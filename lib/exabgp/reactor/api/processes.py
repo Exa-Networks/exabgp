@@ -251,7 +251,7 @@ class Processes (object):
 					raise ProcessError()
 				else:
 					# Could it have been caused by a signal ? What to do.
-					self.logger.debug('error received while SENDING data to helper program, retrying (%s)' % errstr(exc),'process')
+					self.logger.debug('error received while sending data to helper program, retrying (%s)' % errstr(exc),'process')
 					continue
 			break
 

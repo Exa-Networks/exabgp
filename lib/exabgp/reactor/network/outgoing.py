@@ -19,7 +19,7 @@ class Outgoing (Connection):
 	def __init__ (self, afi, peer, local, port=179,md5='',md5_base64=False, ttl=None):
 		Connection.__init__(self,afi,peer,local)
 
-		self.logger.debug('attempting connection %s:%d' % (self.peer,port),self.session())
+		self.logger.debug('attempting connection to %s:%d' % (self.peer,port),self.session())
 
 		self.ttl = ttl
 		self.afi = afi

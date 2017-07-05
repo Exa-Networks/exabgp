@@ -210,7 +210,7 @@ class Protocol (object):
 				yield _NOP
 				continue
 
-			self.logger.debug('<< %s' % Message.CODE.name(msg_id),self.connection.session())
+			self.logger.debug('<< message of type %s' % Message.CODE.name(msg_id),self.connection.session())
 
 			code = 'receive-%s' % Message.CODE.short(msg_id)
 			self.peer.stats[code] = self.peer.stats.get(code,0) + 1

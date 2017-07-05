@@ -19,22 +19,7 @@ import logging.handlers
 import pdb
 
 from exabgp.util.od import od
-from exabgp.util.hashtable import HashTable
 from exabgp.configuration.environment import environment
-
-_SHORT = {
-	'CRITICAL': 'CRIT',
-	'ERROR': 'ERR'
-}
-
-_LONG = {
-	'CRIT': 'CRITICAL',
-	'ERR': 'ERROR'
-}
-
-
-def short (name):
-	return _SHORT.get(name.upper(),name.upper())
 
 
 def _can_write (location):
@@ -123,8 +108,8 @@ class Logger (object):
 		'INFO':     '\033[01;32m',  # Green
 		'NOTICE':   '\033[01;34m',  # Blue
 		'WARNING':  '\033[01;33m',  # Yellow
-		'ERROR':    '\033[01;31m',  # Red
-		'CRITICAL': '\033[00;31m',  # Strong Red
+		'ERR':      '\033[01;31m',  # Red
+		'CRIT':     '\033[00;31m',  # Strong Red
 	}
 
 	MESSAGE = {
@@ -133,8 +118,8 @@ class Logger (object):
 		'INFO':     '\033[1m',  # Green
 		'NOTICE':   '\033[1m',  # Blue
 		'WARNING':  '\033[1m',  # Yellow
-		'ERROR':    '\033[1m',  # Red
-		'CRITICAL': '\033[1m',  # Strong Red
+		'ERR':      '\033[1m',  # Red
+		'CRIT':     '\033[1m',  # Strong Red
 	}
 
 	END = '\033[0m'
@@ -167,7 +152,7 @@ class Logger (object):
 	# we use os.pid everytime as we may fork and the class is instance before it
 
 	def pdb (self, level):
-		if self._option.pdb and level in ['CRITICAL','critical']:
+		if self._option['pdb'] and level == 'CRIT':
 			# not sure why, pylint reports an import error here
 			pdb.set_trace()
 
@@ -179,38 +164,10 @@ class Logger (object):
 	def history (self):
 		return "\n".join(self._format(*_) for _ in self._history)
 
-	def _record (self, timestamp, level, source, message):
+	def _record (self, timestamp, message, source, level):
 		if len(self._history) > self._max_history:
 			self._history.pop(0)
-		self._history.append((timestamp,level,source,message))
-
-	def _format (self, timestamp, level, source, message):
-		if self.short:
-			return message
-		if self._where in ['stdout','stderr','out']:
-			now = time.strftime('%H:%M:%S',timestamp)
-			if not self.TTY[self._where]():
-				return "%s | %-6d | %s | %s" % (now,self._pid,source,message)
-			return "%s | %-6d | %s%-13s%s | %s%-8s%s" % (
-				now,
-				self._pid,
-				self.RECORD.get(level,''),source,self.END,
-				self.MESSAGE.get(level,''),message,self.END
-			)
-		elif self._where in ['syslog',]:
-			return "%s[%d]: %-13s %s" % (environment.application,self._pid,source,message)
-		elif self._where in ['file',]:
-			now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
-			return "%s %-6d %-13s %s" % (now,self._pid,source,message)
-		else:
-			# failsafe
-			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
-
-	def _prefixed (self, level, source, message):
-		timestamp = time.localtime()
-		level = _LONG.get(level,level)
-		self._record(timestamp,level,source,message)
-		return self._format(timestamp,level,source,message)
+		self._history.append((timestamp,message,source,level))
 
 	def __init__ (self):
 		if self._instance.get('class',None) is not None:
@@ -222,19 +179,20 @@ class Logger (object):
 		self.short = command.log.short
 		self.level = command.log.level
 
-		self._option = HashTable()
-		self._option.pdb           = command.debug.pdb
-		self._option.reactor       = command.log.enable and (command.log.all or command.log.reactor)
-		self._option.daemon        = command.log.enable and (command.log.all or command.log.daemon)
-		self._option.processes     = command.log.enable and (command.log.all or command.log.processes)
-		self._option.configuration = command.log.enable and (command.log.all or command.log.configuration)
-		self._option.network       = command.log.enable and (command.log.all or command.log.network)
-		self._option.wire          = command.log.enable and (command.log.all or command.log.packets)
-		self._option.message       = command.log.enable and (command.log.all or command.log.message)
-		self._option.rib           = command.log.enable and (command.log.all or command.log.rib)
-		self._option.timer         = command.log.enable and (command.log.all or command.log.timers)
-		self._option.routes        = command.log.enable and (command.log.all or command.log.routes)
-		self._option.parser        = command.log.enable and (command.log.all or command.log.parser)
+		self._option = {
+			'pdb':           command.debug.pdb,
+			'reactor':       command.log.enable and (command.log.all or command.log.reactor),
+			'daemon':        command.log.enable and (command.log.all or command.log.daemon),
+			'processes':     command.log.enable and (command.log.all or command.log.processes),
+			'configuration': command.log.enable and (command.log.all or command.log.configuration),
+			'network':       command.log.enable and (command.log.all or command.log.network),
+			'wire':          command.log.enable and (command.log.all or command.log.packets),
+			'message':       command.log.enable and (command.log.all or command.log.message),
+			'rib':           command.log.enable and (command.log.all or command.log.rib),
+			'timer':         command.log.enable and (command.log.all or command.log.timers),
+			'routes':        command.log.enable and (command.log.all or command.log.routes),
+			'parser':        command.log.enable and (command.log.all or command.log.parser),
+		}
 
 		if not command.log.enable:
 			self.destination = ''
@@ -332,48 +290,68 @@ class Logger (object):
 			self.critical('Can not set logging (are stdout/stderr closed?)','logger')
 			return False
 
-	def report (self, message, source='',level=''):
+	def _format (self, message, source, level):
+		timestamp = time.localtime()
+		self._record(timestamp,message,source,level)
+
+		if self.short:
+			return message
+
+		if self._where in ['stdout','stderr','out']:
+			now = time.strftime('%H:%M:%S',timestamp)
+			if not self.TTY[self._where]():
+				return "%s | %-6d | %s | %s" % (now,self._pid,source,message)
+			return "%s | %-6d | %s%-13s%s | %s%-8s%s" % (
+				now,
+				self._pid,
+				self.RECORD.get(level,''),source,self.END,
+				self.MESSAGE.get(level,''),message,self.END
+			)
+		elif self._where in ['syslog',]:
+			return "%s[%d]: %-13s %s" % (environment.application,self._pid,source,message)
+		elif self._where in ['file',]:
+			now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
+			return "%s %-6d %-13s %s" % (now,self._pid,source,message)
+		else:
+			# failsafe
+			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
+
+	def _report (self, message, source, level):
+		if source.startswith('incoming-'):
+			src = 'wire'
+		elif source.startswith('outgoing-'):
+			src = 'wire'
+		elif source.startswith('peer-'):
+			src = 'network'
+		else:
+			src = source
+
+		skip = self._option.get(src,False) and getattr(syslog,'LOG_%s' % level) <= self.level
+
 		for line in message.split('\n'):
 			if self._syslog:
-				self._syslog.debug(self._prefixed(level,source,line))
-			else:
-				print(self._prefixed(level,source,line))
+				self._syslog.debug(self._format(line,source,level))
+			elif not skip:
+				print(self._format(line,source,level))
 				sys.stdout.flush()
 
 	def debug (self, message, source='', level='DEBUG'):
-		self.report(message,source,level)
+		self._report(message,source,level)
 
 	def info (self, message, source='', level='INFO'):
-		self.report(message,source,level)
+		self._report(message,source,level)
 
 	def notice (self, message, source='', level='NOTICE'):
-		self.report(message,source,level)
+		self._report(message,source,level)
 
 	def warning (self, message, source='', level='WARNING'):
-		self.report(message,source,level)
+		self._report(message,source,level)
 
-	def error (self, message, source='', level='ERROR'):
-		self.report(message,source,level)
+	def error (self, message, source='', level='ERR'):
+		self._report(message,source,level)
 
-	def critical (self, message, source='', level='CRITICAL'):
-		self.report(message,source,level)
-
-	def raw (self, message):
-		for line in message.split('\n'):
-			if self._syslog:
-				self._syslog.critical(line)
-			else:
-				print(line)
-				sys.stdout.flush()
-
-	# show the message on the wire
-	def _generic (self, message, recorder, source, log):
-		level = short(recorder)
-		if self._option[log] and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder)(message,source,level)
-		else:
-			self._record(time.localtime(),source,recorder,message)
-		self.pdb(recorder)
+	def critical (self, message, source='', level='CRIT'):
+		self._report(message,source,level)
 
 
 class FakeLogger (object):

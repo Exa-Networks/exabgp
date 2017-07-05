@@ -137,16 +137,7 @@ class Connection (object):
 
 					number -= len(read)
 					if not number:
-						self.logger.debug(
-							LazyFormat(
-								'%s %-32s RECEIVED ' % (
-									self.name(),
-									'%s / %s' % (self.local,self.peer)
-								),
-								read
-							),
-							self.session()
-						)
+						self.logger.debug(LazyFormat('received TCP payload',data),self.session())
 						yield data
 						return
 
@@ -177,7 +168,7 @@ class Connection (object):
 			return
 		while not self.writing():
 			yield False
-		self.logger.debug(LazyFormat('%s %-32s SENDING ' % (self.name(),'%s / %s' % (self.local,self.peer)),data),self.session())
+		self.logger.debug(LazyFormat('sending TCP payload',data),self.session())
 		# The first while is here to setup the try/catch block once as it is very expensive
 		while True:
 			try:
