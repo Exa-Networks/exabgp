@@ -326,12 +326,15 @@ class Logger (object):
 		else:
 			src = source
 
-		skip = self._option.get(src,False) and getattr(syslog,'LOG_%s' % level) <= self.level
+		log = self._option.get(src,True) and getattr(syslog,'LOG_%s' % level) <= self.level
+
+		if not log:
+			return
 
 		for line in message.split('\n'):
 			if self._syslog:
 				self._syslog.debug(self._format(line,source,level))
-			elif not skip:
+			else:
 				print(self._format(line,source,level))
 				sys.stdout.flush()
 

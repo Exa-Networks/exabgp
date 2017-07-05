@@ -30,10 +30,10 @@ class API (Command):
 		self.logger = Logger()
 		self.configuration = Configuration([])
 
-	def log_message (self, message, level='info'):
+	def log_message (self, message, level='INFO'):
 		self.logger.notice(message,'api',level)
 
-	def log_failure (self, message, level='error'):
+	def log_failure (self, message, level='ERR'):
 		error = str(self.configuration.tokeniser.error)
 		report = '%s\nreason: %s' % (message, error) if error else message
 		self.logger.error(report,'api',level)
