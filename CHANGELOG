@@ -4,11 +4,26 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 4.0.2
+ * Feature: exabgpcli
  * Feature: draft-ietf-idr-link-bandwidth-06
+ * Feature: colored output
+ * Feature: script to use as flow-spec receiver for Cumulus Linux
+ * Feature: added all families to announce { ipv4 {} ipv6 {} }
+ * Feature: API to clear RIB
+ * Feature: Per family negotiation of Add-Path ( add-path section, like family )
+ * Feature: add --sink and --echo to test bgp daemon
+ * Feature: include negotiated information with update / packets API messages
+ * Feature: allow multiple inheritance
  * Fix: BGP-LS encoding
    patch by: Evelio Vila
  * Fix: Issue with received timer
  * Fix: internal API using named FIFO
+ * Fix: add support for netbsd for heathcheck
+ * Fix: issue with api inheritance
+ * Fix: several issue with BGP-LS
+ * Fix: various
+ * Change: BGPLS with BGP-LS
+ * Change: rewrote may part of the code (reactor/async, log, API, ...)
  * Change: renamed exabgp.api.file to exabgp.api.cli - now a boolean, enabled by default
  * Change: --folder option now --root, and not need when installed in /
 
