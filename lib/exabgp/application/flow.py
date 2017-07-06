@@ -43,15 +43,15 @@ class ACL (object):
 		if key not in cls._known:
 			return
 		# removing key first so the call to clear never loops forever
-		del cls._known[key]
+		uid,acl = cls._known.pop(key)
 		try:
-			filename = cls._file(key)
+			filename = cls._file(uid)
 			if os.path.isfile(filename):
 				os.unlink(filename)
 		except KeyboardInterrupt:
 			raise
 		except Exception:
-			cls.clear()
+			pass
 
 	@classmethod
 	def _commit(cls):
@@ -67,7 +67,7 @@ class ACL (object):
 		except KeyboardInterrupt:
 			raise
 		except Exception:
-			cls.clear()
+			pass
 
 	@staticmethod
 	def _build (flow, action):
@@ -100,7 +100,7 @@ class ACL (object):
 		except KeyboardInterrupt:
 			raise
 		except Exception:
-			pass
+			cls.end()
 
 	@classmethod
 	def remove (cls,flow):
@@ -108,13 +108,18 @@ class ACL (object):
 		if key not in cls._known:
 			return
 		uid,_ = cls._known[key]
-		cls._delete(uid)
+		cls._delete(key)
 
 	@classmethod
 	def clear (cls):
-		for (uid,_) in cls._known.values():
-			cls._delete(uid)
+		for key in cls._known:
+			cls._delete(key)
 		cls._commit()
+
+	@classmethod
+	def end (cls):
+		cls.clear()
+		sys.exit(1)
 
 	@classmethod
 	def show (cls):
@@ -125,7 +130,8 @@ class ACL (object):
 		sys.stderr.flush()
 
 
-signal.signal(signal.SIGTERM,ACL.clear)
+signal.signal(signal.SIGTERM,ACL.end)
+
 
 opened = 0
 buffered = ''
@@ -133,6 +139,8 @@ buffered = ''
 while True:
 	try:
 		line = sys.stdin.readline()
+		if not line or 'shutdown' in line:
+			ACL.end()
 		buffered += line
 		opened += line.count('{')
 		opened -= line.count('}')
@@ -162,6 +170,6 @@ while True:
 			continue
 
 	except KeyboardInterrupt:
-		raise
+		ACL.end()
 	except Exception:
 		pass
