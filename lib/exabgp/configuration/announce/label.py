@@ -20,13 +20,14 @@ from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute import Attributes
 
+from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.path import ParsePath
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import label
 
 
-class ParseLabel (ParsePath):
+class ParseLabel (ParseAnnounce):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'label <15 bits number>',
@@ -54,7 +55,7 @@ class ParseLabel (ParsePath):
 	afi = None
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		ParsePath.__init__(self,tokeniser,scope,error,logger)
+		ParseAnnounce.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		return True
@@ -107,21 +108,11 @@ def ip_label (tokeniser,afi,safi):
 	return [change]
 
 
-class ParsePathv4Label (ParseLabel):
-	name = 'ipv4'
-	afi = AFI.ipv4
-
-
-@ParsePathv4Label.register('nlri-mpls','extend-name',True)
+@ParseAnnounce.register('nlri-mpls','extend-name','ipv4')
 def nlri_mpls_v4 (tokeniser):
 	return ip_label(tokeniser,AFI.ipv4,SAFI.nlri_mpls)
 
 
-class ParsePathv6Label (ParseLabel):
-	name = 'ipv6'
-	afi = AFI.ipv6
-
-
-@ParsePathv6Label.register('nlri-mpls','extend-name',True)
+@ParseAnnounce.register('nlri-mpls','extend-name','ipv6')
 def nlri_mpls_v6 (tokeniser):
 	return ip_label(tokeniser,AFI.ipv6,SAFI.nlri_mpls)

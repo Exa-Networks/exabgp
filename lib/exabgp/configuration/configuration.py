@@ -28,9 +28,9 @@ from exabgp.configuration.neighbor.api import ParseReceive
 from exabgp.configuration.neighbor.family import ParseFamily
 from exabgp.configuration.neighbor.family import ParseAddPath
 from exabgp.configuration.capability import ParseCapability
-from exabgp.configuration.announce import ParseAnnounce
-from exabgp.configuration.announce.vpn import ParseIPv4VPN
-from exabgp.configuration.announce.vpn import ParseIPv6VPN
+from exabgp.configuration.announce import SectionAnnounce
+from exabgp.configuration.announce import ParseIPv4
+from exabgp.configuration.announce import ParseIPv6
 from exabgp.configuration.static import ParseStatic
 from exabgp.configuration.static import ParseStaticRoute
 from exabgp.configuration.flow import ParseFlow
@@ -43,6 +43,13 @@ from exabgp.configuration.l2vpn import ParseVPLS
 from exabgp.configuration.operational import ParseOperational
 
 from exabgp.configuration.environment import environment
+
+# for registration
+from exabgp.configuration.announce.ip import ParseIP
+from exabgp.configuration.announce.path import ParsePath
+from exabgp.configuration.announce.label import ParseLabel
+from exabgp.configuration.announce.vpn import ParseVPN
+from exabgp.configuration.announce.flow import ParseFlow
 
 
 if sys.version_info[0] >= 3:
@@ -126,9 +133,9 @@ class Configuration (_Configuration):
 		self.api_receive         = ParseReceive          (*params)
 		self.static              = ParseStatic           (*params)
 		self.static_route        = ParseStaticRoute      (*params)
-		self.announce            = ParseAnnounce         (*params)
-		self.announce_ipv4       = ParseIPv4VPN          (*params)
-		self.announce_ipv6       = ParseIPv6VPN          (*params)
+		self.announce            = SectionAnnounce       (*params)
+		self.announce_ipv4       = ParseIPv4             (*params)
+		self.announce_ipv6       = ParseIPv6             (*params)
 		self.flow                = ParseFlow             (*params)
 		self.flow_route          = ParseFlowRoute        (*params)
 		self.flow_match          = ParseFlowMatch        (*params)
@@ -240,13 +247,13 @@ class Configuration (_Configuration):
 			},
 			self.announce_ipv4.name: {
 				'class':    self.announce_ipv4,
-				'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'],
+				'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn'],
 				'sections': {
 				},
 			},
 			self.announce_ipv6.name: {
 				'class':    self.announce_ipv6,
-				'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'],
+				'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn'],
 				'sections': {
 				},
 			},

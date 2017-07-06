@@ -20,13 +20,14 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute import Attributes
 
+from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.ip import ParseIP
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.parser import path_information
 
 
-class ParsePath (ParseIP):
+class ParsePath (ParseAnnounce):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'label <15 bits number>',
@@ -52,7 +53,7 @@ class ParsePath (ParseIP):
 	afi = None
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		ParseIP.__init__(self,tokeniser,scope,error,logger)
+		ParseAnnounce.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		return True
@@ -105,21 +106,11 @@ def ip_unicast (tokeniser,afi,safi):
 	return [change]
 
 
-class ParseIPv4Path (ParsePath):
-	name = 'ipv4'
-	afi = AFI.ipv4
-
-
-@ParseIPv4Path.register('unicast','extend-name',True)
+@ParseAnnounce.register('unicast','extend-name','ipv4')
 def unicast_v4 (tokeniser):
 	return ip_unicast(tokeniser,AFI.ipv4,SAFI.unicast)
 
 
-class ParseIPv6Path (ParsePath):
-	name = 'ipv6'
-	afi = AFI.ipv6
-
-
-@ParseIPv6Path.register('unicast','extend-name',True)
+@ParseAnnounce.register('unicast','extend-name','ipv6')
 def unicast_v6 (tokeniser):
 	return ip_unicast(tokeniser,AFI.ipv6,SAFI.unicast)

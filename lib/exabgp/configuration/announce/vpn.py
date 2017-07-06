@@ -20,13 +20,14 @@ from exabgp.bgp.message.update.nlri import IPVPN
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute import Attributes
 
+from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.label import ParseLabel
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import route_distinguisher
 
 
-class ParseVPN (ParseLabel):
+class ParseVPN (ParseAnnounce):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n',
@@ -52,7 +53,7 @@ class ParseVPN (ParseLabel):
 	afi = None
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		ParseLabel.__init__(self,tokeniser,scope,error,logger)
+		ParseAnnounce.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		return True
@@ -105,21 +106,11 @@ def ip_vpn (tokeniser,afi,safi):
 	return [change]
 
 
-class ParseIPv4VPN (ParseVPN):
-	name = 'ipv4'
-	afi = AFI.ipv4
-
-
-@ParseIPv4VPN.register('mpls-vpn','extend-name',True)
+@ParseAnnounce.register('mpls-vpn','extend-name','ipv4')
 def mpls_vpn_v4 (tokeniser):
 	return ip_vpn(tokeniser,AFI.ipv4,SAFI.unicast)
 
 
-class ParseIPv6VPN (ParseVPN):
-	name = 'ipv6'
-	afi = AFI.ipv6
-
-
-@ParseIPv6VPN.register('mpls-vpn','extend-name',True)
+@ParseAnnounce.register('mpls-vpn','extend-name','ipv6')
 def mpls_vpn_v6 (tokeniser):
 	return ip_vpn(tokeniser,AFI.ipv6,SAFI.unicast)

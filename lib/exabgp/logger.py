@@ -17,6 +17,7 @@ import syslog
 import logging
 import logging.handlers
 import pdb
+from collections import deque
 
 from exabgp.util.od import od
 from exabgp.configuration.environment import environment
@@ -134,7 +135,7 @@ class Logger (object):
 	_syslog = None
 	_where = ''
 
-	_history = []
+	_history = deque()
 	_max_history = 20
 
 	_default = None
@@ -166,8 +167,8 @@ class Logger (object):
 
 	def _record (self, timestamp, message, source, level):
 		if len(self._history) > self._max_history:
-			self._history.pop(0)
-		self._history.append((timestamp,message,source,level))
+			self._history.popleft()
+		self._history.append((message,source,level,timestamp))
 
 	def __init__ (self):
 		if self._instance.get('class',None) is not None:
@@ -290,9 +291,10 @@ class Logger (object):
 			self.critical('Can not set logging (are stdout/stderr closed?)','logger')
 			return False
 
-	def _format (self, message, source, level):
-		timestamp = time.localtime()
-		self._record(timestamp,message,source,level)
+	def _format (self, message, source, level,timestamp=None):
+		if timestamp is None:
+			timestamp = time.localtime()
+			self._record(timestamp,message,source,level)
 
 		if self.short:
 			return message
