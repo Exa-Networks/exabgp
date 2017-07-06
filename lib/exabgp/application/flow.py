@@ -132,7 +132,6 @@ buffered = ''
 
 while True:
 	try:
-		ACL.show()
 		line = sys.stdin.readline()
 		buffered += line
 		opened += line.count('{')
