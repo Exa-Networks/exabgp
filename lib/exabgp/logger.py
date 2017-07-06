@@ -300,7 +300,7 @@ class Logger (object):
 		if self._where in ['stdout','stderr','out']:
 			now = time.strftime('%H:%M:%S',timestamp)
 			if not self.TTY[self._where]():
-				return "%s | %-6d | %s | %s" % (now,self._pid,source,message)
+				return "%s | %-6d | %-15s | %s" % (now,self._pid,source,message)
 			return "%s | %-6d | %s%-13s%s | %s%-8s%s" % (
 				now,
 				self._pid,
