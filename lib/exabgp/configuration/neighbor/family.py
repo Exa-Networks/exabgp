@@ -52,7 +52,7 @@ class ParseFamily (Section):
 			'vpls':      	(AFI.l2vpn,SAFI.vpls),
 			'evpn':      	(AFI.l2vpn,SAFI.evpn),
 		},
-		'bgpls': {
+		'bgp-ls': {
 			'bgp-ls':		(AFI.bgpls,SAFI.bgp_ls),
 			'bgp-ls-vpn':	(AFI.bgpls,SAFI.bgp_ls_vpn),
 		},
@@ -62,7 +62,7 @@ class ParseFamily (Section):
 		'ipv4':  'append-command',
 		'ipv6':  'append-command',
 		'l2vpn': 'append-command',
-		'bgpls': 'append-command',
+		'bgp-ls': 'append-command',
 	}
 
 	name = 'family'
@@ -73,7 +73,7 @@ class ParseFamily (Section):
 			'ipv4':  self.ipv4,
 			'ipv6':  self.ipv6,
 			'l2vpn': self.l2vpn,
-			'bgpls': self.bgpls,
+			'bgp-ls': self.bgpls,
 		}
 		self._all = ''
 		self._seen = []
@@ -114,7 +114,7 @@ class ParseFamily (Section):
 		return self._family(tokeniser, 'l2vpn')
 
 	def bgpls (self, tokeniser):
-		return self._family(tokeniser, 'bgpls')
+		return self._family(tokeniser, 'bgp-ls')
 
 	def minimal (self, tokeniser):
 		raise ValueError('family minimal is deprecated')

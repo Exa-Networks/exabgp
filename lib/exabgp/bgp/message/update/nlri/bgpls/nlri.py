@@ -98,7 +98,7 @@ class BGPLS(NLRI):
 		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self._packed))
 
 	def __str__(self):
-		return "bgpls:%s:%s" % (self.registered_bgpls.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ordinal(_) for _ in self._packed))
+		return "bgp-ls:%s:%s" % (self.registered_bgpls.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ordinal(_) for _ in self._packed))
 
 	@classmethod
 	def register(cls, klass):

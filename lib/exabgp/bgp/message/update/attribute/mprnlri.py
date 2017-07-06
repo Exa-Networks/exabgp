@@ -159,7 +159,7 @@ class MPRNLRI (Attribute,Family):
 				Notify(3,0,'invalid l2vpn next-hop length %d expected 4' % len_nh)
 		elif afi == AFI.bgpls:
 			if len_nh != 4:
-				Notify(3,0,'invalid bgpls next-hop length %d expected 4' % len_nh)
+				Notify(3,0,'invalid bgp-ls next-hop length %d expected 4' % len_nh)
 		size = len_nh - rd
 
 		# XXX: FIXME: GET IT FROM CACHE HERE ?

@@ -30,7 +30,7 @@ class _AFI (int):
 		IPv4:      'ipv4',
 		IPv6:      'ipv6',
 		L2VPN:     'l2vpn',
-		BGPLS:     'bgpls',
+		BGPLS:     'bgp-ls',
 	}
 
 	_masks = {
@@ -73,7 +73,7 @@ class AFI (Resource):
 		'ipv4':  ipv4,
 		'ipv6':  ipv6,
 		'l2vpn': l2vpn,
-		'bgpls': bgpls,
+		'bgp-ls': bgpls,
 	}.items())
 
 	cache = dict([(r,r) for (l,r) in codes.items()])
@@ -100,7 +100,7 @@ class AFI (Resource):
 			return ['unicast','mpls-vpn','flow','flow-vpn']
 		if afi == 'l2vpn':
 			return ['vpls','evpn']
-		if afi == 'bgpls':
+		if afi == 'bgp-ls':
 			return ['bgp-ls','bgp-ls-vpn']
 		return []
 
