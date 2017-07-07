@@ -22,17 +22,13 @@ messages3 = [
 
 time.sleep(2)
 
-while messages1:
-	message = messages1.pop(0)
-	sys.stdout.write(message + '\n')
-	sys.stdout.flush()
+sys.stdout.write('\n'.join(messages1) + '\n')
+sys.stdout.flush()
 
 time.sleep(1)
 
-while messages2:
-	message = messages2.pop(0)
-	sys.stdout.write(message + '\n')
-	sys.stdout.flush()
+sys.stdout.write('\n'.join(messages2) + '\n')
+sys.stdout.flush()
 
 time.sleep(1)
 
