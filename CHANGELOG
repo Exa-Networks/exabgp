@@ -21,6 +21,7 @@ Version 4.0.2
  * Fix: add support for netbsd for heathcheck
  * Fix: issue with api inheritance
  * Fix: several issue with BGP-LS
+ * Fix: issues with NLRI decoding (bug introduced between 4.0.0 and 4.0.1)
  * Fix: various
  * Change: BGPLS with BGP-LS
  * Change: rewrote may part of the code (reactor/async, log, API, ...)

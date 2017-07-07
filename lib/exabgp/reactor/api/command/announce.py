@@ -29,14 +29,14 @@ def announce_route (self, reactor, service, line):
 			descriptions,command = extract_neighbors(line)
 			peers = match_neighbors(reactor.peers,descriptions)
 			if not peers:
-				self.log_failure('no neighbor matching the command : %s' % command,'warning')
+				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_route(command)
 			if not changes:
-				self.log_failure('command could not parse route in : %s' % command,'warning')
+				self.log_failure('command could not parse route in : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -72,14 +72,14 @@ def withdraw_route (self, reactor, service, line):
 			descriptions,command = extract_neighbors(line)
 			peers = match_neighbors(reactor.peers,descriptions)
 			if not peers:
-				self.log_failure('no neighbor matching the command : %s' % command,'warning')
+				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_route(command)
 			if not changes:
-				self.log_failure('command could not parse route in : %s' % command,'warning')
+				self.log_failure('command could not parse route in : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -123,14 +123,14 @@ def announce_vpls (self, reactor, service, line):
 			descriptions,command = extract_neighbors(line)
 			peers = match_neighbors(reactor.peers,descriptions)
 			if not peers:
-				self.log_failure('no neighbor matching the command : %s' % command,'warning')
+				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_vpls(command)
 			if not changes:
-				self.log_failure('command could not parse vpls in : %s' % command,'warning')
+				self.log_failure('command could not parse vpls in : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -163,7 +163,7 @@ def withdraw_vpls (self, reactor, service, line):
 			descriptions,command = extract_neighbors(line)
 			peers = match_neighbors(reactor.peers,descriptions)
 			if not peers:
-				self.log_failure('no neighbor matching the command : %s' % command,'warning')
+				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -171,7 +171,7 @@ def withdraw_vpls (self, reactor, service, line):
 			changes = self.api_vpls(command)
 
 			if not changes:
-				self.log_failure('command could not parse vpls in : %s' % command,'warning')
+				self.log_failure('command could not parse vpls in : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -207,14 +207,14 @@ def announce_attributes (self, reactor, service, line):
 			descriptions,command = extract_neighbors(line)
 			peers = match_neighbors(reactor.peers,descriptions)
 			if not peers:
-				self.log_failure('no neighbor matching the command : %s' % command,'warning')
+				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_attributes(command,peers)
 			if not changes:
-				self.log_failure('command could not parse route in : %s' % command,'warning')
+				self.log_failure('command could not parse route in : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -247,14 +247,14 @@ def withdraw_attribute (self, reactor, service, line):
 			descriptions,command = extract_neighbors(line)
 			peers = match_neighbors(reactor.peers,descriptions)
 			if not peers:
-				self.log_failure('no neighbor matching the command : %s' % command,'warning')
+				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_attributes(command,peers)
 			if not changes:
-				self.log_failure('command could not parse route in : %s' % command,'warning')
+				self.log_failure('command could not parse route in : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -290,14 +290,14 @@ def announce_flow (self, reactor, service, line):
 			descriptions,command = extract_neighbors(line)
 			peers = match_neighbors(reactor.peers,descriptions)
 			if not peers:
-				self.log_failure('no neighbor matching the command : %s' % command,'warning')
+				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_flow(command)
 			if not changes:
-				self.log_failure('command could not parse flow in : %s' % command,'warning')
+				self.log_failure('command could not parse flow in : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -330,7 +330,7 @@ def withdraw_flow (self, reactor, service, line):
 			descriptions,command = extract_neighbors(line)
 			peers = match_neighbors(reactor.peers,descriptions)
 			if not peers:
-				self.log_failure('no neighbor matching the command : %s' % command,'warning')
+				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -338,7 +338,7 @@ def withdraw_flow (self, reactor, service, line):
 			changes = self.api_flow(command)
 
 			if not changes:
-				self.log_failure('command could not parse flow in : %s' % command,'warning')
+				self.log_failure('command could not parse flow in : %s' % command)
 				reactor.processes.answer(service,'error')
 				yield True
 				return
@@ -387,7 +387,7 @@ def announce_eor (self, reactor, service, command):
 		descriptions,command = extract_neighbors(command)
 		peers = match_neighbors(reactor.peers,descriptions)
 		if not peers:
-			self.log_failure('no neighbor matching the command : %s' % command,'warning')
+			self.log_failure('no neighbor matching the command : %s' % command)
 			reactor.processes.answer(service,'error')
 			return False
 		reactor.async.schedule(service,command,callback(self,command,peers))
@@ -423,7 +423,7 @@ def announce_refresh (self, reactor, service, command):
 		descriptions,command = extract_neighbors(command)
 		peers = match_neighbors(reactor.peers,descriptions)
 		if not peers:
-			self.log_failure('no neighbor matching the command : %s' % command,'warning')
+			self.log_failure('no neighbor matching the command : %s' % command)
 			reactor.processes.answer(service,'error')
 			return False
 		reactor.async.schedule(service,command,callback(self,command,peers))
@@ -465,7 +465,7 @@ def announce_operational (self, reactor, service, command):
 		descriptions,command = extract_neighbors(command)
 		peers = match_neighbors(reactor.peers,descriptions)
 		if not peers:
-			self.log_failure('no neighbor matching the command : %s' % command,'warning')
+			self.log_failure('no neighbor matching the command : %s' % command)
 			reactor.processes.answer(service,'error')
 			return False
 		reactor.async.schedule(service,command,callback(self,command,peers))
