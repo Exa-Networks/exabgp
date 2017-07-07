@@ -279,7 +279,7 @@ def main ():
 					configurations.append(normalised)
 					continue
 
-			logger.debug('one of the arguments passed as configuration is not a file (%s)' % f,'error','configuration')
+			logger.debug('one of the arguments passed as configuration is not a file (%s)' % f,'configuration')
 			sys.exit(1)
 
 	else:

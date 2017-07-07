@@ -1,0 +1,371 @@
+#!/usr/bin/env python
+# encoding: utf-8
+"""
+cache.py
+
+Created by Thomas Mangin
+Copyright (c) 2013-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
+import os
+import sys
+import glob
+import time
+import signal
+import itertools
+import subprocess
+
+PROGRAM = os.path.realpath(__file__)
+ROOT    = os.path.abspath(os.path.join(os.path.dirname(PROGRAM),os.path.join('..','..')))
+LIBRARY = os.path.join(ROOT,'lib')
+
+try:
+	import docopt
+except ImportError as exc:
+	# PROGRAM = os.path.abspath(os.path.join(os.getcwd(),sys.argv[0]))
+	LIBRARY = os.path.abspath(os.path.join(os.path.dirname(PROGRAM),os.path.join('..','..','lib')))
+	sys.path.append(LIBRARY)
+	from exabgp.vendoring import docopt
+
+
+USAGE = """\
+usage:
+  functional help|--help
+  functional listing
+  functional all [--timeout <timeout>][--port <port>]
+  functional client <test> [--dry] [--timeout <timeout>][--port <port>]
+  functional server <test> [--dry] [--timeout <timeout>][--port <port>]
+  functional run <test> [--timeout <timeout>][--port <port>]
+  functional explain <test> [--timeout <timeout>][--port <port>]
+
+The BGP swiss army knife of networking functional testing tool
+
+commands:
+  listing          list all functional test available
+  all              run all available test
+  explain  <test>  show what command for a test are run
+  run      <test>  run a particular test
+  client   <test>  start the client for a particula test
+  server   <test>  start the server for a particula test
+
+optional arguments:
+  --help,           -h         this page
+  --dry,            -d         show what command would be run but does nothing
+  --port <port>,    -p <port>  base port to use [default: 1790]
+  --timeout <time>, -t <time>  timeout for test failure [default: 120]
+"""
+
+OPTIONS = docopt.docopt(USAGE, help=False)
+
+
+class Color (object):
+	NONE     = '\033[0m' + '\033[0m'   # NONE
+	FAIL     = '\033[0m' + '\033[91m'  # RED
+	SUCCESS  = '\033[1m' + '\033[92m'  # GREEN
+	READY    = '\033[0m' + '\033[94m'  # PENDING
+
+
+class Identifier (object):
+	_next = 0
+	_nl = 3
+
+	@classmethod
+	def get (cls):
+		cls._next += 1
+		return '%02d' % cls._next
+
+	@classmethod
+	def identifiers (cls):
+		for n in range(1,cls._next+1):
+			yield '%02d' % n, not n % cls._nl
+
+
+class Port (object):
+	_next = int(OPTIONS['--port']) - 1
+
+	@classmethod
+	def get (cls):
+		cls._next += 1
+		return cls._next
+
+
+class Path (object):
+	ETC      = os.path.join(ROOT,'etc','exabgp')
+	EXABGP   = os.path.join(ROOT,'sbin','exabgp')
+	BGP      = os.path.join(ROOT,'qa','sbin','bgp')
+	CI       = os.path.join(os.path.join(ROOT,'qa','ci'))
+
+	@classmethod
+	def validate (cls):
+		if not os.path.isdir(cls.ETC):
+			sys.exit('could not find etc folder')
+
+		if not os.path.isdir(cls.CI):
+			sys.exit('could not find tests in the qa/ci folder')
+
+		if not os.path.isfile(cls.EXABGP):
+			sys.exit("could not find exabgp")
+
+		if not os.path.isfile(cls.BGP):
+			sys.exit('could not find the sequence daemon')
+
+
+class CI (dict):
+	_content = {}
+	_tests = []
+	completed = True
+
+	@classmethod
+	def make (cls):
+		for filename in glob.glob(os.path.join(Path.CI,'*.ci')):
+			index = Identifier.get()
+			name,extension = os.path.splitext(filename.split('/')[-1])
+			with open(filename,'r') as reader:
+				content = reader.readline()
+				cls._content[index] = {
+					'name':   name,
+					'confs':  [os.path.join(Path.ETC,_) for _ in content.split()],
+					'ci':     os.path.join(Path.CI,name) + '.ci',
+					'msg':    os.path.join(Path.CI,name) + '.msg',
+					'status': Color.NONE,
+					'port':   Port.get()
+				}
+		cls._tests.extend(sorted(cls._content.keys()))
+
+	@classmethod
+	def get (cls,k):
+		return cls._content.get(k,None)
+
+	@classmethod
+	def passed (cls,k):
+		cls._content[k]['status'] = Color.SUCCESS
+
+	@classmethod
+	def failed (cls,k):
+		cls._content[k]['status'] = Color.FAIL
+		cls.completed = False
+
+
+	@classmethod
+	def display (cls):
+		sys.stdout.write('\r')
+		for k in cls._tests:
+			v = cls._content[k]
+			status = v['status']
+			if status == Color.SUCCESS:
+				k = '--'
+			sys.stdout.write('%s%s ' % (status,k))
+		sys.stdout.write(Color.NONE)
+		sys.stdout.flush()
+
+	@classmethod
+	def listing (cls):
+		sys.stdout.write('\n')
+		sys.stdout.write('The available functional tests are:\n')
+		sys.stdout.write('\n')
+		for index,nl in Identifier.identifiers():
+			name = cls._content[index]['name']
+			sys.stdout.write(' %-2s %s%s' % (index,name,' '*(25 - len(name))))
+			sys.stdout.write('\n' if nl else '')
+		sys.stdout.write('\n')
+		sys.stdout.write('\n')
+		sys.stdout.flush()
+
+
+Path.validate()
+CI.make()
+# CI.display()
+
+
+class Alarm (Exception):
+	pass
+
+
+def alarm_handler (number, frame):  # pylint: disable=W0613
+	raise Alarm()
+
+
+class Command (object):
+	@staticmethod
+	def execute(cmd):
+		print('starting: %s' % ' '.join(cmd))
+		popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+		for line in itertools.chain(iter(popen.stdout.readline, ''),iter(popen.stderr.readline, '')):
+			yield line
+		popen.stdout.close()
+		return_code = popen.wait()
+		if return_code:
+			raise subprocess.CalledProcessError(return_code, cmd)
+
+	@classmethod
+	def explain (cls,index):
+		print('\ncommand lines are:\n')
+		print('export exabgp_debug_rotate=true')
+		print('export exabgp_debug_defensive=true')
+		print('')
+		print(cls.client(index))
+		print(cls.server(index))
+		print('')
+
+	@staticmethod
+	def client (index):
+		test = CI.get(index)
+		if not test:
+			sys.exit('test not found')
+
+		if os.getuid() and os.getgid() and test['port'] <= 1024:
+			sys.exit('you need to have root privileges to bind to port 79')
+
+		config = {
+			'env': ' \\\n  '.join([
+				'exabgp_tcp_once=true',
+				'exabgp_api_cli=false',
+				'exabgp_debug_configuration=true',
+				'exabgp_tcp_bind=\'\'',
+				'exabgp_tcp_port=%d' % test['port'],
+			]),
+			'exabgp': Path.EXABGP,
+			'confs': ' '.join(test['confs']),
+		}
+
+		return "env \\\n  %(env)s\\\n  %(exabgp)s -d -p %(confs)s" % config
+
+	@staticmethod
+	def server (index):
+		test = CI.get(index)
+
+		if not test:
+			sys.exit('test not found')
+
+		if os.getuid() and os.getgid() and test['port'] <= 1024:
+			sys.exit('you need to have root privileges to bind to port 79')
+
+		config = {
+			'env': ' \\\n  '.join([
+				'exabgp_tcp_port=%d' % test['port'],
+			]),
+			'bgp': Path.BGP,
+			'msg': test['msg'],
+		}
+
+		return "env \\\n  %(env)s\\\n %(bgp)s %(msg)s" % config
+
+	@staticmethod
+	def dispatch (running):
+		CI.listing()
+		processes = {}
+
+		try:
+			print('\nchecking\n--------\n')
+
+			for name in running:
+				test = CI.get(name)
+				processes[name] = {
+					'bgp': subprocess.Popen([sys.argv[0],'server',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE),
+					'exa': subprocess.Popen([sys.argv[0],'client',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE),
+				}
+				test['status'] = Color.READY
+				CI.display()
+
+			names = processes.keys()
+			while names:
+				CI.display()
+				for name in list(names):
+					process = processes[name]
+					rbgp = process['bgp'].poll()
+					rexa = process['exa'].poll()
+					if (rbgp,rexa) != (None,None):
+						names.remove(name)
+						try:
+							stdout,stderr = process['bgp'].communicate()
+							if 'successful' in stdout:
+								CI.passed(name)
+							else:
+								CI.failed(name)
+						except (IOError,OSError,ValueError):
+							if name in names:
+								names.remove(name)
+				time.sleep(0.5)
+			print('\n')
+		except Alarm:
+			print('\nfailed, a test is taking more than the allocated time\n')
+
+		if not CI.completed:
+			print('sending alarm signal to\n-----------------------')
+
+			for name in list(processes):
+				p = processes[name]
+				try:
+					p['bgp'].send_signal(signal.SIGTERM)
+				except OSError:  # No such process, Errno 3
+					pass
+				try:
+					p['exa'].send_signal(signal.SIGTERM)
+				except OSError:  # No such process, Errno 3
+					pass
+				try:
+					stdout,stderr = process['bgp'].communicate()
+				except ValueError:  # I/O operation on closed file
+					continue
+				print('\nbgp stdout %s\n\n------' % stdout)
+				print('\nbgp stderr %s\n\n------' % stderr)
+				stdout,stderr = process['exa'].communicate()
+				print('\nexa stdout %s\n\n------' % stdout)
+				print('\nexa stderr %s\n\n------' % stderr)
+
+		return CI.completed
+
+
+if __name__ == '__main__':
+	print OPTIONS
+
+	if OPTIONS['help'] or OPTIONS['--help']:
+		print(USAGE)
+		sys.exit(0)
+
+	if OPTIONS['listing']:
+		CI.listing()
+		sys.exit(0)
+
+	if OPTIONS['explain']:
+		Command.explain(OPTIONS['<test>'])
+		sys.exit(0)
+
+	if OPTIONS['client']:
+		command = Command.client(OPTIONS['<test>'])
+		print('> ' + command)
+		if not OPTIONS['--dry']:
+			sys.exit(os.system(command))
+		sys.exit(0)
+
+	# usage without parameters
+	signal.signal(signal.SIGALRM, alarm_handler)
+	signal.alarm(int(OPTIONS['--timeout']))
+
+	if OPTIONS['server']:
+		command = Command.server(OPTIONS['<test>'])
+		print('> ' + command)
+		if not OPTIONS['--dry']:
+			sys.exit(os.system(command))
+		sys.exit(0)
+
+	if OPTIONS['run']:
+		to_run = [OPTIONS['<test>'],]
+	elif OPTIONS['all']:
+		to_run = [index for index,_ in Identifier.identifiers()]
+	else:
+		print(USAGE)
+		sys.exit(1)
+
+	chunk = len(to_run)
+	success = True
+	while to_run and success:
+		running, to_run = to_run[:chunk], to_run[chunk:]
+		success = Command.dispatch(running)
+
+	CI.display()
+	sys.exit(0 if success else 1)
+
+	print(USAGE)
+	sys.exit(1)
