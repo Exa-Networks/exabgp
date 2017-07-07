@@ -9,10 +9,13 @@ messages = [
 	'announce eor ipv4 unicast',
 ]
 
+time.sleep(2)
+
 while messages:
 	message = messages.pop(0)
 	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
+	time.sleep(1)
 
 try:
 	now = time.time()
