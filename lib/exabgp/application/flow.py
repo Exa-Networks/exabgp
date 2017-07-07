@@ -159,7 +159,10 @@ while True:
 		update = message['neighbor']['message']['update']
 
 		if 'announce' in update:
-			flow = update['announce']['ipv4 flow']['no-nexthop'][0]
+			flow = update['announce']['ipv4 flow']
+			# The RFC allows both encoding
+			flow = flow['no-nexthop'][0] if 'no-nexthop' in flow else flow[0]
+
 			community = update['attribute']['extended-community'][0]
 			ACL.insert(flow,community)
 			continue
