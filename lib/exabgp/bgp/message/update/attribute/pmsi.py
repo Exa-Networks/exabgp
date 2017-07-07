@@ -115,7 +115,7 @@ class PMSI (Attribute):
 	@classmethod
 	def unpack (cls, data, negotiated):
 		flags,subtype = unpack('!BB',data[:2])
-		label = unpack('!L','\0'+data[2:5])[0] >> 4
+		label = unpack('!L',b'\0'+data[2:5])[0] >> 4
 		# should we check for bottom of stack before the shift ?
 		if subtype in cls._pmsi_known:
 			return cls._pmsi_known[subtype].unpack(data[5:],label,flags)
