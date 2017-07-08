@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
+import re
 import sys
 import glob
 import time
@@ -38,6 +39,7 @@ usage:
   functional server <test> [--dry] [--timeout <timeout>][--port <port>]
   functional run <test> [--timeout <timeout>][--port <port>]
   functional explain <test> [--timeout <timeout>][--port <port>]
+  functional edit <test>
 
 The BGP swiss army knife of networking functional testing tool
 
@@ -46,14 +48,35 @@ commands:
   all              run all available test
   explain  <test>  show what command for a test are run
   run      <test>  run a particular test
-  client   <test>  start the client for a particula test
-  server   <test>  start the server for a particula test
+  client   <test>  start the client for a specific test
+  server   <test>  start the server for a specific test
+  edit     <test>  start $EDITOR to edit a specific test
 
 optional arguments:
   --help,           -h         this page
   --dry,            -d         show what command would be run but does nothing
   --port <port>,    -p <port>  base port to use [default: 1790]
   --timeout <time>, -t <time>  timeout for test failure [default: 120]
+"""
+
+EXPLAIN = """
+ExaBGP command line
+=======================================================
+
+%(exa)s
+
+
+bgp daemon command line
+=======================================================
+
+%(bgp)s
+
+
+The following extra configuration options could be used
+=======================================================
+
+export exabgp_debug_rotate=true
+export exabgp_debug_defensive=true
 """
 
 OPTIONS = docopt.docopt(USAGE, help=False)
@@ -95,6 +118,7 @@ class Path (object):
 	EXABGP   = os.path.join(ROOT,'sbin','exabgp')
 	BGP      = os.path.join(ROOT,'qa','sbin','bgp')
 	CI       = os.path.join(os.path.join(ROOT,'qa','ci'))
+	ALL_CI   = glob.glob(os.path.join(CI,'*.ci'))
 
 	@classmethod
 	def validate (cls):
@@ -112,13 +136,14 @@ class Path (object):
 
 
 class CI (dict):
+	API = re.compile('^\s*run\s+(.*)\s*?;\s*?$')
 	_content = {}
 	_tests = []
 	completed = True
 
 	@classmethod
 	def make (cls):
-		for filename in glob.glob(os.path.join(Path.CI,'*.ci')):
+		for filename in Path.ALL_CI:
 			index = Identifier.get()
 			name,extension = os.path.splitext(filename.split('/')[-1])
 			with open(filename,'r') as reader:
@@ -146,6 +171,24 @@ class CI (dict):
 		cls._content[k]['status'] = Color.FAIL
 		cls.completed = False
 
+	@classmethod
+	def files (cls,k):
+		test = cls._content.get(k,None)
+		if not test:
+			return []
+		files = [test['msg'],]
+		for f in test['confs']:
+			files.append(f)
+			with open(f) as reader:
+				for line in reader:
+					found = cls.API.match(line)
+					if not found:
+						continue
+					name = found.group(1)
+					if not name.startswith('/'):
+						name = os.path.abspath(os.path.join(Path.ETC,name))
+					files.append(name)
+		return [f for f in files if os.path.isfile(f)]
 
 	@classmethod
 	def display (cls):
@@ -200,13 +243,11 @@ class Command (object):
 
 	@classmethod
 	def explain (cls,index):
-		print('\ncommand lines are:\n')
-		print('export exabgp_debug_rotate=true')
-		print('export exabgp_debug_defensive=true')
-		print('')
-		print(cls.client(index))
-		print(cls.server(index))
-		print('')
+		print(EXPLAIN % {
+			'exa': cls.client(index),
+			'bgp': cls.server(index),
+		})
+		sys.exit(1)
 
 	@staticmethod
 	def client (index):
@@ -226,10 +267,10 @@ class Command (object):
 				'exabgp_tcp_port=%d' % test['port'],
 			]),
 			'exabgp': Path.EXABGP,
-			'confs': ' '.join(test['confs']),
+			'confs': ' \\\n    '.join(test['confs']),
 		}
 
-		return "env \\\n  %(env)s\\\n  %(exabgp)s -d -p %(confs)s" % config
+		return "env \\\n  %(env)s \\\n  %(exabgp)s -d -p \\\n    %(confs)s" % config
 
 	@staticmethod
 	def server (index):
@@ -249,7 +290,7 @@ class Command (object):
 			'msg': test['msg'],
 		}
 
-		return "env \\\n  %(env)s\\\n %(bgp)s %(msg)s" % config
+		return "env \\\n  %(env)s \\\n  %(bgp)s \\\n    %(msg)s" % config
 
 	@staticmethod
 	def dispatch (running):
@@ -318,7 +359,7 @@ class Command (object):
 
 
 if __name__ == '__main__':
-	print OPTIONS
+	# print OPTIONS
 
 	if OPTIONS['help'] or OPTIONS['--help']:
 		print(USAGE)
@@ -330,6 +371,14 @@ if __name__ == '__main__':
 
 	if OPTIONS['explain']:
 		Command.explain(OPTIONS['<test>'])
+		sys.exit(0)
+
+	if OPTIONS['edit']:
+		files = CI.files(OPTIONS['<test>'])
+		if not files:
+			sys.exit('no such test')
+		editor = os.environ.get('EDITOR','vi')
+		os.system("%s %s" % (editor,' '.join(files)))
 		sys.exit(0)
 
 	if OPTIONS['client']:
