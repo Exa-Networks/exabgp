@@ -187,7 +187,8 @@ class CI (dict):
 					name = found.group(1)
 					if not name.startswith('/'):
 						name = os.path.abspath(os.path.join(Path.ETC,name))
-					files.append(name)
+					if name not in files:
+						files.append(name)
 		return [f for f in files if os.path.isfile(f)]
 
 	@classmethod
@@ -262,6 +263,7 @@ class Command (object):
 			'env': ' \\\n  '.join([
 				'exabgp_tcp_once=true',
 				'exabgp_api_cli=false',
+				'exabgp_debug_rotate=true',
 				'exabgp_debug_configuration=true',
 				'exabgp_tcp_bind=\'\'',
 				'exabgp_tcp_port=%d' % test['port'],
