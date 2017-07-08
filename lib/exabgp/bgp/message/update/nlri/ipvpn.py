@@ -57,14 +57,18 @@ class IPVPN (Label):
 	def __len__ (self):
 		return Label.__len__(self) + len(self.rd)
 
-	def __repr__ (self):
+	def __str__ (self):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
 		return "%s%s" % (self.extensive(),nexthop)
+
+	def __repr__ (self):
+		return str(self)
 
 	def __eq__ (self, other):
 		return \
 			Label.__eq__(self, other) and \
-			self.rd == other.rd
+			self.rd == other.rd and \
+			Label.__eq__(self,other)
 
 	def __ne__ (self, other):
 		return not self.__eq__(other)
