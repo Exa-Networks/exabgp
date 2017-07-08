@@ -40,8 +40,8 @@ class Label (INET):
 
 	def __eq__ (self, other):
 		return \
-			INET.__eq__(self, other) and \
-			self.labels == other.labels
+			self.labels == other.labels and \
+			INET.__eq__(self, other)
 
 	def __hash__ (self):
 		return hash(self.pack())
