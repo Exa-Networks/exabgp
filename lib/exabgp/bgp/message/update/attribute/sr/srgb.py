@@ -53,16 +53,18 @@ class SrGb(object):
 		return '[ {} ]'.format(', '.join(items))
 
 	def pack (self):
-		t = pack('!B', self.TLV)
-		val = b''
-		for srgb in self.srgbs:
-			base = pack("!L", srgb[0])[1:]
-			srange = pack("!L", srgb[1])[1:]
-			val = concat_bytes(base,srange,val)
-		flags = pack('!H',0)
-		val = concat_bytes(flags,val)
-		l = pack('!H', len(val))
-		return concat_bytes(t,l,val)
+		payload = pack('!H',0)  # flags
+		for b,r in self.srgbs:
+			payload = concat_bytes(
+				payload,
+				pack("!L",b)[1:],
+				pack("!L",r)[1:]
+			)
+		return concat_bytes(
+			pack('!B', self.TLV),
+			pack('!H', len(payload)),
+			payload
+		)
 
 	@classmethod
 	def unpack (cls,data,length):
