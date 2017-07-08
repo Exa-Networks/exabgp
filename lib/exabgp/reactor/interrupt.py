@@ -36,7 +36,7 @@ class Signal (object):
 		signal.signal(signal.SIGUSR2, self.sigusr2)
 
 	def sigterm (self, signum, frame):
-		self.logger.critical('SIG TERM received','reactor')
+		self.logger.critical('SIGTERM received','reactor')
 		if self.received:
 			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return
@@ -45,7 +45,7 @@ class Signal (object):
 		self.number = signum
 
 	def sighup (self, signum, frame):
-		self.logger.critical('SIG HUP received','reactor')
+		self.logger.critical('SIGHUP received','reactor')
 		if self.received:
 			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return
@@ -54,7 +54,7 @@ class Signal (object):
 		self.number = signum
 
 	def sigalrm (self, signum, frame):
-		self.logger.critical('SIG ALRM received','reactor')
+		self.logger.critical('SIGALRM received','reactor')
 		if self.received:
 			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return
@@ -63,7 +63,7 @@ class Signal (object):
 		self.number = signum
 
 	def sigusr1 (self, signum, frame):
-		self.logger.critical('SIG USR1 received','reactor')
+		self.logger.critical('SIGUSR1 received','reactor')
 		if self.received:
 			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return
@@ -72,7 +72,7 @@ class Signal (object):
 		self.number = signum
 
 	def sigusr2 (self, signum, frame):
-		self.logger.critical('SIG USR1 received','reactor')
+		self.logger.critical('SIGUSR2 received','reactor')
 		if self.received:
 			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return

@@ -106,6 +106,12 @@ class Reactor (object):
 				peers.add(key)
 		return peers
 
+	def _completed (self,peers):
+		for peer in peers:
+			if self.peers[peer].neighbor.rib.outgoing.pending():
+				return False
+		return True
+
 	def run (self, validate, root):
 		self.daemon.daemonise()
 
@@ -197,7 +203,7 @@ class Reactor (object):
 					if not reload_completed:
 						continue
 
-					if signaled == Signal.RELOAD:
+					if signaled == Signal.FULL_RELOAD:
 						self._reload_processes = True
 
 					if signaled in (Signal.RELOAD, Signal.FULL_RELOAD):
@@ -211,7 +217,7 @@ class Reactor (object):
 					self.async.schedule(str(uuid.uuid1()),'check new connection',self.listener.new_connections())
 
 				peers = self._active_peers()
-				if not peers:
+				if self._completed(peers):
 					reload_completed = True
 
 				# give a turn to all the peers

@@ -68,6 +68,9 @@ class OutgoingRIB (Cache):
 		self._new_attribute = {}
 		self.reset()
 
+	def pending (self):
+		return len(self._new_nlri) != 0
+
 	def resend (self, families, enhanced_refresh):
 		# families can be None or []
 		requested_families = self.families if not families else set(families).intersection(self.families)
