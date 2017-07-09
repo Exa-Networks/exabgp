@@ -14,6 +14,7 @@ Version 4.0.2
  * Feature: add --sink and --echo to test bgp daemon
  * Feature: include negotiated information with update / packets API messages
  * Feature: allow multiple inheritance
+ * Feature: new "functional" program for functional testing with many new goodies
  * Fix: BGP-LS encoding
    patch by: Evelio Vila
  * Fix: Issue with received timer

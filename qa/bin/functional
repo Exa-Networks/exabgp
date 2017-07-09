@@ -34,29 +34,32 @@ USAGE = """\
 usage:
   functional help|--help
   functional listing
-  functional all [--timeout <timeout>][--port <port>]
+  functional all [--timeout <timeout>][--port <port>][--steps <steps>]
   functional client <test> [--dry] [--timeout <timeout>][--port <port>]
   functional server <test> [--dry] [--timeout <timeout>][--port <port>]
   functional run <test> [--timeout <timeout>][--port <port>]
   functional explain <test> [--timeout <timeout>][--port <port>]
+  functional decode <test> <payload>
   functional edit <test>
 
 The BGP swiss army knife of networking functional testing tool
 
 commands:
-  listing          list all functional test available
-  all              run all available test
-  explain  <test>  show what command for a test are run
-  run      <test>  run a particular test
-  client   <test>  start the client for a specific test
-  server   <test>  start the server for a specific test
-  edit     <test>  start $EDITOR to edit a specific test
+  listing    list all functional test available
+  all        run all available test
+  explain    show what command for a test are run
+  run        run a particular test
+  client     start the client for a specific test
+  server     start the server for a specific test
+  decode     use the cond
+  edit       start $EDITOR to edit a specific test
 
 optional arguments:
-  --help,           -h         this page
-  --dry,            -d         show what command would be run but does nothing
-  --port <port>,    -p <port>  base port to use [default: 1790]
-  --timeout <time>, -t <time>  timeout for test failure [default: 120]
+  --help,           -h          this page
+  --dry,            -d          show what command would be run but does nothing
+  --port <port>,    -p <port>   base port to use [default: 1790]
+  --timeout <time>, -t <time>   timeout for test failure [default: 120]
+  --steps <steps>,  -s <steps>  number of test to run simultaneously [default: 0]
 """
 
 EXPLAIN = """
@@ -81,12 +84,12 @@ export exabgp_debug_defensive=true
 
 OPTIONS = docopt.docopt(USAGE, help=False)
 
-
 class Color (object):
 	NONE     = '\033[0m' + '\033[0m'   # NONE
+	STARTING = '\033[0m' + '\033[96m'  # LIGHT BLUE
+	READY    = '\033[0m' + '\033[94m'  # PENDING
 	FAIL     = '\033[0m' + '\033[91m'  # RED
 	SUCCESS  = '\033[1m' + '\033[92m'  # GREEN
-	READY    = '\033[0m' + '\033[94m'  # PENDING
 
 
 class Identifier (object):
@@ -297,31 +300,40 @@ class Command (object):
 	@staticmethod
 	def dispatch (running):
 		CI.listing()
-		processes = {}
+		processes = {
+			'bgp': {},
+			'exa': {},
+		}
 
 		try:
 			print('\nchecking\n--------\n')
 
 			for name in running:
 				test = CI.get(name)
-				processes[name] = {
-					'bgp': subprocess.Popen([sys.argv[0],'server',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE),
-					'exa': subprocess.Popen([sys.argv[0],'client',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE),
-				}
+				processes['bgp'][name] = subprocess.Popen([sys.argv[0],'server',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				test['status'] = Color.STARTING
+				CI.display()
+				time.sleep(0.05)
+
+			time.sleep(0.5)
+			names = list(reversed(running))
+
+			for name in names:
+				test = CI.get(name)
+				processes['exa'][name] = subprocess.Popen([sys.argv[0],'client',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				test['status'] = Color.READY
 				CI.display()
+				time.sleep(0.2)
 
-			names = processes.keys()
 			while names:
 				CI.display()
 				for name in list(names):
-					process = processes[name]
-					rbgp = process['bgp'].poll()
-					rexa = process['exa'].poll()
+					rbgp = processes['bgp'][name].poll()
+					rexa = processes['exa'][name].poll()
 					if (rbgp,rexa) != (None,None):
 						names.remove(name)
 						try:
-							stdout,stderr = process['bgp'].communicate()
+							stdout,stderr = processes['bgp'][name].communicate()
 							if 'successful' in stdout:
 								CI.passed(name)
 							else:
@@ -338,22 +350,24 @@ class Command (object):
 			print('sending alarm signal to\n-----------------------')
 
 			for name in list(processes):
-				p = processes[name]
 				try:
-					p['bgp'].send_signal(signal.SIGTERM)
+					processes['bgp'][name].send_signal(signal.SIGTERM)
 				except OSError:  # No such process, Errno 3
 					pass
 				try:
-					p['exa'].send_signal(signal.SIGTERM)
+					processes['exa'][name].send_signal(signal.SIGTERM)
 				except OSError:  # No such process, Errno 3
 					pass
 				try:
-					stdout,stderr = process['bgp'].communicate()
+					stdout,stderr = processes['bgp'][name].communicate()
 				except ValueError:  # I/O operation on closed file
 					continue
 				print('\nbgp stdout %s\n\n------' % stdout)
 				print('\nbgp stderr %s\n\n------' % stderr)
-				stdout,stderr = process['exa'].communicate()
+				try:
+					stdout,stderr = processes['exa'][name].communicate()
+				except ValueError:  # I/O operation on closed file
+					continue
 				print('\nexa stdout %s\n\n------' % stdout)
 				print('\nexa stderr %s\n\n------' % stderr)
 
@@ -361,7 +375,6 @@ class Command (object):
 
 
 if __name__ == '__main__':
-	# print OPTIONS
 
 	if OPTIONS['help'] or OPTIONS['--help']:
 		print(USAGE)
@@ -381,6 +394,13 @@ if __name__ == '__main__':
 			sys.exit('no such test')
 		editor = os.environ.get('EDITOR','vi')
 		os.system("%s %s" % (editor,' '.join(files)))
+		sys.exit(0)
+
+	if OPTIONS['decode']:
+		test = CI.get(OPTIONS['<test>'])
+		command = "%s -d %s --decode %s" % (Path.EXABGP,test['confs'][0],OPTIONS['<payload>'])
+		print('> %s' % command)
+		os.system(command)
 		sys.exit(0)
 
 	if OPTIONS['client']:
@@ -409,7 +429,7 @@ if __name__ == '__main__':
 		print(USAGE)
 		sys.exit(1)
 
-	chunk = len(to_run)
+	chunk = len(to_run) if not int(OPTIONS['--steps']) else int(OPTIONS['--steps'])
 	success = True
 	while to_run and success:
 		running, to_run = to_run[:chunk], to_run[chunk:]
