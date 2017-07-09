@@ -170,7 +170,7 @@ class Protocol (object):
 		for boolean in self.connection.writer(raw):
 			yield boolean
 
-	def send (self,raw):
+	def send (self, raw):
 		code = 'send-%s' % Message.CODE.short(ordinal(raw[18]))
 		self.peer.stats[code] = self.peer.stats.get(code,0) + 1
 		if self.neighbor.api.get(code,False):
@@ -198,11 +198,11 @@ class Protocol (object):
 				code = 'receive-%s' % Message.CODE.NOTIFICATION.SHORT
 				if self.neighbor.api.get(code,False):
 					if consolidate:
-						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),None,header,body)
+						self.peer.reactor.processes.notification(self.peer.neighbor,'receive',notify.code,notify.subcode,str(notify),None,header,body)
 					elif parsed:
-						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),None,b'',b'')
+						self.peer.reactor.processes.notification(self.peer.neighbor,'receive',notify.code,notify.subcode,str(notify),None,b'',b'')
 					elif packets:
-						self.peer.reactor.processes.packets(self.peer.neighbor,'send',msg_id,None,header,body)
+						self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,None,header,body)
 				# XXX: is notify not already Notify class ?
 				raise Notify(notify.code,notify.subcode,str(notify))
 
