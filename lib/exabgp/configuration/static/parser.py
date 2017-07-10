@@ -491,7 +491,7 @@ def _extended_community (value):
 		if command == 'target4':
 			return ExtendedCommunity.unpack(_HEADER['target4']+pack('!LH',iga,ila),None)
 
-		if command == 'orgin4':
+		if command == 'origin4':
 			return ExtendedCommunity.unpack(_HEADER['origin4']+pack('!LH',iga,ila),None)
 
 		if command == 'redirect':
