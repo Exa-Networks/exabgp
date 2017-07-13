@@ -357,6 +357,8 @@ class Peer (object):
 		if self._teardown:
 			raise Notify(6,3)
 
+		self.neighbor.rib.incoming.clear()
+
 		include_withdraw = False
 
 		# Announce to the process BGP is up
