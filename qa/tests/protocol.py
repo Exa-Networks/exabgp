@@ -23,7 +23,7 @@ from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.vendoring import six
-from six.moves import StringIO
+from exabgp.vendoring.six.moves import StringIO
 
 from exabgp.configuration.environment import environment
 environment.setup('')
