@@ -166,10 +166,15 @@ class _SAFI (int):
 		return self._names.get(self,'unknown safi %d' % int(self))
 
 	def has_label (self):
-		return self in (self.NLRI_MPLS,self.MPLS_VPN)
+		return self in (SAFI.nlri_mpls,SAFI.mpls_vpn)
 
 	def has_rd (self):
-		return self in (self.MPLS_VPN,)  # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
+		return self in (SAFI.nlri_mpls,SAFI.mpls_vpn,SAFI.flow_vpn)
+		# technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
+
+	def has_path (self):
+		return self in (SAFI.unicast,SAFI.nlri_mpls)
+		# technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
 	def __str__ (self):
 		return self.name()
@@ -244,6 +249,24 @@ class SAFI (Resource):
 
 
 class Family (object):
+	size = {
+		# family                   next-hop   RD
+		(AFI.ipv4,SAFI.unicast):   ((4,),      0),
+		(AFI.ipv4,SAFI.multicast): ((4,),      0),
+		(AFI.ipv4,SAFI.nlri_mpls): ((4,),      0),
+		(AFI.ipv4,SAFI.mpls_vpn):  ((12,),     8),
+		(AFI.ipv4,SAFI.flow_ip):   ((0,4),     0),
+		(AFI.ipv4,SAFI.flow_vpn):  ((0,4),     0),
+		(AFI.ipv4,SAFI.rtc):       ((4,16),    0),
+		(AFI.ipv6,SAFI.unicast):   ((16,32),   0),
+		(AFI.ipv6,SAFI.nlri_mpls): ((16,32),   0),
+		(AFI.ipv6,SAFI.mpls_vpn):  ((24,40),   8),
+		(AFI.ipv6,SAFI.flow_ip):   ((0,16,32), 0),
+		(AFI.ipv6,SAFI.flow_vpn):  ((0,16,32), 0),
+		(AFI.l2vpn,SAFI.vpls):     ((4,),      0),
+		(AFI.bgpls,SAFI.bgp_ls):   ((4,),      0),
+	}
+
 	__slots__ = ['afi','safi']
 
 	def __init__ (self, afi, safi):
@@ -251,14 +274,13 @@ class Family (object):
 		self.safi = SAFI.create(safi)
 
 	def has_label (self):
-		if self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):
-			return True
-		return False
+		return self.safi.has_label()
 
 	def has_rd (self):
-		if self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn,SAFI.flow_vpn):
-			return True
-		return False
+		return self.safi.has_rd()
+
+	def has_path (self):
+		return self.safi.has_path()
 
 	def __eq__ (self, other):
 		return \

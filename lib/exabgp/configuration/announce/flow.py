@@ -51,7 +51,7 @@ from exabgp.configuration.flow.parser import interface_set
 from exabgp.configuration.announce import ParseAnnounce
 
 
-class ParseFlow (ParseAnnounce):
+class AnnounceFlow (ParseAnnounce):
 	definition = [
 		'source 10.0.0.0/24',
 		'source ::1/128/0',
@@ -197,15 +197,15 @@ def flow (tokeniser,afi,safi):
 		if not command:
 			break
 
-		action = ParseFlow.action[command]
+		action = AnnounceFlow.action[command]
 
 		if action == 'nlri-add':
-			for adding in ParseFlow.known[command](tokeniser):
+			for adding in AnnounceFlow.known[command](tokeniser):
 				change.nlri.add(adding)
 		elif action == 'attribute-add':
-			change.attributes.add(ParseFlow.known[command](tokeniser))
+			change.attributes.add(AnnounceFlow.known[command](tokeniser))
 		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = ParseFlow.known[command](tokeniser)
+			nexthop,attribute = AnnounceFlow.known[command](tokeniser)
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		elif action == 'nop':

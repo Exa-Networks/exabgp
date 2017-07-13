@@ -44,7 +44,7 @@ from exabgp.configuration.static.parser import watchdog
 from exabgp.configuration.static.parser import withdraw
 
 
-class ParseIP (ParseAnnounce):
+class AnnounceIP (ParseAnnounce):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'next-hop <ip>',
@@ -128,7 +128,9 @@ class ParseIP (ParseAnnounce):
 		return True
 
 	def pre (self):
-		# self.scope.set(self.name,inet(self.tokeniser.iterate))
+		return True
+
+	def post (self):
 		return True
 
 	def _check (self):
@@ -163,14 +165,14 @@ def ip (tokeniser,afi,safi):
 		if not command:
 			break
 
-		action = ParseIP.action.get(command,'')
+		action = AnnounceIP.action.get(command,'')
 
 		if action == 'attribute-add':
-			change.attributes.add(ParseIP.known[command](tokeniser))
+			change.attributes.add(AnnounceIP.known[command](tokeniser))
 		elif action == 'nlri-set':
-			change.nlri.assign(ParseIP.assign[command],ParseIP.known[command](tokeniser))
+			change.nlri.assign(AnnounceIP.assign[command],AnnounceIP.known[command](tokeniser))
 		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = ParseIP.known[command](tokeniser)
+			nexthop,attribute = AnnounceIP.known[command](tokeniser)
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:
@@ -196,14 +198,14 @@ def ip_multicast (tokeniser,afi,safi):
 		if not command:
 			break
 
-		action = ParseIP.action.get(command,'')
+		action = AnnounceIP.action.get(command,'')
 
 		if action == 'attribute-add':
-			change.attributes.add(ParseIP.known[command](tokeniser))
+			change.attributes.add(AnnounceIP.known[command](tokeniser))
 		elif action == 'nlri-set':
-			change.nlri.assign(ParseIP.assign[command],ParseIP.known[command](tokeniser))
+			change.nlri.assign(AnnounceIP.assign[command],AnnounceIP.known[command](tokeniser))
 		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = ParseIP.known[command](tokeniser)
+			nexthop,attribute = AnnounceIP.known[command](tokeniser)
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:

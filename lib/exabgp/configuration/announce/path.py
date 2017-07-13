@@ -21,31 +21,31 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
-from exabgp.configuration.announce.ip import ParseIP
+from exabgp.configuration.announce.ip import AnnounceIP
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.parser import path_information
 
 
-class ParsePath (ParseAnnounce):
+class AnnouncePath (ParseAnnounce):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'label <15 bits number>',
-	] + ParseIP.definition
+	] + AnnounceIP.definition
 
 	syntax = \
 		'<safi> <ip>/<netmask> { ' \
 		'\n   ' + ' ;\n   '.join(definition) + '\n}'
 
-	known = dict(ParseIP.known,**{
+	known = dict(AnnounceIP.known,**{
 		'path-information':    path_information,
 	})
 
-	action = dict(ParseIP.action,**{
+	action = dict(AnnounceIP.action,**{
 		'path-information':    'nlri-set',
 	})
 
-	assign = dict(ParseIP.assign,**{
+	assign = dict(AnnounceIP.assign,**{
 		'path-information':    'path_info',
 	})
 
@@ -90,14 +90,14 @@ def ip_unicast (tokeniser,afi,safi):
 		if not command:
 			break
 
-		action = ParseIP.action.get(command,'')
+		action = AnnouncePath.action.get(command,'')
 
 		if action == 'attribute-add':
-			change.attributes.add(ParseIP.known[command](tokeniser))
+			change.attributes.add(AnnouncePath.known[command](tokeniser))
 		elif action == 'nlri-set':
-			change.nlri.assign(ParseIP.assign[command],ParseIP.known[command](tokeniser))
+			change.nlri.assign(AnnouncePath.assign[command],AnnouncePath.known[command](tokeniser))
 		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = ParseIP.known[command](tokeniser)
+			nexthop,attribute = AnnouncePath.known[command](tokeniser)
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:

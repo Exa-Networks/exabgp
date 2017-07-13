@@ -111,7 +111,7 @@ def mpls (tokeniser):
 	mpls = IPVPN(
 		afi=IP.toafi(ipmask.top()),
 		safi=IP.tosafi(ipmask.top()),
-		action=OUT.UNSET
+		action=OUT.ANNOUNCE
 	)
 	mpls.cidr = CIDR(ipmask.ton(),ipmask.mask)
 

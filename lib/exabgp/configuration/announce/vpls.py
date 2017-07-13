@@ -1,13 +1,23 @@
 # encoding: utf-8
 """
-vpls.py
+announce/vpn.py
 
-Created by Thomas Mangin on 2015-06-05.
+Created by Thomas Mangin on 2017-07-09.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.configuration.core import Section
+from exabgp.rib.change import Change
+
+from exabgp.bgp.message import OUT
+
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+
+from exabgp.bgp.message.update.nlri import VPLS
+from exabgp.bgp.message.update.attribute import Attributes
+
+from exabgp.configuration.announce import ParseAnnounce
 
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import origin
@@ -35,7 +45,7 @@ from exabgp.configuration.l2vpn.parser import vpls_base
 from exabgp.configuration.l2vpn.parser import next_hop
 
 
-class ParseVPLS (Section):
+class AnnounceVPLS (ParseAnnounce):
 	definition = [
 		'endpoint <vpls endpoint id; integer>',
 		'base <label base; integer>',
@@ -44,7 +54,7 @@ class ParseVPLS (Section):
 
 		'next-hop <ip>',
 		'med <16 bits number>',
-		'route-distinguisher|rd <ipv4>:<port>|<16bits number>:<32bits number>|<32bits number>:<16bits number>',
+		'rd <ipv4>:<port>|<16bits number>:<32bits number>|<32bits number>:<16bits number>',
 		'origin IGP|EGP|INCOMPLETE',
 		'as-path [ <asn>.. ]',
 		'local-preference <16 bits number>',
@@ -62,7 +72,7 @@ class ParseVPLS (Section):
 	]
 
 	syntax = \
-		'vpls {\n  %s\n}' % ' ;\n  '.join(definition)
+		'vpls %s\n' % '  '.join(definition)
 
 	known = {
 		'rd':                 route_distinguisher,
@@ -123,25 +133,58 @@ class ParseVPLS (Section):
 		'base':                'base',
 	}
 
-	name = 'l2vpn/vpls'
+	name = 'vpls'
+	afi = None
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Section.__init__(self,tokeniser,scope,error,logger)
+		ParseAnnounce.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
-		pass
-
-	def pre (self):
-		self.scope.append_route(vpls(self.tokeniser.iterate))
-		return True
-
-	def post (self):
-		if not self._check():
-			return False
 		return True
 
 	def _check (self):
-		feedback = self.scope.get_route().feedback()
-		if feedback:
-			return self.error.set(feedback)
+		if not self.check(self.scope.get(self.name),self.afi):
+			return self.error.set(self.syntax)
 		return True
+
+	@staticmethod
+	def check (change,afi):
+		# if change.nlri.nexthop is NoNextHop \
+		# 	and change.nlri.action == OUT.ANNOUNCE \
+		# 	and change.nlri.afi == afi \
+		# 	and change.nlri.safi in (SAFI.unicast,SAFI.multicast):
+		# 	return False
+		return True
+
+
+def l2vpn_vpls (tokeniser,afi,safi):
+	change = Change(
+		VPLS(None,None,None,None,None),
+		Attributes()
+	)
+
+	while True:
+		command = tokeniser()
+
+		if not command:
+			break
+
+		action = AnnounceVPLS.action[command]
+
+		if 'nlri-set' in action:
+			change.nlri.assign(AnnounceVPLS.assign[command],AnnounceVPLS.known[command](tokeniser))
+		elif 'attribute-add' in action:
+			change.attributes.add(AnnounceVPLS.known[command](tokeniser))
+		elif action == 'nexthop-and-attribute':
+			nexthop,attribute = AnnounceVPLS.known[command](tokeniser)
+			change.nlri.nexthop = nexthop
+			change.attributes.add(attribute)
+		else:
+			raise ValueError('vpls: unknown command "%s"' % command)
+
+	return [change,]
+
+
+@ParseAnnounce.register('vpls','extend-name','l2vpn')
+def vpls_v4 (tokeniser):
+	return l2vpn_vpls(tokeniser,AFI.l2vpn,SAFI.vpls)

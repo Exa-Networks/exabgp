@@ -93,6 +93,8 @@ class Section (Error):
 					self.scope.nlri_nexthop(name,ip)
 				if attribute:
 					self.scope.attribute_add(name,attribute)
+			elif action == 'append-route':
+				self.scope.extend_routes(insert)
 			elif action == 'nop':
 				pass
 			else:

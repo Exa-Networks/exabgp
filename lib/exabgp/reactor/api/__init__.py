@@ -58,7 +58,8 @@ class API (Command):
 		if self.configuration.scope.location():
 			return []
 
-		changes = self.configuration.scope.pop('routes',[])
+		self.configuration.scope.to_context()
+		changes = self.configuration.scope.pop_routes()
 		return changes
 
 	def api_flow (self, command):
@@ -71,18 +72,19 @@ class API (Command):
 		if self.configuration.scope.location():
 			return []
 
-		self.configuration.scope.to_context('route')
-		changes = self.configuration.scope.pop('routes',[])
+		self.configuration.scope.to_context()
+		changes = self.configuration.scope.pop_routes()
 		return changes
 
 	def api_vpls (self, command):
 		action, line = command.split(' ',1)
 
-		self.configuration.vpls.clear()
+		self.configuration.l2vpn.clear()
 		if not self.configuration.partial('l2vpn',line):
 			return []
 
-		changes = self.configuration.scope.pop('routes',[])
+		self.configuration.scope.to_context()
+		changes = self.configuration.scope.pop('l2vpn')
 		return changes
 
 	def api_attributes (self, command, peers):
@@ -92,7 +94,8 @@ class API (Command):
 		if not self.configuration.partial('static',line):
 			return []
 
-		changes = self.configuration.scope.pop('routes',[])
+		self.configuration.scope.to_context()
+		changes = self.configuration.scope.pop_routes()
 		return changes
 
 	def api_refresh (self, command):

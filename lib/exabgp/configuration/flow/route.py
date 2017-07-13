@@ -62,19 +62,13 @@ class ParseFlowRoute (Section):
 		pass
 
 	def pre (self):
-		self.scope.to_context()
-		self.scope.set(self.name,flow(self.tokeniser.iterate))
+		self.scope.append_route(flow(None))
 		return True
 
 	def post (self):
-		route = self.scope.pop(self.name)
-
-		# if route.nlri.has_rd(): # ???
+		route = self.scope.get_route()
 		if route.nlri.rd is not RouteDistinguisher.NORD:
 			route.nlri.safi = SAFI.flow_vpn
-
-		if route:
-			self.scope.append('routes',route)
 		return True
 
 	def _check (self,change):

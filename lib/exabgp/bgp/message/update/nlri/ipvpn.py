@@ -52,17 +52,16 @@ class IPVPN (Label):
 		return instance
 
 	def extensive (self):
-		return "%s%s%s%s%s" % (self.prefix(),str(self.labels),str(self.rd),str(self.path_info),str(self.rd))
+		return "%s%s" % (Label.extensive(self),str(self.rd))
+
+	def __str__ (self):
+		return self.extensive()
+
+	def __repr__ (self):
+		return self.extensive()
 
 	def __len__ (self):
 		return Label.__len__(self) + len(self.rd)
-
-	def __str__ (self):
-		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
-		return "%s%s" % (self.extensive(),nexthop)
-
-	def __repr__ (self):
-		return str(self)
 
 	def __eq__ (self, other):
 		return \

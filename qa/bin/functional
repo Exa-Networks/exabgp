@@ -58,7 +58,7 @@ optional arguments:
   --help,           -h          this page
   --dry,            -d          show what command would be run but does nothing
   --port <port>,    -p <port>   base port to use [default: 1790]
-  --timeout <time>, -t <time>   timeout for test failure [default: 120]
+  --timeout <time>, -t <time>   timeout for test failure [default: 20]
   --steps <steps>,  -s <steps>  number of test to run simultaneously [default: 0]
 """
 
@@ -83,6 +83,7 @@ export exabgp_debug_defensive=true
 """
 
 OPTIONS = docopt.docopt(USAGE, help=False)
+
 
 class Color (object):
 	NONE     = '\033[0m' + '\033[0m'   # NONE
@@ -164,6 +165,10 @@ class CI (dict):
 	@classmethod
 	def get (cls,k):
 		return cls._content.get(k,None)
+
+	@classmethod
+	def reset (cls,k):
+		cls._content[k]['status'] = Color.NONE
 
 	@classmethod
 	def passed (cls,k):
@@ -305,51 +310,56 @@ class Command (object):
 			'exa': {},
 		}
 
-		try:
-			print('\nchecking\n--------\n')
+		print('\nchecking\n--------\n')
 
-			for name in running:
-				test = CI.get(name)
-				processes['bgp'][name] = subprocess.Popen([sys.argv[0],'server',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-				test['status'] = Color.STARTING
-				CI.display()
-				time.sleep(0.05)
+		for name in running:
+			test = CI.get(name)
+			processes['bgp'][name] = subprocess.Popen([sys.argv[0],'server',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			test['status'] = Color.STARTING
+			CI.display()
+			time.sleep(0.05)
 
-			time.sleep(0.5)
-			names = list(reversed(running))
+		time.sleep(0.5)
+		names = list(reversed(running))
 
-			for name in names:
-				test = CI.get(name)
-				processes['exa'][name] = subprocess.Popen([sys.argv[0],'client',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-				test['status'] = Color.READY
-				CI.display()
-				time.sleep(0.2)
+		for name in names:
+			test = CI.get(name)
+			processes['exa'][name] = subprocess.Popen([sys.argv[0],'client',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			test['status'] = Color.READY
+			CI.display()
+			time.sleep(0.2)
 
-			while names:
-				CI.display()
-				for name in list(names):
+		exit_time = time.time() + int(OPTIONS['--timeout'])
+
+		while names and time.time() < exit_time:
+			CI.display()
+			for name in list(names):
+				try:
+					signal.alarm(1)
 					rbgp = processes['bgp'][name].poll()
-					rexa = processes['exa'][name].poll()
-					if (rbgp,rexa) != (None,None):
-						names.remove(name)
-						try:
-							stdout,stderr = processes['bgp'][name].communicate()
-							if 'successful' in stdout:
-								CI.passed(name)
-							else:
-								CI.failed(name)
-						except (IOError,OSError,ValueError):
-							if name in names:
-								names.remove(name)
-				time.sleep(0.5)
-			print('\n')
-		except Alarm:
-			print('\nfailed, a test is taking more than the allocated time\n')
+					signal.alarm(0)
+				except Alarm:
+					continue
+				if rbgp is None:
+					continue
+				names.remove(name)
+				try:
+					stdout,stderr = processes['bgp'][name].communicate()
+					if 'successful' in stdout:
+						CI.passed(name)
+					else:
+						CI.failed(name)
+				except (IOError,OSError,ValueError):
+					names.remove(name)
+			time.sleep(0.2)
+
+		for name in names:
+			CI.reset(name)
 
 		if not CI.completed:
-			print('sending alarm signal to\n-----------------------')
-
-			for name in list(processes):
+			for name in names:
+				print('sending alarm signal to %s' % name)
+				print('------------------------%s' % '-'*len(name))
 				try:
 					processes['bgp'][name].send_signal(signal.SIGTERM)
 				except OSError:  # No such process, Errno 3
@@ -359,18 +369,28 @@ class Command (object):
 				except OSError:  # No such process, Errno 3
 					pass
 				try:
+					signal.alarm(1)
 					stdout,stderr = processes['bgp'][name].communicate()
+					signal.alarm(0)
+					print('\nbgp stdout\n------\n%s' % stdout)
+					print('\nbgp stderr\n------\n%s' % stdout)
 				except ValueError:  # I/O operation on closed file
 					continue
-				print('\nbgp stdout %s\n\n------' % stdout)
-				print('\nbgp stderr %s\n\n------' % stderr)
+				except Alarm:
+					pass
 				try:
+					signal.alarm(1)
 					stdout,stderr = processes['exa'][name].communicate()
+					signal.alarm(0)
+					print('\nexa stdout\n------\n%s' % stdout)
+					print('\nexa stderr\n------\n%s' % stdout)
 				except ValueError:  # I/O operation on closed file
 					continue
-				print('\nexa stdout %s\n\n------' % stdout)
-				print('\nexa stderr %s\n\n------' % stderr)
+				except Alarm:
+					pass
 
+		CI.display()
+		print('\n')
 		return CI.completed
 
 
@@ -410,10 +430,6 @@ if __name__ == '__main__':
 			sys.exit(os.system(command))
 		sys.exit(0)
 
-	# usage without parameters
-	signal.signal(signal.SIGALRM, alarm_handler)
-	signal.alarm(int(OPTIONS['--timeout']))
-
 	if OPTIONS['server']:
 		command = Command.server(OPTIONS['<test>'])
 		print('> ' + command)
@@ -435,7 +451,6 @@ if __name__ == '__main__':
 		running, to_run = to_run[:chunk], to_run[chunk:]
 		success = Command.dispatch(running)
 
-	CI.display()
 	sys.exit(0 if success else 1)
 
 	print(USAGE)

@@ -32,7 +32,7 @@ class ParseAnnounce (Section):
 		self._split()
 		routes = self.scope.pop(self.name)
 		if routes:
-			self.scope.extend('routes',routes)
+			self.scope.extend_routes(routes)
 		return True
 
 	@staticmethod
@@ -83,9 +83,9 @@ class ParseAnnounce (Section):
 			yield Change(nlri,last.attributes)
 
 	def _split (self):
-		for route in self.scope.pop(self.name,[]):
+		for route in self.scope.pop_routes():
 			for splat in self.split(route):
-				self.scope.append(self.name,splat)
+				self.scope.append_route(splat)
 
 
 class SectionAnnounce (ParseAnnounce):
@@ -98,20 +98,18 @@ class SectionAnnounce (ParseAnnounce):
 		return True
 
 	def pre (self):
-		self.scope.to_context()
 		return True
 
 	def post (self):
 		routes = self.scope.pop('routes',[])
 		self.scope.pop()
-		self.scope.to_context()
 		if routes:
 			self.scope.extend('routes',routes)
 		self.scope.pop(self.name)
 		return True
 
 
-class ParseIPv4 (ParseAnnounce):
+class AnnounceIPv4 (ParseAnnounce):
 	name = 'ipv4'
 	afi = AFI.ipv4
 
@@ -119,9 +117,17 @@ class ParseIPv4 (ParseAnnounce):
 		return True
 
 
-class ParseIPv6 (ParseAnnounce):
+class AnnounceIPv6 (ParseAnnounce):
 	name = 'ipv6'
 	afi = AFI.ipv6
+
+	def clear (self):
+		return True
+
+
+class AnnounceL2VPN (ParseAnnounce):
+	name = 'l2vpn'
+	afi = AFI.l2vpn
 
 	def clear (self):
 		return True

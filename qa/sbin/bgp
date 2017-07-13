@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-cache.py
+bgp
 
 Created by Thomas Mangin
 Copyright (c) 2013-2017 Exa Networks. All rights reserved.
@@ -323,7 +323,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 						self.announce('received %d (%1s%s):' % (self.counter,self.options['letter'],self.step), announcement)
 					self.check_signal()
 				else:
-					flushed(announcement)
 					if self.raw:
 						self.announce('received %d (%1s%s):' % (self.counter,self.options['letter'],self.step),'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body)))
 					else:

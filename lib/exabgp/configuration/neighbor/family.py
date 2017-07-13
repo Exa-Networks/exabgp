@@ -83,7 +83,6 @@ class ParseFamily (Section):
 		self._seen = []
 
 	def pre (self):
-		self.scope.to_context()
 		self.clear()
 		return True
 

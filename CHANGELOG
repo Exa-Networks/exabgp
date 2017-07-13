@@ -28,6 +28,7 @@ Version 4.0.2
  * Change: rewrote may part of the code (reactor/async, log, API, ...)
  * Change: renamed exabgp.api.file to exabgp.api.cli - now a boolean, enabled by default
  * Change: --folder option now --root, and not need when installed in /
+ * Change: deprecated route-distinguisher only rd will now be parsed
 
 Version 4.0.1
  * Change: makes python3 the default interpreter

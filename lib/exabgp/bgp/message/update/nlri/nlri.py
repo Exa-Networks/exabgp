@@ -74,14 +74,6 @@ class NLRI (Family):
 		raise Exception('unimplemented in NLRI children class')
 
 	@classmethod
-	def has_label (cls):
-		return False
-
-	@classmethod
-	def has_rd (cls):
-		return False
-
-	@classmethod
 	def register (cls, afi, safi, force=False):
 		def register_nlri (klass):
 			new = (AFI.create(afi),SAFI.create(safi))
@@ -114,5 +106,5 @@ class NLRI (Family):
 
 		key = '%s/%s' % (a, s)
 		if key in cls.registered_nlri:
-			return cls.registered_nlri[key].unpack_nlri(afi,safi,data,action,addpath)
+			return cls.registered_nlri[key].unpack_nlri(a,s,data,action,addpath)
 		raise Notify(3,0,'trying to decode unknown family %s/%s' % (a,s))

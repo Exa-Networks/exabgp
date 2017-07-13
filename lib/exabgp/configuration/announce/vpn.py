@@ -21,31 +21,31 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
-from exabgp.configuration.announce.label import ParseLabel
+from exabgp.configuration.announce.label import AnnounceLabel
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import route_distinguisher
 
 
-class ParseVPN (ParseAnnounce):
+class AnnounceVPN (ParseAnnounce):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n',
-	] + ParseLabel.definition
+	] + AnnounceLabel.definition
 
 	syntax = \
 		'<safi> <ip>/<netmask> { ' \
 		'\n   ' + ' ;\n   '.join(definition) + '\n}'
 
-	known = dict(ParseLabel.known,**{
+	known = dict(AnnounceLabel.known,**{
 		'rd':                   route_distinguisher,
 	})
 
-	action = dict(ParseLabel.action,**{
+	action = dict(AnnounceLabel.action,**{
 		'rd':                  'nlri-set',
 	})
 
-	assign = dict(ParseLabel.assign,**{
+	assign = dict(AnnounceLabel.assign,**{
 		'rd':                  'rd',
 	})
 
@@ -90,14 +90,14 @@ def ip_vpn (tokeniser,afi,safi):
 		if not command:
 			break
 
-		action = ParseVPN.action.get(command,'')
+		action = AnnounceVPN.action.get(command,'')
 
 		if action == 'attribute-add':
-			change.attributes.add(ParseVPN.known[command](tokeniser))
+			change.attributes.add(AnnounceVPN.known[command](tokeniser))
 		elif action == 'nlri-set':
-			change.nlri.assign(ParseVPN.assign[command],ParseVPN.known[command](tokeniser))
+			change.nlri.assign(AnnounceVPN.assign[command],AnnounceVPN.known[command](tokeniser))
 		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = ParseVPN.known[command](tokeniser)
+			nexthop,attribute = AnnounceVPN.known[command](tokeniser)
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:

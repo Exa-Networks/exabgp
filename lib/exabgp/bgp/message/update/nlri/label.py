@@ -35,6 +35,15 @@ class Label (INET):
 			return 'labelled nlri next-hop missing'
 		return ''
 
+	def extensive (self):
+		return '%s%s' % (INET.extensive(self),self.labels)
+
+	def __str__ (self):
+		return self.extensive()
+
+	def __repr__ (self):
+		return self.extensive()
+
 	def __len__ (self):
 		return INET.__len__(self) + len(self.labels)
 
@@ -45,10 +54,6 @@ class Label (INET):
 
 	def __hash__ (self):
 		return hash(self.pack())
-
-	@classmethod
-	def has_label (cls):
-		return True
 
 	def prefix (self):
 		return "%s%s" % (INET.prefix(self),str(self.labels))

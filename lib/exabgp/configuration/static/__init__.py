@@ -39,17 +39,13 @@ class ParseStatic (ParseStaticRoute):
 		return True
 
 	def pre (self):
-		self.scope.to_context()
 		return True
 
 	def post (self):
-		routes = self.scope.pop(self.name,[])
-		if routes:
-			self.scope.extend('routes',routes)
 		return True
 
 
-@ParseStatic.register('route','extend-name')
+@ParseStatic.register('route','append-route')
 def route (tokeniser):
 	ipmask = prefix(tokeniser)
 
@@ -89,7 +85,7 @@ def route (tokeniser):
 	return list(ParseStatic.split(change))
 
 
-@ParseStatic.register('attributes','extend-name')
+@ParseStatic.register('attributes','append-route')
 def attributes (tokeniser):
 	ipmask = prefix(lambda: tokeniser.tokens[-1])
 

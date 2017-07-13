@@ -29,8 +29,9 @@ from exabgp.configuration.neighbor.family import ParseFamily
 from exabgp.configuration.neighbor.family import ParseAddPath
 from exabgp.configuration.capability import ParseCapability
 from exabgp.configuration.announce import SectionAnnounce
-from exabgp.configuration.announce import ParseIPv4
-from exabgp.configuration.announce import ParseIPv6
+from exabgp.configuration.announce import AnnounceIPv4
+from exabgp.configuration.announce import AnnounceIPv6
+from exabgp.configuration.announce import AnnounceL2VPN
 from exabgp.configuration.static import ParseStatic
 from exabgp.configuration.static import ParseStaticRoute
 from exabgp.configuration.flow import ParseFlow
@@ -45,11 +46,12 @@ from exabgp.configuration.operational import ParseOperational
 from exabgp.configuration.environment import environment
 
 # for registration
-from exabgp.configuration.announce.ip import ParseIP
-from exabgp.configuration.announce.path import ParsePath
-from exabgp.configuration.announce.label import ParseLabel
-from exabgp.configuration.announce.vpn import ParseVPN
-from exabgp.configuration.announce.flow import ParseFlow
+from exabgp.configuration.announce.ip import AnnounceIP
+from exabgp.configuration.announce.path import AnnouncePath
+from exabgp.configuration.announce.label import AnnounceLabel
+from exabgp.configuration.announce.vpn import AnnounceVPN
+from exabgp.configuration.announce.flow import AnnounceFlow
+from exabgp.configuration.announce.vpls import AnnounceVPLS
 
 
 if sys.version_info[0] >= 3:
@@ -134,8 +136,9 @@ class Configuration (_Configuration):
 		self.static              = ParseStatic           (*params)
 		self.static_route        = ParseStaticRoute      (*params)
 		self.announce            = SectionAnnounce       (*params)
-		self.announce_ipv4       = ParseIPv4             (*params)
-		self.announce_ipv6       = ParseIPv6             (*params)
+		self.announce_ipv4       = AnnounceIPv4          (*params)
+		self.announce_ipv6       = AnnounceIPv6          (*params)
+		self.announce_l2vpn      = AnnounceL2VPN         (*params)
 		self.flow                = ParseFlow             (*params)
 		self.flow_route          = ParseFlowRoute        (*params)
 		self.flow_match          = ParseFlowMatch        (*params)
@@ -243,6 +246,7 @@ class Configuration (_Configuration):
 				'sections': {
 					'ipv4': self.announce_ipv4.name,
 					'ipv6': self.announce_ipv6.name,
+					'l2vpn': self.announce_l2vpn.name,
 				},
 			},
 			self.announce_ipv4.name: {
@@ -254,6 +258,12 @@ class Configuration (_Configuration):
 			self.announce_ipv6.name: {
 				'class':    self.announce_ipv6,
 				'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn'],
+				'sections': {
+				},
+			},
+			self.announce_l2vpn.name: {
+				'class':    self.announce_l2vpn,
+				'commands': ['vpls',],
 				'sections': {
 				},
 			},
@@ -351,6 +361,7 @@ class Configuration (_Configuration):
 		self.api_receive.clear()
 		self.announce_ipv6.clear()
 		self.announce_ipv4.clear()
+		self.announce_l2vpn.clear()
 		self.announce.clear()
 		self.static.clear()
 		self.static_route.clear()
@@ -489,16 +500,28 @@ class Configuration (_Configuration):
 			return self.error.set('section %s is invalid in %s, %s' % (location,name,self.scope.location()))
 
 		self.scope.enter(location)
-		if not self.section(self._structure[name]['sections'][location]):
+		self.scope.to_context()
+
+		class_name = self._structure[name]['sections'][location]
+		instance = self._structure[class_name].get('class',None)
+		if not instance:
+			raise RuntimeError('This should not be happening, debug time !')
+
+		if not instance.pre():
 			return False
-		return True
 
-	def _leave (self):
+		if not self.dispatch(self._structure[name]['sections'][location]):
+			return False
+
+		if not instance.post():
+			return False
+
 		left = self.scope.leave()
-		self.logger.debug("< %-16s | %s" % (left,self.tokeniser.params()),'configuration')
-
 		if not left:
 			return self.error.set('closing too many parenthesis')
+		self.scope.to_context()
+
+		self.logger.debug("< %-16s | %s" % (left,self.tokeniser.params()),'configuration')
 		return True
 
 	def _run (self,name):
@@ -524,7 +547,7 @@ class Configuration (_Configuration):
 				return False
 
 			if self.tokeniser.end == '}':
-				return self._leave()
+				return True
 
 			if not self.tokeniser.end:  # finished
 				return True
@@ -536,14 +559,7 @@ class Configuration (_Configuration):
 		if name not in self._structure:
 			return self.error.set('option %s is not allowed here' % name)
 
-		instance = self._structure[name].get('class',None)
-
-		if not instance:
-			raise RuntimeError('This should not be happening, debug time !')
-
-		return instance.pre() \
-			and self.dispatch(name) \
-			and instance.post()
+		return self.dispatch(name)
 
 	def run (self, name, command):
 		if command not in self._structure[name]['commands']:
