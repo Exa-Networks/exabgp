@@ -95,7 +95,7 @@ class JSON (object):
 	__neighbor = '''\
 "neighbor": {
 	"address": { "local": "%s", "peer": "%s" },
-	"asn": { "local": "%s", "peer": "%s" }
+	"asn": { "local": %s, "peer": %s }
 	%s%s%s%s
 }'''.replace('\t','').replace('\n',' ')
 
