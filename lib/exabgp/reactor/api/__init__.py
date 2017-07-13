@@ -44,7 +44,7 @@ class API (Command):
 				# XXX: should we not test the return value ?
 				self.callback['text'][registered](self,reactor,service,command)
 				return True
-		reactor.answer(service,'error')
+		reactor.procceses.answer(service,'error')
 		self.logger.warning('command from process not understood : %s' % command,'api')
 		return False
 
