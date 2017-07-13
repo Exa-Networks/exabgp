@@ -7,6 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.util import character
@@ -36,7 +37,7 @@ class Label (INET):
 		return ''
 
 	def extensive (self):
-		return '%s%s' % (INET.extensive(self),self.labels)
+		return "%s%s" % (self.prefix(),'' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)
 
 	def __str__ (self):
 		return self.extensive()
@@ -56,7 +57,7 @@ class Label (INET):
 		return hash(self.pack())
 
 	def prefix (self):
-		return "%s%s" % (INET.prefix(self),str(self.labels))
+		return "%s%s" % (INET.prefix(self),self.labels)
 
 	def pack (self, negotiated=None):
 		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''

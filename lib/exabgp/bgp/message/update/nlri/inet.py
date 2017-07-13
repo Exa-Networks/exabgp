@@ -132,7 +132,6 @@ class INET (NLRI):
 			nlri.rd = RouteDistinguisher(rd)
 
 		if mask < 0:
-			import pdb; pdb.set_trace()
 			raise Notify(3,10,'invalid length in NLRI prefix')
 
 		if not bgp and mask:
