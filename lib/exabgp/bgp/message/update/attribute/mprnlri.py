@@ -111,7 +111,7 @@ class MPRNLRI (Attribute,Family):
 
 		# we do not want to accept unknown families
 		if negotiated and (afi,safi) not in negotiated.families:
-			raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
+			raise Notify(3,0,'presented a non-negotiated family %s/%s' % (afi,safi))
 
 		# -- Reading length of next-hop
 		len_nh = ordinal(data[offset])

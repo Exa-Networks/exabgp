@@ -133,7 +133,7 @@ class Path (object):
 			sys.exit('could not find tests in the qa/ci folder')
 
 		if not os.path.isfile(cls.EXABGP):
-			sys.exit("could not find exabgp")
+			sys.exit('could not find exabgp')
 
 		if not os.path.isfile(cls.BGP):
 			sys.exit('could not find the sequence daemon')
@@ -280,7 +280,7 @@ class Command (object):
 			'confs': ' \\\n    '.join(test['confs']),
 		}
 
-		return "env \\\n  %(env)s \\\n  %(exabgp)s -d -p \\\n    %(confs)s" % config
+		return 'env \\\n  %(env)s \\\n  %(exabgp)s -d -p \\\n    %(confs)s' % config
 
 	@staticmethod
 	def server (index):
@@ -300,7 +300,7 @@ class Command (object):
 			'msg': test['msg'],
 		}
 
-		return "env \\\n  %(env)s \\\n  %(bgp)s \\\n    %(msg)s" % config
+		return 'env \\\n  %(env)s \\\n  %(bgp)s \\\n    %(msg)s' % config
 
 	@staticmethod
 	def dispatch (running):
@@ -413,12 +413,12 @@ if __name__ == '__main__':
 		if not files:
 			sys.exit('no such test')
 		editor = os.environ.get('EDITOR','vi')
-		os.system("%s %s" % (editor,' '.join(files)))
+		os.system('%s %s' % (editor,' '.join(files)))
 		sys.exit(0)
 
 	if OPTIONS['decode']:
 		test = CI.get(OPTIONS['<test>'])
-		command = "%s -d %s --decode %s" % (Path.EXABGP,test['confs'][0],OPTIONS['<payload>'])
+		command = '%s -d %s --decode "%s"' % (Path.EXABGP,test['confs'][0],OPTIONS['<payload>'])
 		print('> %s' % command)
 		os.system(command)
 		sys.exit(0)
