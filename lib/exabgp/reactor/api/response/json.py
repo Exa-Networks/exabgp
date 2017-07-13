@@ -261,7 +261,8 @@ class JSON (object):
 		attributes = '' if not update.attributes else '"attribute": { %s }' % update.attributes.json()
 		if not attributes or not nlri:
 			update = '"update": { %s%s }' % (attributes,nlri)
-		update = '"update": { %s, %s }' % (attributes,nlri)
+		else:
+			update = '"update": { %s, %s }' % (attributes,nlri)
 
 		return {
 			'message': '{ %s }' % update
