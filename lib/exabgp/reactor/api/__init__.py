@@ -41,9 +41,7 @@ class API (Command):
 	def text (self, reactor, service, command):
 		for registered in self.functions:
 			if registered in command:
-				# XXX: should we not test the return value ?
-				self.callback['text'][registered](self,reactor,service,command)
-				return True
+				return self.callback['text'][registered](self,reactor,service,command)
 		reactor.processes.answer(service,'error')
 		self.logger.warning('command from process not understood : %s' % command,'api')
 		return False

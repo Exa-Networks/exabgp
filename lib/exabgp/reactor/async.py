@@ -20,7 +20,7 @@ class ASYNC (object):
 		return len(self._async) > 0
 
 	def schedule (self, uid, command, callback):
-		self.logger.debug('async | %s' % command,'reactor')
+		self.logger.debug('async | %s | %s' % (uid,command),'reactor')
 		if self._async:
 			self._async[0].append((uid,callback))
 		else:
@@ -52,6 +52,12 @@ class ASYNC (object):
 				running.append((uid,generator))
 			except StopIteration:
 				pass
+			except KeyboardInterrupt:
+				raise
+			except Exception as exc:
+				self.logger.error('async | %s | problem with function' % uid,'reactor')
+				for line in str(exc).split('\n'):
+					self.logger.error('async | %s | %s' % (uid,line),'reactor')
 		self._async.pop()
 		if running:
 			self._async.append(running)
