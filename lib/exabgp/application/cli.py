@@ -50,6 +50,7 @@ def main ():
 	etc = root + '/etc/exabgp'
 	envfile = get_envfile(options,etc)
 	env = get_env(envfile)
+	pipename = env['api']['pipename']
 
 	if options['--help']:
 		sys.stdout.write(usage)
@@ -65,12 +66,12 @@ def main ():
 
 	pipes = named_pipe(root)
 	if len(pipes) != 1:
-		sys.stdout.write('Could not find ExaBGP\'s named pipes (exabgp.in and exabgp.out) for the cli in any of ' + ', '.join(pipes))
+		sys.stdout.write('Could not find ExaBGP\'s named pipes (%s.in and %s.out) for the cli in any of ' % (pipename,pipename) + ', '.join(pipes))
 		sys.stdout.flush()
 		sys.exit(1)
 
-	send = pipes[0] + 'exabgp.in'
-	recv = pipes[0] + 'exabgp.out'
+	send = pipes[0] + pipename + '.in'
+	recv = pipes[0] + pipename + '.out'
 
 	if not check_fifo(send):
 		sys.stdout.write('could not find write named pipe to connect to ExaBGP')

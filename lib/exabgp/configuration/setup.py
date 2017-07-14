@@ -273,6 +273,12 @@ environment.configuration = {
 			'value': 'true',
 			'help':  'should we create a named pipe for the cli',
 		},
+		'pipename':  {
+			'read':  environment.unquote,
+			'write': environment.quote,
+			'value': 'exabgp',
+			'help':  'name to be used for the exabgp pipe',
+		},
 	},
 	'reactor':  {
 		'speed':  {

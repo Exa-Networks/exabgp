@@ -23,6 +23,16 @@ from exabgp.reactor.network.error import error
 kb = 1024
 mb = kb*1024
 
+
+def env (app, section, name, default):
+	r = os.environ.get('%s.%s.%s' % (app,section,name), None)
+	if r is None:
+		r = os.environ.get('%s_%s_%s' % (app,section,name), None)
+	if r is None:
+		return default
+	return r
+
+
 def check_fifo (name):
 	try:
 		if not stat.S_ISFIFO(os.stat(name).st_mode):
@@ -48,8 +58,8 @@ class Control (object):
 	terminating = False
 
 	def __init__ (self, location):
-		self.send = location + 'exabgp.out'
-		self.recv = location + 'exabgp.in'
+		self.send = location + env('exabgp','api','pipename','exabgp') + '.out'
+		self.recv = location + env('exabgp','api','pipename','exabgp') + '.in'
 		self.r_pipe = None
 
 	def init (self):
