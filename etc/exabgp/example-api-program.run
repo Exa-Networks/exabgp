@@ -94,12 +94,11 @@ def write (data='', left=''):
 		if exc.args[0] in errno_block:
 			return not not left
 		elif exc.args[0] in errno_fatal:
-			# this may not send anything ...
-			print >> sys.stderr, "fatal error while reading on stdin : %s" % str(exc)
+			print >> sys.stderr, "fatal error while writing on stdout : %s" % str(exc)
 			sys.stderr.flush()
 			sys.exit(1)
 		else:
-			print >> sys.stderr, "unknown error while reading on stdin : %s" % str(exc)
+			print >> sys.stderr, "unknown error while writing on stdout : %s" % str(exc)
 			sys.stderr.flush()
 			sys.exit(1)
 
