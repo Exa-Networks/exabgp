@@ -49,12 +49,16 @@ def __exit (memory, code):
 
 def named_pipe (root):
 	locations = [
+		'/run/exabgp/',
 		'/run/%d/' % os.getuid(),
 		'/run/',
+		'/var/run/exabgp/',
 		'/var/run/%d/' % os.getuid(),
 		'/var/run/',
+		root + '/run/exabgp/',
 		root + '/run/%d/' % os.getuid(),
 		root + '/run/',
+		root + '/var/run/exabgp/',
 		root + '/var/run/%d/' % os.getuid(),
 		root + '/var/run/',
 	]
