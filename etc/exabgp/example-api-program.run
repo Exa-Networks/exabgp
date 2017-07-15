@@ -83,14 +83,17 @@ def _reader ():
 reader = _reader().next
 
 
-def write (data='', left=''):
+def write (data='', memory=['',]):
+	left = memory.pop()
 	left += data
 	try:
 		if left:
 			number = os.write(sys.stdout.fileno(),left)
 			left = left[number:]
 			sys.stdout.flush()
+		memory.append(left)
 	except IOError as exc:
+		memory.append(left)
 		if exc.args[0] in errno_block:
 			return not not left
 		elif exc.args[0] in errno_fatal:
