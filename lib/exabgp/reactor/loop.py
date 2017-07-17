@@ -137,13 +137,13 @@ class Reactor (object):
 			return False
 
 		if validate:  # only validate configuration
-			self.logger.debug('','configuration')
-			self.logger.debug('parsed Neighbors, un-templated','configuration')
-			self.logger.debug('------------------------------','configuration')
-			self.logger.debug('','configuration')
+			self.logger.warning('','configuration')
+			self.logger.warning('parsed Neighbors, un-templated','configuration')
+			self.logger.warning('------------------------------','configuration')
+			self.logger.warning('','configuration')
 			for key in self.peers:
-				self.logger.debug(str(self.peers[key].neighbor),'configuration')
-				self.logger.debug('','configuration')
+				self.logger.warning(str(self.peers[key].neighbor),'configuration')
+				self.logger.warning('','configuration')
 			return True
 
 		for neighbor in self.configuration.neighbors.values():
