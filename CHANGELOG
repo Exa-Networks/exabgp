@@ -6,6 +6,7 @@ Version explained:
 Version 4.0.3
  * Fix: MD5 issue with python3
  * Fix: control of logging for timer events
+ * Fix: possible packet data not being reset in update generation
 
 Version 4.0.2
  * Feature: exabgpcli
