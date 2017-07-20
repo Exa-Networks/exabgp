@@ -473,11 +473,9 @@ class Peer (object):
 
 				if new_routes:
 					try:
-						count = 20
-						while count:
+						for _ in range(25):
 							# This can raise a NetworkError
 							six.next(new_routes)
-							count -= 1
 					except StopIteration:
 						new_routes = None
 						include_withdraw = True
