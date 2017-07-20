@@ -167,6 +167,14 @@ class OutgoingRIB (Cache):
 			new_attr[change_attr_index] = change.attributes
 
 	def updates (self, grouped):
+		attr_af_nlri = self._new_attr_af_nlri
+		new_attr = self._new_attribute
+
+		# Get ready to accept more data
+		self._new_nlri = {}
+		self._new_attr_af_nlri = {}
+		self._new_attribute = {}
+
 		# if we need to perform a route-refresh, sending the message
 		# to indicate the start of the announcements
 
@@ -177,9 +185,6 @@ class OutgoingRIB (Cache):
 			yield Update(RouteRefresh(afi,safi,RouteRefresh.start),Attributes())
 
 		# generating Updates from what is in the RIB
-
-		attr_af_nlri = self._new_attr_af_nlri
-		new_attr = self._new_attribute
 
 		for attr_index,per_family in attr_af_nlri.items():
 			for family, changes in per_family.items():
@@ -196,12 +201,6 @@ class OutgoingRIB (Cache):
 				else:
 					for change in changes.values():
 						yield Update([change.nlri,], attributes)
-
-		# Update were send, clear the data we used
-
-		self._new_nlri = {}
-		self._new_attr_af_nlri = {}
-		self._new_attribute = {}
 
 		# If we are performing a route-refresh, indicating that the
 		# update were all sent
