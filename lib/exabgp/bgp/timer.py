@@ -24,8 +24,8 @@ class ReceiveTimer (object):
 		self.session = session
 
 		self.holdtime = holdtime
+		self.last_print = time.time()
 		self.last_read = time.time()
-		self.last_print = 0
 
 		self.code = code
 		self.subcode = subcode
@@ -37,7 +37,7 @@ class ReceiveTimer (object):
 		if self.holdtime:
 			left = int(self.last_read  + self.holdtime - time.time())
 			if self.last_print != left:
-				self.logger.debug('receive-timer %d second(s) left' % left,source=self.session())
+				self.logger.debug('receive-timer %d second(s) left' % left,source='ka-'+self.session())
 				self.last_print = left
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
@@ -51,8 +51,8 @@ class SendTimer (object):
 		self.session = session
 
 		self.keepalive = holdtime.keepalive()
+		self.last_print = int(time.time())
 		self.last_sent = int(time.time())
-		self.last_print = 0
 
 	def need_ka (self):
 		if not self.keepalive:
@@ -62,7 +62,7 @@ class SendTimer (object):
 		left = self.last_sent + self.keepalive - now
 
 		if now != self.last_print:
-			self.logger.debug('send-timer %d second(s) left' % left,source=self.session())
+			self.logger.debug('send-timer %d second(s) left' % left,source='ka-'+self.session())
 			self.last_print = now
 
 		if left <= 0:
