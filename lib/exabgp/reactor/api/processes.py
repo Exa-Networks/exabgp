@@ -200,7 +200,7 @@ class Processes (object):
 						# Calling next() on Linux and OSX works perfectly well
 						# but not on OpenBSD where it always raise StopIteration
 						# and only readline() works
-						buf = str_ascii(proc.stdout.readline())
+						buf = str_ascii(proc.stdout.read())
 						if buf == '' and poll is not None:
 							# if proc.poll() is None then
 							# process is fine, we received an empty line because
@@ -210,15 +210,16 @@ class Processes (object):
 							continue
 
 						raw = self._buffer.get(process,'') + buf
-						if not raw.endswith('\n'):
-							self._buffer[process] = raw
-							continue
 
-						self._buffer[process] = ''
-						line = raw.rstrip()
-						consumed_data = True
-						self.logger.debug('command from process %s : %s ' % (process,line),'process')
-						yield (process,formated(line))
+						while '\n' in raw:
+							line,raw = raw.split('\n',1)
+							line = line.rstrip()
+							consumed_data = True
+							self.logger.debug('command from process %s : %s ' % (process,line),'process')
+							yield (process,formated(line))
+
+						self._buffer[process] = raw
+
 					except IOError as exc:
 						if not exc.errno or exc.errno in error.fatal:
 							# if the program exits we can get an IOError with errno code zero !
