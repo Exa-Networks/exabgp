@@ -107,8 +107,6 @@ class Peer (object):
 		self._reconfigure = True
 		# We want to send all the known routes
 		self._resend_routes = SEND.DONE
-		# We have new routes for the peers
-		self._have_routes = True
 
 		# We have been asked to teardown the session with this code
 		self._teardown = None
@@ -173,9 +171,6 @@ class Peer (object):
 	def resend (self):
 		self._resend_routes = SEND.NORMAL
 		self._delay.reset()
-
-	def schedule_rib_check (self, update=None):
-		self._have_routes = self.neighbor.flush if update is None else update
 
 	def reestablish (self, restart_neighbor=None):
 		# we want to tear down the session and re-establish it
@@ -455,19 +450,15 @@ class Peer (object):
 						# do not keep the previous routes in memory as they are not useful anymore
 						self._neighbor.backup_changes = []
 
-					self._have_routes = True
-
 				# Take the routes already sent to that peer and resend them
 				if self._resend_routes != SEND.DONE:
 					enhanced = True if refresh_enhanced and self._resend_routes == SEND.REFRESH else False
 					self._resend_routes = SEND.DONE
 					self.neighbor.rib.outgoing.resend(send_families,enhanced)
-					self._have_routes = True
 					send_families = []
 
 				# Need to send update
-				if self._have_routes and not new_routes:
-					self._have_routes = False
+				if not new_routes and self.neighbor.rib.outgoing.pending():
 					# XXX: in proto really. hum to think about ?
 					new_routes = self.proto.new_update(include_withdraw)
 
