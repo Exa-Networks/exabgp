@@ -200,7 +200,7 @@ class Processes (object):
 						# Calling next() on Linux and OSX works perfectly well
 						# but not on OpenBSD where it always raise StopIteration
 						# and only readline() works
-						buf = str_ascii(proc.stdout.read())
+						buf = str_ascii(proc.stdout.read(16384))
 						if buf == '' and poll is not None:
 							# if proc.poll() is None then
 							# process is fine, we received an empty line because
