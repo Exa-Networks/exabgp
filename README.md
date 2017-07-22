@@ -93,7 +93,7 @@ The documentation is known to be imperfect. One could even say wanting, limited,
 
 Other users did however do a fair bit of [`documentation`](https://github.com/Exa-Networks/exabgp/wiki/Related-articles), just not on the [`wiki`](https://github.com/Exa-Networks/exabgp/wiki). :cry:
 
-To understand how ExaBGP should be configured, please have a look into the [`qa/conf`](https://github.com/Exa-Networks/exabgp/tree/master/qa/conf) folder of the repository where a great many examples are available.
+To understand how ExaBGP should be configured, please have a look into the [`etc/exabgp`](https://github.com/Exa-Networks/exabgp/tree/master/etc/exabgp) folder of the repository where a great many examples are available.
 
 `exabgp --help`  is also a treasure trove of information.
 
