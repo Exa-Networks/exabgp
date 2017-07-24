@@ -8,6 +8,8 @@ Version 4.0.3
  * Fix: control of logging for timer events
  * Fix: possible packet data not being reset in update generation
  * Fix: could miss API command if sent at faster than read rate
+ * Fix: bad json encoding
+   reported by: Tyson Clugg
 
 Version 4.0.2
  * Feature: exabgpcli
