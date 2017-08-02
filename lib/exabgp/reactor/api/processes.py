@@ -196,7 +196,7 @@ class Processes (object):
 							line = raw.rstrip()
 							consumed_data = True
 							self.logger.processes("Command from process %s : %s " % (process,line))
-							if raw == '':
+							if line == '':
 								raise IOError('Child process died')
 							yield (process,formated(line))
 					except IOError,exc:
