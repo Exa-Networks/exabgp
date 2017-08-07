@@ -264,6 +264,7 @@ class Family (object):
 		(AFI.ipv6,SAFI.flow_ip):   ((0,16,32), 0),
 		(AFI.ipv6,SAFI.flow_vpn):  ((0,16,32), 0),
 		(AFI.l2vpn,SAFI.vpls):     ((4,),      0),
+		(AFI.l2vpn,SAFI.evpn):     ((4,),      0),
 		(AFI.bgpls,SAFI.bgp_ls):   ((4,),      0),
 	}
 
