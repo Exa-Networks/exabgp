@@ -12,6 +12,8 @@ Version 4.0.3
    reported by: Tyson Clugg
  * Fix: missing L2VPN/EVPN to next-hop sizing check
    patch by: jsynack
+ * Fix: allow an hold-time of zero
+   patch by: andrius-adamavicius
 
 Version 4.0.2
  * Feature: exabgpcli
