@@ -114,7 +114,7 @@ def hold_time (tokeniser):
 		holdtime = HoldTime(int(value))
 	except ValueError:
 		raise ValueError ('"%s" is an invalid hold-time' % value)
-	if holdtime < 3 and hold_time != 0:
+	if holdtime < 3 and holdtime != 0:
 		raise ValueError('holdtime must be zero or at least three seconds')
 	if holdtime > HoldTime.MAX:
 		raise ValueError('holdtime must be smaller or equal to %d' % HoldTime.MAX)
