@@ -30,6 +30,7 @@ class ReceiveTimer (object):
 		self.code = code
 		self.subcode = subcode
 		self.message = message
+		self.single = False
 
 	def check_ka (self, message=_NOP,ignore=_NOP.TYPE):
 		if message.TYPE != ignore:
@@ -42,7 +43,9 @@ class ReceiveTimer (object):
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
 		elif message.TYPE == KeepAlive.TYPE:
-			raise Notify(2,6,'Negotiated holdtime was zero, it was invalid to send us a keepalive messages')
+			if self.single:
+				raise Notify(2,6,'Negotiated holdtime was zero, it was invalid to send us a keepalive messages')
+			self.single = True
 
 
 class SendTimer (object):

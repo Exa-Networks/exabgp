@@ -14,6 +14,10 @@ Version 4.0.3
    patch by: jsynack
  * Fix: allow an hold-time of zero
    patch by: andrius-adamavicius
+ * Fix: printing of RT
+   reported by: abreu75
+ * Fix: allow a single KA for hold-time of zero
+   reported by: andrius-adamavicius
 
 Version 4.0.2
  * Feature: exabgpcli
