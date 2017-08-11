@@ -41,9 +41,6 @@ class ReceiveTimer (object):
 				self.last_print = left
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
-		elif message.TYPE == KeepAlive.TYPE:
-			raise Notify(2,6,'Negotiated holdtime was zero, it was invalid to send us a keepalive messages')
-
 
 class SendTimer (object):
 	def __init__ (self, session, holdtime):
