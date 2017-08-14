@@ -30,6 +30,7 @@ class ReceiveTimer (object):
 		self.code = code
 		self.subcode = subcode
 		self.message = message
+		self.ka_number = 0
 
 	def check_ka (self, message=_NOP,ignore=_NOP.TYPE):
 		if message.TYPE != ignore:
@@ -41,6 +42,12 @@ class ReceiveTimer (object):
 				self.last_print = left
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
+		# a workaround to avoid tearing down adj. for BGP implementations that sends two KA when hold-time is 0
+		elif message.TYPE == KeepAlive.TYPE:
+			if self.ka_number > 1:
+				raise Notify(2,6,'Negotiated holdtime was zero, it was invalid to send us a keepalive messages')
+			self.ka_number += 1
+
 
 class SendTimer (object):
 	def __init__ (self, session, holdtime):
