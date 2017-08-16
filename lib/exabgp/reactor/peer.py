@@ -298,7 +298,7 @@ class Peer (object):
 	def _read_ka (self):
 		# Start keeping keepalive timer
 		for message in self.proto.read_keepalive():
-			self.recv_timer.check_ka(message)
+			self.recv_timer.check_ka_timer(message)
 			yield ACTION.NOW
 
 	def _establish (self):
