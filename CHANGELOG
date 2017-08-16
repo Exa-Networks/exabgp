@@ -18,6 +18,10 @@ Version 4.0.3
    reported by: abreu75
  * Fix: allow a single KA for hold-time of zero
    reported by: andrius-adamavicius
+ * Fix: api report writing the word neighbor twice
+   patch by: chantra
+ * Fix: setup.py script functions not working
+   patch by: aabdnn
 
 Version 4.0.2
  * Feature: exabgpcli
