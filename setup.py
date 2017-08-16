@@ -325,18 +325,18 @@ def packages (lib):
 	return r
 
 
-def filesOf (direcotry):
+def filesOf (directory):
 	files = []
-	for l,d,fs in os.walk(direcotry):
+	for l,d,fs in os.walk(directory):
 		if not d:
 			for f in fs:
 				files.append(os.path.join(l,f))
 	return files
 
 
-def testFilesOf (direcotry):
+def testFilesOf (directory):
 	files = []
-	for l,d,fs in os.walk(direcotry):
+	for l,d,fs in os.walk(directory):
 		if not d:
 			for f in fs:
 				if f.endswith('.run') or f.endswith('.conf'):
