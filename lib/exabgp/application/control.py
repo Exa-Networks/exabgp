@@ -134,7 +134,7 @@ class Control (object):
 
 	def loop (self):
 		try:
-			self.r_pipe = os.open(self.recv, os.O_RDONLY | os.O_NONBLOCK | os.O_EXCL)
+			self.r_pipe = os.open(self.recv, os.O_RDWR | os.O_NONBLOCK | os.O_EXCL)
 		except OSError:
 			self.terminate()
 
@@ -217,7 +217,7 @@ class Control (object):
 		}
 
 		def consume (source):
-			if not backlog and b'\n' not in store:
+			if not backlog[source] and b'\n' not in store[source]:
 				store[source] += read[source](1024)
 			else:
 				backlog[source].append(read[source](1024))
