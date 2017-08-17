@@ -22,6 +22,8 @@ Version 4.0.3
    patch by: chantra
  * Fix: setup.py script functions not working
    patch by: aabdnn
+ * Fix: the API would spin on EOF (issue #704)
+   patch by: chantra
 
 Version 4.0.2
  * Feature: exabgpcli
