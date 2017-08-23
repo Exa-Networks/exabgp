@@ -42,8 +42,8 @@ class ReceiveTimer (object):
 				self.last_print = left
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
-			return message.TYPE != KeepAlive.TYPE
-		return False
+			return True
+		return message.TYPE != KeepAlive.TYPE
 
 	def check_ka (self, message=_NOP,ignore=_NOP.TYPE):
 		if self.check_ka_timer(message,ignore):
