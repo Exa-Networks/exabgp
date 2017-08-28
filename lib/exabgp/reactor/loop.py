@@ -249,7 +249,7 @@ class Reactor (object):
 					del workers[io]
 
 				if self._stopping and not self.peers.keys():
-					break
+					self._termination('exiting on peer termination')
 
 			except KeyboardInterrupt:
 				self._termination('^C received')
