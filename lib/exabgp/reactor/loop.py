@@ -64,8 +64,8 @@ class Reactor (object):
 		self.signal.received = Signal.SHUTDOWN
 		self.logger.critical(reason,'reactor')
 
-	def _api_ready (self,sockets):
-		sleeptime = 0 if self.async.ready() else self.max_loop_time / 100
+	def _api_ready (self,sockets,peers):
+		sleeptime = 0 if peers or self.async.ready() else self.max_loop_time / 100
 		fds = self.processes.fds()
 		ios = fds + sockets
 		try:
@@ -244,7 +244,7 @@ class Reactor (object):
 
 				self.async.run()
 
-				for io in self._api_ready(list(workers)):
+				for io in self._api_ready(list(workers),peers):
 					peers.add(workers[io])
 					del workers[io]
 
