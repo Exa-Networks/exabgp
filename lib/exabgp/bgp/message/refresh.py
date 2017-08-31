@@ -57,8 +57,8 @@ class RouteRefresh (Message):
 		return 'route refresh %s/%d/%s' % (self.afi,self.reserved,self.safi)
 
 	# XXX: Check how we get this data into the RR
-	def families (self):
-		return self._families[:]
+	# def families (self):
+	# 	return self._families[:]
 
 	@classmethod
 	def unpack_message (cls, data, _):
