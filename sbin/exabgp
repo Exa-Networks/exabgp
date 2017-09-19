@@ -20,7 +20,7 @@ for INTERPRETER in "$INTERPRETER" python3 pypy3; do
     INTERPRETER="$(command -v "$INTERPRETER")" && break
 done
 
-if [ "$INTERPRETER" == "" ]; then
+if [ "$INTERPRETER" = "" ]; then
 	echo "ExaBGP could not find a python3 interpreter"
 	exit 1
 fi
