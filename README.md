@@ -66,6 +66,8 @@ Multiple versions can be used simultaneously without conflict when ExaBGP is ran
 
 The configuration file and API format change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG) and check their setup after upgrade.
 
+ExaBGP 4.0 and later are targeting python3 when ExaBGP 3.4 and previous versions are python2 applications. At the moment, it is possible to run ExaBGP 4.0 using python2.7 but this backward compatibility should not be relied upon.
+
 ## Support
 
 [![Testing Status](https://img.shields.io/codeship/d6c1ddd0-16a3-0132-5f85-2e35c05e22b1.svg)]()
