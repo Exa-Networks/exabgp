@@ -93,7 +93,7 @@ def main ():
 
 	try:
 		writer = os.open(send, os.O_WRONLY | os.O_EXCL)
-		os.write(writer,command + '\n')
+		os.write(writer,command.encode('utf-8') + b'\n')
 		os.close(writer)
 	except OSError as exc:
 		if exc.errno == errno.ENXIO:
@@ -125,28 +125,28 @@ def main ():
 		reader = os.open(recv, os.O_RDONLY | os.O_EXCL)
 		signal.alarm(0)
 
-		buf = ''
+		buf = b''
 		done = False
 		while not done:
 			try:
 				raw = os.read(reader,4096)
 				buf += raw
-				while '\n' in buf:
-					line,buf = buf.split('\n',1)
-					if line == 'done':
+				while b'\n' in buf:
+					line,buf = buf.split(b'\n',1)
+					if line == b'done':
 						done = True
 						break
-					if line == 'shutdown':
+					if line == b'shutdown':
 						sys.stderr.write('ExaBGP is shutting down, command aborted\n')
 						sys.stderr.flush()
 						done = True
 						break
-					if line == 'error':
+					if line == b'error':
 						done = True
 						sys.stderr.write('ExaBGP returns an error\n')
 						sys.stderr.flush()
 						break
-					sys.stdout.write('%s\n' % line)
+					sys.stdout.write('%s\n' % line.decode())
 					sys.stdout.flush()
 
 				select.select([reader],[],[],0.01)

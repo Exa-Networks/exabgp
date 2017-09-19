@@ -12,9 +12,9 @@ APPLICATION="$("$INTERPRETER" -c "
 import sys
 import os
 
-print [os.path.join(_, 'exabgp', 'application', 'cli.py')
+print([os.path.join(_, 'exabgp', 'application', 'cli.py')
        for _ in sys.path
        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'cli.py')))][0]
-")"
+)")"
 
 exec env "$INTERPRETER" "$APPLICATION" "$@"
