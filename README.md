@@ -110,8 +110,8 @@ The following projects are related to ExaBGP
   - [exabgp-voipbl](https://github.com/GeertHauwaerts/exabgp-voipbl) advertises local or/and voipbl.org blacklist using unicast or flow route.
 
 **Network Monitoring**
-  - [GIXLG](https://code.google.com/p/gixlg/) a looking glass with visualisation
-  - [lookify](https://github.com/Shopify/lookify) another looking glass
+  - [GIXLG](https://github.com/dpiekacz/gixlg) a looking glass with visualisation
+  - [lookify](https://github.com/marc-barry/lookify) another looking glass
   - [invalidroutesreporter](https://github.com/pierky/invalidroutesreporter) report/log invalid routes received by route servers
 
 **Route Announcement**
