@@ -3,7 +3,7 @@
 set -e
 
 if [ "$1" = "configure" ] ; then
-	update-alternatives --install /usr/sbin/exabgp exabgp /usr/sbin/python2-exabgp 300
+	update-alternatives --install /usr/sbin/exabgp exabgp /usr/sbin/python2-exabgp 100
 fi
 
 #DEBHELPER#

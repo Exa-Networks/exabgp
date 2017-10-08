@@ -22,6 +22,8 @@ exabgp (4.0.2-1) UNRELEASED; urgency=medium
   * d/lintian-overrides: silence warning about missing manual pages.
   * d/patches: cherry-pick patch to add documentation to systemd unit.
   * d/copyright: updates.
+  * d/postinst: prefer Python 3 to run exabgp (add an entry to NEWS.Debian
+    for that).
 
  -- Vincent Bernat <bernat@debian.org>  Sun, 08 Oct 2017 18:03:58 +0200
 

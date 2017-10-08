@@ -1,3 +1,18 @@
+exabgp (4.0.2-1) unstable; urgency=medium
+
+  This is a major upgrade for ExaBGP. Your previous configuration file is
+  unlikely to work correctly after this upgrade. See this documentation to
+  migrate your configuration:
+
+    https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.0
+
+  Moreover, the default Python interpreter used by ExaBGP is now Python 3.
+  You can change that with:
+
+    update-alternatives --config exabgp
+
+ -- Vincent Bernat <bernat@debian.org>  Sun, 08 Oct 2017 18:55:31 +0200
+
 exabgp (3.4.11-1) unstable; urgency=medium
 
   /etc/exabgp/processes/healthcheck.py is not shipped any more from this
