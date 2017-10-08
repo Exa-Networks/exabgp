@@ -3,7 +3,7 @@
 prefixmetric.py
 
 Created by Evelio Vila on 2016-12-01.
-Copyright (c) 2014-2016 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
@@ -43,4 +43,4 @@ class PrefixMetric(object):
 			return cls(prefixmetric=metric)
 
 	def json (self,compact=None):
-		return '"prefix-metric": "%s"' % str(self.prefixmetric)
+		return '"prefix-metric": %d' % int(self.prefixmetric)

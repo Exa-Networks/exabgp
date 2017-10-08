@@ -5,7 +5,7 @@ ConditionPathExists=/etc/exabgp/exabgp.conf
 
 [Service]
 Environment=exabgp_daemon_daemonize=false
-ExecStart=/usr/sbin/exabgp --folder /etc/exabgp /etc/exabgp/exabgp.conf
+ExecStart=/usr/sbin/exabgp /etc/exabgp/exabgp.conf
 ExecReload=/bin/kill -USR1 $MAINPID
 
 [Install]

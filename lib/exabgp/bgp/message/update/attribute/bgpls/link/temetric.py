@@ -3,7 +3,7 @@
 temetric.py
 
 Created by Evelio Vila on 2016-12-01.
-Copyright (c) 2014-2016 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 from struct import unpack
 
@@ -40,4 +40,4 @@ class TeMetric(object):
 			return cls(temetric=temetric)
 
 	def json (self,compact=None):
-		return '"te-metric": "%s"' % str(self.temetric)
+		return '"te-metric": %d' % int(str(self.temetric))

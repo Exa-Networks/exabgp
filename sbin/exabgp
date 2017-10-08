@@ -16,7 +16,7 @@ path="$(cd "$(dirname "$0")"/.. ; pwd)"
 
 export PYTHONPATH="$path"/lib
 
-for INTERPRETER in "$INTERPRETER" pypy python2.7 python2.6 python2 python; do
+for INTERPRETER in "$INTERPRETER" python3 pypy3; do
     INTERPRETER="$(command -v "$INTERPRETER")" && break
 done
 
@@ -39,4 +39,4 @@ if 'exabgp' not in os.environ.get('SKIPCLEANUP',''):
 
 ")"
 
-exec "$INTERPRETER" "$APPLICATION" --folder "$path"/etc/exabgp "$@"
+exec "$INTERPRETER" "$APPLICATION" --root "$path" "$@"

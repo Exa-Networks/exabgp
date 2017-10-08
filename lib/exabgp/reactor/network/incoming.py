@@ -15,23 +15,22 @@ class Incoming (Connection):
 	def __init__ (self, afi, peer, local, io):
 		Connection.__init__(self,afi,peer,local)
 
-		self.logger.wire("Connection from %s" % self.peer)
+		self.logger.debug('connection from %s' % self.peer,'network')
 
 		try:
 			self.io = io
 			async(self.io,self.peer)
 			nagle(self.io,self.peer)
+			self.success()
 		except NetworkError as exc:
 			self.close()
 			raise NotConnected(errstr(exc))
 
-	# XXX: FIXME: is that code ever called ?
 	def notification (self, code, subcode, message):
 		try:
 			notification = Notify(code,subcode,message).message()
 			for boolean in self.writer(notification):
 				yield False
-			# self.logger.message(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)),'error')
-			yield True
+			self.close()
 		except NetworkError:
 			pass  # This is only be used when closing session due to unconfigured peers - so issues do not matter

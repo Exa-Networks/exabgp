@@ -3,7 +3,8 @@
 flow.py
 
 Created by Thomas Mangin on 2010-01-14.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # Do not use __slots__ here, we never create enough of them to be worth it
@@ -19,6 +20,7 @@ from exabgp.util import concat_bytes_i
 from exabgp.util import concat_strs_i
 
 from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip.port import Port
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.direction import OUT
@@ -303,7 +305,7 @@ def PacketLength (data):
 
 def PortValue (data):
 	_str_bad_port = "you tried to set an invalid port number .."
-	number = int(data)
+	number = Port.named(data)
 	if number < 0 or number > 0xFFFF:
 		raise ValueError(_str_bad_port)
 	return number
@@ -403,14 +405,14 @@ class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 class FlowICMPType (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x07
 	NAME = 'icmp-type'
-	converter = staticmethod(converter(ICMPType.named))
+	converter = staticmethod(converter(ICMPType.named,ICMPType))
 	decoder = staticmethod(decoder(_number,ICMPType))
 
 
 class FlowICMPCode (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x08
 	NAME = 'icmp-code'
-	converter = staticmethod(converter(ICMPCode.named))
+	converter = staticmethod(converter(ICMPCode.named,ICMPCode))
 	decoder = staticmethod(decoder(_number,ICMPCode))
 
 
@@ -514,27 +516,10 @@ class Flow (NLRI):
 		self.nexthop = NoNextHop
 		self.rd = RouteDistinguisher.NORD
 
-	def __eq__ (self, other):
-		return \
-			self.rules == other.rules and \
-			self.action == other.action and \
-			self.nexthop == other.nexthop and \
-			self.rd == other.rd
-
-	def __ne__ (self, other):
-		return not self.__eq__(other)
-
-	def __lt__ (self, other):
-		raise RuntimeError('comparing Flow for ordering does not make sense')
-
-	def __le__ (self, other):
-		raise RuntimeError('comparing Flow for ordering does not make sense')
-
-	def __gt__ (self, other):
-		raise RuntimeError('comparing Flow for ordering does not make sense')
-
-	def __ge__ (self, other):
-		raise RuntimeError('comparing Flow for ordering does not make sense')
+	def feedback (self, action):
+		if self.nexthop is None and action == OUT.ANNOUNCE:
+			return 'flow nlri next-hop missing'
+		return ''
 
 	def __len__ (self):
 		return len(self.pack())
@@ -552,12 +537,12 @@ class Flow (NLRI):
 				if rule.afi != pair[0].afi:
 					return False
 			if rule.NAME.endswith('ipv6'):  # better way to check this ?
-				self.afi = AFI(AFI.ipv6)
+				self.afi = AFI.ipv6
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 
 	# The API requires addpath, but it is irrelevant here.
-	def pack (self, negotiated=None):
+	def pack_nlri (self, negotiated=None):
 		ordered_rules = []
 		# the order is a RFC requirement
 		for ID in sorted(self.rules.keys()):
@@ -663,7 +648,6 @@ class Flow (NLRI):
 				adding,bgp = klass.make(bgp)
 				if not nlri.add(adding):
 					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-				# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
 			else:
 				end = False
 				while not end:
@@ -674,6 +658,5 @@ class Flow (NLRI):
 					value,bgp = bgp[:length],bgp[length:]
 					adding = klass.decoder(value)
 					nlri.add(klass(operator,adding))
-					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),value))
 
 		return nlri, bgp+over

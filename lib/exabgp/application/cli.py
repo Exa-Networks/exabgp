@@ -4,262 +4,170 @@
 cli.py
 
 Created by Thomas Mangin on 2014-12-22.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import os
 import sys
 import select
+import signal
+import errno
 
-from exabgp.vendoring import six
-from exabgp.vendoring.cmd2 import cmd
+from exabgp.application.bgp import root_folder
+from exabgp.application.bgp import named_pipe
+from exabgp.application.bgp import get_envfile
+from exabgp.application.bgp import get_env
+from exabgp.application.control import check_fifo
 
-from exabgp.version import version
+from exabgp.reactor.network.error import error
 
+from exabgp.vendoring import docopt
 
-class Completed (cmd.Cmd):
-	# use_rawinput = False
-	# prompt = ''
+usage = """\
+The BGP swiss army knife of networking
 
-	# doc_header = 'doc_header'
-	# misc_header = 'misc_header'
-	# undoc_header = 'undoc_header'
+usage: exabgpcli [--root ROOT]
+\t\t\t\t\t\t\t\t [--help|<command>...]
 
-	ruler = '-'
-	completion = {}
+positional arguments:
+\tcommand               valid exabgpcli command (see below)
 
-	def __init__ (self, intro=''):
-		self.prompt = '%s> ' % intro
-		cmd.Cmd.__init__(self)
+optional arguments:
+\t--help,      -h       exabgp manual page
+\t--root ROOT, -f ROOT  root folder where etc,bin,sbin are located
 
-	def completedefault (self, text, line, begidx, endidx):  # pylint: disable=W0613
-		commands = line.split()
-		local = self.completion
-
-		for command in commands:
-			if command in local:
-				local = local[command]
-				continue
-			break
-
-		return [_ for _ in local.keys() if _.startswith(text)]
-
-	def default (self, line):
-		print('unrecognised syntax: ', line)
-
-	def do_EOF (self):
-		return True
+commands:
+\thelp                  show the commands known by ExaBGP
+""".replace('\t','  ')
 
 
-class SubMenu (Completed):
-	def do_exit (self, _):
-		return True
+def main ():
+	options = docopt.docopt(usage, help=False)
+	options['--env'] = ''  # exabgp compatibility
 
-	do_x = do_exit
+	root = root_folder(options,['/bin/exabgpcli','/sbin/exabgpcli','/lib/exabgp/application/cli.py'])
+	etc = root + '/etc/exabgp'
+	envfile = get_envfile(options,etc)
+	env = get_env(envfile)
 
+	if options['--help']:
+		sys.stdout.write(usage)
+		sys.stdout.flush()
+		sys.exit(0)
 
-class Attribute (SubMenu):
-	chars = ''.join(chr(_) for _ in range(ord('a'),ord('z')+1) + range(ord('0'),ord('9')+1) + [ord ('-')])
+	if not options['<command>']:
+		sys.stdout.write(usage)
+		sys.stdout.flush()
+		sys.exit(0)
 
-	attribute = None
+	command = ' '.join(options['<command>'])
 
-	completion = {
-		'origin':  {
-			'igp': {
-			},
-			'egp': {
-			},
-			'incomplete': {
-			},
-		},
-	}
+	pipes = named_pipe(root)
+	if len(pipes) != 1:
+		sys.stdout.write('Could not find ExaBGP\'s named pipes (exabgp.in and exabgp.out) for the cli in any of ' + ', '.join(pipes))
+		sys.stdout.flush()
+		sys.exit(1)
 
-	def __init__ (self, name):
-		self.name = name
-		SubMenu.__init__(self,'attribute %s' % name)
+	send = pipes[0] + 'exabgp.in'
+	recv = pipes[0] + 'exabgp.out'
 
-	def do_origin (self, line):
-		if line in ('igp','egp','incomplete'):
-			self.attribute['origin'] = line
-		else:
-			print('invalid origin')
+	if not check_fifo(send):
+		sys.stdout.write('could not find write named pipe to connect to ExaBGP')
+		sys.stdout.flush()
+		sys.exit(1)
 
-	def do_as_path (self, line):
-		pass
+	if not check_fifo(recv):
+		sys.stdout.write('could not find read named pipe to connect to ExaBGP')
+		sys.stdout.flush()
+		sys.exit(1)
 
-	# next-hop
+	def write_timeout(signum, frame):
+		sys.stderr.write('could not send command to ExaBGP')
+		sys.stderr.flush()
+		sys.exit(1)
 
-	def do_med (self, line):
-		if not line.isdigit():
-			print('invalid med, %s is not a number' % line)
-			return
+	signal.signal(signal.SIGALRM, write_timeout)
+	signal.alarm(2)
 
-		med = int(line)
-		if 0 > med < 65536:
-			print('invalid med, %s is not a valid number' % line)
-		self.attribute['origin'] = line
+	try:
+		writer = os.open(send, os.O_WRONLY | os.O_EXCL)
+		os.write(writer,command + '\n')
+		os.close(writer)
+	except OSError as exc:
+		if exc.errno == errno.ENXIO:
+			sys.stdout.write('ExaBGP is not running / using the configured named pipe')
+			sys.stdout.flush()
+			sys.exit(1)
+		sys.stdout.write('could not communicate with ExaBGP')
+		sys.stdout.flush()
+		sys.exit(1)
+	except IOError as exc:
+		sys.stdout.write('could not communicate with ExaBGP')
+		sys.stdout.flush()
+		sys.exit(1)
 
-	# local-preference
-	# atomic-aggregate
-	# aggregator
-	# community
-	# large-community
-	# originator-id
-	# cluster-list
-	# extended-community
-	# psmi
-	# aigp
+	signal.alarm(0)
 
-	def do_show (self, _):
-		print('attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in six.iteritems(self.attribute)))
+	if command == 'reset':
+		sys.exit(0)
 
+	def read_timeout(signum, frame):
+		sys.stderr.write('could not read answer to ExaBGP')
+		sys.stderr.flush()
+		sys.exit(1)
 
-class Syntax (Completed):
-	completion = {
-		'announce':  {
-			'route':  {
-			},
-			'l2vpn':  {
-			},
-		},
-		'neighbor': {
-			'include': {
-			},
-			'exclude': {
-			},
-			'reset': {
-			},
-			'list': {
-			},
-		},
-		'attribute':  {
-		},
-		'show': {
-			'routes':  {
-				'extensive': {
-				},
-				'minimal': {
-				},
-			},
-		},
-		'reload': {
-		},
-		'restart': {
-		},
-	}
+	signal.signal(signal.SIGALRM, read_timeout)
 
-	def _update_prompt (self):
-		if self._neighbors:
-			self.prompt = '\n# neighbor ' + ', '.join(self._neighbors) + '\n> '
-		else:
-			self.prompt = '\n> '
+	try:
+		signal.alarm(5)
+		reader = os.open(recv, os.O_RDONLY | os.O_EXCL)
+		signal.alarm(0)
 
-	#
-	# repeat last command
-	#
+		buf = ''
+		done = False
+		while not done:
+			try:
+				raw = os.read(reader,4096)
+				buf += raw
+				while '\n' in buf:
+					line,buf = buf.split('\n',1)
+					if line == 'done':
+						done = True
+						break
+					if line == 'shutdown':
+						sys.stderr.write('ExaBGP is shutting down, command aborted\n')
+						sys.stderr.flush()
+						done = True
+						break
+					if line == 'error':
+						done = True
+						sys.stderr.write('ExaBGP returns an error\n')
+						sys.stderr.flush()
+						break
+					sys.stdout.write('%s\n' % line)
+					sys.stdout.flush()
 
-	# last = 'help'
+				select.select([reader],[],[],0.01)
+			except OSError as exc:
+				if exc.errno in error.block:
+					break
+			except IOError as exc:
+				if exc.errno in error.block:
+					break
+		os.close(reader)
 
-	# def do_last (self, line):
-	# 	"Print the input, replacing '$out' with the output of the last shell command"
-	# 	# Obviously not robust
-	# 	if hasattr(self, 'last_output'):
-	# 		print line.replace('$out', self.last_output)
-
-	_neighbors = set()
-
-	def do_neighbor (self, line):
-		try:
-			action,ip = line.split()
-		except ValueError:
-			if line == 'reset':
-				print('removed neighbors', ', '.join(self._neighbors))
-				self._neighbors = set()
-				self._update_prompt()
-			else:
-				print('invalid syntax')
-				self.help_neighbor()
-			return
-
-		if action == 'include':
-			# check ip is an IP
-			# check ip is a known IP
-			self._neighbors.add(ip)
-			self._update_prompt()
-		elif action == 'exclude':
-			if ip in self._neighbors:
-				self._neighbors.remove(ip)
-				print('neighbor excluded')
-				self._update_prompt()
-			else:
-				print('invalid neighbor')
-		elif action == 'list':
-			print('removed neighbors', ', '.join(self._neighbors))
-		else:
-			print('invalid syntax')
-			self.help_neighbor()
-
-	def help_neighbor (self):
-		print("neighbor include <ip>:  limit the action to the defined neighbors")
-		print("neighbor exclude <ip>:  remove a particular neighbor")
-		print("neighbor reset       :  clear the neighbor previous set ")
-
-	_attribute = {}
-
-	def do_attribute (self, name):
-		if not name:
-			self.help_attribute()
-			return
-		invalid = ''.join([_ for _ in name if _ not in Attribute.chars])
-		if invalid:
-			print('invalid character(s) in attribute name: %s' % invalid)
-			return
-		cli = Attribute(name)
-		cli.attribute = self._attribute.get(name,{})
-		cli.cmdloop()
-
-	def help_attribute (self):
-		print('attribute <name>')
-
-	def do_quit (self, _):
-		return True
-
-	do_q = do_quit
-
-
-class Connection (object):
-	def __init__ (self,name):
-		self.read = open(name,'r+')
-		self.write = open(name,'w+')
-
-	def request (self,command):
-		self.write.write(command + '\n')
-
-	def report (self):
-		while select.select([self.read],[],[],5):
-			print(self.read.readline())
-
-	def close (self):
-		self.read.close()
-		self.write.close()
-
-
-class ExaBGP (Connection,Syntax):
-	def __init__ (self,name='exabgp.cmd'):
-		Connection.__init__(self,name)
-		Syntax.__init__(self,'')
-
-	def do_show (self, line):
-		self.request('show routes')
-		self.report()
-
-
-def main():
-	if len(sys.argv) > 1:
-		ExaBGP().onecmd(' '.join(sys.argv[1:]))
-	else:
-		print("ExaBGP %s CLI" % version)
-		ExaBGP('').cmdloop()
+		sys.exit(0)
+	except IOError:
+		sys.stdout.write('could not read answer from ExaBGP')
+		sys.stdout.flush()
+	except OSError:
+		sys.stdout.write('could not read answer from ExaBGP')
+		sys.stdout.flush()
 
 
 if __name__ == '__main__':
-	main()
+	try:
+		main()
+	except KeyboardInterrupt:
+		pass

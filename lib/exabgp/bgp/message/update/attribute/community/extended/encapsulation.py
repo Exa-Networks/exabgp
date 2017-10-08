@@ -3,8 +3,9 @@
 encapsulation.py
 
 Created by Thomas Mangin on 2014-06-20.
-Copyright (c) 2014-2015 Orange. All rights reserved.
-Copyright (c) 2014-2015 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Orange. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
@@ -59,7 +60,7 @@ class Encapsulation (ExtendedCommunity):
 		)
 
 	def __repr__ (self):
-		return "Encap:%s" % Encapsulation._string.get(self.tunnel_type,"Encap:(unknown:%d)" % self.tunnel_type)
+		return "encap:%s" % Encapsulation._string.get(self.tunnel_type,"encap:UNKNOWN-%d" % self.tunnel_type)
 
 	@staticmethod
 	def unpack (data):

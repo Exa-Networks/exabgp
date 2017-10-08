@@ -3,7 +3,8 @@
 community.py
 
 Created by Thomas Mangin on 2009-11-05.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
@@ -78,11 +79,12 @@ class Community (object):
 
 	@classmethod
 	def cached (cls, community):
-		if cls.caching and community in cls.cache:
+		if not cls.caching:
+			return cls(community)
+		if community in cls.cache:
 			return cls.cache[community]
 		instance = cls(community)
-		if cls.caching:
-			cls.cache[community] = instance
+		cls.cache[community] = instance
 		return instance
 
 

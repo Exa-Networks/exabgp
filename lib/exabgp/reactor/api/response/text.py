@@ -4,7 +4,8 @@
 response/text.py
 
 Created by Thomas Mangin on 2012-12-30.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
@@ -50,7 +51,16 @@ class Text (object):
 			os.getppid()
 		)
 
-	def notification (self, neighbor, direction, message, header, body):
+	def negotiated (self, neighbor, negotiated):
+		return None
+
+	def fsm (self, neighbor, fsm):
+		return None
+
+	def signal (self, neighbor, signal):
+		return None
+
+	def notification (self, neighbor, direction, message, negotiated, header, body):
 		return 'neighbor %s %s notification code %d subcode %d data %s%s\n' % (
 			neighbor.peer_address,
 			direction,
@@ -60,7 +70,7 @@ class Text (object):
 			self._header_body(header,body)
 		)
 
-	def packets (self, neighbor, direction, category, header, body):
+	def packets (self, neighbor, direction, category, negotiated, header, body):
 		return 'neighbor %s %s %d%s\n' % (
 			neighbor.peer_address,
 			direction,
@@ -68,14 +78,14 @@ class Text (object):
 			self._header_body(header,body)
 		)
 
-	def keepalive (self, neighbor, direction, header, body):
+	def keepalive (self, neighbor, direction, negotiated, header, body):
 		return 'neighbor %s %s keepalive%s\n' % (
 			neighbor.peer_address,
 			direction,
 			self._header_body(header,body)
 		)
 
-	def open (self, neighbor, direction, sent_open, header, body):
+	def open (self, neighbor, direction, sent_open, negotiated, header, body):
 		return 'neighbor %s %s open version %d asn %d hold_time %s router_id %s capabilities [%s]%s\n' % (
 			neighbor.peer_address,
 			direction,
@@ -87,7 +97,7 @@ class Text (object):
 			self._header_body(header,body)
 		)
 
-	def update (self, neighbor, direction, update, header, body):
+	def update (self, neighbor, direction, update, negotiated, header, body):
 		prefix = 'neighbor %s %s update' % (
 			neighbor.peer_address,
 			direction,
@@ -114,7 +124,7 @@ class Text (object):
 
 		return r
 
-	def refresh (self, neighbor, direction, refresh, header, body):
+	def refresh (self, neighbor, direction, refresh, negotiated, header, body):
 		return 'neighbor %s %s route-refresh afi %s safi %s %s%s\n' % (
 			neighbor.peer_address,
 			direction,
@@ -158,7 +168,7 @@ class Text (object):
 			self._header_body(header,body)
 		)
 
-	def operational (self, neighbor, direction, what, operational, header, body):
+	def operational (self, neighbor, direction, what, operational, negotiated, header, body):
 		if what == 'advisory':
 			return self._operational_advisory(neighbor,direction,operational,header,body)
 		elif what == 'query':

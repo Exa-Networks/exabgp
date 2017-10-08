@@ -49,7 +49,7 @@
 		"_": "the names defined here can be used in the neighbors",
 		"syslog-json": {
 			"encoder": "json",
-			"program": "etc/exabgp/processes/syslog-1.py"
+			"program": "etc/exabgp/run/syslog-1.py"
 		},
 		"_": "be careful to not loose comment if you use multiple _",
 		"syslog-text": {
@@ -82,6 +82,7 @@
 			"med": 10,
 			"community": [[3356,2], [3356,22], [3356,86], [3356,500], [3356,666], [3356,2064]],
             "large-community": [[2914,0,666], [3320,1299,4]],
+			"bgp-prefix-sid": [ 300, [(800000,100), (1000000,4096)]],
 			"cluster-list": [],
 			"extended-community": []
 		}

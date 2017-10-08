@@ -6,7 +6,9 @@ Created by Evelio Vila
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
+import json
 from struct import unpack
+from exabgp.vendoring import six
 
 from exabgp.vendoring.bitstring import BitArray
 from exabgp.protocol.iso import ISO
@@ -47,9 +49,9 @@ class SrAdjacencyLan(object):
 	@classmethod
 	def unpack (cls,data,length):
 		# We only support IS-IS flags for now.
-		flags = LsGenericFlags.unpack(data[0],LsGenericFlags.ISIS_ADJ_SR_FLAGS)
+		flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.ISIS_ADJ_SR_FLAGS)
 		# Parse adj weight
-		weight = unpack('!B',data[1])[0]
+		weight = six.indexbytes(data,1)
 		# Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
 		data = data[4:]
 		isis_system_id = ISO.unpack_sysid(data[:6])
@@ -66,17 +68,18 @@ class SrAdjacencyLan(object):
 		while data:
 			# Range Size: 3 octet value indicating the number of labels in
 			# the range.
-			if flags.flags['V'] and flags.flags['L']:
+			if int(flags.flags['V']) and int(flags.flags['L']):
 				b = BitArray(bytes=data[:3])
 				sid = b.unpack('uintbe:24')[0]
 				data = data[3:]
-			elif (not flags.flags['V']) and (not flags.flags['L']):
+			elif (not flags.flags['V']) and \
+				(not flags.flags['L']):
 				sid = unpack('!I',data[:4])[0]
 				data = data[4:]
 			sids.append(sid)
-		return cls(flags=flags.flags, sids=sids, weight=weight)
+		return cls(flags=flags, sids=sids, weight=weight)
 
 	def json (self,compact=None):
-		return '"sr-adj-lan-flags": "%s", "sids": "%s", "sr-adj-weight": "%s"' % (self.flags,
-				self.sids, self.weight)
-
+		return ', '.join(['"sr-adj-lan-flags": {}'.format(self.flags.json()),
+			'"sids": {}'.format(json.dumps(self.sids)),
+			'"sr-adj-lan-weight": {}'.format(json.dumps(self.weight))])

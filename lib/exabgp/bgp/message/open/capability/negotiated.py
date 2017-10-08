@@ -3,7 +3,8 @@
 negotiated.py
 
 Created by Thomas Mangin on 2012-07-19.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.family import AFI
@@ -36,6 +37,7 @@ class Negotiated (object):
 		self.operational = False
 		self.refresh = REFRESH.ABSENT  # pylint: disable=E1101
 		self.aigp = None
+		self.mismatch = []
 
 	def sent (self, sent_open):
 		self.sent_open = sent_open
@@ -130,6 +132,13 @@ class Negotiated (object):
 			# XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
 			# XXX: FIXME: or should we use this trick in the other case ?
 			return self.multisession
+
+		s = set(self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL,[]))
+		r = set(self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL,[]))
+		mismatch = s ^ r
+
+		for family in mismatch:
+			self.mismatch.append(('exabgp' if family in r else 'peer',family))
 
 		return None
 

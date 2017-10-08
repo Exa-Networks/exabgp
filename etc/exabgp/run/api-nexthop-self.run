@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+import sys
+import time
+
+messages = [
+	'neighbor 127.0.0.1 announce route 1.1.0.0/16 next-hop self',
+	'announce route 2.2.0.0/16 next-hop self',
+	'announce route 2.2.0.1/32 next-hop self',
+	'announce route 2.2.0.1/32 next-hop self',
+	'announce route 2.2.0.1/32 next-hop self',
+	'announce route 3.3.0.3/32 next-hop self',  # Non duplicate route, signals server that test is over
+]
+
+while messages:
+	message = messages.pop(0)
+	sys.stdout.write(message + '\n')
+	sys.stdout.flush()
+	time.sleep(0.3)
+
+try:
+	now = time.time()
+	while True and time.time() < now + 5:
+		line = sys.stdin.readline().strip()
+		if not line or 'shutdown' in line:
+			break
+		time.sleep(1)
+except IOError:
+	pass

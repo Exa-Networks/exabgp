@@ -2,7 +2,8 @@
 bgpls/__init__.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
-Copyright (c) 2009-2016 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # Every BGP LINK_STATE NLRI should be imported from this file

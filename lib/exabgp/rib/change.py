@@ -3,7 +3,8 @@
 change.py
 
 Created by Thomas Mangin on 2009-11-05.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 
@@ -17,14 +18,24 @@ class Source (object):
 class Change (object):
 	SOURCE = Source.UNSET
 
-	__slots__ = ['nlri','attributes']
+	__slots__ = ['nlri','attributes','__index']
+
+	@staticmethod
+	def family_prefix (family):
+		return '%02x%02x' % family
 
 	def __init__ (self, nlri, attributes):
 		self.nlri = nlri
 		self.attributes = attributes
+		# prevent multiple allocation of the index when calling .index()
+		# storing the value at __init__ time causes api-attributes.sequence to fail
+		# XXX: the NLRI content is half missing !!
+		self.__index = ''
 
 	def index (self):
-		return '%02x%02x' % self.nlri.family() + self.nlri.index()
+		if not self.__index:
+			self.__index = '%02x%02x' % self.nlri.family() + self.nlri.index()
+		return self.__index
 
 	def __eq__ (self, other):
 		return self.nlri == other.nlri and self.attributes == other.attributes
@@ -51,6 +62,10 @@ class Change (object):
 	def __repr__ (self):
 		return self.extensive()
 
+	def feedback (self):
+		if self.nlri is not None:
+			return self.nlri.feedback(self.nlri.action)
+		return 'no check implemented for the family %s %s' % self.nlri.family()
 
 class ConfigurationChange (Change):
 	SOURCE = Source.CONFIGURATION

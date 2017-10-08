@@ -5,6 +5,7 @@ cache.py
 
 Created by David Farrar on 2012-12-27.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import unittest
@@ -13,7 +14,7 @@ import time
 from exabgp.util.cache import Cache
 from exabgp.vendoring import six
 
-from six.moves import xrange
+from exabgp.vendoring.six.moves import xrange
 
 
 class TestCache (unittest.TestCase):

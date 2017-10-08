@@ -3,8 +3,9 @@
 vpls.py
 
 Created by Nikita Shirokov on 2014-06-16.
-Copyright (c) 2014-2015 Nikita Shirokov. All rights reserved.
-Copyright (c) 2014-2015 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Nikita Shirokov. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import unpack
@@ -35,6 +36,7 @@ class VPLS (NLRI):
 
 	__slots__ = ['action','nexthop','rd','base','offset','size','endpoint','unique']
 
+	# XXX: Should take AFI, SAFI and OUT.direction as parameter to match other NLRI
 	def __init__ (self, rd, endpoint, base, offset, size):
 		NLRI.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = OUT.ANNOUNCE
@@ -46,18 +48,27 @@ class VPLS (NLRI):
 		self.endpoint = endpoint
 		self.unique = six.next(unique)
 
-	def __eq__ (self,other):
-		return self.nexthop == other.nexthop \
-			and self.rd == other.rd \
-			and self.base == other.base \
-			and self.offset == other.offset \
-			and self.size == other.size \
-			and self.endpoint == other.endpoint
+	def feedback (self, action):
+		if self.nexthop is None and action == OUT.ANNOUNCE:
+			return 'vpls nlri next-hop missing'
+		if self.endpoint is None:
+			return 'vpls nlri endpoint missing'
+		if self.base is None:
+			return 'vpls nlri base missing'
+		if self.offset is None:
+			return 'vpls nlri offset missing'
+		if self.size is None:
+			return 'vpls nlri size missing'
+		if self.rd is None:
+			return 'vpls nlri route-distinguisher missing'
+		if self.base > (0xFFFFF - self.size):  # 20 bits, 3 bytes
+			return 'vpls nlri size inconsistency'
+		return ''
 
 	def assign (self, name, value):
 		setattr(self,name,value)
 
-	def pack (self, negotiated=None):
+	def pack_nlri (self, negotiated=None):
 		return concat_bytes(
 			b'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),
@@ -75,7 +86,7 @@ class VPLS (NLRI):
 
 	# XXX: FIXME: we need an unique key here.
 	# XXX: What can we use as unique key ?
-	def json (self):
+	def json (self,compact=None):
 		content = ', '.join([
 			self.rd.json(),
 			'"endpoint": %s' % self.endpoint,

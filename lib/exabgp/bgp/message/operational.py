@@ -3,7 +3,8 @@
 operational.py
 
 Created by Thomas Mangin on 2013-09-01.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
@@ -140,8 +141,8 @@ class OperationalFamily (Operational):
 
 	def __init__ (self, what, afi, safi, data=b''):
 		Operational.__init__(self,what)
-		self.afi = AFI(afi)
-		self.safi = SAFI(safi)
+		self.afi = AFI.create(afi)
+		self.safi = SAFI.create(safi)
 		self.data = data
 
 	def family (self):

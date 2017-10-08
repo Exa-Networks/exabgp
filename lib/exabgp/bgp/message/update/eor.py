@@ -3,7 +3,8 @@
 eor.py
 
 Created by Thomas Mangin on 2010-01-16.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # from struct import unpack
@@ -41,7 +42,7 @@ class EOR (Message):
 			self.afi = afi
 			self.safi = safi
 
-		def pack (self, negotiated=None):
+		def pack_nlri (self, negotiated=None):
 			if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
 				return b'\x00\x00\x00\x00'
 			return self.PREFIX + self.afi.pack() + self.safi.pack()

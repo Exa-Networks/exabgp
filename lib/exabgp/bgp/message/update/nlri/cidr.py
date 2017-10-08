@@ -3,7 +3,8 @@
 cidr.py
 
 Created by Thomas Mangin on 2013-08-07.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import math
@@ -72,7 +73,7 @@ class CIDR (object):
 		return "%s/%s" % (self.top(),self.mask)
 
 	def index (self):
-		return chr(self.mask) + str(self._packed[:CIDR.size(self.mask)])
+		return str(self.mask) + str(self._packed[:CIDR.size(self.mask)])
 
 	def pack_ip (self):
 		return self._packed[:CIDR.size(self.mask)]

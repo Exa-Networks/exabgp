@@ -3,7 +3,8 @@
 vpls.py
 
 Created by Thomas Mangin on 2015-06-05.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.configuration.core import Section
@@ -131,34 +132,16 @@ class ParseVPLS (Section):
 		pass
 
 	def pre (self):
-		self.scope.set(self.name,vpls(self.tokeniser.iterate))
+		self.scope.append_route(vpls(self.tokeniser.iterate))
 		return True
 
 	def post (self):
 		if not self._check():
 			return False
-		# self.scope.to_context()
-		route = self.scope.pop(self.name)
-		if route:
-			self.scope.append('routes',route)
 		return True
 
 	def _check (self):
-		nlri = self.scope.get(self.name).nlri
-
-		if nlri.nexthop is None:
-			return self.error.set('vpls next-hop missing')
-		if nlri.endpoint is None:
-			return self.error.set('vpls endpoint missing')
-		if nlri.base is None:
-			return self.error.set('vpls base missing')
-		if nlri.offset is None:
-			return self.error.set('vpls offset missing')
-		if nlri.size is None:
-			return self.error.set('vpls size missing')
-		if nlri.base > (0xFFFFF - nlri.size):  # 20 bits, 3 bytes
-			return self.error.set('vpls size inconsistency')
-		return True
-
-	def check (self,change):
+		feedback = self.scope.get_route().feedback()
+		if feedback:
+			return self.error.set(feedback)
 		return True

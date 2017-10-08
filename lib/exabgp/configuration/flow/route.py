@@ -3,7 +3,8 @@
 route.py
 
 Created by Thomas Mangin on 2015-06-22.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.family import SAFI
@@ -24,14 +25,14 @@ from exabgp.configuration.flow.parser import next_hop
 class ParseFlowRoute (Section):
 	syntax = \
 		'route give-me-a-name {\n' \
-		'  (optional) route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535;\n' \
+		'  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n' \
 		'  next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n' \
 		'  %s\n' \
 		'  %s\n' \
 		'  %s\n' \
 		'}\n' % (
 			'\n  '.join(ParseFlowMatch.syntax.split('\n')),
-			'\n  '.join(ParseFlowScope.syntax.split('\n')),			
+			'\n  '.join(ParseFlowScope.syntax.split('\n')),
 			'\n  '.join(ParseFlowThen.syntax.split('\n'))
 		)
 
@@ -61,21 +62,15 @@ class ParseFlowRoute (Section):
 		pass
 
 	def pre (self):
-		self.scope.to_context()
-		self.scope.set(self.name,flow(self.tokeniser.iterate))
+		self.scope.append_route(flow(None))
 		return True
 
 	def post (self):
-		route = self.scope.pop(self.name)
-
-		# if route.nlri.has_rd(): # ???
+		route = self.scope.get_route()
 		if route.nlri.rd is not RouteDistinguisher.NORD:
-			route.nlri.safi = SAFI(SAFI.flow_vpn)
-
-		if route:
-			self.scope.append('routes',route)
+			route.nlri.safi = SAFI.flow_vpn
 		return True
 
 	def _check (self,change):
-		self.logger.configuration('warning: no check on flows are implemented')
+		self.logger.debug('warning: no check on flows are implemented','configuration')
 		return True

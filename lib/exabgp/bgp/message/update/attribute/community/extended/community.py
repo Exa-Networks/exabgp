@@ -3,7 +3,8 @@
 community.py
 
 Created by Thomas Mangin on 2009-11-05.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.util import ordinal
@@ -39,6 +40,7 @@ class ExtendedCommunity (Attribute):
 	def __init__ (self, community):
 		# Two top bits are iana and transitive bits
 		self.community = community
+		self.klass = None
 
 	def __eq__(self, other):
 		return \
@@ -88,9 +90,12 @@ class ExtendedCommunity (Attribute):
 		for byte in self.community:
 			h <<= 8
 			h += ordinal(byte)
-		return "%ld" % h
+		s = self.klass.__repr__(self) if self.klass else ''
+		return '{ "value": %ld, "string": "%s" }' % (h,s)
 
 	def __repr__ (self):
+		if self.klass:
+			return self.klass.__repr__(self)
 		h = 0x00
 		for byte in self.community:
 			h <<= 8
@@ -108,5 +113,8 @@ class ExtendedCommunity (Attribute):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
 		community = (ordinal(data[0]) & 0x0F,ordinal(data[1]))
 		if community in ExtendedCommunity.registered_extended:
-			return ExtendedCommunity.registered_extended[community].unpack(data)
+			klass = ExtendedCommunity.registered_extended[community]
+			instance = klass.unpack(data)
+			instance.klass = klass
+			return instance
 		return ExtendedCommunity(data)

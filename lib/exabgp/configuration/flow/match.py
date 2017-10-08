@@ -3,7 +3,8 @@
 match.py
 
 Created by Thomas Mangin on 2015-06-22.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.configuration.core import Section
@@ -104,9 +105,7 @@ class ParseFlowMatch (Section):
 		pass
 
 	def pre (self):
-		self.scope.set(self.name,self.scope.get('flow/route'))
 		return True
 
 	def post (self):
-		self.scope.pop(self.name)
 		return True

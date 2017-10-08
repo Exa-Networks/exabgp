@@ -3,7 +3,8 @@
 ms.py
 
 Created by Thomas Mangin on 2012-07-17.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.util import character
@@ -30,7 +31,7 @@ class MultiSession (Capability,list):
 
 	def json (self):
 		variant = 'RFC' if self.ID == Capability.CODE.MULTISESSION else 'Cisco'
-		return '{ "name": "multisession", "variant": "%s" ,"capabilities": [%s ] }' % (variant, ','.join(' %s' % str(capa) for capa in self))
+		return '{ "name": "multisession", "variant": "%s", "capabilities": [%s ] }' % (variant, ','.join(' "%s"' % str(capa) for capa in self))
 
 	def extract (self):
 		rs = [character(0),]

@@ -158,11 +158,15 @@ def _generic_condition (tokeniser, klass):
 				AND = BinaryOperator.NOP
 				data = tokeniser()
 	else:
-		operator,_ = _operator(data)
-		value,data = _value(_)
-		if data:
-			raise ValueError("Invalid flow route data" % data)
-		yield klass(operator | AND,klass.converter(value))
+		while data:
+			operator,_ = _operator(data)
+			value,data = _value(_)
+			if data:
+				if data[0] != '&':
+					raise ValueError("Unknown binary operator %s" % data[0])
+				AND = BinaryOperator.AND
+				data = data[1:]
+			yield klass(operator | AND,klass.converter(value))
 
 
 def any_port (tokeniser):
@@ -253,10 +257,10 @@ def rate_limit (tokeniser):
 	# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 	speed = int(tokeniser())
 	if speed < 9600 and speed != 0:
-		Logger().configuration("rate-limiting flow under 9600 bytes per seconds may not work",'warning')
+		Logger().warning("rate-limiting flow under 9600 bytes per seconds may not work",'configuration')
 	if speed > 1000000000000:
 		speed = 1000000000000
-		Logger().configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % speed,'warning')
+		Logger().warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % speed,'configuration')
 	return ExtendedCommunities().add(TrafficRate(ASN(0),speed))
 
 

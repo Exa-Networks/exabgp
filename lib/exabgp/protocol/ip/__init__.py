@@ -3,7 +3,8 @@
 ip/__init__.py
 
 Created by Thomas Mangin on 2010-01-15.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import socket
@@ -12,6 +13,11 @@ from exabgp.util import ordinal
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+
+from exabgp.protocol.ip.netmask import NetMask
+
+# XXX: The IP,Range and CIDR class API are totally broken, fix it.
+# XXX: many of the NLRI classes constructor also need correct @classmethods
 
 
 # =========================================================================== IP
@@ -38,16 +44,15 @@ class IPSelf (object):
 
 
 class IP (object):
-	afi = None  # here for the API
+	afi = None  # here for the API, changed in init which does not change this
 	_known = dict()
 
-	_UNICAST = SAFI(SAFI.unicast)
-	_MULTICAST = SAFI(SAFI.multicast)
+	_UNICAST = SAFI.unicast
+	_MULTICAST = SAFI.multicast
 
 	_multicast_range = set(range(224,240))  # 239
 
 	# deprecate the string API in favor of top()
-	__slots__ = ['_string','_packed']
 
 	def __init__ (self):
 		raise RuntimeError("You should use IP.create() to use IP")
@@ -56,6 +61,7 @@ class IP (object):
 		# XXX: the str should not be needed
 		self._string = string
 		self._packed = IP.pton(string) if packed is None else packed
+		self.afi = IP.toafi(string)
 		return self
 
 	def __iter__ (self):
@@ -108,6 +114,13 @@ class IP (object):
 
 	def ipv6 (self):
 		return False if len(self._packed) == 4 else True
+
+	def address (self):
+		value = 0
+		for char in self._packed:
+			value <<= 8
+			value += ordinal(char)
+		return value
 
 	@staticmethod
 	def length (afi):
@@ -175,6 +188,26 @@ class IP (object):
 		return cls.create(IP.ntop(data),data,klass)
 
 
+# ======================================================================== Range
+#
+
+class IPRange (IP):
+	def __init__ (self, ip, mask):
+		IP.init(self,ip)
+		self.mask = NetMask.create(mask,IP.toafi(ip))
+
+	@classmethod
+	def create (klass, ip, mask):
+		return klass(ip,mask)
+
+	def __repr__ (self):
+		if (self.ipv4() and self.mask == 32) or \
+		   (self.ipv6() and self.mask == 128):
+			return super(IPRange, self).__repr__()
+		else:
+			return '%s/%d' % (self.top(), int(self.mask))
+
+
 # ==================================================================== NoNextHop
 #
 
@@ -193,7 +226,9 @@ class _NoNextHop (object):
 	def __str__ (self):
 		return 'no-nexthop'
 
+
 NoNextHop = _NoNextHop()
+
 
 # ========================================================================= IPv4
 #
@@ -237,6 +272,7 @@ class IPv4 (IP):
 		if klass:
 			return klass(ip,data)
 		return cls(ip,data)
+
 
 IPv4.register()
 
@@ -282,5 +318,6 @@ class IPv6 (IP):
 		if klass:
 			return klass(ip6)
 		return cls(ip6)
+
 
 IPv6.register()

@@ -3,7 +3,8 @@
 inet/parser.py
 
 Created by Thomas Mangin on 2015-06-04.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
@@ -14,6 +15,7 @@ from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPSelf
+from exabgp.protocol.ip import IPRange
 from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
 
@@ -57,31 +59,16 @@ if sys.version_info > (3,):
 	long = int
 
 
-# XXX: The IP and CIDR class API is totally broken, fix it.
-# XXX: Then add a similar class to the lot
-# XXX: I could also say this from many of the NLRI classes constructor which need correct @classmethods
-
-
-class Range (IP):  # XXX:  we do not need this class anymore and should just use CIDR
-	def __init__ (self, ip, packed, mask):
-		IP.init(self,ip,packed)
-		self.mask = mask
-
-	def __repr__ (self):
-		return '%s/%d' % (self.top(),self.mask)
-
-
 def prefix (tokeniser):
 	# XXX: could raise
 	ip = tokeniser()
 	try:
 		ip,mask = ip.split('/')
-		mask = int(mask)
 	except ValueError:
-		mask = 32
+		mask = '32'
 
 	tokeniser.afi = IP.toafi(ip)
-	return Range(ip,IP.pton(ip),mask)
+	return IPRange.create(ip,mask)
 
 
 def path_information (tokeniser):
@@ -124,7 +111,7 @@ def mpls (tokeniser):
 	mpls = IPVPN(
 		afi=IP.toafi(ipmask.top()),
 		safi=IP.tosafi(ipmask.top()),
-		action=OUT.UNSET
+		action=OUT.ANNOUNCE
 	)
 	mpls.cidr = CIDR(ipmask.ton(),ipmask.mask)
 
@@ -188,7 +175,7 @@ def aigp (tokeniser):
 	except ValueError:
 		raise ValueError('aigp requires number (decimal or hexadecimal 0x prefixed)')
 
-	return AIGP('\x01\x00\x0b' + pack('!Q',number))
+	return AIGP(b'\x01\x00\x0b' + pack('!Q',number))
 
 
 def origin (tokeniser):
@@ -429,6 +416,7 @@ _HEADER = {
 	'redirect':            character(0x80)+character(0x08),
 	'l2info':              character(0x80)+character(0x0A),
 	'redirect-to-nexthop': character(0x08)+character(0x00),
+	'bandwidth':           character(0x40)+character(0x04),
 }
 
 _SIZE = {
@@ -439,6 +427,7 @@ _SIZE = {
 	'redirect':            2,
 	'l2info':              4,
 	'redirect-to-nexthop': 0,
+	'bandwidth':           2,
 }
 
 _SIZE_H = 0xFFFF
@@ -502,11 +491,14 @@ def _extended_community (value):
 		if command == 'target4':
 			return ExtendedCommunity.unpack(_HEADER['target4']+pack('!LH',iga,ila),None)
 
-		if command == 'orgin4':
+		if command == 'origin4':
 			return ExtendedCommunity.unpack(_HEADER['origin4']+pack('!LH',iga,ila),None)
 
-		if command in ('redirect',):
+		if command == 'redirect':
 			return ExtendedCommunity.unpack(header+pack('!HL',iga,ila),None)
+
+		if command == 'bandwidth':
+			return ExtendedCommunity.unpack(_HEADER['bandwidth']+pack('!Hf',iga,ila),None)
 
 		raise ValueError('invalid extended community %s' % command)
 	elif value == 'redirect-to-nexthop':

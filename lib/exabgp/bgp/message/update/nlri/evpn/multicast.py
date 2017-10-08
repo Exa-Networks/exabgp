@@ -2,7 +2,8 @@
 multicast.py
 
 Created by Thomas Morin on 2014-06-23.
-Copyright (c) 2014-2015 Orange. All rights reserved.
+Copyright (c) 2014-2017 Orange. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.ip import IP

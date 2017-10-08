@@ -2,12 +2,11 @@
 link.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
-Copyright (c) 2009-2016 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from struct import pack
 from struct import unpack
-import json
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -76,7 +75,7 @@ class LINK(BGPLS):
 		self._pack = packed
 
 	@classmethod
-	def unpack (cls, data, rd):
+	def unpack_nlri (cls, data, rd):
 		proto_id = unpack('!B',data[0:1])[0]
 		iface_addrs = []
 		neigh_addrs = []
@@ -168,8 +167,8 @@ class LINK(BGPLS):
 		interface_addrs = ', '.join(d.json() for d in self.iface_addrs)
 		neighbor_addrs = ', '.join(d.json() for d in self.neigh_addrs)
 		content = '"ls-nlri-type": 2, '
-		content += '"l3-routing-topology": "%s", ' % self.domain
-		content += '"protocol-id": %d, ' % self.proto_id
+		content += '"l3-routing-topology": %d, ' % int(self.domain)
+		content += '"protocol-id": %d, ' % int(self.proto_id)
 		content += '"local-node-descriptors": { %s }, ' % local
 		content += '"remote-node-descriptors": { %s }, ' % remote
 		content += '"interface-address": { %s }, ' % interface_addrs

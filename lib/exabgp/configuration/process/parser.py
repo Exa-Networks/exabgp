@@ -3,7 +3,8 @@
 parse_process.py
 
 Created by Thomas Mangin on 2015-06-18.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
@@ -51,6 +52,7 @@ def run (tokeniser):
 				os.path.abspath(os.path.join('/etc/exabgp',prg)),
 				os.path.abspath(os.path.join(os.path.dirname(tokeniser.fname),prg)),
 			]
+			options.extend((os.path.abspath(os.path.join(p,prg)) for p in os.getenv('PATH').split(':')))
 		for option in options:
 			if os.path.exists(option):
 				prg = option

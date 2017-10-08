@@ -3,7 +3,8 @@
 configuration.py
 
 Created by Thomas Mangin on 2009-08-25.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import sys
@@ -24,8 +25,13 @@ from exabgp.configuration.neighbor import ParseNeighbor
 from exabgp.configuration.neighbor.api import ParseAPI
 from exabgp.configuration.neighbor.api import ParseSend
 from exabgp.configuration.neighbor.api import ParseReceive
-from exabgp.configuration.family import ParseFamily
+from exabgp.configuration.neighbor.family import ParseFamily
+from exabgp.configuration.neighbor.family import ParseAddPath
 from exabgp.configuration.capability import ParseCapability
+from exabgp.configuration.announce import SectionAnnounce
+from exabgp.configuration.announce import AnnounceIPv4
+from exabgp.configuration.announce import AnnounceIPv6
+from exabgp.configuration.announce import AnnounceL2VPN
 from exabgp.configuration.static import ParseStatic
 from exabgp.configuration.static import ParseStaticRoute
 from exabgp.configuration.flow import ParseFlow
@@ -38,6 +44,14 @@ from exabgp.configuration.l2vpn import ParseVPLS
 from exabgp.configuration.operational import ParseOperational
 
 from exabgp.configuration.environment import environment
+
+# for registration
+from exabgp.configuration.announce.ip import AnnounceIP
+from exabgp.configuration.announce.path import AnnouncePath
+from exabgp.configuration.announce.label import AnnounceLabel
+from exabgp.configuration.announce.vpn import AnnounceVPN
+from exabgp.configuration.announce.flow import AnnounceFlow
+from exabgp.configuration.announce.vpls import AnnounceVPLS
 
 
 if sys.version_info[0] >= 3:
@@ -55,9 +69,9 @@ class _Configuration (object):
 		for neighbor in self.neighbors:
 			if neighbor in peers:
 				if change.nlri.family() in self.neighbors[neighbor].families():
-					self.neighbors[neighbor].rib.outgoing.insert_announced(change)
+					self.neighbors[neighbor].rib.outgoing.add_to_rib(change)
 				else:
-					self.logger.configuration('the route family is not configured on neighbor','error')
+					self.logger.error('the route family is not configured on neighbor','configuration')
 					result = False
 		return result
 
@@ -78,7 +92,7 @@ class _Configuration (object):
 						self.neighbors[neighbor].asm[operational.family()] = operational
 					self.neighbors[neighbor].messages.append(operational)
 				else:
-					self.logger.configuration('the route family is not configured on neighbor','error')
+					self.logger.error('the route family is not configured on neighbor','configuration')
 					result = False
 		return result
 
@@ -95,7 +109,6 @@ class _Configuration (object):
 
 
 class Configuration (_Configuration):
-
 	def __init__ (self, configurations, text=False):
 		_Configuration.__init__(self)
 		self.api_encoder = environment.settings().api.encoder
@@ -115,17 +128,22 @@ class Configuration (_Configuration):
 		self.template_neighbor   = ParseTemplateNeighbor (*params)
 		self.neighbor            = ParseNeighbor         (*params)
 		self.family              = ParseFamily           (*params)
+		self.addpath             = ParseAddPath          (*params)
 		self.capability          = ParseCapability       (*params)
 		self.api                 = ParseAPI              (*params)
 		self.api_send            = ParseSend             (*params)
 		self.api_receive         = ParseReceive          (*params)
 		self.static              = ParseStatic           (*params)
 		self.static_route        = ParseStaticRoute      (*params)
+		self.announce            = SectionAnnounce       (*params)
+		self.announce_ipv4       = AnnounceIPv4          (*params)
+		self.announce_ipv6       = AnnounceIPv6          (*params)
+		self.announce_l2vpn      = AnnounceL2VPN         (*params)
 		self.flow                = ParseFlow             (*params)
 		self.flow_route          = ParseFlowRoute        (*params)
 		self.flow_match          = ParseFlowMatch        (*params)
 		self.flow_then           = ParseFlowThen         (*params)
-		self.flow_scope		 = ParseFlowScope	 (*params)
+		self.flow_scope          = ParseFlowScope        (*params)
 		self.l2vpn               = ParseL2VPN            (*params)
 		self.vpls                = ParseVPLS             (*params)
 		self.operational         = ParseOperational      (*params)
@@ -160,11 +178,13 @@ class Configuration (_Configuration):
 				'sections': {
 					'family':      self.family.name,
 					'capability':  self.capability.name,
+					'add-path':    self.addpath.name,
 					'api':         self.api.name,
 					'static':      self.static.name,
 					'flow':        self.flow.name,
 					'l2vpn':       self.l2vpn.name,
 					'operational': self.operational.name,
+					'announce':    self.announce.name,
 				},
 			},
 			self.neighbor.name: {
@@ -173,11 +193,13 @@ class Configuration (_Configuration):
 				'sections': {
 					'family':      self.family.name,
 					'capability':  self.capability.name,
+					'add-path':    self.addpath.name,
 					'api':         self.api.name,
 					'static':      self.static.name,
 					'flow':        self.flow.name,
 					'l2vpn':       self.l2vpn.name,
 					'operational': self.operational.name,
+					'announce':    self.announce.name,
 				},
 			},
 			self.family.name: {
@@ -189,6 +211,12 @@ class Configuration (_Configuration):
 			self.capability.name: {
 				'class':    self.capability,
 				'commands': self.capability.known.keys(),
+				'sections': {
+				},
+			},
+			self.addpath.name: {
+				'class':    self.addpath,
+				'commands': self.addpath.known.keys(),
 				'sections': {
 				},
 			},
@@ -209,6 +237,33 @@ class Configuration (_Configuration):
 			self.api_receive.name: {
 				'class':    self.api_receive,
 				'commands': self.api_receive.known.keys(),
+				'sections': {
+				},
+			},
+			self.announce.name: {
+				'class':    self.announce,
+				'commands': self.announce.known.keys(),
+				'sections': {
+					'ipv4': self.announce_ipv4.name,
+					'ipv6': self.announce_ipv6.name,
+					'l2vpn': self.announce_l2vpn.name,
+				},
+			},
+			self.announce_ipv4.name: {
+				'class':    self.announce_ipv4,
+				'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn'],
+				'sections': {
+				},
+			},
+			self.announce_ipv6.name: {
+				'class':    self.announce_ipv6,
+				'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn'],
+				'sections': {
+				},
+			},
+			self.announce_l2vpn.name: {
+				'class':    self.announce_l2vpn,
+				'commands': ['vpls',],
 				'sections': {
 				},
 			},
@@ -297,12 +352,17 @@ class Configuration (_Configuration):
 
 		self.process.clear()
 		self.template.clear()
+		self.template_neighbor.clear()
 		self.neighbor.clear()
 		self.family.clear()
 		self.capability.clear()
 		self.api.clear()
 		self.api_send.clear()
 		self.api_receive.clear()
+		self.announce_ipv6.clear()
+		self.announce_ipv4.clear()
+		self.announce_l2vpn.clear()
+		self.announce.clear()
 		self.static.clear()
 		self.static_route.clear()
 		self.flow.clear()
@@ -385,6 +445,7 @@ class Configuration (_Configuration):
 				)
 			)
 
+		self.process.add_api()
 		self._commit_reload()
 		self._link()
 		self.debug_check_route()
@@ -396,6 +457,9 @@ class Configuration (_Configuration):
 			api = neighbor.api
 			for process in api.get('processes',[]):
 				self.processes.setdefault(process,{})['neighbor-changes'] = api['neighbor-changes']
+				self.processes.setdefault(process,{})['negotiated'] = api['negotiated']
+				self.processes.setdefault(process,{})['fsm'] = api['fsm']
+				self.processes.setdefault(process,{})['signal'] = api['signal']
 				for way in ('send','receive'):
 					for name in ('parsed','packets','consolidate'):
 						key = "%s-%s" % (way,name)
@@ -413,7 +477,7 @@ class Configuration (_Configuration):
 
 		if self.section(section) is not True:
 			self._rollback_reload()
-			self.logger.configuration(
+			self.logger.debug(
 				"\n"
 				"syntax error in api command %s\n"
 				"line %d: %s\n"
@@ -422,34 +486,47 @@ class Configuration (_Configuration):
 					self.tokeniser.number,
 					' '.join(self.tokeniser.line),
 					str(self.error)
-				)
+				),
+				'configuration'
 			)
 			return False
 		return True
 
 	def _enter (self,name):
 		location = self.tokeniser.iterate()
-		self.logger.configuration("> %-16s | %s" % (location,self.tokeniser.params()))
+		self.logger.debug("> %-16s | %s" % (location,self.tokeniser.params()),'configuration')
 
 		if location not in self._structure[name]['sections']:
 			return self.error.set('section %s is invalid in %s, %s' % (location,name,self.scope.location()))
 
 		self.scope.enter(location)
-		if not self.section(self._structure[name]['sections'][location]):
+		self.scope.to_context()
+
+		class_name = self._structure[name]['sections'][location]
+		instance = self._structure[class_name].get('class',None)
+		if not instance:
+			raise RuntimeError('This should not be happening, debug time !')
+
+		if not instance.pre():
 			return False
-		return True
 
-	def _leave (self):
+		if not self.dispatch(self._structure[name]['sections'][location]):
+			return False
+
+		if not instance.post():
+			return False
+
 		left = self.scope.leave()
-		self.logger.configuration("< %-16s | %s" % (left,self.tokeniser.params()))
-
 		if not left:
 			return self.error.set('closing too many parenthesis')
+		self.scope.to_context()
+
+		self.logger.debug("< %-16s | %s" % (left,self.tokeniser.params()),'configuration')
 		return True
 
 	def _run (self,name):
 		command = self.tokeniser.iterate()
-		self.logger.configuration(". %-16s | %s" % (command,self.tokeniser.params()))
+		self.logger.debug(". %-16s | %s" % (command,self.tokeniser.params()),'configuration')
 
 		if not self.run(name,command):
 			return False
@@ -470,7 +547,7 @@ class Configuration (_Configuration):
 				return False
 
 			if self.tokeniser.end == '}':
-				return self._leave()
+				return True
 
 			if not self.tokeniser.end:  # finished
 				return True
@@ -482,14 +559,7 @@ class Configuration (_Configuration):
 		if name not in self._structure:
 			return self.error.set('option %s is not allowed here' % name)
 
-		instance = self._structure[name].get('class',None)
-
-		if not instance:
-			raise RuntimeError('This should not be happening, debug time !')
-
-		return instance.pre() \
-			and self.dispatch(name) \
-			and instance.post()
+		return self.dispatch(name)
 
 	def run (self, name, command):
 		if command not in self._structure[name]['commands']:

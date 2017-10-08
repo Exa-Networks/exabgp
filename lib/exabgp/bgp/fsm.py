@@ -3,7 +3,8 @@
 fsm.py
 
 Created by Thomas Mangin on 2010-01-15.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import sys
@@ -67,13 +68,16 @@ class FSM (object):
 		ESTABLISHED: [OPENCONFIRM, ESTABLISHED],
 	}
 
-	def __init__ (self, state):
+	def __init__ (self, peer, state):
+		self.peer = peer
 		self.state = state
 
 	def change (self, state):
 		# if self.state not in self.transition.get(state,[]):
 		# 	raise RuntimeError ('invalid state machine transition (from %s to %s)' % (str(self.state),str(state)))
 		self.state = state
+		if self.peer.neighbor.api['fsm']:
+			self.peer.reactor.processes.fsm(self.peer.neighbor,self)
 		return self
 
 	def __eq__ (self, other):
@@ -84,3 +88,6 @@ class FSM (object):
 
 	def __repr__ (self):
 		return 'FSM state %s' % self.state
+
+	def name (self):
+		return self.STATE.names.get(self.state,'INVALID')

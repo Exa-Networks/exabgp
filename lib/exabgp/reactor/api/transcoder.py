@@ -98,10 +98,10 @@ class Transcoder (object):
 		if content == 'open':
 			message = Open.unpack_message(data)
 			self._open(direction,message)
-			return self.encoder.open(neighbor,direction,message,header,body)
+			return self.encoder.open(neighbor,direction,message,None,header,body)
 
 		if content == 'keepalive':
-			return self.encoder.keepalive(neighbor,direction,header,body)
+			return self.encoder.keepalive(neighbor,direction,None,header,body)
 
 		if content == 'notification':
 			# XXX: Use the code of the Notifcation class here ..
@@ -109,12 +109,12 @@ class Transcoder (object):
 
 			if (message.code, message.subcode) != (6, 2):
 				message.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
-				return self.encoder.notification(neighbor,direction,message,header,body)
+				return self.encoder.notification(neighbor,direction,message,None,header,body)
 
 			if len(data) == 0:
 				# shutdown without shutdown communication (the old fashioned way)
 				message.data = ''
-				return self.encoder.notification(neighbor,direction,message,header,body)
+				return self.encoder.notification(neighbor,direction,message,None,header,body)
 
 			# draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
@@ -124,28 +124,28 @@ class Transcoder (object):
 			if shutdown_length == 0:
 				message.data = "empty Shutdown Communication."
 				# move offset past length field
-				return self.encoder.notification(neighbor,direction,message,header,body)
+				return self.encoder.notification(neighbor,direction,message,None,header,body)
 
 			if len(data) < shutdown_length:
 				message.data = "invalid Shutdown Communication (buffer underrun) length : %i [%s]" % (shutdown_length, hexstring(data))
-				return self.encoder.notification(neighbor,direction,message,header,body)
+				return self.encoder.notification(neighbor,direction,message,None,header,body)
 
 			if shutdown_length > 128:
 				message.data = "invalid Shutdown Communication (too large) length : %i [%s]" % (shutdown_length, hexstring(data))
-				return self.encoder.notification(neighbor,direction,message,header,body)
+				return self.encoder.notification(neighbor,direction,message,None,header,body)
 
 			try:
 				message.data = 'Shutdown Communication: "%s"' % \
 					data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
 			except UnicodeDecodeError:
 				message.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
-				return self.encoder.notification(neighbor,direction,message,header,body)
+				return self.encoder.notification(neighbor,direction,message,None,header,body)
 
 			trailer = data[shutdown_length:]
 			if trailer:
 				message.data += ", trailing data: " + hexstring(trailer)
 
-			return self.encoder.notification(neighbor,direction,message,header,body)
+			return self.encoder.notification(neighbor,direction,message,None,header,body)
 
 		if not self.negotiated:
 			print('invalid message sequence, open not exchange not complete', json_string, file=sys.stderr)
@@ -154,15 +154,15 @@ class Transcoder (object):
 		message = Message.unpack(category,data,self.negotiated)
 
 		if content == 'update':
-			return self.encoder.update(neighbor, direction, message, header,body)
+			return self.encoder.update(neighbor, direction, message, None, header,body)
 
 		if content == 'eor':  # XXX: Should not be required
-			return self.encoder.update(neighbor, direction, message, header,body)
+			return self.encoder.update(neighbor, direction, message, None, header,body)
 
 		if content == 'refresh':
-			return self.json.refresh(neighbor, direction, message, header,body)
+			return self.json.refresh(neighbor, direction, message, None, header,body)
 
 		if content == 'operational':
-			return self.json.refresh(neighbor, direction, message, header,body)
+			return self.json.refresh(neighbor, direction, message, None, header,body)
 
 		raise RuntimeError('the programer is a monkey and forgot a JSON message type')

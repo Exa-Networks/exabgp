@@ -2,7 +2,7 @@
 node/__init__.py
 
 Created by Evelio Vila on 2016-12-01.
-Copyright (c) 2014-2016 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE

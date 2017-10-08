@@ -3,7 +3,8 @@
 ipvpn.py
 
 Created by Thomas Mangin on 2012-07-08.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.family import AFI
@@ -15,7 +16,7 @@ from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.labelled import Labelled
+from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
@@ -28,12 +29,17 @@ from exabgp.protocol.ip import NoNextHop
 
 @NLRI.register(AFI.ipv4,SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6,SAFI.mpls_vpn)
-class IPVPN (Labelled):
+class IPVPN (Label):
 	__slots__ = ['rd']
 
 	def __init__ (self, afi, safi, action=OUT.UNSET):
-		Labelled.__init__(self, afi, safi, action)
+		Label.__init__(self, afi, safi, action)
 		self.rd = RouteDistinguisher.NORD
+
+	def feedback (self, action):
+		if self.nexthop is None and action == OUT.ANNOUNCE:
+			return 'ip-vpn nlri next-hop missing'
+		return ''
 
 	@classmethod
 	def new (cls, afi, safi, packed, mask, labels, rd, nexthop=None, action=OUT.UNSET):
@@ -46,19 +52,28 @@ class IPVPN (Labelled):
 		return instance
 
 	def extensive (self):
-		return "%s%s%s%s%s" % (self.prefix(),str(self.labels),str(self.rd),str(self.path_info),str(self.rd))
+		return "%s%s" % (Label.extensive(self),str(self.rd))
 
-	def __len__ (self):
-		return Labelled.__len__(self) + len(self.rd)
+	def __str__ (self):
+		return self.extensive()
 
 	def __repr__ (self):
-		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
-		return "%s%s" % (self.extensive(),nexthop)
+		return self.extensive()
+
+	def __len__ (self):
+		return Label.__len__(self) + len(self.rd)
 
 	def __eq__ (self, other):
 		return \
-			Labelled.__eq__(self, other) and \
-			self.rd == other.rd
+			Label.__eq__(self, other) and \
+			self.rd == other.rd and \
+			Label.__eq__(self,other)
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
+	def __hash__ (self):
+		return hash(self.pack())
 
 	@classmethod
 	def has_rd (cls):
@@ -75,7 +90,7 @@ class IPVPN (Labelled):
 		return NLRI._index(self) + addpath + mask + str(self.rd.pack()) + str(self.cidr.pack_ip())
 
 	def _internal (self, announced=True):
-		r = Labelled._internal(self,announced)
+		r = Label._internal(self,announced)
 		if announced and self.rd:
 			r.append(self.rd.json())
 		return r

@@ -3,7 +3,8 @@
 update/__init__.py
 
 Created by Thomas Mangin on 2009-11-05.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
@@ -111,7 +112,7 @@ class Update (Message):
 		nlris = []
 		mp_nlris = {}
 
-		for nlri in self.nlris:
+		for nlri in sorted(self.nlris):
 			if nlri.family() in negotiated.families:
 				if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast]:
 					nlris.append(nlri)
@@ -180,28 +181,28 @@ class Update (Message):
 	def unpack_message (cls, data, negotiated):
 		logger = Logger()
 
-		logger.parser(LazyFormat("parsing UPDATE",data))
+		logger.debug(LazyFormat('parsing UPDATE',data),'parser')
 
 		length = len(data)
 
 		# This could be speed up massively by changing the order of the IF
 		if length == 4 and data == b'\x00\x00\x00\x00':
-			return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))  # pylint: disable=E1101
+			return EOR(AFI.ipv4,SAFI.unicast)  # pylint: disable=E1101
 		if length == 11 and data.startswith(EOR.NLRI.PREFIX):
 			return EOR.unpack_message(data,negotiated)
 
 		withdrawn, _attributes, announced = cls.split(data)
 
 		if not withdrawn:
-			logger.parser("withdrawn NLRI none")
+			logger.debug('withdrawn NLRI none','parser')
 
 		attributes = Attributes.unpack(_attributes,negotiated)
 
 		if not announced:
-			logger.parser("announced NLRI none")
+			logger.debug('announced NLRI none','parser')
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
-		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
+		addpath = negotiated.addpath.receive(AFI.ipv4,SAFI.unicast)
 
 		# empty string for NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
 		nexthop = attributes.get(Attribute.CODE.NEXT_HOP,NoNextHop)
@@ -212,14 +213,14 @@ class Update (Message):
 		nlris = []
 		while withdrawn:
 			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,withdrawn,IN.WITHDRAWN,addpath)
-			logger.parser("withdrawn NLRI %s" % nlri)
+			logger.debug('withdrawn NLRI %s' % nlri,'parser')
 			withdrawn = left
 			nlris.append(nlri)
 
 		while announced:
 			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.ANNOUNCED,addpath)
 			nlri.nexthop = nexthop
-			logger.parser("announced NLRI %s" % nlri)
+			logger.debug('announced NLRI %s' % nlri,'parser')
 			announced = left
 			nlris.append(nlri)
 
@@ -235,7 +236,7 @@ class Update (Message):
 		if not attributes and not nlris:
 			# Careful do not use == or != as the comparaison does not work
 			if unreach is None and reach is None:
-				return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))
+				return EOR(AFI.ipv4,SAFI.unicast)
 			if unreach is not None:
 				return EOR(unreach.afi,unreach.safi)
 			if reach is not None:

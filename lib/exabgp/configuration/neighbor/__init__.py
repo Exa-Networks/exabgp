@@ -3,13 +3,15 @@
 neighbor/__init__.py
 
 Created by Thomas Mangin on 2015-06-04.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # import sys
 import base64
-import socket
 from copy import deepcopy
+
+from exabgp.util.dns import host,domain
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -17,17 +19,22 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.bgp.message import OUT
+# from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 
 from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.neighbor.api import ParseAPI
-from exabgp.configuration.family import ParseFamily
+from exabgp.configuration.neighbor.family import ParseFamily
+from exabgp.configuration.neighbor.family import ParseAddPath
 
 from exabgp.configuration.parser import boolean
+from exabgp.configuration.parser import auto_boolean
 from exabgp.configuration.parser import ip
-from exabgp.configuration.parser import asn
+from exabgp.configuration.parser import peer_ip
+# from exabgp.configuration.parser import asn
+from exabgp.configuration.parser import auto_asn
 from exabgp.configuration.parser import port
 from exabgp.configuration.neighbor.parser import ttl
 from exabgp.configuration.neighbor.parser import md5
@@ -38,21 +45,6 @@ from exabgp.configuration.neighbor.parser import hostname
 from exabgp.configuration.neighbor.parser import domainname
 from exabgp.configuration.neighbor.parser import description
 from exabgp.configuration.neighbor.parser import inherit
-
-
-def _hostname ():
-	value = socket.gethostname()
-	if not value:
-		return 'localhost'
-	return value.split('.')[0]
-
-
-def _domainname ():
-	value = socket.getfqdn()
-	domainname = '.'.join(value.split('.')[1:])
-	if not domainname:
-		return 'localdomain'
-	return domainname
 
 
 class ParseNeighbor (Section):
@@ -68,25 +60,26 @@ class ParseNeighbor (Section):
 		'router-id':     router_id,
 		'hold-time':     hold_time,
 		'local-address': local_address,
-		'peer-address':  ip,
-		'local-as':      asn,
-		'peer-as':       asn,
+		'peer-address':  peer_ip,
+		'local-as':      auto_asn,
+		'peer-as':       auto_asn,
 		'passive':       boolean,
 		'listen':        port,
 		'connect':       port,
 		'outgoing-ttl':  ttl,
 		'incoming-ttl':  ttl,
 		'md5-password':  md5,
-		'md5-base64':    boolean,
+		'md5-base64':    auto_boolean,
 		'md5-ip':        ip,
 		'group-updates': boolean,
 		'auto-flush':    boolean,
 		'adj-rib-out':   boolean,
+		'adj-rib-in':    boolean,
 		'manual-eor':    boolean,
 	}
 
 	action = {
-		'inherit':       'set-command',
+		'inherit':       'extend-command',
 		'description':   'set-command',
 		'host-name':     'set-command',
 		'domain-name':   'set-command',
@@ -107,6 +100,7 @@ class ParseNeighbor (Section):
 		'group-updates': 'set-command',
 		'auto-flush':    'set-command',
 		'adj-rib-out':   'set-command',
+		'adj-rib-in':    'set-command',
 		'manual-eor':    'set-command',
 		'route':         'append-name',
 	}
@@ -117,6 +111,7 @@ class ParseNeighbor (Section):
 		'group-updates': True,
 		'auto-flush': True,
 		'adj-rib-out': False,
+		'adj-rib-in': False,
 		'manual-eor': False,
 	}
 
@@ -132,11 +127,14 @@ class ParseNeighbor (Section):
 		self.neighbors = {}
 
 	def pre (self):
-		self.scope.to_context()
 		return self.parse(self.name,'peer-address')
 
 	def post (self):
-		local = self.scope.pop_context(self.name)
+		for inherit in self.scope.pop('inherit',[]):
+			data = self.scope.template('neighbor',inherit)
+			self.scope.inherit(data)
+		local = self.scope.get()
+
 		neighbor = Neighbor()
 
 		# XXX: use the right class for the data type
@@ -150,25 +148,22 @@ class ParseNeighbor (Section):
 		neighbor.listen           = local.get('listen',0)
 		neighbor.connect          = local.get('connect',0)
 		neighbor.hold_time        = local.get('hold-time',HoldTime(180))
-		neighbor.host_name        = local.get('host-name',_hostname())
-		neighbor.domain_name      = local.get('domain-name',_domainname())
+		neighbor.host_name        = local.get('host-name',host())
+		neighbor.domain_name      = local.get('domain-name',domain())
 		neighbor.md5_password     = local.get('md5-password',None)
-		neighbor.md5_base64       = local.get('md5-base64', False)
+		neighbor.md5_base64       = local.get('md5-base64', None)
 		neighbor.md5_ip           = local.get('md5-ip',neighbor.local_address)
 		neighbor.description      = local.get('description','')
 		neighbor.flush            = local.get('auto-flush',True)
-		neighbor.adjribout        = local.get('adj-rib-out',True)
+		neighbor.adj_rib_out      = local.get('adj-rib-out',True)
+		neighbor.adj_rib_in       = local.get('adj-rib-in',True)
 		neighbor.aigp             = local.get('aigp',None)
 		neighbor.ttl_out          = local.get('outgoing-ttl',None)
 		neighbor.ttl_in           = local.get('incoming-ttl',None)
 		neighbor.group_updates    = local.get('group-updates',True)
 		neighbor.manual_eor       = local.get('manual-eor', False)
 
-		neighbor.api              = ParseAPI.extract()
-
-		# capabilities
 		capability = local.get('capability',{})
-
 		neighbor.add_path         = capability.get('add-path',0)
 		neighbor.asn4             = capability.get('asn4',True)
 		neighbor.multisession     = capability.get('multi-session',False)
@@ -178,8 +173,10 @@ class ParseNeighbor (Section):
 		if capability.get('graceful-restart',False) is not False:
 			neighbor.graceful_restart = capability.get('graceful-restart',0) or int(neighbor.hold_time)
 
+		neighbor.api              = ParseAPI.flatten(local.pop('api',{}))
+
 		families = []
-		for family in ParseFamily.convert.keys():
+		for family in ParseFamily.convert:
 			for pair in local.get('family',{}).get(family,[]):
 				families.append(pair)
 
@@ -188,17 +185,37 @@ class ParseNeighbor (Section):
 		for family in families:
 			neighbor.add_family(family)
 
-		neighbor.changes = []
+		if neighbor.add_path:
+			add_path = local.get('add-path',{})
+			if add_path:
+				for family in ParseAddPath.convert:
+					for pair in add_path.get(family,[]):
+						if pair not in families:
+							self.logger.debug('skipping add-path family %s as it is not negotiated' % pair,'configuration')
+							continue
+						neighbor.add_addpath(pair)
+			else:
+				for family in families:
+					neighbor.add_addpath(family)
 
+		neighbor.changes = []
+		neighbor.changes.extend(self.scope.pop_routes())
+
+		# old format
 		for section in ('static','l2vpn','flow'):
 			routes = local.get(section,{}).get('routes',[])
 			for route in routes:
 				route.nlri.action = OUT.ANNOUNCE
 			neighbor.changes.extend(routes)
 
+		routes = local.get('routes',[])
+		for route in routes:
+			route.nlri.action = OUT.ANNOUNCE
+		neighbor.changes.extend(routes)
+
 		messages = local.get('operational',{}).get('routes',[])
 
-		if neighbor.local_address == 'auto':
+		if neighbor.local_address is None:
 			neighbor.auto_discovery = True
 			neighbor.local_address = None
 			neighbor.md5_ip = None
@@ -207,8 +224,8 @@ class ParseNeighbor (Section):
 			neighbor.router_id = neighbor.local_address
 
 		if neighbor.route_refresh:
-			if neighbor.adjribout:
-				self.logger.configuration('route-refresh requested, enabling adj-rib-out')
+			if neighbor.adj_rib_out:
+				self.logger.debug('route-refresh requested, enabling adj-rib-out','configuration')
 
 		missing = neighbor.missing()
 		if missing:
@@ -216,6 +233,10 @@ class ParseNeighbor (Section):
 
 		if not neighbor.auto_discovery and neighbor.local_address.afi != neighbor.peer_address.afi:
 			return self.error.set('local-address and peer-address must be of the same family')
+		neighbor.range_size = neighbor.peer_address.mask.size()
+
+		if neighbor.range_size > 1 and not neighbor.passive:
+			return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
 		if neighbor.peer_address.top() in self._neighbors:
 			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.top())
@@ -241,7 +262,7 @@ class ParseNeighbor (Section):
 			for change in neighbor.changes:
 				if change.nlri.family() in families:
 					# This add the family to neighbor.families()
-					neighbor.rib.outgoing.insert_announced_watchdog(change)
+					neighbor.rib.outgoing.add_to_rib_watchdog(change)
 			for message in messages:
 				if message.family() in families:
 					if message.name == 'ASM':
@@ -263,8 +284,3 @@ class ParseNeighbor (Section):
 			_init_neighbor(neighbor)
 
 		return True
-
-		# display configuration
-		# for line in str(neighbor).split('\n'):
-		# 	self.logger.configuration(line)
-		# self.logger.configuration("\n")

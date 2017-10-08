@@ -3,7 +3,7 @@
 igpflags.py
 
 Created by Evelio Vila on 2016-12-01.
-Copyright (c) 2014-2016 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
@@ -43,8 +43,8 @@ class IgpFlags(object):
 		if length > 1:
 			raise Notify(3,5, "IGP Flags TLV length too large")
 		else:
-			flags = LsGenericFlags.unpack(data[0],LsGenericFlags.LS_IGP_FLAGS)
-			return cls(igpflags=flags.flags)
+			flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.LS_IGP_FLAGS)
+			return cls(igpflags=flags)
 
 	def json (self,compact=None):
-		return '"igp-flags": "%s"' % str(self.igpflags)
+		return '"igp-flags": {}'.format(self.igpflags.json())

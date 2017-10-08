@@ -3,7 +3,8 @@
 setup.py
 
 Created by Thomas Mangin on 2014-12-23.
-Copyright (c) 2014-2015 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.configuration.environment import environment
@@ -189,10 +190,10 @@ environment.configuration = {
 			'help':  'start to announce route when the minutes in the hours is a modulo of this number',
 		},
 		'bind': {
-			'read':  environment.optional_ip,
+			'read':  environment.ip_list,
 			'write': environment.quote,
 			'value': '',
-			'help':  'IP to bind on when listening (no ip to disable)',
+			'help':  'Space separated list of IPs to bind on when listening (no ip to disable)',
 		},
 		'port': {
 			'read':  environment.integer,
@@ -230,6 +231,12 @@ environment.configuration = {
 		},
 	},
 	'api':  {
+		'ack':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'acknowledge api command(s) and report issues',
+		},
 		'chunk': {
 			'read': environment.integer,
 			'write': environment.nop,
@@ -251,14 +258,20 @@ environment.configuration = {
 		'respawn':  {
 			'read':  environment.boolean,
 			'write': environment.lower,
-			'value': 'false',
-			'help':  'should we respawn a helper process if it dies',
+			'value': 'true',
+			'help':  'should we try to respawn helper processes if they dies',
 		},
-		'file':  {
-			'read':  environment.unquote,
-			'write': environment.quote,
-			'value': '',
-			'help':  'where should we create a socket for remote control',
+		'terminate':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'should we terminate ExaBGP if any helper process dies',
+		},
+		'cli':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'should we create a named pipe for the cli',
 		},
 	},
 	'reactor':  {

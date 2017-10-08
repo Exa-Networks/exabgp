@@ -5,8 +5,9 @@ Created by Diego Garcia del Rio on 2015-03-12.
 Copyright (c) 2015 Alcatel-Lucent. All rights reserved.
 
 Based on work by Thomas Morin on mac.py
-Copyright (c) 2014-2015 Orange. All rights reserved.
-Copyright (c) 2014-2015 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Orange. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.ip import IP

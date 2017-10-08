@@ -2,7 +2,8 @@
 evpn/__init__.py
 
 Created by Thomas Mangin on 2014-06-27.
-Copyright (c) 2014-2015 Orange. All rights reserved.
+Copyright (c) 2014-2017 Orange. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # Every EVPN should be imported from this file

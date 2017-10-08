@@ -3,13 +3,15 @@
 generic.py
 
 Created by Thomas Mangin on 2009-11-05.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
+from exabgp.util import hexstring
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -56,3 +58,6 @@ class GenericAttribute (Attribute):
 	@classmethod
 	def unpack (cls, code, flag, data):
 		return cls(code,flag,data)
+
+	def json (self):
+		return '{ "id": %d, "flag": %d, "payload": "%s"}' % (self.ID,self.FLAG,hexstring(self.data))

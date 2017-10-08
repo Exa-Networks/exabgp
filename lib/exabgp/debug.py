@@ -3,7 +3,8 @@
 debug.py
 
 Created by Thomas Mangin on 2011-03-29.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
@@ -13,7 +14,12 @@ from exabgp.util.panic import FOOTER
 
 
 def bug_report (dtype, value, trace):
+	sys.stdout.flush()
+	sys.stderr.flush()
+
 	print(PANIC)
+	sys.stdout.flush()
+	sys.stderr.flush()
 
 	import traceback
 
@@ -30,6 +36,8 @@ def bug_report (dtype, value, trace):
 	print("\n\n\n")
 
 	print(FOOTER)
+	sys.stdout.flush()
+	sys.stderr.flush()
 
 
 def intercept (dtype, value, trace):

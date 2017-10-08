@@ -3,8 +3,9 @@
 pmsi.py
 
 Created by Thomas Morin on 2014-06-10.
-Copyright (c) 2014-2015 Orange. All rights reserved.
-Copyright (c) 2014-2015 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Orange. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
@@ -114,7 +115,7 @@ class PMSI (Attribute):
 	@classmethod
 	def unpack (cls, data, negotiated):
 		flags,subtype = unpack('!BB',data[:2])
-		label = unpack('!L','\0'+data[2:5])[0] >> 4
+		label = unpack('!L',b'\0'+data[2:5])[0] >> 4
 		# should we check for bottom of stack before the shift ?
 		if subtype in cls._pmsi_known:
 			return cls._pmsi_known[subtype].unpack(data[5:],label,flags)

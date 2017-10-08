@@ -3,7 +3,8 @@
 capabilities.py
 
 Created by Thomas Mangin on 2012-07-17.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.vendoring import six
@@ -58,11 +59,11 @@ class Parameter (int):
 
 class Capabilities (dict):
 	_ADD_PATH = [
-		(AFI(AFI.ipv4),SAFI(SAFI.unicast)),
-		(AFI(AFI.ipv6),SAFI(SAFI.unicast)),
-		(AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)),
-		(AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)),
-		(AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)),
+		(AFI.ipv4,SAFI.unicast),
+		(AFI.ipv6,SAFI.unicast),
+		(AFI.ipv4,SAFI.nlri_mpls),
+		(AFI.ipv4,SAFI.mpls_vpn),
+		(AFI.ipv6,SAFI.mpls_vpn),
 	]
 
 	def announced (self, capability):
@@ -90,7 +91,7 @@ class Capabilities (dict):
 		if not neighbor.add_path:
 			return
 
-		families = neighbor.families()
+		families = neighbor.addpaths()
 		ap_families = []
 		for allowed in self._ADD_PATH:
 			if allowed in families:

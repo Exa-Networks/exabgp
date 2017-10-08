@@ -2,7 +2,8 @@
 process.py
 
 Created by Thomas Mangin on 2011-05-02.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
@@ -25,6 +26,8 @@ from exabgp.logger import Logger
 from exabgp.version import json as json_version
 from exabgp.version import text as text_version
 
+from exabgp.configuration.environment import environment
+
 
 # pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
 
@@ -42,17 +45,24 @@ def preexec_helper ():
 
 class Processes (object):
 	# how many time can a process can respawn in the time interval
-	respawn_number = 5
 	respawn_timemask = 0xFFFFFF - 0b111111
 	# '0b111111111111111111000000' (around a minute, 63 seconds)
 
 	_dispatch = {}
 
-	def __init__ (self, reactor):
+	def __init__ (self):
 		self.logger = Logger()
-		self.reactor = reactor
 		self.clean()
 		self.silence = False
+		self._buffer = {}
+		self._configuration = {}
+
+		self.respawn_number = 5 if environment.settings().api.respawn else 0
+		self.terminate_on_error = environment.settings().api.terminate
+		self.ack = environment.settings().api.ack
+
+	def number (self):
+		return len(self._process)
 
 	def clean (self):
 		self._process = {}
@@ -60,23 +70,17 @@ class Processes (object):
 		self._broken = []
 		self._respawning = {}
 
-	def handle_respawn (self):
-		self.logger.processes("Issue with the process, restarting it")
-		self._terminate(process)
-		self._start(process)
-
-	def handle_terminate (self):
-		self.logger.processes("Issue with the process, terminating it")
-		self._terminate(process)
-
-	def handle_problem (self):
-		if self.reactor.respawn:
-			self.handle_respawn()
+	def _handle_problem (self, process):
+		if self.respawn_number:
+			self.logger.debug('issue with the process, restarting it','process')
+			self._terminate(process)
+			self._start(process)
 		else:
-			self.handle_terminate()
+			self.logger.debug('issue with the process, terminating it','process')
+			self._terminate(process)
 
 	def _terminate (self, process):
-		self.logger.processes("Terminating process %s" % process)
+		self.logger.debug('terminating process %s' % process,'process')
 		try:
 			self._process[process].terminate()
 		except OSError:
@@ -89,36 +93,38 @@ class Processes (object):
 		for process in list(self._process):
 			if not self.silence:
 				try:
-					self.write(process,self._encoder[process].shutdown())
+					self._write(process,self._encoder[process].shutdown())
 				except ProcessError:
 					pass
 		self.silence = True
+		# waiting a little to make sure IO is flushed to the pipes
+		# we are using unbuffered IO but still ..
 		time.sleep(0.1)
 		for process in list(self._process):
 			try:
 				self._terminate(process)
 			except OSError:
 				# we most likely received a SIGTERM signal and our child is already dead
-				self.logger.processes("child process %s was already dead" % process)
-
+				self.logger.debug('child process %s was already dead' % process,'process')
 		self.clean()
 
-	def _start (self, process):
+	def _start (self,process):
 		try:
 			if process in self._process:
-				self.logger.processes("process already running")
+				self.logger.debug('process already running','process')
 				return
-			if process not in self.reactor.configuration.processes:
-				self.logger.processes("Can not start process, no configuration for it (anymore ?)")
+			if process not in self._configuration:
+				self.logger.debug('can not start process, no configuration for it','process')
 				return
-
 			# Prevent some weird termcap data to be created at the start of the PIPE
 			# \x1b[?1034h (no-eol) (esc)
 			os.environ['TERM'] = 'dumb'
 
-			run = self.reactor.configuration.processes[process].get('run','')
+			configuration = self._configuration[process]
+
+			run = configuration.get('run','')
 			if run:
-				api = self.reactor.configuration.processes[process]['encoder']
+				api = configuration.get('encoder','')
 				self._encoder[process] = Response.Text(text_version) if api == 'text' else Response.JSON(json_version)
 
 				self._process[process] = subprocess.Popen(
@@ -131,7 +137,7 @@ class Processes (object):
 				)
 				fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
-				self.logger.processes("Forked process %s" % process)
+				self.logger.debug('forked process %s' % process,'process')
 
 				around_now = int(time.time()) & self.respawn_timemask
 				if process in self._respawning:
@@ -139,9 +145,9 @@ class Processes (object):
 						self._respawning[process][around_now] += 1
 						# we are respawning too fast
 						if self._respawning[process][around_now] > self.respawn_number:
-							self.logger.processes(
-								"Too many respawn for %s (%d) terminating program" % (process,self.respawn_number),
-								'critical'
+							self.logger.critical(
+								'Too many death for %s (%d) terminating program' % (process,self.respawn_number),
+								'process'
 							)
 							raise ProcessError()
 					else:
@@ -153,21 +159,22 @@ class Processes (object):
 
 		except (subprocess.CalledProcessError,OSError,ValueError) as exc:
 			self._broken.append(process)
-			self.logger.processes("Could not start process %s" % process)
-			self.logger.processes("reason: %s" % str(exc))
+			self.logger.debug('could not start process %s' % process,'process')
+			self.logger.debug('reason: %s' % str(exc),'process')
 
-	def start (self, restart=False):
-		for process in self.reactor.configuration.processes:
+	def start (self, configuration, restart=False):
+		for process in list(self._process):
+			if process not in configuration:
+				self._terminate(process)
+		self._configuration = configuration
+		for process in configuration:
 			if restart and process in list(self._process):
 				self._terminate(process)
 			self._start(process)
-		for process in list(self._process):
-			if process not in self.reactor.configuration.processes:
-				self._terminate(process)
 
 	def broken (self, neighbor):
 		if self._broken:
-			for process in self.reactor.configuration.processes:
+			for process in self._configuration:
 				if process in self._broken:
 					return True
 		return False
@@ -177,7 +184,6 @@ class Processes (object):
 
 	def received (self):
 		consumed_data = False
-		buffered = {}
 
 		for process in list(self._process):
 			try:
@@ -186,52 +192,53 @@ class Processes (object):
 				# proc.poll returns None if the process is still fine
 				# -[signal], like -15, if the process was terminated
 				if poll is not None:
-					self.handle_problem()
+					self._handle_problem(process)
 					return
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
 					try:
-						while True:
-							# Calling next() on Linux and OSX works perfectly well
-							# but not on OpenBSD where it always raise StopIteration
-							# and only readline() works
-							buf = str_ascii(proc.stdout.readline())
-							if buf == '' and poll is not None:
-								# if proc.poll() is None then
-								# process is fine, we received an empty line because
-								# we're doing .readline() on a non-blocking pipe and
-								# the process maybe has nothing to send yet
-								self.handle_problem()
-								return
-							raw = buffered.get(process,'') + buf
+						# Calling next() on Linux and OSX works perfectly well
+						# but not on OpenBSD where it always raise StopIteration
+						# and only readline() works
+						buf = str_ascii(proc.stdout.readline())
+						if buf == '' and poll is not None:
+							# if proc.poll() is None then
+							# process is fine, we received an empty line because
+							# we're doing .readline() on a non-blocking pipe and
+							# the process maybe has nothing to send yet
+							self._handle_problem(process)
+							continue
 
-							if not raw.endswith('\n'):
-								buffered[process] = raw
-								continue
+						raw = self._buffer.get(process,'') + buf
+						if not raw.endswith('\n'):
+							self._buffer[process] = raw
+							continue
 
-							buffered[process] = ''
-							line = raw.rstrip()
-							consumed_data = True
-							self.logger.processes("Command from process %s : %s " % (process,line))
-							yield (process,formated(line))
-							poll = proc.poll()
+						self._buffer[process] = ''
+						line = raw.rstrip()
+						consumed_data = True
+						self.logger.debug('command from process %s : %s ' % (process,line),'process')
+						yield (process,formated(line))
 					except IOError as exc:
 						if not exc.errno or exc.errno in error.fatal:
 							# if the program exits we can get an IOError with errno code zero !
-							self.handle_problem()
+							self._handle_problem(process)
 						elif exc.errno in error.block:
 							# we often see errno.EINTR: call interrupted and
 							# we most likely have data, we will try to read them a the next loop iteration
 							pass
 						else:
-							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(exc))
+							self.logger.debug('unexpected errno received from forked process (%s)' % errstr(exc),'process')
 					except StopIteration:
 						if not consumed_data:
-							self.handle_problem()
+							self._handle_problem(process)
 			except (subprocess.CalledProcessError,OSError,ValueError):
-				self.handle_problem()
+				self._handle_problem(process)
 
-	def write (self, process, string, neighbor=None):
+	def _write (self, process, string, neighbor=None):
+		if string is None:
+			return True
+
 		# XXX: FIXME: This is potentially blocking
 		while True:
 			try:
@@ -240,11 +247,11 @@ class Processes (object):
 				self._broken.append(process)
 				if exc.errno == errno.EPIPE:
 					self._broken.append(process)
-					self.logger.processes("Issue while sending data to our helper program")
+					self.logger.debug('issue while sending data to our helper program','process')
 					raise ProcessError()
 				else:
 					# Could it have been caused by a signal ? What to do.
-					self.logger.processes("Error received while SENDING data to helper program, retrying (%s)" % errstr(exc))
+					self.logger.debug('error received while sending data to helper program, retrying (%s)' % errstr(exc),'process')
 					continue
 			break
 
@@ -252,9 +259,20 @@ class Processes (object):
 			self._process[process].stdin.flush()
 		except IOError as exc:
 			# AFAIK, the buffer should be flushed at the next attempt.
-			self.logger.processes("Error received while FLUSHING data to helper program, retrying (%s)" % errstr(exc))
+			self.logger.debug('error received while FLUSHING data to helper program, retrying (%s)' % errstr(exc),'process')
 
 		return True
+
+	def answer (self, service, string, force=False):
+		if force or self.ack:
+			self.logger.debug('responding to %s : %s' % (service,string.replace('\n','\\n')),'process')
+			self._write(service,string)
+
+	def answer_done (self, service):
+		self.answer(service,'done')
+
+	def answer_error (self, service):
+		self.answer(service,'error')
 
 	def _notify (self, neighbor, event):
 		for process in neighbor.api[event]:
@@ -274,31 +292,46 @@ class Processes (object):
 	@silenced
 	def up (self, neighbor):
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._encoder[process].up(neighbor),neighbor)
+			self._write(process,self._encoder[process].up(neighbor),neighbor)
 
 	@silenced
 	def connected (self, neighbor):
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._encoder[process].connected(neighbor),neighbor)
+			self._write(process,self._encoder[process].connected(neighbor),neighbor)
 
 	@silenced
 	def down (self, neighbor, reason):
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._encoder[process].down(neighbor,reason),neighbor)
+			self._write(process,self._encoder[process].down(neighbor,reason),neighbor)
+
+	@silenced
+	def negotiated (self, neighbor, negotiated):
+		for process in self._notify(neighbor,'negotiated'):
+			self._write(process,self._encoder[process].negotiated(neighbor,negotiated),neighbor)
+
+	@silenced
+	def fsm (self, neighbor, fsm):
+		for process in self._notify(neighbor,'fsm'):
+			self._write(process,self._encoder[process].fsm(neighbor,fsm),neighbor)
+
+	@silenced
+	def signal (self, neighbor, signal):
+		for process in self._notify(neighbor,'signal'):
+			self._write(process,self._encoder[process].signal(neighbor,signal),neighbor)
 
 	@silenced
 	def packets (self, neighbor, direction, category, header, body):
 		for process in self._notify(neighbor,'%s-packets' % direction):
-			self.write(process,self._encoder[process].packets(neighbor,direction,category,header,body),neighbor)
+			self._write(process,self._encoder[process].packets(neighbor,direction,category,header,body),neighbor)
 
 	@silenced
 	def notification (self, neighbor, direction, code, subcode, data, header, body):
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._encoder[process].notification(neighbor,direction,code,subcode,data,header,body),neighbor)
+			self._write(process,self._encoder[process].notification(neighbor,direction,code,subcode,data,header,body),neighbor)
 
 	@silenced
-	def message (self, message_id, neighbor, direction, message, header, *body):
-		self._dispatch[message_id](self,neighbor,direction,message,header,*body)
+	def message (self, message_id, neighbor, direction, message, negotiated, header, *body):
+		self._dispatch[message_id](self,neighbor,direction,message,negotiated,header,*body)
 
 	# registering message functions
 	# no-self-argument
@@ -314,32 +347,32 @@ class Processes (object):
 	# notifications are handled in the loop as they use different arguments
 
 	@register_process(Message.CODE.OPEN)
-	def _open (self, peer, direction, message, header, body):
+	def _open (self, peer, direction, message, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.OPEN.SHORT)):
-			self.write(process,self._encoder[process].open(peer,direction,message,header,body),peer)
+			self._write(process,self._encoder[process].open(peer,direction,message,negotiated,header,body),peer)
 
 	@register_process(Message.CODE.UPDATE)
-	def _update (self, peer, direction, update, header, body):
+	def _update (self, peer, direction, update, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.UPDATE.SHORT)):
-			self.write(process,self._encoder[process].update(peer,direction,update,header,body),peer)
+			self._write(process,self._encoder[process].update(peer,direction,update,negotiated,header,body),peer)
 
 	@register_process(Message.CODE.NOTIFICATION)
-	def _notification (self, peer, direction, message, header, body):
+	def _notification (self, peer, direction, message, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.NOTIFICATION.SHORT)):
-			self.write(process,self._encoder[process].notification(peer,direction,message,header,body),peer)
+			self._write(process,self._encoder[process].notification(peer,direction,message,negotiated,header,body),peer)
 
 	# unused-argument, must keep the API
 	@register_process(Message.CODE.KEEPALIVE)
-	def _keepalive (self, peer, direction, keepalive, header, body):
+	def _keepalive (self, peer, direction, keepalive, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.KEEPALIVE.SHORT)):
-			self.write(process,self._encoder[process].keepalive(peer,direction,header,body),peer)
+			self._write(process,self._encoder[process].keepalive(peer,direction,negotiated,header,body),peer)
 
 	@register_process(Message.CODE.ROUTE_REFRESH)
-	def _refresh (self, peer, direction, refresh, header, body):
+	def _refresh (self, peer, direction, refresh, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.ROUTE_REFRESH.SHORT)):
-			self.write(process,self._encoder[process].refresh(peer,direction,refresh,header,body),peer)
+			self._write(process,self._encoder[process].refresh(peer,direction,refresh,negotiated,header,body),peer)
 
 	@register_process(Message.CODE.OPERATIONAL)
-	def _operational (self, peer, direction, operational, header, body):
+	def _operational (self, peer, direction, operational, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.OPERATIONAL.SHORT)):
-			self.write(process,self._encoder[process].operational(peer,direction,operational.category,operational,header,body),peer)
+			self._write(process,self._encoder[process].operational(peer,direction,operational.category,operational,negotiated,header,body),peer)

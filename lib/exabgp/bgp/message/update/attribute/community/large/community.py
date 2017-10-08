@@ -4,7 +4,8 @@
 Support for RFC 8092
 
 Copyright (c) 2016 Job Snijders <job@ntt.net>
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.bgp.message.update.attribute import Attribute
@@ -61,9 +62,10 @@ class LargeCommunity (Attribute):
 
 	@classmethod
 	def cached (cls, large_community):
-		if cls.caching and large_community in cls.cache:
+		if not cls.caching:
+			return cls(large_community)
+		if large_community in cls.cache:
 			return cls.cache[large_community]
 		instance = cls(large_community)
-		if cls.caching:
-			cls.cache[large_community] = instance
+		cls.cache[large_community] = instance
 		return instance

@@ -19,7 +19,7 @@ class Outgoing (Connection):
 	def __init__ (self, afi, peer, local, port=179,md5='',md5_base64=False, ttl=None):
 		Connection.__init__(self,afi,peer,local)
 
-		self.logger.wire("attempting connection to %s:%d" % (self.peer,port))
+		self.logger.debug('attempting connection to %s:%d' % (self.peer,port),self.session())
 
 		self.ttl = ttl
 		self.afi = afi
@@ -39,11 +39,12 @@ class Outgoing (Connection):
 			connect(self.io,self.peer,port,afi,md5)
 			if not self.local:
 				self.local = self.io.getsockname()[0]
+			self.success()
 			self.init = True
 		except NetworkError as exc:
 			self.init = False
 			self.close()
-			self.logger.wire("connection to %s:%d failed, %s" % (self.peer,port,str(exc)))
+			self.logger.debug('connection to %s:%d failed, %s' % (self.peer,port,str(exc)),self.session())
 
 	def establish (self):
 		if not self.init:

@@ -3,19 +3,21 @@
 usage.py
 
 Created by Thomas Mangin on 2014-12-19.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 usage = """\
 The BGP swiss army knife of networking
 
 usage: exabgp [--help] [--version]
-              [--folder FOLDER] [--env ENV]
+              [--root ROOT] [--env ENV]
               [[--full-ini | --diff-ini | --full-env | --diff-env] |
               [--fi | --di | --fe | --de]]
               [--debug] [--pdb] [--test]
               [--once] [--signal TIME]
               [--memory] [--profile PROFILE]
+              [--validate]
               [--run HELPER]
               [--decode HEX_MESSAGE]...
               [<configuration>...]
@@ -26,8 +28,8 @@ positional arguments:
 optional arguments:
   --help, -h            exabgp manual page
   --version, -v         shows ExaBGP version
-  --folder FOLDER, -f FOLDER
-                        configuration folder
+  --root ROOT, -f ROOT
+                        root folder where etc,bin,sbin are located
   --env ENV, -e ENV     environment configuration file
   --full-ini            display the configuration using the ini format
   --fi                  (shorthand for above)
@@ -46,6 +48,7 @@ debugging:
   --debug, -d           start the python debugger on serious logging and on
                         SIGTERM (shortcut for exabgp.log.all=true
                         exabgp.log.level=DEBUG)
+  --validate            validate the configuration file format only
   --signal TIME         issue a SIGUSR1 to reload the configuration after
                         <time> seconds, only useful for code debugging
   --once, -1            only perform one attempt to connect to peers (used for

@@ -3,7 +3,8 @@
 bgp.py
 
 Created by Thomas Mangin on 2012-07-08.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
@@ -63,7 +64,7 @@ class RouteDistinguisher (object):
 	def json (self):
 		if not self.rd:
 			return ''
-		return '"route-distinguisher": "%s"' % self._str()
+		return '"rd": "%s"' % self._str()
 
 	def __hash__(self):
 		return hash(self.rd)
@@ -71,7 +72,7 @@ class RouteDistinguisher (object):
 	def __repr__ (self):
 		if not self.rd:
 			return ''
-		return ' route-distinguisher %s' % self._str()
+		return ' rd %s' % self._str()
 
 	@classmethod
 	def unpack (cls, data):

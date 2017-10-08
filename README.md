@@ -107,9 +107,10 @@ The following projects are related to ExaBGP
   - [exabgp edgerouter](https://github.com/infowolfe/exabgp-edgerouter) Spamhaus and Emerging Threats blocking with Ubiquiti EdgeRouters
   - [exabgp-voipbl](https://github.com/GeertHauwaerts/exabgp-voipbl) advertises local or/and voipbl.org blacklist using unicast or flow route.
 
-**Visualisation**
+**Network Monitoring**
   - [GIXLG](https://code.google.com/p/gixlg/) a looking glass with visualisation
   - [lookify](https://github.com/Shopify/lookify) another looking glass
+  - [invalidroutesreporter](https://github.com/pierky/invalidroutesreporter) report/log invalid routes received by route servers
 
 **Route Announcement**
   - [ERCO](https://erco.xyz/) web interface

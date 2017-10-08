@@ -3,7 +3,8 @@
 timer.py
 
 Created by Thomas Mangin on 2012-07-21.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import time
@@ -18,12 +19,13 @@ from exabgp.bgp.message import Notify
 
 
 class ReceiveTimer (object):
-	def __init__ (self, me, holdtime, code, subcode, message=b''):
+	def __init__ (self, session, holdtime, code, subcode, message=''):
 		self.logger = Logger()
-		self.me = me
+		self.session = session
 
 		self.holdtime = holdtime
 		self.last_read = time.time()
+		self.last_print = 0
 
 		self.code = code
 		self.subcode = subcode
@@ -34,7 +36,9 @@ class ReceiveTimer (object):
 			self.last_read = time.time()
 		if self.holdtime:
 			left = int(self.last_read  + self.holdtime - time.time())
-			self.logger.timers(self.me('Receive Timer %d second(s) left' % left))
+			if self.last_print != left:
+				self.logger.debug('receive-timer %d second(s) left' % left,source=self.session())
+				self.last_print = left
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
 		elif message.TYPE == KeepAlive.TYPE:
@@ -42,12 +46,13 @@ class ReceiveTimer (object):
 
 
 class SendTimer (object):
-	def __init__ (self, me, holdtime):
+	def __init__ (self, session, holdtime):
 		self.logger = Logger()
-		self.me = me
+		self.session = session
 
 		self.keepalive = holdtime.keepalive()
 		self.last_sent = int(time.time())
+		self.last_print = 0
 
 	def need_ka (self):
 		if not self.keepalive:
@@ -56,8 +61,9 @@ class SendTimer (object):
 		now  = int(time.time())
 		left = self.last_sent + self.keepalive - now
 
-		if now != self.last_sent:
-			self.logger.timers(self.me('Send Timer %d second(s) left' % left))
+		if now != self.last_print:
+			self.logger.debug('send-timer %d second(s) left' % left,source=self.session())
+			self.last_print = now
 
 		if left <= 0:
 			self.last_sent = now

@@ -3,8 +3,9 @@
 etag.py
 
 Created by Thomas Mangin on 2014-06-26.
-Copyright (c) 2014-2015 Orange. All rights reserved.
-Copyright (c) 2014-2015 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Orange. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI

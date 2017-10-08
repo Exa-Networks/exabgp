@@ -3,7 +3,8 @@
 graceful.py
 
 Created by Thomas Mangin on 2012-07-17.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
@@ -58,9 +59,9 @@ class Graceful (Capability,dict):
 		d = {
 			'name':'"graceful restart"',
 			'time':self.restart_time,
-			'address-family-flags':'{%s } ' % (
-				', '.join('"%s/%s": [%s ]' % (
-					' %s' % afi, safi, ' "restart"' if family & 0x80 else '') for afi, safi, family in [
+			'address-family-flags':'{ %s}' % (
+				', '.join('"%s/%s": [%s ] ' % (
+					'%s' % afi, safi, ' "restart"' if family & 0x80 else '') for afi, safi, family in [
 						(str(a), str(s), self[(a,s)]) for (a,s) in self.keys()
 					]
 				)
@@ -68,7 +69,7 @@ class Graceful (Capability,dict):
 			'restart-flags':'[%s] ' % (' "forwarding" ' if self.restart_flag & 0x8 else ' ')
 		}
 
-		return '{ %s}' % ','.join('"%s": %s' % (k,v) for k,v in six.iteritems(d))
+		return '{ %s}' % ', '.join('"%s": %s' % (k,v) for k,v in six.iteritems(d))
 
 	def families (self):
 		return self.keys()

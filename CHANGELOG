@@ -3,6 +3,66 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.0.2
+ * Feature: exabgpcli
+ * Feature: draft-ietf-idr-link-bandwidth-06
+ * Feature: colored output
+ * Feature: script to use as flow-spec receiver for Cumulus Linux
+ * Feature: added all families to announce { ipv4 {} ipv6 {} }
+ * Feature: API to clear RIB
+ * Feature: Per family negotiation of Add-Path ( add-path section, like family )
+ * Feature: add --sink and --echo to test bgp daemon
+ * Feature: include negotiated information with update / packets API messages
+ * Feature: allow multiple inheritance
+ * Feature: new "functional" program for functional testing with many new goodies
+ * Fix: BGP-LS encoding
+   patch by: Evelio Vila
+ * Fix: Issue with received timer
+ * Fix: internal API using named FIFO
+ * Fix: add support for netbsd for heathcheck
+ * Fix: issue with api inheritance
+ * Fix: several issue with BGP-LS
+ * Fix: issues with NLRI decoding (bug introduced between 4.0.0 and 4.0.1)
+ * Fix: various
+ * Change: BGPLS with BGP-LS
+ * Change: rewrote may part of the code (reactor/async, log, API, ...)
+ * Change: renamed exabgp.api.file to exabgp.api.cli - now a boolean, enabled by default
+ * Change: --folder option now --root, and not need when installed in /
+ * Change: deprecated route-distinguisher only rd will now be parsed
+ * Change: ASN in JSON are now correctly expressed as numbers and not strings
+
+Version 4.0.1
+ * Change: makes python3 the default interpreter
+ * Change: major change to log output format
+ * Change: refactor the core for much faster session establishment
+ * Change: JSON format for extended-community now reports both the value and decoded string
+ * Change: new section: announce { ipv4 { unicast ...; multicast ...; } } same syntax as route ...;
+ * Change: new section: announce { ipv6 { unicast ...; multicast ...; } } same syntax as route ...;
+ * Fix: correcly parse single element flow rule
+    reported by: Christoph Loibl
+ * Fix: much faster session establishment
+ * Feature: allow to disable command acknowledgement via environment
+    reported by: nidotech
+ * Feature: https://tools.ietf.org/html/draft-ietf-idr-bgp-prefix-sid-05
+    patch by: Evelio Vila
+ * Feature: added a new API message "negotiated" which gives the negotiated feature of the session
+ * Feature: added a new API message "fsm" which gives the BGP state machine information
+ * Feature: added a new API message "signal" which inform of the signals received by ExaBGP
+ * Feature: it is now possible to use ip/netmask as notation for neighbor
+ * Feature: local-as can be set to "auto", to auto-setup an iBGP session using the OPEN's ASN
+ * Feature: Allow binding to multiple global IP addresses
+ * Feature: Add --validate option to check configuration
+ * Feature: Added option to save ADJ-RIB-IN
+ * Fix: Handle MD5 authentication on global IP addresses
+ * Fix: profiling code
+ * Fix: issue when waiting on a TCP connection then closed
+ * Fix: parsing flowspec port
+ * Fix: correctly inherit API data when using templated neighbors
+ * Fix: hexstring function
+ * Fix: VPLS JSON decoding
+ * Fix: Notification when encountering issues
+ * Fix: Many fixes to make sure all tests pass again
+
 Version 4.0.0
  * Feature: add support for interface-set for BGP flowspec routes
  * Change: the configuration format is not compatible with ExaBGP 3.x
@@ -305,7 +365,7 @@ Version 3.4.12
  * Fix: notification messages were not passed to the API
     reported by: Florian Obser
  * Fix: transitivity on extended community
-    patch by: Thomas Morin 
+    patch by: Thomas Morin
  * Fix: bad reporting of VPLS information in JSON
  * Fix: wrong SAFI on MPLS routes
     reported by: Hideaki HAYASHI
@@ -313,7 +373,7 @@ Version 3.4.12
     reported by: Alvaro Pereira
  * Fix: decoding of Update
  * Fix: Flow redirect to nexhop encoding
-    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help) 
+    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help)
  * Fix/Improve: JSON for flow spec
  * Fix/Improve: redirect-to-nexthop
     reported by: Mickael Marchand
@@ -325,7 +385,7 @@ Version 3.4.11
     reported by: Orangefish on github
  * Fix: Shutdown when waiting for a new outgoing connection to establish
  * Fix: JSON counter
-    reported by: 
+    reported by:
  * Fix: JSON flow printing for source and destination
  * Fix: Do not always locate exabgp.env
     reported by: Florian Obser

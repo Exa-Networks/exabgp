@@ -4,7 +4,7 @@
 setup.py
 
 Created by Thomas Mangin on 2011-01-24.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
 import os
@@ -14,7 +14,6 @@ import platform
 from shutil import rmtree
 from setuptools import setup
 from distutils.util import get_platform
-import six
 
 CHANGELOG = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'CHANGELOG')
 VERSION_PY = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'lib/exabgp/version.py')
@@ -26,8 +25,8 @@ BUILD_ROOT = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'build')
 
 dryrun = False
 
-json_version = '4.0.0'
-text_version = '4.0.0'
+json_version = '4.0.1'
+text_version = '4.0.1'
 
 version_template = """\
 import os
@@ -71,7 +70,7 @@ python setup.py debian   prepend the current version to debian/changelog
 def versions ():
 	versions = []
 	with open(CHANGELOG) as changelog:
-		six.next(changelog)  # skip the word version on the first line
+		changelog.readline()
 		for line in changelog:
 			if line.lower().startswith('version '):
 				version = line.split()[1]
@@ -116,7 +115,6 @@ def set_version ():
 	version = imp.load_source('version',VERSION_PY).version
 
 	if version != full_version:
-		import pdb; pdb.set_trace()
 		print('version setting failed')
 		sys.exit(1)
 
@@ -288,7 +286,7 @@ if sys.argv[-1] in ('pypi'):
 	print()
 	print('updating PyPI')
 
-	command = "python setup.py sdist upload"
+	command = "python3 setup.py sdist upload"
 	print('\n>', command)
 
 	ret = dryrun or os.system(command)
@@ -299,7 +297,7 @@ if sys.argv[-1] in ('pypi'):
 
 	remove_egg()
 
-	command = "python setup.py bdist_wheel upload"
+	command = "python3 setup.py bdist_wheel upload"
 	print('\n>', command)
 
 	ret = dryrun or os.system(command)
@@ -318,7 +316,7 @@ def packages (lib):
 			yield location
 
 	def modules (lib):
-		return six.next(os.walk(lib))[1]
+		return next(os.walk(lib))[1]
 
 	r = []
 	for module in modules(lib):
@@ -357,7 +355,7 @@ if os_name != 'NetBSD':
 	if sys.argv[-1] == 'systemd':
 		files_definition.append(('/usr/lib/systemd/system',filesOf('etc/systemd')))
 
-version = imp.load_source('version','lib/exabgp/version.py').version
+version = imp.load_source('version','lib/exabgp/version.py').version.split('-')[0]
 
 try:
 	description_rst = open('PYPI.rst').read() % {'version': version}
@@ -392,6 +390,7 @@ setup(
 		'Operating System :: Microsoft :: Windows',
 		'Programming Language :: Python',
 		'Programming Language :: Python :: 2.7',
+		'Programming Language :: Python :: 3.6',
 		'Topic :: Internet',
 	],
 	entry_points={

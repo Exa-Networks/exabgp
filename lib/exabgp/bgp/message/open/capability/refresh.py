@@ -3,7 +3,8 @@
 refresh.py
 
 Created by Thomas Mangin on 2012-07-17.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -16,6 +17,16 @@ class REFRESH (object):
 	ABSENT   = 0x01
 	NORMAL   = 0x02
 	ENHANCED = 0x04
+
+	@staticmethod
+	def json (refresh):
+		if refresh == REFRESH.ABSENT:
+			return 'absent'
+		if refresh == REFRESH.NORMAL:
+			return 'normal'
+		if refresh == REFRESH.ENHANCED:
+			return 'enhanced'
+		return 'unknown'
 
 
 @Capability.register()

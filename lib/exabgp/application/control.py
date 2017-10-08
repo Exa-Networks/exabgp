@@ -2,57 +2,64 @@
 control.py
 
 Created by Thomas Mangin on 2015-01-13.
-Copyright (c) 2015-2015 Exa Networks. All rights reserved.
+Copyright (c) 2015-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
 import sys
+import fcntl
 import stat
 import time
 import signal
 import select
 import socket
 import traceback
+from collections import deque
 
+from exabgp.util import str_ascii
 from exabgp.reactor.network.error import error
+
+kb = 1024
+mb = kb*1024
+
+def check_fifo (name):
+	try:
+		if not stat.S_ISFIFO(os.stat(name).st_mode):
+			sys.stdout.write('error: a file exist which is not a named pipe (%s)\n' % os.path.abspath(name))
+			return False
+
+		if not os.access(name,os.R_OK):
+			sys.stdout.write('error: a named pipe exists and we can not read/write to it (%s)\n' % os.path.abspath(name))
+			return False
+		return True
+	except OSError:
+		sys.stdout.write('error: could not create the named pipe %s\n' % os.path.abspath(name))
+		return False
+	except IOError:
+		sys.stdout.write('error: could not access/delete the named pipe %s\n' % os.path.abspath(name))
+		sys.stdout.flush()
+	except socket.error:
+		sys.stdout.write('error: could not write on the named pipe %s\n' % os.path.abspath(name))
+		sys.stdout.flush()
 
 
 class Control (object):
 	terminating = False
 
 	def __init__ (self, location):
-		self.send = location + '.out'
-		self.recv = location + '.in'
+		self.send = location + 'exabgp.out'
+		self.recv = location + 'exabgp.in'
 		self.r_pipe = None
 
 	def init (self):
-		def _make_fifo (name):
-			try:
-				if not os.path.exists(name):
-					os.mkfifo(name)
-				elif not stat.S_ISFIFO(os.stat(name).st_mode):
-					sys.stdout.write('error: a file exist which is not a named pipe (%s)\n' % os.path.abspath(name))
-					return False
+		# obviously this is vulnerable to race conditions ... if an attacker can create fifo in the folder
 
-				if not os.access(name,os.R_OK):
-					sys.stdout.write('error: a named pipe exists and we can not read/write to it (%s)\n' % os.path.abspath(name))
-					return False
-				return True
-			except OSError:
-				sys.stdout.write('error: could not create the named pipe %s\n' % os.path.abspath(name))
-				return False
-			except IOError:
-				sys.stdout.write('error: could not access/delete the named pipe %s\n' % os.path.abspath(name))
-				sys.stdout.flush()
-			except socket.error:
-				sys.stdout.write('error: could not write on the named pipe %s\n' % os.path.abspath(name))
-				sys.stdout.flush()
-
-		if not _make_fifo(self.recv):
+		if not check_fifo(self.recv):
 			self.terminate()
 			sys.exit(1)
 
-		if not _make_fifo(self.send):
+		if not check_fifo(self.send):
 			self.terminate()
 			sys.exit(1)
 
@@ -91,6 +98,30 @@ class Control (object):
 		# self._remove_fifo(self.recv)
 		# self._remove_fifo(self.send)
 
+	def read_on (self,reading):
+		sleep_time = 1.0
+		fault_time = 0.9 * sleep_time
+		now = time.time()
+
+		try:
+			ready,_,_ = select.select(reading,[],[],sleep_time)
+		except select.error as e:
+			if e.args[0] in error.block:
+				return []
+			sys.exit(1)  # Unknow error, ending
+
+		# select stoped before the 1 second but we have no data
+		# the PIPE with ExaBGP is dead
+		elapsed = time.time() - now
+		if not reading and elapsed < fault_time:
+			sys.exit(1)
+		return ready
+
+	def no_buffer (self,fd):
+		mfl = fcntl.fcntl(fd, fcntl.F_GETFL)
+		mfl |= os.O_SYNC
+		fcntl.fcntl(fd, fcntl.F_SETFL, mfl)
+
 	def loop (self):
 		try:
 			self.r_pipe = os.open(self.recv, os.O_RDONLY | os.O_NONBLOCK | os.O_EXCL)
@@ -115,7 +146,7 @@ class Control (object):
 			except OSError as exc:
 				if exc.errno in error.block:
 					return ''
-				raise e
+				sys.exit(1)
 
 		@monitor
 		def std_writer (line):
@@ -124,7 +155,7 @@ class Control (object):
 			except OSError as exc:
 				if exc.errno in error.block:
 					return 0
-				raise e
+				sys.exit(1)
 
 		@monitor
 		def fifo_reader (number):
@@ -133,13 +164,14 @@ class Control (object):
 			except OSError as exc:
 				if exc.errno in error.block:
 					return ''
-				raise e
+				sys.exit(1)
 
 		@monitor
 		def fifo_writer (line):
 			pipe,nb = None,0
 			try:
 				pipe = os.open(self.send, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)
+				self.no_buffer(pipe)
 			except OSError:
 				time.sleep(0.05)
 				return 0
@@ -164,35 +196,31 @@ class Control (object):
 			self.r_pipe: std_writer,
 		}
 
+		backlog = {
+			standard_in: deque(),
+			self.r_pipe: deque(),
+		}
+
 		store = {
-			standard_in: '',
-			self.r_pipe: '',
+			standard_in: b'',
+			self.r_pipe: b'',
 		}
 
 		def consume (source):
-			store[source] += read[source](1024)
+			if not backlog and b'\n' not in store:
+				store[source] += read[source](1024)
+			else:
+				backlog[source].append(read[source](1024))
+				# assuming a route takes 80 chars, 100 Mb is over 1Millions routes
+				# something is really wrong if it was not consummed
+				if len(backlog) > 100*mb:
+					sys.stderr.write('using too much memory - exiting')
+					sys.exit(1)
 
 		reading = [standard_in, self.r_pipe]
 
 		while True:
-			try:
-				ready,_,_ = select.select(reading,[],[],0.05)
-			except select.error as e:
-				if e.args[0] == 4:  # Interrupted system call
-					raise KeyboardInterrupt()
-				sys.exit(1)  # Unknow error, ending
-
-			# we buffer first so the two ends are not blocking
-			if not ready:
-				for source in reading:
-					if '\n' in store[source]:
-						line,_ = store[source].split('\n',1)
-						line = line + '\n'
-						sent = write[source](line)
-						if sent:
-							store[source] = store[source][sent:]
-							continue
-				continue
+			ready = self.read_on(reading)
 
 			# command from user
 			if self.r_pipe in ready:
@@ -200,27 +228,47 @@ class Control (object):
 			if standard_in in ready:
 				consume(standard_in)
 
+			for source in reading:
+				while b'\n' in store[source]:
+					line,_ = store[source].split(b'\n',1)
+					# sys.stderr.write(str(line).replace('\n','\\n') + '\n')
+					# sys.stderr.flush()
+					sent = write[source](line + b'\n')
+					# sys.stderr.write('sent %d\n' % sent)
+					# sys.stderr.flush()
+					if sent:
+						store[source] = store[source][sent:]
+						continue
+					break
+				if backlog[source]:
+					store[source] += backlog[source].popleft()
+
 	def run (self):
 		if not self.init():
-			return False
+			sys.exit(1)
 		try:
-			result = self.loop()
-			self.cleanup()
-			return result
+			self.loop()
 		except KeyboardInterrupt:
 			self.cleanup()
+			sys.exit(0)
 		except Exception as exc:
-			print(exc)
-			print('')
-			traceback.print_exc(file=sys.stdout)
-			sys.stdout.flush()
+			sys.stderr.write(str(exc))
+			sys.stderr.write('\n\n')
+			sys.stderr.flush()
+			traceback.print_exc(file=sys.stderr)
+			sys.stderr.flush()
 			self.cleanup()
 			sys.exit(1)
 
 
-def main (location=None):
+def main (location=''):
 	if not location:
-		location = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
+		location = os.environ.get('exabgp_cli_pipe','')
+	if not location:
+		sys.stderr.write("usage %s %s\n" % (sys.executable,' '.join(sys.argv)))
+		sys.stderr.write("run with 'env exabgp_cli_pipe=<location>' if you are trying to mess with ExaBGP's intenals")
+		sys.stderr.flush()
+		sys.exit(1)
 	Control(location).run()
 
 

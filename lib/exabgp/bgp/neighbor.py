@@ -3,7 +3,8 @@
 neighbor.py
 
 Created by Thomas Mangin on 2009-11-05.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
@@ -27,6 +28,8 @@ from exabgp.rib import RIB
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
+	_GLOBAL = {'uid': 1}
+
 	def __init__ (self):
 		# self.logger should not be used here as long as we do use deepcopy as it contains a Lock
 		self.description = None
@@ -34,6 +37,7 @@ class Neighbor (object):
 		self.host_name = None
 		self.domain_name = None
 		self.local_address = None
+		self.range_size = 1
 		# local_address uses auto discovery
 		self.auto_discovery = False
 		self.peer_address = None
@@ -49,7 +53,8 @@ class Neighbor (object):
 		self.ttl_out = None
 		self.group_updates = None
 		self.flush = None
-		self.adjribout = None
+		self.adj_rib_in = None
+		self.adj_rib_out = None
 
 		self.manual_eor = False
 
@@ -61,6 +66,9 @@ class Neighbor (object):
 		# the port to connect to
 		self.connect = 0
 
+		# was this Neighbor generated from a range
+		self.generated = False
+
 		# capability
 		self.route_refresh = False
 		self.graceful_restart = False
@@ -69,6 +77,7 @@ class Neighbor (object):
 		self.aigp = None
 
 		self._families = []
+		self._addpaths = []
 		self.rib = None
 
 		# The routes we have parsed from the configuration
@@ -88,10 +97,14 @@ class Neighbor (object):
 		# - have multiple exabgp toward one peer on the same host ( use of pid )
 		# - have more than once connection toward a peer
 		# - each connection has it own neihgbor (hence why identificator is not in Protocol)
-		self.uid = '%d-%s' % (os.getpid(),uuid.uuid1())
+		self.uid = '%d' % self._GLOBAL['uid']
+		self._GLOBAL['uid'] += 1
+
+	def id (self):
+		return 'neighbor-%s' % self.uid
 
 	def make_rib (self):
-		self.rib = RIB(self.name(),self.adjribout,self._families)
+		self.rib = RIB(self.name(),self.adj_rib_in,self.adj_rib_out,self._families)
 
 	# will resend all the routes once we reconnect
 	def reset_rib (self):
@@ -110,14 +123,26 @@ class Neighbor (object):
 			session = '/'.join("%s-%s" % (afi.name(),safi.name()) for (afi,safi) in self.families())
 		else:
 			session = 'in-open'
-		return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (self.peer_address,self.local_address,self.local_as,self.peer_as,self.router_id,session)
+		return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (
+			self.peer_address,
+			self.local_address if self.peer_address is not None else 'auto',
+			self.local_as if self.local_as is not None else 'auto',
+			self.peer_as if self.peer_as is not None else 'auto',
+			self.router_id,
+			session
+		)
 
 	def families (self):
 		# this list() is important .. as we use the function to modify self._families
 		return list(self._families)
 
+	def addpaths (self):
+		# this list() is important .. as we use the function to modify self._families
+		return list(self._addpaths)
+
 	def add_family (self, family):
 		# the families MUST be sorted for neighbor indexing name to be predictable for API users
+		# this list() is important .. as we use the function to modify self._families
 		if family not in self.families():
 			afi,safi = family
 			d = dict()
@@ -126,9 +151,24 @@ class Neighbor (object):
 				d.setdefault(afi,[]).append(safi)
 			self._families = [(afi,safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
+	def add_addpath (self, family):
+		# the families MUST be sorted for neighbor indexing name to be predictable for API users
+		# this list() is important .. as we use the function to modify self._families
+		if family not in self.addpaths():
+			afi,safi = family
+			d = dict()
+			d[afi] = [safi,]
+			for afi,safi in self._addpaths:
+				d.setdefault(afi,[]).append(safi)
+			self._addpaths = [(afi,safi) for afi in sorted(d) for safi in sorted(d[afi])]
+
 	def remove_family (self, family):
 		if family in self.families():
 			self._families.remove(family)
+
+	def remove_addpath (self, family):
+		if family in self.addpaths():
+			self._addpaths.remove(family)
 
 	def missing (self):
 		if self.local_address is None and not self.auto_discovery:
@@ -137,19 +177,23 @@ class Neighbor (object):
 			return 'local-address'
 		if self.peer_address is None:
 			return 'peer-address'
-		if self.local_as is None:
-			return 'local-as'
-		if self.peer_as is None:
-			return 'peer-as'
-		if (self.auto_discovery or self.peer_address.afi == AFI.ipv6) and not self.router_id:
+		if self.auto_discovery and not self.router_id:
+			return 'router-id'
+		if self.peer_address.afi == AFI.ipv6 and not self.router_id:
 			return 'router-id'
 		return ''
 
 	# This function only compares the neighbor BUT NOT ITS ROUTES
 	def __eq__ (self, other):
+		# Comparing local_address is skipped in the case where either
+		# peer is configured to auto discover its local address. In
+		# this case it can happen that one local_address is None and
+		# the other one will be set to the auto disocvered IP address.
+		auto_discovery = self.auto_discovery or other.auto_discovery
 		return \
 			self.router_id == other.router_id and \
-			self.local_address == other.local_address and \
+			(auto_discovery or self.local_address == other.local_address) and \
+			self.auto_discovery == other.auto_discovery and \
 			self.local_as == other.local_as and \
 			self.peer_address == other.peer_address and \
 			self.peer_as == other.peer_as and \
@@ -170,7 +214,8 @@ class Neighbor (object):
 			self.operational == other.operational and \
 			self.group_updates == other.group_updates and \
 			self.flush == other.flush and \
-			self.adjribout == other.adjribout and \
+			self.adj_rib_in == other.adj_rib_in and \
+			self.adj_rib_out == other.adj_rib_out and \
 			self.families() == other.families()
 
 	def __ne__ (self, other):
@@ -188,7 +233,18 @@ class Neighbor (object):
 		for afi,safi in self.families():
 			families += '\n\t\t%s %s;' % (afi.name(),safi.name())
 
+		addpaths = ''
+		for afi,safi in self.addpaths():
+			addpaths += '\n\t\t%s %s;' % (afi.name(),safi.name())
+
 		codes = Message.CODE
+
+		_extension_global = {
+			'neighbor-changes': 'neighbor-changes',
+			'negotiated':       'negotiated',
+			'fsm':              'fsm',
+			'signal':           'signal',
+		}
 
 		_extension_receive = {
 			'receive-packets':                        'packets',
@@ -214,15 +270,36 @@ class Neighbor (object):
 			'send-%s' % codes.OPERATIONAL.SHORT:   'operational',
 		}
 
-		_receive = []
-		for api,name in _extension_receive.items():
-			_receive.extend(['\t\t\t%s;\n' % name,] if self.api[api] else [])
-		receive = ''.join(_receive)
+		apis = ''
 
-		_send = []
-		for api,name in _extension_send.items():
-			_send.extend(['\t\t\t%s;\n' % name,] if self.api[api] else [])
-		send = ''.join(_send)
+		for process in self.api.get('processes',[]):
+			_global = []
+			_receive = []
+			_send = []
+
+			for api,name in _extension_global.items():
+				_global.extend(['\t\t%s;\n' % name,] if process in self.api[api] else [])
+
+			for api,name in _extension_receive.items():
+				_receive.extend(['\t\t\t%s;\n' % name,] if process in self.api[api] else [])
+
+			for api,name in _extension_send.items():
+				_send.extend(['\t\t\t%s;\n' % name,] if process in self.api[api] else [])
+
+			_api  = '\tapi {\n'
+			_api += '\t\tprocesses [ %s ];\n' % process
+			_api += ''.join(_global)
+			if _receive:
+				_api += '\t\treceive {\n'
+				_api += ''.join(_receive)
+				_api += '\t\t}\n'
+			if _send:
+				_api += '\t\tsend {\n'
+				_api += ''.join(_send)
+				_api += '\t\t}\n'
+			_api += '\t}\n'
+
+			apis += _api
 
 		returned = \
 			'neighbor %s {\n' \
@@ -237,11 +314,13 @@ class Neighbor (object):
 			'\tmanual-eor %s;\n' \
 			'%s%s%s%s%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
-			'%s%s%s%s%s%s%s\t}\n' \
+			'%s%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
 			'\t}\n' \
-			'\tapi {\n' \
-			'%s%s\t}%s\n' \
+			'\tadd-path {%s\n' \
+			'\t}\n' \
+			'%s' \
+			'%s' \
 			'}' % (
 				self.peer_address,
 				self.description,
@@ -258,9 +337,10 @@ class Neighbor (object):
 				'\n\tconnect %d;\n' % self.connect if self.connect else '',
 				'\tgroup-updates %s;\n' % ('true' if self.group_updates else 'false'),
 				'\tauto-flush %s;\n' % ('true' if self.flush else 'false'),
-				'\tadj-rib-out %s;\n' % ('true' if self.adjribout else 'false'),
+				'\tadj-rib-in %s;\n' % ('true' if self.adj_rib_in else 'false'),
+				'\tadj-rib-out %s;\n' % ('true' if self.adj_rib_out else 'false'),
 				'\tmd5-password "%s";\n' % self.md5_password if self.md5_password else '',
-				'\tmd5-base64 %s;\n' % ('true' if self.md5_base64 else 'false'),
+				'\tmd5-base64 %s;\n' % ('true' if self.md5_base64 is True else 'false' if self.md5_base64 is False else 'auto'),
 				'\tmd5-ip "%s";\n' % self.md5_ip if not self.auto_discovery else '',
 				'\toutgoing-ttl %s;\n' % self.ttl_out if self.ttl_out else '',
 				'\tincoming-ttl %s;\n' % self.ttl_in if self.ttl_in else '',
@@ -272,10 +352,13 @@ class Neighbor (object):
 				'\t\toperational %s;\n' % ('enable' if self.operational else 'disable'),
 				'\t\taigp %s;\n' % ('enable' if self.aigp else 'disable'),
 				families,
-				'\t\treceive {\n%s\t\t}\n' % receive if receive else '',
-				'\t\tsend {\n%s\t\t}\n' % send if send else '',
+				addpaths,
+				apis,
 				changes
 			)
+
+		# '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
+		# '\t\tsend {\n%s\t\t}\n' % send if send else '',
 		return returned.replace('\t','  ')
 
 	def __str__ (self):

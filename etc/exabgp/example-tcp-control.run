@@ -1,0 +1,186 @@
+#!/usr/bin/env python
+
+host, port = "localhost", 9999
+
+import os
+import sys
+import signal
+import socket
+import time
+import select
+
+from SocketServer import TCPServer
+from SocketServer import StreamRequestHandler
+
+class TimeoutException(Exception):
+	pass
+
+def read_command (rfile, wfile, prompt):
+	def timeout_handler (signum, frame):
+		raise TimeoutException()
+
+	signal.signal(signal.SIGALRM, timeout_handler)
+	signal.alarm(1)
+
+	try:
+		if prompt:
+			wfile.write('\n> ')
+		c = rfile.readline()
+	except TimeoutException:
+		c = ''
+	finally:
+		signal.alarm(0)
+
+	return c.strip()
+
+class Control (StreamRequestHandler):
+	allow_reuse_address = True
+
+	def handle (self):
+		command = 'go'
+		prompt = True
+		while command not in ['quit','exit']:
+			# reading the command on TCP
+			# relaying it to exabgp via the socket
+			command = read_command(self.rfile,self.wfile,prompt)
+			prompt = False
+
+			if command in ['quit','exit']:
+				continue
+
+			if command in ['help','?']:
+				self.wfile.write('exabgp tcp-control help\n')
+				self.wfile.write('\n')
+				self.wfile.write('This program is just a way to manually enter commands using telnet\n')
+				self.wfile.write('routes and flows syntax are parsed like normal configuration\n')
+				self.wfile.write('\n')
+				self.wfile.write('quit (close the telnet connection)\n')
+				self.wfile.write('exit (close the telnet connection)\n')
+				self.wfile.write('\n')
+				self.wfile.write('version (returns the version of exabgp)\n')
+				self.wfile.write('reload (reload the configuration - cause exabgp to forget all routes learned via external processes)\n')
+				self.wfile.write('restart (reload the configuration and bounce all BGP session)\n')
+				self.wfile.write('shutdown (politely terminate all session and exit)\n')
+				self.wfile.write('\n')
+				self.wfile.write('WARNING : The result of the following commands will depend on the route, it could even cause the BGP session to drop)\n')
+				self.wfile.write('WARNING : It could even cause the BGP session to drop, for example if you send flow routes to a router which does not support it\n')
+				self.wfile.write('\n')
+                                self.wfile.write('With "announce route" and "withdraw route" the route will be sent to ALL the peers unless the "neighbor x.x.x.x [announce|withdraw] route" commands are used. Details at https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-limiting-diffusion-of-routes\n')
+				self.wfile.write('\n')
+				self.wfile.write('[neighbor x.x.x.x] annouce route\n')
+				self.wfile.write(' The multi-line syntax is currently not supported\n')
+				self.wfile.write(' example: announce route 1.2.3.4 next-hop 5.6.7.8\n')
+				self.wfile.write('[neighbor x.x.x.x] withdraw route\n')
+				self.wfile.write(' example: withdraw route (example: withdraw route 1.2.3.4 next-hop 5.6.7.8)\n')
+				self.wfile.write('announce flow\n')
+				self.wfile.write(' exabgp does not have a single line flow syntax so you must use the multiline version indicating newlines with \\n\n')
+				self.wfile.write(' example: announce flow route {\\n match {\\n source 10.0.0.1/32;\\n destination 1.2.3.4/32;\\n }\\n then {\\n discard;\\n }\\n }\\n\n')
+				self.wfile.write('withdraw flow\n')
+				self.wfile.write(' exabgp does not have a single line flow syntax so you must use the multiline version indicating newlines with \\n\n')
+				self.wfile.write(' example: withdraw flow route {\\n match {\\n source 10.0.0.1/32;\\n destination 1.2.3.4/32;\\n }\\n then {\\n discard;\\n }\\n }\\n\n')
+				self.wfile.write('\n')
+				self.wfile.write('SHOW COMMANDS SHOULD NOT BE USED IN PRODUCTION AS THEY HALT THE BGP ROUTE PROCESSING\n')
+				self.wfile.write('AND CAN RESULT IN BGP PEERING SESSION DROPPING - You have been warned\n')
+				self.wfile.write('\n')
+				self.wfile.write('show neighbors\n')
+				self.wfile.write(' display the neighbor configured\\n\n')
+				self.wfile.write('show routes\n')
+				self.wfile.write(' display routes which have been announced\\n\n')
+				self.wfile.write('\n')
+				self.wfile.flush()
+				prompt = True
+
+			elif command.startswith('announce '):
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
+				self.wfile.write('requested %s annoucement\n' % command.split(' ')[1])
+				self.wfile.flush()
+				prompt = True
+
+			elif command.startswith('withdraw '):
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
+				self.wfile.write('request %s withdrawal\n' % command.split(' ')[1])
+				self.wfile.flush()
+				prompt = True
+
+			elif command.startswith('neighbor '):
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
+				self.wfile.write('neighbor %s requested\n' % command.split(' ')[1])
+				self.wfile.flush()
+				prompt = True
+
+			elif command.startswith('show '):
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
+				self.wfile.write('%s requested\n' % command.split(' ')[1])
+				self.wfile.flush()
+				prompt = True
+
+			elif command in ['shutdown','reload','restart','version','#']:
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
+				prompt = True
+
+			elif command not in ['go','']:
+				self.wfile.write('unknown command [%s], try: help\n' % command)
+				self.wfile.flush()
+				prompt = True
+
+			try:
+				r,_,_ = select.select([sys.stdin], [], [], 1.0)
+			except select.error:
+				raise KeyboardInterrupt('SIGNAL received in select')
+
+			if r:
+				self.wfile.write('\n')
+
+			while r:
+				# Can not use readline with select.
+				# From https://stackoverflow.com/questions/5486717/python-select-doesnt-signal-all-input-from-pipe
+				# Note that internally file.readlines([size]) loops and invokes the read() syscall more than once, attempting to fill an internal buffer of size. The first call to read() will immediately return, since select() indicated the fd was readable. However the 2nd call will block until data is available, which defeats the purpose of using select. In any case it is tricky to use file.readlines([size]) in an asynchronous app.
+				response = os.read(sys.stdin.fileno(),4096)
+				# this should not happen as select informed us of data to read but it seems it does
+				if not response:
+					break
+				self.wfile.write(response)
+				prompt = True
+				time.sleep(0.1)
+				try:
+					r,_,_ = select.select([sys.stdin], [], [], 1.0)
+				except select.error:
+					raise KeyboardInterrupt('SIGNAL received in select')
+			continue
+
+def timed (message):
+	now = time.strftime('%a, %d %b %Y %H:%M:%S',time.localtime())
+	return "%s | %-8s | %-6d | %-13s | %s" % (now,'FORKED',os.getpid(),'tcp-server',message)
+
+def sig (signum, frame):
+	# outch rude but prevent silly trace on exit if waiting for a read on stdin :p
+	os.kill(os.getpid(),signal.SIGKILL)
+
+signal.signal(signal.SIGINT, sig)
+signal.signal(signal.SIGTERM, sig)
+
+count = 0
+connected = False
+
+class Server (TCPServer):
+	def server_activate (self):
+		print >> sys.stderr, timed('tcp-server listening on %s:%d' % (host,port))
+		sys.stderr.flush()
+		TCPServer.server_activate(self)
+
+while not connected:
+	try:
+		server = Server((host, port), Control)
+		connected = True
+	except socket.error:
+		count += 1
+		if count % 1 == 0:
+			print >> sys.stderr, timed('tcp-server still trying to bind to %s:%d' % (host,port))
+		# we can not connect to the socket, retrying (happens if respawns too quickly)
+		time.sleep(1)
+server.serve_forever()

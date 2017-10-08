@@ -3,10 +3,12 @@
 rib/__init__.py
 
 Created by Thomas Mangin on 2010-01-15.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.rib.store import Store
+from exabgp.rib.incoming import IncomingRIB
+from exabgp.rib.outgoing import OutgoingRIB
 
 
 class RIB (object):
@@ -16,7 +18,7 @@ class RIB (object):
 
 	_cache = {}
 
-	def __init__ (self, name, adjribout, families):
+	def __init__ (self, name, adj_rib_in, adj_rib_out, families):
 		self.name = name
 
 		if name in self._cache:
@@ -24,20 +26,16 @@ class RIB (object):
 			self.outgoing = self._cache[name].outgoing
 			self.incoming.families = families
 			self.outgoing.families = families
-			for family in self.outgoing._seen.keys():
-				if family not in families:
-					del self.outgoing._seen[family]
+			self.outgoing.delete_cached_family(families)
 
-			if adjribout:
+			if adj_rib_out:
 				self.outgoing.resend(None,False)
 			else:
 				self.outgoing.clear()
 		else:
-			self.incoming = Store(families)
-			self.outgoing = Store(families)
+			self.incoming = IncomingRIB(adj_rib_in,families)
+			self.outgoing = OutgoingRIB(adj_rib_out,families)
 			self._cache[name] = self
-
-		self.outgoing.cache = adjribout
 
 	def reset (self):
 		self.incoming.reset()
@@ -49,5 +47,5 @@ class RIB (object):
 
 	# This code was never tested ...
 	def clear (self):
-		self._cache[self.name].incoming = Store(self._cache[self.name].incoming.families)
-		self._cache[self.name].outgoing = Store(self._cache[self.name].incoming.families)
+		self._cache[self.name].incoming = IncomingRIB(self.incoming.cache,self._cache[self.name].incoming.families)
+		self._cache[self.name].outgoing = OutgoingRIB(self.outgoing.cache,self._cache[self.name].incoming.families)

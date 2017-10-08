@@ -4,13 +4,15 @@
 Response/json.py
 
 Created by Thomas Mangin on 2012-12-30.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
 import socket
 import sys
 import time
+import signal
 
 from exabgp.vendoring import six
 
@@ -20,10 +22,13 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message import IN
 
 from exabgp.configuration.environment import environment
+from exabgp.bgp.message.open.capability.refresh import REFRESH
 
 
 if sys.version_info > (3,):
 	long = int
+
+SIGNAL_NAME = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items())) if v.startswith('SIG') and not v.startswith('SIG_'))
 
 
 def nop (_): return _
@@ -46,8 +51,19 @@ class JSON (object):
 		self._count[neighbor.uid] = increased
 		return increased
 
-	def _string (self, _):
-		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
+	def _string (self, object):
+		if issubclass(object.__class__,bool):
+			return 'true' if object else 'false'
+		if issubclass(object.__class__,long):
+			return '%s' % object
+		if issubclass(object.__class__,int):
+			return '%s' % object
+		string = '%s' % object
+		if '{' in string:
+			return string
+		if '[' in string:
+			return string
+		return '"%s"' % object
 
 	def _header (self, content, header, body, neighbor,message_type=None):
 		peer     = '"host" : "%s", '   % socket.gethostname()
@@ -76,13 +92,15 @@ class JSON (object):
 				content
 			)
 
+	__neighbor = '''\
+"neighbor": {
+	"address": { "local": "%s", "peer": "%s" },
+	"asn": { "local": %s, "peer": %s }
+	%s%s%s%s
+}'''.replace('\t','').replace('\n',' ')
+
 	def _neighbor (self, neighbor, direction, content):
-		return \
-			'"neighbor": { ' \
-				'"address": { "local": "%s", "peer": "%s" }, ' \
-				'"asn": { "local": "%s", "peer": "%s" }' \
-				'%s%s%s%s' \
-			' }' % (
+		return self.__neighbor % (
 				neighbor.local_address,neighbor.peer_address,
 				neighbor.local_as,neighbor.peer_as,
 				', ' if direction else '',
@@ -91,18 +109,14 @@ class JSON (object):
 				content
 			)
 
-	def _bmp (self, neighbor, content):
-		return \
-			'"bmp": { ' \
-			'"ip": "%s", ' \
-			'%s' \
-			' }' % (neighbor,content)
-
 	def _kv (self, extra):
 		return ", ".join('"%s": %s' % (k,self._string(v)) for (k,v) in six.iteritems(extra))
 
 	def _json_kv (self, extra):
 		return ", ".join('"%s": %s' % (k,v.json()) for (k,v) in six.iteritems(extra))
+
+	def _json_list (self,extra):
+		return ", ".join('%s' % (v.json()) for v in six.iteritems(extra))
 
 	def _minimalkv (self, extra):
 		return ", ".join('"%s": %s' % (k,self._string(v)) for (k,v) in six.iteritems(extra) if v)
@@ -130,7 +144,39 @@ class JSON (object):
 			'notification': 'shutdown',
 		}),'','',None,message_type='notification')
 
-	def notification (self, neighbor, direction, message, header, body):
+	def _negotiated (self,negotiated):
+		return {'negotiated':'{ %s } ' % self._kv({
+				'message_size': negotiated.msg_size,
+				'hold_time':    negotiated.holdtime,
+				'asn4':         negotiated.asn4,
+				'multisession': negotiated.multisession,
+				'operational':  negotiated.operational,
+				'refresh':      REFRESH.json(negotiated.refresh),
+				'families': '[ %s ]' % ' ,'.join(['"%s %s"' % family for family in negotiated.families]),
+				'add_path': '{ "send": %s, "receive": %s }' % (
+					'[ %s ]' % ', '.join([family for family in negotiated.families if negotiated.addpath.send(*family)]),
+					'[ %s ]' % ', '.join(['"%s %s"' % family for family in negotiated.families if negotiated.addpath.receive(*family)]),
+				),
+			})
+		}
+
+	def negotiated (self, neighbor, negotiated):
+		return self._header(self._neighbor(neighbor,None,self._kv(
+			self._negotiated(negotiated)
+		)),'','',neighbor,message_type='negotiated')
+
+	def fsm (self, neighbor, fsm):
+		return self._header(self._neighbor(neighbor,None,self._kv({
+			'state': fsm.name()
+		})),'','',neighbor,message_type='fsm')
+
+	def signal (self, neighbor, signal):
+		return self._header(self._neighbor(neighbor,None,self._kv({
+			'code': '%d' % signal,
+			'name': SIGNAL_NAME.get(signal,'UNKNOWN'),
+		})),'','',neighbor,message_type='signal')
+
+	def notification (self, neighbor, direction, message, negotiated, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
 			'notification': '{ %s } ' % self._kv({
 				'code':    message.code,
@@ -139,21 +185,26 @@ class JSON (object):
 			})
 		})),header,body,neighbor,message_type='notification')
 
-	def packets (self, neighbor, direction, category, header, body):
-		return self._header(self._neighbor(neighbor,direction,self._kv({
+	def packets (self, neighbor, direction, category, negotiated, header, body):
+		message = {
 			'message': '{ %s } ' % self._kv({
-				'category': category,
-				'header':   hexstring(header),
-				'body':     hexstring(body),
+					'category': category,
+					'header':   hexstring(header),
+					'body':     hexstring(body),
 			})
-		})),'','',neighbor,message_type=Message.string(category))
+		}
+		if negotiated:
+			message.update(self._negotiated(negotiated))
+		return self._header(self._neighbor(neighbor,direction,self._kv(
+			message
+		)),'','',neighbor,message_type=Message.string(category))
 
-	def keepalive (self, neighbor, direction, header, body):
+	def keepalive (self, neighbor, direction, negotiated, header, body):
 		return self._header(self._neighbor(neighbor,direction,''),header,body,neighbor,message_type='keepalive')
 
-	def open (self, neighbor, direction, message, header, body):
+	def open (self, neighbor, direction, message, negotiated, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
-			'open':'{ %s } ' % self._kv({
+			'open':'{ %s }' % self._kv({
 				'version':      message.version,
 				'asn':          message.asn,
 				'hold_time':    message.hold_time,
@@ -199,7 +250,7 @@ class JSON (object):
 		nlri = ''
 		if not add and not remove:
 			if update.nlris:  # an EOR
-				return update.nlris[0].json()
+				return {'message': '{ %s }' % update.nlris[0].json()}
 		if add:
 			nlri += '"announce": { %s }' % ', '.join(add)
 		if add and remove:
@@ -209,15 +260,23 @@ class JSON (object):
 
 		attributes = '' if not update.attributes else '"attribute": { %s }' % update.attributes.json()
 		if not attributes or not nlri:
-			return '"update": { %s%s }' % (attributes,nlri)
-		return '"update": { %s, %s }' % (attributes,nlri)
+			update = '"update": { %s%s }' % (attributes,nlri)
+		else:
+			update = '"update": { %s, %s }' % (attributes,nlri)
 
-	def update (self, neighbor, direction, update, header, body):
-		return self._header(self._neighbor(neighbor,direction,self._kv({
-			'message': '{ %s }' % self._update(update)
-		})),header,body,neighbor,message_type='update')
+		return {
+			'message': '{ %s }' % update
+		}
 
-	def refresh (self, neighbor, direction, refresh, header, body):
+	def update (self, neighbor, direction, update, negotiated, header, body):
+		message = self._update(update)
+		if negotiated:
+			message.update(self._negotiated(negotiated))
+		return self._header(self._neighbor(neighbor,direction,self._kv(
+			message
+		)),header,body,neighbor,message_type='update')
+
+	def refresh (self, neighbor, direction, refresh, negotiated, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
 			'route-refresh': '{ %s }' % self._kv({
 				'afi': refresh.afi,
@@ -225,9 +284,6 @@ class JSON (object):
 				'subtype': refresh.reserved
 			})
 		})),header,body,neighbor,message_type='refresh')
-
-	def bmp (self, bmp, update):
-		return self._header(self._bmp(bmp,self._update(update)),'','',None,message_type='bmp')
 
 	def _operational_query (self, neighbor, direction, operational, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
@@ -260,7 +316,7 @@ class JSON (object):
 			})
 		})),header,body,neighbor,message_type='operational')
 
-	def operational (self, neighbor, direction, what, operational, header, body):
+	def operational (self, neighbor, direction, what, operational, negotiated, header, body):
 		if what == 'advisory':
 			return self._operational_advisory(neighbor,direction,operational,header,body)
 		elif what == 'query':

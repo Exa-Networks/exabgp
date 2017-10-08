@@ -2,7 +2,8 @@
 nlri.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
-Copyright (c) 2009-2016 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
@@ -87,7 +88,7 @@ class BGPLS(NLRI):
 		NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
 		self._packed = b''
 
-	def pack(self, negotiated=None):
+	def pack_nlri(self, negotiated=None):
 		return pack('!BB',self.CODE,len(self._packed)) + self._packed
 
 	def __len__(self):
@@ -97,7 +98,7 @@ class BGPLS(NLRI):
 		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self._packed))
 
 	def __str__(self):
-		return "bgpls:%s:%s" % (self.registered_bgpls.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ordinal(_) for _ in self._packed))
+		return "bgp-ls:%s:%s" % (self.registered_bgpls.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ordinal(_) for _ in self._packed))
 
 	@classmethod
 	def register(cls, klass):
@@ -113,10 +114,10 @@ class BGPLS(NLRI):
 			if safi == SAFI.bgp_ls_vpn:
 				# Extract Route Distinguisher
 				rd = RouteDistinguisher.unpack(bgp[4:12])
-				klass = cls.registered_bgpls[code].unpack(bgp[12:length+4],rd)
+				klass = cls.registered_bgpls[code].unpack_nlri(bgp[12:length+4],rd)
 			else:
 				rd = None
-				klass = cls.registered_bgpls[code].unpack(bgp[4:length+4],rd)
+				klass = cls.registered_bgpls[code].unpack_nlri(bgp[4:length+4],rd)
 		else:
 			klass = GenericBGPLS(code,bgp[4:length+4])
 		klass.CODE = code

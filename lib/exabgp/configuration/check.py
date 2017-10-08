@@ -3,7 +3,8 @@
 check.py
 
 Created by Thomas Mangin on 2009-08-25.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # common
@@ -56,9 +57,9 @@ if sys.version_info[0] >= 3:
 
 def check_neighbor (neighbors):
 	logger = Logger()
-	logger._option.parser = True
+	logger._option['parser'] = True
 
-	logger.parser('\ndecoding routes in configuration')
+	logger.notice('\ndecoding routes in configuration','parser')
 
 	for name in neighbors.keys():
 		neighbor = neighbors[name]
@@ -86,20 +87,20 @@ def check_neighbor (neighbors):
 		for _ in neighbor.rib.outgoing.updates(False):
 			pass
 
-		for change1 in neighbor.rib.outgoing.sent_changes():
+		for change1 in neighbor.rib.outgoing.cached_changes():
 			str1 = change1.extensive()
 			packed = list(Update([change1.nlri],change1.attributes).messages(negotiated))
 			pack1 = packed[0]
 
-			logger.parser('parsed route requires %d updates' % len(packed))
-			logger.parser('update size is %d' % len(pack1))
+			logger.debug('parsed route requires %d updates' % len(packed),'parser')
+			logger.debug('update size is %d' % len(pack1),'parser')
 
-			logger.parser('parsed route %s' % str1)
-			logger.parser('parsed hex   %s' % od(pack1))
+			logger.debug('parsed route %s' % str1,'parser')
+			logger.debug('parsed hex   %s' % od(pack1),'parser')
 
 			# This does not take the BGP header - let's assume we will not break that :)
 			try:
-				logger.parser('')  # new line
+				logger.debug('')  # new line
 
 				pack1s = pack1[19:] if pack1.startswith(b'\xFF'*16) else pack1
 				update = Update.unpack_message(pack1s,negotiated)
@@ -108,12 +109,13 @@ def check_neighbor (neighbors):
 				str2 = change2.extensive()
 				pack2 = list(Update([update.nlris[0]],update.attributes).messages(negotiated))[0]
 
-				logger.parser('recoded route %s' % str2)
-				logger.parser('recoded hex   %s' % od(pack2))
+				logger.debug('recoded route %s' % str2,'parser')
+				logger.debug('recoded hex   %s' % od(pack2),'parser')
 
 				str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]','med 100')
 				str1r = str1.lower().replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
 				str2r = str2.lower().replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
+				str2r = str2r.replace('large-community [ 1:2:3 10:11:12 ]','attribute [ 0x20 0xc0 0x0000000100000002000000030000000a0000000b0000000c ]')
 
 				if 'next-hop self' in str1r:
 					if ':' in str1r:
@@ -131,34 +133,34 @@ def check_neighbor (neighbors):
 				if str1r != str2r:
 					if 'attribute [' in str1r and ' 0x00 ' in str1r:
 						# we do not decode non-transitive attributes
-						logger.parser('skipping string check on update with non-transitive attribute(s)')
+						logger.debug('skipping string check on update with non-transitive attribute(s)','parser')
 						skip = True
 					else:
-						logger.parser('strings are different:')
-						logger.parser('[%s]' % (str1r))
-						logger.parser('[%s]' % (str2r))
+						logger.debug('strings are different:','parser')
+						logger.debug('[%s]' % (str1r),'parser')
+						logger.debug('[%s]' % (str2r),'parser')
 						return False
 				else:
-					logger.parser('strings are fine')
+					logger.debug('strings are fine','parser')
 
 				if skip:
-					logger.parser('skipping encoding for update with non-transitive attribute(s)')
+					logger.debug('skipping encoding for update with non-transitive attribute(s)','parser')
 				elif pack1 != pack2:
-					logger.parser('encoding are different')
-					logger.parser('[%s]' % (od(pack1)))
-					logger.parser('[%s]' % (od(pack2)))
+					logger.debug('encoding are different','parser')
+					logger.debug('[%s]' % (od(pack1)),'parser')
+					logger.debug('[%s]' % (od(pack2)),'parser')
 					return False
 				else:
-					logger.parser('encoding is fine')
-					logger.parser('----------------------------------------')
+					logger.debug('encoding is fine','parser')
+					logger.debug('----------------------------------------','parser')
 
-				logger.parser('JSON nlri %s' % change1.nlri.json())
-				logger.parser('JSON attr %s' % change1.attributes.json())
+				logger.debug('JSON nlri %s' % change1.nlri.json(),'parser')
+				logger.debug('JSON attr %s' % change1.attributes.json(),'parser')
 
 			except Notify as exc:
-				logger.parser('----------------------------------------')
-				logger.parser(str(exc))
-				logger.parser('----------------------------------------')
+				logger.debug('----------------------------------------','parser')
+				logger.debug(str(exc),'parser')
+				logger.debug('----------------------------------------','parser')
 				return False
 		neighbor.rib.clear()
 
@@ -170,9 +172,9 @@ def check_neighbor (neighbors):
 
 def check_message (neighbor, message):
 	message = message.replace(':','')
-	raw = concat_bytes_i(character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
+	raw = concat_bytes_i(character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)//2)))
 
-	if raw.startswith('\xff'*16):
+	if raw.startswith(b'\xff'*16):
 		kind = ordinal(raw[18])
 		# XXX: FIXME: check size
 		# size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
@@ -199,8 +201,8 @@ def check_open (neighbor, raw):
 
 def check_update (neighbor, raw):
 	logger = Logger()
-	logger._option.parser = True
-	logger.parser('\ndecoding routes in configuration')
+	logger._option['parser'] = True
+	logger.debug('\ndecoding routes in configuration','parser')
 
 	neighbor = neighbor[list(neighbor)[0]]
 
@@ -225,20 +227,20 @@ def check_update (neighbor, raw):
 	# grouped = False
 
 	while raw:
-		if raw.startswith('\xff'*16):
+		if raw.startswith(b'\xff'*16):
 			kind = ordinal(raw[18])
 			size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
 
 			injected,raw = raw[19:size],raw[size:]
 
 			if kind == 2:
-				logger.parser('the message is an update')
+				logger.debug('the message is an update','parser')
 				decoding = 'update'
 			else:
-				logger.parser('the message is not an update (%d) - aborting' % kind)
+				logger.debug('the message is not an update (%d) - aborting' % kind,'parser')
 				return False
 		else:
-			logger.parser('header missing, assuming this message is ONE update')
+			logger.debug('header missing, assuming this message is ONE update','parser')
 			decoding = 'update'
 			injected,raw = raw,''
 
@@ -248,19 +250,19 @@ def check_update (neighbor, raw):
 		except KeyboardInterrupt:
 			raise
 		except Notify:
-			logger.parser('could not parse the message','error')
-			logger.parser(traceback.format_exc(),'error')
+			logger.error('could not parse the message','parser')
+			logger.error(traceback.format_exc(),'parser')
 			return False
 		except StandardError:
-			logger.parser('could not parse the message','error')
-			logger.parser(traceback.format_exc(),'error')
+			logger.error('could not parse the message','parser')
+			logger.error(traceback.format_exc(),'parser')
 			return False
 
-		logger.parser('')  # new line
+		logger.debug('','parser')  # new line
 		for number in range(len(update.nlris)):
 			change = Change(update.nlris[number],update.attributes)
-			logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-		logger.parser('update json %s' % Response.JSON(json_version).update(neighbor,'in',update,'',''))
+			logger.info('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()),'parser')
+		logger.info('update json %s' % Response.JSON(json_version).update(neighbor,'in',update,None,'',''),'parser')
 
 	return True
 

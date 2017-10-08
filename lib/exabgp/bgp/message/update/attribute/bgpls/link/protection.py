@@ -3,7 +3,7 @@
 protection.py
 
 Created by Evelio Vila on 2016-12-01.
-Copyright (c) 2014-2016 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.notification import Notify
@@ -40,9 +40,9 @@ class LinkProtectionType(object):
 			raise Notify(3,5, "Wrong size for protection type TLV")
 		else:
 			# We only care about the first octect
-			protection_mask = LsGenericFlags.unpack(data[0],
+			protection_mask = LsGenericFlags.unpack(data[0:1],
 				LsGenericFlags.LS_PROTECTION_MASK)
-		return cls(protectionflags=protection_mask.flags)
+		return cls(protectionflags=protection_mask)
 
 	def json (self,compact=None):
-		return '"link-protection-flags": "%s"' % str(self.protectionflags)
+		return '"link-protection-flags": {}'.format(self.protectionflags.json())

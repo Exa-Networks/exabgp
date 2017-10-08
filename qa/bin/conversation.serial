@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+# encoding: utf-8
+"""
+cache.py
+
+Created by Thomas Mangin
+Copyright (c) 2013-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
 
 import os
 import sys
@@ -23,7 +31,11 @@ def main ():
 	if not path.isfile(exabgp):
 		print "could not find exabgp"
 
-	conf = path.abspath(path.join(location,'..','..','conf'))
+	etc = path.abspath(path.join(location,'..','..','..','etc','exabgp'))
+	if not path.isdir(etc):
+		sys.exit('could not find etc folder')
+
+	conf = path.abspath(path.join(location,'..','..','ci'))
 	if not path.isdir(conf):
 		sys.exit('could not find conf folder')
 
@@ -32,7 +44,8 @@ def main ():
 		sys.exit('could not find the sequence daemon')
 
 	match = '*' if len(sys.argv) < 2 else sys.argv[1].split('/')[-1].split('.')[0]
-	if match == 'all': match = '*'
+	if match == 'all':
+		match = '*'
 
 	if len(sys.argv) >= 3:
 		reverse = reversed if sys.argv[2].startswith('rev') else lambda _:_
@@ -43,20 +56,19 @@ def main ():
 		skip = 0
 		show = False
 
-	groups = sorted(glob.glob(path.join(conf,'%s.group' % match.replace('all','*'))))
+	groups = sorted(glob.glob(path.join(conf,'%s.ci' % match.replace('all','*'))))
 	groups = reverse(groups)
 
 	success = True
 
 	for group in groups:
-		directory = os.path.dirname(group)
 		if skip:
 			print 'skiped ', group
 			skip -= 1
 			continue
 
-		configurations = [os.path.join(directory,name) for name in open(group).read().strip().split()]
-		sequence_file = group.replace('.group','.sequence')
+		configurations = [os.path.join(etc,name) for name in open(group).read().strip().split()]
+		sequence_file = group.replace('.ci','.msg')
 
 		if path.isfile(sequence_file):
 			if check_sequence(group,exabgp,configurations,sequence_daemon,sequence_file,show) == False:

@@ -5,6 +5,7 @@ protocol.py
 
 Created by Thomas Mangin on 2009-08-27.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import unittest
@@ -22,7 +23,7 @@ from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.vendoring import six
-from six.moves import StringIO
+from exabgp.vendoring.six.moves import StringIO
 
 from exabgp.configuration.environment import environment
 environment.setup('')
