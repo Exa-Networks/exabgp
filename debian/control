@@ -15,7 +15,7 @@ Build-Depends-Indep: python-ipaddr,
                      python3-nose,
                      python3-psutil,
                      python3-six,
-Standards-Version: 3.9.8
+Standards-Version: 4.1.1.0
 Homepage: https://github.com/Exa-Networks/exabgp
 Vcs-Browser: https://github.com/Exa-Networks/exabgp/tree/debian/sid
 Vcs-Git: https://github.com/Exa-Networks/exabgp.git -b debian/sid
