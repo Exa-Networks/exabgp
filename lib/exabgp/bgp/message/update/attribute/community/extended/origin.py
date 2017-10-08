@@ -30,10 +30,16 @@ class Origin (ExtendedCommunity):
 	def ga (self):
 		return self.community[self.LIMIT:8]
 
+	def __eq__ (self, other):
+		return \
+			self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and \
+			ExtendedCommunity.__eq__(self,other)
+
 
 # ================================================================== OriginASNIP
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class OriginASNIP (Origin):
 	COMMUNITY_TYPE = 0x00
 	LIMIT = 4
@@ -47,13 +53,13 @@ class OriginASNIP (Origin):
 			self,
 			community if community else pack(
 				'!2sH4s',
-				self._packedTypeSubtype(),
+				self._subtype(),
 				asn,
 				IPv4.pton(ip)
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "origin:%s:%s" % (self.asn,self.ip)
 
 	@staticmethod
@@ -65,6 +71,7 @@ class OriginASNIP (Origin):
 # ================================================================== OriginIPASN
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class OriginIPASN (Origin):
 	COMMUNITY_TYPE = 0x01
 	LIMIT = 6
@@ -78,13 +85,13 @@ class OriginIPASN (Origin):
 			self,
 			community if community else pack(
 				'!2s4sH',
-				self._packedTypeSubtype(),
+				self._subtype(),
 				IPv4.pton(ip),
 				asn
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "origin:%s:%s" % (self.ip, self.asn)
 
 	@staticmethod
@@ -96,6 +103,7 @@ class OriginIPASN (Origin):
 # ============================================================= OriginASN4Number
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class OriginASN4Number (Origin):
 	COMMUNITY_TYPE = 0x02
 	LIMIT = 6
@@ -107,13 +115,13 @@ class OriginASN4Number (Origin):
 			self,
 			community if community else pack(
 				'!2sLH',
-				self._packedTypeSubtype(),
+				self._subtype(),
 				asn,
 				number
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "origin:%sL:%s" % (self.asn, self.number)
 
 	@staticmethod

@@ -12,9 +12,16 @@ from exabgp.bgp.message.open.capability.capability import Capability
 #
 
 
+class REFRESH (object):
+	ABSENT   = 0x01
+	NORMAL   = 0x02
+	ENHANCED = 0x04
+
+
+@Capability.register()
+@Capability.register(Capability.CODE.ROUTE_REFRESH_CISCO)
 class RouteRefresh (Capability):
-	def __init__ (self):
-		self.ID = Capability.CODE.ROUTE_REFRESH
+	ID = Capability.CODE.ROUTE_REFRESH
 
 	def __str__ (self):
 		if self.ID == Capability.CODE.ROUTE_REFRESH:
@@ -25,7 +32,7 @@ class RouteRefresh (Capability):
 		return '{ "name": "route-refresh", "variant": "%s" }' % ('RFC' if self.ID == Capability.CODE.ROUTE_REFRESH else 'Cisco')
 
 	def extract (self):
-		return ['']
+		return [b'']
 
 	@staticmethod
 	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
@@ -37,11 +44,26 @@ class RouteRefresh (Capability):
 			return False
 		return self.ID == other.ID
 
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
 
 # ========================================================= EnhancedRouteRefresh
 #
 
 
+@Capability.register()
 class EnhancedRouteRefresh (Capability):
 	ID = Capability.CODE.ENHANCED_ROUTE_REFRESH
 
@@ -52,7 +74,7 @@ class EnhancedRouteRefresh (Capability):
 		return '{ "name": "enhanced-route-refresh" }'
 
 	def extract (self):
-		return ['']
+		return [b'']
 
 	@staticmethod
 	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613

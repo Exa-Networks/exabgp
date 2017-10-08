@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-pmsi_tunnel.py
+pmsi.py
 
 Created by Thomas Morin on 2014-06-10.
 Copyright (c) 2014-2015 Orange. All rights reserved.
@@ -11,9 +11,10 @@ from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IPv4
+from exabgp.util import ordinal
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
-# http://tools.ietf.org/html/rfc6514#section-5
+# https://tools.ietf.org/html/rfc6514#section-5
 #
 #  +---------------------------------+
 #  |  Flags (1 octet)                |
@@ -29,6 +30,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # ========================================================================= PMSI
 # RFC 6514
 
+@Attribute.register()
 class PMSI (Attribute):
 	ID = Attribute.CODE.PMSI_TUNNEL
 	FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
@@ -56,11 +58,22 @@ class PMSI (Attribute):
 		self.flags = flags    # integer
 		self.tunnel = tunnel  # tunnel id, packed data
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.label == other.label and \
+			self.flags == other.flags and \
+			self.tunnel == other.tunnel
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	@staticmethod
 	def name (tunnel_type):
 		return PMSI._name.get(tunnel_type,'unknown')
 
-	def pack (self):
+	def pack (self, negotiated):
 		return self._attribute(
 			pack(
 				'!BB3s',
@@ -74,27 +87,10 @@ class PMSI (Attribute):
 	def __len__ (self):
 		return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
 
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		# if self.TUNNEL_TYPE != other.TUNNEL_TYPE:
-		# 	return -1
-		if self.label != other.label:
-			return -1
-		if self.flags != other.flags:
-			return -1
-		if self.tunnel != other.tunnel:
-			return -1
-		return 0
+	def prettytunnel (self):
+		return "0x" + ''.join('%02X' % ordinal(_) for _ in self.tunnel) if self.tunnel else ''
 
 	def __repr__ (self):
-		return str(self)
-
-	def prettytunnel (self):
-		return "0x" + ''.join('%02X' % ord(_) for _ in self.tunnel) if self.tunnel else ''
-
-	def __str__ (self):
-		# TODO: add hex dump of packedValue
 		return "pmsi:%s:%s:%s:%s" % (
 			self.name(self.TUNNEL_TYPE).replace(' ','').lower(),
 			str(self.flags) if self.flags else '-',  # why not use zero (0) ?
@@ -102,9 +98,12 @@ class PMSI (Attribute):
 			self.prettytunnel()
 		)
 
-	@staticmethod
-	def register_pmsi (klass):
-		PMSI._pmsi_known[klass.TUNNEL_TYPE] = klass
+	@classmethod
+	def register (cls,klass):
+		if klass.TUNNEL_TYPE in cls._pmsi_known:
+			raise RuntimeError('only one registration for PMSI')
+		cls._pmsi_known[klass.TUNNEL_TYPE] = klass
+		return klass
 
 	@staticmethod
 	def pmsi_unknown (subtype, tunnel, label, flags):
@@ -125,11 +124,12 @@ class PMSI (Attribute):
 # ================================================================= PMSINoTunnel
 # RFC 6514
 
+@PMSI.register
 class PMSINoTunnel (PMSI):
 	TUNNEL_TYPE = 0
 
 	def __init__ (self, label=0,flags=0):
-		PMSI.__init__(self,'',label,flags)
+		PMSI.__init__(self,b'',label,flags)
 
 	def prettytunnel (self):
 		return ''
@@ -142,11 +142,12 @@ class PMSINoTunnel (PMSI):
 # ======================================================= PMSIIngressReplication
 # RFC 6514
 
+@PMSI.register
 class PMSIIngressReplication (PMSI):
 	TUNNEL_TYPE = 6
 
 	def __init__ (self, ip, label=0,flags=0,tunnel=None):
-		self.ip = ip
+		self.ip = ip  # looks like a bad name
 		PMSI.__init__(self,tunnel if tunnel else IPv4.pton(ip),label,flags)
 
 	def prettytunnel (self):
@@ -156,7 +157,3 @@ class PMSIIngressReplication (PMSI):
 	def unpack (cls, tunnel, label, flags):
 		ip = IPv4.ntop(tunnel)
 		return cls(ip,label,flags,tunnel)
-
-
-PMSI.register_pmsi(PMSINoTunnel)
-PMSI.register_pmsi(PMSIIngressReplication)

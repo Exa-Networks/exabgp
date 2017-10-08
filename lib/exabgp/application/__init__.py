@@ -27,8 +27,6 @@ def run_cli ():
 	main()
 
 
-def run_as_cli ():
-	import sys
-	from exabgp.reactor.api.control import Control
-	location = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
-	Control(location).run()
+def run_control ():
+	from exabgp.application.control import main
+	main()

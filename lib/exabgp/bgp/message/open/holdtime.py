@@ -12,6 +12,8 @@ from struct import pack
 
 
 class HoldTime (int):
+	MAX = 0xFFFF
+
 	def pack (self):
 		return pack('!H',self)
 

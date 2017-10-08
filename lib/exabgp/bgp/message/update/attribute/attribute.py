@@ -7,10 +7,42 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from struct import pack
+import sys
 
+from exabgp.util import character
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
+
+
+# ============================================================== TreatAsWithdraw
+#
+
+class TreatAsWithdraw (object):
+	ID = 0xffff
+	GENERIC = False
+
+	def __init__ (self,aid=None):
+		self.aid = aid
+
+	def __str__ (self):
+		if self.aid is None:
+			return 'treat-as-withdraw'
+		return 'treat-as-withdraw due to %s' % Attribute.CODE(self.aid)
+
+
+class Discard (object):
+	ID = 0xfffe
+	GENERIC = False
+
+	def __init__ (self,aid=None):
+		self.aid = aid
+
+	def __str__ (self):
+		if self.aid is None:
+			return 'discard'
+		return 'discard due to %s' % Attribute.CODE(self.aid)
 
 
 # ==================================================================== Attribute
@@ -23,6 +55,8 @@ class Attribute (object):
 
 	# Should this Attribute be cached
 	CACHING = False
+	# Generic Class or implementation
+	GENERIC = False
 
 	# Registered subclasses we know how to decode
 	registered_attributes = dict()
@@ -43,7 +77,8 @@ class Attribute (object):
 	# XXX: FIXME: The API of ID is a bit different (it can be instanciated)
 	# XXX: FIXME: This is legacy. should we change to not be ?
 	class CODE (int):
-		__slots__ = []
+		if sys.version_info[0] < 3:
+			__slots__ = []
 
 		# This should move within the classes and not be here
 		# RFC 4271
@@ -72,12 +107,20 @@ class Attribute (object):
 		# RFC5512
 		TUNNEL_ENCAP       = 0x17  # 23
 		AIGP               = 0x1A  # 26
+		# RFC7752
+		BGP_LS             = 0x1D  # 29
 
-		INTERNAL_NAME      = 0xFFFC
-		INTERNAL_WITHDRAW  = 0xFFFD
-		INTERNAL_WATCHDOG  = 0xFFFE
-		INTERNAL_SPLIT     = 0xFFFF
+		# draft-ietf-idr-large-community
+		LARGE_COMMUNITY    = 0x20  # 32
 
+		INTERNAL_NAME              = 0xFFFA
+		INTERNAL_WITHDRAW          = 0xFFFB
+		INTERNAL_WATCHDOG          = 0xFFFC
+		INTERNAL_SPLIT             = 0xFFFD
+		INTERNAL_DISCARD           = 0xFFFE
+		INTERNAL_TREAT_AS_WITHDRAW = 0xFFFF  # Treat as Withdraw
+
+		# Currently formating is done with %-18s
 		names = {
 			ORIGIN:             'origin',
 			AS_PATH:            'as-path',
@@ -87,6 +130,7 @@ class Attribute (object):
 			ATOMIC_AGGREGATE:   'atomic-aggregate',
 			AGGREGATOR:         'aggregator',
 			COMMUNITY:          'community',
+			LARGE_COMMUNITY:    'large-community',
 			ORIGINATOR_ID:      'originator-id',
 			CLUSTER_LIST:       'cluster-list',
 			MP_REACH_NLRI:      'mp-reach-nlri',    # multi-protocol reacheable nlri
@@ -97,17 +141,20 @@ class Attribute (object):
 			PMSI_TUNNEL:        'pmsi-tunnel',
 			TUNNEL_ENCAP:       'tunnel-encaps',
 			AIGP:               'aigp',
-			0xfffc:             'internal-name',
-			0xfffd:             'internal-withdraw',
-			0xfffe:             'internal-watchdog',
-			0xffff:             'internal-split',
+			BGP_LS:				'bgp-ls',
+			0xfffa:             'internal-name',
+			0xfffb:             'internal-withdraw',
+			0xfffc:             'internal-watchdog',
+			0xfffd:             'internal-split',
+			0xfffe:             'internal-discard',
+			0xffff:             'internal-treath-as-withdraw',
 		}
 
-		def __str__ (self):
+		def __repr__ (self):
 			return self.names.get(self,'unknown-attribute-%s' % hex(self))
 
-		def __repr__ (self):
-			return str(self)
+		def __str__ (self):
+			return repr(self)
 
 		@classmethod
 		def name (cls, self):
@@ -126,7 +173,8 @@ class Attribute (object):
 		MASK_TRANSITIVE = 0xBF  # . 191 - 1011 1111
 		MASK_OPTIONAL   = 0x7F  # . 127 - 0111 1111
 
-		__slots__ = []
+		if sys.version_info[0] < 3:
+			__slots__ = []
 
 		def __str__ (self):
 			r = []
@@ -155,38 +203,55 @@ class Attribute (object):
 	def _attribute (self, value):
 		flag = self.FLAG
 		if flag & Attribute.Flag.OPTIONAL and not value:
-			return ''
+			return b''
 		length = len(value)
 		if length > 0xFF:
 			flag |= Attribute.Flag.EXTENDED_LENGTH
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			len_value = pack('!H',length)
 		else:
-			len_value = chr(length)
-		return "%s%s%s%s" % (chr(flag),chr(self.ID),len_value,value)
+			len_value = character(length)
+		return concat_bytes(character(flag),character(self.ID),len_value,value)
 
 	def _len (self,value):
 		length = len(value)
 		return length + 3 if length <= 0xFF else length + 4
 
 	def __eq__ (self, other):
-		return self.ID == other.ID
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG
 
 	def __ne__ (self, other):
-		return self.ID != other.ID
+		return not self.__eq__(other)
 
-	@staticmethod
-	def register_attribute (klass, attribute_id=None,flag=None):
-		aid = klass.ID if attribute_id is None else attribute_id
-		flg = klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
-		if (aid,flg) in klass.registered_attributes:
-			raise RuntimeError('only one class can be registered per attribute')
-		klass.registered_attributes[(aid,flg)] = klass
-		klass.attributes_known.append(aid)
-		if klass.FLAG & Attribute.Flag.OPTIONAL:
-			Attribute.attributes_optional.append(aid)
-		else:
-			Attribute.attributes_well_know.append(aid)
+	def __lt__ (self, other):
+		return self.ID < other.ID
+
+	def __le__ (self, other):
+		return self.ID <= other.ID
+
+	def __gt__ (self, other):
+		return self.ID > other.ID
+
+	def __ge__ (self, other):
+		return self.ID >= other.ID
+
+	@classmethod
+	def register (cls,attribute_id=None,flag=None):
+		def register_attribute (klass):
+			aid = klass.ID if attribute_id is None else attribute_id
+			flg = klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
+			if (aid,flg) in cls.registered_attributes:
+				raise RuntimeError('only one class can be registered per attribute')
+			cls.registered_attributes[(aid,flg)] = klass
+			cls.attributes_known.append(aid)
+			if klass.FLAG & Attribute.Flag.OPTIONAL:
+				cls.attributes_optional.append(aid)
+			else:
+				cls.attributes_well_know.append(aid)
+			return klass
+		return register_attribute
 
 	@classmethod
 	def registered (cls, attribute_id, flag):
@@ -199,11 +264,7 @@ class Attribute (object):
 			kls = cls.registered_attributes[key]
 			kls.ID = attribute_id
 			return kls
-		# XXX: we do see some AS4_PATH with the partial instead of transitive bit set !!
-		if attribute_id == Attribute.CODE.AS4_PATH:
-			kls = cls.attributes_known[attribute_id]
-			kls.ID = attribute_id
-			return kls
+
 		raise Notify (2,4,'can not handle attribute id %s' % attribute_id)
 
 	@classmethod
@@ -229,5 +290,6 @@ class Attribute (object):
 			for attribute in Attribute.CODE.names:
 				if attribute not in cls.cache:
 					cls.cache[attribute] = Cache()
+
 
 Attribute.setCache()

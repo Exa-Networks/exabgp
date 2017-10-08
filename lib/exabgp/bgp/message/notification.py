@@ -8,14 +8,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import string
 
-from exabgp.bgp.message import Message
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes
+from exabgp.util import hexstring
 
-
-def hexstring (value):
-	def spaced (value):
-		for v in value:
-			yield '%02X' % ord(v)
-	return '0x' + ''.join(spaced(value))
+from exabgp.bgp.message.message import Message
 
 
 # ================================================================== Notification
@@ -28,9 +26,10 @@ def hexstring (value):
 # | Error code    | Error subcode |   Data (variable)             |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+@Message.register
 class Notification (Message):
 	ID = Message.CODE.NOTIFICATION
-	TYPE = chr(Message.CODE.NOTIFICATION)
+	TYPE = character(Message.CODE.NOTIFICATION)
 
 	_str_code = {
 		1: "Message header error",
@@ -54,7 +53,7 @@ class Notification (Message):
 		(2,4): "Unsupported Optional Parameter",
 		(2,5): "Authentication Notification (Deprecated)",
 		(2,6): "Unacceptable Hold Time",
-		# RFC 5492
+		# RFC 5492 - https://tools.ietf.org/html/rfc5492
 		(2,7): "Unsupported Capability",
 
 		# draft-ietf-idr-bgp-multisession-06
@@ -78,30 +77,68 @@ class Notification (Message):
 		(4,0): "Unspecific",
 
 		(5,0): "Unspecific",
-		# RFC 6608
+		# RFC 6608 - https://tools.ietf.org/html/rfc6608
 		(5,1): "Receive Unexpected Message in OpenSent State",
 		(5,2): "Receive Unexpected Message in OpenConfirm State",
 		(5,3): "Receive Unexpected Message in Established State",
 
 		(6,0): "Unspecific",
-		# RFC 4486
+		# RFC 4486 - https://tools.ietf.org/html/rfc4486
 		(6,1): "Maximum Number of Prefixes Reached",
-		(6,2): "Administrative Shutdown",
+		(6,2): "Administrative Shutdown",  # augmented with draft-ietf-idr-shutdown
 		(6,3): "Peer De-configured",
 		(6,4): "Administrative Reset",
 		(6,5): "Connection Rejected",
 		(6,6): "Other Configuration Change",
 		(6,7): "Connection Collision Resolution",
 		(6,8): "Out of Resources",
+
 		# draft-keyur-bgp-enhanced-route-refresh-00
 		(7,1): "Invalid Message Length",
 		(7,2): "Malformed Message Subtype",
 	}
 
-	def __init__ (self, code, subcode, data=''):
+	def __init__ (self, code, subcode, data=b''):
 		self.code = code
 		self.subcode = subcode
-		self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+
+		if not (code, subcode) in [(6, 2), (6, 4)]:
+			self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+			return
+
+		if len(data) == 0:
+			# shutdown without shutdown communication (the old fashioned way)
+			self.data = b''
+			return
+
+		# draft-ietf-idr-shutdown or the peer was using 6,2 with data
+
+		shutdown_length  = ordinal(data[0])
+		data = data[1:]
+
+		if shutdown_length == 0:
+			self.data = "empty Shutdown Communication."
+			# move offset past length field
+			return
+
+		if len(data) < shutdown_length:
+			self.data = "invalid Shutdown Communication (buffer underrun) length : %i [%s]" % (shutdown_length, hexstring(data))
+			return
+
+		if shutdown_length > 128:
+			self.data = "invalid Shutdown Communication (too large) length : %i [%s]" % (shutdown_length, hexstring(data))
+			return
+
+		try:
+			self.data = 'Shutdown Communication: "%s"' % \
+				data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
+		except UnicodeDecodeError:
+			self.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
+			return
+
+		trailer = data[shutdown_length:]
+		if trailer:
+			self.data += ", trailing data: " + hexstring(trailer)
 
 	def __str__ (self):
 		return "%s / %s%s" % (
@@ -111,23 +148,23 @@ class Notification (Message):
 		)
 
 	@classmethod
-	def unpack_message (cls, data, negotiated):
-		return cls(ord(data[0]),ord(data[1]),data[2:])
-
+	def unpack_message (cls, data, negotiated=None):
+		return cls(ordinal(data[0]),ordinal(data[1]),data[2:])
 
 
 # =================================================================== Notify
 # A Notification we need to inform our peer of.
 
+@Message.notify
 class Notify (Notification):
 	def __init__ (self, code, subcode, data=None):
 		if data is None:
 			data = self._str_subcode.get((code,subcode),'unknown notification type')
 		Notification.__init__(self,code,subcode,data)
 
-	def message (self):
-		return self._message("%s%s%s" % (
-			chr(self.code),
-			chr(self.subcode),
+	def message (self,negotiated=None):
+		return self._message(concat_bytes(
+			character(self.code),
+			character(self.subcode),
 			self.data
 		))

@@ -6,16 +6,18 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.util import character
+
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # ================================================================= MultiSession
 #
 
 
+@Capability.register()
+@Capability.register(Capability.CODE.MULTISESSION_CISCO)
 class MultiSession (Capability,list):
-	def __init__ (self):
-		self.ID = Capability.CODE.MULTISESSION
-		list.__init__(self)
+	ID = Capability.CODE.MULTISESSION
 
 	def set (self, data):
 		self.extend(data)
@@ -31,9 +33,9 @@ class MultiSession (Capability,list):
 		return '{ "name": "multisession", "variant": "%s" ,"capabilities": [%s ] }' % (variant, ','.join(' %s' % str(capa) for capa in self))
 
 	def extract (self):
-		rs = [chr(0),]
+		rs = [character(0),]
 		for v in self:
-			rs.append(chr(v))
+			rs.append(character(v))
 		return rs
 
 	@staticmethod

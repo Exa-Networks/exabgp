@@ -10,12 +10,14 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import ordinal
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 # ================================================================ Encapsulation
 # RFC 5512
 
 
+@ExtendedCommunity.register
 class Encapsulation (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x03
 	COMMUNITY_SUBTYPE = 0x0C
@@ -28,7 +30,7 @@ class Encapsulation (ExtendedCommunity):
 		IPIP      = 0x07
 		VXLAN     = 0x08
 		NVGRE     = 0x09
-		MPLS      = 0x10
+		MPLS      = 0x0A
 		VXLAN_GPE = 0x0C
 		MPLS_UDP  = 0x0D
 
@@ -51,21 +53,21 @@ class Encapsulation (ExtendedCommunity):
 		ExtendedCommunity.__init__(
 			self,community if community is not None else pack(
 				"!2sLH",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				0,self.tunnel_type
 			)
 		)
 
-	def __str__ (self):
-		return "Encapsulation: %s" % Encapsulation._string.get(self.tunnel_type,"Encap:(unknown:%d)" % self.tunnel_type)
+	def __repr__ (self):
+		return "Encap:%s" % Encapsulation._string.get(self.tunnel_type,"Encap:(unknown:%d)" % self.tunnel_type)
 
 	@staticmethod
 	def unpack (data):
 		tunnel, = unpack('!H',data[6:8])
 		return Encapsulation(tunnel,data[:8])
 
-		# type_  = ord(data[0]) & 0x0F
-		# stype = ord(data[1])
+		# type_  = ordinal(data[0]) & 0x0F
+		# stype = ordinal(data[1])
 
 		# assert(type_==Encapsulation.COMMUNITY_TYPE)
 		# assert(stype==Encapsulation.COMMUNITY_SUBTYPE)

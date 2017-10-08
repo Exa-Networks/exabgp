@@ -3,36 +3,38 @@
 import sys
 import time
 
-# When the parent dies we are seeing continual newlines, so we only access so many before stopping
-counter = 0
-
-line = sys.stdin.readline().strip()
-print >> sys.stderr, 'ok, received', line
-sys.stdout.flush()
-
-if 'keepalive' in line:
-	time.sleep(2)  # make sure the other process is faster if it gets any data
-	print "announce route 0.0.0.0/0 next-hop 1.1.1.1"
-	sys.stdout.flush()
-else:
-	print "announce route 6.6.6.6/6 next-hop 9.9.9.9"
-	sys.stdout.flush()
-
 while True:
 	try:
 		line = sys.stdin.readline().strip()
-		print >> sys.stderr, 'ok, received', line
-		sys.stderr.flush()
 
-		if line == "":
-			counter += 1
-			if counter > 100:
-				break
-			continue
-
-		counter = 0
+		if 'shutdown' in line:
+			print >> sys.stderr, '   (shutdown)', line
+			sys.stdout.flush()
+			sys.exit(1)
+		elif 'done' in line:
+			print >> sys.stderr, '   (ignore) received', line
+			sys.stdout.flush()
+		elif 'eor' in line:
+			print >> sys.stderr, '   (ignore) received', line
+			sys.stdout.flush()
+		elif 'keepalive' in line:
+			print >> sys.stderr, '   (ok) received', line
+			sys.stdout.flush()
+		elif '0.0.0.0/32' in line:
+			print >> sys.stderr, '   (ok) received', line
+			sys.stdout.flush()
+			time.sleep(2)  # make sure the other process is faster if it gets any data
+			print "announce route 6.6.6.0/24 next-hop 1.1.1.1"
+			sys.stdout.flush()
+		else:
+			print >> sys.stderr, '   (bad), received', line
+			sys.stderr.flush()
+			print "announce route 6.6.6.0/24 next-hop 9.9.9.9"
+			sys.stdout.flush()
+			time.sleep(5)
+			sys.exit(1)
 	except KeyboardInterrupt:
-		pass
+		sys.exit(1)
 	except IOError:
 		# most likely a signal during readline
-		pass
+		sys.exit(1)

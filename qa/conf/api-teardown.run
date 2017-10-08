@@ -4,19 +4,21 @@ import sys
 import time
 
 messages = [
-('announce route 1.1.0.0/16 next-hop 1.1.1.1',4.5),
-('neighbor 127.0.0.1 teardown 4',1.5),
-('announce route 2.2.0.0/16 next-hop 2.2.2.2',4.5),
-('neighbor 127.0.0.1 teardown 4',1.5),
-('announce route 3.3.0.0/16 next-hop 3.3.3.3',4.5),
+	('announce route 1.1.0.0/16 next-hop 1.1.1.1',4.5),
+	('neighbor 127.0.0.1 teardown 4',1.5),
+	('announce route 2.2.0.0/16 next-hop 2.2.2.2',4.5),
+	('neighbor 127.0.0.1 teardown 4',1.5),
+	('announce route 3.3.0.0/16 next-hop 3.3.3.3',4.5),
 ]
 
 while messages:
 	message,sleep = messages.pop(0)
-	sys.stdout.write( message + '\n')
+	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 	time.sleep(sleep)
 
-while True:
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
 	time.sleep(1)
-

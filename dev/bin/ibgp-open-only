@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import asyncore
 import socket
 from struct import unpack
@@ -8,11 +9,8 @@ from struct import unpack
 class BGPHandler(asyncore.dispatcher_with_send):
 	def read_message (self):
 		header = self.recv(19)
-		print "read header", od(header)
 		length = unpack('!H',header[16:18])[0]
-		print "waiting for", length, "bytes"
 		body = self.recv(length)
-		print "read body  ", od(body)
 		return header,body
 
 	def handle_read (self):
@@ -21,7 +19,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		header,body = self.read_message()
 		routerid = chr((ord(body[8])+1) & 0xFF)
 		o = header+body[:8]+routerid+body[9:]
-		print "sending open", od(o)
 		self.send(o)
 
 class BGPServer(asyncore.dispatcher):
@@ -40,5 +37,13 @@ class BGPServer(asyncore.dispatcher):
 			print "new BGP connection from", addr
 			handler = BGPHandler(sock)
 
-server = BGPServer('localhost', int(os.environ.get('exabgp.tcp.port','179')))
+
+if os.environ.get('exabgp.tcp.port','').isdigit():
+	port = int(os.environ.get('exabgp.tcp.port'))
+elif os.environ.get('exabgp_tcp_port','').isdigit():
+	port = int(os.environ.get('exabgp_tcp_port'))
+else:
+	port = 179
+
+server = BGPServer('localhost', port)
 asyncore.loop()

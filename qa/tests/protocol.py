@@ -9,22 +9,23 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.configuration.environment import environment
-env = environment.setup('')
-
 from exabgp.bgp.message.open.asn import ASN
 
-from exabgp.bgp.message.open import Open
+from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Capabilities
-# from exabgp.bgp.message.notification import Notification
-from exabgp.bgp.message.keepalive import KeepAlive
-from exabgp.bgp.message.update import Update
+# from exabgp.bgp.message import Notification
+from exabgp.bgp.message import KeepAlive
+from exabgp.bgp.message import Update
 from exabgp.bgp.message.update import Attributes
 
 from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
 
-from StringIO import StringIO
+from exabgp.vendoring import six
+from six.moves import StringIO
+
+from exabgp.configuration.environment import environment
+environment.setup('')
 
 
 class Network (StringIO):

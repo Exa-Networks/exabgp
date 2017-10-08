@@ -8,11 +8,33 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import socket
 
+from exabgp.util import ordinal
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+
 # =========================================================================== IP
 #
+
+class IPSelf (object):
+	def __init__ (self, afi):
+		self.afi = afi
+
+	def __repr__ (self):
+		return 'self'
+
+	def top (self, negotiated, afi=AFI.undefined):
+		return negotiated.nexthopself(afi).top()
+
+	def ton (self,negotiated, afi=AFI.undefined):
+		return negotiated.nexthopself(afi).ton()
+
+	def pack (self, negotiated):
+		return negotiated.nexthopself(self.afi).ton()
+
+	def index (self):
+		return 'self-' + AFI.names[self.afi]
 
 
 class IP (object):
@@ -24,15 +46,21 @@ class IP (object):
 
 	_multicast_range = set(range(224,240))  # 239
 
-	__slots__ = ['ip','packed']
+	# deprecate the string API in favor of top()
+	__slots__ = ['_string','_packed']
 
 	def __init__ (self):
-		raise Exception("You should use IP.create() to use IP")
+		raise RuntimeError("You should use IP.create() to use IP")
 
-	def init (self, ip, packed):
-		self.ip = ip
-		self.packed = packed
+	def init (self, string, packed=None):
+		# XXX: the str should not be needed
+		self._string = string
+		self._packed = IP.pton(string) if packed is None else packed
 		return self
+
+	def __iter__ (self):
+		for letter in self._string:
+			yield letter
 
 	@staticmethod
 	def pton (ip):
@@ -42,6 +70,9 @@ class IP (object):
 	def ntop (data):
 		return socket.inet_ntop(socket.AF_INET if len(data) == 4 else socket.AF_INET6,data)
 
+	def top (self, negotiated=None, afi=AFI.undefined):
+		return self._string
+
 	@staticmethod
 	def toaf (ip):
 		# the orders matters as ::FFFF:<ipv4> is an IPv6 address
@@ -49,7 +80,7 @@ class IP (object):
 			return socket.AF_INET6
 		if '.' in ip:
 			return socket.AF_INET
-		raise Exception('unrecognised ip address %s' % ip)
+		raise ValueError('unrecognised ip address %s' % ip)
 
 	@staticmethod
 	def toafi (ip):
@@ -58,7 +89,7 @@ class IP (object):
 			return AFI.ipv6
 		if '.' in ip:
 			return AFI.ipv4
-		raise Exception('unrecognised ip address %s' % ip)
+		raise ValueError('unrecognised ip address %s' % ip)
 
 	@staticmethod
 	def tosafi (ip):
@@ -70,41 +101,52 @@ class IP (object):
 			if int(ip.split('.')[0]) in IP._multicast_range:
 				return SAFI.multicast
 			return SAFI.unicast
-		raise Exception('unrecognised ip address %s' % ip)
+		raise ValueError('unrecognised ip address %s' % ip)
 
 	def ipv4 (self):
-		return True if len(self.packed) == 4 else False
+		return True if len(self._packed) == 4 else False
 
 	def ipv6 (self):
-		return False if len(self.packed) == 4 else True
+		return False if len(self._packed) == 4 else True
 
 	@staticmethod
 	def length (afi):
 		return 4 if afi == AFI.ipv4 else 16
 
 	def index (self):
-		return self.packed
+		return self._packed
 
 	def pack (self):
-		return self.packed
+		return self._packed
 
-	def __str__ (self):
-		return self.ip
+	def ton (self, negotiated=None, afi=AFI.undefined):
+		return self._packed
 
 	def __repr__ (self):
-		return str(self)
+		return self._string
 
-	def __cmp__ (self, other):
-		if not isinstance(other, self.__class__):
-			return -1
-		if self.packed == other.packed:
-			return 0
-		if self.packed < other.packed:
-			return -1
-		return 1
+	def __eq__ (self, other):
+		if not isinstance(other, IP):
+			return False
+		return self._packed == other._packed
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
+	def __lt__ (self, other):
+		return self._packed < other._packed
+
+	def __le__ (self, other):
+		return self._packed <= other._packed
+
+	def __gt__ (self, other):
+		return self._packed > other._packed
+
+	def __ge__ (self, other):
+		return self._packed >= other._packed
 
 	def __hash__ (self):
-		return hash(str(self.__class__.__name__) + self.packed)
+		return hash((self.__class__.__name__, self._packed))
 
 	@classmethod
 	def klass (cls, ip):
@@ -114,15 +156,15 @@ class IP (object):
 		elif '.' in ip:
 			afi = IPv4.afi
 		else:
-			raise Exception('can not decode this ip address : %s' % ip)
+			raise ValueError('can not decode this ip address : %s' % ip)
 		if afi in cls._known:
 			return cls._known[afi]
 
 	@classmethod
-	def create (cls, ip, data=None,klass=None):
+	def create (cls, string, packed=None, klass=None):
 		if klass:
-			return klass(ip,data)
-		return cls.klass(ip)(ip,data)
+			return klass(string,packed)
+		return cls.klass(string)(string,packed)
 
 	@classmethod
 	def register (cls):
@@ -133,10 +175,10 @@ class IP (object):
 		return cls.create(IP.ntop(data),data,klass)
 
 
-# ========================================================================= NoIP
+# ==================================================================== NoNextHop
 #
 
-class _NoIP (object):
+class _NoNextHop (object):
 	packed = ''
 
 	def pack (self, data, negotiated=None):
@@ -145,10 +187,13 @@ class _NoIP (object):
 	def index (self):
 		return ''
 
-	def __str__ (self):
-		return 'none'
+	def ton (self, negotiated=None, afi=AFI.undefined):
+		return ''
 
-NoIP = _NoIP()
+	def __str__ (self):
+		return 'no-nexthop'
+
+NoNextHop = _NoNextHop()
 
 # ========================================================================= IPv4
 #
@@ -159,8 +204,8 @@ class IPv4 (IP):
 
 	__slots__ = []
 
-	def __init__ (self, ip, packed=None):
-		self.init(ip,packed if packed else IP.pton(ip))
+	def __init__ (self, string, packed=None):
+		self.init(string,packed if packed else IP.pton(string))
 
 	def __len__ (self):
 		return 4
@@ -169,7 +214,7 @@ class IPv4 (IP):
 		return not self.multicast()
 
 	def multicast (self):
-		return ord(self.packed[0]) in set(range(224,240))  # 239 is last
+		return ordinal(self._packed[0]) in set(range(224,240))  # 239 is last
 
 	def ipv4 (self):
 		return True
@@ -205,8 +250,8 @@ class IPv6 (IP):
 
 	__slots__ = []
 
-	def __init__ (self, ip, packed=None):
-		self.init(ip,packed if packed else socket.inet_pton(socket.AF_INET6,ip))
+	def __init__ (self, string, packed=None):
+		self.init(string,packed if packed else socket.inet_pton(socket.AF_INET6,string))
 
 	def __len__ (self):
 		return 16

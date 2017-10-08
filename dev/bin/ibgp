@@ -178,7 +178,13 @@ def drop ():
 		os.setuid(nuid)
 
 try:
-	port = int(os.environ.get('exabgp.tcp.port',int(os.environ.get('exabgp_tcp_port','179'))))
+	if os.environ.get('exabgp.tcp.port','').isdigit():
+		port = int(os.environ.get('exabgp.tcp.port'))
+	elif os.environ.get('exabgp_tcp_port','').isdigit():
+		port = int(os.environ.get('exabgp_tcp_port'))
+	else:
+		port = 179
+
 	bind = os.environ.get('exabgp.tcp.bind',os.environ.get('exabgp_tcp_bind','localhost'))
 	record = bool(os.environ.get('exabgp.wire.record',os.environ.get('exabgp.wire.record',False)))
 	server = BGPServer(bind,port,record)

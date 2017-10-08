@@ -21,6 +21,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 class RouteTarget (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x02
 	LIMIT = 0
+	DESCRIPTION = 'target'
 
 	@property
 	def la (self):
@@ -30,92 +31,117 @@ class RouteTarget (ExtendedCommunity):
 	def ga (self):
 		return self.community[self.LIMIT:8]
 
+	def __eq__ (self, other):
+		return \
+			self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and \
+			ExtendedCommunity.__eq__(self,other)
 
-# ============================================================= RouteTargetASNIP
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
+
+# ============================================================= RouteTargetASN2Number
 # RFC 4360 / RFC 7153
 
-class RouteTargetASNIP (RouteTarget):
+@ExtendedCommunity.register
+class RouteTargetASN2Number (RouteTarget):
 	COMMUNITY_TYPE = 0x00
 	LIMIT = 4
 
-	__slots__ = ['asn','ip']
+	__slots__ = ['asn','number']
 
-	def __init__ (self, asn, ip, transitive, community=None):
+	def __init__ (self, asn, number, transitive=True, community=None):
 		self.asn = asn
-		self.ip = ip
+		self.number = number
+		# assert(number < pow(2,32))
 		RouteTarget.__init__(
 			self,
 			community if community else pack(
 				'!2sHL',
-				self._packedTypeSubtype(transitive),
-				asn,IPv4.pton(ip)
+				self._subtype(transitive),
+				asn,number
 			)
 		)
 
-	def __str__ (self):
-		return "target:%d:%s" % (self.asn,self.ip)
+	def __hash__(self):
+		return hash((self.asn,self.number))
 
-	@staticmethod
-	def unpack (data):
-		asn,ip = unpack('!H4s',data[2:8])
-		return RouteTargetASNIP(ASN(asn),IPv4.ntop(ip),False,data[:8])
+	def __repr__ (self):
+		return "%s:%d:%d" % (self.DESCRIPTION,self.asn,self.number)
+
+	@classmethod
+	def unpack (cls, data):
+		asn,number = unpack('!HL',data[2:8])
+		return cls(ASN(asn),number,False,data[:8])
 
 
-# ============================================================= RouteTargetIPASN
+# ============================================================= RouteTargetIPNumber
 # RFC 4360 / RFC 7153
 
-class RouteTargetIPASN (RouteTarget):
+@ExtendedCommunity.register
+class RouteTargetIPNumber (RouteTarget):
 	COMMUNITY_TYPE = 0x01
 	LIMIT = 6
 
-	__slots__ = ['asn','ip']
+	__slots__ = ['ip','number']
 
-	def __init__ (self, asn, ip, transitive, community=None):
+	def __init__ (self, ip, number, transitive=True, community=None):
 		self.ip = ip
-		self.asn = asn
+		self.number = number
+		# assert(number < pow(2,16))
 		RouteTarget.__init__(
 			self,
 			community if community else pack(
 				'!2s4sH',
-				self._packedTypeSubtype(transitive),
-				IPv4.pton(ip),asn
+				self._subtype(transitive),
+				IPv4.pton(ip),number
 			)
 		)
 
-	def __str__ (self):
-		return "target:%s:%s" % (self.ip, self.asn)
+	# why could we not simply use ExtendedCommunity.hash ?
+	def __hash__(self):
+		return hash((self.ip,self.number))
 
-	@staticmethod
-	def unpack (data):
-		ip,asn = unpack('!4sH',data[2:8])
-		return RouteTargetIPASN(IPv4.ntop(ip),ASN(asn),False,data[:8])
+	def __repr__ (self):
+		return "%s:%d:%d" % (self.DESCRIPTION,self.ip,self.number)
+
+	@classmethod
+	def unpack (cls, data):
+		ip,number = unpack('!4sH',data[2:8])
+		return cls(IPv4.ntop(ip),number,False,data[:8])
 
 
 # ======================================================== RouteTargetASN4Number
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class RouteTargetASN4Number (RouteTarget):
 	COMMUNITY_TYPE = 0x02
 	LIMIT = 6
 
-	__slots__ = ['asn','ip']
+	__slots__ = ['asn','number']
 
-	def __init__ (self, asn, number, transitive, community=None):
+	def __init__ (self, asn, number, transitive=True, community=None):
 		self.asn = asn
 		self.number = number
+		# assert(number < pow(2,16))
 		RouteTarget.__init__(
 			self,
 			community if community else pack(
 				'!2sLH',
-				self._packedTypeSubtype(transitive),
+				self._subtype(transitive),
 				asn,number
 			)
 		)
 
-	def __str__ (self):
-		return "target:%dL:%s" % (self.asn, self.number)
+	# why could we not simply use ExtendedCommunity.hash ?
+	def __hash__(self):
+		return hash((self.asn,self.number))
 
-	@staticmethod
-	def unpack (data):
+	def __repr__ (self):
+		return "%s:%dL:%d" % (self.DESCRIPTION,self.asn, self.number)
+
+	@classmethod
+	def unpack (cls, data):
 		asn,number = unpack('!LH',data[2:8])
-		return RouteTargetASN4Number(ASN(asn),number,False,data[:8])
+		return cls(ASN(asn),number,False,data[:8])

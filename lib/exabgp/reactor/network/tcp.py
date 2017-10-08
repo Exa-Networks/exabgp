@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2013-07-13.
 Copyright (c) 2013-2015 Exa Networks. All rights reserved.
 """
 
+import base64
 import time
 import socket
 import select
@@ -55,7 +56,7 @@ def bind (io, ip, afi):
 			io.bind((ip,0))
 		if afi == AFI.ipv6:
 			io.bind((ip,0,0,0))
-	except socket.error,exc:
+	except socket.error as exc:
 		raise BindingError('Could not bind to local ip %s - %s' % (ip,str(exc)))
 
 
@@ -65,7 +66,7 @@ def connect (io, ip, port, afi, md5):
 			io.connect((ip,port))
 		if afi == AFI.ipv6:
 			io.connect((ip,port,0,0))
-	except socket.error,exc:
+	except socket.error as exc:
 		if exc.errno == errno.EINPROGRESS:
 			return
 		if md5:
@@ -100,7 +101,7 @@ def connect (io, ip, port, afi, md5):
 # 	/* _SS_MAXSIZE value minus size of ss_family */
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
-def MD5 (io, ip, port, md5):
+def MD5 (io, ip, port, md5, md5_base64):
 	if md5:
 		os = platform.system()
 		if os == 'FreeBSD':
@@ -123,6 +124,12 @@ def MD5 (io, ip, port, md5):
 				)
 		elif os == 'Linux':
 			try:
+				if md5_base64:
+					try:
+						md5 = base64.b64decode(md5)
+					except TypeError:
+						raise MD5Error("Failed to decode base 64 encoded PSK")
+
 				# __kernel_sockaddr_storage
 				n_af   = IP.toaf(ip)
 				n_addr = IP.pton(ip)
@@ -147,7 +154,7 @@ def MD5 (io, ip, port, md5):
 
 				TCP_MD5SIG = 14
 				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
-			except socket.error,exc:
+			except socket.error as exc:
 				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc))
 		else:
 			raise MD5Error('ExaBGP has no MD5 support for %s' % os)
@@ -165,15 +172,39 @@ def TTL (io, ip, ttl):
 	# None (ttl-security unset) or zero (maximum TTL) is the same thing
 	if ttl:
 		try:
-			io.setsockopt(socket.IPPROTO_IP,socket.IP_TTL, ttl)
-		except socket.error,exc:
+			io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
+		except socket.error as exc:
 			raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(exc)))
+
+
+def TTLv6 (io, ip, ttl):
+	if ttl:
+		try:
+			io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
+		except socket.error as exc:
+			raise TTLError('This OS does not support unicast_hops (ttl-security) for %s (%s)' % (ip,errstr(exc)))
+
+
+def MIN_TTL (io, ip, ttl):
+	# None (ttl-security unset) or zero (maximum TTL) is the same thing
+	if ttl:
+		try:
+			io.setsockopt(socket.IPPROTO_IP, socket.IP_MINTTL, ttl)
+		except socket.error as exc:
+			raise TTLError('This OS does not support IP_MINTTL (ttl-security) for %s (%s)' % (ip,errstr(exc)))
+		except AttributeError:
+			pass
+
+		try:
+			io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
+		except socket.error as exc:
+			raise TTLError('This OS does not support IP_MINTTL or IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(exc)))
 
 
 def async (io, ip):
 	try:
 		io.setblocking(0)
-	except socket.error,exc:
+	except socket.error as exc:
 		raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip,errstr(exc)))
 
 

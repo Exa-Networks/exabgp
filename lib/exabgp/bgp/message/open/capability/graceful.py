@@ -8,15 +8,25 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import pack
 from struct import unpack
+
+from exabgp.vendoring import six
+
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes_i
+from exabgp.util import concat_bytes
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # =========================================================== Graceful (Restart)
-# RFC 4727
+# RFC 4727 - https://tools.ietf.org/html/rfc4727
 
 
+@Capability.register()
 class Graceful (Capability,dict):
+	MAX = 0xFFFF
 	ID = Capability.CODE.GRACEFUL_RESTART
 
 	TIME_MASK     = 0x0FFF
@@ -35,9 +45,9 @@ class Graceful (Capability,dict):
 
 	def extract (self):
 		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
-		families = [(afi.pack(),safi.pack(),chr(self[(afi,safi)])) for (afi,safi) in self.keys()]
-		sfamilies = ''.join(["%s%s%s" % (pafi,psafi,family) for (pafi,psafi,family) in families])
-		return ["%s%s" % (restart,sfamilies)]
+		families = [(afi.pack(),safi.pack(),character(self[(afi,safi)])) for (afi,safi) in self.keys()]
+		sfamilies = concat_bytes_i(concat_bytes(pafi,psafi,family) for (pafi,psafi,family) in families)
+		return [concat_bytes(restart,sfamilies)]
 
 	def __str__ (self):
 		families = [(str(afi),str(safi),hex(self[(afi,safi)])) for (afi,safi) in self.keys()]
@@ -48,17 +58,17 @@ class Graceful (Capability,dict):
 		d = {
 			'name':'"graceful restart"',
 			'time':self.restart_time,
-			'address family flags':'{ %s} ' % (
-				', '.join('"%s/%s": [ %s]' % (
-					afi, safi, '"restart" ' if family & 0x80 else '') for afi, safi, family in [
+			'address-family-flags':'{%s } ' % (
+				', '.join('"%s/%s": [%s ]' % (
+					' %s' % afi, safi, ' "restart"' if family & 0x80 else '') for afi, safi, family in [
 						(str(a), str(s), self[(a,s)]) for (a,s) in self.keys()
 					]
 				)
 			),
-			'restart flags':'[ %s] ' % ('"forwarding" ' if self.restart_flag & 0x8 else '')
+			'restart-flags':'[%s] ' % (' "forwarding" ' if self.restart_flag & 0x8 else ' ')
 		}
 
-		return '{ %s} ' % ','.join('"%s": %s' % (k,v) for k,v in d.iteritems())
+		return '{ %s}' % ','.join('"%s": %s' % (k,v) for k,v in six.iteritems(d))
 
 	def families (self):
 		return self.keys()
@@ -74,7 +84,7 @@ class Graceful (Capability,dict):
 		while data:
 			afi = AFI.unpack(data[:2])
 			safi = SAFI.unpack(data[2])
-			flag_family = ord(data[3])
+			flag_family = ordinal(data[3])
 			families.append((afi,safi,flag_family))
 			data = data[4:]
 		return instance.set(restart_flag,restart_time,families)

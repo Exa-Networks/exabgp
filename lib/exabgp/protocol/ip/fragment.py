@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2010-02-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.resource import BitResource
+
 
 # =================================================================== Fragment
 
@@ -21,7 +23,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # +  Bit 5 - First fragment (FF)
 # +  Bit 4 - Last fragment (LF)
 
-class Fragment (int):
+class Fragment (BitResource):
+	NAME = 'fragment'
+
 	NOT      = 0x00
 	DONT     = 0x01
 	IS       = 0x02
@@ -29,30 +33,12 @@ class Fragment (int):
 	LAST     = 0x08
 	# reserved = 0xF0
 
-	def __str__ (self):
-		if self == self.NOT:
-			return 'not-a-fragment'
-		if self == self.DONT:
-			return 'dont-fragment'
-		if self == self.IS:
-			return 'is-fragment'
-		if self == self.FIRST:
-			return 'first-fragment'
-		if self == self.LAST:
-			return 'last-fragment'
-		return 'unknown fragment value %d' % int(self)
+	codes = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+		'NOT-A-FRAGMENT': NOT,
+		'DONT-FRAGMENT':  DONT,
+		'IS-FRAGMENT':    IS,
+		'FIRST-FRAGMENT': FIRST,
+		'LAST-FRAGMENT':  LAST,
+	}.items())
 
-
-def NamedFragment (name):
-	fragment = name.lower()
-	if fragment == 'not-a-fragment':
-		return Fragment(Fragment.NOT)
-	if fragment == 'dont-fragment':
-		return Fragment(Fragment.DONT)
-	if fragment == 'is-fragment':
-		return Fragment(Fragment.IS)
-	if fragment == 'first-fragment':
-		return Fragment(Fragment.FIRST)
-	if fragment == 'last-fragment':
-		return Fragment(Fragment.LAST)
-	raise ValueError('unknown fragment name %s' % fragment)
+	names = dict([(r,l) for (l,r) in codes.items()])

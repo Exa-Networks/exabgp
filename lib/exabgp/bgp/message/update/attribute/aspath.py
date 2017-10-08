@@ -9,6 +9,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import unpack
 from struct import error
 
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -18,6 +22,7 @@ from exabgp.bgp.message.notification import Notify
 # =================================================================== ASPath (2)
 # only 2-4% of duplicated data therefore it is not worth to cache
 
+@Attribute.register()
 class ASPath (Attribute):
 	AS_SET             = 0x01
 	AS_SEQUENCE        = 0x02
@@ -28,40 +33,40 @@ class ASPath (Attribute):
 	ID = Attribute.CODE.AS_PATH
 	FLAG = Attribute.Flag.TRANSITIVE
 
-	__slots__ = ['as_seq','as_set','as_cseq','as_cset','segments','packed','index','_str','_json']
+	__slots__ = ['as_seq','as_set','as_cseq','as_cset','segments','_packed','index','_str','_json']
 
 	def __init__ (self, as_sequence, as_set, as_conf_sequence=None,as_conf_set=None,index=None):
 		self.as_seq = as_sequence
 		self.as_set = as_set
 		self.as_cseq = as_conf_sequence if as_conf_sequence is not None else []
 		self.as_cset = as_conf_set if as_conf_set is not None else []
-		self.segments = ''
-		self.packed = {True:'',False:''}
+		self.segments = b''
+		self._packed = {True:b'',False:b''}
 		self.index = index  # the original packed data, use for indexing
 		self._str = ''
 		self._json = {}
 
-	def __cmp__ (self, other):
-		if not isinstance(other, self.__class__):
-			return -1
-		if self.ASN4 != other.ASN4:
-			return -1
-		if self.as_seq != other.as_seq:
-			return -1
-		if self.as_set != other.as_set:
-			return -1
-		return 0
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.ASN4 == other.ASN4 and \
+			self.as_seq == other.as_seq and \
+			self.as_set == other.as_set
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
 
 	def _segment (self, seg_type, values, asn4):
 		length = len(values)
 		if length:
 			if length > 255:
 				return self._segment(seg_type,values[:255],asn4) + self._segment(seg_type,values[255:],asn4)
-			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(asn4) for v in values]))
-		return ""
+			return concat_bytes(character(seg_type),character(len(values)),concat_bytes_i(v.pack(asn4) for v in values))
+		return b""
 
 	def _segments (self, asn4):
-		segments = ''
+		segments = b''
 		if self.as_cseq:
 			segments += self._segment(self.AS_CONFED_SEQUENCE,self.as_cseq,asn4)
 		if self.as_cset:
@@ -74,9 +79,9 @@ class ASPath (Attribute):
 
 	def asn_pack (self, negotiated, force_asn4=False):
 		asn4 = True if force_asn4 else negotiated.asn4
-		if not self.packed[asn4]:
-			self.packed[asn4] = self._attribute(self._segments(asn4))
-		return self.packed[asn4]
+		if not self._packed[asn4]:
+			self._packed[asn4] = self._attribute(self._segments(asn4))
+		return self._packed[asn4]
 
 	def pack (self, negotiated):
 		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
@@ -94,7 +99,7 @@ class ASPath (Attribute):
 	def __len__ (self):
 		raise RuntimeError('it makes no sense to ask for the size of this object')
 
-	def __str__ (self, confed=False):
+	def __repr__ (self, confed=False):
 		if self._str:
 			return self._str
 
@@ -169,8 +174,8 @@ class ASPath (Attribute):
 		try:
 
 			while data:
-				stype = ord(data[0])
-				slen  = ord(data[1])
+				stype = ordinal(data[0])
+				slen  = ordinal(data[1])
 
 				if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE, ASPath.AS_CONFED_SEQUENCE, ASPath.AS_CONFED_SET):
 					raise Notify(3,11,'invalid AS Path type sent %d' % stype)
@@ -208,6 +213,7 @@ ASPath.Empty = ASPath([],[])
 # ================================================================= AS4Path (17)
 #
 
+@Attribute.register()
 class AS4Path (ASPath):
 	ID = Attribute.CODE.AS4_PATH
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
@@ -221,5 +227,6 @@ class AS4Path (ASPath):
 		if not data:
 			return None  # AS4Path.Empty
 		return cls._new_aspaths(data,True,AS4Path)
+
 
 AS4Path.Empty = AS4Path([],[])

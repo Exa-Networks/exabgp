@@ -6,7 +6,7 @@ from .tcp import async
 from .error import NetworkError
 from .error import NotConnected
 
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message import Notify
 
 
 class Incoming (Connection):
@@ -19,9 +19,9 @@ class Incoming (Connection):
 
 		try:
 			self.io = io
-			async(self.io,peer)
-			nagle(self.io,peer)
-		except NetworkError,exc:
+			async(self.io,self.peer)
+			nagle(self.io,self.peer)
+		except NetworkError as exc:
 			self.close()
 			raise NotConnected(errstr(exc))
 

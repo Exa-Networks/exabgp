@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-encapsulation.py
+traffic.py
 
 Created by Thomas Mangin on 2014-06-21.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.
@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # ================================================================== TrafficRate
 # RFC 5575
 
+@ExtendedCommunity.register
 class TrafficRate (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x06
@@ -29,12 +30,12 @@ class TrafficRate (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sHf",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				asn,rate
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "rate-limit %d" % self.rate
 
 	@staticmethod
@@ -46,6 +47,7 @@ class TrafficRate (ExtendedCommunity):
 # ================================================================ TrafficAction
 # RFC 5575
 
+@ExtendedCommunity.register
 class TrafficAction (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x07
@@ -70,12 +72,12 @@ class TrafficAction (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				'!2sLBB',
-				self._packedTypeSubtype(),
+				self._subtype(),
 				0,0,bitmask
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		s = []
 		if self.sample:
 			s.append('sample')
@@ -85,7 +87,7 @@ class TrafficAction (ExtendedCommunity):
 
 	@staticmethod
 	def unpack (data):
-		bit, = unpack('!B',data[7])
+		bit, = unpack('!B',data[7:8])
 		sample = bool(bit & 0x02)
 		terminal = bool(bit & 0x01)
 		return TrafficAction(sample,terminal,data[:8])
@@ -94,6 +96,7 @@ class TrafficAction (ExtendedCommunity):
 # ============================================================== TrafficRedirect
 # RFC 5575
 
+@ExtendedCommunity.register
 class TrafficRedirect (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x08
@@ -107,12 +110,12 @@ class TrafficRedirect (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sHL",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				asn,target
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "redirect:%s:%s" % (self.asn,self.target)
 
 	@staticmethod
@@ -124,6 +127,7 @@ class TrafficRedirect (ExtendedCommunity):
 # ================================================================== TrafficMark
 # RFC 5575
 
+@ExtendedCommunity.register
 class TrafficMark (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x09
@@ -136,17 +140,17 @@ class TrafficMark (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sLBB",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				0,0,dscp
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "mark %d" % self.dscp
 
 	@staticmethod
 	def unpack (data):
-		dscp, = unpack('!B',data[7])
+		dscp, = unpack('!B',data[7:8])
 		return TrafficMark(dscp,data[:8])
 
 
@@ -155,6 +159,7 @@ class TrafficMark (ExtendedCommunity):
 
 # XXX: FIXME: I guess this should be a subclass of NextHop or IP ..
 
+@ExtendedCommunity.register
 class TrafficNextHop (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x08
 	COMMUNITY_SUBTYPE = 0x00
@@ -167,17 +172,17 @@ class TrafficNextHop (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sLH",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				0,1 if copy else 0
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "copy-to-nexthop" if self.copy else "redirect-to-nexthop"
 
 	@staticmethod
 	def unpack (data):
-		bit, = unpack('!B',data[7])
+		bit, = unpack('!B',data[7:8])
 		return TrafficNextHop(bool(bit & 0x01),data[:8])
 
 

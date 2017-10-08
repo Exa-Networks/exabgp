@@ -6,8 +6,15 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.vendoring import six
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.addpath import AddPath
@@ -18,7 +25,7 @@ from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.operational import Operational
 from exabgp.bgp.message.open.capability.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
-# from exabgp.bgp.message.open.capability.unknown import UnknownCapability
+from exabgp.bgp.message.open.capability.hostname import HostName
 
 from exabgp.bgp.message.notification import Notify
 
@@ -38,7 +45,7 @@ class Parameter (int):
 		return 'UNKNOWN'
 
 # =================================================================== Capabilities
-# http://www.iana.org/assignments/capability-codes/
+# https://www.iana.org/assignments/capability-codes/
 
 # +------------------------------+
 # | Capability Code (1 octet)    |
@@ -50,6 +57,14 @@ class Parameter (int):
 
 
 class Capabilities (dict):
+	_ADD_PATH = [
+		(AFI(AFI.ipv4),SAFI(SAFI.unicast)),
+		(AFI(AFI.ipv6),SAFI(SAFI.unicast)),
+		(AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)),
+		(AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)),
+		(AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)),
+	]
+
 	def announced (self, capability):
 		return capability in self
 
@@ -77,14 +92,9 @@ class Capabilities (dict):
 
 		families = neighbor.families()
 		ap_families = []
-		if (AFI(AFI.ipv4),SAFI(SAFI.unicast)) in families:
-			ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-		if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
-			ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
-		if (AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)) in families:
-			ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
-		if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
-			ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		for allowed in self._ADD_PATH:
+			if allowed in families:
+				ap_families.append(allowed)
 		self[Capability.CODE.ADD_PATH] = AddPath(ap_families,neighbor.add_path)
 
 	def _graceful (self, neighbor, restarted):
@@ -102,6 +112,9 @@ class Capabilities (dict):
 			return
 		self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
 		self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
+
+	def _hostname (self, neighbor):
+		self[Capability.CODE.HOSTNAME] = HostName(neighbor.host_name,neighbor.domain_name)
 
 	def _operational (self, neighbor):
 		if not neighbor.operational:
@@ -121,47 +134,49 @@ class Capabilities (dict):
 		self._graceful(neighbor,restarted)
 		self._refresh(neighbor)
 		self._operational(neighbor)
+		# self._hostname(neighbor)  # Cumulus draft - disabling until -01 is out
 		self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
 		return self
 
 	def pack (self):
 		rs = []
-		for k,capabilities in self.iteritems():
+		for k,capabilities in six.iteritems(self):
 			for capability in capabilities.extract():
-				rs.append("%s%s%s" % (chr(k),chr(len(capability)),capability))
-		parameters = "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
-		return "%s%s" % (chr(len(parameters)),parameters)
+				rs.append(concat_bytes(character(k),character(len(capability)),capability))
+		parameters = concat_bytes_i(concat_bytes(character(2),character(len(r)),r) for r in rs)
+		return concat_bytes(character(len(parameters)),parameters)
 
 	@staticmethod
 	def unpack (data):
 		def _key_values (name, data):
 			if len(data) < 2:
 				raise Notify(2,0,"Bad length for OPEN %s (<2) %s" % (name,Capability.hex(data)))
-			l = ord(data[1])
-			boundary = l+2
+			ld = ordinal(data[1])
+			boundary = ld+2
 			if len(data) < boundary:
 				raise Notify(2,0,"Bad length for OPEN %s (buffer underrun) %s" % (name,Capability.hex(data)))
-			key = ord(data[0])
+			key = ordinal(data[0])
 			value = data[2:boundary]
 			rest = data[boundary:]
 			return key,value,rest
 
 		capabilities = Capabilities()
 
-		option_len = ord(data[0])
-		# XXX: FIXME: check the length of data
-		if option_len:
-			data = data[1:]
-			while data:
-				key,value,data = _key_values('parameter',data)
-				# Paramaters must only be sent once.
-				if key == Parameter.AUTHENTIFICATION_INFORMATION:
-					raise Notify(2,5)
+		option_len = ordinal(data[0])
+		if not option_len:
+			return capabilities
 
-				if key == Parameter.CAPABILITIES:
-					while value:
-						capability,capv,value = _key_values('capability',value)
-						capabilities[capability] = Capability.unpack(capability,capabilities,capv)
-				else:
-					raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
+		data = data[1:option_len+1]
+		while data:
+			key,value,data = _key_values('parameter',data)
+			# Parameters must only be sent once.
+			if key == Parameter.AUTHENTIFICATION_INFORMATION:
+				raise Notify(2,5)
+
+			if key == Parameter.CAPABILITIES:
+				while value:
+					capability,capv,value = _key_values('capability',value)
+					capabilities[capability] = Capability.unpack(capability,capabilities,capv)
+			else:
+				raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
 		return capabilities

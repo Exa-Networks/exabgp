@@ -22,6 +22,24 @@ class EthernetTag (object):
 	def __init__ (self, tag=0):
 		self.tag = tag
 
+	def __eq__ (self, other):
+		return self.tag == other.tag
+
+	def __neq__ (self, other):
+		return self.tag != other.tag
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing EthernetTag for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing EthernetTag for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing EthernetTag for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing EthernetTag for ordering does not make sense')
+
 	def __str__ (self):
 		return repr(self.tag)
 
@@ -34,16 +52,12 @@ class EthernetTag (object):
 	def __len__ (self):
 		return 4
 
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.tag != other.tag:
-			return -1
-		return 0
-
 	def __hash__ (self):
 		return hash(self.tag)
 
 	@classmethod
 	def unpack (cls, data):
 		return cls(unpack("!L",data[:4])[0])
+
+	def json (self, compact=None):
+		return '"ethernet-tag": %s' % self.tag

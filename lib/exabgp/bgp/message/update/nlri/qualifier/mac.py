@@ -8,36 +8,52 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes_i
+
+
 # ========================================================================== MAC
 #
 
-class MAC(object):
+class MAC (object):
 
-	__slots__ = ['mac','packed']
+	__slots__ = ['mac','_packed']
 
 	def __init__ (self, mac=None,packed=None):
 		self.mac = mac
-		self.packed = packed if packed else ''.join(chr(int(_,16)) for _ in mac.split(":"))
+		self._packed = packed if packed else concat_bytes_i(character(int(_,16)) for _ in mac.split(":"))
+
+	def __eq__ (self, other):
+		return self.mac == other.mac
+
+	def __neq__ (self, other):
+		return self.mac != other.mac
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing MAC for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing MAC for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing MAC for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing MAC for ordering does not make sense')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ord(_) for _ in self.packed)
+		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()
 
 	def pack (self):
-		return self.packed
+		return self._packed
 
 	# Orange code was returning 10 !
 	def __len__ (self):
 		return 6
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.packed != other.packed:
-			return -1
-		return 0
 
 	# XXX: FIXME: improve for better performance ?
 	def __hash__ (self):
@@ -45,4 +61,7 @@ class MAC(object):
 
 	@classmethod
 	def unpack (cls, data):
-		return cls(':'.join('%02X' % ord(_) for _ in data[:6]),data[:6])
+		return cls(':'.join('%02X' % ordinal(_) for _ in data[:6]),data[:6])
+
+	def json (self, compact=None):
+		return '"mac": "%s"' % str(self)

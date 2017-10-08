@@ -12,27 +12,27 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoIP
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
+from exabgp.util import concat_strs_i
+
+from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
 from exabgp.protocol import Protocol
-from exabgp.protocol import NamedProtocol
 from exabgp.protocol.ip.icmp import ICMPType
 from exabgp.protocol.ip.icmp import ICMPCode
-from exabgp.protocol.ip.icmp import NamedICMPType
-from exabgp.protocol.ip.icmp import NamedICMPCode
 from exabgp.protocol.ip.fragment import Fragment
-from exabgp.protocol.ip.fragment import NamedFragment
 from exabgp.protocol.ip.tcp.flag import TCPFlag
-from exabgp.protocol.ip.tcp.flag import NamedTCPFlag
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 # =================================================================== Flow Components
@@ -40,7 +40,7 @@ from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 class IComponent (object):
 	# all have ID
 	# should have an interface for serialisation and put it here
-	pass
+	FLAG = False
 
 
 class CommonOperator (object):
@@ -71,15 +71,19 @@ class CommonOperator (object):
 
 class NumericOperator (CommonOperator):
 	# reserved= 0x08  # 0b00001000
+	TRUE      = 0x00  # 0000000000
 	LT        = 0x04  # 0b00000100
 	GT        = 0x02  # 0b00000010
 	EQ        = 0x01  # 0b00000001
+	FALSE     = 0x01 | 0x02 | 0x04
 
 
 class BinaryOperator (CommonOperator):
 	# reserved= 0x0C  # 0b00001100
+	NONE      = 0x00  # 0000000000
 	NOT       = 0x02  # 0b00000010
 	MATCH     = 0x01  # 0b00000001
+	INCLUDE   = 0x00  # 0b00000000
 
 
 def _len_to_bit (value):
@@ -93,11 +97,11 @@ def _bit_to_len (value):
 def _number (string):
 	value = 0
 	for c in string:
-		value = (value << 8) + ord(c)
+		value = (value << 8) + ordinal(c)
 	return value
 
 # def short (value):
-# 	return (ord(value[0]) << 8) + ord(value[1])
+# 	return (ordinal(value[0]) << 8) + ordinal(value[1])
 
 # Interface ..................
 
@@ -125,15 +129,20 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 	operations = 0x0
 
 	def __init__ (self, raw, netmask):
-		self.nlri = CIDR(raw,netmask)
+		self.cidr = CIDR(raw,netmask)
 
 	def pack (self):
-		raw = self.nlri.pack()
+		raw = self.cidr.pack_nlri()
 		# ID is defined in subclasses
-		return "%s%s" % (chr(self.ID),raw)  # pylint: disable=E1101
+		return concat_bytes(character(self.ID),raw)  # pylint: disable=E1101
 
 	def __str__ (self):
-		return str(self.nlri)
+		return str(self.cidr)
+
+	@classmethod
+	def make (cls, bgp):
+		prefix,mask = CIDR.decode(AFI.ipv4,bgp)
+		return cls(prefix,mask), bgp[CIDR.size(mask)+1:]
 
 
 class IPrefix6 (IPrefix,IComponent,IPv6):
@@ -145,16 +154,21 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 	operations = 0x0
 
 	def __init__ (self, raw, netmask, offset):
-		self.nlri = CIDR(raw,netmask)
+		self.cidr = CIDR(raw,netmask)
 		self.offset = offset
 
 	def pack (self):
-		raw = self.nlri.packed_ip()
 		# ID is defined in subclasses
-		return "%s%s%s%s" % (chr(self.ID),chr(self.nlri.mask),chr(self.offset),raw)  # pylint: disable=E1101
+		return concat_bytes(character(self.ID),character(self.cidr.mask),character(self.offset),self.cidr.pack_ip())  # pylint: disable=E1101
 
 	def __str__ (self):
-		return "%s/%s" % (self.nlri,self.offset)
+		return "%s/%s" % (self.cidr,self.offset)
+
+	@classmethod
+	def make (cls, bgp):
+		offset = ordinal(bgp[1])
+		prefix,mask = CIDR.decode(AFI.ipv6,bgp[0:1]+bgp[2:])
+		return cls(prefix,mask,offset), bgp[CIDR.size(mask)+2:]
 
 
 class IOperation (IComponent):
@@ -168,13 +182,13 @@ class IOperation (IComponent):
 	def pack (self):
 		l,v = self.encode(self.value)
 		op = self.operations | _len_to_bit(l)
-		return "%s%s" % (chr(op),v)
+		return concat_bytes(character(op),v)
 
 	def encode (self, value):
 		raise NotImplementedError('this method must be implemented by subclasses')
 
-	def decode (self, value):
-		raise NotImplementedError('this method must be implemented by subclasses')
+	# def decode (self, value):
+	# 	raise NotImplementedError('this method must be implemented by subclasses')
 
 
 # class IOperationIPv4 (IOperation):
@@ -183,40 +197,60 @@ class IOperation (IComponent):
 
 class IOperationByte (IOperation):
 	def encode (self, value):
-		return 1,chr(value)
+		return 1,character(value)
 
-	def decode (self, bgp):
-		return ord(bgp[0]),bgp[1:]
+	# def decode (self, bgp):
+	# 	return ordinal(bgp[0]),bgp[1:]
 
 
 class IOperationByteShort (IOperation):
 	def encode (self, value):
 		if value < (1 << 8):
-			return 1,chr(value)
+			return 1,character(value)
 		return 2,pack('!H',value)
 
-	def decode (self, bgp):
-		return unpack('!H',bgp[:2])[0],bgp[2:]
+	# XXX: buggy as it assumes 2 bytes but may be less
+	# def decode (self, bgp):
+	# 	import pdb; pdb.set_trace()
+	# 	return unpack('!H',bgp[:2])[0],bgp[2:]
+
+
+class IOperationByteShortLong (IOperation):
+	def encode (self, value):
+		if value < (1 << 8):
+			return 1,character(value)
+		if value < (1 << 16):
+			return 2,pack('!H',value)
+		return 4,pack('!L',value)
+
+	# XXX: buggy as it assumes 4 bytes but may be less
+	# def decode (self, bgp):
+	# 	return unpack('!L',bgp[:4])[0],bgp[4:]
 
 
 # String representation for Numeric and Binary Tests
 
 class NumericString (object):
+	OPERATION = 'numeric'
 	operations = None
 	value = None
 
 	_string = {
+		NumericOperator.TRUE: 'true',
 		NumericOperator.LT: '<',
 		NumericOperator.GT: '>',
 		NumericOperator.EQ: '=',
 		NumericOperator.LT | NumericOperator.EQ: '<=',
 		NumericOperator.GT | NumericOperator.EQ: '>=',
+		NumericOperator.FALSE: 'false',
 
+		NumericOperator.AND: '&true',
 		NumericOperator.AND | NumericOperator.LT: '&<',
 		NumericOperator.AND | NumericOperator.GT: '&>',
 		NumericOperator.AND | NumericOperator.EQ: '&=',
 		NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ: '&<=',
 		NumericOperator.AND | NumericOperator.GT | NumericOperator.EQ: '&>=',
+		NumericOperator.AND | NumericOperator.FALSE: '&false',
 	}
 
 	def __str__ (self):
@@ -224,12 +258,14 @@ class NumericString (object):
 
 
 class BinaryString (object):
+	OPERATION = 'binary'
 	operations = None
 	value = None
 
 	_string = {
-		BinaryOperator.NOT:   '!',
-		BinaryOperator.MATCH: '=',
+		BinaryOperator.INCLUDE: '',
+		BinaryOperator.NOT:     '!',
+		BinaryOperator.MATCH:   '=',
 		BinaryOperator.AND | BinaryOperator.NOT:   '&!',
 		BinaryOperator.AND | BinaryOperator.MATCH: '&=',
 	}
@@ -276,7 +312,7 @@ def PortValue (data):
 def DSCPValue (data):
 	_str_bad_dscp = "you tried to filter a flow using an invalid dscp for a component .."
 	number = int(data)
-	if number < 0 or number > 0xFFFF:
+	if number < 0 or number > 0x3F:  # 0b00111111
 		raise ValueError(_str_bad_dscp)
 	return number
 
@@ -311,35 +347,35 @@ class FlowSource (object):
 
 # Prefix
 class Flow4Destination (IPrefix4,FlowDestination):
-	NAME = 'destination'
+	NAME = 'destination-ipv4'
 
 
 # Prefix
 class Flow4Source (IPrefix4,FlowSource):
-	NAME = 'source'
+	NAME = 'source-ipv4'
 
 
 # Prefix
 class Flow6Destination (IPrefix6,FlowDestination):
-	NAME = 'destination'
+	NAME = 'destination-ipv6'
 
 
 # Prefix
 class Flow6Source (IPrefix6,FlowSource):
-	NAME = 'source'
+	NAME = 'source-ipv6'
 
 
 class FlowIPProtocol (IOperationByte,NumericString,IPv4):
 	ID  = 0x03
 	NAME = 'protocol'
-	converter = staticmethod(converter(NamedProtocol,Protocol))
+	converter = staticmethod(converter(Protocol.named,Protocol))
 	decoder = staticmethod(decoder(ord,Protocol))
 
 
 class FlowNextHeader (IOperationByte,NumericString,IPv6):
 	ID  = 0x03
 	NAME = 'next-header'
-	converter = staticmethod(converter(NamedProtocol,Protocol))
+	converter = staticmethod(converter(Protocol.named,Protocol))
 	decoder = staticmethod(decoder(ord,Protocol))
 
 
@@ -364,24 +400,25 @@ class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 	decoder = staticmethod(_number)
 
 
-class FlowICMPType (IOperationByte,BinaryString,IPv4,IPv6):
+class FlowICMPType (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x07
 	NAME = 'icmp-type'
-	converter = staticmethod(converter(NamedICMPType))
+	converter = staticmethod(converter(ICMPType.named))
 	decoder = staticmethod(decoder(_number,ICMPType))
 
 
-class FlowICMPCode (IOperationByte,BinaryString,IPv4,IPv6):
+class FlowICMPCode (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x08
 	NAME = 'icmp-code'
-	converter = staticmethod(converter(NamedICMPCode))
+	converter = staticmethod(converter(ICMPCode.named))
 	decoder = staticmethod(decoder(_number,ICMPCode))
 
 
 class FlowTCPFlag (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x09
 	NAME = 'tcp-flags'
-	converter = staticmethod(converter(NamedTCPFlag))
+	FLAG = True
+	converter = staticmethod(converter(TCPFlag.named))
 	decoder = staticmethod(decoder(ord,TCPFlag))
 
 
@@ -393,7 +430,7 @@ class FlowPacketLength (IOperationByteShort,NumericString,IPv4,IPv6):
 
 
 # RFC2474
-class FlowDSCP (IOperationByteShort,NumericString,IPv4):
+class FlowDSCP (IOperationByte,NumericString,IPv4):
 	ID = 0x0B
 	NAME = 'dscp'
 	converter = staticmethod(converter(DSCPValue))
@@ -409,15 +446,16 @@ class FlowTrafficClass (IOperationByte,NumericString,IPv6):
 
 
 # BinaryOperator
-class FlowFragment (IOperationByteShort,NumericString,IPv4):
+class FlowFragment (IOperationByteShort,BinaryString,IPv4):
 	ID = 0x0C
 	NAME = 'fragment'
-	converter = staticmethod(converter(NamedFragment))
+	FLAG = True
+	converter = staticmethod(converter(Fragment.named))
 	decoder = staticmethod(decoder(ord,Fragment))
 
 
 # draft-raszuk-idr-flow-spec-v6-01
-class FlowFlowLabel (IOperationByteShort,NumericString,IPv6):
+class FlowFlowLabel (IOperationByteShortLong,NumericString,IPv6):
 	ID = 0x0D
 	NAME = 'flow-label'
 	converter = staticmethod(converter(LabelValue))
@@ -465,24 +503,38 @@ for content in dir():
 
 # ..........................................................
 
-def _unique ():
-	value = 0
-	while True:
-		yield value
-		value += 1
-
-
-unique = _unique()
-
-
+@NLRI.register(AFI.ipv4,SAFI.flow_ip)
+@NLRI.register(AFI.ipv6,SAFI.flow_ip)
+@NLRI.register(AFI.ipv4,SAFI.flow_vpn)
+@NLRI.register(AFI.ipv6,SAFI.flow_vpn)
 class Flow (NLRI):
-	def __init__ (self, afi=AFI.ipv4,safi=SAFI.flow_ip,nexthop=None,rd=None):
-		NLRI.__init__(self,afi,safi)
+	def __init__ (self, afi=AFI.ipv4, safi=SAFI.flow_ip, action=OUT.UNSET):
+		NLRI.__init__(self,afi,safi,action)
 		self.rules = {}
-		self.action = OUT.ANNOUNCE
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
-		self.rd = rd
-		self.unique = unique.next()
+		self.nexthop = NoNextHop
+		self.rd = RouteDistinguisher.NORD
+
+	def __eq__ (self, other):
+		return \
+			self.rules == other.rules and \
+			self.action == other.action and \
+			self.nexthop == other.nexthop and \
+			self.rd == other.rd
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing Flow for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing Flow for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing Flow for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing Flow for ordering does not make sense')
 
 	def __len__ (self):
 		return len(self.pack())
@@ -499,11 +551,13 @@ class Flow (NLRI):
 			if pair:
 				if rule.afi != pair[0].afi:
 					return False
+			if rule.NAME.endswith('ipv6'):  # better way to check this ?
+				self.afi = AFI(AFI.ipv6)
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 
 	# The API requires addpath, but it is irrelevant here.
-	def pack (self, addpath=None):
+	def pack (self, negotiated=None):
 		ordered_rules = []
 		# the order is a RFC requirement
 		for ID in sorted(self.rules.keys()):
@@ -515,26 +569,19 @@ class Flow (NLRI):
 			rules[-1].operations |= CommonOperator.EOL
 			# and add it to the last rule
 			if ID not in (FlowDestination.ID,FlowSource.ID):
-				ordered_rules.append(chr(ID))
-			ordered_rules.append(''.join(rule.pack() for rule in rules))
+				ordered_rules.append(character(ID))
+			ordered_rules.append(concat_bytes_i(rule.pack() for rule in rules))
 
-		components = ''.join(ordered_rules)
+		components = self.rd.pack() + concat_bytes_i(ordered_rules)
 
-		if self.safi == SAFI.flow_vpn:
-			components = self.rd.pack() + components
+		lc = len(components)
+		if lc < 0xF0:
+			return concat_bytes(character(lc),components)
+		if lc < 0x0FFF:
+			return concat_bytes(pack('!H',lc | 0xF000),components)
+		raise Notify(3,0,"my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can")
 
-		l = len(components)
-		if l < 0xF0:
-			data = "%s%s" % (chr(l),components)
-		elif l < 0x0FFF:
-			data = "%s%s" % (pack('!H',l | 0xF000),components)
-		else:
-			raise Notify(3,0,"rule too big for NLRI - how to handle this - does this work ?")
-			# data = "%s" % chr(0)
-
-		return data
-
-	def extensive (self):
+	def _rules (self):
 		string = []
 		for index in sorted(self.rules):
 			rules = self.rules[index]
@@ -548,14 +595,17 @@ class Flow (NLRI):
 			if len(s) > 1:
 				line = '[ %s ]' % line
 			string.append(' %s %s' % (rules[0].NAME,line))
-		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoIP else ''
-		rd = str(self.rd) if self.rd else ''
-		return 'flow' + ''.join(string) + rd + nexthop
+		return ''.join(string)
+
+	def extensive (self):
+		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoNextHop else ''
+		rd = '' if self.rd is RouteDistinguisher.NORD else str(self.rd)
+		return 'flow' + self._rules() + rd + nexthop
 
 	def __str__ (self):
 		return self.extensive()
 
-	def _json (self):
+	def json (self, compact=None):
 		string = []
 		for index in sorted(self.rules):
 			rules = self.rules[index]
@@ -564,36 +614,31 @@ class Flow (NLRI):
 				# only add ' ' after the first element
 				if idx and not rule.operations & NumericOperator.AND:
 					s.append(', ')
-				s.append('"%s"' % rule)
-			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s).replace('""','')))
-		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoIP else ''
-		rd = ', %s' % self.rd.json() if self.rd else ''
+				if rule.FLAG:
+					s.append(', '.join('"%s"' % flag for flag in rule.value.named_bits()))
+				else:
+					s.append('"%s"' % rule)
+			string.append(' "%s": [ %s ]' % (rules[0].NAME,concat_strs_i(str(_) for _ in s).replace('""','')))
+		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
+		rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
 		compatibility = ', "string": "%s"' % self.extensive()
 		return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
 
-	def json (self):
-		# this is a stop gap so flow route parsing does not crash exabgp
-		# delete unique when this is fixed
-		return '"flow-%d": %s' % (self.unique,self._json())
-
-	def index (self):
-		return self.pack()
-
 	@classmethod
-	def unpack (cls, afi, safi, bgp, has_multiple_path, nexthop, action):
-		total = len(bgp)
-		length,bgp = ord(bgp[0]),bgp[1:]
+	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
+		length,bgp = ordinal(bgp[0]),bgp[1:]
 
 		if length & 0xF0 == 0xF0:  # bigger than 240
-			extra,bgp = ord(bgp[0]),bgp[1:]
+			extra,bgp = ordinal(bgp[0]),bgp[1:]
 			length = ((length & 0x0F) << 16) + extra
 
 		if length > len(bgp):
 			raise Notify(3,10,'invalid length at the start of the the flow')
 
+		over = bgp[length:]
 		bgp = bgp[:length]
-		nlri = Flow(afi,safi,nexthop)
-		nlri.action = action
+
+		nlri = cls(afi,safi,action)
 
 		if safi == SAFI.flow_vpn:
 			nlri.rd = RouteDistinguisher(bgp[:8])
@@ -602,7 +647,7 @@ class Flow (NLRI):
 		seen = []
 
 		while bgp:
-			what,bgp = ord(bgp[0]),bgp[1:]
+			what,bgp = ordinal(bgp[0]),bgp[1:]
 
 			if what not in decode.get(afi,{}):
 				raise Notify(3,10,'unknown flowspec component received for address family %d' % what)
@@ -615,26 +660,14 @@ class Flow (NLRI):
 			klass = factory[afi][what]
 
 			if decoded == 'prefix':
-				if afi == AFI.ipv4:
-					_,rd,_,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,False)
-					adding = klass(prefix,mask)
-					if not nlri.add(adding):
-						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
-					bgp = left
-				else:
-					byte,bgp = bgp[1],bgp[0]+bgp[2:]
-					offset = ord(byte)
-					_,rd,_,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,False)
-					adding = klass(prefix,mask,offset)
-					if not nlri.add(adding):
-						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
-					bgp = left
+				adding,bgp = klass.make(bgp)
+				if not nlri.add(adding):
+					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
+				# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
 			else:
 				end = False
 				while not end:
-					byte,bgp = ord(bgp[0]),bgp[1:]
+					byte,bgp = ordinal(bgp[0]),bgp[1:]
 					end = CommonOperator.eol(byte)
 					operator = CommonOperator.operator(byte)
 					length = CommonOperator.length(byte)
@@ -643,4 +676,4 @@ class Flow (NLRI):
 					nlri.add(klass(operator,adding))
 					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),value))
 
-		return total-len(bgp),nlri
+		return nlri, bgp+over

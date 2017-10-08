@@ -132,8 +132,16 @@ def check_sequence (group, exabgp, configurations, daemon, fname, show):
 
 def check (main):
 	os.environ['exabgp.tcp.bind'] = ''
-	if not os.environ.get('exabgp.tcp.port',None):
-		os.environ['exabgp.tcp.port'] = '1790'
+
+	if os.environ.get('exabgp.tcp.port','').isdigit():
+		port = os.environ.get('exabgp.tcp.port')
+	elif os.environ.get('exabgp_tcp_port','').isdigit():
+		port = os.environ.get('exabgp_tcp_port')
+	else:
+		port = '1790'
+
+	os.environ['exabgp.tcp.port'] = port
+	os.environ['exabgp_tcp_port'] = port
 
 	uid = os.getuid()
 	gid = os.getgid()

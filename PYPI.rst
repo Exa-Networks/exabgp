@@ -14,6 +14,10 @@ ExaBGP
    :target: https://pypi.python.org/pypi/exabgp/
    :alt: Downloads
 
+.. image:: https://img.shields.io/pypi/v/exabgp.svg
+   :target: https://pypi.python.org/pypi/exabgp/
+   :alt: Latest Version
+
 .. image:: https://img.shields.io/scrutinizer/coverage/g/exa-networks/exabgp.svg
    :target: https://coveralls.io/r/Exa-Networks/exabgp
    :alt: Coverage
@@ -37,7 +41,7 @@ Use cases include
 -----------------
 
 - sql backed `looking glass <https://code.google.com/p/gixlg/wiki/sample_maps>`_ with prefix routing visualisation
-- service `high availability <http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html>`_ automatically isolating dead servers / broken services
+- service `high availability <https://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html>`_ automatically isolating dead servers / broken services
 - `DDOS mitigation <http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf>`_ solutions
 - `anycasted <http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/>`_ services
 

@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-encapsulation.py
+l2info.py
 
 Created by Thomas Mangin on 2014-06-20.
 Copyright (c) 2014-2015 Orange. All rights reserved.
@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # RFC 4761
 
 
+@ExtendedCommunity.register
 class L2Info (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x0A
@@ -32,13 +33,13 @@ class L2Info (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sBBHH",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				encaps,control,
 				mtu,reserved
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "l2info:%s:%s:%s:%s" % (self.encaps,self.control,self.mtu,self.reserved)
 
 	@staticmethod

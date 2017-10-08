@@ -9,6 +9,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import ordinal
+from exabgp.util import character
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -42,43 +45,53 @@ class TLVS (list):
 	def unpack (data):
 		def loop (data):
 			while data:
-				t = ord(data[0])
-				l = unpack('!H',data[1:3])[0]
-				v,data = data[3:l],data[l:]
+				t = ordinal(data[0])
+				length = unpack('!H',data[1:3])[0]
+				v,data = data[3:length],data[length:]
 				yield TLV(t,v)
 		return TLVS(list(loop(data)))
 
 	def pack (self):
-		return ''.join('%s%s%s' % (chr(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
+		return concat_bytes_i(concat_bytes(character(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
 
 
 # ==================================================================== AIGP (26)
 #
 
+@Attribute.register()
 class AIGP (Attribute):
 	ID = Attribute.CODE.AIGP
 	FLAG = Attribute.Flag.OPTIONAL
 	CACHING = True
 	TYPES = [1,]
 
-	__slots__ = ['aigp','packed']
+	__slots__ = ['aigp','_packed']
 
 	def __init__ (self, aigp, packed=None):
 		self.aigp = aigp
 		if packed:
-			self.packed = packed
+			self._packed = packed
 		else:
-			self.packed = self._attribute(aigp)
+			self._packed = self._attribute(aigp)
+
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.aigp == other.aigp
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
 
 	def pack (self, negotiated):
 		if negotiated.neighbor.aigp:
-			return self.packed
+			return self._packed
 		if negotiated.local_as == negotiated.peer_as:
-			return self.packed
-		return ''
+			return self._packed
+		return b''
 
-	def __str__ (self):
-		return '0x' + ''.join('%02x' % ord(_) for _ in self.aigp[-8:])
+	def __repr__ (self):
+		return '0x' + ''.join('%02x' % ordinal(_) for _ in self.aigp[-8:])
 
 	@classmethod
 	def unpack (cls, data, negotiated):

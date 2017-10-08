@@ -70,6 +70,12 @@ environment.configuration = {
 			'value': 'true',
 			'help':  'drop privileges before forking processes',
 		},
+		'umask':  {
+			'read':  environment.umask_read,
+			'write': environment.umask_write,
+			'value': '0137',
+			'help':  'run daemon with this umask, governs perms of logfiles etc.',
+		},
 	},
 	'log':  {
 		'enable':  {
@@ -224,17 +230,23 @@ environment.configuration = {
 		},
 	},
 	'api':  {
+		'chunk': {
+			'read': environment.integer,
+			'write': environment.nop,
+			'value': '1',
+			'help': 'maximum lines to print before yielding in show routes api',
+		},
 		'encoder':  {
 			'read':  environment.api,
 			'write': environment.lower,
-			'value': 'text',
+			'value': 'json',
 			'help':  '(experimental) default encoder to use with with external API (text or json)',
 		},
-		'highres':  {
+		'compact':  {
 			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help':  'should we use highres timer in JSON',
+			'help':  'shorter JSON encoding for IPv4/IPv6 Unicast NLRI',
 		},
 		'respawn':  {
 			'read':  environment.boolean,
@@ -242,7 +254,7 @@ environment.configuration = {
 			'value': 'false',
 			'help':  'should we respawn a helper process if it dies',
 		},
-		'socket':  {
+		'file':  {
 			'read':  environment.unquote,
 			'write': environment.quote,
 			'value': '',

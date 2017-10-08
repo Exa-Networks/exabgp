@@ -9,16 +9,16 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import time
 
 from exabgp.logger import Logger
-from exabgp.bgp.message.nop import _NOP
-from exabgp.bgp.message.keepalive import KeepAlive
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message import _NOP
+from exabgp.bgp.message import KeepAlive
+from exabgp.bgp.message import Notify
 
 # ================================================================ ReceiveTimer
 # Track the time for keepalive updates
 
 
 class ReceiveTimer (object):
-	def __init__ (self, me, holdtime, code, subcode, message=''):
+	def __init__ (self, me, holdtime, code, subcode, message=b''):
 		self.logger = Logger()
 		self.me = me
 

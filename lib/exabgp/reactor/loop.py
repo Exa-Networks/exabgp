@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-reactor.py
+reactor/loop.py
 
 Created by Thomas Mangin on 2012-06-10.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -15,6 +15,10 @@ import select
 import socket
 
 from collections import deque
+from exabgp.vendoring import six
+
+from exabgp.util import character
+from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import IP
 
@@ -27,8 +31,8 @@ from exabgp.reactor.peer import Peer
 from exabgp.reactor.peer import ACTION
 from exabgp.reactor.network.error import error
 
-from exabgp.reactor.api.decoder import Decoder
-from exabgp.configuration.ancient import Configuration
+from exabgp.reactor.api.api import API
+from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.environment import environment
 
 from exabgp.version import version
@@ -37,7 +41,7 @@ from exabgp.logger import Logger
 
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
-	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
+	clear = concat_bytes_i(character(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
 	def __init__ (self, configurations):
 		self.ip = environment.settings().tcp.bind
@@ -52,7 +56,7 @@ class Reactor (object):
 		self.processes = None
 		self.listener = None
 		self.configuration = Configuration(configurations)
-		self.decoder = Decoder()
+		self.api = API(self)
 
 		self.peers = {}
 		self.route_update = False
@@ -73,23 +77,23 @@ class Reactor (object):
 		signal.signal(signal.SIGUSR2, self.sigusr2)
 
 	def sigterm (self, signum, frame):
-		self.logger.reactor("SIG TERM received - shutdown")
+		self.logger.reactor('SIG TERM received - shutdown')
 		self._shutdown = True
 
 	def sighup (self, signum, frame):
-		self.logger.reactor("SIG HUP received - shutdown")
+		self.logger.reactor('SIG HUP received - shutdown')
 		self._shutdown = True
 
 	def sigalrm (self, signum, frame):
-		self.logger.reactor("SIG ALRM received - restart")
+		self.logger.reactor('SIG ALRM received - restart')
 		self._restart = True
 
 	def sigusr1 (self, signum, frame):
-		self.logger.reactor("SIG USR1 received - reload configuration")
+		self.logger.reactor('SIG USR1 received - reload configuration')
 		self._reload = True
 
 	def sigusr2 (self, signum, frame):
-		self.logger.reactor("SIG USR2 received - reload configuration and processes")
+		self.logger.reactor('SIG USR2 received - reload configuration and processes')
 		self._reload = True
 		self._reload_processes = True
 
@@ -103,12 +107,12 @@ class Reactor (object):
 		try:
 			read,_,_ = select.select(sockets+ios,[],[],sleeptime)
 			return read
-		except select.error,exc:
+		except select.error as exc:
 			errno,message = exc.args  # pylint: disable=W0633
 			if errno not in error.block:
 				raise exc
 			return []
-		except socket.error,exc:
+		except socket.error as exc:
 			if exc.errno in error.fatal:
 				raise exc
 			return []
@@ -118,7 +122,7 @@ class Reactor (object):
 
 		# Make sure we create processes once we have closed file descriptor
 		# unfortunately, this must be done before reading the configuration file
-		# so we can nto do it with dropped privileges
+		# so we can not do it with dropped privileges
 		self.processes = Processes(self)
 
 		# we have to read the configuration possibly with root privileges
@@ -138,29 +142,29 @@ class Reactor (object):
 			self.listener = Listener()
 
 			if self.ip:
-				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None)
-				self.logger.reactor("Listening for BGP session(s) on %s:%d" % (self.ip,self.port))
+				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None,False,None)
+				self.logger.reactor('Listening for BGP session(s) on %s:%d' % (self.ip,self.port))
 
-			for neighbor in self.configuration.neighbor.values():
+			for neighbor in self.configuration.neighbors.values():
 				if neighbor.listen:
-					self.listener.listen(neighbor.local_address,neighbor.peer_address,neighbor.listen,neighbor.md5)
-					self.logger.reactor("Listening for BGP session(s) on %s:%d%s" % (neighbor.local_address,neighbor.listen,' with MD5' if neighbor.md5 else ''))
-		except NetworkError,exc:
+					self.listener.listen(neighbor.md5_ip,neighbor.peer_address,neighbor.listen,neighbor.md5_password,neighbor.md5_base64,neighbor.ttl_in)
+					self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (neighbor.md5_ip,neighbor.listen,' with MD5' if neighbor.md5_password else ''))
+		except NetworkError as exc:
 			self.listener = None
 			if os.geteuid() != 0 and self.port <= 1024:
-				self.logger.reactor("Can not bind to %s:%d, you may need to run ExaBGP as root" % (self.ip,self.port),'critical')
+				self.logger.reactor('Can not bind to %s:%d, you may need to run ExaBGP as root' % (self.ip,self.port),'critical')
 			else:
-				self.logger.reactor("Can not bind to %s:%d (%s)" % (self.ip,self.port,str(exc)),'critical')
-			self.logger.reactor("unset exabgp.tcp.bind if you do not want listen for incoming connections",'critical')
-			self.logger.reactor("and check that no other daemon is already binding to port %d" % self.port,'critical')
+				self.logger.reactor('Can not bind to %s:%d (%s)' % (self.ip,self.port,str(exc)),'critical')
+			self.logger.reactor('unset exabgp.tcp.bind if you do not want listen for incoming connections','critical')
+			self.logger.reactor('and check that no other daemon is already binding to port %d' % self.port,'critical')
 			sys.exit(1)
 
 		if not self.early_drop:
 			self.processes.start()
 
 		if not self.daemon.drop_privileges():
-			self.logger.reactor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'critical')
-			self.logger.reactor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'critical')
+			self.logger.reactor('Could not drop privileges to \'%s\' refusing to run as root' % self.daemon.user,'critical')
+			self.logger.reactor('Set the environmemnt value exabgp.daemon.user to change the unprivileged user','critical')
 			return
 
 		if self.early_drop:
@@ -168,11 +172,11 @@ class Reactor (object):
 
 		# This is required to make sure we can write in the log location as we now have dropped root privileges
 		if not self.logger.restart():
-			self.logger.reactor("Could not setup the logger, aborting",'critical')
+			self.logger.reactor('Could not setup the logger, aborting','critical')
 			return
 
 		if not self.daemon.savepid():
-			self.logger.reactor('could not update PID, not starting','error')
+			return
 
 		# did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
 		reload_completed = True
@@ -180,7 +184,7 @@ class Reactor (object):
 		wait = environment.settings().tcp.delay
 		if wait:
 			sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
-			self.logger.reactor("waiting for %d seconds before connecting" % sleeptime)
+			self.logger.reactor('waiting for %d seconds before connecting' % sleeptime)
 			time.sleep(float(sleeptime))
 
 		workers = {}
@@ -226,7 +230,7 @@ class Reactor (object):
 							# * later if it should be called again but has no work atm
 							# * close if it is finished and is closing down, or restarting
 							if action == ACTION.CLOSE:
-								self.unschedule(peer)
+								self.unschedule(key)
 								peers.discard(key)
 							# we are loosing this peer, not point to schedule more process work
 							elif action == ACTION.LATER:
@@ -249,7 +253,7 @@ class Reactor (object):
 								peer = self.peers[key]
 								neighbor = peer.neighbor
 								# XXX: FIXME: Inet can only be compared to Inet
-								if connection.local == str(neighbor.peer_address) and connection.peer == str(neighbor.local_address):
+								if connection.local == str(neighbor.peer_address) and (neighbor.auto_discovery or connection.peer == str(neighbor.local_address)):
 									if peer.incoming(connection):
 										found = True
 										break
@@ -286,15 +290,7 @@ class Reactor (object):
 				while True:
 					try:
 						self._shutdown = True
-						self.logger.reactor("^C received")
-						break
-					except KeyboardInterrupt:
-						pass
-			except SystemExit:
-				while True:
-					try:
-						self._shutdown = True
-						self.logger.reactor("exiting")
+						self.logger.reactor('^C received')
 						break
 					except KeyboardInterrupt:
 						pass
@@ -310,26 +306,29 @@ class Reactor (object):
 				while True:
 					try:
 						self._shutdown = True
-						self.logger.reactor("I/O Error received, most likely ^C during IO",'warning')
+						self.logger.reactor('I/O Error received, most likely ^C during IO','warning')
 						break
 					except KeyboardInterrupt:
 						pass
+			except SystemExit:
+				try:
+					self._shutdown = True
+					self.logger.reactor('exiting')
+					break
+				except KeyboardInterrupt:
+					pass
 			except ProcessError:
-				while True:
-					try:
-						self._shutdown = True
-						self.logger.reactor("Problem when sending message(s) to helper program, stopping",'error')
-						break
-					except KeyboardInterrupt:
-						pass
+				try:
+					self._shutdown = True
+					self.logger.reactor('Problem when sending message(s) to helper program, stopping','error')
+				except KeyboardInterrupt:
+					pass
 			except select.error:
-				while True:
-					try:
-						self._shutdown = True
-						self.logger.reactor("problem using select, stopping",'error')
-						break
-					except KeyboardInterrupt:
-						pass
+				try:
+					self._shutdown = True
+					self.logger.reactor('problem using select, stopping','error')
+				except KeyboardInterrupt:
+					pass
 				# from exabgp.leak import objgraph
 				# print objgraph.show_most_common_types(limit=20)
 				# import random
@@ -338,7 +337,7 @@ class Reactor (object):
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
-		self.logger.reactor("Performing shutdown")
+		self.logger.reactor('performing shutdown')
 		if self.listener:
 			self.listener.stop()
 			self.listener = None
@@ -350,40 +349,40 @@ class Reactor (object):
 
 	def load (self):
 		"""reload the configuration and send to the peer the route which changed"""
-		self.logger.reactor("Performing reload of exabgp %s" % version)
+		self.logger.reactor('performing reload of exabgp %s' % version)
 
 		reloaded = self.configuration.reload()
 
 		if not reloaded:
 			#
 			# Careful the string below is used but the QA code to check for sucess of failure
-			self.logger.configuration("Problem with the configuration file, no change done",'error')
+			self.logger.configuration('problem with the configuration file, no change done','error')
 			# Careful the string above is used but the QA code to check for sucess of failure
 			#
-			self.logger.configuration(self.configuration.error,'error')
+			self.logger.configuration(str(self.configuration.error),'error')
 			return False
 
 		for key, peer in self.peers.items():
-			if key not in self.configuration.neighbor:
-				self.logger.reactor("Removing peer: %s" % peer.neighbor.name())
+			if key not in self.configuration.neighbors:
+				self.logger.reactor('removing peer: %s' % peer.neighbor.name())
 				peer.stop()
 
-		for key, neighbor in self.configuration.neighbor.items():
+		for key, neighbor in self.configuration.neighbors.items():
 			# new peer
 			if key not in self.peers:
-				self.logger.reactor("New peer setup: %s" % neighbor.name())
+				self.logger.reactor('new peer: %s' % neighbor.name())
 				peer = Peer(neighbor,self)
 				self.peers[key] = peer
 			# modified peer
 			elif self.peers[key].neighbor != neighbor:
-				self.logger.reactor("Peer definition change, establishing a new connection for %s" % str(key))
+				self.logger.reactor('peer definition change, establishing a new connection for %s' % str(key))
 				self.peers[key].reestablish(neighbor)
 			# same peer but perhaps not the routes
 			else:
 				# finding what route changed and sending the delta is not obvious
-				self.logger.reactor("Peer definition identical, updating peer routes if required for %s" % str(key))
+				self.logger.reactor('peer definition identical, updating peer routes if required for %s' % str(key))
 				self.peers[key].reconfigure(neighbor)
-		self.logger.configuration("Loaded new configuration successfully",'info')
+		self.logger.configuration('loaded new configuration successfully','info')
 
 		return True
 
@@ -391,46 +390,50 @@ class Reactor (object):
 		try:
 			# read at least on message per process if there is some and parse it
 			for service,command in self.processes.received():
-				self.decoder.parse_command(self,service,command)
+				self.api.text(self,service,command)
 
 			# if we have nothing to do, return or save the work
 			if not self._running:
 				if not self._pending:
 					return False
-				self._running = self._pending.popleft()
+				self._running,name = self._pending.popleft()
+				self.logger.reactor('callback | installing %s' % name)
 
-			# run it
-			try:
-				self._running.next()  # run
-				# should raise StopIteration in most case
-				# and prevent us to have to run twice to run one command
-				self._running.next()  # run
-			except StopIteration:
-				self._running = None
-			return True
+			if self._running:
+				# run it
+				try:
+					self.logger.reactor('callback | running')
+					six.next(self._running)  # run
+					# should raise StopIteration in most case
+					# and prevent us to have to run twice to run one command
+					six.next(self._running)  # run
+				except StopIteration:
+					self._running = None
+					self.logger.reactor('callback | removing')
+				return True
 
 		except StopIteration:
 			pass
 		except KeyboardInterrupt:
 			self._shutdown = True
-			self.logger.reactor("^C received",'error')
+			self.logger.reactor('^C received','error')
 
 	def route_send (self):
 		"""the process ran and we need to figure what routes to changes"""
-		self.logger.reactor("Performing dynamic route update")
-		for key in self.configuration.neighbor.keys():
+		self.logger.reactor('performing dynamic route update')
+		for key in self.configuration.neighbors.keys():
 			self.peers[key].send_new()
-		self.logger.reactor("Updated peers dynamic routes successfully")
+		self.logger.reactor('updated peers dynamic routes successfully')
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
-		self.logger.reactor("Performing restart of exabgp %s" % version)
+		self.logger.reactor('performing restart of exabgp %s' % version)
 		self.configuration.reload()
 
 		for key in self.peers.keys():
-			if key not in self.configuration.neighbor.keys():
-				neighbor = self.configuration.neighbor[key]
-				self.logger.reactor("Removing Peer %s" % neighbor.name())
+			if key not in self.configuration.neighbors.keys():
+				neighbor = self.configuration.neighbors[key]
+				self.logger.reactor('removing Peer %s' % neighbor.name())
 				self.peers[key].stop()
 			else:
 				self.peers[key].reestablish()
@@ -438,13 +441,12 @@ class Reactor (object):
 		self.processes.start()
 
 	def unschedule (self, peer):
-		key = peer.neighbor.name()
-		if key in self.peers:
-			del self.peers[key]
+		if peer in self.peers:
+			del self.peers[peer]
 
 	def answer (self, service, string):
 		self.processes.write(service,string)
-		self.logger.reactor('Responding to %s : %s' % (service,string))
+		self.logger.reactor('responding to %s : %s' % (service,string.replace('\n','\\n')))
 
 	def api_shutdown (self):
 		self._shutdown = True
@@ -484,5 +486,5 @@ class Reactor (object):
 	def nexthops (self, peers):
 		return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)
 
-	def plan (self, callback):
-		self._pending.append(callback)
+	def plan (self, callback,name):
+		self._pending.append((callback,name))

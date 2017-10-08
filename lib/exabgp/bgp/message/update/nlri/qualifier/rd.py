@@ -6,7 +6,11 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from struct import pack
 from struct import unpack
+
+from exabgp.util import character
+from exabgp.util import concat_bytes_i
 
 
 # =========================================================== RouteDistinguisher
@@ -19,6 +23,24 @@ class RouteDistinguisher (object):
 	def __init__ (self, rd):
 		self.rd = rd
 		self._len = len(self.rd)
+
+	def __eq__ (self, other):
+		return self.rd == other.rd
+
+	def __neq__ (self, other):
+		return self.rd != other.rd
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
 
 	def pack (self):
 		return self.rd
@@ -43,7 +65,10 @@ class RouteDistinguisher (object):
 			return ''
 		return '"route-distinguisher": "%s"' % self._str()
 
-	def __str__ (self):
+	def __hash__(self):
+		return hash(self.rd)
+
+	def __repr__ (self):
 		if not self.rd:
 			return ''
 		return ' route-distinguisher %s' % self._str()
@@ -52,4 +77,27 @@ class RouteDistinguisher (object):
 	def unpack (cls, data):
 		return cls(data[:8])
 
-RouteDistinguisher.NORD = RouteDistinguisher('')
+	# DO NOT USE, the right function is route_distinguisher() in exabgp.configuation.static.mpls
+	@classmethod
+	def fromElements (cls, prefix, suffix):
+		try:
+			if '.' in prefix:
+				data = [character(0),character(1)]
+				data.extend([character(int(_)) for _ in prefix.split('.')])
+				data.extend([character(suffix >> 8),character(suffix & 0xFF)])
+				distinguisher = concat_bytes_i(data)
+			else:
+				number = int(prefix)
+				if number < pow(2,16) and suffix < pow(2,32):
+					distinguisher = character(0) + character(0) + pack('!H',number) + pack('!L',suffix)
+				elif number < pow(2,32) and suffix < pow(2,16):
+					distinguisher = character(0) + character(2) + pack('!L',number) + pack('!H',suffix)
+				else:
+					raise ValueError('invalid route-distinguisher %s' % number)
+
+			return cls(distinguisher)
+		except ValueError:
+			raise ValueError('invalid route-distinguisher %s:%s' % (prefix,suffix))
+
+
+RouteDistinguisher.NORD = RouteDistinguisher(b'')

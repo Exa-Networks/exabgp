@@ -6,16 +6,16 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.update.attribute.attributes import Attributes
+from exabgp.bgp.message.update.attribute import Attributes
 
+from exabgp.vendoring import six
 
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
+
 
 class Store (object):
 	def __init__ (self, families):
@@ -41,7 +41,7 @@ class Store (object):
 		# WARNING : this function can run while we are in the updates() loop too !
 		self._enhanced_refresh_start = []
 		self._enhanced_refresh_delay = []
-		for update in self.updates(False):
+		for _ in self.updates(True):
 			pass
 
 	# back to square one, all the routes are removed
@@ -55,7 +55,7 @@ class Store (object):
 
 	def sent_changes (self, families=None):
 		# families can be None or []
-		requested_families = self.families if not families else set(families).intersection(self.families)
+		requested_families = self.families if families is None else set(families).intersection(self.families)
 
 		# we use list() to make a snapshot of the data at the time we run the command
 		for family in requested_families:
@@ -182,6 +182,14 @@ class Store (object):
 				if self.cache and change_nlri_index not in self._seen.get(change.nlri.family(),{}):
 					return
 
+		if not force and self.cache:
+			announced = self._seen.get(change.nlri.family(),{})
+			if change_nlri_index in announced and change.nlri.action == OUT.ANNOUNCE:
+				old_change = announced[change_nlri_index]
+				# it is a duplicate route
+				if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
+					return
+
 		# add the route to the list to be announced
 		dict_sorted.setdefault(change_attr_index,{})[change_nlri_index] = change
 		dict_nlri[change_nlri_index] = change
@@ -193,7 +201,7 @@ class Store (object):
 			dict_nlri = self._modify_nlri
 
 			for family in self._seen:
-				for change in self._seen[family].itervalues():
+				for change in six.itervalues(self._seen[family]):
 					if change.index() not in self._modify_nlri:
 						change.nlri.action = OUT.WITHDRAW
 						self.insert_announced(change,True)
@@ -213,58 +221,28 @@ class Store (object):
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
 
-		for attr_index,full_dict_change in dict_sorted.items():
-			if self.cache:
-				dict_change = {}
-				for nlri_index,change in full_dict_change.iteritems():
-					family = change.nlri.family()
-					announced = self._seen.get(family,{})
-					if change.nlri.action == OUT.ANNOUNCE:
-						if nlri_index in announced:
-							old_change = announced[nlri_index]
-							# it is a duplicate route
-							if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
-								continue
-					elif change.nlri.action == OUT.WITHDRAW:
-						if nlri_index not in announced:
-							if dict_nlri[nlri_index].nlri.action == OUT.ANNOUNCE:
-								continue
-					dict_change[nlri_index] = change
-			else:
-				dict_change = full_dict_change
-
+		for attr_index,dict_change in dict_sorted.items():
 			if not dict_change:
 				continue
 
+			updates = {}
+			changed = dict_change.values()
 			attributes = dict_attr[attr_index].attributes
 
-			# we NEED the copy provided by list() here as insert_announced can be called while we iterate
-			changed = list(dict_change.itervalues())
+			for change in dict_change.values():
+				updates.setdefault(change.nlri.family(),[]).append(change.nlri)
+				nlri_index = change.index()
 
-			for family in self._seen:
-				if family != (AFI.ipv4,SAFI.unicast):
-					grouped = False
+			# only yield once we have a consistent state, otherwise it will go wrong
+			# as we will try to modify things we are iterating over and using
 
 			if grouped:
-				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_change],attributes)
-				for change in changed:
-					nlri_index = change.index()
-					del dict_sorted[attr_index][nlri_index]
-					del dict_nlri[nlri_index]
-				# only yield once we have a consistent state, otherwise it will go wrong
-				# as we will try to modify things we are using
-				yield update
+				for nlris in six.itervalues(updates):
+					yield Update(nlris, attributes)
 			else:
-				updates = []
-				for change in changed:
-					updates.append(Update([change.nlri,],attributes))
-					nlri_index = change.index()
-					del dict_sorted[attr_index][nlri_index]
-					del dict_nlri[nlri_index]
-				# only yield once we have a consistent state, otherwise it will go wrong
-				# as we will try to modify things we are using
-				for update in updates:
-					yield update
+				for nlris in six.itervalues(updates):
+					for nlri in nlris:
+						yield Update([nlri,], attributes)
 
 			if self.cache:
 				announced = self._seen
@@ -275,6 +253,9 @@ class Store (object):
 						family = change.nlri.family()
 						if family in announced:
 							announced[family].pop(change.index(),None)
+
+		self._modify_sorted = {}
+		self._modify_nlri = {}
 
 		if rr_announced:
 			for afi,safi in rr_announced:

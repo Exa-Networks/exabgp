@@ -8,28 +8,28 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import os
 import sys
-from exabgp.util.panic import panic
-from exabgp.util.panic import footer
+from exabgp.util.panic import PANIC
+from exabgp.util.panic import FOOTER
 
 
 def bug_report (dtype, value, trace):
-	print panic
+	print(PANIC)
 
 	import traceback
 
-	print "-- Traceback\n\n"
+	print("-- Traceback\n\n")
 	traceback.print_exception(dtype,value,trace)
 
 	from exabgp.logger import Logger
 	logger = Logger()
 
-	print "\n\n-- Configuration\n\n"
-	print logger.config()
-	print "\n\n-- Logging History\n\n"
-	print logger.history()
-	print "\n\n\n"
+	print("\n\n-- Configuration\n\n")
+	print(logger.config())
+	print("\n\n-- Logging History\n\n")
+	print(logger.history())
+	print("\n\n\n")
 
-	print footer
+	print(FOOTER)
 
 
 def intercept (dtype, value, trace):

@@ -11,6 +11,8 @@ import socket
 import select
 from struct import unpack
 
+from exabgp.util import ordinal
+
 from exabgp.configuration.environment import environment
 
 from exabgp.util.errstr import errstr
@@ -38,7 +40,6 @@ class Connection (object):
 
 	def __init__ (self, afi, peer, local):
 		# peer and local are strings of the IP
-
 		try:
 			self.defensive = environment.settings().debug.defensive
 			self.logger = Logger()
@@ -50,7 +51,6 @@ class Connection (object):
 		self.peer = peer
 		self.local = local
 
-		self._buffer = ''
 		self.io = None
 		self.established = False
 
@@ -72,16 +72,16 @@ class Connection (object):
 			if self.io:
 				self.io.close()
 				self.io = None
-		except KeyboardInterrupt,exc:
+		except KeyboardInterrupt as exc:
 			raise exc
-		except:
+		except Exception:
 			pass
 
 	def reading (self):
 		while True:
 			try:
 				r,_,_ = select.select([self.io,],[],[],0)
-			except select.error,exc:
+			except select.error as exc:
 				if exc.args[0] not in error.block:
 					self.close()
 					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]))
@@ -93,7 +93,7 @@ class Connection (object):
 		while True:
 			try:
 				_,w,_ = select.select([],[self.io,],[],0)
-			except select.error,exc:
+			except select.error as exc:
 				if exc.args[0] not in error.block:
 					self.close()
 					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]))
@@ -105,20 +105,20 @@ class Connection (object):
 		# The function must not be called if it does not return with no data with a smaller size as parameter
 		if not self.io:
 			self.close()
-			raise NotConnected('Trying to read on a closed TCP conncetion')
+			raise NotConnected('Trying to read on a closed TCP connection')
 		if number == 0:
-			yield ''
+			yield b''
 			return
 
 		while not self.reading():
-			yield ''
-		data = ''
+			yield b''
+		data = b''
 		reported = ''
 		while True:
 			try:
 				while True:
 					if self.defensive and random.randint(0,2):
-						raise socket.error(errno.EAGAIN,'raising network error in purpose')
+						raise socket.error(errno.EAGAIN,'raising network error on purpose')
 
 					read = self.io.recv(number)
 					if not read:
@@ -141,18 +141,18 @@ class Connection (object):
 						yield data
 						return
 
-					yield ''
-			except socket.timeout,exc:
+					yield b''
+			except socket.timeout as exc:
 				self.close()
 				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
 				raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(exc))
-			except socket.error,exc:
+			except socket.error as exc:
 				if exc.args[0] in error.block:
 					message = "%s %s blocking io problem mid-way through reading a message %s, trying to complete" % (self.name(),self.peer,errstr(exc))
 					if message != reported:
 						reported = message
 						self.logger.wire(message,'debug')
-					yield ''
+					yield b''
 				elif exc.args[0] in error.fatal:
 					self.close()
 					raise LostConnection('issue reading on the socket: %s' % errstr(exc))
@@ -174,7 +174,7 @@ class Connection (object):
 			try:
 				while True:
 					if self.defensive and random.randint(0,2):
-						raise socket.error(errno.EAGAIN,'raising network error in purpose')
+						raise socket.error(errno.EAGAIN,'raising network error on purpose')
 
 					# we can not use sendall as in case of network buffer filling
 					# it does raise and does not let you know how much was sent
@@ -189,7 +189,7 @@ class Connection (object):
 						yield True
 						return
 					yield False
-			except socket.error,exc:
+			except socket.error as exc:
 				if exc.args[0] in error.block:
 					self.logger.wire(
 						"%s %s blocking io problem mid-way through writing a message %s, trying to complete" % (
@@ -217,36 +217,36 @@ class Connection (object):
 		# _reader returns the whole number requested or nothing and then stops
 		for header in self._reader(Message.HEADER_LEN):
 			if not header:
-				yield 0,0,'','',None
+				yield 0,0,b'',b'',None
 
 		if not header.startswith(Message.MARKER):
 			report = 'The packet received does not contain a BGP marker'
-			yield 0,0,header,'',NotifyError(1,1,report)
+			yield 0,0,header,b'',NotifyError(1,1,report)
 			return
 
-		msg = ord(header[18])
+		msg = ordinal(header[18])
 		length = unpack('!H',header[16:18])[0]
 
 		if length < Message.HEADER_LEN or length > Message.MAX_LEN:
 			report = '%s has an invalid message length of %d' % (Message.CODE.name(msg),length)
-			yield length,0,header,'',NotifyError(1,2,report)
+			yield length,0,header,b'',NotifyError(1,2,report)
 			return
 
 		validator = Message.Length.get(msg,lambda _: _ >= 19)
 		if not validator(length):
 			# MUST send the faulty length back
 			report = '%s has an invalid message length of %d' % (Message.CODE.name(msg),length)
-			yield length,0,header,'',NotifyError(1,2,report)
+			yield length,0,header,b'',NotifyError(1,2,report)
 			return
 
 		number = length - Message.HEADER_LEN
 
 		if not number:
-			yield length,msg,header,'',None
+			yield length,msg,header,b'',None
 			return
 
 		for body in self._reader(number):
 			if not body:
-				yield 0,0,'','',None
+				yield 0,0,b'',b'',None
 
 		yield length,msg,header,body,None

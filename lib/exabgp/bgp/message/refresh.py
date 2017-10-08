@@ -9,9 +9,11 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import unpack
 from struct import error
 
+from exabgp.util import character
+from exabgp.util import concat_bytes
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Notification
@@ -30,9 +32,10 @@ class Reserved (int):
 		return 'invalid'
 
 
+@Message.register
 class RouteRefresh (Message):
 	ID = Message.CODE.ROUTE_REFRESH
-	TYPE = chr(Message.CODE.ROUTE_REFRESH)
+	TYPE = character(Message.CODE.ROUTE_REFRESH)
 
 	request = 0
 	start = 1
@@ -43,8 +46,8 @@ class RouteRefresh (Message):
 		self.safi = SAFI(safi)
 		self.reserved = Reserved(reserved)
 
-	def message (self):
-		return self._message('%s%s%s' % (self.afi.pack(),chr(self.reserved),self.safi.pack()))
+	def message (self,negotiated=None):
+		return self._message(concat_bytes(self.afi.pack(),character(self.reserved),self.safi.pack()))
 
 	def __str__ (self):
 		return "REFRESH"
@@ -52,6 +55,7 @@ class RouteRefresh (Message):
 	def extensive (self):
 		return 'route refresh %s/%d/%s' % (self.afi,self.reserved,self.safi)
 
+	# XXX: Check how we get this data into the RR
 	def families (self):
 		return self._families[:]
 
@@ -75,3 +79,6 @@ class RouteRefresh (Message):
 		if self.reserved != other.reserved:
 			return False
 		return True
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)

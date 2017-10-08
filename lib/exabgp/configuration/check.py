@@ -8,13 +8,26 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 # common
 
-from exabgp.protocol.family import known_families
-from exabgp.bgp.message.update import Update
-from exabgp.bgp.message.open import Open
-from exabgp.bgp.message.open.capability.capabilities import Capabilities
-from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.notification import Notify
+import sys
+import traceback
+
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes_i
+
+from exabgp.bgp.message import Update
+from exabgp.bgp.message import Open
+from exabgp.bgp.message.open import Version
+from exabgp.bgp.message.open import ASN
+from exabgp.bgp.message.open import RouterID
+from exabgp.bgp.message.open import HoldTime
+from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability import Negotiated
+from exabgp.bgp.message import Notify
+from exabgp.bgp.message.update.nlri import NLRI
+
+from exabgp.logger import Logger
 
 # check_neighbor
 
@@ -23,28 +36,27 @@ from exabgp.rib.change import Change
 
 # check_update
 
-from exabgp.reactor.peer import Peer
-from exabgp.reactor.api.encoding import JSON
+from exabgp.reactor.api.response import Response
 
 # check_notification
 
-from exabgp.bgp.message.notification import Notification
+from exabgp.bgp.message import Notification
 
-from exabgp.protocol.family import known_families
+# JSON version
+
+from exabgp.version import json as json_version
+
+
+if sys.version_info[0] >= 3:
+	StandardError = Exception
 
 # =============================================================== check_neighbor
 # ...
 
 
 def check_neighbor (neighbors):
-	from exabgp.logger import Logger
-
 	logger = Logger()
 	logger._option.parser = True
-
-	if not neighbors:
-		logger.parser('\ncould not find neighbor(s) to check')
-		return False
 
 	logger.parser('\ndecoding routes in configuration')
 
@@ -52,7 +64,7 @@ def check_neighbor (neighbors):
 		neighbor = neighbors[name]
 
 		path = {}
-		for f in known_families():
+		for f in NLRI.known_families():
 			if neighbor.add_path:
 				path[f] = neighbor.add_path
 
@@ -61,14 +73,17 @@ def check_neighbor (neighbors):
 			capa[Capability.CODE.ADD_PATH] = path
 		capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
-		o1 = Open(4,neighbor.local_as,'127.0.0.2',capa,180)
-		o2 = Open(4,neighbor.peer_as,'127.0.0.3',capa,180)
+		routerid_1 = str(neighbor.router_id)
+		routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(neighbor.router_id).split('.',-1))
+
+		o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(routerid_1),capa)
+		o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(routerid_2),capa)
 		negotiated = Negotiated(neighbor)
 		negotiated.sent(o1)
 		negotiated.received(o2)
 		# grouped = False
 
-		for message in neighbor.rib.outgoing.updates(False):
+		for _ in neighbor.rib.outgoing.updates(False):
 			pass
 
 		for change1 in neighbor.rib.outgoing.sent_changes():
@@ -76,7 +91,6 @@ def check_neighbor (neighbors):
 			packed = list(Update([change1.nlri],change1.attributes).messages(negotiated))
 			pack1 = packed[0]
 
-			logger.parser('parsed route requires %d updates' % len(packed))
 			logger.parser('parsed route requires %d updates' % len(packed))
 			logger.parser('update size is %d' % len(pack1))
 
@@ -87,7 +101,7 @@ def check_neighbor (neighbors):
 			try:
 				logger.parser('')  # new line
 
-				pack1s = pack1[19:] if pack1.startswith('\xFF'*16) else pack1
+				pack1s = pack1[19:] if pack1.startswith(b'\xFF'*16) else pack1
 				update = Update.unpack_message(pack1s,negotiated)
 
 				change2 = Change(update.nlris[0],update.attributes)
@@ -97,8 +111,15 @@ def check_neighbor (neighbors):
 				logger.parser('recoded route %s' % str2)
 				logger.parser('recoded hex   %s' % od(pack2))
 
-				str1r = str1.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
-				str2r = str2.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
+				str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]','med 100')
+				str1r = str1.lower().replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
+				str2r = str2.lower().replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
+
+				if 'next-hop self' in str1r:
+					if ':' in str1r:
+						str1r = str1r.replace('next-hop self','next-hop ::1')
+					else:
+						str1r = str1r.replace('next-hop self','next-hop %s' % neighbor.local_address)
 
 				if ' name ' in str1r:
 					parts = str1r.split(' ')
@@ -134,7 +155,7 @@ def check_neighbor (neighbors):
 				logger.parser('JSON nlri %s' % change1.nlri.json())
 				logger.parser('JSON attr %s' % change1.attributes.json())
 
-			except Notify,exc:
+			except Notify as exc:
 				logger.parser('----------------------------------------')
 				logger.parser(str(exc))
 				logger.parser('----------------------------------------')
@@ -149,12 +170,12 @@ def check_neighbor (neighbors):
 
 def check_message (neighbor, message):
 	message = message.replace(':','')
-	raw = ''.join(chr(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
+	raw = concat_bytes_i(character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
 
 	if raw.startswith('\xff'*16):
-		kind = ord(raw[18])
+		kind = ordinal(raw[18])
 		# XXX: FIXME: check size
-		# size = (ord(raw[16]) << 16) + (ord(raw[17]))
+		# size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
 
 		if kind == 1:
 			return check_open(neighbor,raw[18:])
@@ -177,38 +198,36 @@ def check_open (neighbor, raw):
 #
 
 def check_update (neighbor, raw):
-	from exabgp.logger import Logger
-
 	logger = Logger()
-	logger._parser = True
+	logger._option.parser = True
 	logger.parser('\ndecoding routes in configuration')
 
-	n = neighbor[neighbor.keys()[0]]
-	p = Peer(n,None)
+	neighbor = neighbor[list(neighbor)[0]]
 
 	path = {}
-	for f in known_families():
-		if n.add_path:
-			path[f] = n.add_path
+	for f in NLRI.known_families():
+		if neighbor.add_path:
+			path[f] = neighbor.add_path
 
-	capa = Capabilities().new(n,False)
+	capa = Capabilities().new(neighbor,False)
 	capa[Capability.CODE.ADD_PATH] = path
-	capa[Capability.CODE.MULTIPROTOCOL] = n.families()
+	capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
+	# capa[Capability.CODE.FOUR_BYTES_ASN] = True
 
-	routerid_1 = str(n.router_id)
-	routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(n.router_id).split('.',-1))
+	routerid_1 = str(neighbor.router_id)
+	routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(neighbor.router_id).split('.',-1))
 
-	o1 = Open(4,n.local_as,routerid_1,capa,180)
-	o2 = Open(4,n.peer_as,routerid_2,capa,180)
-	negotiated = Negotiated(n)
+	o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(routerid_1),capa)
+	o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(routerid_2),capa)
+	negotiated = Negotiated(neighbor)
 	negotiated.sent(o1)
 	negotiated.received(o2)
 	# grouped = False
 
 	while raw:
 		if raw.startswith('\xff'*16):
-			kind = ord(raw[18])
-			size = (ord(raw[16]) << 16) + (ord(raw[17]))
+			kind = ordinal(raw[18])
+			size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
 
 			injected,raw = raw[19:size],raw[size:]
 
@@ -228,20 +247,20 @@ def check_update (neighbor, raw):
 			update = Update.unpack_message(injected,negotiated)
 		except KeyboardInterrupt:
 			raise
-		except Notify,exc:
+		except Notify:
 			logger.parser('could not parse the message','error')
-			logger.parser(str(exc),'error')
+			logger.parser(traceback.format_exc(),'error')
 			return False
-		except Exception,exc:
+		except StandardError:
 			logger.parser('could not parse the message','error')
-			logger.parser(str(exc),'error')
+			logger.parser(traceback.format_exc(),'error')
 			return False
 
 		logger.parser('')  # new line
 		for number in range(len(update.nlris)):
 			change = Change(update.nlris[number],update.attributes)
 			logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-		logger.parser('update json %s' % JSON('3.4.0').update(p,update,'',''))
+		logger.parser('update json %s' % Response.JSON(json_version).update(neighbor,'in',update,'',''))
 
 	return True
 
@@ -252,5 +271,5 @@ def check_update (neighbor, raw):
 def check_notification (raw):
 	notification = Notification.unpack_message(raw[18:],None)
 	# XXX: FIXME: should be using logger here
-	print notification
+	print(notification)
 	return True

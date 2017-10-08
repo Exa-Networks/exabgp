@@ -9,12 +9,14 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 usage = """\
 The BGP swiss army knife of networking
 
-usage: exabgp [--help] [--version] [--folder FOLDER] [--env ENV]
+usage: exabgp [--help] [--version]
+              [--folder FOLDER] [--env ENV]
               [[--full-ini | --diff-ini | --full-env | --diff-env] |
               [--fi | --di | --fe | --de]]
               [--debug] [--pdb] [--test]
               [--once] [--signal TIME]
               [--memory] [--profile PROFILE]
+              [--run HELPER]
               [--decode HEX_MESSAGE]...
               [<configuration>...]
 
@@ -37,12 +39,14 @@ optional arguments:
   --diff-env            display non-default configurations values using the env
                         format
   --de                  (shorthand for above)
+  --run HELPER          Do not run ExaBGP but one of its helper program
+                        (options are: healthcheck and cli)
 
 debugging:
   --debug, -d           start the python debugger on serious logging and on
                         SIGTERM (shortcut for exabgp.log.all=true
                         exabgp.log.level=DEBUG)
-  --signal TIME         issue a SIGUSR1 to reload the configuraiton after
+  --signal TIME         issue a SIGUSR1 to reload the configuration after
                         <time> seconds, only useful for code debugging
   --once, -1            only perform one attempt to connect to peers (used for
                         debugging)
@@ -84,7 +88,7 @@ For example :
       exabgp.log.destination=host:127.0.0.1 \\
       exabgp.daemon.user=wheel \\
       exabgp.daemon.daemonize=true \\
-      exabgp.daemon.pid=/var/run/exabpg.pid \\
+      exabgp.daemon.pid=/var/run/exabgp.pid \\
  > ./bin/exabgp ./etc/bgp/configuration.txt
 
 The program configuration can be controlled using signals:

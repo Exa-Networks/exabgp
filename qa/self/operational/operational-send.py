@@ -11,30 +11,30 @@ counter = 1
 # and the message received just before we go to the established loop will be printed twice
 time.sleep(1)
 
-print 'operational rpcq afi ipv4 safi unicast sequence %d' % counter
-print 'operational rpcp afi ipv4 safi unicast sequence %d counter 200' % counter
+print 'announce operational rpcq afi ipv4 safi unicast sequence %d' % counter
+print 'announce operational rpcp afi ipv4 safi unicast sequence %d counter 200' % counter
 time.sleep(1)
 
 counter += 1
 
-print 'operational apcq afi ipv4 safi unicast sequence %d' % counter
-print 'operational apcp afi ipv4 safi unicast sequence %d counter 150' % counter
+print 'announce operational apcq afi ipv4 safi unicast sequence %d' % counter
+print 'announce operational apcp afi ipv4 safi unicast sequence %d counter 150' % counter
 time.sleep(1)
 
 counter += 1
 
-print 'operational lpcq afi ipv4 safi unicast sequence %d' % counter
-print 'operational lpcp afi ipv4 safi unicast sequence %d counter 250' % counter
+print 'announce operational lpcq afi ipv4 safi unicast sequence %d' % counter
+print 'announce operational lpcp afi ipv4 safi unicast sequence %d counter 250' % counter
 time.sleep(1)
 
 while True:
 	try:
 		time.sleep(1)
 		if counter % 2:
-			print 'operational adm afi ipv4 safi unicast advisory "this is dynamic message #%d"' % counter
+			print 'announce operational adm afi ipv4 safi unicast advisory "this is dynamic message #%d"' % counter
 			sys.stdout.flush()
 		else:
-			print 'operational asm afi ipv4 safi unicast advisory "we SHOULD not send asm from the API"'
+			print 'announce operational asm afi ipv4 safi unicast advisory "we SHOULD not send asm from the API"'
 			sys.stdout.flush()
 
 		counter += 1

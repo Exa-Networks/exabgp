@@ -8,59 +8,76 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.protocol.ip.address import Address
+from exabgp.protocol.family import Family
 
-from exabgp.bgp.message import IN
+from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.capability import Negotiated
 
 
 # ================================================================= MP NLRI (14)
 
-class MPURNLRI (Attribute,Address):
+@Attribute.register()
+class MPURNLRI (Attribute,Family):
 	FLAG = Attribute.Flag.OPTIONAL
 	ID = Attribute.CODE.MP_UNREACH_NLRI
 
 	# __slots__ = ['nlris']
 
 	def __init__ (self, afi, safi, nlris):
-		Address.__init__(self,afi,safi)
+		Family.__init__(self,afi,safi)
 		self.nlris = nlris
 
-	def packed_attributes (self, addpath, maximum):
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.nlris == other.nlris
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
+	def packed_attributes (self, negotiated, maximum=Negotiated.FREE_SIZE):
 		if not self.nlris:
 			return
 
-		mpurnlri = {}
+		# we changed the API to nrli.pack from addpath to negotiated but not pack itself
+
+		mpurnlri = []
 		for nlri in self.nlris:
-			mpurnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),[]).append(nlri.pack(addpath))
-
-		for (pafi,psafi),nlris in mpurnlri.iteritems():
-			payload = pafi + psafi + ''.join(nlris)
-
-			if self._len(payload) <= maximum:
-				yield self._attribute(payload)
+			if nlri.family() != self.family():  # nlri is not part of specified family
 				continue
+			mpurnlri.append(nlri.pack(negotiated))
 
-			# This will not generate an optimum update size..
-			# we should feedback the maximum on each iteration
+		payload = concat_bytes(self.afi.pack(), self.safi.pack())
+		header_length = len(payload)
+		for nlri in mpurnlri:
+			if self._len(payload + nlri) > maximum:
+				if len(payload) == header_length or len(payload) > maximum:
+					raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
+				yield self._attribute(payload)
+				payload = concat_bytes(self.afi.pack(), self.safi.pack(), nlri)
+				continue
+			payload = concat_bytes(payload, nlri)
+		if len(payload) == header_length or len(payload) > maximum:
+			raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
+		yield self._attribute(payload)
 
-			for nlri in nlris:
-				yield self._attribute(pafi + psafi + nlri)
-
-
-	def pack (self, addpath):
-		return ''.join(self.packed_attributes(addpath,Negotiated.FREE_SIZE))
+	def pack (self, negotiated):
+		return concat_bytes_i(self.packed_attributes(negotiated))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPURNLRI - was it with our witout addpath ?')
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "MP_UNREACH_NLRI for %s %s with %d NLRI(s)" % (self.afi,self.safi,len(self.nlris))
 
 	@classmethod
@@ -79,11 +96,10 @@ class MPURNLRI (Attribute,Address):
 		addpath = negotiated.addpath.receive(afi,safi)
 
 		while data:
-			length,nlri = NLRI.unpack(afi,safi,data,addpath,None,IN.WITHDRAWN)
+			nlri,data = NLRI.unpack_nlri(afi,safi,data,IN.WITHDRAWN,addpath)
 			nlris.append(nlri)
-			data = data[length:]
-			# logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,data[:length]))
 
 		return cls(afi,safi,nlris)
+
 
 EMPTY_MPURNLRI = MPURNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])

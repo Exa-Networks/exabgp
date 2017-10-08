@@ -1,9 +1,13 @@
+from exabgp.vendoring import six
+
+from exabgp.protocol.family import AFI
 from .connection import Connection
 from .tcp import create,bind
 from .tcp import connect
 from .tcp import MD5
 from .tcp import nagle
 from .tcp import TTL
+from .tcp import TTLv6
 from .tcp import async
 from .tcp import ready
 from .error import NetworkError
@@ -12,12 +16,11 @@ from .error import NetworkError
 class Outgoing (Connection):
 	direction = 'outgoing'
 
-	def __init__ (self, afi, peer, local, port=179,md5='',ttl=None):
+	def __init__ (self, afi, peer, local, port=179,md5='',md5_base64=False, ttl=None):
 		Connection.__init__(self,afi,peer,local)
 
-		self.logger.wire("Attempting connection to %s" % self.peer)
+		self.logger.wire("attempting connection to %s:%d" % (self.peer,port))
 
-		self.peer = peer
 		self.ttl = ttl
 		self.afi = afi
 		self.md5 = md5
@@ -25,16 +28,22 @@ class Outgoing (Connection):
 
 		try:
 			self.io = create(afi)
-			MD5(self.io,peer,port,md5)
-			bind(self.io,local,afi)
-			async(self.io,peer)
-			TTL(self.io,peer,ttl)
-			connect(self.io,peer,port,afi,md5)
+			MD5(self.io,self.peer,port,md5,md5_base64)
+			if afi == AFI.ipv4:
+				TTL(self.io, self.peer, self.ttl)
+			elif afi == AFI.ipv6:
+				TTLv6(self.io, self.peer, self.ttl)
+			if local:
+				bind(self.io,self.local,afi)
+			async(self.io,self.peer)
+			connect(self.io,self.peer,port,afi,md5)
+			if not self.local:
+				self.local = self.io.getsockname()[0]
 			self.init = True
-		except NetworkError,exc:
+		except NetworkError as exc:
 			self.init = False
 			self.close()
-			self.logger.wire("Connection failed, %s" % str(exc))
+			self.logger.wire("connection to %s:%d failed, %s" % (self.peer,port,str(exc)))
 
 	def establish (self):
 		if not self.init:
@@ -44,7 +53,7 @@ class Outgoing (Connection):
 		try:
 			generator = ready(self.io)
 			while True:
-				connected = generator.next()
+				connected = six.next(generator)
 				if not connected:
 					yield False
 					continue
@@ -56,5 +65,5 @@ class Outgoing (Connection):
 			return
 
 		nagle(self.io,self.peer)
-		TTL(self.io,self.peer,self.ttl)
+		# Not working after connect() at least on FreeBSD TTL(self.io,self.peer,self.ttl)
 		yield True

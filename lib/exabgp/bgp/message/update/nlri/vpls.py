@@ -9,13 +9,15 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 from struct import pack
+from exabgp.vendoring import six
+from exabgp.util import concat_bytes
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 def _unique ():
@@ -24,14 +26,16 @@ def _unique ():
 		yield value
 		value += 1
 
+
 unique = _unique()
 
 
+@NLRI.register(AFI.l2vpn,SAFI.vpls)
 class VPLS (NLRI):
 
-	__slots__ = ['action','nexthop','rd','base','offset','size','ve','unique']
+	__slots__ = ['action','nexthop','rd','base','offset','size','endpoint','unique']
 
-	def __init__ (self, rd, ve, base, offset, size):
+	def __init__ (self, rd, endpoint, base, offset, size):
 		NLRI.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = OUT.ANNOUNCE
 		self.nexthop = None
@@ -39,19 +43,27 @@ class VPLS (NLRI):
 		self.base = base
 		self.offset = offset
 		self.size = size
-		self.ve = ve
-		self.unique = unique.next()
+		self.endpoint = endpoint
+		self.unique = six.next(unique)
 
-	def index (self):
-		return self.pack()
+	def __eq__ (self,other):
+		return self.nexthop == other.nexthop \
+			and self.rd == other.rd \
+			and self.base == other.base \
+			and self.offset == other.offset \
+			and self.size == other.size \
+			and self.endpoint == other.endpoint
 
-	def pack (self, addpath=None):
-		return '%s%s%s%s' % (
-			'\x00\x11',  # pack('!H',17)
+	def assign (self, name, value):
+		setattr(self,name,value)
+
+	def pack (self, negotiated=None):
+		return concat_bytes(
+			b'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),
 			pack(
 				'!HHH',
-				self.ve,
+				self.endpoint,
 				self.offset,
 				self.size
 			),
@@ -66,17 +78,17 @@ class VPLS (NLRI):
 	def json (self):
 		content = ', '.join([
 			self.rd.json(),
-			'"endpoint": "%s"' % self.ve,
-			'"base": "%s"' % self.base,
-			'"offset": "%s"' % self.offset,
-			'"size": "%s"' % self.size,
+			'"endpoint": %s' % self.endpoint,
+			'"base": %s' % self.base,
+			'"offset": %s' % self.offset,
+			'"size": %s' % self.size,
 		])
-		return '"vpls-%s": { %s }' % (self.unique, content)
+		return '{ %s }' % (content)
 
 	def extensive (self):
 		return "vpls%s endpoint %s base %s offset %s size %s %s" % (
 			self.rd,
-			self.ve,
+			self.endpoint,
 			self.base,
 			self.offset,
 			self.size,
@@ -87,15 +99,15 @@ class VPLS (NLRI):
 		return self.extensive()
 
 	@classmethod
-	def unpack (cls, afi, safi, data, addpath, nexthop, action):
+	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
 		# label is 20bits, stored using 3 bytes, 24 bits
-		length, = unpack('!H',data[0:2])
-		if len(data) != length+2:
-			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded data')
-		rd = RouteDistinguisher(data[2:10])
-		ve,offset,size = unpack('!HHH',data[10:16])
-		base = unpack('!L','\x00'+data[16:19])[0] >> 4
-		nlri = cls(rd,ve,base,offset,size)
+		length, = unpack('!H',bgp[0:2])
+		if len(bgp) != length+2:
+			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded bgp')
+		rd = RouteDistinguisher(bgp[2:10])
+		endpoint,offset,size = unpack('!HHH',bgp[10:16])
+		base = unpack('!L',b'\x00'+bgp[16:19])[0] >> 4
+		nlri = cls(rd,endpoint,base,offset,size)
 		nlri.action = action
-		nlri.nexthop = IP.unpack(nexthop)
-		return len(data), nlri
+		# nlri.nexthop = IP.unpack(nexthop)
+		return nlri, bgp[19:]

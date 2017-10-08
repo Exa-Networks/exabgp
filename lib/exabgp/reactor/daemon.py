@@ -25,14 +25,30 @@ class Daemon (object):
 		self.pid = environment.settings().daemon.pid
 		self.user = environment.settings().daemon.user
 		self.daemonize = environment.settings().daemon.daemonize
+		self.umask = environment.settings().daemon.umask
 
 		self.logger = Logger()
 
 		self.reactor = reactor
 
 		os.chdir('/')
-		# os.umask(0)
-		os.umask(0137)
+		os.umask(self.umask)
+
+	def check_pid (self,pid):
+		if pid < 0:  # user input error
+			return False
+		if pid == 0:  # all processes
+			return False
+		try:
+			os.kill(pid, 0)
+			return True
+		except OSError as err:
+			if err.errno == errno.EPERM:  # a process we were denied access to
+				return True
+			if err.errno == errno.ESRCH:  # No such process
+				return False
+			# should never happen
+			return False
 
 	def savepid (self):
 		self._saved_pid = False
@@ -48,8 +64,17 @@ class Daemon (object):
 		try:
 			fd = os.open(self.pid,flags,mode)
 		except OSError:
-			self.logger.daemon("PIDfile already exists, not updated %s" % self.pid)
-			return False
+			try:
+				pid = open(self.pid,'r').readline().strip()
+				if self.check_pid(int(pid)):
+					self.logger.daemon("PIDfile already exists and program still running %s" % self.pid)
+					return False
+				else:
+					# If pid is not running, reopen file without O_EXCL
+					fd = os.open(self.pid,flags ^ os.O_EXCL,mode)
+			except (OSError,IOError,ValueError):
+				self.logger.daemon("issue accessing PID file %s (most likely permission or ownership)" % self.pid)
+				return False
 
 		try:
 			f = os.fdopen(fd,'w')
@@ -68,7 +93,7 @@ class Daemon (object):
 			return
 		try:
 			os.remove(self.pid)
-		except OSError,exc:
+		except OSError as exc:
 			if exc.errno == errno.ENOENT:
 				pass
 			else:
@@ -132,7 +157,7 @@ class Daemon (object):
 			return False
 		try:
 			s.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
-		except socket.error,exc:
+		except socket.error as exc:
 			# It is look like one but it is not a socket ...
 			if exc.args[0] == errno.ENOTSOCK:
 				return False
@@ -152,7 +177,7 @@ class Daemon (object):
 				pid = os.fork()
 				if pid > 0:
 					os._exit(0)
-			except OSError,exc:
+			except OSError as exc:
 				self.logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
 
 		# do not detach if we are already supervised or run by init like process

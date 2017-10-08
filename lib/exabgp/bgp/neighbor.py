@@ -6,18 +6,21 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import os
+import uuid
+
 from collections import deque
 
 # collections.counter is python2.7 only ..
-from exabgp.dep.counter import Counter
+try:
+	from collections import Counter
+except ImportError:
+	from exabgp.vendoring.counter import Counter
 
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
-
-from exabgp.reactor.api.encoding import APIOptions
 
 from exabgp.rib import RIB
 
@@ -26,30 +29,36 @@ from exabgp.rib import RIB
 class Neighbor (object):
 	def __init__ (self):
 		# self.logger should not be used here as long as we do use deepcopy as it contains a Lock
-		self.description = ''
+		self.description = None
 		self.router_id = None
+		self.host_name = None
+		self.domain_name = None
 		self.local_address = None
+		# local_address uses auto discovery
+		self.auto_discovery = False
 		self.peer_address = None
 		self.peer_as = None
 		self.local_as = None
-		self.hold_time = HoldTime(180)
+		self.hold_time = None
 		self.asn4 = None
-		self.add_path = 0
-		self.md5 = None
-		self.ttl = None
+		self.add_path = None
+		self.md5_password = None
+		self.md5_base64 = False
+		self.md5_ip = None
+		self.ttl_in = None
+		self.ttl_out = None
 		self.group_updates = None
 		self.flush = None
 		self.adjribout = None
 
 		self.manual_eor = False
 
-		self.api = APIOptions()
-
+		self.api = None  # XXX: not scriptable - is replaced outside the class
 		# passive indicate that we do not establish outgoing connections
 		self.passive = False
 		# the port to listen on ( zero mean that we do not listen )
 		self.listen = 0
-		# the port to listen on ( zero mean use the environment default )
+		# the port to connect to
 		self.connect = 0
 
 		# capability
@@ -75,13 +84,11 @@ class Neighbor (object):
 		self.refresh = deque()
 
 		self.counter = Counter()
-
-	def identificator (self):
 		# It is possible to :
 		# - have multiple exabgp toward one peer on the same host ( use of pid )
 		# - have more than once connection toward a peer
 		# - each connection has it own neihgbor (hence why identificator is not in Protocol)
-		return str(self.peer_address)
+		self.uid = '%d-%s' % (os.getpid(),uuid.uuid1())
 
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adjribout,self._families)
@@ -124,7 +131,9 @@ class Neighbor (object):
 			self._families.remove(family)
 
 	def missing (self):
-		if self.local_address is None:
+		if self.local_address is None and not self.auto_discovery:
+			return 'local-address'
+		if self.listen > 0 and self.auto_discovery:
 			return 'local-address'
 		if self.peer_address is None:
 			return 'peer-address'
@@ -132,7 +141,7 @@ class Neighbor (object):
 			return 'local-as'
 		if self.peer_as is None:
 			return 'peer-as'
-		if self.peer_address.afi == AFI.ipv6 and not self.router_id:
+		if (self.auto_discovery or self.peer_address.afi == AFI.ipv6) and not self.router_id:
 			return 'router-id'
 		return ''
 
@@ -148,8 +157,12 @@ class Neighbor (object):
 			self.listen == other.listen and \
 			self.connect == other.connect and \
 			self.hold_time == other.hold_time and \
-			self.md5 == other.md5 and \
-			self.ttl == other.ttl and \
+			self.host_name == other.host_name and \
+			self.domain_name == other.domain_name and \
+			self.md5_password == other.md5_password and \
+			self.md5_ip == other.md5_ip and \
+			self.ttl_in == other.ttl_in and \
+			self.ttl_out == other.ttl_out and \
 			self.route_refresh == other.route_refresh and \
 			self.graceful_restart == other.graceful_restart and \
 			self.multisession == other.multisession and \
@@ -163,7 +176,7 @@ class Neighbor (object):
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def pprint (self, with_changes=True):
+	def string (self, with_changes=True):
 		changes = ''
 		if with_changes:
 			changes += '\nstatic { '
@@ -175,22 +188,30 @@ class Neighbor (object):
 		for afi,safi in self.families():
 			families += '\n\t\t%s %s;' % (afi.name(),safi.name())
 
+		codes = Message.CODE
+
 		_extension_receive = {
-			'receive-parsed':           'parsed',
-			'receive-packets':          'packets',
-			'receive-parsed':           'parsed',
-			'consolidate':              'consolidate',
-			'neighbor-changes':         'neighbor-changes',
-			Message.CODE.NOTIFICATION:  'notification',
-			Message.CODE.OPEN:          'open',
-			Message.CODE.KEEPALIVE:     'keepalive',
-			Message.CODE.UPDATE:        'update',
-			Message.CODE.ROUTE_REFRESH: 'refresh',
-			Message.CODE.OPERATIONAL:   'operational',
+			'receive-packets':                        'packets',
+			'receive-parsed':                         'parsed',
+			'receive-consolidate':                    'consolidate',
+			'receive-%s' % codes.NOTIFICATION.SHORT:  'notification',
+			'receive-%s' % codes.OPEN.SHORT:          'open',
+			'receive-%s' % codes.KEEPALIVE.SHORT:     'keepalive',
+			'receive-%s' % codes.UPDATE.SHORT:        'update',
+			'receive-%s' % codes.ROUTE_REFRESH.SHORT: 'refresh',
+			'receive-%s' % codes.OPERATIONAL.SHORT:   'operational',
 		}
 
 		_extension_send = {
-			'send-packets': 'packets',
+			'send-packets':                        'packets',
+			'send-parsed':                         'parsed',
+			'send-consolidate':                    'consolidate',
+			'send-%s' % codes.NOTIFICATION.SHORT:  'notification',
+			'send-%s' % codes.OPEN.SHORT:          'open',
+			'send-%s' % codes.KEEPALIVE.SHORT:     'keepalive',
+			'send-%s' % codes.UPDATE.SHORT:        'update',
+			'send-%s' % codes.ROUTE_REFRESH.SHORT: 'refresh',
+			'send-%s' % codes.OPERATIONAL.SHORT:   'operational',
 		}
 
 		_receive = []
@@ -207,35 +228,42 @@ class Neighbor (object):
 			'neighbor %s {\n' \
 			'\tdescription "%s";\n' \
 			'\trouter-id %s;\n' \
+			'\thost-name %s;\n' \
+			'\tdomain-name %s;\n' \
 			'\tlocal-address %s;\n' \
 			'\tlocal-as %s;\n' \
 			'\tpeer-as %s;\n' \
 			'\thold-time %s;\n' \
 			'\tmanual-eor %s;\n' \
-			'%s%s%s%s%s%s%s%s\n' \
+			'%s%s%s%s%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
 			'%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
 			'\t}\n' \
-			'\tprocess {\n' \
+			'\tapi {\n' \
 			'%s%s\t}%s\n' \
 			'}' % (
 				self.peer_address,
 				self.description,
 				self.router_id,
-				self.local_address,
+				self.host_name,
+				self.domain_name,
+				self.local_address if not self.auto_discovery else 'auto',
 				self.local_as,
 				self.peer_as,
 				self.hold_time,
 				'true' if self.manual_eor else 'false',
-				'\n\tpassive;\n' if self.passive else '',
+				'\n\tpassive %s;\n' % ('true' if self.passive else 'false'),
 				'\n\tlisten %d;\n' % self.listen if self.listen else '',
 				'\n\tconnect %d;\n' % self.connect if self.connect else '',
-				'\tgroup-updates: %s;\n' % (self.group_updates if self.group_updates else ''),
-				'\tauto-flush: %s;\n' % ('true' if self.flush else 'false'),
-				'\tadj-rib-out: %s;\n' % ('true' if self.adjribout else 'false'),
-				'\tmd5 "%s";\n' % self.md5 if self.md5 else '',
-				'\tttl-security: %s;\n' % (self.ttl if self.ttl else ''),
+				'\tgroup-updates %s;\n' % ('true' if self.group_updates else 'false'),
+				'\tauto-flush %s;\n' % ('true' if self.flush else 'false'),
+				'\tadj-rib-out %s;\n' % ('true' if self.adjribout else 'false'),
+				'\tmd5-password "%s";\n' % self.md5_password if self.md5_password else '',
+				'\tmd5-base64 %s;\n' % ('true' if self.md5_base64 else 'false'),
+				'\tmd5-ip "%s";\n' % self.md5_ip if not self.auto_discovery else '',
+				'\toutgoing-ttl %s;\n' % self.ttl_out if self.ttl_out else '',
+				'\tincoming-ttl %s;\n' % self.ttl_in if self.ttl_in else '',
 				'\t\tasn4 %s;\n' % ('enable' if self.asn4 else 'disable'),
 				'\t\troute-refresh %s;\n' % ('enable' if self.route_refresh else 'disable'),
 				'\t\tgraceful-restart %s;\n' % (self.graceful_restart if self.graceful_restart else 'disable'),
@@ -251,4 +279,4 @@ class Neighbor (object):
 		return returned.replace('\t','  ')
 
 	def __str__ (self):
-		return self.pprint(False)
+		return self.string(False)

@@ -5,23 +5,33 @@ import time
 import json
 
 time.sleep(3)
+counter = 0
 
 while True:
-	line = sys.stdin.readline()
-	time.sleep(1)
-	if line:
-		break
+	try:
+		sys.stdout.write('announce route 1.1.1.1/32 next-hop 101.1.101.1 med 200\n')
+		sys.stdout.flush()
 
-try:
-	print >> sys.stderr, 'json received:', line.rstrip()
-	print >> sys.stderr, 'json decoded :', json.loads(line)
+		while True:
+			line = sys.stdin.readline().strip()
+			if line == 'done':
+				continue
+			if line:
+				break
+			counter += 1
+			if counter > 100:
+				sys.exit(1)
+		counter = 0
+		time.sleep(0.5)
 
-	time.sleep(1)
+		try:
+			print >> sys.stderr, 'json received:', line.rstrip()
+			print >> sys.stderr, 'json decoded :', json.loads(line)
+		except:
+			print >> sys.stderr, 'failure, json can not be decoded'
 
-	sys.stdout.write('announce route 1.1.1.1/32 next-hop 101.1.101.1 med 200\n')
-	sys.stdout.flush()
-except:
-	print >> sys.stderr, 'failure, json can not be decoded'
-
-while True:
-	sys.stdin.readline()
+	except KeyboardInterrupt:
+		pass
+	except IOError:
+		# most likely a signal during readline
+		pass

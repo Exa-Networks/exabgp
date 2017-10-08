@@ -67,6 +67,7 @@
 			"originator-id": "10.0.0.1",
 			"med": 10,
 			"community": [[3356,2], [3356,22], [3356,86], [3356,500], [3356,666], [3356,2064], "no-export"],
+            "large-community": [[2914,0,666], [3320,1299,4]],
 			"cluster-list": [],
 			"extended-community": []
 		},
@@ -80,6 +81,7 @@
 			"originator-id": "10.0.0.1",
 			"med": 10,
 			"community": [[3356,2], [3356,22], [3356,86], [3356,500], [3356,666], [3356,2064]],
+            "large-community": [[2914,0,666], [3320,1299,4]],
 			"cluster-list": [],
 			"extended-community": []
 		}

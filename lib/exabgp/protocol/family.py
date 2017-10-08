@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-address.py
+family.py
 
 Created by Thomas Mangin on 2010-01-19.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -9,48 +9,53 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.protocol.resource import Resource
 
-# =================================================================== AFI
+# ======================================================================== AFI
+# https://www.iana.org/assignments/address-family-numbers/
 
-# http://www.iana.org/assignments/address-family-numbers/
-class AFI (int):
+
+class AFI (Resource):
 	undefined = 0x00  # internal
 	ipv4      = 0x01
 	ipv6      = 0x02
 	l2vpn     = 0x19
+	bgpls     = 0x4004
 
-	Family = {
-		ipv4:  0x02,  # socket.AF_INET,
-		ipv6:  0x30,  # socket.AF_INET6,
-		l2vpn: 0x02,  # l2vpn info over ipv4 session
-	}
+	# Family = {
+	# 	ipv4:  0x02,  # socket.AF_INET,
+	# 	ipv6:  0x30,  # socket.AF_INET6,
+	# 	l2vpn: 0x02,  # l2vpn info over ipv4 session
+	# }
 
-	names = {
+	codes = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'ipv4':  ipv4,
 		'ipv6':  ipv6,
 		'l2vpn': l2vpn,
+		'bgpls': bgpls,
+	}.items())
+
+	names = dict([(r,l) for (l,r) in codes.items()])
+	inet_names = dict([(r,l.replace('ipv','inet')) for (l,r) in codes.items()])
+
+	masks = {
+		ipv4:  32,
+		ipv6:  128,
 	}
 
 	def __str__ (self):
-		if self == 0x01:
-			return "ipv4"
-		if self == 0x02:
-			return "ipv6"
-		if self == 0x19:
-			return "l2vpn"
-		return "unknown afi %d" % self
+		return self.names.get(self,"unknown afi %d" % int(self))
 
 	def __repr__ (self):
 		return str(self)
 
+	def mask (self):
+		return self.masks.get(self,'invalid request for this family')
+
 	def name (self):
-		if self == 0x01:
-			return "inet4"
-		if self == 0x02:
-			return "inet6"
-		if self == 0x19:
-			return "l2vpn"
-		return "unknown afi"
+		return self.inet_names.get(self,"unknown afi")
 
 	def pack (self):
 		return pack('!H',self)
@@ -59,13 +64,9 @@ class AFI (int):
 	def unpack (data):
 		return AFI(unpack('!H',data)[0])
 
-	@staticmethod
-	def value (name):
-		if name == "ipv4":
-			return AFI.ipv4
-		if name == "ipv6":
-			return AFI.ipv6
-		return None
+	@classmethod
+	def value (cls,name):
+		return cls.codes.get(name,None)
 
 	@staticmethod
 	def implemented_safi (afi):
@@ -74,18 +75,20 @@ class AFI (int):
 		if afi == 'ipv6':
 			return ['unicast','mpls-vpn','flow','flow-vpn']
 		if afi == 'l2vpn':
-			return ['vpls']
+			return ['vpls','evpn']
+		if afi == 'bgpls':
+			return ['bgp-ls','bgp-ls-vpn']
 		return []
 
 	@classmethod
 	def fromString (cls, string):
-		return cls.names.get(string,cls.undefined)
+		return cls.codes.get(string,cls.undefined)
 
 
-# =================================================================== SAFI
+# ======================================================================= SAFI
 
-# http://www.iana.org/assignments/safi-namespace
-class SAFI (int):
+# https://www.iana.org/assignments/safi-namespace
+class SAFI (Resource):
 	undefined = 0               # internal
 	unicast = 1                 # [RFC4760]
 	multicast = 2               # [RFC4760]
@@ -103,6 +106,8 @@ class SAFI (int):
 	# vpn_adi = 69              # [RFC-ietf-l1vpn-bgp-auto-discovery-05.txt]
 
 	evpn = 70                   # [draft-ietf-l2vpn-evpn]
+	bgp_ls = 71                 # [RFC7752]
+	bgp_ls_vpn = 72             # [RFC7752]
 	mpls_vpn = 128              # [RFC4364]
 	# mcast_bgp_mpls_vpn = 129  # [RFC2547]
 	# rt = 132                  # [RFC4684]
@@ -116,38 +121,24 @@ class SAFI (int):
 	# unassigned = [_ for _ in range(8,64)] + [_ for _ in range(70,128)]
 	# reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,]    # [RFC4760]
 
-	names = {
+	codes = {
 		'unicast':   unicast,
 		'multicast': multicast,
 		'nlri-mpls': nlri_mpls,
 		'vpls':      vpls,
 		'evpn':      evpn,
+		'bgp-ls':    bgp_ls,
+		'bgp-ls-vpn':bgp_ls_vpn,
 		'mpls-vpn':  mpls_vpn,
 		'rtc':       rtc,
 		'flow':      flow_ip,
 		'flow-vpn':  flow_vpn,
 	}
 
+	names = dict([(r,l) for (l,r) in codes.items()])
+
 	def name (self):
-		if self == 0x01:
-			return "unicast"
-		if self == 0x02:
-			return "multicast"
-		if self == 0x04:
-			return "nlri-mpls"
-		if self == 0x46:
-			return "evpn"
-		if self == 0x80:
-			return "mpls-vpn"
-		if self == 0x84:
-			return "rtc"
-		if self == 0x85:
-			return "flow"
-		if self == 0x86:
-			return "flow-vpn"
-		if self == 0x41:
-			return "vpls"
-		return "unknown safi %d" % self
+		return self.names.get(self,'unknown safi %d' % int(self))
 
 	def __str__ (self):
 		return self.name()
@@ -156,11 +147,11 @@ class SAFI (int):
 		return str(self)
 
 	def pack (self):
-		return chr(self)
+		return character(self)
 
 	@staticmethod
 	def unpack (data):
-		return SAFI(ord(data))
+		return SAFI(ordinal(data))
 
 	def has_label (self):
 		return self in (self.nlri_mpls,self.mpls_vpn)
@@ -168,54 +159,62 @@ class SAFI (int):
 	def has_rd (self):
 		return self in (self.mpls_vpn,)  # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
-	@staticmethod
-	def value (name):
-		if name == "unicast":
-			return 0x01
-		if name == "multicast":
-			return 0x02
-		if name == "nlri-mpls":
-			return 0x04
-		if name == "mpls-vpn":
-			return 0x80
-		if name == "flow":
-			return 0x85
-		if name == "flow-vpn":
-			return 0x86
-		if name == "vpls":
-			return 0x41
-		return None
+	@classmethod
+	def value (cls,name):
+		return cls.codes.get(name,None)
 
 	@classmethod
 	def fromString (cls, string):
-		return cls.names.get(string,cls.undefined)
+		return cls.codes.get(string,cls.undefined)
 
 
-def known_families ():
-	# it can not be a generator
-	families = [
-		(AFI(AFI.ipv4), SAFI(SAFI.unicast)),
-		(AFI(AFI.ipv4), SAFI(SAFI.multicast)),
-		(AFI(AFI.ipv4), SAFI(SAFI.nlri_mpls)),
-		(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn)),
-		(AFI(AFI.ipv4), SAFI(SAFI.flow_ip)),
-		(AFI(AFI.ipv4), SAFI(SAFI.flow_vpn)),
-		(AFI(AFI.ipv6), SAFI(SAFI.unicast)),
-		(AFI(AFI.ipv6), SAFI(SAFI.mpls_vpn)),
-		(AFI(AFI.ipv6), SAFI(SAFI.flow_ip)),
-		(AFI(AFI.ipv6), SAFI(SAFI.flow_vpn)),
-		(AFI(AFI.l2vpn), SAFI(SAFI.vpls))
-	]
-	return families
+# ===================================================================== FAMILY
 
 
 class Family (object):
+	__slots__ = ['afi','safi']
+
 	def __init__ (self, afi, safi):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
 
+	def has_label (self):
+		if self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):
+			return True
+		return False
+
+	def has_rd (self):
+		if self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn,SAFI.flow_vpn):
+			return True
+		return False
+
+	def __eq__ (self, other):
+		return \
+			self.afi == other.afi and \
+			self.safi == other.safi
+
+	def __neq__ (self, other):
+		return \
+			self.afi != other.afi or \
+			self.safi != other.safi
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing Family for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing Family for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing Family for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing Family for ordering does not make sense')
+
+	def family (self):
+		return (self.afi,self.safi)
+
 	def extensive (self):
 		return 'afi %s safi %s' % (self.afi,self.safi)
 
-	def __str__ (self):
-		return 'family %s %s' % (self.afi,self.safi)
+	def __repr__ (self):
+		return "%s %s" % (str(self.afi),str(self.safi))

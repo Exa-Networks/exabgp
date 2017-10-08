@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-operational/__init__.py
+operational.py
 
 Created by Thomas Mangin on 2013-09-01.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -11,8 +11,11 @@ from struct import unpack
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 
 # ========================================================================= Type
 #
@@ -37,10 +40,10 @@ class Type (int):
 # ================================================================== Operational
 #
 
-
+@Message.register
 class Operational (Message):
 	ID = Message.CODE.OPERATIONAL
-	TYPE = chr(Message.CODE.OPERATIONAL)
+	TYPE = character(Message.CODE.OPERATIONAL)
 
 	registered_operational = dict()
 
@@ -83,7 +86,7 @@ class Operational (Message):
 		self.what = Type(what)
 
 	def _message (self, data):
-		return Message._message(self,"%s%s%s" % (
+		return Message._message(self,concat_bytes(
 			self.what.pack(),
 			pack('!H',len(data)),
 			data
@@ -96,8 +99,9 @@ class Operational (Message):
 		return 'operational %s' % self.name
 
 	@staticmethod
-	def register_operational (klass):
+	def register (klass):
 		Operational.registered_operational[klass.code] = (klass.category,klass)
+		return klass
 
 	@classmethod
 	def unpack_message (cls, data, negotiated):  # pylint: disable=W0613
@@ -108,24 +112,24 @@ class Operational (Message):
 
 		if decode == 'advisory':
 			afi = unpack('!H',data[4:6])[0]
-			safi = ord(data[6])
+			safi = ordinal(data[6])
 			data = data[7:length+4]
 			return klass(afi,safi,data)
 		elif decode == 'query':
 			afi = unpack('!H',data[4:6])[0]
-			safi = ord(data[6])
+			safi = ordinal(data[6])
 			routerid = RouterID.unpack(data[7:11])
 			sequence = unpack('!L',data[11:15])[0]
 			return klass(afi,safi,routerid,sequence)
 		elif decode == 'counter':
 			afi = unpack('!H',data[4:6])[0]
-			safi = ord(data[6])
+			safi = ordinal(data[6])
 			routerid = RouterID.unpack(data[7:11])
 			sequence = unpack('!L',data[11:15])[0]
 			counter = unpack('!L',data[15:19])[0]
 			return klass(afi,safi,routerid,sequence,counter)
 		else:
-			print 'ignoring ATM this kind of message'
+			print('ignoring ATM this kind of message')
 
 
 # ============================================================ OperationalFamily
@@ -134,7 +138,7 @@ class Operational (Message):
 class OperationalFamily (Operational):
 	has_family = True
 
-	def __init__ (self, what, afi, safi, data=''):
+	def __init__ (self, what, afi, safi, data=b''):
 		Operational.__init__(self,what)
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
@@ -144,7 +148,7 @@ class OperationalFamily (Operational):
 		return (self.afi,self.safi)
 
 	def _message (self, data):
-		return Operational._message(self,"%s%s%s" % (
+		return Operational._message(self,concat_bytes(
 			self.afi.pack(),
 			self.safi.pack(),
 			data
@@ -162,7 +166,7 @@ class SequencedOperationalFamily (OperationalFamily):
 	__sequence_number = {}
 	has_routerid = True
 
-	def __init__ (self, what, afi, safi, routerid, sequence, data=''):
+	def __init__ (self, what, afi, safi, routerid, sequence, data=b''):
 		OperationalFamily.__init__(self,what,afi,safi,data)
 		self.routerid = routerid if routerid else None
 		self.sequence = sequence if sequence else None
@@ -177,7 +181,7 @@ class SequencedOperationalFamily (OperationalFamily):
 		else:
 			self.sent_sequence = self.sequence
 
-		return self._message("%s%s%s" % (
+		return self._message(concat_bytes(
 			self.sent_routerid.pack(),pack('!L',self.sent_sequence),
 			self.data
 		))
@@ -203,7 +207,7 @@ class NS (object):
 				self,
 				Operational.CODE.NS,
 				afi,safi,
-				'%s%s' % (sequence,self.ERROR_SUBCODE)
+				concat_bytes(sequence,self.ERROR_SUBCODE)
 			)
 
 		def extensive (self):
@@ -211,27 +215,27 @@ class NS (object):
 
 	class Malformed (_NS):
 		name = 'NS malformed'
-		ERROR_SUBCODE = '\x00\x01'  # pack('!H',MALFORMED)
+		ERROR_SUBCODE = b'\x00\x01'  # pack('!H',MALFORMED)
 
 	class Unsupported (_NS):
 		name = 'NS unsupported'
-		ERROR_SUBCODE = '\x00\x02'  # pack('!H',UNSUPPORTED)
+		ERROR_SUBCODE = b'\x00\x02'  # pack('!H',UNSUPPORTED)
 
 	class Maximum (_NS):
 		name = 'NS maximum'
-		ERROR_SUBCODE = '\x00\x03'  # pack('!H',MAXIMUM)
+		ERROR_SUBCODE = b'\x00\x03'  # pack('!H',MAXIMUM)
 
 	class Prohibited (_NS):
 		name = 'NS prohibited'
-		ERROR_SUBCODE = '\x00\x04'  # pack('!H',PROHIBITED)
+		ERROR_SUBCODE = b'\x00\x04'  # pack('!H',PROHIBITED)
 
 	class Busy (_NS):
 		name = 'NS busy'
-		ERROR_SUBCODE = '\x00\x05'  # pack('!H',BUSY)
+		ERROR_SUBCODE = b'\x00\x05'  # pack('!H',BUSY)
 
 	class NotFound (_NS):
 		name = 'NS notfound'
-		ERROR_SUBCODE = '\x00\x06'  # pack('!H',NOTFOUND)
+		ERROR_SUBCODE = b'\x00\x06'  # pack('!H',NOTFOUND)
 
 
 # ===================================================================== Advisory
@@ -245,6 +249,7 @@ class Advisory (object):
 		def extensive (self):
 			return 'operational %s afi %s safi %s "%s"' % (self.name,self.afi,self.safi,self.data)
 
+	@Operational.register
 	class ADM (_Advisory):
 		name = 'ADM'
 		code = Operational.CODE.ADM
@@ -259,6 +264,7 @@ class Advisory (object):
 				utf8
 			)
 
+	@Operational.register
 	class ASM (_Advisory):
 		name = 'ASM'
 		code = Operational.CODE.ASM
@@ -297,14 +303,17 @@ class Query (object):
 				)
 			return 'operational %s afi %s safi %s' % (self.name,self.afi,self.safi)
 
+	@Operational.register
 	class RPCQ (_Query):
 		name = 'RPCQ'
 		code = Operational.CODE.RPCQ
 
+	@Operational.register
 	class APCQ (_Query):
 		name = 'APCQ'
 		code = Operational.CODE.APCQ
 
+	@Operational.register
 	class LPCQ (_Query):
 		name = 'LPCQ'
 		code = Operational.CODE.LPCQ
@@ -336,14 +345,17 @@ class Response (object):
 				)
 			return 'operational %s afi %s safi %s counter %d' % (self.name,self.afi,self.safi,self.counter)
 
+	@Operational.register
 	class RPCP (_Counter):
 		name = 'RPCP'
 		code = Operational.CODE.RPCP
 
+	@Operational.register
 	class APCP (_Counter):
 		name = 'APCP'
 		code = Operational.CODE.APCP
 
+	@Operational.register
 	class LPCP (_Counter):
 		name = 'LPCP'
 		code = Operational.CODE.LPCP
@@ -354,15 +366,3 @@ class Response (object):
 
 class Dump (object):
 	pass
-
-
-Operational.register_operational(Advisory.ADM)
-Operational.register_operational(Advisory.ASM)
-
-Operational.register_operational(Query.RPCQ)
-Operational.register_operational(Query.APCQ)
-Operational.register_operational(Query.LPCQ)
-
-Operational.register_operational(Response.RPCP)
-Operational.register_operational(Response.APCP)
-Operational.register_operational(Response.LPCP)

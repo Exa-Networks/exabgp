@@ -10,9 +10,9 @@ import socket
 from struct import calcsize
 from collections import namedtuple
 
-from exabgp.netlink.message import NetLinkMessage
-from exabgp.netlink.message import InfoMessage
-from exabgp.netlink.attributes import Attributes
+from exabgp.netlink.message import NetLink
+from exabgp.netlink.message import Message
+# from exabgp.netlink.attributes import Attributes
 
 
 # 0                   1                   2                   3
@@ -25,7 +25,7 @@ from exabgp.netlink.attributes import Attributes
 # |                          Flags                              |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class Network (InfoMessage):
+class Network (Message):
 	class Header (object):
 		# linux/if_addr.h
 		PACK = '8BI'  # or is it 8Bi ?
@@ -116,10 +116,10 @@ class Network (InfoMessage):
 
 	@classmethod
 	def newRoute (cls):
-		network_flags  = NetLinkMessage.Flags.NLM_F_REQUEST
-		network_flags |= NetLinkMessage.Flags.NLM_F_ACK
-		network_flags |= NetLinkMessage.Flags.NLM_F_CREATE
-#		network_flags |= NetLinkMessage.Flags.NLM_F_EXCL
+		network_flags  = NetLink.Flags.NLM_F_REQUEST
+		network_flags |= NetLink.Flags.NLM_F_ACK
+		network_flags |= NetLink.Flags.NLM_F_CREATE
+#		network_flags |= NetLink.Flags.NLM_F_EXCL
 
 		family = socket.AF_INET
 

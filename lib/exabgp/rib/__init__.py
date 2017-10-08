@@ -22,6 +22,12 @@ class RIB (object):
 		if name in self._cache:
 			self.incoming = self._cache[name].incoming
 			self.outgoing = self._cache[name].outgoing
+			self.incoming.families = families
+			self.outgoing.families = families
+			for family in self.outgoing._seen.keys():
+				if family not in families:
+					del self.outgoing._seen[family]
+
 			if adjribout:
 				self.outgoing.resend(None,False)
 			else:
@@ -36,6 +42,10 @@ class RIB (object):
 	def reset (self):
 		self.incoming.reset()
 		self.outgoing.reset()
+
+	def uncache(self):
+		if self.name in self._cache:
+			del self._cache[self.name]
 
 	# This code was never tested ...
 	def clear (self):

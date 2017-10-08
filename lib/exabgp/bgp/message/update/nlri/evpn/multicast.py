@@ -6,13 +6,13 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
-
-
-# ===================================================================== EVPNNLRI
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
@@ -25,55 +25,70 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 # |          (4 or 16 octets)             |
 # +---------------------------------------+
 
+# ===================================================================== EVPNNLRI
+
+
+@EVPN.register
 class Multicast (EVPN):
 	CODE = 3
 	NAME = "Inclusive Multicast Ethernet Tag"
 	SHORT_NAME = "Multicast"
 
-	def __init__ (self, rd, etag, ip):
+	def __init__ (self, rd, etag, ip, packed=None,nexthop=None,action=None,addpath=None):
+		EVPN.__init__(self,action,addpath)
+		self.nexthop = nexthop
 		self.rd = rd
 		self.etag = etag
 		self.ip = ip
-		EVPN.__init__(self,self.pack())
+		self._pack(packed)
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
 
 	def __str__ (self):
 		return "%s:%s:%s:%s" % (
 			self._prefix(),
-			self.rd,
+			self.rd._str(),
 			self.etag,
 			self.ip,
 		)
 
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.rd != other.rd:
-			return -1
-		if self.etag != other.etag:
-			return -1
-		if self.ip != other.ip:
-			return -1
-		return 0
-
-	# XXX: FIXME: improve for better performance?
 	def __hash__ (self):
-		return hash("%s:%s:%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.rd,self.etag,self.ip))
+		return hash((self.afi,self.safi,self.CODE,self.rd,self.etag,self.ip))
 
-	def pack (self):
-		ip = self.ip.pack()
-		return '%s%s%s%s' % (
+	def _pack (self, packed=None):
+		if self._packed:
+			return self._packed
+
+		if packed:
+			self._packed = packed
+			return packed
+
+		self._packed = concat_bytes(
 			self.rd.pack(),
 			self.etag.pack(),
-			chr(len(ip)*8),
-			ip
+			character(len(self.ip)*8),
+			self.ip.pack()
 		)
+		return self._packed
 
 	@classmethod
 	def unpack (cls, data):
 		rd = RouteDistinguisher.unpack(data[:8])
 		etag = EthernetTag.unpack(data[8:12])
-		iplen = ord(data[12])*8
-		ip = IP.unpack(data[12:12+iplen])
+		iplen = ordinal(data[12])
 		if iplen not in (4*8,16*8):
 			raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
-		return cls(rd,etag,ip)
+		ip = IP.unpack(data[13:13+iplen//8])
+		return cls(rd,etag,ip,data)
+
+	def json (self, compact=None):
+		content = ' "code": %d, ' % self.CODE
+		content += '"parsed": true, '
+		content += '"raw": "%s", ' % self._raw()
+		content += '"name": "%s", ' % self.NAME
+		content += '%s, ' % self.rd.json()
+		content += self.etag.json()
+		if self.ip:
+			content += ', "ip": "%s"' % str(self.ip)
+		return '{%s }' % content
