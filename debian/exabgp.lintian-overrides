@@ -1,0 +1,2 @@
+# We want to keep upstart configuration to ease backports (to Debian and other distros)
+exabgp: package-installs-deprecated-upstart-configuration etc/init/exabgp.conf
