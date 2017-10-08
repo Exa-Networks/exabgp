@@ -4,10 +4,13 @@ Upstream-Contact: Thomas Mangin <thomas.mangin@exa-networks.co.uk>
 Source: https://github.com/Exa-Networks/exabgp
 
 Files: *
-Copyright: Copyright (c) 2009-2015, Exa Networks Limited
-           Copyright (c) 2009-2015, Thomas Mangin
-           Copyright (c) 2014-2015, Orange
-           Copyright (c) 2014-2015, Nikita Shirokov
+Copyright: Copyright (c) 2009-2017, Exa Networks Limited
+           Copyright (c) 2009-2017, Thomas Mangin
+           Copyright (c) 2014-2017, Orange
+           Copyright (c) 2014-2017, Nikita Shirokov
+           Copyright (c) 2015-2017, Alcatel-Lucent
+           Copyright (c) 2016-2017, Job Snijders
+           Copyright (c) 2016-2017, Evelio Vila
 License: BSD-3-clause
 
 Files: debian/*
@@ -16,27 +19,44 @@ Copyright: Copyright (c) 2011-2012 Henry-Nicolas Tourneur <henry.nicolas@tourneu
 License: BSD-3-clause
 
 Files: dev/profile/pyprof2calltree.py
+       lib/exabgp/vendoring/lsprofcalltree.py
 Copyright: Copyright (c) 2006-2008 David Allouche, Jp Calderone, Itamar Shtull-Trauring,
                                    Johan Dahlin, Olivier Grisel <olivier.grisel@ensta.org>
 License: Expat
 
-Files: lib/exabgp/dep/docopt.py
+Files: lib/exabgp/vendoring/bitstring.py
+Copyright: Copyright (c) 2006-2016 Scott Griffiths (dr.scottgriffiths@gmail.com)
+License: Expat
+
+Files: lib/exabgp/vendoring/cmd2.py
+Copyright: Copyright (c) 2008-2016 Catherine Devlin and others
+License: Expat
+
+Files: lib/exabgp/vendoring/docopt.py
 Copyright: Copyright (c) 2013 Vladimir Keleshev, vladimir@keleshev.com
 License: Expat
 
-Files: lib/exabgp/dep/ipaddress.py
+Files: lib/exabgp/vendoring/ipaddress.py
 Copyright: Copyright 2007 Google Inc
 License: PSFv2
  The complete text of the license is available in
  `/usr/share/doc/pythonX.Y/copyright'. This is the same license as for
  Python.
 
-Files: lib/exabgp/dep/objgraph.py
+Files: lib/exabgp/vendoring/objgraph.py
 Copyright: Copyright (c) 2008 Marius Gedminas <marius@pov.lt>
 License: Expat
 
-Files: lib/exabgp/dep/pyparsing.py
+Files: lib/exabgp/vendoring/profiler.py
+Copyright: Copyright (c) 2007–2014 Fabian Pedregosa
+License: BSD-3-clause
+
+Files: lib/exabgp/vendoring/pyparsing.py
 Copyright: Copyright (c) 2003-2013  Paul T. McGuire
+License: Expat
+
+Files: lib/exabgp/vendoring/six.py
+Copyright: Copyright (c) 2010-2015 Benjamin Peterson
 License: Expat
 
 License: BSD-3-clause
