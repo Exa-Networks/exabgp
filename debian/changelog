@@ -1,6 +1,7 @@
-exabgp (4.0.0-1) UNRELEASED; urgency=medium
+exabgp (4.0.2-1) UNRELEASED; urgency=medium
 
-  * New upstream release.
+  [ James Page ]
+  * New upstream release (4.0.0).
   * Add Python 3 support:
     - d/control: Add python{3}-exabgp, exabgp-common packages.
     - d/exabgp-common.install: Install /usr/share/exabgp/*.
@@ -11,7 +12,11 @@ exabgp (4.0.0-1) UNRELEASED; urgency=medium
       using alternatives for Python 2 or Python 3 versions.
   * d/rules: Tidy etc/exabgp/exabgp.env on clean.
 
- -- James Page <james.page@ubuntu.com>  Wed, 24 May 2017 16:54:34 +0100
+  [ Vincent Bernat ]
+  * New upstream release (4.0.2).
+  * Remove all patches.
+
+ -- Vincent Bernat <bernat@debian.org>  Sun, 08 Oct 2017 18:03:58 +0200
 
 exabgp (3.4.17-3) unstable; urgency=medium
 
