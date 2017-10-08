@@ -1,0 +1,2 @@
+# Manual page is just exabgp
+python3-exabgp: binary-without-manpage usr/sbin/python3-exabgp
