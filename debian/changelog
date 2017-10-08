@@ -16,6 +16,7 @@ exabgp (4.0.2-1) UNRELEASED; urgency=medium
   * New upstream release (4.0.2).
   * Remove all patches.
   * d/control: bump Standards-Version.
+  * d/install: do not install content of qa/conf (doesn't exist anymore).
 
  -- Vincent Bernat <bernat@debian.org>  Sun, 08 Oct 2017 18:03:58 +0200
 
