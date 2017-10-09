@@ -396,6 +396,7 @@ setup(
 	entry_points={
 		'console_scripts': [
 			'exabgp = exabgp.application:run_exabgp',
+			'exabgpcli = exabgp.application:run_cli',
 		],
 	},
 )
