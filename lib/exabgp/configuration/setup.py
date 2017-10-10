@@ -191,7 +191,7 @@ environment.configuration = {
 		},
 		'bind': {
 			'read':  environment.ip_list,
-			'write': environment.quote,
+			'write': environment.quote_list,
 			'value': '',
 			'help':  'Space separated list of IPs to bind on when listening (no ip to disable)',
 		},
