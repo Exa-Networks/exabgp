@@ -288,7 +288,10 @@ class Peer (object):
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
 			if ordinal(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.NOW
+				# If a peer does not reply to OPEN message, or not enough bytes
+				# yielding ACTION.NOW can cause ExaBGP to busy spin trying to
+				# read from peer. See GH #723 .
+				yield ACTION.LATER
 		yield message
 
 	def _send_ka (self):
