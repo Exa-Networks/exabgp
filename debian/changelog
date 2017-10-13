@@ -21,6 +21,7 @@ exabgp (4.0.2-1) UNRELEASED; urgency=medium
   * d/lintian-overrides: silence warning about upstart.
   * d/lintian-overrides: silence warning about missing manual pages.
   * d/patches: cherry-pick patch to add documentation to systemd unit.
+  * d/patches: cherry-pick patch to fix ini writing for tcp.bind.
   * d/copyright: updates.
   * d/postinst: prefer Python 3 to run exabgp (add an entry to NEWS.Debian
     for that).
