@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import copy
+
 # common
 
 from exabgp.protocol.family import known_families
@@ -45,7 +47,7 @@ def check_neighbor (neighbors):
 	logger.parser('\ndecoding routes in configuration')
 
 	for name in neighbors.keys():
-		neighbor = neighbors[name]
+		neighbor = copy.deepcopy(neighbors[name])
 
 		path = {}
 		for f in known_families():

@@ -7,6 +7,7 @@ Version 3.4.21
   * Fix: make healthcheck work on netbsd
     patch by: he32
   * Fix: re-fix issue #493 Multiple IPv6 MPREACH attributes in one UPDATE 
+  * Fix: issue #732 --test not working for eBGP setup
 
 Version 3.4.20
   * Fix: profiling
