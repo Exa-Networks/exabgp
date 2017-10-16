@@ -24,8 +24,8 @@ class ReceiveTimer (object):
 		self.session = session
 
 		self.holdtime = holdtime
-		self.last_print = time.time()
-		self.last_read = time.time()
+		self.last_print = 0
+		self.last_read = int(time.time())
 
 		self.code = code
 		self.subcode = subcode
@@ -33,17 +33,19 @@ class ReceiveTimer (object):
 		self.single = False
 
 	def check_ka_timer (self, message=_NOP,ignore=_NOP.TYPE):
+		if self.holdtime == 0:
+			return message.TYPE != KeepAlive.TYPE
+		now = int(time.time())
 		if message.TYPE != ignore:
-			self.last_read = time.time()
-		if self.holdtime:
-			left = int(self.last_read  + self.holdtime - time.time())
-			if self.last_print != left:
-				self.logger.debug('receive-timer %d second(s) left' % left,source='ka-'+self.session())
-				self.last_print = left
-			if left <= 0:
-				raise Notify(self.code,self.subcode,self.message)
-			return True
-		return message.TYPE != KeepAlive.TYPE
+			self.last_read = now
+		elapsed = now - self.last_read
+		if elapsed > self.holdtime:
+			raise Notify(self.code,self.subcode,self.message)
+		if self.last_print != now:
+			left = self.holdtime - elapsed
+			self.logger.debug('receive-timer %d second(s) left' % left,source='ka-'+self.session())
+			self.last_print = now
+		return True
 
 	def check_ka (self, message=_NOP,ignore=_NOP.TYPE):
 		if self.check_ka_timer(message,ignore):
