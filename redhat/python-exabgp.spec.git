@@ -18,12 +18,12 @@ Source0:	exabgp-%{version}.tar.gz
 BuildArch:      noarch
 Provides:       exabgp-libs
 
-BuildRequires:  python-setuptools
 BuildRequires:  sed
 BuildRequires:  git
 BuildRequires:  git-extras
 Requires:       python2 >= 2.6
 Requires:	python-ipaddr
+Requires:       python-setuptools
 
 %description
 ExaBGP python module
