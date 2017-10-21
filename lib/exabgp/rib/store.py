@@ -8,6 +8,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from collections import OrderedDict
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update import Update
@@ -217,13 +220,18 @@ class Store (object):
 			changed = dict_change.values()
 			attributes = dict_attr[attr_index]
 
+			if not changed:
+				continue
+
 			for change in changed:
 				updates.setdefault(change.nlri.family(),[]).append(change.nlri)
+
+			family = change.nlri.family()
 
 			# only yield once we have a consistent state, otherwise it will go wrong
 			# as we will try to modify things we are iterating over and using
 
-			if grouped:
+			if grouped and family == (AFI.ipv4,SAFI.unicast):
 				for nlris in updates.itervalues():
 					yield Update(nlris, attributes)
 			else:

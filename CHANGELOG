@@ -3,9 +3,17 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.21
+  * Fix: make healthcheck work on netbsd
+    patch by: he32
+  * Fix: re-fix issue #493 Multiple IPv6 MPREACH attributes in one UPDATE 
+  * Fix: issue #732 --test not working for eBGP setup
+
 Version 3.4.20
   * Fix: profiling
   * Fix: potential issue with networking (select on closed FD/TCP session)
+  * Fix: issue with route replay order when sent fast
+    patch by: Ravikumar Arunachalam
 
 Version 3.4.19
  * Add: IPv6 nlri-mpls to list of enabled protocol (was missing)
