@@ -8,6 +8,8 @@ Version 3.4.21
     patch by: he32
   * Fix: re-fix issue #493 Multiple IPv6 MPREACH attributes in one UPDATE 
   * Fix: issue #732 --test not working for eBGP setup
+  * Fix: possibly missing API message when sent at high rate, issue #736
+    patch by: Ravikumar Arunachalam
 
 Version 3.4.20
   * Fix: profiling
