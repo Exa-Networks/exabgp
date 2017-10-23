@@ -28,6 +28,8 @@ Version 4.0.3
    patch by: dhammika
  * Fix: api poller slow down
    patch by: dhammika
+ * Fix: EVPN decoding on type 4 NLRI
+   patch by: kvlangenhove
 
 Version 4.0.2
  * Feature: exabgpcli
