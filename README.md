@@ -29,6 +29,7 @@ These organisations have spoken of, or are using/have used ExaBGP:
 [MaxCDN](https://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
 [Microsoft](https://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
 [OpenDNS](https://blog.opendns.com/2013/01/10/high-availability-with-anycast-routing/),
+[Oracle](https://dyn.com/blog/how-oracle-dyn-leveraged-open-standards-and-chatbots-to-better-respond-to-attacks/#close),
 [PowerDNS](https://blog.powerdns.com/2016/02/23/an-important-update-on-new-powerdns-products/),
 [RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf), ...
 
