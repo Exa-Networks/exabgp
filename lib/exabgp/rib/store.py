@@ -210,8 +210,11 @@ class Store (object):
 			yield Update(RouteRefresh(afi,safi,RouteRefresh.start),Attributes())
 
 		dict_sorted = self._modify_sorted
-		# Create a new dictionary as the outstanding routes are in dict_sorted.
+
+		# Create new dictionaries as the outstanding routes are in dict_sorted & dict_nlri and will be announced.
+		self._modify_nlri = {}
 		self._modify_sorted = {}
+
 		dict_attr = self._cache_attribute
 
 		for attr_index,dict_change in dict_sorted.items():
@@ -251,7 +254,6 @@ class Store (object):
 						if family in announced:
 							announced[family].pop(change.index(),None)
 
-		self._modify_nlri = {}
 
 		if rr_announced:
 			for afi,safi in rr_announced:
