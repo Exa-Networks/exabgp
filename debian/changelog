@@ -1,3 +1,9 @@
+exabgp (4.0.2-2) unstable; urgency=medium
+
+  * d/control: build-depends on python*-pkg-resources. Closes: #880219.
+
+ -- Vincent Bernat <bernat@debian.org>  Sat, 04 Nov 2017 13:59:49 +0100
+
 exabgp (4.0.2-1) unstable; urgency=medium
 
   [ James Page ]

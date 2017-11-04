@@ -25,6 +25,7 @@ Architecture: all
 Section: python
 Depends: ${misc:Depends},
          ${python:Depends},
+         python-pkg-resources,
 Breaks: exabgp (<< 4.0.0-1~),
 Replaces: exabgp (<< 4.0.0-1~),
 Description: BGP swiss army knife of networking - Python 2 module
@@ -46,6 +47,7 @@ Architecture: all
 Section: python
 Depends: ${misc:Depends},
          ${python3:Depends},
+         python3-pkg-resources,
 Description: BGP swiss army knife of networking - Python 3 module
  ExaBGP allows engineers to control their network from commodity
  servers. Think of it as Software Defined Networking using BGP by
