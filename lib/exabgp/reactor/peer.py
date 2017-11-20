@@ -657,6 +657,7 @@ class Peer (object):
 				'route-refresh': capa.announced(Capability.CODE.ROUTE_REFRESH),
 				'multi-session': capa.announced(Capability.CODE.MULTISESSION) or capa.announced(Capability.CODE.MULTISESSION_CISCO),
 				'add-path':      capa.announced(Capability.CODE.ADD_PATH),
+				'extended-message': capa.announced(Capability.CODE.EXTENDED_MESSAGE),
 				'graceful-restart': capa.announced(Capability.CODE.GRACEFUL_RESTART),
 			})
 
@@ -666,6 +667,7 @@ class Peer (object):
 			'multi-session':    (tri(self.neighbor.multisession), tri(peer['multi-session'])),
 			'operational':      (tri(self.neighbor.operational), tri(peer['operational'])),
 			'add-path':         (tri(self.neighbor.add_path),tri(peer['add-path'])),
+			'extended-message': (tri(self.neighbor.extended_message),tri(peer['extended-message'])),
 			'graceful-restart': (tri(self.neighbor.graceful_restart),tri(peer['graceful-restart'])),
 		}
 
