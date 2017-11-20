@@ -32,6 +32,8 @@ from exabgp.reactor.network.error import NotConnected
 from exabgp.reactor.network.error import LostConnection
 from exabgp.reactor.network.error import NotifyError
 
+from exabgp.bgp.message.open.capability.extended import ExtendedMessage
+
 from .error import *
 
 
@@ -40,6 +42,8 @@ class Connection (object):
 	identifier = {}
 
 	def __init__ (self, afi, peer, local):
+		self.msg_size = ExtendedMessage.INITIAL_MAX_SIZE
+
 		# peer and local are strings of the IP
 		try:
 			self.defensive = environment.settings().debug.defensive
@@ -227,7 +231,7 @@ class Connection (object):
 		msg = ordinal(header[18])
 		length = unpack('!H',header[16:18])[0]
 
-		if length < Message.HEADER_LEN or length > Message.MAX_LEN:
+		if length < Message.HEADER_LEN or length > self.msg_size:
 			report = '%s has an invalid message length of %d' % (Message.CODE.name(msg),length)
 			yield length,0,header,b'',NotifyError(1,2,report)
 			return

@@ -74,10 +74,6 @@ class Protocol (object):
 		else:
 			self.port = 179
 
-		# XXX: FIXME: check the the -19 is correct (but it is harmless)
-		# The message size is the whole BGP message _without_ headers
-		self.message_size = Message.MAX_LEN-Message.HEADER_LEN
-
 		from exabgp.configuration.environment import environment
 		self.log_routes = peer.neighbor.adj_rib_in or environment.settings().log.routes
 
