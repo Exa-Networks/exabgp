@@ -26,6 +26,7 @@ from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.operational import Operational
 from exabgp.bgp.message.open.capability.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
+from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.bgp.message.open.capability.hostname import HostName
 
 from exabgp.bgp.message.notification import Notify
@@ -114,6 +115,12 @@ class Capabilities (dict):
 		self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
 		self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
 
+	def _extended_message (self, neighbor):
+		if not neighbor.extended_message:
+			return
+
+		self[Capability.CODE.EXTENDED_MESSAGE] = ExtendedMessage()
+
 	def _hostname (self, neighbor):
 		self[Capability.CODE.HOSTNAME] = HostName(neighbor.host_name,neighbor.domain_name)
 
@@ -135,6 +142,7 @@ class Capabilities (dict):
 		self._graceful(neighbor,restarted)
 		self._refresh(neighbor)
 		self._operational(neighbor)
+		self._extended_message(neighbor)
 		# self._hostname(neighbor)  # Cumulus draft - disabling until -01 is out
 		self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
 		return self

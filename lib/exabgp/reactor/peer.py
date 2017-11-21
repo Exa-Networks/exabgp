@@ -328,6 +328,8 @@ class Peer (object):
 				yield received_open
 		self.proto.negotiated.received(received_open)
 
+		self.proto.connection.msg_size = self.proto.negotiated.msg_size
+
 		# if we mirror the ASN, we need to read first and send second
 		if not self.neighbor.local_as:
 			for sent_open in self._send_open():
