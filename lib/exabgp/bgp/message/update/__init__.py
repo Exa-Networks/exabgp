@@ -126,6 +126,17 @@ class Update (Message):
 
 		# Withdraws/NLRIS (IPv4 unicast and multicast)
 		msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
+
+		if msg_size < 0:
+			# raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+			Logger().critical('attributes size is so large we can not even pack one NLRI','parser')
+			return
+
+		if msg_size == 0 and (nlris or mp_nlris):
+			# raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+			Logger().critical('attributes size is so large we can not even pack one NLRI','parser')
+			return
+
 		withdraws = b''
 		announced = b''
 		for nlri in nlris:
@@ -138,7 +149,10 @@ class Update (Message):
 				continue
 
 			if not withdraws and not announced:
-				raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+				# raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+				Logger().critical('attributes size is so large we can not even pack one NLRI','parser')
+				return
+
 			yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
 
 			if nlri.action == OUT.ANNOUNCE:
