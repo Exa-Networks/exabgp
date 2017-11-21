@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.0.4
+  * Feature: draft draft-ietf-idr-bgp-extended-messages-24 support (option capability extended-message)
+
 Version 4.0.3
  * Fix: MD5 issue with python3
  * Fix: control of logging for timer events
