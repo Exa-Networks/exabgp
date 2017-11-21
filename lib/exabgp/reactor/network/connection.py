@@ -42,7 +42,7 @@ class Connection (object):
 	identifier = {}
 
 	def __init__ (self, afi, peer, local):
-		self.msg_size = ExtendedMessage.INITIAL_MAX_SIZE
+		self.msg_size = ExtendedMessage.INITIAL_SIZE
 
 		# peer and local are strings of the IP
 		try:
