@@ -5,6 +5,7 @@ Version explained:
 
 Version 4.0.4
   * Feature: draft draft-ietf-idr-bgp-extended-messages-24 support (option capability extended-message)
+  * Bug: do not tear down session if not enough space is available to pack an NLRI after attribute but treat-as-withdraw
 
 Version 4.0.3
  * Fix: MD5 issue with python3
