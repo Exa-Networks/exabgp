@@ -82,10 +82,9 @@ class NumericOperator (CommonOperator):
 
 class BinaryOperator (CommonOperator):
 	# reserved= 0x0C  # 0b00001100
-	NONE      = 0x00  # 0000000000
+	INCLUDE   = 0x00  # 0b00000000
 	NOT       = 0x02  # 0b00000010
 	MATCH     = 0x01  # 0b00000001
-	INCLUDE   = 0x00  # 0b00000000
 
 
 def _len_to_bit (value):
