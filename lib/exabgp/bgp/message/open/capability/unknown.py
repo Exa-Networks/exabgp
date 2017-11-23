@@ -32,7 +32,7 @@ class UnknownCapability (Capability):
 			iana = 'unassigned'
 		else:
 			iana = 'unknown'
-		raw = ''.join('%02X' % ordinal(_) for _ in self.data)
+		raw = ''.join('%02X' % ord(_) for _ in self.data)
 		return '{ "name": "unknown", "iana": "%s", "value": %d, "raw": "%s" }' % (iana,self.capability,raw)
 
 	def extract (self):
