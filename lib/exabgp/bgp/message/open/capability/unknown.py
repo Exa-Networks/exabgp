@@ -7,6 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from exabgp.util import ordinal
+
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # ============================================================ UnknownCapability
@@ -34,7 +36,8 @@ class UnknownCapability (Capability):
 			iana = 'unassigned'
 		else:
 			iana = 'unknown'
-		return '{ "name": "unknown", "iana": "%s", "value": %d, "raw": "%s" }' % (iana,self.capability,self.data)
+		raw = ''.join('%02X' % ordinal(_) for _ in self.data)
+		return '{ "name": "unknown", "iana": "%s", "value": %d, "raw": "%s" }' % (iana,self.capability,raw)
 
 	def extract (self):
 		return []
