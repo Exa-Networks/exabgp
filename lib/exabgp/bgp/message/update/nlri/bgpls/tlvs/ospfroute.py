@@ -84,9 +84,6 @@ class OspfRoute(object):
 	def __repr__ (self):
 		return self.__str__()
 
-	def __len__ (self):
-		return len(self._packed)
-
 	def __hash__ (self):
 		return hash(str(self))
 
