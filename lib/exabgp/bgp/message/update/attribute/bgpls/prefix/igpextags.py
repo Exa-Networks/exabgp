@@ -34,7 +34,7 @@ class IgpExTags(object):
 	@classmethod
 	def unpack (cls,data,length):
 		tags = []
-		n = length / 8
+		n = length // 8
 		ind = 0
 		for i in range(n):
 			tag = unpack("!Q", data[ind:8*i])[0]
