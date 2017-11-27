@@ -63,7 +63,7 @@ class IpReach(object):
 		return cls(prefix=prefix.encode('ascii'))
 
 	def json (self, compact=None):
-		return '"ip-reachability-tlv": "%s"' % self.prefix
+		return '"ip-reachability-tlv": "%s"' % str(self.prefix)
 
 	def __eq__ (self, other):
 		return self.prefix == other.prefix
