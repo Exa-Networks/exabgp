@@ -37,7 +37,7 @@ class IgpTags(object):
 	@classmethod
 	def unpack (cls,data,length):
 		tags = []
-		n = length / 4
+		n = length // 4
 		ind = 0
 		for i in range(n):
 			tag = unpack("!L", data[ind:4*i])[0]
