@@ -3,6 +3,8 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.24
+
 Version 3.4.23
   * Fix: issue parsing some flowspec routes (backport from master)
 
