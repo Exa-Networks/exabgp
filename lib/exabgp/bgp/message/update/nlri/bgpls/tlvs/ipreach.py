@@ -60,7 +60,7 @@ class IpReach(object):
 		# a 4 octet IP prefix
 		prefix_list = prefix_list + ["0"]*(4 - len(prefix_list))
 		prefix = '.'.join(prefix_list)
-		return cls(prefix=prefix.encode('ascii'))
+		return cls(prefix=prefix)
 
 	def json (self, compact=None):
 		return '"ip-reachability-tlv": "%s"' % str(self.prefix)
