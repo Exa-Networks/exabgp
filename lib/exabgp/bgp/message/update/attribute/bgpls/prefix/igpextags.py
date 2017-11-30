@@ -36,11 +36,11 @@ class IgpExTags(object):
 		tags = []
 		n = length // 8
 		ind = 0
-		for i in range(n):
-			tag = unpack("!Q", data[ind:8*i])[0]
+		for i in list(range(n)):
+			tag = unpack("!Q", data[ind:8*(i+1)])[0]
 			tags.append(tag)
 			ind += 8
 		return cls(igpextags=tags)
 
 	def json (self,compact=None):
-		return '"igp-extended-route-tags": "%s"' % str(self.igpextags)
+		return '"igp-extended-route-tags": %s' % self.igpextags
