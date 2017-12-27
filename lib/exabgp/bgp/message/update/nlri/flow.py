@@ -243,6 +243,7 @@ class NumericString (object):
 		NumericOperator.EQ: '=',
 		NumericOperator.LT | NumericOperator.EQ: '<=',
 		NumericOperator.GT | NumericOperator.EQ: '>=',
+		NumericOperator.LT | NumericOperator.GT: '!=',
 		NumericOperator.FALSE: 'false',
 
 		NumericOperator.AND: '&true',
@@ -251,6 +252,7 @@ class NumericString (object):
 		NumericOperator.AND | NumericOperator.EQ: '&=',
 		NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ: '&<=',
 		NumericOperator.AND | NumericOperator.GT | NumericOperator.EQ: '&>=',
+		NumericOperator.AND | NumericOperator.LT | NumericOperator.GT: '&!=',
 		NumericOperator.AND | NumericOperator.FALSE: '&false',
 	}
 
@@ -267,8 +269,12 @@ class BinaryString (object):
 		BinaryOperator.INCLUDE: '',
 		BinaryOperator.NOT:     '!',
 		BinaryOperator.MATCH:   '=',
-		BinaryOperator.AND | BinaryOperator.NOT:   '&!',
-		BinaryOperator.AND | BinaryOperator.MATCH: '&=',
+		BinaryOperator.NOT | BinaryOperator.MATCH:   '!=',
+		BinaryOperator.AND | BinaryOperator.INCLUDE: '&',
+		BinaryOperator.AND | BinaryOperator.NOT:     '&!',
+		BinaryOperator.AND | BinaryOperator.MATCH:   '&=',
+		BinaryOperator.AND | BinaryOperator.NOT | BinaryOperator.MATCH: '&!=',
+
 	}
 
 	def __str__ (self):
