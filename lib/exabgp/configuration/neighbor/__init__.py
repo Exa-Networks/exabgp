@@ -127,7 +127,11 @@ class ParseNeighbor (Section):
 		self.neighbors = {}
 
 	def pre (self):
-		return self.parse(self.name,'peer-address')
+		try:
+			return self.parse(self.name,'peer-address')
+		except ValueError:
+			# That's OK
+			return True
 
 	def post (self):
 		for inherit in self.scope.pop('inherit',[]):
@@ -170,6 +174,9 @@ class ParseNeighbor (Section):
 		neighbor.multisession     = capability.get('multi-session',False)
 		neighbor.operational      = capability.get('operational',False)
 		neighbor.route_refresh    = capability.get('route-refresh',0)
+
+		if neighbor.peer_address is None:
+			return self.error.set('incomplete neighbor, missing peer address')
 
 		if capability.get('graceful-restart',False) is not False:
 			neighbor.graceful_restart = capability.get('graceful-restart',0) or int(neighbor.hold_time)
@@ -239,9 +246,9 @@ class ParseNeighbor (Section):
 		if neighbor.range_size > 1 and not neighbor.passive:
 			return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
-		if neighbor.peer_address.top() in self._neighbors:
-			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.top())
-		self._neighbors.append(neighbor.peer_address.top())
+		if neighbor.name() in self._neighbors:
+			return self.error.set('duplicate peer definition %s' % neighbor.name())
+		self._neighbors.append(neighbor.name())
 
 		if neighbor.md5_password:
 			try:
