@@ -257,7 +257,10 @@ class NumericString (object):
 	}
 
 	def __str__ (self):
-		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF)], self.value)
+		op = self.operations & (CommonOperator.EOL ^ 0xFF)
+		if op in [NumericOperator.TRUE, NumericOperator.FALSE]:
+			return self._string[op]
+		return "%s%s" % (self._string.get(op, "%02X" % op), self.value)
 
 
 class BinaryString (object):
@@ -278,7 +281,8 @@ class BinaryString (object):
 	}
 
 	def __str__ (self):
-		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF)], self.value)
+		op = self.operations & (CommonOperator.EOL ^ 0xFF)
+		return "%s%s" % (self._string.get(op, "%02X" % op), self.value)
 
 
 # Components ..............................
