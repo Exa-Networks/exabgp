@@ -243,6 +243,7 @@ class NumericString (object):
 		NumericOperator.EQ: '=',
 		NumericOperator.LT | NumericOperator.EQ: '<=',
 		NumericOperator.GT | NumericOperator.EQ: '>=',
+		NumericOperator.LT | NumericOperator.GT: '!=',
 		NumericOperator.FALSE: 'false',
 
 		NumericOperator.AND: '&true',
@@ -251,11 +252,15 @@ class NumericString (object):
 		NumericOperator.AND | NumericOperator.EQ: '&=',
 		NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ: '&<=',
 		NumericOperator.AND | NumericOperator.GT | NumericOperator.EQ: '&>=',
+		NumericOperator.AND | NumericOperator.LT | NumericOperator.GT: '&!=',
 		NumericOperator.AND | NumericOperator.FALSE: '&false',
 	}
 
 	def __str__ (self):
-		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF)], self.value)
+		op = self.operations & (CommonOperator.EOL ^ 0xFF)
+		if op in [NumericOperator.TRUE, NumericOperator.FALSE]:
+			return self._string[op]
+		return "%s%s" % (self._string.get(op, "%02X" % op), self.value)
 
 
 class BinaryString (object):
@@ -267,12 +272,17 @@ class BinaryString (object):
 		BinaryOperator.INCLUDE: '',
 		BinaryOperator.NOT:     '!',
 		BinaryOperator.MATCH:   '=',
-		BinaryOperator.AND | BinaryOperator.NOT:   '&!',
-		BinaryOperator.AND | BinaryOperator.MATCH: '&=',
+		BinaryOperator.NOT | BinaryOperator.MATCH:   '!=',
+		BinaryOperator.AND | BinaryOperator.INCLUDE: '&',
+		BinaryOperator.AND | BinaryOperator.NOT:     '&!',
+		BinaryOperator.AND | BinaryOperator.MATCH:   '&=',
+		BinaryOperator.AND | BinaryOperator.NOT | BinaryOperator.MATCH: '&!=',
+
 	}
 
 	def __str__ (self):
-		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF)], self.value)
+		op = self.operations & (CommonOperator.EOL ^ 0xFF)
+		return "%s%s" % (self._string.get(op, "%02X" % op), self.value)
 
 
 # Components ..............................
