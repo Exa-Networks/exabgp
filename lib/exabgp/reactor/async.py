@@ -9,56 +9,54 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from exabgp.logger import Logger
 from exabgp.vendoring import six
-
+from collections import deque
 
 class ASYNC (object):
 	def __init__ (self):
 		self.logger = Logger()
-		self._async = []
+		self._async = deque()
 
 	def ready (self):
 		return len(self._async) > 0
 
 	def schedule (self, uid, command, callback):
 		self.logger.debug('async | %s | %s' % (uid,command),'reactor')
-		if self._async:
-			self._async[0].append((uid,callback))
-		else:
-			self._async.append([(uid,callback),])
+		self._async.append((uid,callback))
 
 	def clear (self, deluid=None):
 		if not self._async:
 			return
 		if deluid is None:
-			self._async = []
+			# We could delete all the generators just to be safe
+			self._async = deque()
 			return
-		running = []
-		for (uid,generator) in self._async[0]:
+		running = deque()
+		for (uid,generator) in self._async:
 			if uid != deluid:
 				running.append((uid,generator))
-		self._async.pop()
-		if running:
-			self._async.append(running)
+		self._async = running
 
 	def run (self):
-		if not self._async:
+		if not self.ready():
 			return False
-		running = []
 
-		for (uid,generator) in self._async[0]:
+		length = range(len(self._async))
+		uid, generator = self._async.popleft()
+
+		for _ in length:
 			try:
 				six.next(generator)
 				six.next(generator)
-				running.append((uid,generator))
 			except StopIteration:
-				pass
+				if not self._async:
+					return False
+				uid, generator = self._async.popleft()
 			except KeyboardInterrupt:
 				raise
 			except Exception as exc:
 				self.logger.error('async | %s | problem with function' % uid,'reactor')
 				for line in str(exc).split('\n'):
 					self.logger.error('async | %s | %s' % (uid,line),'reactor')
-		self._async.pop()
-		if running:
-			self._async.append(running)
+
+		self._async.appendleft((uid, generator))
 		return True
