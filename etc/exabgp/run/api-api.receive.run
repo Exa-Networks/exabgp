@@ -18,7 +18,7 @@ while True:
 			print >> sys.stderr, '   (ok) api.receive eor received', line
 			sys.stdout.flush()
 		elif 'keepalive' in line:
-			print >> sys.stderr, '   (ok) api.receive eor received', line
+			print >> sys.stderr, '   (ok) api.receive keepalive received', line
 			sys.stdout.flush()
 		elif '0.0.0.0/32' in line:
 			print >> sys.stderr, '   (ok) api.receive 0.0.0.0/32 received', line
