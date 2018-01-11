@@ -10,6 +10,7 @@ Version 4.0.4
   * Fix: Invalid JSON when parsing unknown OPEN capabilities
   * Fix: The way we iterated over the action queue could cause out of order executions
   * Fix: problem with encoding of Notification messages
+  * Fix: L being added to number with %ld on some platform and version on Python 
 
 Version 4.0.3
  * Fix: MD5 issue with python3
