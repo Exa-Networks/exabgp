@@ -91,7 +91,7 @@ class ExtendedCommunity (Attribute):
 			h <<= 8
 			h += ordinal(byte)
 		s = self.klass.__repr__(self) if self.klass else ''
-		return '{ "value": %ld, "string": "%s" }' % (h,s)
+		return '{ "value": %s, "string": "%s" }' % (h,s)
 
 	def __repr__ (self):
 		if self.klass:
