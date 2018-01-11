@@ -8,6 +8,7 @@ Version 4.0.4
   * Fix: do not tear down session if not enough space is available to pack an NLRI after attribute but treat-as-withdraw
   * Fix: BGP-LS parsing issue when using Python3
   * Fix: Invalid JSON when parsing unknown OPEN capabilities
+  * Fix: The way we iterated over the action queue could cause out of order executions
 
 Version 4.0.3
  * Fix: MD5 issue with python3
