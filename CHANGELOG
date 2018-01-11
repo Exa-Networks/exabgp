@@ -9,6 +9,7 @@ Version 4.0.4
   * Fix: BGP-LS parsing issue when using Python3
   * Fix: Invalid JSON when parsing unknown OPEN capabilities
   * Fix: The way we iterated over the action queue could cause out of order executions
+  * Fix: problem with encoding of Notification messages
 
 Version 4.0.3
  * Fix: MD5 issue with python3
