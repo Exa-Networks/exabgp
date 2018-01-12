@@ -101,7 +101,10 @@ class Protocol (object):
 			md5_base64 = self.neighbor.md5_base64
 			ttl_out = self.neighbor.ttl_out
 			self.connection = Outgoing(afi,peer,local,self.port,md5,md5_base64,ttl_out)
-			if not local and self.connection.init:
+			if not self.connection.init:
+				yield False
+				return
+			if not local:
 				self.neighbor.local_address = IP.create(self.connection.local)
 				if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
 					self.neighbor.router_id = self.neighbor.local_address
