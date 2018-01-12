@@ -43,10 +43,11 @@ Find what other users have done with it. Current documented use cases include DD
 %{__python2} setup.py install -O1 --root ${RPM_BUILD_ROOT}
 
 # fix file locations
+install bin/healthcheck ${RPM_BUILD_ROOT}%{_bindir}
 mv ${RPM_BUILD_ROOT}%{_bindir} ${RPM_BUILD_ROOT}%{_sbindir}
 mv ${RPM_BUILD_ROOT}%{_sbindir}/healthcheck ${RPM_BUILD_ROOT}/%{_sbindir}/exabgp-healthcheck
 install -d -m 744 ${RPM_BUILD_ROOT}/%{_sysconfdir}/
-mv ${RPM_BUILD_ROOT}/usr/etc/exabgp ${RPM_BUILD_ROOT}/%{_sysconfdir}/
+mv ${RPM_BUILD_ROOT}/usr/share/exabgp/etc ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp
 
 install -d %{buildroot}/%{_unitdir}
 install etc/systemd/exabgp.service %{buildroot}/%{_unitdir}/
@@ -77,6 +78,7 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %attr(755, root, root) %{_sbindir}/exabgp
 %attr(755, root, root) %{_sbindir}/exabgp-healthcheck
 %dir %{_sysconfdir}/exabgp
+%attr(744, root, root) %{_prefix}/share/exabgp/*
 %attr(744, root, root) %{_sysconfdir}/exabgp/*
 %{_unitdir}/exabgp.service
 %doc COPYRIGHT CHANGELOG README.md
