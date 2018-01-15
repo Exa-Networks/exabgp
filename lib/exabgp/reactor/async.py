@@ -7,11 +7,14 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.logger import Logger
-from exabgp.vendoring import six
 from collections import deque
 
+from exabgp.logger import Logger
+from exabgp.vendoring import six
+
 class ASYNC (object):
+	LIMIT = 500
+
 	def __init__ (self):
 		self.logger = Logger()
 		self._async = deque()
@@ -40,7 +43,7 @@ class ASYNC (object):
 		if not self.ready():
 			return False
 
-		length = range(len(self._async))
+		length = range(min(len(self._async),self.LIMIT))
 		uid, generator = self._async.popleft()
 
 		for _ in length:
