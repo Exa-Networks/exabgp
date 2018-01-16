@@ -17,6 +17,9 @@ from exabgp.util import concat_bytes_i
 # ======================================================================= Labels
 # RFC 3107
 
+def opt_raw_label(label, format=' (%d)'):
+    return format % label if label else ''
+
 class Labels (object):
 	MAX = pow(2,20)-1
 
@@ -41,6 +44,7 @@ class Labels (object):
 			if packed and bos:
 				packed.pop()
 				packed.append(pack('!L',(label << 4) | 1)[1:])
+			self.raw_labels = [None for _ in self.labels]
 		self.packed = concat_bytes_i(packed)
 		self._len = len(self.packed)
 
@@ -70,23 +74,23 @@ class Labels (object):
 
 	def json (self):
 		if len(self.labels) >= 1:
-			return '"label": [ %s ]' % ', '.join(["[%d, %d]" % (l,r) for (l,r) in zip(self.labels, self.raw_labels)])
+			return '"label": [ %s ]' % ', '.join(["[%d%s]" % (l,opt_raw_label(r, ', %d')) for (l,r) in zip(self.labels, self.raw_labels)])
 		else:
 			return ''
 
 	def __str__ (self):
 		if len(self.labels) > 1:
-			return ' label [ %s ]' % ' '.join(["%d (%d)" % (l,r) for (l,r) in zip(self.labels, self.raw_labels)])
+			return ' label [ %s ]' % ' '.join(["%d%s" % (l,opt_raw_label(r)) for (l,r) in zip(self.labels, self.raw_labels)])
 		elif len(self.labels) == 1:
-			return ' label %s (%d)' % (self.labels[0], self.raw_labels[0])
+			return ' label %d%s' % (self.labels[0],opt_raw_label(self.raw_labels[0]))
 		else:
 			return ''
 
 	def __repr__(self):
 		if len(self.labels) > 1:
-			return '[ %s ]' % ','.join(["%d (%d)" % (l,r) for (l,r) in zip(self.labels, self.raw_labels)])
+			return '[ %s ]' % ','.join(["%d%s" % (l,opt_raw_label(r)) for (l,r) in zip(self.labels, self.raw_labels)])
 		elif len(self.labels) == 1:
-			return '%d (%d)' % (self.labels[0], self.raw_labels[0])
+			return '%d%s' % (self.labels[0],opt_raw_label(self.raw_labels[0]))
 		else:
 			return '[ ]'
 
