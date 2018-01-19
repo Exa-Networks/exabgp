@@ -51,6 +51,7 @@ mv ${RPM_BUILD_ROOT}/usr/share/exabgp/etc ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabg
 
 install -d %{buildroot}/%{_unitdir}
 install etc/systemd/exabgp.service %{buildroot}/%{_unitdir}/
+install etc/systemd/exabgp@.service %{buildroot}/%{_unitdir}/
 
 install -d %{buildroot}/%{_mandir}/man1
 install doc/man/exabgp.1 %{buildroot}/%{_mandir}/man1
