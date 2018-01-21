@@ -161,12 +161,12 @@ def _generic_condition (tokeniser, klass):
 		while data:
 			operator,_ = _operator(data)
 			value,data = _value(_)
+			yield klass(operator | AND, klass.converter(value))
 			if data:
 				if data[0] != '&':
 					raise ValueError("Unknown binary operator %s" % data[0])
 				AND = BinaryOperator.AND
 				data = data[1:]
-			yield klass(operator | AND,klass.converter(value))
 
 
 def any_port (tokeniser):
