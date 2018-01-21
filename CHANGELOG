@@ -3,6 +3,10 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.0.5
+  * Fix: bad encoding of flow rules with &
+    reported by: Iwase Yusuke
+
 Version 4.0.4
   * Feature: draft draft-ietf-idr-bgp-extended-messages-24 support (option capability extended-message)
   * Fix: do not tear down session if not enough space is available to pack an NLRI after attribute but treat-as-withdraw
