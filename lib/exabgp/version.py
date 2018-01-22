@@ -1,6 +1,6 @@
 import os
 
-release = "4.0.4-8ce44267"
+release = "4.0.5-67a808ae"
 json = "4.0.1"
 text = "4.0.1"
 version = os.environ.get('EXABGP_VERSION',release)
