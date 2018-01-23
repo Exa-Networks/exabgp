@@ -1748,6 +1748,8 @@ class Configuration (object):
 			mask = int(mask)
 		except ValueError:
 			mask = 32
+			if ':' in ip:
+				mask = 128
 		try:
 			if 'rd' in tokens:
 				safi = SAFI(SAFI.mpls_vpn)
