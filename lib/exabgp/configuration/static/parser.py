@@ -66,6 +66,8 @@ def prefix (tokeniser):
 		ip,mask = ip.split('/')
 	except ValueError:
 		mask = '32'
+		if ':' in ip:
+			mask = '128'
 
 	tokeniser.afi = IP.toafi(ip)
 	return IPRange.create(ip,mask)
