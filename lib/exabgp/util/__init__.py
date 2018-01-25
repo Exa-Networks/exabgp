@@ -81,6 +81,8 @@ if PY2:
 		return string
 else:
 	def str_ascii(bytestring):
+                if isinstance(bytestring, str):
+                    return bytestring
 		return str(bytestring, 'ascii')
 
 if PY2:
@@ -88,4 +90,6 @@ if PY2:
 		return string
 else:
 	def bytes_ascii(bytestring):
+		if isinstance(bytestring, bytes):
+			return bytestring
 		return bytes(bytestring, 'ascii')
