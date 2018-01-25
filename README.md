@@ -135,6 +135,7 @@ The following projects are related to ExaBGP
   - [ExaZK](https://github.com/shtouff/exazk) a plugin to interface ExaBGP & ZooKeeper
   - [exazk](https://github.com/ton31337/exazk) a ruby solution to interface ExaBGP & ZooKeeper to achieve service HA
   - [exabgp-healthcheck](https://github.com/shthead/exabgp-healthcheck) A third party healthcheck program in Perl
+  - [exa-template](https://github.com/ton31337/exa-template) service discovery by BGP communities. more information on this [blog](http://blog.donatas.net/blog/2017/03/02/exa-template/)
 
 **Performance**
   - [bgperf](https://github.com/osrg/bgperf) Stress test solution for Bird and Quagga (can be used with other implementations)
@@ -149,7 +150,6 @@ The following projects are related to ExaBGP
   - [Bird](http://bird.network.cz/) very good C based BGP implementation with powerful route filtering language for network administrators
   - [GoBGP](https://github.com/osrg/gobgp) an implementation with various binding for programmers
   - [RYU](https://github.com/osrg/ryu) for SDN fans
-  - [exa-template](https://github.com/ton31337/exa-template) service discovery by BGP communities. More information on http://blog.donatas.net/blog/2017/03/02/exa-template/
 
 **Commercial**
   - [WanGuard](https://www.andrisoft.com/software/wanguard) DDOS protection from Andrisoft with ExaBGP integration
