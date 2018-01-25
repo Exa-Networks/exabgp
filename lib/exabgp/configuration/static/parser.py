@@ -213,7 +213,7 @@ def as_path (tokeniser):
 					inset = True
 					while True:
 						value = tokeniser()
-						if value == ')':
+						if value in (')',']'):
 							break
 						as_set.append(ASN.from_string(value))
 				if value == ')':
