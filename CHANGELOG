@@ -5,6 +5,11 @@ Version explained:
 
 Version 4.0.6
  * Fix: default network for IPv6 is 128 .. not 32
+   patch by: Donatas Abraitis
+ * Fix: issue when parsing AS_SET with '['
+   patch by: Kyle Birkeland
+ * Fix: parding of MD5 string in configuration
+   patch by: Kyle Birkeland
 
 Version 4.0.5
   * Fix: bad encoding of flow rules with &
