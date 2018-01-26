@@ -127,16 +127,17 @@ def MD5 (io, ip, port, md5, md5_base64):
 	elif platform_os == 'Linux':
 		try:
 			if md5:
+				md5_bytes = None
 				if md5_base64 is True:
 					try:
-						md5 = base64.b64decode(md5)
+						md5_bytes = base64.b64decode(md5)
 					except TypeError:
 						raise MD5Error("Failed to decode base 64 encoded PSK")
 				elif md5_base64 is None:  # auto
 					options = [md5+'==', md5+'=', md5]
 					for md5 in options:
 						try:
-							md5 = base64.b64decode(md5)
+							md5_bytes = base64.b64decode(md5)
 							break
 						except TypeError:
 							pass
@@ -162,7 +163,8 @@ def MD5 (io, ip, port, md5, md5_base64):
 
 			TCP_MD5SIG_MAXKEYLEN = 80
 			if md5:
-				md5_bytes = bytes_ascii(md5)
+				if md5_bytes is None:
+					md5_bytes = bytes_ascii(md5)
 				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
 			else:
 				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
