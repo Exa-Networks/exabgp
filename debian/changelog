@@ -1,3 +1,9 @@
+exabgp (4.0.5-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Bernat <bernat@debian.org>  Sat, 27 Jan 2018 17:17:22 +0100
+
 exabgp (4.0.2-2) unstable; urgency=medium
 
   * d/control: build-depends on python*-pkg-resources. Closes: #880219.
