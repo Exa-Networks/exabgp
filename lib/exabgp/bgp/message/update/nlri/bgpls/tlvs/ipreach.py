@@ -59,12 +59,11 @@ class IpReach(object):
 		# fill the rest of the octets with 0 to construct
 		# a 4 octet IP prefix
 		prefix_list = prefix_list + ["0"]*(4 - len(prefix_list))
-		prefix = b".".join(prefix_list)
-
+		prefix = '.'.join(prefix_list) 
 		return cls(prefix=prefix)
 
 	def json (self, compact=None):
-		return '"ip-reachability-tlv": "%s"' % self.prefix
+		return '"ip-reachability-tlv": "%s"' % str(self.prefix)
 
 	def __eq__ (self, other):
 		return self.prefix == other.prefix

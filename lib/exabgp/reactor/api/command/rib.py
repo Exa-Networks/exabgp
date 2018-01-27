@@ -45,7 +45,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
 				for change in changes:
 					if isinstance(change.nlri, route_type):
 						if extensive:
-							reactor.processes.answer(service,'neighbor %s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()),force=True)
+							reactor.processes.answer(service,'%s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()),force=True)
 						else:
 							reactor.processes.answer(service,'neighbor %s %s %s' % (peer.neighbor.peer_address,'%s %s' % change.nlri.family(),str(change.nlri)),force=True)
 				yield True
@@ -98,7 +98,6 @@ def flush_adj_rib_out (self, reactor, service, line):
 			peer = reactor.peers.get(peer_name, None)
 			if not peer:
 				continue
-			peer.schedule_rib_check(True)
 			yield False
 
 		reactor.processes.answer_done(service)

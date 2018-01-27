@@ -166,6 +166,7 @@ class ParseNeighbor (Section):
 		capability = local.get('capability',{})
 		neighbor.add_path         = capability.get('add-path',0)
 		neighbor.asn4             = capability.get('asn4',True)
+		neighbor.extended_message = capability.get('extended-message',True)
 		neighbor.multisession     = capability.get('multi-session',False)
 		neighbor.operational      = capability.get('operational',False)
 		neighbor.route_refresh    = capability.get('route-refresh',0)

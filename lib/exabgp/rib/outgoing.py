@@ -128,7 +128,9 @@ class OutgoingRIB (Cache):
 
 		# import traceback
 		# traceback.print_stack()
-		# print "inserting", change.extensive()
+		# print("\n\n\n")
+		# print("%s %s" % ('inserting' if change.nlri.action == OUT.ANNOUNCE else 'withdrawing', change.extensive()))
+		# print("\n\n\n")
 
 		if not force and self._enhanced_refresh_start:
 			self._enhanced_refresh_delay.append(change)
@@ -158,15 +160,30 @@ class OutgoingRIB (Cache):
 		# So to work correctly, you need to track sent changes (which costs)
 		# And the yield makes it very cpu/memory intensive ..
 
-		# add the route to the list to be announced
+		# always remove previous announcement if cancelled or replaced before being sent
+		if change.nlri.action == OUT.WITHDRAW:
+			prev_change = new_nlri.get(change_index, None)
+			if prev_change:
+				prev_change_index = prev_change.index()
+				prev_change_attr_index = prev_change.attributes.index()
+				attr_af_nlri.setdefault(prev_change_attr_index,{}).setdefault(change_family,RIBdict({})).pop(prev_change_index,None)
+			# then issue the normal withdrawal
+
+		# add the route to the list to be announced/withdrawn
 		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,RIBdict({}))[change_index] = change
 		new_nlri[change_index] = change
+		new_attr[change_attr_index] = change.attributes
 		self.update_cache(change)
 
-		if change_attr_index not in new_attr:
-			new_attr[change_attr_index] = change.attributes
-
 	def updates (self, grouped):
+		attr_af_nlri = self._new_attr_af_nlri
+		new_attr = self._new_attribute
+
+		# Get ready to accept more data
+		self._new_nlri = {}
+		self._new_attr_af_nlri = {}
+		self._new_attribute = {}
+
 		# if we need to perform a route-refresh, sending the message
 		# to indicate the start of the announcements
 
@@ -177,9 +194,6 @@ class OutgoingRIB (Cache):
 			yield Update(RouteRefresh(afi,safi,RouteRefresh.start),Attributes())
 
 		# generating Updates from what is in the RIB
-
-		attr_af_nlri = self._new_attr_af_nlri
-		new_attr = self._new_attribute
 
 		for attr_index,per_family in attr_af_nlri.items():
 			for family, changes in per_family.items():
@@ -196,12 +210,6 @@ class OutgoingRIB (Cache):
 				else:
 					for change in changes.values():
 						yield Update([change.nlri,], attributes)
-
-		# Update were send, clear the data we used
-
-		self._new_nlri = {}
-		self._new_attr_af_nlri = {}
-		self._new_attribute = {}
 
 		# If we are performing a route-refresh, indicating that the
 		# update were all sent

@@ -29,6 +29,7 @@ These organisations have spoken of, or are using/have used ExaBGP:
 [MaxCDN](https://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
 [Microsoft](https://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
 [OpenDNS](https://blog.opendns.com/2013/01/10/high-availability-with-anycast-routing/),
+[Oracle](https://dyn.com/blog/how-oracle-dyn-leveraged-open-standards-and-chatbots-to-better-respond-to-attacks/#close),
 [PowerDNS](https://blog.powerdns.com/2016/02/23/an-important-update-on-new-powerdns-products/),
 [RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf), ...
 
@@ -49,8 +50,8 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.0.0.tar.gz | tar zx
-> ./exabgp-4.0.0/sbin/exabgp --help
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.0.5.tar.gz | tar zx
+> ./exabgp-4.0.5/sbin/exabgp --help
 > ./bin/healthcheck --help
 ```
 
@@ -65,6 +66,8 @@ If using `git`, for production deployment, please use the "3.4` branch.
 Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
 
 The configuration file and API format change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG) and check their setup after upgrade.
+
+ExaBGP 4.0 and later are targeting python3 when ExaBGP 3.4 and previous versions are python2 applications. At the moment, it is possible to run ExaBGP 4.0 using python2.7 but this backward compatibility should not be relied upon.
 
 ## Support
 
@@ -93,7 +96,7 @@ The documentation is known to be imperfect. One could even say wanting, limited,
 
 Other users did however do a fair bit of [`documentation`](https://github.com/Exa-Networks/exabgp/wiki/Related-articles), just not on the [`wiki`](https://github.com/Exa-Networks/exabgp/wiki). :cry:
 
-To understand how ExaBGP should be configured, please have a look into the [`qa/conf`](https://github.com/Exa-Networks/exabgp/tree/master/qa/conf) folder of the repository where a great many examples are available.
+To understand how ExaBGP should be configured, please have a look into the [`etc/exabgp`](https://github.com/Exa-Networks/exabgp/tree/master/etc/exabgp) folder of the repository where a great many examples are available.
 
 `exabgp --help`  is also a treasure trove of information.
 
@@ -108,8 +111,8 @@ The following projects are related to ExaBGP
   - [exabgp-voipbl](https://github.com/GeertHauwaerts/exabgp-voipbl) advertises local or/and voipbl.org blacklist using unicast or flow route.
 
 **Network Monitoring**
-  - [GIXLG](https://code.google.com/p/gixlg/) a looking glass with visualisation
-  - [lookify](https://github.com/Shopify/lookify) another looking glass
+  - [GIXLG](https://github.com/dpiekacz/gixlg) a looking glass with visualisation
+  - [lookify](https://github.com/marc-barry/lookify) another looking glass
   - [invalidroutesreporter](https://github.com/pierky/invalidroutesreporter) report/log invalid routes received by route servers
 
 **Route Announcement**

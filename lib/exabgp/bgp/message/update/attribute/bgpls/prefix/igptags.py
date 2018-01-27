@@ -37,13 +37,13 @@ class IgpTags(object):
 	@classmethod
 	def unpack (cls,data,length):
 		tags = []
-		n = length / 4
+		n = length // 4
 		ind = 0
-		for i in range(n):
-			tag = unpack("!L", data[ind:4*i])[0]
+		for i in list(range(n)):
+			tag = unpack("!L", data[ind:4*(i+1)])[0]
 			tags.append(tag)
 			ind += 4
 		return cls(igptags=tags)
 
 	def json (self,compact=None):
-		return '"igp-route-tags": "%s"' % str(self.igptags)
+		return '"igp-route-tags": %s' % self.igptags

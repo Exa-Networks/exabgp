@@ -25,7 +25,6 @@ def announce_watchdog (self, reactor, service, line):
 			neighbor.rib.outgoing.announce_watchdog(name)
 			yield False
 
-		reactor.schedule_rib_check()
 		reactor.processes.answer_done(service)
 
 	try:
@@ -47,7 +46,6 @@ def withdraw_watchdog (self, reactor, service, line):
 			neighbor.rib.outgoing.withdraw_watchdog(name)
 			yield False
 
-		reactor.schedule_rib_check()
 		reactor.processes.answer_done(service)
 
 	try:

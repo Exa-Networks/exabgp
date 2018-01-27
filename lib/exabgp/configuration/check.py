@@ -11,6 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import sys
 import traceback
+import copy
 
 from exabgp.util import character
 from exabgp.util import ordinal
@@ -62,7 +63,8 @@ def check_neighbor (neighbors):
 	logger.notice('\ndecoding routes in configuration','parser')
 
 	for name in neighbors.keys():
-		neighbor = neighbors[name]
+		neighbor = copy.deepcopy(neighbors[name])
+		neighbor.local_as = neighbor.peer_as
 
 		path = {}
 		for f in NLRI.known_families():

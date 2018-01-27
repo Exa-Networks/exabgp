@@ -323,6 +323,8 @@ class Logger (object):
 			src = 'wire'
 		elif source.startswith('outgoing-'):
 			src = 'wire'
+		elif source.startswith('ka-'):
+			src = 'timer'
 		elif source.startswith('peer-'):
 			src = 'network'
 		else:

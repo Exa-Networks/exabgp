@@ -107,8 +107,6 @@ class Peer (object):
 		self._reconfigure = True
 		# We want to send all the known routes
 		self._resend_routes = SEND.DONE
-		# We have new routes for the peers
-		self._have_routes = True
 
 		# We have been asked to teardown the session with this code
 		self._teardown = None
@@ -174,9 +172,6 @@ class Peer (object):
 		self._resend_routes = SEND.NORMAL
 		self._delay.reset()
 
-	def schedule_rib_check (self, update=None):
-		self._have_routes = self.neighbor.flush if update is None else update
-
 	def reestablish (self, restart_neighbor=None):
 		# we want to tear down the session and re-establish it
 		self._teardown = 3
@@ -210,7 +205,7 @@ class Peer (object):
 		# if the other side fails, we go back to idle
 		if self.fsm == FSM.ESTABLISHED:
 			self.logger.debug('we already have a peer in state established for %s' % connection.name(),self.id())
-			return connection.notification(6,7,b'could not accept the connection, already established')
+			return connection.notification(6,7,'could not accept the connection, already established')
 
 		# 6.8 The convention is to compare the BGP Identifiers of the peers
 		# involved in the collision and to retain only the connection initiated
@@ -225,7 +220,7 @@ class Peer (object):
 
 			if remote_id < local_id:
 				self.logger.debug('closing incoming connection as we have an outgoing connection with higher router-id for %s' % connection.name(),self.id())
-				return connection.notification(6,7,b'could not accept the connection, as another connection is already in open-confirm and will go through')
+				return connection.notification(6,7,'could not accept the connection, as another connection is already in open-confirm and will go through')
 
 		# accept the connection
 		if self.proto:
@@ -293,7 +288,10 @@ class Peer (object):
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
 			if ordinal(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.NOW
+				# If a peer does not reply to OPEN message, or not enough bytes
+				# yielding ACTION.NOW can cause ExaBGP to busy spin trying to
+				# read from peer. See GH #723 .
+				yield ACTION.LATER
 		yield message
 
 	def _send_ka (self):
@@ -303,7 +301,7 @@ class Peer (object):
 	def _read_ka (self):
 		# Start keeping keepalive timer
 		for message in self.proto.read_keepalive():
-			self.recv_timer.check_ka(message)
+			self.recv_timer.check_ka_timer(message)
 			yield ACTION.NOW
 
 	def _establish (self):
@@ -329,6 +327,8 @@ class Peer (object):
 			if received_open in ACTION.ALL:
 				yield received_open
 		self.proto.negotiated.received(received_open)
+
+		self.proto.connection.msg_size = self.proto.negotiated.msg_size
 
 		# if we mirror the ASN, we need to read first and send second
 		if not self.neighbor.local_as:
@@ -455,29 +455,23 @@ class Peer (object):
 						# do not keep the previous routes in memory as they are not useful anymore
 						self._neighbor.backup_changes = []
 
-					self._have_routes = True
-
 				# Take the routes already sent to that peer and resend them
 				if self._resend_routes != SEND.DONE:
 					enhanced = True if refresh_enhanced and self._resend_routes == SEND.REFRESH else False
 					self._resend_routes = SEND.DONE
 					self.neighbor.rib.outgoing.resend(send_families,enhanced)
-					self._have_routes = True
 					send_families = []
 
 				# Need to send update
-				if self._have_routes and not new_routes:
-					self._have_routes = False
+				if not new_routes and self.neighbor.rib.outgoing.pending():
 					# XXX: in proto really. hum to think about ?
 					new_routes = self.proto.new_update(include_withdraw)
 
 				if new_routes:
 					try:
-						count = 20
-						while count:
+						for _ in range(25):
 							# This can raise a NetworkError
 							six.next(new_routes)
-							count -= 1
 					except StopIteration:
 						new_routes = None
 						include_withdraw = True
@@ -665,6 +659,7 @@ class Peer (object):
 				'route-refresh': capa.announced(Capability.CODE.ROUTE_REFRESH),
 				'multi-session': capa.announced(Capability.CODE.MULTISESSION) or capa.announced(Capability.CODE.MULTISESSION_CISCO),
 				'add-path':      capa.announced(Capability.CODE.ADD_PATH),
+				'extended-message': capa.announced(Capability.CODE.EXTENDED_MESSAGE),
 				'graceful-restart': capa.announced(Capability.CODE.GRACEFUL_RESTART),
 			})
 
@@ -674,6 +669,7 @@ class Peer (object):
 			'multi-session':    (tri(self.neighbor.multisession), tri(peer['multi-session'])),
 			'operational':      (tri(self.neighbor.operational), tri(peer['operational'])),
 			'add-path':         (tri(self.neighbor.add_path),tri(peer['add-path'])),
+			'extended-message': (tri(self.neighbor.extended_message),tri(peer['extended-message'])),
 			'graceful-restart': (tri(self.neighbor.graceful_restart),tri(peer['graceful-restart'])),
 		}
 

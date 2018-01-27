@@ -34,6 +34,7 @@ while messages:
 	else:
 		sys.stdout.write(message + '\n')
 		sys.stdout.flush()
+		time.sleep(0.1)
 
 try:
 	now = time.time()

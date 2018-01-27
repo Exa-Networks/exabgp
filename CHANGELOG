@@ -3,6 +3,51 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.0.5
+  * Fix: bad encoding of flow rules with &
+    reported by: Iwase Yusuke
+
+Version 4.0.4
+  * Feature: draft draft-ietf-idr-bgp-extended-messages-24 support (option capability extended-message)
+  * Fix: do not tear down session if not enough space is available to pack an NLRI after attribute but treat-as-withdraw
+  * Fix: BGP-LS parsing issue when using Python3
+  * Fix: Invalid JSON when parsing unknown OPEN capabilities
+  * Fix: The way we iterated over the action queue could cause out of order executions
+  * Fix: problem with encoding of Notification messages
+  * Fix: L being added to number with %ld on some platform and version on Python 
+  * Fix: fix string representations with MPLS raw labels
+    patch by: Thomas Morin
+  * Feature: Add a systemd exabgp instance service
+    patch by: jmauro
+
+Version 4.0.3
+ * Fix: MD5 issue with python3
+ * Fix: control of logging for timer events
+ * Fix: possible packet data not being reset in update generation
+ * Fix: could miss API command if sent at faster than read rate
+ * Fix: bad json encoding
+   reported by: Tyson Clugg
+ * Fix: missing L2VPN/EVPN to next-hop sizing check
+   patch by: jsynack
+ * Fix: allow an hold-time of zero
+   patch by: andrius-adamavicius
+ * Fix: printing of RT
+   reported by: abreu75
+ * Fix: allow a single KA for hold-time of zero
+   reported by: andrius-adamavicius
+ * Fix: api report writing the word neighbor twice
+   patch by: chantra
+ * Fix: setup.py script functions not working
+   patch by: aabdnn
+ * Fix: the API would spin on EOF (issue #704)
+   patch by: chantra
+ * Fix: exabgp.tcp.once was not exiting
+   patch by: dhammika
+ * Fix: api poller slow down
+   patch by: dhammika
+ * Fix: EVPN decoding on type 4 NLRI
+   patch by: kvlangenhove
+
 Version 4.0.2
  * Feature: exabgpcli
  * Feature: draft-ietf-idr-link-bandwidth-06

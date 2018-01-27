@@ -74,10 +74,6 @@ class Protocol (object):
 		else:
 			self.port = 179
 
-		# XXX: FIXME: check the the -19 is correct (but it is harmless)
-		# The message size is the whole BGP message _without_ headers
-		self.message_size = Message.MAX_LEN-Message.HEADER_LEN
-
 		from exabgp.configuration.environment import environment
 		self.log_routes = peer.neighbor.adj_rib_in or environment.settings().log.routes
 
@@ -105,7 +101,10 @@ class Protocol (object):
 			md5_base64 = self.neighbor.md5_base64
 			ttl_out = self.neighbor.ttl_out
 			self.connection = Outgoing(afi,peer,local,self.port,md5,md5_base64,ttl_out)
-			if not local and self.connection.init:
+			if not self.connection.init:
+				yield False
+				return
+			if not local:
 				self.neighbor.local_address = IP.create(self.connection.local)
 				if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
 					self.neighbor.router_id = self.neighbor.local_address

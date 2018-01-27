@@ -14,11 +14,11 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.routerid import RouterID
+from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 
 
 class Negotiated (object):
-	MAX_SIZE = 4096
-	FREE_SIZE = MAX_SIZE - 19 - 2 - 2
+	FREE_SIZE = ExtendedMessage.INITIAL_SIZE - 19 - 2 - 2
 
 	def __init__ (self, neighbor):
 		self.neighbor = neighbor
@@ -33,7 +33,7 @@ class Negotiated (object):
 		self.asn4 = False
 		self.addpath = RequirePath()
 		self.multisession = False
-		self.msg_size = self.MAX_SIZE
+		self.msg_size = ExtendedMessage.INITIAL_SIZE
 		self.operational = False
 		self.refresh = REFRESH.ABSENT  # pylint: disable=E1101
 		self.aigp = None
@@ -76,6 +76,9 @@ class Negotiated (object):
 			self.refresh = REFRESH.ENHANCED  # pylint: disable=E1101
 		elif recv_capa.announced(Capability.CODE.ROUTE_REFRESH) and sent_capa.announced(Capability.CODE.ROUTE_REFRESH):
 			self.refresh = REFRESH.NORMAL  # pylint: disable=E1101
+
+		if recv_capa.announced(Capability.CODE.EXTENDED_MESSAGE) and sent_capa.announced(Capability.CODE.EXTENDED_MESSAGE):
+			self.msg_size = ExtendedMessage.EXTENDED_SIZE
 
 		self.multisession  = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(Capability.CODE.MULTISESSION)
 		self.multisession |= sent_capa.announced(Capability.CODE.MULTISESSION_CISCO) and recv_capa.announced(Capability.CODE.MULTISESSION_CISCO)
