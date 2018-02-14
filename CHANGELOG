@@ -10,6 +10,8 @@ Version 4.0.6
    patch by: Kyle Birkeland
  * Fix: parding of MD5 string in configuration
    patch by: Kyle Birkeland
+ * Change: if exabgp is installed in /usr, the configuration will be looked into /etc (and not /usr/etc)
+   request by: Vascko
 
 Version 4.0.5
   * Fix: bad encoding of flow rules with &
