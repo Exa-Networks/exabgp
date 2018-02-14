@@ -143,7 +143,9 @@ def main ():
 		return
 
 	root = root_folder(options,['/bin/exabgp','/sbin/exabgp','/lib/exabgp/application/bgp.py','/lib/exabgp/application/control.py'])
-	etc = root + '/etc/exabgp'
+	prefix = '' if root == '/usr' else root
+	etc = prefix + '/etc/exabgp'
+
 	os.environ['EXABGP_ETC'] = etc  # This is not most pretty
 
 	if options["--version"]:

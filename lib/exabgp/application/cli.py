@@ -47,7 +47,8 @@ def main ():
 	options['--env'] = ''  # exabgp compatibility
 
 	root = root_folder(options,['/bin/exabgpcli','/sbin/exabgpcli','/lib/exabgp/application/cli.py'])
-	etc = root + '/etc/exabgp'
+	prefix = '' if root == '/usr' else root
+	etc = prefix + '/etc/exabgp'
 	envfile = get_envfile(options,etc)
 	env = get_env(envfile)
 	pipename = env['api']['pipename']
