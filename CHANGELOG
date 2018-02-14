@@ -4,6 +4,8 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.4.24
+  * Fix: support range syntax in Flows protocol, added protocol validation
+    patch by: Omri Matitiau
   * Fix: default for IPv6 should be 128 .. not 32 !
 
 Version 3.4.23
