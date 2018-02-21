@@ -389,16 +389,26 @@ def loop (options):
                                                            options.next_hop or "self")
             if command == "announce":
                 announce = "{0} med {1}".format(announce, metric)
-                if options.community:
+                #With only disabled_community only add community string when we are down or disabled
+                if options.disabled_community and not options.community:
+                        if target in (states.DOWN, states.DISABLED):
+                            announce = "{0} community [ {1} ]".format(announce,
+                                                                      options.disabled_community)
+                #Don't add community twice when things are good and we have both
+                elif options.disabled_community and options.community:
+                        if target in (states.DOWN, states.DISABLED):
+                            announce = "{0} community [ {1} ]".format(announce,
+                                                                      options.disabled_community)
+                        else:
+                            announce = "{0} community [ {1} ]".format(announce,
+                                                                      options.community)
+                elif options.community:
                     announce = "{0} community [ {1} ]".format(announce,
                                                               options.community)
+
                 if options.as_path:
                     announce = "{0} as-path [ {1} ]".format(announce,
                                                               options.as_path)
-            if target in (states.DOWN, states.DISABLED):
-                if options.disabled_community:
-                    announce = "{0} community [ {1} ]".format(announce,
-                                                              options.disabled_community)
             logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
             metric += options.increase
