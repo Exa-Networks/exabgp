@@ -197,6 +197,9 @@ def parse():
     g.add_argument("--large-community", metavar="LARGECOMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied large community")
+    g.add_argument("--disabled-community", metavar="DISABLEDCOMMUNITY",
+                   type=str, default=None,
+                   help="announce IPs with the supplied community when disabled")
     g.add_argument("--as-path", metavar="ASPATH",
                    type=str, default=None,
                    help="announce IPs with the supplied as-path")
@@ -482,7 +485,12 @@ def loop(options):
                     announce = "{0} as-path [ {1} ]".format(
                         announce,
                         options.as_path)
-            logger.debug("exabgp: %s %s", command, announce)
+            if target in (states.DOWN, states.DISABLED):
+                if options.disabled_community:
+                    announce = "{0} community [ {1} ]".format(
+                        announce,
+                        options.disabled_community)
+            logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
             # Flush command and wait for confirmation from ExaBGP
             sys.stdout.flush()
