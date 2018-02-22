@@ -389,22 +389,13 @@ def loop (options):
                                                            options.next_hop or "self")
             if command == "announce":
                 announce = "{0} med {1}".format(announce, metric)
-                #With only disabled_community only add community string when we are down or disabled
-                if options.disabled_community and not options.community:
-                        if target in (states.DOWN, states.DISABLED):
-                            announce = "{0} community [ {1} ]".format(announce,
-                                                                      options.disabled_community)
-                #Don't add community twice when things are good and we have both
-                elif options.disabled_community and options.community:
-                        if target in (states.DOWN, states.DISABLED):
-                            announce = "{0} community [ {1} ]".format(announce,
-                                                                      options.disabled_community)
-                        else:
-                            announce = "{0} community [ {1} ]".format(announce,
-                                                                      options.community)
-                elif options.community:
-                    announce = "{0} community [ {1} ]".format(announce,
-                                                              options.community)
+
+		if options.community or options.disabled_community:
+                    community = options.community
+                    if target in (states.DOWN, states.DISABLED) and options.disabled_community:
+                        community = options.disabled_community
+                    if community:
+                        announce = "{0} community [ {1} ]".format(announce, community)
 
                 if options.as_path:
                     announce = "{0} as-path [ {1} ]".format(announce,
