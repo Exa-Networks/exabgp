@@ -27,7 +27,7 @@ def inherit (tokeniser):
 
 def hostname (tokeniser):
 	value = string(tokeniser)
-	if not value[0].isalnum() or value[0].isdigit():
+	if not value[0].isalnum():
 		raise ValueError('bad host-name (alphanumeric)')
 	if not value[-1].isalnum() or value[-1].isdigit():
 		raise ValueError('bad host-name (alphanumeric)')
