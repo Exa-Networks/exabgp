@@ -19,7 +19,7 @@ else:
 
 PANIC = """
 ********************************************************************************
-EXABGP CRASHED / HELP US FIX IT
+EXABGP HAD AN INTERNAL ISSUE / HELP US FIX IT
 ********************************************************************************
 
 Sorry, you encountered a problem with ExaBGP and we could not keep the program
