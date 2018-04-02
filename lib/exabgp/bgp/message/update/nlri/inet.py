@@ -109,9 +109,8 @@ class INET (NLRI):
 		rd_mask = rd_size * 8
 
 		if safi.has_label():
-			nb_labels = (mask - rd_mask - (len(bgp) - rd_size) * 8) // 24
 			labels = []
-			for _ in range(nb_labels):
+			while mask - rd_mask > 24:
 				label = int(unpack('!L',character(0) + bgp[:3])[0])
 				bgp = bgp[3:]
 				mask -= 24  	# 3 bytes
