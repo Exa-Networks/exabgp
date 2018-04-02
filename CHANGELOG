@@ -13,6 +13,8 @@ Version 4.0.6
  * Fix: bug generating flows with redirect
    reported by: jasonsdn
  * Fix: decoding of routes with label, the number of label to decode was badly calculated
+ * Fix: allow digit as first letter of hostname
+   reported by: Vascko
  * Change: if exabgp is installed in /usr, the configuration will be looked into /etc (and not /usr/etc)
    request by: Vascko
 
