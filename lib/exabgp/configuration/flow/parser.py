@@ -2,6 +2,7 @@ from exabgp.util import character
 from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message.open.asn import ASN
@@ -277,7 +278,7 @@ def redirect (tokeniser):
 			raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 		if route_target >= pow(2,32):
 			raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-		return None,ExtendedCommunities().add(TrafficRedirect(asn,route_target))
+		return NoNextHop,ExtendedCommunities().add(TrafficRedirect(asn,route_target))
 	else:
 		return IP.create(data),ExtendedCommunities().add(TrafficNextHop(False))
 
