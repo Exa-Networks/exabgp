@@ -62,6 +62,7 @@ class _Configuration (object):
 	def __init__ (self):
 		self.processes = {}
 		self.neighbors = {}
+		self.backup_changes = {}
 		self.logger = Logger ()
 
 	def inject_change (self, peers, change):
@@ -340,6 +341,8 @@ class Configuration (_Configuration):
 
 	def _clear (self):
 		self.processes = {}
+		for neighbor in self.neighbors:
+			self.backup_changes[neighbor] = self.neighbors[neighbor].changes
 		self.neighbors = {}
 		self._neighbors = {}
 		self._previous_neighbors = {}
@@ -390,6 +393,9 @@ class Configuration (_Configuration):
 		for neighbor in self.neighbors:
 			if neighbor in self._previous_neighbors:
 				self.neighbors[neighbor].changes = self._previous_neighbors[neighbor].changes
+
+		for neighbor in self.neighbors:
+			self.neighbors[neighbor].backup_changes = self.backup_changes.get(neighbor,[])
 
 		self._previous_neighbors = {}
 		self._cleanup()
