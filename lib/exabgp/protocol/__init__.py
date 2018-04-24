@@ -26,6 +26,11 @@ class Protocol (Enum):
 	PIM   = 0x67
 	SCTP  = 0x84
 
+	def __init__(self, value):
+		Enum.__init__(self, value)
+		if self < 0 or self > 255:
+			raise ValueError("Protocol must be between 0 and 255")
+
 	def pack (self):
 		return chr(self)
 

@@ -166,6 +166,9 @@ def parse ():
     g.add_argument("--community", metavar="COMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied community")
+    g.add_argument("--disabled-community", metavar="DISABLEDCOMMUNITY",
+                   type=str, default=None,
+                   help="announce IPs with the supplied community when disabled")
     g.add_argument("--as-path", metavar="ASPATH",
                    type=str, default=None,
                    help="announce IPs with the supplied as-path")
@@ -381,17 +384,26 @@ def loop (options):
                 command = "announce" if target is states.UP else "withdraw"
             else:
                 command = "announce"
-            announce = "route {0}/{1} next-hop {2}".format(str(ip),
-                                                           ip.max_prefixlen,
-                                                           options.next_hop or "self")
+            announce = "route {0}/{1} next-hop {2}".format(
+                str(ip),
+                ip.max_prefixlen,
+                options.next_hop or "self")
             if command == "announce":
                 announce = "{0} med {1}".format(announce, metric)
-                if options.community:
-                    announce = "{0} community [ {1} ]".format(announce,
-                                                              options.community)
+
+                if options.community or options.disabled_community:
+                    community = options.community
+                    if target in (states.DOWN, states.DISABLED):
+                        if options.disabled_community:
+                            community = options.disabled_community
+                    if community:
+                        announce = "{0} community [ {1} ]".format(
+                            announce, community)
+
                 if options.as_path:
-                    announce = "{0} as-path [ {1} ]".format(announce,
-                                                              options.as_path)
+                    announce = "{0} as-path [ {1} ]".format(
+                        announce,
+                        options.as_path)
             logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
             metric += options.increase

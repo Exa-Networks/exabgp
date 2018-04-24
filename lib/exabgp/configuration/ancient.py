@@ -2845,8 +2845,8 @@ class Configuration (object):
 				if name[0] == '=':
 					name = name[1:]
 				scope[-1]['announce'][-1].nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
+		except (IndexError,ValueError), exc:
+			self._error = self._str_flow_error + str(exc)
 			if self.debug: raise Exception()  # noqa
 			return False
 		return True
@@ -2872,7 +2872,7 @@ class Configuration (object):
 		return self._flow_generic_list(scope,tokens,FlowTCPFlag)
 
 	def _flow_route_protocol (self, scope, tokens):
-		return self._flow_generic_list(scope,tokens,FlowIPProtocol)
+		return self._flow_generic_condition(scope,tokens,FlowIPProtocol)
 
 	def _flow_route_next_header (self, scope, tokens):
 		return self._flow_generic_list(scope,tokens,FlowNextHeader)
