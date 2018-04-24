@@ -103,7 +103,7 @@ class Peer (object):
 		# The peer was restarted (to know what kind of open to send for graceful restart)
 		self._restarted = FORCE_GRACEFUL
 
-		# We want to remove routes which are not in the configuration anymote afte a signal to reload
+		# We want to remove routes which are not in the configuration anymore after a signal to reload
 		self._reconfigure = True
 		# We want to send all the known routes
 		self._resend_routes = SEND.DONE
