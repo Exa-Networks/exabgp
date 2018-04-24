@@ -1,6 +1,5 @@
 [![License](https://img.shields.io/pypi/l/exabgp.svg)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
 [![PyPI](https://img.shields.io/pypi/v/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
-[![PyPI Downloads](https://img.shields.io/pypi/dm/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI Status](https://img.shields.io/pypi/status/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI Wheel](https://img.shields.io/pypi/wheel/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![Gitter](https://badges.gitter.im/Exa-Networks/exabgp.svg)](https://gitter.im/Exa-Networks/exabgp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
@@ -50,12 +49,12 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.0.5.tar.gz | tar zx
-> ./exabgp-4.0.5/sbin/exabgp --help
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.0.6.tar.gz | tar zx
+> ./exabgp-4.0.6/sbin/exabgp --help
 > ./bin/healthcheck --help
 ```
 
-If using `git`, for production deployment, please use the "3.4` branch.
+If using `git`, for production deployment, use the "3.4` branch.
 
 ```sh
 > git clone https://github.com/Exa-Networks/exabgp.git
@@ -71,8 +70,6 @@ ExaBGP 4.0 and later are targeting python3 when ExaBGP 3.4 and previous versions
 
 ## Support
 
-[![Testing Status](https://img.shields.io/codeship/d6c1ddd0-16a3-0132-5f85-2e35c05e22b1.svg)]()
-[![Codacy Rating](https://www.codacy.com/project/badge/1f5fedb98bfd47bcb9ab868ea53ea210)](https://www.codacy.com/public/thomasmangin/exabgp_2)
 [![Landscape Code Quality](https://landscape.io/github/Exa-Networks/exabgp/master/landscape.svg)](https://landscape.io/github/Exa-Networks/exabgp/)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/badges/quality-score.png)](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/)
 [![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
@@ -80,7 +77,8 @@ ExaBGP 4.0 and later are targeting python3 when ExaBGP 3.4 and previous versions
 
 <!--
 [![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
-
+[![Testing Status](https://img.shields.io/codeship/d6c1ddd0-16a3-0132-5f85-2e35c05e22b1.svg)]()
+[![Codacy Rating](https://www.codacy.com/project/badge/1f5fedb98bfd47bcb9ab868ea53ea210)](https://www.codacy.com/public/thomasmangin/exabgp_2)
 [![Coverage Status](https://img.shields.io/scrutinizer/coverage/g/exa-networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
 -->
 
