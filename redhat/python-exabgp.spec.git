@@ -21,9 +21,9 @@ Provides:       exabgp-libs
 BuildRequires:  sed
 BuildRequires:  git
 BuildRequires:  git-extras
+BuildRequires:  python-setuptools
 Requires:       python2 >= 2.6
-Requires:	python-ipaddr
-Requires:       python-setuptools
+Requires:       python-ipaddr
 
 %description
 ExaBGP python module
