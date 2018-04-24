@@ -17,6 +17,10 @@ Version 4.0.6
    reported by: Vascko
  * Fix: Fix strip default attributes from withdrawals
    patch by: dhammika
+ * Fix: make sure routes are removed on SIGUSR1
+   patch by: Malcolm Dodds
+ * Fix: Fix RPM spec files
+   patch by: Malcolm Dodds
  * Change: if exabgp is installed in /usr, the configuration will be looked into /etc (and not /usr/etc)
    request by: Vascko
 
