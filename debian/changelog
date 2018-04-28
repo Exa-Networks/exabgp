@@ -1,9 +1,9 @@
-exabgp (4.0.5-1) unstable; urgency=medium
+exabgp (4.0.6-1) unstable; urgency=medium
 
   * New upstream release.
   * d/patches: drop all patches.
 
- -- Vincent Bernat <bernat@debian.org>  Sat, 27 Jan 2018 17:17:22 +0100
+ -- Vincent Bernat <bernat@debian.org>  Sat, 28 Apr 2018 16:45:39 +0200
 
 exabgp (4.0.2-2) unstable; urgency=medium
 
