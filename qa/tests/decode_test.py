@@ -317,6 +317,7 @@ class FakeNeighbor (object):
 	hold_time = HoldTime(180)
 	asn4 = False
 	add_path = 0
+	extended_message = False
 
 	# capability
 	route_refresh = False
