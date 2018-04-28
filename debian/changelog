@@ -4,6 +4,7 @@ exabgp (4.0.6-1) unstable; urgency=medium
   * d/patches: drop all patches.
   * d/patches: add patch to fix BGP Flowspec tests.
   * d/patches: fix a decoding test.
+  * d/rules: also run tests with Python 3.
 
  -- Vincent Bernat <bernat@debian.org>  Sat, 28 Apr 2018 16:45:39 +0200
 

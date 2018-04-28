@@ -17,7 +17,7 @@ override_dh_auto_install:
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
-	set -e; set -x; for pyvers in $(PYTHONS); do \
+	set -e; set -x; for pyvers in $(PYTHONS) $(PYTHON3S); do \
 		PYMAJOR=`echo $$pyvers | cut -d '.' -f 1`; \
 		env INTERPRETER=python$$pyvers sbin/exabgp --fi > etc/exabgp/exabgp.env ; \
 		env INTERPRETER=python$$pyvers ./qa/bin/parsing ; \
