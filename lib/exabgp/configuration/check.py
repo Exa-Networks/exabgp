@@ -125,6 +125,8 @@ def check_neighbor (neighbors):
 					else:
 						str1r = str1r.replace('next-hop self','next-hop %s' % neighbor.local_address)
 
+				str1r = str1r.replace(' next-hop no-nexthop', '')
+
 				if ' name ' in str1r:
 					parts = str1r.split(' ')
 					pos = parts.index('name')
