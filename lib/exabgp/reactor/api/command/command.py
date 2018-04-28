@@ -13,15 +13,17 @@ class Command (object):
 		'text': {},
 		'json': {},
 		'neighbor': {},
+		'options': {}
 	}
 
 	functions = []
 
 	@classmethod
-	def register (cls, encoding, name, neighbor=True):
+	def register (cls, encoding, name, neighbor=True, options=None):
 		if name not in cls.functions:
 			cls.functions.append(name)
 			cls.functions.sort(reverse=True)
+			cls.callback['options'][name] = options
 
 		def register (function):
 			cls.callback['neighbor'][name] = neighbor

@@ -153,7 +153,10 @@ class Update (Message):
 				Logger().critical('attributes size is so large we can not even pack one NLRI','parser')
 				return
 
-			yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+			if announced:
+				yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+			else:
+				yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
 
 			if nlri.action == OUT.ANNOUNCE:
 				announced = packed
@@ -166,7 +169,10 @@ class Update (Message):
 				announced = b''
 
 		if announced or withdraws:
-			yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+			if announced:
+				yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+			else:
+				yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
 
 		for family in mp_nlris.keys():
 			afi, safi = family

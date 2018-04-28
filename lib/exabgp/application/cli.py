@@ -47,7 +47,8 @@ def main ():
 	options['--env'] = ''  # exabgp compatibility
 
 	root = root_folder(options,['/bin/exabgpcli','/sbin/exabgpcli','/lib/exabgp/application/cli.py'])
-	etc = root + '/etc/exabgp'
+	prefix = '' if root == '/usr' else root
+	etc = prefix + '/etc/exabgp'
 	envfile = get_envfile(options,etc)
 	env = get_env(envfile)
 	pipename = env['api']['pipename']
@@ -145,7 +146,8 @@ def main ():
 						break
 					if line == b'error':
 						done = True
-						sys.stderr.write('ExaBGP returns an error\n')
+						sys.stderr.write('ExaBGP returns an error (see ExaBGP\'s logs for more information)\n')
+						sys.stderr.write('use help for a list of available commands\n')
 						sys.stderr.flush()
 						break
 					sys.stdout.write('%s\n' % line.decode())

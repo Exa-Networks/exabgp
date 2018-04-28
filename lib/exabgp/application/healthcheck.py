@@ -58,19 +58,25 @@ logger = logging.getLogger("healthcheck")
 
 try:
     # Python 3.3+ or backport
-    from ipaddress import ip_network as _ip_address  # pylint: disable=F0401
+    from ipaddress import ip_network as ip_network  # pylint: disable=F0401
+    from ipaddress import ip_address as ip_address  # pylint: disable=F0401
 
-    def ip_address(x):
-        try:
-            x = x.decode('ascii')
-        except AttributeError:
-            pass
-        return _ip_address(x)
+    def fix(f):
+        def fixed(x):
+            try:
+                x = x.decode('ascii')
+            except AttributeError:
+                pass
+            return f(x)
+        return fixed
+    ip_network = fix(ip_network)
+    ip_address = fix(ip_address)
 
 except ImportError:
     try:
         # Python 2.6, 2.7, 3.2
-        from ipaddr import IPNetwork as ip_address
+        from ipaddr import IPNetwork as ip_network
+        from ipaddr import IPAddress as ip_address
     except ImportError:
         sys.stderr.write(
             '\n'
@@ -157,7 +163,7 @@ def parse():
                    type=ip_address,
                    help="self IP address to use as next hop")
     g.add_argument("--ip", metavar='IP',
-                   type=ip_address, dest="ips", action="append",
+                   type=ip_network, dest="ips", action="append",
                    help="advertise this IP address or network (CIDR notation)")
     g.add_argument("--deaggregate-networks",
                    dest="deaggregate_networks", action="store_true",
@@ -197,6 +203,9 @@ def parse():
     g.add_argument("--large-community", metavar="LARGECOMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied large community")
+    g.add_argument("--disabled-community", metavar="DISABLEDCOMMUNITY",
+                   type=str, default=None,
+                   help="announce IPs with the supplied community when disabled")
     g.add_argument("--as-path", metavar="ASPATH",
                    type=str, default=None,
                    help="announce IPs with the supplied as-path")
@@ -302,7 +311,7 @@ def loopback_ips(label):
             continue
         mask = int(mo.group("mask")) or bin(int(mo.group("netmask"), 16)).count("1")
         try:
-            ip = ip_address("{0}/{1}".format(mo.group("ip"),
+            ip = ip_network("{0}/{1}".format(mo.group("ip"),
                                              mask))
         except ValueError:
             continue
@@ -319,7 +328,7 @@ def loopback_ips(label):
 def setup_ips(ips, label, sudo=False):
     """Setup missing IP on loopback interface"""
     existing = set(loopback_ips(label))
-    toadd = set([ip_address(ip) for net in ips for ip in net]) - existing
+    toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
         logger.debug("Setup loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
@@ -344,7 +353,7 @@ def remove_ips(ips, label, sudo=False):
     existing = set(loopback_ips(label))
 
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
-    toremove = set([ip_address(ip) for net in ips for ip in net]) | existing
+    toremove = set([ip_network(ip) for net in ips for ip in net]) | existing
     for ip in toremove:
         logger.debug("Remove loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
@@ -466,10 +475,14 @@ def loop(options):
 
             if command == "announce":
                 announce = "{0} med {1}".format(announce, metric)
-                if options.community:
-                    announce = "{0} community [ {1} ]".format(
-                        announce,
-                        options.community)
+                if options.community or options.disabled_community:
+                    community = options.community
+                    if target in (states.DOWN, states.DISABLED):
+                        if options.disabled_community:
+                            community = options.disabled_community
+                    if community:
+                        announce = "{0} community [ {1} ]".format(
+                            announce, community)
                 if options.extended_community:
                     announce = "{0} extended-community [ {1} ]".format(
                         announce,
@@ -482,7 +495,8 @@ def loop(options):
                     announce = "{0} as-path [ {1} ]".format(
                         announce,
                         options.as_path)
-            logger.debug("exabgp: %s %s", command, announce)
+
+            logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
             # Flush command and wait for confirmation from ExaBGP
             sys.stdout.flush()
@@ -598,7 +612,7 @@ def main():
 
         # Parse defined networks into a list of IPs for advertisement
         if options.deaggregate_networks:
-            options.ips = [ip_address(ip) for net in options.ips for ip in net]
+            options.ips = [ip_network(ip) for net in options.ips for ip in net]
 
         options.ips = collections.deque(options.ips)
         options.ips.rotate(-options.start_ip)

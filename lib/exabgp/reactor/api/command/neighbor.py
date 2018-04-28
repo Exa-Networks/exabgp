@@ -107,7 +107,7 @@ def teardown (self, reactor, service, line):
 		return False
 
 
-@Command.register('text','show neighbor',False)
+@Command.register('text', 'show neighbor', False, ['summary', 'extensive', 'configuration'])
 def show_neighbor (self, reactor, service, command):
 	words = command.split()
 

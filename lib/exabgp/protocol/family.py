@@ -226,6 +226,8 @@ class SAFI (Resource):
 		'flow-vpn':  flow_vpn,
 	}.items())
 
+	names = _SAFI._names
+
 	cache = dict([(r,r) for (l,r) in codes.items()])
 
 	@staticmethod

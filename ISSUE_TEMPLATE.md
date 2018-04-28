@@ -1,57 +1,101 @@
 <!---
-Verify first that your issue/request is not already reported on GitHub.
-Also test if the latest release, and master branch are affected too.
+Hello,
+
+We are sorry that you are experiencing an issue with ExaBGP.
+
+Before opening this issue could you please:
+ - make sure the problem was not already reported to avoid duplicates.
+ - check if the problem is still present on the latest version
+   using the 3.4 or master branch (if you know what it means)
+   alternatively the latest release (3.4 or 4.0)
+
+For us to help you the outpout of exabgp -d is often required.
+Please use ``` for any copied output.
 -->
 
-##### ISSUE TYPE
-<!--- Pick one below and delete the rest: -->
- - Bug Report
- - Feature Idea
- - Documentation Report
+##### Summary
+<!---
+Explain the problem briefly
+-->
 
 ##### OS
 <!---
-Mention the OS you are running ExaBGP on (Linux variant if relevant)
+The exact OS would be appreciated (vendor and version)
+(as OSes affect the way Python behave on some corner cases)
+-->
+```
+Linux
+MacOS
+FreeBSD
+Other (please specify)
+```
+
+<!--
+the output of `uname -a`
+-->
+```
+
+```
+
+##### Version
+<!--
+Paste verbatim the output from “exabgp --version” between quotes below
+-->
+```
+
+```
+
+##### Installation
+<!--
+Please let us know how you installed ExaBGP 
+-->
+```
+pip
+pip with virtualenv
+latest OS package
+other (please specify)
+```
+
+##### Environment 
+<!--
+Paste verbatim the output from “exabgp --di” (let us know if the output is empty) between quotes below
+You can also use gist.github.com links for larger files 
 -->
 
-##### VERSION
-<!--- Paste verbatim the output from “exabgp --version” between quotes below -->
 ```
 
 ```
 
-##### ENVIRONMENT 
-<!--- Paste verbatim the output from “exabgp --di” (let us know if the output is empty) between quotes below -->
-```
-
-```
-
-<!--- You can also use gist.github.com links for larger files -->
-
-##### CONFIGURATION
-<!--- Paste verbatim your configuration file
-```
-
-```
-
-<!--- You can also use gist.github.com links for larger files -->
-
-##### SUMMARY
-<!--- Explain the problem briefly -->
-
-##### STEPS TO REPRODUCE
-<!---
-For bugs, please if possible, please run with the "-d" option and provide the full output,
-If not possible, please provide the full fault section as reported by ExaBGP
+##### Configuration
+<!--- 
+Paste verbatim your configuration file
 -->
+```
 
+```
 
-##### EXPECTED RESULTS
-<!--- What did you expect to happen when running the steps above? -->
+##### Program output
+<!-- 
+When encountering a problem please run exabgp with the "-d" option
 
-##### ACTUAL RESULTS
-<!--- What actually happened? -->
+THIS IS THE MOST IMPORTANT INFORMATION - WITHOUT IT WE ARE UNLIKELY TO BE ABLE TO HELP
+-->
+```
 
-##### IMPORTANCE
-<!-- Please let us know if the issue is affecting you in a production environment -->
+```
 
+##### Steps to reproduce
+<!--
+If the issue is intermittent please provide how it can be reproduced
+-->
+```
+
+```
+
+##### Importance
+<!--
+Please let us know if the issue is affecting you in a production environment
+-->
+```
+
+```

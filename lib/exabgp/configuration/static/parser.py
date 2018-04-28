@@ -66,6 +66,8 @@ def prefix (tokeniser):
 		ip,mask = ip.split('/')
 	except ValueError:
 		mask = '32'
+		if ':' in ip:
+			mask = '128'
 
 	tokeniser.afi = IP.toafi(ip)
 	return IPRange.create(ip,mask)
@@ -211,7 +213,7 @@ def as_path (tokeniser):
 					inset = True
 					while True:
 						value = tokeniser()
-						if value == ')':
+						if value in (')',']'):
 							break
 						as_set.append(ASN.from_string(value))
 				if value == ')':

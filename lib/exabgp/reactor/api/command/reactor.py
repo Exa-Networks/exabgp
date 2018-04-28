@@ -19,7 +19,11 @@ def register_reactor ():
 def manual (self, reactor, service, _):
 	lines = []
 	for command in sorted(self.callback['text']):
-		lines.append('[neighbor <ip> [filters]] ' + command if self.callback['neighbor'][command] else '%s ' % command)
+		if self.callback['options'][command]:
+			extended = '%s [ %s ]' % (command, ' | '.join(self.callback['options'][command]))
+		else:
+			extended = command
+		lines.append('[neighbor <ip> [filters]] ' + command if self.callback['neighbor'][command] else '%s ' % extended)
 
 	reactor.processes.answer(service,'',True)
 	reactor.processes.answer(service,'available API commands are listed here:',True)

@@ -3,6 +3,27 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.0.6
+ * Fix: default network for IPv6 is 128 .. not 32
+   patch by: Donatas Abraitis
+ * Fix: issue when parsing AS_SET with '['
+   patch by: Kyle Birkeland
+ * Fix: parding of MD5 string in configuration
+   patch by: Kyle Birkeland
+ * Fix: bug generating flows with redirect
+   reported by: jasonsdn
+ * Fix: decoding of routes with label, the number of label to decode was badly calculated
+ * Fix: allow digit as first letter of hostname
+   reported by: Vascko
+ * Fix: Fix strip default attributes from withdrawals
+   patch by: dhammika
+ * Fix: make sure routes are removed on SIGUSR1
+   patch by: Malcolm Dodds
+ * Fix: Fix RPM spec files
+   patch by: Malcolm Dodds
+ * Change: if exabgp is installed in /usr, the configuration will be looked into /etc (and not /usr/etc)
+   request by: Vascko
+
 Version 4.0.5
   * Fix: bad encoding of flow rules with &
     reported by: Iwase Yusuke
