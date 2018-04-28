@@ -3,6 +3,7 @@ exabgp (4.0.6-1) unstable; urgency=medium
   * New upstream release.
   * d/patches: drop all patches.
   * d/patches: add patch to fix BGP Flowspec tests.
+  * d/patches: fix a decoding test.
 
  -- Vincent Bernat <bernat@debian.org>  Sat, 28 Apr 2018 16:45:39 +0200
 
