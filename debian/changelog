@@ -1,3 +1,9 @@
+exabgp (4.0.6-2) unstable; urgency=medium
+
+  * d/postinst: add exabgpcli to the alternative system.
+
+ -- Vincent Bernat <bernat@debian.org>  Sat, 28 Apr 2018 20:24:37 +0200
+
 exabgp (4.0.6-1) unstable; urgency=medium
 
   * New upstream release.
