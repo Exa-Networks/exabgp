@@ -14,6 +14,8 @@ override_dh_auto_install:
 	mkdir -p $(CURDIR)/debian/python-exabgp/usr/sbin $(CURDIR)/debian/python3-exabgp/usr/sbin
 	mv $(CURDIR)/debian/python-exabgp/usr/bin/exabgp $(CURDIR)/debian/python-exabgp/usr/sbin/python2-exabgp
 	mv $(CURDIR)/debian/python3-exabgp/usr/bin/exabgp $(CURDIR)/debian/python3-exabgp/usr/sbin/python3-exabgp
+	mv $(CURDIR)/debian/python-exabgp/usr/bin/exabgpcli $(CURDIR)/debian/python-exabgp/usr/sbin/python2-exabgpcli
+	mv $(CURDIR)/debian/python3-exabgp/usr/bin/exabgpcli $(CURDIR)/debian/python3-exabgp/usr/sbin/python3-exabgpcli
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
