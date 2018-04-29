@@ -193,7 +193,7 @@ def parse():
     g.add_argument("--increase", metavar='M',
                    type=int, default=1,
                    help=("for each additional IP address, "
-                         "increase metric value by W"))
+                         "increase metric value by M"))
     g.add_argument("--community", metavar="COMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied community")
