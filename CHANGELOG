@@ -4,6 +4,8 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.4.26
+ * Add: JSON notification messages now include the 'neighbor' structure
+    that contains the details about which peer the notify was sent from.
 
 Version 3.4.25
   * Fix: support range syntax in Flows protocol, added protocol validation

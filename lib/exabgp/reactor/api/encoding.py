@@ -243,13 +243,15 @@ class JSON (object):
 		}),'','','',1,message_type='notification')
 
 	def notification (self, peer, code, subcode, data):
-		return self._header(self._kv({
+		content_notitication = self._kv({
 			'notification': '{ %s } ' % self._kv({
 				'code':    code,
 				'subcode': subcode,
 				'data':    hexstring(data),
-			})
-		}),'','',peer.neighbor.identificator(),self.count(peer),message_type='notification')
+			})})
+		content_neighbor = self._neighbor(peer,content_notitication)
+		content_json = ", ".join([content_notitication,content_neighbor])
+		return self._header(content_json, '', '', peer.neighbor.identificator(), self.count(peer), message_type='notification')
 
 	def receive (self, peer, category, header, body):
 		return self._header(self._neighbor(peer,self._kv({
