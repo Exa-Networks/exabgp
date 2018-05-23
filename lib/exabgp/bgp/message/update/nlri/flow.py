@@ -612,6 +612,7 @@ class Flow (NLRI):
 		if length > len(bgp):
 			raise Notify(3,10,'invalid length at the start of the the flow')
 
+		over = bgp[length:]
 		bgp = bgp[:length]
 		nlri = Flow(afi,safi,nexthop)
 		nlri.action = action
@@ -664,4 +665,4 @@ class Flow (NLRI):
 					nlri.add(klass(operator,adding))
 					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),value))
 
-		return total-len(bgp),nlri
+		return total-len(over)-len(bgp),nlri
