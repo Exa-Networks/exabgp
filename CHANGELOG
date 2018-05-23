@@ -6,6 +6,10 @@ Version explained:
 Version 4.0.7
  * Fix: handling of processes when the configuration reload fails
    patch by: Malcolm Dodds
+ * Fix: healthcheck, remove options.ip_setup in dynamic ip management
+   patch by: Ahmet Demir
+ * Improvement: many fix to QA code
+   patch by: Vincent Bernart
 
 Version 4.0.6
  * Fix: default network for IPv6 is 128 .. not 32
