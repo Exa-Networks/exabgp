@@ -92,6 +92,7 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 %attr(744, root, root) %{_sysconfdir}/exabgp/examples/*
 %{_unitdir}/exabgp.service
 %{_unitdir}/exabgp@.service
+%attr(644, root, root) %{_unitdir}/*
 %doc COPYRIGHT CHANGELOG README.md
 %{_mandir}/man1/*
 %{_mandir}/man5/*
