@@ -259,8 +259,9 @@ def run (env, comment, configurations, pid=0):
 		logger.configuration(comment)
 
 	if not env.profile.enable:
-		ok = Reactor(configurations).run()
-		__exit(env.debug.memory,0 if ok else 1)
+		reactor = Reactor(configurations)
+		reactor.run()
+		__exit(env.debug.memory, reactor.exit_code)
 
 	try:
 		import cProfile as profile
@@ -268,8 +269,9 @@ def run (env, comment, configurations, pid=0):
 		import profile
 
 	if env.profile.file == 'stdout':
-		ok = profile.run('Reactor('+str(configurations)+').run()')
-		__exit(env.debug.memory,0 if ok else 1)
+		reactor = Reactor(configurations)
+		profile.run('reactor.run()')
+		__exit(env.debug.memory, reactor.exit_code)
 
 	if pid:
 		profile_name = "%s-pid-%d" % (env.profile.file,pid)
@@ -287,7 +289,8 @@ def run (env, comment, configurations, pid=0):
 		profiler = profile.Profile()
 		profiler.enable()
 		try:
-			ok = Reactor(configurations).run()
+			reactor = Reactor(configurations)
+			reactor.run()
 		except Exception:
 			raise
 		finally:
@@ -304,13 +307,14 @@ def run (env, comment, configurations, pid=0):
 				logger.reactor(notice)
 				logger.reactor("-"*len(notice))
 
-			__exit(env.debug.memory,0 if ok else 1)
+			__exit(env.debug.memory, reactor.exit_code)
 	else:
 		logger.reactor("-"*len(notice))
 		logger.reactor(notice)
 		logger.reactor("-"*len(notice))
-		Reactor(configurations).run()
-		__exit(env.debug.memory,1)
+		reactor = Reactor(configurations)
+		reactor.run()
+		__exit(env.debug.memory,reactor.exit_code)
 
 
 if __name__ == '__main__':

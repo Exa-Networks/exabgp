@@ -36,10 +36,26 @@ from exabgp.logger import Logger
 
 
 class Reactor (object):
+	class Exit (object):
+		normal = 0
+		validate = 0
+		listening = 1
+		configuration = 1
+		privileges = 1
+		log = 1
+		pid = 1
+		socket = 1
+		io_error = 1
+		process = 1
+		select = 1
+		unknown = 1
+
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
 	def __init__ (self, configurations):
+		self.exit_code = self.Exit.unknown
+
 		self.ip = environment.settings().tcp.bind
 		self.port = environment.settings().tcp.port
 		self.respawn = environment.settings().api.respawn
@@ -74,10 +90,12 @@ class Reactor (object):
 
 	def sigterm (self, signum, frame):
 		self.logger.reactor("SIG TERM received - shutdown")
+		self.exit_code = self.Exit.normal
 		self._shutdown = True
 
 	def sighup (self, signum, frame):
 		self.logger.reactor("SIG HUP received - shutdown")
+		self.exit_code = self.Exit.normal
 		self._shutdown = True
 
 	def sigalrm (self, signum, frame):
@@ -137,7 +155,8 @@ class Reactor (object):
 		# but I can not see any way to avoid it
 
 		if not self.load():
-			return False
+			self.exit_code = self.Exit.configuration
+			return self.exit_code
 
 		try:
 			self.listener = Listener()
@@ -166,7 +185,8 @@ class Reactor (object):
 		if not self.daemon.drop_privileges():
 			self.logger.reactor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'critical')
 			self.logger.reactor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'critical')
-			return
+			self.exit_code = self.Exit.privileges
+			return self.exit_code
 
 		if self.early_drop:
 			self.processes.start()
@@ -174,10 +194,12 @@ class Reactor (object):
 		# This is required to make sure we can write in the log location as we now have dropped root privileges
 		if not self.logger.restart():
 			self.logger.reactor("Could not setup the logger, aborting",'critical')
-			return
+			self.exit_code = self.Exit.log
+			return self.exit_code
 
 		if not self.daemon.savepid():
-			return
+			self.exit_code = self.Exit.pid
+			return self.exit_code
 
 		# did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
 		reload_completed = True
@@ -290,6 +312,7 @@ class Reactor (object):
 			except KeyboardInterrupt:
 				while True:
 					try:
+						self.exit_code = self.Exit.normal
 						self._shutdown = True
 						self.logger.reactor("^C received")
 						break
@@ -298,6 +321,7 @@ class Reactor (object):
 			except SystemExit:
 				while True:
 					try:
+						self.exit_code = self.Exit.normal
 						self._shutdown = True
 						self.logger.reactor("exiting")
 						break
@@ -306,6 +330,7 @@ class Reactor (object):
 			# socket.error is a subclass of IOError (so catch it first)
 			except socket.error:
 				try:
+					self.exit_code = self.Exit.socket
 					self._shutdown = True
 					self.logger.reactor('socket error received','warning')
 					break
@@ -314,6 +339,7 @@ class Reactor (object):
 			except IOError:
 				while True:
 					try:
+						self.exit_code = self.Exit.io_error
 						self._shutdown = True
 						self.logger.reactor("I/O Error received, most likely ^C during IO",'warning')
 						break
@@ -322,6 +348,7 @@ class Reactor (object):
 			except ProcessError:
 				while True:
 					try:
+						self.exit_code = self.Exit.process
 						self._shutdown = True
 						self.logger.reactor("Problem when sending message(s) to helper program, stopping",'error')
 						break
@@ -330,6 +357,7 @@ class Reactor (object):
 			except select.error:
 				while True:
 					try:
+						self.exit_code = self.Exit.select
 						self._shutdown = True
 						self.logger.reactor("problem using select, stopping",'error')
 						break
@@ -340,6 +368,8 @@ class Reactor (object):
 				# import random
 				# obj = objgraph.by_type('Route')[random.randint(0,2000)]
 				# objgraph.show_backrefs([obj], max_depth=10)
+
+		return self.exit_code
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
@@ -417,6 +447,7 @@ class Reactor (object):
 		except StopIteration:
 			pass
 		except KeyboardInterrupt:
+			self.exit_code = self.Exit.normal
 			self._shutdown = True
 			self.logger.reactor("^C received",'error')
 

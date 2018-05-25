@@ -6,6 +6,8 @@ Version explained:
 Version 3.4.27
  * Fix: correctly decode flow routes with multiple NLRI
    reported by: adrian62
+ * Improvement: exit with error code 0 on SIGTERM
+   reported by: Johan Guldmyr
 
 Version 3.4.26
  * Add: JSON notification messages now include the 'neighbor' structure
