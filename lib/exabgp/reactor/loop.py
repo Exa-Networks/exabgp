@@ -43,6 +43,7 @@ class Reactor (object):
 		self._stopping = environment.settings().tcp.once
 
 		self.max_loop_time = environment.settings().reactor.speed
+		self._sleep_time = self.max_loop_time / 100
 		self.early_drop = environment.settings().daemon.drop
 
 		self.processes = None
@@ -64,10 +65,10 @@ class Reactor (object):
 		self.signal.received = Signal.SHUTDOWN
 		self.logger.critical(reason,'reactor')
 
-	def _api_ready (self,sockets,peers):
-		sleeptime = 0 if peers or self.async.ready() else self.max_loop_time / 100
+	def _api_ready (self,sockets,sleeptime):
 		fds = self.processes.fds()
 		ios = fds + sockets
+
 		try:
 			read,_,_ = select.select(ios,[],[],sleeptime)
 			for fd in fds:
@@ -215,6 +216,8 @@ class Reactor (object):
 				if self._completed(peers):
 					reload_completed = True
 
+				sleep = self._sleep_time
+
 				# give a turn to all the peers
 				for key in list(peers):
 					peer = self.peers[key]
@@ -234,6 +237,8 @@ class Reactor (object):
 							workers[io] = key
 						# no need to come back to it before a a full cycle
 						peers.discard(key)
+					elif action == ACTION.NOW:
+						sleep = 0
 
 					if not peers:
 						break
@@ -241,10 +246,11 @@ class Reactor (object):
 				# read at least on message per process if there is some and parse it
 				for service,command in self.processes.received():
 					self.api.text(self,service,command)
+					sleep = 0
 
 				self.async.run()
 
-				for io in self._api_ready(list(workers),peers):
+				for io in self._api_ready(list(workers),sleep):
 					peers.add(workers[io])
 					del workers[io]
 
