@@ -12,6 +12,7 @@ from struct import unpack
 
 from exabgp.util import character
 from exabgp.util import concat_bytes_i
+from exabgp.util import hexstring
 
 
 # =========================================================== RouteDistinguisher
@@ -58,7 +59,7 @@ class RouteDistinguisher (object):
 		elif t == 2:
 			rd = '%d:%d' % ((c1 << 16) + c2,c3)
 		else:
-			rd = str(self.rd)
+			rd = hexstring(self.rd)
 		return rd
 
 	def json (self):
