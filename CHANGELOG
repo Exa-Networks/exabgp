@@ -10,6 +10,8 @@ Version 4.0.7
    patch by: Ahmet Demir
  * Fix: present unknown RD as hexadecimal string (previous representation could not be JSON parsed)
    reported by: Jitoxxx
+ * Fix: fix permissions of systemd service files
+   patch by: Malcolm Dodds
  * Improvement: many fix to QA code
    patch by: Vincent Bernart
  * Improvement: exit with error code 0 on SIGTERM
