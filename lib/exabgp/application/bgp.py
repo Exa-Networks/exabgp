@@ -365,8 +365,8 @@ def run (env, comment, configurations, root, validate, pid=0):
 			logger.info('to read responses %sexabgp.out' % pipe,'cli control')
 
 	if not env.profile.enable:
-		was_ok = Reactor(configurations).run(validate,root)
-		__exit(env.debug.memory,0 if was_ok else 1)
+		exit_code = Reactor(configurations).run(validate,root)
+		__exit(env.debug.memory, exit_code)
 
 	try:
 		import cProfile as profile
@@ -375,8 +375,8 @@ def run (env, comment, configurations, root, validate, pid=0):
 
 	if env.profile.file == 'stdout':
 		profiled = 'Reactor(%s).run(%s,"%s")' % (str(configurations),str(validate),str(root))
-		was_ok = profile.run(profiled)
-		__exit(env.debug.memory,0 if was_ok else 1)
+		exit_code = profile.run(profiled)
+		__exit(env.debug.memory, exit_code)
 
 	if pid:
 		profile_name = "%s-pid-%d" % (env.profile.file,pid)
@@ -395,9 +395,9 @@ def run (env, comment, configurations, root, validate, pid=0):
 		profiler = profile.Profile()
 		profiler.enable()
 		try:
-			was_ok = Reactor(configurations).run(validate,root)
+			exit_code = Reactor(configurations).run(validate, root)
 		except Exception:
-			was_ok = False
+			exit_code = Reactor.Exit.unknown
 			raise
 		finally:
 			profiler.disable()
@@ -411,7 +411,7 @@ def run (env, comment, configurations, root, validate, pid=0):
 				logger.debug("-"*len(notice),'reactor')
 				logger.debug(notice,'reactor')
 				logger.debug("-"*len(notice),'reactor')
-			__exit(env.debug.memory,0 if was_ok else 1)
+			__exit(env.debug.memory,exit_code)
 	else:
 		logger.debug("-"*len(notice),'reactor')
 		logger.debug(notice,'reactor')
