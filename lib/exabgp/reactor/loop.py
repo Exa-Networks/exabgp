@@ -34,6 +34,20 @@ from exabgp.logger import Logger
 
 
 class Reactor (object):
+	class Exit (object):
+		normal = 0
+		validate = 0
+		listening = 1
+		configuration = 1
+		privileges = 1
+		log = 1
+		pid = 1
+		socket = 1
+		io_error = 1
+		process = 1
+		select = 1
+		unknown = 1
+
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = concat_bytes_i(character(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
@@ -41,8 +55,10 @@ class Reactor (object):
 		self._ips = environment.settings().tcp.bind
 		self._port = environment.settings().tcp.port
 		self._stopping = environment.settings().tcp.once
+		self.exit_code = self.Exit.unknown
 
 		self.max_loop_time = environment.settings().reactor.speed
+		self._sleep_time = self.max_loop_time / 100
 		self.early_drop = environment.settings().daemon.drop
 
 		self.processes = None
@@ -60,14 +76,15 @@ class Reactor (object):
 		self._reload_processes = False
 		self._saved_pid = False
 
-	def _termination (self,reason):
+	def _termination (self,reason, exit_code):
+		self.exit_code = exit_code
 		self.signal.received = Signal.SHUTDOWN
 		self.logger.critical(reason,'reactor')
 
-	def _api_ready (self,sockets,peers):
-		sleeptime = 0 if peers or self.async.ready() else self.max_loop_time / 100
+	def _api_ready (self,sockets,sleeptime):
 		fds = self.processes.fds()
 		ios = fds + sockets
+
 		try:
 			read,_,_ = select.select(ios,[],[],sleeptime)
 			for fd in fds:
@@ -91,7 +108,7 @@ class Reactor (object):
 			# The peer closing the TCP connection lead to a negative file descritor
 			return []
 		except KeyboardInterrupt:
-			self._termination('^C received')
+			self._termination('^C received',self.Exit.normal)
 			return []
 
 	def _active_peers (self):
@@ -126,10 +143,10 @@ class Reactor (object):
 		# but I can not see any way to avoid it
 		for ip in self._ips:
 			if not self.listener.listen_on(ip, None, self._port, None, False, None):
-				return False
+				return self.Exit.listening
 
 		if not self.load():
-			return False
+			return self.Exit.configuration
 
 		if validate:  # only validate configuration
 			self.logger.warning('','configuration')
@@ -139,12 +156,12 @@ class Reactor (object):
 			for key in self.peers:
 				self.logger.warning(str(self.peers[key].neighbor),'configuration')
 				self.logger.warning('','configuration')
-			return True
+			return self.Exit.validate
 
 		for neighbor in self.configuration.neighbors.values():
 			if neighbor.listen:
 				if not self.listener.listen_on(neighbor.md5_ip, neighbor.peer_address, neighbor.listen, neighbor.md5_password, neighbor.md5_base64, neighbor.ttl_in):
-					return False
+					return self.Exit.listening
 
 		if not self.early_drop:
 			self.processes.start(self.configuration.processes)
@@ -152,7 +169,7 @@ class Reactor (object):
 		if not self.daemon.drop_privileges():
 			self.logger.critical('could not drop privileges to \'%s\' refusing to run as root' % self.daemon.user,'reactor')
 			self.logger.critical('set the environmemnt value exabgp.daemon.user to change the unprivileged user','reactor')
-			return
+			return self.Exit.privileges
 
 		if self.early_drop:
 			self.processes.start(self.configuration.processes)
@@ -160,10 +177,10 @@ class Reactor (object):
 		# This is required to make sure we can write in the log location as we now have dropped root privileges
 		if not self.logger.restart():
 			self.logger.critical('could not setup the logger, aborting','reactor')
-			return
+			return self.Exit.log
 
 		if not self.daemon.savepid():
-			return
+			return self.Exit.pid
 
 		# did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
 		reload_completed = False
@@ -215,6 +232,8 @@ class Reactor (object):
 				if self._completed(peers):
 					reload_completed = True
 
+				sleep = self._sleep_time
+
 				# give a turn to all the peers
 				for key in list(peers):
 					peer = self.peers[key]
@@ -234,6 +253,8 @@ class Reactor (object):
 							workers[io] = key
 						# no need to come back to it before a a full cycle
 						peers.discard(key)
+					elif action == ACTION.NOW:
+						sleep = 0
 
 					if not peers:
 						break
@@ -241,29 +262,32 @@ class Reactor (object):
 				# read at least on message per process if there is some and parse it
 				for service,command in self.processes.received():
 					self.api.text(self,service,command)
+					sleep = 0
 
 				self.async.run()
 
-				for io in self._api_ready(list(workers),peers):
+				for io in self._api_ready(list(workers),sleep):
 					peers.add(workers[io])
 					del workers[io]
 
 				if self._stopping and not self.peers.keys():
-					self._termination('exiting on peer termination')
+					self._termination('exiting on peer termination',self.Exit.normal)
 
 			except KeyboardInterrupt:
-				self._termination('^C received')
+				self._termination('^C received',self.Exit.normal)
+			except SystemExit:
+				self._termination('exiting', self.Exit.normal)
 			# socket.error is a subclass of IOError (so catch it first)
 			except socket.error:
-				self._termination('socket error received')
+				self._termination('socket error received',self.Exit.socket)
 			except IOError:
-				self._termination('I/O Error received, most likely ^C during IO')
-			except SystemExit:
-				self._termination('exiting')
+				self._termination('I/O Error received, most likely ^C during IO',self.Exit.io_error)
 			except ProcessError:
-				self._termination('Problem when sending message(s) to helper program, stopping')
+				self._termination('Problem when sending message(s) to helper program, stopping',self.Exit.process)
 			except select.error:
-				self._termination('problem using select, stopping')
+				self._termination('problem using select, stopping',self.Exit.select)
+
+		return self.exit_code
 
 	def shutdown (self):
 		"""Terminate all the current BGP connections"""
