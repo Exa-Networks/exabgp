@@ -10,6 +10,8 @@ Version 4.0.7
    patch by: Ahmet Demir
  * Improvement: many fix to QA code
    patch by: Vincent Bernart
+ * Improvement: exit with error code 0 on SIGTERM
+   reported by: Johan Guldmyr
 
 Version 4.0.6
  * Fix: default network for IPv6 is 128 .. not 32
