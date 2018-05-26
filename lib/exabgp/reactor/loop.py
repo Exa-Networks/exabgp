@@ -59,6 +59,7 @@ class Reactor (object):
 
 		self.max_loop_time = environment.settings().reactor.speed
 		self._sleep_time = self.max_loop_time / 100
+		self._busyspin = {}
 		self.early_drop = environment.settings().daemon.drop
 
 		self.processes = None
@@ -81,6 +82,16 @@ class Reactor (object):
 		self.signal.received = Signal.SHUTDOWN
 		self.logger.critical(reason,'reactor')
 
+	def _prevent_spin(self):
+		second = int(time.time())
+		if not second in self._busyspin:
+			self._busyspin = {second: 0}
+		self._busyspin[second] += 1
+		if self._busyspin[second] > self.max_loop_time:
+			time.sleep(self._sleep_time)
+			return True
+		return False
+
 	def _api_ready (self,sockets,sleeptime):
 		fds = self.processes.fds()
 		ios = fds + sockets
@@ -95,6 +106,7 @@ class Reactor (object):
 			err_no,message = exc.args  # pylint: disable=W0633
 			if err_no not in error.block:
 				raise exc
+			self._prevent_spin()
 			return []
 		except socket.error as exc:
 			# python 3 does not raise on closed FD, but python2 does
@@ -103,9 +115,11 @@ class Reactor (object):
 			# (EBADF from python2 must be ignored if when checkign error.fatal)
 			# otherwise sending  notification causes TCP to drop and cause
 			# this code to kill ExaBGP
+			self._prevent_spin()
 			return []
 		except ValueError as exc:
 			# The peer closing the TCP connection lead to a negative file descritor
+			self._prevent_spin()
 			return []
 		except KeyboardInterrupt:
 			self._termination('^C received',self.Exit.normal)
@@ -233,6 +247,11 @@ class Reactor (object):
 					reload_completed = True
 
 				sleep = self._sleep_time
+
+				# do not attempt to listen on closed sockets even if the peer is still here
+				for io in list(workers.keys()):
+					if io.fileno() == -1:
+						del workers[io]
 
 				# give a turn to all the peers
 				for key in list(peers):

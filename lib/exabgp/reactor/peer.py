@@ -198,10 +198,11 @@ class Peer (object):
 	# sockets we must monitor
 
 	def sockets (self):
-		ios = []
-		if self.proto and self.proto.connection and self.proto.connection.io:
-			ios.append(self.proto.connection.io)
-		return ios
+		if self.proto:
+			fd = self.proto.fd()
+			if fd:
+				return [fd]
+		return []
 
 	def handle_connection (self, connection):
 		# if the other side fails, we go back to idle

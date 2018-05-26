@@ -78,6 +78,12 @@ class Connection (object):
 	def session (self):
 		return "%s-%d" % (self.direction,self.id)
 
+	def fd (self):
+		if self.io and self.io.fileno() != -1:
+			return self.io
+		# the socket is closed (fileno() == -1) or not open yet (io is None)
+		return None
+
 	def close (self):
 		try:
 			self.logger.warning('%s, closing connection' % self.name(),source=self.session())
@@ -87,7 +93,7 @@ class Connection (object):
 		except KeyboardInterrupt as exc:
 			raise exc
 		except Exception:
-			pass
+			self.io = None
 
 	def reading (self):
 		while True:
