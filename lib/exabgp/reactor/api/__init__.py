@@ -104,7 +104,7 @@ class API (Command):
 		safi = SAFI.value(tokens.pop(0))
 		if afi is None or safi is None:
 			return False
-		return RouteRefresh(afi,safi)
+		return [RouteRefresh(afi,safi)]
 
 	def api_eor (self, command):
 		tokens = formated(command).split(' ')[2:]
