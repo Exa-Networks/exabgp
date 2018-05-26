@@ -94,6 +94,7 @@ class Peer (object):
 		self.stats = {
 			'fsm':      self.fsm,
 			'creation': now,
+			'reset': now,
 			'complete': 0,
 		}
 		self.generator = None
@@ -122,6 +123,7 @@ class Peer (object):
 		self.stats = {
 			'fsm':      self.fsm,
 			'creation': self.stats['creation'],
+			'reset':    time.time(),
 			'complete': 0,
 		}
 		if self.proto:

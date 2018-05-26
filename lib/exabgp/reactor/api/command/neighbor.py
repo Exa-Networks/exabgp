@@ -63,7 +63,7 @@ Neighbor %(peer-address)s
 		if answer['duration']:
 			duration = cls.extensive_kv % ('up for', timedelta(seconds=answer['duration']), '', '')
 		else:
-			duration = cls.extensive_kv % ('down', '', '', '')
+			duration = cls.extensive_kv % ('down for', timedelta(seconds=answer['reset']), '', '')
 		formated = {
 			'peer-address':  answer['peer-address'],
 			'local-address': cls.extensive_kv % ('local',answer['local-address'],'',''),
