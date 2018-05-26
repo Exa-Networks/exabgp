@@ -91,6 +91,14 @@ def main ():
 		sys.stderr.flush()
 		sys.exit(1)
 
+	try:
+		reader = os.open(recv, os.O_RDONLY | os.O_EXCL | os.O_NONBLOCK)
+		while select.select([reader], [], [], 0) != ([], [], []):
+			os.read(reader,4096)
+	except Exception as exc:
+		print('could not clear named pipe from potential previous command data')
+		print(exc)
+
 	signal.signal(signal.SIGALRM, write_timeout)
 	signal.alarm(2)
 
