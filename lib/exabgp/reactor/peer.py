@@ -698,6 +698,7 @@ class Peer (object):
 		messages['total'] = (total_sent, total_rcvd)
 
 		return {
+			'down':          int(self.stats['reset'] - self.stats['creation']),
 			'duration':      int(time.time() - self.stats['complete']) if self.stats['complete'] else 0,
 			'local-address': str(self.neighbor.local_address),
 			'peer-address':  str(self.neighbor.peer_address),
