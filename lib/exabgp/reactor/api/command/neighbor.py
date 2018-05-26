@@ -60,11 +60,15 @@ Neighbor %(peer-address)s
 
 	@classmethod
 	def extensive (cls,answer):
+		if answer['duration']:
+			duration = cls.extensive_kv % ('up for', timedelta(seconds=answer['duration']), '', '')
+		else:
+			duration = cls.extensive_kv % ('down', '', '', '')
 		formated = {
 			'peer-address':  answer['peer-address'],
 			'local-address': cls.extensive_kv % ('local',answer['local-address'],'',''),
 			'state':         cls.extensive_kv % ('state',answer['state'],'',''),
-			'duration':      cls.extensive_kv % ('up for',timedelta(seconds=answer['duration']),'',''),
+			'duration':      duration,
 			'as':            cls.extensive_kv % ('AS',answer['local-as'],_pr(answer['peer-as']),''),
 			'id':            cls.extensive_kv % ('ID',answer['local-id'],_pr(answer['peer-id']),''),
 			'hold':          cls.extensive_kv % ('hold-time',answer['local-hold'],_pr(answer['peer-hold']),''),
