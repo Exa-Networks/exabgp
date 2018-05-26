@@ -96,8 +96,9 @@ def main ():
 		while select.select([reader], [], [], 0) != ([], [], []):
 			os.read(reader,4096)
 	except Exception as exc:
-		print('could not clear named pipe from potential previous command data')
-		print(exc)
+		sys.stdout.write('could not clear named pipe from potential previous command data')
+		sys.stdout.write(exc)
+		sys.stdout.flush()
 
 	signal.signal(signal.SIGALRM, write_timeout)
 	signal.alarm(2)
