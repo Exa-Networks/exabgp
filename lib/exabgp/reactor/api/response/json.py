@@ -284,37 +284,37 @@ class JSON (object):
 	def refresh (self, neighbor, direction, refresh, negotiated, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
 			'route-refresh': '{ %s }' % self._kv({
-				'afi': refresh.afi,
-				'safi': refresh.safi,
-				'subtype': refresh.reserved
+				'afi': '"%s"' % refresh.afi,
+				'safi': '"%s"' % refresh.safi,
+				'subtype': '"%s"' % refresh.reserved
 			})
 		})),header,body,neighbor,message_type='refresh')
 
 	def _operational_query (self, neighbor, direction, operational, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
 			'operational': '{ %s }' % self._kv({
-				'name': operational.name,
-				'afi': operational.afi,
-				'safi': operational.safi,
+				'name': '"%s"' % operational.name,
+				'afi': '"%s"' % operational.afi,
+				'safi': '"%s"' % operational.safi,
 			})
 		})),header,body,neighbor,message_type='operational')
 
 	def _operational_advisory (self, neighbor, direction, operational, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
 			'operational': '{ %s }' % self._kv({
-				'name': operational.name,
-				'afi': operational.afi,
-				'safi': operational.safi,
-				'advisory': operational.data
+				'name': '"%s"' % operational.name,
+				'afi': '"%s"' % operational.afi,
+				'safi': '"%s"' % operational.safi,
+				'advisory': '"%s"' % operational.data
 			})
 		})),header,body,neighbor,message_type='operational')
 
 	def _operational_counter (self, neighbor, direction, operational, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
 			'operational': '{ %s }' % self._kv({
-				'name': operational.name,
-				'afi': operational.afi,
-				'safi': operational.safi,
+				'name': '"%s"' % operational.name,
+				'afi': '"%s"' % operational.afi,
+				'safi': '"%s"' % operational.safi,
 				'router-id': operational.routerid,
 				'sequence': operational.sequence,
 				'counter': operational.counter
