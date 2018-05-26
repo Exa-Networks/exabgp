@@ -12,6 +12,8 @@ Version 4.0.7
    reported by: Jitoxxx
  * Fix: fix permissions of systemd service files
    patch by: Malcolm Dodds
+ * Fix: properly show connection as down in the cli
+   reported by: chantra
  * Improvement: many fix to QA code
    patch by: Vincent Bernart
  * Improvement: exit with error code 0 on SIGTERM

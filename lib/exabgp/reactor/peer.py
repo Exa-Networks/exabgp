@@ -94,7 +94,7 @@ class Peer (object):
 		self.stats = {
 			'fsm':      self.fsm,
 			'creation': now,
-			'complete': now,
+			'complete': 0,
 		}
 		self.generator = None
 
@@ -122,7 +122,7 @@ class Peer (object):
 		self.stats = {
 			'fsm':      self.fsm,
 			'creation': self.stats['creation'],
-			'complete': self.stats['creation'],
+			'complete': 0,
 		}
 		if self.proto:
 			self.proto.close(u"peer reset, message [{0}] error[{1}]".format(message, error))
