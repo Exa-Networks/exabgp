@@ -13,6 +13,8 @@ from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import match_neighbor
 from exabgp.reactor.api.command.limit import extract_neighbors
 
+from exabgp.reactor.api.response.answer import Answer
+
 
 def register_neighbor ():
 	pass
@@ -104,10 +106,10 @@ def teardown (self, reactor, service, line):
 		reactor.processes.answer_done(service)
 		return True
 	except ValueError:
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service,Answer.error)
 		return False
 	except IndexError:
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service,Answer.error)
 		return False
 
 

@@ -42,7 +42,7 @@ class API (Command):
 		for registered in self.functions:
 			if registered == command or registered + ' ' in command:
 				return self.callback['text'][registered](self,reactor,service,command)
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service,Answer.error)
 		self.logger.warning('command from process not understood : %s' % command,'api')
 		return False
 
