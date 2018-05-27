@@ -20,6 +20,8 @@ from exabgp.reactor.network.error import error
 
 from exabgp.configuration.core.format import formated
 from exabgp.reactor.api.response import Response
+from exabgp.reactor.api.response.answer import Answer
+
 from exabgp.bgp.message import Message
 from exabgp.logger import Logger
 
@@ -267,14 +269,14 @@ class Processes (object):
 
 	def answer (self, service, string, force=False):
 		if force or self.ack:
-			self.logger.debug('responding to %s : %s' % (service,string.replace('\n','\\n')),'process')
+			self.logger.debug('responding to %s : %s' % (service,string.replace('\n', '\\n')), 'process')
 			self._write(service,string)
 
 	def answer_done (self, service):
-		self.answer(service,'done')
+		self.answer(service,Answer.done)
 
 	def answer_error (self, service):
-		self.answer(service,'error')
+		self.answer(service,Answer.error)
 
 	def _notify (self, neighbor, event):
 		for process in neighbor.api[event]:

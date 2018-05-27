@@ -17,6 +17,8 @@ from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
+from exabgp.reactor.api.response.answer import Answer
+
 from exabgp.configuration.environment import environment
 
 
@@ -65,11 +67,11 @@ def show_adj_rib (self, reactor, service, line):
 		elif words[1] == 'adj-rib-out':
 			rib = 'out'
 		else:
-			reactor.processes.answer(service,"error")
+			reactor.processes.answer(service,Answer.error)
 			return False
 
 	if rib not in ('in','out'):
-		reactor.processes.answer(service,"error")
+		reactor.processes.answer(service,Answer.error)
 		return False
 
 	klass = NLRI
@@ -107,17 +109,17 @@ def flush_adj_rib_out (self, reactor, service, line):
 		peers = match_neighbors(reactor.peers,descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
-			reactor.processes.answer(service,'error')
+			reactor.processes.answer(service,Answer.error)
 			return False
 		reactor.async.schedule(service,command,callback(self,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service, Answer.error)
 		return False
 	except IndexError:
 		self.log_failure('issue parsing the command')
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service, Answer.error)
 		return False
 
 
@@ -142,7 +144,7 @@ def clear_adj_rib (self, reactor, service, line):
 		peers = match_neighbors(reactor.peers,descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
-			reactor.processes.answer(service,'error')
+			reactor.processes.answer(service, Answer.error)
 			return False
 		words = line.split()
 		direction = 'in' if 'adj-rib-in' in words or 'in' in words else 'out'
@@ -150,9 +152,9 @@ def clear_adj_rib (self, reactor, service, line):
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service, Answer.error)
 		return False
 	except IndexError:
 		self.log_failure('issue parsing the command')
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service, Answer.error)
 		return False
