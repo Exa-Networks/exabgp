@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import os
 import sys
+import time
 import select
 import signal
 import errno
@@ -101,6 +102,7 @@ def main ():
 		sys.exit(1)
 
 	buffer = ''
+	start = time.time()
 	try:
 		reader = os.open(recv, os.O_RDONLY | os.O_EXCL | os.O_NONBLOCK)
 		while True:
@@ -118,6 +120,9 @@ def main ():
 			if AnswerStream.error.endswith(buffer[-len(AnswerStream.error):]):
 				break
 			if AnswerStream.shutdown.endswith(buffer[-len(AnswerStream.shutdown):]):
+				break
+			# we are not ack'ing the command and probably have read all there is
+			if time.time() > start + 1.5:
 				break
 
 	except Exception as exc:
