@@ -20,6 +20,8 @@ from exabgp.logger import Logger
 from exabgp.reactor.api.command import Command
 from exabgp.configuration.configuration import Configuration
 
+from exabgp.reactor.api.response.answer import Answer
+
 # ======================================================================= Parser
 #
 

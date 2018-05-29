@@ -21,8 +21,6 @@ from exabgp.application.bgp import get_envfile
 from exabgp.application.bgp import get_env
 from exabgp.application.control import check_fifo
 
-from exabgp.reactor.api.response.answer import Answer
-
 from exabgp.reactor.network.error import error
 from exabgp.reactor.api.response.answer import Answer
 
