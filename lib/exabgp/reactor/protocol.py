@@ -77,12 +77,12 @@ class Protocol (object):
 		from exabgp.configuration.environment import environment
 		self.log_routes = peer.neighbor.adj_rib_in or environment.settings().log.routes
 
-	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
-
 	def fd (self):
 		if self.connection is None:
 			return None
 		return self.connection.fd()
+
+	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
 	def me (self, message):
 		return "%s/%s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
