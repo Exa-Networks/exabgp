@@ -309,7 +309,10 @@ def loopback_ips(label):
         mo = ipre.match(line)
         if not mo:
             continue
-        mask = int(mo.group("mask")) or bin(int(mo.group("netmask"), 16)).count("1")
+        if mo.group("mask"):
+            mask = int(mo.group("mask"))
+        else:
+            mask = bin(int(mo.group("netmask"), 16)).count("1")
         try:
             ip = ip_network("{0}/{1}".format(mo.group("ip"),
                                              mask))
