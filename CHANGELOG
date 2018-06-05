@@ -24,6 +24,8 @@ Version 4.0.7
    patch by: Vincent Bernart
  * Improvement: exit with error code 0 on SIGTERM
    reported by: Johan Guldmyr
+ * Fix: fix neighbor CLI to match against peer address
+   patch by: Malcolm Dodds
 
 Version 4.0.6
  * Fix: default network for IPv6 is 128 .. not 32
