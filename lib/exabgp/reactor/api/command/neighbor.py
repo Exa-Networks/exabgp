@@ -160,7 +160,7 @@ def show_neighbor (self, reactor, service, command):
 			peer = reactor.peers.get(peer_name,None)
 			if not peer:
 				continue
-			if limit and limit not in peer.neighbor.name():
+			if limit and limit != str(peer.neighbor.peer_address):
 				continue
 			for line in Neighbor.summary(peer.cli_data()).split('\n'):
 				reactor.processes.answer(service,line)
@@ -180,5 +180,5 @@ def show_neighbor (self, reactor, service, command):
 		return True
 
 	reactor.processes.answer(service,'please specify summary, extensive or configuration')
-	reactor.processes.answer(service,'you can filter by per ip address adding it after the word neighbor')
+	reactor.processes.answer(service,'you can filter by peer ip address adding it after the word neighbor')
 	reactor.processes.answer_done(service)
