@@ -205,6 +205,8 @@ class Peer (object):
 		return []
 
 	def handle_connection (self, connection):
+		self.logger.debug("state machine for the peer is %s" % self.fsm.name(), self.id())
+
 		# if the other side fails, we go back to idle
 		if self.fsm == FSM.ESTABLISHED:
 			self.logger.debug('we already have a peer in state established for %s' % connection.name(),self.id())
@@ -227,7 +229,9 @@ class Peer (object):
 
 		# accept the connection
 		if self.proto:
+			self.logger.debug('closing outgoing connection as we have another incoming on with higher router-id for %s' % connection.name(),self.id())
 			self.proto.close('closing outgoing connection as we have another incoming on with higher router-id')
+
 		self.proto = Protocol(self).accept(connection)
 		self.generator = None
 		# Let's make sure we do some work with this connection

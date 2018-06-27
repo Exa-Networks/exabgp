@@ -155,6 +155,7 @@ class Listener (object):
 		ranged_neighbor = []
 
 		for connection in self._connected():
+			self.logger.debug('new connection received %s' % connection.name(),'network')
 			for key in reactor.peers:
 				peer = reactor.peers[key]
 				neighbor = peer.neighbor
