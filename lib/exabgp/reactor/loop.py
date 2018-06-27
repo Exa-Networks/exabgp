@@ -240,7 +240,7 @@ class Reactor (object):
 
 				if self.listener.incoming():
 					# check all incoming connection
-					self.async.schedule(str(uuid.uuid1()),'check new connection',self.listener.new_connections())
+					self.async.schedule(str(uuid.uuid1()),'checking for new connection(s)',self.listener.new_connections())
 
 				peers = self._active_peers()
 				if self._completed(peers):
