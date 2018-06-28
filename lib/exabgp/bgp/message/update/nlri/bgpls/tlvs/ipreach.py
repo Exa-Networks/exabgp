@@ -34,8 +34,9 @@ from exabgp.util import ordinal
 
 class IpReach(object):
 
-	def __init__ (self, prefix, packed=None):
+	def __init__ (self, prefix, packed=None, plength=None):
 		self.prefix = prefix
+                self.plength = plength
 		self._packed = packed
 
 	@classmethod
@@ -51,7 +52,7 @@ class IpReach(object):
 		# octets for prefix length 9 to 16, 3 octets for prefix length 17 up to
 		# 24, 4 octets for prefix length 25 up to 32, etc.
 
-		# plenght = unpack('!B',data[0:1])[0]
+		plength = unpack('!B',data[0:1])[0]
 		# octet = int(math.ceil(plenght / 8))
 		octet = len(data[1:])
 		prefix_list = unpack("!%dB" % octet,data[1:octet + 1])
@@ -61,10 +62,26 @@ class IpReach(object):
 		prefix_list = prefix_list + ["0"]*(4 - len(prefix_list))
 		prefix = b".".join(prefix_list)
 
-		return cls(prefix=prefix)
+                # Can this be IPv6?
+                if octet > 4:
+                        prefix_list = unpack("!%dH" % octet/2, data[1:octet+1])
+                        # fill out to a complete 128-bit address
+                        prefix_list = prefix_list + ["0"]*(16-len(prefix_list))
+
+                        # Could optimize to use "::" for longest :0: seqence
+                        # but we don't yet
+
+                        prefix = b":".join(prefix_list)
+
+		return cls(prefix=prefix, plength=plength)
 
 	def json (self, compact=None):
-		return '"ip-reachability-tlv": "%s"' % self.prefix
+                return ', '.join([
+		        '"ip-reachability-tlv": "%s"' % str(self.prefix),
+                        '"ip-reach-prefix": "%s"' %
+                           (str(self.prefix), str(self.plength)),
+                ])
+
 
 	def __eq__ (self, other):
 		return self.prefix == other.prefix
