@@ -34,7 +34,7 @@ from exabgp.util import ordinal
 
 class IpReach(object):
 
-	def __init__ (self, prefix, packed=None, plength=None):
+	def __init__ (self, prefix, plength=None, packed=None):
 		self.prefix = prefix
 		self._packed = packed
 		self.plength = plength
@@ -53,7 +53,7 @@ class IpReach(object):
 		# 24, 4 octets for prefix length 25 up to 32, etc.
 
 		plength = unpack('!B',data[0:1])[0]
-		# octet = int(math.ceil(plenght / 8))
+		# octet = int(math.ceil(plength / 8))
 		octet = len(data[1:])
 		prefix_list = unpack("!%dB" % octet,data[1:octet + 1])
 		prefix_list = [str(x) for x in prefix_list]
@@ -64,7 +64,11 @@ class IpReach(object):
 		return cls(prefix=prefix, plength=plength)
 
 	def json (self, compact=None):
-		return '"ip-reachability-tlv": "%s/%s"' % (str(self.prefix), str(self.plength))
+		return ', '.join([
+			'"ip-reachability-tlv": "%s"' % str(self.prefix),
+			'"ip-reach-prefix": "%s/%s"' %
+			(str(self.prefix), str(self.plength)),
+		])
 
 	def __eq__ (self, other):
 		return self.prefix == other.prefix
