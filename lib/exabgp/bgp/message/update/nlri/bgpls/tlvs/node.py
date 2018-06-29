@@ -49,7 +49,7 @@ class NodeDescriptor (object):
 	def unpack (cls, data, igp):
 		dtype, dlength = unpack('!HH',data[0:4])
 		if dtype not in NODE_TLVS.keys():
-			raise Exception("Unknown Node Descriptor Sub-TLV %d" % dtype)
+			raise Exception("Unknown Node Descriptor Sub-TLV")
 		# OSPF Area-ID
 		if dtype == 514:
 			return cls(
