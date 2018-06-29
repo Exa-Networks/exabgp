@@ -26,6 +26,8 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
 
+# nmuber of bits of the RD field, same for VPNv4 and VPNv6
+RD_MASK = 8 * 8
 
 @NLRI.register(AFI.ipv4,SAFI.unicast)
 @NLRI.register(AFI.ipv6,SAFI.unicast)
@@ -105,12 +107,9 @@ class INET (NLRI):
 		mask = ordinal(bgp[0])
 		bgp = bgp[1:]
 
-		_, rd_size = Family.size.get((afi, safi), (0, 0))
-		rd_mask = rd_size * 8
-
 		if safi.has_label():
 			labels = []
-			while mask - rd_mask > 24:
+			while mask - RD_MASK >= 24:
 				label = int(unpack('!L',character(0) + bgp[:3])[0])
 				bgp = bgp[3:]
 				mask -= 24  	# 3 bytes
@@ -128,7 +127,7 @@ class INET (NLRI):
 			nlri.labels = Labels(labels)
 
 		if rd_size:
-			mask -= rd_mask  # the route distinguisher
+			mask -= RD_MASK  # the route distinguisher
 			rd = bgp[:rd_size]
 			bgp = bgp[rd_size:]
 			nlri.rd = RouteDistinguisher(rd)
