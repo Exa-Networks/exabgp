@@ -4,6 +4,8 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 4.0.7
+ * Feature: added prefix for ip-reachability-tlv
+   patch: Tinus Flagstad
  * Fix: handling of processes when the configuration reload fails
    patch by: Malcolm Dodds
  * Fix: healthcheck, remove options.ip_setup in dynamic ip management
