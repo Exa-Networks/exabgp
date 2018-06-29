@@ -104,9 +104,12 @@ class INET (NLRI):
 		mask = ordinal(bgp[0])
 		bgp = bgp[1:]
 
+		_, rd_size = Family.size.get((afi, safi), (0, 0))
+		rd_mask = rd_size * 8
+
 		if safi.has_label():
 			labels = []
-			while mask - RD_MASK >= 24:
+			while mask - rd_mask >= 24:
 				label = int(unpack('!L',character(0) + bgp[:3])[0])
 				bgp = bgp[3:]
 				mask -= 24  	# 3 bytes
@@ -123,9 +126,6 @@ class INET (NLRI):
 					break
 			nlri.labels = Labels(labels)
 
-
-		_, rd_size = Family.size.get((afi, safi), (0, 0))
-		rd_mask = rd_size * 8
 
 		if rd_size:
 			mask -= rd_mask  # the route distinguisher
