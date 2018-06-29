@@ -71,7 +71,7 @@ class PREFIXv4(BGPLS):
 					# follows IGP type
 					node, left = NodeDescriptor.unpack(values, proto_id)
 					local_node.append(node)
-					if left == tlvs:
+					if left == values:
 						raise RuntimeError("sub-calls should consume data")
 					values = left
 				tlvs = tlvs[4 + tlv_length:]
