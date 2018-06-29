@@ -126,6 +126,9 @@ class INET (NLRI):
 					break
 			nlri.labels = Labels(labels)
 
+
+		_, rd_size = Family.size.get((afi, safi), (0, 0))
+
 		if rd_size:
 			mask -= RD_MASK  # the route distinguisher
 			rd = bgp[:rd_size]
