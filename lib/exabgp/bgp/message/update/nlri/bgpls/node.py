@@ -84,7 +84,7 @@ class NODE(BGPLS):
 			# Unpack Node Descriptor Sub-TLVs
 			node_id, left = NodeDescriptor.unpack(values, proto_id)
 			node_ids.append(node_id)
-			if left == data:
+			if left == values:
 				raise RuntimeError("sub-calls should consume data")
 			values = left
 
