@@ -37,7 +37,7 @@ class IpReach(object):
 	def __init__ (self, prefix, plength=None, packed=None):
 		self.prefix = prefix
 		self._packed = packed
-                self.plength = plength
+		self.plength = plength
 
 	@classmethod
 	def unpack (cls, data):
@@ -61,7 +61,6 @@ class IpReach(object):
 		# a 4 octet IP prefix
 		prefix_list = prefix_list + ["0"]*(4 - len(prefix_list))
 		prefix = '.'.join(prefix_list)
-
 		return cls(prefix=prefix, plength=plength)
 
 	def json (self, compact=None):
