@@ -100,7 +100,6 @@ class Message (Exception):
 
 	MARKER = character(0xff)*16
 	HEADER_LEN = 19
-	MAX_LEN = 4096
 
 	registered_message = {}
 	# This is redefined by the Notify class, Exception is never used

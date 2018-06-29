@@ -20,6 +20,8 @@ from exabgp.reactor.network.error import error
 
 from exabgp.configuration.core.format import formated
 from exabgp.reactor.api.response import Response
+from exabgp.reactor.api.response.answer import Answer
+
 from exabgp.bgp.message import Message
 from exabgp.logger import Logger
 
@@ -72,15 +74,15 @@ class Processes (object):
 
 	def _handle_problem (self, process):
 		if self.respawn_number:
-			self.logger.processes("Issue with the process, restarting it")
+			self.logger.debug('issue with the process, restarting it','process')
 			self._terminate(process)
 			self._start(process)
 		else:
-			self.logger.processes("Issue with the process, terminating it")
+			self.logger.debug('issue with the process, terminating it','process')
 			self._terminate(process)
 
 	def _terminate (self, process):
-		self.logger.processes("Terminating process %s" % process)
+		self.logger.debug('terminating process %s' % process,'process')
 		try:
 			self._process[process].terminate()
 		except OSError:
@@ -105,16 +107,16 @@ class Processes (object):
 				self._terminate(process)
 			except OSError:
 				# we most likely received a SIGTERM signal and our child is already dead
-				self.logger.processes("child process %s was already dead" % process)
+				self.logger.debug('child process %s was already dead' % process,'process')
 		self.clean()
 
 	def _start (self,process):
 		try:
 			if process in self._process:
-				self.logger.processes("process already running")
+				self.logger.debug('process already running','process')
 				return
 			if process not in self._configuration:
-				self.logger.processes("Can not start process, no configuration for it")
+				self.logger.debug('can not start process, no configuration for it','process')
 				return
 			# Prevent some weird termcap data to be created at the start of the PIPE
 			# \x1b[?1034h (no-eol) (esc)
@@ -137,7 +139,7 @@ class Processes (object):
 				)
 				fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
-				self.logger.processes("Forked process %s" % process)
+				self.logger.debug('forked process %s' % process,'process')
 
 				around_now = int(time.time()) & self.respawn_timemask
 				if process in self._respawning:
@@ -145,9 +147,9 @@ class Processes (object):
 						self._respawning[process][around_now] += 1
 						# we are respawning too fast
 						if self._respawning[process][around_now] > self.respawn_number:
-							self.logger.processes(
-								"Too many death for %s (%d) terminating program" % (process,self.respawn_number),
-								'critical'
+							self.logger.critical(
+								'Too many death for %s (%d) terminating program' % (process,self.respawn_number),
+								'process'
 							)
 							raise ProcessError()
 					else:
@@ -159,8 +161,8 @@ class Processes (object):
 
 		except (subprocess.CalledProcessError,OSError,ValueError) as exc:
 			self._broken.append(process)
-			self.logger.processes("Could not start process %s" % process)
-			self.logger.processes("reason: %s" % str(exc))
+			self.logger.debug('could not start process %s' % process,'process')
+			self.logger.debug('reason: %s' % str(exc),'process')
 
 	def start (self, configuration, restart=False):
 		for process in list(self._process):
@@ -195,43 +197,45 @@ class Processes (object):
 					self._handle_problem(process)
 					return
 				r,_,_ = select.select([proc.stdout,],[],[],0)
-				if r:
-					try:
-						# Calling next() on Linux and OSX works perfectly well
-						# but not on OpenBSD where it always raise StopIteration
-						# and only readline() works
-						buf = str_ascii(proc.stdout.readline())
-						if buf == '' and poll is not None:
-							# if proc.poll() is None then
-							# process is fine, we received an empty line because
-							# we're doing .readline() on a non-blocking pipe and
-							# the process maybe has nothing to send yet
-							self._handle_problem(process)
-							continue
+				if not r:
+					continue
+				try:
+					# Calling next() on Linux and OSX works perfectly well
+					# but not on OpenBSD where it always raise StopIteration
+					# and only readline() works
+					buf = str_ascii(proc.stdout.read(16384))
+					if buf == '' and poll is not None:
+						# if proc.poll() is None then
+						# process is fine, we received an empty line because
+						# we're doing .readline() on a non-blocking pipe and
+						# the process maybe has nothing to send yet
+						self._handle_problem(process)
+						continue
 
-						raw = self._buffer.get(process,'') + buf
-						if not raw.endswith('\n'):
-							self._buffer[process] = raw
-							continue
+					raw = self._buffer.get(process,'') + buf
 
-						self._buffer[process] = ''
-						line = raw.rstrip()
+					while '\n' in raw:
+						line,raw = raw.split('\n',1)
+						line = line.rstrip()
 						consumed_data = True
-						self.logger.processes("Command from process %s : %s " % (process,line))
+						self.logger.debug('command from process %s : %s ' % (process,line),'process')
 						yield (process,formated(line))
-					except IOError as exc:
-						if not exc.errno or exc.errno in error.fatal:
-							# if the program exits we can get an IOError with errno code zero !
-							self._handle_problem(process)
-						elif exc.errno in error.block:
-							# we often see errno.EINTR: call interrupted and
-							# we most likely have data, we will try to read them a the next loop iteration
-							pass
-						else:
-							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(exc))
-					except StopIteration:
-						if not consumed_data:
-							self._handle_problem(process)
+
+					self._buffer[process] = raw
+
+				except IOError as exc:
+					if not exc.errno or exc.errno in error.fatal:
+						# if the program exits we can get an IOError with errno code zero !
+						self._handle_problem(process)
+					elif exc.errno in error.block:
+						# we often see errno.EINTR: call interrupted and
+						# we most likely have data, we will try to read them a the next loop iteration
+						pass
+					else:
+						self.logger.debug('unexpected errno received from forked process (%s)' % errstr(exc),'process')
+				except StopIteration:
+					if not consumed_data:
+						self._handle_problem(process)
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				self._handle_problem(process)
 
@@ -247,11 +251,11 @@ class Processes (object):
 				self._broken.append(process)
 				if exc.errno == errno.EPIPE:
 					self._broken.append(process)
-					self.logger.processes("Issue while sending data to our helper program")
+					self.logger.debug('issue while sending data to our helper program','process')
 					raise ProcessError()
 				else:
 					# Could it have been caused by a signal ? What to do.
-					self.logger.processes("Error received while SENDING data to helper program, retrying (%s)" % errstr(exc))
+					self.logger.debug('error received while sending data to helper program, retrying (%s)' % errstr(exc),'process')
 					continue
 			break
 
@@ -259,20 +263,20 @@ class Processes (object):
 			self._process[process].stdin.flush()
 		except IOError as exc:
 			# AFAIK, the buffer should be flushed at the next attempt.
-			self.logger.processes("Error received while FLUSHING data to helper program, retrying (%s)" % errstr(exc))
+			self.logger.debug('error received while FLUSHING data to helper program, retrying (%s)' % errstr(exc),'process')
 
 		return True
 
 	def answer (self, service, string, force=False):
 		if force or self.ack:
-			self.logger.processes('responding to %s : %s' % (service,string.replace('\n','\\n')))
+			self.logger.debug('responding to %s : %s' % (service,string.replace('\n', '\\n')), 'process')
 			self._write(service,string)
 
 	def answer_done (self, service):
-		self.answer(service,'done')
+		self.answer(service,Answer.done)
 
 	def answer_error (self, service):
-		self.answer(service,'error')
+		self.answer(service,Answer.error)
 
 	def _notify (self, neighbor, event):
 		for process in neighbor.api[event]:

@@ -36,46 +36,46 @@ class Signal (object):
 		signal.signal(signal.SIGUSR2, self.sigusr2)
 
 	def sigterm (self, signum, frame):
-		self.logger.reactor('SIG TERM received')
+		self.logger.critical('SIGTERM received','reactor')
 		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
+			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return
-		self.logger.reactor('scheduling shutdown')
+		self.logger.critical('scheduling shutdown','reactor')
 		self.received = self.SHUTDOWN
 		self.number = signum
 
 	def sighup (self, signum, frame):
-		self.logger.reactor('SIG HUP received')
+		self.logger.critical('SIGHUP received','reactor')
 		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
+			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return
-		self.logger.reactor('scheduling shutdown')
+		self.logger.critical('scheduling shutdown','reactor')
 		self.received = self.SHUTDOWN
 		self.number = signum
 
 	def sigalrm (self, signum, frame):
-		self.logger.reactor('SIG ALRM received')
+		self.logger.critical('SIGALRM received','reactor')
 		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
+			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return
-		self.logger.reactor('scheduling restart')
+		self.logger.critical('scheduling restart','reactor')
 		self.received = self.RESTART
 		self.number = signum
 
 	def sigusr1 (self, signum, frame):
-		self.logger.reactor('SIG USR1 received')
+		self.logger.critical('SIGUSR1 received','reactor')
 		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
+			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return
-		self.logger.reactor('scheduling reload of configuration')
+		self.logger.critical('scheduling reload of configuration','reactor')
 		self.received = self.RELOAD
 		self.number = signum
 
 	def sigusr2 (self, signum, frame):
-		self.logger.reactor('SIG USR1 received')
+		self.logger.critical('SIGUSR2 received','reactor')
 		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
+			self.logger.critical('ignoring - still handling previous signal','reactor')
 			return
-		self.logger.reactor('scheduling reload of configuration and processes')
+		self.logger.critical('scheduling reload of configuration and processes','reactor')
 		self.received = self.FULL_RELOAD
 		self.number = signum

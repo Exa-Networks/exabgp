@@ -6,33 +6,33 @@ Created by Evelio Vila 2017-02-16
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 import json
-from struct import pack, unpack
+from struct import pack
 
 from exabgp.util import concat_bytes
 from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
-#     0                   1                   2                   3
-#     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#    |     Type      |          Length               |    Flags      |
-#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#    |     Flags     |
-#    +-+-+-+-+-+-+-+-+
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |     Type      |          Length               |    Flags      |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |     Flags     |
+# +-+-+-+-+-+-+-+-+
 #
-#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#    |         SRGB 1 (6 octets)                                     |
-#    |                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#    |                               |
-#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |         SRGB 1 (6 octets)                                     |
+# |                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #
-#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#    |         SRGB n (6 octets)                                     |
-#    |                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#    |                               |
-#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#					3.3.  Originator SRGB TLV
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |         SRGB n (6 octets)                                     |
+# |                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 3.3.  Originator SRGB TLV
 
 
 @PrefixSid.register()
@@ -53,16 +53,18 @@ class SrGb(object):
 		return '[ {} ]'.format(', '.join(items))
 
 	def pack (self):
-		t = pack('!B', self.TLV)
-		val = b''
-		for srgb in self.srgbs:
-			base = pack("!L", srgb[0])[1:]
-			srange = pack("!L", srgb[1])[1:]
-			val = concat_bytes(base,srange,val)
-		flags = pack('!H',0)
-		val = concat_bytes(flags,val)
-		l = pack('!H', len(val))
-		return concat_bytes(t,l,val)
+		payload = pack('!H',0)  # flags
+		for b,r in self.srgbs:
+			payload = concat_bytes(
+				payload,
+				pack("!L",b)[1:],
+				pack("!L",r)[1:]
+			)
+		return concat_bytes(
+			pack('!B', self.TLV),
+			pack('!H', len(payload)),
+			payload
+		)
 
 	@classmethod
 	def unpack (cls,data,length):

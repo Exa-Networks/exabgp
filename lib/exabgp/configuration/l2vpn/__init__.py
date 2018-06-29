@@ -13,6 +13,8 @@ from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.rib.change import Change
 
+from exabgp.configuration.announce import ParseAnnounce
+
 
 class ParseL2VPN (ParseVPLS):
 	syntax = \
@@ -20,7 +22,7 @@ class ParseL2VPN (ParseVPLS):
 
 	action = dict(ParseVPLS.action)
 
-	name = 'l2vpn'
+	name = 'L2VPN'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		ParseVPLS.__init__(self,tokeniser,scope,error,logger)
@@ -29,17 +31,16 @@ class ParseL2VPN (ParseVPLS):
 		return True
 
 	def pre (self):
-		self.scope.to_context()
 		return True
 
 	def post (self):
-		routes = self.scope.pop(self.name)
+		routes = self.scope.pop_routes()
 		if routes:
 			self.scope.extend('routes',routes)
 		return True
 
 
-@ParseL2VPN.register('vpls','append-name')
+@ParseL2VPN.register('vpls','append-route')
 def vpls (tokeniser):
 	change = Change(
 		VPLS(None,None,None,None,None),
@@ -65,8 +66,4 @@ def vpls (tokeniser):
 		else:
 			raise ValueError('vpls: unknown command "%s"' % command)
 
-	# feedback = change.nlri.feedback(change.nlri.action)
-	# if feedback:
-	# 	raise ValueError('vpls: issue validating "%s"' % feedback)
-	#
-	return change
+	return [change,]

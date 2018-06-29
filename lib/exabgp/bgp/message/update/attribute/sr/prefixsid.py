@@ -13,12 +13,11 @@ from exabgp.vendoring import six
 from exabgp.util import concat_bytes_i
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
-
 # =====================================================================
-#				draft-ietf-idr-bgp-prefix-sid
-#			This Attribute may contain up to 3 TLVs
-#			Label-Index TLV ( type = 1 ) is mandatory for this attribute.
-#
+# draft-ietf-idr-bgp-prefix-sid
+# This Attribute may contain up to 3 TLVs
+# Label-Index TLV ( type = 1 ) is mandatory for this attribute.
+
 
 @Attribute.register()
 class PrefixSid (Attribute):

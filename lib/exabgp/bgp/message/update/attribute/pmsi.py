@@ -54,8 +54,9 @@ class PMSI (Attribute):
 
 	__slots__ = ['label','flags','tunnel']
 
-	def __init__ (self, tunnel, label, flags):
+	def __init__ (self, tunnel, label, flags, raw_label=None):
 		self.label = label    # integer
+		self.raw_label = raw_label # integer
 		self.flags = flags    # integer
 		self.tunnel = tunnel  # tunnel id, packed data
 
@@ -75,12 +76,16 @@ class PMSI (Attribute):
 		return PMSI._name.get(tunnel_type,'unknown')
 
 	def pack (self, negotiated):
+		if self.raw_label:
+			packed_label = pack('!L',self.raw_label)[1:4]
+		else:
+			packed_label = pack('!L',self.label << 4)[1:4]
 		return self._attribute(
 			pack(
 				'!BB3s',
 				self.flags,
 				self.TUNNEL_TYPE,
-				pack('!L',self.label << 4)[1:4]
+				packed_label
 			) + self.tunnel
 		)
 
@@ -92,10 +97,14 @@ class PMSI (Attribute):
 		return "0x" + ''.join('%02X' % ordinal(_) for _ in self.tunnel) if self.tunnel else ''
 
 	def __repr__ (self):
+		if self.raw_label:
+			label_repr = "%d(%d)" % (self.label, self.raw_label)
+		else:
+			label_repr = str(self.label) if self.label else '0'
 		return "pmsi:%s:%s:%s:%s" % (
 			self.name(self.TUNNEL_TYPE).replace(' ','').lower(),
-			str(self.flags) if self.flags else '-',  # why not use zero (0) ?
-			str(self.label) if self.label else '-',  # what noy use zero (0) ?
+			str(self.flags),
+			label_repr,
 			self.prettytunnel()
 		)
 
@@ -107,7 +116,7 @@ class PMSI (Attribute):
 		return klass
 
 	@staticmethod
-	def pmsi_unknown (subtype, tunnel, label, flags):
+	def pmsi_unknown (subtype, tunnel, label, flags, raw_label):
 		pmsi = PMSI(tunnel,label,flags)
 		pmsi.TUNNEL_TYPE = subtype
 		return pmsi
@@ -115,11 +124,12 @@ class PMSI (Attribute):
 	@classmethod
 	def unpack (cls, data, negotiated):
 		flags,subtype = unpack('!BB',data[:2])
-		label = unpack('!L','\0'+data[2:5])[0] >> 4
+		raw_label = unpack('!L',b'\0'+data[2:5])[0]
+		label = raw_label >> 4
 		# should we check for bottom of stack before the shift ?
 		if subtype in cls._pmsi_known:
-			return cls._pmsi_known[subtype].unpack(data[5:],label,flags)
-		return cls.pmsi_unknown(subtype,data[5:],label,flags)
+			return cls._pmsi_known[subtype].unpack(data[5:],label,flags,raw_label)
+		return cls.pmsi_unknown(subtype,data[5:],label,flags,raw_label)
 
 
 # ================================================================= PMSINoTunnel
@@ -129,15 +139,15 @@ class PMSI (Attribute):
 class PMSINoTunnel (PMSI):
 	TUNNEL_TYPE = 0
 
-	def __init__ (self, label=0,flags=0):
-		PMSI.__init__(self,b'',label,flags)
+	def __init__ (self, label=0,flags=0,raw_label=None):
+		PMSI.__init__(self,b'',label,flags,raw_label=None)
 
 	def prettytunnel (self):
 		return ''
 
 	@classmethod
-	def unpack (cls, tunnel, label, flags):
-		return cls(label,flags)
+	def unpack (cls, tunnel, label, flags, raw_label=None):
+		return cls(label,flags,raw_label)
 
 
 # ======================================================= PMSIIngressReplication
@@ -147,14 +157,14 @@ class PMSINoTunnel (PMSI):
 class PMSIIngressReplication (PMSI):
 	TUNNEL_TYPE = 6
 
-	def __init__ (self, ip, label=0,flags=0,tunnel=None):
+	def __init__ (self, ip, label=0,flags=0,tunnel=None,raw_label=None):
 		self.ip = ip  # looks like a bad name
-		PMSI.__init__(self,tunnel if tunnel else IPv4.pton(ip),label,flags)
+		PMSI.__init__(self,tunnel if tunnel else IPv4.pton(ip),label,flags,raw_label)
 
 	def prettytunnel (self):
 		return self.ip
 
 	@classmethod
-	def unpack (cls, tunnel, label, flags):
+	def unpack (cls, tunnel, label, flags, raw_label):
 		ip = IPv4.ntop(tunnel)
-		return cls(ip,label,flags,tunnel)
+		return cls(ip,label,flags,tunnel,raw_label)

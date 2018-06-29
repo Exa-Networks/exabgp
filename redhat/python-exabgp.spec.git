@@ -1,6 +1,6 @@
 %{!?__python2:        %global __python2 /usr/bin/python2}
 %{!?python2_sitelib:  %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%define version %(echo "$(python setup.py current).git$(git rev-parse --short $(python setup.py current))")
+%define version %(echo "$(python setup.py next).git$(git rev-parse --short HEAD)")
 
 # Warning: This .spec is meant to be used with https://github.com/iovation/git-build-rpm
 #
@@ -18,12 +18,12 @@ Source0:	exabgp-%{version}.tar.gz
 BuildArch:      noarch
 Provides:       exabgp-libs
 
-BuildRequires:  python-setuptools
 BuildRequires:  sed
 BuildRequires:  git
 BuildRequires:  git-extras
+BuildRequires:  python-setuptools
 Requires:       python2 >= 2.6
-Requires:	python-ipaddr
+Requires:       python-ipaddr
 
 %description
 ExaBGP python module
@@ -56,10 +56,11 @@ mv ${RPM_BUILD_ROOT}%{_bindir} ${RPM_BUILD_ROOT}%{_sbindir}
 mv ${RPM_BUILD_ROOT}%{_sbindir}/healthcheck ${RPM_BUILD_ROOT}/%{_sbindir}/exabgp-healthcheck
 install -d -m 744 ${RPM_BUILD_ROOT}/%{_sysconfdir}/
 install -d -m 755 ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
-mv ${RPM_BUILD_ROOT}/usr/share/exabgp/etc/* ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
+install etc/exabgp/*.conf ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
 
 install -d %{buildroot}/%{_unitdir}
 install etc/systemd/exabgp.service %{buildroot}/%{_unitdir}/
+install etc/systemd/exabgp@.service %{buildroot}/%{_unitdir}/
 
 install -d %{buildroot}/%{_mandir}/man1
 install doc/man/exabgp.1 %{buildroot}/%{_mandir}/man1
@@ -72,6 +73,9 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 
 %post -n exabgp
 %systemd_post exabgp.service
+# Default env
+[ -f %{_sysconfdir}/exabgp/exabgp.env ] || %{_sbindir}/exabgp --fi > %{_sysconfdir}/exabgp/exabgp.env
+
 
 %preun -n exabgp
 %systemd_preun exabgp.service
@@ -87,6 +91,7 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 %files -n exabgp
 %defattr(-,root,root,-)
 %attr(755, root, root) %{_sbindir}/exabgp
+%attr(755, root, root) %{_sbindir}/exabgpcli
 %attr(755, root, root) %{_sbindir}/exabgp-healthcheck
 %dir %{_sysconfdir}/exabgp
 %{_sysconfdir}/exabgp/exabgp.conf
@@ -94,6 +99,8 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 %attr(744, root, root) %{_prefix}/share/exabgp/*
 %attr(744, root, root) %{_sysconfdir}/exabgp/examples/*
 %{_unitdir}/exabgp.service
+%{_unitdir}/exabgp@.service
+%attr(644, root, root) %{_unitdir}/*
 %doc COPYRIGHT CHANGELOG README.md
 %{_mandir}/man1/*
 %{_mandir}/man5/*

@@ -132,21 +132,16 @@ class ParseVPLS (Section):
 		pass
 
 	def pre (self):
-		self.scope.set(self.name,vpls(self.tokeniser.iterate))
+		self.scope.append_route(vpls(self.tokeniser.iterate))
 		return True
 
 	def post (self):
 		if not self._check():
 			return False
-		# self.scope.to_context()
-		route = self.scope.pop(self.name)
-
-		if route:
-			self.scope.append('routes',route)
 		return True
 
 	def _check (self):
-		feedback = self.scope.get(self.name).feedback()
+		feedback = self.scope.get_route().feedback()
 		if feedback:
 			return self.error.set(feedback)
 		return True

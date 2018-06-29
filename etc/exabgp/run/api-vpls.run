@@ -8,7 +8,7 @@ messages = [
 	'neighbor 127.0.0.1 withdraw vpls endpoint 5 base 10702 offset 1 size 8 rd 192.168.201.1:123 next-hop 192.168.201.1',
 ]
 
-time.sleep(1)  # wait for the EOR
+time.sleep(2)  # wait for the EOR
 
 while messages:
 	message = messages.pop(0)

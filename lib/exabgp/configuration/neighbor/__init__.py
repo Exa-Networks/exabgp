@@ -127,23 +127,15 @@ class ParseNeighbor (Section):
 		self.neighbors = {}
 
 	def pre (self):
-		self.scope.to_context()
 		return self.parse(self.name,'peer-address')
 
 	def post (self):
-		self.scope.to_context(self.name)
-
 		for inherit in self.scope.pop('inherit',[]):
 			data = self.scope.template('neighbor',inherit)
 			self.scope.inherit(data)
+		local = self.scope.get()
 
 		neighbor = Neighbor()
-		local = self.scope.get()
-		local_api = ParseAPI.empty()
-
-		for k,values in local.pop('api',{}).items():
-			for value in values:
-				local_api.setdefault(k,[]).append(value)
 
 		# XXX: use the right class for the data type
 		# XXX: we can use the scope.nlri interface ( and rename it ) to set some values
@@ -174,6 +166,7 @@ class ParseNeighbor (Section):
 		capability = local.get('capability',{})
 		neighbor.add_path         = capability.get('add-path',0)
 		neighbor.asn4             = capability.get('asn4',True)
+		neighbor.extended_message = capability.get('extended-message',True)
 		neighbor.multisession     = capability.get('multi-session',False)
 		neighbor.operational      = capability.get('operational',False)
 		neighbor.route_refresh    = capability.get('route-refresh',0)
@@ -181,7 +174,7 @@ class ParseNeighbor (Section):
 		if capability.get('graceful-restart',False) is not False:
 			neighbor.graceful_restart = capability.get('graceful-restart',0) or int(neighbor.hold_time)
 
-		neighbor.api              = local_api
+		neighbor.api              = ParseAPI.flatten(local.pop('api',{}))
 
 		families = []
 		for family in ParseFamily.convert:
@@ -199,7 +192,7 @@ class ParseNeighbor (Section):
 				for family in ParseAddPath.convert:
 					for pair in add_path.get(family,[]):
 						if pair not in families:
-							self.logger.configuration('skipping add-path family %s as it is not negotiated' % pair)
+							self.logger.debug('skipping add-path family %s as it is not negotiated' % pair,'configuration')
 							continue
 						neighbor.add_addpath(pair)
 			else:
@@ -207,6 +200,7 @@ class ParseNeighbor (Section):
 					neighbor.add_addpath(family)
 
 		neighbor.changes = []
+		neighbor.changes.extend(self.scope.pop_routes())
 
 		# old format
 		for section in ('static','l2vpn','flow'):
@@ -215,7 +209,6 @@ class ParseNeighbor (Section):
 				route.nlri.action = OUT.ANNOUNCE
 			neighbor.changes.extend(routes)
 
-		# new format
 		routes = local.get('routes',[])
 		for route in routes:
 			route.nlri.action = OUT.ANNOUNCE
@@ -228,12 +221,15 @@ class ParseNeighbor (Section):
 			neighbor.local_address = None
 			neighbor.md5_ip = None
 
-		if not neighbor.router_id and neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
-			neighbor.router_id = neighbor.local_address
+		if not neighbor.router_id:
+			if neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
+				neighbor.router_id = neighbor.local_address
+			else:
+				return self.error.set('missing router-id for the peer, it can not be set using the local-ip')
 
 		if neighbor.route_refresh:
 			if neighbor.adj_rib_out:
-				self.logger.configuration('route-refresh requested, enabling adj-rib-out')
+				self.logger.debug('route-refresh requested, enabling adj-rib-out','configuration')
 
 		missing = neighbor.missing()
 		if missing:
@@ -292,8 +288,3 @@ class ParseNeighbor (Section):
 			_init_neighbor(neighbor)
 
 		return True
-
-		# display configuration
-		# for line in str(neighbor).split('\n'):
-		# 	self.logger.configuration(line)
-		# self.logger.configuration("\n")

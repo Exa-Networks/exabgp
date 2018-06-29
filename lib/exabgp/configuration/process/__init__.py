@@ -40,25 +40,24 @@ class ParseProcess (Section):
 		Section.__init__(self,tokeniser,scope,error,logger)
 		self.processes = {}
 		self._processes = []
+		self.named = ''
 
 	def clear (self):
 		self.processes = {}
 		self._processes = []
 
 	def pre (self):
-		name = self.tokeniser.line[1]
-		if name in self._processes:
-			return self.error.set('a process section called "%s" already exists' % name)
-		self._processes.append(name)
-		self.scope.to_context(name)
+		self.named = self.tokeniser.line[1]
+		if self.named in self._processes:
+			return self.error.set('a process section called "%s" already exists' % self.named)
+		self._processes.append(self.named)
 		return True
 
 	def post (self):
 		difference = set(self.known.keys()).difference(self.scope.get().keys())
 		if difference:
 			return self.error.set('unset process sections: %s' % ', '.join(difference))
-		self.scope.to_context()
-		self.processes.update(self.scope.pop(self.name))
+		self.processes.update({self.named: self.scope.pop()})
 		return True
 
 	def add_api (self):

@@ -28,6 +28,8 @@ class _CapabilityCode (int):
 	OUTBOUND_ROUTE_FILTERING = 0x03  # [RFC5291]
 	MULTIPLE_ROUTES          = 0x04  # [RFC3107]
 	EXTENDED_NEXT_HOP        = 0x05  # [RFC5549]
+	EXTENDED_MESSAGE         = 0x06  # https://tools.ietf.org/html/draft-ietf-idr-bgp-extended-messages-24
+
 	# 6-63      Unassigned
 	GRACEFUL_RESTART         = 0x40  # [RFC4724]
 	FOUR_BYTES_ASN           = 0x41  # [RFC4893]
@@ -43,7 +45,6 @@ class _CapabilityCode (int):
 
 	HOSTNAME                 = 0xB8  # ExaBGP only ...
 	OPERATIONAL              = 0xB9  # ExaBGP only ...
-	EXTENDED_MESSAGE         = 0xBA  # ExaBGP only ... No yet defined by draft https://tools.ietf.org/html/draft-ietf-idr-bgp-extended-messages-20
 
 	# Internal
 	AIGP = 0xFF00
@@ -55,6 +56,7 @@ class _CapabilityCode (int):
 		OUTBOUND_ROUTE_FILTERING:  'outbound-route-filtering',
 		MULTIPLE_ROUTES:           'multiple-routes',
 		EXTENDED_NEXT_HOP:         'extended-next-hop',
+		EXTENDED_MESSAGE:          'extended-message',
 
 		GRACEFUL_RESTART:          'graceful-restart',
 		FOUR_BYTES_ASN:            'asn4',
@@ -72,7 +74,6 @@ class _CapabilityCode (int):
 
 		HOSTNAME:                  'exabgp-experimental-hostname',
 		OPERATIONAL:               'exabgp-experimental-operational',
-		EXTENDED_MESSAGE:          'exabgp-experimental-extended-message',
 	}
 
 	def __new__ (cls, value):
@@ -108,6 +109,7 @@ class Capability (object):
 		OUTBOUND_ROUTE_FILTERING = _CapabilityCode(_CapabilityCode.OUTBOUND_ROUTE_FILTERING)
 		MULTIPLE_ROUTES          = _CapabilityCode(_CapabilityCode.MULTIPLE_ROUTES)
 		EXTENDED_NEXT_HOP        = _CapabilityCode(_CapabilityCode.EXTENDED_NEXT_HOP)
+		EXTENDED_MESSAGE         = _CapabilityCode(_CapabilityCode.EXTENDED_MESSAGE)
 		GRACEFUL_RESTART         = _CapabilityCode(_CapabilityCode.GRACEFUL_RESTART)
 		FOUR_BYTES_ASN           = _CapabilityCode(_CapabilityCode.FOUR_BYTES_ASN)
 		DYNAMIC_CAPABILITY       = _CapabilityCode(_CapabilityCode.DYNAMIC_CAPABILITY)
@@ -118,7 +120,6 @@ class Capability (object):
 		MULTISESSION_CISCO       = _CapabilityCode(_CapabilityCode.MULTISESSION_CISCO)
 		HOSTNAME                 = _CapabilityCode(_CapabilityCode.HOSTNAME)
 		OPERATIONAL              = _CapabilityCode(_CapabilityCode.OPERATIONAL)
-		EXTENDED_MESSAGE         = _CapabilityCode(_CapabilityCode.EXTENDED_MESSAGE)
 		AIGP                     = _CapabilityCode(_CapabilityCode.AIGP)
 
 		unassigned = range(70,128)

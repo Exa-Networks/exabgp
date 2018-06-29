@@ -68,13 +68,9 @@ class MPRNLRI (Attribute,Family):
 				# EOR and Flow may not have any next_hop
 				nexthop = b''
 			else:
-				# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
-				if nlri.safi.has_rd():
-					# .packed and not .pack()
-					nexthop = character(0)*8 + nlri.nexthop.ton(negotiated,nlri.afi)
-				else:
-					# .packed and not .pack()
-					nexthop = nlri.nexthop.ton(negotiated,nlri.afi)
+				_,rd_size = Family.size.get(self.family(),(0,0))
+				nh_rd = character(0)*rd_size if rd_size else b''
+				nexthop = nh_rd + nlri.nexthop.ton(negotiated,nlri.afi)
 
 			# mpunli[nexthop] = nlri
 			mpnlri.setdefault(nexthop,[]).append(nlri.pack(negotiated))
@@ -109,57 +105,26 @@ class MPRNLRI (Attribute,Family):
 		nlris = []
 
 		# -- Reading AFI/SAFI
-		afi,safi = unpack('!HB',data[:3])
+		_afi,_safi = unpack('!HB',data[:3])
+		afi,safi = AFI.create(_afi),SAFI.create(_safi)
 		offset = 3
 
 		# we do not want to accept unknown families
 		if negotiated and (afi,safi) not in negotiated.families:
-			raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
+			raise Notify(3,0,'presented a non-negotiated family %s/%s' % (afi,safi))
 
 		# -- Reading length of next-hop
 		len_nh = ordinal(data[offset])
 		offset += 1
 
-		rd = 0
+		if (afi,safi) not in Family.size:
+			raise Notify(3,0,'unsupported %s %s' % (afi,safi))
 
-		# check next-hop size
-		if afi == AFI.ipv4:
-			if safi in (SAFI.unicast,SAFI.multicast):
-				if len_nh != 4:
-					raise Notify(3,0,'invalid ipv4 unicast/multicast next-hop length %d expected 4' % len_nh)
-			elif safi in (SAFI.mpls_vpn,):
-				if len_nh != 12:
-					raise Notify(3,0,'invalid ipv4 mpls_vpn next-hop length %d expected 12' % len_nh)
-				rd = 8
-			elif safi in (SAFI.flow_ip,):
-				if len_nh not in (0,4):
-					raise Notify(3,0,'invalid ipv4 flow_ip next-hop length %d expected 4' % len_nh)
-			elif safi in (SAFI.flow_vpn,):
-				if len_nh not in (0,4):
-					raise Notify(3,0,'invalid ipv4 flow_vpn next-hop length %d expected 4' % len_nh)
-			elif safi in (SAFI.rtc,):
-				if len_nh not in (4,16):
-					raise Notify(3,0,'invalid ipv4 rtc next-hop length %d expected 4' % len_nh)
-		elif afi == AFI.ipv6:
-			if safi in (SAFI.unicast,):
-				if len_nh not in (16,32):
-					raise Notify(3,0,'invalid ipv6 unicast next-hop length %d expected 16 or 32' % len_nh)
-			elif safi in (SAFI.mpls_vpn,):
-				if len_nh not in (24,40):
-					raise Notify(3,0,'invalid ipv6 mpls_vpn next-hop length %d expected 24 or 40' % len_nh)
-				rd = 8
-			elif safi in (SAFI.flow_ip,):
-				if len_nh not in (0,16,32):
-					raise Notify(3,0,'invalid ipv6 flow_ip next-hop length %d expected 0, 16 or 32' % len_nh)
-			elif safi in (SAFI.flow_vpn,):
-				if len_nh not in (0,16,32):
-					raise Notify(3,0,'invalid ipv6 flow_vpn next-hop length %d expected 0, 16 or 32' % len_nh)
-		elif afi == AFI.l2vpn:
-			if len_nh != 4:
-				Notify(3,0,'invalid l2vpn next-hop length %d expected 4' % len_nh)
-		elif afi == AFI.bgpls:
-			if len_nh != 4:
-				Notify(3,0,'invalid bgpls next-hop length %d expected 4' % len_nh)
+		length,rd = Family.size[(afi,safi)]
+
+		if len_nh not in length:
+			raise Notify(3,0,'invalid %s %s next-hop length %d expected %s' % (afi,safi,len_nh,' or '.join(str(_) for _ in length)))
+
 		size = len_nh - rd
 
 		# XXX: FIXME: GET IT FROM CACHE HERE ?
@@ -201,7 +166,6 @@ class MPRNLRI (Attribute,Family):
 			if left == data:
 				raise RuntimeError("sub-calls should consume data")
 
-			# logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
 			data = left
 		return cls(afi,safi,nlris)
 

@@ -8,8 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
-import ast
-import re
 
 from exabgp.util import character
 from exabgp.util import concat_bytes_i
@@ -100,20 +98,18 @@ def prefix_sid (tokeniser):
 		if consume_extra:
 			tokeniser()
 	except Exception as e:
-		raise ValueError('could not parse BGP PrefixSid attribute: {}'
-				.format(e))
+		raise ValueError('could not parse BGP PrefixSid attribute: {}'.format(e))
 
 	if int(label_sid) < pow(2,32):
 		sr_attrs.append(SrLabelIndex(int(label_sid)))
 
 	for srgb in srgb_data:
-		if ( len(srgb) == 2 and int(srgb[0]) < pow(2,24) and
-			int(srgb[1]) < pow(2,24) ):
+		if (len(srgb) == 2 and int(srgb[0]) < pow(2,24) and int(srgb[1]) < pow(2,24)):
 			srgbs.append((int(srgb[0]),int(srgb[1])))
 		else:
 			raise ValueError('could not parse SRGB tupple')
 
 	if srgbs:
-    		sr_attrs.append(SrGb(srgbs))
+		sr_attrs.append(SrGb(srgbs))
 
 	return PrefixSid(sr_attrs)

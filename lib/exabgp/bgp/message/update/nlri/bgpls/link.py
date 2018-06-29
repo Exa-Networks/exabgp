@@ -6,9 +6,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from struct import pack
 from struct import unpack
-import json
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -77,7 +75,7 @@ class LINK(BGPLS):
 		self._pack = packed
 
 	@classmethod
-	def unpack (cls, data, rd):
+	def unpack_nlri (cls, data, rd):
 		proto_id = unpack('!B',data[0:1])[0]
 		iface_addrs = []
 		neigh_addrs = []
