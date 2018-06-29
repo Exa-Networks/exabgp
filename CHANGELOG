@@ -28,6 +28,8 @@ Version 4.0.7
    reported by: Johan Guldmyr
  * Fix: fix neighbor CLI to match against peer address
    patch by: Malcolm Dodds
+ * Fix: fix parsing of labelled default IP route
+   patch by: Thomas Morin
 
 Version 4.0.6
  * Fix: default network for IPv6 is 128 .. not 32
