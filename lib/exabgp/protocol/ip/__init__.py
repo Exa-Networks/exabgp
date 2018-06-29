@@ -226,6 +226,12 @@ class _NoNextHop (object):
 	def __str__ (self):
 		return 'no-nexthop'
 
+	def __deepcopy__(self, _):
+		return self
+
+	def __copy__(self, _):
+		return self
+
 
 NoNextHop = _NoNextHop()
 

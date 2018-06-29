@@ -81,9 +81,7 @@ class ParseFlowThen (Section):
 		pass
 
 	def pre (self):
-		self.scope.set(self.name,self.scope.get('flow/route'))
 		return True
 
 	def post (self):
-		self.scope.pop(self.name)
 		return True

@@ -37,5 +37,7 @@ class ParseTemplateNeighbor (Section):
 		return True
 
 	def post (self):
+		routes = self.scope.pop_routes()
+		self.scope.extend('routes',routes)
 		self.scope.leave()
 		return True

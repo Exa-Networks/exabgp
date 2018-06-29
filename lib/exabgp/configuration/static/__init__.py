@@ -16,7 +16,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri import CIDR
 from exabgp.bgp.message.update.nlri import INET
-from exabgp.bgp.message.update.nlri import Labelled
+from exabgp.bgp.message.update.nlri import Label
 from exabgp.bgp.message.update.nlri import IPVPN
 
 from exabgp.bgp.message.update.attribute import Attributes
@@ -39,24 +39,20 @@ class ParseStatic (ParseStaticRoute):
 		return True
 
 	def pre (self):
-		self.scope.to_context()
 		return True
 
 	def post (self):
-		routes = self.scope.pop(self.name,[])
-		if routes:
-			self.scope.extend('routes',routes)
 		return True
 
 
-@ParseStatic.register('route','extend-name')
+@ParseStatic.register('route','append-route')
 def route (tokeniser):
 	ipmask = prefix(tokeniser)
 
 	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
 		nlri = IPVPN(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
 	elif 'label' in tokeniser.tokens:
-		nlri = Labelled(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
+		nlri = Label(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
 	else:
 		nlri = INET(IP.toafi(ipmask.top()),IP.tosafi(ipmask.top()),OUT.ANNOUNCE)
 
@@ -89,14 +85,14 @@ def route (tokeniser):
 	return list(ParseStatic.split(change))
 
 
-@ParseStatic.register('attributes','extend-name')
+@ParseStatic.register('attributes','append-route')
 def attributes (tokeniser):
 	ipmask = prefix(lambda: tokeniser.tokens[-1])
 
 	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
 		nlri = IPVPN(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
 	elif 'label' in tokeniser.tokens:
-		nlri = Labelled(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
+		nlri = Label(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
 	else:
 		nlri = INET(IP.toafi(ipmask.top()),IP.tosafi(ipmask.top()),OUT.ANNOUNCE)
 

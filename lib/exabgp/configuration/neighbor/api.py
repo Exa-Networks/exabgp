@@ -62,7 +62,6 @@ class _ParseDirection (Section):
 		pass
 
 	def pre (self):
-		self.scope.to_context()
 		return True
 
 	def post (self):
@@ -130,17 +129,19 @@ class ParseAPI (Section):
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
+		self.api = {}
 		self.named = ''
 
 	@classmethod
-	def empty (cls):
+	def _empty (cls):
 		return copy.deepcopy(cls.DEFAULT_API)
 
 	def clear (self):
+		self.api = {}
+		self.named = ''
 		pass
 
 	def pre (self):
-		self.scope.to_context()
 		named = self.tokeniser.iterate()
 		self.named = named if named else 'auto-named-%d' % int(time.time()*1000000)
 		self.check_name(self.named)
@@ -149,26 +150,28 @@ class ParseAPI (Section):
 		return True
 
 	def post (self):
-		self.scope.to_context()
-		api = self.scope.pop(self.named)
 		self.scope.leave()
 		self.scope.to_context()
-		built = self.scope.pop('api')
-
-		procs = api.get('processes',[])
-
-		built.setdefault('processes',[]).extend(procs)
-
-		for command in ('neighbor-changes','negotiated','fsm','signal'):
-			built.setdefault(command,[]).extend(procs if api.get(command,False) else [])
-
-		for direction in ('send','receive'):
-			data = api.get(direction,{})
-			for action in ('parsed','packets','consolidate','open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-				built.setdefault("%s-%s" % (direction,action),[]).extend(procs if data.get(action,False) else [])
-
-		self.scope.set(self.name,built)
 		return True
+
+	@classmethod
+	def flatten (cls,apis):
+		built = cls._empty()
+
+		for api in apis.values():
+			procs = api.get('processes',[])
+
+			built.setdefault('processes',[]).extend(procs)
+
+			for command in ('neighbor-changes','negotiated','fsm','signal'):
+				built.setdefault(command,[]).extend(procs if api.get(command,False) else [])
+
+			for direction in ('send','receive'):
+				data = api.get(direction,{})
+				for action in ('parsed','packets','consolidate','open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
+					built.setdefault("%s-%s" % (direction,action),[]).extend(procs if data.get(action,False) else [])
+
+		return built
 
 
 for way in ('send','receive'):

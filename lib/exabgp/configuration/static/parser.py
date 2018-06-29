@@ -66,6 +66,8 @@ def prefix (tokeniser):
 		ip,mask = ip.split('/')
 	except ValueError:
 		mask = '32'
+		if ':' in ip:
+			mask = '128'
 
 	tokeniser.afi = IP.toafi(ip)
 	return IPRange.create(ip,mask)
@@ -111,7 +113,7 @@ def mpls (tokeniser):
 	mpls = IPVPN(
 		afi=IP.toafi(ipmask.top()),
 		safi=IP.tosafi(ipmask.top()),
-		action=OUT.UNSET
+		action=OUT.ANNOUNCE
 	)
 	mpls.cidr = CIDR(ipmask.ton(),ipmask.mask)
 
@@ -211,7 +213,7 @@ def as_path (tokeniser):
 					inset = True
 					while True:
 						value = tokeniser()
-						if value == ')':
+						if value in (')',']'):
 							break
 						as_set.append(ASN.from_string(value))
 				if value == ')':
@@ -491,7 +493,7 @@ def _extended_community (value):
 		if command == 'target4':
 			return ExtendedCommunity.unpack(_HEADER['target4']+pack('!LH',iga,ila),None)
 
-		if command == 'orgin4':
+		if command == 'origin4':
 			return ExtendedCommunity.unpack(_HEADER['origin4']+pack('!LH',iga,ila),None)
 
 		if command == 'redirect':

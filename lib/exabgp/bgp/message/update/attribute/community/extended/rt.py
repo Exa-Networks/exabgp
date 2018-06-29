@@ -104,7 +104,7 @@ class RouteTargetIPNumber (RouteTarget):
 		return hash((self.ip,self.number))
 
 	def __repr__ (self):
-		return "%s:%d:%d" % (self.DESCRIPTION,self.ip,self.number)
+		return "%s:%s:%d" % (self.DESCRIPTION,self.ip,self.number)
 
 	@classmethod
 	def unpack (cls, data):

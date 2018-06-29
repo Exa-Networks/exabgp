@@ -67,6 +67,7 @@ class Change (object):
 			return self.nlri.feedback(self.nlri.action)
 		return 'no check implemented for the family %s %s' % self.nlri.family()
 
+
 class ConfigurationChange (Change):
 	SOURCE = Source.CONFIGURATION
 

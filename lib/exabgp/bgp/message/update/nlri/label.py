@@ -7,6 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.util import character
@@ -23,7 +24,7 @@ from exabgp.bgp.message.update.nlri.qualifier import Labels
 
 @NLRI.register(AFI.ipv4,SAFI.nlri_mpls)
 @NLRI.register(AFI.ipv6,SAFI.nlri_mpls)
-class Labelled (INET):
+class Label (INET):
 	__slots__ = ['labels']
 
 	def __init__ (self, afi, safi, action):
@@ -35,23 +36,28 @@ class Labelled (INET):
 			return 'labelled nlri next-hop missing'
 		return ''
 
+	def extensive (self):
+		return "%s%s" % (self.prefix(),'' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)
+
+	def __str__ (self):
+		return self.extensive()
+
+	def __repr__ (self):
+		return self.extensive()
+
 	def __len__ (self):
 		return INET.__len__(self) + len(self.labels)
 
 	def __eq__ (self, other):
 		return \
-			INET.__eq__(self, other) and \
-			self.labels == other.labels
+			self.labels == other.labels and \
+			INET.__eq__(self, other)
 
 	def __hash__ (self):
 		return hash(self.pack())
 
-	@classmethod
-	def has_label (cls):
-		return True
-
 	def prefix (self):
-		return "%s%s" % (INET.prefix(self),str(self.labels))
+		return "%s%s" % (INET.prefix(self),self.labels)
 
 	def pack (self, negotiated=None):
 		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''

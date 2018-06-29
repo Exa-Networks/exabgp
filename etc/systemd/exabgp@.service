@@ -1,0 +1,16 @@
+[Unit]
+Description=ExaBGP for instance %i
+Documentation=man:exabgp(1)
+Documentation=man:exabgp.conf(5)
+Documentation=https://github.com/Exa-Networks/exabgp/wiki
+After=network.target
+ConditionPathExists=/etc/exabgp/exabgp-%i.conf
+
+[Service]
+Environment=exabgp_daemon_daemonize=false
+Environment=EXABGP_INSTANCE=exabgp-%i
+ExecStart=/usr/sbin/exabgp /etc/exabgp/${EXABGP_INSTANCE}.conf
+ExecReload=/bin/kill -USR1 $MAINPID
+
+[Install]
+WantedBy=multi-user.target

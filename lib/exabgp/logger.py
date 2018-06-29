@@ -7,8 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-# pylint: disable=too-few-public-methods,star-args,import-error
-
 from __future__ import print_function
 
 import os
@@ -18,27 +16,11 @@ import time
 import syslog
 import logging
 import logging.handlers
-
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+import pdb
+from collections import deque
 
 from exabgp.util.od import od
-from exabgp.util.hashtable import HashTable
 from exabgp.configuration.environment import environment
-
-_SHORT = {
-	'CRITICAL': 'CRIT',
-	'ERROR': 'ERR'
-}
-
-_LONG = {
-	'CRIT': 'CRITICAL',
-	'ERR': 'ERROR'
-}
-
-
-def short (name):
-	return _SHORT.get(name.upper(),name.upper())
 
 
 def _can_write (location):
@@ -111,12 +93,49 @@ class LazyNLRI (object):
 		return 'NLRI      %-18s %-28s payload %s' % (family,path,payload)
 
 
+def istty (std):
+	try:
+		return std.isatty()
+	except KeyboardInterrupt:
+		raise
+	except Exception:
+		return False
+
+
 class Logger (object):
+	RECORD = {
+		'START':    '\033[01;32m',  # Green
+		'DEBUG':    '',
+		'INFO':     '\033[01;32m',  # Green
+		'NOTICE':   '\033[01;34m',  # Blue
+		'WARNING':  '\033[01;33m',  # Yellow
+		'ERR':      '\033[01;31m',  # Red
+		'CRIT':     '\033[00;31m',  # Strong Red
+	}
+
+	MESSAGE = {
+		'START':    '\033[1m',  # Green
+		'DEBUG':    '',
+		'INFO':     '\033[1m',  # Green
+		'NOTICE':   '\033[1m',  # Blue
+		'WARNING':  '\033[1m',  # Yellow
+		'ERR':      '\033[1m',  # Red
+		'CRIT':     '\033[1m',  # Strong Red
+	}
+
+	END = '\033[0m'
+
+	TTY = {
+		'stderr': lambda: istty(sys.stderr),
+		'stdout': lambda: istty(sys.stdout),
+		'out': lambda: istty(sys.stdout),
+	}
+
 	_instance = dict()
 	_syslog = None
 	_where = ''
 
-	_history = []
+	_history = deque()
 	_max_history = 20
 
 	_default = None
@@ -134,10 +153,9 @@ class Logger (object):
 	# we use os.pid everytime as we may fork and the class is instance before it
 
 	def pdb (self, level):
-		if self._option.pdb and level in ['CRITICAL','critical']:
+		if self._option['pdb'] and level == 'CRIT':
 			# not sure why, pylint reports an import error here
-			from pdb import set_trace
-			set_trace()
+			pdb.set_trace()
 
 	def config (self, config=None):
 		if config is not None:
@@ -147,30 +165,10 @@ class Logger (object):
 	def history (self):
 		return "\n".join(self._format(*_) for _ in self._history)
 
-	def _record (self, timestamp, level, source, message):
+	def _record (self, timestamp, message, source, level):
 		if len(self._history) > self._max_history:
-			self._history.pop(0)
-		self._history.append((timestamp,level,source,message))
-
-	def _format (self, timestamp, level, source, message):
-		if self.short:
-			return message
-		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
-		if self._where in ['stderr','stdout']:
-			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
-		elif self._where in ['syslog',]:
-			return "%s[%d]: %-13s %s" % (environment.application,self._pid,source,message)
-		elif self._where in ['file',]:
-			return "%s %-6d %-13s %s" % (now,self._pid,source,message)
-		else:
-			# failsafe
-			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
-
-	def _prefixed (self, level, source, message):
-		timestamp = time.localtime()
-		level = _LONG.get(level,level)
-		self._record(timestamp,level,source,message)
-		return self._format(timestamp,level,source,message)
+			self._history.popleft()
+		self._history.append((message,source,level,timestamp))
 
 	def __init__ (self):
 		if self._instance.get('class',None) is not None:
@@ -182,19 +180,20 @@ class Logger (object):
 		self.short = command.log.short
 		self.level = command.log.level
 
-		self._option = HashTable()
-		self._option.pdb           = command.debug.pdb
-		self._option.reactor       = command.log.enable and (command.log.all or command.log.reactor)
-		self._option.daemon        = command.log.enable and (command.log.all or command.log.daemon)
-		self._option.processes     = command.log.enable and (command.log.all or command.log.processes)
-		self._option.configuration = command.log.enable and (command.log.all or command.log.configuration)
-		self._option.network       = command.log.enable and (command.log.all or command.log.network)
-		self._option.wire          = command.log.enable and (command.log.all or command.log.packets)
-		self._option.message       = command.log.enable and (command.log.all or command.log.message)
-		self._option.rib           = command.log.enable and (command.log.all or command.log.rib)
-		self._option.timer         = command.log.enable and (command.log.all or command.log.timers)
-		self._option.routes        = command.log.enable and (command.log.all or command.log.routes)
-		self._option.parser        = command.log.enable and (command.log.all or command.log.parser)
+		self._option = {
+			'pdb':           command.debug.pdb,
+			'reactor':       command.log.enable and (command.log.all or command.log.reactor),
+			'daemon':        command.log.enable and (command.log.all or command.log.daemon),
+			'processes':     command.log.enable and (command.log.all or command.log.processes),
+			'configuration': command.log.enable and (command.log.all or command.log.configuration),
+			'network':       command.log.enable and (command.log.all or command.log.network),
+			'wire':          command.log.enable and (command.log.all or command.log.packets),
+			'message':       command.log.enable and (command.log.all or command.log.message),
+			'rib':           command.log.enable and (command.log.all or command.log.rib),
+			'timer':         command.log.enable and (command.log.all or command.log.timers),
+			'routes':        command.log.enable and (command.log.all or command.log.routes),
+			'parser':        command.log.enable and (command.log.all or command.log.parser),
+		}
 
 		if not command.log.enable:
 			self.destination = ''
@@ -269,10 +268,10 @@ class Logger (object):
 		self._syslog.addHandler(self._default)
 
 		try:
-			if self.destination in ('stderr',):
+			if self.destination == 'stderr':
 				self._where = 'stderr'
 				return True
-			elif self.destination in ('stdout'):
+			elif self.destination == 'stdout':
 				self._where = 'out'
 				result = self._standard(self.destination)
 			elif self.destination in ('','syslog'):
@@ -292,89 +291,74 @@ class Logger (object):
 			self.critical('Can not set logging (are stdout/stderr closed?)','logger')
 			return False
 
-	def report (self, message, source='',level=''):
+	def _format (self, message, source, level,timestamp=None):
+		if timestamp is None:
+			timestamp = time.localtime()
+			self._record(timestamp,message,source,level)
+
+		if self.short:
+			return message
+
+		if self._where in ['stdout','stderr','out']:
+			now = time.strftime('%H:%M:%S',timestamp)
+			if not self.TTY[self._where]():
+				return "%s | %-6d | %-15s | %s" % (now,self._pid,source,message)
+			return "%s | %-6d | %s%-13s%s | %s%-8s%s" % (
+				now,
+				self._pid,
+				self.RECORD.get(level,''),source,self.END,
+				self.MESSAGE.get(level,''),message,self.END
+			)
+		elif self._where in ['syslog',]:
+			return "%s[%d]: %-13s %s" % (environment.application,self._pid,source,message)
+		elif self._where in ['file',]:
+			now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
+			return "%s %-6d %-13s %s" % (now,self._pid,source,message)
+		else:
+			# failsafe
+			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
+
+	def _report (self, message, source, level):
+		if source.startswith('incoming-'):
+			src = 'wire'
+		elif source.startswith('outgoing-'):
+			src = 'wire'
+		elif source.startswith('ka-'):
+			src = 'timer'
+		elif source.startswith('peer-'):
+			src = 'network'
+		else:
+			src = source
+
+		log = self._option.get(src,True) and getattr(syslog,'LOG_%s' % level) <= self.level
+
+		if not log:
+			return
+
 		for line in message.split('\n'):
 			if self._syslog:
-				self._syslog.debug(self._prefixed(level,source,line))
+				self._syslog.debug(self._format(line,source,level))
 			else:
-				print(self._prefixed(level,source,line))
+				print(self._format(line,source,level))
 				sys.stdout.flush()
 
 	def debug (self, message, source='', level='DEBUG'):
-		self.report(message,source,level)
+		self._report(message,source,level)
 
 	def info (self, message, source='', level='INFO'):
-		self.report(message,source,level)
+		self._report(message,source,level)
+
+	def notice (self, message, source='', level='NOTICE'):
+		self._report(message,source,level)
 
 	def warning (self, message, source='', level='WARNING'):
-		self.report(message,source,level)
+		self._report(message,source,level)
 
-	def error (self, message, source='', level='ERROR'):
-		self.report(message,source,level)
+	def error (self, message, source='', level='ERR'):
+		self._report(message,source,level)
 
-	def critical (self, message, source='', level='CRITICAL'):
-		self.report(message,source,level)
-
-	def raw (self, message):
-		for line in message.split('\n'):
-			if self._syslog:
-				self._syslog.critical(line)
-			else:
-				print(line)
-				sys.stdout.flush()
-
-	# show the message on the wire
-	def _generic (self, message, recorder, source, log):
-		level = short(recorder)
-		if self._option[log] and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder)(message,source,level)
-		else:
-			self._record(time.localtime(),source,recorder,message)
-		self.pdb(recorder)
-
-	# show the message on the wire
-	def network (self, message, recorder='info', source='network', log='network'):
-		self._generic(message,recorder,source,log)
-
-	# show the message on the wire
-	def wire (self, message, recorder='debug', source='wire', log='wire'):
-		self._generic(message,recorder,source,log)
-
-	# show the exchange of message between peers
-	def message (self, message, recorder='info', source='message', log='message'):
-		self._generic(message,recorder,source,log)
-
-	# show the parsing of the configuration
-	def configuration (self, message, recorder='info', source='configuration', log='configuration'):
-		self._generic(message,recorder,source,log)
-
-	# show the exchange of message generated by the reactor (^C and signal received)
-	def reactor (self, message, recorder='info', source='reactor', log='reactor'):
-		self._generic(message,recorder,source,log)
-
-	# show the change of rib table
-	def rib (self, message, recorder='info', source='rib', log='rib'):
-		self._generic(message,recorder,source,log)
-
-	# show the change of rib table
-	def timers (self, message, recorder='debug', source='timer', log='timer'):
-		self._generic(message,recorder,source,log)
-
-	# show the exchange of message generated by the daemon feature (change pid, fork, ...)
-	def daemon (self, message, recorder='info', source='daemon', log='daemon'):
-		self._generic(message,recorder,source,log)
-
-	# show the exchange of message generated by the forked processes
-	def processes (self, message, recorder='info', source='processes', log='processes'):
-		self._generic(message,recorder,source,log)
-
-	# show the exchange of message generated by the routes received
-	def routes (self, message, recorder='info', source='routes', log='routes'):
-		self._generic(message,recorder,source,log)
-
-	# show how the message received are parsed
-	def parser (self, message, recorder='info', source='parser', log='parser'):
-		self._generic(message,recorder,source,log)
+	def critical (self, message, source='', level='CRIT'):
+		self._report(message,source,level)
 
 
 class FakeLogger (object):
@@ -382,9 +366,3 @@ class FakeLogger (object):
 		def printf (data, _=None):
 			sys.stdout.write('Fake logger [%s]\n' % str(data))
 		return printf
-
-# if __name__ == '__main__':
-# 	logger = Logger()
-# 	logger.wire('wire packet content')
-# 	logger.message('message exchanged')
-# 	logger.debug('debug test')

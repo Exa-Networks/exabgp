@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-cache.py
+bgp
 
 Created by Thomas Mangin
 Copyright (c) 2013-2017 Exa Networks. All rights reserved.
@@ -291,19 +291,20 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		else:
 			parser = self._decoder.get(self.kind(header),None)
 
+		if self.options['sink']:
+			self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
+			self.send(self.keepalive)
+			return
+
+		if self.options['echo']:
+			self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
+			self.send(header+body)
+			self.announce('sent     %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
+			return
+
 		if parser:
 			for announcement in parser(self,header,body):
-				if self.options['echo']:
-					self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
-					self.send(header+body)
-					self.announce('sent     %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
-					continue
-
 				self.send(self.keepalive)
-
-				if self.options['sink']:
-					self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
-					continue
 
 				if announcement.startswith('eor:'):  # skip EOR
 					self.announce('skipping eor',announcement)
@@ -323,7 +324,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 						self.announce('received %d (%1s%s):' % (self.counter,self.options['letter'],self.step), announcement)
 					self.check_signal()
 				else:
-					flushed(announcement)
 					if self.raw:
 						self.announce('received %d (%1s%s):' % (self.counter,self.options['letter'],self.step),'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body)))
 					else:

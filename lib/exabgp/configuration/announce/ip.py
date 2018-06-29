@@ -1,20 +1,12 @@
 # encoding: utf-8
 """
-announce/ipv4.py
+announce/ip.py
 
 Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-# This is a legacy file to handle 3.4.x like format
-
-from exabgp.util import character
-from exabgp.util import ordinal
-from exabgp.util import concat_bytes_i
-
-
-from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 
 from exabgp.rib.change import Change
@@ -24,15 +16,14 @@ from exabgp.bgp.message import OUT
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message.update.nlri import INET
+from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attributes
 
-from exabgp.configuration.core import Section
+from exabgp.configuration.announce import ParseAnnounce
 
 from exabgp.configuration.static.parser import prefix
-from exabgp.configuration.static.parser import inet
+# from exabgp.configuration.static.parser import inet
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import next_hop
 from exabgp.configuration.static.parser import origin
@@ -51,15 +42,9 @@ from exabgp.configuration.static.parser import name as named
 from exabgp.configuration.static.parser import split
 from exabgp.configuration.static.parser import watchdog
 from exabgp.configuration.static.parser import withdraw
-from exabgp.configuration.static.mpls import label
 
 
-# Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
-def pack_int (afi, integer):
-	return concat_bytes_i(character((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1))
-
-
-class ParseIP (Section):
+class AnnounceIP (ParseAnnounce):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'next-hop <ip>',
@@ -89,7 +74,6 @@ class ParseIP (Section):
 		'\n   ' + ' ;\n   '.join(definition) + '\n}'
 
 	known = {
-		'label':               label,
 		'attribute':           attribute,
 		'next-hop':            next_hop,
 		'origin':              origin,
@@ -138,20 +122,15 @@ class ParseIP (Section):
 	afi = None
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Section.__init__(self,tokeniser,scope,error,logger)
+		ParseAnnounce.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		return True
 
 	def pre (self):
-		# self.scope.set(self.name,inet(self.tokeniser.iterate))
 		return True
 
 	def post (self):
-		self._split()
-		routes = self.scope.pop(self.name)
-		if routes:
-			self.scope.extend('routes',routes)
 		return True
 
 	def _check (self):
@@ -167,58 +146,6 @@ class ParseIP (Section):
 			and change.nlri.safi in (SAFI.unicast,SAFI.multicast):
 			return False
 		return True
-
-	@staticmethod
-	def split (last):
-		if Attribute.CODE.INTERNAL_SPLIT not in last.attributes:
-			yield last
-			return
-
-		# ignore if the request is for an aggregate, or the same size
-		mask = last.nlri.cidr.mask
-		cut = last.attributes[Attribute.CODE.INTERNAL_SPLIT]
-		if mask >= cut:
-			yield last
-			return
-
-		# calculate the number of IP in the /<size> of the new route
-		increment = pow(2,last.nlri.afi.mask() - cut)
-		# how many new routes are we going to create from the initial one
-		number = pow(2,cut - last.nlri.cidr.mask)
-
-		# convert the IP into a integer/long
-		ip = 0
-		for c in last.nlri.cidr.ton():
-			ip <<= 8
-			ip += ordinal(c)
-
-		afi = last.nlri.afi
-		safi = last.nlri.safi
-
-		# Really ugly
-		klass = last.nlri.__class__
-		path_info = last.nlri.path_info
-		nexthop = last.nlri.nexthop
-
-		# XXX: Looks weird to set and then set to None, check
-		last.nlri.cidr.mask = cut
-		last.nlri = None
-
-		# generate the new routes
-		for _ in range(number):
-			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			nlri = klass(afi,safi,OUT.ANNOUNCE)
-			nlri.cidr = CIDR(pack_int(afi,ip),cut)
-			nlri.nexthop = nexthop  # nexthop can be NextHopSelf
-			nlri.path_info = path_info
-			# next ip
-			ip += increment
-			yield Change(nlri,last.attributes)
-
-	def _split (self):
-		for route in self.scope.pop(self.name,[]):
-			for splat in self.split(route):
-				self.scope.append(self.name,splat)
 
 
 def ip (tokeniser,afi,safi):
@@ -238,14 +165,14 @@ def ip (tokeniser,afi,safi):
 		if not command:
 			break
 
-		action = ParseIP.action.get(command,'')
+		action = AnnounceIP.action.get(command,'')
 
 		if action == 'attribute-add':
-			change.attributes.add(ParseIP.known[command](tokeniser))
+			change.attributes.add(AnnounceIP.known[command](tokeniser))
 		elif action == 'nlri-set':
-			change.nlri.assign(ParseIP.assign[command],ParseIP.known[command](tokeniser))
+			change.nlri.assign(AnnounceIP.assign[command],AnnounceIP.known[command](tokeniser))
 		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = ParseIP.known[command](tokeniser)
+			nexthop,attribute = AnnounceIP.known[command](tokeniser)
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:
@@ -254,31 +181,44 @@ def ip (tokeniser,afi,safi):
 	return [change]
 
 
-class ParseIPv4 (ParseIP):
-	name = 'ipv4'
-	afi = AFI.ipv4
+def ip_multicast (tokeniser,afi,safi):
+	ipmask = prefix(tokeniser)
+
+	nlri = INET(afi,safi,OUT.ANNOUNCE)
+	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
+
+	change = Change(
+		nlri,
+		Attributes()
+	)
+
+	while True:
+		command = tokeniser()
+
+		if not command:
+			break
+
+		action = AnnounceIP.action.get(command,'')
+
+		if action == 'attribute-add':
+			change.attributes.add(AnnounceIP.known[command](tokeniser))
+		elif action == 'nlri-set':
+			change.nlri.assign(AnnounceIP.assign[command],AnnounceIP.known[command](tokeniser))
+		elif action == 'nexthop-and-attribute':
+			nexthop,attribute = AnnounceIP.known[command](tokeniser)
+			change.nlri.nexthop = nexthop
+			change.attributes.add(attribute)
+		else:
+			raise ValueError('route: unknown command "%s"' % command)
+
+	return [change]
 
 
-@ParseIPv4.register('unicast','extend-name',True)
-def unicast_v4 (tokeniser):
-	return ip(tokeniser,AFI.ipv4,SAFI.unicast)
-
-
-@ParseIPv4.register('multicast','extend-name',True)
+@ParseAnnounce.register('multicast','extend-name','ipv4')
 def multicast_v4 (tokeniser):
-	return ip(tokeniser,AFI.ipv4,SAFI.multicast)
+	return ip_multicast(tokeniser,AFI.ipv4,SAFI.multicast)
 
 
-class ParseIPv6 (ParseIP):
-	name = 'ipv6'
-	afi = AFI.ipv6
-
-
-@ParseIPv6.register('unicast','extend-name',True)
-def unicast_v6 (tokeniser):
-	return ip(tokeniser,AFI.ipv6,SAFI.unicast)
-
-
-@ParseIPv6.register('multicast','extend-name',True)
+@ParseAnnounce.register('multicast','extend-name','ipv6')
 def multicast_v6 (tokeniser):
-	return ip(tokeniser,AFI.ipv6,SAFI.multicast)
+	return ip_multicast(tokeniser,AFI.ipv6,SAFI.multicast)

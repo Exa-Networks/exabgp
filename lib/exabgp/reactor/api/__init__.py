@@ -20,6 +20,8 @@ from exabgp.logger import Logger
 from exabgp.reactor.api.command import Command
 from exabgp.configuration.configuration import Configuration
 
+from exabgp.reactor.api.response.answer import Answer
+
 # ======================================================================= Parser
 #
 
@@ -30,22 +32,20 @@ class API (Command):
 		self.logger = Logger()
 		self.configuration = Configuration([])
 
-	def log_message (self, message, level='info'):
-		self.logger.reactor(message,level)
+	def log_message (self, message, level='INFO'):
+		self.logger.notice(message,'api',level)
 
-	def log_failure (self, message, level='error'):
+	def log_failure (self, message, level='ERR'):
 		error = str(self.configuration.tokeniser.error)
 		report = '%s\nreason: %s' % (message, error) if error else message
-		self.logger.reactor(report,level)
+		self.logger.error(report,'api',level)
 
 	def text (self, reactor, service, command):
 		for registered in self.functions:
-			if registered in command:
-				# XXX: should we not test the return value ?
-				self.callback['text'][registered](self,reactor,service,command)
-				return True
-		reactor.answer(service,'error')
-		self.logger.reactor("Command from process not understood : %s" % command,'warning')
+			if registered == command or registered + ' ' in command:
+				return self.callback['text'][registered](self,reactor,service,command)
+		reactor.processes.answer(service,Answer.error)
+		self.logger.warning('command from process not understood : %s' % command,'api')
 		return False
 
 	def api_route (self, command):
@@ -58,7 +58,8 @@ class API (Command):
 		if self.configuration.scope.location():
 			return []
 
-		changes = self.configuration.scope.pop('routes',[])
+		self.configuration.scope.to_context()
+		changes = self.configuration.scope.pop_routes()
 		return changes
 
 	def api_flow (self, command):
@@ -71,18 +72,19 @@ class API (Command):
 		if self.configuration.scope.location():
 			return []
 
-		self.configuration.scope.to_context('route')
-		changes = self.configuration.scope.pop('routes',[])
+		self.configuration.scope.to_context()
+		changes = self.configuration.scope.pop_routes()
 		return changes
 
 	def api_vpls (self, command):
 		action, line = command.split(' ',1)
 
-		self.configuration.vpls.clear()
+		self.configuration.l2vpn.clear()
 		if not self.configuration.partial('l2vpn',line):
 			return []
 
-		changes = self.configuration.scope.pop('routes',[])
+		self.configuration.scope.to_context()
+		changes = self.configuration.scope.pop('l2vpn')
 		return changes
 
 	def api_attributes (self, command, peers):
@@ -92,7 +94,8 @@ class API (Command):
 		if not self.configuration.partial('static',line):
 			return []
 
-		changes = self.configuration.scope.pop('routes',[])
+		self.configuration.scope.to_context()
+		changes = self.configuration.scope.pop_routes()
 		return changes
 
 	def api_refresh (self, command):
@@ -103,7 +106,7 @@ class API (Command):
 		safi = SAFI.value(tokens.pop(0))
 		if afi is None or safi is None:
 			return False
-		return RouteRefresh(afi,safi)
+		return [RouteRefresh(afi,safi)]
 
 	def api_eor (self, command):
 		tokens = formated(command).split(' ')[2:]

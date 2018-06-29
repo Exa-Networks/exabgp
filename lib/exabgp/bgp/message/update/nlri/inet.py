@@ -13,6 +13,7 @@ from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import Family
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import padding
@@ -46,7 +47,7 @@ class INET (NLRI):
 		return self.extensive()
 
 	def __repr__ (self):
-		return str(self)
+		return self.extensive()
 
 	def feedback (self, action):
 		if self.nexthop is None and action == OUT.ANNOUNCE:
@@ -104,9 +105,12 @@ class INET (NLRI):
 		mask = ordinal(bgp[0])
 		bgp = bgp[1:]
 
-		if cls.has_label():
+		_, rd_size = Family.size.get((afi, safi), (0, 0))
+		rd_mask = rd_size * 8
+
+		if safi.has_label():
 			labels = []
-			while bgp and mask >= 8:
+			while mask - rd_mask > 24:
 				label = int(unpack('!L',character(0) + bgp[:3])[0])
 				bgp = bgp[3:]
 				mask -= 24  	# 3 bytes
@@ -123,10 +127,10 @@ class INET (NLRI):
 					break
 			nlri.labels = Labels(labels)
 
-		if cls.has_rd():
-			mask -= 8*8  # the 8 bytes of the route distinguisher
-			rd = bgp[:8]
-			bgp = bgp[8:]
+		if rd_size:
+			mask -= rd_mask  # the route distinguisher
+			rd = bgp[:rd_size]
+			bgp = bgp[rd_size:]
 			nlri.rd = RouteDistinguisher(rd)
 
 		if mask < 0:

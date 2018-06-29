@@ -160,31 +160,20 @@ class ParseStaticRoute (Section):
 		return True
 
 	def pre (self):
-		self.scope.set(self.name,mpls(self.tokeniser.iterate))
-		# self.scope.set(self.name,inet(self.tokeniser.iterate))
+		self.scope.append_route(mpls(self.tokeniser.iterate))
 		return True
 
 	def post (self):
-		# self._family()
 		self._split()
-		# self.scope.to_context()
-		routes = self.scope.pop(self.name)
+		routes = self.scope.pop_routes()
 		if routes:
 			for route in routes:
-				# if route.nlri.has_rd():
-				if route.nlri.rd is not RouteDistinguisher.NORD:
+				if route.nlri.has_rd() and route.nlri.rd is not RouteDistinguisher.NORD:
 					route.nlri.safi = SAFI.mpls_vpn
-				# elif route.nlri.has_label():
-				elif route.nlri.labels is not Labels.NOLABEL:
+				elif route.nlri.has_label() and route.nlri.labels is not Labels.NOLABEL:
 					route.nlri.safi = SAFI.nlri_mpls
-
-			self.scope.extend('routes',routes)
+				self.scope.append_route(route)
 		return True
-
-	# def _family (self):
-	# 	last = self.scope.get(self.name)
-	# 	if last.nlri.labels and not last.nlri.safi.has_label():
-	# 		last.nlri.safi = SAFI.nlri_mpls
 
 	def _check (self):
 		if not self.check(self.scope.get(self.name)):
@@ -229,11 +218,12 @@ class ParseStaticRoute (Section):
 
 		# Really ugly
 		klass = last.nlri.__class__
-		path_info = last.nlri.path_info
 		nexthop = last.nlri.nexthop
-		if klass.has_label():
+		if safi.has_path():
+			path_info = last.nlri.path_info
+		if safi.has_label():
 			labels = last.nlri.labels
-		if klass.has_rd():
+		if safi.has_rd():
 			rd = last.nlri.rd
 
 		# XXX: Looks weird to set and then set to None, check
@@ -246,16 +236,17 @@ class ParseStaticRoute (Section):
 			nlri = klass(afi,safi,OUT.ANNOUNCE)
 			nlri.cidr = CIDR(pack_int(afi,ip),cut)
 			nlri.nexthop = nexthop  # nexthop can be NextHopSelf
-			nlri.path_info = path_info
-			# Really ugly
-			if klass.has_label():
+			if safi.has_path():
+				nlri.path_info = path_info
+			if safi.has_label():
 				nlri.labels = labels
-			if klass.has_rd():
+			if safi.has_rd():
 				nlri.rd = rd
 			# next ip
 			ip += increment
 			yield Change(nlri,last.attributes)
 
 	def _split (self):
-		for splat in self.split(self.scope.pop(self.name)):
-			self.scope.append(self.name,splat)
+		for route in self.scope.pop_routes():
+			for splat in self.split(route):
+				self.scope.append_route(splat)

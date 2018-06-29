@@ -32,9 +32,9 @@ class Section (Error):
 		raise RuntimeError('%s did not implemented clear as should be' % self.__class__.__name__)
 
 	@classmethod
-	def register (cls, name, action,multiple=False):
+	def register (cls, name, action,afi=''):
 		def inner (function):
-			identifier = (cls.name,name) if multiple else name
+			identifier = (afi,name) if afi else name
 			if identifier in cls.known:
 				raise RuntimeError('more than one registration per command attempted')
 			cls.known[identifier] = function
@@ -58,7 +58,7 @@ class Section (Error):
 	def parse (self, name, command):
 		identifier = command if command in self.known else (self.name,command)
 		if identifier not in self.known:
-			return self.error.set('unknown command %s options are %s' % (command,', '.join(self.known)))
+			return self.error.set('unknown command %s options are %s' % (command,', '.join([str(_) for _ in self.known])))
 
 		try:
 			if command in self.default:
@@ -93,6 +93,8 @@ class Section (Error):
 					self.scope.nlri_nexthop(name,ip)
 				if attribute:
 					self.scope.attribute_add(name,attribute)
+			elif action == 'append-route':
+				self.scope.extend_routes(insert)
 			elif action == 'nop':
 				pass
 			else:

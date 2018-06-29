@@ -26,8 +26,9 @@ class Scope (Error):
 		self._location = []
 		self._added = set()
 		self._all = {
-			'template': {}
+			'template': {},
 		}
+		self._routes = []
 		self._current = self._all
 
 	def __repr__ (self):
@@ -37,9 +38,34 @@ class Scope (Error):
 		self._location = []
 		self._added = set()
 		self._all = {
-			'template': {}
+			'template': {},
 		}
+		self._routes = []
 		self._current = self._all
+
+	# building route list
+
+	def get_routes(self):
+		return self._routes
+
+	def pop_routes(self):
+		routes = self._routes
+		self._routes = []
+		return routes
+
+	def extend_routes (self, value):
+		self._routes.extend(value)
+
+	# building nlri
+
+	def append_route(self, value):
+		return self._routes.append(value)
+
+	def get_route(self):
+		return self._routes[-1]
+
+	def pop_route(self):
+		return self._routes.pop()
 
 	# context
 
@@ -83,18 +109,18 @@ class Scope (Error):
 	def attribute_add (self, name, data):
 		# .add_and_merge() and not .add() is required
 		# flow spec to have multiple keywords adding to the extended-community
-		self._current[name].attributes.add_and_merge(data)
+		self.get_route().attributes.add_and_merge(data)
 		if name not in self._added:
 			self._added.add(name)
 
 	def nlri_assign (self, name, command, data):
-		self._current[name].nlri.assign(command,data)
+		self.get_route().nlri.assign(command,data)
 
 	def nlri_add (self, name, command, data):
-		self._current[name].nlri.add(data)
+		self.get_route().nlri.add(data)
 
 	def nlri_nexthop (self, name, data):
-		self._current[name].nlri.nexthop = data
+		self.get_route().nlri.nexthop = data
 
 	def append (self, name, data):
 		self._current.setdefault(name,[]).append(data)

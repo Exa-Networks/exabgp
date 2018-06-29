@@ -11,16 +11,16 @@ from exabgp.util import concat_bytes
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
-#    0                   1                   2                   3
-#    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |       Type    |             Length            |   RESERVED    |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |            Flags              |       Label Index             |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#  |          Label Index          |
-#  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#					3.1.  Label-Index TLV
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |       Type    |             Length            |   RESERVED    |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |            Flags              |       Label Index             |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |          Label Index          |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 3.1.  Label-Index TLV
 
 
 @PrefixSid.register()
@@ -36,19 +36,19 @@ class SrLabelIndex(object):
 		return "%s" % (self.labelindex)
 
 	def pack (self):
-		t = pack('!B', self.TLV)
-		l = pack('!H', self.LENGTH)
-		val = pack('!I',self.labelindex)
-		reserved = pack('!B',0)
-		flags = pack('!H',0)
-		return concat_bytes(t,l,reserved,flags,val)
+		return concat_bytes(
+			pack('!B', self.TLV),
+			pack('!H', self.LENGTH),
+			pack('!B',0),  # reserved
+			pack('!H',0),  # flags
+			pack('!I',self.labelindex)
+		)
 
 	@classmethod
 	def unpack (cls,data,length):
 		labelindex = -1
 		if cls.LENGTH != length:
-			raise Notify(3,5, "Invalid TLV size. Should be 7 but {0} received"
-				.format(length))
+			raise Notify(3,5, "Invalid TLV size. Should be 7 but {0} received".format(length))
 		# Shift reserved bits
 		data = data[1:]
 		# Shift Flags

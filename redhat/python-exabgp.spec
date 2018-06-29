@@ -1,8 +1,9 @@
 %{!?__python2:        %global __python2 /usr/bin/python2}
 %{!?python2_sitelib:  %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
+%define version %(echo "$(python setup.py next)")
 
 Name:           python-exabgp
-Version:        3.4.18
+Version:        %{version}
 Release:        1%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 
@@ -43,13 +44,16 @@ Find what other users have done with it. Current documented use cases include DD
 %{__python2} setup.py install -O1 --root ${RPM_BUILD_ROOT}
 
 # fix file locations
+install bin/healthcheck ${RPM_BUILD_ROOT}%{_bindir}
 mv ${RPM_BUILD_ROOT}%{_bindir} ${RPM_BUILD_ROOT}%{_sbindir}
 mv ${RPM_BUILD_ROOT}%{_sbindir}/healthcheck ${RPM_BUILD_ROOT}/%{_sbindir}/exabgp-healthcheck
 install -d -m 744 ${RPM_BUILD_ROOT}/%{_sysconfdir}/
-mv ${RPM_BUILD_ROOT}/usr/etc/exabgp ${RPM_BUILD_ROOT}/%{_sysconfdir}/
+install -d -m 755 ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
+install etc/exabgp/*.conf ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
 
 install -d %{buildroot}/%{_unitdir}
 install etc/systemd/exabgp.service %{buildroot}/%{_unitdir}/
+install etc/systemd/exabgp@.service %{buildroot}/%{_unitdir}/
 
 install -d %{buildroot}/%{_mandir}/man1
 install doc/man/exabgp.1 %{buildroot}/%{_mandir}/man1
@@ -57,9 +61,13 @@ install doc/man/exabgp.1 %{buildroot}/%{_mandir}/man1
 install -d %{buildroot}/%{_mandir}/man5
 install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 
+# Sample .conf
+ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/exabgp/exabgp.conf
 
 %post -n exabgp
 %systemd_post exabgp.service
+# Default env
+[ -f %{_sysconfdir}/exabgp/exabgp.env ] || %{_sbindir}/exabgp --fi > %{_sysconfdir}/exabgp/exabgp.env
 
 %preun -n exabgp
 %systemd_preun exabgp.service
@@ -75,14 +83,20 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %files -n exabgp
 %defattr(-,root,root,-)
 %attr(755, root, root) %{_sbindir}/exabgp
+%attr(755, root, root) %{_sbindir}/exabgpcli
 %attr(755, root, root) %{_sbindir}/exabgp-healthcheck
 %dir %{_sysconfdir}/exabgp
-%attr(744, root, root) %{_sysconfdir}/exabgp/*
+%{_sysconfdir}/exabgp/exabgp.conf
+%dir %{_sysconfdir}/exabgp/examples
+%attr(744, root, root) %{_prefix}/share/exabgp/*
+%attr(744, root, root) %{_sysconfdir}/exabgp/examples/*
 %{_unitdir}/exabgp.service
+%{_unitdir}/exabgp@.service
+%attr(644, root, root) %{_unitdir}/*
 %doc COPYRIGHT CHANGELOG README.md
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 
 %changelog
-* Tue Jun 09 2015 Arun Babu Neelicattu <arun.neelicattu@gmail.com> - 3.4.18-1
-- Initial release
+* Tue Apr 24 2018 Thomas Mangin <thomas.mangin@exa-networks.co.uk> %{version}
+- See https://github.com/Exa-Networks/exabgp/blob/%{version}/CHANGELOG

@@ -3,14 +3,123 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.0.7
+ * Fix: handling of processes when the configuration reload fails
+   patch by: Malcolm Dodds
+ * Fix: healthcheck, remove options.ip_setup in dynamic ip management
+   patch by: Ahmet Demir
+ * Fix: present unknown RD as hexadecimal string (previous representation could not be JSON parsed)
+   reported by: Jitoxxx
+ * Fix: fix permissions of systemd service files
+   patch by: Malcolm Dodds
+ * Fix: properly show connection as down in the cli
+   reported by: chantra
+ * Fix: JSON encoding for route-refresh
+   reported by: nfz1
+ * Fix: Prevent busy spinning in multiple code path (including when a peer closed the connection on us)
+   reported by: chantra
+ * Fix: busy spinning when the peer went away
+   reported by: chantra
+ * Improvement: many fix to QA code
+   patch by: Vincent Bernart
+ * Improvement: exit with error code 0 on SIGTERM
+   reported by: Johan Guldmyr
+ * Fix: fix neighbor CLI to match against peer address
+   patch by: Malcolm Dodds
+
+Version 4.0.6
+ * Fix: default network for IPv6 is 128 .. not 32
+   patch by: Donatas Abraitis
+ * Fix: issue when parsing AS_SET with '['
+   patch by: Kyle Birkeland
+ * Fix: parding of MD5 string in configuration
+   patch by: Kyle Birkeland
+ * Fix: bug generating flows with redirect
+   reported by: jasonsdn
+ * Fix: decoding of routes with label, the number of label to decode was badly calculated
+ * Fix: allow digit as first letter of hostname
+   reported by: Vascko
+ * Fix: Fix strip default attributes from withdrawals
+   patch by: dhammika
+ * Fix: make sure routes are removed on SIGUSR1
+   patch by: Malcolm Dodds
+ * Fix: Fix RPM spec files
+   patch by: Malcolm Dodds
+ * Change: if exabgp is installed in /usr, the configuration will be looked into /etc (and not /usr/etc)
+   request by: Vascko
+
+Version 4.0.5
+  * Fix: bad encoding of flow rules with &
+    reported by: Iwase Yusuke
+
+Version 4.0.4
+  * Feature: draft draft-ietf-idr-bgp-extended-messages-24 support (option capability extended-message)
+  * Fix: do not tear down session if not enough space is available to pack an NLRI after attribute but treat-as-withdraw
+  * Fix: BGP-LS parsing issue when using Python3
+  * Fix: Invalid JSON when parsing unknown OPEN capabilities
+  * Fix: The way we iterated over the action queue could cause out of order executions
+  * Fix: problem with encoding of Notification messages
+  * Fix: L being added to number with %ld on some platform and version on Python 
+  * Fix: fix string representations with MPLS raw labels
+    patch by: Thomas Morin
+  * Feature: Add a systemd exabgp instance service
+    patch by: jmauro
+
+Version 4.0.3
+ * Fix: MD5 issue with python3
+ * Fix: control of logging for timer events
+ * Fix: possible packet data not being reset in update generation
+ * Fix: could miss API command if sent at faster than read rate
+ * Fix: bad json encoding
+   reported by: Tyson Clugg
+ * Fix: missing L2VPN/EVPN to next-hop sizing check
+   patch by: jsynack
+ * Fix: allow an hold-time of zero
+   patch by: andrius-adamavicius
+ * Fix: printing of RT
+   reported by: abreu75
+ * Fix: allow a single KA for hold-time of zero
+   reported by: andrius-adamavicius
+ * Fix: api report writing the word neighbor twice
+   patch by: chantra
+ * Fix: setup.py script functions not working
+   patch by: aabdnn
+ * Fix: the API would spin on EOF (issue #704)
+   patch by: chantra
+ * Fix: exabgp.tcp.once was not exiting
+   patch by: dhammika
+ * Fix: api poller slow down
+   patch by: dhammika
+ * Fix: EVPN decoding on type 4 NLRI
+   patch by: kvlangenhove
+
 Version 4.0.2
+ * Feature: exabgpcli
  * Feature: draft-ietf-idr-link-bandwidth-06
+ * Feature: colored output
+ * Feature: script to use as flow-spec receiver for Cumulus Linux
+ * Feature: added all families to announce { ipv4 {} ipv6 {} }
+ * Feature: API to clear RIB
+ * Feature: Per family negotiation of Add-Path ( add-path section, like family )
+ * Feature: add --sink and --echo to test bgp daemon
+ * Feature: include negotiated information with update / packets API messages
+ * Feature: allow multiple inheritance
+ * Feature: new "functional" program for functional testing with many new goodies
  * Fix: BGP-LS encoding
    patch by: Evelio Vila
  * Fix: Issue with received timer
  * Fix: internal API using named FIFO
+ * Fix: add support for netbsd for heathcheck
+ * Fix: issue with api inheritance
+ * Fix: several issue with BGP-LS
+ * Fix: issues with NLRI decoding (bug introduced between 4.0.0 and 4.0.1)
+ * Fix: various
+ * Change: BGPLS with BGP-LS
+ * Change: rewrote may part of the code (reactor/async, log, API, ...)
  * Change: renamed exabgp.api.file to exabgp.api.cli - now a boolean, enabled by default
  * Change: --folder option now --root, and not need when installed in /
+ * Change: deprecated route-distinguisher only rd will now be parsed
+ * Change: ASN in JSON are now correctly expressed as numbers and not strings
 
 Version 4.0.1
  * Change: makes python3 the default interpreter

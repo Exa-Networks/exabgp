@@ -126,62 +126,87 @@ class Update (Message):
 
 		# Withdraws/NLRIS (IPv4 unicast and multicast)
 		msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
+
+		if msg_size < 0:
+			# raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+			Logger().critical('attributes size is so large we can not even pack one NLRI','parser')
+			return
+
+		if msg_size == 0 and (nlris or mp_nlris):
+			# raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+			Logger().critical('attributes size is so large we can not even pack one NLRI','parser')
+			return
+
 		withdraws = b''
 		announced = b''
 		for nlri in nlris:
 			packed = nlri.pack(negotiated)
-			if len(announced + withdraws + packed) > msg_size:
-				if not withdraws and not announced:
-					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-				yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
-				if nlri.action == OUT.ANNOUNCE:
-					announced = packed
-					withdraws = b''
-				elif include_withdraw:
-					withdraws = packed
-					announced = b''
-			else:
+			if len(announced + withdraws + packed) <= msg_size:
 				if nlri.action == OUT.ANNOUNCE:
 					announced += packed
 				elif include_withdraw:
 					withdraws += packed
+				continue
 
-		if mp_nlris:
-			for family in mp_nlris.keys():
-				afi, safi = family
-				mp_reach = b''
-				mp_unreach = b''
-				mp_announce = MPRNLRI(afi, safi, mp_nlris[family].get(OUT.ANNOUNCE, []))
-				mp_withdraw = MPURNLRI(afi, safi, mp_nlris[family].get(OUT.WITHDRAW, []))
+			if not withdraws and not announced:
+				# raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+				Logger().critical('attributes size is so large we can not even pack one NLRI','parser')
+				return
 
-				for mprnlri in mp_announce.packed_attributes(negotiated, msg_size - len(withdraws + announced)):
-					if mp_reach:
-						yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_reach) + announced)
-						announced = b''
-						withdraws = b''
-					mp_reach = mprnlri
+			if announced:
+				yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+			else:
+				yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
 
-				if include_withdraw:
-					for mpurnlri in mp_withdraw.packed_attributes(negotiated, msg_size - len(withdraws + announced + mp_reach)):
-						if mp_unreach:
-							yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced)
-							mp_reach = b''
-							announced = b''
-							withdraws = b''
-						mp_unreach = mpurnlri
-
-				yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced)  # yield mpr/mpur per family
+			if nlri.action == OUT.ANNOUNCE:
+				announced = packed
+				withdraws = b''
+			elif include_withdraw:
+				withdraws = packed
+				announced = b''
+			else:
 				withdraws = b''
 				announced = b''
-		else:
-			yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+
+		if announced or withdraws:
+			if announced:
+				yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+			else:
+				yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
+
+		for family in mp_nlris.keys():
+			afi, safi = family
+			mp_reach = b''
+			mp_unreach = b''
+			mp_announce = MPRNLRI(afi, safi, mp_nlris[family].get(OUT.ANNOUNCE, []))
+			mp_withdraw = MPURNLRI(afi, safi, mp_nlris[family].get(OUT.WITHDRAW, []))
+
+			for mprnlri in mp_announce.packed_attributes(negotiated, msg_size - len(withdraws + announced)):
+				if mp_reach:
+					yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_reach) + announced)
+					announced = b''
+					withdraws = b''
+				mp_reach = mprnlri
+
+			if include_withdraw:
+				for mpurnlri in mp_withdraw.packed_attributes(negotiated, msg_size - len(withdraws + announced + mp_reach)):
+					if mp_unreach:
+						yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced)
+						mp_reach = b''
+						announced = b''
+						withdraws = b''
+					mp_unreach = mpurnlri
+
+			yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced)  # yield mpr/mpur per family
+			withdraws = b''
+			announced = b''
 
 	# XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
 	@classmethod
 	def unpack_message (cls, data, negotiated):
 		logger = Logger()
 
-		logger.parser(LazyFormat("parsing UPDATE",data))
+		logger.debug(LazyFormat('parsing UPDATE',data),'parser')
 
 		length = len(data)
 
@@ -194,12 +219,12 @@ class Update (Message):
 		withdrawn, _attributes, announced = cls.split(data)
 
 		if not withdrawn:
-			logger.parser("withdrawn NLRI none")
+			logger.debug('withdrawn NLRI none','parser')
 
 		attributes = Attributes.unpack(_attributes,negotiated)
 
 		if not announced:
-			logger.parser("announced NLRI none")
+			logger.debug('announced NLRI none','parser')
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(AFI.ipv4,SAFI.unicast)
@@ -213,14 +238,14 @@ class Update (Message):
 		nlris = []
 		while withdrawn:
 			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,withdrawn,IN.WITHDRAWN,addpath)
-			logger.parser("withdrawn NLRI %s" % nlri)
+			logger.debug('withdrawn NLRI %s' % nlri,'parser')
 			withdrawn = left
 			nlris.append(nlri)
 
 		while announced:
 			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.ANNOUNCED,addpath)
 			nlri.nexthop = nexthop
-			logger.parser("announced NLRI %s" % nlri)
+			logger.debug('announced NLRI %s' % nlri,'parser')
 			announced = left
 			nlris.append(nlri)
 

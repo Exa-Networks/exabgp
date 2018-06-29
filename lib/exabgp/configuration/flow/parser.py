@@ -2,6 +2,7 @@ from exabgp.util import character
 from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message.open.asn import ASN
@@ -161,12 +162,12 @@ def _generic_condition (tokeniser, klass):
 		while data:
 			operator,_ = _operator(data)
 			value,data = _value(_)
+			yield klass(operator | AND, klass.converter(value))
 			if data:
 				if data[0] != '&':
 					raise ValueError("Unknown binary operator %s" % data[0])
 				AND = BinaryOperator.AND
 				data = data[1:]
-			yield klass(operator | AND,klass.converter(value))
 
 
 def any_port (tokeniser):
@@ -257,10 +258,10 @@ def rate_limit (tokeniser):
 	# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 	speed = int(tokeniser())
 	if speed < 9600 and speed != 0:
-		Logger().configuration("rate-limiting flow under 9600 bytes per seconds may not work",'warning')
+		Logger().warning("rate-limiting flow under 9600 bytes per seconds may not work",'configuration')
 	if speed > 1000000000000:
 		speed = 1000000000000
-		Logger().configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % speed,'warning')
+		Logger().warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % speed,'configuration')
 	return ExtendedCommunities().add(TrafficRate(ASN(0),speed))
 
 
@@ -277,7 +278,7 @@ def redirect (tokeniser):
 			raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 		if route_target >= pow(2,32):
 			raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-		return None,ExtendedCommunities().add(TrafficRedirect(asn,route_target))
+		return NoNextHop,ExtendedCommunities().add(TrafficRedirect(asn,route_target))
 	else:
 		return IP.create(data),ExtendedCommunities().add(TrafficNextHop(False))
 

@@ -36,6 +36,7 @@ class VPLS (NLRI):
 
 	__slots__ = ['action','nexthop','rd','base','offset','size','endpoint','unique']
 
+	# XXX: Should take AFI, SAFI and OUT.direction as parameter to match other NLRI
 	def __init__ (self, rd, endpoint, base, offset, size):
 		NLRI.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = OUT.ANNOUNCE

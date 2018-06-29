@@ -104,6 +104,10 @@ class environment (object):
 		return "'%s'" % str(_)
 
 	@staticmethod
+	def quote_list (_):
+		return "'%s'" % ' '.join([str(x) for x in _])
+
+	@staticmethod
 	def nop (_):
 		return _
 

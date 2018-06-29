@@ -70,6 +70,7 @@ class ParseCapability (Section):
 		'   multi-session enable|disable;\n' \
 		'   operational enable|disable;\n' \
 		'   refresh enable|disable;\n' \
+		'   extended-message enable|disable;\n' \
 		'}\n'
 
 	known = {
@@ -80,6 +81,7 @@ class ParseCapability (Section):
 		'operational':      boolean,
 		'route-refresh':    boolean,
 		'aigp':             boolean,
+		'extended-message': boolean,
 	}
 
 	action = {
@@ -90,6 +92,7 @@ class ParseCapability (Section):
 		'operational':      'set-command',
 		'route-refresh':    'set-command',
 		'aigp':             'set-command',
+		'extended-message': 'set-command',
 	}
 
 	default = {
@@ -99,6 +102,7 @@ class ParseCapability (Section):
 		'operational':      True,
 		'route-refresh':    True,
 		'aigp':             True,
+		'extended-message': True,
 	}
 
 	name = 'capability'
@@ -107,7 +111,6 @@ class ParseCapability (Section):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
 	def pre (self):
-		self.scope.to_context()
 		return True
 
 	def post (self):

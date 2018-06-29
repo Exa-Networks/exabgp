@@ -43,7 +43,7 @@ neighbor IP {
 			match {
 				source 10.0.0.1/32;
 				destination 10.0.0.2/32;
-				destination-port =3128;
+				destination-port >=80&<=90;
 				protocol tcp;
 			}
 			then {

@@ -191,7 +191,7 @@ environment.configuration = {
 		},
 		'bind': {
 			'read':  environment.ip_list,
-			'write': environment.quote,
+			'write': environment.quote_list,
 			'value': '',
 			'help':  'Space separated list of IPs to bind on when listening (no ip to disable)',
 		},
@@ -272,6 +272,12 @@ environment.configuration = {
 			'write': environment.lower,
 			'value': 'true',
 			'help':  'should we create a named pipe for the cli',
+		},
+		'pipename':  {
+			'read':  environment.unquote,
+			'write': environment.quote,
+			'value': 'exabgp',
+			'help':  'name to be used for the exabgp pipe',
 		},
 	},
 	'reactor':  {

@@ -7,6 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from exabgp.protocol.family import SAFI
+
 from exabgp.configuration.core import Section
 
 from exabgp.configuration.flow.route import ParseFlowRoute
@@ -17,6 +19,7 @@ from exabgp.configuration.flow.route import ParseFlowScope
 from exabgp.rib.change import Change
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 class ParseFlow (Section):
@@ -42,20 +45,17 @@ class ParseFlow (Section):
 		pass
 
 	def pre (self):
-		self.scope.to_context(self.name)
 		return True
 
 	def post (self):
-		self.scope.to_context(self.name)
-		self.scope.set('routes',self.scope.pop('route',{}).get('routes',[]))
-		self.scope.extend('routes',self.scope.pop('flow',[]))
+		self.scope.set('routes',self.scope.get_routes())
 		return True
 
 	def check (self):
 		return True
 
 
-@ParseFlow.register('route','extend-name')
+@ParseFlow.register('route','append-route')
 def route (tokeniser):
 	change = Change(
 		Flow(),
@@ -83,5 +83,8 @@ def route (tokeniser):
 			pass  # yes nothing to do !
 		else:
 			raise ValueError('flow: unknown command "%s"' % command)
+
+	if change.nlri.rd is not RouteDistinguisher.NORD:
+		change.nlri.safi = SAFI.flow_vpn
 
 	return [change]

@@ -15,6 +15,7 @@ import platform
 
 from struct import pack,calcsize
 
+from exabgp.util import bytes_ascii
 from exabgp.util.errstr import errstr
 
 from exabgp.protocol.family import AFI
@@ -126,16 +127,17 @@ def MD5 (io, ip, port, md5, md5_base64):
 	elif platform_os == 'Linux':
 		try:
 			if md5:
+				md5_bytes = None
 				if md5_base64 is True:
 					try:
-						md5 = base64.b64decode(md5)
+						md5_bytes = base64.b64decode(md5)
 					except TypeError:
 						raise MD5Error("Failed to decode base 64 encoded PSK")
 				elif md5_base64 is None:  # auto
 					options = [md5+'==', md5+'=', md5]
 					for md5 in options:
 						try:
-							md5 = base64.b64decode(md5)
+							md5_bytes = base64.b64decode(md5)
 							break
 						except TypeError:
 							pass
@@ -161,7 +163,9 @@ def MD5 (io, ip, port, md5, md5_base64):
 
 			TCP_MD5SIG_MAXKEYLEN = 80
 			if md5:
-				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5), md5)
+				if md5_bytes is None:
+					md5_bytes = bytes_ascii(md5)
+				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
 			else:
 				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
 
@@ -232,18 +236,18 @@ def ready (io):
 			_,w,_ = select.select([],[io,],[],0)
 			if not w:
 				if not warned and time.time()-start > 1.0:
-					logger.network('attempting to establish connection','warning')
+					logger.debug('attempting to establish connection','network')
 					warned = True
 				yield False
 				continue
 			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
 			if not err:
 				if warned:
-					logger.network('connection established','warning')
+					logger.warning('connection established','network')
 				yield True
 				return
 			elif err in error.block:
-				logger.network('connect attempt failed, retrying, reason %s' % errno.errorcode[err],'warning')
+				logger.warning('connect attempt failed, retrying, reason %s' % errno.errorcode[err],'network')
 				yield False
 			else:
 				yield False
