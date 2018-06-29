@@ -80,13 +80,10 @@ class PREFIXv4(BGPLS):
 				values = tlvs[4: 4 + tlv_length]
 				ospf_type = OspfRoute.unpack(values)
 				tlvs = tlvs[4 + tlv_length:]
-                                continue
 			if tlv_type == 265:
 				values = tlvs[4: 4 + tlv_length]
 				prefix = IpReach.unpack(values)
 				tlvs = tlvs[4 + tlv_length:]
-                                continue
-                        print "Unhandled TLV: %d length %d" % (tlv_type, tlv_length)
 
 		return cls(
 			domain=domain,proto_id=proto_id,packed=data,
