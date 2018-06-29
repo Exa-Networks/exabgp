@@ -60,18 +60,7 @@ class IpReach(object):
 		# fill the rest of the octets with 0 to construct
 		# a 4 octet IP prefix
 		prefix_list = prefix_list + ["0"]*(4 - len(prefix_list))
-		prefix = b".".join(prefix_list)
-
-                # Can this be IPv6?
-                if octet > 4:
-                        prefix_list = unpack("!%dH" % octet/2, data[1:octet+1])
-                        # fill out to a complete 128-bit address
-                        prefix_list = prefix_list + ["0"]*(16-len(prefix_list))
-
-                        # Could optimize to use "::" for longest :0: seqence
-                        # but we don't yet
-
-                        prefix = b":".join(prefix_list)
+		prefix = ".".join(prefix_list)
 
 		return cls(prefix=prefix, plength=plength)
 
