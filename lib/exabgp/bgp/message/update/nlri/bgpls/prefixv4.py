@@ -82,7 +82,7 @@ class PREFIXv4(BGPLS):
 				tlvs = tlvs[4 + tlv_length:]
 			if tlv_type == 265:
 				values = tlvs[4: 4 + tlv_length]
-				prefix = IpReach.unpack(values)
+				prefix = IpReach.unpack(values, 3)
 				tlvs = tlvs[4 + tlv_length:]
 
 		return cls(

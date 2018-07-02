@@ -1,6 +1,6 @@
 """
 prefixv6.py
-Created by Tinus Flagstad on 2018-07-02.
+Created by Tinus Flagstad & Håvard Eidnes on 2018-07-02.
 Copyright (c) 2009-2018 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
@@ -83,7 +83,7 @@ class PREFIXv6(BGPLS):
 				tlvs = tlvs[4 + tlv_length:]
 			if tlv_type == 265:
 				values = tlvs[4: 4 + tlv_length]
-				prefix = IpReach.unpack(values)
+				prefix = IpReach.unpack(values, 4)
 				tlvs = tlvs[4 + tlv_length:]
 
 		return cls(
