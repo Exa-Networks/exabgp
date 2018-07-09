@@ -4,6 +4,8 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.4.27
+ * Improvement: RFC 7674 - Support redirect traffic to a VRF encoded as 4-octet AS, 2-octet Value
+   patch by: Omri Matitiau
  * Fix: correctly decode flow routes with multiple NLRI
    reported by: adrian62
  * Improvement: exit with error code 0 on SIGTERM
