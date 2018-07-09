@@ -88,7 +88,7 @@ def show_adj_rib (self, reactor, service, line):
 			words.remove(remove)
 	last = '' if not words else words[0]
 	callback = _show_adjrib_callback(reactor, service, last, klass, False, rib, extensive)
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service, line, callback())
 	return True
 
 
@@ -111,7 +111,7 @@ def flush_adj_rib_out (self, reactor, service, line):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,Answer.error)
 			return False
-		reactor.async.schedule(service,command,callback(self,peers))
+		reactor.asynchronous.schedule(service, command, callback(self, peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -148,7 +148,7 @@ def clear_adj_rib (self, reactor, service, line):
 			return False
 		words = line.split()
 		direction = 'in' if 'adj-rib-in' in words or 'in' in words else 'out'
-		reactor.async.schedule(service,command,callback(self,peers,direction))
+		reactor.asynchronous.schedule(service, command, callback(self, peers, direction))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')

@@ -8,7 +8,7 @@ from .tcp import MD5
 from .tcp import nagle
 from .tcp import TTL
 from .tcp import TTLv6
-from .tcp import async
+from .tcp import asynchronous
 from .tcp import ready
 from .error import NetworkError
 
@@ -35,7 +35,7 @@ class Outgoing (Connection):
 				TTLv6(self.io, self.peer, self.ttl)
 			if local:
 				bind(self.io,self.local,afi)
-			async(self.io,self.peer)
+			asynchronous(self.io, self.peer)
 			connect(self.io,self.peer,port,afi,md5)
 			if not self.local:
 				self.local = self.io.getsockname()[0]

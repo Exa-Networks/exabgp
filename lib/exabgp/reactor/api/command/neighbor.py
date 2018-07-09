@@ -168,15 +168,15 @@ def show_neighbor (self, reactor, service, command):
 		reactor.processes.answer_done(service)
 
 	if summary:
-		reactor.async.schedule(service,command,callback_summary())
+		reactor.asynchronous.schedule(service,command,callback_summary())
 		return True
 
 	if extensive:
-		reactor.async.schedule(service,command,callback_extensive())
+		reactor.asynchronous.schedule(service, command, callback_extensive())
 		return True
 
 	if configuration:
-		reactor.async.schedule(service,command,callback_configuration())
+		reactor.asynchronous.schedule(service, command, callback_configuration())
 		return True
 
 	reactor.processes.answer(service,'please specify summary, extensive or configuration')

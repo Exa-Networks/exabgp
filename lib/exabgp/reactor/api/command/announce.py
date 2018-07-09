@@ -60,7 +60,7 @@ def announce_route (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service,line,callback())
 	return True
 
 
@@ -110,7 +110,7 @@ def withdraw_route (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service,line,callback())
 	return True
 
 
@@ -149,7 +149,7 @@ def announce_vpls (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service,line,callback())
 	return True
 
 
@@ -192,7 +192,7 @@ def withdraw_vpls (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service,line,callback())
 	return True
 
 
@@ -231,7 +231,7 @@ def announce_attributes (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service,line,callback())
 	return True
 
 
@@ -273,7 +273,7 @@ def withdraw_attribute (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service,line,callback())
 	return True
 
 
@@ -312,7 +312,7 @@ def announce_flow (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service,line,callback())
 	return True
 
 
@@ -354,7 +354,7 @@ def withdraw_flow (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service,line,callback())
 	return True
 
 
@@ -381,7 +381,7 @@ def announce_eor (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command)
 			reactor.processes.answer(service,'error')
 			return False
-		reactor.async.schedule(service,command,callback(self,command,peers))
+		reactor.asynchronous.schedule(service,command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -416,7 +416,7 @@ def announce_refresh (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command)
 			reactor.processes.answer(service,'error')
 			return False
-		reactor.async.schedule(service,command,callback(self,command,peers))
+		reactor.asynchronous.schedule(service,command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -457,7 +457,7 @@ def announce_operational (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command)
 			reactor.processes.answer(service,'error')
 			return False
-		reactor.async.schedule(service,command,callback(self,command,peers))
+		reactor.asynchronous.schedule(service,command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')

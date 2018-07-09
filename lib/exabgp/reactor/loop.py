@@ -21,7 +21,7 @@ from exabgp.reactor.api.processes import Processes
 from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.peer import ACTION
-from exabgp.reactor.async import ASYNC
+from exabgp.reactor.asynchronous import ASYNC
 from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.network.error import error
 
@@ -66,7 +66,7 @@ class Reactor (object):
 
 		self.configuration = Configuration(configurations)
 		self.logger = Logger()
-		self.async = ASYNC()
+		self.asynchronous = ASYNC()
 		self.signal = Signal()
 		self.daemon = Daemon(self)
 		self.listener = Listener(self)
@@ -240,7 +240,7 @@ class Reactor (object):
 
 				if self.listener.incoming():
 					# check all incoming connection
-					self.async.schedule(str(uuid.uuid1()),'checking for new connection(s)',self.listener.new_connections())
+					self.asynchronous.schedule(str(uuid.uuid1()),'checking for new connection(s)',self.listener.new_connections())
 
 				peers = self._active_peers()
 				if self._completed(peers):
@@ -283,7 +283,7 @@ class Reactor (object):
 					self.api.text(self,service,command)
 					sleep = 0
 
-				self.async.run()
+				self.asynchronous.run()
 
 				for io in self._api_ready(list(workers),sleep):
 					peers.add(workers[io])
@@ -316,7 +316,7 @@ class Reactor (object):
 			self.listener = None
 		for key in self.peers.keys():
 			self.peers[key].stop()
-		self.async.clear()
+		self.asynchronous.clear()
 		self.processes.terminate()
 		self.daemon.removepid()
 		self._stopping = True

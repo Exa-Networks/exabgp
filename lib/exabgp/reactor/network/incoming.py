@@ -2,7 +2,7 @@ from exabgp.util.errstr import errstr
 
 from .connection import Connection
 from .tcp import nagle
-from .tcp import async
+from .tcp import asynchronous
 from .error import NetworkError
 from .error import NotConnected
 
@@ -19,7 +19,7 @@ class Incoming (Connection):
 
 		try:
 			self.io = io
-			async(self.io,self.peer)
+			asynchronous(self.io, self.peer)
 			nagle(self.io,self.peer)
 			self.success()
 		except NetworkError as exc:
