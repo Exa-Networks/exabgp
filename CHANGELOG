@@ -6,6 +6,8 @@ Version explained:
 Version 4.0.7
  * Feature: added prefix for ip-reachability-tlv
    patch: Tinus Flagstad
+ * Feature: forewardport #840 (RFC 7674 - Support redirect traffic to a VRF encoded as 4-octet AS)
+   original patch by: Omri Matitiau
  * Fix: handling of processes when the configuration reload fails
    patch by: Malcolm Dodds
  * Fix: healthcheck, remove options.ip_setup in dynamic ip management
