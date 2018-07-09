@@ -35,6 +35,7 @@ from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirect
+from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirectASN4
 from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHop
 
@@ -274,8 +275,13 @@ def redirect (tokeniser):
 
 		asn = int(prefix)
 		route_target = int(suffix)
+
+		if asn >= pow(2, 32):
+			raise ValueError('asn is a 32 bits number, value too large %s' % asn)
 		if asn >= pow(2,16):
-			raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
+			if route_target >= pow(2, 16):
+				raise ValueError('asn is a 32 bits number, route target can only be 16 bit %s' % route_target)
+			return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, route_target))
 		if route_target >= pow(2,32):
 			raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
 		return NoNextHop,ExtendedCommunities().add(TrafficRedirect(asn,route_target))
