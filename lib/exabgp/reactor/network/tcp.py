@@ -219,7 +219,7 @@ def MIN_TTL (io, ip, ttl):
 			raise TTLError('This OS does not support IP_MINTTL or IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(exc)))
 
 
-def async (io, ip):
+def asynchronous(io, ip):
 	try:
 		io.setblocking(0)
 	except socket.error as exc:

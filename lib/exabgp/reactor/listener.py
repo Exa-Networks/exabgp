@@ -193,11 +193,13 @@ class Listener (object):
 				matched = len(ranged_neighbor)
 				if matched > 1:
 					self.logger.debug('could not accept connection from %s (more than one neighbor match)' % connection.name(),'network')
-					reactor.async.schedule(str(uuid.uuid1()),'sending notification (6,5)',connection.notification(6,5,'could not accept the connection (more than one neighbor match)'))
+					reactor.asynchronous.schedule(str(uuid.uuid1()), 'sending notification (6,5)', connection.notification(
+						6, 5, 'could not accept the connection (more than one neighbor match)'))
 					return
 				if not matched:
 					self.logger.debug('no session configured for %s' % connection.name(),'network')
-					reactor.async.schedule(str(uuid.uuid1()),'sending notification (6,3)',connection.notification(6,3,'no session configured for the peer'))
+					reactor.asynchronous.schedule(str(uuid.uuid1()), 'sending notification (6,3)', connection.notification(
+						6, 3, 'no session configured for the peer'))
 					return
 
 				new_neighbor = copy.copy(ranged_neighbor[0])

@@ -32,6 +32,7 @@ Version 4.0.7
    patch by: Thomas Morin
  * Fix: checks for consumption of data in bgp-ls
    patch by: he32
+ * Fix: support latest python3 (with async as keyword)
 
 Version 4.0.6
  * Fix: default network for IPv6 is 128 .. not 32
