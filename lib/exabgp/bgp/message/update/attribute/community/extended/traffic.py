@@ -10,6 +10,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 
@@ -119,6 +120,33 @@ class TrafficRedirect (ExtendedCommunity):
 	def unpack (data):
 		asn,target = unpack('!HL',data[2:8])
 		return TrafficRedirect(ASN(asn),target,data[:8])
+
+
+class TrafficRedirectASN4 (ExtendedCommunity):
+	COMMUNITY_TYPE = 0x82
+	COMMUNITY_SUBTYPE = 0x08
+
+	__slots__ = ['asn','target']
+
+	def __init__ (self, asn, target, community=None):
+		self.asn = asn
+		self.target = target
+		ExtendedCommunity.__init__(
+			self,
+			community if community is not None else pack(
+				"!2sLH",
+				self._packedTypeSubtype(),
+				asn,target
+			)
+		)
+
+	def __str__ (self):
+		return "redirect:%s:%s" % (self.asn,self.target)
+
+	@staticmethod
+	def unpack (data):
+		asn,target = unpack('!LH',data[2:8])
+		return TrafficRedirectASN4(ASN4(asn),target,data[:8])
 
 
 # ================================================================== TrafficMark

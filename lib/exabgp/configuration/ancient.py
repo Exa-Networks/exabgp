@@ -75,7 +75,7 @@ from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.communities import Communities
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate, TrafficRedirectASN4
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
@@ -2950,8 +2950,15 @@ class Configuration (object):
 				else:
 					asn = int(prefix)
 					route_target = int(suffix)
+
+					if asn >= pow(2,32):
+						raise ValueError('asn is a 32 bits number, value too large %s' % asn)
 					if asn >= pow(2,16):
-						raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
+						if route_target >= pow(2,16):
+							raise ValueError('asn is a 32 bits number, route target can only be 16 bit %s' % route_target)
+						scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(
+							TrafficRedirectASN4(asn, route_target))
+						return True
 					if route_target >= pow(2,32):
 						raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
 					scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
