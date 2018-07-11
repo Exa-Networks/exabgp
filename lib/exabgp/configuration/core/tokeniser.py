@@ -51,7 +51,7 @@ class Tokeniser (object):
 
 	@staticmethod
 	def _off ():
-		raise StopIteration()
+		return iter([])
 
 	def __init__ (self, scope, error, logger):
 		self.scope = scope
@@ -123,13 +123,21 @@ class Tokeniser (object):
 		def _source (fname):
 			with open(fname,'r') as fileobject:
 				def formated ():
-					while True:
-						line = six.next(fileobject).rstrip()
+					line = ''
+					for current in fileobject:
 						self.index_line += 1
-						while line.endswith('\\'):
-							line = line[:-1] + six.next(fileobject).rstrip()
-							self.index_line += 1
+						current = current.rstrip()
+						if current.endswith('\\'):
+							line += current
+							continue
+						elif line:
+							yield line + current
+							line = ''
+						else:
+							yield current
+					if line:
 						yield line
+
 				for _ in self._tokenise(formated()):
 					yield _
 		self.type = 'file'

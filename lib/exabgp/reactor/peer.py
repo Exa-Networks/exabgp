@@ -67,6 +67,9 @@ class Interrupted (Exception):
 	pass
 
 
+class Stop (Exception):
+	pass
+
 # ======================================================================== Peer
 # Present a File like interface to socket.socket
 
@@ -260,14 +263,15 @@ class Peer (object):
 
 		connected = False
 		try:
-			while not connected:
+			for connected in generator:
+				if connected:
+					break
 				if self._teardown:
-					raise StopIteration()
-				connected = six.next(generator)
+					raise Stop()
 				# we want to come back as soon as possible
 				yield ACTION.LATER
 			self.proto = proto
-		except StopIteration:
+		except Stop:
 			# Connection failed
 			if not connected and self.proto:
 				self.proto.close('connection to %s:%d failed' % (self.neighbor.peer_address,self.neighbor.connect))
