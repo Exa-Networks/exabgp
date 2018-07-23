@@ -185,9 +185,11 @@ class Peer (object):
 			self._[direction]['proto'] = None
 
 	def _stop (self, direction, message):
-		self._[direction]['generator'] = False
-		self._[direction]['proto'].close('%s loop, stop, message [%s]' % (direction,message))
-		self._[direction]['proto'] = None
+		if self._[direction]:
+			self._[direction]['generator'] = False
+			if self._[direction]['proto']:
+				self._[direction]['proto'].close('%s loop, stop, message [%s]' % (direction,message))
+				self._[direction]['proto'] = None
 
 	# connection delay
 
@@ -218,6 +220,11 @@ class Peer (object):
 		self._restarted = False
 		self._reset_skip()
 		self.neighbor.rib.uncache()
+
+	def remove (self):
+		for direction in ['in','out']:
+			self._stop(direction, "removed")
+		self.stop()
 
 	def resend (self):
 		self._resend_routes = SEND.NORMAL

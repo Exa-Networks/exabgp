@@ -401,7 +401,7 @@ class Reactor (object):
 		for key, peer in self.peers.items():
 			if key not in self.configuration.neighbor:
 				self.logger.reactor("Removing peer: %s" % peer.neighbor.name())
-				peer.stop()
+				peer.remove()
 
 		for key, neighbor in self.configuration.neighbor.items():
 			# new peer
@@ -467,7 +467,7 @@ class Reactor (object):
 			if key not in self.configuration.neighbor.keys():
 				neighbor = self.configuration.neighbor[key]
 				self.logger.reactor("Removing Peer %s" % neighbor.name())
-				self.peers[key].stop()
+				self.peers[key].remove()
 			else:
 				self.peers[key].reestablish()
 		self.processes.terminate()
