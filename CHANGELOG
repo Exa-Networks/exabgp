@@ -3,6 +3,42 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.0.8
+ * Fix: PEP-0479
+
+Version 4.0.7
+ * Feature: added prefix for ip-reachability-tlv
+   patch: Tinus Flagstad
+ * Feature: forewardport #840 (RFC 7674 - Support redirect traffic to a VRF encoded as 4-octet AS)
+   original patch by: Omri Matitiau
+ * Fix: handling of processes when the configuration reload fails
+   patch by: Malcolm Dodds
+ * Fix: healthcheck, remove options.ip_setup in dynamic ip management
+   patch by: Ahmet Demir
+ * Fix: present unknown RD as hexadecimal string (previous representation could not be JSON parsed)
+   reported by: Jitoxxx
+ * Fix: fix permissions of systemd service files
+   patch by: Malcolm Dodds
+ * Fix: properly show connection as down in the cli
+   reported by: chantra
+ * Fix: JSON encoding for route-refresh
+   reported by: nfz1
+ * Fix: Prevent busy spinning in multiple code path (including when a peer closed the connection on us)
+   reported by: chantra
+ * Fix: busy spinning when the peer went away
+   reported by: chantra
+ * Improvement: many fix to QA code
+   patch by: Vincent Bernart
+ * Improvement: exit with error code 0 on SIGTERM
+   reported by: Johan Guldmyr
+ * Fix: fix neighbor CLI to match against peer address
+   patch by: Malcolm Dodds
+ * Fix: fix parsing of labelled default IP route
+   patch by: Thomas Morin
+ * Fix: checks for consumption of data in bgp-ls
+   patch by: he32
+ * Fix: support latest python3 (with async as keyword)
+
 Version 4.0.6
  * Fix: default network for IPv6 is 128 .. not 32
    patch by: Donatas Abraitis

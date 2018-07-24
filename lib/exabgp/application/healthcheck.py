@@ -193,7 +193,7 @@ def parse():
     g.add_argument("--increase", metavar='M',
                    type=int, default=1,
                    help=("for each additional IP address, "
-                         "increase metric value by W"))
+                         "increase metric value by M"))
     g.add_argument("--community", metavar="COMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied community")
@@ -309,7 +309,10 @@ def loopback_ips(label):
         mo = ipre.match(line)
         if not mo:
             continue
-        mask = int(mo.group("mask")) or bin(int(mo.group("netmask"), 16)).count("1")
+        if mo.group("mask"):
+            mask = int(mo.group("mask"))
+        else:
+            mask = bin(int(mo.group("netmask"), 16)).count("1")
         try:
             ip = ip_network("{0}/{1}".format(mo.group("ip"),
                                              mask))
@@ -458,7 +461,7 @@ def loop(options):
             logger.info("service down, deleting loopback ips")
             remove_ips(options.ips, options.label, options.sudo)
         # if ips was deleted with dyn ip, re-setup them
-        if target == states.UP and options.ip_dynamic and options.ip_setup:
+        if target == states.UP and options.ip_dynamic:
             logger.info("service up, restoring loopback ips")
             setup_ips(options.ips, options.label, options.sudo)
 

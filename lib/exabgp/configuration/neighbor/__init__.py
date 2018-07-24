@@ -221,8 +221,11 @@ class ParseNeighbor (Section):
 			neighbor.local_address = None
 			neighbor.md5_ip = None
 
-		if not neighbor.router_id and neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
-			neighbor.router_id = neighbor.local_address
+		if not neighbor.router_id:
+			if neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
+				neighbor.router_id = neighbor.local_address
+			else:
+				return self.error.set('missing router-id for the peer, it can not be set using the local-ip')
 
 		if neighbor.route_refresh:
 			if neighbor.adj_rib_out:

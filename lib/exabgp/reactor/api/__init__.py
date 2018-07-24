@@ -20,6 +20,8 @@ from exabgp.logger import Logger
 from exabgp.reactor.api.command import Command
 from exabgp.configuration.configuration import Configuration
 
+from exabgp.reactor.api.response.answer import Answer
+
 # ======================================================================= Parser
 #
 
@@ -42,7 +44,7 @@ class API (Command):
 		for registered in self.functions:
 			if registered == command or registered + ' ' in command:
 				return self.callback['text'][registered](self,reactor,service,command)
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service,Answer.error)
 		self.logger.warning('command from process not understood : %s' % command,'api')
 		return False
 
@@ -104,7 +106,7 @@ class API (Command):
 		safi = SAFI.value(tokens.pop(0))
 		if afi is None or safi is None:
 			return False
-		return RouteRefresh(afi,safi)
+		return [RouteRefresh(afi,safi)]
 
 	def api_eor (self, command):
 		tokens = formated(command).split(' ')[2:]

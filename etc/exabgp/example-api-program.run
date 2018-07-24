@@ -29,7 +29,7 @@ errno_unavailable = set((
 ))
 
 
-def async (fd):
+def asynchronous(fd):
 	try:
 		fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK)
 		return True
@@ -45,7 +45,7 @@ def sync (fd):
 		return False
 
 
-if not async(sys.stdin):
+if not asynchronous(sys.stdin):
 	print >> sys.stderr, "could not set stdin/stdout non blocking"
 	sys.stderr.flush()
 	sys.exit(1)

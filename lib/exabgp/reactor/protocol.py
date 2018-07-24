@@ -77,6 +77,11 @@ class Protocol (object):
 		from exabgp.configuration.environment import environment
 		self.log_routes = peer.neighbor.adj_rib_in or environment.settings().log.routes
 
+	def fd (self):
+		if self.connection is None:
+			return None
+		return self.connection.fd()
+
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
 	def me (self, message):
@@ -109,22 +114,15 @@ class Protocol (object):
 				if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
 					self.neighbor.router_id = self.neighbor.local_address
 
-			try:
-				generator = self.connection.establish()
-				while True:
-					connected = six.next(generator)
-					if not connected:
-						yield False
-						continue
-					if self.peer.neighbor.api['neighbor-changes']:
-						self.peer.reactor.processes.connected(self.peer.neighbor)
-					yield True
-					return
-			except StopIteration:
-				# close called by the caller
-				# self.close('could not connect to remote end')
-				yield False
+			for connected in self.connection.establish():
+				if not connected:
+					yield False
+					continue
+				if self.peer.neighbor.api['neighbor-changes']:
+					self.peer.reactor.processes.connected(self.peer.neighbor)
+				yield True
 				return
+
 
 	def close (self, reason='protocol closed, reason unspecified'):
 		if self.connection:

@@ -376,6 +376,7 @@ class Configuration (_Configuration):
 
 	def _rollback_reload (self):
 		self.neighbors = self._previous_neighbors
+		self.processes = self.process.processes
 		self._neighbors = {}
 		self._previous_neighbors = {}
 
@@ -431,6 +432,7 @@ class Configuration (_Configuration):
 
 		if self.section('root') is not True:
 			# XXX: Should it be in neighbor ?
+			self.process.add_api()
 			self._rollback_reload()
 
 			return self.error.set(

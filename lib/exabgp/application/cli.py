@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import os
 import sys
+import time
 import select
 import signal
 import errno
@@ -21,6 +22,7 @@ from exabgp.application.bgp import get_env
 from exabgp.application.control import check_fifo
 
 from exabgp.reactor.network.error import error
+from exabgp.reactor.api.response.answer import Answer
 
 from exabgp.vendoring import docopt
 
@@ -41,6 +43,12 @@ commands:
 \thelp                  show the commands known by ExaBGP
 """.replace('\t','  ')
 
+
+class AnswerStream:
+	done = '\n%s\n' % Answer.done
+	error = '\n%s\n' % Answer.error
+	shutdown = '\n%s\n' % Answer.error
+	buffer_size = Answer.buffer_size + 2
 
 def main ():
 	options = docopt.docopt(usage, help=False)
@@ -91,6 +99,35 @@ def main ():
 		sys.stderr.flush()
 		sys.exit(1)
 
+	buffer = ''
+	start = time.time()
+	try:
+		reader = os.open(recv, os.O_RDONLY | os.O_EXCL | os.O_NONBLOCK)
+		while True:
+			while select.select([reader], [], [], 0) != ([], [], []):
+				buffer += os.read(reader,4096)
+				buffer = buffer[-AnswerStream.buffer_size:]
+			# we read nothing, nothing to do
+			if not buffer:
+				break
+			# we read some data but it is not ending by a new line (ie: not a command completion)
+			if buffer[-1] != '\n':
+				continue
+			if AnswerStream.done.endswith(buffer[-len(AnswerStream.done):]):
+				break
+			if AnswerStream.error.endswith(buffer[-len(AnswerStream.error):]):
+				break
+			if AnswerStream.shutdown.endswith(buffer[-len(AnswerStream.shutdown):]):
+				break
+			# we are not ack'ing the command and probably have read all there is
+			if time.time() > start + 1.5:
+				break
+
+	except Exception as exc:
+		sys.stdout.write('could not clear named pipe from potential previous command data')
+		sys.stdout.write(exc)
+		sys.stdout.flush()
+
 	signal.signal(signal.SIGALRM, write_timeout)
 	signal.alarm(2)
 
@@ -136,21 +173,22 @@ def main ():
 				buf += raw
 				while b'\n' in buf:
 					line,buf = buf.split(b'\n',1)
-					if line == b'done':
+					string = line.decode()
+					if string == Answer.done:
 						done = True
 						break
-					if line == b'shutdown':
+					if string == Answer.shutdown:
 						sys.stderr.write('ExaBGP is shutting down, command aborted\n')
 						sys.stderr.flush()
 						done = True
 						break
-					if line == b'error':
+					if string == Answer.error:
 						done = True
 						sys.stderr.write('ExaBGP returns an error (see ExaBGP\'s logs for more information)\n')
 						sys.stderr.write('use help for a list of available commands\n')
 						sys.stderr.flush()
 						break
-					sys.stdout.write('%s\n' % line.decode())
+					sys.stdout.write('%s\n' % string)
 					sys.stdout.flush()
 
 				select.select([reader],[],[],0.01)

@@ -31,7 +31,7 @@ def announce_watchdog (self, reactor, service, line):
 		name = line.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.async.schedule(service,line,callback(name))
+	reactor.asynchronous.schedule(service, line, callback(name))
 	return True
 
 
@@ -52,5 +52,5 @@ def withdraw_watchdog (self, reactor, service, line):
 		name = line.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.async.schedule(service,line,callback(name))
+	reactor.asynchronous.schedule(service, line, callback(name))
 	return True

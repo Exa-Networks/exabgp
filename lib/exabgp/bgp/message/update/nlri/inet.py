@@ -26,7 +26,6 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
 
-
 @NLRI.register(AFI.ipv4,SAFI.unicast)
 @NLRI.register(AFI.ipv6,SAFI.unicast)
 @NLRI.register(AFI.ipv4,SAFI.multicast)
@@ -110,7 +109,7 @@ class INET (NLRI):
 
 		if safi.has_label():
 			labels = []
-			while mask - rd_mask > 24:
+			while mask - rd_mask >= 24:
 				label = int(unpack('!L',character(0) + bgp[:3])[0])
 				bgp = bgp[3:]
 				mask -= 24  	# 3 bytes
@@ -126,6 +125,7 @@ class INET (NLRI):
 				if label & 1:
 					break
 			nlri.labels = Labels(labels)
+
 
 		if rd_size:
 			mask -= rd_mask  # the route distinguisher

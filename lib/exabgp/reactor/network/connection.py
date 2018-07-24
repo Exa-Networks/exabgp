@@ -69,14 +69,20 @@ class Connection (object):
 	# Just in case ..
 	def __del__ (self):
 		if self.io:
-			self.logger.warning('connection to %s closed' % self.peer,self.session())
 			self.close()
+			self.logger.warning('connection to %s closed' % self.peer, self.session())
 
 	def name (self):
 		return "%s-%d %s-%s" % (self.direction,self.id,self.local,self.peer)
 
 	def session (self):
 		return "%s-%d" % (self.direction,self.id)
+
+	def fd (self):
+		if self.io and self.io.fileno() != -1:
+			return self.io
+		# the socket is closed (fileno() == -1) or not open yet (io is None)
+		return None
 
 	def close (self):
 		try:
@@ -87,7 +93,7 @@ class Connection (object):
 		except KeyboardInterrupt as exc:
 			raise exc
 		except Exception:
-			pass
+			self.io = None
 
 	def reading (self):
 		while True:

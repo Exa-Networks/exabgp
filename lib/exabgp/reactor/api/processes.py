@@ -20,6 +20,8 @@ from exabgp.reactor.network.error import error
 
 from exabgp.configuration.core.format import formated
 from exabgp.reactor.api.response import Response
+from exabgp.reactor.api.response.answer import Answer
+
 from exabgp.bgp.message import Message
 from exabgp.logger import Logger
 
@@ -195,44 +197,45 @@ class Processes (object):
 					self._handle_problem(process)
 					return
 				r,_,_ = select.select([proc.stdout,],[],[],0)
-				if r:
-					try:
-						# Calling next() on Linux and OSX works perfectly well
-						# but not on OpenBSD where it always raise StopIteration
-						# and only readline() works
-						buf = str_ascii(proc.stdout.read(16384))
-						if buf == '' and poll is not None:
-							# if proc.poll() is None then
-							# process is fine, we received an empty line because
-							# we're doing .readline() on a non-blocking pipe and
-							# the process maybe has nothing to send yet
-							self._handle_problem(process)
-							continue
+				if not r:
+					continue
+				try:
+					# Calling next() on Linux and OSX works perfectly well
+					# but not on OpenBSD where it always raise StopIteration
+					# and only readline() works
+					buf = str_ascii(proc.stdout.read(16384))
+					if buf == '' and poll is not None:
+						# if proc.poll() is None then
+						# process is fine, we received an empty line because
+						# we're doing .readline() on a non-blocking pipe and
+						# the process maybe has nothing to send yet
+						self._handle_problem(process)
+						continue
 
-						raw = self._buffer.get(process,'') + buf
+					raw = self._buffer.get(process,'') + buf
 
-						while '\n' in raw:
-							line,raw = raw.split('\n',1)
-							line = line.rstrip()
-							consumed_data = True
-							self.logger.debug('command from process %s : %s ' % (process,line),'process')
-							yield (process,formated(line))
+					while '\n' in raw:
+						line,raw = raw.split('\n',1)
+						line = line.rstrip()
+						consumed_data = True
+						self.logger.debug('command from process %s : %s ' % (process,line),'process')
+						yield (process,formated(line))
 
-						self._buffer[process] = raw
+					self._buffer[process] = raw
 
-					except IOError as exc:
-						if not exc.errno or exc.errno in error.fatal:
-							# if the program exits we can get an IOError with errno code zero !
-							self._handle_problem(process)
-						elif exc.errno in error.block:
-							# we often see errno.EINTR: call interrupted and
-							# we most likely have data, we will try to read them a the next loop iteration
-							pass
-						else:
-							self.logger.debug('unexpected errno received from forked process (%s)' % errstr(exc),'process')
-					except StopIteration:
-						if not consumed_data:
-							self._handle_problem(process)
+				except IOError as exc:
+					if not exc.errno or exc.errno in error.fatal:
+						# if the program exits we can get an IOError with errno code zero !
+						self._handle_problem(process)
+					elif exc.errno in error.block:
+						# we often see errno.EINTR: call interrupted and
+						# we most likely have data, we will try to read them a the next loop iteration
+						pass
+					else:
+						self.logger.debug('unexpected errno received from forked process (%s)' % errstr(exc),'process')
+				except StopIteration:
+					if not consumed_data:
+						self._handle_problem(process)
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				self._handle_problem(process)
 
@@ -266,14 +269,14 @@ class Processes (object):
 
 	def answer (self, service, string, force=False):
 		if force or self.ack:
-			self.logger.debug('responding to %s : %s' % (service,string.replace('\n','\\n')),'process')
+			self.logger.debug('responding to %s : %s' % (service,string.replace('\n', '\\n')), 'process')
 			self._write(service,string)
 
 	def answer_done (self, service):
-		self.answer(service,'done')
+		self.answer(service,Answer.done)
 
 	def answer_error (self, service):
-		self.answer(service,'error')
+		self.answer(service,Answer.error)
 
 	def _notify (self, neighbor, event):
 		for process in neighbor.api[event]:

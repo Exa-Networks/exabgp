@@ -25,6 +25,7 @@ from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarge
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectASN4
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHop
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation

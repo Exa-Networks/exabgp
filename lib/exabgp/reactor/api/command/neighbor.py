@@ -13,6 +13,8 @@ from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import match_neighbor
 from exabgp.reactor.api.command.limit import extract_neighbors
 
+from exabgp.reactor.api.response.answer import Answer
+
 
 def register_neighbor ():
 	pass
@@ -60,11 +62,15 @@ Neighbor %(peer-address)s
 
 	@classmethod
 	def extensive (cls,answer):
+		if answer['duration']:
+			duration = cls.extensive_kv % ('up for', timedelta(seconds=answer['duration']), '', '')
+		else:
+			duration = cls.extensive_kv % ('down for', timedelta(seconds=answer['down']), '', '')
 		formated = {
 			'peer-address':  answer['peer-address'],
 			'local-address': cls.extensive_kv % ('local',answer['local-address'],'',''),
 			'state':         cls.extensive_kv % ('state',answer['state'],'',''),
-			'duration':      cls.extensive_kv % ('up for',timedelta(seconds=answer['duration']),'',''),
+			'duration':      duration,
 			'as':            cls.extensive_kv % ('AS',answer['local-as'],_pr(answer['peer-as']),''),
 			'id':            cls.extensive_kv % ('ID',answer['local-id'],_pr(answer['peer-id']),''),
 			'hold':          cls.extensive_kv % ('hold-time',answer['local-hold'],_pr(answer['peer-hold']),''),
@@ -100,10 +106,10 @@ def teardown (self, reactor, service, line):
 		reactor.processes.answer_done(service)
 		return True
 	except ValueError:
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service,Answer.error)
 		return False
 	except IndexError:
-		reactor.processes.answer(service,'error')
+		reactor.processes.answer(service,Answer.error)
 		return False
 
 
@@ -154,7 +160,7 @@ def show_neighbor (self, reactor, service, command):
 			peer = reactor.peers.get(peer_name,None)
 			if not peer:
 				continue
-			if limit and limit not in peer.neighbor.name():
+			if limit and limit != str(peer.neighbor.peer_address):
 				continue
 			for line in Neighbor.summary(peer.cli_data()).split('\n'):
 				reactor.processes.answer(service,line)
@@ -162,17 +168,17 @@ def show_neighbor (self, reactor, service, command):
 		reactor.processes.answer_done(service)
 
 	if summary:
-		reactor.async.schedule(service,command,callback_summary())
+		reactor.asynchronous.schedule(service,command,callback_summary())
 		return True
 
 	if extensive:
-		reactor.async.schedule(service,command,callback_extensive())
+		reactor.asynchronous.schedule(service, command, callback_extensive())
 		return True
 
 	if configuration:
-		reactor.async.schedule(service,command,callback_configuration())
+		reactor.asynchronous.schedule(service, command, callback_configuration())
 		return True
 
 	reactor.processes.answer(service,'please specify summary, extensive or configuration')
-	reactor.processes.answer(service,'you can filter by per ip address adding it after the word neighbor')
+	reactor.processes.answer(service,'you can filter by peer ip address adding it after the word neighbor')
 	reactor.processes.answer_done(service)

@@ -1,6 +1,6 @@
 %{!?__python2:        %global __python2 /usr/bin/python2}
 %{!?python2_sitelib:  %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%define version %(echo "$(python setup.py current)")
+%define version %(echo "$(python setup.py next)")
 
 Name:           python-exabgp
 Version:        %{version}
@@ -92,6 +92,7 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 %attr(744, root, root) %{_sysconfdir}/exabgp/examples/*
 %{_unitdir}/exabgp.service
 %{_unitdir}/exabgp@.service
+%attr(644, root, root) %{_unitdir}/*
 %doc COPYRIGHT CHANGELOG README.md
 %{_mandir}/man1/*
 %{_mandir}/man5/*

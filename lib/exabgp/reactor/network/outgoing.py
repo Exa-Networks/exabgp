@@ -8,7 +8,7 @@ from .tcp import MD5
 from .tcp import nagle
 from .tcp import TTL
 from .tcp import TTLv6
-from .tcp import async
+from .tcp import asynchronous
 from .tcp import ready
 from .error import NetworkError
 
@@ -35,7 +35,7 @@ class Outgoing (Connection):
 				TTLv6(self.io, self.peer, self.ttl)
 			if local:
 				bind(self.io,self.local,afi)
-			async(self.io,self.peer)
+			asynchronous(self.io, self.peer)
 			connect(self.io,self.peer,port,afi,md5)
 			if not self.local:
 				self.local = self.io.getsockname()[0]
@@ -51,19 +51,16 @@ class Outgoing (Connection):
 			yield False
 			return
 
-		try:
-			generator = ready(self.io)
-			while True:
-				connected = six.next(generator)
-				if not connected:
-					yield False
-					continue
-				yield True
-				return
-		except StopIteration:
-			# self.io MUST NOT be closed here, it is closed by the caller
-			yield False
-			return
+		generator = ready(self.io)
+		for connected in generator:
+			if not connected:
+				yield False
+				continue
+			yield True
+		yield False
+		# self.io MUST NOT be closed here, it is closed by the caller
+		return
+
 
 		nagle(self.io,self.peer)
 		# Not working after connect() at least on FreeBSD TTL(self.io,self.peer,self.ttl)

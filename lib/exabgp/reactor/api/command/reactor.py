@@ -81,7 +81,7 @@ def comment (self, reactor, service, line):
 
 @Command.register('text','reset',False)
 def reset (self, reactor, service, line):
-	reactor.async.clear(service)
+	reactor.asynchronous.clear(service)
 
 
 @Command.register('text','crash')
@@ -89,5 +89,5 @@ def crash (self, reactor, service, line):
 	def callback():
 		raise ValueError('crash test of the API')
 		yield None
-	reactor.async.schedule(service,line,callback())
+	reactor.asynchronous.schedule(service, line, callback())
 	return True
