@@ -1,3 +1,10 @@
+exabgp (4.0.8-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Compatibility with Python 3.7. Closes: #904390.
+
+ -- Vincent Bernat <bernat@debian.org>  Tue, 24 Jul 2018 07:47:22 +0200
+
 exabgp (4.0.6-2) unstable; urgency=medium
 
   * d/postinst: add exabgpcli to the alternative system.
