@@ -24,7 +24,7 @@ These organisations have spoken of, or are using/have used ExaBGP:
 [Cisco Systems](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
 [CloudFlare](https://www.slideshare.net/TomPaseka/flowspec-apf-2013),
 [Dailymotion](https://github.com/pyke369/exabgp-helpers),
-[Facebook](https://code.facebook.com/posts/1734.0.726831603/dhcplb-an-open-source-load-balancer/),
+[Facebook](https://code.facebook.com/posts/1734.0.826831603/dhcplb-an-open-source-load-balancer/),
 [MaxCDN](https://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
 [Microsoft](https://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
 [OpenDNS](https://blog.opendns.com/2013/01/10/high-availability-with-anycast-routing/),
@@ -49,8 +49,8 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.0.7.tar.gz | tar zx
-> ./exabgp-4.0.7/sbin/exabgp --help
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.0.8.tar.gz | tar zx
+> ./exabgp-4.0.8/sbin/exabgp --help
 > ./bin/healthcheck --help
 ```
 
