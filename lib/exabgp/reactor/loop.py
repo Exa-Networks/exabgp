@@ -378,7 +378,7 @@ class Reactor (object):
 			self.listener.stop()
 			self.listener = None
 		for key in self.peers.keys():
-			self.peers[key].stop()
+			self.peers[key].shutdown()
 		self.processes.terminate()
 		self.daemon.removepid()
 		self._stopping = True

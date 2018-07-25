@@ -226,6 +226,11 @@ class Peer (object):
 			self._stop(direction, "removed")
 		self.stop()
 
+	def shutdown (self):
+		for direction in ['in','out']:
+			self._stop(direction, "shutting down")
+		self.stop()
+
 	def resend (self):
 		self._resend_routes = SEND.NORMAL
 		self._reset_skip()
