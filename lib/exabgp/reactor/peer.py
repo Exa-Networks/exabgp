@@ -173,6 +173,14 @@ class Peer (object):
 		}
 		self.neighbor.rib.uncache()
 
+	def remove (self):
+		self._stop("removed")
+		self.stop()
+
+	def shutdown (self):
+		self._stop("shutting down")
+		self.stop()
+
 	def resend (self):
 		self._resend_routes = SEND.NORMAL
 		self._delay.reset()

@@ -315,7 +315,7 @@ class Reactor (object):
 			self.listener.stop()
 			self.listener = None
 		for key in self.peers.keys():
-			self.peers[key].stop()
+			self.peers[key].shutdown()
 		self.asynchronous.clear()
 		self.processes.terminate()
 		self.daemon.removepid()
@@ -339,7 +339,7 @@ class Reactor (object):
 		for key, peer in self.peers.items():
 			if key not in self.configuration.neighbors:
 				self.logger.debug('removing peer: %s' % peer.neighbor.name(),'reactor')
-				peer.stop()
+				peer.remove()
 
 		for key, neighbor in self.configuration.neighbors.items():
 			# new peer
@@ -372,7 +372,7 @@ class Reactor (object):
 			if key not in self.configuration.neighbors.keys():
 				neighbor = self.configuration.neighbors[key]
 				self.logger.debug('removing Peer %s' % neighbor.name(),'reactor')
-				self.peers[key].stop()
+				self.peers[key].remove()
 			else:
 				self.peers[key].reestablish()
 		self.processes.start(self.configuration.processes,True)
