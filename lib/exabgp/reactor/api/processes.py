@@ -297,9 +297,9 @@ class Processes (object):
 			self.write(process,self._encoder[process].send(peer,category,header,body),peer)
 
 	@silenced
-	def notification (self, peer, code, subcode, data):
+	def notification (self, peer, code, subcode, data, header, body):
 		for process in self._notify(peer,'neighbor-changes'):
-			self.write(process,self._encoder[process].notification(peer,code,subcode,data),peer)
+			self.write(process,self._encoder[process].notification(peer,code,subcode,data,header,body),peer)
 
 	@silenced
 	def message (self, message_id, peer, message, header,*body):
@@ -345,4 +345,4 @@ class Processes (object):
 	@register_process(Message.CODE.NOTIFICATION,_dispatch)
 	def _notification (self, peer, message, header, body):
 		for process in self._notify(peer,'receive-notifications'):
-			self.write(process,self._encoder[process].notification(peer,message.code,message.subcode,body),peer)
+			self.write(process,self._encoder[process].notification(peer,message.code,message.subcode,body,header,body),peer)

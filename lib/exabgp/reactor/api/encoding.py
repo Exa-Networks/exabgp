@@ -84,8 +84,8 @@ class Text (object):
 	def shutdown (self):
 		return 'shutdown %d %d\n' % (os.getpid(),os.getppid())
 
-	def notification (self, peer, code, subcode, data):
-		return 'notification code %d subcode %d data %s\n' % (code,subcode,hexstring(data))
+	def notification (self, peer, code, subcode, data, header, body):
+		return 'notification code %d subcode %d data %s header %s body %s\n' % (code,subcode,hexstring(data), hexstring(header),hexstring(body))
 
 	def receive (self, peer, category, header, body):
 		return 'neighbor %s received %d header %s body %s\n' % (peer.neighbor.peer_address,category,hexstring(header),hexstring(body))
@@ -242,7 +242,7 @@ class JSON (object):
 			'notification': 'shutdown',
 		}),'','','',1,message_type='notification')
 
-	def notification (self, peer, code, subcode, data):
+	def notification (self, peer, code, subcode, data, header, body):
 		content_notitication = self._kv({
 			'notification': '{ %s } ' % self._kv({
 				'code':    code,
@@ -251,7 +251,7 @@ class JSON (object):
 			})})
 		content_neighbor = self._neighbor(peer,content_notitication)
 		content_json = ", ".join([content_notitication,content_neighbor])
-		return self._header(content_json, '', '', peer.neighbor.identificator(), self.count(peer), message_type='notification')
+		return self._header(content_json, header, body, peer.neighbor.identificator(), self.count(peer), message_type='notification')
 
 	def receive (self, peer, category, header, body):
 		return self._header(self._neighbor(peer,self._kv({

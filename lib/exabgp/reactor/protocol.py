@@ -144,7 +144,7 @@ class Protocol (object):
 				if self.neighbor.api['receive-packets']:
 					self.peer.reactor.processes.receive(self.peer,msg_id,header,body)
 				if self.neighbor.api[Message.CODE.NOTIFICATION]:
-					self.peer.reactor.processes.notification(self.peer,notify.code,notify.subcode,str(notify))
+					self.peer.reactor.processes.notification(self.peer,notify.code,notify.subcode,str(notify),header,body)
 				# XXX: is notify not already Notify class ?
 				raise Notify(notify.code,notify.subcode,str(notify))
 			if not length:
