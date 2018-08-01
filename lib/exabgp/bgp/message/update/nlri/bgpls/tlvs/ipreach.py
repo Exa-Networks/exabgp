@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import division
 from struct import unpack
 import math
-import ipaddress
+from exabgp.vendoring import ipaddress
 
 from exabgp.protocol.ip import IP
 from exabgp.util import ordinal

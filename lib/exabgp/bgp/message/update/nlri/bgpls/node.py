@@ -35,7 +35,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 @BGPLS.register
 class NODE(BGPLS):
 	CODE = 1
-	NAME = "Node NLRI"
+	NAME = "bgpls-node"
 	SHORT_NAME = "Node"
 
 	def __init__ (
@@ -53,7 +53,7 @@ class NODE(BGPLS):
 	def json (self,compact=None):
 		nodes = ', '.join(d.json() for d in self.node_ids)
 		content = ', '.join([
-			'"ls-nlri-type": 1',
+			'"ls-nlri-type": "%s"' % self.NAME,
 			'"l3-routing-topology": %d' % int(self.domain),
 			'"protocol-id": %d' % int(self.proto_id),
 			'"node-descriptors": { %s }' % nodes,
