@@ -35,7 +35,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 @BGPLS.register
 class PREFIXv6(BGPLS):
 	CODE = 4
-	NAME = " IPv6 Topology Prefix"
+	NAME = "bgpls-prefix-v6"
 	SHORT_NAME = "PREFIX_V6"
 
 	def __init__ (
@@ -112,7 +112,7 @@ class PREFIXv6(BGPLS):
 	def json (self, compact=None):
 		nodes = ', '.join(d.json() for d in self.local_node)
 		content = ', '.join([
-			'"ls-nlri-type": %d' % self.CODE,
+			'"ls-nlri-type": "%s"' % self.NAME,
 			'"l3-routing-topology": %d' % int(self.domain),
 			'"protocol-id": %d' % int(self.proto_id),
 			'"node-descriptors": { %s }' % nodes,
