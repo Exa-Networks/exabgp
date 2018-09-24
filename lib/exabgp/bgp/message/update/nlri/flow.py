@@ -74,6 +74,7 @@ class CommonOperator (object):
 class NumericOperator (CommonOperator):
 	# reserved= 0x08  # 0b00001000
 	TRUE      = 0x00  # 0000000000
+	NEQ       = 0x06  # 0b00000110
 	LT        = 0x04  # 0b00000100
 	GT        = 0x02  # 0b00000010
 	EQ        = 0x01  # 0b00000001
@@ -243,7 +244,7 @@ class NumericString (object):
 		NumericOperator.EQ: '=',
 		NumericOperator.LT | NumericOperator.EQ: '<=',
 		NumericOperator.GT | NumericOperator.EQ: '>=',
-		NumericOperator.LT | NumericOperator.GT: '!=',
+		NumericOperator.NEQ: '!=',
 		NumericOperator.FALSE: 'false',
 
 		NumericOperator.AND: '&true',
@@ -252,7 +253,7 @@ class NumericString (object):
 		NumericOperator.AND | NumericOperator.EQ: '&=',
 		NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ: '&<=',
 		NumericOperator.AND | NumericOperator.GT | NumericOperator.EQ: '&>=',
-		NumericOperator.AND | NumericOperator.LT | NumericOperator.GT: '&!=',
+		NumericOperator.AND | NumericOperator.NEQ: '&!=',
 		NumericOperator.AND | NumericOperator.FALSE: '&false',
 	}
 
