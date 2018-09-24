@@ -6,6 +6,8 @@ Version explained:
 Version 4.0.9
  * Fix: forward port of #845, send state down messages on peer removal
    orginal patch: Andre Kampert
+ * Feature: add != test of flows
+   patch by: dhammika
 
 Version 4.0.8
  * Fix: PEP-0479
