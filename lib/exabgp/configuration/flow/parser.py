@@ -97,6 +97,10 @@ def _operator_numeric (string):
 			operator = NumericOperator.GT
 		elif char == '<':
 			operator = NumericOperator.LT
+		elif char == '!':
+			if string.startswith('!='):
+				return NumericOperator.NEQ,string[2:]
+			raise ValueError('invalid operator syntax %s' % string)
 		elif char == 't' and string.lower().startswith('true'):
 			return NumericOperator.TRUE,string[4:]
 		elif char == 'f' and string.lower().startswith('false'):
