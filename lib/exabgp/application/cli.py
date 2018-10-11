@@ -31,11 +31,13 @@ The BGP swiss army knife of networking
 
 usage: exabgpcli [--root ROOT]
 \t\t\t\t\t\t\t\t [--help|<command>...]
+\t\t\t\t\t\t\t\t [--env ENV]
 
 positional arguments:
 \tcommand               valid exabgpcli command (see below)
 
 optional arguments:
+\t--env ENV,   -e ENV   environment configuration file
 \t--help,      -h       exabgp manual page
 \t--root ROOT, -f ROOT  root folder where etc,bin,sbin are located
 
@@ -52,7 +54,8 @@ class AnswerStream:
 
 def main ():
 	options = docopt.docopt(usage, help=False)
-	options['--env'] = ''  # exabgp compatibility
+	if options['--env'] is None:
+		options['--env'] = ''
 
 	root = root_folder(options,['/bin/exabgpcli','/sbin/exabgpcli','/lib/exabgp/application/cli.py'])
 	prefix = '' if root == '/usr' else root
@@ -73,7 +76,7 @@ def main ():
 
 	command = ' '.join(options['<command>'])
 
-	pipes = named_pipe(root)
+	pipes = named_pipe(root, pipename)
 	if len(pipes) != 1:
 		sys.stdout.write('could not find ExaBGP\'s named pipes (%s.in and %s.out) for the cli\n' % (pipename, pipename))
 		sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
