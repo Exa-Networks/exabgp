@@ -8,6 +8,8 @@ Version 4.0.9
    orginal patch: Andre Kampert
  * Feature: add != test of flows
    patch by: dhammika
+ * Fix: Read pipename from env file rather than using default 
+   patch by: Craig Milne
 
 Version 4.0.8
  * Fix: PEP-0479
