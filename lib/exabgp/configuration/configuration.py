@@ -565,7 +565,7 @@ class Configuration (_Configuration):
 
 	def run (self, name, command):
 		# restore 'anounce attribute' to provide backward 3.4 compatibility
-		if command == 'attribute':
+		if name == 'static' and command == 'attribute':
 			command = 'attributes'
 		if command not in self._structure[name]['commands']:
 			return self.error.set('invalid keyword "%s"' % command)
