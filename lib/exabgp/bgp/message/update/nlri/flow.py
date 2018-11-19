@@ -537,8 +537,9 @@ class Flow (NLRI):
 	def add (self, rule):
 		ID = rule.ID
 		if ID in (FlowDestination.ID,FlowSource.ID):
-			if ID in self.rules:
-				return False
+			# re-enabled multiple source/destination as it is allowed by some vendor
+			# if ID in self.rules:
+			# 	return False
 			if ID == FlowDestination.ID:
 				pair = self.rules.get(FlowSource.ID,[])
 			else:
