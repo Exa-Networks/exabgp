@@ -13,6 +13,7 @@ Version 4.0.9
    patch by: Craig Milne
  * Fix: using teardown could crash exabgp
    patch by: Matthias Wichtlhuber
+ * Fix: use of label and rd with announce attributes
 
 Version 4.0.8
  * Fix: PEP-0479
