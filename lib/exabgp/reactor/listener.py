@@ -27,6 +27,8 @@ from exabgp.reactor.network.error import BindingError
 from exabgp.reactor.network.error import AcceptError
 from exabgp.reactor.network.incoming import Incoming
 
+from exabgp.bgp.message.open.routerid import RouterID
+
 from exabgp.logger import Logger
 
 
@@ -207,6 +209,7 @@ class Listener (object):
 				new_neighbor.generated = True
 				new_neighbor.local_address = IP.create(connection.peer)
 				new_neighbor.peer_address = IP.create(connection.local)
+				new_neighbor.router_id = RouterID.create(connection.local)
 
 				new_peer = Peer(new_neighbor,self)
 				denied = new_peer.handle_connection(connection)
