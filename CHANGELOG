@@ -10,6 +10,8 @@ Version 4.0.9
    patch by: dhammika
  * Fix: Read pipename from env file rather than using default 
    patch by: Craig Milne
+ * Fix: using teardown could crash exabgp
+   patch by: russellkelly
 
 Version 4.0.8
  * Fix: PEP-0479

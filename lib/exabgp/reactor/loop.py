@@ -250,7 +250,10 @@ class Reactor (object):
 
 				# do not attempt to listen on closed sockets even if the peer is still here
 				for io in list(workers.keys()):
-					if io.fileno() == -1:
+					try:
+						if io.fileno() == -1:
+							del workers[io]
+					except socket.error:
 						del workers[io]
 
 				# give a turn to all the peers
