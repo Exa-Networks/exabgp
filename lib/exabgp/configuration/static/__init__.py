@@ -23,6 +23,8 @@ from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.rib.change import Change
 
+from exabgp.configuration.static.mpls import label
+from exabgp.configuration.static.mpls import route_distinguisher
 
 class ParseStatic (ParseStaticRoute):
 	syntax = \
@@ -69,6 +71,14 @@ def route (tokeniser):
 		if not command:
 			break
 
+		if command == 'label':
+			nlri.labels = label(tokeniser)
+			continue
+
+		if command == 'rd' or command == 'route-distinguisher':
+			nlri.rd = route_distinguisher(tokeniser)
+			continue
+
 		action = ParseStatic.action.get(command,'')
 
 		if action == 'attribute-add':
@@ -97,11 +107,10 @@ def attributes (tokeniser):
 		nlri = INET(IP.toafi(ipmask.top()),IP.tosafi(ipmask.top()),OUT.ANNOUNCE)
 
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
+	attr = Attributes()
 
-	change = Change(
-		nlri,
-		Attributes()
-	)
+	labels = None
+	rd = None
 
 	while True:
 		command = tokeniser()
@@ -112,39 +121,48 @@ def attributes (tokeniser):
 		if command == 'nlri':
 			break
 
+		if command == 'label':
+			labels = label(tokeniser)
+			continue
+
+		if command == 'rd' or command == 'route-distinguisher':
+			rd = route_distinguisher(tokeniser)
+			continue
+
 		action = ParseStatic.action[command]
 
 		if action == 'attribute-add':
-			change.attributes.add(ParseStatic.known[command](tokeniser))
+			attr.add(ParseStatic.known[command](tokeniser))
 		elif action == 'nlri-set':
-			change.nlri.assign(ParseStatic.assign[command],ParseStatic.known[command](tokeniser))
+			nlri.assign(ParseStatic.assign[command],ParseStatic.known[command](tokeniser))
 		elif action == 'nexthop-and-attribute':
 			nexthop,attribute = ParseStatic.known[command](tokeniser)
-			change.nlri.nexthop = nexthop
-			change.attributes.add(attribute)
+			nlri.nexthop = nexthop
+			attr.add(attribute)
 		else:
 			raise ValueError('route: unknown command "%s"' % command)
 
-	attributes = change.attributes
-	nexthop = change.nlri.nexthop
-
 	changes = []
 	while True:
-		nlri = tokeniser.peek()
-		if not nlri:
+		peeked_nlri = tokeniser.peek()
+		if not peeked_nlri:
 			break
 
 		ipmask = prefix(tokeniser)
 		new = Change(
-			change.nlri.__class__(
-				change.nlri.afi,
-				change.nlri.safi,
+			nlri.__class__(
+				nlri.afi,
+				nlri.safi,
 				OUT.UNSET
 			),
-			attributes
+			attr
 		)
 		new.nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
-		new.nlri.nexthop = nexthop
+		if labels:
+			new.nlri.labels = labels
+		if rd:
+			new.nlri.rd = rd
+		new.nlri.nexthop = nlri.nexthop
 		changes.append(new)
 
 	return changes
