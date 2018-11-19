@@ -196,6 +196,7 @@ def withdraw_vpls (self, reactor, service, line):
 	return True
 
 
+@Command.register('text','announce attribute')
 @Command.register('text','announce attributes')
 def announce_attributes (self, reactor, service, line):
 	def callback ():
