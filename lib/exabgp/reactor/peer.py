@@ -150,8 +150,9 @@ class Peer (object):
 
 	def _stop (self, message):
 		self.generator = False
-		self.proto.close('stop, message [%s]' % message)
-		self.proto = None
+		if self.proto:
+			self.proto.close('stop, message [%s]' % message)
+			self.proto = None
 
 	# logging
 
