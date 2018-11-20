@@ -49,8 +49,8 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.0.8.tar.gz | tar zx
-> ./exabgp-4.0.8/sbin/exabgp --help
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.0.9.tar.gz | tar zx
+> ./exabgp-4.0.9/sbin/exabgp --help
 > ./bin/healthcheck --help
 ```
 
