@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.0.10
+ * Feature: Add decoding for Mac Mobility
+
 Version 4.0.9
  * Change: re-enabled multiple source/destination in flow
  * Fix: forward port of #845, send state down messages on peer removal
