@@ -3,23 +3,24 @@ language: python
 python:
   - "2.6"
   - "2.7"
+  - "3.7"
   - "pypy"
 
 matrix:
-  allow_failures:
-    - python: "3.7"
+#  allow_failures:
+#    - python: "3.7"
   include:
     - python: "3.7"
       dist: xenial    # required for Python >= 3.7 (travis-ci/travis-ci#9069)
       sudo: required  # required for Python >= 3.7 (travis-ci/travis-ci#9069)
-      before_install: true  # override the main before_install
-      install: pip install flake8
-      script:
-        # stop the build if there are Python syntax errors or undefined names
-        - flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
-        # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
-        - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      after_success: true  # override the main after_success
+#      before_install: true  # override the main before_install
+#      install: pip install flake8
+#      script:
+#        # stop the build if there are Python syntax errors or undefined names
+#        - flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
+#        # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
+#        - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+#      after_success: true  # override the main after_success
 
 before_install:
   - sudo apt-get update -qq
@@ -27,7 +28,9 @@ before_install:
 
 install:
   - sudo pip install coveralls
+  - sudo pip install nose
   - sudo pip install psutil
+  - sudo pip install six
   - sudo pip install scrutinizer-ocular
 
 script:
@@ -37,8 +40,8 @@ script:
   - sbin/exabgp --fi > etc/exabgp/exabgp.env
   - set pipefail
   - ./qa/bin/parsing
-  - ./qa/bin/conversation
-  - ./sbin/exabgp etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
+  - ./qa/bin/functional all
+  - env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
   - env exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
 #  - coverage run -m unittest discover -s qa/tests -p *_test.py
 # now run the testsuite again with python3
@@ -47,9 +50,9 @@ script:
   - sbin/exabgp --fi > etc/exabgp/exabgp.env
   - set pipefail
   - ./qa/bin/parsing
-  - ./qa/bin/conversation
-  - ./sbin/exabgp etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
-  - env exabgp_log_enable=false nosetests3 --with-coverage ./qa/tests/*_test.py
+  - ./qa/bin/functional all
+  - env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
+#  - env exabgp_log_enable=false nosetests3 --with-coverage ./qa/tests/*_test.py
 
 after_success:
   - coveralls
