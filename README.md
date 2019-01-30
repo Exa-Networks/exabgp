@@ -120,6 +120,7 @@ The following projects are related to ExaBGP
   - [BGPAPI](https://github.com/abh/bgpapi) an HTTP API
   - [BGP commander](https://github.com/crazed/bgpcommander) Integration with etcd
   - [exabgp-healthcheck](https://github.com/sysadminblog/exabgp-healthcheck) a perl based healthcheck program
+  - [exabgpctl](https://github.com/ahmet2mir/exabgpctl) control exabgp and get information in JSON format
 
 **Installation**
   - [Chef](https://github.com/hw-cookbooks/exabgp) Cookbook
