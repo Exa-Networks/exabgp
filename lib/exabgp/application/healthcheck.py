@@ -165,6 +165,9 @@ def parse():
     g.add_argument("--ip", metavar='IP',
                    type=ip_network, dest="ips", action="append",
                    help="advertise this IP address or network (CIDR notation)")
+    g.add_argument("--local-preference", metavar='P',
+                   type=int, default=-1,
+                   help="advertise with local preference P")
     g.add_argument("--deaggregate-networks",
                    dest="deaggregate_networks", action="store_true",
                    help="Deaggregate Networks specified in --ip")
@@ -478,6 +481,8 @@ def loop(options):
 
             if command == "announce":
                 announce = "{0} med {1}".format(announce, metric)
+                if options.local_preference >= 0:
+                    announce = "{0} local-preference {1}".format(announce, options.local_preference)
                 if options.community or options.disabled_community:
                     community = options.community
                     if target in (states.DOWN, states.DISABLED):
