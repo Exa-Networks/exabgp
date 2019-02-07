@@ -480,11 +480,9 @@ def loop(options):
                 options.next_hop or "self")
 
             if command == "announce":
-                localprefphrase=""
+                announce = "{0} med {1}".format(announce, metric)
                 if options.local_preference >= 0:
-                    localprefphrase = " local-preference {}".format(options.local_preference)
-
-                announce = "{0} med {1}{2}".format(announce, metric, localprefphrase)
+                    announce = "{0} local-preference {1}".format(announce, options.local_preference)
                 if options.community or options.disabled_community:
                     community = options.community
                     if target in (states.DOWN, states.DISABLED):
