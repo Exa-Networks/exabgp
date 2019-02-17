@@ -211,7 +211,7 @@ class Listener (object):
 				new_neighbor.peer_address = IP.create(connection.local)
 				new_neighbor.router_id = RouterID.create(connection.local)
 
-				new_peer = Peer(new_neighbor,self)
+				new_peer = Peer(new_neighbor,reactor)
 				denied = new_peer.handle_connection(connection)
 				if denied:
 					self.logger.debug('refused connection from %s due to the state machine' % connection.name(),'network')
