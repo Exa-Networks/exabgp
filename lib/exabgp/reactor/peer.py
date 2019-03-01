@@ -130,7 +130,11 @@ class Peer (object):
 			'complete': 0,
 		}
 		if self.proto:
-			self.proto.close(u"peer reset, message [{0}] error[{1}]".format(message, error))
+			try:
+				message = u"peer reset, message [{0}] error[{1}]".format(message, error)
+			except UnicodeDecodeError as msg_err:
+				message = u"peer reset, message [{0}] error[{1}]".format(msg_err, error)
+			self.proto.close(message)
 		self._delay.increase()
 
 		self.proto = None

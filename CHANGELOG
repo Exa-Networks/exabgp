@@ -6,6 +6,8 @@ Version explained:
 Version 4.0.11
  * Fix: regression pointed in #873
    patch: Malcolm Dodds
+ * Fix: do not crash when trying to be helpful in presenting notification message
+   reported by: Adam Jacob Muller
 
 Version 4.0.10
  * Feature: Add decoding for Mac Mobility
