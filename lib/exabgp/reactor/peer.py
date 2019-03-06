@@ -133,7 +133,7 @@ class Peer (object):
 			try:
 				message = u"peer reset, message [{0}] error[{1}]".format(message, error)
 			except UnicodeDecodeError as msg_err:
-				message = u"peer reset, message [{0}] error[{1}]".format(msg_err, error)
+				message = u"peer reset, message [{0}] error[{1}]".format(message, msg_err)
 			self.proto.close(message)
 		self._delay.increase()
 
