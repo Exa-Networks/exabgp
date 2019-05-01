@@ -73,12 +73,12 @@ class CommonOperator (object):
 
 class NumericOperator (CommonOperator):
 	# reserved= 0x08  # 0b00001000
-	TRUE      = 0x00  # 0000000000
-	NEQ       = 0x06  # 0b00000110
 	LT        = 0x04  # 0b00000100
 	GT        = 0x02  # 0b00000010
 	EQ        = 0x01  # 0b00000001
-	FALSE     = 0x01 | 0x02 | 0x04
+	NEQ       = LT | GT
+	TRUE      = LT | GT | EQ
+	FALSE     = 0x00
 
 
 class BinaryOperator (CommonOperator):
@@ -247,7 +247,7 @@ class NumericString (object):
 		NumericOperator.NEQ: '!=',
 		NumericOperator.FALSE: 'false',
 
-		NumericOperator.AND: '&true',
+		NumericOperator.AND | NumericOperator.TRUE: '&true',
 		NumericOperator.AND | NumericOperator.LT: '&<',
 		NumericOperator.AND | NumericOperator.GT: '&>',
 		NumericOperator.AND | NumericOperator.EQ: '&=',
@@ -315,8 +315,9 @@ def PacketLength (data):
 
 def PortValue (data):
 	_str_bad_port = "you tried to set an invalid port number .."
-	number = Port.named(data)
-	if number < 0 or number > 0xFFFF:
+	try:
+		number = Port.named(data)
+	except ValueError:
 		raise ValueError(_str_bad_port)
 	return number
 
@@ -547,6 +548,7 @@ class Flow (NLRI):
 			if pair:
 				if rule.afi != pair[0].afi:
 					return False
+			# TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
 			if rule.NAME.endswith('ipv6'):  # better way to check this ?
 				self.afi = AFI.ipv6
 		self.rules.setdefault(ID,[]).append(rule)
@@ -632,8 +634,8 @@ class Flow (NLRI):
 			raise Notify(3,10,'invalid length at the start of the the flow')
 
 		over = bgp[length:]
-		bgp = bgp[:length]
 
+		bgp = bgp[:length]
 		nlri = cls(afi,safi,action)
 
 		if safi == SAFI.flow_vpn:
