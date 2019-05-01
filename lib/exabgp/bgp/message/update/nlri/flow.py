@@ -675,4 +675,4 @@ class Flow (NLRI):
 
 			return nlri, bgp+over
 		except (Notify, ValueError, IndexError) as exc:
-			return None, bgp+over
+			return None, over
