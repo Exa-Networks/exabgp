@@ -157,11 +157,15 @@ class MPRNLRI (Attribute,Family):
 			if nexthops:
 				for nexthop in nexthops:
 					nlri,left = NLRI.unpack_nlri(afi,safi,data,IN.ANNOUNCED,addpath)
-					nlri.nexthop = NextHop.unpack(nexthop)
-					nlris.append(nlri)
+					# allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
+					if nlri:
+						nlri.nexthop = NextHop.unpack(nexthop)
+						nlris.append(nlri)
 			else:
 				nlri,left = NLRI.unpack_nlri(afi,safi,data,IN.ANNOUNCED,addpath)
-				nlris.append(nlri)
+				# allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
+				if nlri:
+					nlris.append(nlri)
 
 			if left == data:
 				raise RuntimeError("sub-calls should consume data")

@@ -638,38 +638,41 @@ class Flow (NLRI):
 		bgp = bgp[:length]
 		nlri = cls(afi,safi,action)
 
-		if safi == SAFI.flow_vpn:
-			nlri.rd = RouteDistinguisher(bgp[:8])
-			bgp = bgp[8:]
+		try:
+			if safi == SAFI.flow_vpn:
+				nlri.rd = RouteDistinguisher(bgp[:8])
+				bgp = bgp[8:]
 
-		seen = []
+			seen = []
 
-		while bgp:
-			what,bgp = ordinal(bgp[0]),bgp[1:]
+			while bgp:
+				what,bgp = ordinal(bgp[0]),bgp[1:]
 
-			if what not in decode.get(afi,{}):
-				raise Notify(3,10,'unknown flowspec component received for address family %d' % what)
+				if what not in decode.get(afi,{}):
+					raise Notify(3,10,'unknown flowspec component received for address family %d' % what)
 
-			seen.append(what)
-			if sorted(seen) != seen:
-				raise Notify(3,10,'components are not sent in the right order %s' % seen)
+				seen.append(what)
+				if sorted(seen) != seen:
+					raise Notify(3,10,'components are not sent in the right order %s' % seen)
 
-			decoded = decode[afi][what]
-			klass = factory[afi][what]
+				decoded = decode[afi][what]
+				klass = factory[afi][what]
 
-			if decoded == 'prefix':
-				adding,bgp = klass.make(bgp)
-				if not nlri.add(adding):
-					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-			else:
-				end = False
-				while not end:
-					byte,bgp = ordinal(bgp[0]),bgp[1:]
-					end = CommonOperator.eol(byte)
-					operator = CommonOperator.operator(byte)
-					length = CommonOperator.length(byte)
-					value,bgp = bgp[:length],bgp[length:]
-					adding = klass.decoder(value)
-					nlri.add(klass(operator,adding))
+				if decoded == 'prefix':
+					adding,bgp = klass.make(bgp)
+					if not nlri.add(adding):
+						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
+				else:
+					end = False
+					while not end:
+						byte,bgp = ordinal(bgp[0]),bgp[1:]
+						end = CommonOperator.eol(byte)
+						operator = CommonOperator.operator(byte)
+						length = CommonOperator.length(byte)
+						value,bgp = bgp[:length],bgp[length:]
+						adding = klass.decoder(value)
+						nlri.add(klass(operator,adding))
 
-		return nlri, bgp+over
+			return nlri, bgp+over
+		except (Notify, ValueError, IndexError) as exc:
+			return None, bgp+over
