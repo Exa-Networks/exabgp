@@ -157,7 +157,7 @@ def main ():
 		sys.exit(0)
 
 	def read_timeout(signum, frame):
-		sys.stderr.write('could not read answer to ExaBGP')
+		sys.stderr.write('could not read answer from ExaBGP')
 		sys.stderr.flush()
 		sys.exit(1)
 
