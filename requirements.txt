@@ -1,9 +1,4 @@
 # ExaBGP dependencies are included in its code tree
-# You only need to install the following for :
+# You only need to install the following for healthcheck.py
 
-# healthcheck.py
 ipaddr
-
-# running the test suite/code
-nose
-psutil

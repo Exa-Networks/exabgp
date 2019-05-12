@@ -1,0 +1,6 @@
+# running the test suite/code
+six
+coveralls
+nose
+psutil
+scrutinizer-ocular
