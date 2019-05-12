@@ -67,7 +67,7 @@ def restart (self, reactor, service, _):
 
 @Command.register('text','version',False)
 def version (self, reactor, service, _):
-	reactor.processes.write(service,'exabgp %s' % _version,force=True)
+	reactor.processes.write(service,'exabgp %s' % _version)
 	reactor.processes.answer_done(service)
 	return True
 

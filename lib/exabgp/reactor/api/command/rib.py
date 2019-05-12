@@ -45,20 +45,24 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
 				for change in changes:
 					if isinstance(change.nlri, route_type):
 						if extensive:
-							reactor.processes.write(service,'%s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()),force=True)
+							reactor.processes.write(service,'%s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()))
 						else:
-							reactor.processes.write(service,'neighbor %s %s %s' % (peer.neighbor.peer_address,'%s %s' % change.nlri.family(),str(change.nlri)),force=True)
+							reactor.processes.write(service,'neighbor %s %s %s' % (peer.neighbor.peer_address,'%s %s' % change.nlri.family(),str(change.nlri)))
 				yield True
 		reactor.processes.answer_done(service)
 	return callback
 
 
-@Command.register('text','show adj-rib')
+@Command.register('text', 'show adj-rib out', False, ['extensive', ])
+@Command.register('text', 'show adj-rib in', False, ['extensive', ])
 def show_adj_rib (self, reactor, service, line):
 	words = line.split()
 	extensive = line.endswith(' extensive')
 	try:
 		rib = words[2]
+		if not rib in ('in','out'):
+			reactor.processes.answer_error(service)
+			return False
 	except IndexError:
 		if words[1] == 'adj-rib-in':
 			rib = 'in'
