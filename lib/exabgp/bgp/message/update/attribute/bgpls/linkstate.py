@@ -125,7 +125,7 @@ class LsGenericFlags(object):
 		valid_flags.append('0000')
 		if bit_array.bin in valid_flags:
 			flags = dict(zip(pattern, bit_array.bin))
-			flags = {k:int(v) for k, v in flags.items()}
+			flags = dict((k, int(v)) for k, v in flags.items())
 		else:
 			raise Notify(3,5, "Invalid SR flags mask")
 		return cls(flags=flags)
