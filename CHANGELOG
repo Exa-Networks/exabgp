@@ -4,6 +4,8 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 4.0.11
+ * CHANGE: when redifining a single parameter option using inheritence the value will be replaced
+ * CHANGE: FlowSpec TRUE and FALSE value have been updated to use the latest RFC and are therefore inverted from previous versions
  * Fix: regression pointed in #873
    patch: Malcolm Dodds
  * Fix: do not crash when trying to be helpful in presenting notification message
