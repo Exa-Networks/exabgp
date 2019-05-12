@@ -122,7 +122,7 @@ class Configuration (_Configuration):
 		self.tokeniser = Tokeniser(self.scope,self.error,self.logger)
 
 		params = (self.tokeniser,self.scope,self.error,self.logger)
-		generic                  = Section               (*params)
+		self.section             = Section               (*params)
 		self.process             = ParseProcess          (*params)
 		self.template            = ParseTemplate         (*params)
 		self.template_neighbor   = ParseTemplateNeighbor (*params)
@@ -152,7 +152,7 @@ class Configuration (_Configuration):
 
 		self._structure = {
 			'root': {
-				'class':    generic,
+				'class':    self.section,
 				'commands': [],
 				'sections': {
 					'process': self.process.name,
@@ -430,7 +430,7 @@ class Configuration (_Configuration):
 			if not self.tokeniser.set_file(fname):
 				return False
 
-		if self.section('root') is not True:
+		if self.parseSection('root') is not True:
 			# XXX: Should it be in neighbor ?
 			self.process.add_api()
 			self._rollback_reload()
@@ -477,7 +477,7 @@ class Configuration (_Configuration):
 		self._clear()
 		self.tokeniser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
 
-		if self.section(section) is not True:
+		if self.parseSection(section) is not True:
 			self._rollback_reload()
 			self.logger.debug(
 				"\n"
@@ -557,7 +557,7 @@ class Configuration (_Configuration):
 			return self.error.set('invalid syntax line %d' % self.tokeniser.index_line)
 		return False
 
-	def section (self, name):
+	def parseSection (self, name):
 		if name not in self._structure:
 			return self.error.set('option %s is not allowed here' % name)
 

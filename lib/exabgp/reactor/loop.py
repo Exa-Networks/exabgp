@@ -333,7 +333,7 @@ class Reactor (object):
 		if not reloaded:
 			#
 			# Careful the string below is used but the QA code to check for sucess of failure
-			self.logger.error('problem with the configuration file, no change done','configuration')
+			self.logger.error('not reloaded, no change found in the configuration','configuration')
 			# Careful the string above is used but the QA code to check for sucess of failure
 			#
 			self.logger.error(str(self.configuration.error),'configuration')

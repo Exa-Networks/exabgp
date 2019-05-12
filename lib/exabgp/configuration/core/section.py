@@ -29,7 +29,7 @@ class Section (Error):
 		self._names = []
 
 	def clear (self):
-		raise RuntimeError('%s did not implemented clear as should be' % self.__class__.__name__)
+		self._names = []
 
 	@classmethod
 	def register (cls, name, action,afi=''):
