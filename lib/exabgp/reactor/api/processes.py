@@ -95,7 +95,7 @@ class Processes (object):
 		for process in list(self._process):
 			if not self.silence:
 				try:
-					self._write(process,self._encoder[process].shutdown())
+					self.write(process,self._encoder[process].shutdown())
 				except ProcessError:
 					pass
 		self.silence = True
@@ -239,7 +239,7 @@ class Processes (object):
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				self._handle_problem(process)
 
-	def _write (self, process, string, neighbor=None):
+	def write (self, process, string, neighbor=None):
 		if string is None:
 			return True
 
@@ -267,16 +267,16 @@ class Processes (object):
 
 		return True
 
-	def answer (self, service, string, force=False):
+	def _answer (self, service, string, force=False):
 		if force or self.ack:
 			self.logger.debug('responding to %s : %s' % (service,string.replace('\n', '\\n')), 'process')
-			self._write(service,string)
+			self.write(service,string)
 
 	def answer_done (self, service):
-		self.answer(service,Answer.done)
+		self._answer(service,Answer.done)
 
 	def answer_error (self, service):
-		self.answer(service,Answer.error)
+		self._answer(service, Answer.error)
 
 	def _notify (self, neighbor, event):
 		for process in neighbor.api[event]:
@@ -296,42 +296,42 @@ class Processes (object):
 	@silenced
 	def up (self, neighbor):
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._encoder[process].up(neighbor),neighbor)
+			self.write(process,self._encoder[process].up(neighbor),neighbor)
 
 	@silenced
 	def connected (self, neighbor):
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._encoder[process].connected(neighbor),neighbor)
+			self.write(process,self._encoder[process].connected(neighbor),neighbor)
 
 	@silenced
 	def down (self, neighbor, reason):
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._encoder[process].down(neighbor,reason),neighbor)
+			self.write(process,self._encoder[process].down(neighbor,reason),neighbor)
 
 	@silenced
 	def negotiated (self, neighbor, negotiated):
 		for process in self._notify(neighbor,'negotiated'):
-			self._write(process,self._encoder[process].negotiated(neighbor,negotiated),neighbor)
+			self.write(process,self._encoder[process].negotiated(neighbor,negotiated),neighbor)
 
 	@silenced
 	def fsm (self, neighbor, fsm):
 		for process in self._notify(neighbor,'fsm'):
-			self._write(process,self._encoder[process].fsm(neighbor,fsm),neighbor)
+			self.write(process,self._encoder[process].fsm(neighbor,fsm),neighbor)
 
 	@silenced
 	def signal (self, neighbor, signal):
 		for process in self._notify(neighbor,'signal'):
-			self._write(process,self._encoder[process].signal(neighbor,signal),neighbor)
+			self.write(process,self._encoder[process].signal(neighbor,signal),neighbor)
 
 	@silenced
 	def packets (self, neighbor, direction, category, header, body):
 		for process in self._notify(neighbor,'%s-packets' % direction):
-			self._write(process,self._encoder[process].packets(neighbor,direction,category,header,body),neighbor)
+			self.write(process,self._encoder[process].packets(neighbor,direction,category,header,body),neighbor)
 
 	@silenced
 	def notification (self, neighbor, direction, code, subcode, data, header, body):
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._encoder[process].notification(neighbor,direction,code,subcode,data,header,body),neighbor)
+			self.write(process,self._encoder[process].notification(neighbor,direction,code,subcode,data,header,body),neighbor)
 
 	@silenced
 	def message (self, message_id, neighbor, direction, message, negotiated, header, *body):
@@ -353,30 +353,30 @@ class Processes (object):
 	@register_process(Message.CODE.OPEN)
 	def _open (self, peer, direction, message, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.OPEN.SHORT)):
-			self._write(process,self._encoder[process].open(peer,direction,message,negotiated,header,body),peer)
+			self.write(process,self._encoder[process].open(peer,direction,message,negotiated,header,body),peer)
 
 	@register_process(Message.CODE.UPDATE)
 	def _update (self, peer, direction, update, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.UPDATE.SHORT)):
-			self._write(process,self._encoder[process].update(peer,direction,update,negotiated,header,body),peer)
+			self.write(process,self._encoder[process].update(peer,direction,update,negotiated,header,body),peer)
 
 	@register_process(Message.CODE.NOTIFICATION)
 	def _notification (self, peer, direction, message, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.NOTIFICATION.SHORT)):
-			self._write(process,self._encoder[process].notification(peer,direction,message,negotiated,header,body),peer)
+			self.write(process,self._encoder[process].notification(peer,direction,message,negotiated,header,body),peer)
 
 	# unused-argument, must keep the API
 	@register_process(Message.CODE.KEEPALIVE)
 	def _keepalive (self, peer, direction, keepalive, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.KEEPALIVE.SHORT)):
-			self._write(process,self._encoder[process].keepalive(peer,direction,negotiated,header,body),peer)
+			self.write(process,self._encoder[process].keepalive(peer,direction,negotiated,header,body),peer)
 
 	@register_process(Message.CODE.ROUTE_REFRESH)
 	def _refresh (self, peer, direction, refresh, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.ROUTE_REFRESH.SHORT)):
-			self._write(process,self._encoder[process].refresh(peer,direction,refresh,negotiated,header,body),peer)
+			self.write(process,self._encoder[process].refresh(peer,direction,refresh,negotiated,header,body),peer)
 
 	@register_process(Message.CODE.OPERATIONAL)
 	def _operational (self, peer, direction, operational, negotiated, header, body):
 		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.OPERATIONAL.SHORT)):
-			self._write(process,self._encoder[process].operational(peer,direction,operational.category,operational,negotiated,header,body),peer)
+			self.write(process,self._encoder[process].operational(peer,direction,operational.category,operational,negotiated,header,body),peer)
