@@ -73,12 +73,12 @@ class CommonOperator (object):
 
 class NumericOperator (CommonOperator):
 	# reserved= 0x08  # 0b00001000
-	TRUE      = 0x00  # 0000000000
-	NEQ       = 0x06  # 0b00000110
 	LT        = 0x04  # 0b00000100
 	GT        = 0x02  # 0b00000010
 	EQ        = 0x01  # 0b00000001
-	FALSE     = 0x01 | 0x02 | 0x04
+	NEQ       = LT | GT
+	TRUE      = LT | GT | EQ
+	FALSE     = 0x00
 
 
 class BinaryOperator (CommonOperator):
@@ -247,7 +247,7 @@ class NumericString (object):
 		NumericOperator.NEQ: '!=',
 		NumericOperator.FALSE: 'false',
 
-		NumericOperator.AND: '&true',
+		NumericOperator.AND | NumericOperator.TRUE: '&true',
 		NumericOperator.AND | NumericOperator.LT: '&<',
 		NumericOperator.AND | NumericOperator.GT: '&>',
 		NumericOperator.AND | NumericOperator.EQ: '&=',
@@ -315,8 +315,9 @@ def PacketLength (data):
 
 def PortValue (data):
 	_str_bad_port = "you tried to set an invalid port number .."
-	number = Port.named(data)
-	if number < 0 or number > 0xFFFF:
+	try:
+		number = Port.named(data)
+	except ValueError:
 		raise ValueError(_str_bad_port)
 	return number
 
@@ -547,6 +548,7 @@ class Flow (NLRI):
 			if pair:
 				if rule.afi != pair[0].afi:
 					return False
+			# TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
 			if rule.NAME.endswith('ipv6'):  # better way to check this ?
 				self.afi = AFI.ipv6
 		self.rules.setdefault(ID,[]).append(rule)
@@ -632,42 +634,45 @@ class Flow (NLRI):
 			raise Notify(3,10,'invalid length at the start of the the flow')
 
 		over = bgp[length:]
-		bgp = bgp[:length]
 
+		bgp = bgp[:length]
 		nlri = cls(afi,safi,action)
 
-		if safi == SAFI.flow_vpn:
-			nlri.rd = RouteDistinguisher(bgp[:8])
-			bgp = bgp[8:]
+		try:
+			if safi == SAFI.flow_vpn:
+				nlri.rd = RouteDistinguisher(bgp[:8])
+				bgp = bgp[8:]
 
-		seen = []
+			seen = []
 
-		while bgp:
-			what,bgp = ordinal(bgp[0]),bgp[1:]
+			while bgp:
+				what,bgp = ordinal(bgp[0]),bgp[1:]
 
-			if what not in decode.get(afi,{}):
-				raise Notify(3,10,'unknown flowspec component received for address family %d' % what)
+				if what not in decode.get(afi,{}):
+					raise Notify(3,10,'unknown flowspec component received for address family %d' % what)
 
-			seen.append(what)
-			if sorted(seen) != seen:
-				raise Notify(3,10,'components are not sent in the right order %s' % seen)
+				seen.append(what)
+				if sorted(seen) != seen:
+					raise Notify(3,10,'components are not sent in the right order %s' % seen)
 
-			decoded = decode[afi][what]
-			klass = factory[afi][what]
+				decoded = decode[afi][what]
+				klass = factory[afi][what]
 
-			if decoded == 'prefix':
-				adding,bgp = klass.make(bgp)
-				if not nlri.add(adding):
-					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-			else:
-				end = False
-				while not end:
-					byte,bgp = ordinal(bgp[0]),bgp[1:]
-					end = CommonOperator.eol(byte)
-					operator = CommonOperator.operator(byte)
-					length = CommonOperator.length(byte)
-					value,bgp = bgp[:length],bgp[length:]
-					adding = klass.decoder(value)
-					nlri.add(klass(operator,adding))
+				if decoded == 'prefix':
+					adding,bgp = klass.make(bgp)
+					if not nlri.add(adding):
+						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
+				else:
+					end = False
+					while not end:
+						byte,bgp = ordinal(bgp[0]),bgp[1:]
+						end = CommonOperator.eol(byte)
+						operator = CommonOperator.operator(byte)
+						length = CommonOperator.length(byte)
+						value,bgp = bgp[:length],bgp[length:]
+						adding = klass.decoder(value)
+						nlri.add(klass(operator,adding))
 
-		return nlri, bgp+over
+			return nlri, bgp+over
+		except (Notify, ValueError, IndexError) as exc:
+			return None, over
