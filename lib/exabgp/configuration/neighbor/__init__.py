@@ -163,6 +163,14 @@ class ParseNeighbor (Section):
 		neighbor.group_updates    = local.get('group-updates',True)
 		neighbor.manual_eor       = local.get('manual-eor', False)
 
+		if neighbor.local_address is None:
+			return self.error.set('incomplete neighbor, missing local-address')
+		if neighbor.local_as is None:
+			return self.error.set('incomplete neighbor, missing local-as')
+		if neighbor.peer_as is None:
+			return self.error.set('incomplete neighbor, missing peer-as')
+
+
 		capability = local.get('capability',{})
 		neighbor.add_path         = capability.get('add-path',0)
 		neighbor.asn4             = capability.get('asn4',True)
