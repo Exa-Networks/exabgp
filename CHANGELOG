@@ -11,7 +11,7 @@ Version 4.0.11
  * Fix: issue while handling ranged neighbors
    patch: Wenxin Wang
  * Fix: accumulating families when using multiple peers
-   patch: Martin Topholm
+   patch: Martin Topholm (reviewed)
 
 Version 4.0.10
  * Feature: Add decoding for Mac Mobility
