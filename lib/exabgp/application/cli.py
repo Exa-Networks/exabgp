@@ -156,12 +156,13 @@ def main ():
 	if command == 'reset':
 		sys.exit(0)
 
-	def read_timeout(signum, frame):
-		sys.stderr.write('could not read answer from ExaBGP')
+	def open_timeout(signum, frame):
+		sys.stderr.write('could not open connection to ExaBGP')
 		sys.stderr.flush()
 		sys.exit(1)
 
-	signal.signal(signal.SIGALRM, read_timeout)
+	signal.signal(signal.SIGALRM, open_timeout)
+	waited = 0.0
 
 	try:
 		signal.alarm(5)
@@ -171,8 +172,20 @@ def main ():
 		buf = b''
 		done = False
 		while not done:
+			r,_,_ = select.select([reader], [], [], 0.01)
+			if waited > 5.0:
+				sys.stderr.write('\n')
+				sys.stderr.write('warning: no end of command message received\n')
+				sys.stderr.write('warning: normal if exabgp.api.ack is set to false otherwise some data may get stuck on the pipe\n')
+				sys.stderr.write('warning: otherwise it may cause exabgp reactor to block\n')
+				sys.exit(0)
+			elif not r:
+				waited += 0.01
+				continue
+			else:
+				waited = 0.0
 			try:
-				raw = os.read(reader,4096)
+				raw = os.read(reader, 4096)
 				buf += raw
 				while b'\n' in buf:
 					line,buf = buf.split(b'\n',1)
@@ -193,8 +206,6 @@ def main ():
 						break
 					sys.stdout.write('%s\n' % string)
 					sys.stdout.flush()
-
-				select.select([reader],[],[],0.01)
 			except OSError as exc:
 				if exc.errno in error.block:
 					break

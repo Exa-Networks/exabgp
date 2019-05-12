@@ -20,8 +20,6 @@ from exabgp.logger import Logger
 from exabgp.reactor.api.command import Command
 from exabgp.configuration.configuration import Configuration
 
-from exabgp.reactor.api.response.answer import Answer
-
 # ======================================================================= Parser
 #
 
@@ -44,7 +42,7 @@ class API (Command):
 		for registered in self.functions:
 			if registered == command or registered + ' ' in command:
 				return self.callback['text'][registered](self,reactor,service,command)
-		reactor.processes.answer(service,Answer.error)
+		reactor.processes.answer_error(service)
 		self.logger.warning('command from process not understood : %s' % command,'api')
 		return False
 

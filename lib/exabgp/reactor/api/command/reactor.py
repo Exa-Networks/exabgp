@@ -25,18 +25,18 @@ def manual (self, reactor, service, _):
 			extended = command
 		lines.append('[neighbor <ip> [filters]] ' + command if self.callback['neighbor'][command] else '%s ' % extended)
 
-	reactor.processes.answer(service,'',True)
-	reactor.processes.answer(service,'available API commands are listed here:',True)
-	reactor.processes.answer(service,'=======================================',True)
-	reactor.processes.answer(service,'',True)
-	reactor.processes.answer(service,'filter can be: [local-ip <ip>][local-as <asn>][peer-as <asn>][router-id <router-id>]',True)
-	reactor.processes.answer(service,'',True)
-	reactor.processes.answer(service,'command are:',True)
-	reactor.processes.answer(service,'------------',True)
-	reactor.processes.answer(service,'',True)
+	reactor.processes.write(service,'',True)
+	reactor.processes.write(service,'available API commands are listed here:',True)
+	reactor.processes.write(service,'=======================================',True)
+	reactor.processes.write(service, '', True)
+	reactor.processes.write(service,'filter can be: [local-ip <ip>][local-as <asn>][peer-as <asn>][router-id <router-id>]',True)
+	reactor.processes.write(service,'',True)
+	reactor.processes.write(service,'command are:',True)
+	reactor.processes.write(service,'------------',True)
+	reactor.processes.write(service,'',True)
 	for line in sorted(lines):
-		reactor.processes.answer(service,line,True)
-	reactor.processes.answer(service,'',True)
+		reactor.processes.write(service,line,True)
+	reactor.processes.write(service, '', True)
 	reactor.processes.answer_done(service)
 	return True
 
@@ -44,7 +44,7 @@ def manual (self, reactor, service, _):
 @Command.register('text','shutdown',False)
 def shutdown (self, reactor, service, _):
 	reactor.signal.received = reactor.signal.SHUTDOWN
-	reactor.processes.answer(service,'shutdown in progress')
+	reactor.processes.write(service,'shutdown in progress')
 	reactor.processes.answer_done(service)
 	return True
 
@@ -52,7 +52,7 @@ def shutdown (self, reactor, service, _):
 @Command.register('text','reload',False)
 def reload (self, reactor, service, _):
 	reactor.signal.received = reactor.signal.RELOAD
-	reactor.processes.answer(service,'reload in progress')
+	reactor.processes.write(service,'reload in progress')
 	reactor.processes.answer_done(service)
 	return True
 
@@ -60,14 +60,14 @@ def reload (self, reactor, service, _):
 @Command.register('text','restart',False)
 def restart (self, reactor, service, _):
 	reactor.signal.received = reactor.signal.RESTART
-	reactor.processes.answer(service,'restart in progress')
+	reactor.processes.write(service,'restart in progress')
 	reactor.processes.answer_done(service)
 	return True
 
 
 @Command.register('text','version',False)
 def version (self, reactor, service, _):
-	reactor.processes.answer(service,'exabgp %s' % _version,force=True)
+	reactor.processes.write(service,'exabgp %s' % _version,force=True)
 	reactor.processes.answer_done(service)
 	return True
 
