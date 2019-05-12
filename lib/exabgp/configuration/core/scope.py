@@ -161,7 +161,7 @@ class Scope (Error):
 			elif isinstance(source[key],IP):
 				destination[key] = value
 			else:
-				self.throw('can not recursively copy this type of data %s' % type(source[key]))
+				self.throw('can not copy "%s" (as it is of type %s) and it exists in both the source and destination' % (key,type(source[key])))
 
 	def get (self, name='', default=None):
 		if name:
