@@ -201,7 +201,6 @@ class ParseNeighbor (Section):
 
 		neighbor.changes = []
 		neighbor.changes.extend(self.scope.pop_routes())
-		local.get('family').clear()
 
 		# old format
 		for section in ('static','l2vpn','flow'):
@@ -288,4 +287,5 @@ class ParseNeighbor (Section):
 			neighbor.make_rib()
 			_init_neighbor(neighbor)
 
+		local.clear()
 		return True
