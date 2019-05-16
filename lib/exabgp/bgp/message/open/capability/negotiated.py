@@ -115,7 +115,7 @@ class Negotiated (object):
 		# 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
 	def validate (self, neighbor):
-		if self.peer_as != neighbor.peer_as:
+		if neighbor.peer_as is not None and self.received_open.asn != neighbor.peer_as:
 			return (2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn,neighbor.peer_as))
 
 		# RFC 6286 : https://tools.ietf.org/html/rfc6286
