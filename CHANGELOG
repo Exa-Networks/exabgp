@@ -18,6 +18,8 @@ Version 4.0.11
    reported by: gbock
  * Feature: better RFC5575bis support, better treat as withdraw
    patch: Christoph Loibl
+ * Fix: Fix issue when using peer ASN discovery
+   patch: Zac Medico
 
 Version 4.0.10
  * Feature: Add decoding for Mac Mobility
