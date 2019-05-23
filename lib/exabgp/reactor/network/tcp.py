@@ -163,15 +163,19 @@ def MD5 (io, ip, port, md5, md5_base64):
 				sockaddr = pack('HHI16sI%dx' % SS_MAXSIZE_PADDING, n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
 
 			TCP_MD5SIG_MAXKEYLEN = 80
-			if md5:
-				if md5_bytes is None:
-					key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
-				else:
-					md5_bytes = bytes_ascii(md5)
-					key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
+			TCP_MD5SIG = 14
 
-				TCP_MD5SIG = 14
+			if md5_bytes:
+				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
 				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+			elif md5:
+				md5_bytes = bytes_ascii(md5)
+				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
+				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+			else:
+				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
+				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+
 		except socket.error as exc:
 			if exc.errno != errno.ENOENT:
 				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc))
