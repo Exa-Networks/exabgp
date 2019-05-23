@@ -172,9 +172,9 @@ def MD5 (io, ip, port, md5, md5_base64):
 				md5_bytes = bytes_ascii(md5)
 				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
 				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
-			else:
-				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
-				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+			# else:
+			# 	key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
+			# 	io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
 
 		except socket.error as exc:
 			if exc.errno != errno.ENOENT:
