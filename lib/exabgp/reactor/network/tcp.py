@@ -7,6 +7,7 @@ Copyright (c) 2013-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import re
 import base64
 import time
 import socket
@@ -133,7 +134,7 @@ def MD5 (io, ip, port, md5, md5_base64):
 						md5_bytes = base64.b64decode(md5)
 					except TypeError:
 						raise MD5Error("Failed to decode base 64 encoded PSK")
-				elif md5_base64 is None:  # auto
+				elif md5_base64 is None and not re.match('.*[^a-f0-9].*', md5):  # auto
 					options = [md5+'==', md5+'=', md5]
 					for md5 in options:
 						try:
