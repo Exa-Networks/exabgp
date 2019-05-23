@@ -164,10 +164,10 @@ def MD5 (io, ip, port, md5, md5_base64):
 			TCP_MD5SIG_MAXKEYLEN = 80
 			if md5:
 				if md5_bytes is None:
+					key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
+				else:
 					md5_bytes = bytes_ascii(md5)
 					key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
-				else:
-					key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
 
 				TCP_MD5SIG = 14
 				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
