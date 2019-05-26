@@ -6,6 +6,7 @@ Version explained:
 Version 4.0.11
  * CHANGE: when redifining a single parameter option using inheritence the value will be replaced
  * CHANGE: FlowSpec TRUE and FALSE value have been updated to use the latest RFC and are therefore inverted from previous versions
+ * Feature: support for extended next-hop (RFC 5549)
  * Fix: regression pointed in #873
    patch: Malcolm Dodds
  * Fix: do not crash when trying to be helpful in presenting notification message
@@ -20,6 +21,8 @@ Version 4.0.11
    patch: Christoph Loibl
  * Fix: Fix issue when using peer ASN discovery
    patch: Zac Medico
+ * Fix: MD5 encoding
+   reported by: Adam Jacob Muller (with an initial idea for a patch)
 
 Version 4.0.10
  * Feature: Add decoding for Mac Mobility
