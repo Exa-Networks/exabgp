@@ -126,6 +126,8 @@ class MPRNLRI (Attribute,Family):
 		if negotiated.nexthop:
 			if len_nh in (16, 32):
 				nh_afi = AFI.ipv6
+			elif len_nh in (4,):
+				nh_afi = AFI.ipv4
 			else:
 				raise Notify(3,0,'unsupported family %s %s with extended next-hop capability enabled' % (afi, safi))
 			length, _ = Family.size[(nh_afi, safi)]
