@@ -88,9 +88,7 @@ def next_hop (tokeniser):
 		return IPSelf(tokeniser.afi),NextHopSelf(tokeniser.afi)
 	else:
 		ip = IP.create(value)
-		if ip.afi == AFI.ipv4:
-			return ip,NextHop(ip.top())
-		return ip,None
+		return ip,NextHop(ip.top())
 
 
 def inet (tokeniser):

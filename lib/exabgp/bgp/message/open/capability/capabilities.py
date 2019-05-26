@@ -18,6 +18,7 @@ from exabgp.util import concat_bytes
 from exabgp.util import concat_bytes_i
 
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.graceful import Graceful
@@ -67,6 +68,13 @@ class Capabilities (dict):
 		(AFI.ipv6,SAFI.mpls_vpn),
 	]
 
+	_NEXTHOP = [
+		(AFI.ipv4, SAFI.unicast, AFI.ipv6),
+		(AFI.ipv4, SAFI.multicast, AFI.ipv6),
+		(AFI.ipv4, SAFI.nlri_mpls, AFI.ipv6),
+		(AFI.ipv4, SAFI.mpls_vpn ,AFI.ipv6),
+	]
+
 	def announced (self, capability):
 		return capability in self
 
@@ -87,6 +95,18 @@ class Capabilities (dict):
 			return
 
 		self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
+
+	def _nexthop (self, neighbor):
+		if not neighbor.nexthop:
+			return
+
+		nexthops = neighbor.nexthops()
+		nh_pairs = []
+		for allowed in self._NEXTHOP:
+			if allowed not in nexthops:
+				continue
+			nh_pairs.append(allowed)
+		self[Capability.CODE.NEXTHOP] = NextHop(nh_pairs)
 
 	def _addpath (self, neighbor):
 		if not neighbor.add_path:
@@ -138,6 +158,7 @@ class Capabilities (dict):
 	def new (self, neighbor, restarted):
 		self._protocol(neighbor)
 		self._asn4(neighbor)
+		self._nexthop(neighbor)
 		self._addpath(neighbor)
 		self._graceful(neighbor,restarted)
 		self._refresh(neighbor)

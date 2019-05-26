@@ -30,6 +30,7 @@ class Negotiated (object):
 		self.local_as = ASN(0)
 		self.peer_as = ASN(0)
 		self.families = []
+		self.nexthop = []
 		self.asn4 = False
 		self.addpath = RequirePath()
 		self.multisession = False
@@ -71,6 +72,14 @@ class Negotiated (object):
 			for family in recv_capa[Capability.CODE.MULTIPROTOCOL]:
 				if family in sent_capa[Capability.CODE.MULTIPROTOCOL]:
 					self.families.append(family)
+
+		self.nexthop = []
+		if \
+			recv_capa.announced(Capability.CODE.NEXTHOP) and \
+			sent_capa.announced(Capability.CODE.NEXTHOP):
+			for family in recv_capa[Capability.CODE.NEXTHOP]:
+				if family in sent_capa[Capability.CODE.NEXTHOP]:
+					self.nexthop.append(family)
 
 		if recv_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH):
 			self.refresh = REFRESH.ENHANCED  # pylint: disable=E1101

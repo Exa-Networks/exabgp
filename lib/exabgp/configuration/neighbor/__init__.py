@@ -27,6 +27,7 @@ from exabgp.bgp.message.update.nlri.flow import NLRI
 from exabgp.configuration.core import Section
 from exabgp.configuration.neighbor.api import ParseAPI
 from exabgp.configuration.neighbor.family import ParseFamily
+from exabgp.configuration.neighbor.nexthop import ParseNextHop
 from exabgp.configuration.neighbor.family import ParseAddPath
 
 from exabgp.configuration.parser import boolean
@@ -172,6 +173,7 @@ class ParseNeighbor (Section):
 
 
 		capability = local.get('capability',{})
+		neighbor.nexthop          = capability.get('nexthop',None)
 		neighbor.add_path         = capability.get('add-path',0)
 		neighbor.asn4             = capability.get('asn4',True)
 		neighbor.extended_message = capability.get('extended-message',True)
@@ -200,12 +202,32 @@ class ParseNeighbor (Section):
 				for family in ParseAddPath.convert:
 					for pair in add_path.get(family,[]):
 						if pair not in families:
-							self.logger.debug('skipping add-path family %s as it is not negotiated' % pair,'configuration')
+							self.logger.debug('skipping add-path family ' + str(pair) + ' as it is not negotiated','configuration')
 							continue
 						neighbor.add_addpath(pair)
 			else:
 				for family in families:
 					neighbor.add_addpath(family)
+
+		# The default is to auto-detect by the presence of the nexthop block
+		# if this is manually set, then we honor it
+		nexthop = local.get('nexthop', {})
+		if neighbor.nexthop is None and nexthop:
+			neighbor.nexthop = True
+
+		if neighbor.nexthop:
+			nexthops = []
+			for family in nexthop:
+				nexthops.extend(nexthop[family])
+			if nexthops:
+				for afi,safi,nhafi in nexthops:
+					if (afi,safi) not in neighbor.families():
+						self.logger.debug('skipping nexthop afi,safi ' + str(afi) + '/' + str(safi) + ' as it is not negotiated', 'configuration')
+						continue
+					if (nhafi, safi) not in neighbor.families():
+						self.logger.debug('skipping nexthop afi ' + str(nhafi) + '/' + str(safi) + ' as it is not negotiated', 'configuration')
+						continue
+					neighbor.add_nexthop(afi, safi, nhafi)
 
 		neighbor.changes = []
 		neighbor.changes.extend(self.scope.pop_routes())
