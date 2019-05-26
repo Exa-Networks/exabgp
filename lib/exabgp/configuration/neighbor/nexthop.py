@@ -2,7 +2,7 @@
 """
 family.py
 
-Created by Thomas Mangin on 2015-06-04.
+Created by Thomas Mangin on 2019-05-23.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
@@ -21,12 +21,17 @@ class ParseNextHop (Section):
 		'   ipv4 multicast ipv6;\n' \
 		'   ipv4 mpls-vpn ipv6;\n' \
 		'   ipv4 nlri-mpls ipv6;\n' \
+		'   ipv6 unicast ipv4;\n' \
+		'   ipv6 multicast ipv4;\n' \
+		'   ipv6 mpls-vpn ipv4;\n' \
+		'   ipv6 nlri-mpls ipv4;\n' \
 		'}'
 
 	convert = ParseFamily.convert
 
 	action = {
 		'ipv4':  'append-command',
+		'ipv6':  'append-command',
 	}
 
 	name = 'nexthop'
@@ -35,6 +40,7 @@ class ParseNextHop (Section):
 		Section.__init__(self, tokeniser, scope, error, logger)
 		self.known = {
 			'ipv4':  self.ipv4,
+			'ipv6':  self.ipv6,
 		}
 		self._all = ''
 		self._seen = []
@@ -65,3 +71,6 @@ class ParseNextHop (Section):
 
 	def ipv4 (self, tokeniser):
 		return self._family(tokeniser, 'ipv4', ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'],['ipv6',])
+
+	def ipv6 (self, tokeniser):
+		return self._family(tokeniser, 'ipv6', ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'], ['ipv4',])
