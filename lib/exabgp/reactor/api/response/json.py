@@ -158,6 +158,7 @@ class JSON (object):
 				'operational':  negotiated.operational,
 				'refresh':      REFRESH.json(negotiated.refresh),
 				'families': '[ %s ]' % ' ,'.join(['"%s %s"' % family for family in negotiated.families]),
+				'nexthop': '[ %s ]' % ' ,'.join(['"%s %s %s"' % family for family in negotiated.nexthop]),
 				'add_path': '{ "send": %s, "receive": %s }' % (
 					'[ %s ]' % ', '.join([family for family in negotiated.families if negotiated.addpath.send(*family)]),
 					'[ %s ]' % ', '.join(['"%s %s"' % family for family in negotiated.families if negotiated.addpath.receive(*family)]),
