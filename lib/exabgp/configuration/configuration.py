@@ -27,6 +27,7 @@ from exabgp.configuration.neighbor.api import ParseSend
 from exabgp.configuration.neighbor.api import ParseReceive
 from exabgp.configuration.neighbor.family import ParseFamily
 from exabgp.configuration.neighbor.family import ParseAddPath
+from exabgp.configuration.neighbor.nexthop import ParseNextHop
 from exabgp.configuration.capability import ParseCapability
 from exabgp.configuration.announce import SectionAnnounce
 from exabgp.configuration.announce import AnnounceIPv4
@@ -129,6 +130,7 @@ class Configuration (_Configuration):
 		self.neighbor            = ParseNeighbor         (*params)
 		self.family              = ParseFamily           (*params)
 		self.addpath             = ParseAddPath          (*params)
+		self.nexthop             = ParseNextHop          (*params)
 		self.capability          = ParseCapability       (*params)
 		self.api                 = ParseAPI              (*params)
 		self.api_send            = ParseSend             (*params)
@@ -179,6 +181,7 @@ class Configuration (_Configuration):
 					'family':      self.family.name,
 					'capability':  self.capability.name,
 					'add-path':    self.addpath.name,
+					'nexthop':     self.nexthop.name,
 					'api':         self.api.name,
 					'static':      self.static.name,
 					'flow':        self.flow.name,
@@ -194,6 +197,7 @@ class Configuration (_Configuration):
 					'family':      self.family.name,
 					'capability':  self.capability.name,
 					'add-path':    self.addpath.name,
+					'nexthop':     self.nexthop.name,
 					'api':         self.api.name,
 					'static':      self.static.name,
 					'flow':        self.flow.name,
@@ -211,6 +215,12 @@ class Configuration (_Configuration):
 			self.capability.name: {
 				'class':    self.capability,
 				'commands': self.capability.known.keys(),
+				'sections': {
+				},
+			},
+			self.nexthop.name: {
+				'class':    self.nexthop,
+				'commands': self.nexthop.known.keys(),
 				'sections': {
 				},
 			},

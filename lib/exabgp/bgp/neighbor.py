@@ -21,6 +21,7 @@ except ImportError:
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.open.capability import NextHop
 from exabgp.bgp.message.open.capability import AddPath
 
 from exabgp.rib import RIB
@@ -45,6 +46,8 @@ class Neighbor (object):
 		self.local_as = None
 		self.hold_time = None
 		self.asn4 = None
+		self.nexthop = None
+		self.nexthop = None
 		self.add_path = None
 		self.md5_password = None
 		self.md5_base64 = False
@@ -73,11 +76,13 @@ class Neighbor (object):
 		self.route_refresh = False
 		self.graceful_restart = False
 		self.multisession = None
+		self.nexthop = None
 		self.add_path = None
 		self.aigp = None
 
 		self._families = []
-		self._addpaths = []
+		self._nexthop = []
+		self._addpath = []
 		self.rib = None
 
 		# The routes we have parsed from the configuration
@@ -136,9 +141,13 @@ class Neighbor (object):
 		# this list() is important .. as we use the function to modify self._families
 		return list(self._families)
 
+	def nexthops (self):
+		# this list() is important .. as we use the function to modify self._nexthop
+		return list(self._nexthop)
+
 	def addpaths (self):
-		# this list() is important .. as we use the function to modify self._families
-		return list(self._addpaths)
+		# this list() is important .. as we use the function to modify self._add_path
+		return list(self._addpath)
 
 	def add_family (self, family):
 		# the families MUST be sorted for neighbor indexing name to be predictable for API users
@@ -151,24 +160,32 @@ class Neighbor (object):
 				d.setdefault(afi,[]).append(safi)
 			self._families = [(afi,safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
+	def add_nexthop (self, afi, safi, nhafi):
+		if (afi,safi,nhafi) not in self._nexthop:
+			self._nexthop.append((afi,safi,nhafi))
+
 	def add_addpath (self, family):
 		# the families MUST be sorted for neighbor indexing name to be predictable for API users
-		# this list() is important .. as we use the function to modify self._families
+		# this list() is important .. as we use the function to modify self._add_path
 		if family not in self.addpaths():
 			afi,safi = family
 			d = dict()
 			d[afi] = [safi,]
-			for afi,safi in self._addpaths:
+			for afi,safi in self._addpath:
 				d.setdefault(afi,[]).append(safi)
-			self._addpaths = [(afi,safi) for afi in sorted(d) for safi in sorted(d[afi])]
+			self._addpath = [(afi,safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
 	def remove_family (self, family):
 		if family in self.families():
 			self._families.remove(family)
 
+	def remove_nexthop (self, afi, safi, nhafi):
+		if (afi,safi,nhafi) in self.nexthops():
+			self._nexthop.remove((afi,safi,nhafi))
+
 	def remove_addpath (self, family):
 		if family in self.addpaths():
-			self._addpaths.remove(family)
+			self._addpath.remove(family)
 
 	def missing (self):
 		if self.local_address is None and not self.auto_discovery:
@@ -210,6 +227,7 @@ class Neighbor (object):
 			self.route_refresh == other.route_refresh and \
 			self.graceful_restart == other.graceful_restart and \
 			self.multisession == other.multisession and \
+			self.nexthop == other.nexthop and \
 			self.add_path == other.add_path and \
 			self.operational == other.operational and \
 			self.group_updates == other.group_updates and \
@@ -232,6 +250,10 @@ class Neighbor (object):
 		families = ''
 		for afi,safi in self.families():
 			families += '\n\t\t%s %s;' % (afi.name(),safi.name())
+
+		nexthops = ''
+		for afi, safi, nexthop in self.nexthops():
+			nexthops += '\n\t\t%s %s %s;' % (afi.name(), safi.name(), nexthop.name())
 
 		addpaths = ''
 		for afi,safi in self.addpaths():
@@ -314,8 +336,10 @@ class Neighbor (object):
 			'\tmanual-eor %s;\n' \
 			'%s%s%s%s%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
-			'%s%s%s%s%s%s%s%s\t}\n' \
+			'%s%s%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
+			'\t}\n' \
+			'\tnexthop {%s\n' \
 			'\t}\n' \
 			'\tadd-path {%s\n' \
 			'\t}\n' \
@@ -347,11 +371,13 @@ class Neighbor (object):
 				'\t\tasn4 %s;\n' % ('enable' if self.asn4 else 'disable'),
 				'\t\troute-refresh %s;\n' % ('enable' if self.route_refresh else 'disable'),
 				'\t\tgraceful-restart %s;\n' % (self.graceful_restart if self.graceful_restart else 'disable'),
+				'\t\tnexthop %s;\n' % ('enable' if self.nexthop else 'disable'),
 				'\t\tadd-path %s;\n' % (AddPath.string[self.add_path] if self.add_path else 'disable'),
 				'\t\tmulti-session %s;\n' % ('enable' if self.multisession else 'disable'),
 				'\t\toperational %s;\n' % ('enable' if self.operational else 'disable'),
 				'\t\taigp %s;\n' % ('enable' if self.aigp else 'disable'),
 				families,
+				nexthops,
 				addpaths,
 				apis,
 				changes

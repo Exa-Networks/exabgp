@@ -74,6 +74,7 @@ class ParseCapability (Section):
 		'}\n'
 
 	known = {
+		'nexthop':          boolean,
 		'add-path':         addpath,
 		'asn4':             boolean,
 		'graceful-restart': gracefulrestart,
@@ -85,6 +86,7 @@ class ParseCapability (Section):
 	}
 
 	action = {
+		'nexthop':          'set-command',
 		'add-path':         'set-command',
 		'asn4':             'set-command',
 		'graceful-restart': 'set-command',
@@ -96,6 +98,7 @@ class ParseCapability (Section):
 	}
 
 	default = {
+		'nexthop':          True,
 		'asn4':             True,
 		'graceful-restart': 0,
 		'multi-session':    True,

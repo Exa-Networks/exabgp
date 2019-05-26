@@ -114,7 +114,7 @@ class Update (Message):
 
 		for nlri in sorted(self.nlris):
 			if nlri.family() in negotiated.families:
-				if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast]:
+				if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast] and nlri.nexthop.afi == AFI.ipv4:
 					nlris.append(nlri)
 				else:
 					mp_nlris.setdefault(nlri.family(), {}).setdefault(nlri.action, []).append(nlri)
