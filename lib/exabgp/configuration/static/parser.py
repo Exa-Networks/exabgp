@@ -70,8 +70,12 @@ def prefix (tokeniser):
 			mask = '128'
 
 	tokeniser.afi = IP.toafi(ip)
-	return IPRange.create(ip,mask)
+	iprange = IPRange.create(ip,mask)
 
+	if iprange.address() & iprange.mask.hostmask() != 0:
+		raise ValueError('invalid network %s for netmask %s' % (ip,mask))
+
+	return iprange
 
 def path_information (tokeniser):
 	pi = tokeniser()
