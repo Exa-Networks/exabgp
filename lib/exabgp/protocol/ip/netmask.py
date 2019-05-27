@@ -22,6 +22,15 @@ class NetMask (Resource):
 	def size (self):
 		return pow(2,self.maximum - self)
 
+	def andmask(self):
+		return pow(2, self.maximum) - 1
+
+	def hostmask (self):
+		return pow(2, self.maximum-self) -1
+
+	def networkmask(self):
+		return self.hostmask() ^ self.andmask()
+
 	def __str__ (self):
 		# return self.names.get(self,'%d' % int(self))
 		return '%d' % int(self)
