@@ -153,7 +153,7 @@ The following projects are related to ExaBGP
 
 ## Features
 
-RFC support includes ASN4, IPv6, MPLS, VPLS, Flow, Graceful Restart, Enhanced Route Refresh, and AIGP among others.
+RFC support includes ASN4, IPv6, MPLS, VPLS, Flow, Graceful Restart, Enhanced Route Refresh, Extended Next-Hop, "BGP-LS" and AIGP among others.
 More information can be found [here](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)
 
 ExaBGP does **not** perform any FIB manipulation. If this is what you need, you may consider another open source BGP daemon such as [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/).
