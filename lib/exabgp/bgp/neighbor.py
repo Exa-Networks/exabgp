@@ -47,7 +47,6 @@ class Neighbor (object):
 		self.hold_time = None
 		self.asn4 = None
 		self.nexthop = None
-		self.nexthop = None
 		self.add_path = None
 		self.md5_password = None
 		self.md5_base64 = False
