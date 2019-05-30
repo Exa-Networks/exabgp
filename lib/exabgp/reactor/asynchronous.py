@@ -13,14 +13,14 @@ from exabgp.logger import Logger
 from exabgp.vendoring import six
 
 class ASYNC (object):
-	LIMIT = 500
+	LIMIT = 50
 
 	def __init__ (self):
 		self.logger = Logger()
 		self._async = deque()
 
 	def ready (self):
-		return len(self._async) > 0
+		return not self._async
 
 	def schedule (self, uid, command, callback):
 		self.logger.debug('async | %s | %s' % (uid,command),'reactor')
@@ -40,22 +40,22 @@ class ASYNC (object):
 		self._async = running
 
 	def run (self):
-		if not self.ready():
+		if not self._async:
 			return False
 
-		length = range(min(len(self._async),self.LIMIT))
+		# length = range(min(len(self._async),self.LIMIT))
+		length = range(self.LIMIT)
 		uid, generator = self._async.popleft()
 
 		for _ in length:
 			try:
 				six.next(generator)
-				six.next(generator)
+			except KeyboardInterrupt:
+				raise
 			except StopIteration:
 				if not self._async:
 					return False
 				uid, generator = self._async.popleft()
-			except KeyboardInterrupt:
-				raise
 			except Exception as exc:
 				self.logger.error('async | %s | problem with function' % uid,'reactor')
 				for line in str(exc).split('\n'):
