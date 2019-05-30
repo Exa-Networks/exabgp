@@ -102,6 +102,7 @@ def flush_adj_rib_out (self, reactor, service, line):
 			peer = reactor.peers.get(peer_name, None)
 			if not peer:
 				continue
+			peer.neighbor.rib.outgoing.resend(None, peer.neighbor.route_refresh)
 			yield False
 
 		reactor.processes.answer_done(service)
@@ -134,7 +135,7 @@ def clear_adj_rib (self, reactor, service, line):
 			if not peer:
 				continue
 			if direction == 'out':
-				peer.neighbor.rib.outgoing.clear()
+				peer.neighbor.rib.outgoing.withdraw(None, peer.neighbor.route_refresh)
 			else:
 				peer.neighbor.rib.incoming.clear()
 			yield False

@@ -8,6 +8,7 @@ Version 4.0.11
  * CHANGE: FlowSpec TRUE and FALSE value have been updated to use the latest RFC and are therefore inverted from previous versions
  * CHANGE: an invalid netmask for a network will now cause ExaBGP to fail the parsing of the route (it can stop ExaBGP from starting with bad routes)
  * Feature: support for extended next-hop (RFC 5549)
+ * Feature: implemented API for "clear adj-rib out" and "flush adj-rib out"
  * Fix: regression pointed in #873
    patch: Malcolm Dodds
  * Fix: do not crash when trying to be helpful in presenting notification message

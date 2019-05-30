@@ -83,6 +83,18 @@ class OutgoingRIB (Cache):
 		for change in self.cached_changes(requested_families):
 			self.add_to_rib(change,True)
 
+	def withdraw (self, families, enhanced_refresh):
+		requested_families = self.families if not families else set(families).intersection(self.families)
+
+		if enhanced_refresh:
+			for family in requested_families:
+				if family not in self._enhanced_refresh_start:
+					self._enhanced_refresh_start.append(family)
+
+		changes = list(self.cached_changes(requested_families))
+		for change in changes:
+			self.del_from_rib(change)
+
 	def queued_changes (self):
 		for change in self._new_nlri.values():
 			yield change
@@ -122,7 +134,11 @@ class OutgoingRIB (Cache):
 				self._watchdog[watchdog].setdefault('-',{})[change.index()] = change
 				self._watchdog[watchdog]['+'].pop(change.index())
 
-	def add_to_rib (self, change, force=False):
+	def del_from_rib (self, change, force=False):
+		return self.add_to_rib(change,force,True)
+
+	# _withdraw should only be used by del_from_rib
+	def add_to_rib (self, change, force=False, _withdraw=False):
 		# WARNING: do not call change.nlri.index as it does not prepend the family
 		# WARNING : this function can run while we are in the updates() loop
 
@@ -147,7 +163,7 @@ class OutgoingRIB (Cache):
 		in_cache,same_in_cache = self.in_cache(change)
 
 		if same_in_cache:
-			if not force:
+			if not force and not _withdraw:
 				return
 
 		# withdrawal of a route before we had time to announce it ?
@@ -159,6 +175,9 @@ class OutgoingRIB (Cache):
 		# cancel a announcement done a long time ago)
 		# So to work correctly, you need to track sent changes (which costs)
 		# And the yield makes it very cpu/memory intensive ..
+
+		if _withdraw:
+			change.nlri.action = OUT.WITHDRAW
 
 		# always remove previous announcement if cancelled or replaced before being sent
 		if change.nlri.action == OUT.WITHDRAW:
