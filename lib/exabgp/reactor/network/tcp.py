@@ -127,8 +127,8 @@ def MD5 (io, ip, port, md5, md5_base64):
 				)
 	elif platform_os == 'Linux':
 		try:
+			md5_bytes = None
 			if md5:
-				md5_bytes = None
 				if md5_base64 is True:
 					try:
 						md5_bytes = base64.b64decode(md5)
