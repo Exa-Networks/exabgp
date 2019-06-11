@@ -21,7 +21,7 @@ These organisations have spoken of, or are using/have used ExaBGP:
 [BBC](http://www.bbc.co.uk/blogs/internet/entries/8c6c2414-df7a-4ad7-bd2e-dbe481da3633),
 [Blablacar](http://blablatech.com/blog/bgp-routing-to-containers),
 [Cisco Systems](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
-[CloudFlare](https://www.slideshare.net/TomPaseka/flowspec-apf-2013),
+[Cloudflare](https://www.slideshare.net/TomPaseka/flowspec-apf-2013),
 [Dailymotion](https://github.com/pyke369/exabgp-helpers),
 [Facebook](https://code.facebook.com/posts/1734.0.826831603/dhcplb-an-open-source-load-balancer/),
 [MaxCDN](https://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
