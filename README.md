@@ -9,7 +9,7 @@
 
 It is routinely used to improve service resilience and provide protection against network or service failures. For example, thanks to the `healthcheck` backend included, anycasted DNS service failures can be detected and handled [gracefully](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/). To help you get started, [Vincent Bernat](https://github.com/vincentbernat) put forward a full lab [explaining](https://vincent.bernat.ch/en/blog/2013-exabgp-highavailability)  how to best use this feature.
 
-Also, [alone](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) or in conjunction with [fastnetmon](https://github.com/pavel-odintsov/fastnetmon), it provides network operators a cost effective DDOS protection solution.
+Also, [alone](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) or in conjunction with [FastNetMon](https://github.com/pavel-odintsov/fastnetmon) or [WanGuard](https://www.andrisoft.com/software/wanguard), it provides network operators a cost effective DDOS protection solution.
 
 But it is not its only strength, thanks to modern routers' flow balancing, ExaBGP can also be used to save you money on [load balancers](https://bits.shutterstock.com/2014/05/22/stop-buying-load-balancers-and-start-controlling-your-traffic-flow-with-software/). Other uses include keeping an eye on network changes done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
@@ -102,9 +102,10 @@ To understand how ExaBGP should be configured, please have a look into the [`etc
 The following projects are related to ExaBGP
 
 **Network Protection**
-  - [fastnetmon](https://github.com/pavel-odintsov/fastnetmon) a DDOS protection solution
   - [exabgp edgerouter](https://github.com/infowolfe/exabgp-edgerouter) Spamhaus and Emerging Threats blocking with Ubiquiti EdgeRouters
   - [exabgp-voipbl](https://github.com/GeertHauwaerts/exabgp-voipbl) advertises local or/and voipbl.org blacklist using unicast or flow route.
+  - [FastNetMon](https://github.com/pavel-odintsov/fastnetmon) a DDOS protection solution
+  - [WanGuard](https://www.andrisoft.com/software/wanguard) DDOS protection from Andrisoft
 
 **Network Monitoring**
   - [GIXLG](https://github.com/dpiekacz/gixlg) a looking glass with visualisation
@@ -147,9 +148,6 @@ The following projects are related to ExaBGP
   - [Bird](http://bird.network.cz/) very good C based BGP implementation with powerful route filtering language for network administrators
   - [GoBGP](https://github.com/osrg/gobgp) an implementation with various binding for programmers
   - [RYU](https://github.com/osrg/ryu) for SDN fans
-
-**Commercial**
-  - [WanGuard](https://www.andrisoft.com/software/wanguard) DDOS protection from Andrisoft with ExaBGP integration
 
 ## Features
 
