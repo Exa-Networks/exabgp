@@ -53,8 +53,8 @@ class SrAdjacencyLan(object):
 		# Parse adj weight
 		weight = six.indexbytes(data,1)
 		# Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
-		data = data[4:]
-		isis_system_id = ISO.unpack_sysid(data[:6])
+		isis_system_id = ISO.unpack_sysid(data[4:10])
+		data = data[10:]
      	# SID/Index/Label: according to the V and L flags, it contains
       	# either:
 		# *  A 3 octet local label where the 20 rightmost bits are used for
