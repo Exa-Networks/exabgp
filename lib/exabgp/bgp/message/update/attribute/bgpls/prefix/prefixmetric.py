@@ -32,7 +32,7 @@ class PrefixMetric(object):
 		self.prefixmetric = prefixmetric
 
 	def __repr__ (self):
-		return "Prefix metric: %s" % (self.prefixmetric)
+		return "prefix_metric: %s" % (self.prefixmetric)
 
 	@classmethod
 	def unpack (cls,data,length):
