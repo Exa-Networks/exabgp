@@ -124,14 +124,14 @@ class LsGenericFlags(object):
 				for item in itertools.product('01', repeat=repeat)]
 		valid_flags.append('0000')
 		if bit_array.bin in valid_flags:
-			flags = dict(zip(pattern, bit_array.bin))
-			flags = dict((k, int(v)) for k, v in flags.items())
+			flags = dict(zip(pattern, [0, ] * len(pattern)))
+			flags.update(dict((k, int(v)) for k, v in zip(pattern, bit_array.bin)))
 		else:
 			raise Notify(3,5, "Invalid SR flags mask")
 		return cls(flags=flags)
 
 	def json (self,compact=None):
-    		return json.dumps(self.flags)
+		return json.dumps(self.flags)
 
 	def __repr__ (self):
 		return str(self.flags)
