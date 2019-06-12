@@ -56,7 +56,7 @@ class Negotiated (object):
 
 		self.holdtime = HoldTime(min(self.sent_open.hold_time,self.received_open.hold_time))
 
-		self.addpath.setup(self.sent_open,self.received_open)
+		self.addpath.setup(self.received_open, self.sent_open)
 		self.asn4 = sent_capa.announced(Capability.CODE.FOUR_BYTES_ASN) and recv_capa.announced(Capability.CODE.FOUR_BYTES_ASN)
 		self.operational = sent_capa.announced(Capability.CODE.OPERATIONAL) and recv_capa.announced(Capability.CODE.OPERATIONAL)
 
@@ -164,9 +164,10 @@ class Negotiated (object):
 
 
 class RequirePath (object):
-	REFUSE = 0
-	ACCEPT = 1
-	ANNOUNCE = 2
+	CANT    = 0b00
+	RECEIVE = 0b01
+	SEND    = 0b10
+	BOTH    = SEND | RECEIVE
 
 	def __init__ (self):
 		self._send = {}
@@ -187,8 +188,8 @@ class RequirePath (object):
 		union.extend([k for k in receive.keys() if k not in send.keys()])
 
 		for k in union:
-			self._send[k] = bool(receive.get(k,self.REFUSE) & self.ANNOUNCE and send.get(k,self.REFUSE) & self.ACCEPT)
-			self._receive[k] = bool(receive.get(k,self.REFUSE) & self.ACCEPT and send.get(k,self.REFUSE) & self.ANNOUNCE)
+			self._send[k] = bool(send.get(k,self.CANT) & self.SEND and receive.get(k,self.CANT) & self.RECEIVE)
+			self._receive[k] = bool(send.get(k,self.CANT) & self.RECEIVE and receive.get(k,self.CANT) & self.SEND)
 
 	def send (self, afi, safi):
 		return self._send.get((afi,safi),False)
