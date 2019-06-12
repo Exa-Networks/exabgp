@@ -12,7 +12,7 @@ class TestTlvs(unittest.TestCase):
     def test_ip_reach(self,):
         data = b'\n\n\x00'
         tlv = IpReach.unpack(data)
-        self.assertEqual(tlv.json(), '"ip-reachability-tlv": "10.0.0.0"')
+        self.assertEqual(tlv.json(), '"ip-reachability-tlv": "10.0.0.0", "ip-reach-prefix": "10.0.0.0/10"')
 
     def test_igp_tags(self,):
         data = b'\x00\x00\xff\xfe'
