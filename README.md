@@ -160,10 +160,49 @@ ExaBGP does **not** perform any FIB manipulation. If this is what you need, you 
 
 ## Development
 
+### Debug environment variable
+
 The following "unsupported" options are available to help with development:
 ```
   exabgp.debug.configuration  to trace with pdb configuration parsing errors
   exabgp.debug.pdb            enable python debugger on runtime errors (be ready to use `killall python` to handle orphaned child processes)
   exabgp.debug.route          similar to --decode but using the environment
   exabgp.debug.selfcheck      does a self check on the configuration file (used by the QA code)
+```
+
+### Test suite
+
+If you want to check some code changes, the repository comes with a `qa` folder including many way to check code integrity.
+
+ExaBGP comes with a set of functional tests, each test starts an IBGP deamon which checks that the expected UDPATEs for a configuration file are well received.
+
+You can see all the existing tests running `./qa/bin/functional listing`. Each test is numbered and can be run independently (note: 03 is not the same as 3).
+
+```sh
+# ./qa/bin/functional run     # (run all the test)
+# ./qa/bin/functional run 03  # (run test 03 as reported by listing)
+```
+
+You can also manually run both the server and client for any given test:
+
+```sh
+shell-1# ./qa/bin/functional server 03
+shell-1# ./qa/bin/functional client 03
+```
+
+A test suite is also present to complement the functional testing.
+
+```sh
+# env exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
+```
+
+(nosetest requires nose `pip install nose` or `pip3 install nose`)
+
+You can check the UPDATE decoding code using the `--decode` command
+
+```sh
+# env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
+```
+```json
+21:24:59 | 37750  | parser        | update json { "exabgp": "4.0.1", "time": 1560371099.404008, "host" : "ptr-41.212.219.82.rev.exa.net.uk", "pid" : 37750, "ppid" : 10834, "counter": 1, "type": "update", "neighbor": { "address": { "local": "127.0.0.1", "peer": "127.0.0.1" }, "asn": { "local": 1, "peer": 1 } , "direction": "in", "message": { "update": { "attribute": { "origin": "igp", "med": 200, "local-preference": 100 }, "announce": { "ipv4 unicast": { "101.1.101.1": [ { "nlri": "1.1.1.1/32", "path-information": "0.0.0.0" } ] } } } } } }
 ```
