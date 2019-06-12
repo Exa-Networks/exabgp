@@ -91,6 +91,9 @@ class GenericLSID(object):
 
 
 class LsGenericFlags(object):
+	class ZeroDict (dict):
+		def __getitem__(self, key):
+			return 0
 
 #	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
 	ISIS_SR_FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
@@ -125,7 +128,7 @@ class LsGenericFlags(object):
 		valid_flags.append('0000')
 		if bit_array.bin in valid_flags:
 			flags = dict(zip(pattern, bit_array.bin))
-			flags = dict((k, int(v)) for k, v in flags.items())
+			flags = cls.ZeroDict((k, int(v)) for k, v in flags.items())
 		else:
 			raise Notify(3,5, "Invalid SR flags mask")
 		return cls(flags=flags)
