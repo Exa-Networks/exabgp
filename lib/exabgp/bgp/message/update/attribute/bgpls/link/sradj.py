@@ -9,6 +9,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 import json
 from struct import unpack
 from exabgp.vendoring import six
+from exabgp.util import hexstring
 
 from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
@@ -29,13 +30,14 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 class SrAdjacency(object):
 	TLV = 1099
 
-	def __init__ (self, flags, sids, weight):
+	def __init__ (self, flags, sids, weight, undecoded=[]):
 		self.flags = flags
 		self.sids = sids
 		self.weight = weight
+		self.undecoded = undecoded
 
 	def __repr__ (self):
-		return "adj_flags: %s, sids: %s" % (self.flags, self.sids)
+		return "adj_flags: %s, sids: %s, undecoded_sid" % (self.flags, self.sids, self.undecoded)
 
 	@classmethod
 	def unpack (cls,data,length):
@@ -55,6 +57,7 @@ class SrAdjacency(object):
 		# 	 advertised by this router using the encodings defined in
 		#  	 Section 3.1.  In this case V and L flags MUST be unset.
 		sids = []
+		raw = []
 		while data:
 			# Range Size: 3 octet value indicating the number of labels in
 			# the range.
@@ -62,14 +65,20 @@ class SrAdjacency(object):
 				b = BitArray(bytes=data[:3])
 				sid = b.unpack('uintbe:24')[0:1]
 				data = data[3:]
+				sids.append(sid)
 			elif (not flags.flags['V']) and \
 				(not flags.flags['L']):
 				sid = unpack('!I',data[:4])[0:1]
 				data = data[4:]
-			sids.append(sid)
-		return cls(flags=flags, sids=sids, weight=weight)
+				sids.append(sid)
+			else:
+				raw.append(hexstring(data))
+				break
+
+		return cls(flags=flags, sids=sids, weight=weight,undecoded=raw)
 
 	def json (self,compact=None):
 		return ', '.join(['"sr-adj-flags": {}'.format(self.flags.json()),
 			'"sids": {}'.format(json.dumps(self.sids)),
+			'"undecoded-sids": {}'.format(json.dumps(self.undecoded)),
 			'"sr-adj-weight": {}'.format(json.dumps(self.weight))])
