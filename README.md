@@ -13,13 +13,16 @@ Also, [alone](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) or i
 
 But it is not its only strength, thanks to modern routers' flow balancing, ExaBGP can also be used to save you money on [load balancers](https://bits.shutterstock.com/2014/05/22/stop-buying-load-balancers-and-start-controlling-your-traffic-flow-with-software/). Other uses include keeping an eye on network changes done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
+
 ## Who is using ExaBGP ?
+
+Some users have documented their use cases, such as [DailyMotion](https://medium.com/dailymotion/how-we-built-our-hybrid-kubernetes-platform-d121ea9cb0bc) or [Facebook](https://code.fb.com/data-infrastructure/dhcplb-server/).
 
 These organisations have spoken of, or are using/have used ExaBGP:
 [AMS-IX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
 [Alcatel Lucent](https://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
 [BBC](http://www.bbc.co.uk/blogs/internet/entries/8c6c2414-df7a-4ad7-bd2e-dbe481da3633),
-[Blablacar](http://blablatech.com/blog/bgp-routing-to-containers),
+[Blablacar](http://previous.blablatech.com/blog/bgp-routing-to-containers),
 [Cisco Systems](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
 [Cloudflare](https://www.slideshare.net/TomPaseka/flowspec-apf-2013),
 [Dailymotion](https://github.com/pyke369/exabgp-helpers),
@@ -102,12 +105,13 @@ To understand how ExaBGP should be configured, please have a look into the [`etc
 The following projects are related to ExaBGP
 
 **Network Protection**
+  - [WanGuard](https://www.andrisoft.com/software/wanguard) DDOS protection from Andrisoft
+  - [FastNetMon](https://github.com/pavel-odintsov/fastnetmon) a DDOS protection solution
   - [exabgp edgerouter](https://github.com/infowolfe/exabgp-edgerouter) Spamhaus and Emerging Threats blocking with Ubiquiti EdgeRouters
   - [exabgp-voipbl](https://github.com/GeertHauwaerts/exabgp-voipbl) advertises local or/and voipbl.org blacklist using unicast or flow route.
-  - [FastNetMon](https://github.com/pavel-odintsov/fastnetmon) a DDOS protection solution
-  - [WanGuard](https://www.andrisoft.com/software/wanguard) DDOS protection from Andrisoft
 
 **Network Monitoring**
+  - [ARTEMIS](https://github.com/FORTH-ICS-INSPIRE/artemis) Real-Time Detection and Automatic Mitigation for BGP Prefix Hijacking.
   - [GIXLG](https://github.com/dpiekacz/gixlg) a looking glass with visualisation
   - [lookify](https://github.com/marc-barry/lookify) another looking glass
   - [invalidroutesreporter](https://github.com/pierky/invalidroutesreporter) report/log invalid routes received by route servers
@@ -122,8 +126,8 @@ The following projects are related to ExaBGP
   - [exabgpctl](https://github.com/ahmet2mir/exabgpctl) control exabgp and get information in json,yaml and flat format
 
 **Installation**
-  - [Chef](https://github.com/hw-cookbooks/exabgp) Cookbook
   - [Ansible](https://github.com/sfromm/ansible-exabgp) Playbook
+  - [Chef](https://github.com/hw-cookbooks/exabgp) Cookbook
 
 **Interoperability**
   - [IOS2ExaBGP](https://github.com/lochiiconnectivity/ios2exa) converts Cisco IOS IPv4 BGP LOC Rib dumps to ExaBGP's format
