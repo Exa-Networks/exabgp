@@ -59,9 +59,7 @@ class Outgoing (Connection):
 			yield True
 		yield False
 		# self.io MUST NOT be closed here, it is closed by the caller
-		return
 
-
-		nagle(self.io,self.peer)
-		# Not working after connect() at least on FreeBSD TTL(self.io,self.peer,self.ttl)
-		yield True
+		# nagle(self.io,self.peer)
+		# # Not working after connect() at least on FreeBSD TTL(self.io,self.peer,self.ttl)
+		# yield True
