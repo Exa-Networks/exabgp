@@ -104,6 +104,9 @@ def parse():
     g.add_argument("--debug", "-d", action="store_true",
                    default=False,
                    help="enable debugging")
+    g.add_argument("--no-ack", "-a", action="store_true",
+                   default=False,
+                   help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false")
     g.add_argument("--silent", "-s", action="store_true",
                    default=False,
                    help="don't log to console")
@@ -504,12 +507,20 @@ def loop(options):
                         announce,
                         options.as_path)
 
+            metric += options.increase
+
+            # Send and flush command
             logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
-            # Flush command and wait for confirmation from ExaBGP
             sys.stdout.flush()
+            
+            # Wait for confirmation from ExaBGP if expected
+            if options.no_ack:
+                return
+            # if the program is not ran manually, do not read the input
+            if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+                return
             sys.stdin.readline()
-            metric += options.increase
 
     def trigger(target):
         """Trigger a state change and execute the appropriate commands"""
