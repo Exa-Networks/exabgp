@@ -104,6 +104,14 @@ To understand how ExaBGP should be configured, please have a look into the [`etc
 
 The following projects are related to ExaBGP
 
+**BGP playgrounds**
+  - [Large Communities](https://github.com/pierky/bgp-large-communities-playground) A docker-based lab to play with BGP Large Communities
+  - [High availability](https://vincent.bernat.ch/en/blog/2013-exabgp-highavailability) provide redundant services
+  - [VXLAN](https://vincent.bernat.ch/en/blog/2017-vxlan-bgp-evpn)
+  - [L3 routing to the hypervisor](https://vincent.bernat.ch/en/blog/2018-l3-routing-hypervisor)
+  - [BGP LLGR](https://vincent.bernat.ch/en/blog/2018-bgp-llgr) BGP long lived graceful restart
+
+
 **Network Protection**
   - [WanGuard](https://www.andrisoft.com/software/wanguard) DDOS protection from Andrisoft
   - [FastNetMon](https://github.com/pavel-odintsov/fastnetmon) a DDOS protection solution
