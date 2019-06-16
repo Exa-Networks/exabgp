@@ -516,10 +516,10 @@ def loop(options):
             
             # Wait for confirmation from ExaBGP if expected
             if options.no_ack:
-                return
+                continue
             # if the program is not ran manually, do not read the input
             if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
-                return
+                continue
             sys.stdin.readline()
 
     def trigger(target):
