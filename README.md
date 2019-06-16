@@ -198,8 +198,8 @@ You can see all the existing tests running `./qa/bin/functional listing`. Each t
 You can also manually run both the server and client for any given test:
 
 ```sh
-shell-1# ./qa/bin/functional server 03
-shell-1# ./qa/bin/functional client 03
+shell1# ./qa/bin/functional server 03
+shell2# ./qa/bin/functional client 03
 ```
 
 A test suite is also present to complement the functional testing.
