@@ -38,6 +38,9 @@ match the beginning of the label without the interface prefix. In the
 example above, this means that you should have addresses on lo
 labelled ``lo:haproxy1``, ``lo:haproxy2``, etc.
 
+When running interactively, option ``--disable-acks`` is automatically
+enabled and processing of acks (from ExaBGP) is disabled.
+
 """
 
 from __future__ import print_function
@@ -128,6 +131,11 @@ def parse():
                         help="set user after setting loopback addresses")
     parser.add_argument("--group", metavar="GROUP",
                         help="set group after setting loopback addresses")
+    parser.add_argument("--disable-acks", action="store_true",
+                        default=hasattr(sys.stdin, "isatty") and
+                        sys.stdin.isatty(),
+                        dest="disable_acks",
+                        help="disable ack processing")
 
     g = parser.add_argument_group("checking healthiness")
     g.add_argument("--interval", "-i", metavar='N',
@@ -508,7 +516,8 @@ def loop(options):
             print("{0} {1}".format(command, announce))
             # Flush command and wait for confirmation from ExaBGP
             sys.stdout.flush()
-            sys.stdin.readline()
+            if not options.disable_acks:
+                sys.stdin.readline()
             metric += options.increase
 
     def trigger(target):
