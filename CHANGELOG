@@ -3,6 +3,8 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.1.1
+
 Version 4.1.0
  * CHANGE: when redifining a single parameter option using inheritence the value will be replaced
  * CHANGE: FlowSpec TRUE and FALSE value have been updated to use the latest RFC and are therefore inverted from previous versions
