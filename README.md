@@ -51,16 +51,8 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.0.10.tar.gz | tar zx
-> ./exabgp-4.0.10/sbin/exabgp --help
-> ./bin/healthcheck --help
-```
-
-If using `git`, for production deployment, use the "3.4` branch.
-
-```sh
-> git clone https://github.com/Exa-Networks/exabgp.git
-> git checkout 3.4
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.1.0.tar.gz | tar zx
+> ./exabgp-4.1.0/sbin/exabgp --help
 > ./bin/healthcheck --help
 ```
 
@@ -68,7 +60,7 @@ Multiple versions can be used simultaneously without conflict when ExaBGP is ran
 
 The configuration file and API format change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG) and check their setup after upgrade.
 
-ExaBGP 4.0 and later are targeting python3 when ExaBGP 3.4 and previous versions are python2 applications. At the moment, it is possible to run ExaBGP 4.0 using python2.7 but this backward compatibility should not be relied upon.
+ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. ExaBGP 4.1 and later are targeting python3 only.
 
 ## Support
 
