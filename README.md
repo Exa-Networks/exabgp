@@ -176,11 +176,11 @@ The following "unsupported" options are available to help with development:
 
 ### Test suite
 
-If you want to check some code changes, the repository comes with a `qa` folder including many way to check code integrity.
+If you want to check any code changes, the repository comes with a `qa` folder, which includes many way to check code integrity.
 
-ExaBGP comes with a set of functional tests, each test starts an IBGP deamon which checks that the expected UDPATEs for a configuration file are well received.
+ExaBGP comes with a set of functional tests, each test starts an IBGP deamon expecting a number of per recorded UDPATEs for the matching configuration file.
 
-You can see all the existing tests running `./qa/bin/functional listing`. Each test is numbered and can be run independently (note: 03 is not the same as 3).
+You can see all the existing tests running `./qa/bin/functional listing`. Each test is numbered and can be run independently (please note that 03 is not the same as 3).
 
 ```sh
 # ./qa/bin/functional run     # (run all the test)
@@ -202,7 +202,7 @@ A test suite is also present to complement the functional testing.
 
 (nosetest requires nose `pip install nose` or `pip3 install nose`)
 
-You can check the UPDATE decoding code using the `--decode` command
+You can decode UPDATE messages using ExaBGP `--decode` argument.
 
 ```sh
 # env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
