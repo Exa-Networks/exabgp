@@ -22,7 +22,6 @@ from struct import unpack
 
 import psutil
 
-PORT = os.environ.get('exabgp.tcp.port',os.environ.get('exabgp_tcp_port','179'))
 SIGNAL = dict([(name,getattr(signal,name)) for name in dir(signal) if name.startswith('SIG')])
 
 
@@ -382,7 +381,7 @@ class BGPServer (asyncore.dispatcher):
 	def announce (self, *args):
 		flushed('    ' + ' '.join(str(_) for _ in args) if len(args) > 1 else args[0])
 
-	def __init__ (self, host, port, messages, options):
+	def __init__ (self, host, options):
 		asyncore.dispatcher.__init__(self)
 
 		if ':' in host:
@@ -390,7 +389,7 @@ class BGPServer (asyncore.dispatcher):
 		else:
 			self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.set_reuse_addr()
-		self.bind((host,port))
+		self.bind((host,options['port']))
 		self.listen(5)
 
 		self.messages = {}
@@ -406,7 +405,7 @@ class BGPServer (asyncore.dispatcher):
 		}
 		self.options.update(options)
 
-		for message in messages:
+		for message in options['messages']:
 			if message.strip() == 'option:open:send-unknown-capability':
 				self.options['send-unknown-capability'] = True
 				continue
@@ -495,6 +494,7 @@ def main ():
 	if len(sys.argv) <= 1:
 		flushed('--sink   accept any BGP messages and reply with a keepalive')
 		flushed('--echo   accept any BGP messages send it back to the emiter')
+		flushed('--port <port>   port to bind to')
 		flushed('a list of expected route announcement/withdrawl in the format <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>')
 		flushed('for example:',sys.argv[0],'1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8 ')
 		flushed('routes with the same <number> can arrive in any order')
@@ -503,25 +503,43 @@ def main ():
 	options = {
 		'sink': False,
 		'echo': False,
+		'port': os.environ.get('exabgp.tcp.port', os.environ.get('exabgp_tcp_port', '179')),
+		'messages': []
 	}
 
-	if sys.argv[1] == '--sink':
-		messages = []
-		options['sink'] = True
-	elif sys.argv[1] == '--echo':
-		messages = []
-		options['echo'] = True
-	else:
+	for arg in sys.argv[1:]:
+		if arg == '--sink':
+			messages = []
+			options['sink'] = True
+			continue
+
+		if arg == '--echo':
+			messages = []
+			options['echo'] = True
+			continue
+
+		if arg == '--port':
+			args = sys.argv[1:] + ['',]
+			port = args[args.index('--port') + 1]
+			if port.isdigit() and int(port)>0:
+				options['port'] = int(port)
+				continue
+			print('invalid port %s' % port)
+			sys.exit(1)
+
+		if arg == str(options['port']):
+			continue
+
 		try:
 			with open(sys.argv[1]) as content:
-				messages = [_.strip() for _ in content.readlines() if _.strip() and '#' not in _]
+				options['messages'] = [_.strip() for _ in content.readlines() if _.strip() and '#' not in _]
 		except IOError:
 			flushed('could not open file', sys.argv[1])
 			sys.exit(1)
 
 	try:
-		BGPServer('127.0.0.1',int(PORT),messages,options)
-		BGPServer('::1',int(PORT),messages,options)
+		BGPServer('127.0.0.1',options)
+		BGPServer('::1',options)
 		drop()
 		asyncore.loop()
 	except socket.error,exc:
