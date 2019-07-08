@@ -157,7 +157,7 @@ def main ():
 		sys.exit(0)
 
 	def open_timeout(signum, frame):
-		sys.stderr.write('could not open connection to ExaBGP')
+		sys.stderr.write('could not open connection to ExaBGP\n')
 		sys.stderr.flush()
 		sys.exit(1)
 
