@@ -165,18 +165,17 @@ def main ():
 		sys.exit(0)
 
 	def open_timeout(signum, frame):
-		sys.stderr.write('could not open connection to ExaBGP\n')
+		sys.stderr.write('could not connect to read response from ExaBGP\n')
 		sys.stderr.flush()
 		sys.exit(1)
 
 	signal.signal(signal.SIGALRM, open_timeout)
-	waited = 0.0
+	signal.alarm(5)
 
 	done = False
-	signal.alarm(5)
 	while not done:
 		try:
-			reader = os.open(recv, os.O_RDONLY | os.O_EXCL)
+			reader = os.open(recv, os.O_RDONLY)
 			done = True
 		except IOError as exc:
 			if exc.args[0] in errno_block:
@@ -188,6 +187,7 @@ def main ():
 			sys.exit(1)
 	signal.alarm(0)
 
+	waited = 0.0
 	try:
 		buf = b''
 		done = False
