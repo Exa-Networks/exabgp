@@ -26,6 +26,14 @@ from exabgp.reactor.api.response.answer import Answer
 
 from exabgp.vendoring import docopt
 
+errno_block = set((
+	errno.EINPROGRESS, errno.EALREADY,
+	errno.EAGAIN, errno.EWOULDBLOCK,
+	errno.EINTR, errno.EDEADLK,
+	errno.EBUSY, errno.ENOBUFS,
+	errno.ENOMEM,
+))
+
 usage = """\
 The BGP swiss army knife of networking
 
@@ -97,11 +105,6 @@ def main ():
 		sys.stdout.flush()
 		sys.exit(1)
 
-	def write_timeout(signum, frame):
-		sys.stderr.write('could not send command to ExaBGP')
-		sys.stderr.flush()
-		sys.exit(1)
-
 	buffer = ''
 	start = time.time()
 	try:
@@ -131,8 +134,13 @@ def main ():
 		sys.stdout.write(exc)
 		sys.stdout.flush()
 
+	def write_timeout(signum, frame):
+		sys.stderr.write('could not send command to ExaBGP')
+		sys.stderr.flush()
+		sys.exit(1)
+
 	signal.signal(signal.SIGALRM, write_timeout)
-	signal.alarm(2)
+	signal.alarm(10)
 
 	try:
 		writer = os.open(send, os.O_WRONLY | os.O_EXCL)
@@ -164,11 +172,23 @@ def main ():
 	signal.signal(signal.SIGALRM, open_timeout)
 	waited = 0.0
 
-	try:
-		signal.alarm(5)
-		reader = os.open(recv, os.O_RDONLY | os.O_EXCL)
-		signal.alarm(0)
+	done = False
+	signal.alarm(5)
+	while not done:
+		try:
+			reader = os.open(recv, os.O_RDONLY | os.O_EXCL)
+			done = True
+		except IOError as exc:
+			if exc.args[0] in errno_block:
+				signal.signal(signal.SIGALRM, open_timeout)
+				signal.alarm(5)
+				continue
+			sys.stdout.write('could not read answer from ExaBGP')
+			sys.stdout.flush()
+			sys.exit(1)
+	signal.alarm(0)
 
+	try:
 		buf = b''
 		done = False
 		while not done:
