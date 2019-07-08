@@ -108,7 +108,7 @@ def main ():
 	buffer = ''
 	start = time.time()
 	try:
-		reader = os.open(recv, os.O_RDONLY | os.O_EXCL | os.O_NONBLOCK)
+		reader = os.open(recv, os.O_RDONLY | os.O_NONBLOCK)
 		while True:
 			while select.select([reader], [], [], 0) != ([], [], []):
 				buffer += os.read(reader,4096)
@@ -143,7 +143,7 @@ def main ():
 	signal.alarm(10)
 
 	try:
-		writer = os.open(send, os.O_WRONLY | os.O_EXCL)
+		writer = os.open(send, os.O_WRONLY)
 		os.write(writer,command.encode('utf-8') + b'\n')
 		os.close(writer)
 	except OSError as exc:
