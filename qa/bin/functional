@@ -345,7 +345,7 @@ class Command (object):
 				names.remove(name)
 				try:
 					stdout,stderr = processes['bgp'][name].communicate()
-					if 'successful' in stdout:
+					if b'successful' in stdout:
 						CI.passed(name)
 					else:
 						CI.failed(name)

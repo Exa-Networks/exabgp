@@ -5,6 +5,8 @@ Version explained:
 
 Version 4.1.1
  * CHANGE: some message are now printed using the log routes option and not parser anymore
+ * Fix: bug with functional testing code when using python3
+   patch by: Cooper Lees
 
 Version 4.1.0
  * CHANGE: when redifining a single parameter option using inheritence the value will be replaced
