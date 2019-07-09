@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.1.2
+ * Feature: exabgpcli autocomplete
+
 Version 4.1.1
  * CHANGE: some message are now printed using the log routes option and not parser anymore
  * Fix: bug with functional testing code when using python3

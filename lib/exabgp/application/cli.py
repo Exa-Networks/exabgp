@@ -196,10 +196,47 @@ def main ():
 		if time.time() > start + 1.5:
 			break
 
+	renamed = ['']
+
+	for pos, token in enumerate(command.split()):
+		for nickname, name, match in (
+			('a', 'announce', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+			('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+			('c', 'configuration', lambda pos, pre: True),
+			('e', 'eor', lambda pos, pre: pre[-1] == 'announce'),
+			('e', 'extensive', lambda _, pre: 'show' in pre),
+			('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+			('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+			('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
+			('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
+			('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
+			('s', 'show', lambda pos, pre: pos == 0),
+			('t', 'teardown', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+			('s', 'summary', lambda pos, pre: pos != 0),
+			('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+			('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
+			('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear','flush','show']),
+			('w', 'withdraw', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+			('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+			('neighbour', 'neighbor', lambda pos, pre: True),
+			('neigbour', 'neighbor', lambda pos, pre: True),
+			('neigbor', 'neighbor', lambda pos, pre: True),
+            ):
+			if (token == nickname or name.startswith(token)) and match(pos,renamed):
+				renamed.append(name)
+				break
+		else:
+			renamed.append(token)
+
+	sending = ' '.join(renamed).strip()
+
+	# This does not change the behaviour for well formed command
+	if sending != command:
+		print('command: %s' % sending)
 
 	writer = open_writer(send)
 	try:
-		os.write(writer, command.encode('utf-8') + b'\n')
+		os.write(writer, sending.encode('utf-8') + b'\n')
 		os.close(writer)
 	except IOError as exc:
 		sys.stdout.write('could not send command to ExaBGP (%s)' % str(exc))
