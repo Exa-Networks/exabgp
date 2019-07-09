@@ -102,6 +102,7 @@ The following projects are related to ExaBGP
   - [VXLAN](https://vincent.bernat.ch/en/blog/2017-vxlan-bgp-evpn)
   - [L3 routing to the hypervisor](https://vincent.bernat.ch/en/blog/2018-l3-routing-hypervisor)
   - [BGP LLGR](https://vincent.bernat.ch/en/blog/2018-bgp-llgr) BGP long lived graceful restart
+  - [ExaBGP Monitor](https://github.com/slowr/ExaBGP-Monitor) Connect ExaBGP with [socket.io](https://socket.io/)
 
 
 **Network Protection**
