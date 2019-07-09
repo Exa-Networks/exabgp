@@ -165,9 +165,17 @@ def main ():
 		try:
 			while select.select([reader], [], [], 0) != ([], [], []):
 				rbuffer += os.read(reader,4096)
-				rbuffer = rbuffer[-AnswerStream.rbuffer_size:]
-		except Exception as exc:
-			sys.stdout.write('could not clear named pipe from potential previous command data')
+				rbuffer = rbuffer[-AnswerStream.buffer_size:]
+		except IOError as exc:
+			if exc.errno in error.block:
+				continue
+			sys.stdout.write('could not clear named pipe from potential previous command data (%s)' % str(exc))
+			sys.stdout.flush()
+			sys.exit(1)
+		except OSError as exc:
+			if exc.errno in error.block:
+				continue
+			sys.stdout.write('could not clear named pipe from potential previous command data (%s)' % str(exc))
 			sys.stdout.write(exc)
 			sys.stdout.flush()
 			sys.exit(1)
@@ -193,7 +201,11 @@ def main ():
 	try:
 		os.write(writer, command.encode('utf-8') + b'\n')
 		os.close(writer)
-	except Exception as exc:
+	except IOError as exc:
+		sys.stdout.write('could not send command to ExaBGP (%s)' % str(exc))
+		sys.stdout.flush()
+		sys.exit(1)
+	except OSError as exc:
 		sys.stdout.write('could not send command to ExaBGP (%s)' % str(exc))
 		sys.stdout.flush()
 		sys.exit(1)
