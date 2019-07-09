@@ -5,6 +5,7 @@ Version explained:
 
 Version 4.1.2
  * Feature: exabgpcli autocomplete
+ * Fix: exabgpcli was not correctly removing data on the pipe in case of issues
 
 Version 4.1.1
  * CHANGE: some message are now printed using the log routes option and not parser anymore

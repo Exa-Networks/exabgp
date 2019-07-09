@@ -159,7 +159,7 @@ def main ():
 
 	reader = open_reader(recv)
 
-	rbuffer = ''
+	rbuffer = b''
 	start = time.time()
 	while True:
 		try:
@@ -180,20 +180,22 @@ def main ():
 			sys.stdout.flush()
 			sys.exit(1)
 
+		# we are not ack'ing the command and probably have read all there is
+		# if time.time() > start + 1.5:
+		# 	break
+
 		# we read nothing, nothing to do
 		if not rbuffer:
 			break
+
 		# we read some data but it is not ending by a new line (ie: not a command completion)
-		if rbuffer[-1] != '\n':
+		if rbuffer[-1] != 10:  # \n
 			continue
 		if AnswerStream.done.endswith(rbuffer[-len(AnswerStream.done):]):
 			break
 		if AnswerStream.error.endswith(rbuffer[-len(AnswerStream.error):]):
 			break
 		if AnswerStream.shutdown.endswith(rbuffer[-len(AnswerStream.shutdown):]):
-			break
-		# we are not ack'ing the command and probably have read all there is
-		if time.time() > start + 1.5:
 			break
 
 	renamed = ['']
