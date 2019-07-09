@@ -181,8 +181,8 @@ def main ():
 			sys.exit(1)
 
 		# we are not ack'ing the command and probably have read all there is
-		# if time.time() > start + 1.5:
-		# 	break
+		if time.time() > start + 1.5:
+			break
 
 		# we read nothing, nothing to do
 		if not rbuffer:
