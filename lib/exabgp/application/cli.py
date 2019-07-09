@@ -60,6 +60,58 @@ class AnswerStream:
 	shutdown = '\n%s\n' % Answer.error
 	buffer_size = Answer.buffer_size + 2
 
+def open_reader (recv):
+	def open_timeout(signum, frame):
+		sys.stderr.write('could not connect to read response from ExaBGP\n')
+		sys.stderr.flush()
+		sys.exit(1)
+
+	signal.signal(signal.SIGALRM, open_timeout)
+	signal.alarm(5)
+
+	done = False
+	while not done:
+		try:
+			reader = os.open(recv, os.O_RDONLY | os.O_NONBLOCK)
+			done = True
+		except IOError as exc:
+			if exc.args[0] in errno_block:
+				signal.signal(signal.SIGALRM, open_timeout)
+				signal.alarm(5)
+				continue
+			sys.stdout.write('could not read answer from ExaBGP')
+			sys.stdout.flush()
+			sys.exit(1)
+	signal.alarm(0)
+	return reader
+
+def open_writer (send):
+	def write_timeout(signum, frame):
+		sys.stderr.write('could not send command to ExaBGP (command timeout)')
+		sys.stderr.flush()
+		sys.exit(1)
+
+	signal.signal(signal.SIGALRM, write_timeout)
+	signal.alarm(5)
+
+	try:
+		writer = os.open(send, os.O_WRONLY)
+	except OSError as exc:
+		if exc.errno == errno.ENXIO:
+			sys.stdout.write('ExaBGP is not running / using the configured named pipe')
+			sys.stdout.flush()
+			sys.exit(1)
+		sys.stdout.write('could not communicate with ExaBGP')
+		sys.stdout.flush()
+		sys.exit(1)
+	except IOError as exc:
+		sys.stdout.write('could not communicate with ExaBGP')
+		sys.stdout.flush()
+		sys.exit(1)
+
+	signal.alarm(0)
+	return writer
+
 def main ():
 	options = docopt.docopt(usage, help=False)
 	if options['--env'] is None:
@@ -105,142 +157,123 @@ def main ():
 		sys.stdout.flush()
 		sys.exit(1)
 
-	buffer = ''
+	reader = open_reader(recv)
+
+	rbuffer = ''
 	start = time.time()
-	try:
-		reader = os.open(recv, os.O_RDONLY | os.O_NONBLOCK)
-		while True:
+	while True:
+		try:
 			while select.select([reader], [], [], 0) != ([], [], []):
-				buffer += os.read(reader,4096)
-				buffer = buffer[-AnswerStream.buffer_size:]
-			# we read nothing, nothing to do
-			if not buffer:
-				break
-			# we read some data but it is not ending by a new line (ie: not a command completion)
-			if buffer[-1] != '\n':
-				continue
-			if AnswerStream.done.endswith(buffer[-len(AnswerStream.done):]):
-				break
-			if AnswerStream.error.endswith(buffer[-len(AnswerStream.error):]):
-				break
-			if AnswerStream.shutdown.endswith(buffer[-len(AnswerStream.shutdown):]):
-				break
-			# we are not ack'ing the command and probably have read all there is
-			if time.time() > start + 1.5:
-				break
-
-	except Exception as exc:
-		sys.stdout.write('could not clear named pipe from potential previous command data')
-		sys.stdout.write(exc)
-		sys.stdout.flush()
-
-	def write_timeout(signum, frame):
-		sys.stderr.write('could not send command to ExaBGP')
-		sys.stderr.flush()
-		sys.exit(1)
-
-	signal.signal(signal.SIGALRM, write_timeout)
-	signal.alarm(10)
-
-	try:
-		writer = os.open(send, os.O_WRONLY)
-		os.write(writer,command.encode('utf-8') + b'\n')
-		os.close(writer)
-	except OSError as exc:
-		if exc.errno == errno.ENXIO:
-			sys.stdout.write('ExaBGP is not running / using the configured named pipe')
+				rbuffer += os.read(reader,4096)
+				rbuffer = rbuffer[-AnswerStream.rbuffer_size:]
+		except Exception as exc:
+			sys.stdout.write('could not clear named pipe from potential previous command data')
+			sys.stdout.write(exc)
 			sys.stdout.flush()
 			sys.exit(1)
-		sys.stdout.write('could not communicate with ExaBGP')
-		sys.stdout.flush()
-		sys.exit(1)
-	except IOError as exc:
-		sys.stdout.write('could not communicate with ExaBGP')
-		sys.stdout.flush()
-		sys.exit(1)
 
-	signal.alarm(0)
+		# we read nothing, nothing to do
+		if not rbuffer:
+			break
+		# we read some data but it is not ending by a new line (ie: not a command completion)
+		if rbuffer[-1] != '\n':
+			continue
+		if AnswerStream.done.endswith(rbuffer[-len(AnswerStream.done):]):
+			break
+		if AnswerStream.error.endswith(rbuffer[-len(AnswerStream.error):]):
+			break
+		if AnswerStream.shutdown.endswith(rbuffer[-len(AnswerStream.shutdown):]):
+			break
+		# we are not ack'ing the command and probably have read all there is
+		if time.time() > start + 1.5:
+			break
+
+
+	writer = open_writer(send)
+	try:
+		os.write(writer, command.encode('utf-8') + b'\n')
+		os.close(writer)
+	except Exception as exc:
+		sys.stdout.write('could not send command to ExaBGP (%s)' % str(exc))
+		sys.stdout.flush()
+		sys.exit(1)
 
 	if command == 'reset':
 		sys.exit(0)
 
-	def open_timeout(signum, frame):
-		sys.stderr.write('could not connect to read response from ExaBGP\n')
-		sys.stderr.flush()
-		sys.exit(1)
-
-	signal.signal(signal.SIGALRM, open_timeout)
-	signal.alarm(5)
-
+	waited = 0.0
+	buf = b''
 	done = False
 	while not done:
 		try:
-			reader = os.open(recv, os.O_RDONLY)
-			done = True
-		except IOError as exc:
-			if exc.args[0] in errno_block:
-				signal.signal(signal.SIGALRM, open_timeout)
-				signal.alarm(5)
+			r, _, _ = select.select([reader], [], [], 0.01)
+		except OSError as exc:
+			if exc.errno in error.block:
 				continue
-			sys.stdout.write('could not read answer from ExaBGP')
+			sys.stdout.write('could not get answer from ExaBGP (%s)' % str(exc))
 			sys.stdout.flush()
 			sys.exit(1)
-	signal.alarm(0)
-
-	waited = 0.0
-	try:
-		buf = b''
-		done = False
-		while not done:
-			r,_,_ = select.select([reader], [], [], 0.01)
-			if waited > 5.0:
-				sys.stderr.write('\n')
-				sys.stderr.write('warning: no end of command message received\n')
-				sys.stderr.write('warning: normal if exabgp.api.ack is set to false otherwise some data may get stuck on the pipe\n')
-				sys.stderr.write('warning: otherwise it may cause exabgp reactor to block\n')
-				sys.exit(0)
-			elif not r:
-				waited += 0.01
+		except IOError as exc:
+			if exc.errno in error.block:
 				continue
-			else:
-				waited = 0.0
-			try:
-				raw = os.read(reader, 4096)
-				buf += raw
-				while b'\n' in buf:
-					line,buf = buf.split(b'\n',1)
-					string = line.decode()
-					if string == Answer.done:
-						done = True
-						break
-					if string == Answer.shutdown:
-						sys.stderr.write('ExaBGP is shutting down, command aborted\n')
-						sys.stderr.flush()
-						done = True
-						break
-					if string == Answer.error:
-						done = True
-						sys.stderr.write('ExaBGP returns an error (see ExaBGP\'s logs for more information)\n')
-						sys.stderr.write('use help for a list of available commands\n')
-						sys.stderr.flush()
-						break
-					sys.stdout.write('%s\n' % string)
-					sys.stdout.flush()
-			except OSError as exc:
-				if exc.errno in error.block:
-					break
-			except IOError as exc:
-				if exc.errno in error.block:
-					break
-		os.close(reader)
+			sys.stdout.write('could not get answer from ExaBGP (%s)' % str(exc))
+			sys.stdout.flush()
+			sys.exit(1)
 
-		sys.exit(0)
-	except IOError:
-		sys.stdout.write('could not read answer from ExaBGP')
-		sys.stdout.flush()
-	except OSError:
-		sys.stdout.write('could not read answer from ExaBGP')
-		sys.stdout.flush()
+		if waited > 5.0:
+			sys.stderr.write('\n')
+			sys.stderr.write('warning: no end of command message received\n')
+			sys.stderr.write('warning: normal if exabgp.api.ack is set to false otherwise some data may get stuck on the pipe\n')
+			sys.stderr.write('warning: otherwise it may cause exabgp reactor to block\n')
+			sys.exit(0)
+		elif not r:
+			waited += 0.01
+			continue
+		else:
+			waited = 0.0
+
+		try:
+			raw = os.read(reader, 4096)
+		except OSError as exc:
+			if exc.errno in error.block:
+				continue
+			sys.stdout.write('could not read answer from ExaBGP (%s)' % str(exc))
+			sys.stdout.flush()
+			sys.exit(1)
+		except IOError as exc:
+			if exc.errno in error.block:
+				continue
+			sys.stdout.write('could not read answer from ExaBGP (%s)' % str(exc))
+			sys.stdout.flush()
+			sys.exit(1)
+
+		buf += raw
+		while b'\n' in buf:
+			line,buf = buf.split(b'\n',1)
+			string = line.decode()
+			if string == Answer.done:
+				done = True
+				break
+			if string == Answer.shutdown:
+				sys.stderr.write('ExaBGP is shutting down, command aborted\n')
+				sys.stderr.flush()
+				done = True
+				break
+			if string == Answer.error:
+				done = True
+				sys.stderr.write('ExaBGP returns an error (see ExaBGP\'s logs for more information)\n')
+				sys.stderr.write('use help for a list of available commands\n')
+				sys.stderr.flush()
+				break
+			sys.stdout.write('%s\n' % string)
+			sys.stdout.flush()
+
+	try:
+		os.close(reader)
+	except Exception:
+		pass
+
+	sys.exit(0)
 
 
 if __name__ == '__main__':
