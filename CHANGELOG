@@ -7,6 +7,8 @@ Version 4.1.1
  * CHANGE: some message are now printed using the log routes option and not parser anymore
  * Fix: bug with functional testing code when using python3
    patch by: Cooper Lees
+ * Fix: bug with ExaBGP cli not working
+   reported by: jlixfeld (thank you to Cooper Lees for providing time and a test env. to reproduce)
 
 Version 4.1.0
  * CHANGE: when redifining a single parameter option using inheritence the value will be replaced
