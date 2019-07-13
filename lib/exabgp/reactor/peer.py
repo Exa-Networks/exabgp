@@ -492,8 +492,9 @@ class Peer (object):
 					new_routes = self.proto.new_update(include_withdraw)
 
 				if new_routes:
+					count = 1 if self.neighbor.rate_limit > 0 else 25
 					try:
-						for _ in range(25):
+						for _ in range(count):
 							# This can raise a NetworkError
 							six.next(new_routes)
 					except StopIteration:

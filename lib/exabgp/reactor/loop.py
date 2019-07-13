@@ -60,6 +60,7 @@ class Reactor (object):
 		self.max_loop_time = environment.settings().reactor.speed
 		self._sleep_time = self.max_loop_time / 100
 		self._busyspin = {}
+		self._ratelimit = {}
 		self.early_drop = environment.settings().daemon.drop
 
 		self.processes = None
@@ -91,6 +92,19 @@ class Reactor (object):
 			time.sleep(self._sleep_time)
 			return True
 		return False
+
+	def _rate_limited(self,peer,rate):
+		if rate <= 0:
+			return False
+		second = int(time.time())
+		ratelimit = self._ratelimit.get(peer,{})
+		if not second in ratelimit:
+			self._ratelimit[peer] = {second: rate-1}
+			return False
+		if self._ratelimit[peer][second] > 0:
+			self._ratelimit[peer][second] -= 1
+			return False
+		return True
 
 	def _api_ready (self,sockets,sleeptime):
 		fds = self.processes.fds()
@@ -259,6 +273,13 @@ class Reactor (object):
 				# give a turn to all the peers
 				for key in list(peers):
 					peer = self.peers[key]
+
+					# limit the number of message handling per second
+					if self._rate_limited(key,peer.neighbor.rate_limit):
+						peers.discard(key)
+						continue
+
+					# handle the peer
 					action = peer.run()
 
 					# .run() returns an ACTION enum:
