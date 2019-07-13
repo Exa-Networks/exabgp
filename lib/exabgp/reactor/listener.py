@@ -46,7 +46,6 @@ class Listener (object):
 		self._backlog = backlog
 		self._sockets = {}
 		self._accepted = {}
-		self._pending = 0
 
 	def _new_socket (self, ip):
 		if ip.afi == AFI.ipv6:
@@ -115,21 +114,21 @@ class Listener (object):
 		if not self.serving:
 			return False
 
+		peer_connected = False
+
 		for sock in self._sockets:
 			if sock in self._accepted:
 				continue
 			try:
 				io, _ = sock.accept()
 				self._accepted[sock] = io
-				self._pending += 1
+				peer_connected = True
 			except socket.error as exc:
 				if exc.errno in error.block:
 					continue
 				self.logger.critical(str(exc),'network')
-		if self._pending:
-			self._pending -= 1
-			return True
-		return False
+
+		return peer_connected
 
 	def _connected (self):
 		try:
