@@ -138,3 +138,16 @@ def processes (tokeniser):
 		result.append(token)
 
 	return result
+
+
+def rate_limit(tokeniser):
+	value = tokeniser().lower()
+	if value in ('disable','disabled'):
+		return 0
+	try:
+		rate = int(value)
+	except ValueError:
+		raise ValueError('"%s" is an invalid rate-limit' % value)
+	if rate <= 0:
+		raise ValueError('rate must be zero or at 1 (per second)')
+	return rate
