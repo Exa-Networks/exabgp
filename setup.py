@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding: utf-8
 """
 setup.py
@@ -9,26 +9,34 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 import os
 import sys
-import imp
-import platform
-from shutil import rmtree
-from setuptools import setup
-from distutils.util import get_platform
-
-CHANGELOG = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'CHANGELOG')
-VERSION_PY = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'lib/exabgp/version.py')
-DEBIAN = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'debian/changelog')
-EGG = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'lib/exabgp.egg-info')
-BUILD_EXABGP = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'build/lib/exabgp')
-BUILD_ROOT = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'build')
 
 
-dryrun = False
+class path:
+	root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
+	changelog = os.path.join(root,'CHANGELOG')
+	lib_exa = os.path.join(root, 'lib/exabgp')
+	version = os.path.join(root, 'lib/exabgp/version.py')
+	debian = os.path.join(root, 'debian/changelog')
+	egg = os.path.join(root, 'lib/exabgp.egg-info')
+	build_exabgp = os.path.join(root, 'build/lib/exabgp')
+	build_root = os.path.join(root, 'build')
 
-json_version = '4.0.1'
-text_version = '4.0.1'
+	@staticmethod
+	def remove_egg():
+		from shutil import rmtree
+		print('removing left-over egg')
+		if os.path.exists(path.egg):
+			rmtree(path.egg)
+		if os.path.exists(path.build_exabgp):
+			rmtree(path.build_root)
+		return 0
 
-version_template = """\
+
+class version:
+	JSON = '4.0.1'
+	TEXT = '4.0.1'
+
+	template = """\
 import os
 
 release = "%s"
@@ -43,7 +51,59 @@ if __name__ == '__main__':
 	sys.stdout.write(version)
 """
 
-debian_template = """\
+	@staticmethod
+	def get():
+		sys.path.append(path.lib_exa)
+		from version import version
+		return version
+
+	@staticmethod
+	def changelog():
+		with open(path.changelog) as f:
+			f.readline()
+			for line in f:
+				if line.lower().startswith('version '):
+					return line.split()[1].rstrip().rstrip(':').strip()
+		return ''
+
+	@staticmethod
+	def set(tag,commit):
+		with open(path.version, 'w') as f:
+			f.write(version.template % (
+				"%s-%s" % (tag, commit),
+				version.JSON,
+				version.TEXT
+			))
+		return version.get() == tag
+
+	@staticmethod
+	def latest (tags):
+		valid = [
+			[int(_) for _ in tag.split('.')] for tag in tags
+			if version.valid(tag)
+		]
+		return '.'.join(str(_) for _ in sorted(valid)[-1])
+
+	@staticmethod
+	def valid (tag):
+		parts = tag.split('.')
+		return len(parts) == 3 \
+			and parts[0].isdigit() \
+			and parts[1].isdigit() \
+			and parts[2].isdigit()
+
+	@staticmethod
+	def candidates(tag):
+		latest = [int(_) for _ in tag.split('.')]
+		return [
+			'.'.join([str(_) for _ in (latest[0], latest[1], latest[2] + 1)]),
+			'.'.join([str(_) for _ in (latest[0], latest[1] + 1, 0)]),
+			'.'.join([str(_) for _ in (latest[0] + 1, 0, 0)]),
+		]
+
+
+class debian:
+	template = """\
 exabgp (%s-0) unstable; urgency=low
 
   * Latest ExaBGP release.
@@ -51,350 +111,281 @@ exabgp (%s-0) unstable; urgency=low
  -- Vincent Bernat <bernat@debian.org>  %s
 
 """
-
-if sys.argv[-1] == 'help':
-	print("""\
-python setup.py help     this help
-python setup.py cleanup  delete left-over file from release
-python setup.py current  show the current version
-python setup.py next     show the next version
-python setup.py version  set the content of the version include file
-python setup.py push     update the version, push to github
-python setup.py release  tag a new version on github, and update pypi
-python setup.py pypi     create egg/wheel
-python setup.py debian   prepend the current version to debian/changelog
-""")
-	sys.exit(0)
+	@staticmethod
+	def set(version):
+		from email.utils import formatdate
+		with open(path.debian, 'w') as w:
+			w.write(debian.template % (version, formatdate()))
+		print('updated debian/changelog')
 
 
-def versions ():
-	versions = []
-	with open(CHANGELOG) as changelog:
-		changelog.readline()
-		for line in changelog:
-			if line.lower().startswith('version '):
-				version = line.split()[1]
-				versions.append(version)
-	return versions
+class command:
+	dryrun = 'dry-run' if os.environ.get('DRY', os.environ.get('DRYRUN', os.environ.get('DRY_RUN', False))) else ''
+
+	@staticmethod
+	def run(cmd):
+		print('>', cmd)
+		return git.dryrun or os.system(cmd)
 
 
-def remove_egg ():
-	if os.path.exists(EGG):
-		print('removing left-over egg')
-		rmtree(EGG)
-	if os.path.exists(BUILD_EXABGP):
-		print('removing left-over egg')
-		rmtree(BUILD_ROOT)
+class git (command):
+	@staticmethod
+	def commit (comment):
+		return git.run('git commit -a -m "%s"' % comment)
 
+	@staticmethod
+	def push(tag=False,repo=''):
+		command = 'git push'
+		if tag:
+			command += ' --tags'
+		if repo:
+			command += ' %s' % repo
+		return git.run(command)
 
-remove_egg()
+	@staticmethod
+	def head_commit():
+		return os.popen('git rev-parse --short HEAD').read().strip()
 
-if sys.argv[-1] == 'cleanup':
-	sys.exit(0)
+	@staticmethod
+	def tags():
+		return os.popen('git tag').read().split('-')[0].strip().split('\n')
 
-if sys.argv[-1] == 'current':
-	print(versions()[1])
-	sys.exit(0)
+	@staticmethod
+	def tag(release):
+		return git.run('git tag -a %s -m "release %s"' % (release, release))
 
-if sys.argv[-1] == 'next':
-	print(versions()[0])
-	sys.exit(0)
+	@staticmethod
+	def pending():
+		commit = None
+		for line in os.popen('git status').read().split('\n'):
+			if 'modified:' in line:
+				if 'lib/exabgp/version.py' in line or 'debian/changelog' in line:
+					if commit is not False:
+						commit = True
+				else:
+					return False
+			elif 'renamed:' in line:
+				return False
+		return commit
 
-def set_version ():
-	next_version = versions()[0]
-	git_version = os.popen('git rev-parse --short HEAD').read().strip()
-	full_version = "%s-%s" % (next_version,git_version)
+class repo:
+	def update_version():
+		if not version.set(version.changelog(), git.head_commit()):
+			print('failed to set version in python code')
+			return False
 
-	with open(VERSION_PY,'w') as version_file:
-		version_file.write(version_template % (
-			full_version,
-			json_version,
-			text_version
-		))
+		if not git.commit('updating version to %s' % version.get()):
+			print('failed to commit the change')
+			return False
 
-	version = imp.load_source('version',VERSION_PY).version
+		if not git.push():
+			print('failed to push the change')
+			return False
+		return True
 
-	if version != full_version:
-		print('version setting failed')
-		sys.exit(1)
-
-	return git_version
-
-#
-# Set the content of the version file
-#
-
-if sys.argv[-1] == 'version':
-	set_version()
-	sys.exit(0)
-
-#
-# Show python readme.rst
-#
-
-#
-# Push a new version to github
-#
-
-if sys.argv[-1] == 'push':
-	git_version = set_version()
-
-	commit = 'git ci -a -m "updating version to %s"' % git_version
-	push = 'git push'
-
-	ret = dryrun or os.system(commit)
-	if ret:
-		print('failed to commit')
-		sys.exit(ret)
-
-	ret = dryrun or os.system(push)
-	if ret:
-		print('failed to push')
-		sys.exit(ret)
-
-	sys.exit(0)
-
-#
-# update the debian changelog
-#
-
-def debian ():
-	from email.utils import formatdate
-
-	version = imp.load_source('version',VERSION_PY).version
-
-	with open(DEBIAN, 'w') as w:
-		w.write(debian_template % (version,formatdate()))
-
-	print('updated debian/changelog')
-
-if sys.argv[-1] == 'debian':
-	debian()
-	sys.exit(0)
 
 #
 # Check that that there is no version inconsistancy before any pypi action
 #
 
-if sys.argv[-1] == 'release':
-	print('figuring valid next release version')
+def release_github():
+	print()
+	print('updating Github')
+	release = version.changelog()
+	tags = git.tags()
 
-	tags = os.popen('git tag').read().split('-')[0].strip()
-	tag_versions = [
-		[int(_) for _ in tag.split('.')]  for tag in tags.split('\n')
-		if tag.count('.') == 2 and tag[0].isdigit()
-	]
-	latest = sorted(tag_versions)[-1]
-	next = [
-		'.'.join([str(_) for _ in (latest[0], latest[1], latest[2]+1)]),
-		'.'.join([str(_) for _ in (latest[0], latest[1]+1, 0)]),
-		'.'.join([str(_) for _ in (latest[0]+1, 0, 0)]),
-	]
+	if not version.valid(release):
+		print('invalid new version in CHANGELOG (%s)' % release)
+		return 1
 
-	print('valid versions are:', ', '.join(next))
+	candidates = version.candidates(version.latest(tags))
+
+	print('valid versions are:', ', '.join(candidates))
 	print('checking the CHANGELOG uses one of them')
 
-	next_version = versions()[0]
-	if next_version.count('.') != 2:
-		print('invalid new version in CHANGELOG')
-		sys.exit(1)
-
-	print('ok, next release is %s' % next_version)
+	print('ok, next release is %s' % release)
 	print('checking that this release is not already tagged')
 
-	if next_version in tags.split('\n'):
+	if release in tags:
 		print('this tag was already released')
-		sys.exit(1)
+		return 1
 
 	print('ok, this is a new release')
 	print('rewriting lib/exabgp/version.py')
-
-	git_version = os.popen('git rev-parse --short HEAD').read().strip()
-	full_version = "%s-%s" % (next_version,git_version)
-
-	with open(VERSION_PY,'w') as version_file:
-		version_file.write(version_template % (
-			full_version,
-			json_version,
-			text_version
-		))
-
-	debian()
+	version.set(release, git.head_commit())
+	print('rewriting debian/changelog')
+	debian.set(release)
 
 	print('checking if we need to commit a version.py change')
-
-	commit = None
-	status = os.popen('git status')
-	for line in status.read().split('\n'):
-		if 'modified:' in line:
-			if 'lib/exabgp/version.py' in line or 'debian/changelog' in line:
-				if commit is not False:
-					commit = True
-			else:
-				commit = False
-		elif 'renamed:' in line:
-			commit = False
-
-	if commit is True:
-		command = "git commit -a -m 'updating version to %s'" % next_version
-		print('\n>', command)
-
-		ret = dryrun or os.system(command)
-		if ret:
-			print('return code is', ret)
-			print('could not commit version change (%s)' % next_version)
-			sys.exit(1)
-		print('version.py was updated')
-	elif commit is False:
+	status = git.pending()
+	if status is None:
+		print('all is already set for release')
+	elif status is False:
 		print('more than one file is modified and need updating, aborting')
-		sys.exit(1)
-	else:  # None
-		print('version.py was already set')
+		return 1
+	else:
+		if git.commit('updating version to %s' % release):
+			print('could not commit version change (%s)' % release)
+			return 1
+		print('version was updated')
 
 	print('tagging the new version')
-	command = "git tag -a %s -m 'release %s'" % (next_version,next_version)
-	print('\n>', command)
-
-	ret = dryrun or os.system(command)
-	if ret:
-		print('return code is', ret)
-		print('could not tag version (%s)' % next_version)
-		sys.exit(1)
+	if git.tag(version):
+		print('could not tag version (%s)' % release)
+		return 1
 
 	print('pushing the new tag to local repo')
-	command = "git push --tags"
-	print('\n>', command)
-
-	ret = dryrun or os.system(command)
-	if ret:
-		print('return code is', ret)
+	if git.push(tag=True, repo='upstream'):
 		print('could not push release version')
-		sys.exit(1)
+		return 1
+	return 0
 
-	print('pushing the new tag to upstream')
-	command = "git push --tags upstream"
-	print('\n>', command)
 
-	ret = dryrun or os.system(command)
-	if ret:
-		print('return code is', ret)
-		print('could not push release version')
-		sys.exit(1)
-	sys.exit(0)
-
-if sys.argv[-1] in ('pypi'):
+def release_pypi():
 	print()
 	print('updating PyPI')
 
-	command = "python3 setup.py sdist upload"
-	print('\n>', command)
+	path.remove_egg()
 
-	ret = dryrun or os.system(command)
-	if ret:
-		print('return code is', ret)
+	if command.run('python3 setup.py sdist upload'):
 		print('could not generate egg on pypi')
-		sys.exit(1)
+		return 1
 
-	remove_egg()
-
-	command = "python3 setup.py bdist_wheel upload"
-	print('\n>', command)
-
-	ret = dryrun or os.system(command)
-	if ret:
-		print('return code is', ret)
+	if command.run('python3 setup.py bdist_wheel upload'):
 		print('could not generate wheel on pypi')
-		sys.exit(1)
+		return 1
 
 	print('all done.')
-	sys.exit(0)
+	return 0
 
 
-def packages (lib):
-	def dirs (*path):
-		for location,_,_ in os.walk(os.path.join(*path)):
-			yield location
+def upload():
+	import platform
+	from distutils.util import get_platform
+	from setuptools import setup
 
-	def modules (lib):
-		return next(os.walk(lib))[1]
+	def packages(lib):
+		def dirs(*path):
+			for location, _, _ in os.walk(os.path.join(*path)):
+				yield location
 
-	r = []
-	for module in modules(lib):
-		for d in dirs(lib,module):
-			r.append(d.replace('/','.').replace('\\','.')[len(lib)+1:])
-	return r
+		def modules(lib):
+			return next(os.walk(lib))[1]
 
-
-def filesOf (directory):
-	files = []
-	for l,d,fs in os.walk(directory):
-		if not d:
-			for f in fs:
-				files.append(os.path.join(l,f))
-	return files
+		r = []
+		for module in modules(lib):
+			for d in dirs(lib, module):
+				r.append(d.replace('/', '.').replace('\\', '.')[len(lib) + 1:])
+		return r
 
 
-def testFilesOf (directory):
-	files = []
-	for l,d,fs in os.walk(directory):
-		if not d:
-			for f in fs:
-				if f.endswith('.run') or f.endswith('.conf'):
-					files.append(os.path.join(l,f))
-	return files
+	def filesOf(directory):
+		files = []
+		for l, d, fs in os.walk(directory):
+			if not d:
+				for f in fs:
+					files.append(os.path.join(l, f))
+		return files
 
 
-os_name = platform.system()
+	def testFilesOf(directory):
+		files = []
+		for l, d, fs in os.walk(directory):
+			if not d:
+				for f in fs:
+					if f.endswith('.run') or f.endswith('.conf'):
+						files.append(os.path.join(l, f))
+		return files
 
-files_definition = [
-	('share/exabgp/processes',filesOf('etc/exabgp')),
-	('share/exabgp/etc',testFilesOf('qa/conf')),
-]
 
-if os_name != 'NetBSD':
-	if sys.argv[-1] == 'systemd':
-		files_definition.append(('/usr/lib/systemd/system',filesOf('etc/systemd')))
+	files_definition = [
+		('share/exabgp/processes', filesOf('etc/exabgp')),
+		('share/exabgp/etc', testFilesOf('qa/conf')),
+	]
 
-version = imp.load_source('version','lib/exabgp/version.py').version.split('-')[0]
+	if platform.system() != 'NetBSD':
+		if sys.argv[-1] == 'systemd':
+			files_definition.append(('/usr/lib/systemd/system', filesOf('etc/systemd')))
 
-try:
-	description_rst = open('PYPI.rst').read() % {'version': version}
-except IOError:
-	description_rst = 'ExaBGP'
+	try:
+		description_rst = open('PYPI.rst').read() % {'version': version.get()}
+	except IOError:
+		print('failed to open PYPI.rst')
+		return 1
 
-setup(
-	name='exabgp',
-	version=version,
-	description='BGP swiss army knife',
-	long_description=description_rst,
-	author='Thomas Mangin',
-	author_email='thomas.mangin@exa-networks.co.uk',
-	url='https://github.com/Exa-Networks/exabgp',
-	license='BSD',
-	keywords='BGP routing SDN FlowSpec HA',
-	platforms=[get_platform(),],
-	package_dir={'': 'lib'},
-	packages=packages('lib'),
-	package_data={'': ['PYPI.rst']},
-	download_url='https://github.com/Exa-Networks/exabgp/archive/%s.tar.gz' % version,
-	data_files=files_definition,
-	setup_requires=['setuptools'],
-	classifiers=[
-		'Development Status :: 5 - Production/Stable',
-		'Environment :: Console',
-		'Intended Audience :: System Administrators',
-		'Intended Audience :: Telecommunications Industry',
-		'License :: OSI Approved :: BSD License',
-		'Operating System :: POSIX',
-		'Operating System :: MacOS :: MacOS X',
-		'Programming Language :: Python',
-		'Programming Language :: Python :: 3.7',
-		'Topic :: Internet',
-	],
-	entry_points={
-		'console_scripts': [
-			'exabgp = exabgp.application:run_exabgp',
-			'exabgpcli = exabgp.application:run_cli',
+	if command.dryrun:
+		return 1
+
+	setup(
+		name='exabgp',
+		version=version.get(),
+		description='BGP swiss army knife',
+		long_description=description_rst,
+		author='Thomas Mangin',
+		author_email='thomas.mangin@exa-networks.co.uk',
+		url='https://github.com/Exa-Networks/exabgp',
+		license='BSD',
+		keywords='BGP routing SDN FlowSpec HA',
+		platforms=[get_platform(), ],
+		package_dir={'': 'lib'},
+		packages=packages('lib'),
+		package_data={'': ['PYPI.rst']},
+		download_url='https://github.com/Exa-Networks/exabgp/archive/%s.tar.gz' % version.get(),
+		data_files=files_definition,
+		setup_requires=['setuptools'],
+		classifiers=[
+			'Development Status :: 5 - Production/Stable',
+			'Environment :: Console',
+			'Intended Audience :: System Administrators',
+			'Intended Audience :: Telecommunications Industry',
+			'License :: OSI Approved :: BSD License',
+			'Operating System :: POSIX',
+			'Operating System :: MacOS :: MacOS X',
+			'Programming Language :: Python',
+			'Programming Language :: Python :: 3.7',
+			'Topic :: Internet',
 		],
-	},
-)
+		entry_points={
+			'console_scripts': [
+				'exabgp = exabgp.application:run_exabgp',
+				'exabgpcli = exabgp.application:run_cli',
+			],
+		},
+	)
+	return 0
+
+
+def help():
+	print("""\
+python3 setup.py help     this help
+python3 setup.py cleanup  delete left-over file from release
+python3 setup.py release  tag a new version on github, and update pypi
+python3 setup.py pypi     create egg/wheel
+""")
+
+def main ():
+	if sys.argv[-1] == 'cleanup':
+		sys.exit(path.remove_egg())
+
+	if sys.argv[-1] == 'release':
+		sys.exit(release_github())
+
+	if sys.argv[-1] == 'pypi':
+		sys.exit(release_pypi())
+
+	# "internal" commands
+
+	if sys.argv[-1] == 'upload':
+		sys.exit(upload())
+
+	if sys.argv[-1] == 'debian':
+		release = version.changelog()
+		debian.set(release)
+		sys.exit(0)
+
+	help()
+	sys.exit(1)
+
+
+if __name__ == '__main__':
+	main()
