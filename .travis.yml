@@ -15,7 +15,7 @@ install:
   - pip3 install -r qa/requirements.txt
 
 script:
-  - export INTERPRETER=python
+  - export INTERPRETER=python3
   - export SKIPCLEANUP=exabgp
   - sbin/exabgp --version
   - sbin/exabgp --fi > etc/exabgp/exabgp.env
