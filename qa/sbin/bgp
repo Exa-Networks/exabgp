@@ -541,7 +541,11 @@ def main ():
 
 	try:
 		BGPServer('127.0.0.1',options)
-		BGPServer('::1',options)
+		try:
+			BGPServer('::1',options)
+		except:
+			# does not work on travis-ci
+			pass
 		drop()
 		asyncore.loop()
 	except socket.error as exc:
