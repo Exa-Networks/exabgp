@@ -6,10 +6,10 @@ import time
 time.sleep(1)  # time for configuration routes to pass
 
 while True:
-	print "announce watchdog dnsr"
+	print("announce watchdog dnsr")
 	sys.stdout.flush()
 	time.sleep(1)
 
-	print "withdraw watchdog dnsr"
+	print("withdraw watchdog dnsr")
 	sys.stdout.flush()
 	time.sleep(1)
