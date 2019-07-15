@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import time
@@ -12,26 +12,26 @@ try:
 
 		expected = expect.pop(0)
 		if expected not in line:
-			print >> sys.stderr, 'not expected json message (%s)' % expected
+			sys.stderr.write('not expected json message (%s)\n' % expected)
 			sys.stderr.flush()
 			sys.exit(1)
 
 		try:
 			json.loads(line)
 		except Exception:
-			print >> sys.stderr, 'failure, json can not be decoded'
+			sys.stderr.write('failure, json can not be decoded\n')
 			sys.stderr.flush()
 			sys.exit(1)
 
-		print >> sys.stderr, 'json received:', line.rstrip()
+		sys.stderr.write('json received: %s\n' % line.rstrip())
 		sys.stderr.flush()
 
 		if 'shutdown' in line:
 			sys.exit(1)
 except KeyboardInterrupt:
 	pass
-except IOError,e:
-	print >> sys.stderr, 'something went wrong'
+except IOError as e:
+	sys.stderr.write('something went wrong\n')
 	if e.errno == 32:  # broken pipe
 		sys.exit(1)
 
@@ -44,11 +44,11 @@ try:
 	line = sys.stdin.readline().strip()
 	if not line or line in ['done','shutdown']:
 		sys.exit(0)
-	print >> sys.stderr, 'Bad termination'
+	sys.stderr.write('Bad termination\n')
 	sys.exit(1)
 except KeyboardInterrupt:
 	pass
-except IOError,e:
-	print >> sys.stderr, 'could not send command to ExaBGP'
+except IOError as e:
+	sys.stderr.write('could not send command to ExaBGP\n')
 	if e.errno == 32:  # broken pipe
 		sys.exit(1)
