@@ -3,4 +3,3 @@ six
 coveralls
 nose
 psutil
-scrutinizer-ocular
