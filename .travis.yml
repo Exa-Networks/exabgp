@@ -1,25 +1,30 @@
 language: python
+dist: xenial
 
-python:
-  - "2.7"
-  - "3.7"
-  - "pypy"
-
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -y python-pip python-dev python-psutil
-  - sudo apt-get install -y python3-pip python3-setuptools python3-psutil
+matrix:
+  fast_finish: true
+  include:
+    - python: 2.7
+    - python: pypy
+    - python: 3.7
+    - python: 3.8-dev
+    - python: nightly
+  allow_failures:
+    - python: 2.7
+    - python: pypy
+    - python: 3.8-dev
+    - python: nightly
 
 install:
+  - pip install --upgrade pip setuptools wheel
   - pip install -r requirements.txt
-  - pip3 install -r requirements.txt
-  - pip3 install -r qa/requirements.txt
+  - pip install -r qa/requirements.txt
 
 script:
-  - export INTERPRETER=python3
   - export SKIPCLEANUP=exabgp
-  - sbin/exabgp --version
-  - sbin/exabgp --fi > etc/exabgp/exabgp.env
+  - ./sbin/exabgp --version
+  - ./sbin/exabgp --fi > etc/exabgp/exabgp.env
+  - cat etc/exabgp/exabgp.env
   - set pipefail
   - ./qa/bin/parsing
   - ./qa/bin/functional all
