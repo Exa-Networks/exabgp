@@ -33,7 +33,6 @@ script:
 
 after_success:
   - coveralls
-  - ocular
 
 notifications:
   irc:
