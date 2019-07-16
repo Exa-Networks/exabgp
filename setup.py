@@ -39,6 +39,7 @@ class version:
 	template = """\
 import os
 
+commit = "%s"
 release = "%s"
 json = "%s"
 text = "%s"
@@ -54,8 +55,16 @@ if __name__ == '__main__':
 	@staticmethod
 	def get():
 		sys.path.append(path.lib_exa)
-		from version import version
-		return version
+		from version import version as release
+
+		# transitional fix
+		if "-" in release:
+			release = release.split("-")[0]
+
+		if version.changelog() != release:
+			release += ".post1"
+
+		return release
 
 	@staticmethod
 	def changelog():
@@ -70,7 +79,7 @@ if __name__ == '__main__':
 	def set(tag,commit):
 		with open(path.version, 'w') as f:
 			f.write(version.template % (
-				"%s-%s" % (tag, commit),
+				commit, tag,
 				version.JSON,
 				version.TEXT
 			))
@@ -259,7 +268,7 @@ def release_pypi():
 	return 0
 
 
-def upload():
+def st():
 	import platform
 	from distutils.util import get_platform
 	from setuptools import setup
@@ -361,6 +370,8 @@ python3 setup.py help     this help
 python3 setup.py cleanup  delete left-over file from release
 python3 setup.py release  tag a new version on github, and update pypi
 python3 setup.py pypi     create egg/wheel
+python3 setup.py install  local installation
+python3 setup.py build    local build
 """)
 
 def main ():
@@ -375,8 +386,18 @@ def main ():
 
 	# "internal" commands
 
-	if sys.argv[-1] == 'upload':
-		sys.exit(upload())
+	if sys.argv[-1] == 'version':
+		sys.stdout.write("%s\n" % version.get())
+		sys.exit(0)
+
+	if sys.argv[-1] == 'current':
+		sys.stdout.write("%s\n" % version.changelog())
+		sys.exit(0)
+
+	if '--help' in sys.argv or \
+		'install' in sys.argv or \
+		'upload' in sys.argv:
+		sys.exit(st())
 
 	if sys.argv[-1] == 'debian':
 		release = version.changelog()
