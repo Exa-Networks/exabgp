@@ -396,7 +396,8 @@ def main ():
 
 	if '--help' in sys.argv or \
 		'install' in sys.argv or \
-		'upload' in sys.argv:
+		'upload' in sys.argv or \
+		'build' in sys.argv:
 		sys.exit(st())
 
 	if sys.argv[-1] == 'debian':
