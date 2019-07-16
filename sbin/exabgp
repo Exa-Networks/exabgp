@@ -18,7 +18,7 @@ export PYTHONPATH="$path"/lib
 
 # A python3 venv still has a python binary / symlink that points @ Python 3
 # We need python so we're actually testing in Python 2 as well
-for INTERPRETER in "$INTERPRETER" pypy pypy3 python python3; do
+for INTERPRETER in "$INTERPRETER" python3 pypy3 python pypy; do
     INTERPRETER="$(command -v "$INTERPRETER")" && break
 done
 
