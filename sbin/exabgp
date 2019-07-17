@@ -16,7 +16,13 @@ path="$(cd "$(dirname "$0")"/.. ; pwd)"
 
 export PYTHONPATH="$path"/lib
 
-for INTERPRETER in "$INTERPRETER" pypy3 python3 pypy python; do
+# Prefer `python` binary when in a venv
+INTS="$INTERPRETER python3 pypy3 python pyp"
+if [ -d "${VIRTUAL_ENV}" ]; then
+    INTS="$INTERPRETER python pypy python3 pypy3"
+fi
+
+for INTERPRETER in $(echo $INTS); do
     INTERPRETER="$(command -v "$INTERPRETER")" && break
 done
 
