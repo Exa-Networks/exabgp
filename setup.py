@@ -375,6 +375,9 @@ python3 setup.py build    local build
 """)
 
 def main ():
+	if os.environ.get("SCRUTINIZER", "") == "true":
+		sys.exit(0)
+
 	if sys.argv[-1] == 'cleanup':
 		sys.exit(path.remove_egg())
 

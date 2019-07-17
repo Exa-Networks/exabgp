@@ -140,7 +140,7 @@ class Path (object):
 
 
 class CI (dict):
-	API = re.compile('^\s*run\s+(.*)\s*?;\s*?$')
+	API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 	_content = {}
 	_tests = []
 	completed = True
@@ -278,12 +278,12 @@ class Command (object):
 				'exabgp_debug_configuration=true',
 				'exabgp_tcp_bind=\'\'',
 				'exabgp_tcp_port=%d' % test['port'],
+				'INTERPRETER=%s ' % os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
 			]),
 			'exabgp': Path.EXABGP,
 			'confs': ' \\\n    '.join(test['confs']),
 		}
-
-		return 'env \\\n  %(env)s \\\n  %(exabgp)s -d -p \\\n    %(confs)s' % config
+		return 'env \\\n  %(env)s \\\n %(exabgp)s -d -p \\\n    %(confs)s' % config
 
 	@staticmethod
 	def server (index):
@@ -299,11 +299,12 @@ class Command (object):
 			'env': ' \\\n  '.join([
 				'exabgp_tcp_port=%d' % test['port'],
 			]),
+			'interpreter': os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
 			'bgp': Path.BGP,
 			'msg': test['msg'],
 		}
 
-		return 'env \\\n  %(env)s \\\n  %(bgp)s \\\n    %(msg)s' % config
+		return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s \\\n    %(msg)s' % config
 
 	@staticmethod
 	def dispatch (running):
