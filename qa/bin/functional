@@ -86,26 +86,27 @@ OPTIONS = docopt.docopt(USAGE, help=False)
 
 
 class Color (object):
-	NONE     = '\033[0m' + '\033[0m'   # NONE
-	STARTING = '\033[0m' + '\033[96m'  # LIGHT BLUE
-	READY    = '\033[0m' + '\033[94m'  # PENDING
-	FAIL     = '\033[0m' + '\033[91m'  # RED
-	SUCCESS  = '\033[1m' + '\033[92m'  # GREEN
+	NONE     = '\033[0m' + '\033[0m' + ' '   # NONE
+	STARTING = '\033[0m' + '\033[96m' + '~'  # LIGHT BLUE
+	READY    = '\033[0m' + '\033[94m' + '?'  # PENDING
+	FAIL     = '\033[0m' + '\033[91m' + '-' # RED
+	SUCCESS  = '\033[1m' + '\033[92m' + '+'  # GREEN
 
 
 class Identifier (object):
+	_listing = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 	_next = 0
 	_nl = 3
 
 	@classmethod
 	def get (cls):
 		cls._next += 1
-		return '%02d' % cls._next
+		return cls._listing[cls._next-1]
 
 	@classmethod
 	def identifiers (cls):
-		for n in range(1,cls._next+1):
-			yield '%02d' % n, not n % cls._nl
+		for n in range(0,cls._next):
+			yield cls._listing[n], not (n + 1) % cls._nl
 
 
 class Port (object):
@@ -205,8 +206,6 @@ class CI (dict):
 		for k in cls._tests:
 			v = cls._content[k]
 			status = v['status']
-			if status == Color.SUCCESS:
-				k = '--'
 			sys.stdout.write('%s%s ' % (status,k))
 		sys.stdout.write(Color.NONE)
 		sys.stdout.flush()
@@ -328,9 +327,11 @@ class Command (object):
 			processes['exa'][name] = subprocess.Popen([sys.argv[0],'client',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			test['status'] = Color.READY
 			CI.display()
-			time.sleep(0.2)
+			time.sleep(0.05)
 
 		exit_time = time.time() + int(OPTIONS['--timeout'])
+
+		out,err = {},{}
 
 		while names and time.time() < exit_time:
 			CI.display()
@@ -350,9 +351,11 @@ class Command (object):
 						CI.passed(name)
 					else:
 						CI.failed(name)
+						out[name] = stdout
+						err[name] = stderr
 				except (IOError,OSError,ValueError):
 					names.remove(name)
-			time.sleep(0.2)
+			time.sleep(0.05)
 
 		for name in names:
 			CI.reset(name)
@@ -389,6 +392,10 @@ class Command (object):
 					continue
 				except Alarm:
 					pass
+
+		for name in out:
+			print('\nexa stdout\n------\n%s' % str(out[name]).replace('\\n','\n'))
+			print('\nexa stderr\n------\n%s' % str(err[name]).replace('\\n','\n'))
 
 		CI.display()
 		return CI.completed
