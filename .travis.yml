@@ -18,20 +18,20 @@ matrix:
 install:
   - sudo apt-get update -qq
   - sudo apt-get install -y python-pip python3-pip
-
-script:
   - pip install --upgrade pip setuptools wheel || true
   - python -m pip install -r requirements.txt || true
   - python -m pip install -r qa/requirements.txt || true
   - python3 -m pip install -r qa/requirements.txt || true
   - pypy -m pip install -r qa/requirements.txt || true
-  - export SKIPCLEANUP=exabgp
-  - ./sbin/exabgp --version
-  - ./sbin/exabgp --fi > etc/exabgp/exabgp.env
-  - cat etc/exabgp/exabgp.env
+
+script:
   - set pipefail
+  - export SKIPCLEANUP=exabgp
+  - ./sbin/exabgp --fi | tee etc/exabgp/exabgp.env
+  - ./sbin/exabgp --version
+  - ./qa/bin/functional listing
+  - ./qa/bin/functional run
   - ./qa/bin/parsing
-  - ./qa/bin/functional all
   - env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
   - env exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
 
