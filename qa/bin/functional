@@ -355,7 +355,7 @@ class Command (object):
 						err[name] = stderr
 				except (IOError,OSError,ValueError):
 					names.remove(name)
-			time.sleep(0.05)
+			time.sleep(0.2)
 
 		for name in names:
 			CI.reset(name)
