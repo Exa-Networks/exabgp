@@ -327,7 +327,7 @@ class Command (object):
 			processes['exa'][name] = subprocess.Popen([sys.argv[0],'client',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			test['status'] = Color.READY
 			CI.display()
-			time.sleep(0.05)
+			time.sleep(0.2)
 
 		exit_time = time.time() + int(OPTIONS['--timeout'])
 
