@@ -140,7 +140,7 @@ class Path (object):
 
 
 class CI (dict):
-	API = re.compile('^\s*run\s+(.*)\s*?;\s*?$')
+	API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 	_content = {}
 	_tests = []
 	completed = True
