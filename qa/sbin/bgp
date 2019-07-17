@@ -78,15 +78,17 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		processes = []
 
-		for line in os.popen("/bin/ps"):
-			if 'python' not in line and 'pypy' not in line:
+		for line in os.popen("/bin/ps x"):
+			low = line.strip().lower()
+			if not low:
+				continue
+			if 'python' not in low and 'pypy' not in low:
 				continue
 
-			line = line.strip()
+			cmdline = line.strip().split()[4:]
 			pid = line.strip().split()[0]
-			cmdline = line.split("/",1)[1].split()
 
-			if not cmdline[1].endswith('/bgp.py'):
+			if len(cmdline) > 1 and not cmdline[1].endswith('/bgp.py'):
 				continue
 
 			if conf_name not in cmdline[-1]:
