@@ -16,9 +16,13 @@ path="$(cd "$(dirname "$0")"/.. ; pwd)"
 
 export PYTHONPATH="$path"/lib
 
-# A python3 venv still has a python binary / symlink that points @ Python 3
-# We need python so we're actually testing in Python 2 as well
-for INTERPRETER in "$INTERPRETER" python3 pypy3 python pypy; do
+# Prefer `python` binary when in a venv
+INTS="$INTERPRETER python3 pypy3 python pyp"
+if [ -d "${VIRTUAL_ENV}" ]; then
+    INTS="$INTERPRETER python pypy python3 pypy3"
+fi
+
+for INTERPRETER in $(echo $INTS); do
     INTERPRETER="$(command -v "$INTERPRETER")" && break
 done
 
