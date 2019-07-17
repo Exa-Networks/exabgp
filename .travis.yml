@@ -19,6 +19,7 @@ install:
   - pip install --upgrade pip setuptools wheel
   - pip install -r requirements.txt
   - pip install -r qa/requirements.txt
+  - pip3 install -r qa/requirements.txt || true
   - pypy -m pip install -r qa/requirements.txt || true
 
 script:
