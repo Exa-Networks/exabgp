@@ -16,10 +16,12 @@ matrix:
     - python: nightly
 
 install:
+  - apt-get update -qq
+  - apt-get install -y python-pip python3-pip
   - pip install --upgrade pip setuptools wheel
-  - pip install -r requirements.txt
-  - pip install -r qa/requirements.txt
-  - pip3 install -r qa/requirements.txt || true
+  - python -m pip install -r requirements.txt
+  - python -m pip install -r qa/requirements.txt
+  - python3 -m pip install -r qa/requirements.txt || true
   - pypy -m pip install -r qa/requirements.txt || true
 
 script:
