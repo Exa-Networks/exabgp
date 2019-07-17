@@ -20,8 +20,6 @@ import asyncore
 import subprocess
 from struct import unpack
 
-import psutil
-
 SIGNAL = dict([(name,getattr(signal,name)) for name in dir(signal) if name.startswith('SIG')])
 
 
@@ -80,33 +78,24 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		processes = []
 
-		for pid in psutil.pids():
-			try:
-				process = psutil.Process(pid)
+		for line in os.popen("/bin/ps"):
+			if 'python' not in line and 'pypy' not in line:
+				continue
 
-				process_name = process.name().lower()
-				if 'python' not in process_name and 'pypy' not in process_name:
-					continue
+			line = line.strip()
+			pid = line.strip().split()[0]
+			cmdline = line.split("/",1)[1].split()
 
-				cmdline = process.cmdline()
-				if len(cmdline) < 2:
-					continue
+			if not cmdline[1].endswith('/bgp.py'):
+				continue
 
-				if not cmdline[1].endswith('/bgp.py'):
-					continue
+			if conf_name not in cmdline[-1]:
+				continue
 
-				if conf_name not in cmdline[-1]:
-					continue
+			if not cmdline[-1].endswith('.conf'):
+				continue
 
-				if not cmdline[-1].endswith('.conf'):
-					continue
-
-				processes.append(pid)
-
-			except psutil.NoSuchProcess:
-				self.announce('signal/psutil: no such processes')
-			except psutil.AccessDenied:
-				self.announce('signal/psutil: access denied')
+			processes.append(pid)
 
 		if len(processes) == 0:
 			self.announce('no running process found, this should not happend, quitting')
