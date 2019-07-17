@@ -58,7 +58,7 @@ def cdr_to_length (cidr):
 class BGPHandler(asyncore.dispatcher_with_send):
 	counter = 0
 
-	keepalive = bytes([0xFF, ] * 16 + [0x0, 0x13, 0x4])
+	keepalive = bytearray([0xFF, ] * 16 + [0x0, 0x13, 0x4])
 
 	_name = {
 		b'\x01': 'OPEN',
@@ -125,9 +125,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 	def routes (self, header, body):
 		len_w = unpack('!H',body[0:2])[0]
-		withdrawn = bytes([_ for _ in body[2:2+len_w]])
+		withdrawn = bytearray([_ for _ in body[2:2+len_w]])
 		len_a = unpack('!H',body[2+len_w:2+len_w+2])[0]
-		announced = bytes([_ for _ in body[2+len_w + 2+len_a:]])
+		announced = bytearray([_ for _ in body[2+len_w + 2+len_a:]])
 
 		if not withdrawn and not announced:
 			if len(body) == 4:
@@ -225,28 +225,28 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					continue
 				raise exc
 
-		return header,body
+		return bytearray(header),bytearray(body)
 
 	def handle_open (self):
 		# reply with a IBGP response with the same capability (just changing routerID)
 		header,body = self.read_message()
-		routerid = bytes([body[8] + 1 & 0xFF])
+		routerid = bytearray([body[8] + 1 & 0xFF])
 		o = header+body[:8]+routerid+body[9:]
 
 		if self.options['send-unknown-capability']:
 			# hack capability 66 into the message
 
 			content = b'loremipsum'
-			cap66 = bytes([66,len(content)]) + content
-			param = bytes([2, len(cap66)]) + cap66
-			o = o[:17] + bytes([o[17] + len(param)]) + o[18:28] + \
-				bytes([o[28] + len(param)]) + o[29:] + param
+			cap66 = bytearray([66, len(content)]) + content
+			param = bytearray([2, len(cap66)]) + cap66
+			o = o[:17] + bytearray([o[17] + len(param)]) + o[18:28] + \
+				bytearray([o[28] + len(param)]) + o[29:] + param
 
 		self.send(o)
 		self.send(self.keepalive)
 
 		if self.options['send-default-route']:
-			self.send(bytes(
+			self.send(bytearray(
 				[0xFF, ] * 16 +
 				[0x00, 0x31] +
 				[0x02,] +
@@ -294,7 +294,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		if parser:
 			for announcement in parser(self,header,body):
 				self.send(self.keepalive)
-
 				if announcement.startswith('eor:'):  # skip EOR
 					self.announce('skipping eor',announcement)
 					continue
@@ -352,7 +351,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		if self.options['send-notification']:
 			notification = b'closing session because we can'
-			self.send(bytes(
+			self.send(bytearray(
 				[0xFF,]*16 +
 				[0x00, 19+2+len(notification)] +
 				[0x03] +

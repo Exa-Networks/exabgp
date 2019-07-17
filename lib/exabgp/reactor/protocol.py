@@ -334,7 +334,7 @@ class Protocol (object):
 	def new_notification (self, notification):
 		for _ in self.write(notification):
 			yield _NOP
-		self.logger.debug('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data),self.connection.session())
+		self.logger.debug('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data.decode('utf-8')),self.connection.session())
 		yield notification
 
 	def new_update (self, include_withdraw):
