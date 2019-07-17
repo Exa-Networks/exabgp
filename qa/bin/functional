@@ -58,7 +58,7 @@ optional arguments:
   --help,           -h          this page
   --dry,            -d          show what command would be run but does nothing
   --port <port>,    -p <port>   base port to use [default: 1790]
-  --timeout <time>, -t <time>   timeout for test failure [default: 20]
+  --timeout <time>, -t <time>   timeout for test failure [default: 60]
   --steps <steps>,  -s <steps>  number of test to run simultaneously [default: 0]
 """
 
