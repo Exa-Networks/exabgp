@@ -124,6 +124,7 @@ class Path (object):
 	BGP      = os.path.join(ROOT,'qa','sbin','bgp')
 	CI       = os.path.join(os.path.join(ROOT,'qa','ci'))
 	ALL_CI   = glob.glob(os.path.join(CI,'*.ci'))
+	ALL_CI.sort()
 
 	@classmethod
 	def validate (cls):
