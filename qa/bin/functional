@@ -264,7 +264,7 @@ class Command (object):
 	def client (index):
 		test = CI.get(index)
 		if not test:
-			sys.exit('test not found')
+			sys.exit("can not find any test called '%s'" % name)
 
 		if os.getuid() and os.getgid() and test['port'] <= 1024:
 			sys.exit('you need to have root privileges to bind to port 79')
@@ -289,7 +289,7 @@ class Command (object):
 		test = CI.get(index)
 
 		if not test:
-			sys.exit('test not found')
+			sys.exit("can not find any test called '%s'" % name)
 
 		if os.getuid() and os.getgid() and test['port'] <= 1024:
 			sys.exit('you need to have root privileges to bind to port 79')
@@ -314,6 +314,8 @@ class Command (object):
 
 		for name in running:
 			test = CI.get(name)
+			if test is None:
+				sys.exit("can not find any test called '%s'" % name)
 			processes['bgp'][name] = subprocess.Popen([sys.argv[0],'server',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			test['status'] = Color.STARTING
 			CI.display()
@@ -362,6 +364,7 @@ class Command (object):
 
 		if not CI.completed:
 			for name in names:
+				print()
 				print('sending alarm signal to %s' % name)
 				print('------------------------%s' % '-'*len(name))
 				try:
