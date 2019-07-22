@@ -209,7 +209,7 @@ class Listener (object):
 				new_neighbor.local_address = IP.create(connection.peer)
 				new_neighbor.peer_address = IP.create(connection.local)
 				if not new_neighbor.router_id:
-					new_neighbor.router_id = RouterID.create(connection.peer)
+					new_neighbor.router_id = RouterID.create(connection.local)
 
 				new_peer = Peer(new_neighbor,reactor)
 				denied = new_peer.handle_connection(connection)

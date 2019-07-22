@@ -5,6 +5,7 @@ Version explained:
 
 Version 4.1.3:
  * Feature: "rate-limit" (per neighbor) limit the number of BGP message(s) handled per second
+ * Fix: use local IP for router-id when the peer is auto-deteted (and not the remote IP)
 
 Version 4.1.2
  * Feature: exabgpcli autocomplete
