@@ -276,9 +276,9 @@ class ParseNeighbor (Section):
 		if neighbor.range_size > 1 and not neighbor.passive:
 			return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
-		if neighbor.peer_address.top() in self._neighbors:
+		if neighbor.index() in self._neighbors:
 			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.top())
-		self._neighbors.append(neighbor.peer_address.top())
+		self._neighbors.append(neighbor.index())
 
 		if neighbor.md5_password:
 			try:
