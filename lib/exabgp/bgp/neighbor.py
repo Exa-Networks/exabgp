@@ -108,6 +108,12 @@ class Neighbor (object):
 	def id (self):
 		return 'neighbor-%s' % self.uid
 
+	# This set must be unique between peer, not full draft-ietf-idr-bgp-multisession-07
+	def index (self):
+		if self.listen != 0:
+			return 'peer-ip %s listen %d' % (self.peer_address, self.listen)
+		return self.name()
+
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adj_rib_in,self.adj_rib_out,self._families)
 
