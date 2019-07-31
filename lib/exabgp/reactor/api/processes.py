@@ -29,6 +29,7 @@ from exabgp.version import json as json_version
 from exabgp.version import text as text_version
 
 from exabgp.configuration.environment import environment
+from threading import Thread
 
 
 # pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
@@ -73,6 +74,8 @@ class Processes (object):
 		self._respawning = {}
 
 	def _handle_problem (self, process):
+		if process not in self._process:
+			return
 		if self.respawn_number:
 			self.logger.debug('issue with the process, restarting it','process')
 			self._terminate(process)
@@ -82,14 +85,19 @@ class Processes (object):
 			self._terminate(process)
 
 	def _terminate (self, process):
+		thread = Thread(target=self._terminate_run, args = (process,))
+		thread.start()
+		return thread
+
+	def _terminate_run (self, process):
 		self.logger.debug('terminating process %s' % process,'process')
 		try:
 			self._process[process].terminate()
-		except OSError:
+			self._process[process].wait()
+			del self._process[process]
+		except (OSError, KeyError):
 			# the process is most likely already dead
 			pass
-		self._process[process].wait()
-		del self._process[process]
 
 	def terminate (self):
 		for process in list(self._process):
@@ -104,7 +112,8 @@ class Processes (object):
 		time.sleep(0.1)
 		for process in list(self._process):
 			try:
-				self._terminate(process)
+				t = self._terminate(process)
+				t.join()
 			except OSError:
 				# we most likely received a SIGTERM signal and our child is already dead
 				self.logger.debug('child process %s was already dead' % process,'process')
@@ -236,6 +245,8 @@ class Processes (object):
 				except StopIteration:
 					if not consumed_data:
 						self._handle_problem(process)
+			except KeyError:
+				pass
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				self._handle_problem(process)
 
