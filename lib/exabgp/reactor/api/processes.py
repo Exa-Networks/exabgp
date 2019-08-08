@@ -84,17 +84,18 @@ class Processes (object):
 			self.logger.debug('issue with the process, terminating it','process')
 			self._terminate(process)
 
-	def _terminate (self, process):
-		self.logger.debug('terminating process %s' % process,'process')
-		thread = Thread(target=self._terminate_run, args = (process,))
+	def _terminate (self, process_name):
+		self.logger.debug('terminating process %s' % process_name, 'process')
+		process = self._process[process_name]
+		del self._process[process_name]
+		thread = Thread(target=self._terminate_run, args=(process,))
 		thread.start()
 		return thread
 
 	def _terminate_run (self, process):
 		try:
-			self._process[process].terminate()
-			self._process[process].wait()
-			del self._process[process]
+			process.terminate()
+			process.wait()
 		except (OSError, KeyError):
 			# the process is most likely already dead
 			pass
