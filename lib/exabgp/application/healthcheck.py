@@ -349,14 +349,6 @@ def setup_ips(ips, label, sudo=False):
             subprocess.check_call(
                 cmd, stdout=fnull, stderr=fnull)
 
-    # If we setup IPs we should also remove them on SIGTERM
-    def sigterm_handler(signum, frame):  # pylint: disable=W0612,W0613
-        remove_ips(ips, label, sudo)
-        sys.exit(0)
-
-    signal.signal(signal.SIGTERM, sigterm_handler)
-
-
 def remove_ips(ips, label, sudo=False):
     """Remove added IP on loopback interface"""
     existing = set(loopback_ips(label))
@@ -456,14 +448,15 @@ def loop(options):
         "FALLING",              # Checks are currently failing.
         "UP",                   # Service is considered as up.
         "DOWN",                 # Service is considered as down.
+        "EXIT",                 # Exit state
     )
 
     def exabgp(target):
         """Communicate new state to ExaBGP"""
-        if target not in (states.UP, states.DOWN, states.DISABLED):
+        if target not in (states.UP, states.DOWN, states.DISABLED, states.EXIT):
             return
         # dynamic ip management. When the service fail, remove the loopback
-        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
+        if target in (states.DOWN, states.DISABLED, states.EXIT) and options.ip_dynamic:
             logger.info("service down, deleting loopback ips")
             remove_ips(options.ips, options.label, options.sudo)
         # if ips was deleted with dyn ip, re-setup them
@@ -472,7 +465,8 @@ def loop(options):
             setup_ips(options.ips, options.label, options.sudo)
 
         logger.info("send announces for %s state to ExaBGP", target)
-        metric = vars(options).get("{0}_metric".format(str(target).lower()))
+        default_metric = vars(options).get("{0}_metric".format(str(states.DISABLED).lower()))
+        metric = vars(options).get("{0}_metric".format(str(target).lower()), default_metric)
         for ip in options.ips:
             if options.withdraw_on_down:
                 command = "announce" if target is states.UP else "withdraw"
@@ -601,6 +595,13 @@ def loop(options):
 
     checks = 0
     state = states.INIT
+    # Do cleanups on SIGTERM
+    def sigterm_handler(signum, frame):  # pylint: disable=W0612,W0613
+        exabgp(states.EXIT)
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
     while True:
         checks, state = one(checks, state)
 
