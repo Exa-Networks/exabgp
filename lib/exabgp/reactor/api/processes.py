@@ -85,12 +85,12 @@ class Processes (object):
 			self._terminate(process)
 
 	def _terminate (self, process):
+		self.logger.debug('terminating process %s' % process,'process')
 		thread = Thread(target=self._terminate_run, args = (process,))
 		thread.start()
 		return thread
 
 	def _terminate_run (self, process):
-		self.logger.debug('terminating process %s' % process,'process')
 		try:
 			self._process[process].terminate()
 			self._process[process].wait()
