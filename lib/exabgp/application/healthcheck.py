@@ -465,10 +465,9 @@ def loop(options):
             setup_ips(options.ips, options.label, options.sudo)
 
         logger.info("send announces for %s state to ExaBGP", target)
-        default_metric = vars(options).get("{0}_metric".format(str(states.DISABLED).lower()))
-        metric = vars(options).get("{0}_metric".format(str(target).lower()), default_metric)
+        metric = vars(options).get("{0}_metric".format(str(target).lower()), 0)
         for ip in options.ips:
-            if options.withdraw_on_down:
+            if options.withdraw_on_down or target is states.EXIT:
                 command = "announce" if target is states.UP else "withdraw"
             else:
                 command = "announce"
