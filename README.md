@@ -15,7 +15,6 @@ Thanks to modern routers' flow balancing, ExaBGP can also be used to save you mo
 
 Other uses include keeping an eye on network changes done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
-
 ## Who is using ExaBGP ?
 
 Some users have documented their use cases, such as [DailyMotion](https://medium.com/dailymotion/how-we-built-our-hybrid-kubernetes-platform-d121ea9cb0bc) or [Facebook](https://code.fb.com/data-infrastructure/dhcplb-server/).
@@ -46,23 +45,65 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 
 ```sh
 > pip install exabgp
+
+> exabgp --version
 > exabgp --help
+
+> exabgp --run healthcheck --help
 > python -m exabgp healthcheck --help
  ```
 
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.1.0.tar.gz | tar zx
-> ./exabgp-4.1.0/sbin/exabgp --help
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.1.2.tar.gz | tar zx
+
+> cd exabgp-4.1.2
+> ./sbin/exabgp --version
+> ./sbin/exabgp --help
+
+> ./sbin/exabgp --run healthcheck --help
+> env PYTHONPATH=./lib python -m exabgp healthcheck --help
 > ./bin/healthcheck --help
+```
+
+or to use git master
+
+```sh
+> git clone https://github.com/Exa-Networks/exabgp exabgp-git
+
+> cd exabgp-git
+> ./sbin/exabgp --version
+> ./sbin/exabgp --help
+
+> ./sbin/exabgp --run healthcheck --help
+> env PYTHONPATH=./lib python -m exabgp healthcheck --help
+> ./bin/healthcheck --help
+```
+
+or change git to use any previous release (here 4.1.2)
+
+```sh
+> git checkout 4.1.2
+> ./sbin/exabgp --version
 ```
 
 Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
 
-The configuration file and API format change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG) and check their setup after upgrade.
-
 ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. ExaBGP 4.1 and later are targeting python3 only.
+
+## Upgrade
+
+ExaBGP is self-contained and easy to upgrade/downgrade by:
+
+* replacing the downloaded release folder, for releases download
+* running `git pull` in the repository folder, for installtion using git master
+* running `pip install -U exabgp`, for pip installations
+* running `apt update; apt upgrade exabgp` for Debian/Ubuntu
+
+*If you are migrating your application from ExaBGP 3.4 to 4.x please read this [wiki](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.0) entry*.
+
+The configuration file and API format may change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG) and check their setup after upgrade.
 
 ## Support
 
