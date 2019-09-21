@@ -4,43 +4,15 @@ Section: net
 Priority: optional
 Build-Depends: debhelper (>= 9),
                dh-python,
-               python-all (>= 2.7),
-               python-setuptools,
                python3-all,
                python3-setuptools,
-Build-Depends-Indep: python-ipaddr,
-                     python-nose,
-                     python-psutil,
-                     python-six,
-                     python3-nose,
+Build-Depends-Indep: python3-nose,
                      python3-psutil,
                      python3-six,
 Standards-Version: 4.1.1.0
 Homepage: https://github.com/Exa-Networks/exabgp
 Vcs-Browser: https://github.com/Exa-Networks/exabgp/tree/debian/sid
 Vcs-Git: https://github.com/Exa-Networks/exabgp.git -b debian/sid
-
-Package: python-exabgp
-Architecture: all
-Section: python
-Depends: ${misc:Depends},
-         ${python:Depends},
-         python-pkg-resources,
-Breaks: exabgp (<< 4.0.0-1~),
-Replaces: exabgp (<< 4.0.0-1~),
-Description: BGP swiss army knife of networking - Python 2 module
- ExaBGP allows engineers to control their network from commodity
- servers. Think of it as Software Defined Networking using BGP by
- transforming BGP messages into friendly plain text or JSON.
- .
- Current documented use cases include DDOS mitigation, network
- visualisation, service high availability, anycast.
- .
- It features ASN4 (RFC 4893), IPv6 (RFC 4760), MPLS (RFC 4659), VPLS
- (RFC 4762), Flow (RFC 5575), Graceful Restart (RFC 4724), Enhanced
- Route Refresh (RFC 7313), AIGP (RFC 7311) and more.
- .
- This package provides the Python 2 module of exabgp.
 
 Package: python3-exabgp
 Architecture: all
@@ -68,11 +40,11 @@ Pre-Depends: debconf (>= 1.5.34),
              dpkg (>= 1.15.7.2),
 Depends: adduser,
          lsb-base (>= 3.2-14),
-         python3-exabgp (= ${binary:Version}) | python-exabgp (= ${binary:Version}),
-         python-pkg-resources,
+         python3-exabgp (= ${binary:Version}),
+         python3-pkg-resources,
          ucf,
          ${misc:Depends},
-         ${python:Depends},
+         ${python3:Depends},
 Description: BGP swiss army knife of networking
  ExaBGP allows engineers to control their network from commodity
  servers. Think of it as Software Defined Networking using BGP by

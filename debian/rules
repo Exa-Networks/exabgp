@@ -2,24 +2,21 @@
 
 export PYBUILD_NAME=exabgp
 
-PYTHONS:=$(shell pyversions -vr)
 PYTHON3S:=$(shell py3versions -vr)
 
 %:
-	dh $@ --with python2,python3 --buildsystem=pybuild
+	dh $@ --with python3 --buildsystem=pybuild
 
 override_dh_auto_install:
 	dh_auto_install --buildsystem=pybuild
 	rm -rf $(CURDIR)/debian/exabgp/usr/etc $(CURDIR)/debian/python*-exabgp/usr/share/exabgp
-	mkdir -p $(CURDIR)/debian/python-exabgp/usr/sbin $(CURDIR)/debian/python3-exabgp/usr/sbin
-	mv $(CURDIR)/debian/python-exabgp/usr/bin/exabgp $(CURDIR)/debian/python-exabgp/usr/sbin/python2-exabgp
+	mkdir -p $(CURDIR)/debian/python3-exabgp/usr/sbin
 	mv $(CURDIR)/debian/python3-exabgp/usr/bin/exabgp $(CURDIR)/debian/python3-exabgp/usr/sbin/python3-exabgp
-	mv $(CURDIR)/debian/python-exabgp/usr/bin/exabgpcli $(CURDIR)/debian/python-exabgp/usr/sbin/python2-exabgpcli
 	mv $(CURDIR)/debian/python3-exabgp/usr/bin/exabgpcli $(CURDIR)/debian/python3-exabgp/usr/sbin/python3-exabgpcli
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
-	set -e; set -x; for pyvers in $(PYTHONS) $(PYTHON3S); do \
+	set -e; set -x; for pyvers in $(PYTHON3S); do \
 		PYMAJOR=`echo $$pyvers | cut -d '.' -f 1`; \
 		env INTERPRETER=python$$pyvers sbin/exabgp --fi > etc/exabgp/exabgp.env ; \
 		env INTERPRETER=python$$pyvers ./qa/bin/parsing ; \
