@@ -1,0 +1,21 @@
+From: Vincent Bernat <vincent@bernat.ch>
+Date: Sat, 21 Sep 2019 21:24:36 +0200
+Subject: tests: make test succeed when only python3 is available
+
+---
+ etc/exabgp/example-healthcheck.conf | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/etc/exabgp/example-healthcheck.conf b/etc/exabgp/example-healthcheck.conf
+index b58ceb1..77fbc97 100644
+--- a/etc/exabgp/example-healthcheck.conf
++++ b/etc/exabgp/example-healthcheck.conf
+@@ -7,7 +7,7 @@
+ # expected (-h flag will give you available options)
+ 
+ process service-nginx {
+-	run python -m exabgp healthcheck -s --name nginx --cmd "curl --fail --verbose --max-time 2 http://localhost" --start-ip 0;
++	run python3 -m exabgp healthcheck -s --name nginx --cmd "curl --fail --verbose --max-time 2 http://localhost" --start-ip 0;
+ 	encoder text;
+ }
+ 

@@ -2,6 +2,8 @@ exabgp (4.1.2-1) unstable; urgency=medium
 
   * New upstream release.
   * d/control: remove support for Python 2. Closes: #936492.
+  * d/patches: add patch to make tests succeed when only python3 is
+    available.
 
  -- Vincent Bernat <bernat@debian.org>  Sat, 21 Sep 2019 21:05:46 +0200
 
