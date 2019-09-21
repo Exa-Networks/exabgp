@@ -3,6 +3,59 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.1.2
+ * Feature: exabgpcli autocomplete
+ * Fix: exabgpcli was not correctly removing data on the pipe in case of issues
+
+Version 4.1.1
+ * CHANGE: some message are now printed using the log routes option and not parser anymore
+ * Fix: bug with functional testing code when using python3
+   patch by: Cooper Lees
+ * Fix: bug with ExaBGP cli not working
+   reported by: jlixfeld (thank you to Cooper Lees for providing time and a test env. to reproduce)
+
+Version 4.1.0
+ * CHANGE: when redifining a single parameter option using inheritence the value will be replaced
+ * CHANGE: FlowSpec TRUE and FALSE value have been updated to use the latest RFC and are therefore inverted from previous versions
+ * CHANGE: an invalid netmask for a network will now cause ExaBGP to fail the parsing of the route (it can stop ExaBGP from starting with bad routes)
+ * Feature: support for extended next-hop (RFC 5549)
+ * Feature: implemented API for "clear adj-rib out" and "flush adj-rib out"
+ * Fix: regression pointed in #873
+   patch: Malcolm Dodds
+ * Fix: do not crash when trying to be helpful in presenting notification message
+   reported by: Adam Jacob Muller
+ * Fix: issue while handling ranged neighbors
+   patch: Wenxin Wang
+ * Fix: accumulating families when using multiple peers
+   patch: Martin Topholm (reviewed)
+ * Fix: could not reload configuration
+   reported by: gbock
+ * Feature: better RFC5575bis support, better treat as withdraw
+   patch: Christoph Loibl
+ * Fix: Fix issue when using peer ASN discovery
+   patch: Zac Medico
+ * Fix: MD5 encoding
+   reported by: Adam Jacob Muller (with an initial idea for a patch)
+ * Fix: ignore unknown BGP-LS SID
+   reported by: MosesN
+ * Fix: badly deciding when to send or not AddPath from parsing the Capability
+   reported by: ivan-balan
+
+Version 4.0.10
+ * Feature: Add decoding for Mac Mobility
+
+Version 4.0.9
+ * Change: re-enabled multiple source/destination in flow
+ * Fix: forward port of #845, send state down messages on peer removal
+   orginal patch: Andre Kampert
+ * Feature: add != test of flows
+   patch by: dhammika
+ * Fix: Read pipename from env file rather than using default 
+   patch by: Craig Milne
+ * Fix: using teardown could crash exabgp
+   patch by: Matthias Wichtlhuber
+ * Fix: use of label and rd with announce attributes
+
 Version 4.0.8
  * Fix: PEP-0479
 

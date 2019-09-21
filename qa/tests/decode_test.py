@@ -318,6 +318,7 @@ class FakeNeighbor (object):
 	asn4 = False
 	add_path = 0
 	extended_message = False
+	nexthop = None
 
 	# capability
 	route_refresh = False

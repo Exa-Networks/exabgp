@@ -27,6 +27,8 @@ from exabgp.reactor.network.error import BindingError
 from exabgp.reactor.network.error import AcceptError
 from exabgp.reactor.network.incoming import Incoming
 
+from exabgp.bgp.message.open.routerid import RouterID
+
 from exabgp.logger import Logger
 
 
@@ -207,8 +209,10 @@ class Listener (object):
 				new_neighbor.generated = True
 				new_neighbor.local_address = IP.create(connection.peer)
 				new_neighbor.peer_address = IP.create(connection.local)
+				if not new_neighbor.router_id:
+					new_neighbor.router_id = RouterID.create(connection.peer)
 
-				new_peer = Peer(new_neighbor,self)
+				new_peer = Peer(new_neighbor,reactor)
 				denied = new_peer.handle_connection(connection)
 				if denied:
 					self.logger.debug('refused connection from %s due to the state machine' % connection.name(),'network')

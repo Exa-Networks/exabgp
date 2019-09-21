@@ -9,6 +9,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 import json
 from struct import unpack
 from exabgp.vendoring import six
+from exabgp.util import hexstring
 
 from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.notification import Notify
@@ -29,13 +30,14 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 class SrPrefix(object):
 	TLV = 1158
 
-	def __init__ (self, flags, sids, sr_algo):
+	def __init__ (self, flags, sids, sr_algo,undecoded=[]):
 		self.flags = flags
 		self.sids = sids
 		self.sr_algo = sr_algo
+		self.undecoded = undecoded
 
 	def __repr__ (self):
-		return "prefix_flags: %s, sids: %s" % (self.flags, self.sids)
+		return "prefix_flags: %s, sids: %s, undecoded_sid: %s" % (self.flags, self.sids, self.undecoded)
 
 	@classmethod
 	def unpack (cls,data,length):
@@ -56,11 +58,13 @@ class SrPrefix(object):
 		# 	 advertised by this router using the encodings defined in
 		#  	 Section 3.1.  In this case V and L flags MUST be unset.
 		sids = []
+		raw = []
 		while data:
 			if flags.flags['V'] and flags.flags['L']:
 				b = BitArray(bytes=data[:3])
 				sid = b.unpack('uintbe:24')[0]
 				data = data[3:]
+				sids.append(sid)
 			elif (not flags.flags['V']) and \
 				(not flags.flags['L']):
 				if len(data) != 4:
@@ -69,10 +73,15 @@ class SrPrefix(object):
 					raise Notify(3,5, "SID/Label size doesn't match V and L flag state")
 				sid = unpack('!I', data[:4])[0]
 				data = data[4:]
-			sids.append(sid)
-		return cls(flags=flags, sids=sids, sr_algo=sr_algo)
+				sids.append(sid)
+			else:
+				raw.append(hexstring(data))
+				break
+
+		return cls(flags=flags, sids=sids, sr_algo=sr_algo,undecoded=raw)
 
 	def json (self,compact=None):
 		return ', '.join(['"sr-prefix-flags": {}'.format(self.flags.json()),
 			'"sids": {}'.format(json.dumps(self.sids)),
+			'"undecoded-sids": {}'.format(json.dumps(self.undecoded)),
 			'"sr-algorithm": {}'.format(json.dumps(self.sr_algo))])

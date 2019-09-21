@@ -2,10 +2,6 @@
 ExaBGP
 ======
 
-.. image:: https://img.shields.io/badge/chat-gitter-blue.svg
-   :target: https://gitter.im/Exa-Networks/exabgp
-   :alt: Gitter
-
 .. image:: https://img.shields.io/pypi/v/exabgp.svg
    :target: https://pypi.python.org/pypi/exabgp/
    :alt: Latest Version
@@ -14,11 +10,7 @@ ExaBGP
    :target: https://pypi.python.org/pypi/exabgp/
    :alt: Downloads
 
-.. image:: https://img.shields.io/pypi/v/exabgp.svg
-   :target: https://pypi.python.org/pypi/exabgp/
-   :alt: Latest Version
-
-.. image:: https://img.shields.io/scrutinizer/coverage/g/exa-networks/exabgp.svg
+.. image:: https://coveralls.io/repos/github/Exa-Networks/exabgp/badge.svg?branch=master
    :target: https://coveralls.io/r/Exa-Networks/exabgp
    :alt: Coverage
 
@@ -40,10 +32,11 @@ ExaBGP can also transform BGP messages into friendly plain text or JSON which ca
 Use cases include
 -----------------
 
-- sql backed `looking glass <https://code.google.com/p/gixlg/wiki/sample_maps>`_ with prefix routing visualisation
-- service `high availability <https://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html>`_ automatically isolating dead servers / broken services
-- `DDOS mitigation <http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf>`_ solutions
-- `anycasted <http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/>`_ services
+- `Artemis <https://github.com/FORTH-ICS-INSPIRE/artemis>`_ Real-Time Detection and Automatic Mitigation for BGP Prefix Hijacking
+- `GIXLG <https://code.google.com/p/gixlg/wiki/sample_maps>`_ An SQL backed  looking glass with with prefix routing visualisation
+- Service `high availability <https://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html>`_ automatically isolating dead servers / broken services
+- `DDOS mitigation <https://mum.mikrotik.com/presentations/EU16/presentation_2960_1456752556.pdf>`_ 
+- `Anycasted <https://vincent.bernat.ch/en/blog/2013-exabgp-highavailability>`_ services
 
 Installation
 ============
@@ -51,7 +44,7 @@ Installation
 Prerequisites
 -------------
 
-ExaBGP requires python 2.7 or 3.x. It has no external dependencies.
+ExaBGP requires python 3.6 or later. It includes/vendors its dependencies.
 
 Using pip
 ---------
@@ -75,9 +68,8 @@ Without installation
 Feedback and getting involved
 =============================
 
-- Gitter: https://gitter.im/Exa-Networks/exabgp
-- #exabgp: irc://irc.freenode.net:6667/exabgp
-- Google +: https://plus.google.com/u/0/communities/108249711110699351497
+- Slack: https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTZjNmZhOWY5MWU3NTlkMTc5MmZlZmI4ZDliY2RhMGIwMDNkMmIzMDE3NTgwNjkwYzNmMDMzM2QwZjdlZDkzYTg
+- #exabgp: irc://irc.freenode.net:6667/exabgp (unmonitored)
 - Twitter: https://twitter.com/#!/search/exabgp
 - Mailing list: http://groups.google.com/group/exabgp-users
 - Issue tracker: https://github.com/Exa-Networks/exabgp/issues

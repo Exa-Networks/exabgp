@@ -7,6 +7,7 @@ Copyright (c) 2013-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import re
 import base64
 import time
 import socket
@@ -126,14 +127,14 @@ def MD5 (io, ip, port, md5, md5_base64):
 				)
 	elif platform_os == 'Linux':
 		try:
+			md5_bytes = None
 			if md5:
-				md5_bytes = None
 				if md5_base64 is True:
 					try:
 						md5_bytes = base64.b64decode(md5)
 					except TypeError:
 						raise MD5Error("Failed to decode base 64 encoded PSK")
-				elif md5_base64 is None:  # auto
+				elif md5_base64 is None and not re.match('.*[^a-f0-9].*', md5):  # auto
 					options = [md5+'==', md5+'=', md5]
 					for md5 in options:
 						try:
@@ -162,15 +163,19 @@ def MD5 (io, ip, port, md5, md5_base64):
 				sockaddr = pack('HHI16sI%dx' % SS_MAXSIZE_PADDING, n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
 
 			TCP_MD5SIG_MAXKEYLEN = 80
-			if md5:
-				if md5_bytes is None:
-					md5_bytes = bytes_ascii(md5)
-					key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
-				else:
-					key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
+			TCP_MD5SIG = 14
 
-				TCP_MD5SIG = 14
+			if md5_bytes:
+				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
 				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+			elif md5:
+				md5_bytes = bytes_ascii(md5)
+				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
+				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+			# else:
+			# 	key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
+			# 	io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+
 		except socket.error as exc:
 			if exc.errno != errno.ENOENT:
 				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc))

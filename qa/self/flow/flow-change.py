@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import os
 import sys
 import time
@@ -17,10 +18,10 @@ while True:
 	try:
 		time.sleep(1)
 		if counter % 2:
-			print 'announce', flow
+			print('announce', flow)
 			sys.stdout.flush()
 		else:
-			print 'withdraw', flow
+			print('withdraw', flow)
 			sys.stdout.flush()
 
 		counter += 1

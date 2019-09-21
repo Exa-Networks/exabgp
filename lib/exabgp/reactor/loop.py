@@ -250,7 +250,10 @@ class Reactor (object):
 
 				# do not attempt to listen on closed sockets even if the peer is still here
 				for io in list(workers.keys()):
-					if io.fileno() == -1:
+					try:
+						if io.fileno() == -1:
+							del workers[io]
+					except socket.error:
 						del workers[io]
 
 				# give a turn to all the peers
@@ -315,7 +318,7 @@ class Reactor (object):
 			self.listener.stop()
 			self.listener = None
 		for key in self.peers.keys():
-			self.peers[key].stop()
+			self.peers[key].shutdown()
 		self.asynchronous.clear()
 		self.processes.terminate()
 		self.daemon.removepid()
@@ -330,7 +333,7 @@ class Reactor (object):
 		if not reloaded:
 			#
 			# Careful the string below is used but the QA code to check for sucess of failure
-			self.logger.error('problem with the configuration file, no change done','configuration')
+			self.logger.error('not reloaded, no change found in the configuration','configuration')
 			# Careful the string above is used but the QA code to check for sucess of failure
 			#
 			self.logger.error(str(self.configuration.error),'configuration')
@@ -339,7 +342,7 @@ class Reactor (object):
 		for key, peer in self.peers.items():
 			if key not in self.configuration.neighbors:
 				self.logger.debug('removing peer: %s' % peer.neighbor.name(),'reactor')
-				peer.stop()
+				peer.remove()
 
 		for key, neighbor in self.configuration.neighbors.items():
 			# new peer
@@ -372,7 +375,7 @@ class Reactor (object):
 			if key not in self.configuration.neighbors.keys():
 				neighbor = self.configuration.neighbors[key]
 				self.logger.debug('removing Peer %s' % neighbor.name(),'reactor')
-				self.peers[key].stop()
+				self.peers[key].remove()
 			else:
 				self.peers[key].reestablish()
 		self.processes.start(self.configuration.processes,True)

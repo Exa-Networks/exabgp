@@ -13,8 +13,6 @@ from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import match_neighbor
 from exabgp.reactor.api.command.limit import extract_neighbors
 
-from exabgp.reactor.api.response.answer import Answer
-
 
 def register_neighbor ():
 	pass
@@ -106,10 +104,10 @@ def teardown (self, reactor, service, line):
 		reactor.processes.answer_done(service)
 		return True
 	except ValueError:
-		reactor.processes.answer(service,Answer.error)
+		reactor.processes.answer_error(service)
 		return False
 	except IndexError:
-		reactor.processes.answer(service,Answer.error)
+		reactor.processes.answer_error(service)
 		return False
 
 
@@ -138,7 +136,7 @@ def show_neighbor (self, reactor, service, command):
 			if limit and limit not in neighbor_name:
 				continue
 			for line in str(neighbor).split('\n'):
-				reactor.processes.answer(service,line)
+				reactor.processes.write(service,line)
 				yield True
 		reactor.processes.answer_done(service)
 
@@ -150,12 +148,12 @@ def show_neighbor (self, reactor, service, command):
 			if limit and limit not in peer.neighbor.name():
 				continue
 			for line in Neighbor.extensive(peer.cli_data()).split('\n'):
-				reactor.processes.answer(service,line)
+				reactor.processes.write(service, line)
 				yield True
 		reactor.processes.answer_done(service)
 
 	def callback_summary ():
-		reactor.processes.answer(service,Neighbor.summary_header)
+		reactor.processes.write(service, Neighbor.summary_header)
 		for peer_name in reactor.peers.keys():
 			peer = reactor.peers.get(peer_name,None)
 			if not peer:
@@ -163,7 +161,7 @@ def show_neighbor (self, reactor, service, command):
 			if limit and limit != str(peer.neighbor.peer_address):
 				continue
 			for line in Neighbor.summary(peer.cli_data()).split('\n'):
-				reactor.processes.answer(service,line)
+				reactor.processes.write(service, line)
 				yield True
 		reactor.processes.answer_done(service)
 
@@ -179,6 +177,6 @@ def show_neighbor (self, reactor, service, command):
 		reactor.asynchronous.schedule(service, command, callback_configuration())
 		return True
 
-	reactor.processes.answer(service,'please specify summary, extensive or configuration')
-	reactor.processes.answer(service,'you can filter by peer ip address adding it after the word neighbor')
+	reactor.processes.write(service,'please specify summary, extensive or configuration')
+	reactor.processes.write(service,'you can filter by peer ip address adding it after the word neighbor')
 	reactor.processes.answer_done(service)

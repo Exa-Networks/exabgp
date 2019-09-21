@@ -98,7 +98,9 @@ class MPURNLRI (Attribute,Family):
 
 		while data:
 			nlri,data = NLRI.unpack_nlri(afi,safi,data,IN.WITHDRAWN,addpath)
-			nlris.append(nlri)
+			# allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
+			if nlri:
+				nlris.append(nlri)
 
 		return cls(afi,safi,nlris)
 

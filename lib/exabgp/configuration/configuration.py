@@ -27,6 +27,7 @@ from exabgp.configuration.neighbor.api import ParseSend
 from exabgp.configuration.neighbor.api import ParseReceive
 from exabgp.configuration.neighbor.family import ParseFamily
 from exabgp.configuration.neighbor.family import ParseAddPath
+from exabgp.configuration.neighbor.nexthop import ParseNextHop
 from exabgp.configuration.capability import ParseCapability
 from exabgp.configuration.announce import SectionAnnounce
 from exabgp.configuration.announce import AnnounceIPv4
@@ -122,13 +123,14 @@ class Configuration (_Configuration):
 		self.tokeniser = Tokeniser(self.scope,self.error,self.logger)
 
 		params = (self.tokeniser,self.scope,self.error,self.logger)
-		generic                  = Section               (*params)
+		self.section             = Section               (*params)
 		self.process             = ParseProcess          (*params)
 		self.template            = ParseTemplate         (*params)
 		self.template_neighbor   = ParseTemplateNeighbor (*params)
 		self.neighbor            = ParseNeighbor         (*params)
 		self.family              = ParseFamily           (*params)
 		self.addpath             = ParseAddPath          (*params)
+		self.nexthop             = ParseNextHop          (*params)
 		self.capability          = ParseCapability       (*params)
 		self.api                 = ParseAPI              (*params)
 		self.api_send            = ParseSend             (*params)
@@ -152,7 +154,7 @@ class Configuration (_Configuration):
 
 		self._structure = {
 			'root': {
-				'class':    generic,
+				'class':    self.section,
 				'commands': [],
 				'sections': {
 					'process': self.process.name,
@@ -179,6 +181,7 @@ class Configuration (_Configuration):
 					'family':      self.family.name,
 					'capability':  self.capability.name,
 					'add-path':    self.addpath.name,
+					'nexthop':     self.nexthop.name,
 					'api':         self.api.name,
 					'static':      self.static.name,
 					'flow':        self.flow.name,
@@ -194,6 +197,7 @@ class Configuration (_Configuration):
 					'family':      self.family.name,
 					'capability':  self.capability.name,
 					'add-path':    self.addpath.name,
+					'nexthop':     self.nexthop.name,
 					'api':         self.api.name,
 					'static':      self.static.name,
 					'flow':        self.flow.name,
@@ -211,6 +215,12 @@ class Configuration (_Configuration):
 			self.capability.name: {
 				'class':    self.capability,
 				'commands': self.capability.known.keys(),
+				'sections': {
+				},
+			},
+			self.nexthop.name: {
+				'class':    self.nexthop,
+				'commands': self.nexthop.known.keys(),
 				'sections': {
 				},
 			},
@@ -430,7 +440,7 @@ class Configuration (_Configuration):
 			if not self.tokeniser.set_file(fname):
 				return False
 
-		if self.section('root') is not True:
+		if self.parseSection('root') is not True:
 			# XXX: Should it be in neighbor ?
 			self.process.add_api()
 			self._rollback_reload()
@@ -477,7 +487,7 @@ class Configuration (_Configuration):
 		self._clear()
 		self.tokeniser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
 
-		if self.section(section) is not True:
+		if self.parseSection(section) is not True:
 			self._rollback_reload()
 			self.logger.debug(
 				"\n"
@@ -557,13 +567,16 @@ class Configuration (_Configuration):
 			return self.error.set('invalid syntax line %d' % self.tokeniser.index_line)
 		return False
 
-	def section (self, name):
+	def parseSection (self, name):
 		if name not in self._structure:
 			return self.error.set('option %s is not allowed here' % name)
 
 		return self.dispatch(name)
 
 	def run (self, name, command):
+		# restore 'anounce attribute' to provide backward 3.4 compatibility
+		if name == 'static' and command == 'attribute':
+			command = 'attributes'
 		if command not in self._structure[name]['commands']:
 			return self.error.set('invalid keyword "%s"' % command)
 

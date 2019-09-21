@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 import signal
 
@@ -19,7 +20,7 @@ while True:
 		sys.stderr.write('received %s\n' % line.strip())
 		sys.stderr.flush()
 	except TimeError:
-		print 'announce route-refresh ipv4 unicast'
+		print('announce route-refresh ipv4 unicast')
 		sys.stdout.flush()
-		print >> sys.stderr, 'announce route-refresh ipv4 unicast'
+		print('announce route-refresh ipv4 unicast', file=sys.stderr)
 		sys.stderr.flush()

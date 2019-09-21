@@ -130,7 +130,11 @@ class Peer (object):
 			'complete': 0,
 		}
 		if self.proto:
-			self.proto.close(u"peer reset, message [{0}] error[{1}]".format(message, error))
+			try:
+				message = u"peer reset, message [{0}] error[{1}]".format(message, error)
+			except UnicodeDecodeError as msg_err:
+				message = u"peer reset, message [{0}] error[{1}]".format(message, msg_err)
+			self.proto.close(message)
 		self._delay.increase()
 
 		self.proto = None
@@ -149,9 +153,10 @@ class Peer (object):
 			self._neighbor = None
 
 	def _stop (self, message):
-		self.generator = False
-		self.proto.close('stop, message [%s]' % message)
-		self.proto = None
+		self.generator = None
+		if self.proto:
+			self.proto.close('stop, message [%s]' % message)
+			self.proto = None
 
 	# logging
 
@@ -172,6 +177,14 @@ class Peer (object):
 			'reset':    time.time(),
 		}
 		self.neighbor.rib.uncache()
+
+	def remove (self):
+		self._stop("removed")
+		self.stop()
+
+	def shutdown (self):
+		self._stop("shutting down")
+		self.stop()
 
 	def resend (self):
 		self._resend_routes = SEND.NORMAL
@@ -688,7 +701,7 @@ class Peer (object):
 		for family in self.neighbor.families():
 			if have_open:
 				common = True if family in self.proto.negotiated.families else False
-				addpath = self.proto.negotiated.addpath.receive(*family) and self.proto.negotiated.addpath.receive(*family)
+				addpath = self.proto.negotiated.addpath.send(*family) and self.proto.negotiated.addpath.receive(*family)
 			else:
 				common = None
 				addpath = None if family in self.neighbor.addpaths() else False

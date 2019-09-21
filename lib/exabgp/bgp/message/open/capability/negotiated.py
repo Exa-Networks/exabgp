@@ -30,6 +30,7 @@ class Negotiated (object):
 		self.local_as = ASN(0)
 		self.peer_as = ASN(0)
 		self.families = []
+		self.nexthop = []
 		self.asn4 = False
 		self.addpath = RequirePath()
 		self.multisession = False
@@ -55,7 +56,7 @@ class Negotiated (object):
 
 		self.holdtime = HoldTime(min(self.sent_open.hold_time,self.received_open.hold_time))
 
-		self.addpath.setup(self.sent_open,self.received_open)
+		self.addpath.setup(self.received_open, self.sent_open)
 		self.asn4 = sent_capa.announced(Capability.CODE.FOUR_BYTES_ASN) and recv_capa.announced(Capability.CODE.FOUR_BYTES_ASN)
 		self.operational = sent_capa.announced(Capability.CODE.OPERATIONAL) and recv_capa.announced(Capability.CODE.OPERATIONAL)
 
@@ -71,6 +72,14 @@ class Negotiated (object):
 			for family in recv_capa[Capability.CODE.MULTIPROTOCOL]:
 				if family in sent_capa[Capability.CODE.MULTIPROTOCOL]:
 					self.families.append(family)
+
+		self.nexthop = []
+		if \
+			recv_capa.announced(Capability.CODE.NEXTHOP) and \
+			sent_capa.announced(Capability.CODE.NEXTHOP):
+			for family in recv_capa[Capability.CODE.NEXTHOP]:
+				if family in sent_capa[Capability.CODE.NEXTHOP]:
+					self.nexthop.append(family)
 
 		if recv_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH):
 			self.refresh = REFRESH.ENHANCED  # pylint: disable=E1101
@@ -115,7 +124,7 @@ class Negotiated (object):
 		# 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
 	def validate (self, neighbor):
-		if self.peer_as != neighbor.peer_as:
+		if neighbor.peer_as is not None and self.peer_as != neighbor.peer_as:
 			return (2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn,neighbor.peer_as))
 
 		# RFC 6286 : https://tools.ietf.org/html/rfc6286
@@ -155,9 +164,10 @@ class Negotiated (object):
 
 
 class RequirePath (object):
-	REFUSE = 0
-	ACCEPT = 1
-	ANNOUNCE = 2
+	CANT    = 0b00
+	RECEIVE = 0b01
+	SEND    = 0b10
+	BOTH    = SEND | RECEIVE
 
 	def __init__ (self):
 		self._send = {}
@@ -178,8 +188,8 @@ class RequirePath (object):
 		union.extend([k for k in receive.keys() if k not in send.keys()])
 
 		for k in union:
-			self._send[k] = bool(receive.get(k,self.REFUSE) & self.ANNOUNCE and send.get(k,self.REFUSE) & self.ACCEPT)
-			self._receive[k] = bool(receive.get(k,self.REFUSE) & self.ACCEPT and send.get(k,self.REFUSE) & self.ANNOUNCE)
+			self._send[k] = bool(send.get(k,self.CANT) & self.SEND and receive.get(k,self.CANT) & self.RECEIVE)
+			self._receive[k] = bool(send.get(k,self.CANT) & self.RECEIVE and receive.get(k,self.CANT) & self.SEND)
 
 	def send (self, afi, safi):
 		return self._send.get((afi,safi),False)

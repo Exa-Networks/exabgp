@@ -27,7 +27,7 @@ class _CapabilityCode (int):
 	ROUTE_REFRESH            = 0x02  # [RFC2918]
 	OUTBOUND_ROUTE_FILTERING = 0x03  # [RFC5291]
 	MULTIPLE_ROUTES          = 0x04  # [RFC3107]
-	EXTENDED_NEXT_HOP        = 0x05  # [RFC5549]
+	NEXTHOP                  = 0x05  # [RFC5549]
 	EXTENDED_MESSAGE         = 0x06  # https://tools.ietf.org/html/draft-ietf-idr-bgp-extended-messages-24
 
 	# 6-63      Unassigned
@@ -55,7 +55,7 @@ class _CapabilityCode (int):
 		ROUTE_REFRESH:             'route-refresh',
 		OUTBOUND_ROUTE_FILTERING:  'outbound-route-filtering',
 		MULTIPLE_ROUTES:           'multiple-routes',
-		EXTENDED_NEXT_HOP:         'extended-next-hop',
+		NEXTHOP:                   'nexthop',
 		EXTENDED_MESSAGE:          'extended-message',
 
 		GRACEFUL_RESTART:          'graceful-restart',
@@ -108,12 +108,13 @@ class Capability (object):
 		ROUTE_REFRESH            = _CapabilityCode(_CapabilityCode.ROUTE_REFRESH)
 		OUTBOUND_ROUTE_FILTERING = _CapabilityCode(_CapabilityCode.OUTBOUND_ROUTE_FILTERING)
 		MULTIPLE_ROUTES          = _CapabilityCode(_CapabilityCode.MULTIPLE_ROUTES)
-		EXTENDED_NEXT_HOP        = _CapabilityCode(_CapabilityCode.EXTENDED_NEXT_HOP)
+		NEXTHOP                  = _CapabilityCode(_CapabilityCode.NEXTHOP)
 		EXTENDED_MESSAGE         = _CapabilityCode(_CapabilityCode.EXTENDED_MESSAGE)
 		GRACEFUL_RESTART         = _CapabilityCode(_CapabilityCode.GRACEFUL_RESTART)
 		FOUR_BYTES_ASN           = _CapabilityCode(_CapabilityCode.FOUR_BYTES_ASN)
 		DYNAMIC_CAPABILITY       = _CapabilityCode(_CapabilityCode.DYNAMIC_CAPABILITY)
 		MULTISESSION             = _CapabilityCode(_CapabilityCode.MULTISESSION)
+		NEXTHOP                  = _CapabilityCode(_CapabilityCode.NEXTHOP)
 		ADD_PATH                 = _CapabilityCode(_CapabilityCode.ADD_PATH)
 		ENHANCED_ROUTE_REFRESH   = _CapabilityCode(_CapabilityCode.ENHANCED_ROUTE_REFRESH)
 		ROUTE_REFRESH_CISCO      = _CapabilityCode(_CapabilityCode.ROUTE_REFRESH_CISCO)

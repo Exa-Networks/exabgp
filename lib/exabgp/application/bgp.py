@@ -47,7 +47,7 @@ def __exit (memory, code):
 	sys.exit(code)
 
 
-def named_pipe (root):
+def named_pipe (root, pipename='exabgp'):
 	locations = [
 		'/run/exabgp/',
 		'/run/%d/' % os.getuid(),
@@ -63,8 +63,8 @@ def named_pipe (root):
 		root + '/var/run/',
 	]
 	for location in locations:
-		cli_in = location + 'exabgp.in'
-		cli_out = location + 'exabgp.out'
+		cli_in = location + pipename + '.in'
+		cli_out = location + pipename + '.out'
 
 		try:
 			if not stat.S_ISFIFO(os.stat(cli_in).st_mode):
@@ -344,25 +344,27 @@ def run (env, comment, configurations, root, validate, pid=0):
 		logger.warning(warning,'advice')
 
 	if env.api.cli:
-		pipes = named_pipe(root)
+		pipename = 'exabgp' if env.api.pipename is None else env.api.pipename
+		pipes = named_pipe(root, pipename)
 		if len(pipes) != 1:
 			env.api.cli = False
-			logger.error('could not find the named pipes (exabgp.in and exabgp.out) required for the cli','cli')
+			logger.error('could not find the named pipes (%s.in and %s.out) required for the cli' % (pipename,pipename),'cli')
 			logger.error('we scanned the following folders (the number is your PID):','cli')
 			for location in pipes:
 				logger.error(' - %s' % location,'cli control')
 			logger.error('please make them in one of the folder with the following commands:','cli control')
-			logger.error('> mkfifo %s/run/exabgp.{in,out}' % os.getcwd(),'cli control')
-			logger.error('> chmod 600 %s/run/exabgp.{in,out}' % os.getcwd(),'cli control')
+			logger.error('> mkfifo %s/run/%s.{in,out}' % (os.getcwd(),pipename),'cli control')
+			logger.error('> chmod 600 %s/run/%s.{in,out}' % (os.getcwd(),pipename) ,'cli control')
 			if os.getuid() != 0:
-				logger.error('> chown %d:%d %s/run/exabgp.{in,out}' % (os.getuid(),os.getgid(),os.getcwd()),'cli control')
+				logger.error('> chown %d:%d %s/run/%s.{in,out}' % (os.getuid(),os.getgid(),os.getcwd(),pipename),'cli control')
 		else:
 			pipe = pipes[0]
 			os.environ['exabgp_cli_pipe'] = pipe
+			os.environ['exabgp_api_pipename'] = pipename
 
 			logger.info('named pipes for the cli are:','cli control')
-			logger.info('to send commands  %sexabgp.in' % pipe,'cli control')
-			logger.info('to read responses %sexabgp.out' % pipe,'cli control')
+			logger.info('to send commands  %s%s.in' % (pipe,pipename),'cli control')
+			logger.info('to read responses %s%s.out' % (pipe,pipename),'cli control')
 
 	if not env.profile.enable:
 		exit_code = Reactor(configurations).run(validate,root)

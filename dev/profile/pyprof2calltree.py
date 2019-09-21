@@ -27,6 +27,7 @@
 This script can either take raw cProfile.Profile.getstats() log entries or
 take a previously recorded instance of the pstats.Stats class.
 """
+from __future__ import print_function
 
 import cProfile
 import pstats
@@ -34,6 +35,8 @@ import optparse
 import os
 import sys
 import tempfile
+
+from exabgp.vendoring import six
 
 __all__ = ['convert', 'visualize', 'CalltreeConverter']
 
@@ -88,7 +91,7 @@ class CalltreeConverter(object):
     kcachegrind_command = "kcachegrind %s"
 
     def __init__(self, profiling_data):
-        if isinstance(profiling_data, basestring):
+        if isinstance(profiling_data, six.string_types):
             # treat profiling_data as a filename of pstats serialized data
             self.entries = pstats2entries(pstats.Stats(profiling_data))
         elif isinstance(profiling_data, pstats.Stats):
@@ -102,7 +105,7 @@ class CalltreeConverter(object):
     def output(self, out_file):
         """Write the converted entries to out_file"""
         self.out_file = out_file
-        print >> out_file, 'events: Ticks'
+        print('events: Ticks', file=out_file)
         self._print_summary()
         for entry in self.entries:
             self._entry(entry)
@@ -115,7 +118,7 @@ class CalltreeConverter(object):
 
         if self.out_file is None:
             _, outfile = tempfile.mkstemp(".log", "pyprof2calltree")
-            f = file(outfile, "wb")
+            f = open(outfile, "wb")
             self.output(f)
             use_temp_file = True
         else:
@@ -135,7 +138,7 @@ class CalltreeConverter(object):
         for entry in self.entries:
             totaltime = int(entry.totaltime * 1000)
             max_cost = max(max_cost, totaltime)
-        print >> self.out_file, 'summary: %d' % (max_cost,)
+        print('summary: %d' % (max_cost,), file=self.out_file)
 
     def _entry(self, entry):
         out_file = self.out_file
@@ -144,15 +147,15 @@ class CalltreeConverter(object):
         #print >> out_file, 'ob=%s' % (code.co_filename,)
 
         co_filename, co_firstlineno, co_name = cProfile.label(code)
-        print >> out_file, 'fi=%s' % (co_filename,)
-        print >> out_file, 'fn=%s %s:%d' % (
-            co_name, co_filename, co_firstlineno)
+        print('fi=%s' % (co_filename,), file=out_file)
+        print('fn=%s %s:%d' % (
+            co_name, co_filename, co_firstlineno), file=out_file)
 
         inlinetime = int(entry.inlinetime * 1000)
         if isinstance(code, str):
-            print >> out_file, '0 ', inlinetime
+            print('0 ', inlinetime, file=out_file)
         else:
-            print >> out_file, '%d %d' % (code.co_firstlineno, inlinetime)
+            print('%d %d' % (code.co_firstlineno, inlinetime), file=out_file)
 
         # recursive calls are counted in entry.calls
         if entry.calls:
@@ -167,20 +170,20 @@ class CalltreeConverter(object):
 
         for subentry, call_info in calls:
             self._subentry(lineno, subentry, call_info)
-        print >> out_file
+        print(file=out_file)
 
     def _subentry(self, lineno, subentry, call_info):
         out_file = self.out_file
         code = subentry.code
         #print >> out_file, 'cob=%s' % (code.co_filename,)
         co_filename, co_firstlineno, co_name = cProfile.label(code)
-        print >> out_file, 'cfn=%s %s:%d' % (
-            co_name, co_filename, co_firstlineno)
-        print >> out_file, 'cfi=%s' % (co_filename,)
-        print >> out_file, 'calls=%d %d' % (call_info[0], co_firstlineno)
+        print('cfn=%s %s:%d' % (
+            co_name, co_filename, co_firstlineno), file=out_file)
+        print('cfi=%s' % (co_filename,), file=out_file)
+        print('calls=%d %d' % (call_info[0], co_firstlineno), file=out_file)
 
         totaltime = int(call_info[3] * 1000)
-        print >> out_file, '%d %d' % (lineno, totaltime)
+        print('%d %d' % (lineno, totaltime), file=out_file)
 
 def main():
     """Execute the converter using parameters provided on the command line"""
@@ -238,11 +241,11 @@ def main():
     if options.outfile is not None or not options.kcachegrind:
         # user either explicitely required output file or requested by not
         # explicitely asking to launch kcachegrind
-        print "writing converted data to: " + outfile
-        kg.output(file(outfile, 'wb'))
+        print("writing converted data to: " + outfile)
+        kg.output(open(outfile, 'wb'))
 
     if options.kcachegrind:
-        print "launching kcachegrind"
+        print("launching kcachegrind")
         kg.visualize()
 
 
@@ -266,12 +269,12 @@ def convert(profiling_data, outputfile):
         - the result of a call to cProfile.Profile.getstats()
 
     `outputfile` can either be:
-        - a file() instance open in write mode
+        - a file instance open in write mode
         - a filename
     """
     converter = CalltreeConverter(profiling_data)
-    if isinstance(outputfile, basestring):
-        f = file(outputfile, "wb")
+    if isinstance(outputfile, six.string_types):
+        f = open(outputfile, "wb")
         try:
             converter.output(f)
         finally:

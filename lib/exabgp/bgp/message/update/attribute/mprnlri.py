@@ -108,6 +108,7 @@ class MPRNLRI (Attribute,Family):
 		_afi,_safi = unpack('!HB',data[:3])
 		afi,safi = AFI.create(_afi),SAFI.create(_safi)
 		offset = 3
+		nh_afi = afi
 
 		# we do not want to accept unknown families
 		if negotiated and (afi,safi) not in negotiated.families:
@@ -120,7 +121,16 @@ class MPRNLRI (Attribute,Family):
 		if (afi,safi) not in Family.size:
 			raise Notify(3,0,'unsupported %s %s' % (afi,safi))
 
-		length,rd = Family.size[(afi,safi)]
+		length, rd = Family.size[(afi, safi)]
+
+		if negotiated.nexthop:
+			if len_nh in (16, 32):
+				nh_afi = AFI.ipv6
+			elif len_nh in (4,):
+				nh_afi = AFI.ipv4
+			else:
+				raise Notify(3,0,'unsupported family %s %s with extended next-hop capability enabled' % (afi, safi))
+			length, _ = Family.size[(nh_afi, safi)]
 
 		if len_nh not in length:
 			raise Notify(3,0,'invalid %s %s next-hop length %d expected %s' % (afi,safi,len_nh,' or '.join(str(_) for _ in length)))
@@ -157,11 +167,15 @@ class MPRNLRI (Attribute,Family):
 			if nexthops:
 				for nexthop in nexthops:
 					nlri,left = NLRI.unpack_nlri(afi,safi,data,IN.ANNOUNCED,addpath)
-					nlri.nexthop = NextHop.unpack(nexthop)
-					nlris.append(nlri)
+					# allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
+					if nlri:
+						nlri.nexthop = NextHop.unpack(nexthop)
+						nlris.append(nlri)
 			else:
 				nlri,left = NLRI.unpack_nlri(afi,safi,data,IN.ANNOUNCED,addpath)
-				nlris.append(nlri)
+				# allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
+				if nlri:
+					nlris.append(nlri)
 
 			if left == data:
 				raise RuntimeError("sub-calls should consume data")
