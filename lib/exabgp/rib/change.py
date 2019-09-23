@@ -22,7 +22,7 @@ class Change (object):
 
 	@staticmethod
 	def family_prefix (family):
-		return '%02x%02x' % family
+		return b'%02x%02x' % family
 
 	def __init__ (self, nlri, attributes):
 		self.nlri = nlri
@@ -34,7 +34,7 @@ class Change (object):
 
 	def index (self):
 		if not self.__index:
-			self.__index = '%02x%02x' % self.nlri.family() + self.nlri.index()
+			self.__index = b'%02x%02x' % self.nlri.family() + self.nlri.index()
 		return self.__index
 
 	def __eq__ (self, other):
