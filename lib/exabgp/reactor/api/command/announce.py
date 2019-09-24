@@ -397,15 +397,16 @@ def announce_eor (self, reactor, service, command):
 @Command.register('text','announce route-refresh')
 def announce_refresh (self, reactor, service, command):
 	def callback (self, command, peers):
-		refresh = self.api_refresh(command)
-		if not refresh:
+		refreshes = self.api_refresh(command)
+		if not refreshes:
 			self.log_failure("Command could not parse route-refresh command : %s" % command)
 			reactor.processes.answer_error(service)
 			yield True
 			return
 
-		reactor.configuration.inject_refresh(peers,refresh)
-		self.log_message("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',refresh.extensive()))
+		reactor.configuration.inject_refresh(peers,refreshes)
+		for refresh in refreshes:
+			self.log_message("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',refresh.extensive()))
 
 		yield False
 		reactor.processes.answer_done(service)

@@ -97,15 +97,16 @@ class _Configuration (object):
 					result = False
 		return result
 
-	def inject_refresh (self, peers, refresh):
+	def inject_refresh (self, peers, refreshes):
 		result = True
 		for neighbor in self.neighbors:
 			if neighbor in peers:
-				family = (refresh.afi,refresh.safi)
-				if family in self.neighbors[neighbor].families():
-					self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
-				else:
-					result = False
+				for refresh in refreshes:
+					family = (refresh.afi,refresh.safi)
+					if family in self.neighbors[neighbor].families():
+						self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
+					else:
+						result = False
 		return result
 
 
