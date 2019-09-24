@@ -50,7 +50,7 @@ class API (Command):
 		action, line = command.split(' ',1)
 
 		self.configuration.static.clear()
-		if not self.configuration.partial('static',line):
+		if not self.configuration.partial('static',line,action):
 			return []
 
 		if self.configuration.scope.location():

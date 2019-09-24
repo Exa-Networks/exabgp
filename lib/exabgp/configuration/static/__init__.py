@@ -10,6 +10,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.configuration.static.route import ParseStaticRoute
 from exabgp.configuration.static.parser import prefix
 
+from exabgp.configuration.announce.path import AnnouncePath
+from exabgp.configuration.announce.label import AnnounceLabel
+from exabgp.configuration.announce.vpn import AnnounceVPN
+
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import SAFI
 
@@ -49,14 +53,19 @@ class ParseStatic (ParseStaticRoute):
 
 @ParseStatic.register('route','append-route')
 def route (tokeniser):
+	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 	ipmask = prefix(tokeniser)
+	check = lambda change,afi: True
 
 	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-		nlri = IPVPN(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
+		nlri = IPVPN(IP.toafi(ipmask.top()),SAFI.mpls_vpn,action)
+		check = AnnounceVPN.check
 	elif 'label' in tokeniser.tokens:
-		nlri = Label(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
+		nlri = Label(IP.toafi(ipmask.top()),SAFI.nlri_mpls,action)
+		check = AnnounceLabel.check
 	else:
-		nlri = INET(IP.toafi(ipmask.top()),IP.tosafi(ipmask.top()),OUT.ANNOUNCE)
+		nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
+		check = AnnouncePath.check
 
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
@@ -90,21 +99,25 @@ def route (tokeniser):
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:
-			raise ValueError('route: unknown command "%s"' % command)
+			raise ValueError('unknown command "%s"' % command)
+
+	if not check(change,nlri.afi):
+		raise ValueError('invalid route (missing next-hop, label or rd ?)')
 
 	return list(ParseStatic.split(change))
 
 
 @ParseStatic.register('attributes','append-route')
 def attributes (tokeniser):
+	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 	ipmask = prefix(lambda: tokeniser.tokens[-1])
 
 	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-		nlri = IPVPN(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
+		nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
 	elif 'label' in tokeniser.tokens:
-		nlri = Label(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
+		nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)
 	else:
-		nlri = INET(IP.toafi(ipmask.top()),IP.tosafi(ipmask.top()),OUT.ANNOUNCE)
+		nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
 
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 	attr = Attributes()
@@ -140,7 +153,7 @@ def attributes (tokeniser):
 			nlri.nexthop = nexthop
 			attr.add(attribute)
 		else:
-			raise ValueError('route: unknown command "%s"' % command)
+			raise ValueError('unknown command "%s"' % command)
 
 	changes = []
 	while True:

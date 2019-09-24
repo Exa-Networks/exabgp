@@ -18,6 +18,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri import IPVPN
 from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
@@ -58,25 +59,24 @@ class AnnounceVPN (ParseAnnounce):
 	def clear (self):
 		return True
 
-	def _check (self):
-		if not self.check(self.scope.get(self.name),self.afi):
-			return self.error.set(self.syntax)
-		return True
-
 	@staticmethod
 	def check (change,afi):
-		if change.nlri.nexthop is NoNextHop \
-			and change.nlri.action == OUT.ANNOUNCE \
-			and change.nlri.afi == afi \
-			and change.nlri.safi in (SAFI.unicast,SAFI.multicast):
+		if not AnnounceLabel.check(change,afi):
 			return False
+
+		if change.nlri.action == OUT.ANNOUNCE \
+			and change.nlri.has_rd() \
+			and change.nlri.rd is RouteDistinguisher.NORD:
+			return False
+
 		return True
 
 
 def ip_vpn (tokeniser,afi,safi):
+	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 	ipmask = prefix(tokeniser)
 
-	nlri = IPVPN(afi,safi,OUT.ANNOUNCE)
+	nlri = IPVPN(afi, safi, action)
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
 	change = Change(
@@ -101,7 +101,10 @@ def ip_vpn (tokeniser,afi,safi):
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:
-			raise ValueError('route: unknown command "%s"' % command)
+			raise ValueError('unknown command "%s"' % command)
+
+	if not AnnounceVPN.check(change,afi):
+		raise ValueError('invalid announcement (missing next-hop, label or rd ?)')
 
 	return [change]
 

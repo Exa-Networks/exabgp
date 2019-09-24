@@ -28,6 +28,9 @@ def pack_int (afi, integer):
 
 
 class ParseAnnounce (Section):
+	syntax = ''
+	afi = None
+
 	def post (self):
 		self._split()
 		routes = self.scope.pop(self.name)
@@ -86,6 +89,15 @@ class ParseAnnounce (Section):
 		for route in self.scope.pop_routes():
 			for splat in self.split(route):
 				self.scope.append_route(splat)
+
+	def _check(self):
+		if not self.check(self.scope.get(self.name), self.afi):
+			return self.error.set(self.syntax)
+		return True
+
+	@staticmethod
+	def check (change,afi):
+		raise RuntimeError('need to be implemented by subclasses')
 
 
 class SectionAnnounce (ParseAnnounce):

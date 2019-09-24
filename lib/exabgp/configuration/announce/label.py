@@ -17,6 +17,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.label import Label
+from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute import Attributes
 
@@ -27,7 +28,7 @@ from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import label
 
 
-class AnnounceLabel (ParseAnnounce):
+class AnnounceLabel (AnnouncePath):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'label <15 bits number>',
@@ -53,30 +54,29 @@ class AnnounceLabel (ParseAnnounce):
 	afi = None
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		ParseAnnounce.__init__(self,tokeniser,scope,error,logger)
+		AnnouncePath.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		return True
 
-	def _check (self):
-		if not self.check(self.scope.get(self.name),self.afi):
-			return self.error.set(self.syntax)
-		return True
-
 	@staticmethod
 	def check (change,afi):
-		if change.nlri.nexthop is NoNextHop \
-			and change.nlri.action == OUT.ANNOUNCE \
-			and change.nlri.afi == afi \
-			and change.nlri.safi in (SAFI.unicast,SAFI.multicast):
+		if not AnnouncePath.check(change,afi):
 			return False
+
+		if change.nlri.action == OUT.ANNOUNCE \
+			and change.nlri.has_label() \
+			and change.nlri.labels is Labels.NOLABEL:
+			return False
+
 		return True
 
 
 def ip_label (tokeniser,afi,safi):
+	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 	ipmask = prefix(tokeniser)
 
-	nlri = Label(afi,safi,OUT.ANNOUNCE)
+	nlri = Label(afi, safi, action)
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
 	change = Change(
@@ -101,7 +101,10 @@ def ip_label (tokeniser,afi,safi):
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:
-			raise ValueError('route: unknown command "%s"' % command)
+			raise ValueError('unknown command "%s"' % command)
+
+	if not AnnounceLabel.check(change,afi):
+		raise ValueError('invalid announcement (missing next-hop or label ?)')
 
 	return [change]
 

@@ -142,18 +142,12 @@ class AnnounceVPLS (ParseAnnounce):
 	def clear (self):
 		return True
 
-	def _check (self):
-		if not self.check(self.scope.get(self.name),self.afi):
-			return self.error.set(self.syntax)
-		return True
+	def post (self):
+		return self._check()
 
 	@staticmethod
 	def check (change,afi):
-		# if change.nlri.nexthop is NoNextHop \
-		# 	and change.nlri.action == OUT.ANNOUNCE \
-		# 	and change.nlri.afi == afi \
-		# 	and change.nlri.safi in (SAFI.unicast,SAFI.multicast):
-		# 	return False
+		# No check performed :-(
 		return True
 
 
