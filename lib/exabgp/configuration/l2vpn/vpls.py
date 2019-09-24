@@ -136,9 +136,7 @@ class ParseVPLS (Section):
 		return True
 
 	def post (self):
-		if not self._check():
-			return False
-		return True
+		return self._check()
 
 	def _check (self):
 		feedback = self.scope.get_route().feedback()

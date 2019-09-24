@@ -94,6 +94,8 @@ def next_hop (tokeniser):
 		ip = IP.create(value)
 		return ip,NextHop(ip.top())
 
+# XXX: using OUT.UNSET should we use the following ?
+# action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 
 def inet (tokeniser):
 	ipmask = prefix(tokeniser)
@@ -109,6 +111,8 @@ def inet (tokeniser):
 		Attributes()
 	)
 
+# XXX: using OUT.ANNOUNCE should we use the following ?
+# action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 
 def mpls (tokeniser):
 	ipmask = prefix(tokeniser)

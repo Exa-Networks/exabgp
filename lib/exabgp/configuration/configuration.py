@@ -482,10 +482,11 @@ class Configuration (_Configuration):
 						if api[key]:
 							self.processes[process].setdefault(key,[]).append(neighbor.router_id)
 
-	def partial (self, section, text):
+	def partial (self, section, text, action='announce'):
 		self._cleanup()  # this perform a big cleanup (may be able to be smarter)
 		self._clear()
 		self.tokeniser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
+		self.tokeniser.set_action(action)
 
 		if self.parseSection(section) is not True:
 			self._rollback_reload()

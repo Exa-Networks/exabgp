@@ -119,7 +119,6 @@ class AnnounceIP (ParseAnnounce):
 	}
 
 	name = 'ip'
-	afi = None
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		ParseAnnounce.__init__(self,tokeniser,scope,error,logger)
@@ -131,27 +130,24 @@ class AnnounceIP (ParseAnnounce):
 		return True
 
 	def post (self):
-		return True
-
-	def _check (self):
-		if not self.check(self.scope.get(self.name),self.afi):
-			return self.error.set(self.syntax)
-		return True
+		return self._check()
 
 	@staticmethod
 	def check (change,afi):
-		if change.nlri.nexthop is NoNextHop \
-			and change.nlri.action == OUT.ANNOUNCE \
+		if change.nlri.action == OUT.ANNOUNCE \
+			and change.nlri.nexthop is NoNextHop \
 			and change.nlri.afi == afi \
 			and change.nlri.safi in (SAFI.unicast,SAFI.multicast):
 			return False
+
 		return True
 
 
 def ip (tokeniser,afi,safi):
+	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 	ipmask = prefix(tokeniser)
 
-	nlri = INET(afi,safi,OUT.ANNOUNCE)
+	nlri = INET(afi, safi, action)
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
 	change = Change(
@@ -176,15 +172,19 @@ def ip (tokeniser,afi,safi):
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:
-			raise ValueError('route: unknown command "%s"' % command)
+			raise ValueError('unknown command "%s"' % command)
+
+	if not AnnounceIP.check(change,afi):
+		raise ValueError('invalid announcement (missing next-hop ?)')
 
 	return [change]
 
 
 def ip_multicast (tokeniser,afi,safi):
+	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 	ipmask = prefix(tokeniser)
 
-	nlri = INET(afi,safi,OUT.ANNOUNCE)
+	nlri = INET(afi,safi,action)
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
 	change = Change(
@@ -209,7 +209,7 @@ def ip_multicast (tokeniser,afi,safi):
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:
-			raise ValueError('route: unknown command "%s"' % command)
+			raise ValueError('unknown command "%s"' % command)
 
 	return [change]
 

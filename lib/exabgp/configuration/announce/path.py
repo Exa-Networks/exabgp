@@ -27,7 +27,7 @@ from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.parser import path_information
 
 
-class AnnouncePath (ParseAnnounce):
+class AnnouncePath (AnnounceIP):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'label <15 bits number>',
@@ -53,30 +53,24 @@ class AnnouncePath (ParseAnnounce):
 	afi = None
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		ParseAnnounce.__init__(self,tokeniser,scope,error,logger)
+		AnnounceIP.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		return True
 
-	def _check (self):
-		if not self.check(self.scope.get(self.name),self.afi):
-			return self.error.set(self.syntax)
-		return True
-
 	@staticmethod
 	def check (change,afi):
-		if change.nlri.nexthop is NoNextHop \
-			and change.nlri.action == OUT.ANNOUNCE \
-			and change.nlri.afi == afi \
-			and change.nlri.safi in (SAFI.unicast,SAFI.multicast):
+		if not AnnounceIP.check(change,afi):
 			return False
+
 		return True
 
 
 def ip_unicast (tokeniser,afi,safi):
+	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 	ipmask = prefix(tokeniser)
 
-	nlri = INET(afi,safi,OUT.ANNOUNCE)
+	nlri = INET(afi, safi, action)
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
 	change = Change(
@@ -101,7 +95,10 @@ def ip_unicast (tokeniser,afi,safi):
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:
-			raise ValueError('route: unknown command "%s"' % command)
+			raise ValueError('unknown command "%s"' % command)
+
+	if not AnnouncePath.check(change,afi):
+		raise ValueError('invalid announcement (missing next-hop ?)')
 
 	return [change]
 
