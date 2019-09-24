@@ -130,7 +130,7 @@ class AnnounceIP (ParseAnnounce):
 		return True
 
 	def post (self):
-		return self._check()
+		return ParseAnnounce.post() and self._check()
 
 	@staticmethod
 	def check (change,afi):
