@@ -10,6 +10,8 @@ Version 4.1.3:
  * Fix: label is mandatory when using RD, force it, and perform better checks on the configuration
  * Fix: sending route-refresh message via the API was broken
    reported by: Konrad Zemek
+ * Fix: make sure exabgpcli does not hang when exabgp.api.ack is set to False
+   patch by: basyron
  * CHANGE: large change to the configuration code (should not have any effect but the devil is in the details)
 
 Version 4.1.2
