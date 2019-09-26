@@ -255,6 +255,7 @@ def main ():
 	waited = 0.0
 	buf = b''
 	done = False
+	done_time_diff = 0.5
 	while not done:
 		try:
 			r, _, _ = select.select([reader], [], [], 0.01)
@@ -318,6 +319,13 @@ def main ():
 				break
 			sys.stdout.write('%s\n' % string)
 			sys.stdout.flush()
+
+		if not env.get('api').get('ack') and not raw.decode():
+			this_moment = time.time()
+			recv_epoch_time = os.path.getmtime(recv)
+			time_diff = this_moment - recv_epoch_time
+			if time_diff >= done_time_diff:
+				done = True
 
 	try:
 		os.close(reader)
