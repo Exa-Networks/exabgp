@@ -37,7 +37,7 @@ from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirectASN4
 from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
-from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHop
+from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopSimpson
 
 from exabgp.bgp.message.update.attribute.community.extended import InterfaceSet
 
@@ -275,7 +275,7 @@ def redirect (tokeniser):
 	if data.count(':') == 1:
 		prefix,suffix = data.split(':',1)
 		if prefix.count('.'):
-			raise ValueError('this format has been deprecaded as it does not make sense and it is not supported by other vendors')
+			raise ValueError('this format has been deprecated as it does not make sense and it is not supported by other vendors')
 
 		asn = int(prefix)
 		route_target = int(suffix)
@@ -290,15 +290,15 @@ def redirect (tokeniser):
 			raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
 		return NoNextHop,ExtendedCommunities().add(TrafficRedirect(asn,route_target))
 	else:
-		return IP.create(data),ExtendedCommunities().add(TrafficNextHop(False))
+		return IP.create(data),ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
 
 def redirect_next_hop (tokeniser):
-	return ExtendedCommunities().add(TrafficNextHop(False))
+	return ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
 
 def copy (tokeniser):
-	return IP.create(tokeniser()),ExtendedCommunities().add(TrafficNextHop(True))
+	return IP.create(tokeniser()),ExtendedCommunities().add(TrafficNextHopSimpson(True))
 
 
 def mark (tokeniser):
