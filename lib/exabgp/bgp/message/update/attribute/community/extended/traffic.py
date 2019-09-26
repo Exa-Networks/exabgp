@@ -182,14 +182,13 @@ class TrafficMark (ExtendedCommunity):
 		dscp, = unpack('!B',data[7:8])
 		return TrafficMark(dscp,data[:8])
 
-
-# =============================================================== TrafficNextHop
+# =============================================================== TrafficNextHopSimpson
 # draft-simpson-idr-flowspec-redirect-02
 
 # XXX: FIXME: I guess this should be a subclass of NextHop or IP ..
 
 @ExtendedCommunity.register
-class TrafficNextHop (ExtendedCommunity):
+class TrafficNextHopSimpson (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x08
 	COMMUNITY_SUBTYPE = 0x00
 
@@ -212,7 +211,7 @@ class TrafficNextHop (ExtendedCommunity):
 	@staticmethod
 	def unpack (data):
 		bit, = unpack('!B',data[7:8])
-		return TrafficNextHop(bool(bit & 0x01),data[:8])
+		return TrafficNextHopSimpson(bool(bit & 0x01), data[:8])
 
 
 # ============================================================ TrafficRedirectIP
