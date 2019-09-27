@@ -11,9 +11,11 @@ from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IPv4
+from exabgp.protocol.ip import IPv6
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
 
 
 # ================================================================== TrafficRate
@@ -214,6 +216,38 @@ class TrafficNextHopIPv4IETF (ExtendedCommunity):
 	def unpack (data):
 		ip, bit = unpack('!4sH', data[2:8])
 		return TrafficNextHopIPv4IETF(IPv4.ntop(ip), bool(bit & 0x01), data[:8])
+
+# =============================================================== TrafficNextHopIPv6IETF
+# draft-ietf-idr-flowspec-redirect-02
+# see RFC 5701 for ipv6 address specific extended community format
+
+@ExtendedCommunity.register
+class TrafficNextHopIPv6IETF (ExtendedCommunityIPv6):
+	COMMUNITY_TYPE = 0x00
+	COMMUNITY_SUBTYPE = 0x0C
+
+	__slots__ = ['ip', 'copy']
+
+	def __init__ (self, ip, copy, community=None):
+		self.ip = ip
+		self.copy = copy
+		ExtendedCommunityIPv6.__init__(
+			self,
+			community if community is not None else pack(
+				"!2s16sH",
+				self._subtype(),
+				ip.pack(),
+				1 if copy else 0
+			)
+		)
+
+	def __repr__ (self):
+		return "copy-to-nexthop-ietf" if self.copy else "redirect-to-nexthop-ietf"
+
+	@staticmethod
+	def unpack (data):
+		ip, bit = unpack('!16sH', data[2:20])
+		return TrafficNextHopIPv6IETF(IPv6.ntop(ip), bool(bit & 0x01), data[:20])
 
 # =============================================================== TrafficNextHopSimpson
 # draft-simpson-idr-flowspec-redirect-02

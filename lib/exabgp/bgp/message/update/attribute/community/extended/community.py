@@ -16,10 +16,7 @@ from struct import pack
 # XXX: Should subclasses register with transitivity ?
 
 
-class ExtendedCommunity (Attribute):
-	ID = Attribute.CODE.EXTENDED_COMMUNITY
-	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
-
+class ExtendedCommunityBase (Attribute):
 	COMMUNITY_TYPE    = 0x00  # MUST be redefined by subclasses
 	COMMUNITY_SUBTYPE = 0x00  # MUST be redefined by subclasses
 	NON_TRANSITIVE    = 0x40
@@ -102,9 +99,6 @@ class ExtendedCommunity (Attribute):
 			h += ordinal(byte)
 		return "0x%016X" % h
 
-	def __len__ (self):
-		return 8
-
 	def __hash__ (self):
 		return hash(self.community)
 
@@ -118,3 +112,18 @@ class ExtendedCommunity (Attribute):
 			instance.klass = klass
 			return instance
 		return ExtendedCommunity(data)
+
+class ExtendedCommunity (ExtendedCommunityBase):
+	ID = Attribute.CODE.EXTENDED_COMMUNITY
+	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+
+	def __len__ (self):
+		return 8
+
+
+class ExtendedCommunityIPv6 (ExtendedCommunityBase):
+	ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
+	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+
+	def __len__ (self):
+		return 20
