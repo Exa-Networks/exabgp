@@ -37,6 +37,7 @@ from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirectASN4
 from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
+from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopIPv4IETF
 from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopSimpson
 
 from exabgp.bgp.message.update.attribute.community.extended import InterfaceSet
@@ -296,6 +297,12 @@ def redirect (tokeniser):
 def redirect_next_hop (tokeniser):
 	return ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
+def redirect_next_hop_ietf (tokeniser):
+	ip = IP.create(tokeniser())
+	if ip.ipv4():
+		return ExtendedCommunities().add(TrafficNextHopIPv4IETF(ip, False))
+	else:
+		raise ValueError('ipv6 address not supported %s' % ip)
 
 def copy (tokeniser):
 	return IP.create(tokeniser()),ExtendedCommunities().add(TrafficNextHopSimpson(True))
