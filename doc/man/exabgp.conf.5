@@ -127,6 +127,7 @@ group <groupname> {
         rate-limit <ratelimit>;
         redirect ( <route-distinguisher> | <ip-address> );
         redirect-to-nexthop; // Ref. next-hop above
+        redirect-to-nexthop-ietf <ip-address>;
         copy <ip-address>;
         mark <mark>;
         action ( sample | terminal | sample-terminal );

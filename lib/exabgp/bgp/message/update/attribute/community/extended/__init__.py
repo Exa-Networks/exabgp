@@ -27,6 +27,7 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectASN4
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopIPv4IETF
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopSimpson
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 from exabgp.bgp.message.update.attribute.community.extended.chso import ConsistentHashSortOrder

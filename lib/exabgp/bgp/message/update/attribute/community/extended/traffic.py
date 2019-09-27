@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
+from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
@@ -96,7 +97,7 @@ class TrafficAction (ExtendedCommunity):
 
 
 # ============================================================== TrafficRedirect
-# RFC 5575
+# RFC 5575 and 7674
 
 @ExtendedCommunity.register
 class TrafficRedirect (ExtendedCommunity):
@@ -181,6 +182,38 @@ class TrafficMark (ExtendedCommunity):
 	def unpack (data):
 		dscp, = unpack('!B',data[7:8])
 		return TrafficMark(dscp,data[:8])
+
+# =============================================================== TrafficNextHopIPv4IETF
+# draft-ietf-idr-flowspec-redirect-02
+# see RFC 4360 for ipv4 address specific extended community format
+
+@ExtendedCommunity.register
+class TrafficNextHopIPv4IETF (ExtendedCommunity):
+	COMMUNITY_TYPE = 0x01
+	COMMUNITY_SUBTYPE = 0x0C
+
+	__slots__ = ['ip', 'copy']
+
+	def __init__ (self, ip, copy, community=None):
+		self.ip = ip
+		self.copy = copy
+		ExtendedCommunity.__init__(
+			self,
+			community if community is not None else pack(
+				"!2s4sH",
+				self._subtype(),
+				ip.pack(),
+				1 if copy else 0
+			)
+		)
+
+	def __repr__ (self):
+		return "copy-to-nexthop-ietf" if self.copy else "redirect-to-nexthop-ietf"
+
+	@staticmethod
+	def unpack (data):
+		ip, bit = unpack('!4sH', data[2:8])
+		return TrafficNextHopIPv4IETF(IPv4.ntop(ip), bool(bit & 0x01), data[:8])
 
 # =============================================================== TrafficNextHopSimpson
 # draft-simpson-idr-flowspec-redirect-02
