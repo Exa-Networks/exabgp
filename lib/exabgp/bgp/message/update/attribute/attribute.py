@@ -112,9 +112,9 @@ class Attribute (object):
 		AIGP                    = 0x1A  # 26
 		# RFC7752
 		BGP_LS                  = 0x1D  # 29
-		# draft-ietf-idr-la     rge-community
+		# draft-ietf-idr-large-community
 		LARGE_COMMUNITY         = 0x20  # 32
-		# draft-ietf-idr-bg     p-prefix-sid
+		# draft-ietf-idr-bgp-prefix-sid
 		BGP_PREFIX_SID	        = 0x28  # 40
 
 		INTERNAL_NAME              = 0xFFFA
