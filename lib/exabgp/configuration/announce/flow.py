@@ -38,6 +38,7 @@ from exabgp.configuration.flow.parser import discard
 from exabgp.configuration.flow.parser import rate_limit
 from exabgp.configuration.flow.parser import redirect
 from exabgp.configuration.flow.parser import redirect_next_hop
+from exabgp.configuration.flow.parser import redirect_next_hop_ietf
 from exabgp.configuration.flow.parser import copy
 from exabgp.configuration.flow.parser import mark
 from exabgp.configuration.flow.parser import action
@@ -106,17 +107,18 @@ class AnnounceFlow (ParseAnnounce):
 		'fragment':         fragment,
 		'flow-label':       flow_label,
 
-		'accept':              accept,
-		'discard':             discard,
-		'rate-limit':          rate_limit,
-		'redirect':            redirect,
-		'redirect-to-nexthop': redirect_next_hop,
-		'copy':                copy,
-		'mark':                mark,
-		'action':              action,
-		'community':           community,
-		'large-community':     large_community,
-		'extended-community':  extended_community,
+		'accept':                   accept,
+		'discard':                  discard,
+		'rate-limit':               rate_limit,
+		'redirect':                 redirect,
+		'redirect-to-nexthop':      redirect_next_hop,
+		'redirect-to-nexthop-ietf': redirect_next_hop_ietf,
+		'copy':                     copy,
+		'mark':                     mark,
+		'action':                   action,
+		'community':                community,
+		'large-community':          large_community,
+		'extended-community':       extended_community,
 
 		'interface-set':	interface_set,
 	}
@@ -145,19 +147,19 @@ class AnnounceFlow (ParseAnnounce):
 		'traffic-class':    'nlri-add',
 		'flow-label':       'nlri-add',
 
-		'accept':              'nop',
-		'discard':             'attribute-add',
-		'rate-limit':          'attribute-add',
-		'redirect':            'nexthop-and-attribute',
-		'redirect-to-nexthop': 'attribute-add',
-		'copy':                'nexthop-and-attribute',
-		'mark':                'attribute-add',
-		'action':              'attribute-add',
-		'community':           'attribute-add',
-		'large-community':     'attribute-add',
-		'extended-community':  'attribute-add',
-
-		'interface-set':       'attribute-add',
+		'accept':                   'nop',
+		'discard':                  'attribute-add',
+		'rate-limit':               'attribute-add',
+		'redirect':                 'nexthop-and-attribute',
+		'redirect-to-nexthop':      'attribute-add',
+		'redirect-to-nexthop-ietf': 'attribute-add',
+		'copy':                     'nexthop-and-attribute',
+		'mark':                     'attribute-add',
+		'action':                   'attribute-add',
+		'community':                'attribute-add',
+		'large-community':          'attribute-add',
+		'extended-community':       'attribute-add',
+		'interface-set':            'attribute-add',
 	}
 
 	assign = dict()

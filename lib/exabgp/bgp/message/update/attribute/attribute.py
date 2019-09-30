@@ -83,37 +83,39 @@ class Attribute (object):
 
 		# This should move within the classes and not be here
 		# RFC 4271
-		ORIGIN             = 0x01
-		AS_PATH            = 0x02
-		NEXT_HOP           = 0x03
-		MED                = 0x04
-		LOCAL_PREF         = 0x05
-		ATOMIC_AGGREGATE   = 0x06
-		AGGREGATOR         = 0x07
+		ORIGIN                  = 0x01
+		AS_PATH                 = 0x02
+		NEXT_HOP                = 0x03
+		MED                     = 0x04
+		LOCAL_PREF              = 0x05
+		ATOMIC_AGGREGATE        = 0x06
+		AGGREGATOR              = 0x07
 		# RFC 1997
-		COMMUNITY          = 0x08
+		COMMUNITY               = 0x08
 		# RFC 4456
-		ORIGINATOR_ID      = 0x09
-		CLUSTER_LIST       = 0x0A  # 10
+		ORIGINATOR_ID           = 0x09
+		CLUSTER_LIST            = 0x0A  # 10
 		# RFC 4760
-		MP_REACH_NLRI      = 0x0E  # 14
-		MP_UNREACH_NLRI    = 0x0F  # 15
+		MP_REACH_NLRI           = 0x0E  # 14
+		MP_UNREACH_NLRI         = 0x0F  # 15
 		# RFC 4360
-		EXTENDED_COMMUNITY = 0x10  # 16
+		EXTENDED_COMMUNITY      = 0x10  # 16
 		# RFC 4893
-		AS4_PATH           = 0x11  # 17
-		AS4_AGGREGATOR     = 0x12  # 18
+		AS4_PATH                = 0x11  # 17
+		AS4_AGGREGATOR          = 0x12  # 18
 		# RFC6514
-		PMSI_TUNNEL        = 0x16  # 22
+		PMSI_TUNNEL             = 0x16  # 22
 		# RFC5512
-		TUNNEL_ENCAP       = 0x17  # 23
-		AIGP               = 0x1A  # 26
+		TUNNEL_ENCAP            = 0x17  # 23
+		# RFC5701
+		IPV6_EXTENDED_COMMUNITY = 0x19  # 25
+		AIGP                    = 0x1A  # 26
 		# RFC7752
-		BGP_LS             = 0x1D  # 29
+		BGP_LS                  = 0x1D  # 29
 		# draft-ietf-idr-large-community
-		LARGE_COMMUNITY    = 0x20  # 32
+		LARGE_COMMUNITY         = 0x20  # 32
 		# draft-ietf-idr-bgp-prefix-sid
-		BGP_PREFIX_SID	   = 0x28  # 40
+		BGP_PREFIX_SID	        = 0x28  # 40
 
 		INTERNAL_NAME              = 0xFFFA
 		INTERNAL_WITHDRAW          = 0xFFFB
@@ -122,35 +124,36 @@ class Attribute (object):
 		INTERNAL_DISCARD           = 0xFFFE
 		INTERNAL_TREAT_AS_WITHDRAW = 0xFFFF  # Treat as Withdraw
 
-		# Currently formating is done with %-18s
+		# Currently formatting is done with %-18s
 		names = {
-			ORIGIN:             'origin',
-			AS_PATH:            'as-path',
-			NEXT_HOP:           'next-hop',
-			MED:                'med',              # multi-exit-disc
-			LOCAL_PREF:         'local-preference',
-			ATOMIC_AGGREGATE:   'atomic-aggregate',
-			AGGREGATOR:         'aggregator',
-			COMMUNITY:          'community',
-			LARGE_COMMUNITY:    'large-community',
-			ORIGINATOR_ID:      'originator-id',
-			CLUSTER_LIST:       'cluster-list',
-			MP_REACH_NLRI:      'mp-reach-nlri',    # multi-protocol reacheable nlri
-			MP_UNREACH_NLRI:    'mp-unreach-nlri',  # multi-protocol unreacheable nlri
-			EXTENDED_COMMUNITY: 'extended-community',
-			AS4_PATH:           'as4-path',
-			AS4_AGGREGATOR:     'as4-aggregator',
-			PMSI_TUNNEL:        'pmsi-tunnel',
-			TUNNEL_ENCAP:       'tunnel-encaps',
-			AIGP:               'aigp',
-			BGP_LS:             'bgp-ls',
-			BGP_PREFIX_SID:     'bgp-prefix-sid',
-			0xfffa:             'internal-name',
-			0xfffb:             'internal-withdraw',
-			0xfffc:             'internal-watchdog',
-			0xfffd:             'internal-split',
-			0xfffe:             'internal-discard',
-			0xffff:             'internal-treath-as-withdraw',
+			ORIGIN:                  'origin',
+			AS_PATH:                 'as-path',
+			NEXT_HOP:                'next-hop',
+			MED:                     'med',              # multi-exit-disc
+			LOCAL_PREF:              'local-preference',
+			ATOMIC_AGGREGATE:        'atomic-aggregate',
+			AGGREGATOR:              'aggregator',
+			COMMUNITY:               'community',
+			LARGE_COMMUNITY:         'large-community',
+			ORIGINATOR_ID:           'originator-id',
+			CLUSTER_LIST:            'cluster-list',
+			MP_REACH_NLRI:           'mp-reach-nlri',    # multi-protocol reacheable nlri
+			MP_UNREACH_NLRI:         'mp-unreach-nlri',  # multi-protocol unreacheable nlri
+			EXTENDED_COMMUNITY:      'extended-community',
+			IPV6_EXTENDED_COMMUNITY: 'extended-community-ipv6',
+			AS4_PATH:                'as4-path',
+			AS4_AGGREGATOR:          'as4-aggregator',
+			PMSI_TUNNEL:             'pmsi-tunnel',
+			TUNNEL_ENCAP:            'tunnel-encaps',
+			AIGP:                    'aigp',
+			BGP_LS:                  'bgp-ls',
+			BGP_PREFIX_SID:          'bgp-prefix-sid',
+			0xfffa:                  'internal-name',
+			0xfffb:                  'internal-withdraw',
+			0xfffc:                  'internal-watchdog',
+			0xfffd:                  'internal-split',
+			0xfffe:                  'internal-discard',
+			0xffff:                  'internal-treath-as-withdraw',
 		}
 
 		def __repr__ (self):
