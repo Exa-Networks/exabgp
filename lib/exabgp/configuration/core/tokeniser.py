@@ -23,6 +23,7 @@ class Tokeniser (object):
 			self.tokens = []
 			self.generator = iter([])
 			self.announce = True
+			self.afi = AFI.undefined
 
 		def replenish (self, content):
 			self.next.clear()
@@ -68,7 +69,6 @@ class Tokeniser (object):
 		self.index_line = 0
 		self.fname = ''
 		self.type = 'unset'
-		self.afi = AFI.undefined
 
 		self._tokens = Tokeniser._off
 		self._next = None
