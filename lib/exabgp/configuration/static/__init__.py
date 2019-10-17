@@ -111,6 +111,7 @@ def route (tokeniser):
 def attributes (tokeniser):
 	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
 	ipmask = prefix(lambda: tokeniser.tokens[-1])
+	tokeniser.afi = ipmask.afi
 
 	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
 		nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
