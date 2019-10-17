@@ -70,7 +70,22 @@ class MPRNLRI (Attribute,Family):
 			else:
 				_,rd_size = Family.size.get(self.family(),(0,0))
 				nh_rd = character(0)*rd_size if rd_size else b''
-				nexthop = nh_rd + nlri.nexthop.ton(negotiated,nlri.afi)
+				try:
+					nexthop = nh_rd + nlri.nexthop.ton(negotiated,nlri.afi)
+				except TypeError:
+					# we could not match "next-hop self" with the BGP AFI of the BGP sesion
+					# attempting invalid IPv4 next-hop (0.0.0.0) to try to not kill the session
+					# and preserve some form of backward compatibility (for some vendors)
+					# the next-hop may have been IPv6 but not valided as the RFC says
+					#
+					# An UPDATE message that carries no NLRI, other than the one encoded in
+					# the MP_REACH_NLRI attribute, SHOULD NOT carry the NEXT_HOP attribute.
+					# If such a message contains the NEXT_HOP attribute, the BGP speaker
+					# that receives the message SHOULD ignore this attribute.
+					#
+					# Some vendors may have therefore not valided the next-hop
+					# and accepted invalid IPv6 next-hop in the past
+					nexthop = character(0)*4
 
 			# mpunli[nexthop] = nlri
 			mpnlri.setdefault(nexthop,[]).append(nlri.pack(negotiated))

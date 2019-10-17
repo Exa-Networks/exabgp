@@ -155,10 +155,14 @@ class Negotiated (object):
 		return None
 
 	def nexthopself (self, afi):
-		if afi in (AFI.ipv4,AFI.ipv6):
-			# return self.sent_open.router_id
+		if afi == self.neighbor.local_address.afi:
 			return self.neighbor.local_address
-		raise RuntimeError('nexthop self is not implemented for this family %s' % afi)
+
+		# attempting to not barf for next-hop self when the peer is IPv6
+		if afi == AFI.ipv4:
+			return self.neighbor.router_id
+
+		raise TypeError('use of "next-hop self": the route (%s) does not have the same family as the BGP tcp session (%s)' % (afi,self.neighbor.local_address.afi))
 
 # =================================================================== RequirePath
 
