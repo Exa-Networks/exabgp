@@ -7,6 +7,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import socket
+
 from struct import pack
 from struct import unpack
 
@@ -221,8 +223,8 @@ class TrafficNextHopIPv4IETF (ExtendedCommunity):
 # draft-ietf-idr-flowspec-redirect-02
 # see RFC 5701 for ipv6 address specific extended community format
 
-@ExtendedCommunity.register
-class TrafficNextHopIPv6IETF (ExtendedCommunityIPv6):
+@ExtendedCommunityIPv6.register
+class TrafficNextHopIPv6IETF (	ExtendedCommunityIPv6):
 	COMMUNITY_TYPE = 0x00
 	COMMUNITY_SUBTYPE = 0x0C
 
@@ -279,6 +281,28 @@ class TrafficNextHopSimpson (ExtendedCommunity):
 	def unpack (data):
 		bit, = unpack('!B',data[7:8])
 		return TrafficNextHopSimpson(bool(bit & 0x01), data[:8])
+
+# ============================================================ TrafficRedirectIPv6
+# https://tools.ietf.org/html/rfc5701
+
+@ExtendedCommunityIPv6.register
+class TrafficRedirectIPv6 (ExtendedCommunityIPv6):
+	COMMUNITY_TYPE = 0x00
+	COMMUNITY_SUBTYPE = 0x02
+
+	def __init__(self, ip, asn, community=None):
+		self.ip = ip
+		self.asn = asn
+		ExtendedCommunityIPv6.__init__(self, community if community is not None else pack(
+			"!BB16sH", 0x00, 0x02, socket.inet_aton(socket.AF_INET6, ip), asn))
+
+	def __str__(self):
+		return "redirect %s:%d" % (self.ip, self.asn)
+
+	@staticmethod
+	def unpack(data):
+		ip, asn = unpack('!16sH', data[2:11])
+		return TrafficRedirectIPv6(socket.inet_ntoa(socket.AF_INET6, ip), asn, data[:11])
 
 
 # ============================================================ TrafficRedirectIP
