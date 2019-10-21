@@ -224,7 +224,7 @@ class TrafficNextHopIPv4IETF (ExtendedCommunity):
 # see RFC 5701 for ipv6 address specific extended community format
 
 @ExtendedCommunityIPv6.register
-class TrafficNextHopIPv6IETF (	ExtendedCommunityIPv6):
+class TrafficNextHopIPv6IETF (ExtendedCommunityIPv6):
 	COMMUNITY_TYPE = 0x00
 	COMMUNITY_SUBTYPE = 0x0C
 

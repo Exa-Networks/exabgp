@@ -35,6 +35,7 @@ class ExtendedCommunities (Communities):
 
 # ===================================================== ExtendedCommunitiesIPv6 (25)
 # RFC 5701
+
 @Attribute.register()
 class ExtendedCommunitiesIPv6 (Communities):
 	ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
