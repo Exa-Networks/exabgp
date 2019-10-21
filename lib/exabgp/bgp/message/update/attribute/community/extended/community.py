@@ -21,8 +21,6 @@ class ExtendedCommunityBase (Attribute):
 	COMMUNITY_SUBTYPE = 0x00  # MUST be redefined by subclasses
 	NON_TRANSITIVE    = 0x40
 
-	registered_extended = {}
-
 	@classmethod
 	def register (cls, klass):
 		cls.registered_extended[(klass.COMMUNITY_TYPE & 0x0F,klass.COMMUNITY_SUBTYPE)] = klass
@@ -117,6 +115,8 @@ class ExtendedCommunity (ExtendedCommunityBase):
 	ID = Attribute.CODE.EXTENDED_COMMUNITY
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
+	registered_extended = {}
+
 	def __len__ (self):
 		return 8
 
@@ -124,6 +124,8 @@ class ExtendedCommunity (ExtendedCommunityBase):
 class ExtendedCommunityIPv6 (ExtendedCommunityBase):
 	ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+
+	registered_extended = {}
 
 	def __len__ (self):
 		return 20
