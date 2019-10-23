@@ -4,6 +4,8 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 4.1.3:
+ * Fix: on 'restart' config could improperly interference with current config which leads to inconsystent state and crash
+   patch by: Alexander Petrovsky
  * Feature: "rate-limit" (per neighbor) limit the number of BGP message(s) handled per second
  * Feature: support draft-ietf-idr-flowspec-redirect-02 (previously only simpson was supported)
    patch by: Eli Lindsey

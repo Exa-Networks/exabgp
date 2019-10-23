@@ -390,12 +390,14 @@ class Reactor (object):
 	def restart (self):
 		"""Kill the BGP session and restart it"""
 		self.logger.notice('performing restart of exabgp %s' % version,'reactor')
-		self.configuration.reload()
+
+		# XXX: FIXME: Could return False, in case there is interference with old config...
+		reloaded = self.configuration.reload()
 
 		for key in self.peers.keys():
 			if key not in self.configuration.neighbors.keys():
-				neighbor = self.configuration.neighbors[key]
-				self.logger.debug('removing Peer %s' % neighbor.name(),'reactor')
+				peer = peers[key]
+				self.logger.debug('removing peer %s' % peer.neighbor.name(),'reactor')
 				self.peers[key].remove()
 			else:
 				self.peers[key].reestablish()
