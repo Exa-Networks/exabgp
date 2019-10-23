@@ -287,8 +287,8 @@ class TrafficNextHopSimpson (ExtendedCommunity):
 
 @ExtendedCommunityIPv6.register
 class TrafficRedirectIPv6 (ExtendedCommunityIPv6):
-	COMMUNITY_TYPE = 0x00
-	COMMUNITY_SUBTYPE = 0x02
+	COMMUNITY_TYPE = 0x80
+	COMMUNITY_SUBTYPE = 0x0B
 
 	def __init__(self, ip, asn, community=None):
 		self.ip = ip
