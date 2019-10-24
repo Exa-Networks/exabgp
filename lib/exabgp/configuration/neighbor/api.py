@@ -139,7 +139,7 @@ class ParseAPI (Section):
 	def clear (self):
 		self.api = {}
 		self.named = ''
-		pass
+		Section.clear(self)
 
 	def pre (self):
 		named = self.tokeniser.iterate()
