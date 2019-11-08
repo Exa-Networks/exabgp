@@ -275,7 +275,7 @@ def main ():
 	# check the file only once that we have parsed all the command line options and allowed them to run
 	if options["<configuration>"]:
 		for f in options["<configuration>"]:
-			normalised = os.path.realpath(os.path.normpath(f))
+			normalised = os.path.normpath(f)
 			if os.path.isfile(normalised):
 				configurations.append(normalised)
 				continue
