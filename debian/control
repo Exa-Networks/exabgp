@@ -2,7 +2,7 @@ Source: exabgp
 Maintainer: Vincent Bernat <bernat@debian.org>
 Section: net
 Priority: optional
-Build-Depends: debhelper (>= 9),
+Build-Depends: debhelper (>= 12~),
                dh-python,
                python3-all,
                python3-setuptools,
