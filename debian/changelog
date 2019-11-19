@@ -1,6 +1,7 @@
 exabgp (4.1.2-2) UNRELEASED; urgency=medium
 
   * Trim trailing whitespace.
+  * Use secure copyright file specification URI.
 
  -- Debian Janitor <janitor@jelmer.uk>  Tue, 19 Nov 2019 04:34:59 +0000
 
