@@ -7,6 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import os
 import sys
 
 from exabgp.vendoring import six
@@ -438,7 +439,11 @@ class Configuration (_Configuration):
 			if not self.tokeniser.set_text(fname):
 				return False
 		else:
-			if not self.tokeniser.set_file(fname):
+			# resolve any potential symlink, and check it is a file
+			target = os.path.realpath(fname)
+			if not os.path.isfile(target):
+				return False
+			if not self.tokeniser.set_file(target):
 				return False
 
 		if self.parseSection('root') is not True:
