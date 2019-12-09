@@ -22,7 +22,6 @@ from exabgp.version import version
 from exabgp.reactor.loop import Reactor
 
 from exabgp.vendoring import docopt
-from exabgp.vendoring import lsprofcalltree
 
 from exabgp.configuration.usage import usage
 
@@ -402,6 +401,7 @@ def run (env, comment, configurations, root, validate, pid=0):
 			exit_code = Reactor.Exit.unknown
 			raise
 		finally:
+			from exabgp.vendoring import lsprofcalltree
 			profiler.disable()
 			kprofile = lsprofcalltree.KCacheGrind(profiler)
 			try:
