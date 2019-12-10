@@ -26,28 +26,21 @@ def register_rib ():
 
 def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_name, extensive):
 	def callback ():
-		families = None
 		lines_per_yield = environment.settings().api.chunk
 		if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
-			peers = list(reactor.peers)
+			peers = reactor.peers()
 		else:
-			peers = [n for n in reactor.peers.keys() if 'neighbor %s' % last in n]
+			peers = [n for n in reactor.peers() if 'neighbor %s' % last in n]
 		for key in peers:
-			peer = reactor.peers.get(key, None)
-			if not peer:
-				continue
-			if advertised:
-				families = peer.proto.negotiated.families if peer.proto else []
-			rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming
-			routes = list(rib.cached_changes(families))
+			routes = reactor.neighor_rib(key, rib_name, advertised)
 			while routes:
 				changes, routes = routes[:lines_per_yield], routes[lines_per_yield:]
 				for change in changes:
 					if isinstance(change.nlri, route_type):
 						if extensive:
-							reactor.processes.write(service,'%s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()))
+							reactor.processes.write(service,'%s %s %s' % (reactor.neighbor_name(key),'%s %s' % change.nlri.family(),change.extensive()))
 						else:
-							reactor.processes.write(service,'neighbor %s %s %s' % (peer.neighbor.peer_address,'%s %s' % change.nlri.family(),str(change.nlri)))
+							reactor.processes.write(service,'neighbor %s %s %s' % (reactor.neighbor_ip(key),'%s %s' % change.nlri.family(),str(change.nlri)))
 				yield True
 		reactor.processes.answer_done(service)
 	return callback
@@ -99,17 +92,14 @@ def flush_adj_rib_out (self, reactor, service, line):
 	def callback (self, peers):
 		self.log_message("Flushing adjb-rib out for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers')
 		for peer_name in peers:
-			peer = reactor.peers.get(peer_name, None)
-			if not peer:
-				continue
-			peer.neighbor.rib.outgoing.resend(None, peer.neighbor.route_refresh)
+			reactor.neighbor_rib_resend(peer_name)
 			yield False
 
 		reactor.processes.answer_done(service)
 
 	try:
 		descriptions,command = extract_neighbors(line)
-		peers = match_neighbors(reactor.peers,descriptions)
+		peers = match_neighbors(reactor.peers(),descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer_error(service)
@@ -131,20 +121,17 @@ def clear_adj_rib (self, reactor, service, line):
 	def callback (self, peers, direction):
 		self.log_message("clearing adjb-rib-%s for %s" % (direction,', '.join(peers if peers else []) if peers is not None else 'all peers'))
 		for peer_name in peers:
-			peer = reactor.peers.get(peer_name, None)
-			if not peer:
-				continue
 			if direction == 'out':
-				peer.neighbor.rib.outgoing.withdraw(None, peer.neighbor.route_refresh)
+				reactor.neighbor_rib_out_withdraw(peer_name)
 			else:
-				peer.neighbor.rib.incoming.clear()
+				reactor.neighbor_rib_in_clear(peer_name)
 			yield False
 
 		reactor.processes.answer_done(service)
 
 	try:
 		descriptions,command = extract_neighbors(line)
-		peers = match_neighbors(reactor.peers,descriptions)
+		peers = match_neighbors(reactor.peers(),descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer_error(service)

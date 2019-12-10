@@ -68,6 +68,7 @@ class Processes (object):
 		return len(self._process)
 
 	def clean (self):
+		self.fds = []
 		self._process = {}
 		self._encoder = {}
 		self._broken = []
@@ -88,6 +89,7 @@ class Processes (object):
 		self.logger.debug('terminating process %s' % process_name, 'process')
 		process = self._process[process_name]
 		del self._process[process_name]
+		self._update_fds()
 		thread = Thread(target=self._terminate_run, args=(process,))
 		thread.start()
 		return thread
@@ -147,6 +149,7 @@ class Processes (object):
 					# This flags exists for python 2.7.3 in the documentation but on on my MAC
 					# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
 				)
+				self._update_fds()
 				fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
 				self.logger.debug('forked process %s' % process,'process')
@@ -191,8 +194,8 @@ class Processes (object):
 					return True
 		return False
 
-	def fds (self):
-		return [self._process[process].stdout for process in self._process]
+	def _update_fds (self):
+		self.fds = [self._process[process].stdout.fileno() for process in self._process]
 
 	def received (self):
 		consumed_data = False

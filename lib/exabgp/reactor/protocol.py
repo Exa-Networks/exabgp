@@ -79,7 +79,7 @@ class Protocol (object):
 
 	def fd (self):
 		if self.connection is None:
-			return None
+			return -1
 		return self.connection.fd()
 
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address

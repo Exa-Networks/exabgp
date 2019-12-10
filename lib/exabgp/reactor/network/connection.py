@@ -79,10 +79,10 @@ class Connection (object):
 		return "%s-%d" % (self.direction,self.id)
 
 	def fd (self):
-		if self.io and self.io.fileno() != -1:
-			return self.io
+		if self.io:
+			return self.io.fileno()
 		# the socket is closed (fileno() == -1) or not open yet (io is None)
-		return None
+		return -1
 
 	def close (self):
 		try:
