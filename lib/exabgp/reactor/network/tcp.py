@@ -236,15 +236,32 @@ def ready (io):
 	warned = False
 	start = time.time()
 
+	poller = select.poll()
+	poller.register(io, select.POLLOUT | select.POLLNVAL | select.POLLERR)
+
 	while True:
 		try:
-			_,w,_ = select.select([],[io,],[],0)
-			if not w:
-				if not warned and time.time()-start > 1.0:
-					logger.debug('attempting to establish connection','network')
+			found = False
+			pulled = poller.poll(0)
+			if not pulled:
+				if not warned and time.time() - start > 1.0:
+					logger.debug('attempting to establish connection', 'network')
 					warned = True
 				yield False
 				continue
+
+			for _, event in pulled:
+				if event & select.POLLOUT:
+					found = True
+				elif event & select.POLLHUP:
+					raise KeyboardInterrupt()
+				elif event & select.POLLERR or event & select.POLLNVAL:
+					logger.warning('connect attempt failed, issue with reading on the network, retrying', 'network')
+				yield found
+
+			if not found:
+				continue
+
 			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
 			if not err:
 				if warned:
@@ -254,6 +271,7 @@ def ready (io):
 			elif err in error.block:
 				logger.warning('connect attempt failed, retrying, reason %s' % errno.errorcode[err],'network')
 				yield False
+				return
 			else:
 				yield False
 				return
