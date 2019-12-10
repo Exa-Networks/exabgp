@@ -111,7 +111,7 @@ class ParseNeighbor (Section):
 
 	default = {
 		'md5-base64': False,
-		'passive': False,
+		'passive': True,
 		'group-updates': True,
 		'auto-flush': True,
 		'adj-rib-out': False,
@@ -148,7 +148,7 @@ class ParseNeighbor (Section):
 		neighbor.local_address    = local.get('local-address',None)
 		neighbor.local_as         = local.get('local-as',None)
 		neighbor.peer_as          = local.get('peer-as',None)
-		neighbor.passive          = local.get('passive',False)
+		neighbor.passive          = local.get('passive',None)
 		neighbor.listen           = local.get('listen',0)
 		neighbor.connect          = local.get('connect',0)
 		neighbor.hold_time        = local.get('hold-time',HoldTime(180))
@@ -175,6 +175,8 @@ class ParseNeighbor (Section):
 		if neighbor.peer_as is None:
 			return self.error.set('incomplete neighbor, missing peer-as')
 
+		if neighbor.passive is None:
+			neighbor.passive = False
 
 		capability = local.get('capability',{})
 		neighbor.nexthop          = capability.get('nexthop',None)

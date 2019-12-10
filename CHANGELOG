@@ -19,6 +19,7 @@ Version 4.1.3:
  * Fix: not correctly recording AFI for next-hop self use
  * Fix: removal of ip address by healthcheck
    patch by: wavezhang
+ * Fix: bug when parsing passive keyword alone (was false not true)
  * CHANGE: large change to the configuration code (should not have any effect but the devil is in the details)
  * CHANGE: using next-hop self could lead to route generated with a IPv6 next-hop in the IPv4 next-hop
    This COULD have been accepted by peers. This version does prevent such generation.
