@@ -29,6 +29,8 @@ from exabgp.reactor.api import API
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.environment import environment
 
+from exabgp.bgp.fsm import FSM
+
 from exabgp.version import version
 from exabgp.logger import Logger
 
@@ -132,6 +134,13 @@ class Reactor (object):
 		peers = set()
 		for key,peer in self._peers.items():
 			if not peer.neighbor.passive or peer.proto:
+				peers.add(key)
+		return peers
+
+	def connected_peers (self):
+		peers = set()
+		for key, peer in self._peers.items():
+			if peer.fsm == FSM.ESTABLISHED:
 				peers.add(key)
 		return peers
 
