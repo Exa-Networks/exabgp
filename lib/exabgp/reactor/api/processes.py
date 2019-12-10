@@ -209,9 +209,22 @@ class Processes (object):
 				if poll is not None:
 					self._handle_problem(process)
 					return
-				r,_,_ = select.select([proc.stdout,],[],[],0)
-				if not r:
+
+				poller = select.poll()
+				poller.register(proc.stdout, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
+
+				ready = False
+				for _, event in poller.poll(0):
+					if event & select.POLLIN or event & select.POLLPRI:
+						ready = True
+					elif event & select.POLLHUP:
+						raise KeyboardInterrupt()
+					elif event & select.POLLERR or event & select.POLLNVAL:
+						self._handle_problem(process)
+
+				if not ready:
 					continue
+
 				try:
 					# Calling next() on Linux and OSX works perfectly well
 					# but not on OpenBSD where it always raise StopIteration

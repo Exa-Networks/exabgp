@@ -51,9 +51,6 @@ class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = concat_bytes_i(character(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
-	READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
-	READ_WRITE = READ_ONLY | select.POLLOUT
-
 	def __init__ (self, configurations):
 		self._ips = environment.settings().tcp.bind
 		self._port = environment.settings().tcp.port
@@ -112,26 +109,22 @@ class Reactor (object):
 
 	def _wait_for_io (self,sleeptime):
 		try:
-			for fd,_ in self._poller.poll(sleeptime):
-				yield fd
-		except select.error as exc:
-			err_no,message = exc.args  # pylint: disable=W0633
-			if err_no not in error.block:
-				raise exc
-			self._prevent_spin()
-		except socket.error as exc:
-			# python 3 does not raise on closed FD, but python2 does
-			# we have lost a peer and it is causing the select
-			# to complain, the code will self-heal, ignore the issue
-			# (EBADF from python2 must be ignored if when checkign error.fatal)
-			# otherwise sending  notification causes TCP to drop and cause
-			# this code to kill ExaBGP
-			self._prevent_spin()
-		except ValueError as exc:
-			# The peer closing the TCP connection lead to a negative file descritor
-			self._prevent_spin()
+			for fd, event in self._poller.poll(sleeptime):
+				if event & select.POLLIN or event & select.POLLPRI:
+					yield fd
+					continue
+				elif event & select.POLLHUP:
+					self._termination('^C received', self.Exit.normal)
+					return
+				elif event & select.POLLERR or event & select.POLLNVAL:
+					self._prevent_spin()
+					continue
 		except KeyboardInterrupt:
 			self._termination('^C received',self.Exit.normal)
+			return
+		except Exception:
+			self._prevent_spin()
+			return
 
 	# peer related functions
 
@@ -362,7 +355,7 @@ class Reactor (object):
 					elif action == ACTION.LATER:
 						io = peer.socket()
 						if io != -1:
-							self._poller.register(io, self.READ_ONLY)
+							self._poller.register(io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
 							workers[io] = key
 						# no need to come back to it before a a full cycle
 						peers.discard(key)
@@ -389,7 +382,7 @@ class Reactor (object):
 						if fd == -1:
 							continue
 						if fd not in api_fds:
-							self._poller.register(fd, self.READ_ONLY)
+							self._poller.register(fd, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
 					api_fds = self.processes.fds
 
 				for io in self._wait_for_io(sleep):

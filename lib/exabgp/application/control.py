@@ -96,36 +96,22 @@ class Control (object):
 
 		self.cleanup()
 
-		# def _remove_fifo (name):
-		# 	# If we got two signal, time to stop trying nicely as we can not delete a file which is open
-		# 	try:
-		# 		if os.path.exists(name):
-		# 			os.remove(name)
-		# 	except IOError:
-		# 		sys.stdout.write('error: could not remove current named pipe (%s)\n' % os.path.abspath(name))
-		# 		sys.stdout.flush()
-
-		# self._remove_fifo(self.recv)
-		# self._remove_fifo(self.send)
-
 	def read_on (self,reading):
-		sleep_time = 1.0
-		fault_time = 0.9 * sleep_time
-		now = time.time()
+		sleep_time = 1000
 
-		try:
-			ready,_,_ = select.select(reading,[],[],sleep_time)
-		except select.error as e:
-			if e.args[0] in error.block:
-				return []
-			sys.exit(1)  # Unknow error, ending
+		poller = select.poll()
+		poller.register(reading, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
 
-		# select stoped before the 1 second but we have no data
-		# the PIPE with ExaBGP is dead
-		elapsed = time.time() - now
-		if not reading and elapsed < fault_time:
-			sys.exit(1)
+		ready = False
+		for _, event in poller.poll(sleep_time):
+			if event & select.POLLIN or event & select.POLLPRI:
+				ready = True
+			elif event & select.POLLHUP:
+				raise KeyboardInterrupt()
+			elif event & select.POLLERR or event & select.POLLNVAL:
+				sys.exit(1)
 		return ready
+
 
 	def no_buffer (self,fd):
 		mfl = fcntl.fcntl(fd, fcntl.F_GETFL)
