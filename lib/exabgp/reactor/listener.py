@@ -157,9 +157,8 @@ class Listener (object):
 
 		for connection in self._connected():
 			self.logger.debug('new connection received %s' % connection.name(),'network')
-			for key in reactor.peers:
-				peer = reactor.peers[key]
-				neighbor = peer.neighbor
+			for key in reactor.peers():
+				neighbor = reactor.neighbor(key)
 
 				connection_local = IP.create(connection.local).address()
 				neighbor_peer_start = neighbor.peer_address.address()
@@ -180,10 +179,10 @@ class Listener (object):
 				# we need to iterate all individual peers before
 				# handling "range" peers
 				if neighbor.range_size > 1:
-					ranged_neighbor.append(peer.neighbor)
+					ranged_neighbor.append(neighbor)
 					continue
 
-				denied = peer.handle_connection(connection)
+				denied = reactor.handle_connection(key,connection)
 				if denied:
 					self.logger.debug('refused connection from %s due to the state machine' % connection.name(),'network')
 					break
@@ -217,7 +216,7 @@ class Listener (object):
 					self.logger.debug('refused connection from %s due to the state machine' % connection.name(),'network')
 					return
 
-				reactor.peers[new_neighbor.name()] = new_peer
+				reactor.register_peer(new_neighbor.name(),new_peer)
 				return
 
 	def stop (self):

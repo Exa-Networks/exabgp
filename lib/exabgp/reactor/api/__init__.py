@@ -40,8 +40,10 @@ class API (Command):
 
 	def text (self, reactor, service, command):
 		for registered in self.functions:
-			if registered == command or registered + ' ' in command:
-				return self.callback['text'][registered](self,reactor,service,command)
+			if registered == command \
+				or command.endswith(' ' + registered) \
+				or registered + ' ' in command:
+				return self.callback['text'][registered](self, reactor, service, command)
 		reactor.processes.answer_error(service)
 		self.logger.warning('command from process not understood : %s' % command,'api')
 		return False

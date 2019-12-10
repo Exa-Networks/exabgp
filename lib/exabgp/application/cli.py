@@ -209,6 +209,7 @@ def main ():
 			('e', 'extensive', lambda _, pre: 'show' in pre),
 			('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
 			('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+			('h', 'help', lambda pos, pre: pos == 0),
 			('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
 			('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
 			('rr', 'route-refresh', lambda _, pre: pre == 'announce'),

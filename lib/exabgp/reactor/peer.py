@@ -211,14 +211,10 @@ class Peer (object):
 		self._teardown = code
 		self._delay.reset()
 
-	# sockets we must monitor
-
-	def sockets (self):
+	def socket (self):
 		if self.proto:
-			fd = self.proto.fd()
-			if fd:
-				return [fd]
-		return []
+			return self.proto.fd()
+		return -1
 
 	def handle_connection (self, connection):
 		self.logger.debug("state machine for the peer is %s" % self.fsm.name(), self.id())
