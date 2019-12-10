@@ -99,7 +99,7 @@ def flush_adj_rib_out (self, reactor, service, line):
 
 	try:
 		descriptions,command = extract_neighbors(line)
-		peers = match_neighbors(reactor.connected_peers(),descriptions)
+		peers = match_neighbors(reactor.established_peers(), descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer_error(service)
@@ -131,7 +131,7 @@ def clear_adj_rib (self, reactor, service, line):
 
 	try:
 		descriptions,command = extract_neighbors(line)
-		peers = match_neighbors(reactor.connected_peers(),descriptions)
+		peers = match_neighbors(reactor.peers(),descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer_error(service)

@@ -137,7 +137,7 @@ class Reactor (object):
 				peers.add(key)
 		return peers
 
-	def connected_peers (self):
+	def established_peers (self):
 		peers = set()
 		for key, peer in self._peers.items():
 			if peer.fsm == FSM.ESTABLISHED:

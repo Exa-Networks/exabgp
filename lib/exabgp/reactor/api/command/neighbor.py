@@ -102,7 +102,7 @@ def teardown (self, reactor, service, line):
 		if not code.isdigit():
 			reactor.processes.answer_error(service)
 			return False
-		for key in reactor.peers():
+		for key in reactor.established_peers():
 			for description in descriptions:
 				if match_neighbor(description,key):
 					reactor.teardown_peer(key,int(code))
@@ -157,7 +157,7 @@ def show_neighbor (self, reactor, service, command):
 
 	def callback_summary ():
 		reactor.processes.write(service, Neighbor.summary_header)
-		for peer_name in reactor.peers():
+		for peer_name in reactor.established_peers():
 			if limit and limit != reactor.neighbor_ip(peer_name):
 				continue
 			for line in Neighbor.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
