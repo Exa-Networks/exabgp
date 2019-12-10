@@ -100,12 +100,13 @@ class Control (object):
 		sleep_time = 1000
 
 		poller = select.poll()
-		poller.register(reading, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
+		for io in reading:
+			poller.register(io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
 
-		ready = False
-		for _, event in poller.poll(sleep_time):
+		ready = []
+		for io, event in poller.poll(sleep_time):
 			if event & select.POLLIN or event & select.POLLPRI:
-				ready = True
+				ready.append(io)
 			elif event & select.POLLHUP:
 				raise KeyboardInterrupt()
 			elif event & select.POLLERR or event & select.POLLNVAL:
