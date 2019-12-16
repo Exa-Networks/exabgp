@@ -9,6 +9,8 @@ Version 4.1.3:
  * Feature: "rate-limit" (per neighbor) limit the number of BGP message(s) handled per second
  * Feature: support draft-ietf-idr-flowspec-redirect-02 (previously only simpson was supported)
    patch by: Eli Lindsey
+ * Feature: BGP LS IPv6 parsing support
+   patch by: Tinus Flagstad
  * Fix: use local IP for router-id when the peer is auto-deteted (and not the remote IP)
  * Fix: potential python3/python2 bytes vs string issues when generating updates
  * Fix: label is mandatory when using RD, force it, and perform better checks on the configuration
