@@ -54,7 +54,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 @BGPLS.register
 class LINK(BGPLS):
 	CODE = 2
-	NAME = "Link NLRI"
+	NAME = "bgpls-link"
 	SHORT_NAME = "Link"
 
 	def __init__ (
@@ -166,7 +166,7 @@ class LINK(BGPLS):
 		remote = ', '.join(d.json() for d in self.remote_node)
 		interface_addrs = ', '.join(d.json() for d in self.iface_addrs)
 		neighbor_addrs = ', '.join(d.json() for d in self.neigh_addrs)
-		content = '"ls-nlri-type": 2, '
+		content = '"ls-nlri-type": "%s", ' % self.NAME
 		content += '"l3-routing-topology": %d, ' % int(self.domain)
 		content += '"protocol-id": %d, ' % int(self.proto_id)
 		content += '"local-node-descriptors": { %s }, ' % local

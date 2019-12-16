@@ -1,12 +1,13 @@
 """
-prefixv4.py
-
-Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
-Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+prefixv6.py
+Created by Tinus Flagstad & Håvard Eidnes on 2018-07-02.
+Copyright (c) 2009-2018 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from struct import pack
 from struct import unpack
+import json
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -32,10 +33,10 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 
 
 @BGPLS.register
-class PREFIXv4(BGPLS):
-	CODE = 3
-	NAME = "bgpls-prefix-v4"
-	SHORT_NAME = "PREFIX_V4"
+class PREFIXv6(BGPLS):
+	CODE = 4
+	NAME = "bgpls-prefix-v6"
+	SHORT_NAME = "PREFIX_V6"
 
 	def __init__ (
 			self,domain,proto_id,local_node,
@@ -82,7 +83,7 @@ class PREFIXv4(BGPLS):
 				tlvs = tlvs[4 + tlv_length:]
 			if tlv_type == 265:
 				values = tlvs[4: 4 + tlv_length]
-				prefix = IpReach.unpack(values, 3)
+				prefix = IpReach.unpack(values, 4)
 				tlvs = tlvs[4 + tlv_length:]
 
 		return cls(
@@ -93,7 +94,7 @@ class PREFIXv4(BGPLS):
 
 	def __eq__ (self, other):
 		return \
-			isinstance(other, PREFIXv4) and \
+			isinstance(other, PREFIXv6) and \
 			self.CODE == other.CODE and \
 			self.domain == other.domain and \
 			self.proto_id == other.proto_id and \
