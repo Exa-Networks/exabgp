@@ -108,8 +108,8 @@ class Connection (object):
 		for _, event in poller.poll(0):
 			if event & select.POLLIN or event & select.POLLPRI:
 				ready = True
-			elif event & select.POLLHUP:
-				raise KeyboardInterrupt()
+			# elif event & select.POLLHUP:
+			# 	pass
 			elif event & select.POLLERR or event & select.POLLNVAL:
 				self._rpoller = {}
 				continue
@@ -126,8 +126,8 @@ class Connection (object):
 		for _, event in poller.poll(0):
 			if event & select.POLLOUT:
 				ready = True
-			elif event & select.POLLHUP:
-				raise KeyboardInterrupt()
+			# elif event & select.POLLHUP:
+			# 	pass
 			elif event & select.POLLERR or event & select.POLLNVAL:
 				self._wpoller = {}
 		return ready

@@ -115,9 +115,8 @@ class Reactor (object):
 				if event & select.POLLIN or event & select.POLLPRI:
 					yield fd
 					continue
-				elif event & select.POLLHUP:
-					self._termination('^C received', self.Exit.normal)
-					return
+				# elif event & select.POLLHUP:
+				# 	continue
 				elif event & select.POLLERR or event & select.POLLNVAL:
 					self._prevent_spin()
 					continue

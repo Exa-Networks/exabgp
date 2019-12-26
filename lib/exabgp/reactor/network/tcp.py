@@ -253,8 +253,8 @@ def ready (io):
 			for _, event in pulled:
 				if event & select.POLLOUT:
 					found = True
-				elif event & select.POLLHUP:
-					raise KeyboardInterrupt()
+				# elif event & select.POLLHUP:
+				# 	pass
 				elif event & select.POLLERR or event & select.POLLNVAL:
 					logger.warning('connect attempt failed, issue with reading on the network, retrying', 'network')
 				yield found

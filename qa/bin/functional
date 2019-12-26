@@ -265,7 +265,7 @@ class Command (object):
 	def client (index):
 		test = CI.get(index)
 		if not test:
-			sys.exit("can not find any test called '%s'" % name)
+			sys.exit("can not find any test called '%s'" % index)
 
 		if os.getuid() and os.getgid() and test['port'] <= 1024:
 			sys.exit('you need to have root privileges to bind to port 79')
@@ -290,7 +290,7 @@ class Command (object):
 		test = CI.get(index)
 
 		if not test:
-			sys.exit("can not find any test called '%s'" % name)
+			sys.exit("can not find any test called '%s'" % index)
 
 		if os.getuid() and os.getgid() and test['port'] <= 1024:
 			sys.exit('you need to have root privileges to bind to port 79')
