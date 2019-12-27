@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import re
 import base64
-import time
 import socket
 import select
 import platform
@@ -233,48 +232,33 @@ def asynchronous(io, ip):
 
 def ready (io):
 	logger = Logger()
-	warned = False
-	start = time.time()
 
 	poller = select.poll()
 	poller.register(io, select.POLLOUT | select.POLLNVAL | select.POLLERR)
 
+	found = False
+
 	while True:
 		try:
-			found = False
-			pulled = poller.poll(0)
-			if not pulled:
-				if not warned and time.time() - start > 1.0:
-					logger.debug('attempting to establish connection', 'network')
-					warned = True
-				yield False
-				continue
-
-			for _, event in pulled:
-				if event & select.POLLOUT:
+			for _, event in poller.poll(0):
+				if event & select.POLLOUT or event & select.POLLIN:
 					found = True
-				# elif event & select.POLLHUP:
-				# 	pass
+				elif event & select.POLLHUP or event & select.POLLRDHUP:
+					yield False, 'could not connect, retrying'
+					return
 				elif event & select.POLLERR or event & select.POLLNVAL:
-					logger.warning('connect attempt failed, issue with reading on the network, retrying', 'network')
-				yield found
+					yield False, 'connect attempt failed, issue with reading on the network, retrying'
+					return
 
-			if not found:
-				continue
-
-			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-			if not err:
-				if warned:
-					logger.warning('connection established','network')
-				yield True
-				return
-			elif err in error.block:
-				logger.warning('connect attempt failed, retrying, reason %s' % errno.errorcode[err],'network')
-				yield False
-				return
-			else:
-				yield False
-				return
-		except select.error:
-			yield False
+			if found:
+				err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+				if not err:
+					yield True, 'connection established'
+					return
+				elif err in error.block:
+					yield False, 'connect attempt failed, retrying, reason %s' % errno.errorcode[err]
+					return
+			yield False, 'waiting for socket to become ready'
+		except select.error as err:
+			yield False, 'error, retrying %s' % str(err)
 			return
