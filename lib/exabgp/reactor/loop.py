@@ -110,16 +110,17 @@ class Reactor (object):
 		return True
 
 	def _wait_for_io (self,sleeptime):
+		spin_prevention = False
 		try:
 			for fd, event in self._poller.poll(sleeptime):
 				if event & select.POLLIN or event & select.POLLPRI:
 					yield fd
 					continue
-				# elif event & select.POLLHUP:
-				# 	continue
-				elif event & select.POLLERR or event & select.POLLNVAL:
-					self._prevent_spin()
+				elif event & select.POLLHUP or event & select.POLLRDHUP or event & select.POLLERR or event & select.POLLNVAL:
+					spin_prevention = true
 					continue
+			if spin_prevention:
+				self._prevent_spin()
 		except KeyboardInterrupt:
 			self._termination('^C received',self.Exit.normal)
 			return

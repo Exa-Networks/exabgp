@@ -268,11 +268,9 @@ class Peer (object):
 
 	def _connect (self):
 		proto = Protocol(self)
-		generator = proto.connect()
-
 		connected = False
 		try:
-			for connected in generator:
+			for connected in proto.connect():
 				if connected:
 					break
 				if self._teardown:
