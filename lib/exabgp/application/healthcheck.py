@@ -327,25 +327,33 @@ def loopback_ips(label):
         if not ip.is_loopback:
             if label:
                 lmo = labelre.match(line)
-                if not lmo or not lmo.group("label").startswith(label):
+                if not lmo:
                     continue
-            addresses.append(ip)
+                if lmo.groupdict().get("label","").startswith(label):
+                    addresses.append(ip)
+
     logger.debug("Loopback addresses: %s", addresses)
     return addresses
 
+def loopback():
+    lo = "lo0"
+    if sys.platform.startswith("linux"):
+        lo = "lo"
+    return lo
 
 def setup_ips(ips, label, sudo=False):
     """Setup missing IP on loopback interface"""
+
     existing = set(loopback_ips(label))
     toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
         logger.debug("Setup loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
-            cmd = ["ip", "address", "add", str(ip), "dev", "lo"]
+            cmd = ["ip", "address", "add", str(ip), "dev", loopback()]
             if sudo:
                 cmd.insert(0, "sudo")
             if label:
-                cmd += ["label", "lo:{0}".format(label)]
+                cmd += ["label", "{0}:{1}".format(loopback(),label)]
             subprocess.check_call(
                 cmd, stdout=fnull, stderr=fnull)
 
@@ -358,11 +366,11 @@ def remove_ips(ips, label, sudo=False):
     for ip in toremove:
         logger.debug("Remove loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
-            cmd = ["ip", "address", "delete", str(ip), "dev", "lo"]
+            cmd = ["ip", "address", "delete", str(ip), "dev", loopback()]
             if sudo:
                 cmd.insert(0, "sudo")
             if label:
-                cmd += ["label", "lo:{0}".format(label)]
+                cmd += ["label", "{0}:{1}".format(loopback(),label)]
             try:
                 subprocess.check_call(
                     cmd, stdout=fnull, stderr=fnull)
@@ -456,7 +464,11 @@ def loop(options):
         if target not in (states.UP, states.DOWN, states.DISABLED, states.EXIT):
             return
         # dynamic ip management. When the service fail, remove the loopback
-        if target in (states.DOWN, states.DISABLED, states.EXIT) and options.ip_dynamic:
+        if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
+            logger.info("exiting, deleting loopback ips")
+            remove_ips(options.ips, options.label, options.sudo)
+        # dynamic ip management. When the service fail, remove the loopback
+        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
             logger.info("service down, deleting loopback ips")
             remove_ips(options.ips, options.label, options.sudo)
         # if ips was deleted with dyn ip, re-setup them
@@ -535,8 +547,14 @@ def loop(options):
             env = os.environ.copy()
             env.update({"STATE": str(target)})
             with open(os.devnull, "w") as fnull:
-                subprocess.call(
-                    cmd, shell=True, stdout=fnull, stderr=fnull, env=env)
+                try:
+                    subprocess.call(
+                        cmd, shell=True, stdout=fnull, stderr=fnull, env=env)
+                except subprocess.CalledProcessError as e:
+                    # the IP address is already setup, ignoring
+                    if cmd[0] == "ip" and cmd[2] == "add" and e.returncode == 2:
+                        continue
+                    raise e
 
         return target
 
@@ -604,11 +622,15 @@ def loop(options):
     while True:
         checks, state = one(checks, state)
 
-        # How much we should sleep?
-        if state in (states.FALLING, states.RISING):
-            time.sleep(options.fast)
-        else:
-            time.sleep(options.interval)
+        try:
+            # How much we should sleep?
+            if state in (states.FALLING, states.RISING):
+                time.sleep(options.fast)
+            else:
+                time.sleep(options.interval)
+        except KeyboardInterrupt:
+            exabgp(states.EXIT)
+            break
 
 
 def main():
