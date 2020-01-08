@@ -354,8 +354,14 @@ def setup_ips(ips, label, sudo=False):
                 cmd.insert(0, "sudo")
             if label:
                 cmd += ["label", "{0}:{1}".format(loopback(),label)]
-            subprocess.check_call(
-                cmd, stdout=fnull, stderr=fnull)
+                try:
+                    subprocess.check_call(
+                        cmd, stdout=fnull, stderr=fnull)
+                except subprocess.CalledProcessError as e:
+                    # the IP address is already setup, ignoring
+                    if cmd[0] == "ip" and cmd[2] == "add" and e.returncode == 2:
+                        continue
+                    raise e
 
 def remove_ips(ips, label, sudo=False):
     """Remove added IP on loopback interface"""
@@ -547,14 +553,8 @@ def loop(options):
             env = os.environ.copy()
             env.update({"STATE": str(target)})
             with open(os.devnull, "w") as fnull:
-                try:
-                    subprocess.call(
-                        cmd, shell=True, stdout=fnull, stderr=fnull, env=env)
-                except subprocess.CalledProcessError as e:
-                    # the IP address is already setup, ignoring
-                    if cmd[0] == "ip" and cmd[2] == "add" and e.returncode == 2:
-                        continue
-                    raise e
+                subprocess.call(
+                    cmd, shell=True, stdout=fnull, stderr=fnull, env=env)
 
         return target
 
