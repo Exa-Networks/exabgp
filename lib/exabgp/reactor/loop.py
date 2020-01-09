@@ -305,6 +305,7 @@ class Reactor (object):
 					self.signal.rearm()
 
 					if signaled == Signal.SHUTDOWN:
+						self.exit_code = self.Exit.normal
 						self.shutdown()
 						break
 
