@@ -16,7 +16,7 @@ class TestTlvs(unittest.TestCase):
         self.assertEqual(tlv.json(), '"ip-reachability-tlv": "10.0.0.0", "ip-reach-prefix": "10.0.0.0/10"')
 
     def test_ip_reach_ipv6(self,):
-        data =b'\x7f \x01\x07\x00\x00\x00\x80'
+        data = b'\x7f \x01\x07\x00\x00\x00\x80'
         tlv = IpReach.unpack(data, 4)
         self.assertEqual(tlv.json(), '"ip-reachability-tlv": "2001:700:0:8000::", "ip-reach-prefix": "2001:700:0:8000::/127"')
 

@@ -68,7 +68,7 @@ class IpReach(object):
 			prefix_list = [str(format(x, 'x')) for x in prefix_list]
 			# fill out to a complete 128-bit address
 			prefix_list = prefix_list + ["0"] * (8 - len(prefix_list))
-			prefix = ":".join(prefix_list)
+			prefix = u":".join(prefix_list)
 			prefix = ipaddress.ip_address(prefix).compressed
 		else:
 			# IPv4
