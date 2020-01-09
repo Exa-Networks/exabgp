@@ -18,6 +18,7 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
 from exabgp.bgp.message.update.attribute.sr.ipv6sid import SrV6Sid
 from exabgp.bgp.message.update.attribute.sr.srv6vpnsid import Srv6VpnSid
+from exabgp.bgp.message.update.attribute.sr.srv6l3vpnsid import Srv6L3vpnSid
 from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
 
 
@@ -116,7 +117,7 @@ def prefix_sid (tokeniser):
 
 	return PrefixSid(sr_attrs)
 
-# { ipv6 <ipv6-addr> | vpn <ipv4-addr> }
+# { ipv6 <ipv6-addr> | vpn <ipv6-addr> | l3vpn <ipv6-addr> }
 def prefix_sid_srv6 (tokeniser):
 	sr_attrs = []
 	value = tokeniser()
@@ -133,6 +134,13 @@ def prefix_sid_srv6 (tokeniser):
 			if value == 'vpn':
 				value = tokeniser()
 				sr_attrs.append(Srv6VpnSid(value))
+				value = tokeniser()
+				if value == ')':
+					return PrefixSid(sr_attrs)
+
+			if value == 'l3vpn':
+				value = tokeniser()
+				sr_attrs.append(Srv6L3vpnSid(value))
 				value = tokeniser()
 				if value == ')':
 					return PrefixSid(sr_attrs)
