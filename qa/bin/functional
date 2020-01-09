@@ -178,7 +178,7 @@ class CI (dict):
 
 	@classmethod
 	def color (cls,name):
-		return cls._status[name]
+		return cls._status.get(name, Color.NONE)
 
 	@classmethod
 	def reset (cls,name):
