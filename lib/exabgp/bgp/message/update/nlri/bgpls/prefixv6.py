@@ -1,6 +1,6 @@
 """
 prefixv6.py
-Created by Tinus Flagstad & Håvard Eidnes on 2018-07-02.
+Created by Tinus Flagstad & Havard Eidnes on 2018-07-02.
 Copyright (c) 2009-2018 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
