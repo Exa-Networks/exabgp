@@ -243,7 +243,7 @@ def ready (io):
 			for _, event in poller.poll(0):
 				if event & select.POLLOUT or event & select.POLLIN:
 					found = True
-				elif event & select.POLLHUP or event & select.POLLRDHUP:
+				elif event & select.POLLHUP:
 					yield False, 'could not connect, retrying'
 					return
 				elif event & select.POLLERR or event & select.POLLNVAL:
