@@ -38,21 +38,25 @@ class Outgoing (Connection):
 			if self.local:
 				bind(self.io,self.local,self.afi)
 			asynchronous(self.io, self.peer)
-			return True
+			return None
 		except NetworkError as exc:
-			self.close()
-			return False
+			self.io.close()
+			self.io = None
+			return exc
 
 	def _connect (self):
+		if not self.io: 
+			setup_issue = self._setup()
+			if setup_issue:
+				return setup_issue
 		try:
 			connect(self.io,self.peer,self.port,self.afi,self.md5)
-			return True
+			return None
 		except NetworkError as exc:
-			return False
+			return exc
 
 	def establish (self):
 		last = time.time() - 2.0
-		self._setup()
 
 		while True:
 			notify = (time.time() - last > 1.0)
@@ -61,10 +65,12 @@ class Outgoing (Connection):
 
 			if notify:
 				self.logger.debug('attempting connection to %s:%d' % (self.peer,self.port),self.session())
-
-			if not self._connect():
+			
+			connect_issue = self._connect()
+			if connect_issue:
 				if notify:
 					self.logger.debug('connection to %s:%d failed' % (self.peer,self.port),self.session())
+					self.logger.debug(str(connect_issue),self.session())
 				yield False
 				continue
 
