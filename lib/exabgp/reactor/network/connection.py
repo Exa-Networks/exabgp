@@ -108,7 +108,7 @@ class Connection (object):
 		for _, event in poller.poll(0):
 			if event & select.POLLIN or event & select.POLLPRI:
 				ready = True
-			elif event & select.POLLHUP or event & select.POLLRDHUP or event & select.POLLERR or event & select.POLLNVAL:
+			elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
 				self._rpoller = {}
 				ready = True
 		return ready
@@ -124,7 +124,7 @@ class Connection (object):
 		for _, event in poller.poll(0):
 			if event & select.POLLOUT:
 				ready = True
-			elif event & select.POLLHUP or event & select.POLLRDHUP or event & select.POLLERR or event & select.POLLNVAL:
+			elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
 				self._wpoller = {}
 				ready = True
 		return ready

@@ -116,7 +116,7 @@ class Reactor (object):
 				if event & select.POLLIN or event & select.POLLPRI:
 					yield fd
 					continue
-				elif event & select.POLLHUP or event & select.POLLRDHUP or event & select.POLLERR or event & select.POLLNVAL:
+				elif event & select.POLLHUP  or event & select.POLLERR or event & select.POLLNVAL:
 					spin_prevention = true
 					continue
 			if spin_prevention:

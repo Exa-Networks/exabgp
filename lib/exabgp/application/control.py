@@ -107,7 +107,7 @@ class Control (object):
 		for io, event in poller.poll(sleep_time):
 			if event & select.POLLIN or event & select.POLLPRI:
 				ready.append(io)
-			elif event & select.POLLHUP or event & select.POLLRDHUP or event & select.POLLERR or event & select.POLLNVAL:
+			elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
 				sys.exit(1)
 		return ready
 
