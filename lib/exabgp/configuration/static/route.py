@@ -54,6 +54,7 @@ from exabgp.configuration.static.parser import withdraw
 from exabgp.configuration.static.mpls import route_distinguisher
 from exabgp.configuration.static.mpls import label
 from exabgp.configuration.static.mpls import prefix_sid
+from exabgp.configuration.static.mpls import prefix_sid_srv6
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
@@ -79,6 +80,7 @@ class ParseStaticRoute (Section):
 		'cluster-list <ipv4>',
 		'label <15 bits number>',
 		'bgp-prefix-sid [ 32 bits number> ] | [ <32 bits number>, [ ( <24 bits number>,<24 bits number> ) ]]',
+		'bgp-prefix-sid-srv6 ( ipv6 <ipv6 formated number> | l3vpn <ipv6 formated number> | vpn <ipv6 formated number> )',
 		'aggregator ( <asn16>:<ipv4> )',
 		'aigp <40 bits number>',
 		'attribute [ generic attribute format ]'
@@ -98,6 +100,7 @@ class ParseStaticRoute (Section):
 		'route-distinguisher': route_distinguisher,
 		'label':               label,
 		'bgp-prefix-sid':      prefix_sid,
+		'bgp-prefix-sid-srv6': prefix_sid_srv6,
 		'attribute':           attribute,
 		'next-hop':            next_hop,
 		'origin':              origin,
@@ -124,6 +127,7 @@ class ParseStaticRoute (Section):
 		'route-distinguisher': 'nlri-set',
 		'label':               'nlri-set',
 		'bgp-prefix-sid':      'attribute-add',
+		'bgp-prefix-sid-srv6': 'attribute-add',
 		'attribute':           'attribute-add',
 		'next-hop':            'nexthop-and-attribute',
 		'origin':              'attribute-add',
