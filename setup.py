@@ -10,7 +10,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 import os
 import sys
 
-
 class path:
 	root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
 	changelog = os.path.join(root,'CHANGELOG')
@@ -406,7 +405,8 @@ def main ():
 		'install' in sys.argv or \
 		'sdist' in sys.argv or \
 		'bdist_wheel' in sys.argv or \
-		'build' in sys.argv:
+		'build' in sys.argv or \
+		'egg_info' in sys.argv:
 		sys.exit(st())
 
 	if sys.argv[-1] == 'debian':
