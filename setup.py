@@ -401,21 +401,16 @@ def main ():
 		sys.stdout.write("%s\n" % version.changelog())
 		sys.exit(0)
 
-	if '--help' in sys.argv or \
-		'install' in sys.argv or \
-		'sdist' in sys.argv or \
-		'bdist_wheel' in sys.argv or \
-		'build' in sys.argv or \
-		'egg_info' in sys.argv:
-		sys.exit(st())
+	if '--help' in sys.argv or 'help' in sys.argv:
+		help()
+		sys.exit(1)
 
 	if sys.argv[-1] == 'debian':
 		release = version.changelog()
 		debian.set(release)
 		sys.exit(0)
 
-	help()
-	sys.exit(1)
+	sys.exit(st())
 
 
 if __name__ == '__main__':
