@@ -29,14 +29,7 @@ ExaBGP allows engineers to control their network from commodity servers. Think o
 It can be used to announce ipv4, ipv6, vpn or flow routes (for DDOS protection) from its configuration file(s).
 ExaBGP can also transform BGP messages into friendly plain text or JSON which can be easily manipulate by scripts and report peer announcements.
 
-Use cases include
------------------
-
-- `Artemis <https://github.com/FORTH-ICS-INSPIRE/artemis>`_ Real-Time Detection and Automatic Mitigation for BGP Prefix Hijacking
-- `GIXLG <https://code.google.com/p/gixlg/wiki/sample_maps>`_ An SQL backed  looking glass with with prefix routing visualisation
-- Service `high availability <https://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html>`_ automatically isolating dead servers / broken services
-- `DDOS mitigation <https://mum.mikrotik.com/presentations/EU16/presentation_2960_1456752556.pdf>`_ 
-- `Anycasted <https://vincent.bernat.ch/en/blog/2013-exabgp-highavailability>`_ services
+It supports IPv4, IPv6, mpls, vpls, bgp-ls, flowspec and more.
 
 Installation
 ============
@@ -44,7 +37,7 @@ Installation
 Prerequisites
 -------------
 
-ExaBGP requires python 3.6 or later. It includes/vendors its dependencies.
+ExaBGP requires a recent python 3 version (3.7 or later recommended). It includes/vendors its dependencies.
 
 Using pip
 ---------
@@ -62,8 +55,8 @@ Without installation
 
 ::
 
-    curl -L https://github.com/Exa-Networks/exabgp/archive/%(version)s.tar.gz | tar zx
-    ./exabgp-%(version)s/sbin/exabgp --help
+    curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.0.tar.gz | tar zx
+    ./exabgp-4.2.0/sbin/exabgp --help
 
 Feedback and getting involved
 =============================
