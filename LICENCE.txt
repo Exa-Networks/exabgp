@@ -1,12 +1,13 @@
 Python BGP route injector
 
-Copyright (c) 2009-2017, Exa Networks Limited
-Copyright (c) 2009-2017, Thomas Mangin
-Copyright (c) 2014-2017, Nikita Shirokov
-Copyright (c) 2014-2017, Orange
-Copyright (c) 2015-2017, Alcatel-Lucent
-Copyright (c) 2016-2017, Job Snijders
-Copyright (c) 2016-2017, Evelio Vila
+Copyright (c) 2009-2020, Exa Networks Limited
+Copyright (c) 2009-2020, Thomas Mangin
+Copyright (c) 2014-2020, Nikita Shirokov
+Copyright (c) 2014-2020, Orange
+Copyright (c) 2015-2020, Alcatel-Lucent
+Copyright (c) 2016-2020, Job Snijders
+Copyright (c) 2016-2020, Evelio Vila
+Copyright (c) 2020-2020, Hiroki Shirokura
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
