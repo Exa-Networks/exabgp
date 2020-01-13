@@ -229,10 +229,19 @@ def release_github():
 
 	print('pushing the new tag')
 	if Git.push(tag=True, repo='origin'):
+		print('could not push release tag to origin')
+		return 1
+
+	if Git.push(tag=False, repo='origin'):
 		print('could not push release version to origin')
 		return 1
 
 	if Git.push(tag=True, repo='upstream'):
+		print('could not push release tag to upstream')
+		return 1
+	return 0
+
+	if Git.push(tag=False, repo='upstream'):
 		print('could not push release version to upstream')
 		return 1
 	return 0
