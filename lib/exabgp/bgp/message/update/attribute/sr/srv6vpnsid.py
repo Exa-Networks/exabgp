@@ -1,9 +1,9 @@
 # encoding: utf-8
 """
-sr/ipv6sid.py
+sr/srv6vpnsid.py
 
-Created by Evelio Vila 2017-02-16
-Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+Created by Hiroki Shirokura 2020-01-09
+Copyright (c) 2020 Hiroki Shirokura . All rights reserved.
 """
 from struct import pack
 
@@ -18,7 +18,7 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 # |       Type    |             Length            |   RESERVED    |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-# |            RESERVED           |                               |
+# |   SID-Type    |   SID-Flags   |                               |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               |
 # |                                                               |
 # |                        IPv6 SID (16 octets)                   |
@@ -26,40 +26,39 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 # |                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 # |                               |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-# 3.2.  IPv6 SID
+# 3.2.  SRv6 VPN SID
 
 
 @PrefixSid.register()
-class SrV6Sid(object):
-	TLV = 2
+class Srv6VpnSid(object):
+	TLV = 4
 	LENGTH = 19
 
-	def __init__ (self,v6sid,packed=None):
-		self.v6sid = v6sid
+	def __init__ (self,vpnsid,packed=None):
+		self.vpnsid = vpnsid
 		self.packed = self.pack()
 
 	def __repr__ (self):
-		return "sr-v6-sid %s" % (self.v6sid)
+		return "srv6-vpn-sid %s" % (self.vpnsid)
 
 	def pack (self):
 		return concat_bytes(
 			pack('!B', self.TLV),
 			pack('!H', self.LENGTH),
 			pack('!B', 0),
-			pack('!H', 0),
-			IP.pton(self.v6sid)
+			pack('!B', 0),
+			pack('!B', 0),
+			IP.pton(self.vpnsid)
 		)
 
 	@classmethod
 	def unpack (cls,data,length):
-		v6sid = -1
+		vpnsid = -1
 		if cls.LENGTH != length:
 			raise Notify(3,5, "Invalid TLV size. Should be {0} but {1} received".format(cls.LENGTH, length))
-		# RESERVED: 24 bit field for future use.  MUST be clear on
-		# transmission an MUST be ignored at reception.
 		data = data[3:19]
-		v6sid = IP.unpack(data)
-		return cls(v6sid=str(v6sid),packed=data)
+		vpnsid = IP.unpack(data)
+		return cls(vpnsid=str(vpnsid),packed=data)
 
 	def json (self, compact=None):
-		return '"sr-v6-sid": "%s"' % (self.v6sid)
+		return '"srv6-vpn-sid": "%s"' % (self.vpnsid)

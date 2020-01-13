@@ -139,7 +139,7 @@ class MPRNLRI (Attribute,Family):
 		length, rd = Family.size[(afi, safi)]
 
 		if negotiated.nexthop:
-			if len_nh in (16, 32):
+			if len_nh in (16, 32, 24):
 				nh_afi = AFI.ipv6
 			elif len_nh in (4,):
 				nh_afi = AFI.ipv4
