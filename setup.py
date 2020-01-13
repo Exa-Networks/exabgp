@@ -14,8 +14,8 @@ import sys
 import setuptools
 from distutils.core import setup
 
-from setuptools.config import read_configuration
-conf_dict = read_configuration('./setup.cfg', find_others=True)
+# from setuptools.config import read_configuration
+# conf_dict = read_configuration('./setup.cfg', find_others=True)
 
 sys.path.append(os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]), 'lib/exabgp'))
 exabgp_version = importlib.import_module('version')
