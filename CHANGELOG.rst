@@ -4,6 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.1:
+ * Feature: use vendored ip_address module for healthcheck
 
 Version 4.2.0:
  * Feature: Support additional sub-type of BGP-Prefix-SID for SRv6-VPN 
