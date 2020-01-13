@@ -56,37 +56,20 @@ import collections
 
 logger = logging.getLogger("healthcheck")
 
-try:
-    # Python 3.3+ or backport
-    from ipaddress import ip_network as ip_network  # pylint: disable=F0401
-    from ipaddress import ip_address as ip_address  # pylint: disable=F0401
+# Python 3.3+ or backport
+from exabgp.vendoring.ipaddress import ip_network  # pylint: disable=F0401
+from exabgp.vendoring.ipaddress import ip_address  # pylint: disable=F0401
 
-    def fix(f):
-        def fixed(x):
-            try:
-                x = x.decode('ascii')
-            except AttributeError:
-                pass
-            return f(x)
-        return fixed
-    ip_network = fix(ip_network)
-    ip_address = fix(ip_address)
-
-except ImportError:
-    try:
-        # Python 2.6, 2.7, 3.2
-        from ipaddr import IPNetwork as ip_network
-        from ipaddr import IPAddress as ip_address
-    except ImportError:
-        sys.stderr.write(
-            '\n'
-            'This program requires the python module ip_address (for python 3.3+) or ipaddr (for python 2.6, 2.7, 3.2)\n'
-            'Please pip install one of them with one of the following command.\n'
-            '> pip install ip_address\n'
-            '> pip install ipaddr\n'
-            '\n'
-        )
-        sys.exit(1)
+def fix(f):
+    def fixed(x):
+        try:
+            x = x.decode('ascii')
+        except AttributeError:
+            pass
+        return f(x)
+    return fixed
+ip_network = fix(ip_network)
+ip_address = fix(ip_address)
 
 
 def enum(*sequential):
