@@ -13,7 +13,7 @@ import sys
 
 class Path:
 	root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
-	changelog = os.path.join(root,'CHANGELOG')
+	changelog = os.path.join(root,'CHANGELOG.rst')
 	lib_exa = os.path.join(root, 'lib/exabgp')
 	version = os.path.join(root, 'lib/exabgp/version.py')
 	debian = os.path.join(root, 'debian/changelog')
@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
 	@staticmethod
 	def get():
-		sys.path.append(path.lib_exa)
+		sys.path.append(Path.lib_exa)
 		from version import version as release
 
 		# transitional fix
@@ -227,14 +227,18 @@ def release_github():
 		print('could not tag version (%s)' % release)
 		return 1
 
-	print('pushing the new tag to local repo')
+	print('pushing the new tag')
+	if Git.push(tag=True, repo='origin'):
+		print('could not push release version to origin')
+		return 1
+
 	if Git.push(tag=True, repo='upstream'):
-		print('could not push release version')
+		print('could not push release version to upstream')
 		return 1
 	return 0
 
 
-def release_pypi():
+def release_pypi(test):
 	print()
 	print('updating PyPI')
 
@@ -247,9 +251,13 @@ def release_pypi():
 	# keyring used to save credential
 	# https://pypi.org/project/twine/
 
-	release = Version.changelog()
+	release = Version.latest(Git.tags())
 
-	if Command.run('twine upload dist/exabgp-%s.tar.gz' % release):
+	server = ''
+	if test:
+		server = '--repository-url https://test.pypi.org/legacy/'
+
+	if Command.run('twine upload %s dist/exabgp-%s.tar.gz' % (server, release)):
 		print('could not upload with twine')
 		return 1
 
@@ -270,22 +278,22 @@ def main ():
 	if os.environ.get("SCRUTINIZER", "") == "true":
 		sys.exit(0)
 
-	if sys.argv[-1] == 'cleanup':
+	if sys.argv[1] == 'cleanup':
 		sys.exit(Path.remove_egg())
 
-	if sys.argv[-1] == 'github':
+	if sys.argv[1] == 'github':
 		sys.exit(release_github())
 
-	if sys.argv[-1] == 'pypi':
-		sys.exit(release_pypi())
+	if sys.argv[1] == 'pypi':
+		sys.exit(release_pypi('--test' in sys.argv or 'test' in sys.argv))
 
 	# "internal" commands
 
-	if sys.argv[-1] == 'version':
+	if sys.argv[1] == 'version':
 		sys.stdout.write("%s\n" % Version.get())
 		sys.exit(0)
 
-	if sys.argv[-1] == 'current':
+	if sys.argv[1] == 'current':
 		sys.stdout.write("%s\n" % Version.changelog())
 		sys.exit(0)
 
@@ -293,7 +301,7 @@ def main ():
 		help()
 		sys.exit(1)
 
-	if sys.argv[-1] == 'debian':
+	if sys.argv[1] == 'debian':
 		release = Version.changelog()
 		Debian.set(release)
 		sys.exit(0)
