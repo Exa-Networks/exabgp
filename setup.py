@@ -238,7 +238,7 @@ def release_github():
 		print('version was updated')
 
 	print('tagging the new version')
-	if git.tag(version):
+	if git.tag(release):
 		print('could not tag version (%s)' % release)
 		return 1
 
