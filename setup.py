@@ -12,7 +12,7 @@ import sys
 
 class path:
 	root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
-	changelog = os.path.join(root,'CHANGELOG')
+	changelog = os.path.join(root,'CHANGELOG.rst')
 	lib_exa = os.path.join(root, 'lib/exabgp')
 	version = os.path.join(root, 'lib/exabgp/version.py')
 	debian = os.path.join(root, 'debian/changelog')
