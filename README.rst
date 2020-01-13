@@ -74,3 +74,6 @@ Feedback and getting involved
 - Mailing list: http://groups.google.com/group/exabgp-users
 - Issue tracker: https://github.com/Exa-Networks/exabgp/issues
 - Code Repository: https://github.com/Exa-Networks/exabgp
+
+Versions
+========
