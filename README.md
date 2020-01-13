@@ -22,7 +22,7 @@ Some users have documented their use cases, such as [DailyMotion](https://medium
 These organisations have spoken of, or are using/have used ExaBGP:
 [AMS-IX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
 [Alcatel Lucent](https://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
-[BBC](http://www.bbc.co.uk/blogs/internet/entries/8c6c2414-df7a-4ad7-bd2e-dbe481da3633),
+[BBC](http://www.bbc.co.uk/blogs/internet/entries/8c6c2414-df7a-4ad7-bd2e-dbeda3633),
 [Blablacar](http://previous.blablatech.com/blog/bgp-routing-to-containers),
 [Cisco Systems](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
 [Cloudflare](https://www.slideshare.net/TomPaseka/flowspec-apf-2013),
@@ -56,9 +56,9 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.1.3.tar.gz | tar zx
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.0.tar.gz | tar zx
 
-> cd exabgp-4.1.3
+> cd exabgp-4.2.0
 > ./sbin/exabgp --version
 > ./sbin/exabgp --help
 
@@ -81,16 +81,16 @@ or to use git master
 > ./bin/healthcheck --help
 ```
 
-or change git to use any previous release (here 4.1.3)
+or change git to use any previous release (here 4.2.0)
 
 ```sh
-> git checkout 4.1.3
+> git checkout 4.2.0
 > ./sbin/exabgp --version
 ```
 
 Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
 
-ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. ExaBGP 4.1 and later are targeting python3 only.
+ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. ExaBGP  and later are targeting python3 only.
 
 ## Upgrade
 
