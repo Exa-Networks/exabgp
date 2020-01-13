@@ -256,12 +256,17 @@ def release_pypi():
 
 	path.remove_egg()
 
-	if command.run('python3 setup.py sdist upload'):
-		print('could not generate egg on pypi')
+	if command.run('python setup.py sdist bdist_wheel'):
+		print('could not generate egg')
 		return 1
 
-	if command.run('python3 setup.py bdist_wheel upload'):
-		print('could not generate wheel on pypi')
+	# keyring used to save credential
+	# https://pypi.org/project/twine/
+
+	release = version.changelog()
+
+	if command.run('twine upload dist/exabgp-%s.tar.gz' % release):
+		print('could not upload with twine')
 		return 1
 
 	print('all done.')
@@ -399,7 +404,8 @@ def main ():
 
 	if '--help' in sys.argv or \
 		'install' in sys.argv or \
-		'upload' in sys.argv or \
+		'sdist' in sys.argv or \
+		'bdist_wheel' in sys.argv or \
 		'build' in sys.argv:
 		sys.exit(st())
 
