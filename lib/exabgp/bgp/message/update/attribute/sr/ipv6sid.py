@@ -59,7 +59,7 @@ class SrV6Sid(object):
 		# transmission an MUST be ignored at reception.
 		data = data[3:19]
 		v6sid = IP.unpack(data)
-		return cls(v6sid=v6sid,packed=data)
+		return cls(v6sid=str(v6sid),packed=data)
 
 	def json (self, compact=None):
 		return '"sr-v6-sid": "%s"' % (self.v6sid)
