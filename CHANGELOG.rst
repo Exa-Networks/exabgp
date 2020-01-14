@@ -3,6 +3,9 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.2:
+
+
 Version 4.2.1:
  * Feature: use vendored ip_address module for healthcheck
  * Feature: respawn option under the process (disable re-starting the api program on failure)
