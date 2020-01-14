@@ -4,7 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.2:
-
+ * Fix: issue with new respawn feature breaking the API
 
 Version 4.2.1:
  * Feature: use vendored ip_address module for healthcheck

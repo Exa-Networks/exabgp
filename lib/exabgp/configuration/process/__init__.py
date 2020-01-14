@@ -80,7 +80,8 @@ class ParseProcess (Section):
 		api = {
 			name: {
 				'run': [sys.executable, os.path.join(os.environ.get('PWD',''),sys.argv[0])],
-				'encoder': 'text'
+				'encoder': 'text',
+				'respawn': True,
 			}
 		}
 		self._processes.append(name)
