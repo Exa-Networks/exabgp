@@ -1,4 +1,4 @@
-Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: ExaBGP
 Upstream-Contact: Thomas Mangin <thomas.mangin@exa-networks.co.uk>
 Source: https://github.com/Exa-Networks/exabgp
