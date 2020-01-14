@@ -59,6 +59,7 @@ class Processes (object):
 		self.silence = False
 		self._buffer = {}
 		self._configuration = {}
+		self._restart = {}
 
 		self.respawn_number = 5 if environment.settings().api.respawn else 0
 		self.terminate_on_error = environment.settings().api.terminate
@@ -77,12 +78,12 @@ class Processes (object):
 	def _handle_problem (self, process):
 		if process not in self._process:
 			return
-		if self.respawn_number:
-			self.logger.debug('issue with the process, restarting it','process')
+		if self.respawn_number and self._restart[process]:
+			self.logger.debug('process %s ended, restarting it' % process,'process')
 			self._terminate(process)
 			self._start(process)
 		else:
-			self.logger.debug('issue with the process, terminating it','process')
+			self.logger.debug('process %s ended' % process, 'process')
 			self._terminate(process)
 
 	def _terminate (self, process_name):
@@ -123,10 +124,15 @@ class Processes (object):
 		self.clean()
 
 	def _start (self,process):
+		if not self._restart.get(process,True):
+			return
+
 		try:
+
 			if process in self._process:
 				self.logger.debug('process already running','process')
 				return
+
 			if process not in self._configuration:
 				self.logger.debug('can not start process, no configuration for it','process')
 				return
@@ -154,6 +160,7 @@ class Processes (object):
 
 				self.logger.debug('forked process %s' % process,'process')
 
+				self._restart[process] = self._configuration[process]['respawn']
 				around_now = int(time.time()) & self.respawn_timemask
 				if process in self._respawning:
 					if around_now in self._respawning[process]:
@@ -204,11 +211,6 @@ class Processes (object):
 			try:
 				proc = self._process[process]
 				poll = proc.poll()
-				# proc.poll returns None if the process is still fine
-				# -[signal], like -15, if the process was terminated
-				if poll is not None:
-					self._handle_problem(process)
-					return
 
 				poller = select.poll()
 				poller.register(proc.stdout, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
@@ -226,12 +228,12 @@ class Processes (object):
 				try:
 					# Calling next() on Linux and OSX works perfectly well
 					# but not on OpenBSD where it always raise StopIteration
-					# and only readline() works
+					# and only read() works (not even readline)
 					buf = str_ascii(proc.stdout.read(16384))
 					if buf == '' and poll is not None:
 						# if proc.poll() is None then
 						# process is fine, we received an empty line because
-						# we're doing .readline() on a non-blocking pipe and
+						# we're doing .read() on a non-blocking pipe and
 						# the process maybe has nothing to send yet
 						self._handle_problem(process)
 						continue
@@ -257,9 +259,18 @@ class Processes (object):
 						pass
 					else:
 						self.logger.debug('unexpected errno received from forked process (%s)' % errstr(exc),'process')
+					continue
 				except StopIteration:
 					if not consumed_data:
 						self._handle_problem(process)
+					continue
+
+				# proc.poll returns None if the process is still fine
+				# -[signal], like -15, if the process was terminated
+				if poll is not None:
+					self._handle_problem(process)
+					return
+
 			except KeyError:
 				pass
 			except (subprocess.CalledProcessError,OSError,ValueError):

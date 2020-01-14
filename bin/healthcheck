@@ -17,4 +17,4 @@ print [os.path.join(_, 'exabgp', 'application', 'healthcheck.py')
        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'healthcheck.py')))][0]
 ")"
 
-exec "$INTERPRETER" "$APPLICATION" --root "$path" "$@"
+exec "$INTERPRETER" "$APPLICATION" "$@"
