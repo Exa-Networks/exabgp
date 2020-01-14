@@ -5,6 +5,8 @@ Version explained:
 
 Version 4.2.1:
  * Feature: use vendored ip_address module for healthcheck
+ * Feature: respawn option under the process (disable re-starting the api program on failure)
+ * Feature: support for single announcement for the healthcheck
 
 Version 4.2.0:
  * Feature: Support additional sub-type of BGP-Prefix-SID for SRv6-VPN 

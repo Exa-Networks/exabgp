@@ -119,7 +119,7 @@ def parse():
     g.add_argument("--interval", "-i", metavar='N',
                    default=5,
                    type=float,
-                   help="wait N seconds between each healthcheck")
+                   help="wait N seconds between each healthcheck (zero to exit after first announcement)")
     g.add_argument("--fast-interval", "-f", metavar='N',
                    default=1,
                    type=float, dest="fast",
@@ -446,11 +446,14 @@ def loop(options):
         "UP",                   # Service is considered as up.
         "DOWN",                 # Service is considered as down.
         "EXIT",                 # Exit state
+        "END",                  # End state, exiting but without removing loopback and/or announced routes
     )
 
     def exabgp(target):
         """Communicate new state to ExaBGP"""
-        if target not in (states.UP, states.DOWN, states.DISABLED, states.EXIT):
+        if target not in (states.UP, states.DOWN, states.DISABLED, states.EXIT, states.END):
+            return
+        if target in (states.END,):
             return
         # dynamic ip management. When the service fail, remove the loopback
         if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
@@ -589,7 +592,7 @@ def loop(options):
             raise ValueError("Unhandled state: {0}".format(str(state)))
 
         # Send announces. We announce them on a regular basis in case
-        # we lose connection with a peer.
+        # we lose connection with a peer and the adj-rib-out is disabled.
         exabgp(state)
         return checks, state
 
@@ -609,12 +612,15 @@ def loop(options):
             # How much we should sleep?
             if state in (states.FALLING, states.RISING):
                 time.sleep(options.fast)
+            elif options.interval == 0:
+                logger.info("interval set to zero, exiting after the announcement")
+                exabgp(states.END)
+                break
             else:
                 time.sleep(options.interval)
         except KeyboardInterrupt:
             exabgp(states.EXIT)
             break
-
 
 def main():
     """Entry point."""
