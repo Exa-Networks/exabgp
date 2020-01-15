@@ -361,9 +361,9 @@ class Processes (object):
 			self.write(process,self._encoder[process].signal(neighbor,signal),neighbor)
 
 	@silenced
-	def packets (self, neighbor, direction, category, header, body):
+	def packets (self, neighbor, direction, category, negotiated, header, body):
 		for process in self._notify(neighbor,'%s-packets' % direction):
-			self.write(process,self._encoder[process].packets(neighbor,direction,category,header,body),neighbor)
+			self.write(process,self._encoder[process].packets(neighbor,direction,category,negotiated,header,body),neighbor)
 
 	@silenced
 	def notification (self, neighbor, direction, code, subcode, data, header, body):
