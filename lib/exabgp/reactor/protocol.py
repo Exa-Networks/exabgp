@@ -145,9 +145,9 @@ class Protocol (object):
 
 		if consolidate:
 			if packets:
-				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,negotiated,raw[:19],raw[19:])
+				self.peer.reactor.processes.message(message.ID,self.peer.neighbor,direction,message,negotiated,raw[:19],raw[19:])
 			else:
-				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,negotiated,b'',b'')
+				self.peer.reactor.processes.message(message.ID,self.peer.neighbor,direction,message,negotiated,b'',b'')
 		else:
 			if packets:
 				self.peer.reactor.processes.packets(self.peer.neighbor,direction,int(message.ID),negotiated,raw[:19],raw[19:])

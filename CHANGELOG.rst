@@ -3,6 +3,10 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.3:
+ * Fix: issue with sending data toward API
+   reported by: jkldgoefgkljefogeg
+
 Version 4.2.2:
  * Fix: issue with new respawn feature breaking the API
 
