@@ -466,9 +466,24 @@ class Configuration (_Configuration):
 		self.process.add_api()
 		self._commit_reload()
 		self._link()
+
+		check = self.validate()
+		if check is not None:
+			return check
+
 		self.debug_check_route()
 		self.debug_self_check()
 		return True
+
+	def validate (self):
+		for neighbor in self.neighbors.values():
+			for notification in neighbor.api:
+				for api in neighbor.api[notification]:
+					if not self.processes[api].get('run',''):
+						return self.error.set(
+							"\n\nan api called '%s' is used by neighbor '%s' but not defined\n\n" % (api,neighbor.peer_address),
+						)
+		return None
 
 	def _link (self):
 		for neighbor in six.itervalues(self.neighbors):
