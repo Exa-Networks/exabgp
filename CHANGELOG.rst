@@ -6,6 +6,7 @@ Version explained:
 Version 4.2.3:
  * Fix: issue with sending data toward API
    reported by: jkldgoefgkljefogeg
+ * Fix: bug in spin prevention (true vs True)
 
 Version 4.2.2:
  * Fix: issue with new respawn feature breaking the API

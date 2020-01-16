@@ -117,7 +117,7 @@ class Reactor (object):
 					yield fd
 					continue
 				elif event & select.POLLHUP  or event & select.POLLERR or event & select.POLLNVAL:
-					spin_prevention = true
+					spin_prevention = True
 					continue
 			if spin_prevention:
 				self._prevent_spin()
