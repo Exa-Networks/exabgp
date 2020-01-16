@@ -672,7 +672,8 @@ class Peer (object):
 		if have_open:
 			capa = self.proto.negotiated.received_open.capabilities
 			peer.update({
-				'router-id':     self.proto.negotiated.received_open.router_id,
+				'router-id':     self.proto.negotiated.sent_open.router_id,
+				'peer-id':       self.proto.negotiated.received_open.router_id,
 				'hold-time':     self.proto.negotiated.received_open.hold_time,
 				'asn4':          self.proto.negotiated.asn4,
 				'route-refresh': capa.announced(Capability.CODE.ROUTE_REFRESH),
