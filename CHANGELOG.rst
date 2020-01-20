@@ -4,7 +4,8 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.4:
- * Change: display next-hop in flow redirect
+ * Change: display next-hop in flow redirect (fixes a bug with route generation too)
+   reported by: Cathal Mooney
 
 Version 4.2.3:
  * Fix: issue with sending data toward API
