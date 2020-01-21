@@ -9,11 +9,13 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 import os
 import sys
+import fileinput
 
+CHANGELOG = 'CHANGELOG.rst'
 
 class Path:
 	root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
-	changelog = os.path.join(root,'CHANGELOG.rst')
+	changelog = os.path.join(root,CHANGELOG)
 	lib_exa = os.path.join(root, 'lib/exabgp')
 	version = os.path.join(root, 'lib/exabgp/version.py')
 	debian = os.path.join(root, 'debian/changelog')
@@ -53,16 +55,13 @@ if __name__ == '__main__':
 """
 
 	@staticmethod
-	def get():
+	def current():
 		sys.path.append(Path.lib_exa)
 		from version import version as release
 
 		# transitional fix
 		if "-" in release:
 			release = release.split("-")[0]
-
-		if Version.changelog() != release:
-			release += ".post1"
 
 		return release
 
@@ -83,7 +82,7 @@ if __name__ == '__main__':
 				Version.JSON,
 				Version.TEXT
 			))
-		return Version.get() == tag
+		return Version.current() == tag
 
 	@staticmethod
 	def latest (tags):
@@ -182,32 +181,42 @@ class Git (Command):
 #
 
 def release_github():
+
 	print()
 	print('updating Github')
+
+	current = Version.current()
+	print('current version is %s (from version.py)' % current)
+
 	release = Version.changelog()
-	tags = Git.tags()
+	print('release version is %s (from %s)' % (release, CHANGELOG))
 
 	if not Version.valid(release):
-		print('invalid new version in CHANGELOG (%s)' % release)
+		print('invalid new version in %s' % CHANGELOG)
+		return 1
+
+	tags = Git.tags()
+	if release in tags:
+		print('this version/tag was already released/used')
 		return 1
 
 	candidates = Version.candidates(Version.latest(tags))
+	if release not in candidates:
+		print('valid versions are:', ', '.join(candidates))
+		print('this release is not one of the candidates')
 
-	print('valid versions are:', ', '.join(candidates))
-	print('checking the CHANGELOG uses one of them')
-
-	print('ok, next release is %s' % release)
-	print('checking that this release is not already tagged')
-
-	if release in tags:
-		print('this tag was already released')
-		return 1
-
-	print('ok, this is a new release')
-	print('rewriting lib/exabgp/version.py')
+	print('updating lib/exabgp/version.py')
 	Version.set(release, Git.head_commit())
-	print('rewriting debian/changelog')
+	print('updating debian/changelog')
 	Debian.set(release)
+
+	print('updating ', end='')
+	for readme in ('README.md', 'README.rst'):
+		print(readme + ' ', end='')
+		with fileinput.FileInput(readme, inplace=True) as replacer:
+			for line in replacer:
+				print(line.replace(current, release), end='')
+	print()
 
 	print('checking if we need to commit a version.py change')
 	status = Git.pending()
@@ -286,6 +295,10 @@ def main ():
 	if os.environ.get("SCRUTINIZER", "") == "true":
 		sys.exit(0)
 
+	if len(sys.argv) < 2:
+		help()
+		sys.exit(1)
+
 	if sys.argv[1] == 'cleanup':
 		sys.exit(Path.remove_egg())
 
@@ -297,11 +310,11 @@ def main ():
 
 	# "internal" commands
 
-	if sys.argv[1] == 'version':
-		sys.stdout.write("%s\n" % Version.get())
+	if sys.argv[1] == 'current':
+		sys.stdout.write("%s\n" % Version.current())
 		sys.exit(0)
 
-	if sys.argv[1] == 'current':
+	if sys.argv[1] == 'release':
 		sys.stdout.write("%s\n" % Version.changelog())
 		sys.exit(0)
 
