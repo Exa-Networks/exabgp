@@ -164,10 +164,11 @@ class Git (Command):
 
 	@staticmethod
 	def pending():
+		# XXX: terrible please rewrite
 		commit = None
 		for line in os.popen('git status').read().split('\n'):
 			if 'modified:' in line:
-				if 'lib/exabgp/version.py' in line or 'debian/changelog' in line:
+				if 'lib/exabgp/version.py' in line or 'debian/changelog' in line or 'README' in line:
 					if commit is not False:
 						commit = True
 				else:
