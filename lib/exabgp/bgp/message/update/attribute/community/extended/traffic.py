@@ -212,7 +212,7 @@ class TrafficNextHopIPv4IETF (ExtendedCommunity):
 		)
 
 	def __repr__ (self):
-		return "copy-to-nexthop-ietf (with copy) %s" % self.ip if self.copy else "redirect-to-nexthop-ietf %s" % self.ip
+		return "copy-to-nexthop-ietf %s (with copy)" % self.ip if self.copy else "redirect-to-nexthop-ietf %s" % self.ip
 
 	@staticmethod
 	def unpack (data):
@@ -244,7 +244,7 @@ class TrafficNextHopIPv6IETF (ExtendedCommunityIPv6):
 		)
 
 	def __repr__ (self):
-		return "copy-to-nexthop-ietf (with copy)" % self.ip if self.copy else "redirect-to-nexthop-ietf %s" % self.ip
+		return "copy-to-nexthop-ietf %s (with copy)" % self.ip if self.copy else "redirect-to-nexthop-ietf %s" % self.ip
 
 	@staticmethod
 	def unpack (data):
