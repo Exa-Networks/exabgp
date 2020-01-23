@@ -12,6 +12,7 @@ exabgp (4.2.4-1) UNRELEASED; urgency=medium
   [ Vincent Bernat ]
   * New upstream release.
   * d/patches: remove patch applied upstream.
+  * d/NEWS: fix name.
 
  -- Vincent Bernat <bernat@debian.org>  Thu, 23 Jan 2020 19:38:04 +0100
 
