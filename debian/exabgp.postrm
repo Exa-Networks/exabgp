@@ -2,15 +2,6 @@
 
 set -e
 
-if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
-    for f in processes/dynamic-1.sh processes/watchdog-1.sh processes/healthcheck.py; do
-        if ! egrep -q "$f" /etc/exabgp/exabgp.conf 2> /dev/null ; then
-            dpkg-maintscript-helper rm_conffile /etc/exabgp/"$f" -- "$@" ; fi
-    done
-    dpkg-maintscript-helper rm_conffile /etc/default/exabgp 3.4.9-0~ -- "$@"
-    dpkg-maintscript-helper rm_conffile /etc/exabgp/exabgp.conf 3.4.9-0~ -- "$@"
-fi
-
 # Remove exabgp.env when run in purge mode
 case "$1" in
     purge)

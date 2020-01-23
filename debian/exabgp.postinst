@@ -14,25 +14,6 @@ gen_env_config() {
     rm -f $TMPCONF
 }
 
-# Remove previous configuration files
-if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
-    for f in processes/dynamic-1.sh processes/watchdog-1.sh processes/healthcheck.py; do
-        if ! egrep -q "$f" /etc/exabgp/exabgp.conf 2> /dev/null ; then
-            dpkg-maintscript-helper rm_conffile /etc/exabgp/"$f" -- "$@" ; fi
-    done
-    dpkg-maintscript-helper rm_conffile /etc/default/exabgp 3.4.9-0~ -- "$@"
-
-    # exabgp.conf should stay here only if it was modified by the
-    # user. If this is the case, we move it back at its previous
-    # location.
-    dpkg-maintscript-helper rm_conffile /etc/exabgp/exabgp.conf 3.4.9-0~ -- "$@"
-    if [ -f "/etc/exabgp/exabgp.conf.dpkg-bak" -a ! -f "/etc/exabgp/exabgp.conf" ]; then
-        echo "Move back exabgp.conf.dpkg-bak to exabgp.conf ..."
-        mv /etc/exabgp/exabgp.conf.dpkg-bak /etc/exabgp/exabgp.conf
-    fi
-    if [ -d "/etc/exabgp/processes/" ] ; then rmdir /etc/exabgp/processes 2>/dev/null || true ; fi
-fi
-
 case "$1" in
 configure)
     adduser --quiet --system --group --disabled-login --home /var/run/exabgp exabgp

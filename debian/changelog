@@ -13,6 +13,7 @@ exabgp (4.2.4-1) UNRELEASED; urgency=medium
   * New upstream release.
   * d/patches: remove patch applied upstream.
   * d/NEWS: fix name.
+  * d/exabgp.*inst: remove migration steps for very old ExaBGP versions.
 
  -- Vincent Bernat <bernat@debian.org>  Thu, 23 Jan 2020 19:38:04 +0100
 
