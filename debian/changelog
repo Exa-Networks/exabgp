@@ -1,4 +1,4 @@
-exabgp (4.2.4-1) UNRELEASED; urgency=medium
+exabgp (4.2.4-1) unstable; urgency=medium
 
   [ Debian Janitor ]
   * Trim trailing whitespace.
@@ -16,7 +16,7 @@ exabgp (4.2.4-1) UNRELEASED; urgency=medium
   * d/exabgp.*inst: remove migration steps for very old ExaBGP versions.
   * d/rules: remove spurious /usr/etc directory with samples.
 
- -- Vincent Bernat <bernat@debian.org>  Thu, 23 Jan 2020 19:38:04 +0100
+ -- Vincent Bernat <bernat@debian.org>  Thu, 23 Jan 2020 19:58:25 +0100
 
 exabgp (4.1.2-1) unstable; urgency=medium
 
