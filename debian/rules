@@ -9,7 +9,7 @@ PYTHON3S:=$(shell py3versions -vr)
 
 override_dh_auto_install:
 	dh_auto_install --buildsystem=pybuild
-	rm -rf $(CURDIR)/debian/exabgp/usr/etc $(CURDIR)/debian/python*-exabgp/usr/share/exabgp
+	rm -rf $(CURDIR)/debian/python*-exabgp/usr/etc $(CURDIR)/debian/python*-exabgp/usr/share/exabgp
 	mkdir -p $(CURDIR)/debian/python3-exabgp/usr/sbin
 	mv $(CURDIR)/debian/python3-exabgp/usr/bin/exabgp $(CURDIR)/debian/python3-exabgp/usr/sbin/python3-exabgp
 	mv $(CURDIR)/debian/python3-exabgp/usr/bin/exabgpcli $(CURDIR)/debian/python3-exabgp/usr/sbin/python3-exabgpcli
