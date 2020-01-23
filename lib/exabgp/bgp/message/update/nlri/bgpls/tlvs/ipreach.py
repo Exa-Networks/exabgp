@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import division
 from struct import unpack
 import math
+from exabgp.vendoring import ipaddress
 
 from exabgp.protocol.ip import IP
 from exabgp.util import ordinal
@@ -40,7 +41,7 @@ class IpReach(object):
 		self.plength = plength
 
 	@classmethod
-	def unpack (cls, data):
+	def unpack (cls, data, code):
 		# FIXME
 		# There seems to be a bug in the Cisco Xr implementation
 		# that causes the Prefix IP field to be one octet less than
@@ -55,12 +56,29 @@ class IpReach(object):
 		plength = unpack('!B',data[0:1])[0]
 		# octet = int(math.ceil(plength / 8))
 		octet = len(data[1:])
-		prefix_list = unpack("!%dB" % octet,data[1:octet + 1])
-		prefix_list = [str(x) for x in prefix_list]
-		# fill the rest of the octets with 0 to construct
-		# a 4 octet IP prefix
-		prefix_list = prefix_list + ["0"]*(4 - len(prefix_list))
-		prefix = '.'.join(prefix_list) 
+
+		if code == 4:
+			# IPv6
+			if len(data[1:octet + 1]) % 2 == 1:
+				# Not an even number.
+				# So we add an empty octet.
+				data += bytearray.fromhex('00')
+				octet += 1
+			prefix_list = unpack("!%dH" % (octet / 2), data[1:octet + 1])
+			prefix_list = [str(format(x, 'x')) for x in prefix_list]
+			# fill out to a complete 128-bit address
+			prefix_list = prefix_list + ["0"] * (8 - len(prefix_list))
+			prefix = u":".join(prefix_list)
+			prefix = ipaddress.ip_address(prefix).compressed
+		else:
+			# IPv4
+			prefix_list = unpack("!%dB" % octet,data[1:octet + 1])
+			prefix_list = [str(x) for x in prefix_list]
+			# fill the rest of the octets with 0 to construct
+			# a 4 octet IP prefix
+			prefix_list = prefix_list + ["0"]*(4 - len(prefix_list))
+			prefix = '.'.join(prefix_list)
+
 		return cls(prefix=prefix, plength=plength)
 
 	def json (self, compact=None):

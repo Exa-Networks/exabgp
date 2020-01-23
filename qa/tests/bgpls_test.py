@@ -9,10 +9,16 @@ import unittest
 
 class TestTlvs(unittest.TestCase):
 
-    def test_ip_reach(self,):
+    def test_ip_reach_ipv4(self,):
         data = b'\n\n\x00'
-        tlv = IpReach.unpack(data)
+
+        tlv = IpReach.unpack(data, 3)
         self.assertEqual(tlv.json(), '"ip-reachability-tlv": "10.0.0.0", "ip-reach-prefix": "10.0.0.0/10"')
+
+    def test_ip_reach_ipv6(self,):
+        data = b'\x7f \x01\x07\x00\x00\x00\x80'
+        tlv = IpReach.unpack(data, 4)
+        self.assertEqual(tlv.json(), '"ip-reachability-tlv": "2001:700:0:8000::", "ip-reach-prefix": "2001:700:0:8000::/127"')
 
     def test_igp_tags(self,):
         data = b'\x00\x00\xff\xfe'

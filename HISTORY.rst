@@ -1,46 +1,3 @@
-Version explained:
- major : codebase increase on incompatible changes
- minor : increase on risk of code breakage during a major release
- bug   : increase on bug or incremental changes
-
-Version 4.1.2
- * Feature: exabgpcli autocomplete
- * Fix: exabgpcli was not correctly removing data on the pipe in case of issues
-
-Version 4.1.1
- * CHANGE: some message are now printed using the log routes option and not parser anymore
- * Fix: bug with functional testing code when using python3
-   patch by: Cooper Lees
- * Fix: bug with ExaBGP cli not working
-   reported by: jlixfeld (thank you to Cooper Lees for providing time and a test env. to reproduce)
-
-Version 4.1.0
- * CHANGE: when redifining a single parameter option using inheritence the value will be replaced
- * CHANGE: FlowSpec TRUE and FALSE value have been updated to use the latest RFC and are therefore inverted from previous versions
- * CHANGE: an invalid netmask for a network will now cause ExaBGP to fail the parsing of the route (it can stop ExaBGP from starting with bad routes)
- * Feature: support for extended next-hop (RFC 5549)
- * Feature: implemented API for "clear adj-rib out" and "flush adj-rib out"
- * Fix: regression pointed in #873
-   patch: Malcolm Dodds
- * Fix: do not crash when trying to be helpful in presenting notification message
-   reported by: Adam Jacob Muller
- * Fix: issue while handling ranged neighbors
-   patch: Wenxin Wang
- * Fix: accumulating families when using multiple peers
-   patch: Martin Topholm (reviewed)
- * Fix: could not reload configuration
-   reported by: gbock
- * Feature: better RFC5575bis support, better treat as withdraw
-   patch: Christoph Loibl
- * Fix: Fix issue when using peer ASN discovery
-   patch: Zac Medico
- * Fix: MD5 encoding
-   reported by: Adam Jacob Muller (with an initial idea for a patch)
- * Fix: ignore unknown BGP-LS SID
-   reported by: MosesN
- * Fix: badly deciding when to send or not AddPath from parsing the Capability
-   reported by: ivan-balan
-
 Version 4.0.10
  * Feature: Add decoding for Mac Mobility
 
@@ -114,21 +71,21 @@ Version 4.0.6
    request by: Vascko
 
 Version 4.0.5
-  * Fix: bad encoding of flow rules with &
-    reported by: Iwase Yusuke
+ * Fix: bad encoding of flow rules with &
+   reported by: Iwase Yusuke
 
 Version 4.0.4
-  * Feature: draft draft-ietf-idr-bgp-extended-messages-24 support (option capability extended-message)
-  * Fix: do not tear down session if not enough space is available to pack an NLRI after attribute but treat-as-withdraw
-  * Fix: BGP-LS parsing issue when using Python3
-  * Fix: Invalid JSON when parsing unknown OPEN capabilities
-  * Fix: The way we iterated over the action queue could cause out of order executions
-  * Fix: problem with encoding of Notification messages
-  * Fix: L being added to number with %ld on some platform and version on Python 
-  * Fix: fix string representations with MPLS raw labels
-    patch by: Thomas Morin
-  * Feature: Add a systemd exabgp instance service
-    patch by: jmauro
+ * Feature: draft draft-ietf-idr-bgp-extended-messages-24 support (option capability extended-message)
+ * Fix: do not tear down session if not enough space is available to pack an NLRI after attribute but treat-as-withdraw
+ * Fix: BGP-LS parsing issue when using Python3
+ * Fix: Invalid JSON when parsing unknown OPEN capabilities
+ * Fix: The way we iterated over the action queue could cause out of order executions
+ * Fix: problem with encoding of Notification messages
+ * Fix: L being added to number with %ld on some platform and version on Python 
+ * Fix: fix string representations with MPLS raw labels
+   patch by: Thomas Morin
+ * Feature: Add a systemd exabgp instance service
+   patch by: jmauro
 
 Version 4.0.3
  * Fix: MD5 issue with python3
@@ -194,12 +151,12 @@ Version 4.0.1
  * Change: new section: announce { ipv4 { unicast ...; multicast ...; } } same syntax as route ...;
  * Change: new section: announce { ipv6 { unicast ...; multicast ...; } } same syntax as route ...;
  * Fix: correcly parse single element flow rule
-    reported by: Christoph Loibl
+   reported by: Christoph Loibl
  * Fix: much faster session establishment
  * Feature: allow to disable command acknowledgement via environment
-    reported by: nidotech
+   reported by: nidotech
  * Feature: https://tools.ietf.org/html/draft-ietf-idr-bgp-prefix-sid-05
-    patch by: Evelio Vila
+   patch by: Evelio Vila
  * Feature: added a new API message "negotiated" which gives the negotiated feature of the session
  * Feature: added a new API message "fsm" which gives the BGP state machine information
  * Feature: added a new API message "signal" which inform of the signals received by ExaBGP
@@ -226,388 +183,389 @@ Version 4.0.0
  * Change: removed old environment support ( DEBUG_* )
  * Change: configuration logging is now disabled by default
  * Change: all API commands returns an 'done' or 'error' message after running
-    patch from: Jérôme Marteaux
+   patch by: Jérôme Marteaux
  * Change: when API commands are failing, returns a 'error' message
-    patch from: Jérôme Marteaux
+   patch by: Jérôme Marteaux
  * Change: md5 is now called md5-password
  * Change: always use neighbor local address for next-hop self (and not router-id for on IPv4 connections)
  * Feature: support for large communities (-03)
-    patch by: Job Snijders
+   patch by: Job Snijders
  * Feature: add support for upstart
-    patch by: Pierre-Yves Kerembellec
+   patch by: Pierre-Yves Kerembellec
  * Feature/Fix: Port of bagpipe EVPN code
-    patch by: Thomas Morrin
+   patch by: Thomas Morrin
  * Feature: EVPN RT5 support
-    patch by: Diego Garcia del Rio
+   patch by: Diego Garcia del Rio
  * Feature: Can use numerical values for Flow elements
-    requested by: jpan613 (on github)
+   requested by: jpan613 (on github)
  * Feature: show route (extensive) can take a neighbor as parameter
-    requested by: jtkdpu
+   requested by: jtkdpu
  * Feature: allow to run exabgp from python -m exabgp
  * Feature: support for BGP-LS decoding
  * Change: ExaBGP is now run as user/group exabgp/exabgp with the systemd service file.
-    patch by: Vincent Bernat
+   patch by: Vincent Bernat
  * Change: Update are now grouped by default
  * Change: Configuration format
-  - all deprecated name remove
-  - no more process group within neighbor
+    - all deprecated name remove
+    - no more process group within neighbor
  * Change: Change the API configuration syntax and format
-  - default changed
-    * JSON is now the default API encoder
-    * JSON now use high resolution time
-  - syntax changes to the Text API format
-    * added direction of message
-    * change received/sent to receive/send
-    * add extra informatiom (detail here)
-  - syntax changes to the JSON API format
-    * add direction to object
-    * pid, ppid are now numbers and not string
-    * remove deprecated 'ip' from neighbor
-    * rename 'restart flags' to be 'restart-flags'
-    * rename 'address family flags' to be 'address-family-flags'
-    * format change for notification and shutdown message
-    * VPLS endpoint, base, offset, and size are now numbers and not strings
-    * nlris are now a list and not nrli indexed object
-    * ipv4/ipv6 nlri without label or rd are now a list of nlri (as string) and not key to empty objects
-    * nlris with label or rd are returned as a list of objects
+    - default changed
+       * JSON is now the default API encoder
+       * JSON now use high resolution time
+    - syntax changes to the Text API format
+       * added direction of message
+       * change received/sent to receive/send
+       * add extra informatiom (detail here)
+    - syntax changes to the JSON API format
+       * add direction to object
+       * pid, ppid are now numbers and not string
+       * remove deprecated 'ip' from neighbor
+       * rename 'restart flags' to be 'restart-flags'
+       * rename 'address family flags' to be 'address-family-flags'
+       * format change for notification and shutdown message
+       * VPLS endpoint, base, offset, and size are now numbers and not strings
+       * nlris are now a list and not nrli indexed object
+       * ipv4/ipv6 nlri without label or rd are now a list of nlri (as string) and not key to empty objects
+       * nlris with label or rd are returned as a list of objects
+ * Change: remove all ExaBGP 2.0 compatibily
  * Change: remove all ExaBGP 2.0 compatibily environment variables
  * Change: include time when we log to file (and not application)
  * Change: ttl-security is now called outgoing-ttl
  * Change: the reactor does not exit if there is no peer configured
-    patch by: Jordan Gedney
+   patch by: Jordan Gedney
  * Change: API format for BGP flowspec updates, flowspec updates is now a list of dicts where each dict contains a single flowspec rule
-    patch by: Stacey Sheldon (Corsa)
+   patch by: Stacey Sheldon (Corsa)
  * Fix: JSON reporting of VPLS ( endpoint, base, offset, and size were mixed up during printing )
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
-    reported by: Orangefish on github
+   reported by: Orangefish on github
  * Fix: Shutdown when waiting for a new outgoing connection to establish
  * Fix: JSON counter
-    reported by:
+   reported by:
  * Fix: JSON flow printing for source and destination
  * Fix: Do not always locate exabgp.env
-    reported by: Florian Obser
+   reported by: Florian Obser
  * Fix: Correctly drop root privileges
-    reported by: Florian Obser
+   reported by: Florian Obser
  * Fix: validation of flow routes
  * Fix: Python differences between Unix version breaking process forking
-    reported by: Raphael Mazelier
+   reported by: Raphael Mazelier
  * Fix: Allow = with flowspec singleton
-    reported by: Pavel Odintsov
+   reported by: Pavel Odintsov
  * Fix: selfcheck feature
  * Fix: do not refuse to parse multiple MP attributes in an update
  * Fix: possible bug with attribute information due to caching
-    reported by: Colin Petrie
+   reported by: Colin Petrie
  * Fix: issue with unknown capabilities
-    reported by: Sandy Breeze
+   reported by: Sandy Breeze
  * Fix: notification messages were not passed to the API
-    reported by: Florian Obser
+   reported by: Florian Obser
  * Fix: ExaBGP was crashing if it could not write to a logfile
-    reported by: Pavel Odintsov
+   reported by: Pavel Odintsov
  * Fix: only grouping IPv4 routes
    reported by: Sergey Viuchny (stroboscope)
  * Fix: Flow redirect to nexhop encoding
    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help)
  * Fix: remove useless PYTHONPATH in sbin/exabgp
-    reported by: Håvard Eidnes
+   reported by: Håvard Eidnes
  * Fix: add semi-colon in syslog ouput
  * Fix: parsing multiple NLRI in flow routes
-    reported by: Dmitry Onuchin
+   reported by: Dmitry Onuchin
  * Fix: bad parsing of flow routes / missing support for exact bit matches
-    reported by: hengchai
-    reported by: Dmitry Onuchin
+   reported by: hengchai
+   reported by: Dmitry Onuchin
  * Fix: reading large buffered data from helper process caused truncation
-    reported by: qqTYXn7
+   reported by: qqTYXn7
  * Fix: better --version output
-    patch by: Ebben Aries
+   patch by: Ebben Aries
  * Fix: mistakenly made a function private breaking some ASN4 code path
-    reported by: Victor Sudakov
+   reported by: Victor Sudakov
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
-    patch by: Borja Marcos
+   patch by: Borja Marcos
  * Fix: AS4Path Message Registration
-    patch by: Adam Twardowski
+   patch by: Adam Twardowski
  * Fix: ASN4 boundary off by one
  * Fix: Bad peer IP when using show routes
-    patch by: Wayne Tucker
+   patch by: Wayne Tucker
  * Fix: broken route-refresh command
-    reported by: Bryan Schwerer
+   reported by: Bryan Schwerer
  * Fix: handle mulitple bits of flags in flow routes (Fragments and TCPFlags)
-    reported by: Pavel Odintsov
+   reported by: Pavel Odintsov
  * Fix: does not use label information when handling the RIB
-    reported by: choisuibun
+   reported by: choisuibun
  * Fix: healthcheck removes added IPs on exit
-    patch by: Ben Agricola
+   patch by: Ben Agricola
  * Fix: Bad encoding of capability when multiple families are used for add-path
-    reported by: Alexander Bespalov
+   reported by: Alexander Bespalov
  * Fix: support non ASN4 use of AS_TRANS (AS23456)
-    reported by: Todd Crane
+   reported by: Todd Crane
  * Fix: the json format would not allow normal parsers to extract all the NLRIs
-    reported by: Marco Marzetti
+   reported by: Marco Marzetti
  * Feature: Allow single line flow route
-    requested by: Pavel Odintsov
+   requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
-    patch by: Arun Babu Neelicattu
+   patch by: Arun Babu Neelicattu
  * Feature: manually sending EOR
-    pach by: Charles Ng
+   pach by: Charles Ng
  * Feature: add per neighbor connection port
-    requested by: dbarrosop
+   requested by: dbarrosop
  * Feature: support MIN_TTL for incoming connection (for OS with support - FreeBSD)
-    requested by: Borja Marcos
+   requested by: Borja Marcos
  * Feature: md5-ip allows to override local-address for the MD5 calculations
-    requested by: Bryan Benson
+   requested by: Bryan Benson
  * Feature: allow setting process umask via exabgp.daemon.umask
-    patch by: Bryan Le Gear
+   patch by: Bryan Le Gear
  * Change: Update syslog message format
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: flush route api
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Feature: Add 'show neighbor status' api
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: Broken EOR printing
-    reported by: Pier Carlo Chiodi
+   reported by: Pier Carlo Chiodi
  * Fix: Allow asn4 peer to speak with asn2 only peer
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: ExaBGP was crashing when serializing BGP flowspec updates
-    patch by: Stacey Sheldon (Corsa)
+   patch by: Stacey Sheldon (Corsa)
  * Fix: API encoding of IPv4 Unicast EOR messages were being encoded as NLRI updates
-    patch by: Stacey Sheldon (Corsa)
+   patch by: Stacey Sheldon (Corsa)
  * Fix: Update RIB cache families on configuration reload
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Change: Update show neighbors output to be parseable by configuration parser
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Feature: Allow configuration parsing of a string or a file
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: Do not add IPv4/unicast family unless specifically configured
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: ParseAPI should always use the class version of the _built dict
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: Off by one error when getting message type for send-* api
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: md5-ip config option is an ip address not a router_id
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Feature: Show routes by type (static/flow/l2vpn)
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: Rewrite Update.messages so it will only include one MP_REACH or MP_UNREACH per UPDATE
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: Remove a peer's RIB cache when it is deleted from the config file
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Feature: Allow md5 password to be base64 encoded
-    patch by: Brian Johnson
+   patch by: Brian Johnson
 
 Version 3.4.19
  * Add: IPv6 nlri-mpls to list of enabled protocol (was missing)
-    requested by: adrian62
+   requested by: adrian62
  * Fix: encoding of Flow Label requiring more than 2 bytes
-    reported by: BLAKEMMM
+   reported by: BLAKEMMM
  * Fix: decoding of capability (was potentially over reading)
  * Fix: trace when trying to access PID file and this is not allowed
-    reported by: George Shuklin
+   reported by: George Shuklin
  * Fix: Remove a peer's RIB cache when it is deleted from the config file
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: do not crash the reactor when an invalid IP is passed via the API
-    reported by: Yevgeniy Ovsyannikov
+   reported by: Yevgeniy Ovsyannikov
  * Fix: bad defintion of Flow for ICMPType, ICMPCode and Fragment
-    reported by: Christoph Loibl
+   reported by: Christoph Loibl
  * Feature: allow add-path for mpls-vpn
-    reported by: adrian62
+   reported by: adrian62
  * Change: Backported setup.py from master
  * Feature: added SRPMS for exabgp
-    patch by: Leonardo Amaral
+   patch by: Leonardo Amaral
 
 Version 3.4.18
  * Backport: backhole community (RFC 7999)
-    original patch by: Job Snijders
+   original patch by: Job Snijders
  * Fix: Configuration parser does not accept configs without neighbors.
-    patch by doddt
+   patch by doddt
  * Fix: 'connect' keyword is now also allowed in neighbor scope
-    patch by: Stacey Sheldon (Corsa)
+   patch by: Stacey Sheldon (Corsa)
  * Fix: removing protocol auto-cleanup (it should never be called and seems to cause a CG issue)
-    reported by: Colin Petrie
+   reported by: Colin Petrie
  * Change: default to a 0 offset for ipv6 flowspec source/destination match
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: Better PID file handling
-    reported by: Ben Agricola
+   reported by: Ben Agricola
  * Fix: Update RIB cache families on configuration reload
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: Backport fix on SIGUSR2 (restarting process not needing to be)
-    patch by: Shawn Zhou
+   patch by: Shawn Zhou
  * Change: group-updates now generates one UPDATE per address family (and not one per NLRI for non IPv4)
-    patch by: Brian Johnson
+   patch by: Brian Johnson
 
 Version 3.4.17
  * Fix: does not accept IPv6 as router-id
-    reported by: yuriya
+   reported by: yuriya
  * Fix: JSON output for flow routes with rd
-    reported by droon5
+   reported by droon5
  * Fix: Fix Path-Information
  * Fix: Bad encoding of capability when multiple families are used for add-path
-    reported: by Alexander Bespalov
+   reported: by Alexander Bespalov
  * Fix: support non ASN4 use of AS_TRANS (AS23456)
-    reported by: Todd Crane
+   reported by: Todd Crane
  * Fix: do not exit when we can not accept incoming connection
-    reported by: Pavel Batkov
+   reported by: Pavel Batkov
  * Fix: quote where not escaped in JSON reason field
-    reported by: Rob Barnes
+   reported by: Rob Barnes
  * Fix: decoding of IPv6 flow routes
-    reported by: stoffi92
+   reported by: stoffi92
  * Fix: decoding of Graceful Restart Capability
-    patch by: florinz
+   patch by: florinz
  * Fix: ASN4 encoding
-    patch by: Shu Sugimoto and Eiichiro Watanabe
+   patch by: Shu Sugimoto and Eiichiro Watanabe
  * Change: Run without even peers configured
-    patch by: Jordan Gedney
+   patch by: Jordan Gedney
  * Fix: JSON encoding of updates without NLRIs
-    patch by: Dhammika Pathirana
+   patch by: Dhammika Pathirana
  * Fix: Possible race conditions in api handling
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Feature: Add 'show neighbor status' api
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: flush route api
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: Allow asn4 peer to speak with asn2 only peer
-    patch by: Brian Johnson
+   patch by: Brian Johnson
  * Fix: only one MP NLRI is allow per UPDATE
-    reported by: subsecond
+   reported by: subsecond
  * Change: configuration output does not includes ':' anymore
-    patch by: doddt
+   patch by: doddt
  * Change: syslog format changed to be in line with other application
-    patch by: Brian Johnson
+   patch by: Brian Johnson
 
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges
-    requested by: Ben Agricola
+   requested by: Ben Agricola
  * Fix: correctly look in /etc/exabgp for programs to run when the path is relative
-    reported by: Vincent Bernat
+   reported by: Vincent Bernat
  * Fix: missing handler for NOTIFICATION
-    patch by: minglvyy
+   patch by: minglvyy
 
 Version 3.4.15
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
-    patch by: Borja Marcos
+   patch by: Borja Marcos
  * Fix: configuration leak between processes for neighbor-changes and send-packets
-    reported by: spakka
+   reported by: spakka
  * Feature: add per neighbor connection port
-    requested by: dbarrosop
+   requested by: dbarrosop
  * Fix: ASN4 boundary off by one
  * Fix: Bad peer IP when using show routes
-    patch by (backported): Wayne Tucker
+   patch by (backported): Wayne Tucker
  * Fix: Missing next-hop in the text api
-    reported by: Lisa Roach
+   reported by: Lisa Roach
  * Fix: broken route-refresh command
-    reported by: Bryan Schwerer
+   reported by: Bryan Schwerer
  * Fix: wrongly announcing connection issue with peer on the API
-    reported by: Bryan Schwerer
+   reported by: Bryan Schwerer
 
 Version 3.4.14
-  * Change: This version does not exists
-  * Change: we modified some pypi related code and failed at first
-  * Change: pypi does not let you modify releases
+ * Change: This version does not exists
+ * Change: we modified some pypi related code and failed at first
+ * Change: pypi does not let you modify releases
 
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
  * Fix: duplication of message following helper process death
-    reported by: spakka
+   reported by: spakka
  * Fix: death of helper program would lead to BGP session drop
-    reported by: spakka
+   reported by: spakka
  * Fix: mistakenly made a function private breaking some ASN4 code path
-    reported by: Victor Sudakov
+   reported by: Victor Sudakov
  * Feature: manual eor
-    patch by: Charles Ng
+   patch by: Charles Ng
 
 Version 3.4.12
  * Fix: issue with unknown capabilities
-    reported by: Sandy Breeze
+   reported by: Sandy Breeze
  * Fix: notification messages were not passed to the API
-    reported by: Florian Obser
+   reported by: Florian Obser
  * Fix: transitivity on extended community
-    patch by: Thomas Morin
+   patch by: Thomas Morin
  * Fix: bad reporting of VPLS information in JSON
  * Fix: wrong SAFI on MPLS routes
-    reported by: Hideaki HAYASHI
+   reported by: Hideaki HAYASHI
  * Fix: bad route comparaison
-    reported by: Alvaro Pereira
+   reported by: Alvaro Pereira
  * Fix: decoding of Update
  * Fix: Flow redirect to nexhop encoding
-    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help)
+   reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help)
  * Fix/Improve: JSON for flow spec
  * Fix/Improve: redirect-to-nexthop
-    reported by: Mickael Marchand
+   reported by: Mickael Marchand
 
 Version 3.4.11
  * Change: install healthcheck in bin
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
-    reported by: Orangefish on github
+   reported by: Orangefish on github
  * Fix: Shutdown when waiting for a new outgoing connection to establish
  * Fix: JSON counter
-    reported by:
+   reported by:
  * Fix: JSON flow printing for source and destination
  * Fix: Do not always locate exabgp.env
-    reported by: Florian Obser
+   reported by: Florian Obser
  * Fix: Correctly drop root privileges
-    reported by: Florian Obser
+   reported by: Florian Obser
  * Fix: validation of flow routes
  * Fix: Python differences between Unix version breaking process forking
  * Fix: Allow = with flowspec singleton
-    reported by: Pavel Odintsov
+   reported by: Pavel Odintsov
  * Fix: selfcheck feature
  * Fix: do not refuse to parse multiple MP attributes in an update
  * Fix: possible bug with attribute information due to caching
  * Feature: Allow single line flow route
-    requested by: Pavel Odintsov
+   requested by: Pavel Odintsov
  * Feature: show route (extensive) can take a neighbor as parameter
-    requested by: jtkdpu
+   requested by: jtkdpu
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
-    patch by: Daniel Neiter
+   patch by: Daniel Neiter
  * Fix: Fix -t exit with error code 1 when -t is used and the configuration is invalid
-    reported by: Kevin Landreth
+   reported by: Kevin Landreth
  * Fix: Using split option with large MP could lead to invalid update
-    reported by: m4ccbr on github
+   reported by: m4ccbr on github
  * Fix: MD5 support for incoming connection
-    patch by: Sandy Breeze and David Overton
+   patch by: Sandy Breeze and David Overton
  * Fix: prevent multiple similar binding
-    reported by: Sandy Breeze
+   reported by: Sandy Breeze
  * Fix: allow different MD5 for the same binding
-    reported by: Sandy Breeze
+   reported by: Sandy Breeze
  * Fix: issue with ASN4 code
-    reported by: Florian Obser (with a patch, thank you)
+   reported by: Florian Obser (with a patch, thank you)
  * Fix: issue with --decode
  * Change: remove /usr/bin/healthcheck. People should use
-    "python -m exabgp healthcheck" instead
+   "python -m exabgp healthcheck" instead
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
-    reported by: esequei
+   reported by: esequei
  * Feature: per peer listening option ( listen keyword with port number )
  * Feature: incoming connection MD5 support (incomplete: only work on localhost atm)
-    requested by: Sandy Breeze
+   requested by: Sandy Breeze
 
 Version 3.4.8
  * Fix: bug with multiple configuration files
  * Fix: allow generic attribute not only in single line but also in multiple lines
-    patch by: Eiichiro Watanabe (issue #214)
+   patch by: Eiichiro Watanabe (issue #214)
  * Fix: issue with parsing extended-community origin
-    reported by: Tim Preston
+   reported by: Tim Preston
  * Fix: handle numeric community parsing correctly
-    reported by: Aaron Kalin
+   reported by: Aaron Kalin
  * Fix: bug in AS_PATH with AS_SET handling
-    patch by: Eiichiro Watanabe
+   patch by: Eiichiro Watanabe
  * Fix: off by one for the maximum message size generation
-    reported by: Eiichiro Watanabe
+   reported by: Eiichiro Watanabe
  * Fix: issue with handling of some generic attributes
-    reported by: Hiroshi Yokoi
+   reported by: Hiroshi Yokoi
  * Fix: restore old api syntax broken by mistake
-    patch by: David Waring
+   patch by: David Waring
  * Fix: issue with E-VPN NLRI
-    patch by: Thomas Morin
+   patch by: Thomas Morin
  * Fix: bad iteration for JSON generation ( bug created during 3.4.8 dev )
-    patch by: Ian bobbitt
+   patch by: Ian bobbitt
  * Fix: healthcheck.py: optionally match "alias" in ifconfig output
-    patch by: Håvard Eidnes
+   patch by: Håvard Eidnes
  * Fix: healthcheck.py: make the ifconfig path work; regexp fix
-    patch by: Håvard Eidnes
+   patch by: Håvard Eidnes
  * Change: moved the netlink library within exabgp
  * Feature: qa/bin/ip and qa/bin/route
 
@@ -619,26 +577,26 @@ Version 3.4.7
 
 Version 3.4.6
  * Fix: a badly formated flow route would throw the parser in limbo
-    reported by: NickGudov (issue #203)
+   reported by: NickGudov (issue #203)
  * Fix: allow multiple extended attribute (like flow rediction with a origin/target)
  * Fix: use ICMP Type and Code when printing flows (respectively using name and number)
  * Fix: do not use space printing redirect extended community
  * Fix: not parsing correctly multisession configurations
  * Fix: bug in ASPath parsing
-    reported by: Terry Hardie (issue #205)
+   reported by: Terry Hardie (issue #205)
  * Feature: use ETC environment variable for configuration location if set
  * Feature: JSON now includes ASN (local,peer) and IP (local,IP)
-    requested by: jtkdpu (issue #196)
-    patch by: Ryan Tinianov (pull #199) for the IP
+   requested by: jtkdpu (issue #196)
+   patch by: Ryan Tinianov (pull #199) for the IP
  * Feature: API support for sending eor
-    requested by: spakka (issue #109)
+   requested by: spakka (issue #109)
  * Feature: allow routes to have a name (which can be used as comment)
-    requested by: lazy404 (issue #167)
+   requested by: lazy404 (issue #167)
  * Feature: improve release code to prevent version mismatch (issue #202)
-    reported by: Anand Buddhdev
+   reported by: Anand Buddhdev
  * Fix: systemd file is not installed anymore by default (issue #202)
-    to add to the file installation list use "python setup.py install systemd"
-    requested by: Anand Buddhdev
+   to add to the file installation list use "python setup.py install systemd"
+   requested by: Anand Buddhdev
  * QA: moved all testing code (used by travis-ci) in the ./qa folder
  * QA: added nosetest, updating some of the old unittest code
  * QA: integrated travis-ci with coveralls.io to have real time code coverage
@@ -650,7 +608,7 @@ Version 3.4.6
 
 Version 3.4.5
  * Fix: improper distribution of events to process workers
-    reported by: Tim Epkes
+   reported by: Tim Epkes
 
 Version 3.4.4
  * Fix: bug with IPv4 / ipv6 handling
@@ -659,108 +617,108 @@ Version 3.4.4
  * Fix: missing text API paramter
  * Fix: no JSON for Aggregator
  * Fix: show route extensive
-    patch by: Michal Grzedzicki, thank you
+   patch by: Michal Grzedzicki, thank you
  * Fix: 4-Octet AS Specific BGP Extended Community (RFC 5668)
-    patch by: Michal Grzedzicki
+   patch by: Michal Grzedzicki
  * Fix: bug with label encoding
-    patch by: Jesse Mather
+   patch by: Jesse Mather
  * Improvement: add support for add-path with family MPLS
-    requested by: Tim Epkes
+   requested by: Tim Epkes
  * Fix: bug when process writes multiple lines
-    reported by: Ilya Voronin
+   reported by: Ilya Voronin
  * Feature: accept packet with confedation (RFC 3065)
-    requested by: oriordan (with a patch, thank you)
+   requested by: oriordan (with a patch, thank you)
  * Fix: do not bark if an unknown ASPath attribute is found
  * Fix: correctly accept connection on AF_INET6 socket
-    patch by: John W. O'Brien
+   patch by: John W. O'Brien
  * Fix: restore lost python2.6 compatibility
-    reported by: Minsuk Song
+   reported by: Minsuk Song
  * Fix: IPv6 MD5
-    reported by: Dave J Knight
+   reported by: Dave J Knight
  * Add framework to debug SIGUSR1 related problems
  * Fix: do not drop session when receiving an unknown capability
-    patch by: Peter van Dijk (PowerDNS)
+   patch by: Peter van Dijk (PowerDNS)
 
 Version 3.4.3
  * Fix: JSON message increment
-    reported by: Daniel Neiter, with a patch, thank you.
+   reported by: Daniel Neiter, with a patch, thank you.
  * Fix: JSON message format for operational
-    reported by: Rob Barnes, with a patch, thank you.
+   reported by: Rob Barnes, with a patch, thank you.
  * Fix: JSON message for route-refresh
  * Fix: EOR unpack issue
  * Fix: ASPath encoding
  * Fix: possible bad notify call
  * Fix: Aggregator configuration issue
  * Fix: pycharm reported issues
-   * operational, using afi instead of safi
-   * bad function paramters
-   * missing return keyword
-   * many cleanups
+    - operational, using afi instead of safi
+    - bad function paramters
+    - missing return keyword
+    - many cleanups
  * Change: use RFC MULTISESSION capability and not CISCO variant anymore
 
 Version 3.4.2
  * Feature: add more information in crash report
  * Fix: problem when trying to report exception errors
  * Fix: better handling of on PIPE errors
-    reported by: Thomas Raabo
+   reported by: Thomas Raabo
  * Fix: could not split MPLS routes
-    reported by: Hideaki HAYASHI
+   reported by: Hideaki HAYASHI
  * Fix: not correctly handling NOTIFICATION message
-    reported by: Hideaki HAYASHI
+   reported by: Hideaki HAYASHI
  * Fix: do not block on a peer should a socket become blocking
-    reported by: Wouter Miltenburg
+   reported by: Wouter Miltenburg
  * Fix: API JSON message id incrementation
-    reported by: Wouter Miltenburg
+   reported by: Wouter Miltenburg
 
 Version 3.4.1
  * Fix: on bad JSON message
-    patch from: Wouter Miltenburg
+   patch by: Wouter Miltenburg
  * Fix: parsing of default route
-    reported by: Wouter Miltenburg
+   reported by: Wouter Miltenburg
  * Fix: remove legacy exabgp.tcp.timeout
  * Fix: forgot some processes options when printing neighbor
  * Fix: bad function call for API
  * Fix: correct JSON for OPEN
  * Fix: issues with bad naming of APIOption
-    patch from: Wouter Miltenburg
+   patch by: Wouter Miltenburg
  * Fix: do not try to be clever (and possibly get it wrong) and rely on keepalive timer to detect TCP faults
  * Fix: formating issue of extended community
  * Fix: issue with EOR
  * Fix: caching issue
-    reported by: Wouter Miltenburg
+   reported by: Wouter Miltenburg
  * Fix: make sure we do not call select with a negative time
-    reported by: Wouter Miltenburg, Daniel Piekacz
-    patch from: Wouter Miltenburg
+   reported by: Wouter Miltenburg, Daniel Piekacz
+   patch by: Wouter Miltenburg
  * Fix: handle AS4_PATH with PARTIAL bit set
-    reported by: Daniel Piekacz
+   reported by: Daniel Piekacz
  * Fix: bug with generic attribute generation
  * Fix: bad Notification
-    patch from: Wouter Miltenburg
+   patch by: Wouter Miltenburg
  * Fix: bad Keepalive JSON message
-    patch from: Wouter Miltenburg
+   patch by: Wouter Miltenburg
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
  * Feature: more detailed JSON objects
-    patch from: Wouter Miltenburg
+   patch by: Wouter Miltenburg
  * Feature: support for L2VPN (experimental)
-    patch from: Nikita V. Shirokov
+   patch by: Nikita V. Shirokov
  * Improvement: better handling of NOTIFICATION received during OPEN negotiation
  * Improvement: ExaBGP can restart failed helper process
  * Fix: Do not reconnect too fast when connection fails
-    reported by: Robert Barnes
+   reported by: Robert Barnes
  * Fix: Invalid JSON object for route-refresh
-    reported by: Robert Barnes
+   reported by: Robert Barnes
  * Fix: We were not reporting the NLRI of the route received when exabgp.log.routes was set
  * Fix: accept exabgp_tcp_port as configuration option and not only exabgp.tcp.port
  * Fix: duplicate line output
  * Fix: bad refactorisation which caused an bad ASN4 bug
  * Fix: change EOR from IPv4 multicast (mistake) to IPv4 unicast
-    reported by: Mark Treacy
+   reported by: Mark Treacy
  * Fix: bad encoding of flow fragment encoding
-    reported by: Andrei-Marius Radu
+   reported by: Andrei-Marius Radu
  * Fix: bad reporting of process open sending
-    reported by: Mark Treacy (with patch, thank you)
+   reported by: Mark Treacy (with patch, thank you)
  * Fix: Incorporating NETBSD compatibility patches
  * Fix: Generation of Generic Attributes
  * Fix: Faster reactor (should be able to process much more API/BGP messages)
@@ -771,7 +729,7 @@ Version 3.4.0
  * Change: JSON new EOR object
  * Change: JSON new Flow format
  * Change: slight variation with the command line option names, now using docopt
-    patch from: Michael Robert Watson
+   patch by: Michael Robert Watson
  * Change: the profile information is now exported in kcachegrind format
  * Compatibility: JSON re-introduced the family under the "announce" section ( removed by mistake )
  * Compatibility: restoring integer as default time, high resolution must be enabled to not break older installations
@@ -789,22 +747,22 @@ Version 3.3.1
  * Fix: prevent ExaBGP to start if the log folder is not writeable by the user
  * Fix: configuration defaults for booleans ( and warns when group-updates is not enabled );
  * Fix: issue when removing some routes
-    reported by: Adrian Gämperli (backb1 on github)
+   reported by: Adrian Gämperli (backb1 on github)
  * Fix: bad printing of route as-path
  * Fix: neighbor matching was too permissive
-    reported by: Adrian Gämperli (with a merge request, thank you)
+   reported by: Adrian Gämperli (with a merge request, thank you)
  * Fix: under load ExaBGP could miss some commands sent through the API
-    reported by: Adrian Gämperli (with a merge request, thank you)
+   reported by: Adrian Gämperli (with a merge request, thank you)
  * Change: performing KeepAlive handling as first action
  * Change: time is provided as an high resolution real number and not an integer
- * Debian package update by:
-    Henry-Nicolas Tourneur
+ * Debian package
+   update by: Henry-Nicolas Tourneur
 
 Version 3.3.0
  * Fix: typo causing issue when parsing multiple neighbor commands
-    reported by: Pablo Camarillo Garvia
+   reported by: Pablo Camarillo Garvia
  * Fix: bad handling of EOR
-    reported by: Petr Lapukhov
+   reported by: Petr Lapukhov
  * Fix: multiple bugs with multi neighbor commands
  * Feature: allow as-path [ asn asn, [ asn ] ]
  * Other: migrate the setup.py script to work with git (vs hg)
@@ -819,50 +777,50 @@ Version 3.3.0
 Version 3.2.19
  * Fix: bug when displaying EOR
  * Fix: invalid check on next-hop for multi-line routes
-    reported by: Pierre Aubry
+   reported by: Pierre Aubry
  * Fix: badly parsing command line for run option
-    reported by: Allan Feid
-    solution by: Vincent Bernat
+   reported by: Allan Feid
+   solution by: Vincent Bernat
  * Fix: allow the creation of 'allow' flows
-    reported by: Adrian Cepleanu
+   reported by: Adrian Cepleanu
  * Fix: bad JSON encoding for EOR
-    reported by: Robert Barnes
+   reported by: Robert Barnes
  * Fix: API message encoding
-    patch by: Daniel Neiter
+   patch by: Daniel Neiter
  * Feature: allow digit:digit in extended communities
-    requested by: Pierre Aubry
+   requested by: Pierre Aubry
  * Feature: healtcheck.py, python 2.6 and community support
-    pulled from: Allan Feid
+   pulled from: Allan Feid
 
 Version 3.2.18
  * Fix: add path for IPv6 was badly negotiated
-    reported by: Robert Barnes
+   reported by: Robert Barnes
 
 Version 3.2.17
  * Feature: make route auto-flush an option with an API call to flush routes on demand
  * Feature: make the reactor loop time an option (it allows for a faster flush of routes)
  * Feature: allow to disable the Adj-RIB-Out (can save lots of memory if you know what you are going to send)
-    requested by: David Hauweele
+   requested by: David Hauweele
  * Fix: Keep API routes between SIGUSR
  * Fix: Missing empty added nlri when the update only has withdrawn
-    reported by Robert Barnes (and his co-workers) with a patch, thank you !
+   reported by Robert Barnes (and his co-workers) with a patch, thank you !
  * Fix: Single AS Path with AS Set were reported as empty AS Path and AS Set
-    reported by: David Hauweele
+   reported by: David Hauweele
  * Fix: possibly not sending withdrawal when it was required
-    reported by: David Hauweele
+   reported by: David Hauweele
  * Fix: typo in code causing crash when process went away
-    reported by: Robert Barnes
+   reported by: Robert Barnes
  * Fix: RouterID MUST be an IPv4
-    reported by: Kristopher Beevers
+   reported by: Kristopher Beevers
  * Fix: JSON output on EBGP and IBGP session is not the same
-    reported by: Robert Barnes
+   reported by: Robert Barnes
  * Fix: route representation with labels and route distinguisher
  * Fix: do not double remove the BGP header size
-    reported by: Hideaki HAYASHI
+   reported by: Hideaki HAYASHI
  * Fix: parsing flow NLRI, withdrawal were reported as announcement
  * Fix: printing extended communities
  * Fix: retry when network is blocking (issue 60)
-    reported by: Hideaki HAYASHI
+   reported by: Hideaki HAYASHI
  * Change: remove next-hop from attributes in JSON as it is given in the announce section
  * Change: cleanup in configuration parsing
  * Change: the path-information, labels and route distinguisher are now printed before the next-hop
@@ -870,15 +828,15 @@ Version 3.2.17
 Version 3.2.16
  * Fix: fix an issue with RIB cache handling
  * Fix: fix an issue with Flow generation introduced recently (mandatory attributes are mandatory even for Flow Routes)
-    thanks to: Quentin Loos for reporting the issue and helping fixing it
+   thanks to: Quentin Loos for reporting the issue and helping fixing it
  * Fix: on SIGUSR no route withdrawal update was performed
-    reported by: Sascha Schumann
+   reported by: Sascha Schumann
  * Fix: Do not oversend routes for route refresh
-    reported by: Hideaki HAYASHI
+   reported by: Hideaki HAYASHI
  * Fix: Bug when route when trying to withdraw an absent route with the API
-    reported by: Peter Bristow
+   reported by: Peter Bristow
  * Fix: Malformed JSON message
-    reported by: Robert Barnes
+   reported by: Robert Barnes
  * Fix: validate the FLAG of the attribute received (following our own advise on IDR)
  * Change: major RIB code modification
  * Change: match attributes using the flag value as well
@@ -902,39 +860,39 @@ Version 3.2.13
 
 Version 3.2.12
  * Fix: the signal for reload were wrong in the debian script
-    reported by: Sascha Schumann
+   reported by: Sascha Schumann
  * Fix: a critical bug introduce in 3.2.11 when route were not resent on reconnect
-    reported by: Sascha Schumann
+   reported by: Sascha Schumann
 
 Version 3.2.11
  * Feature: the TCP server allows 'neighbor' commands
-    patch by: Hideaki HAYASHI
+   patch by: Hideaki HAYASHI
  * Feature: initial Enhanced route refresh initial implementation
-    thanks to: Hideaki HAYASHI for reporting an issue before the release (some border cases still exist)
+   thanks to: Hideaki HAYASHI for reporting an issue before the release (some border cases still exist)
  * Fix: bug in generating API string, missing space
  * Fix: bug in generating API string, withdrawn reported as invalid announced
  * Fix: bug in generating API string, withdawn was missing Path-Information
  * Fix: route refresh implementation issues
  * Fix: a bug with capability parsing introduced with operational
-    reported by: M. Brent Busby
+   reported by: M. Brent Busby
  * Fix: be more aggressive on reconnection (3.2 was slower than 3.1)
-    reported by: Sascha Schumann
+   reported by: Sascha Schumann
 
 Version 3.2.10
  * Fix: was not announcing add-path for IPv6 unicast
  * Fix: we were not sending the Notification messages
-    reported by: Hideaki HAYASHI
+   reported by: Hideaki HAYASHI
  * Feature: add support for route-refresh (RFC 2918)
 
 Version 3.2.9
  * Fix: some json generation issue
-    reported by: Peter Spikings
+   reported by: Peter Spikings
  * Fix: bad decoding of withdrawn routes with label ( checking 0x80000 and not 0x800000 )
  * Fix: only treat 0x800000 as special for route withdrawal
  * Fix: we could believe we were already connected when we were not
  * Fix: handle when ExaBGP daftly connects to iself
  * Fix: did not parse add-path capability correctly (only registered the last family sent)
-    reported Ryan Steinmetz
+   reported by: Ryan Steinmetz
  * Fix: ASM messages were sent as ADM
  * Feature: decode shows the JSON representation of updates
  * Feature: start of support for draft-ietf-idr-operational-message-00
@@ -961,9 +919,9 @@ Version 3.2.5
  * Feature: add support for draft-raszuk-idr-flow-spec-v6-03
  * Feature: complete RFC 5575 by providing support for flow-vpn
  * Fix: async connect issues
-    reported by: Vincent Bernat (with very good advice for the patch)
+   reported by: Vincent Bernat (with very good advice for the patch)
  * Fix: bad function defintions
-    patch by: Vincent Bernat
+   patch by: Vincent Bernat
  * Fix/Compatibility: bad naming of flow capability
  * Compatibility: -c becomes -f (it should not be used by users anyway)
 
@@ -975,7 +933,7 @@ Version 3.2.4
 
 Version 3.2.3
  * Fix: an issue in the 3.2.x series when the socket return a non-fatal error
-    reported by: Daniel Bradshaw
+   reported by: Daniel Bradshaw
  * Fix: an issue when the code would not behave correctly on network error
  * Fix: some issues when encoding vpnv4 routes
  * Fix: change the behaviour of the main peer loop (should behave more like expected - no bug reported tho)
@@ -987,13 +945,13 @@ Version 3.2.3
 
 Version 3.2.2
  * Feature: allow to generate NOTIFICATION messages through the API
-    requested by: Parag Jain
+   requested by: Parag Jain
  * Feature: new syntax for the multiple neighbor announcement created in 3.1.13
-    Allow to filter on more than the IP address
-    requested by: Petr Lapukhov
+   Allow to filter on more than the IP address
+   requested by: Petr Lapukhov
  * Feature: better uid/euid/gid change check
  * Feature: allow to reload with restart of helper process with SIGUSR1
-    patch by: Vincent Bernat
+   patch by: Vincent Bernat
  * Feature: --decode can now be passed multiple messages to decode
  * Feature: -v,--version returns ExaBGP's version
  * Feature: be more robust on ^C
@@ -1007,41 +965,41 @@ Version 3.2.2
  * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
  * Fix: could not handle NOTICATION sent during the OPEN negotiation stage
  * Fix: extra spaces in the configuration could cause bad parsing
-    reported by: Parag Jain (with a patch for the RD case - thank you)
-    reported by: Vincent Bernat (with an alternate solution)
+   reported by: Parag Jain (with a patch for the RD case - thank you)
+   reported by: Vincent Bernat (with an alternate solution)
  * Fix: ExaBGP would not connect if the OS did not implement SO_REUSEPORT
-    reported by: Vincent Bernat
+   reported by: Vincent Bernat
  * Fix: the configuration would not handle run program with upper case or spaces
-    reported by: Vincent Bernat
+   reported by: Vincent Bernat
  * Fix: bug in the networking code
-    patch by: Vincent Bernat
+   patch by: Vincent Bernat
  * Fix: an issue with received timer expiring when it should not have
-    reported by: Eric Cables
+   reported by: Eric Cables
  * Fix: do not try to parse Flow Route when perforing self-check (ExaBGP regression suite)
  * Compatibility: supervisor was renamed reactor
  * Compatibility: the word inet4/inet6 are now replaced by ipv4/ipv6
  * Compatibility: the option exabgp.tcp.block was removed following the networking code change
  * Compatibility: reload the configuration with SIGUSR1, reload configuration and processes with SIGUSR2
  * Compatinility: using SIGHUP will now TERMINATE ExaBGP and not reload the configuration
-    reported by: Daniel Bradshaw (issue 32)
+   reported by: Daniel Bradshaw (issue 32)
 
 Version 3.1.13 - 6th July 2013
  * Fix: only clear buffered routes on restart and not reload (bug never reported)
  * Fix: an issue when parsing EOR
  * Fix: bug with RD community genration
-    reported by: Parag Jain
+   reported by: Parag Jain
  * Feature: use less memory on route change calculation
  * Feature: more regression testing
  * Feature: allow to control which neighbor will get API notification
-    requested by: Parag Jain
+   requested by: Parag Jain
  * Feature: allow to control which neighbors will get API notification
-    requested by: Petr Lapukhov
+   requested by: Petr Lapukhov
  * Feature: allow delayed connections
-    requested by: David Freeman
+   requested by: David Freeman
  * Feature: block on busy socket for performance testing
-    requested by: David Freeman
+   requested by: David Freeman
  * Fix/Feature: only announce routes for the negociated family on a connection
-    requested by: Andrew Hoyos
+   requested by: Andrew Hoyos
 
 Version 3.1.12 - 16th May 2013
  * Fix: could crash when a family safi was not defined in the peer family group instead of exiting with an error
@@ -1065,21 +1023,21 @@ Version 3.1.9 - 27th of March 2013
 
 Version 3.1.8 - 22nd of March 2013
  * Fix: bad encoding of extended community for FlowSpec redirect
-    reported by: Ozgur Karaman
+   reported by: Ozgur Karaman
  * Feature: unsupported before the next configuration format 'next-hop self', the neighbor MUST be defined first
-    requested by: Federic Gabut-Deloraine
+   requested by: Federic Gabut-Deloraine
 
 Version 3.1.7 - 18th of March 2013
  * Fix: api only get bgp session negotiation messages if neighbor-changes is set
-    reported by: Lorenzo Murillo
+   reported by: Lorenzo Murillo
  * Fix: json quoted integer and long by mistake
-    reported by: Lorenzo Murillo
+   reported by: Lorenzo Murillo
  * Fix: json used comma with no data to separate
-    reported by: Lorenzo Murillo
+   reported by: Lorenzo Murillo
 
 Version 3.1.6 - 8th of March 2013
  * Fix: unclear log entry when removing route using API
-    reported by: Lorenzo Murillo
+   reported by: Lorenzo Murillo
  * Fix: withdrawn routes were always prepended with add-path information
  * Fix: bad withdrawal of routes (issue 11)
  * Fix: more sanity checking when parsing flow routes
@@ -1088,27 +1046,27 @@ Version 3.1.6 - 8th of March 2013
 
 Version 3.1.5 - 18th of Febuary 2013
  * Fix: function name broking some features (issue 23)
-    reported by: Lorenzo Murillo
+   reported by: Lorenzo Murillo
 
 Version 3.1.4 - 18th of Febuary 2013
  * Fix: Learn to spell negotiated (issue 21)
-    reported by: Ian Wells
+   reported by: Ian Wells
  * Feature: option to only attempt one TCP connection per peer (required by unittesting code)
  * Fix: a bug in code in charge of parsing legacy API names
  * Fix: fix relative path from exabgp
  * Fix: bug in api code causing crash
  * Fix: did not cleanup routes from the api before tokenisation (issue 22)
-    reported by: Lorenzo Murillo
+   reported by: Lorenzo Murillo
  * Fix: did not split routes from the api (issue 22)
-    reported by: Lorenzo Murillo
+   reported by: Lorenzo Murillo
  * Fix: when the api program was sending message too fast, some were missed (issue 22)
-    reported by: Lorenzo Murillo
+   reported by: Lorenzo Murillo
  * Fix: make peer name more unique (adding asn, and router-id) to prevent to router configuration to merge
  * Feature: restart the API program if we lost its file descriptor
 
 Version 3.1.3 - 4th of Febuary 2013
  * Fix: JSON bugs (encoding for cluster-list, withdrawn routes)
-    patch by: Vincent Bernat
+   patch by: Vincent Bernat
 
 Version 3.1.2 - 10th of January 2013
  * Copyright: updated all copyright notice (welcome to 2013)
@@ -1124,35 +1082,35 @@ Version 3.1.1 - 6th of January 2013
 
 Version 3.1.0 - 2nd of January 2013
  * Partial Fix: watchdog feature
-    reported by: Ryan Steinmetz
+   reported by: Ryan Steinmetz
  * Fix: problem with SIGHUP when deleting peer
-    patch by: Justin Azoff (thank you)
+   patch by: Justin Azoff (thank you)
  * Fix: cluster-list attribute was not passed to api correctly
  * Feature: MD5 support on FreeBSD (issue 14)
-    patch by: Ryan Steinmetz (thank you)
+   patch by: Ryan Steinmetz (thank you)
  * Feature: caching of Community and Next-Hop
-    requested by: Justin Azoff (with benchmarking gains report,thank you)
+   requested by: Justin Azoff (with benchmarking gains report,thank you)
  * Feature: Store routes in neighbor as set and not list, so removal are O(1)
-    patch by: Justin Azoff (thank you)
+   patch by: Justin Azoff (thank you)
  * Feature: (experimental) Limit the memory used for parsed route caching
  * Feature: (experimental) json encoding on the API (issue 17) not tested with flow routes or complex routes
 
 Version 3.0.11 - 21st of November 2012
  * Fix: add support for IPv6 MD5SUM
-    reported by: Eiichiro Watanabe (with a patch, thank you)
+   reported by: Eiichiro Watanabe (with a patch, thank you)
  * Fix: RFC compliance, supporting keepalive timer of zero
  * Fix: parsing an invalid community string could cause a program crash
  * Feature: add possibility to disable route attribute caching to reduce memory usage
-               (over a few hundred Mb saved per full routing tables)
-    requested by Daniel Piekacz
+   (over a few hundred Mb saved per full routing tables)
+   requested by Daniel Piekacz
 
 Version 3.0.10 - 6th of September 2012
  * Fix: not removing duplicate route correctly (same nlri different attributes) (issue 7)
-    patch by: Reggie Yam (thank you)
+   patch by: Reggie Yam (thank you)
 
 Version 3.0.9 - 5th of September 2012
  * Fix: problem when parsing ASN which are not fitting in a Python integer
-    reported by: Matthias Cramer
+   reported by: Matthias Cramer
 
 Version 3.0.8 - 28th of August 2012
  * Fix: empty as-path route printing
@@ -1166,7 +1124,7 @@ Version 3.0.8 - 28th of August 2012
 
 Version 3.0.7 - 19th of August 2012
  * Fix: parser had a bug with multiple flow routes
-    reported by Dmitry Lisakov and Oleg Alekseenko
+   reported by Dmitry Lisakov and Oleg Alekseenko
 
 Version 3.0.6 - 5th of August 2012
  * Fix: ommission during a variable name change
@@ -1175,21 +1133,21 @@ Version 3.0.6 - 5th of August 2012
 
 Version 3.0.5 - 22 of July 2012
  * Feature: suppor for systemd
-    patch by: Sébastien Luttringer
+   patch by: Sébastien Luttringer
  * Fix: some unexpected verbosity when use the exabgp shell script on some OSes
-    patch by: Sébastien Luttringer
+   patch by: Sébastien Luttringer
  * Fix: possible miss of connection loss
  * Fix: EOR code (again)
  * Fix: we were deleting the next-hop of MP routes !
  * Fix: follow correctly RFC 4760 (MP) for route generation (it was working, we were lucky)
  * Fix: exabgp.daemon was spelt exabgp.deamon for the PID location migration
-    reported by: Tim Gebbett
+   reported by: Tim Gebbett
  * CHANGE: Do not start if the PID file exists
  * CHANGE: helpers can now get new message for EORs like "announced eor 1/1 (IPv4 unicast)"
  * Debian package update by:
-    Henry-Nicolas Tourneur
+   Henry-Nicolas Tourneur
  * ArchLinux package by:
-    by: Sébastien Luttringer
+   by: Sébastien Luttringer
 
 Version 3.0.4 - 19 of July 2012
  * Fix: FlowSpec API change update forgotten
@@ -1212,7 +1170,7 @@ Version 3.0.3 - 17 of July 2012 (unreleased experimental version)
  * Fix: on peer reload make sure all the routes are re-announced
  * Fix: massive CPU saving - only check for new route to announce when we have some
  * Fix: route buffering when sending many routes over slow connection/to slow routers was broken
-    reported by Simon Woodhead (thank you for the testbed to debug it)
+   reported by Simon Woodhead (thank you for the testbed to debug it)
  * Feature: in the way we store route in memory for the route delta on config change
  * Feature: better reporting of message buffering
  * CHANGE: The way the routes as-path is printed/parsed (final for the 3.x.x)
@@ -1220,7 +1178,7 @@ Version 3.0.3 - 17 of July 2012 (unreleased experimental version)
 Version 3.0.2 - 16 of July 2012 (unreleased experimental version)
  * CHANGE: python2.4 may work but it not supported anymore
  * Fix: as-path decoding issue with as-set being eaten (full rewrite of ASPATH and ASN4 parsing)
-    reported by Rishabh Goel
+   reported by Rishabh Goel
  * Fix: bug with profiling
  * Fix: withdrawal was broken when path-info was added
  * API CHANGE: as-path configuration syntax (as-sequence removed)
@@ -1231,9 +1189,9 @@ Version 3.0.1 - 14 of July 2012 (unreleased experimental version)
  * Feature: do not generate complex string with packet data if not printed
  * Feature: all objects are storing data in the wire format when possible
  * Feature: add AGGREGATOR and AS4_AGGREGATOR support
-    requested by: Rishabh Goel <rgoel@internap.com>
+   requested by: Rishabh Goel <rgoel@internap.com>
  * Feature: add ATOMIC_AGGREGATE support
-    requested by Rishabh Goel
+   requested by Rishabh Goel
  * Feature: faster configuration parsing
  * Feature: bring compatibility mode for option with 2.0.x
  * Feature: support for RFC 4659 BGP-MPLS IP VPN Extension for IPv6 VPN
@@ -1264,31 +1222,31 @@ Version 3.0.0 - 13 of July 2012 (unreleased experimental version)
  * Fix: reset counters correctly for number of routes seen (only affects the logs)
  * Fix: prevent 100% CPU usage/loop when trying to read on unreliable links
  * Fix: correctly process IPv6 routes with 32 bytes long next-hop
-    reported by Daniel Piekacz (with patch, thank you)
+   reported by Daniel Piekacz (with patch, thank you)
  * Fix: problem on broken pipe with the helper program
  * Fix: correct sending of message to helper program (every worker was getting every peers messages)
  * Fix: if an helper program goes away, do not try to restart the peer (prevent surprises)
  * Fix: problem when writing too fast and causing EGAIN errno failure on the socket (mostly/only on Mac OSX)
-    reported by Simon Helson (with patch, thank you)
+   reported by Simon Helson (with patch, thank you)
  * Fix: a nasty bug when dynamic route announcement would not work when no routes were setup
-    reported by Tim Gebbett
+   reported by Tim Gebbett
  * Fix: bad counting of routes parsed (not resetting in some case)
  * Fix: badly printed local-preference when generating route representation
  * Fix: bug when trying to daemonise ExaBGP, caused by unclosed FD
-    reported by Ryan Lane (with a patch, thank you)
+   reported by Ryan Lane (with a patch, thank you)
  * Fix: parse correctly routes with empty AS-SET or AS-SEQUENCE
  * Feature: hidden option to change BGP select timeout (use at your own risk - do not ask me where it is - it is hidden)
  * Feature: announce EOR even if Graceful-Restart was not negotiated but only MultiProtocol
  * Feature: implementation of draft-ietf-idr-bgp-multisession-06
-    use capability 131 (and not 68) for multisession to achieve interop with Cisco
+   use capability 131 (and not 68) for multisession to achieve interop with Cisco
  * Feature: following RFC 6608 new notification codes
  * Feature: to the logging code and message filtering
  * Feature: support RFC 3765 (NOPEER community)
  * Feature: support for draft-ietf-idr-add-paths-07 (even IPv6 even if it is not supported by anyone)
-    requested by: Rishabh Goel (Thank you for giving me a BGP session to an XR)
+   requested by: Rishabh Goel (Thank you for giving me a BGP session to an XR)
  * Feature: support for RFC 4456 (BGP Route Reflection: An Alternative to Full Mesh Internal BGP (IBGP))
-    more exactly the generation and parsing of originator-id and cluster-list attributes
-    requested by Rishabh Goel
+   more exactly the generation and parsing of originator-id and cluster-list attributes
+   requested by Rishabh Goel
  * Feature: add tcp timeout control for connection over very slow ebgp multihop (dangerous, use with care)
  * Feature: control of the MP families announced in the OPEN message
  * Feature: support for RFC 3107 and 4364 (Carrying Label Information in BGP-4)
@@ -1321,7 +1279,7 @@ Version 2.0.3 - 1st of Febuary 2012
  * Fix: now sending correctly "neighbor <ip> down" when a neighbor goes down
  * Fix: a bug when parsing "split" configuration
  * Fix: sending routes faster than a router can accept does not cause the BGP session to go down
-    problem found by Eric Nghia Nguyen Duy (thank you for giving me access to his lab to fix the issue)
+   problem found by Eric Nghia Nguyen Duy (thank you for giving me access to his lab to fix the issue)
  * Feature: Buffering message we can not send if sockets return a transient failure
  * Feature: Limiting how long and how deep the buffer are kept before we kill the session
  * Fix: under load we could receive partial messages, read until we have it all
@@ -1346,18 +1304,18 @@ Version 2.0.2 - 1st of January 2012
  * User Change: implemented RFC 6286 BGP Identifier released restrictions
  * Improvment: recognise multisession capability (draft-ietf-idr-bgp-multisession-06)
  * Improvment: allow the configuration of route which will not be announced on configuration reload (to work in conjunction with watchdog)
-    requested by Marco d'Itri
+   requested by Marco d'Itri
 
 Version 2.0.1 - 8th of December 2011
  * Fix : Regression on FlowSpec
  * Fix : interpreter not found on some Linux version
-    (issue 3) reported by  Sebastien Luttringer
+   (issue 3) reported by  Sebastien Luttringer
 
 Version 2.0.0 - 3rd of December 2011 (experimental version)
  * Feature: can set flowspec communities
-    requested by Yiming Gong
+   requested by Yiming Gong
  * Feature: incoming route parsing for processing by an external application
-    requested by Daniel Piekacz (and others)
+   requested by Daniel Piekacz (and others)
  * Improvment: Add profiling features to find bottlenecks
  * Improvment: Code speedup following profiling
  * Internal Change : lots of folder restructuration
@@ -1368,16 +1326,16 @@ Version 2.0.0 - 3rd of December 2011 (experimental version)
 
 Version 1.3.4 - 21th of September 2011 (stable version)
  * Feature: added support for asdot/asdot+
-    requested by jonlooney (with a patch - thank you)
+   requested by jonlooney (with a patch - thank you)
  * Fix: when the pid file could not be written, the daemon was crashing on exit
 
 Version 1.3.3 - 25th of June 2011
  * Feature: massive speed improvement when reloading with many routes (60 to 2 seconds with 10k routes)
-    reported by Martin Baum (with proof of concept patch)
+   reported by Martin Baum (with proof of concept patch)
 
 Version 1.3.2 - 23rd of June 2011
  * Fix bug where we would not wait long enough for OPEN/KEEPALIVE messages on startup
-    reported by: Yann Berthier
+   reported by: Yann Berthier
 
 Version 1.3.1 - 3rd of May 2011
  * Fix bug in configuration parsing introduce just before 1.3.0
@@ -1396,38 +1354,38 @@ Version 1.3.0 - 2nd of May 2011
  * Change: renamed env variable DAEMON to DAEMONIZE (to prevent name clash with Debian)
  * Feature: added env variable PDB if set the program will call pdb, the python debugger, on program fault
  * Feature: it is now possible to get some routes withdrawn from an external process (see watchdog example conf.)
-    warning: this code is not yet considered production ready, expect some bugs for complex configurations
+   warning: this code is not yet considered production ready, expect some bugs for complex configurations
  * Feature: it is now possible to modify the configuration without reload from external proccess (see process example conf.)
-    warning: this code is not yet considered production ready, expect some bugs for complex configurations
+   warning: this code is not yet considered production ready, expect some bugs for complex configurations
  * Fix: make sure we can setup a session even if no route (ie: AFI/SAFI families for Mulitprotocol) are in the configuration
  * Fix: many small bug fixes, simple code refactorisation, ...
 
 Version 1.2.0 - 25th of January 2011
  * Feature: Allow to break route in more specific (ie define a /22 and get 4x /24 announced)
-                This is useful when blackholing traffic to make sure no routes more specific are received from your network peer/transit
-    requested by : Renaud Chaput
+   This is useful when blackholing traffic to make sure no routes more specific are received from your network peer/transit
+   requested by : Renaud Chaput
  * Feature: Save the program PID into a file (set the PID= environment value with the file path)
-    requested by : Renaud Chaput
+   requested by : Renaud Chaput
  * Feature: Add syslog support (env SYSLOG= nothing for local syslog, a file name (auto-rotate) or host:<host> for remote syslog)
-    requested by : Josh Ward
+   requested by : Josh Ward
  * Feature: Can now daemonise (env DAEMON= detach and send the program in the background)
-    requested by : Josh Ward
+   requested by : Josh Ward
  * Feature: Selection of what subsystems to log, more readable logs (well, less unreadeable to be exact)
  * Feature: Create a new "group" in the configuration to share routes and configuration options between neighbors
-    requested by : Multiple people
+   requested by : Multiple people
  * Fix: non detection of MD5 change on configuration reload
  * Feature: support distutil with a setup.py file for easy installation
 
 Version 1.1.0 - 10th of January 2011
  * Feature: Tested and completed TCP MD5 signature
-    contribution: MD5 TCP code by David Farrar
+   contribution: MD5 TCP code by David Farrar
 
 Version 1.0.4 - 8th of January 2011
  * Feature: can now toggle debuging using environment values (DEBUG_CONFIGURATION, DEBUG_SUPERVISOR, DEBUG_WIRE)
  * Fix: some change to the AS_PATH generation code (some routers did not accept empty AS_PATH as it was encoded before)
-    reported by: R.P. Aditya
+   reported by: R.P. Aditya
  * Fix: some interoperability issue with openbgpd (could not parse their OPEN message)
-    (issue 1) reported by Manuel Guesdon
+   (issue 1) reported by Manuel Guesdon
  * Experimental: Some MD5 for Linux (untested - surely not working)
 
 Version 1.0.3 - 6th of January 2011
@@ -1438,11 +1396,11 @@ Version 1.0.3 - 6th of January 2011
 Version 1.0.2 - 22nd of October 2010
  * Feature: only try to generate UPDATE messages if the configuration was changed (save quite some CPU as the algorithm is really naive)
  * Fix : a neighbor configuration change could have been undetected on SIGHUP/SIGALRM
-    reported by: Yann Berthier
+   reported by: Yann Berthier
  * Fix : reloading the configuration did not detect the removed routes
-    reported by Renaud Chaput
+   reported by Renaud Chaput
  * Fix : a bug in the format of the UPDATE for route withdrawal causing Cisco (and not Quagga) to tear the session
-    reported by Renaud Chaput
+   reported by Renaud Chaput
 
 Version 1.0.1 - 7th of September 2010
  * Fixes an issue with some python versions (at least 2.5.2) when sending a large number of routes (several hundred). Some messages could be sent in multiple parts, causing the parser at the other end to barf (Thank you to Renaud Chaput for the bug report)

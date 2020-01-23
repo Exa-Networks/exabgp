@@ -211,14 +211,10 @@ class Peer (object):
 		self._teardown = code
 		self._delay.reset()
 
-	# sockets we must monitor
-
-	def sockets (self):
+	def socket (self):
 		if self.proto:
-			fd = self.proto.fd()
-			if fd:
-				return [fd]
-		return []
+			return self.proto.fd()
+		return -1
 
 	def handle_connection (self, connection):
 		self.logger.debug("state machine for the peer is %s" % self.fsm.name(), self.id())
@@ -272,11 +268,9 @@ class Peer (object):
 
 	def _connect (self):
 		proto = Protocol(self)
-		generator = proto.connect()
-
 		connected = False
 		try:
-			for connected in generator:
+			for connected in proto.connect():
 				if connected:
 					break
 				if self._teardown:
@@ -492,8 +486,9 @@ class Peer (object):
 					new_routes = self.proto.new_update(include_withdraw)
 
 				if new_routes:
+					count = 1 if self.neighbor.rate_limit > 0 else 25
 					try:
-						for _ in range(25):
+						for _ in range(count):
 							# This can raise a NetworkError
 							six.next(new_routes)
 					except StopIteration:
@@ -677,7 +672,8 @@ class Peer (object):
 		if have_open:
 			capa = self.proto.negotiated.received_open.capabilities
 			peer.update({
-				'router-id':     self.proto.negotiated.received_open.router_id,
+				'router-id':     self.proto.negotiated.sent_open.router_id,
+				'peer-id':       self.proto.negotiated.received_open.router_id,
 				'hold-time':     self.proto.negotiated.received_open.hold_time,
 				'asn4':          self.proto.negotiated.asn4,
 				'route-refresh': capa.announced(Capability.CODE.ROUTE_REFRESH),

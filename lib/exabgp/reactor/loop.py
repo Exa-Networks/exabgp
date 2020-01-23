@@ -29,6 +29,8 @@ from exabgp.reactor.api import API
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.environment import environment
 
+from exabgp.bgp.fsm import FSM
+
 from exabgp.version import version
 from exabgp.logger import Logger
 
@@ -60,6 +62,7 @@ class Reactor (object):
 		self.max_loop_time = environment.settings().reactor.speed
 		self._sleep_time = self.max_loop_time / 100
 		self._busyspin = {}
+		self._ratelimit = {}
 		self.early_drop = environment.settings().daemon.drop
 
 		self.processes = None
@@ -72,10 +75,11 @@ class Reactor (object):
 		self.listener = Listener(self)
 		self.api = API(self)
 
-		self.peers = {}
+		self._peers = {}
 
 		self._reload_processes = False
 		self._saved_pid = False
+		self._poller = select.poll()
 
 	def _termination (self,reason, exit_code):
 		self.exit_code = exit_code
@@ -92,49 +96,130 @@ class Reactor (object):
 			return True
 		return False
 
-	def _api_ready (self,sockets,sleeptime):
-		fds = self.processes.fds()
-		ios = fds + sockets
+	def _rate_limited(self,peer,rate):
+		if rate <= 0:
+			return False
+		second = int(time.time())
+		ratelimit = self._ratelimit.get(peer,{})
+		if not second in ratelimit:
+			self._ratelimit[peer] = {second: rate-1}
+			return False
+		if self._ratelimit[peer][second] > 0:
+			self._ratelimit[peer][second] -= 1
+			return False
+		return True
 
+	def _wait_for_io (self,sleeptime):
+		spin_prevention = False
 		try:
-			read,_,_ = select.select(ios,[],[],sleeptime)
-			for fd in fds:
-				if fd in read:
-					read.remove(fd)
-			return read
-		except select.error as exc:
-			err_no,message = exc.args  # pylint: disable=W0633
-			if err_no not in error.block:
-				raise exc
-			self._prevent_spin()
-			return []
-		except socket.error as exc:
-			# python 3 does not raise on closed FD, but python2 does
-			# we have lost a peer and it is causing the select
-			# to complain, the code will self-heal, ignore the issue
-			# (EBADF from python2 must be ignored if when checkign error.fatal)
-			# otherwise sending  notification causes TCP to drop and cause
-			# this code to kill ExaBGP
-			self._prevent_spin()
-			return []
-		except ValueError as exc:
-			# The peer closing the TCP connection lead to a negative file descritor
-			self._prevent_spin()
-			return []
+			for fd, event in self._poller.poll(sleeptime):
+				if event & select.POLLIN or event & select.POLLPRI:
+					yield fd
+					continue
+				elif event & select.POLLHUP  or event & select.POLLERR or event & select.POLLNVAL:
+					spin_prevention = True
+					continue
+			if spin_prevention:
+				self._prevent_spin()
 		except KeyboardInterrupt:
 			self._termination('^C received',self.Exit.normal)
-			return []
+			return
+		except Exception:
+			self._prevent_spin()
+			return
 
-	def _active_peers (self):
+	# peer related functions
+
+	def active_peers (self):
 		peers = set()
-		for key,peer in self.peers.items():
+		for key,peer in self._peers.items():
 			if not peer.neighbor.passive or peer.proto:
 				peers.add(key)
 		return peers
 
+	def established_peers (self):
+		peers = set()
+		for key, peer in self._peers.items():
+			if peer.fsm == FSM.ESTABLISHED:
+				peers.add(key)
+		return peers
+
+	def peers(self):
+		return list(self._peers)
+
+	def handle_connection (self, peer_name, connection):
+		peer = self._peers.get(peer_name, None)
+		if not peer:
+			self.logger.critical('could not find referenced peer','reactor')
+			return
+		peer.handle_connection(connection)
+
+	def neighbor (self,peer_name):
+		peer = self._peers.get(peer_name, None)
+		if not peer:
+			self.logger.critical('could not find referenced peer', 'reactor')
+			return
+		return peer.neighbor
+
+	def neighbor_name (self,peer_name):
+		peer = self._peers.get(peer_name, None)
+		if not peer:
+			self.logger.critical('could not find referenced peer', 'reactor')
+			return ""
+		return peer.neighbor.name()
+
+	def neighbor_ip (self, peer_name):
+		peer = self._peers.get(peer_name, None)
+		if not peer:
+			self.logger.critical('could not find referenced peer', 'reactor')
+			return ""
+		return str(peer.neighbor.peer_address)
+
+	def neighbor_cli_data (self, peer_name):
+		peer = self._peers.get(peer_name, None)
+		if not peer:
+			self.logger.critical('could not find referenced peer', 'reactor')
+			return ""
+		return peer.cli_data()
+
+	def neighor_rib (self, peer_name, rib_name, advertised=False):
+		peer = self._peers.get(peer_name, None)
+		if not peer:
+			self.logger.critical('could not find referenced peer', 'reactor')
+			return []
+		families = None
+		if advertised:
+			families = peer.proto.negotiated.families if peer.proto else []
+		rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming
+		return list(rib.cached_changes(families))
+
+	def neighbor_rib_resend (self, peer_name):
+		peer = self._peers.get(peer_name, None)
+		if not peer:
+			self.logger.critical('could not find referenced peer', 'reactor')
+			return
+		peer.neighbor.rib.outgoing.resend(None, peer.neighbor.route_refresh)
+
+	def neighbor_rib_out_withdraw (self, peer_name):
+		peer = self._peers.get(peer_name, None)
+		if not peer:
+			self.logger.critical('could not find referenced peer', 'reactor')
+			return
+		peer.neighbor.rib.outgoing.withdraw(None, peer.neighbor.route_refresh)
+
+
+	def neighbor_rib_in_clear (self,peer_name):
+		peer = self._peers.get(peer_name, None)
+		if not peer:
+			self.logger.critical('could not find referenced peer', 'reactor')
+			return
+		peer.neighbor.rib.incoming.clear()
+
+	# ...
+
 	def _completed (self,peers):
 		for peer in peers:
-			if self.peers[peer].neighbor.rib.outgoing.pending():
+			if self._peers[peer].neighbor.rib.outgoing.pending():
 				return False
 		return True
 
@@ -167,8 +252,8 @@ class Reactor (object):
 			self.logger.warning('parsed Neighbors, un-templated','configuration')
 			self.logger.warning('------------------------------','configuration')
 			self.logger.warning('','configuration')
-			for key in self.peers:
-				self.logger.warning(str(self.peers[key].neighbor),'configuration')
+			for key in self._peers:
+				self.logger.warning(str(self._peers[key].neighbor),'configuration')
 				self.logger.warning('','configuration')
 			return self.Exit.validate
 
@@ -207,18 +292,20 @@ class Reactor (object):
 
 		workers = {}
 		peers = set()
+		api_fds = []
 
 		while True:
 			try:
 				if self.signal.received:
-					for key in self.peers:
-						if self.peers[key].neighbor.api['signal']:
-							self.peers[key].reactor.processes.signal(self.peers[key].neighbor,self.signal.number)
+					for key in self._peers:
+						if self._peers[key].neighbor.api['signal']:
+							self._peers[key].reactor.processes.signal(self._peers[key].neighbor,self.signal.number)
 
 					signaled = self.signal.received
 					self.signal.rearm()
 
 					if signaled == Signal.SHUTDOWN:
+						self.exit_code = self.Exit.normal
 						self.shutdown()
 						break
 
@@ -242,7 +329,7 @@ class Reactor (object):
 					# check all incoming connection
 					self.asynchronous.schedule(str(uuid.uuid1()),'checking for new connection(s)',self.listener.new_connections())
 
-				peers = self._active_peers()
+				peers = self.active_peers()
 				if self._completed(peers):
 					reload_completed = True
 
@@ -250,15 +337,20 @@ class Reactor (object):
 
 				# do not attempt to listen on closed sockets even if the peer is still here
 				for io in list(workers.keys()):
-					try:
-						if io.fileno() == -1:
-							del workers[io]
-					except socket.error:
+					if io == -1:
+						self._poller.unregister(io)
 						del workers[io]
 
 				# give a turn to all the peers
 				for key in list(peers):
-					peer = self.peers[key]
+					peer = self._peers[key]
+
+					# limit the number of message handling per second
+					if self._rate_limited(key,peer.neighbor.rate_limit):
+						peers.discard(key)
+						continue
+
+					# handle the peer
 					action = peer.run()
 
 					# .run() returns an ACTION enum:
@@ -266,12 +358,14 @@ class Reactor (object):
 					# * later if it should be called again but has no work atm
 					# * close if it is finished and is closing down, or restarting
 					if action == ACTION.CLOSE:
-						if key in self.peers:
-							del self.peers[key]
+						if key in self._peers:
+							del self._peers[key]
 						peers.discard(key)
 					# we are loosing this peer, not point to schedule more process work
 					elif action == ACTION.LATER:
-						for io in peer.sockets():
+						io = peer.socket()
+						if io != -1:
+							self._poller.register(io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
 							workers[io] = key
 						# no need to come back to it before a a full cycle
 						peers.discard(key)
@@ -288,11 +382,24 @@ class Reactor (object):
 
 				self.asynchronous.run()
 
-				for io in self._api_ready(list(workers),sleep):
-					peers.add(workers[io])
-					del workers[io]
+				if api_fds != self.processes.fds:
+					for fd in api_fds:
+						if fd == -1:
+							continue
+						if fd not in self.processes.fds:
+							self._poller.unregister(fd)
+					for fd in self.processes.fds:
+						if fd == -1:
+							continue
+						if fd not in api_fds:
+							self._poller.register(fd, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
+					api_fds = self.processes.fds
 
-				if self._stopping and not self.peers.keys():
+				for io in self._wait_for_io(sleep):
+					if io not in api_fds:
+						peers.add(workers[io])
+
+				if self._stopping and not self._peers.keys():
 					self._termination('exiting on peer termination',self.Exit.normal)
 
 			except KeyboardInterrupt:
@@ -311,14 +418,20 @@ class Reactor (object):
 
 		return self.exit_code
 
+	def register_peer (self,name,peer):
+		self._peers[name] = peer
+
+	def teardown_peer (self,name,code):
+		self._peers[name].teardown(code)
+
 	def shutdown (self):
 		"""Terminate all the current BGP connections"""
 		self.logger.critical('performing shutdown','reactor')
 		if self.listener:
 			self.listener.stop()
 			self.listener = None
-		for key in self.peers.keys():
-			self.peers[key].shutdown()
+		for key in self._peers.keys():
+			self._peers[key].shutdown()
 		self.asynchronous.clear()
 		self.processes.terminate()
 		self.daemon.removepid()
@@ -339,26 +452,26 @@ class Reactor (object):
 			self.logger.error(str(self.configuration.error),'configuration')
 			return False
 
-		for key, peer in self.peers.items():
+		for key, peer in self._peers.items():
 			if key not in self.configuration.neighbors:
 				self.logger.debug('removing peer: %s' % peer.neighbor.name(),'reactor')
 				peer.remove()
 
 		for key, neighbor in self.configuration.neighbors.items():
 			# new peer
-			if key not in self.peers:
+			if key not in self._peers:
 				self.logger.debug('new peer: %s' % neighbor.name(),'reactor')
 				peer = Peer(neighbor,self)
-				self.peers[key] = peer
+				self._peers[key] = peer
 			# modified peer
-			elif self.peers[key].neighbor != neighbor:
+			elif self._peers[key].neighbor != neighbor:
 				self.logger.debug('peer definition change, establishing a new connection for %s' % str(key),'reactor')
-				self.peers[key].reestablish(neighbor)
+				self._peers[key].reestablish(neighbor)
 			# same peer but perhaps not the routes
 			else:
 				# finding what route changed and sending the delta is not obvious
 				self.logger.debug('peer definition identical, updating peer routes if required for %s' % str(key),'reactor')
-				self.peers[key].reconfigure(neighbor)
+				self._peers[key].reconfigure(neighbor)
 			for ip in self._ips:
 				if ip.afi == neighbor.peer_address.afi:
 					self.listener.listen_on(ip, neighbor.peer_address, self._port, neighbor.md5_password, neighbor.md5_base64, None)
@@ -369,16 +482,18 @@ class Reactor (object):
 	def restart (self):
 		"""Kill the BGP session and restart it"""
 		self.logger.notice('performing restart of exabgp %s' % version,'reactor')
-		self.configuration.reload()
 
-		for key in self.peers.keys():
+		# XXX: FIXME: Could return False, in case there is interference with old config...
+		reloaded = self.configuration.reload()
+
+		for key in self._peers.keys():
 			if key not in self.configuration.neighbors.keys():
-				neighbor = self.configuration.neighbors[key]
-				self.logger.debug('removing Peer %s' % neighbor.name(),'reactor')
-				self.peers[key].remove()
+				peer = peers[key]
+				self.logger.debug('removing peer %s' % peer.neighbor.name(),'reactor')
+				self._peers[key].remove()
 			else:
-				self.peers[key].reestablish()
+				self._peers[key].reestablish()
 		self.processes.start(self.configuration.processes,True)
 
 	# def nexthops (self, peers):
-	# 	return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)
+	# 	return dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)

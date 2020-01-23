@@ -45,6 +45,7 @@ class Neighbor (object):
 		self.peer_as = None
 		self.local_as = None
 		self.hold_time = None
+		self.rate_limit = None
 		self.asn4 = None
 		self.nexthop = None
 		self.add_path = None
@@ -106,6 +107,12 @@ class Neighbor (object):
 
 	def id (self):
 		return 'neighbor-%s' % self.uid
+
+	# This set must be unique between peer, not full draft-ietf-idr-bgp-multisession-07
+	def index (self):
+		if self.listen != 0:
+			return 'peer-ip %s listen %d' % (self.peer_address, self.listen)
+		return self.name()
 
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adj_rib_in,self.adj_rib_out,self._families)
@@ -217,6 +224,7 @@ class Neighbor (object):
 			self.listen == other.listen and \
 			self.connect == other.connect and \
 			self.hold_time == other.hold_time and \
+			self.rate_limit == other.rate_limit and \
 			self.host_name == other.host_name and \
 			self.domain_name == other.domain_name and \
 			self.md5_password == other.md5_password and \
@@ -332,6 +340,7 @@ class Neighbor (object):
 			'\tlocal-as %s;\n' \
 			'\tpeer-as %s;\n' \
 			'\thold-time %s;\n' \
+			'\trate-limit %s;\n' \
 			'\tmanual-eor %s;\n' \
 			'%s%s%s%s%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
@@ -354,6 +363,7 @@ class Neighbor (object):
 				self.local_as,
 				self.peer_as,
 				self.hold_time,
+				'disable' if self.rate_limit == 0 else self.rate_limit,
 				'true' if self.manual_eor else 'false',
 				'\n\tpassive %s;\n' % ('true' if self.passive else 'false'),
 				'\n\tlisten %d;\n' % self.listen if self.listen else '',

@@ -56,37 +56,20 @@ import collections
 
 logger = logging.getLogger("healthcheck")
 
-try:
-    # Python 3.3+ or backport
-    from ipaddress import ip_network as ip_network  # pylint: disable=F0401
-    from ipaddress import ip_address as ip_address  # pylint: disable=F0401
+# Python 3.3+ or backport
+from exabgp.vendoring.ipaddress import ip_network  # pylint: disable=F0401
+from exabgp.vendoring.ipaddress import ip_address  # pylint: disable=F0401
 
-    def fix(f):
-        def fixed(x):
-            try:
-                x = x.decode('ascii')
-            except AttributeError:
-                pass
-            return f(x)
-        return fixed
-    ip_network = fix(ip_network)
-    ip_address = fix(ip_address)
-
-except ImportError:
-    try:
-        # Python 2.6, 2.7, 3.2
-        from ipaddr import IPNetwork as ip_network
-        from ipaddr import IPAddress as ip_address
-    except ImportError:
-        sys.stderr.write(
-            '\n'
-            'This program requires the python module ip_address (for python 3.3+) or ipaddr (for python 2.6, 2.7, 3.2)\n'
-            'Please pip install one of them with one of the following command.\n'
-            '> pip install ip_address\n'
-            '> pip install ipaddr\n'
-            '\n'
-        )
-        sys.exit(1)
+def fix(f):
+    def fixed(x):
+        try:
+            x = x.decode('ascii')
+        except AttributeError:
+            pass
+        return f(x)
+    return fixed
+ip_network = fix(ip_network)
+ip_address = fix(ip_address)
 
 
 def enum(*sequential):
@@ -136,7 +119,7 @@ def parse():
     g.add_argument("--interval", "-i", metavar='N',
                    default=5,
                    type=float,
-                   help="wait N seconds between each healthcheck")
+                   help="wait N seconds between each healthcheck (zero to exit after first announcement)")
     g.add_argument("--fast-interval", "-f", metavar='N',
                    default=1,
                    type=float, dest="fast",
@@ -327,50 +310,56 @@ def loopback_ips(label):
         if not ip.is_loopback:
             if label:
                 lmo = labelre.match(line)
-                if not lmo or not lmo.group("label").startswith(label):
+                if not lmo:
                     continue
-            addresses.append(ip)
+                if lmo.groupdict().get("label","").startswith(label):
+                    addresses.append(ip)
+
     logger.debug("Loopback addresses: %s", addresses)
     return addresses
 
+def loopback():
+    lo = "lo0"
+    if sys.platform.startswith("linux"):
+        lo = "lo"
+    return lo
 
 def setup_ips(ips, label, sudo=False):
     """Setup missing IP on loopback interface"""
+
     existing = set(loopback_ips(label))
     toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
         logger.debug("Setup loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
-            cmd = ["ip", "address", "add", str(ip), "dev", "lo"]
+            cmd = ["ip", "address", "add", str(ip), "dev", loopback()]
             if sudo:
                 cmd.insert(0, "sudo")
             if label:
-                cmd += ["label", "lo:{0}".format(label)]
-            subprocess.check_call(
-                cmd, stdout=fnull, stderr=fnull)
-
-    # If we setup IPs we should also remove them on SIGTERM
-    def sigterm_handler(signum, frame):  # pylint: disable=W0612,W0613
-        remove_ips(ips, label, sudo)
-        sys.exit(0)
-
-    signal.signal(signal.SIGTERM, sigterm_handler)
-
+                cmd += ["label", "{0}:{1}".format(loopback(),label)]
+                try:
+                    subprocess.check_call(
+                        cmd, stdout=fnull, stderr=fnull)
+                except subprocess.CalledProcessError as e:
+                    # the IP address is already setup, ignoring
+                    if cmd[0] == "ip" and cmd[2] == "add" and e.returncode == 2:
+                        continue
+                    raise e
 
 def remove_ips(ips, label, sudo=False):
     """Remove added IP on loopback interface"""
     existing = set(loopback_ips(label))
 
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
-    toremove = set([ip_network(ip) for net in ips for ip in net]) | existing
+    toremove = set([ip_network(ip) for net in ips for ip in net]) & existing
     for ip in toremove:
         logger.debug("Remove loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
-            cmd = ["ip", "address", "delete", str(ip), "dev", "lo"]
+            cmd = ["ip", "address", "delete", str(ip), "dev", loopback()]
             if sudo:
                 cmd.insert(0, "sudo")
             if label:
-                cmd += ["label", "lo:{0}".format(label)]
+                cmd += ["label", "{0}:{1}".format(loopback(),label)]
             try:
                 subprocess.check_call(
                     cmd, stdout=fnull, stderr=fnull)
@@ -456,12 +445,20 @@ def loop(options):
         "FALLING",              # Checks are currently failing.
         "UP",                   # Service is considered as up.
         "DOWN",                 # Service is considered as down.
+        "EXIT",                 # Exit state
+        "END",                  # End state, exiting but without removing loopback and/or announced routes
     )
 
     def exabgp(target):
         """Communicate new state to ExaBGP"""
-        if target not in (states.UP, states.DOWN, states.DISABLED):
+        if target not in (states.UP, states.DOWN, states.DISABLED, states.EXIT, states.END):
             return
+        if target in (states.END,):
+            return
+        # dynamic ip management. When the service fail, remove the loopback
+        if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
+            logger.info("exiting, deleting loopback ips")
+            remove_ips(options.ips, options.label, options.sudo)
         # dynamic ip management. When the service fail, remove the loopback
         if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
             logger.info("service down, deleting loopback ips")
@@ -472,9 +469,9 @@ def loop(options):
             setup_ips(options.ips, options.label, options.sudo)
 
         logger.info("send announces for %s state to ExaBGP", target)
-        metric = vars(options).get("{0}_metric".format(str(target).lower()))
+        metric = vars(options).get("{0}_metric".format(str(target).lower()), 0)
         for ip in options.ips:
-            if options.withdraw_on_down:
+            if options.withdraw_on_down or target is states.EXIT:
                 command = "announce" if target is states.UP else "withdraw"
             else:
                 command = "announce"
@@ -595,21 +592,35 @@ def loop(options):
             raise ValueError("Unhandled state: {0}".format(str(state)))
 
         # Send announces. We announce them on a regular basis in case
-        # we lose connection with a peer.
+        # we lose connection with a peer and the adj-rib-out is disabled.
         exabgp(state)
         return checks, state
 
     checks = 0
     state = states.INIT
+    # Do cleanups on SIGTERM
+    def sigterm_handler(signum, frame):  # pylint: disable=W0612,W0613
+        exabgp(states.EXIT)
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
     while True:
         checks, state = one(checks, state)
 
-        # How much we should sleep?
-        if state in (states.FALLING, states.RISING):
-            time.sleep(options.fast)
-        else:
-            time.sleep(options.interval)
-
+        try:
+            # How much we should sleep?
+            if state in (states.FALLING, states.RISING):
+                time.sleep(options.fast)
+            elif options.interval == 0:
+                logger.info("interval set to zero, exiting after the announcement")
+                exabgp(states.END)
+                break
+            else:
+                time.sleep(options.interval)
+        except KeyboardInterrupt:
+            exabgp(states.EXIT)
+            break
 
 def main():
     """Entry point."""

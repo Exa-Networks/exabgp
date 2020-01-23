@@ -209,6 +209,8 @@ def main ():
 			('e', 'extensive', lambda _, pre: 'show' in pre),
 			('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
 			('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+			('h', 'help', lambda pos, pre: pos == 0),
+			('i', 'in', lambda pos, pre: pre[-1] == 'adj-rib'),
 			('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
 			('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
 			('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
@@ -217,6 +219,7 @@ def main ():
 			('s', 'summary', lambda pos, pre: pos != 0),
 			('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
 			('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
+			('o', 'out', lambda pos, pre: pre[-1] == 'adj-rib'),
 			('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear','flush','show']),
 			('w', 'withdraw', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
 			('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
@@ -255,6 +258,7 @@ def main ():
 	waited = 0.0
 	buf = b''
 	done = False
+	done_time_diff = 0.5
 	while not done:
 		try:
 			r, _, _ = select.select([reader], [], [], 0.01)
@@ -318,6 +322,13 @@ def main ():
 				break
 			sys.stdout.write('%s\n' % string)
 			sys.stdout.flush()
+
+		if not env.get('api').get('ack') and not raw.decode():
+			this_moment = time.time()
+			recv_epoch_time = os.path.getmtime(recv)
+			time_diff = this_moment - recv_epoch_time
+			if time_diff >= done_time_diff:
+				done = True
 
 	try:
 		os.close(reader)

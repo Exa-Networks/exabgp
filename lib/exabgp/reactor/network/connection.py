@@ -58,6 +58,8 @@ class Connection (object):
 
 		self.io = None
 		self.established = False
+		self._rpoller = {}
+		self._wpoller = {}
 
 		self.id = self.identifier.get(self.direction,1)
 
@@ -79,10 +81,10 @@ class Connection (object):
 		return "%s-%d" % (self.direction,self.id)
 
 	def fd (self):
-		if self.io and self.io.fileno() != -1:
-			return self.io
+		if self.io:
+			return self.io.fileno()
 		# the socket is closed (fileno() == -1) or not open yet (io is None)
-		return None
+		return -1
 
 	def close (self):
 		try:
@@ -96,28 +98,36 @@ class Connection (object):
 			self.io = None
 
 	def reading (self):
-		while True:
-			try:
-				r,_,_ = select.select([self.io,],[],[],0)
-			except select.error as exc:
-				if exc.args[0] not in error.block:
-					self.close()
-					self.logger.warning('%s %s errno %s on socket' % (self.name(),self.peer,errno.errorcode[exc.args[0]]),self.session())
-					raise NetworkError('errno %s on socket' % errno.errorcode[exc.args[0]])
-				return False
-			return r != []
+		poller = self._rpoller.get(self.io,None)
+		if poller is None:
+			poller = select.poll()
+			poller.register(self.io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
+			self._rpoller = {self.io: poller}
+
+		ready = False
+		for _, event in poller.poll(0):
+			if event & select.POLLIN or event & select.POLLPRI:
+				ready = True
+			elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
+				self._rpoller = {}
+				ready = True
+		return ready
 
 	def writing (self):
-		while True:
-			try:
-				_,w,_ = select.select([],[self.io,],[],0)
-			except select.error as exc:
-				if exc.args[0] not in error.block:
-					self.close()
-					self.logger.warning('%s %s errno %s on socket' % (self.name(),self.peer,errno.errorcode[exc.args[0]]),self.session())
-					raise NetworkError('errno %s on socket' % errno.errorcode[exc.args[0]])
-				return False
-			return w != []
+		poller = self._wpoller.get(self.io, None)
+		if poller is None:
+			poller = select.poll()
+			poller.register(self.io, select.POLLOUT| select.POLLHUP | select.POLLNVAL | select.POLLERR)
+			self._wpoller = {self.io: poller}
+
+		ready = False
+		for _, event in poller.poll(0):
+			if event & select.POLLOUT:
+				ready = True
+			elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
+				self._wpoller = {}
+				ready = True
+		return ready
 
 	def _reader (self, number):
 		# The function must not be called if it does not return with no data with a smaller size as parameter

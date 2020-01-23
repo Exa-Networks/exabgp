@@ -11,7 +11,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # as it makes sure that all the registering decorator are run
 
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunityIPv6
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesIPv6
 
 from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
 from exabgp.bgp.message.update.attribute.community.extended.origin import Origin
@@ -27,7 +29,10 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectASN4
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHop
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectIPv6
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopIPv4IETF
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopIPv6IETF
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopSimpson
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 from exabgp.bgp.message.update.attribute.community.extended.chso import ConsistentHashSortOrder
 from exabgp.bgp.message.update.attribute.community.extended.rt_record import RTRecord

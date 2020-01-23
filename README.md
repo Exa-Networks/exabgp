@@ -1,4 +1,4 @@
-[![License](https://img.shields.io/pypi/l/exabgp.svg)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
+[![License](https://img.shields.io/pypi/l/exabgp.svg)](https://github.com/Exa-Networks/exabgp/blob/master/LICENCE.txt)
 [![PyPI](https://img.shields.io/pypi/v/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI Status](https://img.shields.io/pypi/status/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI Wheel](https://img.shields.io/pypi/wheel/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
@@ -11,8 +11,9 @@ It is routinely used to improve service resilience and provide protection agains
 
 Also, [alone](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) or in conjunction with [FastNetMon](https://github.com/pavel-odintsov/fastnetmon) or [WanGuard](https://www.andrisoft.com/software/wanguard), it provides network operators a cost effective DDOS protection solution.
 
-But it is not its only strength, thanks to modern routers' flow balancing, ExaBGP can also be used to save you money on [load balancers](https://bits.shutterstock.com/2014/05/22/stop-buying-load-balancers-and-start-controlling-your-traffic-flow-with-software/). Other uses include keeping an eye on network changes done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
+Thanks to modern routers' flow balancing, ExaBGP can also be used to save you money on [load balancers](https://vincent.bernat.ch/en/blog/2018-multi-tier-loadbalancer).
 
+Other uses include keeping an eye on network changes done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
 ## Who is using ExaBGP ?
 
@@ -21,7 +22,7 @@ Some users have documented their use cases, such as [DailyMotion](https://medium
 These organisations have spoken of, or are using/have used ExaBGP:
 [AMS-IX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
 [Alcatel Lucent](https://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
-[BBC](http://www.bbc.co.uk/blogs/internet/entries/8c6c2414-df7a-4ad7-bd2e-dbe481da3633),
+[BBC](http://www.bbc.co.uk/blogs/internet/entries/8c6c2414-df7a-4ad7-bd2e-dbeda3633),
 [Blablacar](http://previous.blablatech.com/blog/bgp-routing-to-containers),
 [Cisco Systems](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
 [Cloudflare](https://www.slideshare.net/TomPaseka/flowspec-apf-2013),
@@ -44,23 +45,65 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 
 ```sh
 > pip install exabgp
+
+> exabgp --version
 > exabgp --help
+
+> exabgp --run healthcheck --help
 > python -m exabgp healthcheck --help
  ```
 
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.1.0.tar.gz | tar zx
-> ./exabgp-4.1.0/sbin/exabgp --help
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.4.tar.gz | tar zx
+
+> cd exabgp-4.2.4
+> ./sbin/exabgp --version
+> ./sbin/exabgp --help
+
+> ./sbin/exabgp --run healthcheck --help
+> env PYTHONPATH=./lib python -m exabgp healthcheck --help
 > ./bin/healthcheck --help
+```
+
+or to use git master
+
+```sh
+> git clone https://github.com/Exa-Networks/exabgp exabgp-git
+
+> cd exabgp-git
+> ./sbin/exabgp --version
+> ./sbin/exabgp --help
+
+> ./sbin/exabgp --run healthcheck --help
+> env PYTHONPATH=./lib python -m exabgp healthcheck --help
+> ./bin/healthcheck --help
+```
+
+or change git to use any previous release (here 4.2.4)
+
+```sh
+> git checkout 4.2.4
+> ./sbin/exabgp --version
 ```
 
 Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
 
-The configuration file and API format change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG) and check their setup after upgrade.
+ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. ExaBGP  and later are targeting python3 only.
 
-ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. ExaBGP 4.1 and later are targeting python3 only.
+## Upgrade
+
+ExaBGP is self-contained and easy to upgrade/downgrade by:
+
+* replacing the downloaded release folder, for releases download
+* running `git pull` in the repository folder, for installtion using git master
+* running `pip install -U exabgp`, for pip installations
+* running `apt update; apt upgrade exabgp` for Debian/Ubuntu
+
+*If you are migrating your application from ExaBGP 3.4 to 4.x please read this [wiki](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.0) entry*.
+
+The configuration file and API format may change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG) and check their setup after upgrade.
 
 ## Support
 
@@ -78,9 +121,9 @@ ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had suppor
 
 ExaBGP is supported through Github's [issue tracker](https://github.com/Exa-Networks/exabgp/issues). So should you encounter any problems, please do not hesitate to [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you.
 
-During "day time" (GMT/BST) feel free to contact us on  [`Slack`](https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTZjNmZhOWY5MWU3NTlkMTc5MmZlZmI4ZDliY2RhMGIwMDNkMmIzMDE3NTgwNjkwYzNmMDMzM2QwZjdlZDkzYTg), we are phasing out our use of [`Gitter`](https://gitter.im/Exa-Networks/exabgp); we will try to respond if available. ExaBGP also has a channel on `Freenode` [`#exabgp`](irc://irc.freenode.net:6667/exabgp) but it is not monitored.
+During "day time" (GMT/BST) feel free to contact us on  [`Slack`](https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTMwNmZlMGMyNTQyNWY3Y2RjYmQxODgyYzY2MGFkZmYwODMxNDZkZjc4YmMyM2QzNzA1YWM0MmZjODhlYThjNTQ), we are phasing out our use of [`Gitter`](https://gitter.im/Exa-Networks/exabgp); we will try to respond if available. ExaBGP also has a channel on `Freenode` [`#exabgp`](irc://irc.freenode.net:6667/exabgp) but it is not monitored.
 
-The best way to be kept informed about our progress/releases is to follow us on [Google+](https://plus.google.com/u/0/communities/108249711110699351497) and/or [Twitter](https://twitter.com/#!/search/exabgp). You can also use and subscribe to our low volume [mailing list](https://groups.google.com/group/exabgp-users).
+The best way to be kept informed about our progress/releases is to follow us on [Twitter](https://twitter.com/#!/search/exabgp). You can also use and subscribe to our low volume [mailing list](https://groups.google.com/group/exabgp-users).
 
 ## Documentation
 

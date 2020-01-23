@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+"""
+release.py
+
+Created by Thomas Mangin on 2011-01-24.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+"""
+
+import os
+import sys
+import fileinput
+
+CHANGELOG = 'CHANGELOG.rst'
+
+class Path:
+	root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
+	changelog = os.path.join(root,CHANGELOG)
+	lib_exa = os.path.join(root, 'lib/exabgp')
+	version = os.path.join(root, 'lib/exabgp/version.py')
+	debian = os.path.join(root, 'debian/changelog')
+	egg = os.path.join(root, 'lib/exabgp.egg-info')
+	build_exabgp = os.path.join(root, 'build/lib/exabgp')
+	build_root = os.path.join(root, 'build')
+
+	@classmethod
+	def remove_egg(cls):
+		from shutil import rmtree
+		print('removing left-over egg')
+		if os.path.exists(cls.egg):
+			rmtree(cls.egg)
+		if os.path.exists(cls.build_exabgp):
+			rmtree(cls.build_root)
+		return 0
+
+
+class Version:
+	JSON = '4.0.1'
+	TEXT = '4.0.1'
+
+	template = """\
+import os
+
+commit = "%s"
+release = "%s"
+json = "%s"
+text = "%s"
+version = os.environ.get('EXABGP_VERSION',release)
+
+# Do not change the first line as it is parsed by scripts
+
+if __name__ == '__main__':
+	import sys
+	sys.stdout.write(version)
+"""
+
+	@staticmethod
+	def current():
+		sys.path.append(Path.lib_exa)
+		from version import version as release
+
+		# transitional fix
+		if "-" in release:
+			release = release.split("-")[0]
+
+		return release
+
+	@staticmethod
+	def changelog():
+		with open(Path.changelog) as f:
+			f.readline()
+			for line in f:
+				if line.lower().startswith('version '):
+					return line.split()[1].rstrip().rstrip(':').strip()
+		return ''
+
+	@staticmethod
+	def set(tag,commit):
+		with open(Path.version, 'w') as f:
+			f.write(Version.template % (
+				commit, tag,
+				Version.JSON,
+				Version.TEXT
+			))
+		return Version.current() == tag
+
+	@staticmethod
+	def latest (tags):
+		valid = [
+			[int(_) for _ in tag.split('.')] for tag in tags
+			if Version.valid(tag)
+		]
+		return '.'.join(str(_) for _ in sorted(valid)[-1])
+
+	@staticmethod
+	def valid (tag):
+		parts = tag.split('.')
+		return len(parts) == 3 \
+			and parts[0].isdigit() \
+			and parts[1].isdigit() \
+			and parts[2].isdigit()
+
+	@staticmethod
+	def candidates(tag):
+		latest = [int(_) for _ in tag.split('.')]
+		return [
+			'.'.join([str(_) for _ in (latest[0], latest[1], latest[2] + 1)]),
+			'.'.join([str(_) for _ in (latest[0], latest[1] + 1, 0)]),
+			'.'.join([str(_) for _ in (latest[0] + 1, 0, 0)]),
+		]
+
+
+class Debian:
+	template = """\
+exabgp (%s-0) unstable; urgency=low
+
+  * Latest ExaBGP release.
+
+ -- Vincent Bernat <bernat@debian.org>  %s
+
+"""
+	@staticmethod
+	def set(version):
+		from email.utils import formatdate
+		with open(Path.debian, 'w') as w:
+			w.write(Debian.template % (version, formatdate()))
+		print('updated debian/changelog')
+
+
+class Command:
+	dryrun = 'dry-run' if os.environ.get('DRY', os.environ.get('DRYRUN', os.environ.get('DRY_RUN', False))) else ''
+
+	@staticmethod
+	def run(cmd):
+		print('>', cmd)
+		return Git.dryrun or os.system(cmd)
+
+
+class Git (Command):
+	@staticmethod
+	def commit (comment):
+		return Git.run('git commit -a -m "%s"' % comment)
+
+	@staticmethod
+	def push(tag=False,repo=''):
+		command = 'git push'
+		if tag:
+			command += ' --tags'
+		if repo:
+			command += ' %s' % repo
+		return Git.run(command)
+
+	@staticmethod
+	def head_commit():
+		return os.popen('git rev-parse --short HEAD').read().strip()
+
+	@staticmethod
+	def tags():
+		return os.popen('git tag').read().split('-')[0].strip().split('\n')
+
+	@staticmethod
+	def tag(release):
+		return Git.run('git tag -a %s -m "release %s"' % (release, release))
+
+	@staticmethod
+	def pending():
+		# XXX: terrible please rewrite
+		commit = None
+		for line in os.popen('git status').read().split('\n'):
+			if 'modified:' in line:
+				if 'lib/exabgp/version.py' in line or 'debian/changelog' in line or 'README' in line:
+					if commit is not False:
+						commit = True
+				else:
+					return False
+			elif 'renamed:' in line:
+				return False
+		return commit
+
+#
+# Check that that there is no version inconsistancy before any pypi action
+#
+
+def release_github():
+
+	print()
+	print('updating Github')
+
+	current = Version.current()
+	print('current version is %s (from version.py)' % current)
+
+	release = Version.changelog()
+	print('release version is %s (from %s)' % (release, CHANGELOG))
+
+	if not Version.valid(release):
+		print('invalid new version in %s' % CHANGELOG)
+		return 1
+
+	tags = Git.tags()
+	if release in tags:
+		print('this version/tag was already released/used')
+		return 1
+
+	candidates = Version.candidates(Version.latest(tags))
+	if release not in candidates:
+		print('valid versions are:', ', '.join(candidates))
+		print('this release is not one of the candidates')
+
+	print('updating lib/exabgp/version.py')
+	Version.set(release, Git.head_commit())
+	print('updating debian/changelog')
+	Debian.set(release)
+
+	print('updating ', end='')
+	for readme in ('README.md', 'README.rst'):
+		print(readme + ' ', end='')
+		with fileinput.FileInput(readme, inplace=True) as replacer:
+			for line in replacer:
+				print(line.replace(current, release), end='')
+	print()
+
+	print('checking if we need to commit a version.py change')
+	status = Git.pending()
+	if status is None:
+		print('all is already set for release')
+	elif status is False:
+		print('more than one file is modified and need updating, aborting')
+		return 1
+	else:
+		if Git.commit('updating version to %s' % release):
+			print('could not commit version change (%s)' % release)
+			return 1
+		print('version was updated')
+
+	print('tagging the new version')
+	if Git.tag(release):
+		print('could not tag version (%s)' % release)
+		return 1
+
+	print('pushing the new tag')
+	if Git.push(tag=True, repo='origin'):
+		print('could not push release tag to origin')
+		return 1
+
+	if Git.push(tag=False, repo='origin'):
+		print('could not push release version to origin')
+		return 1
+
+	if Git.push(tag=True, repo='upstream'):
+		print('could not push release tag to upstream')
+		return 1
+
+	if Git.push(tag=False, repo='upstream'):
+		print('could not push release version to upstream')
+		return 1
+	return 0
+
+
+def release_pypi(test):
+	print()
+	print('updating PyPI')
+
+	Path.remove_egg()
+
+	if Command.run('python setup.py sdist bdist_wheel'):
+		print('could not generate egg')
+		return 1
+
+	# keyring used to save credential
+	# https://pypi.org/project/twine/
+
+	release = Version.latest(Git.tags())
+
+	server = ''
+	if test:
+		server = '--repository-url https://test.pypi.org/legacy/'
+
+	if Command.run('twine upload %s dist/exabgp-%s.tar.gz' % (server, release)):
+		print('could not upload with twine')
+		return 1
+
+	print('all done.')
+	return 0
+
+
+def help():
+	print("""\
+release help     this help
+release cleanup  delete left-over file from release
+release github   tag a new version on github, and update pypi
+release pypi     create egg/wheel
+release install  local installation
+""")
+
+def main ():
+	if os.environ.get("SCRUTINIZER", "") == "true":
+		sys.exit(0)
+
+	if len(sys.argv) < 2:
+		help()
+		sys.exit(1)
+
+	if sys.argv[1] == 'cleanup':
+		sys.exit(Path.remove_egg())
+
+	if sys.argv[1] == 'github':
+		sys.exit(release_github())
+
+	if sys.argv[1] == 'pypi':
+		sys.exit(release_pypi('--test' in sys.argv or 'test' in sys.argv))
+
+	# "internal" commands
+
+	if sys.argv[1] == 'current':
+		sys.stdout.write("%s\n" % Version.current())
+		sys.exit(0)
+
+	if sys.argv[1] == 'release':
+		sys.stdout.write("%s\n" % Version.changelog())
+		sys.exit(0)
+
+	if '--help' in sys.argv or 'help' in sys.argv:
+		help()
+		sys.exit(1)
+
+	if sys.argv[1] == 'debian':
+		release = Version.changelog()
+		Debian.set(release)
+		sys.exit(0)
+
+	sys.exit(1)
+
+
+if __name__ == '__main__':
+	main()

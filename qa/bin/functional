@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding: utf-8
 """
 cache.py
@@ -58,7 +58,7 @@ optional arguments:
   --help,           -h          this page
   --dry,            -d          show what command would be run but does nothing
   --port <port>,    -p <port>   base port to use [default: 1790]
-  --timeout <time>, -t <time>   timeout for test failure [default: 20]
+  --timeout <time>, -t <time>   timeout for test failure [default: 60]
   --steps <steps>,  -s <steps>  number of test to run simultaneously [default: 0]
 """
 
@@ -66,13 +66,13 @@ EXPLAIN = """
 ExaBGP command line
 =======================================================
 
-%(exa)s
+%(client)s
 
 
 bgp daemon command line
 =======================================================
 
-%(bgp)s
+%(server)s
 
 
 The following extra configuration options could be used
@@ -86,26 +86,27 @@ OPTIONS = docopt.docopt(USAGE, help=False)
 
 
 class Color (object):
-	NONE     = '\033[0m' + '\033[0m'   # NONE
-	STARTING = '\033[0m' + '\033[96m'  # LIGHT BLUE
-	READY    = '\033[0m' + '\033[94m'  # PENDING
-	FAIL     = '\033[0m' + '\033[91m'  # RED
-	SUCCESS  = '\033[1m' + '\033[92m'  # GREEN
+	NONE     = '\033[0m' + '\033[0m' + ' '   # NONE
+	STARTING = '\033[0m' + '\033[96m' + '~'  # LIGHT BLUE
+	READY    = '\033[0m' + '\033[94m' + '='  # PENDING
+	FAIL     = '\033[0m' + '\033[91m' + '-'  # RED
+	SUCCESS  = '\033[1m' + '\033[92m' + '+'  # GREEN
 
 
 class Identifier (object):
+	_listing = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 	_next = 0
 	_nl = 3
 
 	@classmethod
 	def get (cls):
 		cls._next += 1
-		return '%02d' % cls._next
+		return cls._listing[cls._next-1]
 
 	@classmethod
 	def identifiers (cls):
-		for n in range(1,cls._next+1):
-			yield '%02d' % n, not n % cls._nl
+		for n in range(0,cls._next):
+			yield cls._listing[n], not (n + 1) % cls._nl
 
 
 class Port (object):
@@ -123,6 +124,7 @@ class Path (object):
 	BGP      = os.path.join(ROOT,'qa','sbin','bgp')
 	CI       = os.path.join(os.path.join(ROOT,'qa','ci'))
 	ALL_CI   = glob.glob(os.path.join(CI,'*.ci'))
+	ALL_CI.sort()
 
 	@classmethod
 	def validate (cls):
@@ -140,10 +142,10 @@ class Path (object):
 
 
 class CI (dict):
-	API = re.compile('^\s*run\s+(.*)\s*?;\s*?$')
+	API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 	_content = {}
+	_status = {}
 	_tests = []
-	completed = True
 
 	@classmethod
 	def make (cls):
@@ -157,7 +159,6 @@ class CI (dict):
 					'confs':  [os.path.join(Path.ETC,_) for _ in content.split()],
 					'ci':     os.path.join(Path.CI,name) + '.ci',
 					'msg':    os.path.join(Path.CI,name) + '.msg',
-					'status': Color.NONE,
 					'port':   Port.get()
 				}
 		cls._tests.extend(sorted(cls._content.keys()))
@@ -167,17 +168,29 @@ class CI (dict):
 		return cls._content.get(k,None)
 
 	@classmethod
-	def reset (cls,k):
-		cls._content[k]['status'] = Color.NONE
+	def state (cls,name):
+		if name not in cls._status:
+			cls._status[name] = Color.NONE
+		elif cls._status[name] == Color.NONE:
+			cls._status[name] = Color.STARTING
+		elif cls._status[name] == Color.STARTING:
+			cls._status[name] = Color.READY
 
 	@classmethod
-	def passed (cls,k):
-		cls._content[k]['status'] = Color.SUCCESS
+	def color (cls,name):
+		return cls._status.get(name, Color.NONE)
 
 	@classmethod
-	def failed (cls,k):
-		cls._content[k]['status'] = Color.FAIL
-		cls.completed = False
+	def reset (cls,name):
+		cls._status[name] = Color.NONE
+
+	@classmethod
+	def passed (cls,name):
+		cls._status[name] = Color.SUCCESS
+
+	@classmethod
+	def failed (cls,name):
+		cls._status[name] = Color.FAIL
 
 	@classmethod
 	def files (cls,k):
@@ -203,11 +216,7 @@ class CI (dict):
 	def display (cls):
 		sys.stdout.write('\r')
 		for k in cls._tests:
-			v = cls._content[k]
-			status = v['status']
-			if status == Color.SUCCESS:
-				k = '--'
-			sys.stdout.write('%s%s ' % (status,k))
+			sys.stdout.write('%s%s ' % (CI.color(k),k))
 		sys.stdout.write(Color.NONE)
 		sys.stdout.flush()
 
@@ -241,7 +250,72 @@ def alarm_handler (number, frame):  # pylint: disable=W0613
 	raise Alarm()
 
 
-class Command (object):
+class Process (object):
+	_running = {}
+	_result = {}
+
+	@classmethod
+	def add (cls, name, side, process):
+		cls._running.setdefault(name,{})[side] = process
+		for std in ('in','out'):
+			cls._result.setdefault(name,{}).setdefault(side,{})[std] = b''
+
+	@classmethod
+	def success (cls,name):
+		return b'successful' in cls._result[name]['server']['out']
+
+	@classmethod
+	def _ready (cls, side, name):
+		try:
+			signal.alarm(1)
+			polled = cls._running[side][name].poll()
+			signal.alarm(0)
+		except Alarm:
+			return False
+		except (IOError,OSError,ValueError):
+			return True
+		if polled is None:
+			return False
+		return True
+
+	@classmethod
+	def collect (cls, name, side):
+		try:
+			signal.alarm(1)
+			stdout,stderr = cls._running[name][side].communicate()
+			signal.alarm(0)
+			cls._result[name][side]['out'] = stdout
+			cls._result[name][side]['err'] = stderr
+		except ValueError:  # I/O operation on closed file
+			pass
+		except Alarm:
+			pass
+
+	@classmethod
+	def output (cls, name, side):
+		return cls._result[name][side]['out']
+
+	def error (cls, name, side):	
+		return cls._result[name][side]['err']
+
+	@classmethod
+	def _terminate (cls,name,side):
+		try:
+			cls._running[name][side].send_signal(signal.SIGTERM)
+		except OSError:  # No such process, Errno 3
+			pass
+
+	@classmethod
+	def terminate (cls):
+		for name in cls._running:
+			for side in cls._running[name]:
+				if cls.output(name,side) != '' or cls.error(name,side) != '':
+					continue
+				cls._terminate(name,side)
+				cls.collect(name,side)
+
+
+class Command (dict):
 	@staticmethod
 	def execute(cmd):
 		print('starting: %s' % ' '.join(cmd))
@@ -256,8 +330,8 @@ class Command (object):
 	@classmethod
 	def explain (cls,index):
 		print(EXPLAIN % {
-			'exa': cls.client(index),
-			'bgp': cls.server(index),
+			'client': cls.client(index),
+			'server': cls.server(index),
 		})
 		sys.exit(1)
 
@@ -265,7 +339,7 @@ class Command (object):
 	def client (index):
 		test = CI.get(index)
 		if not test:
-			sys.exit('test not found')
+			sys.exit("can not find any test called '%s'" % index)
 
 		if os.getuid() and os.getgid() and test['port'] <= 1024:
 			sys.exit('you need to have root privileges to bind to port 79')
@@ -278,19 +352,19 @@ class Command (object):
 				'exabgp_debug_configuration=true',
 				'exabgp_tcp_bind=\'\'',
 				'exabgp_tcp_port=%d' % test['port'],
+				'INTERPRETER=%s ' % os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
 			]),
 			'exabgp': Path.EXABGP,
 			'confs': ' \\\n    '.join(test['confs']),
 		}
-
-		return 'env \\\n  %(env)s \\\n  %(exabgp)s -d -p \\\n    %(confs)s' % config
+		return 'env \\\n  %(env)s \\\n %(exabgp)s -d -p \\\n    %(confs)s' % config
 
 	@staticmethod
 	def server (index):
 		test = CI.get(index)
 
 		if not test:
-			sys.exit('test not found')
+			sys.exit("can not find any test called '%s'" % index)
 
 		if os.getuid() and os.getgid() and test['port'] <= 1024:
 			sys.exit('you need to have root privileges to bind to port 79')
@@ -299,98 +373,62 @@ class Command (object):
 			'env': ' \\\n  '.join([
 				'exabgp_tcp_port=%d' % test['port'],
 			]),
+			'interpreter': os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
 			'bgp': Path.BGP,
 			'msg': test['msg'],
 		}
 
-		return 'env \\\n  %(env)s \\\n  %(bgp)s \\\n    %(msg)s' % config
+		return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s \\\n    %(msg)s' % config
 
 	@staticmethod
 	def dispatch (running):
-		processes = {
-			'bgp': {},
-			'exa': {},
-		}
-
+		completed = True
+		names = []
 		for name in running:
-			test = CI.get(name)
-			processes['bgp'][name] = subprocess.Popen([sys.argv[0],'server',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			test['status'] = Color.STARTING
-			CI.display()
-			time.sleep(0.05)
+			if CI.get(name) is None:
+				sys.exit("can not find any test called '%s'" % name)
+			CI.state(name)
+			names.append(name)
 
-		time.sleep(0.5)
-		names = list(reversed(running))
-
-		for name in names:
-			test = CI.get(name)
-			processes['exa'][name] = subprocess.Popen([sys.argv[0],'client',name,'--port',str(test['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			test['status'] = Color.READY
-			CI.display()
-			time.sleep(0.2)
+		for side in ['server','client']:	
+			for name in running:
+				process = subprocess.Popen([sys.argv[0],side,name,'--port',str(CI.get(name)['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				Process.add(name,side,process)
+				CI.state(name)
+				CI.display()
+				time.sleep(0.02)
 
 		exit_time = time.time() + int(OPTIONS['--timeout'])
 
 		while names and time.time() < exit_time:
 			CI.display()
 			for name in list(names):
-				try:
-					signal.alarm(1)
-					rbgp = processes['bgp'][name].poll()
-					signal.alarm(0)
-				except Alarm:
-					continue
-				if rbgp is None:
-					continue
-				names.remove(name)
-				try:
-					stdout,stderr = processes['bgp'][name].communicate()
-					if b'successful' in stdout:
+				for side in ('server','client'):
+					if not Process._ready(name,side):
+						continue
+
+					Process.collect(name,side)
+
+					if side == 'server':
+						names.remove(name)
+
+					if Process.success(name):
 						CI.passed(name)
 					else:
 						CI.failed(name)
-				except (IOError,OSError,ValueError):
-					names.remove(name)
+						completed = False
+
+					CI.display()
 			time.sleep(0.2)
 
-		for name in names:
-			CI.reset(name)
+		Process.terminate()
 
-		if not CI.completed:
-			for name in names:
-				print('sending alarm signal to %s' % name)
-				print('------------------------%s' % '-'*len(name))
-				try:
-					processes['bgp'][name].send_signal(signal.SIGTERM)
-				except OSError:  # No such process, Errno 3
-					pass
-				try:
-					processes['exa'][name].send_signal(signal.SIGTERM)
-				except OSError:  # No such process, Errno 3
-					pass
-				try:
-					signal.alarm(1)
-					stdout,stderr = processes['bgp'][name].communicate()
-					signal.alarm(0)
-					print('\nbgp stdout\n------\n%s' % stdout)
-					print('\nbgp stderr\n------\n%s' % stdout)
-				except ValueError:  # I/O operation on closed file
-					continue
-				except Alarm:
-					pass
-				try:
-					signal.alarm(1)
-					stdout,stderr = processes['exa'][name].communicate()
-					signal.alarm(0)
-					print('\nexa stdout\n------\n%s' % stdout)
-					print('\nexa stderr\n------\n%s' % stdout)
-				except ValueError:  # I/O operation on closed file
-					continue
-				except Alarm:
-					pass
+		for name in names:
+			print('\server stderr\n------\n%s' % str(Process.output(name,'server')).replace('\\n','\n'))
+			print('\client stdout\n------\n%s' % str(Process.output(name,'client')).replace('\\n','\n'))
 
 		CI.display()
-		return CI.completed
+		return completed
 
 
 if __name__ == '__main__':

@@ -46,6 +46,7 @@ from exabgp.configuration.neighbor.parser import hostname
 from exabgp.configuration.neighbor.parser import domainname
 from exabgp.configuration.neighbor.parser import description
 from exabgp.configuration.neighbor.parser import inherit
+from exabgp.configuration.neighbor.parser import rate_limit
 
 
 class ParseNeighbor (Section):
@@ -60,6 +61,7 @@ class ParseNeighbor (Section):
 		'domain-name':   domainname,
 		'router-id':     router_id,
 		'hold-time':     hold_time,
+		'rate-limit':    rate_limit,
 		'local-address': local_address,
 		'peer-address':  peer_ip,
 		'local-as':      auto_asn,
@@ -86,6 +88,7 @@ class ParseNeighbor (Section):
 		'domain-name':   'set-command',
 		'router-id':     'set-command',
 		'hold-time':     'set-command',
+		'rate-limit':    'set-command',
 		'local-address': 'set-command',
 		'peer-address':  'set-command',
 		'local-as':      'set-command',
@@ -108,7 +111,7 @@ class ParseNeighbor (Section):
 
 	default = {
 		'md5-base64': False,
-		'passive': False,
+		'passive': True,
 		'group-updates': True,
 		'auto-flush': True,
 		'adj-rib-out': False,
@@ -145,10 +148,11 @@ class ParseNeighbor (Section):
 		neighbor.local_address    = local.get('local-address',None)
 		neighbor.local_as         = local.get('local-as',None)
 		neighbor.peer_as          = local.get('peer-as',None)
-		neighbor.passive          = local.get('passive',False)
+		neighbor.passive          = local.get('passive',None)
 		neighbor.listen           = local.get('listen',0)
 		neighbor.connect          = local.get('connect',0)
 		neighbor.hold_time        = local.get('hold-time',HoldTime(180))
+		neighbor.rate_limit       = local.get('rate-limit',0)
 		neighbor.host_name        = local.get('host-name',host())
 		neighbor.domain_name      = local.get('domain-name',domain())
 		neighbor.md5_password     = local.get('md5-password',None)
@@ -171,6 +175,8 @@ class ParseNeighbor (Section):
 		if neighbor.peer_as is None:
 			return self.error.set('incomplete neighbor, missing peer-as')
 
+		if neighbor.passive is None:
+			neighbor.passive = False
 
 		capability = local.get('capability',{})
 		neighbor.nexthop          = capability.get('nexthop',None)
@@ -272,9 +278,9 @@ class ParseNeighbor (Section):
 		if neighbor.range_size > 1 and not neighbor.passive:
 			return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
-		if neighbor.peer_address.top() in self._neighbors:
+		if neighbor.index() in self._neighbors:
 			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.top())
-		self._neighbors.append(neighbor.peer_address.top())
+		self._neighbors.append(neighbor.index())
 
 		if neighbor.md5_password:
 			try:

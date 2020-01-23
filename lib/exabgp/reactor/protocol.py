@@ -79,7 +79,7 @@ class Protocol (object):
 
 	def fd (self):
 		if self.connection is None:
-			return None
+			return -1
 		return self.connection.fd()
 
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
@@ -98,31 +98,29 @@ class Protocol (object):
 
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
-		if not self.connection:
-			local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery else None
-			peer = self.neighbor.peer_address.top()
-			afi = self.neighbor.peer_address.afi
-			md5 = self.neighbor.md5_password
-			md5_base64 = self.neighbor.md5_base64
-			ttl_out = self.neighbor.ttl_out
-			self.connection = Outgoing(afi,peer,local,self.port,md5,md5_base64,ttl_out)
-			if not self.connection.init:
-				yield False
-				return
-			if not local:
-				self.neighbor.local_address = IP.create(self.connection.local)
-				if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
-					self.neighbor.router_id = self.neighbor.local_address
+		if self.connection:
+			return
 
-			for connected in self.connection.establish():
-				if not connected:
-					yield False
-					continue
-				if self.peer.neighbor.api['neighbor-changes']:
-					self.peer.reactor.processes.connected(self.peer.neighbor)
-				yield True
-				return
+		local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery else None
+		peer = self.neighbor.peer_address.top()
+		afi = self.neighbor.peer_address.afi
+		md5 = self.neighbor.md5_password
+		md5_base64 = self.neighbor.md5_base64
+		ttl_out = self.neighbor.ttl_out
+		self.connection = Outgoing(afi,peer,local,self.port,md5,md5_base64,ttl_out)
 
+		for connected in self.connection.establish():
+			yield False
+
+		if self.peer.neighbor.api['neighbor-changes']:
+			self.peer.reactor.processes.connected(self.peer.neighbor)
+
+		if not local:
+			self.neighbor.local_address = IP.create(self.connection.local)
+			if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
+				self.neighbor.router_id = self.neighbor.local_address
+
+		yield True
 
 	def close (self, reason='protocol closed, reason unspecified'):
 		if self.connection:
@@ -147,9 +145,9 @@ class Protocol (object):
 
 		if consolidate:
 			if packets:
-				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,negotiated,raw[:19],raw[19:])
+				self.peer.reactor.processes.message(message.ID,self.peer.neighbor,direction,message,negotiated,raw[:19],raw[19:])
 			else:
-				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,negotiated,b'',b'')
+				self.peer.reactor.processes.message(message.ID,self.peer.neighbor,direction,message,negotiated,b'',b'')
 		else:
 			if packets:
 				self.peer.reactor.processes.packets(self.peer.neighbor,direction,int(message.ID),negotiated,raw[:19],raw[19:])
@@ -334,7 +332,7 @@ class Protocol (object):
 	def new_notification (self, notification):
 		for _ in self.write(notification):
 			yield _NOP
-		self.logger.debug('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data),self.connection.session())
+		self.logger.debug('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data.decode('utf-8')),self.connection.session())
 		yield notification
 
 	def new_update (self, include_withdraw):

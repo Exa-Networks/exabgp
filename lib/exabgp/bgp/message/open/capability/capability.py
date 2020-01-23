@@ -155,7 +155,8 @@ class Capability (object):
 
 	@staticmethod
 	def hex (data):
-		return '0x' + concat_bytes_i('%02x' % ordinal(_) for _ in data)
+		return '0x' + ''.join('%02x' % ordinal(_) for _ in data)
+		# return '0x' + concat_bytes_i('%02x' % ordinal(_) for _ in data)
 
 	@classmethod
 	def unknown (cls, klass):

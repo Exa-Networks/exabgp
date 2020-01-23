@@ -22,7 +22,6 @@ from exabgp.version import version
 from exabgp.reactor.loop import Reactor
 
 from exabgp.vendoring import docopt
-from exabgp.vendoring import lsprofcalltree
 
 from exabgp.configuration.usage import usage
 
@@ -275,8 +274,11 @@ def main ():
 	# check the file only once that we have parsed all the command line options and allowed them to run
 	if options["<configuration>"]:
 		for f in options["<configuration>"]:
+			# some users are using symlinks for atomic change of the configuration file
+			# using mv may however be better practice :p
 			normalised = os.path.realpath(os.path.normpath(f))
-			if os.path.isfile(normalised):
+			target = os.path.realpath(normalised)
+			if os.path.isfile(target):
 				configurations.append(normalised)
 				continue
 			if f.startswith('etc/exabgp'):
@@ -402,6 +404,7 @@ def run (env, comment, configurations, root, validate, pid=0):
 			exit_code = Reactor.Exit.unknown
 			raise
 		finally:
+			from exabgp.vendoring import lsprofcalltree
 			profiler.disable()
 			kprofile = lsprofcalltree.KCacheGrind(profiler)
 			try:

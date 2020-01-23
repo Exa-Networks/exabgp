@@ -16,6 +16,8 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.process.parser import encoder
 from exabgp.configuration.process.parser import run
 
+from exabgp.configuration.parser import boolean
+
 
 class ParseProcess (Section):
 	syntax = \
@@ -26,12 +28,18 @@ class ParseProcess (Section):
 
 	known = {
 		'encoder': encoder,
+		'respawn': boolean,
 		'run':     run,
 	}
 
 	action = {
 		'encoder': 'set-command',
+		'respawn': 'set-command',
 		'run':     'set-command',
+	}
+
+	default = {
+		'respawn': True,
 	}
 
 	name = 'process'
@@ -54,7 +62,12 @@ class ParseProcess (Section):
 		return True
 
 	def post (self):
-		difference = set(self.known.keys()).difference(self.scope.get().keys())
+		known = self.known.keys()
+		configured = self.scope.get().keys()
+		for default in self.default:
+			if default not in configured:
+				self.scope.set(default, self.default[default])
+		difference = set(known).difference(configured)
 		if difference:
 			return self.error.set('unset process sections: %s' % ', '.join(difference))
 		self.processes.update({self.named: self.scope.pop()})
@@ -67,7 +80,8 @@ class ParseProcess (Section):
 		api = {
 			name: {
 				'run': [sys.executable, os.path.join(os.environ.get('PWD',''),sys.argv[0])],
-				'encoder': 'text'
+				'encoder': 'text',
+				'respawn': True,
 			}
 		}
 		self._processes.append(name)

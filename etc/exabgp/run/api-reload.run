@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import time
@@ -7,7 +7,7 @@ messages = [
 	'announce route 3.0.0.0/24 next-hop 4.0.0.0',
 ]
 
-time.sleep(1)  # let some time for the config to be sent
+time.sleep(2)  # let some time for the config to be sent
 
 while messages:
 	message = messages.pop(0)

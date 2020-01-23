@@ -27,7 +27,7 @@ def announce_route (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = extract_neighbors(line)
-			peers = match_neighbors(reactor.peers,descriptions)
+			peers = match_neighbors(reactor.peers(),descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer_error(service)
@@ -69,7 +69,7 @@ def withdraw_route (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = extract_neighbors(line)
-			peers = match_neighbors(reactor.peers,descriptions)
+			peers = match_neighbors(reactor.peers(),descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer_error(service)
@@ -119,7 +119,7 @@ def announce_vpls (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = extract_neighbors(line)
-			peers = match_neighbors(reactor.peers,descriptions)
+			peers = match_neighbors(reactor.peers(),descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer_error(service)
@@ -158,7 +158,7 @@ def withdraw_vpls (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = extract_neighbors(line)
-			peers = match_neighbors(reactor.peers,descriptions)
+			peers = match_neighbors(reactor.peers(),descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer_error(service)
@@ -202,7 +202,7 @@ def announce_attributes (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = extract_neighbors(line)
-			peers = match_neighbors(reactor.peers,descriptions)
+			peers = match_neighbors(reactor.peers(),descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer_error(service)
@@ -241,7 +241,7 @@ def withdraw_attribute (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = extract_neighbors(line)
-			peers = match_neighbors(reactor.peers,descriptions)
+			peers = match_neighbors(reactor.peers(),descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer_error(service)
@@ -283,7 +283,7 @@ def announce_flow (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = extract_neighbors(line)
-			peers = match_neighbors(reactor.peers,descriptions)
+			peers = match_neighbors(reactor.peers(),descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer_error(service)
@@ -322,7 +322,7 @@ def withdraw_flow (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = extract_neighbors(line)
-			peers = match_neighbors(reactor.peers,descriptions)
+			peers = match_neighbors(reactor.peers(),descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command)
 				reactor.processes.answer_error(service)
@@ -377,7 +377,7 @@ def announce_eor (self, reactor, service, command):
 
 	try:
 		descriptions,command = extract_neighbors(command)
-		peers = match_neighbors(reactor.peers,descriptions)
+		peers = match_neighbors(reactor.established_peers(), descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command)
 			reactor.processes.answer_error(service)
@@ -397,22 +397,23 @@ def announce_eor (self, reactor, service, command):
 @Command.register('text','announce route-refresh')
 def announce_refresh (self, reactor, service, command):
 	def callback (self, command, peers):
-		refresh = self.api_refresh(command)
-		if not refresh:
+		refreshes = self.api_refresh(command)
+		if not refreshes:
 			self.log_failure("Command could not parse route-refresh command : %s" % command)
 			reactor.processes.answer_error(service)
 			yield True
 			return
 
-		reactor.configuration.inject_refresh(peers,refresh)
-		self.log_message("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',refresh.extensive()))
+		reactor.configuration.inject_refresh(peers,refreshes)
+		for refresh in refreshes:
+			self.log_message("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',refresh.extensive()))
 
 		yield False
 		reactor.processes.answer_done(service)
 
 	try:
 		descriptions,command = extract_neighbors(command)
-		peers = match_neighbors(reactor.peers,descriptions)
+		peers = match_neighbors(reactor.established_peers(), descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command)
 			reactor.processes.answer_error(service)
@@ -453,7 +454,7 @@ def announce_operational (self, reactor, service, command):
 
 	try:
 		descriptions,command = extract_neighbors(command)
-		peers = match_neighbors(reactor.peers,descriptions)
+		peers = match_neighbors(reactor.peers(),descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command)
 			reactor.processes.answer_error(service)

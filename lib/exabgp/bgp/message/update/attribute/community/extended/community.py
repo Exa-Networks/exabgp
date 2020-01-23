@@ -16,15 +16,13 @@ from struct import pack
 # XXX: Should subclasses register with transitivity ?
 
 
-class ExtendedCommunity (Attribute):
-	ID = Attribute.CODE.EXTENDED_COMMUNITY
-	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
-
+class ExtendedCommunityBase (Attribute):
 	COMMUNITY_TYPE    = 0x00  # MUST be redefined by subclasses
 	COMMUNITY_SUBTYPE = 0x00  # MUST be redefined by subclasses
 	NON_TRANSITIVE    = 0x40
 
-	registered_extended = {}
+	# Need to be overwritten by sub-classes
+	registered_extended = None
 
 	@classmethod
 	def register (cls, klass):
@@ -102,19 +100,36 @@ class ExtendedCommunity (Attribute):
 			h += ordinal(byte)
 		return "0x%016X" % h
 
-	def __len__ (self):
-		return 8
-
 	def __hash__ (self):
 		return hash(self.community)
 
-	@staticmethod
-	def unpack (data, negotiated=None):
+	@classmethod
+	def unpack (cls,data, negotiated=None):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
 		community = (ordinal(data[0]) & 0x0F,ordinal(data[1]))
-		if community in ExtendedCommunity.registered_extended:
-			klass = ExtendedCommunity.registered_extended[community]
+		if community in cls.registered_extended:
+			klass = cls.registered_extended[community]
 			instance = klass.unpack(data)
 			instance.klass = klass
 			return instance
-		return ExtendedCommunity(data)
+		return cls(data)
+
+
+class ExtendedCommunity (ExtendedCommunityBase):
+	ID = Attribute.CODE.EXTENDED_COMMUNITY
+	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+
+	registered_extended = {}
+
+	def __len__ (self):
+		return 8
+
+
+class ExtendedCommunityIPv6 (ExtendedCommunityBase):
+	ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
+	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+
+	registered_extended = {}
+
+	def __len__ (self):
+		return 20

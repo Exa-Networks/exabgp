@@ -18,18 +18,34 @@ def extract_neighbors (command):
 	# The parsed neighbor is a list of the element making the neighbor string so each part can be checked against the neighbor name
 
 	returned = []
-	neighbor,remaining = command.split(' ',1)
+
+	neiremain = command.split(' ', 1)
+	if len(neiremain) == 1:
+		return [], command
+
+	neighbor, remaining = neiremain
 	if neighbor != 'neighbor':
 		return [],command
 
-	ip,command = remaining.split(' ',1)
+	ipcmd = remaining.split(' ', 1)
+	if len(ipcmd) == 1:
+		return [], remaining
+	ip, command = ipcmd
 	definition = ['neighbor %s' % (ip)]
+
+	if ' ' not in command:
+		return definition,command
 
 	while True:
 		try:
 			key,value,remaining = command.split(' ',2)
 		except ValueError:
-			key,value = command.split(' ',1)
+			# single word command
+			keyval = command.split(' ', 1)
+			if len(keyval) == 1:
+				return definition,command
+			key, value = keyval
+		# we have further filtering
 		if key == ',':
 			returned.append(definition)
 			_,command = command.split(' ',1)
@@ -55,12 +71,12 @@ def match_neighbor (description, name):
 def match_neighbors (peers,descriptions):
 	"""Return the sublist of peers matching the description passed, or None if no description is given"""
 	if not descriptions:
-		return peers.keys()
+		return peers
 
 	returned = []
-	for key in peers:
+	for peer_name in peers:
 		for description in descriptions:
-			if match_neighbor(description,key):
-				if key not in returned:
-					returned.append(key)
+			if match_neighbor(description, peer_name):
+				if peer_name not in returned:
+					returned.append(peer_name)
 	return returned

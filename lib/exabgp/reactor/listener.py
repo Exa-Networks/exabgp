@@ -46,7 +46,6 @@ class Listener (object):
 		self._backlog = backlog
 		self._sockets = {}
 		self._accepted = {}
-		self._pending = 0
 
 	def _new_socket (self, ip):
 		if ip.afi == AFI.ipv6:
@@ -115,21 +114,21 @@ class Listener (object):
 		if not self.serving:
 			return False
 
+		peer_connected = False
+
 		for sock in self._sockets:
 			if sock in self._accepted:
 				continue
 			try:
 				io, _ = sock.accept()
 				self._accepted[sock] = io
-				self._pending += 1
+				peer_connected = True
 			except socket.error as exc:
 				if exc.errno in error.block:
 					continue
 				self.logger.critical(str(exc),'network')
-		if self._pending:
-			self._pending -= 1
-			return True
-		return False
+
+		return peer_connected
 
 	def _connected (self):
 		try:
@@ -158,9 +157,8 @@ class Listener (object):
 
 		for connection in self._connected():
 			self.logger.debug('new connection received %s' % connection.name(),'network')
-			for key in reactor.peers:
-				peer = reactor.peers[key]
-				neighbor = peer.neighbor
+			for key in reactor.peers():
+				neighbor = reactor.neighbor(key)
 
 				connection_local = IP.create(connection.local).address()
 				neighbor_peer_start = neighbor.peer_address.address()
@@ -181,10 +179,10 @@ class Listener (object):
 				# we need to iterate all individual peers before
 				# handling "range" peers
 				if neighbor.range_size > 1:
-					ranged_neighbor.append(peer.neighbor)
+					ranged_neighbor.append(neighbor)
 					continue
 
-				denied = peer.handle_connection(connection)
+				denied = reactor.handle_connection(key,connection)
 				if denied:
 					self.logger.debug('refused connection from %s due to the state machine' % connection.name(),'network')
 					break
@@ -210,7 +208,7 @@ class Listener (object):
 				new_neighbor.local_address = IP.create(connection.peer)
 				new_neighbor.peer_address = IP.create(connection.local)
 				if not new_neighbor.router_id:
-					new_neighbor.router_id = RouterID.create(connection.peer)
+					new_neighbor.router_id = RouterID.create(connection.local)
 
 				new_peer = Peer(new_neighbor,reactor)
 				denied = new_peer.handle_connection(connection)
@@ -218,7 +216,7 @@ class Listener (object):
 					self.logger.debug('refused connection from %s due to the state machine' % connection.name(),'network')
 					return
 
-				reactor.peers[new_neighbor.name()] = new_peer
+				reactor.register_peer(new_neighbor.name(),new_peer)
 				return
 
 	def stop (self):

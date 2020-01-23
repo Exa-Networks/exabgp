@@ -22,6 +22,8 @@ class Tokeniser (object):
 			self.next = deque()
 			self.tokens = []
 			self.generator = iter([])
+			self.announce = True
+			self.afi = AFI.undefined
 
 		def replenish (self, content):
 			self.next.clear()
@@ -31,6 +33,7 @@ class Tokeniser (object):
 
 		def clear (self):
 			self.replenish([])
+			self.announce = True
 
 		def __call__ (self):
 			if self.next:
@@ -66,7 +69,6 @@ class Tokeniser (object):
 		self.index_line = 0
 		self.fname = ''
 		self.type = 'unset'
-		self.afi = AFI.undefined
 
 		self._tokens = Tokeniser._off
 		self._next = None
@@ -153,6 +155,10 @@ class Tokeniser (object):
 
 	def set_api (self, line):
 		return self._set(self._tokenise(iter([line])))
+
+	def set_action(self, command):
+		if command != 'announce':
+			self.iterate.announce = False
 
 	def __call__ (self):
 		self.number += 1

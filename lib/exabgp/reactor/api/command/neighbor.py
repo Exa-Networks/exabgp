@@ -95,11 +95,17 @@ Neighbor %(peer-address)s
 def teardown (self, reactor, service, line):
 	try:
 		descriptions,line = extract_neighbors(line)
+		if ' ' not in line:
+			reactor.processes.answer_error(service)
+			return False
 		_,code = line.split(' ',1)
-		for key in reactor.peers:
+		if not code.isdigit():
+			reactor.processes.answer_error(service)
+			return False
+		for key in reactor.established_peers():
 			for description in descriptions:
 				if match_neighbor(description,key):
-					reactor.peers[key].teardown(int(code))
+					reactor.teardown_peer(key,int(code))
 					self.log_message('teardown scheduled for %s' % ' '.join(description))
 		reactor.processes.answer_done(service)
 		return True
@@ -141,26 +147,20 @@ def show_neighbor (self, reactor, service, command):
 		reactor.processes.answer_done(service)
 
 	def callback_extensive ():
-		for peer_name in reactor.peers.keys():
-			peer = reactor.peers.get(peer_name,None)
-			if not peer:
+		for peer_name in reactor.peers():
+			if limit and limit not in reactor.neighbor_name(peer_name):
 				continue
-			if limit and limit not in peer.neighbor.name():
-				continue
-			for line in Neighbor.extensive(peer.cli_data()).split('\n'):
+			for line in Neighbor.extensive(reactor.neighbor_cli_data(peer_name)).split('\n'):
 				reactor.processes.write(service, line)
 				yield True
 		reactor.processes.answer_done(service)
 
 	def callback_summary ():
 		reactor.processes.write(service, Neighbor.summary_header)
-		for peer_name in reactor.peers.keys():
-			peer = reactor.peers.get(peer_name,None)
-			if not peer:
+		for peer_name in reactor.established_peers():
+			if limit and limit != reactor.neighbor_ip(peer_name):
 				continue
-			if limit and limit != str(peer.neighbor.peer_address):
-				continue
-			for line in Neighbor.summary(peer.cli_data()).split('\n'):
+			for line in Neighbor.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
 				reactor.processes.write(service, line)
 				yield True
 		reactor.processes.answer_done(service)

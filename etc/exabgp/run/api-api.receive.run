@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import time
@@ -8,28 +8,28 @@ while True:
 		line = sys.stdin.readline().strip()
 
 		if 'shutdown' in line:
-			print >> sys.stderr, '   (ok) api.receive shutdown received', line
+			sys.stderr.write('   (ok) api.receive shutdown received\n%s\n' % line)
 			sys.stdout.flush()
 			sys.exit(1)
 		elif 'done' in line:
-			print >> sys.stderr, '   (ok) api.receive done received', line
+			sys.stderr.write('   (ok) api.receive done received\n%s\n' % line)
 			sys.stdout.flush()
 		elif 'eor' in line:
-			print >> sys.stderr, '   (ok) api.receive eor received', line
+			sys.stderr.write('   (ok) api.receive eor received\n%s\n' % line)
 			sys.stdout.flush()
 		elif 'keepalive' in line:
-			print >> sys.stderr, '   (ok) api.receive keepalive received', line
+			sys.stderr.write('   (ok) api.receive keepalive received\n%s\n' % line)
 			sys.stdout.flush()
 		elif '0.0.0.0/32' in line:
-			print >> sys.stderr, '   (ok) api.receive 0.0.0.0/32 received', line
+			sys.stderr.write('   (ok) api.receive 0.0.0.0/32 received\n%s\n' % line)
 			sys.stdout.flush()
 			time.sleep(2)  # make sure the other process is faster if it gets any data
-			print "announce route 6.6.6.0/24 next-hop 1.1.1.1"
+			sys.stdout.write("announce route 6.6.6.0/24 next-hop 1.1.1.1\n")
 			sys.stdout.flush()
 		else:
-			print >> sys.stderr, '   (failure) api.receive received unexpected data:', line
+			sys.stderr.write ('   (failure) api.receive received unexpected data:\n%s' % line)
 			sys.stderr.flush()
-			print "announce route 6.6.6.0/24 next-hop 9.9.9.9"
+			sys.stdout.write("announce route 6.6.6.0/24 next-hop 9.9.9.9\n")
 			sys.stdout.flush()
 			time.sleep(3)
 			sys.exit(1)

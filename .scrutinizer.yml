@@ -1,15 +1,23 @@
+build:
+    environment:
+        python: 3.7.1
 filter:
     excluded_paths:
-        - 'lib/exabgp/dep/*'
         - 'bin/*'
-        - 'sbin/*'
-        - 'etc/*'
-        - 'dev/*'
-        - 'qa/*'
-        - 'debian/*'
-        - 'service/*'
         - 'build/*'
+        - 'debian/*'
+        - 'dev/*'
         - 'dist/*'
+        - 'doc/*'
+        - 'etc/*'
+        - 'fifo/*'
+        - 'lib/exabgp/vendoring/*'
+        - 'logo/*'
+        - 'qa/*'
+        - 'redhat/*'
+        - 'run/*'
+        - 'sbin/*'
+        - 'service/*'
     paths: {  }
 tools:
     python_analyzer:
@@ -23,34 +31,44 @@ tools:
             - .py
         filter:
             excluded_paths:
-                - 'lib/exabgp/dep/*'
                 - 'bin/*'
-                - 'sbin/*'
-                - 'etc/*'
-                - 'dev/*'
-                - 'qa/*'
-                - 'debian/*'
-                - 'service/*'
                 - 'build/*'
+                - 'debian/*'
+                - 'dev/*'
                 - 'dist/*'
+                - 'doc/*'
+                - 'etc/*'
+                - 'fifo/*'
+                - 'lib/exabgp/vendoring/*'
+                - 'logo/*'
+                - 'qa/*'
+                - 'redhat/*'
+                - 'run/*'
+                - 'sbin/*'
+                - 'service/*'
             paths: {  }
     pylint:
         enabled: true
-        python_version: '2'
+        python_version: '3'
         plugins: {  }
         config_file: '.pylintrc'
         filter:
             excluded_paths:
-                - 'lib/exabgp/dep/*'
                 - 'bin/*'
-                - 'sbin/*'
-                - 'etc/*'
-                - 'dev/*'
-                - 'qa/*'
-                - 'debian/*'
-                - 'service/*'
                 - 'build/*'
+                - 'debian/*'
+                - 'dev/*'
                 - 'dist/*'
+                - 'doc/*'
+                - 'etc/*'
+                - 'fifo/*'
+                - 'lib/exabgp/vendoring/*'
+                - 'logo/*'
+                - 'qa/*'
+                - 'redhat/*'
+                - 'run/*'
+                - 'sbin/*'
+                - 'service/*'
             paths: {  }
     external_code_coverage:
         timeout: 600

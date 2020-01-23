@@ -1,3 +1,5 @@
+import time
+
 from exabgp.vendoring import six
 
 from exabgp.protocol.family import AFI
@@ -19,46 +21,74 @@ class Outgoing (Connection):
 	def __init__ (self, afi, peer, local, port=179,md5='',md5_base64=False, ttl=None):
 		Connection.__init__(self,afi,peer,local)
 
-		self.logger.debug('attempting connection to %s:%d' % (self.peer,port),self.session())
-
 		self.ttl = ttl
 		self.afi = afi
 		self.md5 = md5
+		self.md5_base64 = md5_base64
 		self.port = port
 
+	def _setup (self):
 		try:
-			self.io = create(afi)
-			MD5(self.io,self.peer,port,md5,md5_base64)
-			if afi == AFI.ipv4:
+			self.io = create(self.afi)
+			MD5(self.io,self.peer,self.port,self.md5,self.md5_base64)
+			if self.afi == AFI.ipv4:
 				TTL(self.io, self.peer, self.ttl)
-			elif afi == AFI.ipv6:
+			elif self.afi == AFI.ipv6:
 				TTLv6(self.io, self.peer, self.ttl)
-			if local:
-				bind(self.io,self.local,afi)
+			if self.local:
+				bind(self.io,self.local,self.afi)
 			asynchronous(self.io, self.peer)
-			connect(self.io,self.peer,port,afi,md5)
-			if not self.local:
-				self.local = self.io.getsockname()[0]
-			self.success()
-			self.init = True
+			return None
 		except NetworkError as exc:
-			self.init = False
-			self.close()
-			self.logger.debug('connection to %s:%d failed, %s' % (self.peer,port,str(exc)),self.session())
+			self.io.close()
+			self.io = None
+			return exc
+
+	def _connect (self):
+		if not self.io: 
+			setup_issue = self._setup()
+			if setup_issue:
+				return setup_issue
+		try:
+			connect(self.io,self.peer,self.port,self.afi,self.md5)
+			return None
+		except NetworkError as exc:
+			return exc
 
 	def establish (self):
-		if not self.init:
-			yield False
-			return
+		last = time.time() - 2.0
 
-		generator = ready(self.io)
-		for connected in generator:
-			if not connected:
+		while True:
+			notify = (time.time() - last > 1.0)
+			if notify:
+				last = time.time()
+
+			if notify:
+				self.logger.debug('attempting connection to %s:%d' % (self.peer,self.port),self.session())
+			
+			connect_issue = self._connect()
+			if connect_issue:
+				if notify:
+					self.logger.debug('connection to %s:%d failed' % (self.peer,self.port),self.session())
+					self.logger.debug(str(connect_issue),self.session())
 				yield False
 				continue
-			yield True
-		yield False
-		# self.io MUST NOT be closed here, it is closed by the caller
+
+			connected = False
+			for r,message in ready(self.io):
+				if not r:
+					yield False
+					continue
+				connected = True
+
+			if connected:
+				self.success()
+				if not self.local:
+					self.local = self.io.getsockname()[0]
+				yield True
+				return
+
+			self._setup()
 
 		# nagle(self.io,self.peer)
 		# # Not working after connect() at least on FreeBSD TTL(self.io,self.peer,self.ttl)

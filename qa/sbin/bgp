@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding: utf-8
 """
 bgp
@@ -14,24 +14,22 @@ import sys
 import time
 import errno
 import socket
-import thread
+import threading
 import signal
 import asyncore
 import subprocess
 from struct import unpack
 
-import psutil
-
 SIGNAL = dict([(name,getattr(signal,name)) for name in dir(signal) if name.startswith('SIG')])
 
 
 def flushed (*output):
-	print ' '.join(str(_) for _ in output)
+	print(' '.join(str(_) for _ in output))
 	sys.stdout.flush()
 
 
 def bytestream (value):
-	return ''.join(['%02X' % ord(_) for _ in value])
+	return ''.join(['%02X' % _ for _ in value])
 
 
 def dump (value):
@@ -40,7 +38,7 @@ def dump (value):
 		for v in value:
 			if even is False:
 				yield ' '
-			yield '%02X' % ord(v)
+			yield '%02X' % v
 			even = not even
 	return ''.join(spaced(value))
 
@@ -60,13 +58,13 @@ def cdr_to_length (cidr):
 class BGPHandler(asyncore.dispatcher_with_send):
 	counter = 0
 
-	keepalive = chr(0xFF)*16 + chr(0x0) + chr(0x13) + chr(0x4)
+	keepalive = bytearray([0xFF, ] * 16 + [0x0, 0x13, 0x4])
 
 	_name = {
-		chr(1): 'OPEN',
-		chr(2): 'UPDATE',
-		chr(3): 'NOTIFICATION',
-		chr(4): 'KEEPALIVE',
+		b'\x01': 'OPEN',
+		b'\x02': 'UPDATE',
+		b'\x03': 'NOTIFICATION',
+		b'\x04': 'KEEPALIVE',
 	}
 
 	def signal (self,myself,signal_name='SIGUSR1'):
@@ -80,33 +78,26 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		processes = []
 
-		for pid in psutil.pids():
-			try:
-				process = psutil.Process(pid)
+		for line in os.popen("/bin/ps x"):
+			low = line.strip().lower()
+			if not low:
+				continue
+			if 'python' not in low and 'pypy' not in low:
+				continue
 
-				process_name = process.name().lower()
-				if 'python' not in process_name and 'pypy' not in process_name:
-					continue
+			cmdline = line.strip().split()[4:]
+			pid = line.strip().split()[0]
 
-				cmdline = process.cmdline()
-				if len(cmdline) < 2:
-					continue
+			if len(cmdline) > 1 and not cmdline[1].endswith('/bgp.py'):
+				continue
 
-				if not cmdline[1].endswith('/bgp.py'):
-					continue
+			if conf_name not in cmdline[-1]:
+				continue
 
-				if conf_name not in cmdline[-1]:
-					continue
+			if not cmdline[-1].endswith('.conf'):
+				continue
 
-				if not cmdline[-1].endswith('.conf'):
-					continue
-
-				processes.append(pid)
-
-			except psutil.NoSuchProcess:
-				self.announce('signal/psutil: no such processes')
-			except psutil.AccessDenied:
-				self.announce('signal/psutil: access denied')
+			processes.append(pid)
 
 		if len(processes) == 0:
 			self.announce('no running process found, this should not happend, quitting')
@@ -119,54 +110,54 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		try:
 			self.announce('sending signal %s to ExaBGP (pid %s)\n' % (signal_name,processes[0]))
 			os.kill(int(processes[0]),signal_number)
-		except Exception,exc:
+		except Exception as exc:
 			self.announce('\n     failed: %s' % str(exc))
 
 	def kind (self, header):
 		return header[18]
 
 	def isupdate (self, header):
-		return header[18] == chr(2)
+		return header[18] == 2
 
 	def isnotification (self, header):
-		return header[18] == chr(4)
+		return header[18] == 4
 
 	def name (self, header):
 		return self._name.get(header[18],'SOME WEIRD RFC PACKET')
 
 	def routes (self, header, body):
 		len_w = unpack('!H',body[0:2])[0]
-		withdrawn = [ord(_) for _ in body[2:2+len_w]]
+		withdrawn = bytearray([_ for _ in body[2:2+len_w]])
 		len_a = unpack('!H',body[2+len_w:2+len_w+2])[0]
-		announced = [ord(_) for _ in body[2+len_w + 2+len_a:]]
+		announced = bytearray([_ for _ in body[2+len_w + 2+len_a:]])
 
 		if not withdrawn and not announced:
 			if len(body) == 4:
 				yield 'eor:1:1'
 			elif len(body) == 11:
-				yield 'eor:%d:%d' % (ord(body[-2]),ord(body[-1]))
+				yield 'eor:%d:%d' % (body[-2],body[-1])
 			else:  # undecoded MP route
 				yield 'mp:'
 			return
 
 		while withdrawn:
-			cdr = withdrawn.pop(0)
+			cdr,withdrawn = withdrawn[0],withdrawn[1:]
 			size = cdr_to_length(cdr)
 			r = [0,0,0,0]
 			for index in range(size):
-				r[index] = withdrawn.pop(0)
+				r[index], withdrawn = withdrawn[0], withdrawn[1:]
 			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(cdr)
 
 		while announced:
-			cdr = announced.pop(0)
+			cdr, announced = announced[0], announced[1:]
 			size = cdr_to_length(cdr)
 			r = [0,0,0,0]
 			for index in range(size):
-				r[index] = announced.pop(0)
+				r[index], announced = announced[0], announced[1:]
 			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(cdr)
 
 	def notification (self, header, body):
-		yield 'notification:%d,%d' % (ord(body[0]),ord(body[1])), bytestream(body)
+		yield 'notification:%d,%d' % (body[0],body[1]), bytestream(body)
 
 	def announce (self, *args):
 		flushed('    ',self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0])
@@ -211,7 +202,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		return False
 
 	def read_message (self):
-		header = ''
+		header = b''
 		while len(header) != 19:
 			try:
 				left = 19-len(header)
@@ -219,55 +210,56 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				if left == 19-len(header):  # ugly
 					# the TCP session is gone.
 					return None,None
-			except socket.error,exc:
+			except socket.error as exc:
 				if exc.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
 					continue
 				raise exc
 
 		length = unpack('!H',header[16:18])[0] - 19
 
-		body = ''
+		body = b''
 		while len(body) != length:
 			try:
 				left = length-len(body)
 				body += self.recv(left)
-			except socket.error,exc:
+			except socket.error as exc:
 				if exc.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
 					continue
 				raise exc
 
-		return header,body
+		return bytearray(header),bytearray(body)
 
 	def handle_open (self):
 		# reply with a IBGP response with the same capability (just changing routerID)
 		header,body = self.read_message()
-		routerid = chr((ord(body[8])+1) & 0xFF)
+		routerid = bytearray([body[8] + 1 & 0xFF])
 		o = header+body[:8]+routerid+body[9:]
 
 		if self.options['send-unknown-capability']:
 			# hack capability 66 into the message
-			content = 'loremipsum'
-			cap66 = chr(66) + chr(len(content)) + content
-			param = chr(2) + chr(len(cap66)) + cap66
-			o = o[:17] + chr(ord(o[17])+len(param)) + o[18:28] + \
-				chr(ord(o[28])+len(param)) + o[29:] + param
+
+			content = b'loremipsum'
+			cap66 = bytearray([66, len(content)]) + content
+			param = bytearray([2, len(cap66)]) + cap66
+			o = o[:17] + bytearray([o[17] + len(param)]) + o[18:28] + \
+				bytearray([o[28] + len(param)]) + o[29:] + param
 
 		self.send(o)
 		self.send(self.keepalive)
 
 		if self.options['send-default-route']:
-			self.send(
-				chr(0xFF)*16 +
-				chr(0x00) + chr(0x31) +
-				chr(0x02) +
-				chr(0x00) + chr(0x00) +
-				chr(0x00) + chr(0x15) +
-				'' + chr(0x40) + chr(0x01) + chr(0x01) + chr(0x00) +
-				'' + chr(0x40) + chr(0x02) + chr(0x00) +
-				'' + chr(0x40) + chr(0x03) + chr(0x04) + chr(0x7F) + chr(0x00) + chr(0x00) + chr(0x01) +
-				'' + chr(0x40) + chr(0x05) + chr(0x04) + chr(0x00) + chr(0x00) + chr(0x00) + chr(0x64) +
-				chr(0x20) + chr(0x00) + chr(0x00) + chr(0x00) + chr(0x00)
-			)
+			self.send(bytearray(
+				[0xFF, ] * 16 +
+				[0x00, 0x31] +
+				[0x02,] +
+				[0x00, 0x00] +
+				[0x00, 0x15] +
+				[] + [0x40, 0x01, 0x01, 0x00] +
+				[] + [0x40, 0x02, 0x00] +
+				[] + [0x40, 0x03, 0x04, 0x7F, 0x00, 0x00, 0x01] +
+				[] + [0x40, 0x05, 0x04, 0x00, 0x00, 0x00, 0x64] +
+				[0x20, 0x00, 0x00, 0x00, 0x00]
+			))
 			self.announce('sending default-route\n')
 
 		self.handle_read = self.handle_keepalive
@@ -304,7 +296,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		if parser:
 			for announcement in parser(self,header,body):
 				self.send(self.keepalive)
-
 				if announcement.startswith('eor:'):  # skip EOR
 					self.announce('skipping eor',announcement)
 					continue
@@ -361,19 +352,18 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			self.send(self.keepalive)
 
 		if self.options['send-notification']:
-			notification = 'closing session because we can'
-			self.send(
-				chr(0xFF)*16 +
-				chr(0x00) + chr(19+2+len(notification)) +
-				chr(0x03) +
-				chr(0x06) +
-				chr(0x00) +
-				notification
-			)
+			notification = b'closing session because we can'
+			self.send(bytearray(
+				[0xFF,]*16 +
+				[0x00, 19+2+len(notification)] +
+				[0x03] +
+				[0x06] +
+				[0x00]
+			) + notification)
 
 	_decoder = {
-		chr(2): routes,
-		chr(3): notification,
+		2: routes,
+		3: notification,
 	}
 
 
@@ -420,11 +410,11 @@ class BGPServer (asyncore.dispatcher):
 					time.sleep(delay)
 					self.signal(myself)
 					time.sleep(10)
-					thread.exit()
 
 				# Python 2.6 can not perform this test as it misses the function
 				if 'check_output' in dir(subprocess):
-					thread.start_new_thread(notify,(int(message.split(':')[-1]),os.getpid()))
+					# thread.start_new_thread(notify,(int(message.split(':')[-1]),os.getpid()))
+					threading.Thread(target=notify, args=(int(message.split(':')[-1]), os.getpid()))
 				else:
 					self.options['single-shot'] = True
 				continue
@@ -491,7 +481,9 @@ def drop ():
 
 
 def main ():
-	if len(sys.argv) <= 1:
+	port = os.environ.get('exabgp.tcp.port', os.environ.get('exabgp_tcp_port', '179'))
+
+	if not port.isdigit() and port >0 and port <= 65535 or len(sys.argv) <= 1:
 		flushed('--sink   accept any BGP messages and reply with a keepalive')
 		flushed('--echo   accept any BGP messages send it back to the emiter')
 		flushed('--port <port>   port to bind to')
@@ -503,7 +495,7 @@ def main ():
 	options = {
 		'sink': False,
 		'echo': False,
-		'port': os.environ.get('exabgp.tcp.port', os.environ.get('exabgp_tcp_port', '179')),
+		'port': int(port),
 		'messages': []
 	}
 
@@ -539,14 +531,18 @@ def main ():
 
 	try:
 		BGPServer('127.0.0.1',options)
-		BGPServer('::1',options)
+		try:
+			BGPServer('::1',options)
+		except:
+			# does not work on travis-ci
+			pass
 		drop()
 		asyncore.loop()
-	except socket.error,exc:
+	except socket.error as exc:
 		if exc.errno == errno.EACCES:
-			flushed('failure: could not bind to port %s - most likely not run as root' % PORT)
+			flushed('failure: could not bind to port %s - most likely not run as root' % port)
 		elif exc.errno == errno.EADDRINUSE:
-			flushed('failure: could not bind to port %s - port already in use' % PORT)
+			flushed('failure: could not bind to port %s - port already in use' % port)
 		else:
 			flushed('failure', str(exc))
 

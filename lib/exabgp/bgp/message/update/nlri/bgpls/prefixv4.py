@@ -34,7 +34,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 @BGPLS.register
 class PREFIXv4(BGPLS):
 	CODE = 3
-	NAME = " IPv4 Topology Prefix"
+	NAME = "bgpls-prefix-v4"
 	SHORT_NAME = "PREFIX_V4"
 
 	def __init__ (
@@ -82,7 +82,7 @@ class PREFIXv4(BGPLS):
 				tlvs = tlvs[4 + tlv_length:]
 			if tlv_type == 265:
 				values = tlvs[4: 4 + tlv_length]
-				prefix = IpReach.unpack(values)
+				prefix = IpReach.unpack(values, 3)
 				tlvs = tlvs[4 + tlv_length:]
 
 		return cls(
@@ -111,7 +111,7 @@ class PREFIXv4(BGPLS):
 	def json (self, compact=None):
 		nodes = ', '.join(d.json() for d in self.local_node)
 		content = ', '.join([
-			'"ls-nlri-type": 3',
+			'"ls-nlri-type": "%s"' % self.NAME,
 			'"l3-routing-topology": %d' % int(self.domain),
 			'"protocol-id": %d' % int(self.proto_id),
 			'"node-descriptors": { %s }' % nodes,

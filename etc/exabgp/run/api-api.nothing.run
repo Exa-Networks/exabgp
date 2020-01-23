@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import time
@@ -6,14 +6,14 @@ import time
 line = sys.stdin.readline().strip()
 
 if 'shutdown' in line:
-	print >> sys.stderr, '  (ok) api.nothing shutdown', line
+	sys.stderr.write('  (ok) api.nothing shutdown %s\n' % line)
 	sys.stderr.flush()
 	time.sleep(3)
 	sys.exit(1)
 
-print >> sys.stderr, '  (failure) api.noting received data: ', line
+sys.stderr.write('  (failure) api.noting received data: %s\n' % line)
 sys.stderr.flush()
-print "announce route 6.6.6.0/24 next-hop 9.9.9.9"
+sys.stdout.write('announce route 6.6.6.0/24 next-hop 9.9.9.9\n')
 sys.stdout.flush()
 
 try:

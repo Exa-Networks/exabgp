@@ -1,32 +1,38 @@
 language: python
+dist: xenial
 
-python:
-  - "2.7"
-  - "3.7"
-  - "pypy"
-
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -y python-pip python-dev
+matrix:
+  fast_finish: true
+  include:
+    - python: 2.7
+    - python: pypy
+    - python: 3.7
+    - python: 3.8
+    - python: nightly
+  allow_failures:
+    - python: 2.7
+    - python: pypy
+    - python: 3.8-dev
+    - python: nightly
 
 install:
-  - pip install -r requirements.txt
-  - pip install -r qa/requirements.txt
+  - python -m pip install --upgrade pip setuptools wheel
+  - python -m pip install -r requirements.txt
+  - python -m pip install -r qa/requirements.txt
 
 script:
-  - export INTERPRETER=python
-  - export SKIPCLEANUP=exabgp
-  - sbin/exabgp --version
-  - sbin/exabgp --fi > etc/exabgp/exabgp.env
   - set pipefail
-  - ./qa/bin/parsing
+  - export SKIPCLEANUP=exabgp
+  - ./sbin/exabgp --fi | tee etc/exabgp/exabgp.env
+  - ./sbin/exabgp --version
+  - ./qa/bin/functional listing
   - ./qa/bin/functional all
+  - ./qa/bin/parsing
   - env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
   - env exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
 
 after_success:
   - coveralls
-  - ocular
 
 notifications:
   irc:

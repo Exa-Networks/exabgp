@@ -7,6 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import os
 import sys
 
 from exabgp.vendoring import six
@@ -97,15 +98,16 @@ class _Configuration (object):
 					result = False
 		return result
 
-	def inject_refresh (self, peers, refresh):
+	def inject_refresh (self, peers, refreshes):
 		result = True
 		for neighbor in self.neighbors:
 			if neighbor in peers:
-				family = (refresh.afi,refresh.safi)
-				if family in self.neighbors[neighbor].families():
-					self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
-				else:
-					result = False
+				for refresh in refreshes:
+					family = (refresh.afi,refresh.safi)
+					if family in self.neighbors[neighbor].families():
+						self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
+					else:
+						result = False
 		return result
 
 
@@ -437,7 +439,11 @@ class Configuration (_Configuration):
 			if not self.tokeniser.set_text(fname):
 				return False
 		else:
-			if not self.tokeniser.set_file(fname):
+			# resolve any potential symlink, and check it is a file
+			target = os.path.realpath(fname)
+			if not os.path.isfile(target):
+				return False
+			if not self.tokeniser.set_file(target):
 				return False
 
 		if self.parseSection('root') is not True:
@@ -460,9 +466,24 @@ class Configuration (_Configuration):
 		self.process.add_api()
 		self._commit_reload()
 		self._link()
+
+		check = self.validate()
+		if check is not None:
+			return check
+
 		self.debug_check_route()
 		self.debug_self_check()
 		return True
+
+	def validate (self):
+		for neighbor in self.neighbors.values():
+			for notification in neighbor.api:
+				for api in neighbor.api[notification]:
+					if not self.processes[api].get('run',''):
+						return self.error.set(
+							"\n\nan api called '%s' is used by neighbor '%s' but not defined\n\n" % (api,neighbor.peer_address),
+						)
+		return None
 
 	def _link (self):
 		for neighbor in six.itervalues(self.neighbors):
@@ -482,10 +503,11 @@ class Configuration (_Configuration):
 						if api[key]:
 							self.processes[process].setdefault(key,[]).append(neighbor.router_id)
 
-	def partial (self, section, text):
+	def partial (self, section, text, action='announce'):
 		self._cleanup()  # this perform a big cleanup (may be able to be smarter)
 		self._clear()
 		self.tokeniser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
+		self.tokeniser.set_action(action)
 
 		if self.parseSection(section) is not True:
 			self._rollback_reload()
