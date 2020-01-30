@@ -11,6 +11,8 @@ Version 3.4.27
    reported by: adrian62
  * Improvement: exit with error code 0 on SIGTERM
    reported by: Johan Guldmyr
+ * Fix: issue with IPv6 nlri-mpls update generation
+   reported by: adrian62
 
 Version 3.4.26
  * Add: JSON notification messages now include the 'neighbor' structure
