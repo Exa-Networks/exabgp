@@ -314,6 +314,8 @@ def loopback_ips(label):
                     continue
                 if lmo.groupdict().get("label","").startswith(label):
                     addresses.append(ip)
+            else:
+                addresses.append(ip)
 
     logger.debug("Loopback addresses: %s", addresses)
     return addresses
