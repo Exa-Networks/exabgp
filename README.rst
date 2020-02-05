@@ -55,8 +55,8 @@ Without installation
 
 ::
 
-    curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.4.tar.gz | tar zx
-    ./exabgp-4.2.4/sbin/exabgp --help
+    curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.5.tar.gz | tar zx
+    ./exabgp-4.2.5/sbin/exabgp --help
 
 Feedback and getting involved
 =============================
