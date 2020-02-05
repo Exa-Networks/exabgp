@@ -1,7 +1,7 @@
 import os
 
-commit = "ab2b3933"
-release = "4.2.5"
+commit = "99de31e8"
+release = "4.2.6"
 json = "4.0.1"
 text = "4.0.1"
 version = os.environ.get('EXABGP_VERSION',release)

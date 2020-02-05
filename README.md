@@ -56,9 +56,9 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.5.tar.gz | tar zx
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.6.tar.gz | tar zx
 
-> cd exabgp-4.2.5
+> cd exabgp-4.2.6
 > ./sbin/exabgp --version
 > ./sbin/exabgp --help
 
@@ -81,10 +81,10 @@ or to use git master
 > ./bin/healthcheck --help
 ```
 
-or change git to use any previous release (here 4.2.5)
+or change git to use any previous release (here 4.2.6)
 
 ```sh
-> git checkout 4.2.5
+> git checkout 4.2.6
 > ./sbin/exabgp --version
 ```
 
