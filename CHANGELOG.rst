@@ -3,6 +3,9 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.6:
+ * Fix: prevent the deletion of IP addresses not added by the healthchecker
+
 Version 4.2.5:
  * Fix: Fix loopback detection without label issue
    patch by: Ruben Herold
