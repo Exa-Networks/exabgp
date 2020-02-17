@@ -488,7 +488,7 @@ class Reactor (object):
 
 		for key in self._peers.keys():
 			if key not in self.configuration.neighbors.keys():
-				peer = peers[key]
+				peer = self._peers[key]
 				self.logger.debug('removing peer %s' % peer.neighbor.name(),'reactor')
 				self._peers[key].remove()
 			else:
