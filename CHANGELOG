@@ -3,6 +3,10 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.28
+ * Fix: add support for ipv6 mpls
+   patch by: adrian62
+
 Version 3.4.27
  * Fix: Send state down messages on peer removal and shutdown
  * Improvement: RFC 7674 - Support redirect traffic to a VRF encoded as 4-octet AS, 2-octet Value
