@@ -64,6 +64,7 @@ class Capabilities (dict):
 		(AFI.ipv4,SAFI.unicast),
 		(AFI.ipv6,SAFI.unicast),
 		(AFI.ipv4,SAFI.nlri_mpls),
+		(AFI.ipv6,SAFI.nlri_mpls),
 		(AFI.ipv4,SAFI.mpls_vpn),
 		(AFI.ipv6,SAFI.mpls_vpn),
 	]
