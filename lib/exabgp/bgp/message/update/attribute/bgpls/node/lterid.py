@@ -22,12 +22,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 @LINKSTATE.register(lsid=1028)
 @LINKSTATE.register(lsid=1029)
 class LocalTeRid(object):
+	_terids = []
 
-	def __init__ (self, terid):
-		self.terid = terid
+	def __init__ (self):
+		self.terids = [str(terid) for terid in LocalTeRid._terids]
 
 	def __repr__ (self):
-		return "Local TE Router ID: %s" % (self.terid)
+		return "Local TE Router IDs: %s" % ', '.join(self.terids)
 
 	@classmethod
 	def unpack (cls,data,length):
@@ -37,7 +38,12 @@ class LocalTeRid(object):
 		elif len(data) == 16:
 			# IPv6
 			terid = IP.unpack(data[:16])
-		return cls(terid=terid)
+		cls._terids.append(terid)
+		return cls()
 
 	def json (self,compact=None):
-		return '"local-te-router-id": "%s"' % str(self.terid)
+		return '"local-te-router-ids": ["%s"]' % '", "'.join(self.terids)
+
+	@classmethod
+	def reset(cls):
+	    cls._terids = []
