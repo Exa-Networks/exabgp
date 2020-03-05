@@ -59,6 +59,9 @@ class LINKSTATE(Attribute):
 			klass.TLV = scode
 			ls_attrs.append(klass)
 			data = data[length+4:]
+		for klass in ls_attrs:
+			if hasattr(klass, 'terids'):
+				klass.reset()
 
 		return cls(ls_attrs=ls_attrs)
 
