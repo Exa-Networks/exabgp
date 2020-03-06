@@ -8,6 +8,8 @@ Version 4.3.0:
  * Fix: issue during restart
  * Fix: add ipv6 mpls to add-path
    patch by: adrian62
+ * Change: BGP-LS TE-RIDs are now reported as a list (as Arista reports more than one)
+   patch: tomjshine
  * reported: the RIB code so withdraw message before any announce are sent
         this does change the RIB behaviour sending withdrawal when it was not previously
 
