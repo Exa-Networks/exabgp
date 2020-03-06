@@ -8,6 +8,8 @@ Version 4.3.0:
  * Fix: issue during restart
  * Fix: add ipv6 mpls to add-path
    patch by: adrian62
+ * Fix: aggregator parsing when no space are used around ()
+   reported by: thomas955
  * Change: BGP-LS TE-RIDs are now reported as a list (as Arista reports more than one)
    patch: tomjshine
  * reported: the RIB code so withdraw message before any announce are sent
