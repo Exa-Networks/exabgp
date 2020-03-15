@@ -293,6 +293,7 @@ class Reactor (object):
 		workers = {}
 		peers = set()
 		api_fds = []
+		ms_sleep = int(self._sleep_time * 1000)
 
 		while True:
 			try:
@@ -333,7 +334,7 @@ class Reactor (object):
 				if self._completed(peers):
 					reload_completed = True
 
-				sleep = self._sleep_time
+				sleep = ms_sleep
 
 				# do not attempt to listen on closed sockets even if the peer is still here
 				for io in list(workers.keys()):
