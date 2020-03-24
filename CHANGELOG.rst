@@ -12,6 +12,8 @@ Version 4.3.0:
    reported by: thomas955
  * Fix: high CPU load to do sleeptime in second and not ms
    reported by: Gary Buhrmaster
+ * Fix: support for more than one BGP-LS Adjacency SID per link(requires reformat of output data structure)
+   patch: tomjshine
  * Change: BGP-LS TE-RIDs are now reported as a list (as Arista reports more than one)
    patch: tomjshine
  * reported: the RIB code so withdraw message before any announce are sent

@@ -29,20 +29,18 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 @LINKSTATE.register()
 class SrAdjacency(object):
 	TLV = 1099
+	_sr_adj_sids = []
 
-	def __init__ (self, flags, sids, weight, undecoded=[]):
-		self.flags = flags
-		self.sids = sids
-		self.weight = weight
-		self.undecoded = undecoded
+	def __init__ (self):
+		self.sr_adj_sids = SrAdjacency._sr_adj_sids.copy()
 
 	def __repr__ (self):
-		return "adj_flags: %s, sids: %s, undecoded_sid" % (self.flags, self.sids, self.undecoded)
+		return "sr-adj-sids: {}".format(self.sr_adj_sids)
 
 	@classmethod
 	def unpack (cls,data,length):
 		# We only support IS-IS flags for now.
-		flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.ISIS_SR_ADJ_FLAGS)
+		flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.ISIS_SR_ADJ_FLAGS).flags
 		# Parse adj weight
 		weight = six.indexbytes(data,1)
 		# Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
@@ -56,29 +54,26 @@ class SrAdjacency(object):
 		# *  A 4 octet index defining the offset in the SID/Label space
 		# 	 advertised by this router using the encodings defined in
 		#  	 Section 3.1.  In this case V and L flags MUST be unset.
-		sids = []
 		raw = []
 		while data:
 			# Range Size: 3 octet value indicating the number of labels in
 			# the range.
-			if int(flags.flags['V']) and int(flags.flags['L']):
+			if int(flags['V']) and int(flags['L']):
 				b = BitArray(bytes=data[:3])
-				sid = b.unpack('uintbe:24')[0:1]
+				sid = b.unpack('uintbe:24')[0]
 				data = data[3:]
-				sids.append(sid)
-			elif (not flags.flags['V']) and \
-				(not flags.flags['L']):
-				sid = unpack('!I',data[:4])[0:1]
+			elif (not flags['V']) and (not flags['L']):
+				sid = unpack('!I',data[:4])[0]
 				data = data[4:]
-				sids.append(sid)
 			else:
 				raw.append(hexstring(data))
 				break
-
-		return cls(flags=flags, sids=sids, weight=weight,undecoded=raw)
+		cls._sr_adj_sids.append({'flags': flags, 'weight': weight, 'sid': sid, 'undecoded': raw})
+		return cls()
 
 	def json (self,compact=None):
-		return ', '.join(['"sr-adj-flags": {}'.format(self.flags.json()),
-			'"sids": {}'.format(json.dumps(self.sids)),
-			'"undecoded-sids": {}'.format(json.dumps(self.undecoded)),
-			'"sr-adj-weight": {}'.format(json.dumps(self.weight))])
+		return '"sr-adj-sids": {}'.format(json.dumps(self.sr_adj_sids))
+
+	@classmethod
+	def reset(cls):
+		cls._sr_adj_sids = []

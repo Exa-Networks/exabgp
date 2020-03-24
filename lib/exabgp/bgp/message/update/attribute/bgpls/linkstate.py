@@ -59,8 +59,10 @@ class LINKSTATE(Attribute):
 			klass.TLV = scode
 			ls_attrs.append(klass)
 			data = data[length+4:]
+		# Remove all but last instance of each TLV class - the last holds state for all TLVs of that type
+		ls_attrs = list({ls_attr.TLV: ls_attr for ls_attr in ls_attrs}.values())
 		for klass in ls_attrs:
-			if hasattr(klass, 'terids'):
+			if hasattr(klass, 'terids') or hasattr(klass, 'sr_adj_sids') or hasattr(klass, 'sr_adj_lan_sids'):
 				klass.reset()
 
 		return cls(ls_attrs=ls_attrs)
