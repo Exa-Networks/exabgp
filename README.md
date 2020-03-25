@@ -187,6 +187,7 @@ The following projects are related to ExaBGP
   - [bgperf](https://github.com/osrg/bgperf) Stress test solution for Bird and Quagga (can be used with other implementations)
   - [super smash brogp](https://github.com/spotify/super-smash-brogp) Stress test BGP
   - [kyro](https://github.com/kvogt/kyro) realtime network performance measurement and optimal routes injection - not really ExaBGP related, they have their own stack, but worth mentioning
+  - [kakapo](https://github.com/hdb3/kakapo) a BGP flooding tool
 
 **FIB**
   - [IOS-XR Solenoid](https://github.com/ios-xr/Solenoid) a FIB for ExaBGP
