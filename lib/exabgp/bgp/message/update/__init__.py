@@ -122,7 +122,28 @@ class Update (Message):
 		if not nlris and not mp_nlris:
 			return
 
-		attr = self.attributes.pack(negotiated, True)
+		# If all we have is MP_UNREACH_NLRI, we do not need the default
+		# attributes. See RFC4760 that states the following:
+		#
+		#	An UPDATE message that contains the MP_UNREACH_NLRI is not required
+		#	to carry any other path attributes.
+		#
+		include_defaults = True
+
+		if mp_nlris and not nlris:
+
+			for family, actions in mp_nlris.items():
+				afi, safi = family
+
+				if safi not in (SAFI.unicast, SAFI.multicast):
+					break
+
+				if set(actions.keys()) != {OUT.WITHDRAW}:
+					break
+			else:
+				include_defaults = False
+
+		attr = self.attributes.pack(negotiated, include_defaults)
 
 		# Withdraws/NLRIS (IPv4 unicast and multicast)
 		msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
