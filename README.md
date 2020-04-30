@@ -88,6 +88,14 @@ or change git to use any previous release (here 4.2.6)
 > ./sbin/exabgp --version
 ```
 
+once you have the code, it is possible to create a self-contained executable which only requires an install python3 interpreter
+
+```
+> cd exabgp-git
+> python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main  -p "/usr/bin/env python3" lib
+>  /usr/local/sbin/exabgp --version
+```
+
 Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
 
 ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. ExaBGP  and later are targeting python3 only.
