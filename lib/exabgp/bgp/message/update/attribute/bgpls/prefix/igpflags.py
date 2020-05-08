@@ -27,24 +27,25 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #           | Reserved | Reserved for future use.  |           |
 #           +----------+---------------------------+-----------+
 
+
 @LINKSTATE.register()
 class IgpFlags(object):
-	TLV = 1152
+    TLV = 1152
 
-	def __init__ (self, igpflags):
-		self.igpflags = igpflags
+    def __init__(self, igpflags):
+        self.igpflags = igpflags
 
-	def __repr__ (self):
-		return "IGP flags: %s" % (self.igpflags)
+    def __repr__(self):
+        return "IGP flags: %s" % (self.igpflags)
 
-	@classmethod
-	def unpack (cls,data,length):
+    @classmethod
+    def unpack(cls, data, length):
 
-		if length > 1:
-			raise Notify(3,5, "IGP Flags TLV length too large")
-		else:
-			flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.LS_IGP_FLAGS)
-			return cls(igpflags=flags)
+        if length > 1:
+            raise Notify(3, 5, "IGP Flags TLV length too large")
+        else:
+            flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_IGP_FLAGS)
+            return cls(igpflags=flags)
 
-	def json (self,compact=None):
-		return '"igp-flags": {}'.format(self.igpflags.json())
+    def json(self, compact=None):
+        return '"igp-flags": {}'.format(self.igpflags.json())

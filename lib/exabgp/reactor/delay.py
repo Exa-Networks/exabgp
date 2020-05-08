@@ -12,18 +12,19 @@ import time
 # ======================================================================== Delay
 # Exponential backup for outgoing connection
 
-class Delay (object):
-	def __init__ (self):
-		self._time = time.time()
-		self._next = 0
 
-	def reset (self):
-		self._time = time.time()
-		self._next = 0
+class Delay(object):
+    def __init__(self):
+        self._time = time.time()
+        self._next = 0
 
-	def increase (self):
-		self._time = time.time() + self._next
-		self._next = min(int(1 + self._next * 1.2),60)
+    def reset(self):
+        self._time = time.time()
+        self._next = 0
 
-	def backoff (self):
-		return self._time > time.time()
+    def increase(self):
+        self._time = time.time() + self._next
+        self._next = min(int(1 + self._next * 1.2), 60)
+
+    def backoff(self):
+        return self._time > time.time()

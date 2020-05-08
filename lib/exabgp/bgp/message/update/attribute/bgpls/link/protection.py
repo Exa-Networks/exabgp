@@ -24,25 +24,25 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #      0x40  Reserved
 #      0x80  Reserved
 
+
 @LINKSTATE.register()
 class LinkProtectionType(object):
-	TLV = 1093
+    TLV = 1093
 
-	def __init__ (self, protectionflags):
-		self.protectionflags = protectionflags
+    def __init__(self, protectionflags):
+        self.protectionflags = protectionflags
 
-	def __repr__ (self):
-		return "Link protection mask: %s" % (self.protectionflags)
+    def __repr__(self):
+        return "Link protection mask: %s" % (self.protectionflags)
 
-	@classmethod
-	def unpack (cls,data,length):
-		if length != 2:
-			raise Notify(3,5, "Wrong size for protection type TLV")
-		else:
-			# We only care about the first octect
-			protection_mask = LsGenericFlags.unpack(data[0:1],
-				LsGenericFlags.LS_PROTECTION_MASK)
-		return cls(protectionflags=protection_mask)
+    @classmethod
+    def unpack(cls, data, length):
+        if length != 2:
+            raise Notify(3, 5, "Wrong size for protection type TLV")
+        else:
+            # We only care about the first octect
+            protection_mask = LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_PROTECTION_MASK)
+        return cls(protectionflags=protection_mask)
 
-	def json (self,compact=None):
-		return '"link-protection-flags": {}'.format(self.protectionflags.json())
+    def json(self, compact=None):
+        return '"link-protection-flags": {}'.format(self.protectionflags.json())

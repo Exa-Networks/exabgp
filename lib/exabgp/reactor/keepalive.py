@@ -17,44 +17,45 @@ from exabgp.reactor.network.error import NetworkError
 # =========================================================================== KA
 #
 
-class KA (object):
-	def __init__ (self, session, proto):
-		self._generator = self._keepalive(proto)
-		self.send_timer = SendTimer(session,proto.negotiated.holdtime)
 
-	def _keepalive (self, proto):
-		need_ka   = False
-		generator = None
+class KA(object):
+    def __init__(self, session, proto):
+        self._generator = self._keepalive(proto)
+        self.send_timer = SendTimer(session, proto.negotiated.holdtime)
 
-		while True:
-			# SEND KEEPALIVES
-			need_ka |= self.send_timer.need_ka()
+    def _keepalive(self, proto):
+        need_ka = False
+        generator = None
 
-			if need_ka:
-				if not generator:
-					generator = proto.new_keepalive()
-					need_ka = False
+        while True:
+            # SEND KEEPALIVES
+            need_ka |= self.send_timer.need_ka()
 
-			if not generator:
-				yield False
-				continue
+            if need_ka:
+                if not generator:
+                    generator = proto.new_keepalive()
+                    need_ka = False
 
-			try:
-				# try to close the generator and raise a StopIteration in one call
-				six.next(generator)
-				six.next(generator)
-				# still running
-				yield True
-			except NetworkError:
-				raise Notify(4,0,'problem with network while trying to send keepalive')
-			except StopIteration:
-				generator = None
-				yield False
+            if not generator:
+                yield False
+                continue
 
-	def __call__ (self):
-		#  True  if we need or are trying
-		#  False if we do not need to send one
-		try:
-			return six.next(self._generator)
-		except StopIteration:
-			raise Notify(4,0,'could not send keepalive')
+            try:
+                # try to close the generator and raise a StopIteration in one call
+                six.next(generator)
+                six.next(generator)
+                # still running
+                yield True
+            except NetworkError:
+                raise Notify(4, 0, 'problem with network while trying to send keepalive')
+            except StopIteration:
+                generator = None
+                yield False
+
+    def __call__(self):
+        #  True  if we need or are trying
+        #  False if we do not need to send one
+        try:
+            return six.next(self._generator)
+        except StopIteration:
+            raise Notify(4, 0, 'could not send keepalive')

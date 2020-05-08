@@ -1,6 +1,5 @@
-
 from exabgp.netlink import NetLinkError
 
 
-class NetLinkRouteError (NetLinkError):
-	pass
+class NetLinkRouteError(NetLinkError):
+    pass

@@ -24,19 +24,19 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
 @LINKSTATE.register()
 class IsisArea(object):
-	TLV = 1027
+    TLV = 1027
 
-	def __init__ (self, areaid):
-		self.areaid = areaid
+    def __init__(self, areaid):
+        self.areaid = areaid
 
-	def __repr__ (self):
-		return "ISIS area id: %s" % (self.areaid)
+    def __repr__(self):
+        return "ISIS area id: %s" % (self.areaid)
 
-	@classmethod
-	def unpack (cls,data,length):
+    @classmethod
+    def unpack(cls, data, length):
 
-		b = BitArray(bytes=data)
-		return cls(areaid=b.hex)
+        b = BitArray(bytes=data)
+        return cls(areaid=b.hex)
 
-	def json (self,compact=None):
-		return '"area-id": "%s"' % str(self.areaid)
+    def json(self, compact=None):
+        return '"area-id": "%s"' % str(self.areaid)

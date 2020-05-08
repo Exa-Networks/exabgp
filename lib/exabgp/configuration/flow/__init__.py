@@ -22,69 +22,63 @@ from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
-class ParseFlow (Section):
-	syntax = \
-		'flow {\n' \
-		'  %s' \
-		'}' % ';\n  '.join(ParseFlowRoute.syntax.split('\n'))
+class ParseFlow(Section):
+    syntax = 'flow {\n' '  %s' '}' % ';\n  '.join(ParseFlowRoute.syntax.split('\n'))
 
-	name = 'flow'
+    name = 'flow'
 
-	known = dict(ParseFlowMatch.known)
-	known.update(ParseFlowThen.known)
-	known.update(ParseFlowScope.known)
+    known = dict(ParseFlowMatch.known)
+    known.update(ParseFlowThen.known)
+    known.update(ParseFlowScope.known)
 
-	action = dict(ParseFlowMatch.action)
-	action.update(ParseFlowThen.action)
-	action.update(ParseFlowScope.action)
+    action = dict(ParseFlowMatch.action)
+    action.update(ParseFlowThen.action)
+    action.update(ParseFlowScope.action)
 
-	def __init__ (self, tokeniser, scope, error, logger):
-		Section.__init__(self,tokeniser,scope,error,logger)
+    def __init__(self, tokeniser, scope, error, logger):
+        Section.__init__(self, tokeniser, scope, error, logger)
 
-	def clear (self):
-		pass
+    def clear(self):
+        pass
 
-	def pre (self):
-		return True
+    def pre(self):
+        return True
 
-	def post (self):
-		self.scope.set('routes',self.scope.get_routes())
-		return True
+    def post(self):
+        self.scope.set('routes', self.scope.get_routes())
+        return True
 
-	def check (self):
-		return True
+    def check(self):
+        return True
 
 
-@ParseFlow.register('route','append-route')
-def route (tokeniser):
-	change = Change(
-		Flow(),
-		Attributes()
-	)
+@ParseFlow.register('route', 'append-route')
+def route(tokeniser):
+    change = Change(Flow(), Attributes())
 
-	while True:
-		command = tokeniser()
+    while True:
+        command = tokeniser()
 
-		if not command:
-			break
+        if not command:
+            break
 
-		action = ParseFlow.action[command]
+        action = ParseFlow.action[command]
 
-		if action == 'nlri-add':
-			for adding in ParseFlow.known[command](tokeniser):
-				change.nlri.add(adding)
-		elif action == 'attribute-add':
-			change.attributes.add(ParseFlow.known[command](tokeniser))
-		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = ParseFlow.known[command](tokeniser)
-			change.nlri.nexthop = nexthop
-			change.attributes.add(attribute)
-		elif action == 'nop':
-			pass  # yes nothing to do !
-		else:
-			raise ValueError('flow: unknown command "%s"' % command)
+        if action == 'nlri-add':
+            for adding in ParseFlow.known[command](tokeniser):
+                change.nlri.add(adding)
+        elif action == 'attribute-add':
+            change.attributes.add(ParseFlow.known[command](tokeniser))
+        elif action == 'nexthop-and-attribute':
+            nexthop, attribute = ParseFlow.known[command](tokeniser)
+            change.nlri.nexthop = nexthop
+            change.attributes.add(attribute)
+        elif action == 'nop':
+            pass  # yes nothing to do !
+        else:
+            raise ValueError('flow: unknown command "%s"' % command)
 
-	if change.nlri.rd is not RouteDistinguisher.NORD:
-		change.nlri.safi = SAFI.flow_vpn
+    if change.nlri.rd is not RouteDistinguisher.NORD:
+        change.nlri.safi = SAFI.flow_vpn
 
-	return [change]
+    return [change]

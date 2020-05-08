@@ -23,24 +23,24 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
 @LINKSTATE.register()
 class IgpExTags(object):
-	TLV = 1154
+    TLV = 1154
 
-	def __init__ (self, igpextags):
-		self.igpextags = igpextags
+    def __init__(self, igpextags):
+        self.igpextags = igpextags
 
-	def __repr__ (self):
-		return "IGP Extended Route Tags: %s" % (self.igpextags)
+    def __repr__(self):
+        return "IGP Extended Route Tags: %s" % (self.igpextags)
 
-	@classmethod
-	def unpack (cls,data,length):
-		tags = []
-		n = length // 8
-		ind = 0
-		for i in list(range(n)):
-			tag = unpack("!Q", data[ind:8*(i+1)])[0]
-			tags.append(tag)
-			ind += 8
-		return cls(igpextags=tags)
+    @classmethod
+    def unpack(cls, data, length):
+        tags = []
+        n = length // 8
+        ind = 0
+        for i in list(range(n)):
+            tag = unpack("!Q", data[ind : 8 * (i + 1)])[0]
+            tags.append(tag)
+            ind += 8
+        return cls(igpextags=tags)
 
-	def json (self,compact=None):
-		return '"igp-extended-route-tags": %s' % self.igpextags
+    def json(self, compact=None):
+        return '"igp-extended-route-tags": %s' % self.igpextags

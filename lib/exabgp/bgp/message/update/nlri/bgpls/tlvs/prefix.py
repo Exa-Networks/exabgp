@@ -27,54 +27,54 @@ from exabgp.bgp.message.notification import Notify
 # ================================================================== InterfaceAddress
 
 
-class Prefix (object):
-	def __init__ (self, iface_addr, packed=None):
-		self.iface_address = iface_addr
-		self._packed = packed
+class Prefix(object):
+    def __init__(self, iface_addr, packed=None):
+        self.iface_address = iface_addr
+        self._packed = packed
 
-	@classmethod
-	def unpack (cls, data):
-		if len(data) == 4:
-			# IPv4 address
-			addr = IP.unpack(data[:4])
-		elif len(data) == 16:
-			# IPv6
-			addr = IP.unpack(data[:16])
-		return cls(iface_addr=addr)
+    @classmethod
+    def unpack(cls, data):
+        if len(data) == 4:
+            # IPv4 address
+            addr = IP.unpack(data[:4])
+        elif len(data) == 16:
+            # IPv6
+            addr = IP.unpack(data[:16])
+        return cls(iface_addr=addr)
 
-	def json (self):
-		content = '"interface-address": "%s"' % self.iface_address
-		return content
+    def json(self):
+        content = '"interface-address": "%s"' % self.iface_address
+        return content
 
-	def __eq__ (self, other):
-		return self.iface_address == other.iface_address
+    def __eq__(self, other):
+        return self.iface_address == other.iface_address
 
-	def __neq__ (self, other):
-		return self.iface_address != other.iface_address
+    def __neq__(self, other):
+        return self.iface_address != other.iface_address
 
-	def __lt__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __lt__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __le__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __le__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __gt__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __gt__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __ge__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __ge__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __str__ (self):
-		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
+    def __str__(self):
+        return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
-	def __repr__ (self):
-		return self.__str__()
+    def __repr__(self):
+        return self.__str__()
 
-	def __len__ (self):
-		return len(self._packed)
+    def __len__(self):
+        return len(self._packed)
 
-	def __hash__ (self):
-		return hash(str(self))
+    def __hash__(self):
+        return hash(str(self))
 
-	def pack (self):
-		return self._packed
+    def pack(self):
+        return self._packed
