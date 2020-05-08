@@ -18,16 +18,16 @@ import itertools
 import subprocess
 
 PROGRAM = os.path.realpath(__file__)
-ROOT    = os.path.abspath(os.path.join(os.path.dirname(PROGRAM),os.path.join('..','..')))
-LIBRARY = os.path.join(ROOT,'lib')
+ROOT = os.path.abspath(os.path.join(os.path.dirname(PROGRAM), os.path.join('..', '..')))
+LIBRARY = os.path.join(ROOT, 'lib')
 
 try:
-	import docopt
+    import docopt
 except ImportError as exc:
-	# PROGRAM = os.path.abspath(os.path.join(os.getcwd(),sys.argv[0]))
-	LIBRARY = os.path.abspath(os.path.join(os.path.dirname(PROGRAM),os.path.join('..','..','lib')))
-	sys.path.append(LIBRARY)
-	from exabgp.vendoring import docopt
+    # PROGRAM = os.path.abspath(os.path.join(os.getcwd(),sys.argv[0]))
+    LIBRARY = os.path.abspath(os.path.join(os.path.dirname(PROGRAM), os.path.join('..', '..', 'lib')))
+    sys.path.append(LIBRARY)
+    from exabgp.vendoring import docopt
 
 
 USAGE = """\
@@ -85,156 +85,158 @@ export exabgp_debug_defensive=true
 OPTIONS = docopt.docopt(USAGE, help=False)
 
 
-class Color (object):
-	NONE     = '\033[0m' + '\033[0m' + ' '   # NONE
-	STARTING = '\033[0m' + '\033[96m' + '~'  # LIGHT BLUE
-	READY    = '\033[0m' + '\033[94m' + '='  # PENDING
-	FAIL     = '\033[0m' + '\033[91m' + '-'  # RED
-	SUCCESS  = '\033[1m' + '\033[92m' + '+'  # GREEN
+class Color(object):
+    NONE = '\033[0m' + '\033[0m' + ' '  # NONE
+    STARTING = '\033[0m' + '\033[96m' + '~'  # LIGHT BLUE
+    READY = '\033[0m' + '\033[94m' + '='  # PENDING
+    FAIL = '\033[0m' + '\033[91m' + '-'  # RED
+    SUCCESS = '\033[1m' + '\033[92m' + '+'  # GREEN
 
 
-class Identifier (object):
-	_listing = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-	_next = 0
-	_nl = 3
+class Identifier(object):
+    _listing = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    _next = 0
+    _nl = 3
 
-	@classmethod
-	def get (cls):
-		cls._next += 1
-		return cls._listing[cls._next-1]
+    @classmethod
+    def get(cls):
+        cls._next += 1
+        return cls._listing[cls._next - 1]
 
-	@classmethod
-	def identifiers (cls):
-		for n in range(0,cls._next):
-			yield cls._listing[n], not (n + 1) % cls._nl
-
-
-class Port (object):
-	_next = int(OPTIONS['--port']) - 1
-
-	@classmethod
-	def get (cls):
-		cls._next += 1
-		return cls._next
+    @classmethod
+    def identifiers(cls):
+        for n in range(0, cls._next):
+            yield cls._listing[n], not (n + 1) % cls._nl
 
 
-class Path (object):
-	ETC      = os.path.join(ROOT,'etc','exabgp')
-	EXABGP   = os.path.join(ROOT,'sbin','exabgp')
-	BGP      = os.path.join(ROOT,'qa','sbin','bgp')
-	CI       = os.path.join(os.path.join(ROOT,'qa','ci'))
-	ALL_CI   = glob.glob(os.path.join(CI,'*.ci'))
-	ALL_CI.sort()
+class Port(object):
+    _next = int(OPTIONS['--port']) - 1
 
-	@classmethod
-	def validate (cls):
-		if not os.path.isdir(cls.ETC):
-			sys.exit('could not find etc folder')
-
-		if not os.path.isdir(cls.CI):
-			sys.exit('could not find tests in the qa/ci folder')
-
-		if not os.path.isfile(cls.EXABGP):
-			sys.exit('could not find exabgp')
-
-		if not os.path.isfile(cls.BGP):
-			sys.exit('could not find the sequence daemon')
+    @classmethod
+    def get(cls):
+        cls._next += 1
+        return cls._next
 
 
-class CI (dict):
-	API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
-	_content = {}
-	_status = {}
-	_tests = []
+class Path(object):
+    ETC = os.path.join(ROOT, 'etc', 'exabgp')
+    EXABGP = os.path.join(ROOT, 'sbin', 'exabgp')
+    BGP = os.path.join(ROOT, 'qa', 'sbin', 'bgp')
+    CI = os.path.join(os.path.join(ROOT, 'qa', 'ci'))
+    ALL_CI = glob.glob(os.path.join(CI, '*.ci'))
+    ALL_CI.sort()
 
-	@classmethod
-	def make (cls):
-		for filename in Path.ALL_CI:
-			index = Identifier.get()
-			name,extension = os.path.splitext(filename.split('/')[-1])
-			with open(filename,'r') as reader:
-				content = reader.readline()
-				cls._content[index] = {
-					'name':   name,
-					'confs':  [os.path.join(Path.ETC,_) for _ in content.split()],
-					'ci':     os.path.join(Path.CI,name) + '.ci',
-					'msg':    os.path.join(Path.CI,name) + '.msg',
-					'port':   Port.get()
-				}
-		cls._tests.extend(sorted(cls._content.keys()))
+    @classmethod
+    def validate(cls):
+        if not os.path.isdir(cls.ETC):
+            sys.exit('could not find etc folder')
 
-	@classmethod
-	def get (cls,k):
-		return cls._content.get(k,None)
+        if not os.path.isdir(cls.CI):
+            sys.exit('could not find tests in the qa/ci folder')
 
-	@classmethod
-	def state (cls,name):
-		if name not in cls._status:
-			cls._status[name] = Color.NONE
-		elif cls._status[name] == Color.NONE:
-			cls._status[name] = Color.STARTING
-		elif cls._status[name] == Color.STARTING:
-			cls._status[name] = Color.READY
+        if not os.path.isfile(cls.EXABGP):
+            sys.exit('could not find exabgp')
 
-	@classmethod
-	def color (cls,name):
-		return cls._status.get(name, Color.NONE)
+        if not os.path.isfile(cls.BGP):
+            sys.exit('could not find the sequence daemon')
 
-	@classmethod
-	def reset (cls,name):
-		cls._status[name] = Color.NONE
 
-	@classmethod
-	def passed (cls,name):
-		cls._status[name] = Color.SUCCESS
+class CI(dict):
+    API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
+    _content = {}
+    _status = {}
+    _tests = []
 
-	@classmethod
-	def failed (cls,name):
-		cls._status[name] = Color.FAIL
+    @classmethod
+    def make(cls):
+        for filename in Path.ALL_CI:
+            index = Identifier.get()
+            name, extension = os.path.splitext(filename.split('/')[-1])
+            with open(filename, 'r') as reader:
+                content = reader.readline()
+                cls._content[index] = {
+                    'name': name,
+                    'confs': [os.path.join(Path.ETC, _) for _ in content.split()],
+                    'ci': os.path.join(Path.CI, name) + '.ci',
+                    'msg': os.path.join(Path.CI, name) + '.msg',
+                    'port': Port.get(),
+                }
+        cls._tests.extend(sorted(cls._content.keys()))
 
-	@classmethod
-	def files (cls,k):
-		test = cls._content.get(k,None)
-		if not test:
-			return []
-		files = [test['msg'],]
-		for f in test['confs']:
-			files.append(f)
-			with open(f) as reader:
-				for line in reader:
-					found = cls.API.match(line)
-					if not found:
-						continue
-					name = found.group(1)
-					if not name.startswith('/'):
-						name = os.path.abspath(os.path.join(Path.ETC,name))
-					if name not in files:
-						files.append(name)
-		return [f for f in files if os.path.isfile(f)]
+    @classmethod
+    def get(cls, k):
+        return cls._content.get(k, None)
 
-	@classmethod
-	def display (cls):
-		sys.stdout.write('\r')
-		for k in cls._tests:
-			sys.stdout.write('%s%s ' % (CI.color(k),k))
-		sys.stdout.write(Color.NONE)
-		sys.stdout.flush()
+    @classmethod
+    def state(cls, name):
+        if name not in cls._status:
+            cls._status[name] = Color.NONE
+        elif cls._status[name] == Color.NONE:
+            cls._status[name] = Color.STARTING
+        elif cls._status[name] == Color.STARTING:
+            cls._status[name] = Color.READY
 
-	@classmethod
-	def listing (cls):
-		sys.stdout.write('\n')
-		sys.stdout.write('The available functional tests are:\n')
-		sys.stdout.write('\n')
-		for index,nl in Identifier.identifiers():
-			name = cls._content[index]['name']
-			sys.stdout.write(' %-2s %s%s' % (index,name,' '*(25 - len(name))))
-			sys.stdout.write('\n' if nl else '')
-		sys.stdout.write('\n')
-		sys.stdout.write('\n')
-		sys.stdout.write('\n')
-		sys.stdout.write('checking\n')
-		sys.stdout.write('\n')
-		sys.stdout.flush()
+    @classmethod
+    def color(cls, name):
+        return cls._status.get(name, Color.NONE)
+
+    @classmethod
+    def reset(cls, name):
+        cls._status[name] = Color.NONE
+
+    @classmethod
+    def passed(cls, name):
+        cls._status[name] = Color.SUCCESS
+
+    @classmethod
+    def failed(cls, name):
+        cls._status[name] = Color.FAIL
+
+    @classmethod
+    def files(cls, k):
+        test = cls._content.get(k, None)
+        if not test:
+            return []
+        files = [
+            test['msg'],
+        ]
+        for f in test['confs']:
+            files.append(f)
+            with open(f) as reader:
+                for line in reader:
+                    found = cls.API.match(line)
+                    if not found:
+                        continue
+                    name = found.group(1)
+                    if not name.startswith('/'):
+                        name = os.path.abspath(os.path.join(Path.ETC, name))
+                    if name not in files:
+                        files.append(name)
+        return [f for f in files if os.path.isfile(f)]
+
+    @classmethod
+    def display(cls):
+        sys.stdout.write('\r')
+        for k in cls._tests:
+            sys.stdout.write('%s%s ' % (CI.color(k), k))
+        sys.stdout.write(Color.NONE)
+        sys.stdout.flush()
+
+    @classmethod
+    def listing(cls):
+        sys.stdout.write('\n')
+        sys.stdout.write('The available functional tests are:\n')
+        sys.stdout.write('\n')
+        for index, nl in Identifier.identifiers():
+            name = cls._content[index]['name']
+            sys.stdout.write(' %-2s %s%s' % (index, name, ' ' * (25 - len(name))))
+            sys.stdout.write('\n' if nl else '')
+        sys.stdout.write('\n')
+        sys.stdout.write('\n')
+        sys.stdout.write('\n')
+        sys.stdout.write('checking\n')
+        sys.stdout.write('\n')
+        sys.stdout.flush()
 
 
 Path.validate()
@@ -242,257 +244,262 @@ CI.make()
 # CI.display()
 
 
-class Alarm (Exception):
-	pass
+class Alarm(Exception):
+    pass
 
 
-def alarm_handler (number, frame):  # pylint: disable=W0613
-	raise Alarm()
+def alarm_handler(number, frame):  # pylint: disable=W0613
+    raise Alarm()
 
 
-class Process (object):
-	_running = {}
-	_result = {}
+class Process(object):
+    _running = {}
+    _result = {}
 
-	@classmethod
-	def add (cls, name, side, process):
-		cls._running.setdefault(name,{})[side] = process
-		for std in ('in','out'):
-			cls._result.setdefault(name,{}).setdefault(side,{})[std] = b''
+    @classmethod
+    def add(cls, name, side, process):
+        cls._running.setdefault(name, {})[side] = process
+        for std in ('in', 'out'):
+            cls._result.setdefault(name, {}).setdefault(side, {})[std] = b''
 
-	@classmethod
-	def success (cls,name):
-		return b'successful' in cls._result[name]['server']['out']
+    @classmethod
+    def success(cls, name):
+        return b'successful' in cls._result[name]['server']['out']
 
-	@classmethod
-	def _ready (cls, side, name):
-		try:
-			signal.alarm(1)
-			polled = cls._running[side][name].poll()
-			signal.alarm(0)
-		except Alarm:
-			return False
-		except (IOError,OSError,ValueError):
-			return True
-		if polled is None:
-			return False
-		return True
+    @classmethod
+    def _ready(cls, side, name):
+        try:
+            signal.alarm(1)
+            polled = cls._running[side][name].poll()
+            signal.alarm(0)
+        except Alarm:
+            return False
+        except (IOError, OSError, ValueError):
+            return True
+        if polled is None:
+            return False
+        return True
 
-	@classmethod
-	def collect (cls, name, side):
-		try:
-			signal.alarm(1)
-			stdout,stderr = cls._running[name][side].communicate()
-			signal.alarm(0)
-			cls._result[name][side]['out'] = stdout
-			cls._result[name][side]['err'] = stderr
-		except ValueError:  # I/O operation on closed file
-			pass
-		except Alarm:
-			pass
+    @classmethod
+    def collect(cls, name, side):
+        try:
+            signal.alarm(1)
+            stdout, stderr = cls._running[name][side].communicate()
+            signal.alarm(0)
+            cls._result[name][side]['out'] = stdout
+            cls._result[name][side]['err'] = stderr
+        except ValueError:  # I/O operation on closed file
+            pass
+        except Alarm:
+            pass
 
-	@classmethod
-	def output (cls, name, side):
-		return cls._result[name][side]['out']
+    @classmethod
+    def output(cls, name, side):
+        return cls._result[name][side]['out']
 
-	def error (cls, name, side):	
-		return cls._result[name][side]['err']
+    def error(cls, name, side):
+        return cls._result[name][side]['err']
 
-	@classmethod
-	def _terminate (cls,name,side):
-		try:
-			cls._running[name][side].send_signal(signal.SIGTERM)
-		except OSError:  # No such process, Errno 3
-			pass
+    @classmethod
+    def _terminate(cls, name, side):
+        try:
+            cls._running[name][side].send_signal(signal.SIGTERM)
+        except OSError:  # No such process, Errno 3
+            pass
 
-	@classmethod
-	def terminate (cls):
-		for name in cls._running:
-			for side in cls._running[name]:
-				if cls.output(name,side) != '' or cls.error(name,side) != '':
-					continue
-				cls._terminate(name,side)
-				cls.collect(name,side)
+    @classmethod
+    def terminate(cls):
+        for name in cls._running:
+            for side in cls._running[name]:
+                if cls.output(name, side) != '' or cls.error(name, side) != '':
+                    continue
+                cls._terminate(name, side)
+                cls.collect(name, side)
 
 
-class Command (dict):
-	@staticmethod
-	def execute(cmd):
-		print('starting: %s' % ' '.join(cmd))
-		popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-		for line in itertools.chain(iter(popen.stdout.readline, ''),iter(popen.stderr.readline, '')):
-			yield line
-		popen.stdout.close()
-		return_code = popen.wait()
-		if return_code:
-			raise subprocess.CalledProcessError(return_code, cmd)
+class Command(dict):
+    @staticmethod
+    def execute(cmd):
+        print('starting: %s' % ' '.join(cmd))
+        popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        for line in itertools.chain(iter(popen.stdout.readline, ''), iter(popen.stderr.readline, '')):
+            yield line
+        popen.stdout.close()
+        return_code = popen.wait()
+        if return_code:
+            raise subprocess.CalledProcessError(return_code, cmd)
 
-	@classmethod
-	def explain (cls,index):
-		print(EXPLAIN % {
-			'client': cls.client(index),
-			'server': cls.server(index),
-		})
-		sys.exit(1)
+    @classmethod
+    def explain(cls, index):
+        print(
+            EXPLAIN % {'client': cls.client(index), 'server': cls.server(index),}
+        )
+        sys.exit(1)
 
-	@staticmethod
-	def client (index):
-		test = CI.get(index)
-		if not test:
-			sys.exit("can not find any test called '%s'" % index)
+    @staticmethod
+    def client(index):
+        test = CI.get(index)
+        if not test:
+            sys.exit("can not find any test called '%s'" % index)
 
-		if os.getuid() and os.getgid() and test['port'] <= 1024:
-			sys.exit('you need to have root privileges to bind to port 79')
+        if os.getuid() and os.getgid() and test['port'] <= 1024:
+            sys.exit('you need to have root privileges to bind to port 79')
 
-		config = {
-			'env': ' \\\n  '.join([
-				'exabgp_tcp_once=true',
-				'exabgp_api_cli=false',
-				'exabgp_debug_rotate=true',
-				'exabgp_debug_configuration=true',
-				'exabgp_tcp_bind=\'\'',
-				'exabgp_tcp_port=%d' % test['port'],
-				'INTERPRETER=%s ' % os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
-			]),
-			'exabgp': Path.EXABGP,
-			'confs': ' \\\n    '.join(test['confs']),
-		}
-		return 'env \\\n  %(env)s \\\n %(exabgp)s -d -p \\\n    %(confs)s' % config
+        config = {
+            'env': ' \\\n  '.join(
+                [
+                    'exabgp_tcp_once=true',
+                    'exabgp_api_cli=false',
+                    'exabgp_debug_rotate=true',
+                    'exabgp_debug_configuration=true',
+                    'exabgp_tcp_bind=\'\'',
+                    'exabgp_tcp_port=%d' % test['port'],
+                    'INTERPRETER=%s ' % os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
+                ]
+            ),
+            'exabgp': Path.EXABGP,
+            'confs': ' \\\n    '.join(test['confs']),
+        }
+        return 'env \\\n  %(env)s \\\n %(exabgp)s -d -p \\\n    %(confs)s' % config
 
-	@staticmethod
-	def server (index):
-		test = CI.get(index)
+    @staticmethod
+    def server(index):
+        test = CI.get(index)
 
-		if not test:
-			sys.exit("can not find any test called '%s'" % index)
+        if not test:
+            sys.exit("can not find any test called '%s'" % index)
 
-		if os.getuid() and os.getgid() and test['port'] <= 1024:
-			sys.exit('you need to have root privileges to bind to port 79')
+        if os.getuid() and os.getgid() and test['port'] <= 1024:
+            sys.exit('you need to have root privileges to bind to port 79')
 
-		config = {
-			'env': ' \\\n  '.join([
-				'exabgp_tcp_port=%d' % test['port'],
-			]),
-			'interpreter': os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
-			'bgp': Path.BGP,
-			'msg': test['msg'],
-		}
+        config = {
+            'env': ' \\\n  '.join(['exabgp_tcp_port=%d' % test['port'],]),
+            'interpreter': os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
+            'bgp': Path.BGP,
+            'msg': test['msg'],
+        }
 
-		return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s \\\n    %(msg)s' % config
+        return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s \\\n    %(msg)s' % config
 
-	@staticmethod
-	def dispatch (running):
-		completed = True
-		names = []
-		for name in running:
-			if CI.get(name) is None:
-				sys.exit("can not find any test called '%s'" % name)
-			CI.state(name)
-			names.append(name)
+    @staticmethod
+    def dispatch(running):
+        completed = True
+        names = []
+        for name in running:
+            if CI.get(name) is None:
+                sys.exit("can not find any test called '%s'" % name)
+            CI.state(name)
+            names.append(name)
 
-		for side in ['server','client']:	
-			for name in running:
-				process = subprocess.Popen([sys.argv[0],side,name,'--port',str(CI.get(name)['port'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-				Process.add(name,side,process)
-				CI.state(name)
-				CI.display()
-				time.sleep(0.02)
+        for side in ['server', 'client']:
+            for name in running:
+                process = subprocess.Popen(
+                    [sys.argv[0], side, name, '--port', str(CI.get(name)['port'])],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                Process.add(name, side, process)
+                CI.state(name)
+                CI.display()
+                time.sleep(0.02)
 
-		exit_time = time.time() + int(OPTIONS['--timeout'])
+        exit_time = time.time() + int(OPTIONS['--timeout'])
 
-		while names and time.time() < exit_time:
-			CI.display()
-			for name in list(names):
-				for side in ('server','client'):
-					if not Process._ready(name,side):
-						continue
+        while names and time.time() < exit_time:
+            CI.display()
+            for name in list(names):
+                for side in ('server', 'client'):
+                    if not Process._ready(name, side):
+                        continue
 
-					Process.collect(name,side)
+                    Process.collect(name, side)
 
-					if side == 'server':
-						names.remove(name)
+                    if side == 'server':
+                        names.remove(name)
 
-					if Process.success(name):
-						CI.passed(name)
-					else:
-						CI.failed(name)
-						completed = False
+                    if Process.success(name):
+                        CI.passed(name)
+                    else:
+                        CI.failed(name)
+                        completed = False
 
-					CI.display()
-			time.sleep(0.2)
+                    CI.display()
+            time.sleep(0.2)
 
-		Process.terminate()
+        Process.terminate()
 
-		for name in names:
-			print('\server stderr\n------\n%s' % str(Process.output(name,'server')).replace('\\n','\n'))
-			print('\client stdout\n------\n%s' % str(Process.output(name,'client')).replace('\\n','\n'))
+        for name in names:
+            print('\server stderr\n------\n%s' % str(Process.output(name, 'server')).replace('\\n', '\n'))
+            print('\client stdout\n------\n%s' % str(Process.output(name, 'client')).replace('\\n', '\n'))
 
-		CI.display()
-		return completed
+        CI.display()
+        return completed
 
 
 if __name__ == '__main__':
 
-	if OPTIONS['help'] or OPTIONS['--help']:
-		print(USAGE)
-		sys.exit(0)
+    if OPTIONS['help'] or OPTIONS['--help']:
+        print(USAGE)
+        sys.exit(0)
 
-	if OPTIONS['listing']:
-		CI.listing()
-		sys.exit(0)
+    if OPTIONS['listing']:
+        CI.listing()
+        sys.exit(0)
 
-	if OPTIONS['explain']:
-		Command.explain(OPTIONS['<test>'])
-		sys.exit(0)
+    if OPTIONS['explain']:
+        Command.explain(OPTIONS['<test>'])
+        sys.exit(0)
 
-	if OPTIONS['edit']:
-		files = CI.files(OPTIONS['<test>'])
-		if not files:
-			sys.exit('no such test')
-		editor = os.environ.get('EDITOR','vi')
-		os.system('%s %s' % (editor,' '.join(files)))
-		sys.exit(0)
+    if OPTIONS['edit']:
+        files = CI.files(OPTIONS['<test>'])
+        if not files:
+            sys.exit('no such test')
+        editor = os.environ.get('EDITOR', 'vi')
+        os.system('%s %s' % (editor, ' '.join(files)))
+        sys.exit(0)
 
-	if OPTIONS['decode']:
-		test = CI.get(OPTIONS['<test>'])
-		command = '%s -d %s --decode "%s"' % (Path.EXABGP,test['confs'][0],OPTIONS['<payload>'])
-		print('> %s' % command)
-		os.system(command)
-		sys.exit(0)
+    if OPTIONS['decode']:
+        test = CI.get(OPTIONS['<test>'])
+        command = '%s -d %s --decode "%s"' % (Path.EXABGP, test['confs'][0], OPTIONS['<payload>'])
+        print('> %s' % command)
+        os.system(command)
+        sys.exit(0)
 
-	if OPTIONS['client']:
-		command = Command.client(OPTIONS['<test>'])
-		print('> ' + command)
-		if not OPTIONS['--dry']:
-			sys.exit(os.system(command))
-		sys.exit(0)
+    if OPTIONS['client']:
+        command = Command.client(OPTIONS['<test>'])
+        print('> ' + command)
+        if not OPTIONS['--dry']:
+            sys.exit(os.system(command))
+        sys.exit(0)
 
-	if OPTIONS['server']:
-		command = Command.server(OPTIONS['<test>'])
-		print('> ' + command)
-		if not OPTIONS['--dry']:
-			sys.exit(os.system(command))
-		sys.exit(0)
+    if OPTIONS['server']:
+        command = Command.server(OPTIONS['<test>'])
+        print('> ' + command)
+        if not OPTIONS['--dry']:
+            sys.exit(os.system(command))
+        sys.exit(0)
 
-	if OPTIONS['run']:
-		test = OPTIONS['<test>']
-		to_run = [index for index, _ in Identifier.identifiers()] if test is None else [test, ]
-		chunk = len(to_run) if not int(OPTIONS['--steps']) else int(OPTIONS['--steps'])
-	elif OPTIONS['all']:
-		to_run = [index for index, _ in Identifier.identifiers()]
-		chunk = 1
-	else:
-		print(USAGE)
-		sys.exit(1)
+    if OPTIONS['run']:
+        test = OPTIONS['<test>']
+        to_run = (
+            [index for index, _ in Identifier.identifiers()] if test is None else [test,]
+        )
+        chunk = len(to_run) if not int(OPTIONS['--steps']) else int(OPTIONS['--steps'])
+    elif OPTIONS['all']:
+        to_run = [index for index, _ in Identifier.identifiers()]
+        chunk = 1
+    else:
+        print(USAGE)
+        sys.exit(1)
 
-	CI.listing()
-	success = True
-	while to_run and success:
-		running, to_run = to_run[:chunk], to_run[chunk:]
-		success = Command.dispatch(running)
-	sys.stdout.write('\n')
+    CI.listing()
+    success = True
+    while to_run and success:
+        running, to_run = to_run[:chunk], to_run[chunk:]
+        success = Command.dispatch(running)
+    sys.stdout.write('\n')
 
-	sys.exit(0 if success else 1)
+    sys.exit(0 if success else 1)
 
-	print(USAGE)
-	sys.exit(1)
+    print(USAGE)
+    sys.exit(1)
