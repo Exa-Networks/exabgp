@@ -8,7 +8,7 @@ import sys
 
 
 def data_from_body(body):
-	if sys.version_info[0] < 3:
-		return ''.join(chr(_) for _ in body)
-	# python3
-	return bytes(body)
+    if sys.version_info[0] < 3:
+        return ''.join(chr(_) for _ in body)
+    # python3
+    return bytes(body)

@@ -12,22 +12,19 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from exabgp.vendoring.bitstring import BitArray
 
-class ISO (object):
 
-	def __init__ (self, sysid,
-                  selector=None,
-                  area_id=None,
-                  afi=49):
+class ISO(object):
+    def __init__(self, sysid, selector=None, area_id=None, afi=49):
 
-		self.sysid = sysid
-		self.area_id = area_id
-		self.selector = selector
-		self.afi = afi
+        self.sysid = sysid
+        self.area_id = area_id
+        self.selector = selector
+        self.afi = afi
 
-	@classmethod
-	def unpack_sysid(cls,data):
-		b = BitArray(bytes=data)
-		return b.hex
+    @classmethod
+    def unpack_sysid(cls, data):
+        b = BitArray(bytes=data)
+        return b.hex
 
-	def json(self,compact=None):
-		return self.sysid
+    def json(self, compact=None):
+        return self.sysid

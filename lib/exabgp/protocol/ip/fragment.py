@@ -24,22 +24,26 @@ from exabgp.protocol.resource import BitResource
 # +  Bit 5 - First fragment (FF)
 # +  Bit 4 - Last fragment (LF)
 
-class Fragment (BitResource):
-	NAME = 'fragment'
 
-	NOT      = 0x00
-	DONT     = 0x01
-	IS       = 0x02
-	FIRST    = 0x04
-	LAST     = 0x08
-	# reserved = 0xF0
+class Fragment(BitResource):
+    NAME = 'fragment'
 
-	codes = dict ((k.lower().replace('_','-'),v) for (k,v) in {
-		'NOT-A-FRAGMENT': NOT,
-		'DONT-FRAGMENT':  DONT,
-		'IS-FRAGMENT':    IS,
-		'FIRST-FRAGMENT': FIRST,
-		'LAST-FRAGMENT':  LAST,
-	}.items())
+    NOT = 0x00
+    DONT = 0x01
+    IS = 0x02
+    FIRST = 0x04
+    LAST = 0x08
+    # reserved = 0xF0
 
-	names = dict([(r,l) for (l,r) in codes.items()])
+    codes = dict(
+        (k.lower().replace('_', '-'), v)
+        for (k, v) in {
+            'NOT-A-FRAGMENT': NOT,
+            'DONT-FRAGMENT': DONT,
+            'IS-FRAGMENT': IS,
+            'FIRST-FRAGMENT': FIRST,
+            'LAST-FRAGMENT': LAST,
+        }.items()
+    )
+
+    names = dict([(r, l) for (l, r) in codes.items()])

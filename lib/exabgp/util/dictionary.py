@@ -13,6 +13,7 @@ from collections import defaultdict
 # ===================================================================== dictdict
 # an Hardcoded defaultdict with dict as method
 
-class Dictionary (defaultdict):
-	def __init__ (self):
-		self.default_factory = dict
+
+class Dictionary(defaultdict):
+    def __init__(self):
+        self.default_factory = dict

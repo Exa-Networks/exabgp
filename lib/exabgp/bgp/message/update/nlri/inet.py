@@ -26,126 +26,126 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
 
-@NLRI.register(AFI.ipv4,SAFI.unicast)
-@NLRI.register(AFI.ipv6,SAFI.unicast)
-@NLRI.register(AFI.ipv4,SAFI.multicast)
-@NLRI.register(AFI.ipv6,SAFI.multicast)
-class INET (NLRI):
-	__slots__ = ['path_info','cidr','nexthop','labels','rd']
 
-	def __init__ (self, afi, safi, action=OUT.UNSET):
-		NLRI.__init__(self,afi,safi,action)
-		self.path_info = PathInfo.NOPATH
-		self.cidr = CIDR.NOCIDR
-		self.nexthop = NoNextHop
+@NLRI.register(AFI.ipv4, SAFI.unicast)
+@NLRI.register(AFI.ipv6, SAFI.unicast)
+@NLRI.register(AFI.ipv4, SAFI.multicast)
+@NLRI.register(AFI.ipv6, SAFI.multicast)
+class INET(NLRI):
+    __slots__ = ['path_info', 'cidr', 'nexthop', 'labels', 'rd']
 
-	def __len__ (self):
-		return len(self.cidr) + len(self.path_info)
+    def __init__(self, afi, safi, action=OUT.UNSET):
+        NLRI.__init__(self, afi, safi, action)
+        self.path_info = PathInfo.NOPATH
+        self.cidr = CIDR.NOCIDR
+        self.nexthop = NoNextHop
 
-	def __str__ (self):
-		return self.extensive()
+    def __len__(self):
+        return len(self.cidr) + len(self.path_info)
 
-	def __repr__ (self):
-		return self.extensive()
+    def __str__(self):
+        return self.extensive()
 
-	def feedback (self, action):
-		if self.nexthop is None and action == OUT.ANNOUNCE:
-			return 'inet nlri next-hop missing'
-		return ''
+    def __repr__(self):
+        return self.extensive()
 
-	def pack_nlri (self, negotiated=None):
-		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''
-		return addpath + self.cidr.pack_nlri()
+    def feedback(self, action):
+        if self.nexthop is None and action == OUT.ANNOUNCE:
+            return 'inet nlri next-hop missing'
+        return ''
 
-	def index (self):
-		addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
-		return self._index() + addpath + self.cidr.pack_nlri()
+    def pack_nlri(self, negotiated=None):
+        addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
+        return addpath + self.cidr.pack_nlri()
 
-	def prefix (self):
-		return "%s%s" % (self.cidr.prefix(),str(self.path_info))
+    def index(self):
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
+        return self._index() + addpath + self.cidr.pack_nlri()
 
-	def extensive (self):
-		return "%s%s" % (self.prefix(),'' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)
+    def prefix(self):
+        return "%s%s" % (self.cidr.prefix(), str(self.path_info))
 
-	def _internal (self, announced=True):
-		return [self.path_info.json()]
+    def extensive(self):
+        return "%s%s" % (self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)
 
-	# The announced feature is not used by ExaBGP, is it by BAGPIPE ?
+    def _internal(self, announced=True):
+        return [self.path_info.json()]
 
-	def json (self, announced=True, compact=False):
-		internal = ", ".join([_ for _ in self._internal(announced) if _])
-		if internal:
-			return '{ "nlri": "%s", %s }' % (self.cidr.prefix(),internal)
-		if compact:
-			return '"%s"' % self.cidr.prefix()
-		return '{ "nlri": "%s" }' % (self.cidr.prefix())
+    # The announced feature is not used by ExaBGP, is it by BAGPIPE ?
 
-	@classmethod
-	def _pathinfo (cls, data, addpath):
-		if addpath:
-			return PathInfo(data[:4]),data[4:]
-		return PathInfo.NOPATH, data
+    def json(self, announced=True, compact=False):
+        internal = ", ".join([_ for _ in self._internal(announced) if _])
+        if internal:
+            return '{ "nlri": "%s", %s }' % (self.cidr.prefix(), internal)
+        if compact:
+            return '"%s"' % self.cidr.prefix()
+        return '{ "nlri": "%s" }' % (self.cidr.prefix())
 
-	# @classmethod
-	# def unpack_inet (cls, afi, safi, data, action, addpath):
-	# 	pathinfo, data = cls._pathinfo(data,addpath)
-	# 	nlri,data = cls.unpack_range(data,action,addpath)
-	# 	nlri.path_info = pathinfo
-	# 	return nlri,data
+    @classmethod
+    def _pathinfo(cls, data, addpath):
+        if addpath:
+            return PathInfo(data[:4]), data[4:]
+        return PathInfo.NOPATH, data
 
-	@classmethod
-	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
-		nlri = cls(afi,safi,action)
+    # @classmethod
+    # def unpack_inet (cls, afi, safi, data, action, addpath):
+    # 	pathinfo, data = cls._pathinfo(data,addpath)
+    # 	nlri,data = cls.unpack_range(data,action,addpath)
+    # 	nlri.path_info = pathinfo
+    # 	return nlri,data
 
-		if addpath:
-			nlri.path_info = PathInfo(bgp[:4])
-			bgp = bgp[4:]
+    @classmethod
+    def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        nlri = cls(afi, safi, action)
 
-		mask = ordinal(bgp[0])
-		bgp = bgp[1:]
+        if addpath:
+            nlri.path_info = PathInfo(bgp[:4])
+            bgp = bgp[4:]
 
-		_, rd_size = Family.size.get((afi, safi), (0, 0))
-		rd_mask = rd_size * 8
+        mask = ordinal(bgp[0])
+        bgp = bgp[1:]
 
-		if safi.has_label():
-			labels = []
-			while mask - rd_mask >= 24:
-				label = int(unpack('!L',character(0) + bgp[:3])[0])
-				bgp = bgp[3:]
-				mask -= 24  	# 3 bytes
-				# The last 4 bits are the bottom of Stack
-				# The last bit is set for the last label
-				labels.append(label >> 4)
-				# This is a route withdrawal
-				if label == 0x800000 and action == IN.WITHDRAWN:
-					break
-				# This is a next-hop
-				if label == 0x000000:
-					break
-				if label & 1:
-					break
-			nlri.labels = Labels(labels)
+        _, rd_size = Family.size.get((afi, safi), (0, 0))
+        rd_mask = rd_size * 8
 
+        if safi.has_label():
+            labels = []
+            while mask - rd_mask >= 24:
+                label = int(unpack('!L', character(0) + bgp[:3])[0])
+                bgp = bgp[3:]
+                mask -= 24  # 3 bytes
+                # The last 4 bits are the bottom of Stack
+                # The last bit is set for the last label
+                labels.append(label >> 4)
+                # This is a route withdrawal
+                if label == 0x800000 and action == IN.WITHDRAWN:
+                    break
+                # This is a next-hop
+                if label == 0x000000:
+                    break
+                if label & 1:
+                    break
+            nlri.labels = Labels(labels)
 
-		if rd_size:
-			mask -= rd_mask  # the route distinguisher
-			rd = bgp[:rd_size]
-			bgp = bgp[rd_size:]
-			nlri.rd = RouteDistinguisher(rd)
+        if rd_size:
+            mask -= rd_mask  # the route distinguisher
+            rd = bgp[:rd_size]
+            bgp = bgp[rd_size:]
+            nlri.rd = RouteDistinguisher(rd)
 
-		if mask < 0:
-			raise Notify(3,10,'invalid length in NLRI prefix')
+        if mask < 0:
+            raise Notify(3, 10, 'invalid length in NLRI prefix')
 
-		if not bgp and mask:
-			raise Notify(3,10,'not enough data for the mask provided to decode the NLRI')
+        if not bgp and mask:
+            raise Notify(3, 10, 'not enough data for the mask provided to decode the NLRI')
 
-		size = CIDR.size(mask)
+        size = CIDR.size(mask)
 
-		if len(bgp) < size:
-			raise Notify(3,10,'could not decode route with AFI %d and SAFI %d' % (afi,safi))
+        if len(bgp) < size:
+            raise Notify(3, 10, 'could not decode route with AFI %d and SAFI %d' % (afi, safi))
 
-		network,bgp = bgp[:size],bgp[size:]
+        network, bgp = bgp[:size], bgp[size:]
 
-		nlri.cidr = CIDR(network + padding(IP.length(afi)-size),mask)
+        nlri.cidr = CIDR(network + padding(IP.length(afi) - size), mask)
 
-		return nlri,bgp
+        return nlri, bgp

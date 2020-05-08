@@ -22,23 +22,24 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #  Units are in Bytes not Bits.
 #  ----------------------------
 
+
 @LINKSTATE.register()
 class RsvpBw(object):
-	TLV = 1090
+    TLV = 1090
 
-	def __init__ (self, rsvpbw):
-		self.rsvpbw = rsvpbw
+    def __init__(self, rsvpbw):
+        self.rsvpbw = rsvpbw
 
-	def __repr__ (self):
-		return "Maximum reservable link bandwidth: %s" % (self.rsvpbw)
+    def __repr__(self):
+        return "Maximum reservable link bandwidth: %s" % (self.rsvpbw)
 
-	@classmethod
-	def unpack (cls,data,length):
-		if len(data) != 4:
-			raise Notify(3,5, "Incorrect maximum reservable link bw metric")
-		else:
-			rsvpbw = unpack('!f',data)[0]
-			return cls(rsvpbw=rsvpbw)
+    @classmethod
+    def unpack(cls, data, length):
+        if len(data) != 4:
+            raise Notify(3, 5, "Incorrect maximum reservable link bw metric")
+        else:
+            rsvpbw = unpack('!f', data)[0]
+            return cls(rsvpbw=rsvpbw)
 
-	def json (self,compact=None):
-		return '"maximum-reservable-link-bandwidth": %s' % str(self.rsvpbw)
+    def json(self, compact=None):
+        return '"maximum-reservable-link-bandwidth": %s' % str(self.rsvpbw)

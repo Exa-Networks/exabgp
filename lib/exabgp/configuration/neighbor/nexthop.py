@@ -14,63 +14,65 @@ from exabgp.bgp.message.update.nlri.flow import NLRI
 from exabgp.configuration.core import Section
 from exabgp.configuration.neighbor.family import ParseFamily
 
-class ParseNextHop (Section):
-	syntax = \
-		'nexthop {\n' \
-		'   ipv4 unicast ipv6;\n' \
-		'   ipv4 multicast ipv6;\n' \
-		'   ipv4 mpls-vpn ipv6;\n' \
-		'   ipv4 nlri-mpls ipv6;\n' \
-		'   ipv6 unicast ipv4;\n' \
-		'   ipv6 multicast ipv4;\n' \
-		'   ipv6 mpls-vpn ipv4;\n' \
-		'   ipv6 nlri-mpls ipv4;\n' \
-		'}'
 
-	convert = ParseFamily.convert
+class ParseNextHop(Section):
+    syntax = (
+        'nexthop {\n'
+        '   ipv4 unicast ipv6;\n'
+        '   ipv4 multicast ipv6;\n'
+        '   ipv4 mpls-vpn ipv6;\n'
+        '   ipv4 nlri-mpls ipv6;\n'
+        '   ipv6 unicast ipv4;\n'
+        '   ipv6 multicast ipv4;\n'
+        '   ipv6 mpls-vpn ipv4;\n'
+        '   ipv6 nlri-mpls ipv4;\n'
+        '}'
+    )
 
-	action = {
-		'ipv4':  'append-command',
-		'ipv6':  'append-command',
-	}
+    convert = ParseFamily.convert
 
-	name = 'nexthop'
+    action = {
+        'ipv4': 'append-command',
+        'ipv6': 'append-command',
+    }
 
-	def __init__ (self, tokeniser, scope, error, logger):
-		Section.__init__(self, tokeniser, scope, error, logger)
-		self.known = {
-			'ipv4':  self.ipv4,
-			'ipv6':  self.ipv6,
-		}
-		self._all = ''
-		self._seen = []
+    name = 'nexthop'
 
-	def clear (self):
-		self._all = False
-		self._seen = []
+    def __init__(self, tokeniser, scope, error, logger):
+        Section.__init__(self, tokeniser, scope, error, logger)
+        self.known = {
+            'ipv4': self.ipv4,
+            'ipv6': self.ipv6,
+        }
+        self._all = ''
+        self._seen = []
 
-	def pre (self):
-		self.clear()
-		return True
+    def clear(self):
+        self._all = False
+        self._seen = []
 
-	def post (self):
-		return True
+    def pre(self):
+        self.clear()
+        return True
 
-	def _family (self, tokeniser, afi, safis, nhafis):
-		safi = tokeniser().lower()
-		if safi not in safis:
-			raise ValueError('invalid afi/safi pair %s/%s' % (afi, safi))
+    def post(self):
+        return True
 
-		nhafi = tokeniser().lower()
-		if nhafi not in nhafis:
-			raise ValueError('invalid nexthop afi %s' % nhafi)
+    def _family(self, tokeniser, afi, safis, nhafis):
+        safi = tokeniser().lower()
+        if safi not in safis:
+            raise ValueError('invalid afi/safi pair %s/%s' % (afi, safi))
 
-		seen = (AFI.fromString(afi), SAFI.fromString(safi), AFI.fromString(nhafi))
-		self._seen.append(seen)
-		return seen
+        nhafi = tokeniser().lower()
+        if nhafi not in nhafis:
+            raise ValueError('invalid nexthop afi %s' % nhafi)
 
-	def ipv4 (self, tokeniser):
-		return self._family(tokeniser, 'ipv4', ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'],['ipv6',])
+        seen = (AFI.fromString(afi), SAFI.fromString(safi), AFI.fromString(nhafi))
+        self._seen.append(seen)
+        return seen
 
-	def ipv6 (self, tokeniser):
-		return self._family(tokeniser, 'ipv6', ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'], ['ipv4',])
+    def ipv4(self, tokeniser):
+        return self._family(tokeniser, 'ipv4', ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'], ['ipv6',])
+
+    def ipv6(self, tokeniser):
+        return self._family(tokeniser, 'ipv6', ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'], ['ipv4',])

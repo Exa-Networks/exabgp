@@ -19,24 +19,24 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     Source Router Identifier (Source Router-ID) TLV
 
+
 @LINKSTATE.register()
 class SrSourceRouterID(object):
-	TLV = 1171
+    TLV = 1171
 
-	def __init__ (self, srid):
-		self.srid = srid
+    def __init__(self, srid):
+        self.srid = srid
 
-	def __repr__ (self):
-		return "Source router identifier: %s" % (self.srid)
+    def __repr__(self):
+        return "Source router identifier: %s" % (self.srid)
 
-	@classmethod
-	def unpack (cls,data,length):
-		if len(data) == 4:
-			srid = IP.unpack(data[:4])
-		elif len(data) == 16:
-			srid = IP.unpack(data[:16])
-		return cls(srid=srid)
+    @classmethod
+    def unpack(cls, data, length):
+        if len(data) == 4:
+            srid = IP.unpack(data[:4])
+        elif len(data) == 16:
+            srid = IP.unpack(data[:16])
+        return cls(srid=srid)
 
-	def json (self,compact=None):
-		return '"sr-source-router-id": "%s"' % str(self.srid)
-
+    def json(self, compact=None):
+        return '"sr-source-router-id": "%s"' % str(self.srid)

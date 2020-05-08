@@ -28,92 +28,77 @@ from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import label
 
 
-class AnnounceLabel (AnnouncePath):
-	# put next-hop first as it is a requirement atm
-	definition = [
-		'label <15 bits number>',
-	] + AnnouncePath.definition
+class AnnounceLabel(AnnouncePath):
+    # put next-hop first as it is a requirement atm
+    definition = ['label <15 bits number>',] + AnnouncePath.definition
 
-	syntax = \
-		'<safi> <ip>/<netmask> { ' \
-		'\n   ' + ' ;\n   '.join(definition) + '\n}'
+    syntax = '<safi> <ip>/<netmask> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
 
-	known = dict(AnnouncePath.known,**{
-		'label':               label,
-	})
+    known = dict(AnnouncePath.known, **{'label': label,})
 
-	action = dict(AnnouncePath.action,**{
-		'label':               'nlri-set',
-	})
+    action = dict(AnnouncePath.action, **{'label': 'nlri-set',})
 
-	assign = dict(AnnouncePath.assign,**{
-		'label':               'labels',
-	})
+    assign = dict(AnnouncePath.assign, **{'label': 'labels',})
 
-	name = 'vpn'
-	afi = None
+    name = 'vpn'
+    afi = None
 
-	def __init__ (self, tokeniser, scope, error, logger):
-		AnnouncePath.__init__(self,tokeniser,scope,error,logger)
+    def __init__(self, tokeniser, scope, error, logger):
+        AnnouncePath.__init__(self, tokeniser, scope, error, logger)
 
-	def clear (self):
-		return True
+    def clear(self):
+        return True
 
-	@staticmethod
-	def check (change,afi):
-		if not AnnouncePath.check(change,afi):
-			return False
+    @staticmethod
+    def check(change, afi):
+        if not AnnouncePath.check(change, afi):
+            return False
 
-		if change.nlri.action == OUT.ANNOUNCE \
-			and change.nlri.has_label() \
-			and change.nlri.labels is Labels.NOLABEL:
-			return False
+        if change.nlri.action == OUT.ANNOUNCE and change.nlri.has_label() and change.nlri.labels is Labels.NOLABEL:
+            return False
 
-		return True
+        return True
 
 
-def ip_label (tokeniser,afi,safi):
-	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
-	ipmask = prefix(tokeniser)
+def ip_label(tokeniser, afi, safi):
+    action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+    ipmask = prefix(tokeniser)
 
-	nlri = Label(afi, safi, action)
-	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
+    nlri = Label(afi, safi, action)
+    nlri.cidr = CIDR(ipmask.pack(), ipmask.mask)
 
-	change = Change(
-		nlri,
-		Attributes()
-	)
+    change = Change(nlri, Attributes())
 
-	while True:
-		command = tokeniser()
+    while True:
+        command = tokeniser()
 
-		if not command:
-			break
+        if not command:
+            break
 
-		action = AnnounceLabel.action.get(command,'')
+        action = AnnounceLabel.action.get(command, '')
 
-		if action == 'attribute-add':
-			change.attributes.add(AnnounceLabel.known[command](tokeniser))
-		elif action == 'nlri-set':
-			change.nlri.assign(AnnounceLabel.assign[command],AnnounceLabel.known[command](tokeniser))
-		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = AnnounceLabel.known[command](tokeniser)
-			change.nlri.nexthop = nexthop
-			change.attributes.add(attribute)
-		else:
-			raise ValueError('unknown command "%s"' % command)
+        if action == 'attribute-add':
+            change.attributes.add(AnnounceLabel.known[command](tokeniser))
+        elif action == 'nlri-set':
+            change.nlri.assign(AnnounceLabel.assign[command], AnnounceLabel.known[command](tokeniser))
+        elif action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceLabel.known[command](tokeniser)
+            change.nlri.nexthop = nexthop
+            change.attributes.add(attribute)
+        else:
+            raise ValueError('unknown command "%s"' % command)
 
-	if not AnnounceLabel.check(change,afi):
-		raise ValueError('invalid announcement (missing next-hop or label ?)')
+    if not AnnounceLabel.check(change, afi):
+        raise ValueError('invalid announcement (missing next-hop or label ?)')
 
-	return [change]
+    return [change]
 
 
-@ParseAnnounce.register('nlri-mpls','extend-name','ipv4')
-def nlri_mpls_v4 (tokeniser):
-	return ip_label(tokeniser,AFI.ipv4,SAFI.nlri_mpls)
+@ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv4')
+def nlri_mpls_v4(tokeniser):
+    return ip_label(tokeniser, AFI.ipv4, SAFI.nlri_mpls)
 
 
-@ParseAnnounce.register('nlri-mpls','extend-name','ipv6')
-def nlri_mpls_v6 (tokeniser):
-	return ip_label(tokeniser,AFI.ipv6,SAFI.nlri_mpls)
+@ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv6')
+def nlri_mpls_v6(tokeniser):
+    return ip_label(tokeniser, AFI.ipv6, SAFI.nlri_mpls)

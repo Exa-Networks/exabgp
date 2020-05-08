@@ -13,6 +13,6 @@ from exabgp.util import character
 #
 
 
-class Version (int):
-	def pack (self):
-		return character(self)
+class Version(int):
+    def pack(self):
+        return character(self)

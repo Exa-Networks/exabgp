@@ -28,92 +28,77 @@ from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import route_distinguisher
 
 
-class AnnounceVPN (ParseAnnounce):
-	# put next-hop first as it is a requirement atm
-	definition = [
-		'  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n',
-	] + AnnounceLabel.definition
+class AnnounceVPN(ParseAnnounce):
+    # put next-hop first as it is a requirement atm
+    definition = ['  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n',] + AnnounceLabel.definition
 
-	syntax = \
-		'<safi> <ip>/<netmask> { ' \
-		'\n   ' + ' ;\n   '.join(definition) + '\n}'
+    syntax = '<safi> <ip>/<netmask> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
 
-	known = dict(AnnounceLabel.known,**{
-		'rd':                   route_distinguisher,
-	})
+    known = dict(AnnounceLabel.known, **{'rd': route_distinguisher,})
 
-	action = dict(AnnounceLabel.action,**{
-		'rd':                  'nlri-set',
-	})
+    action = dict(AnnounceLabel.action, **{'rd': 'nlri-set',})
 
-	assign = dict(AnnounceLabel.assign,**{
-		'rd':                  'rd',
-	})
+    assign = dict(AnnounceLabel.assign, **{'rd': 'rd',})
 
-	name = 'vpn'
-	afi = None
+    name = 'vpn'
+    afi = None
 
-	def __init__ (self, tokeniser, scope, error, logger):
-		ParseAnnounce.__init__(self,tokeniser,scope,error,logger)
+    def __init__(self, tokeniser, scope, error, logger):
+        ParseAnnounce.__init__(self, tokeniser, scope, error, logger)
 
-	def clear (self):
-		return True
+    def clear(self):
+        return True
 
-	@staticmethod
-	def check (change,afi):
-		if not AnnounceLabel.check(change,afi):
-			return False
+    @staticmethod
+    def check(change, afi):
+        if not AnnounceLabel.check(change, afi):
+            return False
 
-		if change.nlri.action == OUT.ANNOUNCE \
-			and change.nlri.has_rd() \
-			and change.nlri.rd is RouteDistinguisher.NORD:
-			return False
+        if change.nlri.action == OUT.ANNOUNCE and change.nlri.has_rd() and change.nlri.rd is RouteDistinguisher.NORD:
+            return False
 
-		return True
+        return True
 
 
-def ip_vpn (tokeniser,afi,safi):
-	action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
-	ipmask = prefix(tokeniser)
+def ip_vpn(tokeniser, afi, safi):
+    action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+    ipmask = prefix(tokeniser)
 
-	nlri = IPVPN(afi, safi, action)
-	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
+    nlri = IPVPN(afi, safi, action)
+    nlri.cidr = CIDR(ipmask.pack(), ipmask.mask)
 
-	change = Change(
-		nlri,
-		Attributes()
-	)
+    change = Change(nlri, Attributes())
 
-	while True:
-		command = tokeniser()
+    while True:
+        command = tokeniser()
 
-		if not command:
-			break
+        if not command:
+            break
 
-		action = AnnounceVPN.action.get(command,'')
+        action = AnnounceVPN.action.get(command, '')
 
-		if action == 'attribute-add':
-			change.attributes.add(AnnounceVPN.known[command](tokeniser))
-		elif action == 'nlri-set':
-			change.nlri.assign(AnnounceVPN.assign[command],AnnounceVPN.known[command](tokeniser))
-		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = AnnounceVPN.known[command](tokeniser)
-			change.nlri.nexthop = nexthop
-			change.attributes.add(attribute)
-		else:
-			raise ValueError('unknown command "%s"' % command)
+        if action == 'attribute-add':
+            change.attributes.add(AnnounceVPN.known[command](tokeniser))
+        elif action == 'nlri-set':
+            change.nlri.assign(AnnounceVPN.assign[command], AnnounceVPN.known[command](tokeniser))
+        elif action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceVPN.known[command](tokeniser)
+            change.nlri.nexthop = nexthop
+            change.attributes.add(attribute)
+        else:
+            raise ValueError('unknown command "%s"' % command)
 
-	if not AnnounceVPN.check(change,afi):
-		raise ValueError('invalid announcement (missing next-hop, label or rd ?)')
+    if not AnnounceVPN.check(change, afi):
+        raise ValueError('invalid announcement (missing next-hop, label or rd ?)')
 
-	return [change]
+    return [change]
 
 
-@ParseAnnounce.register('mpls-vpn','extend-name','ipv4')
-def mpls_vpn_v4 (tokeniser):
-	return ip_vpn(tokeniser,AFI.ipv4,SAFI.unicast)
+@ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv4')
+def mpls_vpn_v4(tokeniser):
+    return ip_vpn(tokeniser, AFI.ipv4, SAFI.unicast)
 
 
-@ParseAnnounce.register('mpls-vpn','extend-name','ipv6')
-def mpls_vpn_v6 (tokeniser):
-	return ip_vpn(tokeniser,AFI.ipv6,SAFI.unicast)
+@ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv6')
+def mpls_vpn_v6(tokeniser):
+    return ip_vpn(tokeniser, AFI.ipv6, SAFI.unicast)

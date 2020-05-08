@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # import socket
 from struct import calcsize
+
 # from collections import namedtuple
 
 from exabgp.netlink.message import Message
@@ -29,23 +30,23 @@ from exabgp.netlink.message import Message
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-class TC (Message):
-	class Header (object):
-		PACK = "BxxxiIII"
-		LEN = calcsize(PACK)
+class TC(Message):
+    class Header(object):
+        PACK = "BxxxiIII"
+        LEN = calcsize(PACK)
 
-	class Command (object):
-		RTM_NEWQDISC = 36
-		RTM_DELQDISC = 37
-		RTM_GETQDISC = 38
+    class Command(object):
+        RTM_NEWQDISC = 36
+        RTM_DELQDISC = 37
+        RTM_GETQDISC = 38
 
-	class Type (object):
-		class Attribute (object):
-			TCA_UNSPEC  = 0x00
-			TCA_KIND    = 0x01
-			TCA_OPTIONS = 0x02
-			TCA_STATS   = 0x03
-			TCA_XSTATS  = 0x04
-			TCA_RATE    = 0x05
-			TCA_FCNT    = 0x06
-			TCA_STATS2  = 0x07
+    class Type(object):
+        class Attribute(object):
+            TCA_UNSPEC = 0x00
+            TCA_KIND = 0x01
+            TCA_OPTIONS = 0x02
+            TCA_STATS = 0x03
+            TCA_XSTATS = 0x04
+            TCA_RATE = 0x05
+            TCA_FCNT = 0x06
+            TCA_STATS2 = 0x07

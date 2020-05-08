@@ -13,19 +13,19 @@ from exabgp.configuration.neighbor import ParseNeighbor
 from exabgp.configuration.neighbor.api import ParseAPI
 
 
-class ParseTemplate (Section):
-	syntax = ''
+class ParseTemplate(Section):
+    syntax = ''
 
-	name = 'template'
+    name = 'template'
 
-	def __init__ (self, tokeniser, scope, error, logger):
-		Section.__init__(self,tokeniser,scope,error,logger)
+    def __init__(self, tokeniser, scope, error, logger):
+        Section.__init__(self, tokeniser, scope, error, logger)
 
-	def clear (self):
-		self._names = []
+    def clear(self):
+        self._names = []
 
-	def pre (self):
-		return True
+    def pre(self):
+        return True
 
-	def post (self):
-		return True
+    def post(self):
+        return True
