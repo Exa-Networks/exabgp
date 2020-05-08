@@ -10,104 +10,109 @@ import errno
 
 
 class RecordHandler(asyncore.dispatcher_with_send):
-	raw = True
+    raw = True
 
-	def setup (self, name, ip, port):
-		now = time.strftime("%a-%d-%b-%Y-%H:%M:%S", time.gmtime())
-		self.record = open("%s-%s" % (name,now),'w')
-		if not self.raw:
-			self.record.write('Connection from %s:%d\n' % (ip,port))
+    def setup(self, name, ip, port):
+        now = time.strftime("%a-%d-%b-%Y-%H:%M:%S", time.gmtime())
+        self.record = open("%s-%s" % (name, now), 'w')
+        if not self.raw:
+            self.record.write('Connection from %s:%d\n' % (ip, port))
 
-	def handle_read (self):
-		try:
-			_read_size = 10240
-			count = 0
-			space = False
-			while True:
-				try:
-					data = self.recv(_read_size)
-				except socket.error,exc:
-					if exc.errno in (errno.EWOULDBLOCK,errno.EAGAIN):
-						continue
-					raise exc
-				if not data:
-					print "connection closed"
-					break
+    def handle_read(self):
+        try:
+            _read_size = 10240
+            count = 0
+            space = False
+            while True:
+                try:
+                    data = self.recv(_read_size)
+                except socket.error, exc:
+                    if exc.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
+                        continue
+                    raise exc
+                if not data:
+                    print "connection closed"
+                    break
 
-				if len(data) == _read_size:
-					print '.',
-				else:
-					print "%d" % len(data),
-				sys.stdout.flush()
+                if len(data) == _read_size:
+                    print '.',
+                else:
+                    print "%d" % len(data),
+                sys.stdout.flush()
 
-				if self.raw:
-					self.record.write(data)
-					self.record.flush()
-					if not data:
-						break
-					continue
+                if self.raw:
+                    self.record.write(data)
+                    self.record.flush()
+                    if not data:
+                        break
+                    continue
 
-				for byte in data:
-					self.record.write('%02X' % ord(byte))
-					count = (count + 1) % 32
-					if not count:
-						self.record.write('\n')
-						space = False
-						continue
-					if space:
-						self.record.write(' ')
-					space = not space
-				self.record.flush()
+                for byte in data:
+                    self.record.write('%02X' % ord(byte))
+                    count = (count + 1) % 32
+                    if not count:
+                        self.record.write('\n')
+                        space = False
+                        continue
+                    if space:
+                        self.record.write(' ')
+                    space = not space
+                self.record.flush()
 
-			self.record.close()
-		except KeyboardInterrupt:
-			self.record.close()
-			self.close()
+            self.record.close()
+        except KeyboardInterrupt:
+            self.record.close()
+            self.close()
+
 
 class RecordServer(asyncore.dispatcher):
-	def __init__ (self, host, port, name):
-		asyncore.dispatcher.__init__(self)
-		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.set_reuse_addr()
-		self.bind((host, port))
-		self.listen(5)
-		self.name = name
+    def __init__(self, host, port, name):
+        asyncore.dispatcher.__init__(self)
+        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.set_reuse_addr()
+        self.bind((host, port))
+        self.listen(5)
+        self.name = name
 
-	def handle_accept (self):
-		pair = self.accept()
-		if pair is not None:
-			sock, (ip,port) = pair
-			print "new BGP connection from %s:%d" % (ip, port)
-			handler = RecordHandler(sock).setup(self.name,ip,port)
+    def handle_accept(self):
+        pair = self.accept()
+        if pair is not None:
+            sock, (ip, port) = pair
+            print "new BGP connection from %s:%d" % (ip, port)
+            handler = RecordHandler(sock).setup(self.name, ip, port)
 
-def drop ():
-	uid = os.getuid()
-	gid = os.getgid()
 
-	if uid and gid:
-		return
+def drop():
+    uid = os.getuid()
+    gid = os.getgid()
 
-	for name in ['nobody',]:
-		try:
-			user = pwd.getpwnam(name)
-			nuid = int(user.pw_uid)
-			ngid = int(user.pw_uid)
-		except KeyError:
-			pass
+    if uid and gid:
+        return
 
-	if not gid:
-		os.setgid(ngid)
-	if not uid:
-		os.setuid(nuid)
+    for name in [
+        'nobody',
+    ]:
+        try:
+            user = pwd.getpwnam(name)
+            nuid = int(user.pw_uid)
+            ngid = int(user.pw_uid)
+        except KeyError:
+            pass
+
+    if not gid:
+        os.setgid(ngid)
+    if not uid:
+        os.setuid(nuid)
+
 
 if len(sys.argv) != 4:
-	print sys.argv[0], '<host> <port> <hex file to create>'
-	sys.exit(1)
+    print sys.argv[0], '<host> <port> <hex file to create>'
+    sys.exit(1)
 
 # IP, port, file
 server = RecordServer(sys.argv[1], int(sys.argv[2]), sys.argv[3])
 drop()
 try:
-	asyncore.loop()
-except (KeyboardInterrupt,SystemExit):
-	pass
+    asyncore.loop()
+except (KeyboardInterrupt, SystemExit):
+    pass

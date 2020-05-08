@@ -6,50 +6,52 @@ import pstats
 prg = sys.argv[0]
 
 try:
-	name = sys.argv[1]
+    name = sys.argv[1]
 except IndexError:
-	print "%s <filename> [<number> [<field>]] " % prg
-	print "%s   -^" % (' '*len(prg))
-	sys.exit(1)
+    print "%s <filename> [<number> [<field>]] " % prg
+    print "%s   -^" % (' ' * len(prg))
+    sys.exit(1)
 
 try:
-	number = int(sys.argv[2])
+    number = int(sys.argv[2])
 except ValueError:
-	print "%s <filename> [<number> [<field>]] " % prg
-	print "%s              -^" % (' '*len(prg))
-	sys.exit(1)
+    print "%s <filename> [<number> [<field>]] " % prg
+    print "%s              -^" % (' ' * len(prg))
+    sys.exit(1)
 except IndexError:
-	number = 0
+    number = 0
 
 try:
-	field = sys.argv[3]
+    field = sys.argv[3]
 except IndexError:
-	field = 'time'
+    field = 'time'
 
 options = {
-	'calls'  : 'call count',
-	'cumulative'  : 'cumulative time',
-	'file'  : 'file name',
-	'module'  : 'file name',
-	'pcalls'  : 'primitive call count',
-	'line'  : 'line number',
-	'name'  : 'function name',
-	'nfl'  : 'name/file/line',
-	'stdname'  : 'standard name',
-	'time'  : 'internal time',
+    'calls': 'call count',
+    'cumulative': 'cumulative time',
+    'file': 'file name',
+    'module': 'file name',
+    'pcalls': 'primitive call count',
+    'line': 'line number',
+    'name': 'function name',
+    'nfl': 'name/file/line',
+    'stdname': 'standard name',
+    'time': 'internal time',
 }
 
 if field not in options:
-	print 'invalid sorting field, valid enties are :\n%s' % '\n'.join("  %-10s : %s" % (k,v) for (k,v) in options.iteritems())
-	sys.exit(1)
+    print 'invalid sorting field, valid enties are :\n%s' % '\n'.join(
+        "  %-10s : %s" % (k, v) for (k, v) in options.iteritems()
+    )
+    sys.exit(1)
 
 try:
-	stats = pstats.Stats(name)
+    stats = pstats.Stats(name)
 except IOError:
-	print "can not open the file %s" % name
-	sys.exit(1)
+    print "can not open the file %s" % name
+    sys.exit(1)
 
 if number:
-	print stats.strip_dirs().sort_stats(field).print_stats(number)
+    print stats.strip_dirs().sort_stats(field).print_stats(number)
 else:
-	print stats.print_stats()
+    print stats.print_stats()

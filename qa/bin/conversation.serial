@@ -19,152 +19,162 @@ from os import path
 
 
 class Alarm(Exception):
-	pass
+    pass
 
-def alarm_handler (number, frame):  # pylint: disable=W0613
-	raise Alarm()
 
-def main ():
-	location = path.realpath(__file__)
+def alarm_handler(number, frame):  # pylint: disable=W0613
+    raise Alarm()
 
-	exabgp = path.abspath(path.join(location,'..','..','..','sbin','exabgp'))
-	if not path.isfile(exabgp):
-		print "could not find exabgp"
 
-	etc = path.abspath(path.join(location,'..','..','..','etc','exabgp'))
-	if not path.isdir(etc):
-		sys.exit('could not find etc folder')
+def main():
+    location = path.realpath(__file__)
 
-	conf = path.abspath(path.join(location,'..','..','ci'))
-	if not path.isdir(conf):
-		sys.exit('could not find conf folder')
+    exabgp = path.abspath(path.join(location, '..', '..', '..', 'sbin', 'exabgp'))
+    if not path.isfile(exabgp):
+        print "could not find exabgp"
 
-	sequence_daemon = path.abspath(path.join(location,'..','..','sbin','bgp'))
-	if not path.isfile(sequence_daemon):
-		sys.exit('could not find the sequence daemon')
+    etc = path.abspath(path.join(location, '..', '..', '..', 'etc', 'exabgp'))
+    if not path.isdir(etc):
+        sys.exit('could not find etc folder')
 
-	match = '*' if len(sys.argv) < 2 else sys.argv[1].split('/')[-1].split('.')[0]
-	if match == 'all':
-		match = '*'
+    conf = path.abspath(path.join(location, '..', '..', 'ci'))
+    if not path.isdir(conf):
+        sys.exit('could not find conf folder')
 
-	if len(sys.argv) >= 3:
-		reverse = reversed if sys.argv[2].startswith('rev') else lambda _:_
-		skip = 0 if not sys.argv[2].isdigit() else int(sys.argv[2])
-		show = True if sys.argv[2] == 'show' else False
-	else:
-		reverse = lambda _:_
-		skip = 0
-		show = False
+    sequence_daemon = path.abspath(path.join(location, '..', '..', 'sbin', 'bgp'))
+    if not path.isfile(sequence_daemon):
+        sys.exit('could not find the sequence daemon')
 
-	groups = sorted(glob.glob(path.join(conf,'%s.ci' % match.replace('all','*'))))
-	groups = reverse(groups)
+    match = '*' if len(sys.argv) < 2 else sys.argv[1].split('/')[-1].split('.')[0]
+    if match == 'all':
+        match = '*'
 
-	success = True
+    if len(sys.argv) >= 3:
+        reverse = reversed if sys.argv[2].startswith('rev') else lambda _: _
+        skip = 0 if not sys.argv[2].isdigit() else int(sys.argv[2])
+        show = True if sys.argv[2] == 'show' else False
+    else:
+        reverse = lambda _: _
+        skip = 0
+        show = False
 
-	for group in groups:
-		if skip:
-			print 'skiped ', group
-			skip -= 1
-			continue
+    groups = sorted(glob.glob(path.join(conf, '%s.ci' % match.replace('all', '*'))))
+    groups = reverse(groups)
 
-		configurations = [os.path.join(etc,name) for name in open(group).read().strip().split()]
-		sequence_file = group.replace('.ci','.msg')
+    success = True
 
-		if path.isfile(sequence_file):
-			if check_sequence(group,exabgp,configurations,sequence_daemon,sequence_file,show) == False:
-				success = False
-		else:
-			print "checking        %s\nskipped (no sequence data)\n" % group.split('/')[-1]
-			continue
+    for group in groups:
+        if skip:
+            print 'skiped ', group
+            skip -= 1
+            continue
 
-	sys.exit(0 if success else 1)
+        configurations = [os.path.join(etc, name) for name in open(group).read().strip().split()]
+        sequence_file = group.replace('.ci', '.msg')
 
-def check_sequence (group, exabgp, configurations, daemon, fname, show):
-	os.environ['exabgp.tcp.once'] = 'true'
-	os.environ['exabgp.debug.defensive'] = 'true'
-	os.environ['exabgp.debug.rotate'] = 'true'
+        if path.isfile(sequence_file):
+            if check_sequence(group, exabgp, configurations, sequence_daemon, sequence_file, show) == False:
+                success = False
+        else:
+            print "checking        %s\nskipped (no sequence data)\n" % group.split('/')[-1]
+            continue
 
-	timeout = 10240  # seconds
+    sys.exit(0 if success else 1)
 
-	class Exit (Exception): pass
 
-	try:
-		command_daemon = [daemon, fname]
-		command_exabgp = [exabgp, '-d'] + configurations
+def check_sequence(group, exabgp, configurations, daemon, fname, show):
+    os.environ['exabgp.tcp.once'] = 'true'
+    os.environ['exabgp.debug.defensive'] = 'true'
+    os.environ['exabgp.debug.rotate'] = 'true'
 
-		if show:
-			raise Exit()
+    timeout = 10240  # seconds
 
-		signal.signal(signal.SIGALRM, alarm_handler)
-		signal.alarm(timeout)
+    class Exit(Exception):
+        pass
 
-		print "%-15s %s\n" % ('checking',group.split('/')[-1].split('.')[0]),
-		daemon = subprocess.Popen(command_daemon, stdout=subprocess.PIPE)
-		time.sleep(5)
-		exabgp = subprocess.Popen(command_exabgp, stdout=subprocess.PIPE)
+    try:
+        command_daemon = [daemon, fname]
+        command_exabgp = [exabgp, '-d'] + configurations
 
-		exabgp_output = exabgp.communicate()[0]
-		daemon_output = daemon.communicate()[0]
-	except Alarm:
-		exabgp_output = '(killed) exabgp was still running\n'
-		daemon_output = '(killed) still waiting for data after %d seconds\n' % timeout
+        if show:
+            raise Exit()
 
-		for pid in [daemon.pid, exabgp.pid]:
-			try:
-				os.kill(pid,signal.SIGTERM)
-			except OSError:
-				pass
-	except Exit:
-		exabgp_output = ''
-		daemon_output = ''
+        signal.signal(signal.SIGALRM, alarm_handler)
+        signal.alarm(timeout)
 
-	def commands (command_exabgp, command_daemon):
-		r = ""
-		r += "command lines are:\n"
-		r += 'export exabgp_debug_defensive=true\n'
-		r += "> env exabgp.tcp.port=1790 exabgp.tcp.once=true exabgp.debug.rotate=true exabgp.tcp.bind='' " + ' '.join(command_exabgp) + '\n'
-		r += '> env exabgp.tcp.port=1790 ' + ' '.join(command_daemon)
-		r += '\n'
-		return r
+        print "%-15s %s\n" % ('checking', group.split('/')[-1].split('.')[0]),
+        daemon = subprocess.Popen(command_daemon, stdout=subprocess.PIPE)
+        time.sleep(5)
+        exabgp = subprocess.Popen(command_exabgp, stdout=subprocess.PIPE)
 
-	if show:
-		print commands(command_exabgp,command_daemon)
-		return None
-	elif 'successful' in daemon_output:
-		print "successful\n"
-		return True
-	else:
-		print "failure"
-		print
-		print commands(command_exabgp,command_daemon)
-		print
-		print 'exabgp:\n', '\n'.join(('    %s' % _ for _ in exabgp_output.split('\n')))
-		print 'daemon:\n', '\n'.join(('    %s' % _ for _ in daemon_output.split('\n')))
-		return False
+        exabgp_output = exabgp.communicate()[0]
+        daemon_output = daemon.communicate()[0]
+    except Alarm:
+        exabgp_output = '(killed) exabgp was still running\n'
+        daemon_output = '(killed) still waiting for data after %d seconds\n' % timeout
 
-def check (main):
-	os.environ['exabgp.tcp.bind'] = ''
+        for pid in [daemon.pid, exabgp.pid]:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
+    except Exit:
+        exabgp_output = ''
+        daemon_output = ''
 
-	if os.environ.get('exabgp.tcp.port','').isdigit():
-		port = os.environ.get('exabgp.tcp.port')
-	elif os.environ.get('exabgp_tcp_port','').isdigit():
-		port = os.environ.get('exabgp_tcp_port')
-	else:
-		port = '1790'
+    def commands(command_exabgp, command_daemon):
+        r = ""
+        r += "command lines are:\n"
+        r += 'export exabgp_debug_defensive=true\n'
+        r += (
+            "> env exabgp.tcp.port=1790 exabgp.tcp.once=true exabgp.debug.rotate=true exabgp.tcp.bind='' "
+            + ' '.join(command_exabgp)
+            + '\n'
+        )
+        r += '> env exabgp.tcp.port=1790 ' + ' '.join(command_daemon)
+        r += '\n'
+        return r
 
-	os.environ['exabgp.tcp.port'] = port
-	os.environ['exabgp_tcp_port'] = port
+    if show:
+        print commands(command_exabgp, command_daemon)
+        return None
+    elif 'successful' in daemon_output:
+        print "successful\n"
+        return True
+    else:
+        print "failure"
+        print
+        print commands(command_exabgp, command_daemon)
+        print
+        print 'exabgp:\n', '\n'.join(('    %s' % _ for _ in exabgp_output.split('\n')))
+        print 'daemon:\n', '\n'.join(('    %s' % _ for _ in daemon_output.split('\n')))
+        return False
 
-	uid = os.getuid()
-	gid = os.getgid()
 
-	port = os.environ['exabgp.tcp.port']
-	if not port.isdigit():
-		print 'invalid port value %s' % port
+def check(main):
+    os.environ['exabgp.tcp.bind'] = ''
 
-	if uid and gid and int(port) <= 1024:
-		print 'you need to have root privileges to bind to port 79'
-		sys.exit(1)
-	main()
+    if os.environ.get('exabgp.tcp.port', '').isdigit():
+        port = os.environ.get('exabgp.tcp.port')
+    elif os.environ.get('exabgp_tcp_port', '').isdigit():
+        port = os.environ.get('exabgp_tcp_port')
+    else:
+        port = '1790'
+
+    os.environ['exabgp.tcp.port'] = port
+    os.environ['exabgp_tcp_port'] = port
+
+    uid = os.getuid()
+    gid = os.getgid()
+
+    port = os.environ['exabgp.tcp.port']
+    if not port.isdigit():
+        print 'invalid port value %s' % port
+
+    if uid and gid and int(port) <= 1024:
+        print 'you need to have root privileges to bind to port 79'
+        sys.exit(1)
+    main()
+
 
 check(main)

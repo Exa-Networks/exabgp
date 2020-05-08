@@ -14,13 +14,13 @@ try:
 except ImportError:
     raise SystemExit("This script requires cProfile from Python 2.5")
 
+
 def label(code):
     if isinstance(code, str):
-        return ('~', 0, code)    # built-in functions ('~' sorts at the end)
+        return ('~', 0, code)  # built-in functions ('~' sorts at the end)
     else:
-        return '%s %s:%d' % (code.co_name,
-                             code.co_filename,
-                             code.co_firstlineno)
+        return '%s %s:%d' % (code.co_name, code.co_filename, code.co_firstlineno)
+
 
 class KCacheGrind(object):
     def __init__(self, profiler):
@@ -45,7 +45,7 @@ class KCacheGrind(object):
         out_file = self.out_file
 
         code = entry.code
-        #print >> out_file, 'ob=%s' % (code.co_filename,)
+        # print >> out_file, 'ob=%s' % (code.co_filename,)
         if isinstance(code, str):
             print('fi=~', file=out_file)
         else:
@@ -76,25 +76,24 @@ class KCacheGrind(object):
     def _subentry(self, lineno, subentry):
         out_file = self.out_file
         code = subentry.code
-        #print >> out_file, 'cob=%s' % (code.co_filename,)
+        # print >> out_file, 'cob=%s' % (code.co_filename,)
         print('cfn=%s' % (label(code),), file=out_file)
         if isinstance(code, str):
             print('cfi=~', file=out_file)
             print('calls=%d 0' % (subentry.callcount,), file=out_file)
         else:
             print('cfi=%s' % (code.co_filename,), file=out_file)
-            print('calls=%d %d' % (
-                subentry.callcount, code.co_firstlineno), file=out_file)
+            print('calls=%d %d' % (subentry.callcount, code.co_firstlineno), file=out_file)
 
         totaltime = int(subentry.totaltime * 1000)
         print('%d %d' % (lineno, totaltime), file=out_file)
+
 
 def main(args):
     usage = "%s [-o output_file_path] scriptfile [arg] ..."
     parser = optparse.OptionParser(usage=usage % sys.argv[0])
     parser.allow_interspersed_args = False
-    parser.add_option('-o', '--outfile', dest="outfile",
-                      help="Save stats to <outfile>", default=None)
+    parser.add_option('-o', '--outfile', dest="outfile", help="Save stats to <outfile>", default=None)
 
     if not sys.argv[1:]:
         parser.print_usage()
@@ -116,6 +115,7 @@ def main(args):
     finally:
         kg = KCacheGrind(prof)
         kg.output(file(options.outfile, 'w'))
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

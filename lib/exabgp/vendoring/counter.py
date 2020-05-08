@@ -7,6 +7,7 @@ From python2.7 standard library
 
 from _abcoll import *
 
+
 class Counter(dict):
     '''Dict subclass for counting hashable items.  Sometimes called a bag
     or multiset.  Elements are stored as dictionary keys and their counts
@@ -51,6 +52,7 @@ class Counter(dict):
     [('a', 3), ('c', 1), ('b', 0)]
 
     '''
+
     # References:
     #   https://en.wikipedia.org/wiki/Multiset
     #   https://www.gnu.org/software/smalltalk/manual-base/html_node/Bag.html
@@ -118,8 +120,7 @@ class Counter(dict):
     def fromkeys(cls, iterable, v=None):
         # There is no equivalent method for counters because setting v=1
         # means that no element can have a count greater than one.
-        raise NotImplementedError(
-            'Counter.fromkeys() is undefined.  Use Counter(iterable) instead.')
+        raise NotImplementedError('Counter.fromkeys() is undefined.  Use Counter(iterable) instead.')
 
     def update(self, iterable=None, **kwds):
         '''Like dict.update() but add counts instead of replacing them.
@@ -148,7 +149,7 @@ class Counter(dict):
                     for elem, count in iterable.iteritems():
                         self[elem] = self_get(elem, 0) + count
                 else:
-                    super(Counter, self).update(iterable) # fast path when counter is empty
+                    super(Counter, self).update(iterable)  # fast path when counter is empty
             else:
                 self_get = self.get
                 for elem in iterable:
