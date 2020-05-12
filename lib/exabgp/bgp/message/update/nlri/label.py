@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import Family
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.bgp.message import OUT
@@ -66,7 +67,7 @@ class Label(INET):
     def index(self, negotiated=None):
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
         mask = character(self.cidr.mask)
-        return NLRI._index(self) + addpath + mask + self.cidr.pack_ip()
+        return Family.index(self) + addpath + mask + self.cidr.pack_ip()
 
     def _internal(self, announced=True):
         r = INET._internal(self, announced)

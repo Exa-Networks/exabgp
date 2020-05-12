@@ -60,7 +60,7 @@ class INET(NLRI):
 
     def index(self):
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
-        return self._index() + addpath + self.cidr.pack_nlri()
+        return Family.index(self) + addpath + self.cidr.pack_nlri()
 
     def prefix(self):
         return "%s%s" % (self.cidr.prefix(), str(self.path_info))
