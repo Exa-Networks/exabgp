@@ -22,6 +22,7 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.family import Family
 
 
 # ====================================================== IPVPN
@@ -85,7 +86,7 @@ class IPVPN(Label):
     def index(self, negotiated=None):
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
         mask = character(len(self.rd) * 8 + self.cidr.mask)
-        return NLRI._index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()
+        return Family.index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()
 
     def _internal(self, announced=True):
         r = Label._internal(self, announced)

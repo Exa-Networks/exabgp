@@ -60,11 +60,8 @@ class NLRI(Family):
     def assign(self, name, value):
         setattr(self, name, value)
 
-    def _index(self):
-        return b'%02x%02x' % (self.afi, self.safi)
-
     def index(self):
-        return self._index() + self.pack_nlri()
+        return Family.index(self) + self.pack_nlri()
 
     # remove this when code restructure is finished
     def pack(self, negotiated=None):

@@ -312,5 +312,8 @@ class Family(object):
     def extensive(self):
         return 'afi %s safi %s' % (self.afi, self.safi)
 
+    def index(self):
+        return b'%02x%02x' % (self.afi, self.safi)
+
     def __repr__(self):
         return "%s %s" % (str(self.afi), str(self.safi))
