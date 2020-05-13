@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import hexstring
@@ -42,8 +41,8 @@ class GenericAttribute(Attribute):
         if flag & Attribute.Flag.EXTENDED_LENGTH:
             len_value = pack('!H', length)
         else:
-            len_value = character(length)
-        return concat_bytes(character(flag), character(self.ID), len_value, self.data)
+            len_value = bytes([length])
+        return concat_bytes(bytes([flag, self.ID]), len_value, self.data)
 
     def __len__(self):
         return len(self.data)

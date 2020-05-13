@@ -12,7 +12,6 @@ from struct import unpack
 
 from exabgp.vendoring import six
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 from exabgp.util import concat_bytes
@@ -46,7 +45,7 @@ class Graceful(Capability, dict):
 
     def extract(self):
         restart = pack('!H', ((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
-        families = [(afi.pack(), safi.pack(), character(self[(afi, safi)])) for (afi, safi) in self.keys()]
+        families = [(afi.pack(), safi.pack(), bytes([self[(afi, safi)]])) for (afi, safi) in self.keys()]
         sfamilies = concat_bytes_i(concat_bytes(pafi, psafi, family) for (pafi, psafi, family) in families)
         return [concat_bytes(restart, sfamilies)]
 

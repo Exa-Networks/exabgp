@@ -13,7 +13,6 @@ import sys
 import traceback
 import copy
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 
@@ -180,7 +179,7 @@ def check_neighbor(neighbors):
 def check_message(neighbor, message):
     message = message.replace(':', '')
     raw = concat_bytes_i(
-        character(int(_, 16)) for _ in (message[i * 2 : (i * 2) + 2] for i in range(len(message) // 2))
+        bytes([int(_, 16)]) for _ in (message[i * 2 : (i * 2) + 2] for i in range(len(message) // 2))
     )
 
     if raw.startswith(b'\xff' * 16):

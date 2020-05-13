@@ -11,7 +11,6 @@ import math
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.bgp.message.notification import Notify
 
@@ -73,7 +72,7 @@ class CIDR(object):
         return self._packed[: CIDR.size(self.mask)]
 
     def pack_nlri(self):
-        return character(self.mask) + self._packed[: CIDR.size(self.mask)]
+        return bytes([self.mask]) + self._packed[: CIDR.size(self.mask)]
 
     @staticmethod
     def decode(afi, bgp):
@@ -98,7 +97,7 @@ class CIDR(object):
         return CIDR.size(self.mask) + 1
 
     def __hash__(self):
-        return hash(character(self.mask) + self._packed)
+        return hash(bytes([self.mask]) + self._packed)
 
 
 for netmask in range(0, 129):

@@ -1,4 +1,3 @@
-from exabgp.util import character
 from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import IP
@@ -60,7 +59,7 @@ def source(tokeniser):
     data = tokeniser()
     if data.count('.') == 3 and data.count(':') == 0:
         ip, netmask = data.split('/')
-        raw = concat_bytes_i(character(int(_)) for _ in ip.split('.'))
+        raw = concat_bytes_i(bytes([int(_)]) for _ in ip.split('.'))
         yield Flow4Source(raw, int(netmask))
     elif data.count('/') == 1:
         ip, netmask = data.split('/')
@@ -75,7 +74,7 @@ def destination(tokeniser):
     data = tokeniser()
     if data.count('.') == 3 and data.count(':') == 0:
         ip, netmask = data.split('/')
-        raw = concat_bytes_i(character(int(_)) for _ in ip.split('.'))
+        raw = concat_bytes_i(bytes([int(_)]) for _ in ip.split('.'))
         yield Flow4Destination(raw, int(netmask))
     elif data.count('/') == 1:
         ip, netmask = data.split('/')

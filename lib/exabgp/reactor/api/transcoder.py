@@ -4,7 +4,6 @@ import sys
 import json
 import string
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 from exabgp.util import hexstring
@@ -93,7 +92,7 @@ class Transcoder(object):
         category = parsed['neighbor']['message']['category']
         header = parsed['neighbor']['message']['header']
         body = parsed['neighbor']['message']['body']
-        data = concat_bytes_i(character(int(body[_ : _ + 2], 16)) for _ in range(0, len(body), 2))
+        data = concat_bytes_i(bytes([int(body[_ : _ + 2], 16)]) for _ in range(0, len(body), 2))
 
         if content == 'open':
             message = Open.unpack_message(data)

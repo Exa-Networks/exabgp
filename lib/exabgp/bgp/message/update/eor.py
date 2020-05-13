@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # from struct import unpack
 import sys
 
-from exabgp.util import character
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.message import Message
@@ -24,7 +22,7 @@ from exabgp.bgp.message.update.nlri import NLRI as _NLRI
 
 class EOR(Message):
     ID = Message.CODE.UPDATE
-    TYPE = character(Message.CODE.UPDATE)
+    TYPE = bytes([Message.CODE.UPDATE])
 
     class NLRI(_NLRI):
         PREFIX = b'\x00\x00\x00\x07\x90\x0F\x00\x03'

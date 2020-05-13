@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import string
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import str_ascii
@@ -34,7 +33,7 @@ from exabgp.bgp.message.message import Message
 @Message.register
 class Notification(Message):
     ID = Message.CODE.NOTIFICATION
-    TYPE = character(Message.CODE.NOTIFICATION)
+    TYPE = bytes([Message.CODE.NOTIFICATION])
 
     _str_code = {
         1: "Message header error",
@@ -178,4 +177,4 @@ class Notify(Notification):
         Notification.__init__(self, code, subcode, bytes_ascii(data), False)
 
     def message(self, negotiated=None):
-        return self._message(character(self.code) + character(self.subcode) + self.data)
+        return self._message(bytes([self.code, self.subcode]) + self.data)

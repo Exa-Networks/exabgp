@@ -7,8 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import character
-
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # ================================================================= MultiSession
@@ -37,11 +35,12 @@ class MultiSession(Capability, list):
         )
 
     def extract(self):
+        # can probably be written better
         rs = [
-            character(0),
+            bytes([0]),
         ]
         for v in self:
-            rs.append(character(v))
+            rs.append(bytes([v]))
         return rs
 
     @staticmethod

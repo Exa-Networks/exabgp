@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 import sys
 
-from exabgp.util import character
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.notification import Notify
 
@@ -212,8 +211,8 @@ class Attribute(object):
         if flag & Attribute.Flag.EXTENDED_LENGTH:
             len_value = pack('!H', length)
         else:
-            len_value = character(length)
-        return concat_bytes(character(flag), character(self.ID), len_value, value)
+            len_value = bytes([length])
+        return concat_bytes(bytes([flag, self.ID]), len_value, value)
 
     def _len(self, value):
         length = len(value)

@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.util import character
-
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -78,12 +76,12 @@ class IPVPN(Label):
 
     def pack(self, negotiated=None):
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
-        mask = character(len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask)
+        mask = bytes([len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask])
         return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 
     def index(self, negotiated=None):
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
-        mask = character(len(self.rd) * 8 + self.cidr.mask)
+        mask = bytes([len(self.rd) * 8 + self.cidr.mask])
         return Family.index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()
 
     def _internal(self, announced=True):

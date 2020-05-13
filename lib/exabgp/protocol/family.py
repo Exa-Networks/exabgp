@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.protocol.resource import Resource
 
@@ -160,7 +159,7 @@ class _SAFI(int):
     }
 
     def pack(self):
-        return character(self)
+        return bytes([self])
 
     def name(self):
         return self._names.get(self, 'unknown safi %d' % int(self))

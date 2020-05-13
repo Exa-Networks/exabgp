@@ -7,7 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -27,7 +26,7 @@ class Origin(Attribute):
 
     def __init__(self, origin, packed=None):
         self.origin = origin
-        self._packed = self._attribute(packed if packed else character(origin))
+        self._packed = self._attribute(packed if packed else bytes([origin]))
 
     def __eq__(self, other):
         return self.ID == other.ID and self.FLAG == other.FLAG and self.origin == other.origin

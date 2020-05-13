@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.util import character
 from exabgp.util import concat_bytes_i
 
 
@@ -103,7 +102,7 @@ class Labels(object):
         labels = []
         raw_labels = []
         while len(data):
-            label = unpack('!L', character(0) + data[:3])[0]
+            label = unpack('!L', bytes([0]) + data[:3])[0]
             data = data[3:]
             labels.append(label >> 4)
             raw_labels.append(label)

@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import sys
 from struct import pack
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 
@@ -96,7 +95,7 @@ class Message(Exception):
     # otherwise we can not dynamically create different UnknownMessage
     # TYPE = None
 
-    MARKER = character(0xFF) * 16
+    MARKER = bytes([0xFF,] * 16)
     HEADER_LEN = 19
 
     registered_message = {}

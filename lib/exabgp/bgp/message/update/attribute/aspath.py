@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import unpack
 from struct import error
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import concat_bytes_i
@@ -64,7 +63,7 @@ class ASPath(Attribute):
             if length > 255:
                 return self._segment(seg_type, values[:255], asn4) + self._segment(seg_type, values[255:], asn4)
             return concat_bytes(
-                character(seg_type), character(len(values)), concat_bytes_i(v.pack(asn4) for v in values)
+                bytes([seg_type, len(values)]), concat_bytes_i(v.pack(asn4) for v in values)
             )
         return b""
 

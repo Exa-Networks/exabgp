@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import unpack
 from struct import error
 
-from exabgp.util import character
 from exabgp.util import concat_bytes
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -36,7 +35,7 @@ class Reserved(int):
 @Message.register
 class RouteRefresh(Message):
     ID = Message.CODE.ROUTE_REFRESH
-    TYPE = character(Message.CODE.ROUTE_REFRESH)
+    TYPE = bytes([Message.CODE.ROUTE_REFRESH])
 
     request = 0
     start = 1
@@ -48,7 +47,7 @@ class RouteRefresh(Message):
         self.reserved = Reserved(reserved)
 
     def message(self, negotiated=None):
-        return self._message(concat_bytes(self.afi.pack(), character(self.reserved), self.safi.pack()))
+        return self._message(concat_bytes(self.afi.pack(), bytes([self.reserved]), self.safi.pack()))
 
     def __str__(self):
         return "REFRESH"
