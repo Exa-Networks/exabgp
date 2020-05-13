@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -60,7 +59,7 @@ class Multicast(EVPN):
             self._packed = packed
             return packed
 
-        self._packed = concat_bytes(self.rd.pack(), self.etag.pack(), character(len(self.ip) * 8), self.ip.pack())
+        self._packed = concat_bytes(self.rd.pack(), self.etag.pack(), bytes([len(self.ip) * 8]), self.ip.pack())
         return self._packed
 
     @classmethod

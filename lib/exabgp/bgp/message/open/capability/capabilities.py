@@ -12,7 +12,6 @@ from exabgp.vendoring import six
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import concat_bytes_i
@@ -175,9 +174,9 @@ class Capabilities(dict):
         rs = []
         for k, capabilities in six.iteritems(self):
             for capability in capabilities.extract():
-                rs.append(concat_bytes(character(k), character(len(capability)), capability))
-        parameters = concat_bytes_i(concat_bytes(character(2), character(len(r)), r) for r in rs)
-        return concat_bytes(character(len(parameters)), parameters)
+                rs.append(concat_bytes(bytes([k, len(capability)]), capability))
+        parameters = concat_bytes_i(concat_bytes(bytes([2,len(r)]), r) for r in rs)
+        return concat_bytes(bytes([len(parameters)]), parameters)
 
     @staticmethod
     def unpack(data):

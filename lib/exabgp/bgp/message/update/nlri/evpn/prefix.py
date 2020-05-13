@@ -11,7 +11,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -122,7 +121,7 @@ class Prefix(EVPN):
             self.rd.pack(),
             self.esi.pack(),
             self.etag.pack(),
-            character(self.iplen),
+            bytes([self.iplen]),
             self.ip.pack(),
             self.gwip.pack(),
             self.label.pack(),

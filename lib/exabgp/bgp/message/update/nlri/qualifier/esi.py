@@ -8,7 +8,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 
@@ -18,8 +17,8 @@ from exabgp.util import concat_bytes_i
 
 # Ethernet Segment Identifier
 class ESI(object):
-    DEFAULT = concat_bytes_i(character(0) for _ in range(0, 10))
-    MAX = concat_bytes_i(character(0xFF) for _ in range(0, 10))
+    DEFAULT = concat_bytes_i(bytes([0]) for _ in range(0, 10))
+    MAX = concat_bytes_i(bytes([0xFF]) for _ in range(0, 10))
 
     def __init__(self, esi=None):
         self.esi = self.DEFAULT if esi is None else esi

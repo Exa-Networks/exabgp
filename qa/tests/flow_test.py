@@ -11,7 +11,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import socket
 import unittest
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_strs
 
@@ -72,7 +71,7 @@ class TestFlow(unittest.TestCase):
         for key in ['destination', 'source', 'anyport_1', 'anyport_2']:
             flow.add(components[key])
             message += bytes(messages[key])
-        message = character(len(message)) + message
+        message = bytes([len(message)]) + message
         # flow.add(to_FlowAction(65000,False,False))
         flow.pack()
         # print [hex(ord(_)) for _ in flow]
@@ -96,7 +95,7 @@ class TestFlow(unittest.TestCase):
         for key in ['destination', 'source', 'anyport_1', 'anyport_2']:
             flow.add(components[key])
             message += bytes(messages[key])
-        message = character(len(message)) + message
+        message = bytes([len(message)]) + message
         # policy.add(to_FlowAction(65000,False,False))
         flow = flow.pack()
         if message[0] != flow[0]:

@@ -7,8 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import character
-
 from exabgp.bgp.message.message import Message
 
 # ================================================================= UnknownMessage
@@ -20,7 +18,7 @@ class UnknownMessage(Message):
 
     def __init__(self, code, data=b''):
         self.ID = code
-        self.TYPE = character(code)
+        self.TYPE = bytes([code])
         self.data = data
 
     def message(self, negotiated=None):

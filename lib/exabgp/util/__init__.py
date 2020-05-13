@@ -39,10 +39,6 @@ def ordinal(x):
     return x if type(x) == int else ord(x)
 
 
-def character(x):
-    return bytes([x])
-
-
 # Each item is an 'str' in py2 or a 'bytes' in py3
 
 

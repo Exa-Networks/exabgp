@@ -7,7 +7,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import character
 from exabgp.util import coroutine
 
 
@@ -53,7 +52,7 @@ def unescape(string):
         elif esc == 't':
             yield '\t'
         elif esc == 'u':
-            yield character(int(string[pos + 1 : pos + 5], 16))
+            yield bytes([int(string[pos + 1 : pos + 5], 16)])
             pos += 4
         else:
             yield esc

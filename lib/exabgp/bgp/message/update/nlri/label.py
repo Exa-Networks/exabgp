@@ -11,7 +11,6 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -59,12 +58,12 @@ class Label(INET):
 
     def pack(self, negotiated=None):
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
-        mask = character(len(self.labels) * 8 + self.cidr.mask)
+        mask = bytes([len(self.labels) * 8 + self.cidr.mask])
         return addpath + mask + self.labels.pack() + self.cidr.pack_ip()
 
     def index(self, negotiated=None):
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
-        mask = character(self.cidr.mask)
+        mask = bytes([self.cidr.mask])
         return Family.index(self) + addpath + mask + self.cidr.pack_ip()
 
     def _internal(self, announced=True):

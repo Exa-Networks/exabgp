@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from exabgp.protocol.ip import IP
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 
@@ -78,7 +77,7 @@ class EthernetSegment(EVPN):
         self._packed = concat_bytes(
             self.rd.pack(),
             self.esi.pack(),
-            character(len(self.ip) * 8 if self.ip else 0),
+            bytes([len(self.ip) * 8 if self.ip else 0]),
             self.ip.pack() if self.ip else b'',
         )
         return self._packed

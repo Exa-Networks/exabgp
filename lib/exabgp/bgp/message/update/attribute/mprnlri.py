@@ -18,7 +18,6 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.bgp.message.direction import IN
 
@@ -66,7 +65,7 @@ class MPRNLRI(Attribute, Family):
                 nexthop = b''
             else:
                 _, rd_size = Family.size.get(self.family(), (0, 0))
-                nh_rd = character(0) * rd_size if rd_size else b''
+                nh_rd = bytes([0]) * rd_size if rd_size else b''
                 try:
                     nexthop = nh_rd + nlri.nexthop.ton(negotiated, nlri.afi)
                 except TypeError:
@@ -82,13 +81,13 @@ class MPRNLRI(Attribute, Family):
                     #
                     # Some vendors may have therefore not valided the next-hop
                     # and accepted invalid IPv6 next-hop in the past
-                    nexthop = character(0) * 4
+                    nexthop = bytes([0]) * 4
 
             # mpunli[nexthop] = nlri
             mpnlri.setdefault(nexthop, []).append(nlri.pack(negotiated))
 
         for nexthop, nlris in six.iteritems(mpnlri):
-            payload = concat_bytes(self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0))
+            payload = concat_bytes(self.afi.pack(), self.safi.pack(), bytes([len(nexthop)]), nexthop, bytes([0]))
             header_length = len(payload)
             for nlri in nlris:
                 if self._len(payload + nlri) > maximum:
@@ -96,7 +95,7 @@ class MPRNLRI(Attribute, Family):
                         raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
                     yield self._attribute(payload)
                     payload = concat_bytes(
-                        self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0), nlri
+                        self.afi.pack(), self.safi.pack(), bytes([len(nexthop)]), nexthop, bytes([0]), nlri
                     )
                     continue
                 payload = concat_bytes(payload, nlri)

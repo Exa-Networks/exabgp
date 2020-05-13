@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -107,9 +106,9 @@ class MAC(EVPN):
             self.rd.pack(),
             self.esi.pack(),
             self.etag.pack(),
-            character(self.maclen),  # only 48 supported by the draft
+            bytes([self.maclen]),  # only 48 supported by the draft
             self.mac.pack(),
-            character(len(self.ip) * 8 if self.ip else 0),
+            bytes([len(self.ip) * 8 if self.ip else 0]),
             self.ip.pack() if self.ip else b'',
             self.label.pack(),
         )

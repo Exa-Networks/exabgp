@@ -12,7 +12,6 @@ import uuid
 import select
 import socket
 
-from exabgp.util import character
 from exabgp.util import concat_bytes_i
 
 from exabgp.reactor.daemon import Daemon
@@ -51,7 +50,7 @@ class Reactor(object):
         unknown = 1
 
     # [hex(ord(c)) for c in os.popen('clear').read()]
-    clear = concat_bytes_i(character(int(c, 16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
+    clear = concat_bytes_i(bytes([int(c, 16)]) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
     def __init__(self, configurations):
         self._ips = environment.settings().tcp.bind

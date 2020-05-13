@@ -7,8 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import character
-
 from exabgp.protocol.resource import Resource
 
 
@@ -55,4 +53,4 @@ class Protocol(Resource):
     names = dict([(r, l) for (l, r) in codes.items()])
 
     def pack(self):
-        return character(self)
+        return bytes([self])

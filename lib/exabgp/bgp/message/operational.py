@@ -12,7 +12,6 @@ from struct import unpack
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.routerid import RouterID
@@ -45,7 +44,7 @@ class Type(int):
 @Message.register
 class Operational(Message):
     ID = Message.CODE.OPERATIONAL
-    TYPE = character(Message.CODE.OPERATIONAL)
+    TYPE = bytes([Message.CODE.OPERATIONAL])
 
     registered_operational = dict()
 

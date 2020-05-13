@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import pack
 
-from exabgp.util import character
 from exabgp.util import concat_bytes_i
 
 from exabgp.bgp.message.update.nlri.qualifier import Labels
@@ -47,16 +46,16 @@ def route_distinguisher(tokeniser):
         suffix = int(data[separator + 1 :])
 
     if '.' in prefix:
-        data = [character(0), character(1)]
-        data.extend([character(int(_)) for _ in prefix.split('.')])
-        data.extend([character(suffix >> 8), character(suffix & 0xFF)])
+        data = [bytes([0, 1])]
+        data.extend([bytes([int(_)]) for _ in prefix.split('.')])
+        data.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
         rtd = concat_bytes_i(data)
     else:
         number = int(prefix)
         if number < pow(2, 16) and suffix < pow(2, 32):
-            rtd = character(0) + character(0) + pack('!H', number) + pack('!L', suffix)
+            rtd = bytes([0, 0]) + pack('!H', number) + pack('!L', suffix)
         elif number < pow(2, 32) and suffix < pow(2, 16):
-            rtd = character(0) + character(2) + pack('!L', number) + pack('!H', suffix)
+            rtd = bytes([0, 2]) + pack('!L', number) + pack('!H', suffix)
         else:
             raise ValueError('invalid route-distinguisher %s' % data)
 

@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import unittest
 
-from exabgp.util import character
-
 from exabgp.reactor.protocol import AFI, SAFI
 
 from exabgp.bgp.message.update import Attributes
@@ -213,7 +211,7 @@ class TestNLRIs(unittest.TestCase):
         # ESI
         nlri1 = EVPNMAC(
             RouteDistinguisher.fromElements("42.42.42.42", 5),
-            ESI(b''.join(character(1) for _ in range(0, 10))),
+            ESI(bytes([1,]*10)),
             EthernetTag(111),
             MAC("01:02:03:04:05:06"),
             6 * 8,

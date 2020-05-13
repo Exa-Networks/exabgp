@@ -7,7 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 
@@ -22,9 +21,9 @@ class PathInfo(object):
         if packed:
             self.path_info = packed
         elif ip:
-            self.path_info = concat_bytes_i(character(int(_)) for _ in ip.split('.'))
+            self.path_info = concat_bytes_i(bytes([int(_)]) for _ in ip.split('.'))
         elif integer:
-            self.path_info = concat_bytes_i(character((integer >> offset) & 0xFF) for offset in [24, 16, 8, 0])
+            self.path_info = concat_bytes_i(bytes([(integer >> offset) & 0xFF]) for offset in [24, 16, 8, 0])
         else:
             self.path_info = b''
         # sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))

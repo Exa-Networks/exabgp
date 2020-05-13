@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import unpack
 
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import bytes_ascii
@@ -54,7 +53,7 @@ from exabgp.bgp.message.open.capability import Capabilities
 @Message.register
 class Open(Message):
     ID = Message.CODE.OPEN
-    TYPE = character(Message.CODE.OPEN)
+    TYPE = bytes([Message.CODE.OPEN])
 
     def __init__(self, version, asn, hold_time, router_id, capabilities):
         self.version = version

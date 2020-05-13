@@ -1,4 +1,3 @@
-from exabgp.util import character
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import rt
@@ -13,7 +12,7 @@ class RTRecord(rt.RouteTarget):
     @classmethod
     def from_rt(cls, route_target):
         packed = route_target.pack()
-        return cls.unpack(concat_bytes(packed[0:1], character(cls.COMMUNITY_SUBTYPE), packed[2:]))
+        return cls.unpack(concat_bytes(packed[0:1], bytes([cls.COMMUNITY_SUBTYPE]), packed[2:]))
 
 
 @ExtendedCommunity.register

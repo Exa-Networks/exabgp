@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.util import character
 from exabgp.util import concat_bytes
 
 from exabgp.protocol.ip import NoNextHop
@@ -61,7 +60,7 @@ from exabgp.logger import LazyFormat
 @Message.register
 class Update(Message):
     ID = Message.CODE.UPDATE
-    TYPE = character(Message.CODE.UPDATE)
+    TYPE = bytes([Message.CODE.UPDATE])
     EOR = False
 
     def __init__(self, nlris, attributes):
