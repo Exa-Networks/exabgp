@@ -10,7 +10,6 @@ import binascii
 import itertools
 from struct import unpack
 
-from exabgp.util import concat_strs
 from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -133,7 +132,7 @@ class LsGenericFlags(object):
         hex_rep = hex(int(flag_array, 16))
         bit_array = BitArray(hex_rep)
         valid_flags = [
-            concat_strs(''.join(item), ''.join(itertools.repeat('0', pad)))
+            ''.join(''.join(item), ''.join(itertools.repeat('0', pad)))
             for item in itertools.product('01', repeat=repeat)
         ]
         valid_flags.append('0000')

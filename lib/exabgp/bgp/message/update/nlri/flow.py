@@ -9,8 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import pack
 
-from exabgp.util import concat_strs_i
-
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.ip.port import Port
 from exabgp.protocol.family import AFI
@@ -627,7 +625,7 @@ class Flow(NLRI):
                     s.append(', '.join('"%s"' % flag for flag in rule.value.named_bits()))
                 else:
                     s.append('"%s"' % rule)
-            string.append(' "%s": [ %s ]' % (rules[0].NAME, concat_strs_i(str(_) for _ in s).replace('""', '')))
+            string.append(' "%s": [ %s ]' % (rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
         nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
         rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
         compatibility = ', "string": "%s"' % self.extensive()
