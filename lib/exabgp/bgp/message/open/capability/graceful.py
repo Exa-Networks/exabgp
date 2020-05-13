@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.vendoring import six
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -63,7 +61,7 @@ class Graceful(Capability, dict):
             'restart-flags': '[%s] ' % (' "forwarding" ' if self.restart_flag & 0x8 else ' '),
         }
 
-        return '{ %s}' % ', '.join('"%s": %s' % (k, v) for k, v in six.iteritems(d))
+        return '{ %s}' % ', '.join('"%s": %s' % (k, v) for k, v in d.items())
 
     def families(self):
         return self.keys()

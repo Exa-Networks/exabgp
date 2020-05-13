@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import unpack
 from struct import pack
-from exabgp.vendoring import six
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.direction import OUT
@@ -42,7 +41,7 @@ class VPLS(NLRI):
         self.offset = offset
         self.size = size
         self.endpoint = endpoint
-        self.unique = six.next(unique)
+        self.unique = next(unique)
 
     def feedback(self, action):
         if self.nexthop is None and action == OUT.ANNOUNCE:

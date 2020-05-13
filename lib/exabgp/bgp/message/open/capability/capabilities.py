@@ -7,8 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.vendoring import six
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -168,7 +166,7 @@ class Capabilities(dict):
 
     def pack(self):
         parameters = b''
-        for k, capabilities in six.iteritems(self):
+        for k, capabilities in self.items():
             for capability in capabilities.extract():
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += bytes([2, len(encoded)]) + encoded

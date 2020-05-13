@@ -7,10 +7,10 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from collections import deque
+
 from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
-from collections import deque
-from exabgp.vendoring import six
 
 
 class Tokeniser(object):
@@ -39,13 +39,13 @@ class Tokeniser(object):
                 return self.next.popleft()
 
             try:
-                return six.next(self.generator)
+                return next(self.generator)
             except StopIteration:
                 return ''
 
         def peek(self):
             try:
-                peaked = six.next(self.generator)
+                peaked = next(self.generator)
                 self.next.append(peaked)
                 return peaked
             except StopIteration:
@@ -104,7 +104,7 @@ class Tokeniser(object):
     def _set(self, function):
         try:
             self._tokens = function
-            self._next = six.next(self._tokens)
+            self._next = next(self._tokens)
         except IOError as exc:
             error = str(exc)
             if error.count(']'):
@@ -165,7 +165,7 @@ class Tokeniser(object):
     def __call__(self):
         self.number += 1
         try:
-            self.line, self._next = self._next, six.next(self._tokens)
+            self.line, self._next = self._next, next(self._tokens)
             self.end = self.line[-1]
         except StopIteration:
             if not self.finished:

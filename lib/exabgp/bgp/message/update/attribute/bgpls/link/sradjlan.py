@@ -8,13 +8,12 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 import json
 from struct import unpack
-from exabgp.vendoring import six
 from exabgp.util import hexstring
 
 from exabgp.vendoring.bitstring import BitArray
 from exabgp.protocol.iso import ISO
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
-from exabgp.bgp.message.notification import Notify
+
 
 #   0                   1                   2                   3
 #   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -54,7 +53,7 @@ class SrAdjacencyLan(object):
         # We only support IS-IS flags for now.
         flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.ISIS_SR_ADJ_FLAGS)
         # Parse adj weight
-        weight = six.indexbytes(data, 1)
+        weight = data[1]
         # Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
         system_id = ISO.unpack_sysid(data[4:10])
         data = data[10:]

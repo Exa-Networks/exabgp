@@ -9,8 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import unpack
 
-from exabgp.vendoring import six
-
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -83,7 +81,7 @@ class MPRNLRI(Attribute, Family):
             # mpunli[nexthop] = nlri
             mpnlri.setdefault(nexthop, []).append(nlri.pack(negotiated))
 
-        for nexthop, nlris in six.iteritems(mpnlri):
+        for nexthop, nlris in mpnlri.items():
             payload = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0])
             header_length = len(payload)
             for nlri in nlris:

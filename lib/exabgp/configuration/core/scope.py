@@ -7,11 +7,9 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import sys
 import pprint
 
 # from copy import deepcopy
-from exabgp.vendoring import six
 from exabgp.protocol.ip import IP
 from exabgp.configuration.core.error import Error
 
@@ -140,7 +138,7 @@ class Scope(Error):
         return self.transfer(data, self._current)
 
     def transfer(self, source, destination):
-        for key, value in six.iteritems(source):
+        for key, value in source.items():
             if key not in destination:
                 destination[key] = value
             elif isinstance(source[key], list):
@@ -151,8 +149,6 @@ class Scope(Error):
                 else:
                     self.transfer(source[key], destination[key])
             elif isinstance(source[key], int):
-                destination[key] = value
-            elif isinstance(source[key], long):
                 destination[key] = value
             elif isinstance(source[key], IP):
                 destination[key] = value

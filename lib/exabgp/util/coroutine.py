@@ -8,14 +8,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from functools import wraps
-from exabgp.vendoring import six
 
 
 def each(function):
     @wraps(function)
     def start(*args, **kwargs):
         generator = function(*args, **kwargs)
-        return lambda: six.next(generator)  # noqa
+        return lambda: next(generator)  # noqa
 
     return start
 

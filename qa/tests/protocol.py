@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from io import StringIO
+
 import unittest
 
 from exabgp.bgp.message.open.asn import ASN
@@ -22,9 +24,6 @@ from exabgp.bgp.message.update import Attributes
 
 from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
-
-from exabgp.vendoring import six
-from exabgp.vendoring.six.moves import StringIO
 
 from exabgp.configuration.environment import environment
 

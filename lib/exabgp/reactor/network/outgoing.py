@@ -1,7 +1,5 @@
 import time
 
-from exabgp.vendoring import six
-
 from exabgp.protocol.family import AFI
 from .connection import Connection
 from .tcp import create, bind

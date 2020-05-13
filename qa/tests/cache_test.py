@@ -12,9 +12,6 @@ import unittest
 
 import time
 from exabgp.util.cache import Cache
-from exabgp.vendoring import six
-
-from exabgp.vendoring.six.moves import xrange
 
 
 class TestCache(unittest.TestCase):
@@ -103,7 +100,7 @@ class TestCache(unittest.TestCase):
             cache = {}
 
             start = time.time()
-            for val in xrange(COUNT):
+            for val in range(COUNT):
                 val %= UNIQUE
                 _ = klass(samples[val])
             end = time.time()
