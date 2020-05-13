@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Healthchecker for exabgp.
 
@@ -40,9 +40,6 @@ labelled ``lo:haproxy1``, ``lo:haproxy2``, etc.
 
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import sys
 import os
 import subprocess
@@ -54,26 +51,11 @@ import signal
 import time
 import collections
 
+from ipaddress import ip_network
+from ipaddress import ip_address
+
+
 logger = logging.getLogger("healthcheck")
-
-# Python 3.3+ or backport
-from exabgp.vendoring.ipaddress import ip_network  # pylint: disable=F0401
-from exabgp.vendoring.ipaddress import ip_address  # pylint: disable=F0401
-
-
-def fix(f):
-    def fixed(x):
-        try:
-            x = x.decode('ascii')
-        except AttributeError:
-            pass
-        return f(x)
-
-    return fixed
-
-
-ip_network = fix(ip_network)
-ip_address = fix(ip_address)
 
 
 def enum(*sequential):
