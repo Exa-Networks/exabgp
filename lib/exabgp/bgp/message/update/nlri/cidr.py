@@ -13,7 +13,6 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import padding
 from exabgp.bgp.message.notification import Notify
 
 
@@ -84,7 +83,7 @@ class CIDR(object):
         if len(bgp) < size + 1:
             raise Notify(3, 10, 'could not decode CIDR')
 
-        return bgp[1 : size + 1] + padding(IP.length(afi) - size), mask
+        return bgp[1 : size + 1] + bytes(IP.length(afi) - size), mask
 
         # data = bgp[1:size+1] + '\x0\x0\x0\x0'
         # return data[:4], mask
