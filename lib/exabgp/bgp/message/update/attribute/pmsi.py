@@ -53,8 +53,6 @@ class PMSI(Attribute):
         7: 'mLDP MP2MP LSP',
     }
 
-    __slots__ = ['label', 'flags', 'tunnel']
-
     def __init__(self, tunnel, label, flags, raw_label=None):
         self.label = label  # integer
         self.raw_label = raw_label  # integer

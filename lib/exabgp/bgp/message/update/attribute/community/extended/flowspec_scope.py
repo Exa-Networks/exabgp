@@ -21,8 +21,6 @@ class InterfaceSet(ExtendedCommunity):
     COMMUNITY_TYPE = 0x07
     COMMUNITY_SUBTYPE = 0x02
 
-    __slots__ = ['trans', 'asn', 'target', 'direction']
-
     names = {
         1: 'input',
         2: 'output',

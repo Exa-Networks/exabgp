@@ -16,9 +16,6 @@ from exabgp.util import concat_bytes
 
 
 class _MessageCode(int):
-    if sys.version_info[0] < 3:
-        __slots__ = ['SHORT', 'NAME']
-
     NOP = 0x00  # .   0 - internal
     OPEN = 0x01  # .   1
     UPDATE = 0x02  # .   2

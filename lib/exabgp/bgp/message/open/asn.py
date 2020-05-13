@@ -13,9 +13,6 @@ import sys
 
 from exabgp.protocol.resource import Resource
 
-if sys.version_info > (3,):
-    long = int
-
 # =================================================================== ASN
 
 
@@ -47,14 +44,14 @@ class ASN(Resource):
         return self
 
     def __repr__(self):
-        return '%ld' % long(self)
+        return '%ld' % int(self)
 
     def __str__(self):
-        return '%ld' % long(self)
+        return '%ld' % int(self)
 
     @classmethod
     def from_string(cls, value):
-        return cls(long(value))
+        return cls(int(value))
 
 
 AS_TRANS = ASN(23456)

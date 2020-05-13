@@ -22,8 +22,6 @@ class L2Info(ExtendedCommunity):
     COMMUNITY_TYPE = 0x80
     COMMUNITY_SUBTYPE = 0x0A
 
-    __slots__ = ['encaps', 'control', 'mtu', 'reserved']
-
     def __init__(self, encaps, control, mtu, reserved, community=None):
         self.encaps = encaps
         self.control = control

@@ -12,11 +12,7 @@ import sys
 from exabgp.util import string_is_hex
 
 
-if sys.version_info > (3,):
-    long = int
-
-
-class Resource(long):
+class Resource(int):
     NAME = ''
     codes = {}
     names = {}
@@ -27,12 +23,12 @@ class Resource(long):
         key = '//'.join((str(_) for _ in args))
         if key in Resource.cache.setdefault(cls, {}):
             return Resource.cache[cls][key]
-        instance = long.__new__(cls, *args)
+        instance = int.__new__(cls, *args)
         Resource.cache[cls][key] = instance
         return instance
 
     def __str__(self):
-        return self.names.get(self, 'unknown %s type %ld' % (self.NAME, long(self)))
+        return self.names.get(self, 'unknown %s type %ld' % (self.NAME, int(self)))
 
     @classmethod
     def _value(cls, string):
@@ -65,7 +61,7 @@ class BitResource(Resource):
                 yield self.names[bit]
                 value -= bit
         if value:
-            yield self.names.get(self, 'unknown %s type %ld' % (self.NAME, long(self)))
+            yield self.names.get(self, 'unknown %s type %ld' % (self.NAME, int(self)))
 
     def named_bits(self):
         for value in self.bits():

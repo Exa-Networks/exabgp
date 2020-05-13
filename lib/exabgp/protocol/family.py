@@ -273,8 +273,6 @@ class Family(object):
         (AFI.bgpls, SAFI.bgp_ls): ((4,), 0),
     }
 
-    __slots__ = ['afi', 'safi']
-
     def __init__(self, afi, safi):
         self.afi = AFI.create(afi)
         self.safi = SAFI.create(safi)

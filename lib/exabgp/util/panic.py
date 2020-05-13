@@ -7,15 +7,11 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.version import version
-
 import sys
 import platform
 
-if sys.version_info[0] < 3:
-    _max = sys.maxint
-else:
-    _max = sys.maxsize
+from exabgp.version import version
+
 
 PANIC = """
 ********************************************************************************
@@ -57,7 +53,7 @@ System MaxInt  : %s
     version,
     sys.version.replace('\n', ' '),
     platform.version(),
-    str(_max),
+    str(sys.maxsize),
 )
 
 
@@ -101,7 +97,7 @@ System MaxInt  : %s
     version,
     sys.version.replace('\n', ' '),
     platform.version(),
-    str(_max),
+    str(sys.maxsize),
 )
 
 FOOTER = """\

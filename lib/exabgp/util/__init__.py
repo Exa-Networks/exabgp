@@ -8,9 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import string
-import sys
-
-PY2 = sys.version_info[0] < 3
 
 
 def hexstring(value):
@@ -38,32 +35,16 @@ def string_is_hex(s):
 # data being of type 'bytes'
 
 
-if PY2:
-    ordinal = ord
-else:
-
-    def ordinal(x):
-        return x if type(x) == int else ord(x)
+def ordinal(x):
+    return x if type(x) == int else ord(x)
 
 
-if PY2:
-    character = chr
-else:
-
-    def character(x):
-        return bytes([x])
+def character(x):
+    return bytes([x])
 
 
-if PY2:
-
-    def padding(n):
-        return '\0' * n
-
-
-else:
-
-    def padding(n):
-        return bytes(n)
+def padding(n):
+    return bytes(n)
 
 
 # Each item is an 'str' in py2 or a 'bytes' in py3
@@ -90,25 +71,9 @@ def concat_bytes_i(iterable):
 
 # helpers for converting between string and bytestring
 
-if PY2:
-
-    def str_ascii(string):
-        return string
+def str_ascii(bytestring):
+    return str(bytestring, 'ascii')
 
 
-else:
-
-    def str_ascii(bytestring):
-        return str(bytestring, 'ascii')
-
-
-if PY2:
-
-    def bytes_ascii(string):
-        return string
-
-
-else:
-
-    def bytes_ascii(bytestring):
-        return bytes(bytestring, 'ascii')
+def bytes_ascii(bytestring):
+    return bytes(bytestring, 'ascii')

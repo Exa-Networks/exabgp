@@ -18,8 +18,6 @@ from exabgp.logger import LazyNLRI
 
 
 class NLRI(Family):
-    __slots__ = ['action']
-
     EOR = False
 
     registered_nlri = dict()

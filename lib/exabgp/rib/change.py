@@ -18,8 +18,6 @@ class Source(object):
 class Change(object):
     SOURCE = Source.UNSET
 
-    __slots__ = ['nlri', 'attributes', '__index']
-
     @staticmethod
     def family_prefix(family):
         return b'%02x%02x' % family

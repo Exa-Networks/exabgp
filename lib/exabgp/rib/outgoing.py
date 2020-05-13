@@ -18,10 +18,8 @@ from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.rib.cache import Cache
 
-if sys.version_info[0] >= 3 and sys.version_info[1] >= 6:
-    RIBdict = dict
-else:
-    from exabgp.vendoring.ordereddict import OrderedDict as RIBdict
+# This is needs to be an ordered dict
+RIBdict = dict
 
 
 class OutgoingRIB(Cache):

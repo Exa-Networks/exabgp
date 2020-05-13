@@ -25,8 +25,6 @@ def opt_raw_label(label, format=' (%d)'):
 class Labels(object):
     MAX = pow(2, 20) - 1
 
-    __slots__ = ['labels', 'packed', '_len', 'raw_labels']
-
     def __init__(self, labels, bos=True, raw_labels=None):
         self.labels = labels
         self.raw_labels = raw_labels

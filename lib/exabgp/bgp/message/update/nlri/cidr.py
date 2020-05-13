@@ -19,7 +19,6 @@ from exabgp.bgp.message.notification import Notify
 
 class CIDR(object):
     EOR = False
-    # __slots__ = ['packed','mask','_ip']
 
     _mask_to_bytes = {}
 

@@ -12,8 +12,6 @@ class ConsistentHashSortOrder(ExtendedCommunity):
     COMMUNITY_SUBTYPE = 0x14
     DESCRIPTION = "consistentHashSortOrder"
 
-    __slots__ = ['order', 'reserved']
-
     def __init__(self, order, reserved=0, community=None):
         self.order = order
         self.reserved = reserved

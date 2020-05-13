@@ -23,8 +23,6 @@ class LocalPreference(Attribute):
     FLAG = Attribute.Flag.TRANSITIVE
     CACHING = True
 
-    __slots__ = ['localpref', '_packed']
-
     def __init__(self, localpref, packed=None):
         self.localpref = localpref
         self._packed = self._attribute(packed if packed is not None else pack('!L', localpref))

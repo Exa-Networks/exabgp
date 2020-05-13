@@ -23,8 +23,6 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import RouteRefresh
 
-from exabgp.util.test import data_from_body
-
 from exabgp.configuration.environment import environment
 
 environment.setup('')
@@ -88,7 +86,7 @@ class TestData(unittest.TestCase):
         message_id = 1
         negotiated = {'invalid': 'test'}
 
-        o = Message.unpack(message_id, data_from_body(open_body), negotiated)
+        o = Message.unpack(message_id, bytes(open_body), negotiated)
 
         self.assertEqual(o.version, 4)
         self.assertEqual(o.asn, 65534)

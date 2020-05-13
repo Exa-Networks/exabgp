@@ -32,8 +32,6 @@ from exabgp.bgp.message.notification import Notify
 @NLRI.register(AFI.ipv4, SAFI.multicast)
 @NLRI.register(AFI.ipv6, SAFI.multicast)
 class INET(NLRI):
-    __slots__ = ['path_info', 'cidr', 'nexthop', 'labels', 'rd']
-
     def __init__(self, afi, safi, action=OUT.UNSET):
         NLRI.__init__(self, afi, safi, action)
         self.path_info = PathInfo.NOPATH

@@ -33,8 +33,6 @@ class ExtendedCommunityBase(Attribute):
     length_value = {False: 7, True: 6}
     name = {False: 'regular', True: 'extended'}
 
-    __slots__ = ['community']
-
     def __init__(self, community):
         # Two top bits are iana and transitive bits
         self.community = community

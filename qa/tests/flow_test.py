@@ -26,8 +26,6 @@ from exabgp.bgp.message.update.nlri.flow import NumericOperator
 
 from exabgp.protocol.ip import IPv4
 
-from exabgp.util.test import data_from_body
-
 from exabgp.configuration.environment import environment
 
 environment.setup('')
@@ -51,7 +49,7 @@ class TestFlow(unittest.TestCase):
 
         for key in ['destination', 'source', 'anyport_1']:
             component = components[key].pack()
-            message = data_from_body(messages[key])
+            message = bytes(messages[key])
             # if component != message:
             # 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % ord(_) for _ in component],['0x%02X' % ord(_) for _ in message]))
 
@@ -73,7 +71,7 @@ class TestFlow(unittest.TestCase):
         message = b""
         for key in ['destination', 'source', 'anyport_1', 'anyport_2']:
             flow.add(components[key])
-            message += data_from_body(messages[key])
+            message += bytes(messages[key])
         message = character(len(message)) + message
         # flow.add(to_FlowAction(65000,False,False))
         flow.pack()
@@ -97,7 +95,7 @@ class TestFlow(unittest.TestCase):
         message = b""
         for key in ['destination', 'source', 'anyport_1', 'anyport_2']:
             flow.add(components[key])
-            message += data_from_body(messages[key])
+            message += bytes(messages[key])
         message = character(len(message)) + message
         # policy.add(to_FlowAction(65000,False,False))
         flow = flow.pack()

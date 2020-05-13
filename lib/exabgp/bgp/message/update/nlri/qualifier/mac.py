@@ -20,8 +20,6 @@ from exabgp.util import concat_bytes_i
 
 class MAC(object):
 
-    __slots__ = ['mac', '_packed']
-
     def __init__(self, mac=None, packed=None):
         self.mac = mac
         self._packed = packed if packed else concat_bytes_i(character(int(_, 16)) for _ in mac.split(":"))

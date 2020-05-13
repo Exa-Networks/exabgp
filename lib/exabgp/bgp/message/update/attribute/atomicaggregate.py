@@ -22,8 +22,6 @@ class AtomicAggregate(Attribute):
     FLAG = Attribute.Flag.TRANSITIVE
     CACHING = True
 
-    __slots__ = []
-
     # Inherited from Attribute
     # def __eq__ (self, other):
     # def __ne__ (self, other):

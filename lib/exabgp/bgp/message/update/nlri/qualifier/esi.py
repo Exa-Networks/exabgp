@@ -21,8 +21,6 @@ class ESI(object):
     DEFAULT = concat_bytes_i(character(0) for _ in range(0, 10))
     MAX = concat_bytes_i(character(0xFF) for _ in range(0, 10))
 
-    __slots__ = ['esi']
-
     def __init__(self, esi=None):
         self.esi = self.DEFAULT if esi is None else esi
         if len(self.esi) != 10:

@@ -23,8 +23,6 @@ class MED(Attribute):
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
 
-    __slots__ = ['med', '_packed']
-
     def __init__(self, med, packed=None):
         self.med = med
         self._packed = self._attribute(packed if packed is not None else pack('!L', med))

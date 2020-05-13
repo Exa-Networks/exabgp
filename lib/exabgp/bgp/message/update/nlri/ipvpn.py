@@ -32,8 +32,6 @@ from exabgp.protocol.family import Family
 @NLRI.register(AFI.ipv4, SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6, SAFI.mpls_vpn)
 class IPVPN(Label):
-    __slots__ = ['rd']
-
     def __init__(self, afi, safi, action=OUT.UNSET):
         Label.__init__(self, afi, safi, action)
         self.rd = RouteDistinguisher.NORD

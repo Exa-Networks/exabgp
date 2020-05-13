@@ -56,10 +56,6 @@ from exabgp.configuration.announce.flow import AnnounceFlow
 from exabgp.configuration.announce.vpls import AnnounceVPLS
 
 
-if sys.version_info[0] >= 3:
-    StandardError = Exception
-
-
 class _Configuration(object):
     def __init__(self):
         self.processes = {}
@@ -348,7 +344,7 @@ class Configuration(_Configuration):
             return self.error.set(
                 'problem parsing configuration file line %d\n' 'error message: %s' % (self.tokeniser.index_line, exc)
             )
-        except StandardError as exc:
+        except Exception as exc:
             if environment.settings().debug.configuration:
                 raise
             return self.error.set(

@@ -29,8 +29,6 @@ class ClusterList(Attribute):
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
 
-    __slots__ = ['clusters', 'packed', '_len']
-
     def __init__(self, clusters, packed=None):
         self.clusters = clusters
         self._packed = self._attribute(packed if packed else concat_bytes_i(_.pack() for _ in clusters))

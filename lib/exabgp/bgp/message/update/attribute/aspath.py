@@ -35,8 +35,6 @@ class ASPath(Attribute):
     ID = Attribute.CODE.AS_PATH
     FLAG = Attribute.Flag.TRANSITIVE
 
-    __slots__ = ['as_seq', 'as_set', 'as_cseq', 'as_cset', 'segments', '_packed', 'index', '_str', '_json']
-
     def __init__(self, as_sequence, as_set, as_conf_sequence=None, as_conf_set=None, index=None):
         self.as_seq = as_sequence
         self.as_set = as_set

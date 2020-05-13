@@ -49,9 +49,6 @@ from exabgp.bgp.message import Notification
 from exabgp.version import json as json_version
 
 
-if sys.version_info[0] >= 3:
-    StandardError = Exception
-
 # =============================================================== check_neighbor
 # ...
 
@@ -267,7 +264,7 @@ def check_update(neighbor, raw):
             logger.error('could not parse the message', 'parser')
             logger.error(traceback.format_exc(), 'parser')
             return False
-        except StandardError:
+        except Exception:
             logger.error('could not parse the message', 'parser')
             logger.error(traceback.format_exc(), 'parser')
             return False

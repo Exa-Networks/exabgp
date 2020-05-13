@@ -40,8 +40,6 @@ class MPRNLRI(Attribute, Family):
     FLAG = Attribute.Flag.OPTIONAL
     ID = Attribute.CODE.MP_REACH_NLRI
 
-    # __slots__ = ['nlris']
-
     def __init__(self, afi, safi, nlris):
         Family.__init__(self, afi, safi)
         # all the routes must have the same next-hop
