@@ -43,10 +43,6 @@ def character(x):
     return bytes([x])
 
 
-def padding(n):
-    return bytes(n)
-
-
 # Each item is an 'str' in py2 or a 'bytes' in py3
 
 
@@ -70,6 +66,7 @@ def concat_bytes_i(iterable):
 
 
 # helpers for converting between string and bytestring
+
 
 def str_ascii(bytestring):
     return str(bytestring, 'ascii')

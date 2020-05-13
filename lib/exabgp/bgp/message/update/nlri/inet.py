@@ -16,7 +16,6 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import padding
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -144,6 +143,6 @@ class INET(NLRI):
 
         network, bgp = bgp[:size], bgp[size:]
 
-        nlri.cidr = CIDR(network + padding(IP.length(afi) - size), mask)
+        nlri.cidr = CIDR(network + bytes(IP.length(afi) - size), mask)
 
         return nlri, bgp
