@@ -3,7 +3,8 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
-Version 4.3.0:
+Version 5.0.0:
+ * Feature: drop support for python2, well it is classed as feature, your opinion may vary
  * Feature: logging parsing in debug mode will now print the JSON of updates
  * Fix: issue during restart
  * Fix: add ipv6 mpls to add-path
