@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import string
 
-from exabgp.util import bytes_ascii
 from exabgp.util import hexbytes
 from exabgp.util import hexstring
 
@@ -171,7 +170,7 @@ class Notify(Notification):
             data = self._str_subcode.get((code, subcode), 'unknown notification type')
         if (code, subcode) in [(6, 2), (6, 4)]:
             data = chr(len(data)) + data
-        Notification.__init__(self, code, subcode, bytes_ascii(data), False)
+        Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)
 
     def message(self, negotiated=None):
         return self._message(bytes([self.code, self.subcode]) + self.data)

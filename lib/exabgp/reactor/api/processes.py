@@ -13,8 +13,6 @@ import subprocess
 import select
 import fcntl
 
-from exabgp.util import str_ascii
-from exabgp.util import bytes_ascii
 from exabgp.util.errstr import errstr
 from exabgp.reactor.network.error import error
 
@@ -232,7 +230,7 @@ class Processes(object):
                     # Calling next() on Linux and OSX works perfectly well
                     # but not on OpenBSD where it always raise StopIteration
                     # and only read() works (not even readline)
-                    buf = str_ascii(proc.stdout.read(16384))
+                    buf = str(proc.stdout.read(16384), 'ascii')
                     if buf == '' and poll is not None:
                         # if proc.poll() is None then
                         # process is fine, we received an empty line because
@@ -286,7 +284,7 @@ class Processes(object):
         # XXX: FIXME: This is potentially blocking
         while True:
             try:
-                self._process[process].stdin.write(bytes_ascii('%s\n' % string))
+                self._process[process].stdin.write(bytes('%s\n' % string, 'ascii'))
             except IOError as exc:
                 self._broken.append(process)
                 if exc.errno == errno.EPIPE:

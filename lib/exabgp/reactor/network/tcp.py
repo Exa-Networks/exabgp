@@ -15,7 +15,6 @@ import platform
 
 from struct import pack, calcsize
 
-from exabgp.util import bytes_ascii
 from exabgp.util.errstr import errstr
 
 from exabgp.protocol.family import AFI
@@ -171,7 +170,7 @@ def MD5(io, ip, port, md5, md5_base64):
                 key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
                 io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
             elif md5:
-                md5_bytes = bytes_ascii(md5)
+                md5_bytes = bytes(md5, 'ascii')
                 key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
                 io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
             # else:

@@ -17,7 +17,6 @@ import socket
 import traceback
 from collections import deque
 
-from exabgp.util import str_ascii
 from exabgp.reactor.network.error import error
 
 kb = 1024
