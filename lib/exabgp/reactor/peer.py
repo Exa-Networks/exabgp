@@ -11,7 +11,6 @@ import time
 from collections import defaultdict
 
 # import traceback
-from exabgp.vendoring import six
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.message import Message
 from exabgp.bgp.fsm import FSM
@@ -456,7 +455,7 @@ class Peer(object):
 
                     if operational:
                         try:
-                            six.next(operational)
+                            next(operational)
                         except StopIteration:
                             operational = None
                 # make sure that if some operational message are received via the API
@@ -473,7 +472,7 @@ class Peer(object):
 
                     if refresh:
                         try:
-                            six.next(refresh)
+                            next(refresh)
                         except StopIteration:
                             refresh = None
 
@@ -505,7 +504,7 @@ class Peer(object):
                     try:
                         for _ in range(count):
                             # This can raise a NetworkError
-                            six.next(new_routes)
+                            next(new_routes)
                     except StopIteration:
                         new_routes = None
                         include_withdraw = True
@@ -523,7 +522,7 @@ class Peer(object):
 
                 if command_eor:
                     try:
-                        six.next(command_eor)
+                        next(command_eor)
                     except StopIteration:
                         command_eor = None
 
@@ -577,7 +576,7 @@ class Peer(object):
                     generator = self.proto.new_notification(notify)
                     try:
                         while True:
-                            six.next(generator)
+                            next(generator)
                             yield ACTION.NOW
                     except StopIteration:
                         pass
@@ -636,7 +635,7 @@ class Peer(object):
             try:
                 # This generator only stops when it raises
                 # otherwise return one of the ACTION
-                return six.next(self.generator)
+                return next(self.generator)
             except StopIteration:
                 # Trying to run a closed loop, no point continuing
                 self.generator = None

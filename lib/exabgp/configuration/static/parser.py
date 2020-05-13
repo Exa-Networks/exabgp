@@ -148,7 +148,7 @@ def attribute(tokeniser):
 
     return GenericAttribute(code, flag, data)
 
-    # for ((ID,flag),klass) in six.iteritems(Attribute.registered_attributes):
+    # for ((ID,flag),klass) in Attribute.registered_attributes.items():
     # 	length = len(data)
     # 	if code == ID and flag | Attribute.Flag.EXTENDED_LENGTH == klass.FLAG | Attribute.Flag.EXTENDED_LENGTH:
     # 		# if length > 0xFF or flag & Attribute.Flag.EXTENDED_LENGTH:

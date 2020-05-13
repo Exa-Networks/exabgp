@@ -14,8 +14,6 @@ import sys
 import time
 import signal
 
-from exabgp.vendoring import six
-
 from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
@@ -104,16 +102,16 @@ class JSON(object):
         )
 
     def _kv(self, extra):
-        return ", ".join('"%s": %s' % (k, self._string(v)) for (k, v) in six.iteritems(extra))
+        return ", ".join('"%s": %s' % (k, self._string(v)) for (k, v) in extra.items())
 
     def _json_kv(self, extra):
-        return ", ".join('"%s": %s' % (k, v.json()) for (k, v) in six.iteritems(extra))
+        return ", ".join('"%s": %s' % (k, v.json()) for (k, v) in extra.items())
 
     def _json_list(self, extra):
-        return ", ".join('%s' % (v.json()) for v in six.iteritems(extra))
+        return ", ".join('%s' % (v.json()) for v in extra.items())
 
     def _minimalkv(self, extra):
-        return ", ".join('"%s": %s' % (k, self._string(v)) for (k, v) in six.iteritems(extra) if v)
+        return ", ".join('"%s": %s' % (k, self._string(v)) for (k, v) in extra.items() if v)
 
     def up(self, neighbor):
         return self._header(

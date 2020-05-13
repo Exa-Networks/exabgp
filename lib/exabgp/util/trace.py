@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import traceback
 
-from exabgp.vendoring.six.moves import StringIO
+from io import StringIO
 
 
 def trace():

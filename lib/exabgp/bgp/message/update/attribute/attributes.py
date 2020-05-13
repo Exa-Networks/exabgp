@@ -27,8 +27,6 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.logger import Logger
 from exabgp.logger import LazyAttribute
 
-from exabgp.vendoring import six
-
 
 class _NOTHING(object):
     def pack(self, _=None):
@@ -486,7 +484,7 @@ class Attributes(dict):
             return x.pack()
 
         try:
-            for key in set(six.iterkeys(self)).union(set(six.iterkeys(other))):
+            for key in set(self.keys()).union(set(other.keys())):
                 if key == Attribute.CODE.MP_REACH_NLRI or key == Attribute.CODE.MP_UNREACH_NLRI:
                     continue
 

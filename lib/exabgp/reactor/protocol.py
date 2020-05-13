@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import os
 
-from exabgp.vendoring import six
 import traceback
 
 # ================================================================ Registration

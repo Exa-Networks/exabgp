@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from collections import deque
 
 from exabgp.logger import Logger
-from exabgp.vendoring import six
 
 
 class ASYNC(object):
@@ -50,7 +49,7 @@ class ASYNC(object):
 
         for _ in length:
             try:
-                six.next(generator)
+                next(generator)
             except KeyboardInterrupt:
                 raise
             except StopIteration:

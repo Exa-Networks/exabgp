@@ -315,7 +315,7 @@ class environment(object):
 # ========================================================================= _env
 #
 
-from exabgp.vendoring.six.moves import configparser as ConfigParser
+import configparser as ConfigParser
 from exabgp.util.hashtable import HashTable
 
 

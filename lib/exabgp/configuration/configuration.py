@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import os
 import sys
 
-from exabgp.vendoring import six
-
 from exabgp.logger import Logger
 
 from exabgp.configuration.core import Error
@@ -406,7 +404,7 @@ class Configuration(_Configuration):
         return None
 
     def _link(self):
-        for neighbor in six.itervalues(self.neighbors):
+        for neighbor in self.neighbors.values():
             api = neighbor.api
             for process in api.get('processes', []):
                 self.processes.setdefault(process, {})['neighbor-changes'] = api['neighbor-changes']

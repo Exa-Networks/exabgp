@@ -36,8 +36,6 @@ import os
 import sys
 import tempfile
 
-from exabgp.vendoring import six
-
 __all__ = ['convert', 'visualize', 'CalltreeConverter']
 
 
@@ -95,7 +93,7 @@ class CalltreeConverter(object):
     kcachegrind_command = "kcachegrind %s"
 
     def __init__(self, profiling_data):
-        if isinstance(profiling_data, six.string_types):
+        if isinstance(profiling_data, str):
             # treat profiling_data as a filename of pstats serialized data
             self.entries = pstats2entries(pstats.Stats(profiling_data))
         elif isinstance(profiling_data, pstats.Stats):
@@ -282,7 +280,7 @@ def convert(profiling_data, outputfile):
         - a filename
     """
     converter = CalltreeConverter(profiling_data)
-    if isinstance(outputfile, six.string_types):
+    if isinstance(outputfile, str):
         f = open(outputfile, "wb")
         try:
             converter.output(f)

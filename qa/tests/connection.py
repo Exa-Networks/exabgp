@@ -8,14 +8,11 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import os
 import sys
-import cProfile
 
 import unittest
 
 from exabgp.util.od import od
-from exabgp.vendoring import six
 
 
 def test():
@@ -31,10 +28,10 @@ def test():
 
     connection = Outgoing(1, '82.219.0.69', '82.219.212.34')
     writer = connection.writer(OPEN)
-    while six.next(writer) is False:
+    while next(writer) is False:
         pass
     writer = connection.writer(KEEP)
-    while six.next(writer) is False:
+    while next(writer) is False:
         pass
 
     reader = connection.reader()

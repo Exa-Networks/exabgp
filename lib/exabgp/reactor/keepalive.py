@@ -6,8 +6,6 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 """
 
-from exabgp.vendoring import six
-
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Notify
 
@@ -42,8 +40,8 @@ class KA(object):
 
             try:
                 # try to close the generator and raise a StopIteration in one call
-                six.next(generator)
-                six.next(generator)
+                next(generator)
+                next(generator)
                 # still running
                 yield True
             except NetworkError:
@@ -56,6 +54,6 @@ class KA(object):
         #  True  if we need or are trying
         #  False if we do not need to send one
         try:
-            return six.next(self._generator)
+            return next(self._generator)
         except StopIteration:
             raise Notify(4, 0, 'could not send keepalive')

@@ -8,7 +8,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 import json
 from struct import unpack
-from exabgp.vendoring import six
 from exabgp.util import hexstring
 
 from exabgp.vendoring.bitstring import BitArray
@@ -45,7 +44,7 @@ class SrAdjacency(object):
         # We only support IS-IS flags for now.
         flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.ISIS_SR_ADJ_FLAGS)
         # Parse adj weight
-        weight = six.indexbytes(data, 1)
+        weight = data[1]
         # Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
         data = data[4:]
         # SID/Index/Label: according to the V and L flags, it contains
