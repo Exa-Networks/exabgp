@@ -10,7 +10,6 @@ import binascii
 import itertools
 from struct import unpack
 
-from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -128,17 +127,16 @@ class LsGenericFlags(object):
     def unpack(cls, data, pattern):
         pad = pattern.count('RSV')
         repeat = len(pattern) - pad
-        flag_array = binascii.b2a_hex(data)
-        hex_rep = hex(int(flag_array, 16))
-        bit_array = BitArray(hex_rep)
+        hex_rep = int(binascii.b2a_hex(data), 16)
+        bits = f'{hex_rep:08b}'
         valid_flags = [
             ''.join(''.join(item), ''.join(itertools.repeat('0', pad)))
             for item in itertools.product('01', repeat=repeat)
         ]
         valid_flags.append('0000')
-        if bit_array.bin in valid_flags:
+        if bits in valid_flags:
             flags = dict(zip(pattern, [0,] * len(pattern)))
-            flags.update(dict((k, int(v)) for k, v in zip(pattern, bit_array.bin)))
+            flags.update(dict((k, int(v)) for k, v in zip(pattern, bits)))
         else:
             raise Notify(3, 5, "Invalid SR flags mask")
         return cls(flags=flags)

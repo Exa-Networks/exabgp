@@ -10,7 +10,6 @@ import json
 from struct import unpack
 from exabgp.util import hexstring
 
-from exabgp.vendoring.bitstring import BitArray
 from exabgp.protocol.iso import ISO
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
 
@@ -72,8 +71,7 @@ class SrAdjacencyLan(object):
             # Range Size: 3 octet value indicating the number of labels in
             # the range.
             if int(flags.flags['V']) and int(flags.flags['L']):
-                b = BitArray(bytes=data[:3])
-                sid = b.unpack('uintbe:24')[0]
+                sid = unpack('!L', bytes([0]) + data[:3])[0]
                 data = data[3:]
                 sids.append(sid)
             elif (not flags.flags['V']) and (not flags.flags['L']):

@@ -8,7 +8,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from struct import unpack
 
-from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
@@ -51,8 +50,7 @@ class IgpMetric(object):
             return cls(igpmetric=igpmetric)
         elif len(data) == 3:
             # ISIS wide metrics
-            b = BitArray(bytes=data)
-            igpmetric = b.unpack('uintbe:24')
+            igpmetric = unpack('!L', bytes([0]) + data)[0]
             return cls(igpmetric=igpmetric)
         else:
             raise Notify(3, 5, "Incorrect IGP Metric Size")

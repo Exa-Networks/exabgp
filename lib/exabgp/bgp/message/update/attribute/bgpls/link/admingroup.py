@@ -6,7 +6,8 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
-from exabgp.vendoring.bitstring import BitArray
+from struct import unpack
+
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
@@ -26,8 +27,7 @@ class AdminGroup(object):
         if length != 4:
             raise Notify(3, 5, "Unable to decode attribute. Incorrect Size")
         else:
-            b = BitArray(bytes=data)
-            colormask = b.unpack('uintbe:32')
+            colormask = unpack('!L', data[:4])[0]
             return cls(colormask=colormask)
 
     def json(self, compact=None):

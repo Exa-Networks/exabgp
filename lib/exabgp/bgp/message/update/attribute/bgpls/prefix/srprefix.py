@@ -10,7 +10,6 @@ import json
 from struct import unpack
 from exabgp.util import hexstring
 
-from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
 
@@ -61,8 +60,7 @@ class SrPrefix(object):
         raw = []
         while data:
             if flags.flags['V'] and flags.flags['L']:
-                b = BitArray(bytes=data[:3])
-                sid = b.unpack('uintbe:24')[0]
+                sid = unpack('!L', bytes([0]) + data[:3])[0]
                 data = data[3:]
                 sids.append(sid)
             elif (not flags.flags['V']) and (not flags.flags['L']):
