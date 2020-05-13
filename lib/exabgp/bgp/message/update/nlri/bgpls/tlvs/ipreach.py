@@ -8,8 +8,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import division
+
 from struct import unpack
-from exabgp.vendoring import ipaddress
+from ipaddress import ip_address
 
 from exabgp.protocol.ip import IP
 
@@ -66,7 +67,7 @@ class IpReach(object):
             # fill out to a complete 128-bit address
             prefix_list = prefix_list + ["0"] * (8 - len(prefix_list))
             prefix = u":".join(prefix_list)
-            prefix = ipaddress.ip_address(prefix).compressed
+            prefix = ip_address(prefix).compressed
         else:
             # IPv4
             prefix_list = unpack("!%dB" % octet, data[1 : octet + 1])
