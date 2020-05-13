@@ -13,7 +13,7 @@ import string
 def hexstring(value):
     def spaced(value):
         for v in value:
-            yield '%02X' % ordinal(v)
+            yield '%02X' % v
 
     return '0x' + concat_strs_i(spaced(value))
 
@@ -30,17 +30,7 @@ def string_is_hex(s):
     return all(c in string.hexdigits for c in s[2:])
 
 
-# for Python3+, let's redefine ord into something
-# that plays along nicely with ord(data[42]) with
-# data being of type 'bytes'
-
-
-def ordinal(x):
-    return x if type(x) == int else ord(x)
-
-
 # Each item is an 'str' in py2 or a 'bytes' in py3
-
 
 def concat_strs(*items):
     return ''.join(items)

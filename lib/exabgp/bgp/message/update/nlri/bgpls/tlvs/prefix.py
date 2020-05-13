@@ -7,13 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from struct import pack
-from struct import unpack
-
-from exabgp.protocol.ip import IP
-from exabgp.util import ordinal
-from exabgp.bgp.message.notification import Notify
-
 #   https://tools.ietf.org/html/rfc5305#section-3.2
 # 	This sub-TLV contains a 4-octet IPv4 address for the interface
 #   described by the (main) TLV.  This sub-TLV can occur multiple times.
@@ -65,7 +58,7 @@ class Prefix(object):
         raise RuntimeError('Not implemented')
 
     def __str__(self):
-        return ':'.join('%02X' % ordinal(_) for _ in self._packed)
+        return ':'.join('%02X' % _ for _ in self._packed)
 
     def __repr__(self):
         return self.__str__()

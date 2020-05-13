@@ -84,8 +84,8 @@ def routes():
         destination = route.attributes.get(Network.Type.Attribute.RTA_DST)
         gateway = route.attributes.get(Network.Type.Attribute.RTA_GATEWAY)
 
-        oif = ord(route.attributes.get(Network.Type.Attribute.RTA_OIF)[0])
-        metric = ord(route.attributes.get(Network.Type.Attribute.RTA_PRIORITY, '\0')[0])
+        oif = route.attributes.get(Network.Type.Attribute.RTA_OIF)[0]
+        metric = route.attributes.get(Network.Type.Attribute.RTA_PRIORITY, '\0')[0]
 
         dst = '%s' % socket.inet_ntop(route.family, destination) if destination else ''
         gw = '%s' % socket.inet_ntop(route.family, gateway) if gateway else '0.0.0.0'
@@ -116,8 +116,8 @@ def new():
         # destination = route.attributes.get(Network.Type.Attribute.RTA_DST)
         # gateway = route.attributes.get(Network.Type.Attribute.RTA_GATEWAY)
         #
-        # oif = ord(route.attributes.get(Network.Type.Attribute.RTA_OIF)[0])
-        # metric = ord(route.attributes.get(Network.Type.Attribute.RTA_PRIORITY,'\0')[0])
+        # oif = route.attributes.get(Network.Type.Attribute.RTA_OIF)[0]
+        # metric = route.attributes.get(Network.Type.Attribute.RTA_PRIORITY,'\0')[0]
         #
         # dst = '%s' % socket.inet_ntop(route.family, destination) if destination else ''
         # gw  = '%s' % socket.inet_ntop(route.family, gateway) if gateway else '0.0.0.0'

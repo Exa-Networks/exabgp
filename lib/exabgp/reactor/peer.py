@@ -12,7 +12,6 @@ from collections import defaultdict
 
 # import traceback
 from exabgp.vendoring import six
-from exabgp.util import ordinal
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.message import Message
 from exabgp.bgp.fsm import FSM
@@ -305,7 +304,7 @@ class Peer(object):
     def _send_open(self):
         message = Message.CODE.NOP
         for message in self.proto.new_open():
-            if ordinal(message.TYPE) == Message.CODE.NOP:
+            if message.ID == Message.CODE.NOP:
                 yield ACTION.NOW
         yield message
 
@@ -321,7 +320,7 @@ class Peer(object):
             # XXX: FIXME: change the whole code to use the ord and not the chr version
             # Only yield if we have not the open, otherwise the reactor can run the other connection
             # which would be bad as we need to do the collission check
-            if ordinal(message.TYPE) == Message.CODE.NOP:
+            if message.ID == Message.CODE.NOP:
                 # If a peer does not reply to OPEN message, or not enough bytes
                 # yielding ACTION.NOW can cause ExaBGP to busy spin trying to
                 # read from peer. See GH #723 .

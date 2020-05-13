@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import hexstring
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -48,7 +47,7 @@ class GenericAttribute(Attribute):
         return len(self.data)
 
     def __repr__(self):
-        return '0x' + ''.join('%02x' % ordinal(_) for _ in self.data)
+        return '0x' + ''.join('%02x' % _ for _ in self.data)
 
     @classmethod
     def unpack(cls, code, flag, data):

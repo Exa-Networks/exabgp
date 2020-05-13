@@ -7,11 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from struct import pack
 from struct import unpack
 
-from exabgp.bgp.message.notification import Notify
-from exabgp.util import ordinal
 
 #       0                   1                   2                   3
 #       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -59,7 +56,7 @@ class LinkIdentifier(object):
         raise RuntimeError('Not implemented')
 
     def __str__(self):
-        return ':'.join('%02X' % ordinal(_) for _ in self._packed)
+        return ':'.join('%02X' % _ for _ in self._packed)
 
     def __repr__(self):
         return self.__str__()

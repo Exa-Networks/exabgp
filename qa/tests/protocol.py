@@ -65,7 +65,7 @@ class TestProtocol(unittest.TestCase):
         #
         # txt = ds.message()
         # network = Network(txt)
-        # print [hex(ord(c)) for c in txt]
+        # print [hex(c) for c in txt]
         # bgp = Protocol(self.neighbor,network)
         # bgp.follow = False
 

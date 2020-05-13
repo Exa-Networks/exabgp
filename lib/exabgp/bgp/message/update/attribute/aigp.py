@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i, concat_bytes
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -42,7 +41,7 @@ class TLVS(list):
     def unpack(data):
         def loop(data):
             while data:
-                t = ordinal(data[0])
+                t = data[0]
                 length = unpack('!H', data[1:3])[0]
                 v, data = data[3:length], data[length:]
                 yield TLV(t, v)
@@ -89,7 +88,7 @@ class AIGP(Attribute):
         return b''
 
     def __repr__(self):
-        return '0x' + ''.join('%02x' % ordinal(_) for _ in self.aigp[-8:])
+        return '0x' + ''.join('%02x' % _ for _ in self.aigp[-8:])
 
     @classmethod
     def unpack(cls, data, negotiated):

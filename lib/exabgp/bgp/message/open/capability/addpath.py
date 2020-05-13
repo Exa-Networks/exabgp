@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import ordinal
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # ====================================================================== AddPath
@@ -69,7 +68,7 @@ class AddPath(Capability, dict):
         while data:
             afi = AFI.unpack(data[:2])
             safi = SAFI.unpack(data[2])
-            sr = ordinal(data[3])
+            sr = data[3]
             instance.add_path(afi, safi, sr)
             data = data[4:]
         return instance

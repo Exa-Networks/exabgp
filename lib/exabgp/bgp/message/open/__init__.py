@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import unpack
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import bytes_ascii
 from exabgp.bgp.message.message import Message
@@ -84,7 +83,7 @@ class Open(Message):
 
     @classmethod
     def unpack_message(cls, data, _=None):
-        version = ordinal(data[0])
+        version = data[0]
         if version != 4:
             # Only version 4 is supported nowdays..
             raise Notify(2, 1, bytes_ascii(data[0]))

@@ -48,7 +48,7 @@ class RecordHandler(asyncore.dispatcher_with_send):
                     continue
 
                 for byte in data:
-                    self.record.write('%02X' % ord(byte))
+                    self.record.write('%02X' % byte)
                     count = (count + 1) % 32
                     if not count:
                         self.record.write('\n')

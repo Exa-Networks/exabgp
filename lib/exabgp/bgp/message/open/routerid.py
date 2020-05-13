@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IPv4
 
-from exabgp.util import ordinal
-
 # ===================================================================== RouterID
 #
 
@@ -24,4 +22,4 @@ class RouterID(IPv4):
 
     @classmethod
     def unpack(cls, data):  # pylint: disable=W0221
-        return cls('.'.join(str(ordinal(_)) for _ in data), data)
+        return cls('.'.join(str(_) for _ in data), data)

@@ -4,7 +4,6 @@ import sys
 import json
 import string
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 from exabgp.util import hexstring
 
@@ -117,7 +116,7 @@ class Transcoder(object):
 
             # draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
-            shutdown_length = ordinal(data[0])
+            shutdown_length = data[0]
             data = data[1:]
 
             if shutdown_length == 0:

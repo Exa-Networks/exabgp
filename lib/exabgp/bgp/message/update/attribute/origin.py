@@ -7,7 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import ordinal
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -51,7 +50,7 @@ class Origin(Attribute):
 
     @classmethod
     def unpack(cls, data, negotiated):
-        return cls(ordinal(data), data)
+        return cls(data[0], data)
 
     @classmethod
     def setCache(cls):

@@ -9,8 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import socket
 
-from exabgp.util import ordinal
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -120,7 +118,7 @@ class IP(object):
         value = 0
         for char in self._packed:
             value <<= 8
-            value += ordinal(char)
+            value += char
         return value
 
     @staticmethod
@@ -256,7 +254,7 @@ class IPv4(IP):
         return not self.multicast()
 
     def multicast(self):
-        return ordinal(self._packed[0]) in set(range(224, 240))  # 239 is last
+        return self._packed[0] in set(range(224, 240))  # 239 is last
 
     def ipv4(self):
         return True

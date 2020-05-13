@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://tools.ietf.org/html/draft-walton-bgp-hostname-capability-02
 
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.capability.capability import Capability
 
@@ -37,8 +36,8 @@ class HostName(Capability):
 
     @staticmethod
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
-        l1 = ordinal(data[0])
+        l1 = data[0]
         instance.host_name = data[1 : l1 + 1].decode('utf-8')
-        l2 = ordinal(data[l1 + 1])
+        l2 = data[l1 + 1]
         instance.domain_name = data[l1 + 2 : l1 + 2 + l2].decode('utf-8')
         return instance
