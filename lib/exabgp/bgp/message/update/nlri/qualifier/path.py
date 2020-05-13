@@ -18,8 +18,6 @@ from exabgp.util import concat_bytes_i
 
 class PathInfo(object):
 
-    __slots__ = ['path_info']
-
     def __init__(self, packed=None, integer=None, ip=None):
         if packed:
             self.path_info = packed

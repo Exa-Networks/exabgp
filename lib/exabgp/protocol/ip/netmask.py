@@ -12,10 +12,6 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.resource import Resource
 
 
-if sys.version_info > (3,):
-    long = int
-
-
 class NetMask(Resource):
     NAME = 'netmask'
 
@@ -91,7 +87,7 @@ class NetMask(Resource):
         if not string.isdigit():
             raise ValueError('invalid netmask %s' % string)
 
-        value = long(string)
+        value = int(string)
         if value < 0 or value > maximum:
             raise ValueError('invalid netmask %s' % string)
 

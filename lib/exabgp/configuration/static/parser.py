@@ -56,10 +56,6 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.rib.change import Change
 
 
-if sys.version_info > (3,):
-    long = int
-
-
 def prefix(tokeniser):
     # XXX: could raise
     ip = tokeniser()
@@ -323,7 +319,7 @@ def _community(value):
         return Community(pack('!L', (prefix << 16) + suffix))
 
     elif value[:2].lower() == '0x':
-        number = long(value, 16)
+        number = int(value, 16)
         if number > Community.MAX:
             raise ValueError('invalid community %s (too large)' % value)
         return Community(pack('!L', number))

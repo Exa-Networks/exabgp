@@ -20,8 +20,6 @@ class LargeCommunity(Attribute):
     cache = {}
     caching = True
 
-    __slots__ = ['large_community', '_str']
-
     def __init__(self, large_community):
         self.large_community = large_community
         self._str = "%d:%d:%d" % unpack('!LLL', self.large_community)

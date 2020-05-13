@@ -16,10 +16,6 @@ from exabgp.protocol.ip import IP
 from exabgp.configuration.core.error import Error
 
 
-if sys.version_info > (3,):
-    long = int
-
-
 class Scope(Error):
     def __init__(self):
         Error.__init__(self)

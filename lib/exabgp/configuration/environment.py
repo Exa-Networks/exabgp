@@ -374,10 +374,7 @@ def _env(conf):
                 elif rep_name in os.environ:
                     conf = os.environ.get(rep_name)
                 else:
-                    if sys.version_info[0] < 3:
-                        conf = environment.unquote(ini.get(proxy_section, option, nonedict))
-                    else:
-                        conf = environment.unquote(ini.get(proxy_section, option, vars=nonedict))
+                    conf = environment.unquote(ini.get(proxy_section, option, vars=nonedict))
                     # name without an = or : in the configuration and no value
                     if conf is None:
                         conf = default[option]['value']

@@ -25,8 +25,6 @@ class Aggregator(Attribute):
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     CACHING = True
 
-    __slots__ = ['asn', 'speaker', '_str']
-
     def __init__(self, asn, speaker):
         self.asn = asn
         self.speaker = speaker
@@ -75,9 +73,6 @@ class Aggregator(Attribute):
 @Attribute.register()
 class Aggregator4(Aggregator):
     ID = Attribute.CODE.AS4_AGGREGATOR
-
-    if sys.version_info[0] < 3:
-        __slots__ = ['pack']
 
     def pack(self, negotiated):
         return self._attribute(self.asn.pack(True) + self.speaker.pack())

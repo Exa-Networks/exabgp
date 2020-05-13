@@ -20,8 +20,6 @@ class MacMobility(ExtendedCommunity):
     COMMUNITY_SUBTYPE = 0x00
     DESCRIPTION = 'mac-mobility'
 
-    __slots__ = ['sequence', 'sticky']
-
     def __init__(self, sequence, sticky=False, community=None):
         self.sequence = sequence
         self.sticky = sticky

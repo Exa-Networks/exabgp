@@ -31,8 +31,6 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 class RTC(NLRI):
     # XXX: FIXME: no support yet for RTC variable length with prefixing
 
-    __slots__ = ['origin', 'rt', 'action', 'nexthop']
-
     def __init__(self, afi, safi, action, origin, rt):
         NLRI.__init__(self, afi, safi)
         self.action = action

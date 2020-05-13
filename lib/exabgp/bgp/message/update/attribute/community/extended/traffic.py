@@ -29,8 +29,6 @@ class TrafficRate(ExtendedCommunity):
     COMMUNITY_TYPE = 0x80
     COMMUNITY_SUBTYPE = 0x06
 
-    __slots__ = ['asn', 'rate']
-
     def __init__(self, asn, rate, community=None):
         self.asn = asn
         self.rate = rate
@@ -66,8 +64,6 @@ class TrafficAction(ExtendedCommunity):
         True: 0x1,
     }
 
-    __slots__ = ['sample', 'terminal']
-
     def __init__(self, sample, terminal, community=None):
         self.sample = sample
         self.terminal = terminal
@@ -101,8 +97,6 @@ class TrafficRedirect(ExtendedCommunity):
     COMMUNITY_TYPE = 0x80
     COMMUNITY_SUBTYPE = 0x08
 
-    __slots__ = ['asn', 'target']
-
     def __init__(self, asn, target, community=None):
         self.asn = asn
         self.target = target
@@ -123,8 +117,6 @@ class TrafficRedirect(ExtendedCommunity):
 class TrafficRedirectASN4(ExtendedCommunity):
     COMMUNITY_TYPE = 0x82
     COMMUNITY_SUBTYPE = 0x08
-
-    __slots__ = ['asn', 'target']
 
     def __init__(self, asn, target, community=None):
         self.asn = asn
@@ -151,8 +143,6 @@ class TrafficMark(ExtendedCommunity):
     COMMUNITY_TYPE = 0x80
     COMMUNITY_SUBTYPE = 0x09
 
-    __slots__ = ['dscp']
-
     def __init__(self, dscp, community=None):
         self.dscp = dscp
         ExtendedCommunity.__init__(
@@ -177,8 +167,6 @@ class TrafficMark(ExtendedCommunity):
 class TrafficNextHopIPv4IETF(ExtendedCommunity):
     COMMUNITY_TYPE = 0x01
     COMMUNITY_SUBTYPE = 0x0C
-
-    __slots__ = ['ip', 'copy']
 
     def __init__(self, ip, copy, community=None):
         self.ip = ip
@@ -206,8 +194,6 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
     COMMUNITY_TYPE = 0x00
     COMMUNITY_SUBTYPE = 0x0C
 
-    __slots__ = ['ip', 'copy']
-
     def __init__(self, ip, copy, community=None):
         self.ip = ip
         self.copy = copy
@@ -234,8 +220,6 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
 class TrafficNextHopSimpson(ExtendedCommunity):
     COMMUNITY_TYPE = 0x08
     COMMUNITY_SUBTYPE = 0x00
-
-    __slots__ = ['copy']
 
     def __init__(self, copy, community=None):
         self.copy = copy

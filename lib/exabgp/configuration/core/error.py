@@ -3,11 +3,8 @@ import pdb
 
 from exabgp.configuration.environment import environment
 
-if sys.version_info[0] >= 3:
-    StandardError = Exception
 
-
-class Error(StandardError):
+class Error(Exception):
     def __init__(self):
         self.message = ''
         self.debug = environment.settings().debug.configuration

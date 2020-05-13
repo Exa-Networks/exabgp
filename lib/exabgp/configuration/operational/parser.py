@@ -21,10 +21,6 @@ from exabgp.bgp.message.operational import Query
 from exabgp.bgp.message.operational import Response
 
 
-if sys.version_info > (3,):
-    long = int
-
-
 def _operational(klass, parameters, tokeniser):
     def utf8(string):
         return string.encode('utf-8')
@@ -36,7 +32,7 @@ def _operational(klass, parameters, tokeniser):
         return int(_) <= 0xFFFFFFFF
 
     def u64(_):
-        return long(_) <= 0xFFFFFFFFFFFFFFFF
+        return int(_) <= 0xFFFFFFFFFFFFFFFF
 
     def advisory(_):
         return len(_.encode('utf-8')) <= MAX_ADVISORY + 2  # the two quotes

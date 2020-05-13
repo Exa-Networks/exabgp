@@ -55,8 +55,6 @@ class Operational(Message):
 
     # really this should be called ID if not for the naming conflict
     class CODE(object):
-        __slots__ = []
-
         NOP = 0x00  # Not defined by the RFC
         # ADVISE
         ADM = 0x01  # 01: Advisory Demand Message

@@ -21,8 +21,6 @@ class Bandwidth(ExtendedCommunity):
     COMMUNITY_TYPE = 0x40
     COMMUNITY_SUBTYPE = 0x04
 
-    __slots__ = ['encaps', 'control', 'mtu', 'reserved']
-
     def __init__(self, asn, speed, community=None):
         self.asn = asn
         self.speed = speed

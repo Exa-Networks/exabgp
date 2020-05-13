@@ -18,9 +18,6 @@ import sys
 
 class FSM(object):
     class STATE(int):
-        if sys.version_info[0] < 3:
-            __slots__ = ['code']
-
         IDLE = 0x01
         ACTIVE = 0x02
         CONNECT = 0x04

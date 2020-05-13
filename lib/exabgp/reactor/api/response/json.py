@@ -25,9 +25,6 @@ from exabgp.configuration.environment import environment
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 
 
-if sys.version_info > (3,):
-    long = int
-
 SIGNAL_NAME = dict(
     (k, v) for v, k in reversed(sorted(signal.__dict__.items())) if v.startswith('SIG') and not v.startswith('SIG_')
 )
@@ -57,8 +54,6 @@ class JSON(object):
     def _string(self, object):
         if issubclass(object.__class__, bool):
             return 'true' if object else 'false'
-        if issubclass(object.__class__, long):
-            return '%s' % object
         if issubclass(object.__class__, int):
             return '%s' % object
         string = '%s' % object

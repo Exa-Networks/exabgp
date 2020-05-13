@@ -32,8 +32,6 @@ class MPURNLRI(Attribute, Family):
     FLAG = Attribute.Flag.OPTIONAL
     ID = Attribute.CODE.MP_UNREACH_NLRI
 
-    # __slots__ = ['nlris']
-
     def __init__(self, afi, safi, nlris):
         Family.__init__(self, afi, safi)
         self.nlris = nlris

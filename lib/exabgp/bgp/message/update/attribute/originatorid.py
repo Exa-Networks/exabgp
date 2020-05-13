@@ -21,8 +21,6 @@ class OriginatorID(Attribute, IPv4):
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
 
-    __slots__ = []
-
     def __eq__(self, other):
         return self.ID == other.ID and self.FLAG == other.FLAG
 

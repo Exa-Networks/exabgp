@@ -80,9 +80,6 @@ class Attribute(object):
     # XXX: FIXME: The API of ID is a bit different (it can be instanciated)
     # XXX: FIXME: This is legacy. should we change to not be ?
     class CODE(int):
-        if sys.version_info[0] < 3:
-            __slots__ = []
-
         # This should move within the classes and not be here
         # RFC 4271
         ORIGIN = 0x01
@@ -180,9 +177,6 @@ class Attribute(object):
         MASK_PARTIAL = 0xDF  # . 223 - 1101 1111
         MASK_TRANSITIVE = 0xBF  # . 191 - 1011 1111
         MASK_OPTIONAL = 0x7F  # . 127 - 0111 1111
-
-        if sys.version_info[0] < 3:
-            __slots__ = []
 
         def __str__(self):
             r = []

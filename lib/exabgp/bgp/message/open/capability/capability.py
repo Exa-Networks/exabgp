@@ -19,9 +19,6 @@ from exabgp.bgp.message.notification import Notify
 class _CapabilityCode(int):
     _cache = dict()
 
-    if sys.version_info[0] < 3:
-        __slots__ = ['NAME', '_cache']
-
     RESERVED = 0x00  # [RFC5492]
     MULTIPROTOCOL = 0x01  # [RFC2858]
     ROUTE_REFRESH = 0x02  # [RFC2918]
@@ -95,9 +92,6 @@ class _CapabilityCode(int):
 
 class Capability(object):
     class CODE(int):
-        if sys.version_info[0] < 3:
-            __slots__ = []
-
         RESERVED = _CapabilityCode(_CapabilityCode.RESERVED)
         MULTIPROTOCOL = _CapabilityCode(_CapabilityCode.MULTIPROTOCOL)
         ROUTE_REFRESH = _CapabilityCode(_CapabilityCode.ROUTE_REFRESH)

@@ -18,9 +18,6 @@ from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri import NLRI as _NLRI
 
-if sys.version_info > (3,):
-    long = int
-
 # =================================================================== End-Of-RIB
 # not technically a different message type but easier to treat as one
 
@@ -51,7 +48,7 @@ class EOR(Message):
             return self.extensive()
 
         def extensive(self):
-            return 'eor %ld/%ld (%s %s)' % (long(self.afi), long(self.safi), self.afi, self.safi)
+            return 'eor %ld/%ld (%s %s)' % (int(self.afi), int(self.safi), self.afi, self.safi)
 
         def json(self, announced=True, compact=None):
             return '"eor": { "afi" : "%s", "safi" : "%s" }' % (self.afi, self.safi)
