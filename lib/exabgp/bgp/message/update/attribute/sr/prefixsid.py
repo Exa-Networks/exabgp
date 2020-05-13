@@ -10,7 +10,6 @@ import binascii
 from struct import unpack
 from exabgp.vendoring import six
 
-from exabgp.util import concat_bytes_i
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # =====================================================================
@@ -31,7 +30,7 @@ class PrefixSid(Attribute):
 
     def __init__(self, sr_attrs, packed=None):
         self.sr_attrs = sr_attrs
-        self._packed = self._attribute(packed if packed else concat_bytes_i(_.pack() for _ in sr_attrs))
+        self._packed = self._attribute(packed if packed else b''.join(_.pack() for _ in sr_attrs))
 
     @classmethod
     def register(cls, srid=None, flag=None):

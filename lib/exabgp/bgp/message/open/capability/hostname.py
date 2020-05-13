@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://tools.ietf.org/html/draft-walton-bgp-hostname-capability-02
 
 
-from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.capability.capability import Capability
 
 
@@ -28,11 +27,7 @@ class HostName(Capability):
         return '{ "host-name": "%s", "domain-name": "%s" }' % (self.host_name, self.domain_name)
 
     def extract(self):
-        return [
-            concat_bytes(
-                bytes([len(self.host_name)]), self.host_name, bytes([len(self.domain_name)]), self.domain_name,
-            )
-        ]
+        return [bytes([len(self.host_name)]) + self.host_name + bytes([len(self.domain_name)]) + self.domain_name]
 
     @staticmethod
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613

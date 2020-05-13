@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import unpack
 
-from exabgp.util import concat_bytes
 from exabgp.util import bytes_ascii
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
@@ -63,13 +62,11 @@ class Open(Message):
 
     def message(self, negotiated=None):
         return self._message(
-            concat_bytes(
-                self.version.pack(),
-                self.asn.trans().pack(),
-                self.hold_time.pack(),
-                self.router_id.pack(),
-                self.capabilities.pack(),
-            )
+            self.version.pack()
+            + self.asn.trans().pack()
+            + self.hold_time.pack()
+            + self.router_id.pack()
+            + self.capabilities.pack()
         )
 
     def __str__(self):

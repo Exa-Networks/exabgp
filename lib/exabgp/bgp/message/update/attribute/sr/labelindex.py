@@ -7,7 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 from struct import pack, unpack
 
-from exabgp.util import concat_bytes
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
@@ -36,12 +35,13 @@ class SrLabelIndex(object):
         return "%s" % (self.labelindex)
 
     def pack(self):
-        return concat_bytes(
-            pack('!B', self.TLV),
-            pack('!H', self.LENGTH),
-            pack('!B', 0),  # reserved
-            pack('!H', 0),  # flags
-            pack('!I', self.labelindex),
+        reserved, flags = 0, 0
+        return (
+            pack('!B', self.TLV)
+            + pack('!H', self.LENGTH)
+            + pack('!B', reserved)
+            + pack('!H', flags)
+            + pack('!I', self.labelindex)
         )
 
     @classmethod

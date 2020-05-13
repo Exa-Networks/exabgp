@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.util import concat_bytes
-
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -75,7 +73,7 @@ class Update(Message):
     @staticmethod
     def prefix(data):
         # This function needs renaming
-        return concat_bytes(pack('!H', len(data)), data)
+        return pack('!H', len(data)) + data
 
     @staticmethod
     def split(data):

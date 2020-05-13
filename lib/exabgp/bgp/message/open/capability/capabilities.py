@@ -12,9 +12,6 @@ from exabgp.vendoring import six
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.util import concat_bytes
-from exabgp.util import concat_bytes_i
-
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.addpath import AddPath
@@ -170,12 +167,13 @@ class Capabilities(dict):
         return self
 
     def pack(self):
-        rs = []
+        parameters = b''
         for k, capabilities in six.iteritems(self):
             for capability in capabilities.extract():
-                rs.append(concat_bytes(bytes([k, len(capability)]), capability))
-        parameters = concat_bytes_i(concat_bytes(bytes([2,len(r)]), r) for r in rs)
-        return concat_bytes(bytes([len(parameters)]), parameters)
+                encoded = bytes([k, len(capability)]) + capability
+                parameters += bytes([2, len(encoded)]) + encoded
+
+        return bytes([len(parameters)]) + parameters
 
     @staticmethod
     def unpack(data):

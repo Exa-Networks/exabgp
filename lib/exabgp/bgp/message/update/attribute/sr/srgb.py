@@ -8,9 +8,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 import json
 from struct import pack
 
-from exabgp.util import concat_bytes
 from exabgp.vendoring.bitstring import BitArray
-from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
 # 0                   1                   2                   3
@@ -55,8 +53,8 @@ class SrGb(object):
     def pack(self):
         payload = pack('!H', 0)  # flags
         for b, r in self.srgbs:
-            payload = concat_bytes(payload, pack("!L", b)[1:], pack("!L", r)[1:])
-        return concat_bytes(pack('!B', self.TLV), pack('!H', len(payload)), payload)
+            payload = payload + pack("!L", b)[1:] + pack("!L", r)[1:]
+        return pack('!B', self.TLV) + pack('!H', len(payload)) + payload
 
     @classmethod
     def unpack(cls, data, length):

@@ -9,8 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import pack
 
-from exabgp.util import concat_bytes
-
 
 class _MessageCode(int):
     NOP = 0x00  # .   0 - internal
@@ -145,7 +143,7 @@ class Message(Exception):
 
     def _message(self, message):
         message_len = pack('!H', 19 + len(message))
-        return concat_bytes(self.MARKER, message_len, self.TYPE, message)
+        return self.MARKER + message_len + self.TYPE + message
 
     def message(self, negotiated=None):
         raise NotImplementedError('message not implemented in subclasses')

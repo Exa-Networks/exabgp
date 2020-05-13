@@ -211,7 +211,7 @@ class TestNLRIs(unittest.TestCase):
         # ESI
         nlri1 = EVPNMAC(
             RouteDistinguisher.fromElements("42.42.42.42", 5),
-            ESI(bytes([1,]*10)),
+            ESI(bytes([1,] * 10)),
             EthernetTag(111),
             MAC("01:02:03:04:05:06"),
             6 * 8,

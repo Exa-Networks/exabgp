@@ -9,8 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import pack
 
-from exabgp.util import concat_bytes_i
-
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
@@ -49,7 +47,7 @@ def route_distinguisher(tokeniser):
         data = [bytes([0, 1])]
         data.extend([bytes([int(_)]) for _ in prefix.split('.')])
         data.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
-        rtd = concat_bytes_i(data)
+        rtd = b''.join(data)
     else:
         number = int(prefix)
         if number < pow(2, 16) and suffix < pow(2, 32):

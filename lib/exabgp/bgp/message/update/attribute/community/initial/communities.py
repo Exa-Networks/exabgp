@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # ============================================================== Communities (8)
 # https://www.iana.org/assignments/bgp-extended-communities
 
-from exabgp.util import concat_bytes_i
-
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.initial.community import Community
 
@@ -36,7 +34,7 @@ class Communities(Attribute):
 
     def pack(self, negotiated=None):
         if len(self.communities):
-            return self._attribute(concat_bytes_i(c.pack() for c in self.communities))
+            return self._attribute(b''.join(c.pack() for c in self.communities))
         return b''
 
     def __iter__(self):

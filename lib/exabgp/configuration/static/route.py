@@ -9,8 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # This is a legacy file to handle 3.4.x like format
 
-from exabgp.util import concat_bytes_i
-
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 
@@ -57,7 +55,7 @@ from exabgp.configuration.static.mpls import prefix_sid_srv6
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int(afi, integer):
-    return concat_bytes_i(bytes([(integer >> (offset * 8)) & 0xFF]) for offset in range(IP.length(afi) - 1, -1, -1))
+    return b''.join(bytes([(integer >> (offset * 8)) & 0xFF]) for offset in range(IP.length(afi) - 1, -1, -1))
 
 
 class ParseStaticRoute(Section):

@@ -9,8 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import pack
 
-from exabgp.util import concat_bytes
-from exabgp.util import concat_bytes_i
 from exabgp.util import concat_strs_i
 
 from exabgp.protocol.ip import NoNextHop
@@ -140,7 +138,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
     def pack(self):
         raw = self.cidr.pack_nlri()
         # ID is defined in subclasses
-        return concat_bytes(bytes([self.ID]), raw)  # pylint: disable=E1101
+        return bytes([self.ID]) + raw  # pylint: disable=E1101
 
     def __str__(self):
         return str(self.cidr)
@@ -165,9 +163,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 
     def pack(self):
         # ID is defined in subclasses
-        return concat_bytes(
-            bytes([self.ID, self.cidr.mask, self.offset]), self.cidr.pack_ip()
-        )  # pylint: disable=E1101
+        return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()  # pylint: disable=E1101
 
     def __str__(self):
         return "%s/%s" % (self.cidr, self.offset)
@@ -190,7 +186,7 @@ class IOperation(IComponent):
     def pack(self):
         l, v = self.encode(self.value)
         op = self.operations | _len_to_bit(l)
-        return concat_bytes(bytes([op]), v)
+        return bytes([op]) + v
 
     def encode(self, value):
         raise NotImplementedError('this method must be implemented by subclasses')
@@ -579,15 +575,15 @@ class Flow(NLRI):
             # and add it to the last rule
             if ID not in (FlowDestination.ID, FlowSource.ID):
                 ordered_rules.append(bytes([ID]))
-            ordered_rules.append(concat_bytes_i(rule.pack() for rule in rules))
+            ordered_rules.append(b''.join(rule.pack() for rule in rules))
 
-        components = self.rd.pack() + concat_bytes_i(ordered_rules)
+        components = self.rd.pack() + b''.join(ordered_rules)
 
         lc = len(components)
         if lc < 0xF0:
-            return concat_bytes(bytes([lc]), components)
+            return bytes([lc]) + components
         if lc < 0x0FFF:
-            return concat_bytes(pack('!H', lc | 0xF000), components)
+            return pack('!H', lc | 0xF000) + components
         raise Notify(
             3,
             0,

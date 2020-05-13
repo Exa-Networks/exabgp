@@ -6,15 +6,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-# from struct import pack
-# from struct import unpack
-
-from exabgp.util import concat_bytes
-
-# from exabgp.protocol.family import AFI
-# from exabgp.protocol.family import SAFI
-# from exabgp.bgp.message.update.nlri.qualifier import ESI
-
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
@@ -77,7 +68,7 @@ class EthernetAD(EVPN):
             self._packed = packed
             return packed
 
-        self._packed = concat_bytes(self.rd.pack(), self.esi.pack(), self.etag.pack(), self.label.pack())
+        self._packed = self.rd.pack() + self.esi.pack() + self.etag.pack() + self.label.pack()
         return self._packed
 
     @classmethod
