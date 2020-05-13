@@ -15,7 +15,7 @@ def hexstring(value):
         for v in value:
             yield '%02X' % v
 
-    return '0x' + concat_strs_i(spaced(value))
+    return '0x' + ''.join(spaced(value))
 
 
 def hexbytes(value):
@@ -28,20 +28,6 @@ def string_is_hex(s):
     if len(s) <= 2:
         return False
     return all(c in string.hexdigits for c in s[2:])
-
-
-# Each item is an 'str' in py2 or a 'bytes' in py3
-
-
-def concat_strs(*items):
-    return ''.join(items)
-
-
-# same with iterators/lists
-
-
-def concat_strs_i(iterable):
-    return ''.join(iterable)
 
 
 # helpers for converting between string and bytestring
