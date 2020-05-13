@@ -7,8 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 import json
 from struct import pack
+from struct import unpack
 
-from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
 # 0                   1                   2                   3
@@ -67,10 +67,8 @@ class SrGb(object):
         # the SRGB field MAY appear multiple times.  If the SRGB field
         # appears multiple times, the SRGB consists of multiple ranges.
         while data:
-            b = BitArray(bytes=data[:3])
-            base = b.unpack('uintbe:24')[0]
-            b = BitArray(bytes=data[3:6])
-            srange = b.unpack('uintbe:24')[0]
+            base = unpack('!L', bytes([0]) + data[:3])[0]
+            srange = unpack('!L', bytes([0]) + data[3:6])[0]
             srgbs.append((base, srange))
             data = data[6:]
         return cls(srgbs=srgbs)

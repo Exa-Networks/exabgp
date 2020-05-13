@@ -9,7 +9,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 import json
 from struct import unpack
 
-from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
 from exabgp.bgp.message.notification import Notify
 
@@ -59,8 +58,8 @@ class SrCapabilities(object):
         while data:
             # Range Size: 3 octet value indicating the number of labels in
             # the range.
-            b = BitArray(bytes=data[:3])
-            range_size = b.unpack('uintbe:24')[0]
+            range_size = unpack('!L', bytes([0]) + data[:3])[0]
+
             # SID/Label: If length is set to 3, then the 20 rightmost bits
             # represent a label.  If length is set to 4, then the value
             # represents a 32 bit SID.
@@ -69,8 +68,7 @@ class SrCapabilities(object):
                 raise Notify(3, 5, "Invalid sub-TLV type: {}".format(t))
             v = data[7 : l + 7]
             if l == 3:
-                b = BitArray(bytes=v)
-                sid = b.unpack('uintbe:24')[0]
+                sid = unpack('!L', bytes([0]) + data[:3])[0]
             elif l == 4:
                 sid = unpack('!I', v)[0]
             sids.append((range_size, sid))

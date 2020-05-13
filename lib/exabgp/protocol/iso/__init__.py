@@ -10,8 +10,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 # =========================================================================== ISO
 #
 
-from exabgp.vendoring.bitstring import BitArray
-
 
 class ISO(object):
     def __init__(self, sysid, selector=None, area_id=None, afi=49):
@@ -23,8 +21,7 @@ class ISO(object):
 
     @classmethod
     def unpack_sysid(cls, data):
-        b = BitArray(bytes=data)
-        return b.hex
+        return data.hex()
 
     def json(self, compact=None):
         return self.sysid

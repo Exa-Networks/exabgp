@@ -17,6 +17,7 @@ Version 5.0.0:
    patch: tomjshine
  * reported: the RIB code so withdraw message before any announce are sent
         this does change the RIB behaviour sending withdrawal when it was not previously
+ * Fix: parsing of SID in BGP-LS
 
 Version 4.2.6:
  * Fix: prevent the deletion of IP addresses not added by the healthchecker

@@ -6,10 +6,6 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
-from exabgp.vendoring.bitstring import BitArray
-
-from exabgp.bgp.message.notification import Notify
-
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
 #      0                   1                   2                   3
@@ -34,9 +30,7 @@ class IsisArea(object):
 
     @classmethod
     def unpack(cls, data, length):
-
-        b = BitArray(bytes=data)
-        return cls(areaid=b.hex)
+        return cls(areaid=int(data.hex(), 16))
 
     def json(self, compact=None):
         return '"area-id": "%s"' % str(self.areaid)
