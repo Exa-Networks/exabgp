@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import unpack
 
-from exabgp.util import bytes_ascii
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
@@ -83,7 +82,7 @@ class Open(Message):
         version = data[0]
         if version != 4:
             # Only version 4 is supported nowdays..
-            raise Notify(2, 1, bytes_ascii(data[0]))
+            raise Notify(2, 1, bytes(data[0], 'ascii'))
         asn = unpack('!H', data[1:3])[0]
         hold_time = unpack('!H', data[3:5])[0]
         numeric = unpack('!L', data[5:9])[0]

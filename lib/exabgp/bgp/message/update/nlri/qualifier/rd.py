@@ -18,7 +18,6 @@ from exabgp.util import hexstring
 
 
 class RouteDistinguisher(object):
-
     def __init__(self, rd):
         self.rd = rd
         self._len = len(self.rd)

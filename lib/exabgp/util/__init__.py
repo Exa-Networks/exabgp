@@ -19,7 +19,7 @@ def hexstring(value):
 
 
 def hexbytes(value):
-    return bytes_ascii(hexstring(str_ascii(value)))
+    return bytes(hexstring(str(value, 'ascii')), 'ascii')
 
 
 def string_is_hex(s):
@@ -28,14 +28,3 @@ def string_is_hex(s):
     if len(s) <= 2:
         return False
     return all(c in string.hexdigits for c in s[2:])
-
-
-# helpers for converting between string and bytestring
-
-
-def str_ascii(bytestring):
-    return str(bytestring, 'ascii')
-
-
-def bytes_ascii(bytestring):
-    return bytes(bytestring, 'ascii')

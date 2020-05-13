@@ -13,7 +13,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 
 class PathInfo(object):
-
     def __init__(self, packed=None, integer=None, ip=None):
         if packed:
             self.path_info = packed
