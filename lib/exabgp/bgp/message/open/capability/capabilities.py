@@ -12,7 +12,6 @@ from exabgp.vendoring import six
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import concat_bytes_i
 
@@ -183,18 +182,18 @@ class Capabilities(dict):
         def _key_values(name, data):
             if len(data) < 2:
                 raise Notify(2, 0, "Bad length for OPEN %s (<2) %s" % (name, Capability.hex(data)))
-            ld = ordinal(data[1])
+            ld = data[1]
             boundary = ld + 2
             if len(data) < boundary:
                 raise Notify(2, 0, "Bad length for OPEN %s (buffer underrun) %s" % (name, Capability.hex(data)))
-            key = ordinal(data[0])
+            key = data[0]
             value = data[2:boundary]
             rest = data[boundary:]
             return key, value, rest
 
         capabilities = Capabilities()
 
-        option_len = ordinal(data[0])
+        option_len = data[0]
         if not option_len:
             return capabilities
 

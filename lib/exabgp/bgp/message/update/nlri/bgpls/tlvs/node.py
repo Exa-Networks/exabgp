@@ -7,13 +7,11 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.iso import ISO
 from exabgp.bgp.message.notification import Notify
-from exabgp.util import ordinal
 
 #           +--------------------+-------------------+----------+
 #           | Sub-TLV Code Point | Description       |   Length |

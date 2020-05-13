@@ -6,7 +6,6 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import IP
@@ -59,7 +58,7 @@ class ParseAnnounce(Section):
         ip = 0
         for c in last.nlri.cidr.ton():
             ip <<= 8
-            ip += ordinal(c)
+            ip += c
 
         afi = last.nlri.afi
         safi = last.nlri.safi

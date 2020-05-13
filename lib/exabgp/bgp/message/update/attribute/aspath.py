@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import unpack
 from struct import error
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import concat_bytes_i
 from exabgp.bgp.message.open.asn import ASN
@@ -179,8 +178,8 @@ class ASPath(Attribute):
         try:
 
             while data:
-                stype = ordinal(data[0])
-                slen = ordinal(data[1])
+                stype = data[0]
+                slen = data[1]
 
                 if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE, ASPath.AS_CONFED_SEQUENCE, ASPath.AS_CONFED_SET):
                     raise Notify(3, 11, 'invalid AS Path type sent %d' % stype)

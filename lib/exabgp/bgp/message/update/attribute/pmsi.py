@@ -12,7 +12,6 @@ from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IPv4
-from exabgp.util import ordinal
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # https://tools.ietf.org/html/rfc6514#section-5
@@ -87,7 +86,7 @@ class PMSI(Attribute):
         return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
 
     def prettytunnel(self):
-        return "0x" + ''.join('%02X' % ordinal(_) for _ in self.tunnel) if self.tunnel else ''
+        return "0x" + ''.join('%02X' % _ for _ in self.tunnel) if self.tunnel else ''
 
     def __repr__(self):
         if self.raw_label:

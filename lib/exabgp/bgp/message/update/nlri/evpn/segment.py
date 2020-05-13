@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from exabgp.protocol.ip import IP
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -86,7 +85,7 @@ class EthernetSegment(EVPN):
     def unpack(cls, data):
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
-        iplen = ordinal(data[18])
+        iplen = data[18]
 
         if iplen not in (32, 128):
             raise Notify(

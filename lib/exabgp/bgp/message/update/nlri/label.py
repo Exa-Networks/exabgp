@@ -11,7 +11,6 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
-from exabgp.util import ordinal
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.inet import INET
@@ -74,7 +73,7 @@ class Label(INET):
 
     # @classmethod
     # def _labels (cls, data, action):
-    # 	mask = ordinal(data[0])
+    # 	mask = data[0]
     # 	data = data[1:]
     # 	labels = []
     # 	while data and mask >= 8:

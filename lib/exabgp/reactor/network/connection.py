@@ -12,8 +12,6 @@ import socket
 import select
 from struct import unpack
 
-from exabgp.util import ordinal
-
 from exabgp.configuration.environment import environment
 
 from exabgp.util.errstr import errstr
@@ -255,7 +253,7 @@ class Connection(object):
             yield 0, 0, header, b'', NotifyError(1, 1, report)
             return
 
-        msg = ordinal(header[18])
+        msg = header[18]
         length = unpack('!H', header[16:18])[0]
 
         if length < Message.HEADER_LEN or length > self.msg_size:

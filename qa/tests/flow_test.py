@@ -8,11 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import socket
 import unittest
-
-from exabgp.util import ordinal
-from exabgp.util import concat_strs
 
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.nlri.flow import Flow4Source
@@ -50,7 +46,7 @@ class TestFlow(unittest.TestCase):
             component = components[key].pack()
             message = bytes(messages[key])
             # if component != message:
-            # 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % ord(_) for _ in component],['0x%02X' % ord(_) for _ in message]))
+            # 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % _ for _ in component],['0x%02X' % _ for _ in message]))
 
     def test_rule_and(self):
         components = {
@@ -74,7 +70,7 @@ class TestFlow(unittest.TestCase):
         message = bytes([len(message)]) + message
         # flow.add(to_FlowAction(65000,False,False))
         flow.pack()
-        # print [hex(ord(_)) for _ in flow]
+        # print [hex(_) for _ in flow]
 
     def test_nlri(self):
         components = {
@@ -99,11 +95,11 @@ class TestFlow(unittest.TestCase):
         # policy.add(to_FlowAction(65000,False,False))
         flow = flow.pack()
         if message[0] != flow[0]:
-            self.fail('size mismatch %s %s\n' % (ordinal(flow[0]), ordinal(message[0])))
-        if len(flow) != ordinal(flow[0]) + 1:
+            self.fail('size mismatch %s %s\n' % (flow[0], message[0]))
+        if len(flow) != flow[0] + 1:
             self.fail('invalid size for message')
         # if message[1:] != flow[1:]:
-        # 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % ord(_) for _ in flow],['0x%02X' % ord(_) for _ in message]))
+        # 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % _ for _ in flow],['0x%02X' % _ for _ in message]))
 
     def test_compare(self):
         components = {

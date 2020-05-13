@@ -8,12 +8,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import pack
 
-from exabgp.protocol.ip import NoNextHop
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.util import ordinal
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri import NLRI
@@ -56,7 +53,7 @@ class EVPN(NLRI):
     def __str__(self):
         return "evpn:%s:%s" % (
             self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('%02x' % ordinal(_) for _ in self._packed),
+            '0x' + ''.join('%02x' % _ for _ in self._packed),
         )
 
     def __repr__(self):
@@ -83,8 +80,8 @@ class EVPN(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
-        code = ordinal(bgp[0])
-        length = ordinal(bgp[1])
+        code = bgp[0]
+        length = bgp[1]
 
         if code in cls.registered_evpn:
             klass = cls.registered_evpn[code].unpack(bgp[2 : length + 2])
@@ -97,7 +94,7 @@ class EVPN(NLRI):
         return klass, bgp[length + 2 :]
 
     def _raw(self):
-        return ''.join('%02X' % ordinal(_) for _ in self.pack_nlri())
+        return ''.join('%02X' % _ for _ in self.pack_nlri())
 
 
 class GenericEVPN(EVPN):

@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # ============================================================== Communities (8)
 # https://www.iana.org/assignments/bgp-extended-communities
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 
 from exabgp.bgp.message.update.attribute import Attribute
@@ -59,7 +58,7 @@ class Communities(Attribute):
         communities = Communities()
         while data:
             if data and len(data) < 4:
-                raise Notify(3, 1, 'could not decode community %s' % str([hex(ordinal(_)) for _ in data]))
+                raise Notify(3, 1, 'could not decode community %s' % str([hex(_) for _ in data]))
             communities.add(Community.unpack(data[:4], negotiated))
             data = data[4:]
         return communities

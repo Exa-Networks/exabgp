@@ -14,7 +14,6 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
-from exabgp.util import ordinal
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -98,7 +97,7 @@ class INET(NLRI):
             nlri.path_info = PathInfo(bgp[:4])
             bgp = bgp[4:]
 
-        mask = ordinal(bgp[0])
+        mask = bgp[0]
         bgp = bgp[1:]
 
         _, rd_size = Family.size.get((afi, safi), (0, 0))

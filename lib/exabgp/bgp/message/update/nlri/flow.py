@@ -8,9 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
-from struct import unpack
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import concat_bytes_i
 from exabgp.util import concat_strs_i
@@ -106,12 +104,9 @@ def _bit_to_len(value):
 def _number(string):
     value = 0
     for c in string:
-        value = (value << 8) + ordinal(c)
+        value = (value << 8) + c
     return value
 
-
-# def short (value):
-# 	return (ordinal(value[0]) << 8) + ordinal(value[1])
 
 # Interface ..................
 
@@ -179,7 +174,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 
     @classmethod
     def make(cls, bgp):
-        offset = ordinal(bgp[1])
+        offset = bgp[1]
         prefix, mask = CIDR.decode(AFI.ipv6, bgp[0:1] + bgp[2:])
         return cls(prefix, mask, offset), bgp[CIDR.size(mask) + 2 :]
 
@@ -214,7 +209,7 @@ class IOperationByte(IOperation):
         return 1, bytes([value])
 
     # def decode (self, bgp):
-    # 	return ordinal(bgp[0]),bgp[1:]
+    # 	return bgp[0],bgp[1:]
 
 
 class IOperationByteShort(IOperation):
@@ -644,10 +639,10 @@ class Flow(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
-        length, bgp = ordinal(bgp[0]), bgp[1:]
+        length, bgp = bgp[0], bgp[1:]
 
         if length & 0xF0 == 0xF0:  # bigger than 240
-            extra, bgp = ordinal(bgp[0]), bgp[1:]
+            extra, bgp = bgp[0], bgp[1:]
             length = ((length & 0x0F) << 16) + extra
 
         if length > len(bgp):
@@ -666,7 +661,7 @@ class Flow(NLRI):
             seen = []
 
             while bgp:
-                what, bgp = ordinal(bgp[0]), bgp[1:]
+                what, bgp = bgp[0], bgp[1:]
 
                 if what not in decode.get(afi, {}):
                     raise Notify(3, 10, 'unknown flowspec component received for address family %d' % what)
@@ -689,7 +684,7 @@ class Flow(NLRI):
                 else:
                     end = False
                     while not end:
-                        byte, bgp = ordinal(bgp[0]), bgp[1:]
+                        byte, bgp = bgp[0], bgp[1:]
                         end = CommonOperator.eol(byte)
                         operator = CommonOperator.operator(byte)
                         length = CommonOperator.length(byte)

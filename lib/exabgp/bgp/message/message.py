@@ -7,10 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import sys
 from struct import pack
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 
 
@@ -156,7 +154,7 @@ class Message(Exception):
     def register(cls, klass):
         if klass.TYPE in cls.registered_message:
             raise RuntimeError('only one class can be registered per message')
-        cls.registered_message[ordinal(klass.TYPE)] = klass
+        cls.registered_message[klass.ID] = klass
         return klass
 
     @classmethod

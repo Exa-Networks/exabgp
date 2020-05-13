@@ -17,7 +17,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
         # reply with a IBGP response with the same capability (just changing routerID)
         print "reading open"
         header, body = self.read_message()
-        routerid = chr((ord(body[8]) + 1) & 0xFF)
+        routerid = chr((body[8] + 1) & 0xFF)
         o = header + body[:8] + routerid + body[9:]
         self.send(o)
 

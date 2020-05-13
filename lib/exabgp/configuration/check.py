@@ -9,11 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # common
 
-import sys
-import traceback
 import copy
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 
 from exabgp.bgp.message import Update
@@ -183,9 +180,9 @@ def check_message(neighbor, message):
     )
 
     if raw.startswith(b'\xff' * 16):
-        kind = ordinal(raw[18])
+        kind = raw[18]
         # XXX: FIXME: check size
-        # size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
+        # size = (raw[16] << 16) + raw[17]
 
         if kind == 1:
             return check_open(neighbor, raw[18:])
@@ -238,8 +235,8 @@ def check_update(neighbor, raw):
 
     while raw:
         if raw.startswith(b'\xff' * 16):
-            kind = ordinal(raw[18])
-            size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
+            kind = raw[18]
+            size = (raw[16] << 16) + raw[17]
 
             injected, raw = raw[19:size], raw[size:]
 

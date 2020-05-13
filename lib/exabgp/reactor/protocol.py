@@ -15,8 +15,6 @@ import traceback
 # ================================================================ Registration
 #
 
-from exabgp.util import ordinal
-
 from exabgp.reactor.network.outgoing import Outgoing
 
 # from exabgp.reactor.network.error import NotifyError
@@ -176,7 +174,7 @@ class Protocol(object):
             yield boolean
 
     def send(self, raw):
-        code = 'send-%s' % Message.CODE.short(ordinal(raw[18]))
+        code = 'send-%s' % Message.CODE.short(raw[18])
         self.peer.stats[code] = self.peer.stats.get(code, 0) + 1
         if self.neighbor.api.get(code, False):
             message = Update.unpack_message(raw[19:], self.negotiated)

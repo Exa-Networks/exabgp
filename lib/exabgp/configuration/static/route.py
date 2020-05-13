@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # This is a legacy file to handle 3.4.x like format
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import IP
@@ -213,7 +212,7 @@ class ParseStaticRoute(Section):
         ip = 0
         for c in last.nlri.cidr.ton():
             ip <<= 8
-            ip += ordinal(c)
+            ip += c
 
         afi = last.nlri.afi
         safi = last.nlri.safi

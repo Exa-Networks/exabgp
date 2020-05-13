@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 
 
@@ -42,7 +41,7 @@ class MAC(object):
         raise RuntimeError('comparing MAC for ordering does not make sense')
 
     def __str__(self):
-        return ':'.join('%02X' % ordinal(_) for _ in self._packed)
+        return ':'.join('%02X' % _ for _ in self._packed)
 
     def __repr__(self):
         return self.__str__()
@@ -60,7 +59,7 @@ class MAC(object):
 
     @classmethod
     def unpack(cls, data):
-        return cls(':'.join('%02X' % ordinal(_) for _ in data[:6]), data[:6])
+        return cls(':'.join('%02X' % _ for _ in data[:6]), data[:6])
 
     def json(self, compact=None):
         return '"mac": "%s"' % str(self)

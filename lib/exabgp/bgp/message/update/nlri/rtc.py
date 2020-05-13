@@ -1,4 +1,3 @@
-# encoding: utf-8
 """
 rtc.py
 
@@ -11,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.util import ordinal
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
@@ -62,7 +60,7 @@ class RTC(NLRI):
 
     @staticmethod
     def resetFlags(char):
-        return bytes([ordinal(char) & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL)])
+        return char & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL)
 
     def pack_nlri(self, negotiated=None):
         # XXX: no support for addpath yet
@@ -70,13 +68,13 @@ class RTC(NLRI):
         # because in an RTC route these flags never appear.
         if self.rt:
             packedRT = self.rt.pack()
-            return pack("!BLB", len(self), self.origin, ordinal(RTC.resetFlags(packedRT[0]))) + packedRT[1:]
+            return pack("!BLB", len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]
         return pack("!B", 0)
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
 
-        length = ordinal(bgp[0])
+        length = bgp[0]
 
         if length == 0:
             return cls(afi, safi, action, ASN(0), None), bgp[1:]
@@ -93,7 +91,7 @@ class RTC(NLRI):
                 safi,
                 action,
                 ASN(unpack('!L', bgp[1:5])[0]),
-                RouteTarget.unpack(RTC.resetFlags(bgp[5]) + bgp[6:13]),
+                RouteTarget.unpack(bytes([RTC.resetFlags(bgp[5])]) + bgp[6:13]),
             ),
             bgp[13:],
         )

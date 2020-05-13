@@ -7,15 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
-
-from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
@@ -120,7 +117,7 @@ class MAC(EVPN):
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
         etag = EthernetTag.unpack(data[18:22])
-        maclength = ordinal(data[22])
+        maclength = data[22]
 
         if maclength > 48 or maclength < 0:
             raise Notify(3, 5, 'invalid MAC Address length in %s' % cls.NAME)
@@ -128,7 +125,7 @@ class MAC(EVPN):
 
         mac = MACQUAL.unpack(data[23:end])
 
-        length = ordinal(data[end])
+        length = data[end]
         iplen = length / 8
 
         if datalen in [33, 36]:  # No IP information (1 or 2 labels)

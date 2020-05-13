@@ -7,7 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import ordinal
 from exabgp.bgp.message.update.attribute import Attribute
 
 from struct import pack
@@ -82,7 +81,7 @@ class ExtendedCommunityBase(Attribute):
         h = 0x00
         for byte in self.community:
             h <<= 8
-            h += ordinal(byte)
+            h += byte
         s = self.klass.__repr__(self) if self.klass else ''
         return '{ "value": %s, "string": "%s" }' % (h, s)
 
@@ -92,7 +91,7 @@ class ExtendedCommunityBase(Attribute):
         h = 0x00
         for byte in self.community:
             h <<= 8
-            h += ordinal(byte)
+            h += byte
         return "0x%016X" % h
 
     def __hash__(self):
@@ -101,7 +100,7 @@ class ExtendedCommunityBase(Attribute):
     @classmethod
     def unpack(cls, data, negotiated=None):
         # 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
-        community = (ordinal(data[0]) & 0x0F, ordinal(data[1]))
+        community = (data[0] & 0x0F, data[1])
         if community in cls.registered_extended:
             klass = cls.registered_extended[community]
             instance = klass.unpack(data)

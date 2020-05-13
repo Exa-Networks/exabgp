@@ -32,7 +32,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
     def routes(self, body):
         len_w = unpack('!H', body[0:2])[0]
-        prefixes = [ord(_) for _ in body[2 : 2 + len_w :]]
+        prefixes = [_ for _ in body[2 : 2 + len_w :]]
 
         if not prefixes:
             yield 'no ipv4 withdrawal'
@@ -47,7 +47,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
             yield 'withdraw ' + '.'.join(str(_) for _ in r) + '/' + str(l)
 
         len_a = unpack('!H', body[2 + len_w : 2 + len_w + 2])[0]
-        prefixes = [ord(_) for _ in body[2 + len_w + 2 + len_a :]]
+        prefixes = [_ for _ in body[2 + len_w + 2 + len_a :]]
 
         if not prefixes:
             yield 'no ipv4 announcement'
@@ -137,7 +137,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
     def handle_open(self):
         # reply with a IBGP response with the same capability (just changing routerID)
         header, body = self.read_message()
-        routerid = chr((ord(body[8]) + 1) & 0xFF)
+        routerid = chr((body[8] + 1) & 0xFF)
         o = header + body[:8] + routerid + body[9:]
         self.announce("sending open")
         self.send(o)

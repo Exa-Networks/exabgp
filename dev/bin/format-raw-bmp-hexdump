@@ -17,11 +17,11 @@ with open(sys.argv[2], 'w') as out:
     while parts:
         part = parts.pop(0)
         if len(part) > 44:
-            data = ''.join('%02X' % ord(_) for _ in part[:-44])
+            data = ''.join('%02X' % _ for _ in part[:-44])
             data += '\n'
-            data += ''.join('%02X' % ord(_) for _ in part[-44:])
+            data += ''.join('%02X' % _ for _ in part[-44:])
         else:
-            data = ''.join('%02X' % ord(_) for _ in part)
+            data = ''.join('%02X' % _ for _ in part)
         if parts:
             data += '\n' + 'F' * 16
         out.write(data)

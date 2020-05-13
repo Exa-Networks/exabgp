@@ -8,7 +8,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
 
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
@@ -46,7 +45,7 @@ class ESI(object):
     def __str__(self):
         if self.esi == self.DEFAULT:
             return "-"
-        return ":".join('%02x' % ordinal(_) for _ in self.esi)
+        return ":".join('%02x' % _ for _ in self.esi)
 
     def __repr__(self):
         return self.__str__()

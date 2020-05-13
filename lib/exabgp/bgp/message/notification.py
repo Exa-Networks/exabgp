@@ -9,9 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import string
 
-from exabgp.util import ordinal
-from exabgp.util import concat_bytes
-from exabgp.util import str_ascii
 from exabgp.util import bytes_ascii
 from exabgp.util import hexbytes
 from exabgp.util import hexstring
@@ -114,7 +111,7 @@ class Notification(Message):
 
         # draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
-        shutdown_length = ordinal(data[0])
+        shutdown_length = data[0]
         data = data[1:]
 
         if shutdown_length == 0:
@@ -160,7 +157,7 @@ class Notification(Message):
 
     @classmethod
     def unpack_message(cls, data, negotiated=None):
-        return cls(ordinal(data[0]), ordinal(data[1]), data[2:])
+        return cls(data[0], data[1], data[2:])
 
 
 # =================================================================== Notify

@@ -12,7 +12,6 @@ from struct import unpack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.util import ordinal
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri import NLRI
@@ -100,7 +99,7 @@ class BGPLS(NLRI):
     def __str__(self):
         return "bgp-ls:%s:%s" % (
             self.registered_bgpls.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('%02x' % ordinal(_) for _ in self._packed),
+            '0x' + ''.join('%02x' % _ for _ in self._packed),
         )
 
     @classmethod
@@ -130,7 +129,7 @@ class BGPLS(NLRI):
         return klass, bgp[length + 4 :]
 
     def _raw(self):
-        return ''.join('%02X' % ordinal(_) for _ in self.pack())
+        return ''.join('%02X' % _ for _ in self.pack())
 
 
 class GenericBGPLS(BGPLS):

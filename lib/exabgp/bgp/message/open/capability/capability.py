@@ -7,11 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import sys
-
 # Do not create a dependency loop by using exabgp.bgp.message as import
-from exabgp.util import ordinal
-from exabgp.util import concat_bytes_i
 
 from exabgp.bgp.message.notification import Notify
 
@@ -146,8 +142,8 @@ class Capability(object):
 
     @staticmethod
     def hex(data):
-        return '0x' + ''.join('%02x' % ordinal(_) for _ in data)
-        # return '0x' + concat_bytes_i('%02x' % ordinal(_) for _ in data)
+        return '0x' + ''.join('%02x' % _ for _ in data)
+        # return '0x' + concat_bytes_i('%02x' % _ for _ in data)
 
     @classmethod
     def unknown(cls, klass):

@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.util import ordinal
 from exabgp.protocol.resource import Resource
 
 
@@ -234,7 +233,7 @@ class SAFI(Resource):
 
     @staticmethod
     def unpack(data):
-        return SAFI.common.get(data, _SAFI(ordinal(data)))
+        return SAFI.common.get(data, _SAFI(data))
 
     @classmethod
     def value(cls, name):

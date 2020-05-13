@@ -1229,7 +1229,7 @@ class Bits(object):
         h = 0
         for byte in shorter.tobytes():
             try:
-                h = (h << 4) + ord(byte)
+                h = (h << 4) + byte
             except TypeError:
                 # Python 3
                 h = (h << 4) + byte
