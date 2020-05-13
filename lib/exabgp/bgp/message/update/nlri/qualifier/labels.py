@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.util import concat_bytes_i
-
 
 # ======================================================================= Labels
 # RFC 3107
@@ -44,7 +42,7 @@ class Labels(object):
                 packed.pop()
                 packed.append(pack('!L', (label << 4) | 1)[1:])
             self.raw_labels = [None for _ in self.labels]
-        self.packed = concat_bytes_i(packed)
+        self.packed = b''.join(packed)
         self._len = len(self.packed)
 
     def __eq__(self, other):

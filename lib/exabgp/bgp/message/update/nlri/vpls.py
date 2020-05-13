@@ -11,8 +11,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import unpack
 from struct import pack
 from exabgp.vendoring import six
-from exabgp.util import concat_bytes
-from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.direction import OUT
@@ -67,11 +65,11 @@ class VPLS(NLRI):
         setattr(self, name, value)
 
     def pack_nlri(self, negotiated=None):
-        return concat_bytes(
-            b'\x00\x11',  # pack('!H',17)
-            self.rd.pack(),
-            pack('!HHH', self.endpoint, self.offset, self.size),
-            pack('!L', (self.base << 4) | 0x1)[1:],  # setting the bottom of stack, should we ?
+        return (
+            b'\x00\x11'  # pack('!H',17)
+            + self.rd.pack()
+            + pack('!HHH', self.endpoint, self.offset, self.size)
+            + pack('!L', (self.base << 4) | 0x1)[1:]  # setting the bottom of stack, should we ?
         )
 
     # XXX: FIXME: we need an unique key here.

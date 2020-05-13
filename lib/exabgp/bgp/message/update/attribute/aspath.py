@@ -10,8 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import unpack
 from struct import error
 
-from exabgp.util import concat_bytes
-from exabgp.util import concat_bytes_i
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -61,9 +59,7 @@ class ASPath(Attribute):
         if length:
             if length > 255:
                 return self._segment(seg_type, values[:255], asn4) + self._segment(seg_type, values[255:], asn4)
-            return concat_bytes(
-                bytes([seg_type, len(values)]), concat_bytes_i(v.pack(asn4) for v in values)
-            )
+            return bytes([seg_type, len(values)]) + b''.join(v.pack(asn4) for v in values)
         return b""
 
     def _segments(self, asn4):

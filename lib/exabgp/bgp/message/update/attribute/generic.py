@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
-from exabgp.util import concat_bytes
 from exabgp.util import hexstring
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -41,7 +40,7 @@ class GenericAttribute(Attribute):
             len_value = pack('!H', length)
         else:
             len_value = bytes([length])
-        return concat_bytes(bytes([flag, self.ID]), len_value, self.data)
+        return bytes([flag, self.ID]) + len_value + self.data
 
     def __len__(self):
         return len(self.data)

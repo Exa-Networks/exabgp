@@ -9,9 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import unpack
 
-from exabgp.util import concat_bytes
-from exabgp.util import concat_bytes_i
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
@@ -54,22 +51,22 @@ class MPURNLRI(Attribute, Family):
                 continue
             mpurnlri.append(nlri.pack(negotiated))
 
-        payload = concat_bytes(self.afi.pack(), self.safi.pack())
+        payload = self.afi.pack() + self.safi.pack()
         header_length = len(payload)
         for nlri in mpurnlri:
             if self._len(payload + nlri) > maximum:
                 if len(payload) == header_length or len(payload) > maximum:
                     raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
                 yield self._attribute(payload)
-                payload = concat_bytes(self.afi.pack(), self.safi.pack(), nlri)
+                payload = self.afi.pack() + self.safi.pack() + nlri
                 continue
-            payload = concat_bytes(payload, nlri)
+            payload = payload + nlri
         if len(payload) == header_length or len(payload) > maximum:
             raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
         yield self._attribute(payload)
 
     def pack(self, negotiated):
-        return concat_bytes_i(self.packed_attributes(negotiated))
+        return b''.join(self.packed_attributes(negotiated))
 
     def __len__(self):
         raise RuntimeError('we can not give you the size of an MPURNLRI - was it with our witout addpath ?')

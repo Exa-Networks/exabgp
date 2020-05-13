@@ -8,9 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
-import sys
 
-from exabgp.util import concat_bytes
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
@@ -212,7 +210,7 @@ class Attribute(object):
             len_value = pack('!H', length)
         else:
             len_value = bytes([length])
-        return concat_bytes(bytes([flag, self.ID]), len_value, value)
+        return bytes([flag, self.ID]) + len_value + value
 
     def _len(self, value):
         length = len(value)

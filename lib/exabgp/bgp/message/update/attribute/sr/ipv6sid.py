@@ -7,7 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 from struct import pack
 
-from exabgp.util import concat_bytes
 from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message.notification import Notify
@@ -42,9 +41,7 @@ class SrV6Sid(object):
         return "sr-v6-sid %s" % (self.v6sid)
 
     def pack(self):
-        return concat_bytes(
-            pack('!B', self.TLV), pack('!H', self.LENGTH), pack('!B', 0), pack('!H', 0), IP.pton(self.v6sid)
-        )
+        return pack('!B', self.TLV) + pack('!H', self.LENGTH) + pack('!B', 0) + pack('!H', 0) + IP.pton(self.v6sid)
 
     @classmethod
     def unpack(cls, data, length):

@@ -7,7 +7,6 @@ Copyright (c) 2020 Hiroki Shirokura . All rights reserved.
 """
 from struct import pack
 
-from exabgp.util import concat_bytes
 from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message.notification import Notify
@@ -41,14 +40,14 @@ class Srv6L3vpnSid(object):
         return "srv6-l3vpn-sid %s" % (self.l3vpnsid)
 
     def pack(self):
-        return concat_bytes(
-            pack('!B', self.TLV),
-            pack('!H', self.LENGTH),
-            pack('!B', 0),
-            IP.pton(self.l3vpnsid),
-            pack('!B', 0),
-            pack('!H', 0xFFFF),
-            pack('!B', 0),
+        return (
+            pack('!B', self.TLV)
+            + pack('!H', self.LENGTH)
+            + pack('!B', 0)
+            + IP.pton(self.l3vpnsid)
+            + pack('!B', 0)
+            + pack('!H', 0xFFFF)
+            + pack('!B', 0)
         )
 
     @classmethod

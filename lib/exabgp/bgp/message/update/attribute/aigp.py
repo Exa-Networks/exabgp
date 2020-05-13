@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import pack
 from struct import unpack
 
-from exabgp.util import concat_bytes_i, concat_bytes
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -49,9 +48,7 @@ class TLVS(list):
         return TLVS(list(loop(data)))
 
     def pack(self):
-        return concat_bytes_i(
-            concat_bytes(bytes([tlv.type]), pack('!H', len(tlv.value) + 3), tlv.value) for tlv in self
-        )
+        return b''.join([bytes([tlv.type]) + pack('!H', len(tlv.value) + 3) + tlv.value for tlv in self])
 
 
 # ==================================================================== AIGP (26)

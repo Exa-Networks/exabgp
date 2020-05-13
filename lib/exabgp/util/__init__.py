@@ -32,12 +32,9 @@ def string_is_hex(s):
 
 # Each item is an 'str' in py2 or a 'bytes' in py3
 
+
 def concat_strs(*items):
     return ''.join(items)
-
-
-def concat_bytes(*items):
-    return b''.join(items)
 
 
 # same with iterators/lists
@@ -45,10 +42,6 @@ def concat_bytes(*items):
 
 def concat_strs_i(iterable):
     return ''.join(iterable)
-
-
-def concat_bytes_i(iterable):
-    return b''.join(iterable)
 
 
 # helpers for converting between string and bytestring

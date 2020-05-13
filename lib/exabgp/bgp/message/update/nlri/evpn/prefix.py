@@ -11,7 +11,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.util import concat_bytes
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
@@ -116,14 +115,14 @@ class Prefix(EVPN):
             self._packed = packed
             return packed
 
-        self._packed = concat_bytes(
-            self.rd.pack(),
-            self.esi.pack(),
-            self.etag.pack(),
-            bytes([self.iplen]),
-            self.ip.pack(),
-            self.gwip.pack(),
-            self.label.pack(),
+        self._packed = (
+            self.rd.pack()
+            + self.esi.pack()
+            + self.etag.pack()
+            + bytes([self.iplen])
+            + self.ip.pack()
+            + self.gwip.pack()
+            + self.label.pack()
         )
         return self._packed
 

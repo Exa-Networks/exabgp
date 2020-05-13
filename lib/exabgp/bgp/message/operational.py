@@ -12,7 +12,6 @@ from struct import unpack
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.message import Message
 
@@ -84,7 +83,7 @@ class Operational(Message):
         self.what = Type(what)
 
     def _message(self, data):
-        return Message._message(self, concat_bytes(self.what.pack(), pack('!H', len(data)), data))
+        return Message._message(self, self.what.pack() + pack('!H', len(data)) + data)
 
     def __str__(self):
         return self.extensive()
@@ -143,7 +142,7 @@ class OperationalFamily(Operational):
         return (self.afi, self.safi)
 
     def _message(self, data):
-        return Operational._message(self, concat_bytes(self.afi.pack(), self.safi.pack(), data))
+        return Operational._message(self, self.afi.pack() + self.safi.pack() + data)
 
     def message(self, negotiated):
         return self._message(self.data)
@@ -172,7 +171,7 @@ class SequencedOperationalFamily(OperationalFamily):
         else:
             self.sent_sequence = self.sequence
 
-        return self._message(concat_bytes(self.sent_routerid.pack(), pack('!L', self.sent_sequence), self.data))
+        return self._message(self.sent_routerid.pack() + pack('!L', self.sent_sequence) + self.data)
 
 
 # =========================================================================== NS
@@ -191,7 +190,7 @@ class NS(object):
         is_fault = True
 
         def __init__(self, afi, safi, sequence):
-            OperationalFamily.__init__(self, Operational.CODE.NS, afi, safi, concat_bytes(sequence, self.ERROR_SUBCODE))
+            OperationalFamily.__init__(self, Operational.CODE.NS, afi, safi, sequence + self.ERROR_SUBCODE)
 
         def extensive(self):
             return 'operational NS %s %s/%s' % (self.name, self.afi, self.safi)

@@ -11,8 +11,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import copy
 
-from exabgp.util import concat_bytes_i
-
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
@@ -175,9 +173,8 @@ def check_neighbor(neighbors):
 
 def check_message(neighbor, message):
     message = message.replace(':', '')
-    raw = concat_bytes_i(
-        bytes([int(_, 16)]) for _ in (message[i * 2 : (i * 2) + 2] for i in range(len(message) // 2))
-    )
+    msghexa = [message[i * 2 : (i * 2) + 2] for i in range(len(message) // 2)]
+    raw = bytes([int(_, 16) for _ in msghexa])
 
     if raw.startswith(b'\xff' * 16):
         kind = raw[18]
