@@ -13,7 +13,7 @@ import pwd
 import errno
 import socket
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 from exabgp.logger import Logger
 
@@ -22,10 +22,10 @@ MAXFD = 2048
 
 class Daemon(object):
     def __init__(self, reactor):
-        self.pid = environment.settings().daemon.pid
-        self.user = environment.settings().daemon.user
-        self.daemonize = environment.settings().daemon.daemonize
-        self.umask = environment.settings().daemon.umask
+        self.pid = getenv().daemon.pid
+        self.user = getenv().daemon.user
+        self.daemonize = getenv().daemon.daemonize
+        self.umask = getenv().daemon.umask
 
         self.logger = Logger()
 
@@ -171,7 +171,7 @@ class Daemon(object):
         if not self.daemonize:
             return
 
-        log = environment.settings().log
+        log = getenv().log
         if log.enable and log.destination.lower() in ('stdout', 'stderr'):
             self.logger.critical('ExaBGP can not fork when logs are going to %s' % log.destination.lower(), 'daemon')
             return

@@ -15,6 +15,7 @@ fi
 
 path="$(cd "$(dirname "$0")"/.. ; pwd)"
 
+export EXABGP_ROOT=$path
 export PYTHONPATH="$path"/lib
 
 # Prefer `python` binary when in a venv
@@ -38,9 +39,9 @@ import os
 
 path = [os.path.join(_,'exabgp')
         for _ in sys.path
-        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'bgp.py')))][0]
+        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'main.py')))][0]
 
-print(os.path.join(path,'application','bgp.py'))
+print(os.path.join(path,'application','main.py'))
 
 def remove (file):
     try: os.remove(file)
@@ -51,4 +52,4 @@ if 'exabgp' not in os.environ.get('SKIPCLEANUP',''):
 
 ")"
 
-exec "$INTERPRETER" "$APPLICATION" --root "$path" "$@"
+exec "$INTERPRETER" "$APPLICATION" "$@"

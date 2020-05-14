@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import unittest
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 environment.setup('')
 

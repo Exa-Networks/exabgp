@@ -43,7 +43,7 @@ from exabgp.configuration.l2vpn import ParseL2VPN
 from exabgp.configuration.l2vpn import ParseVPLS
 from exabgp.configuration.operational import ParseOperational
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 # for registration
 from exabgp.configuration.announce.ip import AnnounceIP
@@ -108,7 +108,7 @@ class _Configuration(object):
 class Configuration(_Configuration):
     def __init__(self, configurations, text=False):
         _Configuration.__init__(self)
-        self.api_encoder = environment.settings().api.encoder
+        self.api_encoder = getenv().api.encoder
 
         self._configurations = configurations
         self._text = text
@@ -337,13 +337,13 @@ class Configuration(_Configuration):
         except KeyboardInterrupt:
             return self.error.set('configuration reload aborted by ^C or SIGINT')
         except Error as exc:
-            if environment.settings().debug.configuration:
+            if getenv().debug.configuration:
                 raise
             return self.error.set(
                 'problem parsing configuration file line %d\n' 'error message: %s' % (self.tokeniser.index_line, exc)
             )
         except Exception as exc:
-            if environment.settings().debug.configuration:
+            if getenv().debug.configuration:
                 raise
             return self.error.set(
                 'problem parsing configuration file line %d\n' 'error message: %s' % (self.tokeniser.index_line, exc)
@@ -519,16 +519,16 @@ class Configuration(_Configuration):
 
     def debug_check_route(self):
         # we are not really running the program, just want to ....
-        if environment.settings().debug.route:
+        if getenv().debug.route:
             from exabgp.configuration.check import check_message
 
-            if check_message(self.neighbors, environment.settings().debug.route):
+            if check_message(self.neighbors, getenv().debug.route):
                 sys.exit(0)
             sys.exit(1)
 
     def debug_self_check(self):
         # we are not really running the program, just want check the configuration validity
-        if environment.settings().debug.selfcheck:
+        if getenv().debug.selfcheck:
             from exabgp.configuration.check import check_neighbor
 
             if check_neighbor(self.neighbors):

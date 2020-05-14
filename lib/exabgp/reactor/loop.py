@@ -24,7 +24,7 @@ from exabgp.reactor.network.error import error
 
 from exabgp.reactor.api import API
 from exabgp.configuration.configuration import Configuration
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 from exabgp.bgp.fsm import FSM
 
@@ -51,16 +51,16 @@ class Reactor(object):
     clear = b''.join(bytes([int(c, 16)]) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
     def __init__(self, configurations):
-        self._ips = environment.settings().tcp.bind
-        self._port = environment.settings().tcp.port
-        self._stopping = environment.settings().tcp.once
+        self._ips = getenv().tcp.bind
+        self._port = getenv().tcp.port
+        self._stopping = getenv().tcp.once
         self.exit_code = self.Exit.unknown
 
-        self.max_loop_time = environment.settings().reactor.speed
+        self.max_loop_time = getenv().reactor.speed
         self._sleep_time = self.max_loop_time / 100
         self._busyspin = {}
         self._ratelimit = {}
-        self.early_drop = environment.settings().daemon.drop
+        self.early_drop = getenv().daemon.drop
 
         self.processes = None
 
@@ -291,7 +291,7 @@ class Reactor(object):
         # did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
         reload_completed = False
 
-        wait = environment.settings().tcp.delay
+        wait = getenv().tcp.delay
         if wait:
             sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
             self.logger.debug('waiting for %d seconds before connecting' % sleeptime, 'reactor')

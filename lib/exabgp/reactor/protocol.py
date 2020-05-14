@@ -72,9 +72,9 @@ class Protocol(object):
         else:
             self.port = 179
 
-        from exabgp.configuration.environment import environment
+        from exabgp.environment import getenv
 
-        self.log_routes = peer.neighbor.adj_rib_in or environment.settings().log.routes
+        self.log_routes = peer.neighbor.adj_rib_in or getenv().log.routes
 
     def fd(self):
         if self.connection is None:

@@ -20,7 +20,8 @@ import pdb
 from collections import deque
 
 from exabgp.util.od import od
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
+from exabgp.environment import APPLICATION
 
 
 def _can_write(location):
@@ -174,33 +175,33 @@ class Logger(object):
     def __init__(self):
         if self._instance.get('class', None) is not None:
             return
-
         self._instance['class'] = self
 
-        command = environment.settings()
-        self.short = command.log.short
-        self.level = command.log.level
+        env = getenv()
+
+        self.short = env.log.short
+        self.level = env.log.level
 
         self._option = {
-            'pdb': command.debug.pdb,
-            'reactor': command.log.enable and (command.log.all or command.log.reactor),
-            'daemon': command.log.enable and (command.log.all or command.log.daemon),
-            'processes': command.log.enable and (command.log.all or command.log.processes),
-            'configuration': command.log.enable and (command.log.all or command.log.configuration),
-            'network': command.log.enable and (command.log.all or command.log.network),
-            'wire': command.log.enable and (command.log.all or command.log.packets),
-            'message': command.log.enable and (command.log.all or command.log.message),
-            'rib': command.log.enable and (command.log.all or command.log.rib),
-            'timer': command.log.enable and (command.log.all or command.log.timers),
-            'routes': command.log.enable and (command.log.all or command.log.routes),
-            'parser': command.log.enable and (command.log.all or command.log.parser),
+            'pdb': env.debug.pdb,
+            'reactor': env.log.enable and (env.log.all or env.log.reactor),
+            'daemon': env.log.enable and (env.log.all or env.log.daemon),
+            'processes': env.log.enable and (env.log.all or env.log.processes),
+            'configuration': env.log.enable and (env.log.all or env.log.configuration),
+            'network': env.log.enable and (env.log.all or env.log.network),
+            'wire': env.log.enable and (env.log.all or env.log.packets),
+            'message': env.log.enable and (env.log.all or env.log.message),
+            'rib': env.log.enable and (env.log.all or env.log.rib),
+            'timer': env.log.enable and (env.log.all or env.log.timers),
+            'routes': env.log.enable and (env.log.all or env.log.routes),
+            'parser': env.log.enable and (env.log.all or env.log.parser),
         }
 
-        if not command.log.enable:
+        if not env.log.enable:
             self.destination = ''
             return
 
-        self.destination = command.log.destination
+        self.destination = env.log.destination
 
         self.restart(True)
 
@@ -317,7 +318,7 @@ class Logger(object):
         elif self._where in [
             'syslog',
         ]:
-            return "%s[%d]: %-13s %s" % (environment.application, self._pid, source, message)
+            return "%s[%d]: %-13s %s" % (APPLICATION, self._pid, source, message)
         elif self._where in [
             'file',
         ]:

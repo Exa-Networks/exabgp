@@ -1,2 +1,1 @@
 # ExaBGP dependencies are included in its code tree
-# it uses docopt

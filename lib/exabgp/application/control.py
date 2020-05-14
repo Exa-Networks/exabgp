@@ -1,11 +1,3 @@
-"""
-control.py
-
-Created by Thomas Mangin on 2015-01-13.
-Copyright (c) 2015-2017 Exa Networks. All rights reserved.
-License: 3-clause BSD. (See the COPYRIGHT file)
-"""
-
 import os
 import sys
 import fcntl
@@ -21,6 +13,39 @@ from exabgp.reactor.network.error import error
 
 kb = 1024
 mb = kb * 1024
+
+
+def named_pipe(root, pipename='exabgp'):
+    locations = [
+        '/run/exabgp/',
+        '/run/%d/' % os.getuid(),
+        '/run/',
+        '/var/run/exabgp/',
+        '/var/run/%d/' % os.getuid(),
+        '/var/run/',
+        root + '/run/exabgp/',
+        root + '/run/%d/' % os.getuid(),
+        root + '/run/',
+        root + '/var/run/exabgp/',
+        root + '/var/run/%d/' % os.getuid(),
+        root + '/var/run/',
+    ]
+    for location in locations:
+        cli_in = location + pipename + '.in'
+        cli_out = location + pipename + '.out'
+
+        try:
+            if not stat.S_ISFIFO(os.stat(cli_in).st_mode):
+                continue
+            if not stat.S_ISFIFO(os.stat(cli_out).st_mode):
+                continue
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            continue
+        os.environ['exabgp_cli_pipe'] = location
+        return [location]
+    return locations
 
 
 def env(app, section, name, default):

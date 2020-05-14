@@ -17,7 +17,7 @@ from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 
 def register_rib():
@@ -26,7 +26,7 @@ def register_rib():
 
 def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_name, extensive):
     def callback():
-        lines_per_yield = environment.settings().api.chunk
+        lines_per_yield = getenv().api.chunk
         if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
             peers = reactor.peers()
         else:

@@ -12,7 +12,7 @@ import socket
 import select
 from struct import unpack
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 from exabgp.util.errstr import errstr
 
@@ -44,7 +44,7 @@ class Connection(object):
 
         # peer and local are strings of the IP
         try:
-            self.defensive = environment.settings().debug.defensive
+            self.defensive = getenv().debug.defensive
             self.logger = Logger()
         except RuntimeError:
             self.defensive = True

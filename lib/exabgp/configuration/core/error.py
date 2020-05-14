@@ -1,13 +1,13 @@
 import sys
 import pdb
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 
 class Error(Exception):
     def __init__(self):
         self.message = ''
-        self.debug = environment.settings().debug.configuration
+        self.debug = getenv().debug.configuration
 
     def set(self, message):
         self.message = message

@@ -26,7 +26,7 @@ from exabgp.logger import Logger
 from exabgp.version import json as json_version
 from exabgp.version import text as text_version
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 from threading import Thread
 
 
@@ -60,9 +60,9 @@ class Processes(object):
         self._configuration = {}
         self._restart = {}
 
-        self.respawn_number = 5 if environment.settings().api.respawn else 0
-        self.terminate_on_error = environment.settings().api.terminate
-        self.ack = environment.settings().api.ack
+        self.respawn_number = 5 if getenv().api.respawn else 0
+        self.terminate_on_error = getenv().api.terminate
+        self.ack = getenv().api.ack
 
     def number(self):
         return len(self._process)

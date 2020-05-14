@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import unpack
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
@@ -188,7 +188,7 @@ class Attributes(dict):
         self.cacheable = True
 
         # XXX: FIXME: surely not the best place for this
-        Attribute.caching = environment.settings().cache.attributes
+        Attribute.caching = getenv().cache.attributes
 
     def has(self, k):
         return k in self
