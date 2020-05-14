@@ -449,6 +449,8 @@ class BGPServer(asyncore.dispatcher):
                 self.options['send-notification'] = True
                 continue
             if message.strip().startswith('option:SIGUSR1:'):
+                delay = int(message.split(':')[-1])
+                myself = os.getpid()
 
                 def notify(delay, myself):
                     time.sleep(delay)
@@ -458,7 +460,7 @@ class BGPServer(asyncore.dispatcher):
                 # Python 2.6 can not perform this test as it misses the function
                 if 'check_output' in dir(subprocess):
                     # thread.start_new_thread(notify,(int(message.split(':')[-1]),os.getpid()))
-                    threading.Thread(target=notify, args=(int(message.split(':')[-1]), os.getpid()))
+                    threading.Thread(target=notify, args=(delay, myself))
                 else:
                     self.options['single-shot'] = True
                 continue
@@ -522,53 +524,42 @@ def drop():
         os.setuid(nuid)
 
 
+import argparse
+
+
 def main():
     port = os.environ.get('exabgp.tcp.port', os.environ.get('exabgp_tcp_port', '179'))
 
-    if not port.isdigit() and port > 0 and port <= 65535 or len(sys.argv) <= 1:
-        flushed('--sink   accept any BGP messages and reply with a keepalive')
-        flushed('--echo   accept any BGP messages send it back to the emiter')
-        flushed('--port <port>   port to bind to')
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--help', help='this help :-)')
+    parser.add_argument('--echo', help='accept any BGP messages send it back to the emiter')
+    parser.add_argument('--sink', help='accept any BGP messages and reply with a keepalive')
+    parser.add_argument('--port', help='port to bind to', type=int, default=port)
+    parser.add_argument('checks', help='a list of expected route announcement/withdrawl', nargs='?', type=open)
+
+    cmdarg = parser.parse_args()
+
+    if cmdarg.port <= 0 and port > 65535 or cmdarg.help:
+        parser.print_help()
+        flushed('a list of expected route announcement/withdrawl in the format:')
         flushed(
-            'a list of expected route announcement/withdrawl in the format <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>'
+            '<number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>'
         )
-        flushed('for example:', sys.argv[0], '1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8 ')
+        flushed('for example:', sys.argv[0], '1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8')
         flushed('routes with the same <number> can arrive in any order')
         sys.exit(1)
 
-    options = {'sink': False, 'echo': False, 'port': int(port), 'messages': []}
+    # fmt: off
+    options = {
+        'sink': cmdarg.sink,
+        'echo': cmdarg.echo,
+        'port': cmdarg.port,
+        'messages': []
+    }
+    # fmt: on
 
-    for arg in sys.argv[1:]:
-        if arg == '--sink':
-            messages = []
-            options['sink'] = True
-            continue
-
-        if arg == '--echo':
-            messages = []
-            options['echo'] = True
-            continue
-
-        if arg == '--port':
-            args = sys.argv[1:] + [
-                '',
-            ]
-            port = args[args.index('--port') + 1]
-            if port.isdigit() and int(port) > 0:
-                options['port'] = int(port)
-                continue
-            print('invalid port %s' % port)
-            sys.exit(1)
-
-        if arg == str(options['port']):
-            continue
-
-        try:
-            with open(sys.argv[1]) as content:
-                options['messages'] = [_.strip() for _ in content.readlines() if _.strip() and '#' not in _]
-        except IOError:
-            flushed('could not open file', sys.argv[1])
-            sys.exit(1)
+    if cmdarg.checks:
+        options['messages'] = [_.strip() for _ in cmdarg.checks.readlines() if _.strip() and '#' not in _]
 
     try:
         BGPServer('127.0.0.1', options)
