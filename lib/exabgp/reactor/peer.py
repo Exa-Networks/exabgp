@@ -29,7 +29,7 @@ from exabgp.reactor.api.processes import ProcessError
 
 from exabgp.rib.change import Change
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 from exabgp.logger import Logger
 from exabgp.logger import FakeLogger
 from exabgp.logger import LazyFormat
@@ -78,8 +78,8 @@ class Peer(object):
         try:
             self.logger = Logger()
             # We only to try to connect via TCP once
-            self.once = environment.settings().tcp.once
-            self.bind = True if environment.settings().tcp.bind else False
+            self.once = getenv().tcp.once
+            self.bind = True if getenv().tcp.bind else False
         except RuntimeError:
             self.logger = FakeLogger()
             self.once = False
@@ -308,7 +308,7 @@ class Peer(object):
         yield message
 
     def _read_open(self):
-        wait = environment.settings().bgp.openwait
+        wait = getenv().bgp.openwait
         opentimer = ReceiveTimer(
             self.proto.connection.session, wait, 1, 1, 'waited for open too long, we do not like stuck in active'
         )

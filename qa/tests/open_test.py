@@ -23,7 +23,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import RouteRefresh
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 environment.setup('')
 

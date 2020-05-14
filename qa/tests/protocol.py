@@ -25,7 +25,7 @@ from exabgp.bgp.message.update import Attributes
 from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 
 environment.setup('')
 

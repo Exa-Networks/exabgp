@@ -21,9 +21,6 @@ from collections import deque
 from exabgp.reactor.api.transcoder import Transcoder
 from exabgp.reactor.api.processes import preexec_helper
 
-from exabgp.configuration.setup import environment
-
-environment.setup('')
 
 # test = """\
 # { "exabgp": "3.5.0", "time": 1430238962.74, "host" : "mangin.local", "pid" : 37912, "ppid" : 37903, "type": "state", "neighbor": { "address": { "local": "82.219.212.34", "peer": "127.0.0.1" }, "asn": { "local": "65534", "peer": "65533" }, "state": "down", "reason": "out loop, peer reset, message [closing connection] error[the TCP connection was closed by the remote end]"} }

@@ -68,7 +68,7 @@ def parse():
     formatter = argparse.RawDescriptionHelpFormatter
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__, formatter_class=formatter)
 
-    #fmt: off
+    # fmt: off
     g = parser.add_mutually_exclusive_group()
     g.add_argument("--debug", "-d", action="store_true", default=False, help="enable debugging")
     g.add_argument("--no-ack", "-a", action="store_true", default=False, help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false")
@@ -116,7 +116,7 @@ def parse():
     g.add_argument("--up-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service becomes available")
     g.add_argument("--down-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service becomes unavailable")
     g.add_argument("--disabled-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service is disabled")
-    #fmt: on
+    # fmt: on
 
     options = parser.parse_args()
     if options.config is not None:
@@ -507,6 +507,11 @@ def loop(options):
         except KeyboardInterrupt:
             exabgp(states.EXIT)
             break
+
+
+def cmdline(cmdarg):
+    sys.argv = [f'{sys.argv[0]} {sys.argv[1]}'] + sys.argv[2:]
+    main()
 
 
 def main():

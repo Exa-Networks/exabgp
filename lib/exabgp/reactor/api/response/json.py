@@ -19,7 +19,7 @@ from exabgp.util import hexstring
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import IN
 
-from exabgp.configuration.environment import environment
+from exabgp.environment import getenv
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 
 
@@ -38,7 +38,7 @@ class JSON(object):
     def __init__(self, version):
         self.version = version
         self.time = nop
-        self.compact = environment.settings().api.compact
+        self.compact = getenv().api.compact
 
     # def _reset (self, neighbor):
     # 	self._count[neighbor.uid] = 0

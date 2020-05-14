@@ -1,30 +1,23 @@
 #!/usr/bin/env python
 # encoding: utf-8
-"""
-cli.py
 
-Created by Thomas Mangin on 2014-12-22.
-Copyright (c) 2009-2017 Exa Networks. All rights reserved.
-License: 3-clause BSD. (See the COPYRIGHT file)
-"""
+"""exabgp command line interface"""
+
 
 import os
 import sys
 import time
+import errno
 import select
 import signal
-import errno
+import argparse
 
-from exabgp.application.bgp import root_folder
-from exabgp.application.bgp import named_pipe
-from exabgp.application.bgp import get_envfile
-from exabgp.application.bgp import get_env
+from exabgp.application.control import named_pipe
 from exabgp.application.control import check_fifo
 
 from exabgp.reactor.network.error import error
 from exabgp.reactor.api.response.answer import Answer
 
-from exabgp.vendoring import docopt
 
 errno_block = set(
     (
@@ -38,27 +31,6 @@ errno_block = set(
         errno.ENOBUFS,
         errno.ENOMEM,
     )
-)
-
-usage = """\
-The BGP swiss army knife of networking
-
-usage: exabgpcli [--root ROOT]
-\t\t\t\t\t\t\t\t [--help|<command>...]
-\t\t\t\t\t\t\t\t [--env ENV]
-
-positional arguments:
-\tcommand               valid exabgpcli command (see below)
-
-optional arguments:
-\t--env ENV,   -e ENV   environment configuration file
-\t--help,      -h       exabgp manual page
-\t--root ROOT, -f ROOT  root folder where etc,bin,sbin are located
-
-commands:
-\thelp                  show the commands known by ExaBGP
-""".replace(
-    '\t', '  '
 )
 
 
@@ -123,29 +95,22 @@ def open_writer(send):
     return writer
 
 
-def main():
-    options = docopt.docopt(usage, help=False)
-    if options['--env'] is None:
-        options['--env'] = ''
+def args(sub):
+    # fmt:off
+    sub.add_argument('command', nargs='*', help='command to run on the router')
+    # fmt:on
 
-    root = root_folder(options, ['/bin/exabgpcli', '/sbin/exabgpcli', '/lib/exabgp/application/cli.py'])
-    prefix = '' if root == '/usr' else root
-    etc = prefix + '/etc/exabgp'
-    envfile = get_envfile(options, etc)
-    env = get_env(envfile)
+
+def main():
+    parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
+    args(parser)
+    cmdline(parser.parse_args())
+
+
+def cmdline(cmdarg):
     pipename = env['api']['pipename']
 
-    if options['--help']:
-        sys.stdout.write(usage)
-        sys.stdout.flush()
-        sys.exit(0)
-
-    if not options['<command>']:
-        sys.stdout.write(usage)
-        sys.stdout.flush()
-        sys.exit(0)
-
-    command = ' '.join(options['<command>'])
+    command = cmdarg.command
 
     pipes = named_pipe(root, pipename)
     if len(pipes) != 1:
