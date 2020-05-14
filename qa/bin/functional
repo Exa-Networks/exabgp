@@ -50,20 +50,33 @@ class Color(object):
     SUCCESS = '\033[1m' + '\033[92m' + '+'  # GREEN
 
 
-class Identifier(object):
+class Identifier(dict):
     _listing = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    _from_name = {}
+    _from_nick = {}
     _next = 0
     _nl = 3
 
     @classmethod
-    def get(cls):
+    def get(cls, name):
+        letter = cls._listing[cls._next]
+        cls._from_name[name] = letter
+        cls._from_nick[letter] = name
         cls._next += 1
-        return cls._listing[cls._next - 1]
+        return letter
 
     @classmethod
     def identifiers(cls):
         for n in range(0, cls._next):
             yield cls._listing[n], not (n + 1) % cls._nl
+
+    @classmethod
+    def nick(cls, name):
+        return cls._from_name[name]
+
+    @classmethod
+    def name(cls, nick):
+        return cls._from_nick[nick]
 
 
 class Port(object):
@@ -71,8 +84,9 @@ class Port(object):
 
     @classmethod
     def get(cls):
+        current = cls.base
         cls.base += 1
-        return cls.base
+        return current
 
 
 class Path(object):
@@ -107,11 +121,11 @@ class CI(dict):
     @classmethod
     def make(cls):
         for filename in Path.ALL_CI:
-            index = Identifier.get()
             name, extension = os.path.splitext(filename.split('/')[-1])
+            nick = Identifier.get(name)
             with open(filename, 'r') as reader:
                 content = reader.readline()
-                cls._content[index] = {
+                cls._content[nick] = {
                     'name': name,
                     'confs': [os.path.join(Path.ETC, _) for _ in content.split()],
                     'ci': os.path.join(Path.CI, name) + '.ci',
