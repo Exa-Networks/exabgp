@@ -481,7 +481,6 @@ if __name__ == '__main__':
 
     sub = subparsers.add_parser('edit', help='start $EDITOR to edit a specific test')
     sub.add_argument('test', help='name of the test to edit')
-    sub.add_argument('payload', help='hexadecimal of the BGP packet')
     sub.set_defaults(func=edit)
 
     def decode(parsed):
