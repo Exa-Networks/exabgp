@@ -12,45 +12,42 @@ from collections import deque
 from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
 
+class Iterator(object):
+    def __init__(self):
+        self.next = deque()
+        self.tokens = []
+        self.generator = iter([])
+        self.announce = True
+        self.afi = AFI.undefined
+
+    def replenish(self, content):
+        self.next.clear()
+        self.tokens = content
+        self.generator = iter(content)
+        return self
+
+    def clear(self):
+        self.replenish([])
+        self.announce = True
+
+    def __call__(self):
+        if self.next:
+            return self.next.popleft()
+
+        try:
+            return next(self.generator)
+        except StopIteration:
+            return ''
+
+    def peek(self):
+        try:
+            peaked = next(self.generator)
+            self.next.append(peaked)
+            return peaked
+        except StopIteration:
+            return ''
 
 class Tokeniser(object):
-    class Iterator(object):
-        fname = ''  # This is ok to have a unique value as API parser do not use files
-
-        def __init__(self):
-            self.next = deque()
-            self.tokens = []
-            self.generator = iter([])
-            self.announce = True
-            self.afi = AFI.undefined
-
-        def replenish(self, content):
-            self.next.clear()
-            self.tokens = content
-            self.generator = iter(content)
-            return self
-
-        def clear(self):
-            self.replenish([])
-            self.announce = True
-
-        def __call__(self):
-            if self.next:
-                return self.next.popleft()
-
-            try:
-                return next(self.generator)
-            except StopIteration:
-                return ''
-
-        def peek(self):
-            try:
-                peaked = next(self.generator)
-                self.next.append(peaked)
-                return peaked
-            except StopIteration:
-                return ''
-
     @staticmethod
     def _off():
         return iter([])
@@ -62,7 +59,7 @@ class Tokeniser(object):
         self.finished = False
         self.number = 0
         self.line = []
-        self.iterate = Tokeniser.Iterator()
+        self.iterate = Iterator()
         self.end = ''
         self.index_column = 0
         self.index_line = 0
@@ -144,7 +141,7 @@ class Tokeniser(object):
                     yield _
 
         self.type = 'file'
-        self.Iterator.fname = data
+        self.iterate.fname = data
         return self._set(_source(data))
 
     def set_text(self, data):
