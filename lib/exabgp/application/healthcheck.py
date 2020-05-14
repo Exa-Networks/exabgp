@@ -68,52 +68,24 @@ def parse():
     formatter = argparse.RawDescriptionHelpFormatter
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__, formatter_class=formatter)
 
+    #fmt: off
     g = parser.add_mutually_exclusive_group()
     g.add_argument("--debug", "-d", action="store_true", default=False, help="enable debugging")
-    g.add_argument(
-        "--no-ack", "-a", action="store_true", default=False, help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false"
-    )
+    g.add_argument("--no-ack", "-a", action="store_true", default=False, help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false")
     g.add_argument("--silent", "-s", action="store_true", default=False, help="don't log to console")
-    g.add_argument(
-        "--syslog-facility",
-        "-sF",
-        metavar="FACILITY",
-        nargs='?',
-        const="daemon",
-        default="daemon",
-        help=("log to syslog using FACILITY, " "default FACILITY is daemon"),
-    )
+    g.add_argument("--syslog-facility", "-sF", metavar="FACILITY", nargs='?', const="daemon", default="daemon", help="log to syslog using FACILITY, default FACILITY is daemon")
     g.add_argument("--sudo", action="store_true", default=False, help="use sudo to setup ip addresses")
     g.add_argument("--no-syslog", action="store_true", help="disable syslog logging")
     parser.add_argument("--name", "-n", metavar="NAME", help="name for this healthchecker")
     parser.add_argument("--config", "-F", metavar="FILE", type=open, help="read configuration from a file")
-    parser.add_argument(
-        "--pid", "-p", metavar="FILE", type=argparse.FileType('w'), help="write PID to the provided file"
-    )
+    parser.add_argument("--pid", "-p", metavar="FILE", type=argparse.FileType('w'), help="write PID to the provided file")
     parser.add_argument("--user", metavar="USER", help="set user after setting loopback addresses")
     parser.add_argument("--group", metavar="GROUP", help="set group after setting loopback addresses")
 
     g = parser.add_argument_group("checking healthiness")
-    g.add_argument(
-        "--interval",
-        "-i",
-        metavar='N',
-        default=5,
-        type=float,
-        help="wait N seconds between each healthcheck (zero to exit after first announcement)",
-    )
-    g.add_argument(
-        "--fast-interval",
-        "-f",
-        metavar='N',
-        default=1,
-        type=float,
-        dest="fast",
-        help=("when a state change is about to occur, " "wait N seconds between each healthcheck"),
-    )
-    g.add_argument(
-        "--timeout", "-t", metavar='N', default=5, type=int, help="wait N seconds for the check command to execute"
-    )
+    g.add_argument("--interval", "-i", metavar='N', default=5, type=float, help="wait N seconds between each healthcheck (zero to exit after first announcement)")
+    g.add_argument("--fast-interval", "-f", metavar='N', default=1, type=float, dest="fast", help="when a state change is about to occur, wait N seconds between each healthcheck")
+    g.add_argument("--timeout", "-t", metavar='N', default=5, type=int, help="wait N seconds for the check command to execute")
     g.add_argument("--rise", metavar='N', default=3, type=int, help="check N times before considering the service up")
     g.add_argument("--fall", metavar='N', default=3, type=int, help="check N times before considering the service down")
     g.add_argument("--disable", metavar='FILE', type=str, help="if FILE exists, the service is considered disabled")
@@ -121,99 +93,30 @@ def parse():
 
     g = parser.add_argument_group("advertising options")
     g.add_argument("--next-hop", "-N", metavar='IP', type=ip_address, help="self IP address to use as next hop")
-    g.add_argument(
-        "--ip",
-        metavar='IP',
-        type=ip_network,
-        dest="ips",
-        action="append",
-        help="advertise this IP address or network (CIDR notation)",
-    )
+    g.add_argument("--ip", metavar='IP', type=ip_network, dest="ips", action="append", help="advertise this IP address or network (CIDR notation)")
     g.add_argument("--local-preference", metavar='P', type=int, default=-1, help="advertise with local preference P")
-    g.add_argument(
-        "--deaggregate-networks",
-        dest="deaggregate_networks",
-        action="store_true",
-        help="Deaggregate Networks specified in --ip",
-    )
+    g.add_argument("--deaggregate-networks", dest="deaggregate_networks", action="store_true", help="Deaggregate Networks specified in --ip")
     g.add_argument("--no-ip-setup", action="store_false", dest="ip_setup", help="don't setup missing IP addresses")
-    g.add_argument(
-        "--dynamic-ip-setup",
-        default=False,
-        action="store_true",
-        dest="ip_dynamic",
-        help="delete existing loopback ips on state down and " "disabled, then restore loopback when up",
-    )
+    g.add_argument("--dynamic-ip-setup", default=False, action="store_true", dest="ip_dynamic", help="delete existing loopback ips on state down and " "disabled, then restore loopback when up")
     g.add_argument("--label", default=None, help="use the provided label to match loopback addresses")
-    g.add_argument(
-        "--start-ip", metavar='N', type=int, default=0, help="index of the first IP in the list of IP addresses"
-    )
-    g.add_argument(
-        "--up-metric", metavar='M', type=int, default=100, help="first IP get the metric M when the service is up"
-    )
-    g.add_argument(
-        "--down-metric", metavar='M', type=int, default=1000, help="first IP get the metric M when the service is down"
-    )
-    g.add_argument(
-        "--disabled-metric",
-        metavar='M',
-        type=int,
-        default=500,
-        help=("first IP get the metric M " "when the service is disabled"),
-    )
-    g.add_argument(
-        "--increase",
-        metavar='M',
-        type=int,
-        default=1,
-        help=("for each additional IP address, " "increase metric value by M"),
-    )
-    g.add_argument(
-        "--community", metavar="COMMUNITY", type=str, default=None, help="announce IPs with the supplied community"
-    )
-    g.add_argument(
-        "--extended-community",
-        metavar="EXTENDEDCOMMUNITY",
-        type=str,
-        default=None,
-        help="announce IPs with the supplied extended community",
-    )
-    g.add_argument(
-        "--large-community",
-        metavar="LARGECOMMUNITY",
-        type=str,
-        default=None,
-        help="announce IPs with the supplied large community",
-    )
-    g.add_argument(
-        "--disabled-community",
-        metavar="DISABLEDCOMMUNITY",
-        type=str,
-        default=None,
-        help="announce IPs with the supplied community when disabled",
-    )
+    g.add_argument("--start-ip", metavar='N', type=int, default=0, help="index of the first IP in the list of IP addresses")
+    g.add_argument("--up-metric", metavar='M', type=int, default=100, help="first IP get the metric M when the service is up")
+    g.add_argument("--down-metric", metavar='M', type=int, default=1000, help="first IP get the metric M when the service is down")
+    g.add_argument("--disabled-metric", metavar='M', type=int, default=500, help="first IP get the metric M when the service is disabled")
+    g.add_argument("--increase", metavar='M', type=int, default=1, help="for each additional IP address, increase metric value by M")
+    g.add_argument("--community", metavar="COMMUNITY", type=str, default=None, help="announce IPs with the supplied community")
+    g.add_argument("--extended-community", metavar="EXTENDEDCOMMUNITY", type=str, default=None, help="announce IPs with the supplied extended community")
+    g.add_argument("--large-community", metavar="LARGECOMMUNITY", type=str, default=None, help="announce IPs with the supplied large community")
+    g.add_argument("--disabled-community", metavar="DISABLEDCOMMUNITY", type=str, default=None, help="announce IPs with the supplied community when disabled")
     g.add_argument("--as-path", metavar="ASPATH", type=str, default=None, help="announce IPs with the supplied as-path")
-    g.add_argument(
-        "--withdraw-on-down",
-        action="store_true",
-        help=("Instead of increasing the metric on health failure, " "withdraw the route"),
-    )
+    g.add_argument("--withdraw-on-down", action="store_true", help="Instead of increasing the metric on health failure, withdraw the route")
 
     g = parser.add_argument_group("reporting")
     g.add_argument("--execute", metavar='CMD', type=str, action="append", help="execute CMD on state change")
-    g.add_argument(
-        "--up-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service becomes available"
-    )
-    g.add_argument(
-        "--down-execute",
-        metavar='CMD',
-        type=str,
-        action="append",
-        help="execute CMD when the service becomes unavailable",
-    )
-    g.add_argument(
-        "--disabled-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service is disabled"
-    )
+    g.add_argument("--up-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service becomes available")
+    g.add_argument("--down-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service becomes unavailable")
+    g.add_argument("--disabled-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service is disabled")
+    #fmt: on
 
     options = parser.parse_args()
     if options.config is not None:
