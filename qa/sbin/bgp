@@ -89,7 +89,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
             cmdline = line.strip().split()[4:]
             pid = line.strip().split()[0]
 
-            if len(cmdline) > 1 and not cmdline[1].endswith('/bgp.py'):
+            if len(cmdline) > 1 and not cmdline[1].endswith('/main.py'):
                 continue
 
             if conf_name not in cmdline[-1]:
