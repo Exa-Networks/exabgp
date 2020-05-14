@@ -4,6 +4,7 @@ import sys
 import string
 import argparse
 
+from exabgp.environment import Env
 from exabgp.environment import getenv
 
 

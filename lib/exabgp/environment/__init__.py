@@ -7,6 +7,7 @@ from exabgp.environment.environment import Env
 from exabgp.environment.base import APPLICATION
 from exabgp.environment.base import ENVFILE
 from exabgp.environment.base import ROOT
+from exabgp.environment.base import ETC
 
 # As soon as we import anything, a COPY is made in the local
 # namespace, it mean that we can not import the GlobalHashTable

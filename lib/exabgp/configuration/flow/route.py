@@ -21,6 +21,7 @@ from exabgp.configuration.static.mpls import route_distinguisher
 from exabgp.configuration.flow.parser import flow
 from exabgp.configuration.flow.parser import next_hop
 
+from exabgp.logger import log
 
 class ParseFlowRoute(Section):
     syntax = (
