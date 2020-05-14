@@ -34,11 +34,10 @@ from exabgp.bgp.message.update.nlri import NLRI
 
 
 from exabgp.configuration.setup import environment
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 
 environment.setup('')
-logger = Logger()
 
 
 bodies = []

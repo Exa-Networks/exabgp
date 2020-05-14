@@ -111,8 +111,8 @@ class ParseCapability(Section):
 
     name = 'capability'
 
-    def __init__(self, tokeniser, scope, error, logger):
-        Section.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        Section.__init__(self, tokeniser, scope, error)
 
     def pre(self):
         return True

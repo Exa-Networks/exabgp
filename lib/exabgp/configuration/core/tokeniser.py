@@ -52,10 +52,9 @@ class Tokeniser(object):
     def _off():
         return iter([])
 
-    def __init__(self, scope, error, logger):
+    def __init__(self, scope, error):
         self.scope = scope
         self.error = error
-        self.logger = logger
         self.finished = False
         self.number = 0
         self.line = []

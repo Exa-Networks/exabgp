@@ -15,7 +15,7 @@ from exabgp.debug import setup_report
 from exabgp.reactor.loop import Reactor
 
 from exabgp.util.dns import warn
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 # this is imported from configuration.setup to make sure it was initialised
 from exabgp.environment import getenv
@@ -60,13 +60,13 @@ def cmdline(cmdarg):
     else:
         comment = ''
 
-    logger = Logger()
-
     # Must be done before setting the logger as it modify its behaviour
     if cmdarg.debug:
         env = getenv()
         env.log.all = True
         env.log.level = syslog.LOG_DEBUG
+
+    log.init()
 
     duration = cmdarg.signal
     if duration and duration.isdigit():
@@ -128,7 +128,7 @@ def cmdline(cmdarg):
                 configurations.append(normalised)
                 continue
 
-        logger.debug('one of the arguments passed as configuration is not a file (%s)' % f, 'configuration')
+        log.debug('one of the arguments passed as configuration is not a file (%s)' % f, 'configuration')
         sys.exit(1)
 
     from exabgp.bgp.message.update.attribute import Attribute
@@ -138,7 +138,7 @@ def cmdline(cmdarg):
     if env.debug.rotate or len(configurations) == 1:
         run(env, comment, configurations, cmdarg.validate)
 
-        logger.error('can not log to files when running multiple configuration (as we fork)', 'configuration')
+        log.error('can not log to files when running multiple configuration (as we fork)', 'configuration')
         sys.exit(1)
 
     try:
@@ -160,42 +160,40 @@ def cmdline(cmdarg):
         for pid in pids:
             os.waitpid(pid, 0)
     except OSError as exc:
-        logger.critical('can not fork, errno %d : %s' % (exc.errno, exc.strerror), 'reactor')
+        log.critical('can not fork, errno %d : %s' % (exc.errno, exc.strerror), 'reactor')
         sys.exit(1)
 
 
 def run(env, comment, configurations, validate, pid=0):
-    logger = Logger()
-
-    logger.notice('Thank you for using ExaBGP', 'welcome')
-    logger.notice('%s' % version, 'version')
-    logger.notice('%s' % sys.version.replace('\n', ' '), 'interpreter')
-    logger.notice('%s' % ' '.join(platform.uname()[:5]), 'os')
-    logger.notice('%s' % ROOT, 'installation')
+    log.notice('Thank you for using ExaBGP', 'welcome')
+    log.notice('%s' % version, 'version')
+    log.notice('%s' % sys.version.replace('\n', ' '), 'interpreter')
+    log.notice('%s' % ' '.join(platform.uname()[:5]), 'os')
+    log.notice('%s' % ROOT, 'installation')
 
     if comment:
-        logger.notice(comment, 'advice')
+        log.notice(comment, 'advice')
 
     warning = warn()
     if warning:
-        logger.warning(warning, 'advice')
+        log.warning(warning, 'advice')
 
     if env.api.cli:
         pipename = 'exabgp' if env.api.pipename is None else env.api.pipename
         pipes = named_pipe(ROOT, pipename)
         if len(pipes) != 1:
             env.api.cli = False
-            logger.error(
+            log.error(
                 'could not find the named pipes (%s.in and %s.out) required for the cli' % (pipename, pipename), 'cli'
             )
-            logger.error('we scanned the following folders (the number is your PID):', 'cli')
+            log.error('we scanned the following folders (the number is your PID):', 'cli')
             for location in pipes:
-                logger.error(' - %s' % location, 'cli control')
-            logger.error('please make them in one of the folder with the following commands:', 'cli control')
-            logger.error('> mkfifo %s/run/%s.{in,out}' % (os.getcwd(), pipename), 'cli control')
-            logger.error('> chmod 600 %s/run/%s.{in,out}' % (os.getcwd(), pipename), 'cli control')
+                log.error(' - %s' % location, 'cli control')
+            log.error('please make them in one of the folder with the following commands:', 'cli control')
+            log.error('> mkfifo %s/run/%s.{in,out}' % (os.getcwd(), pipename), 'cli control')
+            log.error('> chmod 600 %s/run/%s.{in,out}' % (os.getcwd(), pipename), 'cli control')
             if os.getuid() != 0:
-                logger.error(
+                log.error(
                     '> chown %d:%d %s/run/%s.{in,out}' % (os.getuid(), os.getgid(), os.getcwd(), pipename),
                     'cli control',
                 )
@@ -204,9 +202,9 @@ def run(env, comment, configurations, validate, pid=0):
             os.environ['exabgp_cli_pipe'] = pipe
             os.environ['exabgp_api_pipename'] = pipename
 
-            logger.info('named pipes for the cli are:', 'cli control')
-            logger.info('to send commands  %s%s.in' % (pipe, pipename), 'cli control')
-            logger.info('to read responses %s%s.out' % (pipe, pipename), 'cli control')
+            log.info('named pipes for the cli are:', 'cli control')
+            log.info('to send commands  %s%s.in' % (pipe, pipename), 'cli control')
+            log.info('to read responses %s%s.out' % (pipe, pipename), 'cli control')
 
     if not env.profile.enable:
         exit_code = Reactor(configurations).run(validate, ROOT)
@@ -235,7 +233,7 @@ def run(env, comment, configurations, validate, pid=0):
 
     if not notice:
         cwd = os.getcwd()
-        logger.debug('profiling ....', 'reactor')
+        log.debug('profiling ....', 'reactor')
         profiler = profile.Profile()
         profiler.enable()
         try:
@@ -254,14 +252,14 @@ def run(env, comment, configurations, validate, pid=0):
                     kprofile.output(write)
             except IOError:
                 notice = 'could not save profiling in formation at: ' + destination
-                logger.debug("-" * len(notice), 'reactor')
-                logger.debug(notice, 'reactor')
-                logger.debug("-" * len(notice), 'reactor')
+                log.debug("-" * len(notice), 'reactor')
+                log.debug(notice, 'reactor')
+                log.debug("-" * len(notice), 'reactor')
             __exit(env.debug.memory, exit_code)
     else:
-        logger.debug("-" * len(notice), 'reactor')
-        logger.debug(notice, 'reactor')
-        logger.debug("-" * len(notice), 'reactor')
+        log.debug("-" * len(notice), 'reactor')
+        log.debug(notice, 'reactor')
+        log.debug("-" * len(notice), 'reactor')
         Reactor(configurations).run(validate, ROOT)
         __exit(env.debug.memory, 1)
 

@@ -46,7 +46,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 from exabgp.rib.change import Change
 
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 
 def flow(tokeniser):
@@ -263,10 +263,10 @@ def rate_limit(tokeniser):
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
     speed = int(tokeniser())
     if speed < 9600 and speed != 0:
-        Logger().warning("rate-limiting flow under 9600 bytes per seconds may not work", 'configuration')
+        log.warning("rate-limiting flow under 9600 bytes per seconds may not work", 'configuration')
     if speed > 1000000000000:
         speed = 1000000000000
-        Logger().warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % speed, 'configuration')
+        log.warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % speed, 'configuration')
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 

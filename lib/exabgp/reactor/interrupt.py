@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import signal
 
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 
 class Signal(object):
@@ -20,7 +20,6 @@ class Signal(object):
     FULL_RELOAD = 8
 
     def __init__(self):
-        self.logger = Logger()
         self.received = self.NONE
         self.number = 0
         self.rearm()
@@ -36,46 +35,46 @@ class Signal(object):
         signal.signal(signal.SIGUSR2, self.sigusr2)
 
     def sigterm(self, signum, frame):
-        self.logger.critical('SIGTERM received', 'reactor')
+        log.critical('SIGTERM received', 'reactor')
         if self.received:
-            self.logger.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical('ignoring - still handling previous signal', 'reactor')
             return
-        self.logger.critical('scheduling shutdown', 'reactor')
+        log.critical('scheduling shutdown', 'reactor')
         self.received = self.SHUTDOWN
         self.number = signum
 
     def sighup(self, signum, frame):
-        self.logger.critical('SIGHUP received', 'reactor')
+        log.critical('SIGHUP received', 'reactor')
         if self.received:
-            self.logger.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical('ignoring - still handling previous signal', 'reactor')
             return
-        self.logger.critical('scheduling shutdown', 'reactor')
+        log.critical('scheduling shutdown', 'reactor')
         self.received = self.SHUTDOWN
         self.number = signum
 
     def sigalrm(self, signum, frame):
-        self.logger.critical('SIGALRM received', 'reactor')
+        log.critical('SIGALRM received', 'reactor')
         if self.received:
-            self.logger.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical('ignoring - still handling previous signal', 'reactor')
             return
-        self.logger.critical('scheduling restart', 'reactor')
+        log.critical('scheduling restart', 'reactor')
         self.received = self.RESTART
         self.number = signum
 
     def sigusr1(self, signum, frame):
-        self.logger.critical('SIGUSR1 received', 'reactor')
+        log.critical('SIGUSR1 received', 'reactor')
         if self.received:
-            self.logger.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical('ignoring - still handling previous signal', 'reactor')
             return
-        self.logger.critical('scheduling reload of configuration', 'reactor')
+        log.critical('scheduling reload of configuration', 'reactor')
         self.received = self.RELOAD
         self.number = signum
 
     def sigusr2(self, signum, frame):
-        self.logger.critical('SIGUSR2 received', 'reactor')
+        log.critical('SIGUSR2 received', 'reactor')
         if self.received:
-            self.logger.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical('ignoring - still handling previous signal', 'reactor')
             return
-        self.logger.critical('scheduling reload of configuration and processes', 'reactor')
+        log.critical('scheduling reload of configuration and processes', 'reactor')
         self.received = self.FULL_RELOAD
         self.number = signum

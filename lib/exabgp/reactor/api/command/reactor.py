@@ -76,7 +76,7 @@ def version(self, reactor, service, _):
 
 @Command.register('text', '#', False)
 def comment(self, reactor, service, line):
-    self.logger.debug(line.lstrip().lstrip('#').strip(), 'process')
+    log.debug(line.lstrip().lstrip('#').strip(), 'process')
     reactor.processes.answer_done(service)
     return True
 

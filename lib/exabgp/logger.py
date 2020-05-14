@@ -146,11 +146,12 @@ class Logger(object):
     _pid = os.getpid()
     _cwd = os.getcwd()
 
+    _instance = None
+
     def __new__(cls):
-        if cls._instance.get('class', None) is None:
-            return super(Logger, cls).__new__(cls)
-        else:
-            return cls._instance['class']
+        if cls._instance is None:
+            cls._instance = super(Logger, cls).__new__(cls)
+        return cls._instance
 
     # we use os.pid everytime as we may fork and the class is instance before it
 
@@ -172,11 +173,7 @@ class Logger(object):
             self._history.popleft()
         self._history.append((message, source, level, timestamp))
 
-    def __init__(self):
-        if self._instance.get('class', None) is not None:
-            return
-        self._instance['class'] = self
-
+    def init(self):
         env = getenv()
 
         self.short = env.log.short
@@ -371,9 +368,4 @@ class Logger(object):
         self._report(message, source, level)
 
 
-class FakeLogger(object):
-    def __getattr__(self, name):
-        def printf(data, _=None):
-            sys.stdout.write('Fake logger [%s]\n' % str(data))
-
-        return printf
+log = Logger()

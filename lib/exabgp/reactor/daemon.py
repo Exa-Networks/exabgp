@@ -15,7 +15,7 @@ import socket
 
 from exabgp.environment import getenv
 
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 MAXFD = 2048
 
@@ -26,8 +26,6 @@ class Daemon(object):
         self.user = getenv().daemon.user
         self.daemonize = getenv().daemon.daemonize
         self.umask = getenv().daemon.umask
-
-        self.logger = Logger()
 
         self.reactor = reactor
 
@@ -67,13 +65,13 @@ class Daemon(object):
             try:
                 pid = open(self.pid, 'r').readline().strip()
                 if self.check_pid(int(pid)):
-                    self.logger.debug("PIDfile already exists and program still running %s" % self.pid, 'daemon')
+                    log.debug("PIDfile already exists and program still running %s" % self.pid, 'daemon')
                     return False
                 else:
                     # If pid is not running, reopen file without O_EXCL
                     fd = os.open(self.pid, flags ^ os.O_EXCL, mode)
             except (OSError, IOError, ValueError):
-                self.logger.debug(
+                log.debug(
                     "issue accessing PID file %s (most likely permission or ownership)" % self.pid, 'daemon'
                 )
                 return False
@@ -85,9 +83,9 @@ class Daemon(object):
             f.close()
             self._saved_pid = True
         except IOError:
-            self.logger.warning("Can not create PIDfile %s" % self.pid, 'daemon')
+            log.warning("Can not create PIDfile %s" % self.pid, 'daemon')
             return False
-        self.logger.warning("Created PIDfile %s with value %d" % (self.pid, ownid), 'daemon')
+        log.warning("Created PIDfile %s with value %d" % (self.pid, ownid), 'daemon')
         return True
 
     def removepid(self):
@@ -99,9 +97,9 @@ class Daemon(object):
             if exc.errno == errno.ENOENT:
                 pass
             else:
-                self.logger.error("Can not remove PIDfile %s" % self.pid, 'daemon')
+                log.error("Can not remove PIDfile %s" % self.pid, 'daemon')
                 return
-        self.logger.debug("Removed PIDfile %s" % self.pid, 'daemon')
+        log.debug("Removed PIDfile %s" % self.pid, 'daemon')
 
     def drop_privileges(self):
         """return true if we are left with insecure privileges"""
@@ -173,7 +171,7 @@ class Daemon(object):
 
         log = getenv().log
         if log.enable and log.destination.lower() in ('stdout', 'stderr'):
-            self.logger.critical('ExaBGP can not fork when logs are going to %s' % log.destination.lower(), 'daemon')
+            log.critical('ExaBGP can not fork when logs are going to %s' % log.destination.lower(), 'daemon')
             return
 
         def fork_exit():
@@ -182,7 +180,7 @@ class Daemon(object):
                 if pid > 0:
                     os._exit(0)
             except OSError as exc:
-                self.logger.critical('can not fork, errno %d : %s' % (exc.errno, exc.strerror), 'daemon')
+                log.critical('can not fork, errno %d : %s' % (exc.errno, exc.strerror), 'daemon')
 
         # do not detach if we are already supervised or run by init like process
         if self._is_socket(sys.__stdin__.fileno()) or os.getppid() == 1:
@@ -212,7 +210,7 @@ class Daemon(object):
         # elif 'bsd' in sys.platform:
         # 	nofile = resource.RLIMIT_OFILE
         # else:
-        # 	self.logger.daemon("For platform %s, can not close FDS before forking" % sys.platform)
+        # 	log.daemon("For platform %s, can not close FDS before forking" % sys.platform)
         # 	nofile = None
         # if nofile:
         # 	maxfd = resource.getrlimit(nofile)[1]

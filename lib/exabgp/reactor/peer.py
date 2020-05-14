@@ -30,8 +30,7 @@ from exabgp.reactor.api.processes import ProcessError
 from exabgp.rib.change import Change
 
 from exabgp.environment import getenv
-from exabgp.logger import Logger
-from exabgp.logger import FakeLogger
+from exabgp.logger import log
 from exabgp.logger import LazyFormat
 
 from exabgp.util.trace import trace
@@ -75,15 +74,9 @@ class Stop(Exception):
 
 class Peer(object):
     def __init__(self, neighbor, reactor):
-        try:
-            self.logger = Logger()
-            # We only to try to connect via TCP once
-            self.once = getenv().tcp.once
-            self.bind = True if getenv().tcp.bind else False
-        except RuntimeError:
-            self.logger = FakeLogger()
-            self.once = False
-            self.bind = True
+        # We only to try to connect via TCP once
+        self.once = getenv().tcp.once
+        self.bind = True if getenv().tcp.bind else False
 
         now = time.time()
 
@@ -217,11 +210,11 @@ class Peer(object):
         return -1
 
     def handle_connection(self, connection):
-        self.logger.debug("state machine for the peer is %s" % self.fsm.name(), self.id())
+        log.debug("state machine for the peer is %s" % self.fsm.name(), self.id())
 
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:
-            self.logger.debug('we already have a peer in state established for %s' % connection.name(), self.id())
+            log.debug('we already have a peer in state established for %s' % connection.name(), self.id())
             return connection.notification(6, 7, 'could not accept the connection, already established')
 
         # 6.8 The convention is to compare the BGP Identifiers of the peers
@@ -236,7 +229,7 @@ class Peer(object):
             remote_id = self.proto.negotiated.received_open.router_id.pack()
 
             if remote_id < local_id:
-                self.logger.debug(
+                log.debug(
                     'closing incoming connection as we have an outgoing connection with higher router-id for %s'
                     % connection.name(),
                     self.id(),
@@ -249,7 +242,7 @@ class Peer(object):
 
         # accept the connection
         if self.proto:
-            self.logger.debug(
+            log.debug(
                 'closing outgoing connection as we have another incoming on with higher router-id for %s'
                 % connection.name(),
                 self.id(),
@@ -394,7 +387,7 @@ class Peer(object):
         include_withdraw = False
 
         # Announce to the process BGP is up
-        self.logger.notice('connected to %s with %s' % (self.id(), self.proto.connection.name()), 'reactor')
+        log.notice('connected to %s with %s' % (self.id(), self.proto.connection.name()), 'reactor')
         self.stats['up'] = self.stats.get('up', 0) + 1
         if self.neighbor.api['neighbor-changes']:
             try:
@@ -435,11 +428,11 @@ class Peer(object):
                 # Received update
                 if message.TYPE == Update.TYPE:
                     number += 1
-                    self.logger.debug('<< UPDATE #%d' % number, self.id())
+                    log.debug('<< UPDATE #%d' % number, self.id())
 
                     for nlri in message.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
-                        self.logger.debug(LazyFormat('   UPDATE #%d nlri ' % number, nlri, str), self.id())
+                        log.debug(LazyFormat('   UPDATE #%d nlri ' % number, nlri, str), self.id())
 
                 elif message.TYPE == RouteRefresh.TYPE:
                     if message.reserved == RouteRefresh.request:
@@ -513,7 +506,7 @@ class Peer(object):
                     send_eor = False
                     for _ in self.proto.new_eors():
                         yield ACTION.NOW
-                    self.logger.debug('>> EOR(s)', self.id())
+                    log.debug('>> EOR(s)', self.id())
 
                 # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
                 elif not command_eor and self.neighbor.eor:
@@ -543,7 +536,7 @@ class Peer(object):
         if self.neighbor.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(
             Capability.CODE.GRACEFUL_RESTART
         ):
-            self.logger.error('closing the session without notification', self.id())
+            log.error('closing the session without notification', self.id())
             self.proto.close('graceful restarted negotiated, closing without sending any notification')
             raise NetworkError('closing')
 
@@ -563,7 +556,7 @@ class Peer(object):
         except NetworkError as network:
             # we tried to connect once, it failed and it was not a manual request, we stop
             if self.once and not self._teardown:
-                self.logger.debug('only one attempt to connect is allowed, stopping the peer', self.id())
+                log.debug('only one attempt to connect is allowed, stopping the peer', self.id())
                 self.stop()
 
             self._reset('closing connection', network)
@@ -581,7 +574,7 @@ class Peer(object):
                     except StopIteration:
                         pass
                 except (NetworkError, ProcessError):
-                    self.logger.error('Notification not sent', self.id())
+                    log.error('Notification not sent', self.id())
                 self._reset('notification sent (%d,%d)' % (notify.code, notify.subcode), notify)
             else:
                 self._reset()
@@ -591,7 +584,7 @@ class Peer(object):
         except Notification as notification:
             # we tried to connect once, it failed and it was not a manual request, we stop
             if self.once and not self._teardown:
-                self.logger.debug('only one attempt to connect is allowed, stopping the peer', self.id())
+                log.debug('only one attempt to connect is allowed, stopping the peer', self.id())
                 self.stop()
 
             self._reset('notification received (%d,%d)' % (notification.code, notification.subcode), notification)
@@ -615,7 +608,7 @@ class Peer(object):
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            self.logger.debug('\n'.join([NO_PANIC, '', '', str(type(exc)), str(exc), trace(), FOOTER]), 'reactor')
+            log.debug('\n'.join([NO_PANIC, '', '', str(type(exc)), str(exc), trace(), FOOTER]), 'reactor')
             self._reset()
             return
 
@@ -624,7 +617,7 @@ class Peer(object):
     def run(self):
         if self.reactor.processes.broken(self.neighbor):
             # XXX: we should perhaps try to restart the process ??
-            self.logger.error('ExaBGP lost the helper process for this peer - stopping', 'process')
+            log.error('ExaBGP lost the helper process for this peer - stopping', 'process')
             if self.reactor.processes.terminate_on_error:
                 self.reactor.api_shutdown()
             else:
@@ -645,13 +638,13 @@ class Peer(object):
 
         elif self.generator is None:
             if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
-                self.logger.debug('stopping, other connection is established', self.id())
+                log.debug('stopping, other connection is established', self.id())
                 self.generator = False
                 return ACTION.LATER
             if self._delay.backoff():
                 return ACTION.LATER
             if self._restart:
-                self.logger.debug('initialising connection to %s' % self.id(), 'reactor')
+                log.debug('initialising connection to %s' % self.id(), 'reactor')
                 self.generator = self._run()
                 return ACTION.LATER  # make sure we go through a clean loop
             return ACTION.CLOSE

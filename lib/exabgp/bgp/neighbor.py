@@ -7,9 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import os
-import uuid
-
 from collections import deque
 
 from collections import Counter
@@ -17,7 +14,6 @@ from collections import Counter
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.open.capability import NextHop
 from exabgp.bgp.message.open.capability import AddPath
 
 from exabgp.rib import RIB
@@ -28,7 +24,6 @@ class Neighbor(object):
     _GLOBAL = {'uid': 1}
 
     def __init__(self):
-        # self.logger should not be used here as long as we do use deepcopy as it contains a Lock
         self.description = None
         self.router_id = None
         self.host_name = None

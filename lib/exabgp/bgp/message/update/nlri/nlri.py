@@ -13,7 +13,7 @@ from exabgp.protocol.family import Family
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.logger import Logger
+from exabgp.logger import log
 from exabgp.logger import LazyNLRI
 
 
@@ -22,7 +22,6 @@ class NLRI(Family):
 
     registered_nlri = dict()
     registered_families = [(AFI.ipv4, SAFI.multicast)]
-    logger = None
 
     def __init__(self, afi, safi, action=OUT.UNSET):
         Family.__init__(self, afi, safi)
@@ -94,11 +93,8 @@ class NLRI(Family):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, data, action, addpath):
-        if not cls.logger:
-            cls.logger = Logger()
-
         a, s = AFI.create(afi), SAFI.create(safi)
-        cls.logger.debug(LazyNLRI(a, s, addpath, data), 'parser')
+        log.debug(LazyNLRI(a, s, addpath, data), 'parser')
 
         key = '%s/%s' % (a, s)
         if key in cls.registered_nlri:

@@ -16,7 +16,7 @@ from exabgp.protocol.family import Family
 
 from exabgp.bgp.message.refresh import RouteRefresh
 
-from exabgp.logger import Logger
+from exabgp.logger import log
 from exabgp.reactor.api.command import Command
 from exabgp.configuration.configuration import Configuration
 
@@ -27,23 +27,22 @@ from exabgp.configuration.configuration import Configuration
 class API(Command):
     def __init__(self, reactor):
         self.reactor = reactor
-        self.logger = Logger()
         self.configuration = Configuration([])
 
     def log_message(self, message, level='INFO'):
-        self.logger.notice(message, 'api', level)
+        log.notice(message, 'api', level)
 
     def log_failure(self, message, level='ERR'):
         error = str(self.configuration.tokeniser.error)
         report = '%s\nreason: %s' % (message, error) if error else message
-        self.logger.error(report, 'api', level)
+        log.error(report, 'api', level)
 
     def text(self, reactor, service, command):
         for registered in self.functions:
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
                 return self.callback['text'][registered](self, reactor, service, command)
         reactor.processes.answer_error(service)
-        self.logger.warning('command from process not understood : %s' % command, 'api')
+        log.warning('command from process not understood : %s' % command, 'api')
         return False
 
     def api_route(self, command):

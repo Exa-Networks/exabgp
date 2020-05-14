@@ -117,8 +117,8 @@ class AnnounceIP(ParseAnnounce):
 
     name = 'ip'
 
-    def __init__(self, tokeniser, scope, error, logger):
-        ParseAnnounce.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        ParseAnnounce.__init__(self, tokeniser, scope, error)
 
     def clear(self):
         return True

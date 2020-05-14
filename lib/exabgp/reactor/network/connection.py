@@ -16,8 +16,7 @@ from exabgp.environment import getenv
 
 from exabgp.util.errstr import errstr
 
-from exabgp.logger import Logger
-from exabgp.logger import FakeLogger
+from exabgp.logger import log
 from exabgp.logger import LazyFormat
 
 from exabgp.bgp.message import Message
@@ -41,14 +40,7 @@ class Connection(object):
 
     def __init__(self, afi, peer, local):
         self.msg_size = ExtendedMessage.INITIAL_SIZE
-
-        # peer and local are strings of the IP
-        try:
-            self.defensive = getenv().debug.defensive
-            self.logger = Logger()
-        except RuntimeError:
-            self.defensive = True
-            self.logger = FakeLogger()
+        self.defensive = getenv().debug.defensive
 
         self.afi = afi
         self.peer = peer
@@ -70,7 +62,7 @@ class Connection(object):
     def __del__(self):
         if self.io:
             self.close()
-            self.logger.warning('connection to %s closed' % self.peer, self.session())
+            log.warning('connection to %s closed' % self.peer, self.session())
 
     def name(self):
         return "%s-%d %s-%s" % (self.direction, self.id, self.local, self.peer)
@@ -86,7 +78,7 @@ class Connection(object):
 
     def close(self):
         try:
-            self.logger.warning('%s, closing connection' % self.name(), source=self.session())
+            log.warning('%s, closing connection' % self.name(), source=self.session())
             if self.io:
                 self.io.close()
                 self.io = None
@@ -149,7 +141,7 @@ class Connection(object):
                     read = self.io.recv(number)
                     if not read:
                         self.close()
-                        self.logger.warning(
+                        log.warning(
                             '%s %s lost TCP session with peer' % (self.name(), self.peer), self.session()
                         )
                         raise LostConnection('the TCP connection was closed by the remote end')
@@ -157,14 +149,14 @@ class Connection(object):
 
                     number -= len(read)
                     if not number:
-                        self.logger.debug(LazyFormat('received TCP payload', data), self.session())
+                        log.debug(LazyFormat('received TCP payload', data), self.session())
                         yield data
                         return
 
                     yield b''
             except socket.timeout as exc:
                 self.close()
-                self.logger.warning('%s %s peer is too slow' % (self.name(), self.peer), self.session())
+                log.warning('%s %s peer is too slow' % (self.name(), self.peer), self.session())
                 raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(exc))
             except socket.error as exc:
                 if exc.args[0] in error.block:
@@ -175,14 +167,14 @@ class Connection(object):
                     )
                     if message != reported:
                         reported = message
-                        self.logger.debug(message, self.session())
+                        log.debug(message, self.session())
                     yield b''
                 elif exc.args[0] in error.fatal:
                     self.close()
                     raise LostConnection('issue reading on the socket: %s' % errstr(exc))
                 # what error could it be !
                 else:
-                    self.logger.critical(
+                    log.critical(
                         '%s %s undefined error reading on socket' % (self.name(), self.peer), self.session()
                     )
                     raise NetworkError('Problem while reading data from the network (%s)' % errstr(exc))
@@ -194,7 +186,7 @@ class Connection(object):
             return
         while not self.writing():
             yield False
-        self.logger.debug(LazyFormat('sending TCP payload', data), self.session())
+        log.debug(LazyFormat('sending TCP payload', data), self.session())
         # The first while is here to setup the try/catch block once as it is very expensive
         while True:
             try:
@@ -207,7 +199,7 @@ class Connection(object):
                     number = self.io.send(data)
                     if not number:
                         self.close()
-                        self.logger.warning(
+                        log.warning(
                             '%s %s lost TCP connection with peer' % (self.name(), self.peer), self.session()
                         )
                         raise LostConnection('lost the TCP connection')
@@ -219,7 +211,7 @@ class Connection(object):
                     yield False
             except socket.error as exc:
                 if exc.args[0] in error.block:
-                    self.logger.debug(
+                    log.debug(
                         '%s %s blocking io problem mid-way through writing a message %s, trying to complete'
                         % (self.name(), self.peer, errstr(exc)),
                         self.session(),
@@ -231,13 +223,13 @@ class Connection(object):
                     raise NetworkError('Broken TCP connection')
                 elif exc.args[0] in error.fatal:
                     self.close()
-                    self.logger.critical(
+                    log.critical(
                         '%s %s problem sending message (%s)' % (self.name(), self.peer, errstr(exc)), self.session()
                     )
                     raise NetworkError('Problem while writing data to the network (%s)' % errstr(exc))
                 # what error could it be !
                 else:
-                    self.logger.critical(
+                    log.critical(
                         '%s %s undefined error writing on socket' % (self.name(), self.peer), self.session()
                     )
                     yield False

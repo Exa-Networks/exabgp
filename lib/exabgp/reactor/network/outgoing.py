@@ -5,12 +5,14 @@ from .connection import Connection
 from .tcp import create, bind
 from .tcp import connect
 from .tcp import MD5
-from .tcp import nagle
+# from .tcp import nagle
 from .tcp import TTL
 from .tcp import TTLv6
 from .tcp import asynchronous
 from .tcp import ready
 from .error import NetworkError
+
+from exabgp.logger import log
 
 
 class Outgoing(Connection):
@@ -62,13 +64,13 @@ class Outgoing(Connection):
                 last = time.time()
 
             if notify:
-                self.logger.debug('attempting connection to %s:%d' % (self.peer, self.port), self.session())
+                log.debug('attempting connection to %s:%d' % (self.peer, self.port), self.session())
 
             connect_issue = self._connect()
             if connect_issue:
                 if notify:
-                    self.logger.debug('connection to %s:%d failed' % (self.peer, self.port), self.session())
-                    self.logger.debug(str(connect_issue), self.session())
+                    log.debug('connection to %s:%d failed' % (self.peer, self.port), self.session())
+                    log.debug(str(connect_issue), self.session())
                 yield False
                 continue
 

@@ -42,8 +42,8 @@ class AnnouncePath(AnnounceIP):
     name = 'path'
     afi = None
 
-    def __init__(self, tokeniser, scope, error, logger):
-        AnnounceIP.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        AnnounceIP.__init__(self, tokeniser, scope, error)
 
     def clear(self):
         return True

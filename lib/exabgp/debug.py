@@ -9,9 +9,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import os
 import sys
+from exabgp.logger import log
 from exabgp.util.panic import PANIC
 from exabgp.util.panic import FOOTER
-
 
 def bug_report(dtype, value, trace):
     sys.stdout.flush()
@@ -26,14 +26,10 @@ def bug_report(dtype, value, trace):
     print("-- Traceback\n\n")
     traceback.print_exception(dtype, value, trace)
 
-    from exabgp.logger import Logger
-
-    logger = Logger()
-
     print("\n\n-- Configuration\n\n")
-    print(logger.config())
+    print(log.config())
     print("\n\n-- Logging History\n\n")
-    print(logger.history())
+    print(log.history())
     print("\n\n\n")
 
     print(FOOTER)

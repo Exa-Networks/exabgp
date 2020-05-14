@@ -9,21 +9,20 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from collections import deque
 
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 
 class ASYNC(object):
     LIMIT = 50
 
     def __init__(self):
-        self.logger = Logger()
         self._async = deque()
 
     def ready(self):
         return not self._async
 
     def schedule(self, uid, command, callback):
-        self.logger.debug('async | %s | %s' % (uid, command), 'reactor')
+        log.debug('async | %s | %s' % (uid, command), 'reactor')
         self._async.append((uid, callback))
 
     def clear(self, deluid=None):
@@ -57,9 +56,9 @@ class ASYNC(object):
                     return False
                 uid, generator = self._async.popleft()
             except Exception as exc:
-                self.logger.error('async | %s | problem with function' % uid, 'reactor')
+                log.error('async | %s | problem with function' % uid, 'reactor')
                 for line in str(exc).split('\n'):
-                    self.logger.error('async | %s | %s' % (uid, line), 'reactor')
+                    log.error('async | %s | %s' % (uid, line), 'reactor')
 
         self._async.appendleft((uid, generator))
         return True
