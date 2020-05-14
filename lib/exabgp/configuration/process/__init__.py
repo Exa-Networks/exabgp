@@ -39,8 +39,8 @@ class ParseProcess(Section):
 
     name = 'process'
 
-    def __init__(self, tokeniser, scope, error, logger):
-        Section.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        Section.__init__(self, tokeniser, scope, error)
         self.processes = {}
         self._processes = []
         self.named = ''

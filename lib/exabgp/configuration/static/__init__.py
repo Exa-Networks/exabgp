@@ -38,8 +38,8 @@ class ParseStatic(ParseStaticRoute):
 
     name = 'static'
 
-    def __init__(self, tokeniser, scope, error, logger):
-        ParseStaticRoute.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        ParseStaticRoute.__init__(self, tokeniser, scope, error)
 
     def clear(self):
         return True

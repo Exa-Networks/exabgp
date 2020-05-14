@@ -57,8 +57,8 @@ class ParseFlowRoute(Section):
 
     name = 'flow/route'
 
-    def __init__(self, tokeniser, scope, error, logger):
-        Section.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        Section.__init__(self, tokeniser, scope, error)
 
     def clear(self):
         pass
@@ -74,5 +74,5 @@ class ParseFlowRoute(Section):
         return True
 
     def _check(self, change):
-        self.logger.debug('warning: no check on flows are implemented', 'configuration')
+        log.debug('warning: no check on flows are implemented', 'configuration')
         return True

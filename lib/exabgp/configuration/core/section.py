@@ -20,12 +20,11 @@ class Section(Error):
     action = {}  # how to handle this command ( append, add, assign, route )
     assign = {}  # configuration to class variable lookup for setattr
 
-    def __init__(self, tokerniser, scope, error, logger):
+    def __init__(self, tokerniser, scope, error):
         Error.__init__(self)
         self.tokeniser = tokerniser
         self.scope = scope
         self.error = error
-        self.logger = logger
         self._names = []
 
     def clear(self):

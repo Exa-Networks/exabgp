@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import os
 import sys
 
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 from exabgp.configuration.core import Error
 from exabgp.configuration.core import Scope
@@ -58,7 +58,6 @@ class _Configuration(object):
     def __init__(self):
         self.processes = {}
         self.neighbors = {}
-        self.logger = Logger()
 
     def inject_change(self, peers, change):
         result = True
@@ -67,7 +66,7 @@ class _Configuration(object):
                 if change.nlri.family() in self.neighbors[neighbor].families():
                     self.neighbors[neighbor].rib.outgoing.add_to_rib(change)
                 else:
-                    self.logger.error('the route family is not configured on neighbor', 'configuration')
+                    log.error('the route family is not configured on neighbor', 'configuration')
                     result = False
         return result
 
@@ -88,7 +87,7 @@ class _Configuration(object):
                         self.neighbors[neighbor].asm[operational.family()] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:
-                    self.logger.error('the route family is not configured on neighbor', 'configuration')
+                    log.error('the route family is not configured on neighbor', 'configuration')
                     result = False
         return result
 
@@ -116,9 +115,9 @@ class Configuration(_Configuration):
         self.error = Error()
         self.scope = Scope()
 
-        self.tokeniser = Tokeniser(self.scope, self.error, self.logger)
+        self.tokeniser = Tokeniser(self.scope, self.error)
 
-        params = (self.tokeniser, self.scope, self.error, self.logger)
+        params = (self.tokeniser, self.scope, self.error)
         self.section = Section(*params)
         self.process = ParseProcess(*params)
         self.template = ParseTemplate(*params)
@@ -429,7 +428,7 @@ class Configuration(_Configuration):
 
         if self.parseSection(section) is not True:
             self._rollback_reload()
-            self.logger.debug(
+            log.debug(
                 "\n"
                 "syntax error in api command %s\n"
                 "line %d: %s\n"
@@ -441,7 +440,7 @@ class Configuration(_Configuration):
 
     def _enter(self, name):
         location = self.tokeniser.iterate()
-        self.logger.debug("> %-16s | %s" % (location, self.tokeniser.params()), 'configuration')
+        log.debug("> %-16s | %s" % (location, self.tokeniser.params()), 'configuration')
 
         if location not in self._structure[name]['sections']:
             return self.error.set('section %s is invalid in %s, %s' % (location, name, self.scope.location()))
@@ -468,12 +467,12 @@ class Configuration(_Configuration):
             return self.error.set('closing too many parenthesis')
         self.scope.to_context()
 
-        self.logger.debug("< %-16s | %s" % (left, self.tokeniser.params()), 'configuration')
+        log.debug("< %-16s | %s" % (left, self.tokeniser.params()), 'configuration')
         return True
 
     def _run(self, name):
         command = self.tokeniser.iterate()
-        self.logger.debug(". %-16s | %s" % (command, self.tokeniser.params()), 'configuration')
+        log.debug(". %-16s | %s" % (command, self.tokeniser.params()), 'configuration')
 
         if not self.run(name, command):
             return False

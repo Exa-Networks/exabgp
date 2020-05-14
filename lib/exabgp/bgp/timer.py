@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import time
 
-from exabgp.logger import Logger
+from exabgp.logger import log
 from exabgp.bgp.message import _NOP
 from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message import Notify
@@ -20,7 +20,6 @@ from exabgp.bgp.message import Notify
 
 class ReceiveTimer(object):
     def __init__(self, session, holdtime, code, subcode, message=''):
-        self.logger = Logger()
         self.session = session
 
         self.holdtime = holdtime
@@ -43,7 +42,7 @@ class ReceiveTimer(object):
             raise Notify(self.code, self.subcode, self.message)
         if self.last_print != now:
             left = self.holdtime - elapsed
-            self.logger.debug('receive-timer %d second(s) left' % left, source='ka-' + self.session())
+            log.debug('receive-timer %d second(s) left' % left, source='ka-' + self.session())
             self.last_print = now
         return True
 
@@ -57,7 +56,6 @@ class ReceiveTimer(object):
 
 class SendTimer(object):
     def __init__(self, session, holdtime):
-        self.logger = Logger()
         self.session = session
 
         self.keepalive = holdtime.keepalive()
@@ -72,7 +70,7 @@ class SendTimer(object):
         left = self.last_sent + self.keepalive - now
 
         if now != self.last_print:
-            self.logger.debug('send-timer %d second(s) left' % left, source='ka-' + self.session())
+            log.debug('send-timer %d second(s) left' % left, source='ka-' + self.session())
             self.last_print = now
 
         if left <= 0:

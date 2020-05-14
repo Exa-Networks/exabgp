@@ -50,6 +50,7 @@ from exabgp.configuration.neighbor.parser import description
 from exabgp.configuration.neighbor.parser import inherit
 from exabgp.configuration.neighbor.parser import rate_limit
 
+from exabgp.logger import log
 
 class ParseNeighbor(Section):
     TTL_SECURITY = 255
@@ -123,8 +124,8 @@ class ParseNeighbor(Section):
 
     name = 'neighbor'
 
-    def __init__(self, tokeniser, scope, error, logger):
-        Section.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        Section.__init__(self, tokeniser, scope, error)
         self._neighbors = []
         self.neighbors = {}
 
@@ -210,7 +211,7 @@ class ParseNeighbor(Section):
                 for family in ParseAddPath.convert:
                     for pair in add_path.get(family, []):
                         if pair not in families:
-                            self.logger.debug(
+                            log.debug(
                                 'skipping add-path family ' + str(pair) + ' as it is not negotiated', 'configuration'
                             )
                             continue
@@ -232,13 +233,13 @@ class ParseNeighbor(Section):
             if nexthops:
                 for afi, safi, nhafi in nexthops:
                     if (afi, safi) not in neighbor.families():
-                        self.logger.debug(
+                        log.debug(
                             'skipping nexthop afi,safi ' + str(afi) + '/' + str(safi) + ' as it is not negotiated',
                             'configuration',
                         )
                         continue
                     if (nhafi, safi) not in neighbor.families():
-                        self.logger.debug(
+                        log.debug(
                             'skipping nexthop afi ' + str(nhafi) + '/' + str(safi) + ' as it is not negotiated',
                             'configuration',
                         )
@@ -275,7 +276,7 @@ class ParseNeighbor(Section):
 
         if neighbor.route_refresh:
             if neighbor.adj_rib_out:
-                self.logger.debug('route-refresh requested, enabling adj-rib-out', 'configuration')
+                log.debug('route-refresh requested, enabling adj-rib-out', 'configuration')
 
         missing = neighbor.missing()
         if missing:

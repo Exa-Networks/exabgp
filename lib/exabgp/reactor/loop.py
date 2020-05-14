@@ -29,7 +29,7 @@ from exabgp.environment import getenv
 from exabgp.bgp.fsm import FSM
 
 from exabgp.version import version
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 
 class Reactor(object):
@@ -65,7 +65,6 @@ class Reactor(object):
         self.processes = None
 
         self.configuration = Configuration(configurations)
-        self.logger = Logger()
         self.asynchronous = ASYNC()
         self.signal = Signal()
         self.daemon = Daemon(self)
@@ -81,7 +80,7 @@ class Reactor(object):
     def _termination(self, reason, exit_code):
         self.exit_code = exit_code
         self.signal.received = Signal.SHUTDOWN
-        self.logger.critical(reason, 'reactor')
+        log.critical(reason, 'reactor')
 
     def _prevent_spin(self):
         second = int(time.time())
@@ -147,42 +146,42 @@ class Reactor(object):
     def handle_connection(self, peer_name, connection):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            self.logger.critical('could not find referenced peer', 'reactor')
+            log.critical('could not find referenced peer', 'reactor')
             return
         peer.handle_connection(connection)
 
     def neighbor(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            self.logger.critical('could not find referenced peer', 'reactor')
+            log.critical('could not find referenced peer', 'reactor')
             return
         return peer.neighbor
 
     def neighbor_name(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            self.logger.critical('could not find referenced peer', 'reactor')
+            log.critical('could not find referenced peer', 'reactor')
             return ""
         return peer.neighbor.name()
 
     def neighbor_ip(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            self.logger.critical('could not find referenced peer', 'reactor')
+            log.critical('could not find referenced peer', 'reactor')
             return ""
         return str(peer.neighbor.peer_address)
 
     def neighbor_cli_data(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            self.logger.critical('could not find referenced peer', 'reactor')
+            log.critical('could not find referenced peer', 'reactor')
             return ""
         return peer.cli_data()
 
     def neighor_rib(self, peer_name, rib_name, advertised=False):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            self.logger.critical('could not find referenced peer', 'reactor')
+            log.critical('could not find referenced peer', 'reactor')
             return []
         families = None
         if advertised:
@@ -193,21 +192,21 @@ class Reactor(object):
     def neighbor_rib_resend(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            self.logger.critical('could not find referenced peer', 'reactor')
+            log.critical('could not find referenced peer', 'reactor')
             return
         peer.neighbor.rib.outgoing.resend(None, peer.neighbor.route_refresh)
 
     def neighbor_rib_out_withdraw(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            self.logger.critical('could not find referenced peer', 'reactor')
+            log.critical('could not find referenced peer', 'reactor')
             return
         peer.neighbor.rib.outgoing.withdraw(None, peer.neighbor.route_refresh)
 
     def neighbor_rib_in_clear(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            self.logger.critical('could not find referenced peer', 'reactor')
+            log.critical('could not find referenced peer', 'reactor')
             return
         peer.neighbor.rib.incoming.clear()
 
@@ -244,13 +243,13 @@ class Reactor(object):
             return self.Exit.configuration
 
         if validate:  # only validate configuration
-            self.logger.warning('', 'configuration')
-            self.logger.warning('parsed Neighbors, un-templated', 'configuration')
-            self.logger.warning('------------------------------', 'configuration')
-            self.logger.warning('', 'configuration')
+            log.warning('', 'configuration')
+            log.warning('parsed Neighbors, un-templated', 'configuration')
+            log.warning('------------------------------', 'configuration')
+            log.warning('', 'configuration')
             for key in self._peers:
-                self.logger.warning(str(self._peers[key].neighbor), 'configuration')
-                self.logger.warning('', 'configuration')
+                log.warning(str(self._peers[key].neighbor), 'configuration')
+                log.warning('', 'configuration')
             return self.Exit.validate
 
         for neighbor in self.configuration.neighbors.values():
@@ -269,10 +268,10 @@ class Reactor(object):
             self.processes.start(self.configuration.processes)
 
         if not self.daemon.drop_privileges():
-            self.logger.critical(
+            log.critical(
                 'could not drop privileges to \'%s\' refusing to run as root' % self.daemon.user, 'reactor'
             )
-            self.logger.critical(
+            log.critical(
                 'set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor'
             )
             return self.Exit.privileges
@@ -281,8 +280,8 @@ class Reactor(object):
             self.processes.start(self.configuration.processes)
 
         # This is required to make sure we can write in the log location as we now have dropped root privileges
-        if not self.logger.restart():
-            self.logger.critical('could not setup the logger, aborting', 'reactor')
+        if not log.restart():
+            log.critical('could not setup the logger, aborting', 'reactor')
             return self.Exit.log
 
         if not self.daemon.savepid():
@@ -294,7 +293,7 @@ class Reactor(object):
         wait = getenv().tcp.delay
         if wait:
             sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
-            self.logger.debug('waiting for %d seconds before connecting' % sleeptime, 'reactor')
+            log.debug('waiting for %d seconds before connecting' % sleeptime, 'reactor')
             time.sleep(float(sleeptime))
 
         workers = {}
@@ -440,7 +439,7 @@ class Reactor(object):
 
     def shutdown(self):
         """Terminate all the current BGP connections"""
-        self.logger.critical('performing shutdown', 'reactor')
+        log.critical('performing shutdown', 'reactor')
         if self.listener:
             self.listener.stop()
             self.listener = None
@@ -453,38 +452,38 @@ class Reactor(object):
 
     def load(self):
         """Reload the configuration and send to the peer the route which changed"""
-        self.logger.notice('performing reload of exabgp %s' % version, 'configuration')
+        log.notice('performing reload of exabgp %s' % version, 'configuration')
 
         reloaded = self.configuration.reload()
 
         if not reloaded:
             #
             # Careful the string below is used but the QA code to check for sucess of failure
-            self.logger.error('not reloaded, no change found in the configuration', 'configuration')
+            log.error('not reloaded, no change found in the configuration', 'configuration')
             # Careful the string above is used but the QA code to check for sucess of failure
             #
-            self.logger.error(str(self.configuration.error), 'configuration')
+            log.error(str(self.configuration.error), 'configuration')
             return False
 
         for key, peer in self._peers.items():
             if key not in self.configuration.neighbors:
-                self.logger.debug('removing peer: %s' % peer.neighbor.name(), 'reactor')
+                log.debug('removing peer: %s' % peer.neighbor.name(), 'reactor')
                 peer.remove()
 
         for key, neighbor in self.configuration.neighbors.items():
             # new peer
             if key not in self._peers:
-                self.logger.debug('new peer: %s' % neighbor.name(), 'reactor')
+                log.debug('new peer: %s' % neighbor.name(), 'reactor')
                 peer = Peer(neighbor, self)
                 self._peers[key] = peer
             # modified peer
             elif self._peers[key].neighbor != neighbor:
-                self.logger.debug('peer definition change, establishing a new connection for %s' % str(key), 'reactor')
+                log.debug('peer definition change, establishing a new connection for %s' % str(key), 'reactor')
                 self._peers[key].reestablish(neighbor)
             # same peer but perhaps not the routes
             else:
                 # finding what route changed and sending the delta is not obvious
-                self.logger.debug(
+                log.debug(
                     'peer definition identical, updating peer routes if required for %s' % str(key), 'reactor'
                 )
                 self._peers[key].reconfigure(neighbor)
@@ -493,13 +492,13 @@ class Reactor(object):
                     self.listener.listen_on(
                         ip, neighbor.peer_address, self._port, neighbor.md5_password, neighbor.md5_base64, None
                     )
-        self.logger.notice('loaded new configuration successfully', 'reactor')
+        log.notice('loaded new configuration successfully', 'reactor')
 
         return True
 
     def restart(self):
         """Kill the BGP session and restart it"""
-        self.logger.notice('performing restart of exabgp %s' % version, 'reactor')
+        log.notice('performing restart of exabgp %s' % version, 'reactor')
 
         # XXX: FIXME: Could return False, in case there is interference with old config...
         reloaded = self.configuration.reload()
@@ -507,7 +506,7 @@ class Reactor(object):
         for key in self._peers.keys():
             if key not in self.configuration.neighbors.keys():
                 peer = self._peers[key]
-                self.logger.debug('removing peer %s' % peer.neighbor.name(), 'reactor')
+                log.debug('removing peer %s' % peer.neighbor.name(), 'reactor')
                 self._peers[key].remove()
             else:
                 self._peers[key].reestablish()

@@ -21,7 +21,7 @@ from exabgp.reactor.api.response import Response
 from exabgp.reactor.api.response.answer import Answer
 
 from exabgp.bgp.message import Message
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 from exabgp.version import json as json_version
 from exabgp.version import text as text_version
@@ -53,7 +53,6 @@ class Processes(object):
     _dispatch = {}
 
     def __init__(self):
-        self.logger = Logger()
         self.clean()
         self.silence = False
         self._buffer = {}
@@ -78,15 +77,15 @@ class Processes(object):
         if process not in self._process:
             return
         if self.respawn_number and self._restart[process]:
-            self.logger.debug('process %s ended, restarting it' % process, 'process')
+            log.debug('process %s ended, restarting it' % process, 'process')
             self._terminate(process)
             self._start(process)
         else:
-            self.logger.debug('process %s ended' % process, 'process')
+            log.debug('process %s ended' % process, 'process')
             self._terminate(process)
 
     def _terminate(self, process_name):
-        self.logger.debug('terminating process %s' % process_name, 'process')
+        log.debug('terminating process %s' % process_name, 'process')
         process = self._process[process_name]
         del self._process[process_name]
         self._update_fds()
@@ -119,7 +118,7 @@ class Processes(object):
                 t.join()
             except OSError:
                 # we most likely received a SIGTERM signal and our child is already dead
-                self.logger.debug('child process %s was already dead' % process, 'process')
+                log.debug('child process %s was already dead' % process, 'process')
         self.clean()
 
     def _start(self, process):
@@ -129,11 +128,11 @@ class Processes(object):
         try:
 
             if process in self._process:
-                self.logger.debug('process already running', 'process')
+                log.debug('process already running', 'process')
                 return
 
             if process not in self._configuration:
-                self.logger.debug('can not start process, no configuration for it', 'process')
+                log.debug('can not start process, no configuration for it', 'process')
                 return
             # Prevent some weird termcap data to be created at the start of the PIPE
             # \x1b[?1034h (no-eol) (esc)
@@ -157,7 +156,7 @@ class Processes(object):
                 self._update_fds()
                 fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
-                self.logger.debug('forked process %s' % process, 'process')
+                log.debug('forked process %s' % process, 'process')
 
                 self._restart[process] = self._configuration[process]['respawn']
                 around_now = int(time.time()) & self.respawn_timemask
@@ -166,7 +165,7 @@ class Processes(object):
                         self._respawning[process][around_now] += 1
                         # we are respawning too fast
                         if self._respawning[process][around_now] > self.respawn_number:
-                            self.logger.critical(
+                            log.critical(
                                 'Too many death for %s (%d) terminating program' % (process, self.respawn_number),
                                 'process',
                             )
@@ -180,8 +179,8 @@ class Processes(object):
 
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)
-            self.logger.debug('could not start process %s' % process, 'process')
-            self.logger.debug('reason: %s' % str(exc), 'process')
+            log.debug('could not start process %s' % process, 'process')
+            log.debug('reason: %s' % str(exc), 'process')
 
     def start(self, configuration, restart=False):
         for process in list(self._process):
@@ -245,7 +244,7 @@ class Processes(object):
                         line, raw = raw.split('\n', 1)
                         line = line.rstrip()
                         consumed_data = True
-                        self.logger.debug('command from process %s : %s ' % (process, line), 'process')
+                        log.debug('command from process %s : %s ' % (process, line), 'process')
                         yield (process, formated(line))
 
                     self._buffer[process] = raw
@@ -259,7 +258,7 @@ class Processes(object):
                         # we most likely have data, we will try to read them a the next loop iteration
                         pass
                     else:
-                        self.logger.debug('unexpected errno received from forked process (%s)' % errstr(exc), 'process')
+                        log.debug('unexpected errno received from forked process (%s)' % errstr(exc), 'process')
                     continue
                 except StopIteration:
                     if not consumed_data:
@@ -289,11 +288,11 @@ class Processes(object):
                 self._broken.append(process)
                 if exc.errno == errno.EPIPE:
                     self._broken.append(process)
-                    self.logger.debug('issue while sending data to our helper program', 'process')
+                    log.debug('issue while sending data to our helper program', 'process')
                     raise ProcessError()
                 else:
                     # Could it have been caused by a signal ? What to do.
-                    self.logger.debug(
+                    log.debug(
                         'error received while sending data to helper program, retrying (%s)' % errstr(exc), 'process'
                     )
                     continue
@@ -303,7 +302,7 @@ class Processes(object):
             self._process[process].stdin.flush()
         except IOError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
-            self.logger.debug(
+            log.debug(
                 'error received while FLUSHING data to helper program, retrying (%s)' % errstr(exc), 'process'
             )
 
@@ -311,7 +310,7 @@ class Processes(object):
 
     def _answer(self, service, string, force=False):
         if force or self.ack:
-            self.logger.debug('responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
+            log.debug('responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
     def answer_done(self, service):

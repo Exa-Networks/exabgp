@@ -29,7 +29,7 @@ from exabgp.reactor.network.error import NagleError
 from exabgp.reactor.network.error import TTLError
 from exabgp.reactor.network.error import AsyncError
 
-from exabgp.logger import Logger
+from exabgp.logger import log
 
 
 def create(afi):
@@ -235,8 +235,6 @@ def asynchronous(io, ip):
 
 
 def ready(io):
-    logger = Logger()
-
     poller = select.poll()
     poller.register(io, select.POLLOUT | select.POLLNVAL | select.POLLERR)
 

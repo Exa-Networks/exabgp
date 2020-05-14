@@ -99,8 +99,8 @@ class ParseAnnounce(Section):
 class SectionAnnounce(ParseAnnounce):
     name = 'announce'
 
-    def __init__(self, tokeniser, scope, error, logger):
-        Section.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        ParseAnnounce.__init__(self, tokeniser, scope, error)
 
     def clear(self):
         return True

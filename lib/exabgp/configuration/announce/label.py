@@ -43,8 +43,8 @@ class AnnounceLabel(AnnouncePath):
     name = 'vpn'
     afi = None
 
-    def __init__(self, tokeniser, scope, error, logger):
-        AnnouncePath.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        AnnouncePath.__init__(self, tokeniser, scope, error)
 
     def clear(self):
         return True

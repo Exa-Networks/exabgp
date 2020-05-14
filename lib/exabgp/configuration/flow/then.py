@@ -74,8 +74,8 @@ class ParseFlowThen(Section):
 
     name = 'flow/then'
 
-    def __init__(self, tokeniser, scope, error, logger):
-        Section.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        Section.__init__(self, tokeniser, scope, error)
 
     def clear(self):
         pass

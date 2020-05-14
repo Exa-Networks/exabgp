@@ -38,8 +38,8 @@ class ParseNextHop(Section):
 
     name = 'nexthop'
 
-    def __init__(self, tokeniser, scope, error, logger):
-        Section.__init__(self, tokeniser, scope, error, logger)
+    def __init__(self, tokeniser, scope, error):
+        Section.__init__(self, tokeniser, scope, error)
         self.known = {
             'ipv4': self.ipv4,
             'ipv6': self.ipv6,
