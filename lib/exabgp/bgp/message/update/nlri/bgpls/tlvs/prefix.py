@@ -19,6 +19,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 #   This sub-TLV can occur multiple times.
 # ================================================================== InterfaceAddress
 
+from exabgp.protocol.ip import IP
+
 
 class Prefix(object):
     def __init__(self, iface_addr, packed=None):

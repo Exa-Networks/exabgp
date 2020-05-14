@@ -21,6 +21,7 @@ from exabgp.logger import log
 from exabgp.environment import getenv
 from exabgp.environment import ENVFILE
 from exabgp.environment import ROOT
+from exabgp.environment import ETC
 
 from exabgp.application.control import named_pipe
 from exabgp.version import version
@@ -123,7 +124,7 @@ def cmdline(cmdarg):
             configurations.append(normalised)
             continue
         if f.startswith('etc/exabgp'):
-            normalised = os.path.join(etc, f[11:])
+            normalised = os.path.join(ETC, f[11:])
             if os.path.isfile(normalised):
                 configurations.append(normalised)
                 continue

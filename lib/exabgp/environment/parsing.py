@@ -124,7 +124,7 @@ def path(path):
 
 
 def conf(path):
-    first = environment.folder(path)
+    first = folder(path)
     if not os.path.isfile(first):
         raise TypeError('%s is not a file' % path)
     return first

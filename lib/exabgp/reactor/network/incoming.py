@@ -7,7 +7,7 @@ from .error import NetworkError
 from .error import NotConnected
 
 from exabgp.bgp.message import Notify
-
+from exabgp.logger import log
 
 class Incoming(Connection):
     direction = 'incoming'

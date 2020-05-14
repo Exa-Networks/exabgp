@@ -18,6 +18,9 @@ from exabgp.application.control import check_fifo
 from exabgp.reactor.network.error import error
 from exabgp.reactor.api.response.answer import Answer
 
+from exabgp.environment import getenv
+from exabgp.environment import ROOT
+
 
 errno_block = set(
     (
@@ -108,11 +111,11 @@ def main():
 
 
 def cmdline(cmdarg):
-    pipename = env['api']['pipename']
+    pipename = env().api.pipename
 
     command = cmdarg.command
 
-    pipes = named_pipe(root, pipename)
+    pipes = named_pipe(ROOT, pipename)
     if len(pipes) != 1:
         sys.stdout.write('could not find ExaBGP\'s named pipes (%s.in and %s.out) for the cli\n' % (pipename, pipename))
         sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
@@ -301,7 +304,7 @@ def cmdline(cmdarg):
             sys.stdout.write('%s\n' % string)
             sys.stdout.flush()
 
-        if not env.get('api').get('ack') and not raw.decode():
+        if not getenv().api.ack and not raw.decode():
             this_moment = time.time()
             recv_epoch_time = os.path.getmtime(recv)
             time_diff = this_moment - recv_epoch_time

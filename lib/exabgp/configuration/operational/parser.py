@@ -37,7 +37,7 @@ def _operational(klass, parameters, tokeniser):
     def advisory(_):
         return len(_.encode('utf-8')) <= MAX_ADVISORY + 2  # the two quotes
 
-    convert = {'afi': AFI.value, 'safi': SAFI.value, 'sequence': int, 'counter': long, 'advisory': utf8}
+    convert = {'afi': AFI.value, 'safi': SAFI.value, 'sequence': int, 'counter': int, 'advisory': utf8}
 
     validate = {
         'afi': AFI.value,

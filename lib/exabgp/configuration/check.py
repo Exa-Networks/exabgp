@@ -251,10 +251,12 @@ def check_update(neighbor, raw):
         except KeyboardInterrupt:
             raise
         except Notify:
+            import traceback
             log.error('could not parse the message', 'parser')
             log.error(traceback.format_exc(), 'parser')
             return False
         except Exception:
+            import traceback
             log.error('could not parse the message', 'parser')
             log.error(traceback.format_exc(), 'parser')
             return False
