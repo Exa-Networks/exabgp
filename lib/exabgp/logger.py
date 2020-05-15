@@ -98,8 +98,6 @@ class LazyNLRI(object):
 def istty(std):
     try:
         return std.isatty()
-    except KeyboardInterrupt:
-        raise
     except Exception:
         return False
 

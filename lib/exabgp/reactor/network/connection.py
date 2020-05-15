@@ -82,8 +82,6 @@ class Connection(object):
             if self.io:
                 self.io.close()
                 self.io = None
-        except KeyboardInterrupt as exc:
-            raise exc
         except Exception:
             self.io = None
 

@@ -49,8 +49,6 @@ class ASYNC(object):
         for _ in length:
             try:
                 next(generator)
-            except KeyboardInterrupt:
-                raise
             except StopIteration:
                 if not self._async:
                     return False

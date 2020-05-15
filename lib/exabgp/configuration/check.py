@@ -248,8 +248,6 @@ def check_update(neighbor, raw):
         try:
             # This does not take the BGP header - let's assume we will not break that :)
             update = Update.unpack_message(injected, negotiated)
-        except KeyboardInterrupt:
-            raise
         except Notify:
             import traceback
             log.error('could not parse the message', 'parser')

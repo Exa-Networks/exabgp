@@ -48,8 +48,6 @@ class ACL(object):
             filename = cls._file(uid)
             if os.path.isfile(filename):
                 os.unlink(filename)
-        except KeyboardInterrupt:
-            raise
         except Exception:
             pass
 
@@ -62,8 +60,6 @@ class ACL(object):
             return subprocess.Popen(
                 ['cl-acltool', '-i'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE
             ).communicate()[0]
-        except KeyboardInterrupt:
-            raise
         except Exception:
             pass
 
@@ -95,8 +91,6 @@ class ACL(object):
             with open(cls._file(uid), 'w') as f:
                 f.write(acl)
             cls._commit()
-        except KeyboardInterrupt:
-            raise
         except Exception:
             cls.end()
 
