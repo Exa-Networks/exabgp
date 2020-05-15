@@ -23,7 +23,7 @@ from exabgp.environment import ENVFILE
 from exabgp.environment import ROOT
 from exabgp.environment import ETC
 
-from exabgp.application.control import named_pipe
+from exabgp.application.pipe import named_pipe
 from exabgp.version import version
 
 

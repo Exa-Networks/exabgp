@@ -22,9 +22,9 @@ from exabgp.application import healthcheck
 def main():
     cli_named_pipe = os.environ.get('exabgp_cli_pipe', '')
     if cli_named_pipe:
-        from exabgp.application.control import main as control
+        from exabgp.application.pipe import main
 
-        control(cli_named_pipe)
+        main(cli_named_pipe)
         sys.exit(0)
 
     # compatibility with exabgp 4.x

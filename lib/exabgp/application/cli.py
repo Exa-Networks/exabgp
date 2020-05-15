@@ -12,8 +12,8 @@ import select
 import signal
 import argparse
 
-from exabgp.application.control import named_pipe
-from exabgp.application.control import check_fifo
+from exabgp.application.pipe import named_pipe
+from exabgp.application.pipe import check_fifo
 
 from exabgp.reactor.network.error import error
 from exabgp.reactor.api.response.answer import Answer
@@ -111,7 +111,7 @@ def main():
 
 
 def cmdline(cmdarg):
-    pipename = env().api.pipename
+    pipename = getenv().api.pipename
 
     command = cmdarg.command
 
