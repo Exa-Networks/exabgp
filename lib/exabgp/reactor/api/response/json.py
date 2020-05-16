@@ -10,9 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import os
 import socket
-import sys
 import time
-import signal
 
 from exabgp.util import hexstring
 
@@ -22,10 +20,8 @@ from exabgp.bgp.message import IN
 from exabgp.environment import getenv
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 
+from exabgp.reactor.interrupt import Signal
 
-SIGNAL_NAME = dict(
-    (k, v) for v, k in reversed(sorted(signal.__dict__.items())) if v.startswith('SIG') and not v.startswith('SIG_')
-)
 
 
 def nop(_):
@@ -187,7 +183,7 @@ class JSON(object):
     def signal(self, neighbor, signal):
         return self._header(
             self._neighbor(
-                neighbor, None, self._kv({'code': '%d' % signal, 'name': SIGNAL_NAME.get(signal, 'UNKNOWN'),})
+                neighbor, None, self._kv({'code': '%d' % signal, 'name': Signal.name(signal),})
             ),
             '',
             '',

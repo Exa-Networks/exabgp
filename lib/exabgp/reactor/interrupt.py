@@ -14,10 +14,30 @@ from exabgp.logger import log
 
 class Signal(object):
     NONE = 0
-    SHUTDOWN = 1
-    RESTART = 2
-    RELOAD = 4
-    FULL_RELOAD = 8
+    SHUTDOWN = -1
+    RESTART = -2
+    RELOAD = -4
+    FULL_RELOAD = -8
+
+    _names = {
+        **dict(
+            (k, v)
+            for v, k in reversed(sorted(signal.__dict__.items()))
+            if v.startswith('SIG') and not v.startswith('SIG_')
+        ),
+        **{
+            NONE: 'none',
+            SHUTDOWN: 'shutdown',
+            RESTART: 'restart',
+            RELOAD: 'reload',
+            FULL_RELOAD: 'full reload',
+            # some padding to make black format this as we like :-)
+        },
+    }
+
+    @classmethod
+    def name(cls, received):
+        return cls._names.get(received, 'unknown')
 
     def __init__(self):
         self.received = self.NONE
