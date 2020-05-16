@@ -130,7 +130,7 @@ class LsGenericFlags(object):
         hex_rep = int(binascii.b2a_hex(data), 16)
         bits = f'{hex_rep:08b}'
         valid_flags = [
-            ''.join(''.join(item), ''.join(itertools.repeat('0', pad)))
+            ''.join(item) + '0' * pad
             for item in itertools.product('01', repeat=repeat)
         ]
         valid_flags.append('0000')
