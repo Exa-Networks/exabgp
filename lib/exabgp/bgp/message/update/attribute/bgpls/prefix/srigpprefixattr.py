@@ -24,6 +24,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 class SrIgpPrefixAttr(object):
     TLV = 1170
 
+    # 	RFC 7794 IPv4/IPv6 Extended Reachability Attribute Flags
+    ISIS_SR_ATTR_FLAGS = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+
     def __init__(self, flags):
         self.flags = flags
 
@@ -33,8 +36,7 @@ class SrIgpPrefixAttr(object):
     @classmethod
     def unpack(cls, data, length):
         # We only support IS-IS for now.
-        flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.ISIS_SR_ATTR_FLAGS)
-        return cls(flags=flags)
+        return cls(LsGenericFlags.unpack(data[0:1], cls.ISIS_SR_ATTR_FLAGS))
 
     def json(self, compact=None):
         return '"sr-prefix-attribute-flags": {}'.format(self.flags.json())

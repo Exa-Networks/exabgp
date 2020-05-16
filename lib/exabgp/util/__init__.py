@@ -28,3 +28,7 @@ def string_is_hex(s):
     if len(s) <= 2:
         return False
     return all(c in string.hexdigits for c in s[2:])
+
+
+def split(data, step):
+    return (data[i:i + step] for i in range(0, len(data), step))

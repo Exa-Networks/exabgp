@@ -32,11 +32,11 @@ class SrSourceRouterID(object):
 
     @classmethod
     def unpack(cls, data, length):
-        if len(data) == 4:
-            srid = IP.unpack(data[:4])
-        elif len(data) == 16:
-            srid = IP.unpack(data[:16])
-        return cls(srid=srid)
+        size = len(data)
+        if size not in (4, 16):
+            raise Notify(3, 5, "Error parsing SR Source Router ID. Wrong size")
+
+        return cls(IP.unpack(data[:size]))
 
     def json(self, compact=None):
         return '"sr-source-router-id": "%s"' % str(self.srid)

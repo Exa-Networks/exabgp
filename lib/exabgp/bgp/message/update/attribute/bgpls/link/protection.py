@@ -39,10 +39,9 @@ class LinkProtectionType(object):
     def unpack(cls, data, length):
         if length != 2:
             raise Notify(3, 5, "Wrong size for protection type TLV")
-        else:
-            # We only care about the first octect
-            protection_mask = LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_PROTECTION_MASK)
-        return cls(protectionflags=protection_mask)
+
+        # We only care about the first octect
+        return cls(LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_PROTECTION_MASK))
 
     def json(self, compact=None):
         return '"link-protection-flags": {}'.format(self.protectionflags.json())

@@ -8,6 +8,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.util import split
+
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
@@ -33,14 +35,7 @@ class IgpExTags(object):
 
     @classmethod
     def unpack(cls, data, length):
-        tags = []
-        n = length // 8
-        ind = 0
-        for i in list(range(n)):
-            tag = unpack("!Q", data[ind : 8 * (i + 1)])[0]
-            tags.append(tag)
-            ind += 8
-        return cls(igpextags=tags)
+        return cls([unpack("!Q", _)[0] for _ in split(data, 8)])
 
     def json(self, compact=None):
         return '"igp-extended-route-tags": %s' % self.igpextags

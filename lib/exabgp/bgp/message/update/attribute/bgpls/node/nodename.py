@@ -37,9 +37,8 @@ class NodeName(object):
     def unpack(cls, data, length):
         if length > 255:
             raise Notify(3, 5, "Node Name TLV length too large")
-        else:
-            nodename = data[:length].decode('ascii')
-            return cls(nodename=nodename)
+
+        return cls(data[:length].decode('ascii'))
 
     def json(self, compact=None):
         return '"node-name": "%s"' % str(self.nodename)

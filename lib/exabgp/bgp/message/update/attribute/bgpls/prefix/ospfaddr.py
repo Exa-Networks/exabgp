@@ -33,15 +33,11 @@ class OspfForwardingAddress(object):
 
     @classmethod
     def unpack(cls, data, length):
-        if len(data) == 4:
-            # IPv4 address
-            addr = IP.unpack(data[:4])
-        elif len(data) == 16:
-            # IPv6
-            addr = IP.unpack(data[:16])
-        else:
+        size = len(data)
+        if size not in (4, 16):
             raise Notify(3, 5, "Error parsing OSPF Forwarding Address. Wrong size")
-        return cls(addr=addr)
+
+        return cls(IP.unpack(data[:size]))
 
     def json(self, compact=None):
         return '"ospf-forwarding-address": "%s"' % str(self.addr)

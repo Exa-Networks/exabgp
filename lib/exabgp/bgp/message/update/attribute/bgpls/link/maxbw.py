@@ -34,9 +34,8 @@ class MaxBw(object):
     def unpack(cls, data, length):
         if length != 4:
             raise Notify(3, 5, "Incorrect maximum link bw metric")
-        else:
-            maxbw = unpack('!f', data)[0]
-            return cls(maxbw=maxbw)
+
+        return cls(unpack('!f', data)[0])
 
     def json(self, compact=None):
         return '"maximum-link-bandwidth": %s' % self.maxbw

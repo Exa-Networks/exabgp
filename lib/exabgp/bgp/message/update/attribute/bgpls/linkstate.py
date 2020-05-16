@@ -93,21 +93,20 @@ class GenericLSID(object):
 
 
 class LsGenericFlags(object):
-
-    # 	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
-    ISIS_SR_FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
-    # 	RFC 7794 IPv4/IPv6 Extended Reachability Attribute Flags
-    ISIS_SR_ATTR_FLAGS = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    # 	draft-ietf-isis-segment-routing-extensions - Adj-SID IS-IS Flags
-    ISIS_SR_ADJ_FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
-    # 	isis-segment-routing-extensions 3.1. SR-Capabilities Sub-TLV
-    ISIS_SR_CAP_FLAGS = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    # 	RFC 7752 3.3.1.1. Node Flag Bits TLV
-    LS_NODE_FLAGS = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
-    # 	RFC 7752 3.3.3.1. IGP Flags TLV
-    LS_IGP_FLAGS = ['D', 'N', 'L', 'P', 'RSV', 'RSV', 'RSV', 'RSV']
-    # 	RFC 7752 3.3.2.2.  MPLS Protocol Mask TLV
-    LS_MPLS_MASK = ['LDP', 'RSVP-TE', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    # # 	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
+    # ISIS_SR_FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
+    # # 	RFC 7794 IPv4/IPv6 Extended Reachability Attribute Flags
+    # ISIS_SR_ATTR_FLAGS = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    # # 	draft-ietf-isis-segment-routing-extensions - Adj-SID IS-IS Flags
+    # ISIS_SR_ADJ_FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
+    # # 	isis-segment-routing-extensions 3.1. SR-Capabilities Sub-TLV
+    # ISIS_SR_CAP_FLAGS = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    # # 	RFC 7752 3.3.1.1. Node Flag Bits TLV
+    # LS_NODE_FLAGS = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
+    # # 	RFC 7752 3.3.3.1. IGP Flags TLV
+    # LS_IGP_FLAGS = ['D', 'N', 'L', 'P', 'RSV', 'RSV', 'RSV', 'RSV']
+    # # 	RFC 7752 3.3.2.2.  MPLS Protocol Mask TLV
+    # LS_MPLS_MASK = ['LDP', 'RSVP-TE', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     # 	RFC 5307 1.2.
     LS_PROTECTION_MASK = [
         'ExtraTrafic',

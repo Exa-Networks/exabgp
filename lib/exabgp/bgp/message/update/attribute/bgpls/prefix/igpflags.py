@@ -32,6 +32,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 class IgpFlags(object):
     TLV = 1152
 
+    # 	RFC 7752 3.3.3.1. IGP Flags TLV
+    LS_IGP_FLAGS = ['D', 'N', 'L', 'P', 'RSV', 'RSV', 'RSV', 'RSV']
+
     def __init__(self, igpflags):
         self.igpflags = igpflags
 
@@ -40,12 +43,10 @@ class IgpFlags(object):
 
     @classmethod
     def unpack(cls, data, length):
-
         if length > 1:
             raise Notify(3, 5, "IGP Flags TLV length too large")
-        else:
-            flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_IGP_FLAGS)
-            return cls(igpflags=flags)
+
+        return cls(LsGenericFlags.unpack(data[0:1], cls.LS_IGP_FLAGS))
 
     def json(self, compact=None):
         return '"igp-flags": {}'.format(self.igpflags.json())

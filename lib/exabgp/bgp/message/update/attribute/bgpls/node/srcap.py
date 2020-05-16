@@ -9,6 +9,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 import json
 from struct import unpack
 
+from exabgp.util import split
+
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
 from exabgp.bgp.message.notification import Notify
 
@@ -41,6 +43,9 @@ from exabgp.bgp.message.notification import Notify
 class SrCapabilities(object):
     TLV = 1034
 
+    # 	isis-segment-routing-extensions 3.1. SR-Capabilities Sub-TLV
+    ISIS_SR_CAP_FLAGS = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+
     def __init__(self, sr_flags, sids):
         self.sr_flags = sr_flags
         self.sids = sids
@@ -51,10 +56,11 @@ class SrCapabilities(object):
     @classmethod
     def unpack(cls, data, length):
         # Extract node capability flags
-        flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.ISIS_SR_CAP_FLAGS)
+        flags = LsGenericFlags.unpack(data[0:1], cls.ISIS_SR_CAP_FLAGS)
         # Move pointer past flags and reserved bytes
         data = data[2:]
         sids = []
+
         while data:
             # Range Size: 3 octet value indicating the number of labels in
             # the range.
@@ -66,12 +72,11 @@ class SrCapabilities(object):
             t, l = unpack('!HH', data[3:7])
             if t != 1161:
                 raise Notify(3, 5, "Invalid sub-TLV type: {}".format(t))
-            v = data[7 : l + 7]
             if l == 3:
-                sid = unpack('!L', bytes([0]) + data[:3])[0]
+                sids.append((range_size, unpack('!L', bytes([0]) + data[:3])[0]))
             elif l == 4:
-                sid = unpack('!I', v)[0]
-            sids.append((range_size, sid))
+                # XXX: really we are reading 7+ but then re-parsing it again ??
+                sids.append((range_size, unpack('!I', data[7 : l + 7])[0]))
             data = data[l + 7 :]
 
         return cls(sr_flags=flags, sids=sids)

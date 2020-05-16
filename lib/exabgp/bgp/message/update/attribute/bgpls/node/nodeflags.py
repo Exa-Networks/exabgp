@@ -34,6 +34,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 class NodeFlags(object):
     TLV = 1024
 
+    # 	RFC 7752 3.3.1.1. Node Flag Bits TLV
+    LS_NODE_FLAGS = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
+
     def __init__(self, nodeflags):
         self.nodeflags = nodeflags
 
@@ -42,12 +45,10 @@ class NodeFlags(object):
 
     @classmethod
     def unpack(cls, data, length):
-
         if length > 1:
             raise Notify(3, 5, "Node Flags TLV length too large")
-        else:
-            flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_NODE_FLAGS)
-        return cls(nodeflags=flags)
+
+        return cls(LsGenericFlags.unpack(data[0:1], cls.LS_NODE_FLAGS))
 
     def json(self, compact=None):
         return '"node-flags": {}'.format(self.nodeflags.json())
