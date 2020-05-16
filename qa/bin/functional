@@ -499,12 +499,14 @@ if __name__ == '__main__':
 
     def decode(parsed):
         test = CI.get(parsed.test)
-        command = '%s -d %s --decode "%s"' % (Path.EXABGP, test['confs'][0], parsed.payload)
+        command = '%s decode %s  "%s"' % (Path.EXABGP, test['confs'][0], ''.join(parsed.payload))
         print('> %s' % command)
         os.system(command)
         sys.exit(0)
 
     sub = subparsers.add_parser('decode', help='use the test configuration to decode a packet')
+    sub.add_argument('test', help='name of the test to use to know the BGP configuration')
+    sub.add_argument('payload', nargs='+', help='the hexadecimal representation of the packet')
     sub.set_defaults(func=decode)
 
     sub = subparsers.add_parser('listing', help='list all functional test available')
