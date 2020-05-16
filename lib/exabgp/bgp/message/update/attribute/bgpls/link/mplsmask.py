@@ -7,7 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -30,7 +30,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 # 	RFC 7752 3.3.2.2.  MPLS Protocol Mask TLV
 
 @LinkState.register()
-class MplsMask(LsGenericFlags):
+class MplsMask(FlagLS):
     REPR = 'MPLS Protocol mask'
     JSON = 'mpls-mask'
     TLV = 1094

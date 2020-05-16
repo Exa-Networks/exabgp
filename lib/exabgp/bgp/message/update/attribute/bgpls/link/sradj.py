@@ -11,7 +11,7 @@ from struct import unpack
 from exabgp.util import hexstring
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -27,7 +27,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 
 @LinkState.register()
-class SrAdjacency(LsGenericFlags):
+class SrAdjacency(FlagLS):
     TLV = 1099
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
 
