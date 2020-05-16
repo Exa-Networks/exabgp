@@ -10,6 +10,7 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 #   The IGP Route Tag TLV carries original IGP Tags (IS-IS [RFC5130] or
 #   OSPF) of the prefix and is encoded as follows:
@@ -25,19 +26,11 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class IgpTags(object):
+class IgpTags(BaseLS):
     TLV = 1153
-
-    def __init__(self, igptags):
-        self.igptags = igptags
-
-    def __repr__(self):
-        return "IGP Route Tags: %s" % (self.igptags)
+    REPR = 'IGP Route Tags'
+    JSON = 'igp-route-tags'
 
     @classmethod
     def unpack(cls, data, length):
         return cls([unpack("!L", _)[0] for _ in split(data, 4)])
-
-
-    def json(self, compact=None):
-        return '"igp-route-tags": %s' % self.igptags

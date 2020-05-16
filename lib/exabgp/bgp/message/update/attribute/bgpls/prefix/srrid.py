@@ -8,6 +8,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -21,22 +22,14 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class SrSourceRouterID(object):
+class SrSourceRouterID(BaseLS):
     TLV = 1171
-
-    def __init__(self, srid):
-        self.srid = srid
-
-    def __repr__(self):
-        return "Source router identifier: %s" % (self.srid)
+    REPR = 'Source router identifier'
+    JSON = 'sr-source-router-id'
 
     @classmethod
     def unpack(cls, data, length):
         size = len(data)
         if size not in (4, 16):
             raise Notify(3, 5, "Error parsing SR Source Router ID. Wrong size")
-
         return cls(IP.unpack(data[:size]))
-
-    def json(self, compact=None):
-        return '"sr-source-router-id": "%s"' % str(self.srid)

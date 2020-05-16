@@ -12,6 +12,7 @@ from exabgp.util import split
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -24,18 +25,11 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class IgpExTags(object):
+class IgpExTags(BaseLS):
     TLV = 1154
-
-    def __init__(self, igpextags):
-        self.igpextags = igpextags
-
-    def __repr__(self):
-        return "IGP Extended Route Tags: %s" % (self.igpextags)
+    REPR = 'IGP Extended Route Tags'
+    JSON = 'igp-extended-route-tags'
 
     @classmethod
     def unpack(cls, data, length):
         return cls([unpack("!Q", _)[0] for _ in split(data, 8)])
-
-    def json(self, compact=None):
-        return '"igp-extended-route-tags": %s' % self.igpextags
