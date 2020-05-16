@@ -10,7 +10,7 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 #   This sub-TLV contains the amount of bandwidth reservable in this
@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #  ----------------------------
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class UnRsvpBw(object):
     TLV = 1091
 

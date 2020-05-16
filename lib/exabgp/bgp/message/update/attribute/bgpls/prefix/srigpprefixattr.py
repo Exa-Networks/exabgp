@@ -8,7 +8,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 import json
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 # 	RFC 7794 IPv4/IPv6 Extended Reachability Attribute Flags
 
-@LINKSTATE.register()
+@LinkState.register()
 class SrIgpPrefixAttr(LsGenericFlags):
     REPR = 'Prefix Attr Flags'
     JSON = 'sr-prefix-attribute-flags'

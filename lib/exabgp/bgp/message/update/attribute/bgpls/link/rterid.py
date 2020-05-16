@@ -9,7 +9,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 #   |    1030   | IPv4 Router-ID of   |   134/---    | [RFC5305]/4.3    |
@@ -18,8 +18,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #   |           | Remote Node         |              |                  |
 
 
-@LINKSTATE.register(lsid=1030)
-@LINKSTATE.register(lsid=1031)
+@LinkState.register(lsid=1030)
+@LinkState.register(lsid=1031)
 class RemoteTeRid(object):
     def __init__(self, terid):
         self.terid = terid

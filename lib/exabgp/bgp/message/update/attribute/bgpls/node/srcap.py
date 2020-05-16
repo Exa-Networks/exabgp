@@ -11,7 +11,7 @@ from struct import unpack
 
 from exabgp.util import split
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 from exabgp.bgp.message.notification import Notify
 
@@ -42,7 +42,7 @@ from exabgp.bgp.message.notification import Notify
 # 	isis-segment-routing-extensions 3.1. SR-Capabilities Sub-TLV
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class SrCapabilities(LsGenericFlags):
     REPR = 'SR Capability Flags'
     JSON = 'sr_capability_flags'

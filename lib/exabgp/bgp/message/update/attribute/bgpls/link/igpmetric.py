@@ -10,7 +10,7 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 #   The IGP Metric TLV carries the metric for this link.  The length of
@@ -28,7 +28,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class IgpMetric(object):
     TLV = 1095
 
