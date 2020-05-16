@@ -137,7 +137,7 @@ def cmdline(cmdarg):
     Attribute.caching = env.cache.attributes
 
     if env.debug.rotate or len(configurations) == 1:
-        run(env, comment, configurations, cmdarg.validate)
+        run(comment, configurations, cmdarg.validate)
 
         log.error('can not log to files when running multiple configuration (as we fork)', 'configuration')
         sys.exit(1)
@@ -148,7 +148,7 @@ def cmdline(cmdarg):
         for configuration in configurations:
             pid = os.fork()
             if pid == 0:
-                run(env, comment, [configuration], cmdarg.validate, os.getpid())
+                run(comment, [configuration], cmdarg.validate, os.getpid())
             else:
                 pids.append(pid)
 
@@ -165,7 +165,9 @@ def cmdline(cmdarg):
         sys.exit(1)
 
 
-def run(env, comment, configurations, validate, pid=0):
+def run(comment, configurations, validate, pid=0):
+    env = getenv()
+
     log.notice('Thank you for using ExaBGP', 'welcome')
     log.notice('%s' % version, 'version')
     log.notice('%s' % sys.version.replace('\n', ' '), 'interpreter')

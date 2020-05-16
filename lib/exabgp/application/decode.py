@@ -1,11 +1,17 @@
 # encoding: utf-8
 
 import sys
+import syslog
 import string
 import argparse
 
 from exabgp.environment import Env
 from exabgp.environment import getenv
+from exabgp.environment import ROOT
+
+from exabgp.reactor.loop import Reactor
+from exabgp.logger import log
+from exabgp.debug import setup_report
 
 
 def is_bgp(message):
@@ -14,7 +20,9 @@ def is_bgp(message):
 
 def args(sub):
     # fmt:off
-    sub.add_argument('payload', help='the BGP payload in hexadecimal', type=str)
+    sub.add_argument('-d', '--debug', help='start the python debugger errors', action='store_true')
+    sub.add_argument('configuration', help='configuration file(s)', type=str)
+    sub.add_argument('payload', help='the BGP payload in hexadecimal', nargs='+', type=str)
     # fmt:on
 
 
@@ -25,24 +33,32 @@ def main():
 
 
 def cmdline(cmdarg):
-    if not is_bgp(cmdarg.payload):
+    route = ''.join(cmdarg.payload).replace(' ','')
+
+    if not is_bgp(route):
         # parser.print_usage()
         sys.stdout.write('Environment values are:\n%s\n\n' % '\n'.join(' - %s' % _ for _ in Env.default()))
         sys.stdout.write('The BGP message must be an hexadecimal string.\n\n')
         sys.stdout.write('All colons or spaces are ignored, for example:\n\n')
-        sys.stdout.write('  --decode 001E0200000007900F0003000101\n')
-        sys.stdout.write('  --decode 001E:02:0000:0007:900F:0003:0001:01\n')
-        sys.stdout.write('  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101\n')
-        sys.stdout.write('  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01\n')
-        sys.stdout.write('  --decode \'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101\n\'')
+        sys.stdout.write('  001E0200000007900F0003000101\n')
+        sys.stdout.write('  001E:02:0000:0007:900F:0003:0001:01\n')
+        sys.stdout.write('  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101\n')
+        sys.stdout.write('  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01\n')
+        sys.stdout.write("  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101\n")
         sys.stdout.flush()
         sys.exit(1)
 
     env = getenv()
     env.log.parser = True
-    env.debug.route = cmdarg.payload
+    env.debug.route = route
     env.tcp.bind = ''
 
+    if cmdarg.debug:
+        env.log.all = True
+        env.log.level = syslog.LOG_DEBUG
+
+    log.init()
+    Reactor([cmdarg.configuration]).run(False, ROOT)
 
 if __name__ == '__main__':
     main()
