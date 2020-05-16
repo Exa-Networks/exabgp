@@ -40,16 +40,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 class SrAdjacencyLan(LsGenericFlags):
     TLV = 1100
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
+    MERGE = True
 
-    def __init__(self, flags, sids, weight, system_id, undecoded=[]):
-        self.flags = flags
-        self.sids = sids
-        self.weight = weight
-        self.undecoded = undecoded
-        self.system_id = system_id
+    def __init__(self, sradjlans):
+        self.sr_adj_lan_sids = []
 
     def __repr__(self):
-        return "sr_adj_lan_flags: %s, sids: %s, undecoded_sid: %s" % (self.flags, self.sids, self.undecoded)
+        return "sr-adj-lan-sids: {}".format(self.sr_adj_lan_sids)
 
     @classmethod
     def unpack(cls, data, length):
@@ -86,13 +83,10 @@ class SrAdjacencyLan(LsGenericFlags):
                 raw.append(hexstring(data))
                 break
 
-        return cls(flags=flags, sids=sids, weight=weight, system_id=system_id, undecoded=raw)
+        return cls([{'flags': flags, 'weight': weight, 'system-id': system_id, 'sid': sid, 'undecoded': raw}])
 
     def json(self, compact=None):
-        return json.dumps({
-            'sr-adj-lan-flags': self.flags,
-            'sids': self.sids,
-            'undecoded-sids': self.undecoded,
-            'sr-adj-lan-weight': self.weight,
-            'system-id': self.sytemd_id
-        })
+        return '"sr-adj-lan-sids": {}'.format(json.dumps(self.sr_adj_lan_sids))
+
+    def merge(self, klass):
+        self.sr_adj_lan_sids.extend(klass.sr_adj_lan_sids)

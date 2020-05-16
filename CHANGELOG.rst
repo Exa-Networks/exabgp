@@ -4,6 +4,9 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.0:
+ * Compatibility: The BGP-LS Adjacency SID JSON format has changed
+ * Compatibility: The command line format has changed
+   whilst trying to keep backward compatibility for most usual commands
  * Feature: drop support for python2, well it is classed as feature, your opinion may vary
  * Feature: logging parsing in debug mode will now print the JSON of updates
  * Fix: issue during restart
@@ -14,6 +17,8 @@ Version 5.0.0:
  * Fix: high CPU load to do sleeptime in second and not ms
    reported by: Gary Buhrmaster
  * Change: BGP-LS TE-RIDs are now reported as a list (as Arista reports more than one)
+   patch: tomjshine
+ * Fix: support for more than one BGP-LS Adjacency SID per link
    patch: tomjshine
  * reported: the RIB code so withdraw message before any announce are sent
         this does change the RIB behaviour sending withdrawal when it was not previously
