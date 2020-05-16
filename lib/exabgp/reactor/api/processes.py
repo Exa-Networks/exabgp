@@ -188,8 +188,11 @@ class Processes(object):
                 self._terminate(process)
         self._configuration = configuration
         for process in configuration:
-            if restart and process in list(self._process):
-                self._terminate(process)
+            if process in list(self._process):
+                if restart:
+                    self._terminate(process)
+                    self._start(process)
+                continue
             self._start(process)
 
     def broken(self, neighbor):
