@@ -38,6 +38,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 class SrAdjacencyLan(object):
     TLV = 1100
 
+    #  draft-ietf-isis-segment-routing-extensions - Adj-SID IS-IS Flags
+    ISIS_SR_ADJ_FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
+
     def __init__(self, flags, sids, weight, undecoded=[]):
         self.flags = flags
         self.sids = sids
@@ -50,7 +53,7 @@ class SrAdjacencyLan(object):
     @classmethod
     def unpack(cls, data, length):
         # We only support IS-IS flags for now.
-        flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.ISIS_SR_ADJ_FLAGS)
+        flags = LsGenericFlags.unpack(data[0:1], cls.ISIS_SR_ADJ_FLAGS)
         # Parse adj weight
         weight = data[1]
         # Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)

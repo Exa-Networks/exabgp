@@ -33,12 +33,12 @@ class LocalTeRid(object):
 
     @classmethod
     def unpack(cls, data, length):
-        if len(data) == 4:
-            # IPv4 address
-            terid = IP.unpack(data[:4])
-        elif len(data) == 16:
-            # IPv6
-            terid = IP.unpack(data[:16])
+        size = len(data)
+
+        if size not in (4, 16):
+            raise Notify(3, 5, "Invalid remote-te size")
+
+        terid = IP.unpack(data[:size])
         cls._terids.append(terid)
         return cls()
 

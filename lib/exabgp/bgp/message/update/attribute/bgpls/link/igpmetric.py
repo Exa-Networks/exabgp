@@ -42,18 +42,17 @@ class IgpMetric(object):
     def unpack(cls, data, length):
         if len(data) == 2:
             # OSPF
-            igpmetric = unpack('!H', data)[0]
-            return cls(igpmetric=igpmetric)
-        elif len(data) == 1:
+            return cls(unpack('!H', data)[0])
+
+        if len(data) == 1:
             # ISIS small metrics
-            igpmetric = data[0]
-            return cls(igpmetric=igpmetric)
-        elif len(data) == 3:
+            return cls(data[0])
+
+        if len(data) == 3:
             # ISIS wide metrics
-            igpmetric = unpack('!L', bytes([0]) + data)[0]
-            return cls(igpmetric=igpmetric)
-        else:
-            raise Notify(3, 5, "Incorrect IGP Metric Size")
+            return cls(unpack('!L', bytes([0]) + data)[0])
+
+        raise Notify(3, 5, "Incorrect IGP Metric Size")
 
     def json(self, compact=None):
         return '"igp-metric": %d' % int(self.igpmetric[0])

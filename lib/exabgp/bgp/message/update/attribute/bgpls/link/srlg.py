@@ -7,6 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
+from exabgp.util import split
 
 from exabgp.bgp.message.notification import Notify
 
@@ -39,14 +40,9 @@ class Srlg(object):
 
     @classmethod
     def unpack(cls, data, length):
-        srlg = []
-        if len(data) < 4:
+        if len(data) % 4:
             raise Notify(3, 5, "Unable to decode SRLG")
-        while data:
-            lgrp = unpack('!L', data[:4])[0]
-            srlg.append(lgrp)
-            data = data[4:]
-        return cls(srlg=srlg)
+        return cls([unpack('!L', _)[0] for _ in split(data, 4)])
 
     def json(self, compact=None):
         return '"shared-risk-link-groups": %s' % str(self.srlg)

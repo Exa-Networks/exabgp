@@ -37,9 +37,9 @@ class RsvpBw(object):
     def unpack(cls, data, length):
         if len(data) != 4:
             raise Notify(3, 5, "Incorrect maximum reservable link bw metric")
-        else:
-            rsvpbw = unpack('!f', data)[0]
-            return cls(rsvpbw=rsvpbw)
+
+        rsvpbw = unpack('!f', data)[0]
+        return cls(rsvpbw=rsvpbw)
 
     def json(self, compact=None):
         return '"maximum-reservable-link-bandwidth": %s' % str(self.rsvpbw)

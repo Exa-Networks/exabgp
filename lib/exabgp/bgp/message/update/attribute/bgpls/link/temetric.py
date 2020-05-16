@@ -36,9 +36,8 @@ class TeMetric(object):
     def unpack(cls, data, length):
         if len(data) != 4:
             raise Notify(3, 5, "Incorrect TE Metric Size")
-        else:
-            temetric = unpack('!L', data)[0]
-            return cls(temetric=temetric)
+
+        return cls(unpack('!L', data)[0])
 
     def json(self, compact=None):
         return '"te-metric": %d' % int(str(self.temetric))

@@ -30,7 +30,7 @@ class IsisArea(object):
 
     @classmethod
     def unpack(cls, data, length):
-        return cls(areaid=int(data.hex(), 16))
+        return cls(int(data.hex(), 16))
 
     def json(self, compact=None):
         return '"area-id": "%s"' % str(self.areaid)

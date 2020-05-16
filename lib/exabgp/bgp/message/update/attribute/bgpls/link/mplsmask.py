@@ -31,6 +31,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 class MplsMask(object):
     TLV = 1094
 
+    # 	RFC 7752 3.3.2.2.  MPLS Protocol Mask TLV
+    LS_MPLS_MASK = ['LDP', 'RSVP-TE', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+
     def __init__(self, mplsflags):
         self.mplsflags = mplsflags
 
@@ -42,9 +45,8 @@ class MplsMask(object):
 
         if length > 1:
             raise Notify(3, 5, "LINK TLV length too large")
-        else:
-            mpls_mask = LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_MPLS_MASK)
-            return cls(mplsflags=mpls_mask)
+
+        return cls(LsGenericFlags.unpack(data[0:1], cls.LS_MPLS_MASK))
 
     def json(self, compact=None):
         return '"mpls-mask": {}'.format(self.mplsflags.json())

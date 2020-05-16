@@ -26,9 +26,9 @@ class AdminGroup(object):
     def unpack(cls, data, length):
         if length != 4:
             raise Notify(3, 5, "Unable to decode attribute. Incorrect Size")
-        else:
-            colormask = unpack('!L', data[:4])[0]
-            return cls(colormask=colormask)
+
+        colormask = unpack('!L', data[:4])[0]
+        return cls(colormask=colormask)
 
     def json(self, compact=None):
         return '"admin-group-mask": %s' % self.colormask

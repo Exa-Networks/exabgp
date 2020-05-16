@@ -28,7 +28,10 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 @LINKSTATE.register()
 class SrPrefix(object):
     TLV = 1158
-
+ 
+   # 	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
+    ISIS_SR_FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
+ 
     def __init__(self, flags, sids, sr_algo, undecoded=[]):
         self.flags = flags
         self.sids = sids
@@ -41,7 +44,7 @@ class SrPrefix(object):
     @classmethod
     def unpack(cls, data, length):
         # We only support IS-IS flags for now.
-        flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.ISIS_SR_FLAGS)
+        flags = LsGenericFlags.unpack(data[0:1], cls.ISIS_SR_FLAGS)
         #
         # Parse Algorithm
         sr_algo = data[1]

@@ -37,9 +37,8 @@ class LinkName(object):
     def unpack(cls, data, length):
         if length > 255:
             raise Notify(3, 5, "Link Name TLV length too large")
-        else:
-            linkname = binascii.b2a_uu(data[:length])
-            return cls(linkname=linkname)
+
+        return cls(binascii.b2a_uu(data[:length]))
 
     def json(self, compact=None):
         return '"link-name": "%s"' % self.linkname

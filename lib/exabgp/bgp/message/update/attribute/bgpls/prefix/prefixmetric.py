@@ -37,9 +37,8 @@ class PrefixMetric(object):
     def unpack(cls, data, length):
         if length != 4:
             raise Notify(3, 5, "Incorrect Prefix Metric size")
-        else:
-            metric = unpack("!L", data)[0]
-            return cls(prefixmetric=metric)
+
+        return cls(unpack("!L", data)[0])
 
     def json(self, compact=None):
         return '"prefix-metric": %d' % int(self.prefixmetric)

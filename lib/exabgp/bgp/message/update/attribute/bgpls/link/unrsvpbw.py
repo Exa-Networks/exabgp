@@ -37,9 +37,8 @@ class UnRsvpBw(object):
     def unpack(cls, data, length):
         if length != 32:
             raise Notify(3, 5, "Wrong Unreservable Bw metric size")
-        else:
-            unrsvpbw = [p for p in unpack('!ffffffff', data)]
-            return cls(unrsvpbw=unrsvpbw)
+
+        return cls(unpack('!ffffffff', data))
 
     def json(self, compact=None):
         return '"unreserved-bandwidth": %s' % str(self.unrsvpbw)
