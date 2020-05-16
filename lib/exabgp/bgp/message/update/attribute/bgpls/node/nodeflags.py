@@ -6,7 +6,8 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -29,26 +30,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #        +-----------------+-------------------------+------------+
 # 		https://tools.ietf.org/html/rfc7752 sec 3.3.1.1 Node Flag Bits Definitions
 
+# 	RFC 7752 3.3.1.1. Node Flag Bits TLV
+
 
 @LINKSTATE.register()
-class NodeFlags(object):
+class NodeFlags(LsGenericFlags):
+    REPR = 'Node Flags'
+    JSON = 'node-flags'
     TLV = 1024
-
-    # 	RFC 7752 3.3.1.1. Node Flag Bits TLV
     LS_NODE_FLAGS = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
-
-    def __init__(self, nodeflags):
-        self.nodeflags = nodeflags
-
-    def __repr__(self):
-        return "nodeflags: %s" % (self.nodeflags)
-
-    @classmethod
-    def unpack(cls, data, length):
-        if length > 1:
-            raise Notify(3, 5, "Node Flags TLV length too large")
-
-        return cls(LsGenericFlags.unpack(data[0:1], cls.LS_NODE_FLAGS))
-
-    def json(self, compact=None):
-        return '"node-flags": {}'.format(self.nodeflags.json())
+    LEN = 1

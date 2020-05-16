@@ -8,7 +8,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 import json
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -19,24 +20,12 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #   //                       Flags (variable)                      //
 #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+# 	RFC 7794 IPv4/IPv6 Extended Reachability Attribute Flags
 
 @LINKSTATE.register()
-class SrIgpPrefixAttr(object):
+class SrIgpPrefixAttr(LsGenericFlags):
+    REPR = 'Prefix Attr Flags'
+    JSON = 'sr-prefix-attribute-flags'
     TLV = 1170
-
-    # 	RFC 7794 IPv4/IPv6 Extended Reachability Attribute Flags
-    ISIS_SR_ATTR_FLAGS = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-
-    def __init__(self, flags):
-        self.flags = flags
-
-    def __repr__(self):
-        return "prefix_attr_flags: %s" % (self.flags)
-
-    @classmethod
-    def unpack(cls, data, length):
-        # We only support IS-IS for now.
-        return cls(LsGenericFlags.unpack(data[0:1], cls.ISIS_SR_ATTR_FLAGS))
-
-    def json(self, compact=None):
-        return '"sr-prefix-attribute-flags": {}'.format(self.flags.json())
+    FLAGS = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    # MISSING LEN

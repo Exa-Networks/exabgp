@@ -6,7 +6,8 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -26,27 +27,12 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #   | 'Reserved' | Reserved for future use                  |           |
 #   +------------+------------------------------------------+-----------+
 
+# 	RFC 7752 3.3.2.2.  MPLS Protocol Mask TLV
 
 @LINKSTATE.register()
-class MplsMask(object):
+class MplsMask(LsGenericFlags):
+    REPR = 'MPLS Protocol mask'
+    JSON = 'mpls-mask'
     TLV = 1094
-
-    # 	RFC 7752 3.3.2.2.  MPLS Protocol Mask TLV
-    LS_MPLS_MASK = ['LDP', 'RSVP-TE', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-
-    def __init__(self, mplsflags):
-        self.mplsflags = mplsflags
-
-    def __repr__(self):
-        return "MPLS Protocol mask: %s" % (self.mplsflags)
-
-    @classmethod
-    def unpack(cls, data, length):
-
-        if length > 1:
-            raise Notify(3, 5, "LINK TLV length too large")
-
-        return cls(LsGenericFlags.unpack(data[0:1], cls.LS_MPLS_MASK))
-
-    def json(self, compact=None):
-        return '"mpls-mask": {}'.format(self.mplsflags.json())
+    FLAGS = ['LDP', 'RSVP-TE', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    LEN = 1
