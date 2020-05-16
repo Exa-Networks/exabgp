@@ -33,11 +33,7 @@ from exabgp.environment import getenv
 from exabgp.logger import log
 from exabgp.logger import LazyFormat
 
-from exabgp.util.trace import trace
-
-from exabgp.util.panic import NO_PANIC
-from exabgp.util.panic import FOOTER
-
+from exabgp.debug import format_exception
 
 class ACTION(object):
     CLOSE = 0x01  # finished, no need to restart the peer
@@ -608,7 +604,7 @@ class Peer(object):
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            log.debug('\n'.join([NO_PANIC, '', '', str(type(exc)), str(exc), trace(), FOOTER]), 'reactor')
+            log.debug(format_exception(exc), 'reactor')
             self._reset()
             return
 

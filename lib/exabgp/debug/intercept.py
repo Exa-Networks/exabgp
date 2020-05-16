@@ -1,0 +1,32 @@
+# encoding: utf-8
+"""
+debug.py
+
+Created by Thomas Mangin on 2011-03-29.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
+import os
+import sys
+import pdb
+
+from exabgp.debug.report import format_panic
+
+
+def bug_report(dtype, value, trace):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    print(format_panic(dtype, value, trace))
+    sys.stdout.flush()
+
+
+def intercept(dtype, value, trace):
+    bug_report(dtype, value, trace)
+    if os.environ.get('PDB', None) not in [None, '0', '']:
+        pdb.pm()
+
+
+def trace_interceptor():
+    sys.excepthook = intercept
+

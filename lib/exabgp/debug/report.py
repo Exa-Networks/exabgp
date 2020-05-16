@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-panic.py
+report.py
 
 Created by Thomas Mangin on 2014-12-30.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -9,11 +9,63 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import sys
 import platform
+import traceback
+from io import StringIO
 
 from exabgp.version import version
+from exabgp.environment import Env
+from exabgp.environment import ROOT
 
 
-PANIC = """
+from exabgp.logger import log
+
+
+def format_exception(exception):
+    buff = StringIO()
+    traceback.print_exc(file=buff)
+    trace = buff.getvalue()
+    buff.close()
+
+    return '\n'.join([_NO_PANIC + _INFO, '', '', str(type(exception)), str(exception), trace, _FOOTER])
+
+
+def format_panic(dtype, value, trace):
+    result = _PANIC + _INFO
+
+    result = "-- Traceback\n\n"
+    result += traceback.format_exception(dtype, value, trace)
+
+    result += "\n\n-- Configuration\n\n"
+    result += log.config()
+    result += "\n\n-- Logging History\n\n"
+    result += log.history()
+    result += "\n\n\n"
+
+    result += _FOOTER
+
+    return result
+
+
+_INFO = """
+ExaBGP version : %s
+Python version : %s
+System Uname   : %s
+System MaxInt  : %s
+Root           : %s
+
+Environment:
+%s
+""" % (
+    version,
+    sys.version.replace('\n', ' '),
+    platform.version(),
+    str(sys.maxsize),
+    ROOT,
+    '\n'.join(Env.iter_env(diff=True))
+)
+
+
+_PANIC = """
 ********************************************************************************
 EXABGP HAD AN INTERNAL ISSUE / HELP US FIX IT
 ********************************************************************************
@@ -43,21 +95,10 @@ it was not overlooked. (please keep in mind the authors are based in GMT/Europe)
 -- Please provide ALL the information below on :
 -- https://github.com/Exa-Networks/exabgp/issues
 ********************************************************************************
-
-ExaBGP version : %s
-Python version : %s
-System Uname   : %s
-System MaxInt  : %s
-
-""" % (
-    version,
-    sys.version.replace('\n', ' '),
-    platform.version(),
-    str(sys.maxsize),
-)
+"""
 
 
-NO_PANIC = """
+_NO_PANIC = """
 ********************************************************************************
 EXABGP MISBEHAVED / HELP US FIX IT
 ********************************************************************************
@@ -87,20 +128,10 @@ it was not overlooked. (please keep in mind the authors are based in GMT/Europe)
 -- Please provide ALL the information below on :
 -- https://github.com/Exa-Networks/exabgp/issues
 ********************************************************************************
+"""
 
-ExaBGP version : %s
-Python version : %s
-System Uname   : %s
-System MaxInt  : %s
 
-""" % (
-    version,
-    sys.version.replace('\n', ' '),
-    platform.version(),
-    str(sys.maxsize),
-)
-
-FOOTER = """\
+_FOOTER = """\
 ********************************************************************************
 -- Please provide _ALL_ the information above on :
 -- https://github.com/Exa-Networks/exabgp/issues

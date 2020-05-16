@@ -9,7 +9,7 @@ import syslog
 import argparse
 import platform
 
-from exabgp.debug import setup_report
+from exabgp.debug import trace_interceptor
 
 # import before the fork to improve copy on write memory savings
 from exabgp.reactor.loop import Reactor
@@ -270,7 +270,7 @@ def run(comment, configurations, validate, pid=0):
 def main():
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     args(parser)
-    setup_report()
+    format_errors()
     cmdline(parser, parser.parse_args())
 
 

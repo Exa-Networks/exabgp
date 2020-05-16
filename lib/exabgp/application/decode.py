@@ -11,7 +11,6 @@ from exabgp.environment import ROOT
 
 from exabgp.reactor.loop import Reactor
 from exabgp.logger import log
-from exabgp.debug import setup_report
 
 
 def is_bgp(message):
