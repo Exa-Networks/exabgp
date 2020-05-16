@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.util import split
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.notification import Notify
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
@@ -43,7 +43,7 @@ from exabgp.bgp.message.notification import Notify
 
 
 @LinkState.register()
-class SrCapabilities(LsGenericFlags):
+class SrCapabilities(FlagLS):
     REPR = 'SR Capability Flags'
     JSON = 'sr_capability_flags'
     TLV = 1034
@@ -51,7 +51,7 @@ class SrCapabilities(LsGenericFlags):
 
 
     def __init__(self, flags, sids):
-        LsGenericFlags.__init__(self, flags)
+        FlagLS.__init__(self, flags)
         self.sids = sids
 
     def __repr__(self):
@@ -86,4 +86,4 @@ class SrCapabilities(LsGenericFlags):
         return cls(flags, sids)
 
     def json(self, compact=None):
-        return '"{}": {}, "sids": {}'.format(self.JSON, LsGenericFlags.json(self), self.sids)
+        return '"{}": {}, "sids": {}'.format(self.JSON, FlagLS.json(self), self.sids)

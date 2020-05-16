@@ -12,7 +12,7 @@ from exabgp.util import hexstring
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -28,7 +28,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 # 	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
 
 @LinkState.register()
-class SrPrefix(LsGenericFlags):
+class SrPrefix(FlagLS):
     TLV = 1158
     FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
 
@@ -83,7 +83,7 @@ class SrPrefix(LsGenericFlags):
     def json(self, compact=None):
         return ', '.join(
             [
-                '"sr-prefix-flags": {}'.format(LsGenericFlags.json(self)),
+                '"sr-prefix-flags": {}'.format(FlagLS.json(self)),
                 '"sids": {}'.format(json.dumps(self.sids)),
                 '"undecoded-sids": {}'.format(json.dumps(self.undecoded)),
                 '"sr-algorithm": {}'.format(json.dumps(self.sr_algo)),

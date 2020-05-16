@@ -115,7 +115,7 @@ class GenericLSID(BaseLS):
         return cls(scode, binascii.b2a_uu(data[:]))
 
 
-class LsGenericFlags(BaseLS):
+class FlagLS(BaseLS):
     def __init__(self, flags):
         self.flags = flags
 
