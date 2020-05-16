@@ -61,9 +61,9 @@ def cmdline(cmdarg):
     else:
         comment = ''
 
+    env = getenv()
     # Must be done before setting the logger as it modify its behaviour
     if cmdarg.debug:
-        env = getenv()
         env.log.all = True
         env.log.level = syslog.LOG_DEBUG
 
