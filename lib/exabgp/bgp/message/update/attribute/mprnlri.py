@@ -129,6 +129,10 @@ class MPRNLRI(Attribute, Family):
 
         length, rd = Family.size[(afi, safi)]
 
+        # Is the peer going to send us some Path Information with the route (AddPath)
+        # It need to be done before adapting the family for another possible next-hop
+        addpath = negotiated.addpath.receive(afi, safi)
+
         if negotiated.nexthop:
             if len_nh in (16, 32, 24):
                 nh_afi = AFI.ipv6
@@ -164,9 +168,6 @@ class MPRNLRI(Attribute, Family):
 
         if reserved != 0:
             raise Notify(3, 0, 'the reserved bit of MP_REACH_NLRI is not zero')
-
-        # Is the peer going to send us some Path Information with the route (AddPath)
-        addpath = negotiated.addpath.receive(afi, safi)
 
         # Reading the NLRIs
         data = data[offset:]
