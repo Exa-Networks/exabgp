@@ -273,7 +273,7 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
         logger.addHandler(ch)
 
 
-def loopback_ips(label):
+def loopback_ips(label,label_only):
     """Retrieve loopback IP addresses"""
     logger.debug("Retrieve loopback IP addresses")
     addresses = []
@@ -314,6 +314,8 @@ def loopback_ips(label):
                     continue
                 if lmo.groupdict().get("label","").startswith(label):
                     addresses.append(ip)
+            elif not label_only:
+                addresses.append(ip)
 
     logger.debug("Loopback addresses: %s", addresses)
     return addresses
@@ -327,7 +329,7 @@ def loopback():
 def setup_ips(ips, label, sudo=False):
     """Setup missing IP on loopback interface"""
 
-    existing = set(loopback_ips(label))
+    existing = set(loopback_ips(label,False))
     toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
         logger.debug("Setup loopback IP address %s", ip)
@@ -348,7 +350,7 @@ def setup_ips(ips, label, sudo=False):
 
 def remove_ips(ips, label, sudo=False):
     """Remove added IP on loopback interface"""
-    existing = set(loopback_ips(label))
+    existing = set(loopback_ips(label,True))
 
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
     toremove = set([ip_network(ip) for net in ips for ip in net]) & existing
@@ -632,7 +634,7 @@ def main():
         options.pid.close()
     try:
         # Setup IP to use
-        options.ips = options.ips or loopback_ips(options.label)
+        options.ips = options.ips or loopback_ips(options.label,False)
         if not options.ips:
             logger.error("No IP found")
             sys.exit(1)
