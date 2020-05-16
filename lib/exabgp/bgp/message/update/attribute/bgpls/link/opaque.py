@@ -11,7 +11,7 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #
 #     0                   1                   2                   3
@@ -26,7 +26,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 # This TLV is added here for completeness but we don't look into the TLV.
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class LinkOpaque(object):
     TLV = 1097
 

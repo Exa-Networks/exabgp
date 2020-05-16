@@ -9,7 +9,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #   The IGP Route Tag TLV carries original IGP Tags (IS-IS [RFC5130] or
 #   OSPF) of the prefix and is encoded as follows:
@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.2
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class IgpTags(object):
     TLV = 1153
 

@@ -6,7 +6,7 @@ Created by Evelio Vila 2016-12-01
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 from exabgp.bgp.message.update.attribute.bgpls.link.igpmetric import IgpMetric
 from exabgp.bgp.message.update.attribute.bgpls.link.srlg import Srlg

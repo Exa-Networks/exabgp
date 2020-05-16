@@ -7,7 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 #       0                   1
@@ -26,7 +26,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 #      0x80  Reserved
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class LinkProtectionType(LsGenericFlags):
     REPR = 'Link protection mask'
     JSON = 'link-protection-flags'

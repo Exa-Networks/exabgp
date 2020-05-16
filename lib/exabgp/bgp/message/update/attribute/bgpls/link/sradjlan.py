@@ -11,7 +11,7 @@ from struct import unpack
 from exabgp.util import hexstring
 
 from exabgp.protocol.iso import ISO
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 
@@ -36,7 +36,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 #  draft-ietf-isis-segment-routing-extensions - Adj-SID IS-IS Flags
 
-@LINKSTATE.register()
+@LinkState.register()
 class SrAdjacencyLan(LsGenericFlags):
     TLV = 1100
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']

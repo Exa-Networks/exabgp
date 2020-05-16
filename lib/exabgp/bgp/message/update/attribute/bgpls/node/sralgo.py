@@ -8,7 +8,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 import json
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #     draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 # 						sec 2.1.2.
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class SrAlgorithm(object):
     TLV = 1035
 

@@ -7,7 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -20,7 +20,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     Source Router Identifier (Source Router-ID) TLV
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class SrSourceRouterID(object):
     TLV = 1171
 

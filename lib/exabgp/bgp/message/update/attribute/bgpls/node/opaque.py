@@ -11,7 +11,7 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #
 #     0                   1                   2                   3
@@ -27,7 +27,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #   Use of draft-tantsura-bgp-ls-segment-routing-msd-02 in this TLV is not clear
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class NodeOpaque(object):
     TLV = 1025
 

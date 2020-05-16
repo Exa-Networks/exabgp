@@ -9,10 +9,10 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class AdminGroup(object):
     TLV = 1088
 

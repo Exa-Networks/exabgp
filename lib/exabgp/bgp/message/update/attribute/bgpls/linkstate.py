@@ -15,7 +15,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
 @Attribute.register()
-class LINKSTATE(Attribute):
+class LinkState(Attribute):
     ID = Attribute.CODE.BGP_LS
     FLAG = Attribute.Flag.OPTIONAL
     TLV = -1

@@ -10,7 +10,7 @@ import binascii
 
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 #      0                   1                   2                   3
@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     https://tools.ietf.org/html/rfc7752 Sec 3.3.1.3.  Node Name TLV
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class NodeName(object):
     TLV = 1026
 

@@ -9,7 +9,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 #   |     1028    | IPv4 Router-ID of    |        4 | [RFC5305]/4.3     |
@@ -20,8 +20,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #   https://tools.ietf.org/html/rfc7752 sec 3.3.1.4  - Traffic Engineering RouterID
 
 
-@LINKSTATE.register(lsid=1028)
-@LINKSTATE.register(lsid=1029)
+@LinkState.register(lsid=1028)
+@LinkState.register(lsid=1029)
 class LocalTeRid(object):
     _terids = []
 

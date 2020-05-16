@@ -10,7 +10,7 @@ import json
 from struct import unpack
 from exabgp.util import hexstring
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
 
@@ -27,7 +27,7 @@ from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyL
 #
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class SrAdjacency(LsGenericFlags):
     TLV = 1099
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']

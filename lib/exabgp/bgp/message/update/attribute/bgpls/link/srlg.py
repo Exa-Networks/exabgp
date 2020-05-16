@@ -11,7 +11,7 @@ from exabgp.util import split
 
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 #      0                   1                   2                   3
@@ -28,7 +28,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     https://tools.ietf.org/html/rfc7752#section-3.3.2.5 Shared Risk Link Group TLV
 
 
-@LINKSTATE.register()
+@LinkState.register()
 class Srlg(object):
     TLV = 1096
 
