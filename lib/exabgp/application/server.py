@@ -5,6 +5,8 @@
 
 import os
 import sys
+import time
+import signal
 import syslog
 import argparse
 import platform
@@ -41,6 +43,24 @@ def __exit(memory, code):
     sys.exit(code)
 
 
+def _delayed_signal(delay, signalnum):
+    if not delay:
+        return
+
+    pid = os.fork()
+    if pid:
+        # the parent process is the one waiting
+        # and sending a signa to the child
+        try:
+            time.sleep(delay)
+            os.kill(pid, signalnum)
+        finally:
+            try:
+                pid, code = os.wait()
+            finally:
+                sys.exit(code)
+
+
 def args(sub):
     # fmt:off
     sub.add_argument('-t', '--test', help='perform a configuration validity check only', action='store_true')
@@ -69,27 +89,8 @@ def cmdline(cmdarg):
 
     log.init()
 
-    duration = cmdarg.signal
-    if duration and duration.isdigit():
-        pid = os.fork()
-        if pid:
-            import time
-            import signal
-
-            try:
-                time.sleep(int(duration))
-                os.kill(pid, signal.SIGUSR1)
-            except KeyboardInterrupt:
-                pass
-            try:
-                pid, code = os.wait()
-                sys.exit(code)
-            except KeyboardInterrupt:
-                try:
-                    pid, code = os.wait()
-                    sys.exit(code)
-                except Exception:
-                    sys.exit(0)
+    delay = cmdarg.signal
+    _delayed_signal(delay, signal.SIGUSR1)
 
     if cmdarg.profile:
         env.profile.enable = True
@@ -153,8 +154,6 @@ def cmdline(cmdarg):
                 pids.append(pid)
 
         # If we get a ^C / SIGTERM, ignore just continue waiting for our child process
-        import signal
-
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
         # wait for the forked processes
