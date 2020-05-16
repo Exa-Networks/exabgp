@@ -10,7 +10,9 @@ import json
 from struct import unpack
 from exabgp.util import hexstring
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -26,8 +28,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 
 
 @LINKSTATE.register()
-class SrAdjacency(object):
+class SrAdjacency(LsGenericFlags):
     TLV = 1099
+    FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
 
     def __init__(self, flags, sids, weight, undecoded=[]):
         self.flags = flags
@@ -41,7 +44,7 @@ class SrAdjacency(object):
     @classmethod
     def unpack(cls, data, length):
         # We only support IS-IS flags for now.
-        flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.ISIS_SR_ADJ_FLAGS)
+        flags = cls.unpack_flags(data[0:1])
         # Parse adj weight
         weight = data[1]
         # Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
@@ -77,7 +80,7 @@ class SrAdjacency(object):
     def json(self, compact=None):
         return ', '.join(
             [
-                '"sr-adj-flags": {}'.format(self.flags.json()),
+                '"sr-adj-flags": {}'.format(LsGenericFlags.json(self)),
                 '"sids": {}'.format(json.dumps(self.sids)),
                 '"undecoded-sids": {}'.format(json.dumps(self.undecoded)),
                 '"sr-adj-weight": {}'.format(json.dumps(self.weight)),

@@ -11,7 +11,8 @@ from struct import unpack
 from exabgp.util import hexstring
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -24,14 +25,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #   |                       SID/Index/Label (variable)              |
 #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+# 	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
 
 @LINKSTATE.register()
-class SrPrefix(object):
+class SrPrefix(LsGenericFlags):
     TLV = 1158
- 
-   # 	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
-    ISIS_SR_FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
- 
+    FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
+
     def __init__(self, flags, sids, sr_algo, undecoded=[]):
         self.flags = flags
         self.sids = sids
@@ -44,7 +44,7 @@ class SrPrefix(object):
     @classmethod
     def unpack(cls, data, length):
         # We only support IS-IS flags for now.
-        flags = LsGenericFlags.unpack(data[0:1], cls.ISIS_SR_FLAGS)
+        flags = cls.unpack_flags(data[0:1])
         #
         # Parse Algorithm
         sr_algo = data[1]
@@ -62,11 +62,11 @@ class SrPrefix(object):
         sids = []
         raw = []
         while data:
-            if flags.flags['V'] and flags.flags['L']:
+            if flags['V'] and flags['L']:
                 sid = unpack('!L', bytes([0]) + data[:3])[0]
                 data = data[3:]
                 sids.append(sid)
-            elif (not flags.flags['V']) and (not flags.flags['L']):
+            elif (not flags['V']) and (not flags['L']):
                 if len(data) != 4:
                     # Cisco IOS XR Software, Version 6.1.1.19I is not
                     # correctly setting the flags
@@ -83,7 +83,7 @@ class SrPrefix(object):
     def json(self, compact=None):
         return ', '.join(
             [
-                '"sr-prefix-flags": {}'.format(self.flags.json()),
+                '"sr-prefix-flags": {}'.format(LsGenericFlags.json(self)),
                 '"sids": {}'.format(json.dumps(self.sids)),
                 '"undecoded-sids": {}'.format(json.dumps(self.undecoded)),
                 '"sr-algorithm": {}'.format(json.dumps(self.sr_algo)),

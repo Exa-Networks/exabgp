@@ -6,7 +6,8 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -27,26 +28,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #           | Reserved | Reserved for future use.  |           |
 #           +----------+---------------------------+-----------+
 
+# 	RFC 7752 3.3.3.1. IGP Flags TLV
+
 
 @LINKSTATE.register()
-class IgpFlags(object):
+class IgpFlags(LsGenericFlags):
+    REPR = 'IGP flags'
+    JSON = 'igp-flags'
     TLV = 1152
-
-    # 	RFC 7752 3.3.3.1. IGP Flags TLV
-    LS_IGP_FLAGS = ['D', 'N', 'L', 'P', 'RSV', 'RSV', 'RSV', 'RSV']
-
-    def __init__(self, igpflags):
-        self.igpflags = igpflags
-
-    def __repr__(self):
-        return "IGP flags: %s" % (self.igpflags)
-
-    @classmethod
-    def unpack(cls, data, length):
-        if length > 1:
-            raise Notify(3, 5, "IGP Flags TLV length too large")
-
-        return cls(LsGenericFlags.unpack(data[0:1], cls.LS_IGP_FLAGS))
-
-    def json(self, compact=None):
-        return '"igp-flags": {}'.format(self.igpflags.json())
+    FLAGS = ['D', 'N', 'L', 'P', 'RSV', 'RSV', 'RSV', 'RSV']
+    LEN = 1

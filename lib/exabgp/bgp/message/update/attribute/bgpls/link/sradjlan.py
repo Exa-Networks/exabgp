@@ -11,7 +11,8 @@ from struct import unpack
 from exabgp.util import hexstring
 
 from exabgp.protocol.iso import ISO
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 
 #   0                   1                   2                   3
@@ -33,13 +34,12 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #   +---------------------------------------------------------------+
 # 		draft-gredler-idr-bgp-ls-segment-routing-ext-03
 
+#  draft-ietf-isis-segment-routing-extensions - Adj-SID IS-IS Flags
 
 @LINKSTATE.register()
-class SrAdjacencyLan(object):
+class SrAdjacencyLan(LsGenericFlags):
     TLV = 1100
-
-    #  draft-ietf-isis-segment-routing-extensions - Adj-SID IS-IS Flags
-    ISIS_SR_ADJ_FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
+    FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
 
     def __init__(self, flags, sids, weight, undecoded=[]):
         self.flags = flags
@@ -53,7 +53,7 @@ class SrAdjacencyLan(object):
     @classmethod
     def unpack(cls, data, length):
         # We only support IS-IS flags for now.
-        flags = LsGenericFlags.unpack(data[0:1], cls.ISIS_SR_ADJ_FLAGS)
+        flags = cls.unpack_flags(data[0:1])
         # Parse adj weight
         weight = data[1]
         # Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
@@ -90,7 +90,7 @@ class SrAdjacencyLan(object):
     def json(self, compact=None):
         return ', '.join(
             [
-                '"sr-adj-lan-flags": {}'.format(self.flags.json()),
+                '"sr-adj-lan-flags": {}'.format(LsGenericFlags.json(self)),
                 '"sids": {}'.format(json.dumps(self.sids)),
                 '"undecoded-sids": {}'.format(json.dumps(self.undecoded)),
                 '"sr-adj-lan-weight": {}'.format(json.dumps(self.weight)),

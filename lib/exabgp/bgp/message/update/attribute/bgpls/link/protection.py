@@ -7,7 +7,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
 
 #       0                   1
 #       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
@@ -26,22 +27,18 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 
 
 @LINKSTATE.register()
-class LinkProtectionType(object):
+class LinkProtectionType(LsGenericFlags):
+    REPR = 'Link protection mask'
+    JSON = 'link-protection-flags'
     TLV = 1093
-
-    def __init__(self, protectionflags):
-        self.protectionflags = protectionflags
-
-    def __repr__(self):
-        return "Link protection mask: %s" % (self.protectionflags)
-
-    @classmethod
-    def unpack(cls, data, length):
-        if length != 2:
-            raise Notify(3, 5, "Wrong size for protection type TLV")
-
-        # We only care about the first octect
-        return cls(LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_PROTECTION_MASK))
-
-    def json(self, compact=None):
-        return '"link-protection-flags": {}'.format(self.protectionflags.json())
+    FLAGS = [
+        'ExtraTrafic',
+        'Unprotected',
+        'Shared',
+        'Dedicated 1:1',
+        'Dedicated 1+1',
+        'Enhanced',
+        'RSV',
+        'RSV',
+    ]
+    LEN = 2
