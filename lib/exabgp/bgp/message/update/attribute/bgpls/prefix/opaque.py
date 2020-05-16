@@ -12,6 +12,7 @@ from struct import unpack
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 #
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -25,17 +26,11 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class PrefixOpaque(object):
+class PrefixOpaque(BaseLS):
     TLV = 1157
-
-    def __init__(self, opaque):
-        self.opaque = opaque
-
-    def __repr__(self):
-        return "Prefix Opaque attribute: %s" % (self.opaque)
+    REPR = 'Opaque Prefix Attribute'
+    JSON = 'opaque-prefix'
 
     @classmethod
     def unpack(cls, data, length):
         return cls(unpack("!%ds" % length, data[:length])[0])
-
-    # XXX: Missing JSON

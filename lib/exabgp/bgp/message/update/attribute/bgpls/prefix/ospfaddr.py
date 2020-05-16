@@ -10,6 +10,7 @@ from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -22,22 +23,14 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class OspfForwardingAddress(object):
+class OspfForwardingAddress(BaseLS):
     TLV = 1156
-
-    def __init__(self, addr):
-        self.addr = addr
-
-    def __repr__(self):
-        return "Ospf forwarding address: '%s'" % (self.addr)
+    REPR = 'Ospf forwarding address'
+    JSON = 'ospf-forwarding-address'
 
     @classmethod
     def unpack(cls, data, length):
         size = len(data)
         if size not in (4, 16):
             raise Notify(3, 5, "Error parsing OSPF Forwarding Address. Wrong size")
-
         return cls(IP.unpack(data[:size]))
-
-    def json(self, compact=None):
-        return '"ospf-forwarding-address": "%s"' % str(self.addr)
