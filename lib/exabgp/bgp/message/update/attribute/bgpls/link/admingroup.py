@@ -10,25 +10,17 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 @LinkState.register()
-class AdminGroup(object):
+class AdminGroup(BaseLS):
     TLV = 1088
-
-    def __init__(self, colormask):
-        self.colormask = colormask
-
-    def __repr__(self):
-        return "Admin Group mask: %s" % (self.colormask)
+    REPR = 'Admin Group mask'
+    JSON = 'admin-group-mask'
+    LEN = 4
 
     @classmethod
     def unpack(cls, data, length):
-        if length != 4:
-            raise Notify(3, 5, "Unable to decode attribute. Incorrect Size")
-
-        colormask = unpack('!L', data[:4])[0]
-        return cls(colormask=colormask)
-
-    def json(self, compact=None):
-        return '"admin-group-mask": %s' % self.colormask
+        cls.check(length)
+        return cls(unpack('!L', data[:4])[0])

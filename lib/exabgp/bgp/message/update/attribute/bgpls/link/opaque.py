@@ -12,6 +12,7 @@ from struct import unpack
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 #
 #     0                   1                   2                   3
@@ -29,13 +30,10 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register()
 class LinkOpaque(object):
     TLV = 1097
-
-    def __init__(self, opaque):
-        self.opaque = opaque
-
-    def __repr__(self):
-        return "Link Opaque attribute: %s" % (self.opaque)
+    REPR = 'Opaque Link attribute'
+    REPR = 'opaque-link'
 
     @classmethod
     def unpack(cls, data, length):
+        # XXX: cls.check(length)
         return cls(unpack("!%ds" % length, data[:length])[0])

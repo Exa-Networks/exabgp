@@ -11,6 +11,7 @@ from struct import unpack
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 #   The IGP Metric TLV carries the metric for this link.  The length of
@@ -29,14 +30,10 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class IgpMetric(object):
+class IgpMetric(BaseLS):
     TLV = 1095
-
-    def __init__(self, igpmetric):
-        self.igpmetric = igpmetric
-
-    def __repr__(self):
-        return "IGP Metric: %s" % (self.igpmetric)
+    REPR = 'IGP Metric'
+    JSON = 'igp-metric'
 
     @classmethod
     def unpack(cls, data, length):
@@ -53,6 +50,3 @@ class IgpMetric(object):
             return cls(unpack('!L', bytes([0]) + data)[0])
 
         raise Notify(3, 5, "Incorrect IGP Metric Size")
-
-    def json(self, compact=None):
-        return '"igp-metric": %d' % int(self.igpmetric[0])
