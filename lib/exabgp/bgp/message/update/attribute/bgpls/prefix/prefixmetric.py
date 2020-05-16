@@ -11,6 +11,7 @@ from struct import unpack
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 #
 #      0                   1                   2                   3
@@ -24,21 +25,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class PrefixMetric(object):
+class PrefixMetric(BaseLS):
     TLV = 1155
-
-    def __init__(self, prefixmetric):
-        self.prefixmetric = prefixmetric
-
-    def __repr__(self):
-        return "prefix_metric: %s" % (self.prefixmetric)
+    REPR = 'prefix_metric'
+    JSON = 'prefix-metric'
+    LEN = 4
 
     @classmethod
     def unpack(cls, data, length):
-        if length != 4:
-            raise Notify(3, 5, "Incorrect Prefix Metric size")
-
-        return cls(unpack("!L", data)[0])
-
-    def json(self, compact=None):
-        return '"prefix-metric": %d' % int(self.prefixmetric)
+        cls.check(length)
+        return cls(int(unpack("!L", data)[0]))

@@ -10,6 +10,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 #   |    1030   | IPv4 Router-ID of   |   134/---    | [RFC5305]/4.3    |
@@ -20,22 +21,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 @LinkState.register(lsid=1030)
 @LinkState.register(lsid=1031)
-class RemoteTeRid(object):
-    def __init__(self, terid):
-        self.terid = terid
-
-    def __repr__(self):
-        return "Remote TE Router ID: %s" % (self.terid)
+class RemoteTeRid(BaseLS):
+    REPR = 'Remote TE Router ID'
+    JSON = 'remote-te-router-id'
 
     @classmethod
     def unpack(cls, data, length):
         size = len(data)
-
         if size not in (4, 16):
             raise Notify(3, 5, "Invalid remote-te size")
-
-        terid = IP.unpack(data[:size])
-        return cls(terid=terid)
-
-    def json(self, compact=None):
-        return '"remote-te-router-id": "%s"' % str(self.terid)
+        return cls(IP.unpack(data[:size]))

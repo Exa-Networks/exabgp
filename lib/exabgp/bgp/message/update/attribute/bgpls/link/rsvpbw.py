@@ -11,6 +11,7 @@ from struct import unpack
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 # This sub-TLV contains the maximum amount of bandwidth that can be
@@ -24,22 +25,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class RsvpBw(object):
+class RsvpBw(BaseLS):
     TLV = 1090
-
-    def __init__(self, rsvpbw):
-        self.rsvpbw = rsvpbw
-
-    def __repr__(self):
-        return "Maximum reservable link bandwidth: %s" % (self.rsvpbw)
+    REPR = 'Maximum reservable link bandwidth'
+    JSON = 'maximum-reservable-link-bandwidth'
+    LEN = 4
 
     @classmethod
     def unpack(cls, data, length):
-        if len(data) != 4:
-            raise Notify(3, 5, "Incorrect maximum reservable link bw metric")
-
-        rsvpbw = unpack('!f', data)[0]
-        return cls(rsvpbw=rsvpbw)
-
-    def json(self, compact=None):
-        return '"maximum-reservable-link-bandwidth": %s' % str(self.rsvpbw)
+        cls.check(length)
+        return cls(unpack('!f', data)[0])

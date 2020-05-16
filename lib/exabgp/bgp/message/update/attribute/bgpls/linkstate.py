@@ -77,36 +77,53 @@ class LinkState(Attribute):
         return ', '.join(str(d) for d in self.ls_attrs)
 
 
-class GenericLSID(object):
+class BaseLS(object):
     TLV = -1
-    # MERGE is not setup by the register here
-    MERGE = False
-
-    def __init__(self, code, rep):
-        self.rep = rep
-        self.code = code
-
-    def __repr__(self):
-        return "Attribute with code [ %s ] not implemented" % (self.code)
-
-    @classmethod
-    def unpack(cls, scode, data):
-        length = len(data)
-        info = binascii.b2a_uu(data[:length])
-        return cls(code=scode, rep=info)
-
-    def json(self, compact=None):
-        return '"attribute-not-implemented": "%s"' % (self.code)
-
-
-class LsGenericFlags(object):
     TLV = -1
     JSON = 'json-name-unset'
     REPR = 'repr name unset'
     LEN = None
 
+    def __init__(self, content):
+        self.content = content
+
+    def json(self, compact=None):
+        return '"{}": {}'.format(self.JSON, json.dumps(self.content))
+
+    def __repr__(self):
+        return "%s: %s" % (self.REPR, self.content)
+
+    @classmethod
+    def check(cls, length):
+        if cls.LEN is not None and length != cls.LEN:
+            raise Notify(3, 5, f'Unable to decode attribute, wrong size for {cls.REPR}')
+
+
+class GenericLSID(BaseLS):
+    def __init__(self, code, content):
+        BaseLS.__init__(self, content)
+        self.code = code
+
+    def __repr__(self):
+        return "Attribute with code [ %s ] not implemented" % (self.code)
+
+    def json(self):
+        return '"generic-LSID-{}": {}'.format(self.code, json.dumps(self.content))
+
+    @classmethod
+    def unpack(cls, scode, data):
+        return cls(scode, binascii.b2a_uu(data[:]))
+
+
+class LsGenericFlags(BaseLS):
     def __init__(self, flags):
         self.flags = flags
+
+    def __repr__(self):
+        return "%s: %s" % (self.REPR, self.flags)
+
+    def json(self, compact=None):
+        return '"{}": {}'.format(self.JSON, json.dumps(self.flags))
 
     @classmethod
     def unpack_flags(cls, data):
@@ -127,16 +144,8 @@ class LsGenericFlags(object):
         return flags
 
 
-    def json(self, compact=None):
-        return '"{}": {}'.format(self.JSON, json.dumps(self.flags))
-
-    def __repr__(self):
-        return "%s: %s" % (self.REPR, self.flags)
-
     @classmethod
     def unpack(cls, data, length):
-        if cls.LEN is not None and length != cls.LEN:
-            raise Notify(3, 5, f'wrong size for {cls.REPR}')
-
+        cls.check(length)
         # We only support IS-IS for now.
         return cls(cls.unpack_flags(data[0:1]))

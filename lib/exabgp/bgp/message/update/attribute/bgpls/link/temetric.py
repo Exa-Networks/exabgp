@@ -10,6 +10,7 @@ from struct import unpack
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 #     0                   1                   2                   3
@@ -23,21 +24,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class TeMetric(object):
+class TeMetric(BaseLS):
     TLV = 1092
-
-    def __init__(self, temetric):
-        self.temetric = temetric
-
-    def __repr__(self):
-        return "TE Default Metric: %s" % (self.temetric)
+    REPR = 'TE Default Metric'
+    JSON = 'te-metric'
+    LEN = 4
 
     @classmethod
     def unpack(cls, data, length):
-        if len(data) != 4:
-            raise Notify(3, 5, "Incorrect TE Metric Size")
-
+        cls.check(length)
         return cls(unpack('!L', data)[0])
-
-    def json(self, compact=None):
-        return '"te-metric": %d' % int(str(self.temetric))

@@ -11,6 +11,7 @@ import binascii
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 #      0                   1                   2                   3
@@ -24,21 +25,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class LinkName(object):
+class LinkName(BaseLS):
     TLV = 1098
-
-    def __init__(self, linkname):
-        self.linkname = linkname
-
-    def __repr__(self):
-        return "linkname: %s" % (self.linkname)
+    REPR = 'Link Name'
+    JSON = 'link-name'
 
     @classmethod
     def unpack(cls, data, length):
         if length > 255:
             raise Notify(3, 5, "Link Name TLV length too large")
-
         return cls(binascii.b2a_uu(data[:length]))
-
-    def json(self, compact=None):
-        return '"link-name": "%s"' % self.linkname

@@ -12,6 +12,7 @@ from exabgp.util import split
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 #      0                   1                   2                   3
@@ -29,20 +30,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class Srlg(object):
+class Srlg(BaseLS):
     TLV = 1096
-
-    def __init__(self, srlg):
-        self.srlg = srlg
-
-    def __repr__(self):
-        return "SRLG values on link are: %s" % (self.srlg)
+    REPR = 'link SRLG values'
+    JSON = 'shared-risk-link-groups'
 
     @classmethod
     def unpack(cls, data, length):
         if len(data) % 4:
             raise Notify(3, 5, "Unable to decode SRLG")
         return cls([unpack('!L', _)[0] for _ in split(data, 4)])
-
-    def json(self, compact=None):
-        return '"shared-risk-link-groups": %s' % str(self.srlg)

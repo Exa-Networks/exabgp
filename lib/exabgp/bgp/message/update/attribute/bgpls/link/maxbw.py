@@ -10,6 +10,7 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 #  This sub-TLV contains the maximum bandwidth that can be used on this
 #   link in this direction (from the system originating the LSP to its
@@ -21,21 +22,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class MaxBw(object):
+class MaxBw(BaseLS):
     TLV = 1089
-
-    def __init__(self, maxbw):
-        self.maxbw = maxbw
-
-    def __repr__(self):
-        return "Maximum link bandwidth: %s" % (self.maxbw)
+    REPR = 'Maximum link bandwidth'
+    JSON = 'maximum-link-bandwidth'
+    LEN = 4
 
     @classmethod
     def unpack(cls, data, length):
-        if length != 4:
-            raise Notify(3, 5, "Incorrect maximum link bw metric")
-
+        cls.check(length)
         return cls(unpack('!f', data)[0])
-
-    def json(self, compact=None):
-        return '"maximum-link-bandwidth": %s' % self.maxbw

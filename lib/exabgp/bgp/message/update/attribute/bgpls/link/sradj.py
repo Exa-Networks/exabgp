@@ -12,7 +12,6 @@ from exabgp.util import hexstring
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LsGenericFlags
-from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -78,11 +77,9 @@ class SrAdjacency(LsGenericFlags):
         return cls(flags=flags, sids=sids, weight=weight, undecoded=raw)
 
     def json(self, compact=None):
-        return ', '.join(
-            [
-                '"sr-adj-flags": {}'.format(LsGenericFlags.json(self)),
-                '"sids": {}'.format(json.dumps(self.sids)),
-                '"undecoded-sids": {}'.format(json.dumps(self.undecoded)),
-                '"sr-adj-weight": {}'.format(json.dumps(self.weight)),
-            ]
-        )
+        return json.dumps({
+            'sr-adj-flags': self.flags,
+            'sids': self.sids,
+            'undecoded-sids': self.undecoded,
+            'sr-adj-weight': self.weight,
+        })
