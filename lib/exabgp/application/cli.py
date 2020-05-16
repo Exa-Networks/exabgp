@@ -179,7 +179,7 @@ def cmdline(cmdarg):
 
     renamed = ['']
 
-    for pos, token in enumerate(command.split()):
+    for pos, token in enumerate(command):
         for nickname, name, match in (
             ('a', 'announce', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
             ('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
