@@ -532,8 +532,8 @@ def main():
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--help', help='this help :-)')
-    parser.add_argument('--echo', help='accept any BGP messages send it back to the emiter')
-    parser.add_argument('--sink', help='accept any BGP messages and reply with a keepalive')
+    parser.add_argument('--echo', help='accept any BGP messages send it back to the emiter', action='store_true')
+    parser.add_argument('--sink', help='accept any BGP messages and reply with a keepalive', action='store_true')
     parser.add_argument('--port', help='port to bind to', type=int, default=port)
     parser.add_argument('checks', help='a list of expected route announcement/withdrawl', nargs='?', type=open)
 
