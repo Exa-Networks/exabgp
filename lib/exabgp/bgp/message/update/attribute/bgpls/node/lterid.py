@@ -23,10 +23,10 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register(lsid=1028)
 @LinkState.register(lsid=1029)
 class LocalTeRid(object):
-    _terids = []
+    MERGE = True
 
-    def __init__(self):
-        self.terids = [str(terid) for terid in LocalTeRid._terids]
+    def __init__(self, terids):
+        self.terids = terids
 
     def __repr__(self):
         return "Local TE Router IDs: %s" % ', '.join(self.terids)
@@ -38,13 +38,10 @@ class LocalTeRid(object):
         if size not in (4, 16):
             raise Notify(3, 5, "Invalid remote-te size")
 
-        terid = IP.unpack(data[:size])
-        cls._terids.append(terid)
-        return cls()
+        return cls([str(IP.unpack(data[:size]))])
 
     def json(self, compact=None):
         return '"local-te-router-ids": ["%s"]' % '", "'.join(self.terids)
 
-    @classmethod
-    def reset(cls):
-        cls._terids = []
+    def merge(self, klass):
+        self.terids.extend(klass.terids)

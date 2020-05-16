@@ -34,6 +34,8 @@ class LinkState(Attribute):
     @classmethod
     def register(cls, lsid=None, flag=None):
         def register_lsid(klass):
+            if not hasattr(klass, 'MERGE'):
+                klass.MERGE = False
             scode = klass.TLV if lsid is None else lsid
             if scode in cls.registered_lsids:
                 raise RuntimeError('only one class can be registered per BGP link state attribute type')
@@ -41,6 +43,10 @@ class LinkState(Attribute):
             return klass
 
         return register_lsid
+
+    @classmethod
+    def klass(cls, code):
+        return cls.registered_lsids.get(code, GenericLSID)
 
     @classmethod
     def registered(cls, lsid, flag=None):
@@ -51,16 +57,15 @@ class LinkState(Attribute):
         ls_attrs = []
         while data:
             scode, length = unpack('!HH', data[:4])
-            if scode in cls.registered_lsids:
-                klass = cls.registered_lsids[scode].unpack(data[4 : length + 4], length)
-            else:
-                klass = GenericLSID(scode, data[4 : length + 4])
+            klass = cls.klass(scode).unpack(data[4: length + 4], length)
             klass.TLV = scode
+            data = data[length + 4:]
+            if klass.MERGE:
+                for k in ls_attrs:
+                    if k.TLV == klass.TLV:
+                        k.merge(k)
+                        continue
             ls_attrs.append(klass)
-            data = data[length + 4 :]
-        for klass in ls_attrs:
-            if hasattr(klass, 'terids'):
-                klass.reset()
 
         return cls(ls_attrs=ls_attrs)
 
@@ -73,7 +78,9 @@ class LinkState(Attribute):
 
 
 class GenericLSID(object):
-    TLV = 99999
+    TLV = -1
+    # MERGE is not setup by the register here
+    MERGE = False
 
     def __init__(self, code, rep):
         self.rep = rep
@@ -93,6 +100,7 @@ class GenericLSID(object):
 
 
 class LsGenericFlags(object):
+    TLV = -1
     JSON = 'json-name-unset'
     REPR = 'repr name unset'
     LEN = None
