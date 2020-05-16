@@ -25,6 +25,8 @@ Version 5.0.0:
  * Fix: parsing of SID in BGP-LS
  * Fix: bad parsing in some case when capability next-hop was used
    reported: alexejli
+ * Change: do not include attribute infos in updates if only sending withdrawals
+   patch: Denis Krienbühl
 
 Version 4.2.6:
  * Fix: prevent the deletion of IP addresses not added by the healthchecker
