@@ -20,6 +20,7 @@ def is_bgp(message):
 def args(sub):
     # fmt:off
     sub.add_argument('-d', '--debug', help='start the python debugger errors', action='store_true')
+    sub.add_argument('-p', '--pdb', help='fire the debugger on fault', action='store_true')
     sub.add_argument('configuration', help='configuration file(s)', type=str)
     sub.add_argument('payload', help='the BGP payload in hexadecimal', nargs='+', type=str)
     # fmt:on
@@ -55,6 +56,9 @@ def cmdline(cmdarg):
     if cmdarg.debug:
         env.log.all = True
         env.log.level = syslog.LOG_DEBUG
+
+    if cmdarg.pdb:
+        env.debug.pdb = True
 
     log.init()
     Reactor([cmdarg.configuration]).run(False, ROOT)
