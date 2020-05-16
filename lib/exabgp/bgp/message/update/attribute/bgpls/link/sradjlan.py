@@ -41,11 +41,12 @@ class SrAdjacencyLan(LsGenericFlags):
     TLV = 1100
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
 
-    def __init__(self, flags, sids, weight, undecoded=[]):
+    def __init__(self, flags, sids, weight, system_id, undecoded=[]):
         self.flags = flags
         self.sids = sids
         self.weight = weight
         self.undecoded = undecoded
+        self.system_id = system_id
 
     def __repr__(self):
         return "sr_adj_lan_flags: %s, sids: %s, undecoded_sid: %s" % (self.flags, self.sids, self.undecoded)
@@ -85,14 +86,13 @@ class SrAdjacencyLan(LsGenericFlags):
                 raw.append(hexstring(data))
                 break
 
-        return cls(flags=flags, sids=sids, weight=weight, undecoded=raw)
+        return cls(flags=flags, sids=sids, weight=weight, system_id=system_id, undecoded=raw)
 
     def json(self, compact=None):
-        return ', '.join(
-            [
-                '"sr-adj-lan-flags": {}'.format(LsGenericFlags.json(self)),
-                '"sids": {}'.format(json.dumps(self.sids)),
-                '"undecoded-sids": {}'.format(json.dumps(self.undecoded)),
-                '"sr-adj-lan-weight": {}'.format(json.dumps(self.weight)),
-            ]
-        )
+        return json.dumps({
+            'sr-adj-lan-flags': self.flags,
+            'sids': self.sids,
+            'undecoded-sids': self.undecoded,
+            'sr-adj-lan-weight': self.weight,
+            'system-id': self.sytemd_id
+        })
