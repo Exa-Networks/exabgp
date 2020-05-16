@@ -20,7 +20,6 @@ from exabgp.reactor.peer import Peer
 from exabgp.reactor.peer import ACTION
 from exabgp.reactor.asynchronous import ASYNC
 from exabgp.reactor.interrupt import Signal
-from exabgp.reactor.network.error import error
 
 from exabgp.reactor.api import API
 from exabgp.configuration.configuration import Configuration
@@ -73,7 +72,6 @@ class Reactor(object):
 
         self._peers = {}
 
-        self._reload_processes = False
         self._saved_pid = False
         self._poller = select.poll()
 
@@ -212,11 +210,11 @@ class Reactor(object):
 
     # ...
 
-    def _completed(self, peers):
-        for peer in peers:
+    def _pending_adjribout(self):
+        for peer in self.active_peers():
             if self._peers[peer].neighbor.rib.outgoing.pending():
-                return False
-        return True
+                return True
+        return False
 
     def run(self, validate, root):
         self.daemon.daemonise()
@@ -287,9 +285,6 @@ class Reactor(object):
         if not self.daemon.savepid():
             return self.Exit.pid
 
-        # did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
-        reload_completed = False
-
         wait = getenv().tcp.delay
         if wait:
             sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
@@ -304,32 +299,39 @@ class Reactor(object):
         while True:
             try:
                 if self.signal.received:
+                    signaled = self.signal.received
+
+                    # report that we received a signal
                     for key in self._peers:
                         if self._peers[key].neighbor.api['signal']:
                             self._peers[key].reactor.processes.signal(self._peers[key].neighbor, self.signal.number)
 
-                    signaled = self.signal.received
                     self.signal.rearm()
 
+                    # we always want to exit
                     if signaled == Signal.SHUTDOWN:
                         self.exit_code = self.Exit.normal
                         self.shutdown()
                         break
 
+                    # it does mot matter what we did if we are restarting
+                    # as the peers and network stack are replaced by new ones
                     if signaled == Signal.RESTART:
                         self.restart()
                         continue
 
-                    if not reload_completed:
+                    # did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
+                    if self._pending_adjribout():
+                        continue
+
+                    if signaled == Signal.RELOAD:
+                        self.load()
+                        self.processes.start(self.configuration.processes, False)
                         continue
 
                     if signaled == Signal.FULL_RELOAD:
-                        self._reload_processes = True
-
-                    if signaled in (Signal.RELOAD, Signal.FULL_RELOAD):
                         self.load()
-                        self.processes.start(self.configuration.processes, self._reload_processes)
-                        self._reload_processes = False
+                        self.processes.start(self.configuration.processes, True)
                         continue
 
                 if self.listener.incoming():
@@ -337,10 +339,6 @@ class Reactor(object):
                     self.asynchronous.schedule(
                         str(uuid.uuid1()), 'checking for new connection(s)', self.listener.new_connections()
                     )
-
-                peers = self.active_peers()
-                if self._completed(peers):
-                    reload_completed = True
 
                 sleep = ms_sleep
 
@@ -350,6 +348,7 @@ class Reactor(object):
                         self._poller.unregister(io)
                         del workers[io]
 
+                peers = self.active_peers()
                 # give a turn to all the peers
                 for key in list(peers):
                     peer = self._peers[key]
