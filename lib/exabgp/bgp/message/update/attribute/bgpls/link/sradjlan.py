@@ -71,11 +71,11 @@ class SrAdjacencyLan(FlagLS):
         while data:
             # Range Size: 3 octet value indicating the number of labels in
             # the range.
-            if int(flags.flags['V']) and int(flags.flags['L']):
+            if int(flags['V']) and int(flags['L']):
                 sid = unpack('!L', bytes([0]) + data[:3])[0]
                 data = data[3:]
                 sids.append(sid)
-            elif (not flags.flags['V']) and (not flags.flags['L']):
+            elif (not flags['V']) and (not flags['L']):
                 sid = unpack('!I', data[:4])[0]
                 data = data[4:]
                 sids.append(sid)
