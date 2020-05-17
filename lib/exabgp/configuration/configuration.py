@@ -387,8 +387,6 @@ class Configuration(_Configuration):
         if check is not None:
             return check
 
-        self.debug_check_route()
-        self.debug_self_check()
         return True
 
     def validate(self):
@@ -515,21 +513,3 @@ class Configuration(_Configuration):
             return self.error.set('invalid keyword "%s"' % command)
 
         return self._structure[name]['class'].parse(name, command)
-
-    def debug_check_route(self):
-        # we are not really running the program, just want to ....
-        if getenv().debug.route:
-            from exabgp.configuration.check import check_message
-
-            if check_message(self.neighbors, getenv().debug.route):
-                sys.exit(0)
-            sys.exit(1)
-
-    def debug_self_check(self):
-        # we are not really running the program, just want check the configuration validity
-        if getenv().debug.selfcheck:
-            from exabgp.configuration.check import check_neighbor
-
-            if check_neighbor(self.neighbors):
-                sys.exit(0)
-            sys.exit(1)

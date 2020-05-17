@@ -224,7 +224,6 @@ The following "unsupported" options are available to help with development:
   exabgp.debug.configuration  to trace with pdb configuration parsing errors
   exabgp.debug.pdb            enable python debugger on runtime errors (be ready to use `killall python` to handle orphaned child processes)
   exabgp.debug.route          similar to --decode but using the environment
-  exabgp.debug.selfcheck      does a self check on the configuration file (used by the QA code)
 ```
 
 ### Test suite

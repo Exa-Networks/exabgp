@@ -246,8 +246,8 @@ class Neighbor(object):
         changes = ''
         if with_changes:
             changes += '\nstatic { '
-            for changes in self.rib.incoming.queued_changes():
-                changes += '\n\t\t%s' % changes.extensive()
+            for change in self.rib.outgoing.queued_changes():
+                changes += '\n\t\t%s' % change.extensive()
             changes += '\n}'
 
         families = ''
