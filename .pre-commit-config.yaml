@@ -5,3 +5,9 @@ repos:
       - id: black
         language_version: python3.8
         args: [--line-length=120, --skip-string-normalization,--exclude=lib/exabgp/vendoring]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v1.2.3
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-bugbear]

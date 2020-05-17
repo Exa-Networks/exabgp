@@ -35,23 +35,23 @@ class Neighbor(object):
     extensive_template = """\
 Neighbor %(peer-address)s
 
-	Session                         Local
+    Session                         Local
 %(local-address)s
 %(state)s
 %(duration)s
 
-	Setup                           Local          Remote
+    Setup                           Local          Remote
 %(as)s
 %(id)s
 %(hold)s
 
-	Capability                      Local          Remote
+    Capability                      Local          Remote
 %(capabilities)s
 
-	Families                        Local          Remote        Add-Path
+    Families                        Local          Remote        Add-Path
 %(families)s
 
-	Message Statistic                Sent        Received
+    Message Statistic                Sent        Received
 %(messages)s
 """.replace(
         '\t', '  '

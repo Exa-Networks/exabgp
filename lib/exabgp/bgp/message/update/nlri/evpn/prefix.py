@@ -56,15 +56,15 @@ class Prefix(EVPN):
 
     def __init__(self, rd, esi, etag, label, ip, iplen, gwip, packed=None, nexthop=None, action=None, addpath=None):
         '''
-		rd: a RouteDistinguisher
-		esi: an EthernetSegmentIdentifier
-		etag: an EthernetTag
-		mac: a MAC
-		label: a LabelStackEntry
-		ip: an IP address (dotted quad string notation)
-		iplen: prefixlength for ip (defaults to 32)
-		gwip: an IP address (dotted quad string notation)
-		'''
+        rd: a RouteDistinguisher
+        esi: an EthernetSegmentIdentifier
+        etag: an EthernetTag
+        mac: a MAC
+        label: a LabelStackEntry
+        ip: an IP address (dotted quad string notation)
+        iplen: prefixlength for ip (defaults to 32)
+        gwip: an IP address (dotted quad string notation)
+        '''
         EVPN.__init__(self, action, addpath)
         self.nexthop = nexthop
         self.rd = rd
