@@ -16,6 +16,7 @@ from exabgp.application import server
 from exabgp.application import decode
 from exabgp.application import environ
 from exabgp.application import version
+from exabgp.application import validate
 from exabgp.application import healthcheck
 
 
@@ -29,7 +30,7 @@ def main():
 
     # compatibility with exabgp 4.x
     if len(sys.argv) > 1 and not ('-h' in sys.argv or '--help' in sys.argv):
-        if sys.argv[1] not in ('version', 'cli', 'healthcheck', 'decode', 'server', 'env'):
+        if sys.argv[1] not in ('version', 'cli', 'healthcheck', 'decode', 'server', 'env', 'validate'):
             sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
 
     formatter = argparse.RawDescriptionHelpFormatter
@@ -65,6 +66,10 @@ def main():
     sub = subparsers.add_parser('server', help='start exabgp', description=server.__doc__)
     sub.set_defaults(func=server.cmdline)
     server.args(sub)
+
+    sub = subparsers.add_parser('validate', help='validate configuration', description=validate.__doc__)
+    sub.set_defaults(func=validate.cmdline)
+    validate.args(sub)
 
     cmdarg = parser.parse_args()
     options = vars(cmdarg)

@@ -21,12 +21,14 @@ from exabgp.logger import log
 
 # this is imported from configuration.setup to make sure it was initialised
 from exabgp.environment import getenv
+from exabgp.environment import getconf
 from exabgp.environment import ENVFILE
 from exabgp.environment import ROOT
-from exabgp.environment import ETC
 
 from exabgp.application.pipe import named_pipe
 from exabgp.version import version
+
+from exabgp.bgp.message.update.attribute import Attribute
 
 
 def __exit(memory, code):
@@ -70,7 +72,7 @@ def args(sub):
     sub.add_argument('-1', '--once', help='only perform one attempt to connect to peers', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on critical logging, SIGTERM, and exceptions (shortcut for exabgp.pdb.enable=true)', action='store_true')
     sub.add_argument('-m', '--memory', help='display memory usage information on exit', action='store_true')
-    sub.add_argument('--profile', help='enable profiling (shortcut for exabgp.profile.enable=true exabgp.profile.file=PROFILE)', type=int)
+    sub.add_argument('--profile', help='enable profiling and set where the information should be saved', type=str, default='')
     sub.add_argument('configuration', help='configuration file(s)', nargs='+', type=str)
     # fmt:on
 
@@ -89,17 +91,9 @@ def cmdline(cmdarg):
 
     log.init()
 
-    delay = cmdarg.signal
-    _delayed_signal(delay, signal.SIGUSR1)
-
     if cmdarg.profile:
         env.profile.enable = True
-        if cmdarg.profile.lower() in ['1', 'true']:
-            env.profile.file = True
-        elif cmdarg.profile.lower() in ['0', 'false']:
-            env.profile.file = False
-        else:
-            env.profile.file = cmdarg.profile
+        env.profile.file = cmdarg.profile
 
     if cmdarg.once:
         env.tcp.once = True
@@ -108,38 +102,29 @@ def cmdline(cmdarg):
         env.debug.pdb = True
 
     if cmdarg.test:
-        env.debug.selfcheck = True
         env.log.parser = True
 
     if cmdarg.memory:
         env.debug.memory = True
 
+    if env.cache.attributes:
+        Attribute.caching = env.cache.attributes
+
     configurations = []
-    # check the file only once that we have parsed all the command line options and allowed them to run
-    for f in cmdarg.configuration:
-        # some users are using symlinks for atomic change of the configuration file
-        # using mv may however be better practice :p
-        normalised = os.path.realpath(os.path.normpath(f))
-        target = os.path.realpath(normalised)
-        if os.path.isfile(target):
-            configurations.append(normalised)
-            continue
-        if f.startswith('etc/exabgp'):
-            normalised = os.path.join(ETC, f[11:])
-            if os.path.isfile(normalised):
-                configurations.append(normalised)
-                continue
+    for configuration in cmdarg.configuration:
+        location = getconf(configuration)
+        if not location:
+            log.critical(f'{configuration} is not an exabgp config file', 'configuration')
+            sys.exit(1)
+        configurations.append(configuration)
 
-        log.debug('one of the arguments passed as configuration is not a file (%s)' % f, 'configuration')
-        sys.exit(1)
-
-    from exabgp.bgp.message.update.attribute import Attribute
-
-    Attribute.caching = env.cache.attributes
+    delay = cmdarg.signal
+    _delayed_signal(delay, signal.SIGUSR1)
 
     if env.debug.rotate or len(configurations) == 1:
         run(comment, configurations, cmdarg.validate)
 
+    if not (env.log.destination in ('syslog', 'stdout', 'stderr') or env.log.destination.startswith('host:')):
         log.error('can not log to files when running multiple configuration (as we fork)', 'configuration')
         sys.exit(1)
 

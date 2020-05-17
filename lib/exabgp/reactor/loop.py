@@ -237,7 +237,7 @@ class Reactor(object):
             if not self.listener.listen_on(ip, None, self._port, None, False, None):
                 return self.Exit.listening
 
-        if not self.load():
+        if not self.reload():
             return self.Exit.configuration
 
         if validate:  # only validate configuration
@@ -325,12 +325,12 @@ class Reactor(object):
                         continue
 
                     if signaled == Signal.RELOAD:
-                        self.load()
+                        self.reload()
                         self.processes.start(self.configuration.processes, False)
                         continue
 
                     if signaled == Signal.FULL_RELOAD:
-                        self.load()
+                        self.reload()
                         self.processes.start(self.configuration.processes, True)
                         continue
 
@@ -449,7 +449,7 @@ class Reactor(object):
         self.daemon.removepid()
         self._stopping = True
 
-    def load(self):
+    def reload(self):
         """Reload the configuration and send to the peer the route which changed"""
         log.notice('performing reload of exabgp %s' % version, 'configuration')
 

@@ -47,9 +47,8 @@ from exabgp.version import json as json_version
 # ...
 
 
-def check_neighbor(neighbors):
+def check_generation(neighbors):
     log._option['parser'] = True
-    log.notice('\ndecoding routes in configuration', 'parser')
 
     for name in neighbors.keys():
         neighbor = copy.deepcopy(neighbors[name])
@@ -203,7 +202,6 @@ def check_open(neighbor, raw):
 
 def check_update(neighbor, raw):
     log._option['parser'] = True
-    log.debug('\ndecoding routes in configuration', 'parser')
 
     neighbor = neighbor[list(neighbor)[0]]
 
