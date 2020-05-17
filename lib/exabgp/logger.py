@@ -102,7 +102,7 @@ def istty(std):
         return False
 
 
-class Logger(object):
+class log(object):
     RECORD = {
         'START': '\033[01;32m',  # Green
         'DEBUG': '',
@@ -146,38 +146,56 @@ class Logger(object):
 
     _instance = None
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(Logger, cls).__new__(cls)
-        return cls._instance
+    _short = False
+    _level = syslog.LOG_DEBUG
+
+    _option = {
+        'pdb': False,
+        'reactor': False,
+        'daemon': False,
+        'processes': False,
+        'configuration': False,
+        'network': False,
+        'wire': False,
+        'message': False,
+        'rib': False,
+        'timer': False,
+        'routes': False,
+        'parser': False,
+    }
 
     # we use os.pid everytime as we may fork and the class is instance before it
 
-    def pdb(self, level):
-        if self._option['pdb'] and level == 'CRIT':
+    @classmethod
+    def pdb(cls, level):
+        if cls._option['pdb'] and level == 'CRIT':
             # not sure why, pylint reports an import error here
             pdb.set_trace()
 
-    def config(self, config=None):
+    @classmethod
+    def config(cls, config=None):
         if config is not None:
-            self._config = config
-        return self._config
+            cls._config = config
+        return cls._config
 
-    def history(self):
-        return "\n".join(self._format(*_) for _ in self._history)
+    @classmethod
+    def history(cls):
+        return "\n".join(cls._format(*_) for _ in cls._history)
 
-    def _record(self, timestamp, message, source, level):
-        if len(self._history) > self._max_history:
-            self._history.popleft()
-        self._history.append((message, source, level, timestamp))
+    @classmethod
+    def _record(cls, timestamp, message, source, level):
+        if len(cls._history) > cls._max_history:
+            cls._history.popleft()
+        cls._history.append((message, source, level, timestamp))
 
-    def init(self):
+    @classmethod
+    def init(cls):
         env = getenv()
 
-        self.short = env.log.short
-        self.level = env.log.level
+        cls._short = env.log.short
+        cls._level = env.log.level
 
-        self._option = {
+        cls._option = {
             'pdb': env.debug.pdb,
             'reactor': env.log.enable and (env.log.all or env.log.reactor),
             'daemon': env.log.enable and (env.log.all or env.log.daemon),
@@ -193,14 +211,15 @@ class Logger(object):
         }
 
         if not env.log.enable:
-            self.destination = ''
+            cls.destination = ''
             return
 
-        self.destination = env.log.destination
+        cls.destination = env.log.destination
 
-        self.restart(True)
+        cls.restart(True)
 
-    def _local_syslog(self):
+    @classmethod
+    def _local_syslog(cls):
         if sys.platform == "darwin":
             address = '/var/run/syslog'
         else:
@@ -209,121 +228,127 @@ class Logger(object):
             address = ('localhost', 514)
         handler = logging.handlers.SysLogHandler(address)
 
-        self._syslog.addHandler(handler)
+        cls._syslog.addHandler(handler)
         return True
 
-    def _remote_syslog(self, destination):
+    @classmethod
+    def _remote_syslog(cls, destination):
         # If the address is invalid, each syslog call will print an error.
         # See how it can be avoided, as the socket error is encapsulated and not returned
         address = (destination, 514)
         handler = logging.handlers.SysLogHandler(address)
 
-        self._syslog.addHandler(handler)
+        cls._syslog.addHandler(handler)
         return True
 
-    def _standard(self, facility):
+    @classmethod
+    def _standard(cls, facility):
         handler = logging.StreamHandler(getattr(sys, facility))
 
-        self._syslog.addHandler(handler)
+        cls._syslog.addHandler(handler)
         return True
 
-    def _file(self, destination):
+    @classmethod
+    def _file(cls, destination):
         # folder
-        logfile = os.path.realpath(os.path.normpath(os.path.join(self._cwd, destination)))
+        logfile = os.path.realpath(os.path.normpath(os.path.join(cls._cwd, destination)))
         can = _can_write(logfile)
         if can is True:
             handler = logging.handlers.RotatingFileHandler(logfile, maxBytes=5 * 1024 * 1024, backupCount=5)
         elif can is None:
-            self.critical('ExaBGP can not access (perhaps as it does not exist) the log folder provided', 'logger')
+            cls.critical('ExaBGP can not access (perhaps as it does not exist) the log folder provided', 'logger')
             return False
         else:
-            self.critical('ExaBGP does not have the right to write in the requested log directory', 'logger')
+            cls.critical('ExaBGP does not have the right to write in the requested log directory', 'logger')
             return False
 
-        self._syslog.addHandler(handler)
+        cls._syslog.addHandler(handler)
         return True
 
-    def restart(self, first=False):
+    @classmethod
+    def restart(cls, first=False):
         try:
             if first:
-                self._where = 'stdout'
-                self._default = logging.StreamHandler(sys.stdout)
-                self._syslog = logging.getLogger()
-                self._syslog.setLevel(logging.DEBUG)
-                self._syslog.addHandler(self._default)
+                cls._where = 'stdout'
+                cls._default = logging.StreamHandler(sys.stdout)
+                cls._syslog = logging.getLogger()
+                cls._syslog.setLevel(logging.DEBUG)
+                cls._syslog.addHandler(cls._default)
                 return True
         except IOError:
             # no way to report anything via stdout, silently failing
             return False
 
-        if not self._syslog:
+        if not cls._syslog:
             # no way to report anything via stdout, silently failing
             return False
 
-        for handler in self._syslog.handlers:
-            self._syslog.removeHandler(handler)
-        self._syslog.addHandler(self._default)
+        for handler in cls._syslog.handlers:
+            cls._syslog.removeHandler(handler)
+        cls._syslog.addHandler(cls._default)
 
         try:
-            if self.destination == 'stderr':
-                self._where = 'stderr'
+            if cls.destination == 'stderr':
+                cls._where = 'stderr'
                 return True
-            elif self.destination == 'stdout':
-                self._where = 'out'
-                result = self._standard(self.destination)
-            elif self.destination in ('', 'syslog'):
-                self._where = 'syslog'
-                result = self._local_syslog()
-            elif self.destination.startswith('host:'):
-                self._where = 'syslog'
-                result = self._remote_syslog(self.destination[5:].strip())
+            elif cls.destination == 'stdout':
+                cls._where = 'out'
+                result = cls._standard(cls.destination)
+            elif cls.destination in ('', 'syslog'):
+                cls._where = 'syslog'
+                result = cls._local_syslog()
+            elif cls.destination.startswith('host:'):
+                cls._where = 'syslog'
+                result = cls._remote_syslog(cls.destination[5:].strip())
             else:
-                self._where = 'file'
-                result = self._file(self.destination)
+                cls._where = 'file'
+                result = cls._file(cls.destination)
 
             if result:
-                self._syslog.removeHandler(self._default)
+                cls._syslog.removeHandler(cls._default)
             return result
         except IOError:
-            self.critical('Can not set logging (are stdout/stderr closed?)', 'logger')
+            cls.critical('Can not set logging (are stdout/stderr closed?)', 'logger')
             return False
 
-    def _format(self, message, source, level, timestamp=None):
+    @classmethod
+    def _format(cls, message, source, level, timestamp=None):
         if timestamp is None:
             timestamp = time.localtime()
-            self._record(timestamp, message, source, level)
+            cls._record(timestamp, message, source, level)
 
-        if self.short:
+        if cls._short:
             return message
 
-        if self._where in ['stdout', 'stderr', 'out']:
+        if cls._where in ['stdout', 'stderr', 'out']:
             now = time.strftime('%H:%M:%S', timestamp)
-            if not self.TTY[self._where]():
-                return "%s | %-6d | %-15s | %s" % (now, self._pid, source, message)
+            if not cls.TTY[cls._where]():
+                return "%s | %-6d | %-15s | %s" % (now, cls._pid, source, message)
             return "%s | %-6d | %s%-13s%s | %s%-8s%s" % (
                 now,
-                self._pid,
-                self.RECORD.get(level, ''),
+                cls._pid,
+                cls.RECORD.get(level, ''),
                 source,
-                self.END,
-                self.MESSAGE.get(level, ''),
+                cls.END,
+                cls.MESSAGE.get(level, ''),
                 message,
-                self.END,
+                cls.END,
             )
-        elif self._where in [
+        elif cls._where in [
             'syslog',
         ]:
-            return "%s[%d]: %-13s %s" % (APPLICATION, self._pid, source, message)
-        elif self._where in [
+            return "%s[%d]: %-13s %s" % (APPLICATION, cls._pid, source, message)
+        elif cls._where in [
             'file',
         ]:
             now = time.strftime('%a, %d %b %Y %H:%M:%S', timestamp)
-            return "%s %-6d %-13s %s" % (now, self._pid, source, message)
+            return "%s %-6d %-13s %s" % (now, cls._pid, source, message)
         else:
             # failsafe
-            return "%s | %-8s | %-6d | %-13s | %s" % (now, level, self._pid, source, message)
+            return "%s | %-8s | %-6d | %-13s | %s" % (now, level, cls._pid, source, message)
 
-    def _report(self, message, source, level):
+    @classmethod
+    def _report(cls, message, source, level):
         if source.startswith('incoming-'):
             src = 'wire'
         elif source.startswith('outgoing-'):
@@ -335,35 +360,38 @@ class Logger(object):
         else:
             src = source
 
-        log = self._option.get(src, True) and getattr(syslog, 'LOG_%s' % level) <= self.level
+        log = cls._option.get(src, True) and getattr(syslog, 'LOG_%s' % level) <= cls._level
 
         if not log:
             return
 
         for line in message.split('\n'):
-            if self._syslog:
-                self._syslog.debug(self._format(line, source, level))
+            if cls._syslog:
+                cls._syslog.debug(cls._format(line, source, level))
             else:
-                print(self._format(line, source, level))
+                print(cls._format(line, source, level))
                 sys.stdout.flush()
 
-    def debug(self, message, source='', level='DEBUG'):
-        self._report(message, source, level)
+    @classmethod
+    def debug(cls, message, source='', level='DEBUG'):
+        cls._report(message, source, level)
 
-    def info(self, message, source='', level='INFO'):
-        self._report(message, source, level)
+    @classmethod
+    def info(cls, message, source='', level='INFO'):
+        cls._report(message, source, level)
 
-    def notice(self, message, source='', level='NOTICE'):
-        self._report(message, source, level)
+    @classmethod
+    def notice(cls, message, source='', level='NOTICE'):
+        cls._report(message, source, level)
 
-    def warning(self, message, source='', level='WARNING'):
-        self._report(message, source, level)
+    @classmethod
+    def warning(cls, message, source='', level='WARNING'):
+        cls._report(message, source, level)
 
-    def error(self, message, source='', level='ERR'):
-        self._report(message, source, level)
+    @classmethod
+    def error(cls, message, source='', level='ERR'):
+        cls._report(message, source, level)
 
-    def critical(self, message, source='', level='CRIT'):
-        self._report(message, source, level)
-
-
-log = Logger()
+    @classmethod
+    def critical(cls, message, source='', level='CRIT'):
+        cls._report(message, source, level)
