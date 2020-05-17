@@ -57,9 +57,9 @@ class LinkState(Attribute):
         ls_attrs = []
         while data:
             scode, length = unpack('!HH', data[:4])
-            klass = cls.klass(scode).unpack(data[4: length + 4], length)
+            klass = cls.klass(scode).unpack(data[4 : length + 4], length)
             klass.TLV = scode
-            data = data[length + 4:]
+            data = data[length + 4 :]
             if klass.MERGE:
                 for k in ls_attrs:
                     if k.TLV == klass.TLV:
@@ -131,18 +131,14 @@ class FlagLS(BaseLS):
         repeat = len(cls.FLAGS) - pad
         hex_rep = int(binascii.b2a_hex(data), 16)
         bits = f'{hex_rep:08b}'
-        valid_flags = [
-            ''.join(item) + '0' * pad
-            for item in itertools.product('01', repeat=repeat)
-        ]
+        valid_flags = [''.join(item) + '0' * pad for item in itertools.product('01', repeat=repeat)]
         valid_flags.append('0000')
         if bits in valid_flags:
-            flags = dict(zip(cls.FLAGS, [0, ] * len(cls.FLAGS)))
+            flags = dict(zip(cls.FLAGS, [0,] * len(cls.FLAGS)))
             flags.update(dict((k, int(v)) for k, v in zip(cls.FLAGS, bits)))
         else:
             raise Notify(3, 5, "Invalid SR flags mask")
         return flags
-
 
     @classmethod
     def unpack(cls, data, length):

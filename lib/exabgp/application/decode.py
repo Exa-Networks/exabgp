@@ -33,7 +33,7 @@ def main():
 
 
 def cmdline(cmdarg):
-    route = ''.join(cmdarg.payload).replace(' ','')
+    route = ''.join(cmdarg.payload).replace(' ', '')
 
     if not is_bgp(route):
         # parser.print_usage()
@@ -62,6 +62,7 @@ def cmdline(cmdarg):
 
     log.init()
     Reactor([cmdarg.configuration]).run(False, ROOT)
+
 
 if __name__ == '__main__':
     main()

@@ -266,12 +266,8 @@ class Reactor(object):
             self.processes.start(self.configuration.processes)
 
         if not self.daemon.drop_privileges():
-            log.critical(
-                'could not drop privileges to \'%s\' refusing to run as root' % self.daemon.user, 'reactor'
-            )
-            log.critical(
-                'set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor'
-            )
+            log.critical('could not drop privileges to \'%s\' refusing to run as root' % self.daemon.user, 'reactor')
+            log.critical('set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor')
             return self.Exit.privileges
 
         if self.early_drop:
@@ -482,9 +478,7 @@ class Reactor(object):
             # same peer but perhaps not the routes
             else:
                 # finding what route changed and sending the delta is not obvious
-                log.debug(
-                    'peer definition identical, updating peer routes if required for %s' % str(key), 'reactor'
-                )
+                log.debug('peer definition identical, updating peer routes if required for %s' % str(key), 'reactor')
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
                 if ip.afi == neighbor.peer_address.afi:

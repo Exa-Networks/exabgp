@@ -23,7 +23,6 @@ from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.reactor.interrupt import Signal
 
 
-
 def nop(_):
     return _
 
@@ -182,9 +181,7 @@ class JSON(object):
 
     def signal(self, neighbor, signal):
         return self._header(
-            self._neighbor(
-                neighbor, None, self._kv({'code': '%d' % signal, 'name': Signal.name(signal),})
-            ),
+            self._neighbor(neighbor, None, self._kv({'code': '%d' % signal, 'name': Signal.name(signal),})),
             '',
             '',
             neighbor,

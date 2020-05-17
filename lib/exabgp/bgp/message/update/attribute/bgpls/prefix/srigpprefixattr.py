@@ -22,6 +22,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 # 	RFC 7794 IPv4/IPv6 Extended Reachability Attribute Flags
 
+
 @LinkState.register()
 class SrIgpPrefixAttr(FlagLS):
     REPR = 'Prefix Attr Flags'

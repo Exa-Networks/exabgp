@@ -192,9 +192,7 @@ class Listener(object):
 
                 denied = reactor.handle_connection(key, connection)
                 if denied:
-                    log.debug(
-                        'refused connection from %s due to the state machine' % connection.name(), 'network'
-                    )
+                    log.debug('refused connection from %s due to the state machine' % connection.name(), 'network')
                     break
                 log.debug('accepted connection from %s' % connection.name(), 'network')
                 break
@@ -232,9 +230,7 @@ class Listener(object):
                 new_peer = Peer(new_neighbor, reactor)
                 denied = new_peer.handle_connection(connection)
                 if denied:
-                    log.debug(
-                        'refused connection from %s due to the state machine' % connection.name(), 'network'
-                    )
+                    log.debug('refused connection from %s due to the state machine' % connection.name(), 'network')
                     return
 
                 reactor.register_peer(new_neighbor.name(), new_peer)

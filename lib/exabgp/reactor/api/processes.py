@@ -305,9 +305,7 @@ class Processes(object):
             self._process[process].stdin.flush()
         except IOError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
-            log.debug(
-                'error received while FLUSHING data to helper program, retrying (%s)' % errstr(exc), 'process'
-            )
+            log.debug('error received while FLUSHING data to helper program, retrying (%s)' % errstr(exc), 'process')
 
         return True
 

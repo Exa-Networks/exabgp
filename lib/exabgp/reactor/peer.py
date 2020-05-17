@@ -35,6 +35,7 @@ from exabgp.logger import LazyFormat
 
 from exabgp.debug import format_exception
 
+
 class ACTION(object):
     CLOSE = 0x01  # finished, no need to restart the peer
     LATER = 0x02  # re-run at the next reactor round

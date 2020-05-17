@@ -139,9 +139,7 @@ class Connection(object):
                     read = self.io.recv(number)
                     if not read:
                         self.close()
-                        log.warning(
-                            '%s %s lost TCP session with peer' % (self.name(), self.peer), self.session()
-                        )
+                        log.warning('%s %s lost TCP session with peer' % (self.name(), self.peer), self.session())
                         raise LostConnection('the TCP connection was closed by the remote end')
                     data += read
 
@@ -172,9 +170,7 @@ class Connection(object):
                     raise LostConnection('issue reading on the socket: %s' % errstr(exc))
                 # what error could it be !
                 else:
-                    log.critical(
-                        '%s %s undefined error reading on socket' % (self.name(), self.peer), self.session()
-                    )
+                    log.critical('%s %s undefined error reading on socket' % (self.name(), self.peer), self.session())
                     raise NetworkError('Problem while reading data from the network (%s)' % errstr(exc))
 
     def writer(self, data):
@@ -197,9 +193,7 @@ class Connection(object):
                     number = self.io.send(data)
                     if not number:
                         self.close()
-                        log.warning(
-                            '%s %s lost TCP connection with peer' % (self.name(), self.peer), self.session()
-                        )
+                        log.warning('%s %s lost TCP connection with peer' % (self.name(), self.peer), self.session())
                         raise LostConnection('lost the TCP connection')
 
                     data = data[number:]
@@ -227,9 +221,7 @@ class Connection(object):
                     raise NetworkError('Problem while writing data to the network (%s)' % errstr(exc))
                 # what error could it be !
                 else:
-                    log.critical(
-                        '%s %s undefined error writing on socket' % (self.name(), self.peer), self.session()
-                    )
+                    log.critical('%s %s undefined error writing on socket' % (self.name(), self.peer), self.session())
                     yield False
 
     def reader(self):

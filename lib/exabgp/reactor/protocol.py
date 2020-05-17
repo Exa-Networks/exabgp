@@ -273,9 +273,7 @@ class Protocol(object):
             )
             log.warning('the connection can not carry the following family/families', self.connection.session())
             for reason, (afi, safi) in self.negotiated.mismatch:
-                log.warning(
-                    ' - %s is not configured for %s/%s' % (reason, afi, safi), self.connection.session()
-                )
+                log.warning(' - %s is not configured for %s/%s' % (reason, afi, safi), self.connection.session())
             log.warning(
                 'therefore no routes of this kind can be announced on the connection', self.connection.session()
             )

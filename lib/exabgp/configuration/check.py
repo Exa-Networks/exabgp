@@ -248,11 +248,13 @@ def check_update(neighbor, raw):
             update = Update.unpack_message(injected, negotiated)
         except Notify:
             import traceback
+
             log.error('could not parse the message', 'parser')
             log.error(traceback.format_exc(), 'parser')
             return False
         except Exception:
             import traceback
+
             log.error('could not parse the message', 'parser')
             log.error(traceback.format_exc(), 'parser')
             return False
@@ -261,9 +263,7 @@ def check_update(neighbor, raw):
         for number in range(len(update.nlris)):
             change = Change(update.nlris[number], update.attributes)
             log.info('decoded %s %s %s' % (decoding, change.nlri.action, change.extensive()), 'parser')
-        log.info(
-            'update json %s' % Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''), 'parser'
-        )
+        log.info('update json %s' % Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''), 'parser')
 
     return True
 

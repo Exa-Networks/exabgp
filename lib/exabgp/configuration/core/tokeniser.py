@@ -12,6 +12,7 @@ from collections import deque
 from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
 
+
 class Iterator(object):
     def __init__(self):
         self.next = deque()
@@ -46,6 +47,7 @@ class Iterator(object):
             return peaked
         except StopIteration:
             return ''
+
 
 class Tokeniser(object):
     @staticmethod

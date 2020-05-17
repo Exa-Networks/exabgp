@@ -29,4 +29,3 @@ def intercept(dtype, value, trace):
 
 def trace_interceptor():
     sys.excepthook = intercept
-
