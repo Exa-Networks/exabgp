@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-host, port = "localhost", 9999
-
 import os
 import sys
 import signal
@@ -11,6 +9,9 @@ import select
 
 from SocketServer import TCPServer
 from SocketServer import StreamRequestHandler
+
+
+host, port = "localhost", 9999
 
 
 class TimeoutException(Exception):

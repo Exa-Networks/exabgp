@@ -36,8 +36,8 @@ class JSON(object):
         self.compact = getenv().api.compact
 
     # def _reset (self, neighbor):
-    # 	self._count[neighbor.uid] = 0
-    # 	return 0
+    #     self._count[neighbor.uid] = 0
+    #     return 0
 
     def _counter(self, neighbor):
         increased = self._count.get(neighbor.uid, 0) + 1
@@ -75,9 +75,9 @@ class JSON(object):
 
     __neighbor = '''\
 "neighbor": {
-	"address": { "local": "%s", "peer": "%s" },
-	"asn": { "local": %s, "peer": %s }
-	%s%s%s%s
+    "address": { "local": "%s", "peer": "%s" },
+    "asn": { "local": %s, "peer": %s }
+    %s%s%s%s
 }'''.replace(
         '\t', ''
     ).replace(
@@ -419,6 +419,6 @@ class JSON(object):
         elif what == 'counter':
             return self._operational_counter(neighbor, direction, operational, header, body)
         # elif what == 'interface':
-        # 	return self._operational_interface(peer,operational)
+        #     return self._operational_interface(peer,operational)
         else:
             raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
