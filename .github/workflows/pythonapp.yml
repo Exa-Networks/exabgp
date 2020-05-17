@@ -25,6 +25,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f qa/requirements.txt ]; then pip install -r qa/requirements.txt; fi
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -38,6 +39,10 @@ jobs:
         ./qa/bin/functional run
         ./sbin/exabgp decode ./etc/exabgp/api-open.conf FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
         env exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
+
+    # - name: Coveralls
+    #   run: |
+    #     coveralls
 
 #     - name: Test with pytest
 #       run: |
