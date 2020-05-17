@@ -36,6 +36,9 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.logger import log
 
 
+log.init()
+
+
 bodies = []
 
 # fmt: off

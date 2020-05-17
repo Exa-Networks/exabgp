@@ -15,7 +15,6 @@ import sys
 import glob
 
 from exabgp.configuration.configuration import Configuration
-from exabgp.configuration.check import check_neighbor
 
 from exabgp.environment import getenv
 
@@ -43,9 +42,8 @@ class TestControl(unittest.TestCase):
             print(filename)
             print('=' * 80)
             sys.stdout.flush()
-            configuration = Configuration([filename,])
+            configuration = Configuration([filename, ])
             configuration.reload()
-            self.assertEqual(check_neighbor(configuration.neighbors), True)
             del configuration
 
 
