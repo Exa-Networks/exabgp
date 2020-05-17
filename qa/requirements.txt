@@ -1,5 +1,5 @@
 # running the test suite/code
-six
+flake8
 coveralls
 nose
 psutil
