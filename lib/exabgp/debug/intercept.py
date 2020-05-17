@@ -27,5 +27,7 @@ def intercept(dtype, value, trace):
         pdb.pm()
 
 
-def trace_interceptor():
+def trace_interceptor(with_pdb):
+    if with_pdb:
+        os.environ['PDB'] = '1'
     sys.excepthook = intercept

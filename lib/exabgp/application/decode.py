@@ -55,12 +55,12 @@ def cmdline(cmdarg):
 
     if cmdarg.debug:
         env.log.all = True
-        env.log.level = syslog.LOG_DEBUG
+        env.log.level = 'DEBUG'
 
     if cmdarg.pdb:
         env.debug.pdb = True
 
-    log.init()
+    log.init(env)
     Reactor([cmdarg.configuration]).run(False, ROOT)
 
 

@@ -10,15 +10,12 @@ import os
 import sys
 import pwd
 
-import syslog
+from exabgp.logger.handler import levels
 
 from exabgp.util.ip import isip
 from exabgp.protocol.ip import IP
 
 from exabgp.environment import base
-
-
-log_levels = ['EMERG', 'ALERT', 'CRIT', 'CRITICAL', 'ERR', 'ERROR', 'WARNING', 'NOTICE', 'INFO', 'DEBUG']
 
 
 def integer(_):
@@ -155,24 +152,17 @@ def umask_write(_):
 
 
 def syslog_value(log):
-    if log not in log_levels:
-        if log == 'CRITICAL':
-            log = 'CRIT'
-        if log == 'ERROR':
-            log = 'ERR'
+    log = log.upper()
+    if log not in levels:
         raise TypeError('invalid log level %s' % log)
-    return getattr(syslog, 'LOG_%s' % log)
+    return log
 
 
 def syslog_name(log):
-    for name in log_levels:
-        if name == 'CRITICAL':
-            name = 'CRIT'
-        if name == 'ERROR':
-            name = 'ERR'
-        if getattr(syslog, 'LOG_%s' % name) == log:
-            return name
-    raise TypeError('invalid log level %s' % log)
+    log = log.upper()
+    if log not in levels:
+        raise TypeError('invalid log level %s' % log)
+    return log
 
 
 def root(path):

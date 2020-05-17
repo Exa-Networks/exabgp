@@ -18,6 +18,7 @@ from exabgp.environment import ROOT
 
 
 from exabgp.logger import log
+from exabgp.logger import history
 
 
 def format_exception(exception):
@@ -32,13 +33,11 @@ def format_exception(exception):
 def format_panic(dtype, value, trace):
     result = _PANIC + _INFO
 
-    result = "-- Traceback\n\n"
-    result += traceback.format_exception(dtype, value, trace)
+    result += "-- Traceback\n\n"
+    result += ''.join(traceback.format_exception(dtype, value, trace))
 
-    result += "\n\n-- Configuration\n\n"
-    result += log.config()
     result += "\n\n-- Logging History\n\n"
-    result += log.history()
+    result += history()
     result += "\n\n\n"
 
     result += _FOOTER

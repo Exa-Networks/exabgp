@@ -30,7 +30,8 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.logger import log
-from exabgp.logger import LazyFormat
+from exabgp.logger import logfunc
+from exabgp.logger import lazyformat
 
 # ======================================================================= Update
 
@@ -230,7 +231,7 @@ class Update(Message):
     # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
     @classmethod
     def unpack_message(cls, data, negotiated):
-        log.debug(LazyFormat('parsing UPDATE', data), 'parser')
+        logfunc.debug(lazyformat('parsing UPDATE', data), 'parser')
 
         length = len(data)
 
@@ -302,6 +303,6 @@ class Update(Message):
 
             return 'json %s' % Response.JSON(json_version).update(negotiated.neighbor, 'in', update, None, '', '')
 
-        log.debug(LazyFormat('decoded UPDATE', '', parsed), 'parser')
+        logfunc.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
 
         return update

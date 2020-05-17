@@ -31,7 +31,8 @@ from exabgp.rib.change import Change
 
 from exabgp.environment import getenv
 from exabgp.logger import log
-from exabgp.logger import LazyFormat
+from exabgp.logger import logfunc
+from exabgp.logger import lazyformat
 
 from exabgp.debug import format_exception
 
@@ -384,7 +385,7 @@ class Peer(object):
         include_withdraw = False
 
         # Announce to the process BGP is up
-        log.notice('connected to %s with %s' % (self.id(), self.proto.connection.name()), 'reactor')
+        log.info('connected to %s with %s' % (self.id(), self.proto.connection.name()), 'reactor')
         self.stats['up'] = self.stats.get('up', 0) + 1
         if self.neighbor.api['neighbor-changes']:
             try:
@@ -429,7 +430,7 @@ class Peer(object):
 
                     for nlri in message.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
-                        log.debug(LazyFormat('   UPDATE #%d nlri ' % number, nlri, str), self.id())
+                        logfunc.debug(lazyformat('   UPDATE #%d nlri ' % number, nlri, str), self.id())
 
                 elif message.TYPE == RouteRefresh.TYPE:
                     if message.reserved == RouteRefresh.request:

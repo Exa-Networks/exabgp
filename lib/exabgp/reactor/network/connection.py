@@ -17,7 +17,8 @@ from exabgp.environment import getenv
 from exabgp.util.errstr import errstr
 
 from exabgp.logger import log
-from exabgp.logger import LazyFormat
+from exabgp.logger import logfunc
+from exabgp.logger import lazyformat
 
 from exabgp.bgp.message import Message
 
@@ -145,7 +146,7 @@ class Connection(object):
 
                     number -= len(read)
                     if not number:
-                        log.debug(LazyFormat('received TCP payload', data), self.session())
+                        logfunc.debug(lazyformat('received TCP payload', data), self.session())
                         yield data
                         return
 
@@ -180,7 +181,7 @@ class Connection(object):
             return
         while not self.writing():
             yield False
-        log.debug(LazyFormat('sending TCP payload', data), self.session())
+        logfunc.debug(lazyformat('sending TCP payload', data), self.session())
         # The first while is here to setup the try/catch block once as it is very expensive
         while True:
             try:
