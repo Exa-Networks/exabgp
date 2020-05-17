@@ -4,4 +4,4 @@ repos:
     hooks:
       - id: black
         language_version: python3.8
-        args: [--line-length=130, --skip-string-normalization,--exclude=lib/exabgp/vendoring]
+        args: [--line-length=120, --skip-string-normalization,--exclude=lib/exabgp/vendoring]

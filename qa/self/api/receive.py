@@ -33,7 +33,6 @@ count = 0
 
 while True:
     line = sys.stdin.readline().strip()
-    # print >> sys.stderr, '[%s]' % line.replace('\n','\\n'), start, end
 
     options = match[count % 4]
 
