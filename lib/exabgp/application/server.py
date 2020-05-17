@@ -118,7 +118,7 @@ def cmdline(cmdarg):
     _delayed_signal(delay, signal.SIGUSR1)
 
     if env.debug.rotate or len(configurations) == 1:
-        run(comment, configurations, cmdarg.validate)
+        run(comment, configurations)
 
     if not (env.log.destination in ('syslog', 'stdout', 'stderr') or env.log.destination.startswith('host:')):
         log.error('can not log to files when running multiple configuration (as we fork)', 'configuration')
@@ -130,7 +130,7 @@ def cmdline(cmdarg):
         for configuration in configurations:
             pid = os.fork()
             if pid == 0:
-                run(comment, [configuration], cmdarg.validate, os.getpid())
+                run(comment, [configuration], os.getpid())
             else:
                 pids.append(pid)
 
@@ -145,7 +145,7 @@ def cmdline(cmdarg):
         sys.exit(1)
 
 
-def run(comment, configurations, validate, pid=0):
+def run(comment, configurations, pid=0):
     env = getenv()
 
     log.notice('Thank you for using ExaBGP', 'welcome')
@@ -190,7 +190,7 @@ def run(comment, configurations, validate, pid=0):
             log.info('to read responses %s%s.out' % (pipe, pipename), 'cli control')
 
     if not env.profile.enable:
-        exit_code = Reactor(configurations).run(validate, ROOT)
+        exit_code = Reactor(configurations).run()
         __exit(env.debug.memory, exit_code)
 
     try:
@@ -199,7 +199,7 @@ def run(comment, configurations, validate, pid=0):
         import profile
 
     if env.profile.file == 'stdout':
-        profiled = 'Reactor(%s).run(%s,"%s")' % (str(configurations), str(validate), str(ROOT))
+        profiled = 'Reactor(%s).run()' % (str(configurations))
         exit_code = profile.run(profiled)
         __exit(env.debug.memory, exit_code)
 
@@ -220,7 +220,7 @@ def run(comment, configurations, validate, pid=0):
         profiler = profile.Profile()
         profiler.enable()
         try:
-            exit_code = Reactor(configurations).run(validate, ROOT)
+            exit_code = Reactor(configurations).run()
         except Exception:
             exit_code = Reactor.Exit.unknown
             raise
@@ -243,7 +243,7 @@ def run(comment, configurations, validate, pid=0):
         log.debug("-" * len(notice), 'reactor')
         log.debug(notice, 'reactor')
         log.debug("-" * len(notice), 'reactor')
-        Reactor(configurations).run(validate, ROOT)
+        Reactor(configurations).run()
         __exit(env.debug.memory, 1)
 
 
