@@ -61,7 +61,7 @@ def cmdline(cmdarg):
         env.debug.pdb = True
 
     log.init(env)
-    Reactor([cmdarg.configuration]).run(False, ROOT)
+    Reactor([cmdarg.configuration]).run()
 
 
 if __name__ == '__main__':
