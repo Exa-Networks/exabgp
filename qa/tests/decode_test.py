@@ -32,11 +32,10 @@ from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 
-
 from exabgp.logger import log
+from exabgp.environment import getenv
 
-
-log.init()
+log.init(getenv())
 
 
 bodies = []

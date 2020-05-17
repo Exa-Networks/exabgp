@@ -33,18 +33,19 @@ def cmdline(cmdarg):
     # Must be done before setting the logger as it modify its behaviour
     if cmdarg.verbose:
         env.log.all = True
-        env.log.level = syslog.LOG_DEBUG
-
-    log.init()
+        env.log.level = 'DEBUG'
 
     if cmdarg.pdb:
         env.debug.pdb = True
+
+    log.init(env)
+    trace_interceptor(env.debug.pdb)
 
     if cmdarg.verbose:
         env.log.parser = True
 
     for configuration in cmdarg.configuration:
-        log.notice(f'loading {configuration}', 'configuration')
+        log.info(f'loading {configuration}', 'configuration')
         location = getconf(configuration)
         if not location:
             log.critical(f'{configuration} is not an exabgp config file', 'configuration')
@@ -58,15 +59,14 @@ def cmdline(cmdarg):
         log.info(f'\u2713 loading', 'configuration')
 
         if cmdarg.neighbor:
-            log.notice(f'checking neighbors', 'configuration')
+            log.warning(f'checking neighbors', 'configuration')
             for name, neighbor in config.neighbors.items():
                 reparsed = neighbor.string()
-                for line in reparsed.split('\n'):
-                    log.debug(line, configuration)
+                log.debug(reparsed, configuration)
                 log.info(f'\u2713 neighbor  {name.split()[1]}', 'configuration')
 
         if cmdarg.route:
-            log.notice(f'checking routes', 'configuration')
+            log.warning(f'checking routes', 'configuration')
             if not check_generation(config.neighbors):
                 log.critical(f'{configuration} has an invalid route', 'configuration')
                 sys.exit(1)
@@ -76,7 +76,6 @@ def cmdline(cmdarg):
 def main():
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     args(parser)
-    trace_interceptor()
     cmdline(parser, parser.parse_args())
 
 

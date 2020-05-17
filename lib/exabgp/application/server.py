@@ -86,9 +86,14 @@ def cmdline(cmdarg):
     # Must be done before setting the logger as it modify its behaviour
     if cmdarg.verbose or cmdarg.debug:
         env.log.all = True
-        env.log.level = syslog.LOG_DEBUG
+        env.log.level = 'DEBUG'
+        env.log.short = False
 
-    log.init()
+    if cmdarg.debug or cmdarg.pdb:
+        env.debug.pdb = True
+
+    log.init(env)
+    trace_interceptor(env.debug.pdb)
 
     if cmdarg.profile:
         env.profile.enable = True
@@ -96,9 +101,6 @@ def cmdline(cmdarg):
 
     if cmdarg.once:
         env.tcp.once = True
-
-    if cmdarg.debug or cmdarg.pdb:
-        env.debug.pdb = True
 
     if cmdarg.memory:
         env.debug.memory = True
@@ -148,14 +150,14 @@ def cmdline(cmdarg):
 def run(comment, configurations, pid=0):
     env = getenv()
 
-    log.notice('Thank you for using ExaBGP', 'welcome')
-    log.notice('%s' % version, 'version')
-    log.notice('%s' % sys.version.replace('\n', ' '), 'interpreter')
-    log.notice('%s' % ' '.join(platform.uname()[:5]), 'os')
-    log.notice('%s' % ROOT, 'installation')
+    log.info('Thank you for using ExaBGP', 'welcome')
+    log.debug('%s' % version, 'version')
+    log.debug('%s' % ROOT, 'location')
+    log.debug('%s' % sys.version.replace('\n', ' '), 'python')
+    log.debug('%s' % ' '.join(platform.uname()[:5]), 'platform')
 
     if comment:
-        log.notice(comment, 'advice')
+        log.error(comment, 'advice')
 
     warning = warn()
     if warning:
@@ -250,7 +252,6 @@ def run(comment, configurations, pid=0):
 def main():
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     args(parser)
-    trace_interceptor()
     cmdline(parser, parser.parse_args())
 
 

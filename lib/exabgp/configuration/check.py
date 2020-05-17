@@ -24,6 +24,7 @@ from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.logger import log
+from exabgp.logger import option
 
 # check_neighbor
 
@@ -48,7 +49,7 @@ from exabgp.version import json as json_version
 
 
 def check_generation(neighbors):
-    log._option['parser'] = True
+    option.enabled['parser'] = True
 
     for name in neighbors.keys():
         neighbor = copy.deepcopy(neighbors[name])
@@ -201,7 +202,7 @@ def check_open(neighbor, raw):
 
 
 def check_update(neighbor, raw):
-    log._option['parser'] = True
+    option.enabled['parser'] = True
 
     neighbor = neighbor[list(neighbor)[0]]
 

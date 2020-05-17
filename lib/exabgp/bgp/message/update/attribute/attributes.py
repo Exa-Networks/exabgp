@@ -25,7 +25,8 @@ from exabgp.bgp.message.update.attribute.community import Communities
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import log
-from exabgp.logger import LazyAttribute
+from exabgp.logger import logfunc
+from exabgp.logger import lazyattribute
 
 
 class _NOTHING(object):
@@ -341,7 +342,7 @@ class Attributes(dict):
         left = data[length:]
         attribute = data[:length]
 
-        log.debug(LazyAttribute(flag, aid, length, data[:length]), 'parser')
+        logfunc.debug(lazyattribute(flag, aid, length, data[:length]), 'parser')
 
         # remove the PARTIAL bit before comparaison if the attribute is optional
         if aid in Attribute.attributes_optional:

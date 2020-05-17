@@ -175,7 +175,7 @@ CONFIGURATION = {
         'short': {
             'read': parsing.boolean,
             'write': parsing.lower,
-            'value': 'false',
+            'value': 'true',
             'help': 'use short log format (not prepended with time,level,pid and source)',
         },
     },

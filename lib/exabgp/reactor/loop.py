@@ -264,9 +264,7 @@ class Reactor(object):
             self.processes.start(self.configuration.processes)
 
         # This is required to make sure we can write in the log location as we now have dropped root privileges
-        if not log.restart():
-            log.critical('could not setup the logger, aborting', 'reactor')
-            return self.Exit.log
+        log.init(getenv())
 
         if not self.daemon.savepid():
             return self.Exit.pid
@@ -437,7 +435,7 @@ class Reactor(object):
 
     def reload(self):
         """Reload the configuration and send to the peer the route which changed"""
-        log.notice('performing reload of exabgp %s' % version, 'configuration')
+        log.info('performing reload of exabgp %s' % version, 'configuration')
 
         reloaded = self.configuration.reload()
 
@@ -471,13 +469,13 @@ class Reactor(object):
                     self.listener.listen_on(
                         ip, neighbor.peer_address, self._port, neighbor.md5_password, neighbor.md5_base64, None
                     )
-        log.notice('loaded new configuration successfully', 'reactor')
+        log.info('loaded new configuration successfully', 'reactor')
 
         return True
 
     def restart(self):
         """Kill the BGP session and restart it"""
-        log.notice('performing restart of exabgp %s' % version, 'reactor')
+        log.info('performing restart of exabgp %s' % version, 'reactor')
 
         # XXX: FIXME: Could return False, in case there is interference with old config...
         reloaded = self.configuration.reload()
