@@ -8,6 +8,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.util import split
+
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS

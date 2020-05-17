@@ -10,10 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import unittest
 
-from exabgp.environment import getenv
-
-environment.setup('')
-
 # from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
 

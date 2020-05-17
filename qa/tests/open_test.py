@@ -23,10 +23,6 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import RouteRefresh
 
-from exabgp.environment import getenv
-
-environment.setup('')
-
 
 open_body = [
     0x4,

@@ -21,10 +21,6 @@ from exabgp.bgp.message.update.nlri.flow import NumericOperator
 
 from exabgp.protocol.ip import IPv4
 
-from exabgp.environment import getenv
-
-environment.setup('')
-
 
 class TestFlow(unittest.TestCase):
     def setUp(self):

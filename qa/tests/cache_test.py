@@ -111,7 +111,7 @@ class TestCache(unittest.TestCase):
 
             cache = Cache()
             start = time.time()
-            for val in xrange(COUNT):
+            for val in range(COUNT):
                 val %= UNIQUE
 
                 if val in cache:

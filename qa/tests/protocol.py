@@ -25,10 +25,6 @@ from exabgp.bgp.message.update import Attributes
 from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
 
-from exabgp.environment import getenv
-
-environment.setup('')
-
 
 class Network(StringIO):
     def pending(self):

@@ -16,8 +16,7 @@ while True:
     else:
         exit = False
 
-    print >>sys.stderr, '\n=====\n'
-    print >>sys.stderr, line
-    print >>sys.stderr, '\n---\n'
-    print >>sys.stderr, pprint.pformat(json.loads(line), indent=3).replace("u'", "'")
+    sys.sterr.write(f'\n=====\n{line}\n---\n')
+    sys.stderr.write(pprint.pformat(json.loads(line), indent=3).replace("u'", "'"))
+    sys.sterr.write('\n')
     sys.stderr.flush()

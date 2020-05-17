@@ -33,11 +33,7 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 
 
-from exabgp.configuration.setup import environment
 from exabgp.logger import log
-
-
-environment.setup('')
 
 
 bodies = []

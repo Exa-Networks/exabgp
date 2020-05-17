@@ -621,7 +621,8 @@ if __name__ == '__main__':
             __builtin__.__dict__['profile'] = prof
             ns = copy(locals())
             ns['profile'] = prof  # shadow the profile decorator defined above
-            execfile(__file__, ns, ns)
+            # execfile(__file__, ns, ns)
+            exec(open(__file__).read())
         else:
             import builtins
 

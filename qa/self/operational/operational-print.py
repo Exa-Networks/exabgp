@@ -19,7 +19,7 @@ while True:
         counter = 0
 
         send = '\n%s %s %s\n' % ('-' * 10, line, '-' * 10)
-        print >>sys.stderr, send
+        sys.stderr.write(f'{send}\n')
         sys.stderr.flush()
     except KeyboardInterrupt:
         pass

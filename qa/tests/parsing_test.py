@@ -17,9 +17,10 @@ import glob
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.check import check_neighbor
 
-from exabgp.configuration.setup import environment
+from exabgp.environment import getenv
 
-environ = environment.setup('')
+
+environ = getenv()
 environ.log.enable = True
 environ.log.all = False
 environ.log.configuration = False
