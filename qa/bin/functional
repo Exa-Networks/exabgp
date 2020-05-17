@@ -42,6 +42,7 @@ export exabgp_debug_rotate=true
 export exabgp_debug_defensive=true
 """
 
+
 class Color(object):
     NONE = '\033[0m' + '\033[0m' + ' '  # NONE
     STARTING = '\033[0m' + '\033[96m' + '~'  # LIGHT BLUE
@@ -434,7 +435,9 @@ if __name__ == '__main__':
     def run(parsed):
         Port.base = parsed.port
         if parsed.test:
-            to_run = [parsed.test, ]
+            to_run = [
+                parsed.test,
+            ]
         else:
             to_run = [index for index, _ in Identifier.identifiers()]
         chunk = len(to_run) if not parsed.steps else parsed.steps

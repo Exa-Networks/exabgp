@@ -151,9 +151,7 @@ class Control(object):
 
         def monitor(function):
             def wrapper(*args):
-                # print >> sys.stderr, "%s(%s)" % (function.func_name,','.join([str(_).replace('\n','\\n') for _ in args]))
                 r = function(*args)
-                # print >> sys.stderr, "%s -> %s" % (function.func_name,str(r))
                 return r
 
             return wrapper

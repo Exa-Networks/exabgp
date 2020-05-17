@@ -24,6 +24,7 @@ version = os.popen(f'{sys.executable} {get_version}').read()
 
 sys.path.append(os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]), 'lib'))
 
+
 def filesOf(directory):
     return [
         os.path.join(directory, fname)
