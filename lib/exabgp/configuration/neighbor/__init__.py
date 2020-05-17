@@ -52,6 +52,7 @@ from exabgp.configuration.neighbor.parser import rate_limit
 
 from exabgp.logger import log
 
+
 class ParseNeighbor(Section):
     TTL_SECURITY = 255
 

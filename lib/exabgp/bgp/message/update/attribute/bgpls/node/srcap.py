@@ -49,7 +49,6 @@ class SrCapabilities(FlagLS):
     TLV = 1034
     FLAGS = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
 
-
     def __init__(self, flags, sids):
         FlagLS.__init__(self, flags)
         self.sids = sids

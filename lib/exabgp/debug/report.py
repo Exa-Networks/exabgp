@@ -61,7 +61,7 @@ Environment:
     platform.version(),
     str(sys.maxsize),
     ROOT,
-    '\n'.join(Env.iter_env(diff=True))
+    '\n'.join(Env.iter_env(diff=True)),
 )
 
 

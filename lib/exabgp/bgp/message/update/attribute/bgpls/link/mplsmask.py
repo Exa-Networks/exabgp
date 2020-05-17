@@ -29,6 +29,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 # 	RFC 7752 3.3.2.2.  MPLS Protocol Mask TLV
 
+
 @LinkState.register()
 class MplsMask(FlagLS):
     REPR = 'MPLS Protocol mask'

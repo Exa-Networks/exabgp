@@ -31,4 +31,4 @@ def string_is_hex(s):
 
 
 def split(data, step):
-    return (data[i:i + step] for i in range(0, len(data), step))
+    return (data[i : i + step] for i in range(0, len(data), step))

@@ -23,6 +23,7 @@ from exabgp.configuration.flow.parser import next_hop
 
 from exabgp.logger import log
 
+
 class ParseFlowRoute(Section):
     syntax = (
         'route give-me-a-name {\n'
