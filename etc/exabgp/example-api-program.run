@@ -57,7 +57,7 @@ def sync(fd):
 
 
 if not asynchronous(sys.stdin):
-    print >>sys.stderr, "could not set stdin/stdout non blocking"
+    sys.stderr.write("could not set stdin/stdout non blocking\n")
     sys.stderr.flush()
     sys.exit(1)
 
@@ -73,15 +73,15 @@ def _reader():
                 yield ''
                 continue
             elif exc.args[0] in errno_fatal:
-                print >>sys.stderr, "fatal error while reading on stdin : %s" % str(exc)
+                sys.stderr.write("fatal error while reading on stdin : %s" % str(exc))
                 sys.exit(1)
             else:
-                print >>sys.stderr, "unknown error while reading on stdin : %s" % str(exc)
+                sys.stderr.write("unknown error while reading on stdin : %s" % str(exc))
                 sys.exit(1)
 
         if not data:
             # we lost the pipe
-            print >>sys.stderr, "the read pipe was closed by the other side : %s" % str(exc)
+            sys.stderr.write("the read pipe was closed by the other side : %s" % str(exc))
             sys.exit(1)
 
         received += data
@@ -109,11 +109,11 @@ def write(data='', memory=['',]):
         if exc.args[0] in errno_block:
             return not not left
         elif exc.args[0] in errno_fatal:
-            print >>sys.stderr, "fatal error while writing on stdout : %s" % str(exc)
+            sys.stderr.write("fatal error while writing on stdout : %s" % str(exc))
             sys.stderr.flush()
             sys.exit(1)
         else:
-            print >>sys.stderr, "unknown error while writing on stdout : %s" % str(exc)
+            sys.stderr.write("unknown error while writing on stdout : %s" % str(exc))
             sys.stderr.flush()
             sys.exit(1)
 
@@ -128,12 +128,12 @@ def read(timeout):
             return ''
         elif exc.args[0] in errno_fatal:
             # this may not send anything ...
-            print >>sys.stderr, "fatal error during select : %s" % str(exc)
+            sys.stderr.write("fatal error during select : %s" % str(exc))
             sys.stderr.flush()
             sys.exit(1)
         else:
             # this may not send anything ...
-            print >>sys.stderr, "unexpected error during select : %s" % str(exc)
+            sys.stderr.write("unexpected error during select : %s" % str(exc))
             sys.stderr.flush()
             sys.exit(1)
 

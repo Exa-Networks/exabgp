@@ -27,7 +27,7 @@ while True:
 
         counter = 0
 
-        print >>sys.stderr, line
+        sys.sterr.write(f'{line}\n')
         syslog.syslog(syslog.LOG_ALERT, _prefixed('INFO', line))
     except KeyboardInterrupt:
         pass

@@ -39,10 +39,6 @@ from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import OUT
 
-from exabgp.configuration.setup import environment
-
-environment.setup('')
-
 
 class TestNLRIs(unittest.TestCase):
 

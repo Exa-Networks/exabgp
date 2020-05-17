@@ -13,11 +13,6 @@ import socket
 import unittest
 
 
-from exabgp.configuration.setup import environment
-
-environment.setup('')
-
-
 def speak(name, data):
     time.sleep(0.005)
     try:
