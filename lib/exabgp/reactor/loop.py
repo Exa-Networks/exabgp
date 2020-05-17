@@ -216,7 +216,7 @@ class Reactor(object):
                 return True
         return False
 
-    def run(self, validate, root):
+    def run(self):
         self.daemon.daemonise()
 
         # Make sure we create processes once we have closed file descriptor
