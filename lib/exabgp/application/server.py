@@ -65,10 +65,9 @@ def _delayed_signal(delay, signalnum):
 
 def args(sub):
     # fmt:off
-    sub.add_argument('-t', '--test', help='perform a configuration validity check only', action='store_true')
-    sub.add_argument('-d', '--debug', help='start the python debugger on serious logging and on SIGTERM (shortcut for exabgp.log.all=true exabgp.log.level=DEBUG)', action='store_true')
+    sub.add_argument('-v', '--verbose', help='toogle all logging', action='store_true')
+    sub.add_argument('-d', '--debug', help='start the python debugger on issue and (implies -v, -p)', action='store_true')
     sub.add_argument('-s', '--signal', help='issue a SIGUSR1 to reload the configuration after <time> seconds, only useful for code debugging', type=int)
-    sub.add_argument('-v', '--validate', help='validate the configuration file format only', action='store_true')
     sub.add_argument('-1', '--once', help='only perform one attempt to connect to peers', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on critical logging, SIGTERM, and exceptions (shortcut for exabgp.pdb.enable=true)', action='store_true')
     sub.add_argument('-m', '--memory', help='display memory usage information on exit', action='store_true')
@@ -85,7 +84,7 @@ def cmdline(cmdarg):
 
     env = getenv()
     # Must be done before setting the logger as it modify its behaviour
-    if cmdarg.debug:
+    if cmdarg.verbose or cmdarg.debug:
         env.log.all = True
         env.log.level = syslog.LOG_DEBUG
 
@@ -98,11 +97,8 @@ def cmdline(cmdarg):
     if cmdarg.once:
         env.tcp.once = True
 
-    if cmdarg.pdb:
+    if cmdarg.debug or cmdarg.pdb:
         env.debug.pdb = True
-
-    if cmdarg.test:
-        env.log.parser = True
 
     if cmdarg.memory:
         env.debug.memory = True
