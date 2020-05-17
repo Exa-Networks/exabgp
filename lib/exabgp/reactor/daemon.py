@@ -26,13 +26,15 @@ class Daemon(object):
         self.user = getenv().daemon.user
         self.daemonize = getenv().daemon.daemonize
         self.umask = getenv().daemon.umask
+        self._saved_pid = False
 
         self.reactor = reactor
 
         os.chdir('/')
         os.umask(self.umask)
 
-    def check_pid(self, pid):
+    @staticmethod
+    def check_pid(pid):
         if pid < 0:  # user input error
             return False
         if pid == 0:  # all processes
@@ -49,8 +51,6 @@ class Daemon(object):
             return False
 
     def savepid(self):
-        self._saved_pid = False
-
         if not self.pid:
             return True
 
@@ -149,7 +149,8 @@ class Daemon(object):
 
         return True
 
-    def _is_socket(self, fd):
+    @staticmethod
+    def _is_socket(fd):
         try:
             s = socket.fromfd(fd, socket.AF_INET, socket.SOCK_RAW)
         except ValueError:
@@ -167,8 +168,8 @@ class Daemon(object):
         if not self.daemonize:
             return
 
-        log = getenv().log
-        if log.enable and log.destination.lower() in ('stdout', 'stderr'):
+        logging = getenv().log
+        if logging.enable and logging.destination.lower() in ('stdout', 'stderr'):
             log.critical('ExaBGP can not fork when logs are going to %s' % log.destination.lower(), 'daemon')
             return
 
@@ -189,7 +190,8 @@ class Daemon(object):
         fork_exit()
         self.silence()
 
-    def silence(self):
+    @staticmethod
+    def silence():
         # closing more would close the log file too if open
         maxfd = 3
 

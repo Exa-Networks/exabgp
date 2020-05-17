@@ -116,7 +116,7 @@ def cmdline(cmdarg):
         if not location:
             log.critical(f'{configuration} is not an exabgp config file', 'configuration')
             sys.exit(1)
-        configurations.append(configuration)
+        configurations.append(location)
 
     delay = cmdarg.signal
     _delayed_signal(delay, signal.SIGUSR1)

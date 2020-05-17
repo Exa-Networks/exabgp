@@ -240,16 +240,6 @@ class Reactor(object):
         if not self.reload():
             return self.Exit.configuration
 
-        if validate:  # only validate configuration
-            log.warning('', 'configuration')
-            log.warning('parsed Neighbors, un-templated', 'configuration')
-            log.warning('------------------------------', 'configuration')
-            log.warning('', 'configuration')
-            for key in self._peers:
-                log.warning(str(self._peers[key].neighbor), 'configuration')
-                log.warning('', 'configuration')
-            return self.Exit.validate
-
         for neighbor in self.configuration.neighbors.values():
             if neighbor.listen:
                 if not self.listener.listen_on(
@@ -452,11 +442,7 @@ class Reactor(object):
         reloaded = self.configuration.reload()
 
         if not reloaded:
-            #
-            # Careful the string below is used but the QA code to check for sucess of failure
-            log.error('not reloaded, no change found in the configuration', 'configuration')
-            # Careful the string above is used but the QA code to check for sucess of failure
-            #
+            log.error('could not load/reload configuration', 'configuration')
             log.error(str(self.configuration.error), 'configuration')
             return False
 
