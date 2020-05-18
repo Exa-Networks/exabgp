@@ -28,7 +28,7 @@ def setargs(sub):
 
 def main():
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
-    args(parser)
+    setargs(parser)
     cmdline(parser.parse_args())
 
 
