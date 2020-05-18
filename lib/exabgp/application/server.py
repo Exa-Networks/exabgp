@@ -251,7 +251,7 @@ def run(comment, configurations, pid=0):
 
 def main():
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
-    args(parser)
+    setargs(parser)
     cmdline(parser, parser.parse_args())
 
 
