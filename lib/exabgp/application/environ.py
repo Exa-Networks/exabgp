@@ -8,7 +8,7 @@ import argparse
 from exabgp.environment import Env
 
 
-def args(sub):
+def setargs(sub):
     # fmt: off
     sub.add_argument('-d', '--diff', help='show only the different from the defaults', action='store_true')
     sub.add_argument('-e', '--env', help='display using environment (not ini)', action='store_true')

@@ -9,7 +9,7 @@ import platform
 from exabgp.version import version
 
 
-def args(sub):
+def setargs(sub):
     # fmt:off
     pass
     # fmt:on

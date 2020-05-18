@@ -63,11 +63,7 @@ def enum(*sequential):
     return type(str("Enum"), (), dict(zip(sequential, sequential)))
 
 
-def parse():
-    """Parse arguments"""
-    formatter = argparse.RawDescriptionHelpFormatter
-    parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__, formatter_class=formatter)
-
+def setargs(parser):
     # fmt: off
     g = parser.add_mutually_exclusive_group()
     g.add_argument("--debug", "-d", action="store_true", default=False, help="enable debugging")
@@ -117,6 +113,13 @@ def parse():
     g.add_argument("--down-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service becomes unavailable")
     g.add_argument("--disabled-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service is disabled")
     # fmt: on
+
+
+def parse():
+    """Parse arguments"""
+    formatter = argparse.RawDescriptionHelpFormatter
+    parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__, formatter_class=formatter)
+    setargs(parser)
 
     options = parser.parse_args()
     if options.config is not None:
