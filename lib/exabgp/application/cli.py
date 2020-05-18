@@ -98,7 +98,7 @@ def open_writer(send):
     return writer
 
 
-def args(sub):
+def setargs(sub):
     # fmt:off
     sub.add_argument('command', nargs='*', help='command to run on the router')
     # fmt:on

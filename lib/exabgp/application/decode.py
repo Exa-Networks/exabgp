@@ -17,7 +17,7 @@ def is_bgp(message):
     return all(c in string.hexdigits or c == ':' for c in message)
 
 
-def args(sub):
+def setargs(sub):
     # fmt:off
     sub.add_argument('-d', '--debug', help='start the python debugger errors', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on fault', action='store_true')

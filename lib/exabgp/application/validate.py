@@ -17,7 +17,7 @@ from exabgp.reactor.loop import Reactor
 from exabgp.configuration.check import check_generation
 
 
-def args(sub):
+def setargs(sub):
     # fmt:off
     sub.add_argument('-n', '--neighbor', help='check the parsing of the neighbors', action='store_true')
     sub.add_argument('-r', '--route', help='check the parsing of the routes', action='store_true')

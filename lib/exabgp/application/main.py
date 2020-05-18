@@ -40,11 +40,11 @@ def main():
 
     sub = subparsers.add_parser('version', help='report exabgp version', description=version.__doc__)
     sub.set_defaults(func=version.cmdline)
-    version.args(sub)
+    version.setargs(sub)
 
     sub = subparsers.add_parser('cli', help='control a running exabgp server instance', description=cli.__doc__)
     sub.set_defaults(func=cli.cmdline)
-    cli.args(sub)
+    cli.setargs(sub)
 
     sub = subparsers.add_parser(
         'healthcheck',
@@ -53,25 +53,29 @@ def main():
         formatter_class=formatter,
     )
     sub.set_defaults(func=healthcheck.cmdline)
-    # healthcheck.args(sub)
+    healthcheck.setargs(sub)
 
     sub = subparsers.add_parser('env', help='show exabgp configuration information', description=environ.__doc__)
     sub.set_defaults(func=environ.cmdline)
-    environ.args(sub)
+    environ.setargs(sub)
 
     sub = subparsers.add_parser('decode', help='decode hex-encoded bgp packets', description=decode.__doc__)
     sub.set_defaults(func=decode.cmdline)
-    decode.args(sub)
+    decode.setargs(sub)
 
     sub = subparsers.add_parser('server', help='start exabgp', description=server.__doc__)
     sub.set_defaults(func=server.cmdline)
-    server.args(sub)
+    server.setargs(sub)
 
     sub = subparsers.add_parser('validate', help='validate configuration', description=validate.__doc__)
     sub.set_defaults(func=validate.cmdline)
-    validate.args(sub)
+    validate.setargs(sub)
 
-    cmdarg = parser.parse_args()
+    try:
+        cmdarg = parser.parse_args()
+    except Exception as exc:
+        sys.exit(exc.args[-1])
+
     options = vars(cmdarg)
 
     if 'func' in options:

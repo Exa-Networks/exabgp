@@ -63,7 +63,7 @@ def _delayed_signal(delay, signalnum):
                 sys.exit(code)
 
 
-def args(sub):
+def setargs(sub):
     # fmt:off
     sub.add_argument('-v', '--verbose', help='toogle all logging', action='store_true')
     sub.add_argument('-d', '--debug', help='start the python debugger on issue and (implies -v, -p)', action='store_true')
