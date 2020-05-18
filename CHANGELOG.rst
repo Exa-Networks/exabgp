@@ -8,6 +8,15 @@ Version 5.0.0:
  * Compatibility: The command line format has changed
    whilst trying to keep backward compatibility for most usual commands
  * Feature: drop support for python2, well it is classed as feature, your opinion may vary
+ * Fix: support for more than one BGP-LS Adjacency SID per link
+   patch: tomjshine
+ * reported: the RIB code so withdraw message before any announce are sent
+   this does change the RIB behaviour sending withdrawal when it was not previously
+ * Fix: parsing of SID in BGP-LS
+ * Change: do not include attribute infos in updates if only sending withdrawals
+   patch: Denis Krienbühl
+
+Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
  * Fix: issue during restart
  * Fix: add ipv6 mpls to add-path
@@ -18,15 +27,8 @@ Version 5.0.0:
    reported by: Gary Buhrmaster
  * Change: BGP-LS TE-RIDs are now reported as a list (as Arista reports more than one)
    patch: tomjshine
- * Fix: support for more than one BGP-LS Adjacency SID per link
-   patch: tomjshine
- * reported: the RIB code so withdraw message before any announce are sent
-        this does change the RIB behaviour sending withdrawal when it was not previously
- * Fix: parsing of SID in BGP-LS
  * Fix: bad parsing in some case when capability next-hop was used
    reported: alexejli
- * Change: do not include attribute infos in updates if only sending withdrawals
-   patch: Denis Krienbühl
 
 Version 4.2.6:
  * Fix: prevent the deletion of IP addresses not added by the healthchecker
