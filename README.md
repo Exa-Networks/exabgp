@@ -204,7 +204,8 @@ The following projects are related to ExaBGP
 
 **Other BGP implementation**
   - [Full list](https://github.com/Exa-Networks/exabgp/wiki/Other-OSS-BGP-implementations) of known open source BGP implementation
-  - [Bird](http://bird.network.cz/) very good C based BGP implementation with powerful route filtering language for network administrators
+  - [Bird](http://bird.network.cz/) very good C based BGP implementation with powerful route filtering language
+  - [FRR](http://frrouting.org/) the successor of Quagga, itself successor from Zebra. If you do not already know it, you should
   - [GoBGP](https://github.com/osrg/gobgp) an implementation with various binding for programmers
   - [RYU](https://github.com/osrg/ryu) for SDN fans
 
