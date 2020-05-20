@@ -7,6 +7,7 @@ import argparse
 
 from exabgp.environment import Env
 from exabgp.environment import getenv
+from exabgp.environment import getconf
 from exabgp.environment import ROOT
 
 from exabgp.reactor.loop import Reactor
@@ -61,7 +62,7 @@ def cmdline(cmdarg):
         env.debug.pdb = True
 
     log.init(env)
-    Reactor([cmdarg.configuration]).run()
+    Reactor([getconf(cmdarg.configuration)]).run()
 
 
 if __name__ == '__main__':
