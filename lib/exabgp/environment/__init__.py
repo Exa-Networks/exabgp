@@ -26,13 +26,13 @@ def getconf(name):
     # some users are using symlinks for atomic change of the configuration file
     # using mv may however be better practice :p
     # so we must not follow symlink when looking for the file
-
     if name.startswith('etc/exabgp'):
         normalised = os.path.join(ETC, name[11:])
     else:
         normalised = os.path.normpath(name)
 
-    if os.path.isfile(os.path.abspath(normalised)):
-        return normalised
+    absolute = os.path.abspath(normalised)
+    if os.path.isfile(absolute):
+        return absolute
 
     return ''
