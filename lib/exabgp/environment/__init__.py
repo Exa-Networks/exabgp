@@ -32,7 +32,7 @@ def getconf(name):
     else:
         normalised = os.path.normpath(name)
 
-    if os.path.isfile(os.path.realpath(normalised)):
+    if os.path.isfile(os.path.abspath(normalised)):
         return normalised
 
     return ''
