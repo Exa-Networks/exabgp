@@ -7,16 +7,16 @@ After=network.target
 ConditionPathExists=/etc/exabgp/exabgp.conf
 
 [Service]
-#User=exabgp
-#Group=exabgp
+User=exabgp
+Group=exabgp
 Environment=exabgp_daemon_daemonize=false
 PermissionsStartOnly=true
-ExecStartPre=-mkfifo /run/exabgp.in
-ExecStartPre=-mkfifo /run/exabgp.out
-ExecStartPre=chmod 600 /run/exabgp.in
-ExecStartPre=chmod 600 /run/exabgp.out
-ExecStartPre=chown exabgp.exabgp /run/exabgp.in
-ExecStartPre=chown exabgp.exabgp /run/exabgp.out
+ExecStartPre=-/usr/bin/env mkfifo /run/exabgp.in
+ExecStartPre=-/usr/bin/env mkfifo /run/exabgp.out
+ExecStartPre=/usr/bin/env chmod 600 /run/exabgp.in
+ExecStartPre=/usr/bin/env chmod 600 /run/exabgp.out
+ExecStartPre=/usr/bin/env chown exabgp.exabgp /run/exabgp.in
+ExecStartPre=/usr/bin/env chown exabgp.exabgp /run/exabgp.out
 ExecStart=/usr/sbin/exabgp /etc/exabgp/exabgp.conf
 ExecReload=/bin/kill -USR1 $MAINPID
 Restart=always
