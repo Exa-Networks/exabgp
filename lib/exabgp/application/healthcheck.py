@@ -60,6 +60,7 @@ logger = logging.getLogger("healthcheck")
 from exabgp.vendoring.ipaddress import ip_network  # pylint: disable=F0401
 from exabgp.vendoring.ipaddress import ip_address  # pylint: disable=F0401
 
+
 def fix(f):
     def fixed(x):
         try:
@@ -67,7 +68,10 @@ def fix(f):
         except AttributeError:
             pass
         return f(x)
+
     return fixed
+
+
 ip_network = fix(ip_network)
 ip_address = fix(ip_address)
 
@@ -80,149 +84,167 @@ def enum(*sequential):
 def parse():
     """Parse arguments"""
     formatter = argparse.RawDescriptionHelpFormatter
-    parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__,
-                                     formatter_class=formatter)
+    parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__, formatter_class=formatter)
 
     g = parser.add_mutually_exclusive_group()
-    g.add_argument("--debug", "-d", action="store_true",
-                   default=False,
-                   help="enable debugging")
-    g.add_argument("--no-ack", "-a", action="store_true",
-                   default=False,
-                   help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false")
-    g.add_argument("--silent", "-s", action="store_true",
-                   default=False,
-                   help="don't log to console")
-    g.add_argument("--syslog-facility", "-sF", metavar="FACILITY",
-                   nargs='?',
-                   const="daemon",
-                   default="daemon",
-                   help=("log to syslog using FACILITY, "
-                         "default FACILITY is daemon"))
-    g.add_argument("--sudo", action="store_true", default=False,
-                   help="use sudo to setup ip addresses")
-    g.add_argument("--no-syslog", action="store_true",
-                   help="disable syslog logging")
-    parser.add_argument("--name", "-n", metavar="NAME",
-                        help="name for this healthchecker")
-    parser.add_argument("--config", "-F", metavar="FILE", type=open,
-                        help="read configuration from a file")
-    parser.add_argument("--pid", "-p", metavar="FILE",
-                        type=argparse.FileType('w'),
-                        help="write PID to the provided file")
-    parser.add_argument("--user", metavar="USER",
-                        help="set user after setting loopback addresses")
-    parser.add_argument("--group", metavar="GROUP",
-                        help="set group after setting loopback addresses")
+    g.add_argument("--debug", "-d", action="store_true", default=False, help="enable debugging")
+    g.add_argument(
+        "--no-ack", "-a", action="store_true", default=False, help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false"
+    )
+    g.add_argument("--silent", "-s", action="store_true", default=False, help="don't log to console")
+    g.add_argument(
+        "--syslog-facility",
+        "-sF",
+        metavar="FACILITY",
+        nargs='?',
+        const="daemon",
+        default="daemon",
+        help=("log to syslog using FACILITY, " "default FACILITY is daemon"),
+    )
+    g.add_argument("--sudo", action="store_true", default=False, help="use sudo to setup ip addresses")
+    g.add_argument("--no-syslog", action="store_true", help="disable syslog logging")
+    parser.add_argument("--name", "-n", metavar="NAME", help="name for this healthchecker")
+    parser.add_argument("--config", "-F", metavar="FILE", type=open, help="read configuration from a file")
+    parser.add_argument(
+        "--pid", "-p", metavar="FILE", type=argparse.FileType('w'), help="write PID to the provided file"
+    )
+    parser.add_argument("--user", metavar="USER", help="set user after setting loopback addresses")
+    parser.add_argument("--group", metavar="GROUP", help="set group after setting loopback addresses")
 
     g = parser.add_argument_group("checking healthiness")
-    g.add_argument("--interval", "-i", metavar='N',
-                   default=5,
-                   type=float,
-                   help="wait N seconds between each healthcheck (zero to exit after first announcement)")
-    g.add_argument("--fast-interval", "-f", metavar='N',
-                   default=1,
-                   type=float, dest="fast",
-                   help=("when a state change is about to occur, "
-                         "wait N seconds between each healthcheck"))
-    g.add_argument("--timeout", "-t", metavar='N',
-                   default=5,
-                   type=int,
-                   help="wait N seconds for the check command to execute")
-    g.add_argument("--rise", metavar='N',
-                   default=3,
-                   type=int,
-                   help="check N times before considering the service up")
-    g.add_argument("--fall", metavar='N',
-                   default=3,
-                   type=int,
-                   help="check N times before considering the service down")
-    g.add_argument("--disable", metavar='FILE',
-                   type=str,
-                   help="if FILE exists, the service is considered disabled")
-    g.add_argument("--command", "--cmd", "-c", metavar='CMD',
-                   type=str,
-                   help="command to use for healthcheck")
+    g.add_argument(
+        "--interval",
+        "-i",
+        metavar='N',
+        default=5,
+        type=float,
+        help="wait N seconds between each healthcheck (zero to exit after first announcement)",
+    )
+    g.add_argument(
+        "--fast-interval",
+        "-f",
+        metavar='N',
+        default=1,
+        type=float,
+        dest="fast",
+        help=("when a state change is about to occur, " "wait N seconds between each healthcheck"),
+    )
+    g.add_argument(
+        "--timeout", "-t", metavar='N', default=5, type=int, help="wait N seconds for the check command to execute"
+    )
+    g.add_argument("--rise", metavar='N', default=3, type=int, help="check N times before considering the service up")
+    g.add_argument("--fall", metavar='N', default=3, type=int, help="check N times before considering the service down")
+    g.add_argument("--disable", metavar='FILE', type=str, help="if FILE exists, the service is considered disabled")
+    g.add_argument("--command", "--cmd", "-c", metavar='CMD', type=str, help="command to use for healthcheck")
 
     g = parser.add_argument_group("advertising options")
-    g.add_argument("--next-hop", "-N", metavar='IP',
-                   type=ip_address,
-                   help="self IP address to use as next hop")
-    g.add_argument("--ip", metavar='IP',
-                   type=ip_network, dest="ips", action="append",
-                   help="advertise this IP address or network (CIDR notation)")
-    g.add_argument("--local-preference", metavar='P',
-                   type=int, default=-1,
-                   help="advertise with local preference P")
-    g.add_argument("--deaggregate-networks",
-                   dest="deaggregate_networks", action="store_true",
-                   help="Deaggregate Networks specified in --ip")
-    g.add_argument("--no-ip-setup",
-                   action="store_false", dest="ip_setup",
-                   help="don't setup missing IP addresses")
-    g.add_argument("--dynamic-ip-setup", default=False,
-                   action="store_true", dest="ip_dynamic",
-                   help="delete existing loopback ips on state down and "
-                        "disabled, then restore loopback when up")
-    g.add_argument("--label", default=None,
-                   help="use the provided label to match loopback addresses")
-    g.add_argument("--start-ip", metavar='N',
-                   type=int, default=0,
-                   help="index of the first IP in the list of IP addresses")
-    g.add_argument("--up-metric", metavar='M',
-                   type=int, default=100,
-                   help="first IP get the metric M when the service is up")
-    g.add_argument("--down-metric", metavar='M',
-                   type=int, default=1000,
-                   help="first IP get the metric M when the service is down")
-    g.add_argument("--disabled-metric", metavar='M',
-                   type=int, default=500,
-                   help=("first IP get the metric M "
-                         "when the service is disabled"))
-    g.add_argument("--increase", metavar='M',
-                   type=int, default=1,
-                   help=("for each additional IP address, "
-                         "increase metric value by M"))
-    g.add_argument("--community", metavar="COMMUNITY",
-                   type=str, default=None,
-                   help="announce IPs with the supplied community")
-    g.add_argument("--extended-community", metavar="EXTENDEDCOMMUNITY",
-                   type=str, default=None,
-                   help="announce IPs with the supplied extended community")
-    g.add_argument("--large-community", metavar="LARGECOMMUNITY",
-                   type=str, default=None,
-                   help="announce IPs with the supplied large community")
-    g.add_argument("--disabled-community", metavar="DISABLEDCOMMUNITY",
-                   type=str, default=None,
-                   help="announce IPs with the supplied community when disabled")
-    g.add_argument("--as-path", metavar="ASPATH",
-                   type=str, default=None,
-                   help="announce IPs with the supplied as-path")
-    g.add_argument("--withdraw-on-down", action="store_true",
-                   help=("Instead of increasing the metric on health failure, "
-                         "withdraw the route"))
+    g.add_argument("--next-hop", "-N", metavar='IP', type=ip_address, help="self IP address to use as next hop")
+    g.add_argument(
+        "--ip",
+        metavar='IP',
+        type=ip_network,
+        dest="ips",
+        action="append",
+        help="advertise this IP address or network (CIDR notation)",
+    )
+    g.add_argument("--local-preference", metavar='P', type=int, default=-1, help="advertise with local preference P")
+    g.add_argument(
+        "--deaggregate-networks",
+        dest="deaggregate_networks",
+        action="store_true",
+        help="Deaggregate Networks specified in --ip",
+    )
+    g.add_argument("--no-ip-setup", action="store_false", dest="ip_setup", help="don't setup missing IP addresses")
+    g.add_argument(
+        "--dynamic-ip-setup",
+        default=False,
+        action="store_true",
+        dest="ip_dynamic",
+        help="delete existing loopback ips on state down and " "disabled, then restore loopback when up",
+    )
+    g.add_argument("--label", default=None, help="use the provided label to match loopback addresses")
+    g.add_argument(
+        "--start-ip", metavar='N', type=int, default=0, help="index of the first IP in the list of IP addresses"
+    )
+    g.add_argument(
+        "--up-metric", metavar='M', type=int, default=100, help="first IP get the metric M when the service is up"
+    )
+    g.add_argument(
+        "--down-metric", metavar='M', type=int, default=1000, help="first IP get the metric M when the service is down"
+    )
+    g.add_argument(
+        "--disabled-metric",
+        metavar='M',
+        type=int,
+        default=500,
+        help=("first IP get the metric M " "when the service is disabled"),
+    )
+    g.add_argument(
+        "--increase",
+        metavar='M',
+        type=int,
+        default=1,
+        help=("for each additional IP address, " "increase metric value by M"),
+    )
+    g.add_argument(
+        "--community", metavar="COMMUNITY", type=str, default=None, help="announce IPs with the supplied community"
+    )
+    g.add_argument(
+        "--extended-community",
+        metavar="EXTENDEDCOMMUNITY",
+        type=str,
+        default=None,
+        help="announce IPs with the supplied extended community",
+    )
+    g.add_argument(
+        "--large-community",
+        metavar="LARGECOMMUNITY",
+        type=str,
+        default=None,
+        help="announce IPs with the supplied large community",
+    )
+    g.add_argument(
+        "--disabled-community",
+        metavar="DISABLEDCOMMUNITY",
+        type=str,
+        default=None,
+        help="announce IPs with the supplied community when disabled",
+    )
+    g.add_argument("--as-path", metavar="ASPATH", type=str, default=None, help="announce IPs with the supplied as-path")
+    g.add_argument(
+        "--withdraw-on-down",
+        action="store_true",
+        help=("Instead of increasing the metric on health failure, " "withdraw the route"),
+    )
 
     g = parser.add_argument_group("reporting")
-    g.add_argument("--execute", metavar='CMD',
-                   type=str, action="append",
-                   help="execute CMD on state change")
-    g.add_argument("--up-execute", metavar='CMD',
-                   type=str, action="append",
-                   help="execute CMD when the service becomes available")
-    g.add_argument("--down-execute", metavar='CMD',
-                   type=str, action="append",
-                   help="execute CMD when the service becomes unavailable")
-    g.add_argument("--disabled-execute", metavar='CMD',
-                   type=str, action="append",
-                   help="execute CMD when the service is disabled")
+    g.add_argument("--execute", metavar='CMD', type=str, action="append", help="execute CMD on state change")
+    g.add_argument(
+        "--up-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service becomes available"
+    )
+    g.add_argument(
+        "--down-execute",
+        metavar='CMD',
+        type=str,
+        action="append",
+        help="execute CMD when the service becomes unavailable",
+    )
+    g.add_argument(
+        "--disabled-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service is disabled"
+    )
 
     options = parser.parse_args()
     if options.config is not None:
         # A configuration file has been provided. Read each line and
         # build an equivalent command line.
-        args = sum(["--{0}".format(l.strip()).split("=", 1)
-                    for l in options.config.readlines()
-                    if not l.strip().startswith("#") and l.strip()], [])
+        args = sum(
+            [
+                "--{0}".format(l.strip()).split("=", 1)
+                for l in options.config.readlines()
+                if not l.strip().startswith("#") and l.strip()
+            ],
+            [],
+        )
         args = [x.strip() for x in args]
         args.extend(sys.argv[1:])
         options = parser.parse_args(args)
@@ -242,56 +264,46 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
             return "/var/run/log"
         if sys.platform.startswith("linux"):
             return "/dev/log"
-        raise EnvironmentError("Unable to guess syslog address for your "
-                               "platform, try to disable syslog")
+        raise EnvironmentError("Unable to guess syslog address for your " "platform, try to disable syslog")
 
     logger.setLevel(debug and logging.DEBUG or logging.INFO)
     enable_syslog = syslog and not debug
     # To syslog
     if enable_syslog:
-        facility = getattr(logging.handlers.SysLogHandler,
-                           "LOG_{0}".format(syslog_facility.upper()))
-        sh = logging.handlers.SysLogHandler(address=str(syslog_address()),
-                                            facility=facility)
+        facility = getattr(logging.handlers.SysLogHandler, "LOG_{0}".format(syslog_facility.upper()))
+        sh = logging.handlers.SysLogHandler(address=str(syslog_address()), facility=facility)
         if name:
             healthcheck_name = "healthcheck-{0}".format(name)
         else:
             healthcheck_name = "healthcheck"
-        sh.setFormatter(logging.Formatter(
-            "{0}[{1}]: %(message)s".format(
-                healthcheck_name,
-                os.getpid())))
+        sh.setFormatter(logging.Formatter("{0}[{1}]: %(message)s".format(healthcheck_name, os.getpid())))
         logger.addHandler(sh)
     # To console
-    toconsole = (hasattr(sys.stderr, "isatty") and
-                 sys.stderr.isatty() and  # pylint: disable=E1101
-                 not silent)
+    toconsole = hasattr(sys.stderr, "isatty") and sys.stderr.isatty() and not silent  # pylint: disable=E1101
     if toconsole:
         ch = logging.StreamHandler()
-        ch.setFormatter(logging.Formatter(
-            "%(levelname)s[%(name)s] %(message)s"))
+        ch.setFormatter(logging.Formatter("%(levelname)s[%(name)s] %(message)s"))
         logger.addHandler(ch)
 
 
-def loopback_ips(label,label_only):
+def loopback_ips(label, label_only):
     """Retrieve loopback IP addresses"""
     logger.debug("Retrieve loopback IP addresses")
     addresses = []
 
     if sys.platform.startswith("linux"):
         # Use "ip" (ifconfig is not able to see all addresses)
-        ipre = re.compile(r"^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+"
-                          r"(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*")
+        ipre = re.compile(r"^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+" r"(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*")
         labelre = re.compile(r".*\s+lo:(?P<label>\S+).*")
-        cmd = subprocess.Popen("/sbin/ip -o address show dev lo".split(),
-                               shell=False, stdout=subprocess.PIPE)
+        cmd = subprocess.Popen("/sbin/ip -o address show dev lo".split(), shell=False, stdout=subprocess.PIPE)
     else:
         # Try with ifconfig
-        ipre = re.compile(r"^inet6?\s+(alias\s+)?(?P<ip>[\da-f.:]+)\s+"
-                          r"(?:netmask 0x(?P<netmask>[0-9a-f]+)|"
-                          r"prefixlen (?P<mask>\d+)).*")
-        cmd = subprocess.Popen("/sbin/ifconfig lo0".split(), shell=False,
-                               stdout=subprocess.PIPE)
+        ipre = re.compile(
+            r"^inet6?\s+(alias\s+)?(?P<ip>[\da-f.:]+)\s+"
+            r"(?:netmask 0x(?P<netmask>[0-9a-f]+)|"
+            r"prefixlen (?P<mask>\d+)).*"
+        )
+        cmd = subprocess.Popen("/sbin/ifconfig lo0".split(), shell=False, stdout=subprocess.PIPE)
         labelre = re.compile(r"")
     for line in cmd.stdout:
         line = line.decode("ascii", "ignore").strip()
@@ -303,8 +315,7 @@ def loopback_ips(label,label_only):
         else:
             mask = bin(int(mo.group("netmask"), 16)).count("1")
         try:
-            ip = ip_network("{0}/{1}".format(mo.group("ip"),
-                                             mask))
+            ip = ip_network("{0}/{1}".format(mo.group("ip"), mask))
         except ValueError:
             continue
         if not ip.is_loopback:
@@ -312,7 +323,7 @@ def loopback_ips(label,label_only):
                 lmo = labelre.match(line)
                 if not lmo:
                     continue
-                if lmo.groupdict().get("label","").startswith(label):
+                if lmo.groupdict().get("label", "").startswith(label):
                     addresses.append(ip)
             elif not label_only:
                 addresses.append(ip)
@@ -320,16 +331,18 @@ def loopback_ips(label,label_only):
     logger.debug("Loopback addresses: %s", addresses)
     return addresses
 
+
 def loopback():
     lo = "lo0"
     if sys.platform.startswith("linux"):
         lo = "lo"
     return lo
 
+
 def setup_ips(ips, label, sudo=False):
     """Setup missing IP on loopback interface"""
 
-    existing = set(loopback_ips(label,False))
+    existing = set(loopback_ips(label, False))
     toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
         logger.debug("Setup loopback IP address %s", ip)
@@ -338,19 +351,19 @@ def setup_ips(ips, label, sudo=False):
             if sudo:
                 cmd.insert(0, "sudo")
             if label:
-                cmd += ["label", "{0}:{1}".format(loopback(),label)]
+                cmd += ["label", "{0}:{1}".format(loopback(), label)]
                 try:
-                    subprocess.check_call(
-                        cmd, stdout=fnull, stderr=fnull)
+                    subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
                 except subprocess.CalledProcessError as e:
                     # the IP address is already setup, ignoring
                     if cmd[0] == "ip" and cmd[2] == "add" and e.returncode == 2:
                         continue
                     raise e
 
+
 def remove_ips(ips, label, sudo=False):
     """Remove added IP on loopback interface"""
-    existing = set(loopback_ips(label,True))
+    existing = set(loopback_ips(label, True))
 
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
     toremove = set([ip_network(ip) for net in ips for ip in net]) & existing
@@ -361,19 +374,22 @@ def remove_ips(ips, label, sudo=False):
             if sudo:
                 cmd.insert(0, "sudo")
             if label:
-                cmd += ["label", "{0}:{1}".format(loopback(),label)]
+                cmd += ["label", "{0}:{1}".format(loopback(), label)]
             try:
-                subprocess.check_call(
-                    cmd, stdout=fnull, stderr=fnull)
+                subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError:
-                logger.warn("Unable to remove loopback IP address %s - is \
-                    healthcheck running as root?", str(ip))
+                logger.warn(
+                    "Unable to remove loopback IP address %s - is \
+                    healthcheck running as root?",
+                    str(ip),
+                )
 
 
 def drop_privileges(user, group):
     """Drop privileges to specified user and group"""
     if group is not None:
         import grp
+
         gid = grp.getgrnam(group).gr_gid
         logger.debug("Dropping privileges to group {0}/{1}".format(group, gid))
         try:
@@ -382,6 +398,7 @@ def drop_privileges(user, group):
             os.setregid(gid, gid)
     if user is not None:
         import pwd
+
         uid = pwd.getpwnam(user).pw_uid
         logger.debug("Dropping privileges to user {0}/{1}".format(user, uid))
         try:
@@ -403,6 +420,7 @@ def check(cmd, timeout):
 
     class Alarm(Exception):
         """Exception to signal an alarm condition."""
+
         pass
 
     def alarm_handler(number, frame):  # pylint: disable=W0613
@@ -410,10 +428,7 @@ def check(cmd, timeout):
         raise Alarm()
 
     logger.debug("Checking command %s", repr(cmd))
-    p = subprocess.Popen(cmd, shell=True,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT,
-                         preexec_fn=os.setpgrp)
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
     if timeout:
         signal.signal(signal.SIGALRM, alarm_handler)
         signal.alarm(timeout)
@@ -423,17 +438,14 @@ def check(cmd, timeout):
         if timeout:
             signal.alarm(0)
         if p.returncode != 0:
-            logger.warn("Check command was unsuccessful: %s",
-                        p.returncode)
+            logger.warn("Check command was unsuccessful: %s", p.returncode)
             if stdout.strip():
                 logger.info("Output of check command: %s", stdout)
             return False
-        logger.debug(
-            "Command was executed successfully %s %s", p.returncode, stdout)
+        logger.debug("Command was executed successfully %s %s", p.returncode, stdout)
         return True
     except Alarm:
-        logger.warn("Timeout (%s) while running check command %s",
-                    timeout, cmd)
+        logger.warn("Timeout (%s) while running check command %s", timeout, cmd)
         os.killpg(p.pid, signal.SIGKILL)
         return False
 
@@ -441,14 +453,14 @@ def check(cmd, timeout):
 def loop(options):
     """Main loop."""
     states = enum(
-        "INIT",                 # Initial state
-        "DISABLED",             # Disabled state
-        "RISING",               # Checks are currently succeeding.
-        "FALLING",              # Checks are currently failing.
-        "UP",                   # Service is considered as up.
-        "DOWN",                 # Service is considered as down.
-        "EXIT",                 # Exit state
-        "END",                  # End state, exiting but without removing loopback and/or announced routes
+        "INIT",  # Initial state
+        "DISABLED",  # Disabled state
+        "RISING",  # Checks are currently succeeding.
+        "FALLING",  # Checks are currently failing.
+        "UP",  # Service is considered as up.
+        "DOWN",  # Service is considered as down.
+        "EXIT",  # Exit state
+        "END",  # End state, exiting but without removing loopback and/or announced routes
     )
 
     def exabgp(target):
@@ -477,9 +489,7 @@ def loop(options):
                 command = "announce" if target is states.UP else "withdraw"
             else:
                 command = "announce"
-            announce = "route {0} next-hop {1}".format(
-                str(ip),
-                options.next_hop or "self")
+            announce = "route {0} next-hop {1}".format(str(ip), options.next_hop or "self")
 
             if command == "announce":
                 announce = "{0} med {1}".format(announce, metric)
@@ -491,20 +501,13 @@ def loop(options):
                         if options.disabled_community:
                             community = options.disabled_community
                     if community:
-                        announce = "{0} community [ {1} ]".format(
-                            announce, community)
+                        announce = "{0} community [ {1} ]".format(announce, community)
                 if options.extended_community:
-                    announce = "{0} extended-community [ {1} ]".format(
-                        announce,
-                        options.extended_community)
+                    announce = "{0} extended-community [ {1} ]".format(announce, options.extended_community)
                 if options.large_community:
-                    announce = "{0} large-community [ {1} ]".format(
-                        announce,
-                        options.large_community)
+                    announce = "{0} large-community [ {1} ]".format(announce, options.large_community)
                 if options.as_path:
-                    announce = "{0} as-path [ {1} ]".format(
-                        announce,
-                        options.as_path)
+                    announce = "{0} as-path [ {1} ]".format(announce, options.as_path)
 
             metric += options.increase
 
@@ -512,7 +515,7 @@ def loop(options):
             logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
             sys.stdout.flush()
-            
+
             # Wait for confirmation from ExaBGP if expected
             if options.no_ack:
                 continue
@@ -532,24 +535,20 @@ def loop(options):
         # Log and execute commands
         logger.debug("Transition to %s", str(target))
         cmds = []
-        cmds.extend(vars(options).get("{0}_execute".format(
-            str(target).lower()), []) or [])
+        cmds.extend(vars(options).get("{0}_execute".format(str(target).lower()), []) or [])
         cmds.extend(vars(options).get("execute", []) or [])
         for cmd in cmds:
-            logger.debug("Transition to %s, execute `%s`",
-                         str(target), cmd)
+            logger.debug("Transition to %s, execute `%s`", str(target), cmd)
             env = os.environ.copy()
             env.update({"STATE": str(target)})
             with open(os.devnull, "w") as fnull:
-                subprocess.call(
-                    cmd, shell=True, stdout=fnull, stderr=fnull, env=env)
+                subprocess.call(cmd, shell=True, stdout=fnull, stderr=fnull, env=env)
 
         return target
 
     def one(checks, state):
         """Execute one loop iteration."""
-        disabled = (options.disable is not None and
-                    os.path.exists(options.disable))
+        disabled = options.disable is not None and os.path.exists(options.disable)
         successful = disabled or check(options.command, options.timeout)
         # FSM
         if state != states.DISABLED and disabled:
@@ -624,17 +623,17 @@ def loop(options):
             exabgp(states.EXIT)
             break
 
+
 def main():
     """Entry point."""
     options = parse()
-    setup_logging(options.debug, options.silent, options.name,
-                  options.syslog_facility, not options.no_syslog)
+    setup_logging(options.debug, options.silent, options.name, options.syslog_facility, not options.no_syslog)
     if options.pid:
         options.pid.write("{0}\n".format(os.getpid()))
         options.pid.close()
     try:
         # Setup IP to use
-        options.ips = options.ips or loopback_ips(options.label,False)
+        options.ips = options.ips or loopback_ips(options.label, False)
         if not options.ips:
             logger.error("No IP found")
             sys.exit(1)

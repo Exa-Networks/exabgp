@@ -19,47 +19,45 @@ from exabgp.configuration.operational.parser import lpcq
 from exabgp.configuration.operational.parser import lpcp
 
 
-class ParseOperational (Section):
-	syntax = \
-		'syntax:\n' \
-		''
+class ParseOperational(Section):
+    syntax = 'syntax:\n' ''
 
-	known = {
-		'asm':  asm,
-		'adm':  adm,
-		'rpcq': rpcq,
-		'rpcp': rpcp,
-		'apcq': apcq,
-		'apcp': apcp,
-		'lpcq': lpcq,
-		'lpcp': lpcp,
-	}
+    known = {
+        'asm': asm,
+        'adm': adm,
+        'rpcq': rpcq,
+        'rpcp': rpcp,
+        'apcq': apcq,
+        'apcp': apcp,
+        'lpcq': lpcq,
+        'lpcp': lpcp,
+    }
 
-	action = {
-		'asm':  'append-name',
-		'adm':  'append-name',
-		'rpcq': 'append-name',
-		'rpcp': 'append-name',
-		'apcq': 'append-name',
-		'apcp': 'append-name',
-		'lpcq': 'append-name',
-		'lpcp': 'append-name',
-	}
+    action = {
+        'asm': 'append-name',
+        'adm': 'append-name',
+        'rpcq': 'append-name',
+        'rpcp': 'append-name',
+        'apcq': 'append-name',
+        'apcp': 'append-name',
+        'lpcq': 'append-name',
+        'lpcp': 'append-name',
+    }
 
-	name = 'operational'
+    name = 'operational'
 
-	def __init__ (self, tokeniser, scope, error, logger):
-		Section.__init__(self,tokeniser,scope,error,logger)
+    def __init__(self, tokeniser, scope, error, logger):
+        Section.__init__(self, tokeniser, scope, error, logger)
 
-	def clear (self):
-		pass
+    def clear(self):
+        pass
 
-	def pre (self):
-		self.scope.to_context()
-		return True
+    def pre(self):
+        self.scope.to_context()
+        return True
 
-	def post (self):
-		routes = self.scope.pop(self.name)
-		if routes:
-			self.scope.set('routes',routes)
-		return True
+    def post(self):
+        routes = self.scope.pop(self.name)
+        if routes:
+            self.scope.set('routes', routes)
+        return True

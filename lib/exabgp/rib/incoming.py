@@ -10,13 +10,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.rib.cache import Cache
 
 
-class IncomingRIB (Cache):
-	def __init__ (self, cache, families):
-		Cache.__init__(self,cache,families)
+class IncomingRIB(Cache):
+    def __init__(self, cache, families):
+        Cache.__init__(self, cache, families)
 
-	# back to square one, all the routes are removed
-	def clear (self):
-		self.clear_cache()
+    # back to square one, all the routes are removed
+    def clear(self):
+        self.clear_cache()
 
-	def reset (self):
-		pass
+    def reset(self):
+        pass

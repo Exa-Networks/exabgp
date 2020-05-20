@@ -22,27 +22,27 @@ Adding your hostname to the /etc/hosts file should fix the issue
 '''
 
 
-def host ():
-	global __host_name
-	if not __host_name:
-		value = socket.gethostname()
-		__host_name = value.split('.')[0] if value else 'localhost'
-	return __host_name
+def host():
+    global __host_name
+    if not __host_name:
+        value = socket.gethostname()
+        __host_name = value.split('.')[0] if value else 'localhost'
+    return __host_name
 
 
-def domain ():
-	global __domain_name
-	if not __domain_name:
-		value = socket.getfqdn()
-		__domain_name = value.split('.')[0] if value else 'localhost'
-	return __domain_name
+def domain():
+    global __domain_name
+    if not __domain_name:
+        value = socket.getfqdn()
+        __domain_name = value.split('.')[0] if value else 'localhost'
+    return __domain_name
 
 
-def warn ():
-	if __warned:
-		return ''
+def warn():
+    if __warned:
+        return ''
 
-	now = time.time()
-	_ = host(),domain()
-	if time.time() - now > 1.0:
-		return __warning
+    now = time.time()
+    _ = host(), domain()
+    if time.time() - now > 1.0:
+        return __warning

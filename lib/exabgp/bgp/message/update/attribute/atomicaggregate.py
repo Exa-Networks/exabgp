@@ -15,40 +15,41 @@ from exabgp.bgp.message.notification import Notify
 # ========================================================== AtomicAggregate (6)
 #
 
+
 @Attribute.register()
-class AtomicAggregate (Attribute):
-	ID = Attribute.CODE.ATOMIC_AGGREGATE
-	FLAG = Attribute.Flag.TRANSITIVE
-	CACHING = True
+class AtomicAggregate(Attribute):
+    ID = Attribute.CODE.ATOMIC_AGGREGATE
+    FLAG = Attribute.Flag.TRANSITIVE
+    CACHING = True
 
-	__slots__ = []
+    __slots__ = []
 
-	# Inherited from Attribute
-	# def __eq__ (self, other):
-	# def __ne__ (self, other):
+    # Inherited from Attribute
+    # def __eq__ (self, other):
+    # def __ne__ (self, other):
 
-	def pack (self, negotiated=None):
-		return self._attribute(b'')
+    def pack(self, negotiated=None):
+        return self._attribute(b'')
 
-	def __len__ (self):
-		return 0
+    def __len__(self):
+        return 0
 
-	def __repr__ (self):
-		return ''
+    def __repr__(self):
+        return ''
 
-	def __hash__ (self):
-		return 0
+    def __hash__(self):
+        return 0
 
-	@classmethod
-	def unpack (cls, data, negotiated):
-		if data:
-			raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ordinal(_)) for _ in data])
-		return cls()
+    @classmethod
+    def unpack(cls, data, negotiated):
+        if data:
+            raise Notify(3, 2, 'invalid ATOMIC_AGGREGATE %s' % [hex(ordinal(_)) for _ in data])
+        return cls()
 
-	@classmethod
-	def setCache (cls):
-		# There can only be one, build it now :)
-		cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][''] = cls()
+    @classmethod
+    def setCache(cls):
+        # There can only be one, build it now :)
+        cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][''] = cls()
 
 
 AtomicAggregate.setCache()

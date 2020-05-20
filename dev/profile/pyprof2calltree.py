@@ -40,11 +40,14 @@ from exabgp.vendoring import six
 
 __all__ = ['convert', 'visualize', 'CalltreeConverter']
 
+
 class Code(object):
     pass
 
+
 class Entry(object):
     pass
+
 
 def pstats2entries(data):
     """Helper to convert serialized pstats back to a list of raw entries
@@ -84,6 +87,7 @@ def pstats2entries(data):
             entries[entry_caller].calls.append((entry, call_info))
 
     return entries.values()
+
 
 class CalltreeConverter(object):
     """Convert raw cProfile or pstats data to the calltree format"""
@@ -144,12 +148,11 @@ class CalltreeConverter(object):
         out_file = self.out_file
 
         code = entry.code
-        #print >> out_file, 'ob=%s' % (code.co_filename,)
+        # print >> out_file, 'ob=%s' % (code.co_filename,)
 
         co_filename, co_firstlineno, co_name = cProfile.label(code)
         print('fi=%s' % (co_filename,), file=out_file)
-        print('fn=%s %s:%d' % (
-            co_name, co_filename, co_firstlineno), file=out_file)
+        print('fn=%s %s:%d' % (co_name, co_filename, co_firstlineno), file=out_file)
 
         inlinetime = int(entry.inlinetime * 1000)
         if isinstance(code, str):
@@ -175,15 +178,15 @@ class CalltreeConverter(object):
     def _subentry(self, lineno, subentry, call_info):
         out_file = self.out_file
         code = subentry.code
-        #print >> out_file, 'cob=%s' % (code.co_filename,)
+        # print >> out_file, 'cob=%s' % (code.co_filename,)
         co_filename, co_firstlineno, co_name = cProfile.label(code)
-        print('cfn=%s %s:%d' % (
-            co_name, co_filename, co_firstlineno), file=out_file)
+        print('cfn=%s %s:%d' % (co_name, co_filename, co_firstlineno), file=out_file)
         print('cfi=%s' % (co_filename,), file=out_file)
         print('calls=%d %d' % (call_info[0], co_firstlineno), file=out_file)
 
         totaltime = int(call_info[3] * 1000)
         print('%d %d' % (lineno, totaltime), file=out_file)
+
 
 def main():
     """Execute the converter using parameters provided on the command line"""
@@ -191,18 +194,23 @@ def main():
     usage = "%s [-k] [-o output_file_path] [-i input_file_path] [-r scriptfile [args]]"
     parser = optparse.OptionParser(usage=usage % sys.argv[0])
     parser.allow_interspersed_args = False
-    parser.add_option('-o', '--outfile', dest="outfile",
-                      help="Save calltree stats to <outfile>", default=None)
-    parser.add_option('-i', '--infile', dest="infile",
-                      help="Read python stats from <infile>", default=None)
-    parser.add_option('-r', '--run-script', dest="script",
-                      help="Name of the python script to run to collect"
-                      " profiling data", default=None)
-    parser.add_option('-k', '--kcachegrind', dest="kcachegrind",
-                      help="Run the kcachegrind tool on the converted data",
-                      action="store_true")
+    parser.add_option('-o', '--outfile', dest="outfile", help="Save calltree stats to <outfile>", default=None)
+    parser.add_option('-i', '--infile', dest="infile", help="Read python stats from <infile>", default=None)
+    parser.add_option(
+        '-r',
+        '--run-script',
+        dest="script",
+        help="Name of the python script to run to collect" " profiling data",
+        default=None,
+    )
+    parser.add_option(
+        '-k',
+        '--kcachegrind',
+        dest="kcachegrind",
+        help="Run the kcachegrind tool on the converted data",
+        action="store_true",
+    )
     options, args = parser.parse_args()
-
 
     outfile = options.outfile
 
@@ -259,6 +267,7 @@ def visualize(profiling_data):
     """
     converter = CalltreeConverter(profiling_data)
     converter.visualize()
+
 
 def convert(profiling_data, outputfile):
     """convert `profiling_data` to calltree format and dump it to `outputfile`

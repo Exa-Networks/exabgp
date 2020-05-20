@@ -26,26 +26,27 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     https://tools.ietf.org/html/rfc7752#section-3.3.2.5 Shared Risk Link Group TLV
 
+
 @LINKSTATE.register()
 class Srlg(object):
-	TLV = 1096
+    TLV = 1096
 
-	def __init__ (self, srlg):
-		self.srlg = srlg
+    def __init__(self, srlg):
+        self.srlg = srlg
 
-	def __repr__ (self):
-		return "SRLG values on link are: %s" % (self.srlg)
+    def __repr__(self):
+        return "SRLG values on link are: %s" % (self.srlg)
 
-	@classmethod
-	def unpack (cls,data,length):
-		srlg = []
-		if len(data) < 4:
-			raise Notify(3,5, "Unable to decode SRLG")
-		while data:
-			lgrp = unpack('!L',data[:4])[0]
-			srlg.append(lgrp)
-			data = data[4:]
-		return cls(srlg=srlg)
+    @classmethod
+    def unpack(cls, data, length):
+        srlg = []
+        if len(data) < 4:
+            raise Notify(3, 5, "Unable to decode SRLG")
+        while data:
+            lgrp = unpack('!L', data[:4])[0]
+            srlg.append(lgrp)
+            data = data[4:]
+        return cls(srlg=srlg)
 
-	def json (self,compact=None):
-		return '"shared-risk-link-groups": %s' % str(self.srlg)
+    def json(self, compact=None):
+        return '"shared-risk-link-groups": %s' % str(self.srlg)

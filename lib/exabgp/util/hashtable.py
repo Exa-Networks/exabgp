@@ -8,15 +8,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 
-class HashTable (dict):
-	def __getitem__ (self, key):
-		return dict.__getitem__(self,key.replace('_','-'))
+class HashTable(dict):
+    def __getitem__(self, key):
+        return dict.__getitem__(self, key.replace('_', '-'))
 
-	def __setitem__ (self, key, value):
-		return dict.__setitem__(self,key.replace('_','-'),value)
+    def __setitem__(self, key, value):
+        return dict.__setitem__(self, key.replace('_', '-'), value)
 
-	def __getattr__ (self, key):
-		return dict.__getitem__(self,key.replace('_','-'))
+    def __getattr__(self, key):
+        return dict.__getitem__(self, key.replace('_', '-'))
 
-	def __setattr__ (self, key, value):
-		return dict.__setitem__(self,key.replace('_','-'),value)
+    def __setattr__(self, key, value):
+        return dict.__setitem__(self, key.replace('_', '-'), value)

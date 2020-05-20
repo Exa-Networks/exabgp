@@ -12,14 +12,14 @@ from struct import pack
 # =================================================================== HoldTime
 
 
-class HoldTime (int):
-	MAX = 0xFFFF
+class HoldTime(int):
+    MAX = 0xFFFF
 
-	def pack (self):
-		return pack('!H',self)
+    def pack(self):
+        return pack('!H', self)
 
-	def keepalive (self):
-		return int(self/3)
+    def keepalive(self):
+        return int(self / 3)
 
-	def __len__ (self):
-		return 2
+    def __len__(self):
+        return 2

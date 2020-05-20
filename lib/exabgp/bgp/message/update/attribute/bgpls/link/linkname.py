@@ -25,21 +25,21 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
 @LINKSTATE.register()
 class LinkName(object):
-	TLV = 1098
+    TLV = 1098
 
-	def __init__ (self, linkname):
-		self.linkname = linkname
+    def __init__(self, linkname):
+        self.linkname = linkname
 
-	def __repr__ (self):
-		return "linkname: %s" % (self.linkname)
+    def __repr__(self):
+        return "linkname: %s" % (self.linkname)
 
-	@classmethod
-	def unpack (cls,data,length):
-		if length > 255:
-			raise Notify(3,5, "Link Name TLV length too large")
-		else:
-			linkname = binascii.b2a_uu(data[:length])
-			return cls(linkname=linkname)
+    @classmethod
+    def unpack(cls, data, length):
+        if length > 255:
+            raise Notify(3, 5, "Link Name TLV length too large")
+        else:
+            linkname = binascii.b2a_uu(data[:length])
+            return cls(linkname=linkname)
 
-	def json (self,compact=None):
-		return '"link-name": "%s"' % self.linkname
+    def json(self, compact=None):
+        return '"link-name": "%s"' % self.linkname

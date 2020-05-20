@@ -15,18 +15,19 @@ from exabgp.bgp.message.message import Message
 #
 
 
-class NOP (Message):
-	ID = Message.CODE.NOP
-	TYPE = character(Message.CODE.NOP)
+class NOP(Message):
+    ID = Message.CODE.NOP
+    TYPE = character(Message.CODE.NOP)
 
-	def message (self,negotiated=None):
-		raise RuntimeError('NOP messages can not be sent on the wire')
+    def message(self, negotiated=None):
+        raise RuntimeError('NOP messages can not be sent on the wire')
 
-	def __str__ (self):
-		return "NOP"
+    def __str__(self):
+        return "NOP"
 
-	@classmethod
-	def unpack_message (cls, data, negotiated):  # pylint: disable=W0613
-		return NOP()
+    @classmethod
+    def unpack_message(cls, data, negotiated):  # pylint: disable=W0613
+        return NOP()
+
 
 _NOP = NOP()

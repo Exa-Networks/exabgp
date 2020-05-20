@@ -19,25 +19,32 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #   +-------------+----------------------+----------+-------------------+
 #   https://tools.ietf.org/html/rfc7752 sec 3.3.1.4  - Traffic Engineering RouterID
 
+
 @LINKSTATE.register(lsid=1028)
 @LINKSTATE.register(lsid=1029)
 class LocalTeRid(object):
+    _terids = []
 
-	def __init__ (self, terid):
-		self.terid = terid
+    def __init__(self):
+        self.terids = [str(terid) for terid in LocalTeRid._terids]
 
-	def __repr__ (self):
-		return "Local TE Router ID: %s" % (self.terid)
+    def __repr__(self):
+        return "Local TE Router IDs: %s" % ', '.join(self.terids)
 
-	@classmethod
-	def unpack (cls,data,length):
-		if len(data) == 4:
-			# IPv4 address
-			terid = IP.unpack(data[:4])
-		elif len(data) == 16:
-			# IPv6
-			terid = IP.unpack(data[:16])
-		return cls(terid=terid)
+    @classmethod
+    def unpack(cls, data, length):
+        if len(data) == 4:
+            # IPv4 address
+            terid = IP.unpack(data[:4])
+        elif len(data) == 16:
+            # IPv6
+            terid = IP.unpack(data[:16])
+        cls._terids.append(terid)
+        return cls()
 
-	def json (self,compact=None):
-		return '"local-te-router-id": "%s"' % str(self.terid)
+    def json(self, compact=None):
+        return '"local-te-router-ids": ["%s"]' % '", "'.join(self.terids)
+
+    @classmethod
+    def reset(cls):
+        cls._terids = []

@@ -24,52 +24,51 @@ from exabgp.util import ordinal
 # ================================================================== Link Local/Remote Identifiers
 
 
-class LinkIdentifier (object):
-	def __init__ (self, local_id, remote_id, packed=None):
-		self.local_id = local_id
-		self.remote_id = remote_id
-		self._packed = packed
+class LinkIdentifier(object):
+    def __init__(self, local_id, remote_id, packed=None):
+        self.local_id = local_id
+        self.remote_id = remote_id
+        self._packed = packed
 
-	@classmethod
-	def unpack (cls, data):
-		local_id = unpack('!L',data[:4])[0]
-		remote_id = unpack('!L',data[4:8])[0]
-		return cls(local_id=local_id,remote_id=remote_id)
+    @classmethod
+    def unpack(cls, data):
+        local_id = unpack('!L', data[:4])[0]
+        remote_id = unpack('!L', data[4:8])[0]
+        return cls(local_id=local_id, remote_id=remote_id)
 
-	def json (self):
-		content = '"link-local-id": %s, ' % self.local_id + \
-			'"link-remote-id": %s' % self.remote_id
-		return content
+    def json(self):
+        content = '"link-local-id": %s, ' % self.local_id + '"link-remote-id": %s' % self.remote_id
+        return content
 
-	def __eq__ (self, other):
-		return (self.local_id == other.local_id) and (self.remote_id == other.remote_id)
+    def __eq__(self, other):
+        return (self.local_id == other.local_id) and (self.remote_id == other.remote_id)
 
-	def __neq__ (self, other):
-		return self.local_id != other.local_id
+    def __neq__(self, other):
+        return self.local_id != other.local_id
 
-	def __lt__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __lt__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __le__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __le__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __gt__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __gt__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __ge__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __ge__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __str__ (self):
-		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
+    def __str__(self):
+        return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
-	def __repr__ (self):
-		return self.__str__()
+    def __repr__(self):
+        return self.__str__()
 
-	def __len__ (self):
-		return len(self._packed)
+    def __len__(self):
+        return len(self._packed)
 
-	def __hash__ (self):
-		return hash(str(self))
+    def __hash__(self):
+        return hash(str(self))
 
-	def pack (self):
-		return self._packed
+    def pack(self):
+        return self._packed

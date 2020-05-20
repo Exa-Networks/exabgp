@@ -39,88 +39,89 @@ environment.setup('')
 
 # XXX: We do not accept input from the forked application
 
-class Application (object):
-	Q = deque()
-	running = True
 
-	@staticmethod
-	def _signal (_,__):
-		Application.running = False
+class Application(object):
+    Q = deque()
+    running = True
 
-	def process (self):
-		run = sys.argv[1:]
-		if not run:
-			print(sys.stderr, 'no consummer program provided')
-			sys.exit(1)
+    @staticmethod
+    def _signal(_, __):
+        Application.running = False
 
-		# Prevent some weird termcap data to be created at the start of the PIPE
-		# \x1b[?1034h (no-eol) (esc)
-		os.environ['TERM'] = 'dumb'
+    def process(self):
+        run = sys.argv[1:]
+        if not run:
+            print(sys.stderr, 'no consummer program provided')
+            sys.exit(1)
 
-		try:
-			sub = subprocess.Popen(
-				run,
-				stdin=subprocess.PIPE,
-				stdout=subprocess.PIPE,
-				preexec_fn=preexec_helper
-				# This flags exists for python 2.7.3 in the documentation but on on my MAC
-				# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
-			)
-		except (subprocess.CalledProcessError,OSError,ValueError):
-			print('could not start subprocess', file=sys.stderr)
-			sys.exit(1)
+        # Prevent some weird termcap data to be created at the start of the PIPE
+        # \x1b[?1034h (no-eol) (esc)
+        os.environ['TERM'] = 'dumb'
 
-		return sub
+        try:
+            sub = subprocess.Popen(
+                run,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                preexec_fn=preexec_helper
+                # This flags exists for python 2.7.3 in the documentation but on on my MAC
+                # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            )
+        except (subprocess.CalledProcessError, OSError, ValueError):
+            print('could not start subprocess', file=sys.stderr)
+            sys.exit(1)
 
-	def __init__ (self):
-		thread.start_new_thread(self.reader,(os.getpid(),))
-		signal.signal(signal.SIGTERM,Application._signal)
-		self.sub = self.process()
-		self.transcoder = Transcoder('json','json')
-		self.main()
+        return sub
 
-	# def test_reader (self,myself):
-	# 	while len(test):
-	# 		# line = sys.stdin.readline().strip()
-	# 		line = test.pop(0)
-	# 		if line:
-	# 			self.Q.append(line)
-	# 	time.sleep(2)
-	# 	os.kill(myself,signal.SIGTERM)
+    def __init__(self):
+        thread.start_new_thread(self.reader, (os.getpid(),))
+        signal.signal(signal.SIGTERM, Application._signal)
+        self.sub = self.process()
+        self.transcoder = Transcoder('json', 'json')
+        self.main()
 
-	def reader (self,myself):
-		ok = True
-		line = ''
-		while True:
-			line = sys.stdin.readline().strip()
-			if ok:
-				if not line:
-					ok = False
-					continue
-			elif not line:
-				break
-			else:
-				ok = True
-			self.Q.append(line)
-		os.kill(myself,signal.SIGTERM)
+    # def test_reader (self,myself):
+    # 	while len(test):
+    # 		# line = sys.stdin.readline().strip()
+    # 		line = test.pop(0)
+    # 		if line:
+    # 			self.Q.append(line)
+    # 	time.sleep(2)
+    # 	os.kill(myself,signal.SIGTERM)
 
-	def main (self):
-		while self.running or len(self.Q):
-			try:
-				line = self.Q.popleft()
-				self.sub.stdin.write(self.transcoder.convert(line))
-				self.sub.stdin.flush()
-			except IndexError:
-				# no data on the Q to read
-				time.sleep(0.1)
-			except IOError:
-				# subprocess died
-				print('subprocess died', file=sys.stderr)
-				sys.exit(1)
+    def reader(self, myself):
+        ok = True
+        line = ''
+        while True:
+            line = sys.stdin.readline().strip()
+            if ok:
+                if not line:
+                    ok = False
+                    continue
+            elif not line:
+                break
+            else:
+                ok = True
+            self.Q.append(line)
+        os.kill(myself, signal.SIGTERM)
+
+    def main(self):
+        while self.running or len(self.Q):
+            try:
+                line = self.Q.popleft()
+                self.sub.stdin.write(self.transcoder.convert(line))
+                self.sub.stdin.flush()
+            except IndexError:
+                # no data on the Q to read
+                time.sleep(0.1)
+            except IOError:
+                # subprocess died
+                print('subprocess died', file=sys.stderr)
+                sys.exit(1)
 
 
 if __name__ == '__main__':
-	try:
-		Application()
-	except KeyboardInterrupt:
-		pass
+    try:
+        Application()
+    except KeyboardInterrupt:
+        pass

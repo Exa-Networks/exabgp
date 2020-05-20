@@ -3,6 +3,22 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.7:
+ * Feature: logging parsing in debug mode will now print the JSON of updates
+ * Fix: issue during restart
+ * Fix: add ipv6 mpls to add-path
+   patch by: adrian62
+ * Fix: aggregator parsing when no space are used around ()
+   reported by: thomas955
+ * Fix: high CPU load to do sleeptime in second and not ms
+   reported by: Gary Buhrmaster
+ * Change: BGP-LS TE-RIDs are now reported as a list (as Arista reports more than one)
+   patch: tomjshine
+ * reported: the RIB code so withdraw message before any announce are sent
+        this does change the RIB behaviour sending withdrawal when it was not previously
+ * Fix: bad parsing in some case when capability next-hop was used
+   reported: alexejli
+
 Version 4.2.6:
  * Fix: prevent the deletion of IP addresses not added by the healthchecker
 

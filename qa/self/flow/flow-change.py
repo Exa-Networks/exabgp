@@ -5,7 +5,7 @@ import os
 import sys
 import time
 
-flow="flow route { match { source 10.0.0.1/32; destination 10.0.0.2/32; destination-port =3128; protocol tcp; } then { discard; } }"
+flow = "flow route { match { source 10.0.0.1/32; destination 10.0.0.2/32; destination-port =3128; protocol tcp; } then { discard; } }"
 
 # When the parent dies we are seeing continual newlines, so we only access so many before stopping
 counter = 1
@@ -15,17 +15,17 @@ counter = 1
 time.sleep(1)
 
 while True:
-	try:
-		time.sleep(1)
-		if counter % 2:
-			print('announce', flow)
-			sys.stdout.flush()
-		else:
-			print('withdraw', flow)
-			sys.stdout.flush()
+    try:
+        time.sleep(1)
+        if counter % 2:
+            print('announce', flow)
+            sys.stdout.flush()
+        else:
+            print('withdraw', flow)
+            sys.stdout.flush()
 
-		counter += 1
-	except KeyboardInterrupt:
-		pass
-	except IOError:
-		break
+        counter += 1
+    except KeyboardInterrupt:
+        pass
+    except IOError:
+        break

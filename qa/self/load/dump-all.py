@@ -5,6 +5,6 @@ import sys
 count = 0
 
 while True:
-	line = sys.stdin.readline()
-	sys.stderr.write(line)
-	sys.stderr.flush()
+    line = sys.stdin.readline()
+    sys.stderr.write(line)
+    sys.stderr.flush()

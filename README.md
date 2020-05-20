@@ -56,9 +56,9 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.6.tar.gz | tar zx
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.7.tar.gz | tar zx
 
-> cd exabgp-4.2.6
+> cd exabgp-4.2.7
 > ./sbin/exabgp --version
 > ./sbin/exabgp --help
 
@@ -81,11 +81,19 @@ or to use git master
 > ./bin/healthcheck --help
 ```
 
-or change git to use any previous release (here 4.2.6)
+or change git to use any previous release (here 4.2.7)
 
 ```sh
-> git checkout 4.2.6
+> git checkout 4.2.7
 > ./sbin/exabgp --version
+```
+
+once you have the code, it is possible to create a self-contained executable which only requires an install python3 interpreter
+
+```
+> cd exabgp-git
+> python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main  -p "/usr/bin/env python3" lib
+>  /usr/local/sbin/exabgp --version
 ```
 
 Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
@@ -187,6 +195,7 @@ The following projects are related to ExaBGP
   - [bgperf](https://github.com/osrg/bgperf) Stress test solution for Bird and Quagga (can be used with other implementations)
   - [super smash brogp](https://github.com/spotify/super-smash-brogp) Stress test BGP
   - [kyro](https://github.com/kvogt/kyro) realtime network performance measurement and optimal routes injection - not really ExaBGP related, they have their own stack, but worth mentioning
+  - [kakapo](https://github.com/hdb3/kakapo) a BGP flooding tool
 
 **FIB**
   - [IOS-XR Solenoid](https://github.com/ios-xr/Solenoid) a FIB for ExaBGP

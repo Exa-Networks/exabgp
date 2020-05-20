@@ -19,21 +19,22 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #   //                       Flags (variable)                      //
 #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+
 @LINKSTATE.register()
 class SrIgpPrefixAttr(object):
-	TLV = 1170
+    TLV = 1170
 
-	def __init__ (self, flags):
-		self.flags = flags
+    def __init__(self, flags):
+        self.flags = flags
 
-	def __repr__ (self):
-		return "prefix_attr_flags: %s" % (self.flags)
+    def __repr__(self):
+        return "prefix_attr_flags: %s" % (self.flags)
 
-	@classmethod
-	def unpack (cls,data,length):
-		# We only support IS-IS for now.
-		flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.ISIS_SR_ATTR_FLAGS)
-		return cls(flags=flags)
+    @classmethod
+    def unpack(cls, data, length):
+        # We only support IS-IS for now.
+        flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.ISIS_SR_ATTR_FLAGS)
+        return cls(flags=flags)
 
-	def json (self,compact=None):
-		return '"sr-prefix-attribute-flags": {}'.format(self.flags.json())
+    def json(self, compact=None):
+        return '"sr-prefix-attribute-flags": {}'.format(self.flags.json())

@@ -35,57 +35,50 @@ from exabgp.util import ordinal
 # ================================================================== OSPF_ROUTE_TYPE
 
 
-OSPF_ROUTE = {
-	1:	'intra-area',
-	2:	'inter-area',
-	3:	'external-1',
-	4:	'external-2',
-	5:	'nssa-1',
-	6:	'nssa-2'
-}
+OSPF_ROUTE = {1: 'intra-area', 2: 'inter-area', 3: 'external-1', 4: 'external-2', 5: 'nssa-1', 6: 'nssa-2'}
 
 
 class OspfRoute(object):
-	def __init__ (self, ospf_type, packed=None):
-		self.ospf_type = ospf_type
-		self._packed = packed
+    def __init__(self, ospf_type, packed=None):
+        self.ospf_type = ospf_type
+        self._packed = packed
 
-	@classmethod
-	def unpack (cls, data):
-		if len(data) == 1:
-			ospf_type = unpack('!B',data[0:1])[0]
-		return cls(ospf_type=ospf_type)
+    @classmethod
+    def unpack(cls, data):
+        if len(data) == 1:
+            ospf_type = unpack('!B', data[0:1])[0]
+        return cls(ospf_type=ospf_type)
 
-	def json (self):
-		content = '"ospf-route-type": %s' % self.ospf_type
-		return content
+    def json(self):
+        content = '"ospf-route-type": %s' % self.ospf_type
+        return content
 
-	def __eq__ (self, other):
-		return self.ospf_type == other.ospf_type
+    def __eq__(self, other):
+        return self.ospf_type == other.ospf_type
 
-	def __neq__ (self, other):
-		return self.ospf_type != other.ospf_type
+    def __neq__(self, other):
+        return self.ospf_type != other.ospf_type
 
-	def __lt__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __lt__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __le__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __le__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __gt__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __gt__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __ge__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __ge__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __str__ (self):
-		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
+    def __str__(self):
+        return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
-	def __repr__ (self):
-		return self.__str__()
+    def __repr__(self):
+        return self.__str__()
 
-	def __hash__ (self):
-		return hash(str(self))
+    def __hash__(self):
+        return hash(str(self))
 
-	def pack (self):
-		return self._packed
+    def pack(self):
+        return self._packed

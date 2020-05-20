@@ -25,56 +25,54 @@ from exabgp.util import ordinal
 # ================================================================== NeighborAddress
 
 
-class NeighAddr (object):
-	def __init__ (self, addr, packed=None):
-		self.addr = addr
-		self._packed = packed
+class NeighAddr(object):
+    def __init__(self, addr, packed=None):
+        self.addr = addr
+        self._packed = packed
 
-	@classmethod
-	def unpack (cls, data):
-		if len(data) == 4:
-			# IPv4 address
-			addr = IP.unpack(data[:4])
-		elif len(data) == 16:
-			# IPv6
-			addr = IP.unpack(data[:16])
-		return cls(addr=addr)
+    @classmethod
+    def unpack(cls, data):
+        if len(data) == 4:
+            # IPv4 address
+            addr = IP.unpack(data[:4])
+        elif len(data) == 16:
+            # IPv6
+            addr = IP.unpack(data[:16])
+        return cls(addr=addr)
 
-	def json (self):
-		content = ' '.join([
-				'"neighbor-address": "%s"' % self.addr,
-		])
-		return content
+    def json(self):
+        content = ' '.join(['"neighbor-address": "%s"' % self.addr,])
+        return content
 
-	def __eq__ (self, other):
-		return self.addr == other.addr
+    def __eq__(self, other):
+        return self.addr == other.addr
 
-	def __neq__ (self, other):
-		return self.addr != other.addr
+    def __neq__(self, other):
+        return self.addr != other.addr
 
-	def __lt__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __lt__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __le__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __le__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __gt__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __gt__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __ge__ (self, other):
-		raise RuntimeError('Not implemented')
+    def __ge__(self, other):
+        raise RuntimeError('Not implemented')
 
-	def __str__ (self):
-		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
+    def __str__(self):
+        return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
-	def __repr__ (self):
-		return self.__str__()
+    def __repr__(self):
+        return self.__str__()
 
-	def __len__ (self):
-		return len(self._packed)
+    def __len__(self):
+        return len(self._packed)
 
-	def __hash__ (self):
-		return hash(str(self))
+    def __hash__(self):
+        return hash(str(self))
 
-	def pack (self):
-		return self._packed
+    def pack(self):
+        return self._packed
