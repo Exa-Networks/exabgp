@@ -3,6 +3,9 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.8:
+ * Fix: restore python -m exabgp
+
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
  * Fix: issue during restart
