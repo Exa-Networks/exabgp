@@ -85,10 +85,17 @@ class Processes(object):
             self._terminate(process)
 
     def _terminate(self, process_name):
-        log.debug('terminating process %s' % process_name, 'process')
         process = self._process[process_name]
+        rc = process.returncode
+        if rc != None:
+            # _handle_problem() will reach here
+            self.logger.debug('process %s already dies' % process_name, 'process')
+            del self._process[process_name]
+            self._update_fds()
+            return
+        log.debug('terminating process %s' % process_name, 'process')
         del self._process[process_name]
-        self._update_fds()
+        self._process[process_name + '-old'] = process
         thread = Thread(target=self._terminate_run, args=(process,))
         thread.start()
         return thread
