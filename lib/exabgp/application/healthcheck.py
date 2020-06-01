@@ -66,12 +66,13 @@ def enum(*sequential):
 def setargs(parser):
     # fmt: off
     g = parser.add_mutually_exclusive_group()
-    g.add_argument("--debug", "-d", action="store_true", default=False, help="enable debugging")
-    g.add_argument("--no-ack", "-a", action="store_true", default=False, help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false")
     g.add_argument("--silent", "-s", action="store_true", default=False, help="don't log to console")
     g.add_argument("--syslog-facility", "-sF", metavar="FACILITY", nargs='?', const="daemon", default="daemon", help="log to syslog using FACILITY, default FACILITY is daemon")
-    g.add_argument("--sudo", action="store_true", default=False, help="use sudo to setup ip addresses")
     g.add_argument("--no-syslog", action="store_true", help="disable syslog logging")
+
+    parser.add_argument("--debug", "-d", action="store_true", default=False, help="enable debugging")
+    parser.add_argument("--no-ack", "-a", action="store_true", default=False, help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false")
+    parser.add_argument("--sudo", action="store_true", default=False, help="use sudo to setup ip addresses")
     parser.add_argument("--name", "-n", metavar="NAME", help="name for this healthchecker")
     parser.add_argument("--config", "-F", metavar="FILE", type=open, help="read configuration from a file")
     parser.add_argument("--pid", "-p", metavar="FILE", type=argparse.FileType('w'), help="write PID to the provided file")
