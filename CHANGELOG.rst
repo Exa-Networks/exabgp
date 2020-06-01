@@ -3,6 +3,10 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.9
+ * Fix: healthcheck --sudo, --debug and --no-ack are not exclusive
+   reported by: sincerywaing
+
 Version 4.2.8:
  * Fix: restore python -m exabgp
 
