@@ -29,14 +29,14 @@ class Cache(object):
             if family not in families:
                 del self._seen[family]
 
-    def cached_changes(self, families=None):
+    def cached_changes(self, families=None, actions=[OUT.ANNOUNCE]):
         # families can be None or []
         requested_families = self.families if families is None else set(families).intersection(self.families)
 
         # we use list() to make a snapshot of the data at the time we run the command
         for family in requested_families:
             for change in self._seen.get(family, {}).values():
-                if change.nlri.action == OUT.ANNOUNCE:
+                if change.nlri.action in actions:
                     yield change
 
     def is_cached(self, change):
