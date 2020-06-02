@@ -91,7 +91,7 @@ class OutgoingRIB(Cache):
                 if family not in self._enhanced_refresh_start:
                     self._enhanced_refresh_start.append(family)
 
-        changes = list(self.cached_changes(requested_families))
+        changes = list(self.cached_changes(requested_families, [OUT.ANNOUNCE,OUT.WITHDRAW]))
         for change in changes:
             self.del_from_rib(change)
 
