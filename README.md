@@ -13,9 +13,9 @@ It is routinely used to improve service resilience and provide protection agains
 
 Also, [alone](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) or in conjunction with [FastNetMon](https://github.com/pavel-odintsov/fastnetmon) or [WanGuard](https://www.andrisoft.com/software/wanguard), it provides network operators a cost effective DDOS protection solution.
 
-Thanks to modern routers' flow balancing, ExaBGP can also be used to save you money on [load balancers](https://vincent.bernat.ch/en/blog/2018-multi-tier-loadbalancer).
+Thanks to modern routers' flow balancing, ExaBGP can also be used to save you money on [load balancers](https://tech.shutterstock.com/2014/05/22/stop-buying-load-balancers), some good information can be found [here](https://vincent.bernat.ch/en/blog/2018-multi-tier-loadbalancer) too.
 
-Other uses include keeping an eye on network changes done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
+Other uses include keeping an eye on network changes done as was done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
 ## Who is using ExaBGP ?
 
