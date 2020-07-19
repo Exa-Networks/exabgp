@@ -153,7 +153,7 @@ class Daemon(object):
     def _is_socket(fd):
         try:
             s = socket.fromfd(fd, socket.AF_INET, socket.SOCK_RAW)
-        except ValueError:
+        except (ValueError, OSError):
             # The file descriptor is closed
             return False
         try:
