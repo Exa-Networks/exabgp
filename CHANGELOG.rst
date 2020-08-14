@@ -3,7 +3,10 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
-Version 4.2.10:
+Version 4.2.11
+ * Feature: new release code allowing the creation of zipapp
+
+ Version 4.2.10:
  * Fix: cache invalidation on clear command
    patch by: Boris Murashov
 
