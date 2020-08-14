@@ -8,7 +8,7 @@ Version 4.2.11
 
  Version 4.2.10:
  * Fix: cache invalidation on clear command
-   patch by: Boris Murashov
+ patch by: Boris Murashov
 
 Version 4.2.9
  * Fix: healthcheck --sudo, --debug and --no-ack are not exclusive
