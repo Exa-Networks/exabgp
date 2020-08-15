@@ -61,7 +61,6 @@ class _CapabilityCode(int):
         MULTISESSION_CISCO: 'cisco-multi-sesion',
         AIGP: 'aigp',
         HOSTNAME: 'exabgp-experimental-hostname',
-        OPERATIONAL: 'exabgp-experimental-operational',
     }
 
     def __new__(cls, value):
