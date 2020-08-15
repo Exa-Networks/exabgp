@@ -1,0 +1,69 @@
+[build-system]
+# Minimum requirements for the build system to execute.
+requires = ["setuptools", "wheel"]  # PEP 508 specifications.
+# build-backend = "setuptools.build-meta"
+# build-backend = "poetry.masonry.api"
+
+[tool.poetry]
+name = 'exabgp'
+version = '5.0.0'
+description = 'exabgp'
+authors = [
+	'Thomas Mangin <thomas.mangin@exa-networks.co.uk>'
+]
+readme = 'README.md'
+repository = 'https://github.com/exa-networks/exabgp'
+homepage = 'https://github.com/exa-networks/exabgp'
+license = 'BSD 3-Clause License'
+keywords = ['bgp', 'ddos-protection', 'health-check', 'flowspec', 'bgp-ls', 'mpls', 'vpls']
+
+classifiers = [
+ 	'Development Status :: 5 - Production/Stable',
+	'Environment :: Console',
+	'Intended Audience :: System Administrators',
+	'Intended Audience :: Telecommunications Industry',
+	'License :: OSI Approved :: BSD License',
+	'Operating System :: POSIX',
+	'Operating System :: MacOS :: MacOS X',
+	'Programming Language :: Python',
+	'Programming Language :: Python :: 3.7',
+	'Topic :: Internet',
+]
+
+[tool.poetry.dependencies]
+python = "~3.6 || ~3.7 || ^3.8"  # Compatible python versions must be declared here
+
+# Optional dependencies (development)
+# pudb
+# flake8 = { optional = true }
+# coveralls = { optional = true }
+# nose = { optional = true }
+# psutil = { optional = true }
+
+[tool.poetry.scripts]
+exabgp = 'exabgp.application.main:main'
+
+[tool.black]
+line-length = 120
+target-version = ['py36', 'py37', 'py38']
+skip_string_normalization = '1'
+
+[flake8]
+show-source = true
+statistics = true
+max-complexity = 18
+max-line-length = 120
+exclude = '.git,.tox,__pycache__,build,dist,tests/*,lib/exabgp/vendoring/*,'
+
+select = 'B,C,E,F,W,T4,B9'
+# E222 multiple spaces after operator
+# E231 missing whitespace after ','
+# E241 multiple spaces after ':'
+# E131 continuation line unaligned for hanging indent
+# the last , is required otherwise the last error ignore is not applied
+ignore = 'E222,E231,E241,E131,E203,E266,E501,W503,F403,F401,'
+
+# pycodestyle (formerly called pep8)
+[pycodestyle]
+max_line_length = 120
+ignore = 'W191'
