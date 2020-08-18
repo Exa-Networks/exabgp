@@ -24,7 +24,7 @@ omit =
 	*/site-packages/ordereddict.py
 	*/site-packages/nose/*
 	*/__init__.py
-	/lib/exabgp/dep/*
+	/src/exabgp/dep/*
 	/qa/*
 	/dev/*
 	/debian/*

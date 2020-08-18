@@ -65,7 +65,7 @@ It is also possible to download the latest archive from github
 > ./sbin/exabgp --help
 
 > ./sbin/exabgp --run healthcheck --help
-> env PYTHONPATH=./lib python -m exabgp healthcheck --help
+> env PYTHONPATH=./src python -m exabgp healthcheck --help
 > ./bin/healthcheck --help
 ```
 
@@ -79,7 +79,7 @@ or to use git master
 > ./sbin/exabgp --help
 
 > ./sbin/exabgp --run healthcheck --help
-> env PYTHONPATH=./lib python -m exabgp healthcheck --help
+> env PYTHONPATH=./src python -m exabgp healthcheck --help
 > ./bin/healthcheck --help
 ```
 
@@ -90,17 +90,23 @@ or change git to use any previous release (here 4.2.6)
 > ./sbin/exabgp --version
 ```
 
-once you have the code, it is possible to create a self-contained executable which only requires an install python3 interpreter
+It is possible to create a self-contained executable which only requires an installed python3 interpreter
 
 ```
 > cd exabgp-git
 > python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main  -p "/usr/bin/env python3" lib
->  /usr/local/sbin/exabgp --version
+> /usr/local/sbin/exabgp --version
+```
+or
+```
+> cd exabgp-git
+> release binary /usr/local/sbin/exabgp
+> /usr/local/sbin/exabgp --version
 ```
 
 Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
 
-ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. ExaBGP  and later are targeting python3 only.
+ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. current version of ExaBGP are targeting python3 (3.6+) only.
 
 ## Upgrade
 

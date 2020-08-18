@@ -7,16 +7,15 @@ requires = ["setuptools", "wheel"]  # PEP 508 specifications.
 [tool.poetry]
 name = 'exabgp'
 version = '5.0.0'
-description = 'exabgp'
+description = 'BGP swiss army knife'
 authors = [
 	'Thomas Mangin <thomas.mangin@exa-networks.co.uk>'
 ]
 readme = 'README.md'
 repository = 'https://github.com/exa-networks/exabgp'
 homepage = 'https://github.com/exa-networks/exabgp'
-license = 'BSD 3-Clause License'
+license = 'BSD-3-Clause'
 keywords = ['bgp', 'ddos-protection', 'health-check', 'flowspec', 'bgp-ls', 'mpls', 'vpls']
-
 classifiers = [
  	'Development Status :: 5 - Production/Stable',
 	'Environment :: Console',
@@ -30,15 +29,32 @@ classifiers = [
 	'Topic :: Internet',
 ]
 
+# packages = [
+#     { include = "my_package" },
+#     { include = "my_other_package", format = "sdist" },
+# ]
+# include = ["CHANGELOG.md"]
+# exclude = ["my_package/excluded.py"]
+
+# [[tool.poetry.source]]
+# name = 'private'
+# url = 'http://example.com/simple'
+
 [tool.poetry.dependencies]
 python = "~3.6 || ~3.7 || ^3.8"  # Compatible python versions must be declared here
+pyang = "^2.3.2"
+pyang-jsontree-plugin = "^0.1"
 
 # Optional dependencies (development)
-# pudb
-# flake8 = { optional = true }
-# coveralls = { optional = true }
-# nose = { optional = true }
-# psutil = { optional = true }
+pudb = "^2019.2"
+flake8 = { version="^3.8.3", optional = true }
+coveralls = { version="2.1.2", optional = true }
+nose = { version="1.3.7", optional = true }
+psutil = { version="5.7.2", optional = true }
+
+[tool.poetry.extras]
+debug = ["pudb"]
+developer = ["pudb", "flake8", "coveralls", "nose", "psutil"]
 
 [tool.poetry.scripts]
 exabgp = 'exabgp.application.main:main'
@@ -62,6 +78,7 @@ select = 'B,C,E,F,W,T4,B9'
 # E131 continuation line unaligned for hanging indent
 # the last , is required otherwise the last error ignore is not applied
 ignore = 'E222,E231,E241,E131,E203,E266,E501,W503,F403,F401,'
+variable-rgx = "[a-z_][a-z0-9_]{0,30}$"
 
 # pycodestyle (formerly called pep8)
 [pycodestyle]

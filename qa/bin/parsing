@@ -18,7 +18,7 @@ case $dirname in
 	;;
 esac
 
-export PYTHONPATH=$path/lib
+export PYTHONPATH=$path/src
 
 cd $path/etc/exabgp > /dev/null
 names=`ls *.conf`
