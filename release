@@ -17,7 +17,7 @@ import zipapp
 import argparse
 
 
-CHANGELOG = 'CHANGELOG.rst'
+CHANGELOG = 'doc/CHANGELOG.rst'
 
 
 class Path:
@@ -214,7 +214,7 @@ def release_github(args):
     Debian.set(release)
 
     print('updating ', end='')
-    for readme in ('README.md', 'README.rst'):
+    for readme in ('README.md', 'doc/README.rst'):
         print(readme + ' ', end='')
         with fileinput.FileInput(readme, inplace=True) as replacer:
             for line in replacer:
