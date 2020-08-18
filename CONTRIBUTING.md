@@ -21,7 +21,7 @@ We will review all code changes sent via Pull Requests and welcome them:
 4. Ensure the test suite passes.
    ./qa/bin/functional run
    ./qa/bin/parsing
-   env exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
+   env exabgp_log_enable=false nosetests --with-coverage ./tests/*_test.py
    env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
 5. Make sure your code is formated with black (black -S -l 130).
 3. If you've changed APIs, update the documentation.
