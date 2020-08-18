@@ -1,2 +1,2 @@
 #!/bin/sh
-exec nice --4 env PYTHONPATH=/opt/exabgp/lib setuidgid nobody `which python` /opt/exabgp/lib/exabgp/application/bgp.py /opt/exabgp/etc/exabgp/service-ip.txt 2>&1
+exec nice --4 env PYTHONPATH=/opt/exabgp/src setuidgid nobody `which python` /opt/exabgp/src/exabgp/application/bgp.py /opt/exabgp/etc/exabgp/service-ip.txt 2>&1

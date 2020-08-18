@@ -16,7 +16,7 @@ fi
 path="$(cd "$(dirname "$0")"/.. ; pwd)"
 
 export EXABGP_ROOT=$path
-export PYTHONPATH="$path"/lib
+export PYTHONPATH="$path"/src
 
 # Prefer `python` binary when in a venv
 INTS="$INTERPRETER python3 pypy3 python pyp"

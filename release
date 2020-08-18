@@ -23,11 +23,11 @@ CHANGELOG = 'CHANGELOG.rst'
 class Path:
     root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
     changelog = os.path.join(root, CHANGELOG)
-    lib_exa = os.path.join(root, 'lib/exabgp')
-    version = os.path.join(root, 'lib/exabgp/version.py')
+    lib_exa = os.path.join(root, 'src/exabgp')
+    version = os.path.join(root, 'src/exabgp/version.py')
     debian = os.path.join(root, 'debian/changelog')
-    egg = os.path.join(root, 'lib/exabgp.egg-info')
-    build_exabgp = os.path.join(root, 'build/lib/exabgp')
+    egg = os.path.join(root, 'src/exabgp.egg-info')
+    build_exabgp = os.path.join(root, 'build/src/exabgp')
     build_root = os.path.join(root, 'build')
 
     @classmethod
@@ -168,7 +168,7 @@ class Git(Command):
         commit = None
         for line in os.popen('git status').read().split('\n'):
             if 'modified:' in line:
-                if 'lib/exabgp/version.py' in line or 'debian/changelog' in line or 'README' in line:
+                if 'src/exabgp/version.py' in line or 'debian/changelog' in line or 'README' in line:
                     if commit is not False:
                         commit = True
                 else:
@@ -208,7 +208,7 @@ def release_github(args):
         print('valid versions are:', ', '.join(candidates))
         print('this release is not one of the candidates')
 
-    print('updating lib/exabgp/version.py')
+    print('updating src/exabgp/version.py')
     Version.set(release, Git.head_commit())
     print('updating debian/changelog')
     Debian.set(release)
@@ -288,14 +288,14 @@ def release_pypi(args):
 
 
 def remove_cache():
-    for name in glob.glob('./lib/*/__pycache__'):
+    for name in glob.glob('./src/*/__pycache__'):
         shutil.rmtree(name)
-    for name in glob.glob('./lib/*/*/__pycache__'):
+    for name in glob.glob('./src/*/*/__pycache__'):
         shutil.rmtree(name)
 
-    for name in glob.glob('./lib/*/*.pyc'):
+    for name in glob.glob('./src/*/*.pyc'):
         os.remove(name)
-    for name in glob.glob('./lib/*/*/*.pyc'):
+    for name in glob.glob('./src/*/*/*.pyc'):
         os.remove(name)
 
 
@@ -307,14 +307,14 @@ def generate_binary(args):
         sys.exit('zipapp is only available with python 3.5+')
 
     FOLDER = os.path.dirname(os.path.realpath(__file__))
-    IMPORT = os.path.abspath(os.path.join(FOLDER, 'lib'))
+    IMPORT = os.path.abspath(os.path.join(FOLDER, 'src'))
 
     if not os.path.exists(IMPORT):
         sys.exit(f'could not import "{IMPORT}"')
     sys.path = [IMPORT]
 
     params = {
-        'source': 'lib',
+        'source': 'src',
         'target': target,
         'interpreter': '/usr/bin/env python3',
         'main': 'exabgp.application.main:main',

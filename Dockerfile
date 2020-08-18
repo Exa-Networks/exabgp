@@ -4,7 +4,7 @@ RUN mkdir -p /src
 COPY setup.py /src
 COPY CHANGELOG.rst /src
 COPY debian/ /src
-COPY lib/ /src/lib/
+COPY src/ /src/lib/
 
 RUN pip install --upgrade pip setuptools
 RUN cd /src && pip install .
