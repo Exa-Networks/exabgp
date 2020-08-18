@@ -2,7 +2,7 @@ FROM python:3
 
 RUN mkdir -p /src
 COPY setup.py /src
-COPY CHANGELOG.rst /src
+COPY doc/CHANGELOG.rst /src
 COPY debian/ /src
 COPY src/ /src/lib/
 
