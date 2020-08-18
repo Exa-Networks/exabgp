@@ -258,7 +258,7 @@ shell2# ./qa/bin/functional client 03
 A test suite is also present to complement the functional testing.
 
 ```sh
-# env exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
+# env exabgp_log_enable=false nosetests --with-coverage ./tests/*_test.py
 ```
 
 (nosetest requires nose `pip install nose` or `pip3 install nose`)
