@@ -17,6 +17,14 @@ Thanks to modern routers' flow balancing, ExaBGP can also be used to save you mo
 
 Other uses include keeping an eye on network changes done as was done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
+## Development
+
+The master branch is now what will be ExaBGP 5.0.x. It is going to be a major rewrite of the software. Lots has changed in 11 years. ExaBGP is nearly as old as Python3.
+
+Suport for python2 has already been dropped. The code will be updated to take advantage of Python3 'new' async-io and new features are being investigated (such as configuration edition via a interactive CLI). A large part of the configuration parsing will surely be changed which mean the configuration format will most likely change too.
+
+The program command line arguments has already been changed and is no longer backward compatible with version 3 and 4. For these reasons, we do not recommand the use of the master branch in production.
+
 ## Who is using ExaBGP ?
 
 Some users have documented their use cases, such as [DailyMotion](https://medium.com/dailymotion/how-we-built-our-hybrid-kubernetes-platform-d121ea9cb0bc) or [Facebook](https://code.fb.com/data-infrastructure/dhcplb-server/).
@@ -137,7 +145,7 @@ The configuration file and API format may change from time to time, but every ef
 
 ExaBGP is supported through Github's [issue tracker](https://github.com/Exa-Networks/exabgp/issues). So should you encounter any problems, please do not hesitate to [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you.
 
-During "day time" (GMT/BST) feel free to contact us on  [`Slack`](https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTMwNmZlMGMyNTQyNWY3Y2RjYmQxODgyYzY2MGFkZmYwODMxNDZkZjc4YmMyM2QzNzA1YWM0MmZjODhlYThjNTQ), we are phasing out our use of [`Gitter`](https://gitter.im/Exa-Networks/exabgp); we will try to respond if available. ExaBGP also has a channel on `Freenode` [`#exabgp`](irc://irc.freenode.net:6667/exabgp) but it is not monitored.
+During "day time" (GMT/BST) feel free to contact us on [`Slack`](https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTMwNmZlMGMyNTQyNWY3Y2RjYmQxODgyYzY2MGFkZmYwODMxNDZkZjc4YmMyM2QzNzA1YWM0MmZjODhlYThjNTQ). We will try to respond if available. ExaBGP also has a channel on `Freenode` [`#exabgp`](irc://irc.freenode.net:6667/exabgp) but it is not monitored and an historical room on gitter not monitored anymore [`Gitter`](https://gitter.im/Exa-Networks/exabgp)
 
 The best way to be kept informed about our progress/releases is to follow us on [Twitter](https://twitter.com/#!/search/exabgp). You can also use and subscribe to our low volume [mailing list](https://groups.google.com/group/exabgp-users).
 
