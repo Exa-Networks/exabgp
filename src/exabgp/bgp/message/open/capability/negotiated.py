@@ -37,7 +37,7 @@ class Negotiated(object):
         self.msg_size = ExtendedMessage.INITIAL_SIZE
         self.operational = False
         self.refresh = REFRESH.ABSENT  # pylint: disable=E1101
-        self.aigp = None
+        self.aigp = neighbor['capability']['aigp']
         self.mismatch = []
 
     def sent(self, sent_open):
@@ -132,11 +132,11 @@ class Negotiated(object):
         # 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
     def validate(self, neighbor):
-        if neighbor.peer_as is not None and self.peer_as != neighbor.peer_as:
+        if neighbor['peer-as'] is not None and self.peer_as != neighbor['peer-as']:
             return (
                 2,
                 2,
-                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn, neighbor.peer_as),
+                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn, neighbor['peer-as']),
             )
 
         # RFC 6286 : https://tools.ietf.org/html/rfc6286
@@ -144,9 +144,9 @@ class Negotiated(object):
         if self.received_open.router_id == RouterID('0.0.0.0'):
             return (2, 3, '0.0.0.0 is an invalid router_id')
 
-        if self.received_open.asn == neighbor.local_as:
+        if self.received_open.asn == neighbor['local-as']:
             # router-id must be unique within an ASN
-            if self.received_open.router_id == neighbor.router_id:
+            if self.received_open.router_id == neighbor['router-id']:
                 return (
                     2,
                     3,
@@ -172,16 +172,16 @@ class Negotiated(object):
         return None
 
     def nexthopself(self, afi):
-        if afi == self.neighbor.local_address.afi:
-            return self.neighbor.local_address
+        if afi == self.neighbor['local-address'].afi:
+            return self.neighbor['local-address']
 
         # attempting to not barf for next-hop self when the peer is IPv6
         if afi == AFI.ipv4:
-            return self.neighbor.router_id
+            return self.neighbor['router-id']
 
         raise TypeError(
             'use of "next-hop self": the route (%s) does not have the same family as the BGP tcp session (%s)'
-            % (afi, self.neighbor.local_address.afi)
+            % (afi, self.neighbor['local-address'].afi)
         )
 
 

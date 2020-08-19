@@ -18,12 +18,15 @@ from exabgp.reactor.api.response import Response
 from exabgp.protocol.ip import IPv4
 
 
-class _FakeNeighbor(object):
+class _FakeNeighbor(dict):
     def __init__(self, local, remote, asn, peer):
-        self.local_address = IPv4(local)
-        self.peer_address = IPv4(remote)
-        self.peer_as = ASN(asn)
-        self.local_as = ASN(peer)
+        self['local-address'] = IPv4(local)
+        self['peer_address'] = IPv4(remote)
+        self['peer-as'] = ASN(asn)
+        self['local-as'] = ASN(peer)
+        self['capability'] = {
+            'asn4': True,
+        }
 
 
 class Transcoder(object):

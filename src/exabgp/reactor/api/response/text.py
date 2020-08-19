@@ -30,13 +30,13 @@ class Text(object):
         return None
 
     def up(self, neighbor):
-        return 'neighbor %s up\n' % (neighbor.peer_address)
+        return 'neighbor %s up\n' % (neighbor['peer-address'])
 
     def connected(self, neighbor):
-        return 'neighbor %s connected\n' % (neighbor.peer_address)
+        return 'neighbor %s connected\n' % (neighbor['peer-address'])
 
     def down(self, neighbor, reason=''):
-        return 'neighbor %s down - %s\n' % (neighbor.peer_address, reason)
+        return 'neighbor %s down - %s\n' % (neighbor['peer-address'], reason)
 
     def shutdown(self):
         return 'shutdown %d %d\n' % (os.getpid(), os.getppid())
@@ -52,7 +52,7 @@ class Text(object):
 
     def notification(self, neighbor, direction, message, negotiated, header, body):
         return 'neighbor %s %s notification code %d subcode %d data %s%s\n' % (
-            neighbor.peer_address,
+            neighbor['peer-address'],
             direction,
             message.code,
             message.subcode,
@@ -61,14 +61,14 @@ class Text(object):
         )
 
     def packets(self, neighbor, direction, category, negotiated, header, body):
-        return 'neighbor %s %s %d%s\n' % (neighbor.peer_address, direction, category, self._header_body(header, body))
+        return 'neighbor %s %s %d%s\n' % (neighbor['peer-address'], direction, category, self._header_body(header, body))
 
     def keepalive(self, neighbor, direction, negotiated, header, body):
-        return 'neighbor %s %s keepalive%s\n' % (neighbor.peer_address, direction, self._header_body(header, body))
+        return 'neighbor %s %s keepalive%s\n' % (neighbor['peer-address'], direction, self._header_body(header, body))
 
     def open(self, neighbor, direction, sent_open, negotiated, header, body):
         return 'neighbor %s %s open version %d asn %d hold_time %s router_id %s capabilities [%s]%s\n' % (
-            neighbor.peer_address,
+            neighbor['peer-address'],
             direction,
             sent_open.version,
             sent_open.asn,
@@ -79,7 +79,7 @@ class Text(object):
         )
 
     def update(self, neighbor, direction, update, negotiated, header, body):
-        prefix = 'neighbor %s %s update' % (neighbor.peer_address, direction,)
+        prefix = 'neighbor %s %s update' % (neighbor['peer-address'], direction,)
 
         r = '%s start\n' % prefix
 
@@ -104,7 +104,7 @@ class Text(object):
 
     def refresh(self, neighbor, direction, refresh, negotiated, header, body):
         return 'neighbor %s %s route-refresh afi %s safi %s %s%s\n' % (
-            neighbor.peer_address,
+            neighbor['peer-address'],
             direction,
             refresh.afi,
             refresh.safi,
@@ -114,7 +114,7 @@ class Text(object):
 
     def _operational_advisory(self, neighbor, direction, operational, header, body):
         return 'neighbor %s %s operational %s afi %s safi %s advisory "%s"%s' % (
-            neighbor.peer_address,
+            neighbor['peer-address'],
             direction,
             operational.name,
             operational.afi,
@@ -125,7 +125,7 @@ class Text(object):
 
     def _operational_query(self, neighbor, direction, operational, header, body):
         return 'neighbor %s %s operational %s afi %s safi %s%s' % (
-            neighbor.peer_address,
+            neighbor['peer-address'],
             direction,
             operational.name,
             operational.afi,
@@ -135,7 +135,7 @@ class Text(object):
 
     def _operational_counter(self, neighbor, direction, operational, header, body):
         return 'neighbor %s %s operational %s afi %s safi %s router-id %s sequence %d counter %d%s' % (
-            neighbor.peer_address,
+            neighbor['peer-address'],
             direction,
             operational.name,
             operational.afi,

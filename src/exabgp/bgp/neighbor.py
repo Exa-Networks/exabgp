@@ -12,64 +12,107 @@ from collections import deque
 from collections import Counter
 
 from exabgp.protocol.family import AFI
+from exabgp.util.dns import host, domain
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
+from exabgp.bgp.message.open.holdtime import HoldTime
 
 from exabgp.rib import RIB
 
 
+# class Section(dict):
+#     name = ''
+#     key = ''
+#     sub = ['capability']
+
+#     def string(self, level=0):
+#         prefix = ' ' * level
+#         key_name = self.get(key,'')
+#         returned = f'{prefix} {key_name} {\n'
+
+#         prefix = ' ' * (level+1)
+#         for k, v in self.items():
+#             if k == prefix:
+#                 continue
+#             if k in sub:
+#                 returned += self[k].string(level+1)
+#             returned += f'{k} {v};\n'
+#         return returned
+
+
 # The definition of a neighbor (from reading the configuration)
-class Neighbor(object):
+class Neighbor(dict):
+    class Capability(dict):
+        defaults = {
+            'asn4': True,
+            'extended-message': True,
+            'graceful-restart': False,
+            'multi-session': False,
+            'operational': False,
+            'add-path': 0,
+            'route-refresh': 0,
+            'nexthop': None,
+            'aigp': None, 
+        }    
+
+    defaults = {
+        # Those are the field from the configuration
+        'description': '',
+        'router-id': None,
+
+        'local-address': None,
+        'peer-address': None,
+        'local-as': None,
+        'peer-as': None,
+
+        # passive indicate that we do not establish outgoing connections
+        'passive': False,
+        # the port to listen on ( zero mean that we do not listen )
+        'listen': 0,
+        # the port to connect to
+        'connect': 0,
+
+        'hold-time': HoldTime(180),
+        'rate-limit': 0,
+
+        'host-name': host(),
+        'domain-name': domain(),
+
+        'group-updates': True,
+        'auto-flush': True,
+        'adj-rib-in': True,
+        'adj-rib-out': True,
+        'manual-eor': False,
+
+        # XXX: this should be under an MD5 sub-dict/object ?
+        'md5-password': None,
+        'md5-base64': False,
+        'md5-ip': None,
+
+        'outgoing-ttl': None,
+        'incoming-ttl': None,
+    }
+
     _GLOBAL = {'uid': 1}
 
     def __init__(self):
-        self.description = None
-        self.router_id = None
-        self.host_name = None
-        self.domain_name = None
-        self.local_address = None
-        self.range_size = 1
+        # super init
+        self.update(self.defaults)
+
+        # Those are subconf
+        self.api = None  # XXX: not scriptable - is replaced outside the class
+
+        # internal or calculated field
+        self['capability'] = self.Capability.defaults.copy()
+
         # local_address uses auto discovery
         self.auto_discovery = False
-        self.peer_address = None
-        self.peer_as = None
-        self.local_as = None
-        self.hold_time = None
-        self.rate_limit = None
-        self.asn4 = None
-        self.nexthop = None
-        self.add_path = None
-        self.md5_password = None
-        self.md5_base64 = False
-        self.md5_ip = None
-        self.ttl_in = None
-        self.ttl_out = None
-        self.group_updates = None
-        self.flush = None
-        self.adj_rib_in = None
-        self.adj_rib_out = None
 
-        self.manual_eor = False
-
-        self.api = None  # XXX: not scriptable - is replaced outside the class
-        # passive indicate that we do not establish outgoing connections
-        self.passive = False
-        # the port to listen on ( zero mean that we do not listen )
-        self.listen = 0
-        # the port to connect to
-        self.connect = 0
+        self.range_size = 1
 
         # was this Neighbor generated from a range
         self.generated = False
-
-        # capability
-        self.route_refresh = False
-        self.graceful_restart = False
-        self.multisession = None
-        self.nexthop = None
-        self.add_path = None
-        self.aigp = None
 
         self._families = []
         self._nexthop = []
@@ -81,7 +124,6 @@ class Neighbor(object):
         # On signal update, the previous routes so we can compare what changed
         self.backup_changes = []
 
-        self.operational = None
         self.eor = deque()
         self.asm = dict()
 
@@ -96,17 +138,33 @@ class Neighbor(object):
         self.uid = '%d' % self._GLOBAL['uid']
         self._GLOBAL['uid'] += 1
 
+    def missing(self):
+        if self['local-as'] is None:
+            return 'incomplete neighbor, missing local-address'
+        if self['local-as'] is None:
+            return 'incomplete neighbor, missing local-as'
+        if self['peer-as'] is None:
+            return 'incomplete neighbor, missing peer-as'
+        return ''
+
+    def infer(self):
+        if self['md5-ip'] is None:
+            self['md5-ip'] = self['local-address']
+
+        if self['capability']['graceful-restart'] == 0:
+            self['capability']['graceful-restart'] = int(self['hold-time'])
+
     def id(self):
         return 'neighbor-%s' % self.uid
 
     # This set must be unique between peer, not full draft-ietf-idr-bgp-multisession-07
     def index(self):
-        if self.listen != 0:
-            return 'peer-ip %s listen %d' % (self.peer_address, self.listen)
+        if self['listen'] != 0:
+            return 'peer-ip %s listen %d' % (self['peer-address'], self['listen'])
         return self.name()
 
     def make_rib(self):
-        self.rib = RIB(self.name(), self.adj_rib_in, self.adj_rib_out, self._families)
+        self.rib = RIB(self.name(), self['adj-rib-in'], self['adj-rib-out'], self._families)
 
     # will resend all the routes once we reconnect
     def reset_rib(self):
@@ -121,16 +179,16 @@ class Neighbor(object):
         self.refresh = deque()
 
     def name(self):
-        if self.multisession:
+        if self['capability']['multi-session']:
             session = '/'.join("%s-%s" % (afi.name(), safi.name()) for (afi, safi) in self.families())
         else:
             session = 'in-open'
         return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (
-            self.peer_address,
-            self.local_address if self.peer_address is not None else 'auto',
-            self.local_as if self.local_as is not None else 'auto',
-            self.peer_as if self.peer_as is not None else 'auto',
-            self.router_id,
+            self['peer-address'],
+            self['local-address'] if self['peer-address'] is not None else 'auto',
+            self['local-as'] if self['local-as'] is not None else 'auto',
+            self['peer-as'] if self['peer-as'] is not None else 'auto',
+            self['router-id'],
             session,
         )
 
@@ -189,15 +247,15 @@ class Neighbor(object):
             self._addpath.remove(family)
 
     def missing(self):
-        if self.local_address is None and not self.auto_discovery:
+        if self['local-address'] is None and not self.auto_discovery:
             return 'local-address'
-        if self.listen > 0 and self.auto_discovery:
+        if self['listen'] > 0 and self.auto_discovery:
             return 'local-address'
-        if self.peer_address is None:
+        if self['peer-address'] is None:
             return 'peer-address'
-        if self.auto_discovery and not self.router_id:
+        if self.auto_discovery and not self['router-id']:
             return 'router-id'
-        if self.peer_address.afi == AFI.ipv6 and not self.router_id:
+        if self['peer-address'].afi == AFI.ipv6 and not self['router-id']:
             return 'router-id'
         return ''
 
@@ -209,33 +267,28 @@ class Neighbor(object):
         # the other one will be set to the auto disocvered IP address.
         auto_discovery = self.auto_discovery or other.auto_discovery
         return (
-            self.router_id == other.router_id
-            and (auto_discovery or self.local_address == other.local_address)
+            self['router-id'] == other['router-id']
+            and self['local-as'] == other['local-as']
+            and self['peer-address'] == other['peer-address']
+            and self['peer-as'] == other['peer-as']
+            and self['passive'] == other['passive']
+            and self['listen'] == other['listen']
+            and self['connect'] == other['connect']
+            and self['hold-time'] == other['hold-time']
+            and self['rate-limit'] == other['rate-limit']
+            and self['host-name'] == other['host-name']
+            and self['domain-name'] == other['domain-name']
+            and self['md5-password'] == other['md5-password']
+            and self['md5-ip'] == other['md5-ip']
+            and self['incoming-ttl'] == other['incoming-ttl']
+            and self['outgoing-ttl'] == other['outgoing-ttl']
+            and self['group-updates'] == other['group-updates']
+            and self['auto-flush'] == other['auto-flush']
+            and self['adj-rib-in'] == other['adj-rib-in']
+            and self['adj-rib-out'] == other['adj-rib-out']
+            and (auto_discovery or self['local-address'] == other['local-address'])
+            and self['capability'] == other['capability']
             and self.auto_discovery == other.auto_discovery
-            and self.local_as == other.local_as
-            and self.peer_address == other.peer_address
-            and self.peer_as == other.peer_as
-            and self.passive == other.passive
-            and self.listen == other.listen
-            and self.connect == other.connect
-            and self.hold_time == other.hold_time
-            and self.rate_limit == other.rate_limit
-            and self.host_name == other.host_name
-            and self.domain_name == other.domain_name
-            and self.md5_password == other.md5_password
-            and self.md5_ip == other.md5_ip
-            and self.ttl_in == other.ttl_in
-            and self.ttl_out == other.ttl_out
-            and self.route_refresh == other.route_refresh
-            and self.graceful_restart == other.graceful_restart
-            and self.multisession == other.multisession
-            and self.nexthop == other.nexthop
-            and self.add_path == other.add_path
-            and self.operational == other.operational
-            and self.group_updates == other.group_updates
-            and self.flush == other.flush
-            and self.adj_rib_in == other.adj_rib_in
-            and self.adj_rib_out == other.adj_rib_out
             and self.families() == other.families()
         )
 
@@ -351,38 +404,38 @@ class Neighbor(object):
             '%s'
             '}'
             % (
-                self.peer_address,
-                self.description,
-                self.router_id,
-                self.host_name,
-                self.domain_name,
-                self.local_address if not self.auto_discovery else 'auto',
-                self.local_as,
-                self.peer_as,
-                self.hold_time,
-                'disable' if self.rate_limit == 0 else self.rate_limit,
-                'true' if self.manual_eor else 'false',
-                '\n\tpassive %s;\n' % ('true' if self.passive else 'false'),
-                '\n\tlisten %d;\n' % self.listen if self.listen else '',
-                '\n\tconnect %d;\n' % self.connect if self.connect else '',
-                '\tgroup-updates %s;\n' % ('true' if self.group_updates else 'false'),
-                '\tauto-flush %s;\n' % ('true' if self.flush else 'false'),
-                '\tadj-rib-in %s;\n' % ('true' if self.adj_rib_in else 'false'),
-                '\tadj-rib-out %s;\n' % ('true' if self.adj_rib_out else 'false'),
-                '\tmd5-password "%s";\n' % self.md5_password if self.md5_password else '',
+                self['peer-address'],
+                self['description'],
+                self['router-id'],
+                self['host-name'],
+                self['domain-name'],
+                self['local-address'] if not self.auto_discovery else 'auto',
+                self['local-as'],
+                self['peer-as'],
+                self['hold-time'],
+                'disable' if self['rate-limit'] == 0 else self['rate-limit'],
+                'true' if self['manual-eor'] else 'false',
+                '\n\tpassive %s;\n' % ('true' if self['passive'] else 'false'),
+                '\n\tlisten %d;\n' % self['listen'] if self['listen'] else '',
+                '\n\tconnect %d;\n' % self['connect'] if self['connect'] else '',
+                '\tgroup-updates %s;\n' % ('true' if self['group-updates'] else 'false'),
+                '\tauto-flush %s;\n' % ('true' if self['auto-flush'] else 'false'),
+                '\tadj-rib-in %s;\n' % ('true' if self['adj-rib-in'] else 'false'),
+                '\tadj-rib-out %s;\n' % ('true' if self['adj-rib-out'] else 'false'),
+                '\tmd5-password "%s";\n' % self['md5-password'] if self['md5-password'] else '',
                 '\tmd5-base64 %s;\n'
-                % ('true' if self.md5_base64 is True else 'false' if self.md5_base64 is False else 'auto'),
-                '\tmd5-ip "%s";\n' % self.md5_ip if not self.auto_discovery else '',
-                '\toutgoing-ttl %s;\n' % self.ttl_out if self.ttl_out else '',
-                '\tincoming-ttl %s;\n' % self.ttl_in if self.ttl_in else '',
-                '\t\tasn4 %s;\n' % ('enable' if self.asn4 else 'disable'),
-                '\t\troute-refresh %s;\n' % ('enable' if self.route_refresh else 'disable'),
-                '\t\tgraceful-restart %s;\n' % (self.graceful_restart if self.graceful_restart else 'disable'),
-                '\t\tnexthop %s;\n' % ('enable' if self.nexthop else 'disable'),
-                '\t\tadd-path %s;\n' % (AddPath.string[self.add_path] if self.add_path else 'disable'),
-                '\t\tmulti-session %s;\n' % ('enable' if self.multisession else 'disable'),
-                '\t\toperational %s;\n' % ('enable' if self.operational else 'disable'),
-                '\t\taigp %s;\n' % ('enable' if self.aigp else 'disable'),
+                % ('true' if self['md5-base64'] is True else 'false' if self['md5-base64'] is False else 'auto'),
+                '\tmd5-ip "%s";\n' % self['md5-ip'] if not self.auto_discovery else '',
+                '\toutgoing-ttl %s;\n' % self['outgoing-ttl'] if self['outgoing-ttl'] else '',
+                '\tincoming-ttl %s;\n' % self['incoming-ttl'] if self['incoming-ttl'] else '',
+                '\t\tasn4 %s;\n' % ('enable' if self['capability']['asn4'] else 'disable'),
+                '\t\troute-refresh %s;\n' % ('enable' if self['capability']['route-refresh'] else 'disable'),
+                '\t\tgraceful-restart %s;\n' % (self['capability']['graceful-restart'] if self['capability']['graceful-restart'] else 'disable'),
+                '\t\tnexthop %s;\n' % ('enable' if self['capability']['nexthop'] else 'disable'),
+                '\t\tadd-path %s;\n' % (AddPath.string[self['capability']['add-path']] if self['capability']['add-path'] else 'disable'),
+                '\t\tmulti-session %s;\n' % ('enable' if self['capability']['multi-session'] else 'disable'),
+                '\t\toperational %s;\n' % ('enable' if self['capability']['operational'] else 'disable'),
+                '\t\taigp %s;\n' % ('enable' if self['capability']['aigp'] else 'disable'),
                 families,
                 nexthops,
                 addpaths,

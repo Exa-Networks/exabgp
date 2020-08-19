@@ -145,56 +145,26 @@ class ParseNeighbor(Section):
 
         neighbor = Neighbor()
 
+        for option in neighbor.defaults:
+            conf = local.get(option, None)
+            if conf is not None:
+                neighbor[option] = conf
+
         # XXX: use the right class for the data type
         # XXX: we can use the scope.nlri interface ( and rename it ) to set some values
-        neighbor.router_id = local.get('router-id', None)
-        neighbor.peer_address = local.get('peer-address', None)
-        neighbor.local_address = local.get('local-address', None)
-        neighbor.local_as = local.get('local-as', None)
-        neighbor.peer_as = local.get('peer-as', None)
-        neighbor.passive = local.get('passive', None)
-        neighbor.listen = local.get('listen', 0)
-        neighbor.connect = local.get('connect', 0)
-        neighbor.hold_time = local.get('hold-time', HoldTime(180))
-        neighbor.rate_limit = local.get('rate-limit', 0)
-        neighbor.host_name = local.get('host-name', host())
-        neighbor.domain_name = local.get('domain-name', domain())
-        neighbor.md5_password = local.get('md5-password', None)
-        neighbor.md5_base64 = local.get('md5-base64', None)
-        neighbor.md5_ip = local.get('md5-ip', neighbor.local_address)
-        neighbor.description = local.get('description', '')
-        neighbor.flush = local.get('auto-flush', True)
-        neighbor.adj_rib_out = local.get('adj-rib-out', True)
-        neighbor.adj_rib_in = local.get('adj-rib-in', True)
-        neighbor.aigp = local.get('aigp', None)
-        neighbor.ttl_out = local.get('outgoing-ttl', None)
-        neighbor.ttl_in = local.get('incoming-ttl', None)
-        neighbor.group_updates = local.get('group-updates', True)
-        neighbor.manual_eor = local.get('manual-eor', False)
-
-        if neighbor.local_address is None:
-            return self.error.set('incomplete neighbor, missing local-address')
-        if neighbor.local_as is None:
-            return self.error.set('incomplete neighbor, missing local-as')
-        if neighbor.peer_as is None:
-            return self.error.set('incomplete neighbor, missing peer-as')
-
-        if neighbor.passive is None:
-            neighbor.passive = False
 
         capability = local.get('capability', {})
-        neighbor.nexthop = capability.get('nexthop', None)
-        neighbor.add_path = capability.get('add-path', 0)
-        neighbor.asn4 = capability.get('asn4', True)
-        neighbor.extended_message = capability.get('extended-message', True)
-        neighbor.multisession = capability.get('multi-session', False)
-        neighbor.operational = capability.get('operational', False)
-        neighbor.route_refresh = capability.get('route-refresh', 0)
-
-        if capability.get('graceful-restart', False) is not False:
-            neighbor.graceful_restart = capability.get('graceful-restart', 0) or int(neighbor.hold_time)
+        for option in neighbor.Capability.defaults:
+            conf = capability.get(option, None)
+            if conf is not None:
+                neighbor['capability'][option] = conf
 
         neighbor.api = ParseAPI.flatten(local.pop('api', {}))
+
+        missing = neighbor.missing()
+        if missing:
+            return self.error.set(missing)
+        neighbor.infer()
 
         families = []
         for family in ParseFamily.convert:
@@ -206,7 +176,7 @@ class ParseNeighbor(Section):
         for family in families:
             neighbor.add_family(family)
 
-        if neighbor.add_path:
+        if neighbor['capability']['add-path']:
             add_path = local.get('add-path', {})
             if add_path:
                 for family in ParseAddPath.convert:
@@ -224,10 +194,10 @@ class ParseNeighbor(Section):
         # The default is to auto-detect by the presence of the nexthop block
         # if this is manually set, then we honor it
         nexthop = local.get('nexthop', {})
-        if neighbor.nexthop is None and nexthop:
-            neighbor.nexthop = True
+        if neighbor['capability']['nexthop'] is None and nexthop:
+            neighbor['capability']['nexthop'] = True
 
-        if neighbor.nexthop:
+        if neighbor['capability']['nexthop']:
             nexthops = []
             for family in nexthop:
                 nexthops.extend(nexthop[family])
@@ -264,39 +234,39 @@ class ParseNeighbor(Section):
 
         messages = local.get('operational', {}).get('routes', [])
 
-        if neighbor.local_address is None:
+        if neighbor['local-address'] is None:
             neighbor.auto_discovery = True
-            neighbor.local_address = None
-            neighbor.md5_ip = None
+            neighbor['local-address'] = None
+            neighbor['md5-ip'] = None
 
-        if not neighbor.router_id:
-            if neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
-                neighbor.router_id = neighbor.local_address
+        if not neighbor['router-id']:
+            if neighbor['peer-address'].afi == AFI.ipv4 and not neighbor.auto_discovery:
+                neighbor['router-id'] = neighbor['local-address']
             else:
                 return self.error.set('missing router-id for the peer, it can not be set using the local-ip')
 
-        if neighbor.route_refresh:
-            if neighbor.adj_rib_out:
+        if neighbor['capability']['route-refresh']:
+            if neighbor['adj-rib-out']:
                 log.debug('route-refresh requested, enabling adj-rib-out', 'configuration')
 
         missing = neighbor.missing()
         if missing:
             return self.error.set('incomplete neighbor, missing %s' % missing)
 
-        if not neighbor.auto_discovery and neighbor.local_address.afi != neighbor.peer_address.afi:
+        if not neighbor.auto_discovery and neighbor['local-address'].afi != neighbor['peer-address'].afi:
             return self.error.set('local-address and peer-address must be of the same family')
-        neighbor.range_size = neighbor.peer_address.mask.size()
+        neighbor.range_size = neighbor['peer-address'].mask.size()
 
-        if neighbor.range_size > 1 and not neighbor.passive:
+        if neighbor.range_size > 1 and not neighbor['passive']:
             return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
         if neighbor.index() in self._neighbors:
-            return self.error.set('duplicate peer definition %s' % neighbor.peer_address.top())
+            return self.error.set('duplicate peer definition %s' % neighbor['peer-address'].top())
         self._neighbors.append(neighbor.index())
 
-        if neighbor.md5_password:
+        if neighbor['md5-password']:
             try:
-                md5 = base64.b64decode(neighbor.md5_password) if neighbor.md5_base64 else neighbor.md5_password
+                md5 = base64.b64decode(neighbor['md5-password']) if neighbor['md5-base64'] else neighbor['md5-password']
             except TypeError as e:
                 return self.error.set(f"Invalid base64 encoding of MD5 password ({e})")
             else:
@@ -327,7 +297,7 @@ class ParseNeighbor(Section):
             self.neighbors[neighbor.name()] = neighbor
 
         # create one neighbor object per family for multisession
-        if neighbor.multisession and len(neighbor.families()) > 1:
+        if neighbor['capability']['multi-session'] and len(neighbor.families()) > 1:
             for family in neighbor.families():
                 # XXX: FIXME: Ok, it works but it takes LOTS of memory ..
                 m_neighbor = deepcopy(neighbor)

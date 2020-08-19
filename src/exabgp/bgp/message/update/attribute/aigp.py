@@ -78,7 +78,7 @@ class AIGP(Attribute):
         return not self.__eq__(other)
 
     def pack(self, negotiated):
-        if negotiated.neighbor.aigp:
+        if negotiated.aigp:
             return self._packed
         if negotiated.local_as == negotiated.peer_as:
             return self._packed
@@ -89,7 +89,7 @@ class AIGP(Attribute):
 
     @classmethod
     def unpack(cls, data, negotiated):
-        if not negotiated.neighbor.aigp:
+        if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
             return None
         return cls(unpack('!Q', data[:8] & 0x000000FFFFFFFFFF), data[:8])
