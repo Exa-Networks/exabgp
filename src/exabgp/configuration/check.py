@@ -53,23 +53,23 @@ def check_generation(neighbors):
 
     for name in neighbors.keys():
         neighbor = copy.deepcopy(neighbors[name])
-        neighbor.local_as = neighbor.peer_as
+        neighbor['local-as'] = neighbor['peer-as']
 
         path = {}
         for f in NLRI.known_families():
-            if neighbor.add_path:
-                path[f] = neighbor.add_path
+            if neighbor['capability']['add-path']:
+                path[f] = neighbor['capability']['add-path']
 
         capa = Capabilities().new(neighbor, False)
         if path:
             capa[Capability.CODE.ADD_PATH] = path
         capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
-        routerid_1 = str(neighbor.router_id)
-        routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.router_id).split('.', -1))
+        routerid_1 = str(neighbor['router-id'])
+        routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor['router-id']).split('.', -1))
 
-        o1 = Open(Version(4), ASN(neighbor.local_as), HoldTime(180), RouterID(routerid_1), capa)
-        o2 = Open(Version(4), ASN(neighbor.peer_as), HoldTime(180), RouterID(routerid_2), capa)
+        o1 = Open(Version(4), ASN(neighbor['local-as']), HoldTime(180), RouterID(routerid_1), capa)
+        o2 = Open(Version(4), ASN(neighbor['peer-as']), HoldTime(180), RouterID(routerid_2), capa)
         negotiated = Negotiated(neighbor)
         negotiated.sent(o1)
         negotiated.received(o2)
@@ -119,7 +119,7 @@ def check_generation(neighbors):
                     if ':' in str1r:
                         str1r = str1r.replace('next-hop self', 'next-hop ::1')
                     else:
-                        str1r = str1r.replace('next-hop self', 'next-hop %s' % neighbor.local_address)
+                        str1r = str1r.replace('next-hop self', 'next-hop %s' % neighbor['local-address'])
 
                 if ' name ' in str1r:
                     parts = str1r.split(' ')
@@ -208,19 +208,19 @@ def check_update(neighbor, raw):
 
     path = {}
     for f in NLRI.known_families():
-        if neighbor.add_path:
-            path[f] = neighbor.add_path
+        if neighbor['capability']['add-path']:
+            path[f] = neighbor['capability']['add-path']
 
     capa = Capabilities().new(neighbor, False)
     capa[Capability.CODE.ADD_PATH] = path
     capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
     # capa[Capability.CODE.FOUR_BYTES_ASN] = True
 
-    routerid_1 = str(neighbor.router_id)
-    routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.router_id).split('.', -1))
+    routerid_1 = str(neighbor['router-id'])
+    routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor['router-id']).split('.', -1))
 
-    o1 = Open(Version(4), ASN(neighbor.local_as), HoldTime(180), RouterID(routerid_1), capa)
-    o2 = Open(Version(4), ASN(neighbor.peer_as), HoldTime(180), RouterID(routerid_2), capa)
+    o1 = Open(Version(4), ASN(neighbor['local-as']), HoldTime(180), RouterID(routerid_1), capa)
+    o2 = Open(Version(4), ASN(neighbor['peer-as']), HoldTime(180), RouterID(routerid_2), capa)
     negotiated = Negotiated(neighbor)
     negotiated.sent(o1)
     negotiated.received(o2)

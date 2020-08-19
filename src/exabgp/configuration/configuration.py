@@ -396,7 +396,7 @@ class Configuration(_Configuration):
                     if not self.processes[api].get('run', ''):
                         return self.error.set(
                             "\n\nan api called '%s' is used by neighbor '%s' but not defined\n\n"
-                            % (api, neighbor.peer_address),
+                            % (api, neighbor['peer-address']),
                         )
         return None
 
@@ -412,11 +412,11 @@ class Configuration(_Configuration):
                     for name in ('parsed', 'packets', 'consolidate'):
                         key = "%s-%s" % (way, name)
                         if api[key]:
-                            self.processes[process].setdefault(key, []).append(neighbor.router_id)
+                            self.processes[process].setdefault(key, []).append(neighbor['router-id'])
                     for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
                         key = "%s-%s" % (way, name)
                         if api[key]:
-                            self.processes[process].setdefault(key, []).append(neighbor.router_id)
+                            self.processes[process].setdefault(key, []).append(neighbor['router-id'])
 
     def partial(self, section, text, action='announce'):
         self._cleanup()  # this perform a big cleanup (may be able to be smarter)

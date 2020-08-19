@@ -87,13 +87,13 @@ class Capabilities(dict):
         self[Capability.CODE.MULTIPROTOCOL] = mp
 
     def _asn4(self, neighbor):
-        if not neighbor.asn4:
+        if not neighbor['capability']['asn4']:
             return
 
-        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
+        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor['local-as'])
 
     def _nexthop(self, neighbor):
-        if not neighbor.nexthop:
+        if not neighbor['capability']['nexthop']:
             return
 
         nexthops = neighbor.nexthops()
@@ -105,7 +105,7 @@ class Capabilities(dict):
         self[Capability.CODE.NEXTHOP] = NextHop(nh_pairs)
 
     def _addpath(self, neighbor):
-        if not neighbor.add_path:
+        if not neighbor['capability']['add-path']:
             return
 
         families = neighbor.addpaths()
@@ -113,40 +113,40 @@ class Capabilities(dict):
         for allowed in self._ADD_PATH:
             if allowed in families:
                 ap_families.append(allowed)
-        self[Capability.CODE.ADD_PATH] = AddPath(ap_families, neighbor.add_path)
+        self[Capability.CODE.ADD_PATH] = AddPath(ap_families, neighbor['capability']['add-path'])
 
     def _graceful(self, neighbor, restarted):
-        if not neighbor.graceful_restart:
+        if not neighbor['capability']['graceful-restart']:
             return
 
         self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(
             Graceful.RESTART_STATE if restarted else 0x0,
-            neighbor.graceful_restart,
+            neighbor['capability']['graceful-restart'],
             [(afi, safi, Graceful.FORWARDING_STATE) for (afi, safi) in neighbor.families()],
         )
 
     def _refresh(self, neighbor):
-        if not neighbor.route_refresh:
+        if not neighbor['capability']['route-refresh']:
             return
         self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
         self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
 
     def _extended_message(self, neighbor):
-        if not neighbor.extended_message:
+        if not neighbor['capability']['extended-message']:
             return
 
         self[Capability.CODE.EXTENDED_MESSAGE] = ExtendedMessage()
 
     def _hostname(self, neighbor):
-        self[Capability.CODE.HOSTNAME] = HostName(neighbor.host_name, neighbor.domain_name)
+        self[Capability.CODE.HOSTNAME] = HostName(neighbor['host-name'], neighbor['domain-name'])
 
     def _operational(self, neighbor):
-        if not neighbor.operational:
+        if not neighbor['capability']['operational']:
             return
         self[Capability.CODE.OPERATIONAL] = Operational()
 
     def _session(self, neighbor):
-        if not neighbor.multisession:
+        if not neighbor['capability']['multi-session']:
             return
         # XXX: FIXME: should it not be the RFC version ?
         self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])

@@ -302,33 +302,36 @@ body = [0x00, 0x00, # withdrawn routes length 0
 bodies.append((True, body))
 
 
-class FakeNeighbor(object):
-    description = 'a test neighbor'
-    router_id = RouterID('127.0.0.1')
-    local_address = IPv4('127.0.0.1')
-    peer_address = IPv4('127.0.0.1')
-    host_name = 'localhost'
-    domain_name = 'localdomain'
-    peer_as = ASN('65500')
-    local_as = ASN('65500')
-    hold_time = HoldTime(180)
-    asn4 = False
-    add_path = 0
-    extended_message = False
-    nexthop = None
-
-    # capability
-    route_refresh = False
-    graceful_restart = False
-    multisession = None
-    add_path = None
-    aigp = None
-    operational = None
+class FakeNeighbor(dict):
+    def __init__(self):
+        self.update({
+            'description': 'a test neighbor',
+            'router-id': RouterID('127.0.0.1'),
+            'local-address': IPv4('127.0.0.1'),
+            'peer-address': IPv4('127.0.0.1'),
+            'host-name': 'localhost',
+            'domain-name': 'localdomain',
+            'peer-as': ASN('65500'),
+            'local-as': ASN('65500'),
+            'hold-time': HoldTime(180),
+            'capability': {
+                'asn4': False,
+                'add-path': 0,
+                'extended_message': False,
+                'nexthop': None,
+                'route-refresh': False,
+                'graceful-restart': False,
+                'multi-session': None,
+                'add-path': None,
+                'aigp': None,
+                'operational': None,
+                'extended-message': True,
+             },
+        })
 
     @staticmethod
     def families():
         return NLRI.known_families()
-
 
 import unittest
 
@@ -362,11 +365,11 @@ class TestUpdateDecoding(unittest.TestCase):
             #         path[f] = neighbor.add_path
             # capa[Capability.CODE.ADD_PATH] = path
 
-            routerid_1 = str(neighbor.router_id)
-            routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.router_id).split('.', -1))
+            routerid_1 = str(neighbor['router-id'])
+            routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor['router-id']).split('.', -1))
 
-            o1 = Open(Version(4), ASN(neighbor.local_as), HoldTime(180), RouterID(routerid_1), capa)
-            o2 = Open(Version(4), ASN(neighbor.peer_as), HoldTime(180), RouterID(routerid_2), capa)
+            o1 = Open(Version(4), ASN(neighbor['local-as']), HoldTime(180), RouterID(routerid_1), capa)
+            o2 = Open(Version(4), ASN(neighbor['peer-as']), HoldTime(180), RouterID(routerid_2), capa)
 
             negotiated = Negotiated(neighbor)
             negotiated.sent(o1)

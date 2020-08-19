@@ -127,7 +127,7 @@ class Reactor(object):
     def active_peers(self):
         peers = set()
         for key, peer in self._peers.items():
-            if not peer.neighbor.passive or peer.proto:
+            if not peer.neighbor['passive'] or peer.proto:
                 peers.add(key)
         return peers
 
@@ -167,7 +167,7 @@ class Reactor(object):
         if not peer:
             log.critical('could not find referenced peer', 'reactor')
             return ""
-        return str(peer.neighbor.peer_address)
+        return str(peer.neighbor['peer-address'])
 
     def neighbor_cli_data(self, peer_name):
         peer = self._peers.get(peer_name, None)
@@ -192,14 +192,14 @@ class Reactor(object):
         if not peer:
             log.critical('could not find referenced peer', 'reactor')
             return
-        peer.neighbor.rib.outgoing.resend(None, peer.neighbor.route_refresh)
+        peer.neighbor.rib.outgoing.resend(None, peer.neighbor['capability']['route-refresh'])
 
     def neighbor_rib_out_withdraw(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
             log.critical('could not find referenced peer', 'reactor')
             return
-        peer.neighbor.rib.outgoing.withdraw(None, peer.neighbor.route_refresh)
+        peer.neighbor.rib.outgoing.withdraw(None, peer.neighbor['capability']['route-refresh'])
 
     def neighbor_rib_in_clear(self, peer_name):
         peer = self._peers.get(peer_name, None)
@@ -241,14 +241,14 @@ class Reactor(object):
             return self.Exit.configuration
 
         for neighbor in self.configuration.neighbors.values():
-            if neighbor.listen:
+            if neighbor['listen']:
                 if not self.listener.listen_on(
-                    neighbor.md5_ip,
-                    neighbor.peer_address,
-                    neighbor.listen,
-                    neighbor.md5_password,
-                    neighbor.md5_base64,
-                    neighbor.ttl_in,
+                    neighbor['md5-ip'],
+                    neighbor['peer-address'],
+                    neighbor['listen'],
+                    neighbor['md5-password'],
+                    neighbor['md5-base64'],
+                    neighbor['incoming-ttl'],
                 ):
                     return self.Exit.listening
 
@@ -338,7 +338,7 @@ class Reactor(object):
                     peer = self._peers[key]
 
                     # limit the number of message handling per second
-                    if self._rate_limited(key, peer.neighbor.rate_limit):
+                    if self._rate_limited(key, peer.neighbor['rate-limit']):
                         peers.discard(key)
                         continue
 
@@ -465,9 +465,9 @@ class Reactor(object):
                 log.debug('peer definition identical, updating peer routes if required for %s' % str(key), 'reactor')
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
-                if ip.afi == neighbor.peer_address.afi:
+                if ip.afi == neighbor['peer-address'].afi:
                     self.listener.listen_on(
-                        ip, neighbor.peer_address, self._port, neighbor.md5_password, neighbor.md5_base64, None
+                        ip, neighbor['peer-address'], self._port, neighbor['md5-password'], neighbor['md5-base64'], None
                     )
         log.info('loaded new configuration successfully', 'reactor')
 
@@ -490,4 +490,4 @@ class Reactor(object):
         self.processes.start(self.configuration.processes, True)
 
     # def nexthops (self, peers):
-    # 	return dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
+    # 	return dict((peer,self._peers[peer].neighbor['local-address']) for peer in peers)

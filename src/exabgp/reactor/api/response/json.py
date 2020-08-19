@@ -86,10 +86,10 @@ class JSON(object):
 
     def _neighbor(self, neighbor, direction, content):
         return self.__neighbor % (
-            neighbor.local_address,
-            neighbor.peer_address,
-            neighbor.local_as,
-            neighbor.peer_as,
+            neighbor['local-address'],
+            neighbor['peer-address'],
+            neighbor['local-as'],
+            neighbor['peer-as'],
             ', ' if direction else '',
             '"direction": "%s"' % direction if direction else '',
             ', ' if content else ' ',

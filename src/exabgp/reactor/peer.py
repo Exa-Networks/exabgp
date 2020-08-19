@@ -152,7 +152,7 @@ class Peer(object):
     # logging
 
     def me(self, message):
-        return "peer %s ASN %-7s %s" % (self.neighbor.peer_address, self.neighbor.peer_as, message)
+        return "peer %s ASN %-7s %s" % (self.neighbor['peer-address'], self.neighbor['peer-as'], message)
 
     # control
 
@@ -223,7 +223,7 @@ class Peer(object):
         if self.fsm == FSM.OPENCONFIRM:
             # We cheat: we are not really reading the OPEN, we use the data we have instead
             # it does not matter as the open message will be the same anyway
-            local_id = self.neighbor.router_id.pack()
+            local_id = self.neighbor['router-id'].pack()
             remote_id = self.proto.negotiated.received_open.router_id.pack()
 
             if remote_id < local_id:
@@ -284,7 +284,7 @@ class Peer(object):
         except Stop:
             # Connection failed
             if not connected and self.proto:
-                self.proto.close('connection to %s:%d failed' % (self.neighbor.peer_address, self.neighbor.connect))
+                self.proto.close('connection to %s:%d failed' % (self.neighbor['peer-address'], self.neighbor['connect']))
 
             # A connection arrived before we could establish !
             if not connected or self.proto:
@@ -305,7 +305,7 @@ class Peer(object):
         )
         # Only yield if we have not the open, otherwise the reactor can run the other connection
         # which would be bad as we need to do the collission check without going to the other peer
-        for message in self.proto.read_open(self.neighbor.peer_address.top()):
+        for message in self.proto.read_open(self.neighbor['peer-address'].top()):
             opentimer.check_ka(message)
             # XXX: FIXME: change the whole code to use the ord and not the chr version
             # Only yield if we have not the open, otherwise the reactor can run the other connection
@@ -338,7 +338,7 @@ class Peer(object):
         self.fsm.change(FSM.CONNECT)
 
         # normal sending of OPEN first ...
-        if self.neighbor.local_as:
+        if self.neighbor['local-as']:
             for sent_open in self._send_open():
                 if sent_open in ACTION.ALL:
                     yield sent_open
@@ -354,7 +354,7 @@ class Peer(object):
         self.proto.connection.msg_size = self.proto.negotiated.msg_size
 
         # if we mirror the ASN, we need to read first and send second
-        if not self.neighbor.local_as:
+        if not self.neighbor['local-as']:
             for sent_open in self._send_open():
                 if sent_open in ACTION.ALL:
                     yield sent_open
@@ -396,7 +396,7 @@ class Peer(object):
                 # XXX: In the main loop we do exit on this kind of error
                 raise Notify(6, 0, 'ExaBGP Internal error, sorry.')
 
-        send_eor = not self.neighbor.manual_eor
+        send_eor = not self.neighbor['manual-eor']
         new_routes = None
         self._resend_routes = SEND.NORMAL
         send_families = []
@@ -438,7 +438,7 @@ class Peer(object):
                         send_families.append((message.afi, message.safi))
 
                 # SEND OPERATIONAL
-                if self.neighbor.operational:
+                if self.neighbor['capability']['operational']:
                     if not operational:
                         new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                         if new_operational:
@@ -455,7 +455,7 @@ class Peer(object):
                     self.neighbor.messages.popleft()
 
                 # SEND REFRESH
-                if self.neighbor.route_refresh:
+                if self.neighbor['capability']['route-refresh']:
                     if not refresh:
                         new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                         if new_refresh:
@@ -491,7 +491,7 @@ class Peer(object):
                     new_routes = self.proto.new_update(include_withdraw)
 
                 if new_routes:
-                    count = 1 if self.neighbor.rate_limit > 0 else 25
+                    count = 1 if self.neighbor['rate-limit'] > 0 else 25
                     try:
                         for _ in range(count):
                             # This can raise a NetworkError
@@ -531,7 +531,7 @@ class Peer(object):
                     break
 
         # If graceful restart, silent shutdown
-        if self.neighbor.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(
+        if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
             Capability.CODE.GRACEFUL_RESTART
         ):
             log.error('closing the session without notification', self.id())
@@ -681,13 +681,13 @@ class Peer(object):
             )
 
         capabilities = {
-            'asn4': (tri(self.neighbor.asn4), tri(peer['asn4'])),
-            'route-refresh': (tri(self.neighbor.route_refresh), tri(peer['route-refresh'])),
-            'multi-session': (tri(self.neighbor.multisession), tri(peer['multi-session'])),
-            'operational': (tri(self.neighbor.operational), tri(peer['operational'])),
-            'add-path': (tri(self.neighbor.add_path), tri(peer['add-path'])),
-            'extended-message': (tri(self.neighbor.extended_message), tri(peer['extended-message'])),
-            'graceful-restart': (tri(self.neighbor.graceful_restart), tri(peer['graceful-restart'])),
+            'asn4': (tri(self.neighbor['capability']['asn4']), tri(peer['asn4'])),
+            'route-refresh': (tri(self.neighbor['capability']['route-refresh']), tri(peer['route-refresh'])),
+            'multi-session': (tri(self.neighbor['capability']['multi-session']), tri(peer['multi-session'])),
+            'operational': (tri(self.neighbor['capability']['operational']), tri(peer['operational'])),
+            'add-path': (tri(self.neighbor['capability']['add-path']), tri(peer['add-path'])),
+            'extended-message': (tri(self.neighbor['capability']['extended-message']), tri(peer['extended-message'])),
+            'graceful-restart': (tri(self.neighbor['capability']['graceful-restart']), tri(peer['graceful-restart'])),
         }
 
         families = {}
@@ -714,13 +714,13 @@ class Peer(object):
         return {
             'down': int(self.stats['reset'] - self.stats['creation']),
             'duration': int(time.time() - self.stats['complete']) if self.stats['complete'] else 0,
-            'local-address': str(self.neighbor.local_address),
-            'peer-address': str(self.neighbor.peer_address),
-            'local-as': int(self.neighbor.local_as),
-            'peer-as': int(self.neighbor.peer_as),
-            'local-id': str(self.neighbor.router_id),
+            'local-address': str(self.neighbor['local-address']),
+            'peer-address': str(self.neighbor['peer-address']),
+            'local-as': int(self.neighbor['local-as']),
+            'peer-as': int(self.neighbor['peer-as']),
+            'local-id': str(self.neighbor['router-id']),
             'peer-id': None if peer['peer-id'] is None else str(peer['router-id']),
-            'local-hold': int(self.neighbor.hold_time),
+            'local-hold': int(self.neighbor['hold-time']),
             'peer-hold': None if peer['hold-time'] is None else int(peer['hold-time']),
             'state': self.fsm.name(),
             'capabilities': capabilities,

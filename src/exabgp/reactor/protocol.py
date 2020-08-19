@@ -58,8 +58,8 @@ class Protocol(object):
         self.negotiated = Negotiated(self.neighbor)
         self.connection = None
 
-        if self.neighbor.connect:
-            self.port = self.neighbor.connect
+        if self.neighbor['connect']:
+            self.port = self.neighbor['connect']
         elif os.environ.get('exabgp.tcp.port', '').isdigit():
             self.port = int(os.environ.get('exabgp.tcp.port'))
         elif os.environ.get('exabgp_tcp_port', '').isdigit():
@@ -69,17 +69,17 @@ class Protocol(object):
 
         from exabgp.environment import getenv
 
-        self.log_routes = peer.neighbor.adj_rib_in or getenv().log.routes
+        self.log_routes = peer.neighbor['adj-rib-in'] or getenv().log.routes
 
     def fd(self):
         if self.connection is None:
             return -1
         return self.connection.fd()
 
-    # XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
+    # XXX: we use self.peer.neighbor['peer-address'] when we could use self.neighbor['peer-address']
 
     def me(self, message):
-        return "%s/%s %s" % (self.peer.neighbor.peer_address, self.peer.neighbor.peer_as, message)
+        return "%s/%s %s" % (self.peer.neighbor['peer-address'], self.peer.neighbor['peer-as'], message)
 
     def accept(self, incoming):
         self.connection = incoming
@@ -95,12 +95,12 @@ class Protocol(object):
         if self.connection:
             return
 
-        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery else None
-        peer = self.neighbor.peer_address.top()
-        afi = self.neighbor.peer_address.afi
-        md5 = self.neighbor.md5_password
-        md5_base64 = self.neighbor.md5_base64
-        ttl_out = self.neighbor.ttl_out
+        local = self.neighbor['md5-ip'].top() if not self.neighbor.auto_discovery else None
+        peer = self.neighbor['peer-address'].top()
+        afi = self.neighbor['peer-address'].afi
+        md5 = self.neighbor['md5-password']
+        md5_base64 = self.neighbor['md5-base64']
+        ttl_out = self.neighbor['outgoing-ttl']
         self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out)
 
         for connected in self.connection.establish():
@@ -110,9 +110,9 @@ class Protocol(object):
             self.peer.reactor.processes.connected(self.peer.neighbor)
 
         if not local:
-            self.neighbor.local_address = IP.create(self.connection.local)
-            if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
-                self.neighbor.router_id = self.neighbor.local_address
+            self.neighbor['local-address'] = IP.create(self.connection.local)
+            if self.neighbor['router-id'] is None and self.neighbor['local-address'].afi == AFI.ipv4:
+                self.neighbor['router-id'] = self.neighbor['local-address']
 
         yield True
 
@@ -222,7 +222,7 @@ class Protocol(object):
                 self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, negotiated, header, body)
 
             if msg_id == Message.CODE.UPDATE:
-                if not self.neighbor.adj_rib_in and not (for_api or self.log_routes) and not (parsed or consolidate):
+                if not self.neighbor['adj-rib-in'] and not (for_api or self.log_routes) and not (parsed or consolidate):
                     yield _UPDATE
                     return
 
@@ -311,8 +311,8 @@ class Protocol(object):
     #
 
     def new_open(self):
-        if self.neighbor.local_as:
-            local_as = self.neighbor.local_as
+        if self.neighbor['local-as']:
+            local_as = self.neighbor['local-as']
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
         else:
@@ -321,8 +321,8 @@ class Protocol(object):
         sent_open = Open(
             Version(4),
             local_as,
-            self.neighbor.hold_time,
-            self.neighbor.router_id,
+            self.neighbor['hold-time'],
+            self.neighbor['router-id'],
             Capabilities().new(self.neighbor, self.peer._restarted),
         )
 
@@ -354,7 +354,7 @@ class Protocol(object):
         yield notification
 
     def new_update(self, include_withdraw):
-        updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
+        updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
         number = 0
         for update in updates:
             for message in update.messages(self.negotiated, include_withdraw):
