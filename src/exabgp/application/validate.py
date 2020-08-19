@@ -56,21 +56,21 @@ def cmdline(cmdarg):
         if not config.reload():
             log.critical(f'{configuration} is not a valid config file', 'configuration')
             sys.exit(1)
-        log.info(f'\u2713 loading', 'configuration')
+        log.info('\u2713 loading', 'configuration')
 
         if cmdarg.neighbor:
-            log.warning(f'checking neighbors', 'configuration')
+            log.warning('checking neighbors', 'configuration')
             for name, neighbor in config.neighbors.items():
                 reparsed = neighbor.string()
                 log.debug(reparsed, configuration)
                 log.info(f'\u2713 neighbor  {name.split()[1]}', 'configuration')
 
         if cmdarg.route:
-            log.warning(f'checking routes', 'configuration')
+            log.warning('checking routes', 'configuration')
             if not check_generation(config.neighbors):
                 log.critical(f'{configuration} has an invalid route', 'configuration')
                 sys.exit(1)
-            log.info(f'\u2713 routes', 'configuration')
+            log.info('\u2713 routes', 'configuration')
 
 
 def main():

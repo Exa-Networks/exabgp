@@ -6,7 +6,6 @@ Created by Evelio Vila
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
-import json
 from struct import unpack
 
 from exabgp.util import split

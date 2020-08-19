@@ -138,8 +138,8 @@ class ParseNeighbor(Section):
         return self.parse(self.name, 'peer-address')
 
     def post(self):
-        for inherit in self.scope.pop('inherit', []):
-            data = self.scope.template('neighbor', inherit)
+        for inherited in self.scope.pop('inherit', []):
+            data = self.scope.template('neighbor', inherited)
             self.scope.inherit(data)
         local = self.scope.get()
 
@@ -298,7 +298,7 @@ class ParseNeighbor(Section):
             try:
                 md5 = base64.b64decode(neighbor.md5_password) if neighbor.md5_base64 else neighbor.md5_password
             except TypeError as e:
-                return self.error.set("Invalid base64 encoding of MD5 password.")
+                return self.error.set(f"Invalid base64 encoding of MD5 password ({e})")
             else:
                 if len(md5) > 80:
                     return self.error.set('MD5 password must be no larger than 80 characters')

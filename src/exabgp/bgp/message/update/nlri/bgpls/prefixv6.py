@@ -5,7 +5,6 @@ Copyright (c) 2009-2018 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from struct import pack
 from struct import unpack
 import json
 

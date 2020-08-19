@@ -289,7 +289,7 @@ class Peer(object):
             # A connection arrived before we could establish !
             if not connected or self.proto:
                 yield ACTION.NOW
-                raise Interrupted()
+                raise Interrupted('connection failed')
 
     def _send_open(self):
         message = Message.CODE.NOP
@@ -600,7 +600,7 @@ class Peer(object):
 
         # ....
         except Interrupted as interruption:
-            self._reset('connection received before we could fully establish one')
+            self._reset(f'connection received before we could fully establish one ({interruption})')
             return
 
         # UNHANDLED PROBLEMS
