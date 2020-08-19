@@ -64,11 +64,25 @@ line-length = 120
 target-version = ['py36', 'py37', 'py38']
 skip_string_normalization = '1'
 
-[flake8]
-show-source = true
-statistics = true
-max-complexity = 18
+[tool.flakehell]
 max-line-length = 120
+show-source = true
+
+format = "grouped"
+
+[tool.flakehell.plugins]
+pyflakes = ["+*", "-F401"]
+flake8-bandit = ["-*", "+S1??"]
+"flake8-*" = ["+*"]
+flake8-docstrings = ["-*"]
+
+
+[flake8]
+max-line-length = 120
+show-source = true
+
+max-complexity = 18
+statistics = true
 exclude = '.git,.tox,__pycache__,build,dist,tests/*,lib/exabgp/vendoring/*,'
 
 select = 'B,C,E,F,W,T4,B9'
