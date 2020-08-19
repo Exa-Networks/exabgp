@@ -90,7 +90,7 @@ def open_writer(send):
         sys.stdout.flush()
         sys.exit(1)
     except IOError as exc:
-        sys.stdout.write('could not communicate with ExaBGP')
+        sys.stdout.write(f'could not communicate with ExaBGP ({exc})')
         sys.stdout.flush()
         sys.exit(1)
 

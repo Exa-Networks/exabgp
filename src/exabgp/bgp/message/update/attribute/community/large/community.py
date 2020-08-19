@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from exabgp.bgp.message.update.attribute import Attribute
 
-from struct import pack
 from struct import unpack
 
 

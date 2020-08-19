@@ -32,7 +32,7 @@ from exabgp.reactor.network.error import NotifyError
 
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 
-from .error import *
+# from .error import *
 
 
 class Connection(object):

@@ -38,7 +38,7 @@ class SrAdjacency(FlagLS):
         self.undecoded = undecoded
 
     def __repr__(self):
-        return "adj_flags: %s, sids: %s, undecoded_sid" % (self.flags, self.sids, self.undecoded)
+        return "adj_flags: %s, sids: %s, undecoded_sid %s" % (self.flags, self.sids, self.undecoded)
 
     @classmethod
     def unpack(cls, data, length):

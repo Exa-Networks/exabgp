@@ -382,7 +382,7 @@ def _large_community(value):
         return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
 
     else:
-        low = value.lower()
+        value = value.lower()
         if value.isdigit():
             number = int(value)
             if number > LargeCommunity.MAX:

@@ -687,5 +687,9 @@ class Flow(NLRI):
                         nlri.add(klass(operator, adding))
 
             return nlri, bgp + over
-        except (Notify, ValueError, IndexError) as exc:
+        except Notify:
+            return None, over
+        except ValueError:
+            return None, over
+        except IndexError:
             return None, over
