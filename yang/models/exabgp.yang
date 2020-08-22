@@ -1,0 +1,452 @@
+module exabgp {
+	namespace "https://github.com/exa-networks/exabgp";
+	prefix exabgp;
+
+	import ietf-inet-types {
+		prefix ietf-inet-types;
+	}
+
+	import openconfig-bgp-types {
+		prefix openconfig-bgp-types;
+	}
+
+	organization
+		"Exa Networks";
+	contact
+		"Thomas Mangin <thomas.mangin@exa-networks.co.uk>";
+	description
+		"This yang module defines ExaBGP version 5 configuration";
+
+	revision 2020-08-15 {
+		description
+			"Initial revision.";
+	}
+
+	typedef router-name {
+		description
+			"The IP address or DNS name of a router";
+		type union {
+			type ietf-inet-types:ip-address;
+			type ietf-inet-types:domain-name;
+		}
+	}
+
+	grouping nlri-v4 {
+		leaf prefix {
+			type ietf-inet-types:ipv4-address;
+		}
+		leaf prefix-length {
+			description
+				"The length of the subnet prefix";
+			type uint8 {
+				range "0..32";
+			}
+		}
+	}
+
+	grouping nlri-v6 {
+		leaf prefix {
+			type ietf-inet-types:ipv6-address;
+		}
+		leaf prefix-length {
+			description
+				"The length of the subnet prefix";
+			type uint8 {
+				range "0..128";
+			}
+		}
+	}
+
+	grouping nlri-path {
+		leaf path-information {
+			description
+				"";
+			type ietf-inet-types:ip-address;
+		}
+	}
+
+	grouping nlri-label {
+		leaf-list label {
+			description
+				"";
+			type uint32 {
+				// 20 bits
+				range "0..1048575";
+			}
+		}
+	}
+
+	grouping nlri-rd {
+		leaf route-distinguisher {
+			description
+				"";
+			type string {
+				// TODO validation
+			}
+		}
+	}
+
+	grouping attributes-bgp {
+		leaf attribute {
+			description
+				"";
+			type string;
+		}
+		leaf next-hop {
+			description
+				"";
+			type ietf-inet-types:ip-address;
+		}
+		leaf origin {
+			description
+				"";
+			type enumeration {
+				enum igp;
+				enum egp;
+				enum incomplete;
+			}
+			default incomplete;
+		}
+		leaf med {
+			description
+				"";
+			type uint32;			
+			default 0;
+		}
+		leaf local-preference {
+			description
+				"";
+			type uint32;
+			default 100;		
+		}
+		leaf-list community {
+			description
+				"";
+			type openconfig-bgp-types:bgp-std-community-type;
+		}
+		leaf-list large-commity {
+			description
+				"";
+			type string;
+			// constraint TODO
+		}
+        leaf-list extended-community {
+			description
+				"";
+			type string;
+			// constraint TODO
+		}
+		leaf-list as-path {
+			description
+				"";
+			type ietf-inet-types:as-number;
+		}
+		leaf-list aggregator {
+			description
+				"";
+			type string;
+			// constraint TODO
+		}
+		leaf atomic-aggregate {
+			description
+				"";
+			type boolean;
+			default "false";
+		}
+		leaf originator-id {
+			description
+				"";
+			type ietf-inet-types:ip-address;
+		}
+		leaf-list cluster-list {
+			description
+				"";
+			type ietf-inet-types:ip-address;
+		}
+		leaf-list name {
+			description
+				"";
+			type string;
+		}
+		leaf-list aigp {
+			description
+				"";
+			type uint8;
+		}
+	}
+
+	grouping attributes-v4 {
+		uses attributes-bgp {
+			refine split {
+				default 32;
+			}
+		}
+		leaf-list split {
+			description
+				"";
+			type uint8 {
+				range "0..32";
+			}
+		}
+	}
+
+	grouping ipv4-unicast {
+		uses attributes-v4;
+		uses nlri-path;
+		uses nlri-v4;
+	}
+
+	grouping ipv4-nlri-mpls {
+		uses attributes-v4;
+		uses nlri-label;
+		uses nlri-path;
+		uses nlri-v4;
+	}
+
+	grouping ipv4-mpls-vpn {
+		uses attributes-v4;
+		uses nlri-rd;
+		uses nlri-label;
+		uses nlri-v4;
+	}
+
+	grouping attributes-v6 {
+		uses attributes-bgp {
+			refine split {
+				default 32;
+			}
+		}
+		leaf-list split {
+			description
+				"";
+			type uint8 {
+				range "0..128";
+			}
+		}
+	}
+
+	grouping ipv6-unicast {
+		uses attributes-v6;
+		uses nlri-path;
+		uses nlri-v6;
+	}
+
+	grouping ipv6-nlri-mpls {
+		uses attributes-v6;
+		uses nlri-label;
+		uses nlri-path;
+		uses nlri-v6;
+	}
+
+	grouping ipv6-mpls-vpn {
+		uses attributes-v6;
+		uses nlri-rd;
+		uses nlri-label;
+		uses nlri-v6;
+	}
+
+	list process {
+		key "name";
+		leaf name {
+			description
+				"The name of this process, so that it can be referenced";
+			// need better validation
+			type string;
+		}
+		leaf run {
+			description
+				"The program to execute which will receive and send API messages";
+			// need better validation
+			type string;
+			mandatory true;
+		}
+		leaf encoding {
+			description
+				"The codec to use when sending data to the process";
+			type enumeration {
+				enum json;
+				enum text;
+			}
+			default json;
+		}
+		leaf respawn {
+			description
+				"Should the program be restarted should it exit";
+			type boolean;
+			default "true";
+		}
+	}
+	list neighbor {
+		// TODO
+        // 'host-name': hostname,
+        // 'domain-name': domainname,
+		key "neighbor";
+		leaf neighbor {
+			description
+				"The IP address of the router";
+			type router-name;
+		}
+		leaf description {
+			description
+				"A description for this router";
+			type string;
+		}
+		leaf router-id {
+			description
+				"A unique 32 bit number for this router with the Autonomous system
+				 expressed as an IPv4 address";
+			type ietf-inet-types:ipv4-address;
+		}
+		leaf hold-time {
+			// describe BGP Hold time
+			description
+				"";
+			type uint16 {
+				range "3..max";
+			}
+			default 180;
+		}
+		leaf rate-limit {
+			description
+				"The maximum number of message handling per second
+				 unset or set to zero to remove any limit";
+			type uint32;
+			default 0;
+		}
+		leaf local-address {
+			description
+				"";
+			type ietf-inet-types:ip-address;
+			mandatory true;
+		}
+		leaf peer-address {
+			description
+				"";
+			type ietf-inet-types:ip-address;
+			mandatory true;
+		}
+		leaf local-as {
+			description
+				"";
+			type ietf-inet-types:as-number;
+			mandatory true;
+		}
+		leaf peer-as {
+			description
+				"";
+			type ietf-inet-types:as-number;
+			mandatory true;
+		}
+		leaf passive {
+			description
+				"";
+			type boolean;
+			default "false";			
+		}
+		leaf listen {
+			description
+				"";
+			type ietf-inet-types:port-number {
+				range "1..max";
+			}
+		}
+		leaf connect {
+			description
+				"";
+			type ietf-inet-types:port-number {
+				range "1..max";
+			}
+		}
+		leaf outgoing-ttl {
+			description
+				"";
+			// check if ttl 0 make sense
+			type uint8;
+		}
+		leaf incoming-ttl {
+			description
+				"";
+			// check if ttl 0 make sense
+			type uint8;
+		}
+		leaf md5-password {
+			description
+				"";
+			// check if ttl 0 make sense
+			type string;
+		}
+		leaf md5-base64 {
+			// unset is auto
+			description
+				"";
+			type boolean;
+		}
+		leaf md5-ip {
+			// unset is auto
+			description
+				"";
+			type ietf-inet-types:ipv4-address;
+		}
+		leaf group-updates {
+			description
+				"";
+			type boolean;
+			default true;			
+		}
+		leaf auto-flush {
+			description
+				"";
+			type boolean;
+			default true;			
+		}
+		leaf adj-rib-out {
+			description
+				"";
+			type boolean;
+			default true;			
+		}
+		leaf adj-rib-in {
+			description
+				"";
+			type boolean;
+			default true;			
+		}
+		leaf manual-eor {
+			description
+				"";
+			type boolean;
+			default true;			
+		}
+	}
+	container annnounce {
+		container ipv4 {
+			list unicast {
+				key "prefix prefix-length";
+				uses ipv4-unicast;
+			}
+			list nlri-mpls {
+				key "prefix prefix-length";
+				uses ipv4-nlri-mpls;
+			}
+			list mpls-vpn {
+				key "prefix prefix-length";
+				uses ipv4-mpls-vpn;
+			}
+		}
+		container ipv6 {
+			list unicast {
+				key "prefix prefix-length";
+				uses ipv6-unicast;
+			}
+			list nlri-mpls {
+				key "prefix prefix-length";
+				uses ipv4-nlri-mpls;
+			}
+			list mpls-vpn {
+				key "prefix prefix-length";
+				uses ipv6-mpls-vpn;
+			}
+		}
+		// missing flowspec and other families
+	}
+}
