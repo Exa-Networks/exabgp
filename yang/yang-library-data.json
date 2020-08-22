@@ -1,0 +1,59 @@
+{
+  "ietf-yang-library:modules-state": {
+    "module-set-id": "exabgp00",
+    "module": [
+      {
+        "name": "ietf-yang-library",
+        "revision": "2016-06-21",
+        "namespace": "urn:ietf:params:xml:ns:yang:ietf-yang-library",
+        "conformance-type": "implement"
+      },
+      {
+        "name": "ietf-yang-types",
+        "revision": "2013-07-15",
+        "namespace": "urn:ietf:params:xml:ns:yang:ietf-yang-types",
+        "conformance-type": "import",
+        "schema": "https://raw.githubusercontent.com/YangModels/yang/master/standard/ietf/RFC/ietf-yang-types@2013-07-15.yang"
+      },
+      {
+        "name": "openconfig-bgp-types",
+        "revision": "2020-06-17",
+        "namespace": "urn:ietf:params:xml:ns:yang:openconfig-bgp-types",
+        "conformance-type": "implement",
+        "schema": "https://raw.githubusercontent.com/openconfig/public/master/release/models/bgp/openconfig-bgp-types.yang"
+      },
+      {
+        "required by": "openconfig-bgp-types",
+        "name": "openconfig-types",
+        "revision": "2019-04-16",
+        "namespace": "urn:ietf:params:xml:ns:yang:openconfig-types",
+        "conformance-type": "implement",
+        "schema": "https://raw.githubusercontent.com/openconfig/public/master/release/models/types/openconfig-types.yang"
+      },
+      {
+        "required by": "openconfig-bgp-types",
+        "name": "openconfig-inet-types",
+        "revision": "2019-04-25",
+        "namespace": "urn:ietf:params:xml:ns:yang:openconfig-inet-types",
+        "conformance-type": "implement",
+        "schema": "https://raw.githubusercontent.com/openconfig/public/master/release/models/types/openconfig-inet-types.yang"
+      },
+      {
+        "required by": "openconfig-bgp-types",
+        "name": "ietf-inet-types",
+        "revision": "2013-07-15",
+        "namespace": "urn:ietf:params:xml:ns:yang:ietf-inet-types",
+        "conformance-type": "implement",
+        "schema": "https://raw.githubusercontent.com/YangModels/yang/master/standard/ietf/RFC/ietf-inet-types@2013-07-15.yang"
+      },
+      {
+        "required by": "openconfig-*",
+        "name": "openconfig-extensions",
+        "revision": "2018-10-17",
+        "namespace": "urn:ietf:params:xml:ns:yang:openconfig-extensions",
+        "conformance-type": "import",
+        "schema": "https://raw.githubusercontent.com/openconfig/public/master/release/models/openconfig-extensions.yang"
+      }
+    ]
+  }
+}
