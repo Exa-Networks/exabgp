@@ -12,8 +12,6 @@ from glob import glob
 from pygments.token import Token
 from yanglexer import yanglexer
 
-from yangson.datamodel import DataModel
-
 
 def write(string):
     if not string.startswith('\n'):
@@ -82,14 +80,14 @@ class yang:
     kw = dict((w, f'[{w}]') for w in words)
 
     ranges = {
-        'int8': (0, (2 ^ 8)-1),
-        'int16': (0, (2 ^ 16)-1),
-        'int32': (0, (2 ^ 32)-1),
-        'int64': (0, (2 ^ 64)-1),
-        'uint8': (-(2 ^ 7), (2 ^ 7)-1),
-        'uint16': (-(2 ^ 7), (2 ^ 15)-1),
-        'uint32': (-(2 ^ 7), (2 ^ 31)-1),
-        'uint64': (-(2 ^ 7), (2 ^ 64)-1),
+        'int8': (0, pow(2, 8)-1),
+        'int16': (0, pow(2, 16)-1),
+        'int32': (0, pow(2, 32)-1),
+        'int64': (0, pow(2, 64)-1),
+        'uint8': (-pow(2, 7), pow(2, 7)-1),
+        'uint16': (-pow(2, 7), pow(2, 15)-1),
+        'uint32': (-pow(2, 7), pow(2, 31)-1),
+        'uint64': (-pow(2, 7), pow(2, 64)-1),
     }
 
     namespaces = {
@@ -129,7 +127,6 @@ class yang:
 
         module = cls.models[name]
 
-        breakpoint()
         revision = module['revision']
         yang = f'{name}@{revision}.yang'
         save = f'{folder}/{name}.yang'
@@ -437,11 +434,7 @@ class Lexer(object):
         pass
 
 
-def make_tree(yang, python):
-    root = Lexer(yang).parse()
-    print(pprint.pformat(root))
-    print()
-
+def save_dict(python, root):
     print(f'generating {python}')
     with open(python, 'w') as w:
         w.write('# yang model converted to dict\n')
@@ -451,12 +444,223 @@ def make_tree(yang, python):
         w.write('\n')
 
 
+from ast import Module, FunctionDef, If, Return, BoolOp, BinOp, Add, Name, Param, Load, GtE, LtE, And, Or, UnaryOp, Call, Not, Attribute, Constant, Compare, USub, arguments, arg
+import astunparse
+
+
+def unique_name(prefix='function', counter=[0]):
+    unique = counter.pop()
+    unique += 1
+    counter.append(unique)
+    return f'{prefix}_{unique}'
+
+
+def function(name, body):
+    return [
+        FunctionDef(
+            name=name,
+            args=arguments(
+                posonlyargs=[],
+                args=[arg(arg='value', annotation=None, type_comment=None)],
+                vararg=None,
+                kwonlyargs=[],
+                kw_defaults=[],
+                kwarg=None,
+                defaults=[],
+            ),
+            body=body,
+            decorator_list=[],
+            returns=None,
+            type_comment=None,
+        )
+    ]
+
+
+def return_bool(value):
+    return [
+        Return(
+            value=Constant(value=value, kind=None),
+        )
+    ]
+
+
+def test_digit():
+    return [
+        If(
+            test=UnaryOp(
+                op=Not(),
+                operand=Call(
+                    func=Attribute(
+                        value=Name(id='value', ctx=Load()),
+                        attr='isdigit',
+                        ctx=Load(),
+                    ),
+                    args=[],
+                    keywords=[],
+                ),
+            ),
+            body=[
+                Return(
+                    value=Constant(value=False, kind=None),
+                ),
+            ],
+            orelse=[],
+        )
+    ]
+
+
+def test_lte(value):
+    if value >= 0:
+        comparators = [
+            Constant(value=value, kind=None)
+        ]
+    else:
+        comparators = [
+            UnaryOp(
+                op=USub(),
+                operand=Constant(value=abs(value), kind=None),
+            ),
+        ]
+
+    return [
+        If(
+            test=Compare(
+                left=Call(
+                    func=Name(id='int', ctx=Load()),
+                    args=[Name(id='value', ctx=Load())],
+                    keywords=[],
+                ),
+                ops=[LtE()],
+                comparators=comparators,
+                keywords=[],
+            ),
+            body=[
+                Return(
+                    value=Constant(value=False, kind=None),
+                ),
+            ],
+            orelse=[],
+        )
+    ]
+
+
+def test_gte(value):
+    if value >= 0:
+        comparators = [
+            Constant(value=value, kind=None)
+        ]
+    else:
+        comparators = [
+            UnaryOp(
+                op=USub(),
+                operand=Constant(value=abs(value), kind=None),
+            ),
+        ]
+    return [
+        If(
+            test=Compare(
+                left=Call(
+                    func=Name(id='int', ctx=Load()),
+                    args=[Name(id='value', ctx=Load())],
+                    keywords=[],
+                ),
+                ops=[GtE()],
+                comparators=comparators,
+            ),
+            body=[
+                Return(
+                    value=Constant(value=False, kind=None),
+                ),
+            ],
+            orelse=[],
+        )
+    ]
+
+
+def test_range(minimum, maximum):
+    return test_digit() + test_gte(minimum) + test_lte(maximum)
+
+
+def test_union(tests):
+    names = []
+    body = []
+    values = []
+
+    for test in tests:
+        func_name = unique_name('function')
+        names.append(func_name)
+        body += function(func_name, test + return_bool(True))
+
+    for func_name in names:
+        values += [
+            UnaryOp(
+                op=Not(),
+                operand=Call(
+                    func=Name(id=func_name, ctx=Load()),
+                    args=[Name(id='value', ctx=Load())],
+                    keywords=[],
+                ),
+            ),
+        ]
+
+    return body + [
+        If(
+            test=BoolOp(
+                op=And(),
+                values=values,
+            ),
+            body=[
+                Return(
+                    value=Constant(value=False, kind=None),
+                ),
+            ],
+            orelse=[],
+        ),
+    ]
+
+
+def gen_type(node):
+    for keyword in node:
+        body = []
+        if keyword == 'union':
+            for test in node[keyword][yang.kw['type']]:
+                test = {yang.kw['type']: node[keyword][yang.kw['type']][test]}
+                body += gen_type(test)
+            return test_union(body)
+
+        if keyword in ('int8', 'int16', 'int16', 'int32', 'uint8', 'uint16', 'uint16', 'uint32'):
+            minimum, maximum = yang.ranges[keyword]
+            return test_range(minimum, maximum)
+
+        breakpoint()
+        pass
+
+
+def gen_check(node):
+    print(node)
+
+    body = []
+    for keyword in node:
+        if keyword == yang.kw['type']:
+            body += gen_type(node[keyword])
+
+    return body + return_bool(True)
+
+
 def main():
     folder = os.path.dirname(__file__)
     os.chdir(os.path.abspath(folder))
 
     yang.load('yang-library-data.json', 'models')
-    make_tree('exabgp.yang', 'model.py')
+    root = Lexer('exabgp.yang').parse()
+    # save_dict('model.py', root)
+
+    body = gen_check(root[yang.kw['typedef']]['bgp-std-community-type'])
+    ast = Module(
+        body=body,
+    )
+    code = astunparse.unparse(ast)
+    print(code)
 
 
 if __name__ == "__main__":
