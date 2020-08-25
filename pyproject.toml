@@ -42,9 +42,9 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "~3.6 || ~3.7 || ^3.8"  # Compatible python versions must be declared here
+pygments-yang-lexer = "^0.2"
 pyang = "^2.3.2"
 pyangbind="^0.8.1"
-pygments-yang-lexer = "^0.2"
 
 # Optional dependencies (development)
 pudb = "^2019.2"
