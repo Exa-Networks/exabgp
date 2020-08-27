@@ -13,6 +13,9 @@ from pygments.token import Token
 from yanglexer import yanglexer
 
 
+DEBUG = True
+
+
 def write(string):
     if not string.startswith('\n'):
         fill = ' ' * shutil.get_terminal_size().columns
@@ -77,7 +80,14 @@ class yang:
         'pattern',
     )
 
+    # the yang keywords
     kw = dict((w, f'[{w}]') for w in words)
+    # the yang module loaded
+    kw['loaded'] = '[loaded]'
+    # the root of the configuration
+    kw['root'] = '[root]'
+    # strings can be pattern but is assume to be a match otherwise, make it explicit
+    kw['match'] = '[match]'
 
     ranges = {
         'int8': (0, pow(2, 8)-1),
@@ -182,9 +192,6 @@ class yang:
         print('done.\n')
 
 
-replace = re.compile('\n\t')
-
-
 class Lexer(object):
     ignore = (Token.Text, Token.Comment.Singleline)
 
@@ -198,18 +205,32 @@ class Lexer(object):
         return s
 
     def __init__(self, yangfile):
+        name = yangfile.split('/')[-1].split('.')[0]
+        # the yang file parsed tokens (configuration block according to the syntax)
+        self.tokens = []
+        # the name of the module being parsed
+        self.module = ''
+        # module can declare a "prefix" (nickname), which can be used to make the syntax shorter
         self.prefix = ''
-        self.name = yangfile.split('/')[-1].split('.')[0]
-        self.tree = {
-            self.name: {
-                yang.kw['typedef']: {}
-            }
-        }
-        self.root = self.tree[self.name]
-        self.tokens = self.tokenise(yangfile)
+        # the parsed yang tree
+        # - at the root are the namespace (the module names) and within
+        #   * a key for all the typedef
+        #   * a key for all the grouping
+        #   * a key for the root of the configuration
+        # - a key [loaded] with a list of the module loaded (first is the one parsed)
+        # the names of all the configuration sections
+        self.tree = {}
+        # the current namespace (module) we are parsing
+        self.ns = {}
+        # where the grouping for this section are stored
+        self.grouping = {}
+        # where the typedef for this section are stored
+        self.typedef = {}
+        # where the configuration parsed is stored
+        self.root = {}
+        self.load(name, yangfile)
 
     def tokenise(self, name):
-
         lexer = yanglexer.YangLexer()
         content = open(name).read()
         tokens = lexer.get_tokens(content)
@@ -222,9 +243,9 @@ class Lexer(object):
         breakpoint()
         pass
 
-    def pop(self, what, expected=None):
+    def pop(self, what=None, expected=None):
         token, string = self.tokens[0]
-        if not str(token).startswith(str(what)):
+        if what is not None and not str(token).startswith(str(what)):
             self.unexpected(string)
         if expected is not None and string.strip() != expected:
             self.unexpected(string)
@@ -251,28 +272,54 @@ class Lexer(object):
             if not count:
                 break
 
+    def set_subtrees(self):
+        """
+        to make the core more redeable the tree[module] structure
+        is presented as subtrees, this reset all the subtree
+        for the current module
+        """
+        self.ns = self.tree[self.module]
+        self.grouping = self.ns[yang.kw['grouping']]
+        self.typedef = self.ns[yang.kw['typedef']]
+        self.root = self.ns[yang.kw['root']]
+
     def imports(self, module, prefix):
+        """
+        load, and if missing and defined download, a yang module
+
+        module: the name of the yang module to find
+        prefix: how it is called (prefix)
+        """
         fname = os.path.join(yang.folder, module) + '.yang'
         if not os.path.exists(fname):
             yang.fetch_model('models', module)
-        tokens = self.tokens
-        root = self.root
 
-        self.tree[prefix] = {
-            yang.kw['typedef']: {}
-        }
-        self.root = self.tree[prefix]
+        backup = (self.tokens, self.module, self.prefix)
+        self.load(prefix, fname)
+        self.tokens, self.module, self.prefix = backup
+        self.set_subtrees()
+
+    def load(self, module, fname):
+        """
+        add a new yang module/namespace to the tree
+        this function is used when initialising the
+        root module, as it does not perform backups
+        """
+        self.tree.setdefault(yang.kw['loaded'], []).append(module)
         self.tokens = self.tokenise(fname)
+        self.module = module
+        self.prefix = module
+        self.tree[module] = {
+            yang.kw['typedef']: {},
+            yang.kw['grouping']: {},
+            yang.kw['root']: {},
+        }
+        self.set_subtrees()
         self.parse()
 
-        self.tokens = tokens
-        self.root = root
-
-    def parse(self, tree=None):
-        if tree is None:
-            tree = self.root
-        self._parse([], tree)
-        return self.root
+    def parse(self):
+        self._parse([], self.root)
+        return self.tree
 
     def _parse(self, inside, tree):
         while self.tokens:
@@ -282,147 +329,201 @@ class Lexer(object):
                 # it is clearer to pop it in the caller
                 return
 
-            if token == Token.Comment.Multiline:
-                # ignore multiline comments
-                self.pop(Token.Comment.Multiline)
-                continue
+            self._parse_one(inside, tree, token, string)
 
-            if token == Token.Keyword.Namespace:
-                self.pop(Token.Keyword.Namespace, 'module')
-                self.pop(Token.Literal.String)
+    def _parse_one(self, inside, tree, token, string):
+        if token == Token.Comment.Multiline:
+            # ignore multiline comments
+            self.pop(Token.Comment.Multiline)
+            return
+
+        if token == Token.Keyword.Namespace:
+            self.pop(Token.Keyword.Namespace, 'module')
+            self.pop(Token.Literal.String)
+            self.pop(Token.Punctuation, '{')
+            self._parse(inside, tree)
+            self.pop(Token.Punctuation, '}')
+            return
+
+        if token != Token.Keyword or string not in yang.words:
+            if ':' not in string:
+                self.unknown(string, '')
+                return
+
+        self.pop(Token.Keyword, string)
+        name = self.formated(self.pop(Token.Literal.String))
+
+        if string == 'prefix':
+            self.prefix = name
+            self.pop(Token.Punctuation, ';')
+            return
+
+        if string in ('namespace', 'organization', 'contact', 'yang-version'):
+            self.pop(Token.Punctuation, ';')
+            return
+
+        if string in ('revision', 'extension'):
+            self.skip_keyword_block(Token.Punctuation)
+            return
+
+        if string in ('range', 'length'):
+            self.pop(Token.Punctuation, ';')
+            tree[yang.kw[string]] = [_ for _ in name.replace(' ', '').replace('..',' ').split()]
+            return
+
+        if string == 'import':
+            token, string = self.peek(0, Token.Punctuation)
+            if string == ';':
+                self.pop(Token.Punctuation, ';')
+                self.imports(name, name)
+            if string == '{':
                 self.pop(Token.Punctuation, '{')
-                self._parse(inside, tree)
+                self.pop(Token.Keyword, 'prefix')
+                prefix = self.formated(self.pop(Token.Literal.String))
+                self.pop(Token.Punctuation, ';')
                 self.pop(Token.Punctuation, '}')
-                continue
+                self.imports(name, prefix)
+                return
 
-            if token != Token.Keyword or string not in yang.words:
-                if ':' not in string:
-                    self.unknown(string, '')
-                    continue
+        if string in ('description', 'reference'):
+            self.pop(Token.Punctuation, ';')
+            # XXX: not saved during debugging
+            if DEBUG:
+                return
+            tree[yang.kw[string]] = name
+            return
 
-            self.pop(Token.Keyword, string)
-            name = self.formated(self.pop(Token.Literal.String))
+        if string in ('pattern', 'value', 'default', 'mandatory'):
+            self.pop(Token.Punctuation, ';')
+            tree[yang.kw[string]] = name
+            return
 
-            if string == 'prefix':
-                self.prefix = name
-                self.pop(Token.Punctuation, ';')
-                continue
+        if string == 'key':
+            self.pop(Token.Punctuation, ';')
+            tree[yang.kw[string]] = name.split()
+            return
 
-            if string in ('namespace', 'organization', 'contact', 'yang-version'):
-                self.pop(Token.Punctuation, ';')
-                continue
+        if string == 'typedef':
+            self.pop(Token.Punctuation, '{')
+            sub = self.typedef.setdefault(name, {})
+            self._parse(inside + [name], sub)
+            self.pop(Token.Punctuation, '}')
+            return
 
-            if string in ('revision', 'extension'):
-                self.skip_keyword_block(Token.Punctuation)
-                continue
-
-            if string in ('range', 'length'):
-                self.pop(Token.Punctuation, ';')
-                tree[yang.kw[string]] = [_ for _ in name.replace(' ', '').replace('..',' ').split()]
-                continue
-
-            if string == 'import':
-                token, string = self.peek(0, Token.Punctuation)
-                if string == ';':
-                    self.pop(Token.Punctuation, ';')
-                    self.imports(name, name)
-                if string == '{':
-                    self.pop(Token.Punctuation, '{')
-                    self.pop(Token.Keyword, 'prefix')
-                    prefix = self.formated(self.pop(Token.Literal.String))
-                    self.pop(Token.Punctuation, ';')
-                    self.pop(Token.Punctuation, '}')
-                    self.imports(name, prefix)
-                    continue
-
-            if string in ('description', 'pattern', 'reference', 'value', 'default', 'mandatory'):
-                self.pop(Token.Punctuation, ';')
-                tree[yang.kw[string]] = name
-                continue
-
-            if string == 'key':
-                self.pop(Token.Punctuation, ';')
-                tree[yang.kw[string]] = name.split()
-                continue
-
-            if string == 'typedef':
-                self.pop(Token.Punctuation, '{')
-                sub = tree.setdefault(yang.kw[string], {}).setdefault(name, {})
-                self._parse(inside + [name], sub)
-                self.pop(Token.Punctuation, '}')
-                continue
-
-            if string == 'enum':
-                option = self.pop(Token.Punctuation)
-                if option == ';':
-                    tree.setdefault(yang.kw[string], []).append(name)
-                    continue
-                if option == '{':
-                    sub = tree.setdefault(name, {})
-                    self._parse(inside + [name], sub)
-                    self.pop(Token.Punctuation, '}')
-                    continue
-
-            if string == 'type':
-                option = self.pop(Token.Punctuation)
-                if option == ';':
-                    if ':' in name:
-                        prefix, suffix = name.split(':', 1)
-                        if prefix == self.prefix:
-                            name = suffix
-                            tree.setdefault(yang.kw[string], []).append(name)
-                            continue
-
-                        if prefix not in self.tree:
-                            self.unexpected(f'referenced non-included module {name}')
-
-                        if suffix not in self.tree[prefix].get(yang.kw['typedef'], {}):
-                            self.unexpected(f'referenced a undefined typedef {name}')
-
-                        self.root[yang.kw['typedef']][name] = self.tree[prefix][yang.kw['typedef']][suffix]
-                        tree.setdefault(yang.kw[string], []).append(name)
-                        continue
-
-                    tree.setdefault(yang.kw[string], []).append(name)
-                    continue
-
-                if option == '{':
-                    if name in ('union', 'enumeration') or ':' in name or name in yang.types:
-                        sub = tree.setdefault(yang.kw[string], {}).setdefault(name, {})
-                        self._parse(inside + [name], sub)
-                        self.pop(Token.Punctuation, '}')
-                        continue
-
-            if string == 'uses':
-                tree.update(self.root['grouping'][name])
-                option = self.pop(Token.Punctuation)
-                if option == ';':
-                    continue
-                if option == '{':
-                    sub = tree.setdefault(name, {})
-                    self._parse(inside + [name], sub)
-                    self.pop(Token.Punctuation, '}')
-                    continue
-
-            if string == 'grouping':
-                self.pop(Token.Punctuation, '{')
-                sub = self.root.setdefault('grouping', {}).setdefault(name, {})
-                self._parse(inside + [name], sub)
-                self.pop(Token.Punctuation, '}')
-                continue
-
-            if string in ('container', 'list', 'refine', 'leaf', 'leaf-list'):
-                self.pop(Token.Punctuation, '{')
+        if string == 'enum':
+            option = self.pop(Token.Punctuation)
+            if option == ';':
+                tree.setdefault(yang.kw[string], []).append(name)
+                return
+            if option == '{':
                 sub = tree.setdefault(name, {})
                 self._parse(inside + [name], sub)
                 self.pop(Token.Punctuation, '}')
-                continue
+                return
 
-            self.unknown(string, name)
+        if string == 'type':
+            option = self.pop(Token.Punctuation)
+            if option == ';':
+                if name in yang.types:
+                    # not dealing with refine
+                    tree.setdefault(yang.kw[string], name)
+                    return
+
+                if ':' not in name:
+                    # a reference to a local type
+                    # XXX: this need to be check post parsing
+                    # yang allows to reference a type before its creation
+                    # if name not in self.typedef:
+                    #     self.unexpected(f'referenced a undefined local typedef {name}')
+
+                    tree.setdefault(yang.kw[string], name)
+                    return
+
+                # a reference to a remote type
+                # or the local namespace using a fully qualified name
+
+                module, typeref = name.split(':', 1)
+
+                if module == self.prefix:
+                    module = self.module
+
+                if module not in self.tree:
+                    self.unexpected(f'referenced non-included module {name}')
+
+                # yang allows to reference a type before its creation
+                # XXX: this need to be check post parsing
+                # if typeref not in self.tree[module][yang.kw['typedef']]:
+                #     self.unexpected(f'referenced a undefined typedef {name}')
+
+                tree.setdefault(yang.kw[string], name)
+                return
+
+            if option == '{':
+                if name == 'union':
+                    # sub = tree.setdefault(yang.kw[string], {}).setdefault(name, {})
+                    # self._parse(inside + [name], sub)
+                    # self.pop(Token.Punctuation, '}')
+                    # continue
+
+                    sub = tree.setdefault(yang.kw[string], {}).setdefault(name, [])
+                    while True:
+                        what, name = self.peek(0)
+                        name = self.formated(name)
+                        if name == 'type':
+                            union_type = {}
+                            self._parse_one(inside + [name], union_type, what, name)
+                            sub.append(union_type[yang.kw['type']])
+                            continue
+                        if name == '}':
+                            self.pop(Token.Punctuation, '}')
+                            break
+                        self.unexpected(f'did not expect this in an union: {what}')
+                    return
+
+                if name == 'enumeration':
+                    sub = tree.setdefault(yang.kw[string], {}).setdefault(name, {})
+                    self._parse(inside + [name], sub)
+                    self.pop(Token.Punctuation, '}')
+                    return
+
+                if ':' in name or name in yang.types:
+                    sub = tree.setdefault(yang.kw[string], {}).setdefault(name, {})
+                    self._parse(inside + [name], sub)
+                    self.pop(Token.Punctuation, '}')
+                    return
+
+        if string == 'uses':
+            if name not in self.grouping:
+                breakpoint()
+            tree.update(self.grouping[name])
+            option = self.pop(Token.Punctuation)
+            if option == ';':
+                return
+            if option == '{':
+                sub = tree.setdefault(name, {})
+                self._parse(inside + [name], sub)
+                self.pop(Token.Punctuation, '}')
+                return
+
+        if string == 'grouping':
+            self.pop(Token.Punctuation, '{')
+            sub = self.grouping.setdefault(name, {})
+            self._parse(inside + [name], sub)
+            self.pop(Token.Punctuation, '}')
+            return
+
+        if string in ('container', 'list', 'refine', 'leaf', 'leaf-list'):
+            self.pop(Token.Punctuation, '{')
+            sub = tree.setdefault(name, {})
+            self._parse(inside + [name], sub)
+            self.pop(Token.Punctuation, '}')
+            return
+
+        self.unknown(string, name)
 
     def unknown(self, string, name):
         # catch unknown keyword so we can implement them
-        pprint.pprint(self.root)
+        pprint.pprint(self.ns)
         pprint.pprint('\n')
         pprint.pprint(string)
         pprint.pprint(name)
@@ -434,15 +535,21 @@ class Lexer(object):
         pass
 
 
-def save_dict(python, root):
+def save_dict(python, ns):
     print(f'generating {python}')
     with open(python, 'w') as w:
         w.write('# yang model converted to dict\n')
         w.write('\n')
         w.write('model = ')
-        w.write(str(root))
+        w.write(str(ns))
         w.write('\n')
 
+
+# Used https://github.com/asottile/astpretty
+# to understand how the python AST works
+# Python 3.9 will have ast.unparse but until then
+# https://github.com/simonpercivall/astunparse
+# is used to generate code from the AST created
 
 from ast import Module, FunctionDef, If, Return, BoolOp, BinOp, Add, Name, Param, Load, GtE, LtE, And, Or, UnaryOp, Call, Not, Attribute, Constant, Compare, USub, arguments, arg
 import astunparse
@@ -480,6 +587,14 @@ def return_bool(value):
     return [
         Return(
             value=Constant(value=value, kind=None),
+        )
+    ]
+
+
+def test_string(value):
+    return [
+        Return(
+            value=Constant(value=True, kind=None),
         )
     ]
 
@@ -621,17 +736,30 @@ def test_union(tests):
 
 def gen_type(node):
     for keyword in node:
-        body = []
+        # bodies is a list of list
+        bodies = []
         if keyword == 'union':
-            for test in node[keyword][yang.kw['type']]:
-                test = {yang.kw['type']: node[keyword][yang.kw['type']][test]}
-                body += gen_type(test)
-            return test_union(body)
+            for union in node[keyword]:
+                # this may not be required ?? always assume [type]?
+                if union == yang.kw['type']:
+                    for k, v in node[keyword][union].items():
+                        sub = {k: v}
+                        bodies.append(gen_type(sub))
+                breakpoint()
+                pass
+
+            return test_union(bodies)
 
         if keyword in ('int8', 'int16', 'int16', 'int32', 'uint8', 'uint16', 'uint16', 'uint32'):
+            # not dealing with refine
             minimum, maximum = yang.ranges[keyword]
             return test_range(minimum, maximum)
 
+        if keyword == 'string':
+            return test_string(node[keyword])
+	
+        # if keyword == 'string':
+        #     gen_string(node[string])
         breakpoint()
         pass
 
@@ -652,10 +780,13 @@ def main():
     os.chdir(os.path.abspath(folder))
 
     yang.load('yang-library-data.json', 'models')
-    root = Lexer('exabgp.yang').parse()
-    # save_dict('model.py', root)
+    ns = Lexer('exabgp.yang').parse()
 
-    body = gen_check(root[yang.kw['typedef']]['bgp-std-community-type'])
+    # save_dict('model.py', root)
+    pprint.pprint(ns)
+    return
+
+    body = gen_check(ns[yang.kw['typedef']]['bgp-std-community-type'])
     ast = Module(
         body=body,
     )
