@@ -430,49 +430,35 @@ class Lexer(object):
                 return
 
         if string == 'type':
-            option = self.pop(Token.Punctuation)
-            if option == ';':
-                if name in yang.types:
-                    # not dealing with refine
-                    tree.setdefault(yang.kw[string], name)
-                    return
-
-                if ':' not in name:
-                    # a reference to a local type
-                    # XXX: this need to be check post parsing
-                    # yang allows to reference a type before its creation
-                    # if name not in self.typedef:
-                    #     self.unexpected(f'referenced a undefined local typedef {name}')
-
-                    tree.setdefault(yang.kw[string], name)
-                    return
-
-                # a reference to a remote type
-                # or the local namespace using a fully qualified name
-
+            # make sure the use module name and not prefix, as prefix is not global
+            if ':' in name:
                 module, typeref = name.split(':', 1)
-
                 if module == self.prefix:
+                    name = f'{self.module}:{typeref}'
                     module = self.module
 
                 if module not in self.tree:
                     self.unexpected(f'referenced non-included module {name}')
+            elif name not in yang.types:
+                name = f'{self.module}:{name}'
 
-                # yang allows to reference a type before its creation
-                # XXX: this need to be check post parsing
-                # if typeref not in self.tree[module][yang.kw['typedef']]:
-                #     self.unexpected(f'referenced a undefined typedef {name}')
+            option = self.pop(Token.Punctuation)
+            if option == ';':
+                if name in yang.types:
+                    tree.setdefault(yang.kw[string], {name: {}})
+                    return
 
-                tree.setdefault(yang.kw[string], name)
+                if ':' not in name:
+                    # not dealing with refine
+                    # breakpoint()
+                    tree.setdefault(yang.kw[string], {name: {}})
+                    return
+
+                tree.setdefault(yang.kw[string], {name: {}})
                 return
 
             if option == '{':
                 if name == 'union':
-                    # sub = tree.setdefault(yang.kw[string], {}).setdefault(name, {})
-                    # self._parse(inside + [name], sub)
-                    # self.pop(Token.Punctuation, '}')
-                    # continue
-
                     sub = tree.setdefault(yang.kw[string], {}).setdefault(name, [])
                     while True:
                         what, name = self.peek(0)
@@ -494,7 +480,13 @@ class Lexer(object):
                     self.pop(Token.Punctuation, '}')
                     return
 
-                if ':' in name or name in yang.types:
+                if name in yang.types:
+                    sub = tree.setdefault(yang.kw[string], {}).setdefault(name, {})
+                    self._parse(inside + [name], sub)
+                    self.pop(Token.Punctuation, '}')
+                    return
+
+                if ':' in name:
                     sub = tree.setdefault(yang.kw[string], {}).setdefault(name, {})
                     self._parse(inside + [name], sub)
                     self.pop(Token.Punctuation, '}')
@@ -543,16 +535,6 @@ class Lexer(object):
         pass
 
 
-def save_dict(python, ns):
-    print(f'generating {python}')
-    with open(python, 'w') as w:
-        w.write('# yang model converted to dict\n')
-        w.write('\n')
-        w.write('model = ')
-        w.write(str(ns))
-        w.write('\n')
-
-
 # Used https://github.com/asottile/astpretty
 # to understand how the python AST works
 # Python 3.9 will have ast.unparse but until then
@@ -580,7 +562,7 @@ def unique_name(prefix='function', counter=[0]):
 
 
 def function(name, body):
-    name = name.replace('-', '_')
+    name = name.split(':')[-1].replace('-', '_')
 
     return [
         FunctionDef(
@@ -811,6 +793,11 @@ def gen_type(keyword, node):
             breakpoint()
             pass
 
+    if ':' in keyword:
+        print(f"**** {keyword}")
+        # missing code for this
+        return return_bool(True)
+
     print(f'not implemented keyword: {keyword}')
     breakpoint()
     pass
@@ -825,40 +812,80 @@ def gen_types(node):
 
 
 def generate(ns):
-    print(ns)
-
     td = ns[yang.kw['typedef']]
 
     for name in td:
-        if name != 'bgp-std-community-type':
-            continue
         body = []
         check = td[name]
         for keyword in check:
             if keyword == yang.kw['type']:
                 body += gen_types(check[keyword])
 
-        return function(name, body + return_bool(True))
+        ast = Module(
+            body=function(name, body + return_bool(True)),
+        )
+        yield astunparse.unparse(ast)
+
+
+class Conf(object):
+    intro = '# yang model structure and validation\n# autogenerate by exabgp\n\n'
+    variable = '{name} = {data}\n'
+
+    def __init__(self, fname):
+        self.fname = fname
+        self.dicts = []
+        self.codes = []
+
+    def add_dict(self, name, data):
+        self.dicts.append((name, data))
+
+    def add_code(self, block):
+        self.codes.append(block)
+
+    def _generate(self):
+        returned = self.intro
+        for name, data in self.dicts:
+            returned += self.variable.format(name=name, data=data)
+            returned += '\n'
+        for section in self.codes:
+            returned += section
+            returned += '\n'
+        return returned
+
+    def save(self):
+        print(f'generating {self.fname}')
+        with open(self.fname, 'w') as w:
+            w.write(self._generate())
+
+    def output(self):
+        for name, data in self.dicts:
+            pprint.pprint(name)
+            pprint.pprint(data)
+        for section in self.codes:
+            print(section)
 
 
 def main():
     folder = os.path.dirname(__file__)
     os.chdir(os.path.abspath(folder))
 
-    yang.load('yang-library-data.json', 'models')
-    tree = Lexer('exabgp.yang').parse()
+    library = 'yang-library-data.json'
+    module = 'exabgp'
+    models = 'models'
+    fname = '{module}-yang.py'
 
-    # save_dict('model.py', root)
-    # pprint.pprint(ns)
+    conf = Conf(fname)
 
-    ns = tree['exabgp']
-    body = generate(ns)
+    yang.load(library, models)
+    tree = Lexer(f'{module}.yang').parse()
 
-    ast = Module(
-        body=body,
-    )
-    code = astunparse.unparse(ast)
-    print(code)
+    conf.add_dict('model', tree)
+
+    for block in generate(tree[module]):
+        conf.add_code(block)
+
+    # # conf.save()
+    conf.output()
 
 
 if __name__ == "__main__":
