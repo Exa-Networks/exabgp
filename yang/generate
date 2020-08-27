@@ -197,12 +197,20 @@ class Lexer(object):
 
     @staticmethod
     def formated(string):
-        s = string.strip()
-        if s and s[0] == s[-1]:
-            if s[0] in ('"', "'"):
-                s = s[1:-1]
-        s = re.sub(r'\n\t*\s*', ' ', s)
-        return s
+        returned = ''
+        for line in string.strip().split('\n'):
+            line = line.strip()
+
+            if line.endswith('+'):
+                line = line[:-1].strip()
+            if line.startswith('+'):
+                line = line[1:].strip()
+
+            if line and line[0] == line[-1]:
+                if line[0] in ('"', "'"):
+                    line = line[1:-1]
+            returned += line
+        return returned
 
     def __init__(self, yangfile):
         name = yangfile.split('/')[-1].split('.')[0]
@@ -494,7 +502,7 @@ class Lexer(object):
 
         if string == 'uses':
             if name not in self.grouping:
-                breakpoint()
+                self.unexpected(f'could not find grouping calle {name}')
             tree.update(self.grouping[name])
             option = self.pop(Token.Punctuation)
             if option == ';':
@@ -551,8 +559,17 @@ def save_dict(python, ns):
 # https://github.com/simonpercivall/astunparse
 # is used to generate code from the AST created
 
-from ast import Module, FunctionDef, If, Return, BoolOp, BinOp, Add, Name, Param, Load, GtE, LtE, And, Or, UnaryOp, Call, Not, Attribute, Constant, Compare, USub, arguments, arg
+from ast import Module, Import, FunctionDef, arguments, arg, alias
+from ast import Load, Call, Return, Name, Attribute, Constant, Param
+from ast import Add, If, Compare, Gt, Lt, GtE, LtE, And, Or
+from ast import BoolOp, UnaryOp, Not, USub
+
 import astunparse
+
+
+def missing():
+    # this code path was not handled
+    breakpoint()
 
 
 def unique_name(prefix='function', counter=[0]):
@@ -563,6 +580,8 @@ def unique_name(prefix='function', counter=[0]):
 
 
 def function(name, body):
+    name = name.replace('-', '_')
+
     return [
         FunctionDef(
             name=name,
@@ -599,6 +618,37 @@ def test_string(value):
     ]
 
 
+def test_pattern(pattern):
+    return [
+        Import(
+            names=[alias(name='re', asname=None)],
+        ),
+        If(
+            test=UnaryOp(
+                op=Not(),
+                operand=Call(
+                    func=Attribute(
+                        value=Name(id='re', ctx=Load()),
+                        attr='match',
+                        ctx=Load(),
+                    ),
+                    args=[
+                        Constant(value=pattern, kind=None),
+                        Name(id='value', ctx=Load()),
+                    ],
+                    keywords=[],
+                ),
+            ),
+            body=[
+                Return(
+                    value=Constant(value=False, kind=None),
+                ),
+            ],
+            orelse=[],
+        ),
+    ]
+
+
 def test_digit():
     return [
         If(
@@ -624,7 +674,7 @@ def test_digit():
     ]
 
 
-def test_lte(value):
+def test_lt(value):
     if value >= 0:
         comparators = [
             Constant(value=value, kind=None)
@@ -645,7 +695,7 @@ def test_lte(value):
                     args=[Name(id='value', ctx=Load())],
                     keywords=[],
                 ),
-                ops=[LtE()],
+                ops=[Lt()],
                 comparators=comparators,
                 keywords=[],
             ),
@@ -659,7 +709,7 @@ def test_lte(value):
     ]
 
 
-def test_gte(value):
+def test_gt(value):
     if value >= 0:
         comparators = [
             Constant(value=value, kind=None)
@@ -679,7 +729,7 @@ def test_gte(value):
                     args=[Name(id='value', ctx=Load())],
                     keywords=[],
                 ),
-                ops=[GtE()],
+                ops=[Gt()],
                 comparators=comparators,
             ),
             body=[
@@ -693,25 +743,22 @@ def test_gte(value):
 
 
 def test_range(minimum, maximum):
-    return test_digit() + test_gte(minimum) + test_lte(maximum)
+    return test_digit() + test_lt(minimum) + test_gt(maximum)
 
 
-def test_union(tests):
-    names = []
+def union(names, tests):
     body = []
     values = []
 
     for test in tests:
-        func_name = unique_name('function')
-        names.append(func_name)
-        body += function(func_name, test + return_bool(True))
+        name = unique_name(names.pop(0))
+        body += function(name, test + return_bool(True))
 
-    for func_name in names:
         values += [
             UnaryOp(
                 op=Not(),
                 operand=Call(
-                    func=Name(id=func_name, ctx=Load()),
+                    func=Name(id=name, ctx=Load()),
                     args=[Name(id='value', ctx=Load())],
                     keywords=[],
                 ),
@@ -734,45 +781,64 @@ def test_union(tests):
     ]
 
 
-def gen_type(node):
-    for keyword in node:
+def gen_type(keyword, node):
+    if keyword == 'union':
+        names = []
+        funcs = []
+
+        for each in node:
+            for what, sub in each.items():
+                names.append(what.replace('-', '_'))
+                funcs.append(gen_type(what, sub))
+
+        return union(names, funcs)
+
+    if keyword in ('int8', 'int16', 'int16', 'int32', 'uint8', 'uint16', 'uint16', 'uint32'):
+        # not dealing with refine
+        minimum, maximum = yang.ranges[keyword]
+        return test_range(minimum, maximum)
+
+    if keyword == 'string':
+        for what, sub in node.items():
+            if what == yang.kw['pattern']:
+                return test_pattern(sub)
+
+            if what == yang.kw['match']:
+                return test_string(sub)
+
+            # not implemented
+            print(f'not implemented string: {keyword}')
+            breakpoint()
+            pass
+
+    print(f'not implemented keyword: {keyword}')
+    breakpoint()
+    pass
+
+
+def gen_types(node):
+    for keyword, content in node.items():
         # bodies is a list of list
         bodies = []
-        if keyword == 'union':
-            for union in node[keyword]:
-                # this may not be required ?? always assume [type]?
-                if union == yang.kw['type']:
-                    for k, v in node[keyword][union].items():
-                        sub = {k: v}
-                        bodies.append(gen_type(sub))
-                breakpoint()
-                pass
-
-            return test_union(bodies)
-
-        if keyword in ('int8', 'int16', 'int16', 'int32', 'uint8', 'uint16', 'uint16', 'uint32'):
-            # not dealing with refine
-            minimum, maximum = yang.ranges[keyword]
-            return test_range(minimum, maximum)
-
-        if keyword == 'string':
-            return test_string(node[keyword])
-	
-        # if keyword == 'string':
-        #     gen_string(node[string])
-        breakpoint()
-        pass
+        bodies.append(gen_type(keyword, content))
+    return bodies
 
 
-def gen_check(node):
-    print(node)
+def generate(ns):
+    print(ns)
 
-    body = []
-    for keyword in node:
-        if keyword == yang.kw['type']:
-            body += gen_type(node[keyword])
+    td = ns[yang.kw['typedef']]
 
-    return body + return_bool(True)
+    for name in td:
+        if name != 'bgp-std-community-type':
+            continue
+        body = []
+        check = td[name]
+        for keyword in check:
+            if keyword == yang.kw['type']:
+                body += gen_types(check[keyword])
+
+        return function(name, body + return_bool(True))
 
 
 def main():
@@ -780,13 +846,14 @@ def main():
     os.chdir(os.path.abspath(folder))
 
     yang.load('yang-library-data.json', 'models')
-    ns = Lexer('exabgp.yang').parse()
+    tree = Lexer('exabgp.yang').parse()
 
     # save_dict('model.py', root)
-    pprint.pprint(ns)
-    return
+    # pprint.pprint(ns)
 
-    body = gen_check(ns[yang.kw['typedef']]['bgp-std-community-type'])
+    ns = tree['exabgp']
+    body = generate(ns)
+
     ast = Module(
         body=body,
     )
