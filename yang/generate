@@ -310,7 +310,7 @@ class Lexer(object):
     def load(self, module, fname):
         """
         add a new yang module/namespace to the tree
-        this function is used when initialising the
+        this _function is used when initialising the
         root module, as it does not perform backups
         """
         self.tree.setdefault(yang.kw['loaded'], []).append(module)
@@ -549,282 +549,334 @@ from ast import BoolOp, UnaryOp, Not, USub
 import astunparse
 
 
-def missing():
-    # this code path was not handled
-    breakpoint()
+class Code(object):
+    def __init__(self, tree):
+        # the modules (import) required within the generated function
+        self.imported = set()
+        # type/function referenced in other types (union, ...)
+        # which should therefore also be generated
+        self.referenced = set()
+        # the parsed yang as a tree
+        self.tree = tree
 
+    @staticmethod
+    def _missing(**kargs):
+        print(' '.join(f'{k}={v}' for k, v in kargs.items()))
 
-def unique_name(prefix='function', counter=[0]):
-    unique = counter.pop()
-    unique += 1
-    counter.append(unique)
-    return f'{prefix}_{unique}'
+        # this code path was not handled
+        breakpoint()
 
+    @staticmethod
+    def _unique(name, counter={}):
+        unique = counter.get(name, 0)
+        unique += 1
+        counter[name] = unique
+        return f'{name}_{unique}'
 
-def function(name, body):
-    name = name.split(':')[-1].replace('-', '_')
-
-    return [
-        FunctionDef(
-            name=name,
-            args=arguments(
-                posonlyargs=[],
-                args=[arg(arg='value', annotation=None, type_comment=None)],
-                vararg=None,
-                kwonlyargs=[],
-                kw_defaults=[],
-                kwarg=None,
-                defaults=[],
-            ),
+    @staticmethod
+    def _module(body):
+        ast = Module(
             body=body,
-            decorator_list=[],
-            returns=None,
-            type_comment=None,
         )
-    ]
+        return ast
 
+    @staticmethod
+    def _function(name, body):
+        name = name.split(':')[-1].replace('-', '_')
+        return [
+            FunctionDef(
+                name=name,
+                args=arguments(
+                    posonlyargs=[],
+                    args=[arg(arg='value', annotation=None, type_comment=None)],
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[],
+                ),
+                body=body,
+                decorator_list=[],
+                returns=None,
+                type_comment=None,
+            )
+        ]
 
-def return_bool(value):
-    return [
-        Return(
-            value=Constant(value=value, kind=None),
-        )
-    ]
+    @staticmethod
+    def _return_boolean(value):
+        return [
+            Return(
+                value=Constant(value=value, kind=None),
+            )
+        ]
 
-
-def test_string(value):
-    return [
-        Return(
-            value=Constant(value=True, kind=None),
-        )
-    ]
-
-
-def test_pattern(pattern):
-    return [
-        Import(
-            names=[alias(name='re', asname=None)],
-        ),
-        If(
-            test=UnaryOp(
-                op=Not(),
-                operand=Call(
-                    func=Attribute(
-                        value=Name(id='re', ctx=Load()),
-                        attr='match',
-                        ctx=Load(),
+    def _if_pattern(self, pattern):
+        self.imported.add('re')
+        return [
+            If(
+                test=UnaryOp(
+                    op=Not(),
+                    operand=Call(
+                        func=Attribute(
+                            value=Name(id='re', ctx=Load()),
+                            attr='match',
+                            ctx=Load(),
+                        ),
+                        args=[
+                            Constant(value=pattern, kind=None),
+                            Name(id='value', ctx=Load()),
+                        ],
+                        keywords=[],
                     ),
-                    args=[
-                        Constant(value=pattern, kind=None),
-                        Name(id='value', ctx=Load()),
+                ),
+                body=[
+                    Return(
+                        value=Constant(value=False, kind=None),
+                    ),
+                ],
+                orelse=[],
+            ),
+        ]
+
+    def _if_length(self, min, max):
+        self.imported.add('re')
+        return [
+            If(
+                test=Compare(
+                    left=Constant(value=min, kind=None),
+                    ops=[
+                        Gt(),
+                        Gt(),
                     ],
-                    keywords=[],
+                    comparators=[
+                        Call(
+                            func=Name(id='len', ctx=Load()),
+                            args=[Name(id='value', ctx=Load())],
+                            keywords=[],
+                        ),
+                        Constant(value=max, kind=None),
+                    ],
                 ),
-            ),
-            body=[
-                Return(
-                    value=Constant(value=False, kind=None),
-                ),
-            ],
-            orelse=[],
-        ),
-    ]
-
-
-def test_digit():
-    return [
-        If(
-            test=UnaryOp(
-                op=Not(),
-                operand=Call(
-                    func=Attribute(
-                        value=Name(id='value', ctx=Load()),
-                        attr='isdigit',
-                        ctx=Load(),
+                body=[
+                    Return(
+                        lineno=4,
+                        col_offset=8,
+                        end_lineno=4,
+                        end_col_offset=20,
+                        value=Constant(value=False, kind=None),
                     ),
-                    args=[],
-                    keywords=[],
-                ),
-            ),
-            body=[
-                Return(
-                    value=Constant(value=False, kind=None),
-                ),
-            ],
-            orelse=[],
-        )
-    ]
-
-
-def test_lt(value):
-    if value >= 0:
-        comparators = [
-            Constant(value=value, kind=None)
-        ]
-    else:
-        comparators = [
-            UnaryOp(
-                op=USub(),
-                operand=Constant(value=abs(value), kind=None),
+                ],
+                orelse=[],
             ),
         ]
 
-    return [
-        If(
-            test=Compare(
-                left=Call(
-                    func=Name(id='int', ctx=Load()),
-                    args=[Name(id='value', ctx=Load())],
-                    keywords=[],
-                ),
-                ops=[Lt()],
-                comparators=comparators,
-                keywords=[],
-            ),
-            body=[
-                Return(
-                    value=Constant(value=False, kind=None),
-                ),
-            ],
-            orelse=[],
-        )
-    ]
-
-
-def test_gt(value):
-    if value >= 0:
-        comparators = [
-            Constant(value=value, kind=None)
-        ]
-    else:
-        comparators = [
-            UnaryOp(
-                op=USub(),
-                operand=Constant(value=abs(value), kind=None),
-            ),
-        ]
-    return [
-        If(
-            test=Compare(
-                left=Call(
-                    func=Name(id='int', ctx=Load()),
-                    args=[Name(id='value', ctx=Load())],
-                    keywords=[],
-                ),
-                ops=[Gt()],
-                comparators=comparators,
-            ),
-            body=[
-                Return(
-                    value=Constant(value=False, kind=None),
-                ),
-            ],
-            orelse=[],
-        )
-    ]
-
-
-def test_range(minimum, maximum):
-    return test_digit() + test_lt(minimum) + test_gt(maximum)
-
-
-def union(names, tests):
-    body = []
-    values = []
-
-    for test in tests:
-        name = unique_name(names.pop(0))
-        body += function(name, test + return_bool(True))
-
-        values += [
-            UnaryOp(
-                op=Not(),
-                operand=Call(
-                    func=Name(id=name, ctx=Load()),
-                    args=[Name(id='value', ctx=Load())],
-                    keywords=[],
-                ),
-            ),
-        ]
-
-    return body + [
-        If(
-            test=BoolOp(
-                op=And(),
-                values=values,
-            ),
-            body=[
-                Return(
-                    value=Constant(value=False, kind=None),
-                ),
-            ],
-            orelse=[],
-        ),
-    ]
-
-
-def gen_type(keyword, node):
-    if keyword == 'union':
-        names = []
-        funcs = []
-
-        for each in node:
-            for what, sub in each.items():
-                names.append(what.replace('-', '_'))
-                funcs.append(gen_type(what, sub))
-
-        return union(names, funcs)
-
-    if keyword in ('int8', 'int16', 'int16', 'int32', 'uint8', 'uint16', 'uint16', 'uint32'):
-        # not dealing with refine
-        minimum, maximum = yang.ranges[keyword]
-        return test_range(minimum, maximum)
-
-    if keyword == 'string':
+    def _iter_if_string(self, node):
         for what, sub in node.items():
             if what == yang.kw['pattern']:
-                return test_pattern(sub)
+                yield self._if_pattern(sub)
+                continue
 
             if what == yang.kw['match']:
-                return test_string(sub)
+                self._missing(if_type=what, node=node)
+                continue
 
-            # not implemented
-            print(f'not implemented string: {keyword}')
-            breakpoint()
-            pass
+            if what == yang.kw['length']:
+                yield self._if_length(*sub)
+                continue
 
-    if ':' in keyword:
-        print(f"**** {keyword}")
-        # missing code for this
-        return return_bool(True)
+            self._missing(if_type=what, node=node)
 
-    print(f'not implemented keyword: {keyword}')
-    breakpoint()
-    pass
+    @staticmethod
+    def _if_digit():
+        return [
+            If(
+                test=UnaryOp(
+                    op=Not(),
+                    operand=Call(
+                        func=Attribute(
+                            value=Name(id='value', ctx=Load()),
+                            attr='isdigit',
+                            ctx=Load(),
+                        ),
+                        args=[],
+                        keywords=[],
+                    ),
+                ),
+                body=[
+                    Return(
+                        value=Constant(value=False, kind=None),
+                    ),
+                ],
+                orelse=[],
+            )
+        ]
 
+    @staticmethod
+    def _if_lt(value):
+        if value >= 0:
+            comparators = [
+                Constant(value=value, kind=None)
+            ]
+        else:
+            comparators = [
+                UnaryOp(
+                    op=USub(),
+                    operand=Constant(value=abs(value), kind=None),
+                ),
+            ]
 
-def gen_types(node):
-    for keyword, content in node.items():
-        # bodies is a list of list
-        bodies = []
-        bodies.append(gen_type(keyword, content))
-    return bodies
+        return [
+            If(
+                test=Compare(
+                    left=Call(
+                        func=Name(id='int', ctx=Load()),
+                        args=[Name(id='value', ctx=Load())],
+                        keywords=[],
+                    ),
+                    ops=[Lt()],
+                    comparators=comparators,
+                    keywords=[],
+                ),
+                body=[
+                    Return(
+                        value=Constant(value=False, kind=None),
+                    ),
+                ],
+                orelse=[],
+            )
+        ]
 
+    @staticmethod
+    def _if_gt(value):
+        if value >= 0:
+            comparators = [
+                Constant(value=value, kind=None)
+            ]
+        else:
+            comparators = [
+                UnaryOp(
+                    op=USub(),
+                    operand=Constant(value=abs(value), kind=None),
+                ),
+            ]
+        return [
+            If(
+                test=Compare(
+                    left=Call(
+                        func=Name(id='int', ctx=Load()),
+                        args=[Name(id='value', ctx=Load())],
+                        keywords=[],
+                    ),
+                    ops=[Gt()],
+                    comparators=comparators,
+                ),
+                body=[
+                    Return(
+                        value=Constant(value=False, kind=None),
+                    ),
+                ],
+                orelse=[],
+            )
+        ]
 
-def generate(ns):
-    td = ns[yang.kw['typedef']]
+    def _if_range(self, minimum, maximum):
+        return self._if_digit() + self._if_lt(minimum) + self._if_gt(maximum)
 
-    for name in td:
-        body = []
-        check = td[name]
-        for keyword in check:
-            if keyword == yang.kw['type']:
-                body += gen_types(check[keyword])
+    def _union(self, names, tests):
+        funcs = []
+        values = []
 
-        ast = Module(
-            body=function(name, body + return_bool(True)),
-        )
-        yield astunparse.unparse(ast)
+        for test in tests:
+            name = self._unique(names.pop(0))
+            name = name.replace(':', '__').replace('-', '_')
+            yield self._function(name, test + self._return_boolean(True))
+
+            values += [
+                UnaryOp(
+                    op=Not(),
+                    operand=Call(
+                        func=Name(id=name, ctx=Load()),
+                        args=[Name(id='value', ctx=Load())],
+                        keywords=[],
+                    ),
+                ),
+            ]
+
+        yield funcs + [
+            If(
+                test=BoolOp(
+                    op=And(),
+                    values=values,
+                ),
+                body=[
+                    Return(
+                        value=Constant(value=False, kind=None),
+                    ),
+                ],
+                orelse=[],
+            ),
+        ]
+
+    def _imports(self):
+        returned = []
+        for imported in self.imported:
+            returned.append(
+                Import(
+                    names=[alias(name='re', asname=None)],
+                )
+            )
+        return returned
+
+    def _type(self, keyword, node):
+        if keyword == 'union':
+            names = []
+            funcs = []
+
+            for each in node:
+                print(each)
+                for what, sub in each.items():
+                    names.append(what.replace('-', '_'))
+                    funcs.append(self._type(what, sub))
+
+            return list(self._union(names, funcs))
+
+        if keyword in ('int8', 'int16', 'int16', 'int32', 'uint8', 'uint16', 'uint16', 'uint32'):
+            # not dealing with refine
+            minimum, maximum = yang.ranges[keyword]
+            return self._if_range(minimum, maximum)
+
+        if keyword == 'string':
+            return list(self._iter_if_string(node))
+
+        if ':' in keyword:
+            ns, name = keyword.split(':', 1)
+            return list(self._generate(ns, name))
+
+        self._missing(keyword=keyword, node=node)
+
+    def _iter(self, node):
+        for keyword, content in node.items():
+            yield self._type(keyword, content)
+
+    def _generate(self, module, only):
+        td = self.tree[module][yang.kw['typedef']]
+
+        for name in td:
+            if only and only != name:
+                continue
+            body = list(self._iter(td[name][yang.kw['type']]))
+            print(name)
+            print(body)
+            print('')
+            yield self._function(name, body + self._return_boolean(True))
+
+    def generate(self, module, only=''):
+        generated = self._imports()
+        generated += list(self._generate(module, only))
+        while self.referenced:
+            module, check = self.referenced.pop(0)
+            generated += list(self._generate(module, check))
+        return self._module(generated)
 
 
 class Conf(object):
@@ -880,12 +932,15 @@ def main():
     tree = Lexer(f'{module}.yang').parse()
 
     conf.add_dict('model', tree)
+    # conf.output()
 
-    for block in generate(tree[module]):
-        conf.add_code(block)
+    code = Code(tree)
+    ast = code.generate(module)
+    block = astunparse.unparse(ast)
+    conf.add_code(block)
 
-    # # conf.save()
     conf.output()
+    # # conf.save()
 
 
 if __name__ == "__main__":
