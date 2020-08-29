@@ -558,6 +558,10 @@ class Code(object):
         self.referenced = set()
         # the parsed yang as a tree
         self.tree = tree
+        # the main yang namespace/module
+        self.module = tree[yang.kw['loaded']][0]
+        # the namespace we are working in
+        self.ns = self.module
 
     @staticmethod
     def _missing(**kargs):
@@ -574,41 +578,19 @@ class Code(object):
         return f'{name}_{unique}'
 
     @staticmethod
-    def _module(body):
-        ast = Module(
-            body=body,
-        )
-        return ast
-
-    @staticmethod
-    def _function(name, body):
-        name = name.split(':')[-1].replace('-', '_')
-        return [
-            FunctionDef(
-                name=name,
-                args=arguments(
-                    posonlyargs=[],
-                    args=[arg(arg='value', annotation=None, type_comment=None)],
-                    vararg=None,
-                    kwonlyargs=[],
-                    kw_defaults=[],
-                    kwarg=None,
-                    defaults=[],
-                ),
-                body=body,
-                decorator_list=[],
-                returns=None,
-                type_comment=None,
-            )
-        ]
-
-    @staticmethod
     def _return_boolean(value):
         return [
             Return(
                 value=Constant(value=value, kind=None),
             )
         ]
+
+    def _python_name(self, name):
+        if self.ns != self.tree[yang.kw['loaded']][0] and ':' not in name:
+            # XXX: could this lead to function shadowing?
+            name = f'{self.ns}:{name}'
+        # XXX: could this lead to function shadowing?
+        return name.replace(':', '__').replace('-', '_')
 
     def _if_pattern(self, pattern):
         self.imported.add('re')
@@ -638,12 +620,12 @@ class Code(object):
             ),
         ]
 
-    def _if_length(self, min, max):
+    def _if_length(self, minimum, maximum):
         self.imported.add('re')
         return [
             If(
                 test=Compare(
-                    left=Constant(value=min, kind=None),
+                    left=Constant(value=int(minimum), kind=None),
                     ops=[
                         Gt(),
                         Gt(),
@@ -654,15 +636,11 @@ class Code(object):
                             args=[Name(id='value', ctx=Load())],
                             keywords=[],
                         ),
-                        Constant(value=max, kind=None),
+                        Constant(value=int(maximum), kind=None),
                     ],
                 ),
                 body=[
                     Return(
-                        lineno=4,
-                        col_offset=8,
-                        end_lineno=4,
-                        end_col_offset=20,
                         value=Constant(value=False, kind=None),
                     ),
                 ],
@@ -782,27 +760,37 @@ class Code(object):
     def _if_range(self, minimum, maximum):
         return self._if_digit() + self._if_lt(minimum) + self._if_gt(maximum)
 
-    def _union(self, names, tests):
-        funcs = []
+    def _union(self, node):
         values = []
+        generated = []
 
-        for test in tests:
-            name = self._unique(names.pop(0))
-            name = name.replace(':', '__').replace('-', '_')
-            yield self._function(name, test + self._return_boolean(True))
+        for union in node:
+            for what, sub in union.items():
+                if ':' in what:
+                    if what in generated:
+                        # only generate any imported function once
+                        continue
+                    generated.append(what)
+                    name = what
+                    yield self._type(what, name, sub)
+                else:
+                    # this is a build_in type (and my have been refined)
+                    # therefore generate one function per type
+                    name = self._unique(what)
+                    yield self._function(name, self._type(what, what, sub))
 
-            values += [
-                UnaryOp(
-                    op=Not(),
-                    operand=Call(
-                        func=Name(id=name, ctx=Load()),
-                        args=[Name(id='value', ctx=Load())],
-                        keywords=[],
+                values += [
+                    UnaryOp(
+                        op=Not(),
+                        operand=Call(
+                            func=Name(id=self._python_name(name), ctx=Load()),
+                            args=[Name(id='value', ctx=Load())],
+                            keywords=[],
+                        ),
                     ),
-                ),
-            ]
+                ]
 
-        yield funcs + [
+        yield [
             If(
                 test=BoolOp(
                     op=And(),
@@ -817,66 +805,79 @@ class Code(object):
             ),
         ]
 
-    def _imports(self):
-        returned = []
+    def _imported(self):
         for imported in self.imported:
-            returned.append(
-                Import(
-                    names=[alias(name='re', asname=None)],
-                )
-            )
-        return returned
+            yield Import(names=[alias(name=imported, asname=None)])
 
-    def _type(self, keyword, node):
-        if keyword == 'union':
-            names = []
-            funcs = []
+    def _type(self, what, name, node):
+        if what == 'union':
+            return list(self._union(node))
 
-            for each in node:
-                print(each)
-                for what, sub in each.items():
-                    names.append(what.replace('-', '_'))
-                    funcs.append(self._type(what, sub))
-
-            return list(self._union(names, funcs))
-
-        if keyword in ('int8', 'int16', 'int16', 'int32', 'uint8', 'uint16', 'uint16', 'uint32'):
+        if what in ('int8', 'int16', 'int16', 'int32', 'uint8', 'uint16', 'uint16', 'uint32'):
             # not dealing with refine
-            minimum, maximum = yang.ranges[keyword]
+            minimum, maximum = yang.ranges[what]
             return self._if_range(minimum, maximum)
 
-        if keyword == 'string':
+        if what == 'string':
             return list(self._iter_if_string(node))
 
-        if ':' in keyword:
-            ns, name = keyword.split(':', 1)
-            return list(self._generate(ns, name))
+        if ':' in what:
+            ns, name = what.split(':', 1)
+            backup_ns, self.ns = self.ns, ns
+            answer = list(self._typedef(ns, name))
+            self.ns = backup_ns
+            return answer
 
-        self._missing(keyword=keyword, node=node)
+        self._missing(what=what, name=name, node=node)
 
     def _iter(self, node):
         for keyword, content in node.items():
-            yield self._type(keyword, content)
+            yield self._type(keyword, keyword, content)
 
-    def _generate(self, module, only):
+    def _function(self, name, body):
+        # XXX: could this lead to function shadowing?
+        return [
+            FunctionDef(
+                name=self._python_name(name),
+                args=arguments(
+                    posonlyargs=[],
+                    args=[arg(arg='value', annotation=None, type_comment=None)],
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[],
+                ),
+                body=body + self._return_boolean(True),
+                decorator_list=[],
+                returns=None,
+                type_comment=None,
+            )
+        ]
+
+    def _typedef(self, module, only):
         td = self.tree[module][yang.kw['typedef']]
 
         for name in td:
             if only and only != name:
                 continue
             body = list(self._iter(td[name][yang.kw['type']]))
-            print(name)
-            print(body)
-            print('')
-            yield self._function(name, body + self._return_boolean(True))
+            yield self._function(name, body)
 
-    def generate(self, module, only=''):
-        generated = self._imports()
-        generated += list(self._generate(module, only))
-        while self.referenced:
-            module, check = self.referenced.pop(0)
-            generated += list(self._generate(module, check))
-        return self._module(generated)
+    def _module(self, module, only=''):
+        generated = list(self._typedef(module, only))
+        # while self.referenced:
+        #     module, check = self.referenced.pop(0)
+        #     generated += list(self._typedef(module, check))
+        return generated
+
+    def generate(self, module):
+        # this must be run first so that the imported module can be generated
+        body = list(self._module(module))
+        ast = Module(
+            body=list(self._imported()) + body,
+        )
+        return ast
 
 
 class Conf(object):
@@ -910,9 +911,9 @@ class Conf(object):
             w.write(self._generate())
 
     def output(self):
-        for name, data in self.dicts:
-            pprint.pprint(name)
-            pprint.pprint(data)
+        # for name, data in self.dicts:
+        #     pprint.pprint(name)
+        #     pprint.pprint(data)
         for section in self.codes:
             print(section)
 
