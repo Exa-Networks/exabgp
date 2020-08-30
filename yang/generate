@@ -4,6 +4,7 @@ import re
 import os
 import sys
 import json
+import decimal
 import shutil
 import pprint
 import urllib.request
@@ -24,28 +25,70 @@ def write(string):
     sys.stdout.flush()
 
 
+class Boolean(int):
+    def __new__(cls, value):
+        return int.__new__(cls, value not in ('false', False, 0))
+
+    def __init__(self, boolean):
+        self.string = boolean
+
+    def __str__(self):
+        return self.string
+
+
+class Decimal64(decimal.Decimal):
+    def __init__(cls, value, frac=0):
+        raise RuntimeError()
+        # look at https://github.com/CZ-NIC/yangson/blob/master/yangson/datatype.py#L682
+        return super().__init__(decimal.Decimal(value))
+
+
 class yang:
-    types = (
-        'binary',
-        'bits',
-        'boolean',
-        'decimal64',
-        'empty',
-        'enumeration',
-        'identityref',
-        'instance-identifier',
-        'int8',
-        'int16',
-        'int32',
-        'int64',
-        'leafref',
-        'string',
-        'uint8',
-        'uint16',
-        'uint32',
-        'uint64',
-        'union',
-    )
+    restriction = {
+        'binary': ['length'],
+        'bits': ['bit'],
+        'boolean': [],
+        'decimal64': ['range'],
+        'empty': [],
+        'enumeration': ['enum'],
+        'identityref': [],
+        'instance-identifier': ['require-instance'],
+        'int8': [],
+        'int16': [],
+        'int32': [],
+        'int64': [],
+        'leafref': ['path', 'require-instance'],
+        'string': ['pattern', 'length'],
+        'uint8': [],
+        'uint16': [],
+        'uint32': [],
+        'uint64': [],
+        'union': [],
+    }
+
+    klass = {
+        'binary': ['length'],
+        'bits': ['bit'],
+        'boolean': Boolean,
+        'decimal64': Decimal64,
+        'empty': None,
+        'enumeration': None,
+        'identityref': str,
+        'instance-identifier': str,
+        'int8': int,
+        'int16': int,
+        'int32': int,
+        'int64': int,
+        'leafref': str,
+        'string': str,
+        'uint8': int,
+        'uint16': int,
+        'uint32': int,
+        'uint64': int,
+        'union': None,
+    }
+
+    types = list(restriction.keys())
 
     words = (
         'extension',
