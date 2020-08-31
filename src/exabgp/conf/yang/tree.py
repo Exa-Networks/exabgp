@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2020-09-01.
 Copyright (c) 2020 Exa Networks. All rights reserved.
 """
 
-import os
+import pprint
 
 from pygments.token import Token
 from yanglexer import yanglexer
@@ -336,7 +336,14 @@ class Tree(object):
             self.pop(Token.Punctuation, '}')
             return
 
-        if string in ('container', 'list', 'refine', 'leaf', 'leaf-list'):
+        if string in ('container', 'list', 'leaf', 'leaf-list'):
+            self.pop(Token.Punctuation, '{')
+            sub = tree.setdefault(name, {kw[string]: {}})
+            self._parse(inside + [name], sub)
+            self.pop(Token.Punctuation, '}')
+            return
+
+        if string == 'refine':
             self.pop(Token.Punctuation, '{')
             sub = tree.setdefault(name, {})
             self._parse(inside + [name], sub)
