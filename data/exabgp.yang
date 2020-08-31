@@ -1,4 +1,8 @@
 module exabgp {
+	// ExaBGP does use python "re" for regex, therefore all regexes
+	// need to be expressed in a common subset of both XSD and re
+	// \\p{N}\\p{L} is replaced by a unicode matching of \w
+
 	namespace "https://github.com/exa-networks/exabgp";
 	prefix exabgp;
 

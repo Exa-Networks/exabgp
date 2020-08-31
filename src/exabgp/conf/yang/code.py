@@ -68,6 +68,8 @@ class Code(object):
 
     def _if_pattern(self, pattern):
         self.imported.add('re')
+        # fix known ietf regex use
+        pattern = pattern.replace('\\p{N}\\p{L}','\\w')
         return [
             If(
                 test=UnaryOp(
@@ -81,6 +83,11 @@ class Code(object):
                         args=[
                             Constant(value=pattern, kind=None),
                             Name(id='value', ctx=Load()),
+                            Attribute(
+                                value=Name(id='re', ctx=Load()),
+                                attr='UNICODE',
+                                ctx=Load(),
+                            ),
                         ],
                         keywords=[],
                     ),
@@ -95,7 +102,6 @@ class Code(object):
         ]
 
     def _if_length(self, minimum, maximum):
-        self.imported.add('re')
         return [
             If(
                 test=Compare(
