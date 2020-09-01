@@ -8,6 +8,6 @@ Copyright (c) 2020 Exa Networks. All rights reserved.
 
 from exabgp.conf.yang.model import Model
 from exabgp.conf.yang.code import Code
-from exabgp.conf.yang.tree import Tree
+from exabgp.conf.yang.tree import Parser
 
 from exabgp.conf.yang.datatypes import kw

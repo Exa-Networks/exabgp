@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding: utf-8
 
 import os
 import astunparse
 
-from exabgp.conf.yang import Tree 
+from exabgp.conf.yang import Parser 
 from exabgp.conf.yang import Code
 
 
@@ -39,37 +39,37 @@ class Generate(object):
             w.write(self._generate())
 
     def output(self):
-        # for name, data in self.dicts:
-        #     pprint.pprint(name)
-        #     pprint.pprint(data)
+        for name, data in self.dicts:
+            pprint.pprint(name)
+            pprint.pprint(data)
         for section in self.codes:
             print(section)
 
 
 def main():
-    folder = os.path.dirname(__file__)
-    data = os.path.join(folder, '..', '..', '..', 'data')
+    folder = os.path.abspath(os.path.dirname(__file__))
+    data = os.path.join(folder, '..', '..', '..', '..', 'data')
     os.chdir(os.path.abspath(data))
 
     library = 'yang-library-data.json'
     module = 'exabgp'
     models = 'models'
-    fname = '{module}-yang.py'
+    fname = 'cache.py'
 
     gen = Generate(fname)
 
-    tree = Tree(library, models, module).parse()
+    tree = Parser(library, models, module).parse()
 
     gen.add_dict('model', tree)
-    # gen.output()
 
     code = Code(tree)
     ast = code.generate(module)
     block = astunparse.unparse(ast)
     gen.add_code(block)
 
-    gen.output()
-    # # gen.save()
+    os.chdir(folder)
+    # gen.output()
+    gen.save()
 
 
 if __name__ == "__main__":
