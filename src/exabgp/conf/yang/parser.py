@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-yang/tree.py
+yang/parser.py
 
 Created by Thomas Mangin on 2020-09-01.
 Copyright (c) 2020 Exa Networks. All rights reserved.
