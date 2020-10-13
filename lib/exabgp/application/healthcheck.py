@@ -471,14 +471,6 @@ def loop(options):
             return
         if target in (states.END,):
             return
-        # dynamic ip management. When the service fail, remove the loopback
-        if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
-            logger.info("exiting, deleting loopback ips")
-            remove_ips(options.ips, options.label, options.sudo)
-        # dynamic ip management. When the service fail, remove the loopback
-        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
-            logger.info("service down, deleting loopback ips")
-            remove_ips(options.ips, options.label, options.sudo)
         # if ips was deleted with dyn ip, re-setup them
         if target == states.UP and options.ip_dynamic:
             logger.info("service up, restoring loopback ips")
@@ -525,6 +517,15 @@ def loop(options):
             if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
                 continue
             sys.stdin.readline()
+
+        # dynamic ip management. When the service fail, remove the loopback
+        if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
+            logger.info("exiting, deleting loopback ips")
+            remove_ips(options.ips, options.label, options.sudo)
+        # dynamic ip management. When the service fail, remove the loopback
+        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
+            logger.info("service down, deleting loopback ips")
+            remove_ips(options.ips, options.label, options.sudo)
 
     def trigger(target):
         """Trigger a state change and execute the appropriate commands"""
