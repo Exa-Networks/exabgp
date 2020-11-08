@@ -216,7 +216,7 @@ CONFIGURATION = {
             'read': parsing.integer,
             'write': parsing.nop,
             'value': '60',
-            'help': 'how many second we wait for an open once the TCP session is established',
+            'help': 'how many seconds we wait for an open once the TCP session is established',
         },
     },
     'cache': {

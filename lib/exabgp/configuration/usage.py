@@ -26,7 +26,7 @@ positional arguments:
   configuration         peer and route configuration file
 
 optional arguments:
-  --help, -h            exabgp manual page
+  --help, -h            ExaBGP manual page
   --version, -v         shows ExaBGP version
   --root ROOT, -f ROOT
                         root folder where etc,bin,sbin are located
