@@ -159,6 +159,9 @@ class Daemon(object):
         except ValueError:
             # The file descriptor is closed
             return False
+        except OSError:
+            # Not a socket.
+            return False
         try:
             s.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
         except socket.error as exc:
