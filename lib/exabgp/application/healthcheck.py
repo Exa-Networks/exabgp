@@ -213,12 +213,14 @@ def parse():
         help="announce IPs with the supplied community when disabled",
     )
     g.add_argument("--as-path", metavar="ASPATH", type=str, default=None, help="announce IPs with the supplied as-path")
+    g.add_argument("--up-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is up")
+    g.add_argument("--down-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is down")
+    g.add_argument("--disabled-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is disabled")
     g.add_argument(
         "--withdraw-on-down",
         action="store_true",
         help=("Instead of increasing the metric on health failure, " "withdraw the route"),
     )
-
     g = parser.add_argument_group("reporting")
     g.add_argument("--execute", metavar='CMD', type=str, action="append", help="execute CMD on state change")
     g.add_argument(
@@ -478,6 +480,9 @@ def loop(options):
 
         logger.info("send announces for %s state to ExaBGP", target)
         metric = vars(options).get("{0}_metric".format(str(target).lower()), 0)
+        as_path = vars(options).get("{0}_as_path".format(str(target).lower()), None)
+        if as_path is None:
+            as_path = options.as_path
         for ip in options.ips:
             if options.withdraw_on_down or target is states.EXIT:
                 command = "announce" if target is states.UP else "withdraw"
@@ -500,8 +505,8 @@ def loop(options):
                     announce = "{0} extended-community [ {1} ]".format(announce, options.extended_community)
                 if options.large_community:
                     announce = "{0} large-community [ {1} ]".format(announce, options.large_community)
-                if options.as_path:
-                    announce = "{0} as-path [ {1} ]".format(announce, options.as_path)
+                if as_path:
+                    announce = "{0} as-path [ {1} ]".format(announce, as_path)
 
             metric += options.increase
 
