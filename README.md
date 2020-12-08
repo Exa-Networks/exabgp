@@ -107,7 +107,7 @@ ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had suppor
 ExaBGP is self-contained and easy to upgrade/downgrade by:
 
 * replacing the downloaded release folder, for releases download
-* running `git pull` in the repository folder, for installtion using git master
+* running `git pull` in the repository folder, for installation using git master
 * running `pip install -U exabgp`, for pip installations
 * running `apt update; apt upgrade exabgp` for Debian/Ubuntu
 
@@ -233,7 +233,7 @@ The following "unsupported" options are available to help with development:
 
 If you want to check any code changes, the repository comes with a `qa` folder, which includes many way to check code integrity.
 
-ExaBGP comes with a set of functional tests, each test starts an IBGP deamon expecting a number of per recorded UDPATEs for the matching configuration file.
+ExaBGP comes with a set of functional tests, each test starts an IBGP daemon expecting a number of per recorded UPDATEs for the matching configuration file.
 
 You can see all the existing tests running `./qa/bin/functional listing`. Each test is numbered and can be run independently (please note that 03 is not the same as 3).
 
