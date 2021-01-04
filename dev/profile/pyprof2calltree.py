@@ -50,7 +50,7 @@ class Entry(object):
 def pstats2entries(data):
     """Helper to convert serialized pstats back to a list of raw entries
 
-    Converse opperation of cProfile.Profile.snapshot_stats()
+    Converse operation of cProfile.Profile.snapshot_stats()
     """
     entries = dict()
     allcallers = dict()
