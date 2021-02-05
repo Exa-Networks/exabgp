@@ -1,1 +1,0 @@
-# ExaBGP dependencies are included in its code tree

@@ -1,8 +1,6 @@
 [build-system]
-# Minimum requirements for the build system to execute.
-requires = ["setuptools", "wheel"]  # PEP 508 specifications.
-# build-backend = "setuptools.build-meta"
-# build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = 'exabgp'
@@ -14,6 +12,7 @@ authors = [
 readme = 'README.md'
 repository = 'https://github.com/exa-networks/exabgp'
 homepage = 'https://github.com/exa-networks/exabgp'
+documentation = 'https://github.com/Exa-Networks/exabgp/wiki'
 license = 'BSD-3-Clause'
 keywords = ['bgp', 'ddos-protection', 'health-check', 'flowspec', 'bgp-ls', 'mpls', 'vpls']
 classifiers = [
@@ -28,7 +27,7 @@ classifiers = [
 	'Programming Language :: Python :: 3.7',
 	'Topic :: Internet',
 ]
-
+include = ["*.txt", "*.rst"]
 # packages = [
 #     { include = "my_package" },
 #     { include = "my_other_package", format = "sdist" },
@@ -42,28 +41,54 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "~3.6 || ~3.7 || ^3.8"  # Compatible python versions must be declared here
+pyang = "^2.4.0"
+pyangbind = {git = "https://github.com/ahmet2mir/pyangbind.git"} # https://github.com/robshakir/pyangbind/pull/233/files
 pygments-yang-lexer = "^0.2"
-pyang = "^2.3.2"
-pyangbind="^0.8.1"
 
 # Optional dependencies (development)
+[tool.poetry.dev-dependencies]
+bandit = "^1.7.0"
+black = "^20.8b1"
+coverage = "^5.4"
+coveralls = "^2.1.2"
+dephell = "^0.8.3"
+flake8 = "^3.8.3"
+flake8-bugbear = "^20.11.1"
+flakehell = "^0.9.0"
+isort = "^5.7.0"
+nose = "^1.3.7"
+pex = { version="^2.1.28", python = ">=3.6,<3.10" }
+psutil = "^5.7.2"
 pudb = "^2019.2"
-flake8 = { version="^3.8.3", optional = true }
-coveralls = { version="2.1.2", optional = true }
-nose = { version="1.3.7", optional = true }
-psutil = { version="5.7.2", optional = true }
-
-[tool.poetry.extras]
-debug = ["pudb"]
-developer = ["pudb", "flake8", "coveralls", "nose", "psutil"]
+pytest = "^6.2.2"
+wheel = "^0.35.1"
 
 [tool.poetry.scripts]
 exabgp = 'exabgp.application.main:main'
+exabgpcli = 'exabgp.application.cli:main'
+exabgp-cli = 'exabgp.application.cli:main'
+exabgp-healthcheck = 'exabgp.application.healthcheck:main'
 
 [tool.black]
 line-length = 120
 target-version = ['py36', 'py37', 'py38']
 skip_string_normalization = '1'
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | tests/data
+)/
+'''
 
 [tool.flakehell]
 max-line-length = 120
@@ -77,6 +102,9 @@ flake8-bandit = ["-*", "+S1??"]
 "flake8-*" = ["+*"]
 flake8-docstrings = ["-*"]
 
+[tool.dephell.main]
+from = 'poetry'
+to = 'requirements.txt'
 
 [flake8]
 max-line-length = 120

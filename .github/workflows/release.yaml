@@ -1,0 +1,31 @@
+name: Publish packages
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  assets:
+    name: Release packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out src from Git
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+
+    - name: Build
+      run: |
+        make init build
+
+      - name: Publish distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.GH_ACTIONS_EXABGP }}

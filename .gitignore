@@ -31,3 +31,6 @@ __pycache__/
 develop-eggs
 eggs
 fake-eggs
+init
+artifacts
+requirements.txt

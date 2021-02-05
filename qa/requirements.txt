@@ -1,5 +1,0 @@
-# running the test suite/code
-flake8
-coveralls
-nose
-psutil
