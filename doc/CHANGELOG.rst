@@ -15,6 +15,7 @@ Version 5.0.0:
  * Fix: parsing of SID in BGP-LS
  * Change: do not include attribute infos in updates if only sending withdrawals
    patch: Denis Krienbühl
+ * Fix: Flowspec fragment (issue 1027)
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
