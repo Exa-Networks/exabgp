@@ -109,7 +109,7 @@ def folder(path):
 
 
 def path(path):
-    split = sys.argv[0].split('lib/exabgp')
+    split = sys.argv[0].split('src/exabgp')
     if len(split) > 1:
         prefix = os.sep.join(split[:1])
         if prefix and path.startswith(prefix):
@@ -169,7 +169,7 @@ def root(path):
     roots = base.root.split(os.sep)
     location = []
     for index in range(len(roots) - 1, -1, -1):
-        if roots[index] == 'lib':
+        if roots[index] == 'src':
             if index:
                 location = roots[:index]
             break

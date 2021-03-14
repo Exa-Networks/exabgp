@@ -84,7 +84,7 @@ show-source = true
 
 max-complexity = 18
 statistics = true
-exclude = '.git,.tox,__pycache__,build,dist,tests/*,lib/exabgp/vendoring/*,'
+exclude = '.git,.tox,__pycache__,build,dist,tests/*,src/exabgp/vendoring/*,'
 
 select = 'B,C,E,F,W,T4,B9'
 # E222 multiple spaces after operator
