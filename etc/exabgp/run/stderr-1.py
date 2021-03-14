@@ -14,7 +14,7 @@ def _prefixed(level, message):
 counter = 0
 
 
-while True:
+while os.getppid() != 1:
     try:
         line = sys.stdin.readline().strip()
         sys.stdout.flush()
