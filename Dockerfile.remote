@@ -1,0 +1,22 @@
+# how to build and run exabgp using docker (using github)
+# this Dockerfile does not require a local installation
+
+# docker build --build-arg version=master -f Dockerfile.remote  -t exabgp.remote ./
+# docker run -it exabgp.remote exabgp
+
+FROM python:3-slim-buster
+
+ARG version="master"
+
+RUN apt update \
+    && apt -y dist-upgrade \
+    && apt install -y git \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+RUN cd /tmp \
+    && echo Building ${version} \
+    && pip install -U setuptools \
+    && pip install git+https://github.com/Exa-Networks/exabgp.git@${version}
+
+WORKDIR /usr/local/etc/exabgp
+

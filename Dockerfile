@@ -1,3 +1,8 @@
+# how to build and run exabgp using docker (using the local copy)
+
+# docker build -t exabgp ./
+# docker run -it exabgp exabgp
+
 FROM python:3-slim-buster
 
 ARG version="master"
