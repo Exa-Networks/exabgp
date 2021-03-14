@@ -3,6 +3,10 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.13
+ * Fix: issue when there is no route to the peer and the connection looked like it established with the API
+ reported by: iddq
+
 Version 4.2.12
  * Fix: issue with flow fragment (issue #1027)
 
