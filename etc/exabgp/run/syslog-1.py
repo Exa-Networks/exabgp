@@ -16,7 +16,7 @@ syslog.openlog("ExaBGP")
 # When the parent dies we are seeing continual newlines, so we only access so many before stopping
 counter = 0
 
-while True:
+while os.getppid() != 1:
     try:
         line = sys.stdin.readline().strip()
         if line == "":
