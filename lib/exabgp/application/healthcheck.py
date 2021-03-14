@@ -614,7 +614,7 @@ def loop(options):
 
     signal.signal(signal.SIGTERM, sigterm_handler)
 
-    while True:
+    while os.getppid() != 1:
         checks, state = one(checks, state)
 
         try:
