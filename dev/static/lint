@@ -1,6 +1,6 @@
 #!/bin/sh
 env \
-	PYTHONPATH=$PYTHONPATH:lib \
+	PYTHONPATH=$PYTHONPATH:src \
 	python2.6 \
 		/opt/local/bin/pylint-2.6 \
 			--variable-rgx="[a-z_][a-z0-9_]{0,30}$" \

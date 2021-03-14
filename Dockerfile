@@ -1,14 +1,18 @@
-FROM python:3
+FROM python:3-slim-buster
 
-RUN mkdir -p /src
-COPY setup.py /src
-COPY doc/CHANGELOG.rst /src
-COPY debian/ /src
-COPY src/ /src/lib/
+ARG version="master"
+ENV PYTHONPATH "/tmp/exabgp/src"
 
-RUN pip install --upgrade pip setuptools
-RUN cd /src && pip install .
+RUN apt update \
+    && apt -y dist-upgrade \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
-RUN rm -rf /src
+ADD . /tmp/exabgp
+WORKDIR /tmp/exabgp
+RUN ln -s src/exabgp exabgp
 
-CMD ["exabgp", "--help"]
+# RUN python3 -c "import exabgp.application.main; exabgp.application.main.main()"
+RUN echo Building exabgp ${version}
+RUN pip3 install --upgrade pip setuptools wheel
+RUN pip3 install .
+WORKDIR /usr/local/etc/exabgp

@@ -102,7 +102,7 @@ It is possible to create a self-contained executable which only requires an inst
 
 ```
 > cd exabgp-git
-> python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main  -p "/usr/bin/env python3" lib
+> python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main  -p "/usr/bin/env python3" src
 > /usr/local/sbin/exabgp --version
 ```
 or

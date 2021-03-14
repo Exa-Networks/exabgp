@@ -14,15 +14,15 @@ import setuptools
 from distutils.core import setup
 
 
-# less magic for readers than adding lib/exabgp to sys.path and using importlib
+# less magic for readers than adding src/exabgp to sys.path and using importlib
 
-get_version = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]), 'lib/exabgp/version.py')
+get_version = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]), 'src/exabgp/version.py')
 version = os.popen(f'{sys.executable} {get_version}').read()
 
 # without this sys.path change then this does fail
 # sudo -H pip install git+https://github.com/Exa-Networks/exabgp.git
 
-sys.path.append(os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]), 'lib'))
+sys.path.append(os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]), 'src'))
 
 
 def filesOf(directory):

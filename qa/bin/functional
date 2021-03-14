@@ -20,7 +20,7 @@ import subprocess
 
 PROGRAM = os.path.realpath(__file__)
 ROOT = os.path.abspath(os.path.join(os.path.dirname(PROGRAM), os.path.join('..', '..')))
-LIBRARY = os.path.join(ROOT, 'lib')
+LIBRARY = os.path.join(ROOT, 'src')
 
 EXPLAIN = """
 ExaBGP command line
