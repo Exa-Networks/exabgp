@@ -16,6 +16,8 @@ Version 5.0.0:
  * Change: do not include attribute infos in updates if only sending withdrawals
    patch: Denis Krienbühl
  * Fix: Flowspec fragment (issue 1027)
+ * Fix: left-over process (issue 1029 - can not be backported as python3 only)
+   patch: Vincent Bernat
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
