@@ -89,15 +89,22 @@ class Processes(object):
         process = self._process[process_name]
         del self._process[process_name]
         self._update_fds()
-        thread = Thread(target=self._terminate_run, args=(process,))
+        thread = Thread(target=self._terminate_run,
+                        args=(process, process_name))
         thread.start()
         return thread
 
-    def _terminate_run(self, process):
+    def _terminate_run(self, process, process_name):
         try:
             process.terminate()
-            process.wait()
-        except (OSError, KeyError):
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                log.debug('force kill unresponsive %s' % process_name,
+                          'process')
+                process.kill()
+                process.wait(timeout=1)
+        except (OSError, KeyError, subprocess.TimeoutExpired):
             # the process is most likely already dead
             pass
 
