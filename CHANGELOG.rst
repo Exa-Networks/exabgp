@@ -5,11 +5,11 @@ Version explained:
 
 Version 4.2.13
  * Fix: issue when there is no route to the peer and the connection looked like it established with the API
- reported by: iddq
+   reported by: iddq
  * Fix: healthcheck was not ending if/when exabgp did
- reported by: mzealey
+   reported by: mzealey
  * Fix: issue with poller
- reported by: emilstahl97
+   reported by: emilstahl97
 
 Version 4.2.12
  * Fix: issue with flow fragment (issue #1027)
