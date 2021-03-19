@@ -103,7 +103,7 @@ class Control(object):
 
     def cleanup(self):
         def _close(pipe):
-            if self.r_pipe:
+            if pipe:
                 try:
                     os.close(pipe)
                 except (OSError, IOError, TypeError):
@@ -125,7 +125,8 @@ class Control(object):
 
         poller = select.poll()
         for io in reading:
-            poller.register(io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
+            if io is not None:
+                poller.register(io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
 
         ready = []
         for io, event in poller.poll(sleep_time):
