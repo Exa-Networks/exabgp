@@ -70,6 +70,7 @@ def setargs(sub):
     sub.add_argument('-s', '--signal', help='issue a SIGUSR1 to reload the configuration after <time> seconds, only useful for code debugging', type=int)
     sub.add_argument('-1', '--once', help='only perform one attempt to connect to peers', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on critical logging, SIGTERM, and exceptions (shortcut for exabgp.pdb.enable=true)', action='store_true')
+    sub.add_argument('-P', '--passive', help='only accept incoming connections', action='store_true')
     sub.add_argument('-m', '--memory', help='display memory usage information on exit', action='store_true')
     sub.add_argument('--profile', help='enable profiling and set where the information should be saved', type=str, default='')
     sub.add_argument('configuration', help='configuration file(s)', nargs='+', type=str)
@@ -107,6 +108,9 @@ def cmdline(cmdarg):
 
     if env.cache.attributes:
         Attribute.caching = env.cache.attributes
+
+    if cmdarg.passive:
+        env.bgp.passive = True
 
     configurations = []
     for configuration in cmdarg.configuration:

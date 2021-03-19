@@ -212,6 +212,12 @@ CONFIGURATION = {
         },
     },
     'bgp': {
+        'passive': {
+            'read': parsing.boolean,
+            'write': parsing.lower,
+            'value': 'false',
+            'help': 'ignore the peer configuration and make all peers passive',
+        },
         'openwait': {
             'read': parsing.integer,
             'write': parsing.nop,
