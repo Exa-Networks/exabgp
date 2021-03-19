@@ -27,6 +27,8 @@ from exabgp.environment import getenv
 
 from exabgp.bgp.fsm import FSM
 
+from exabgp.environment import getenv
+
 from exabgp.version import version
 from exabgp.logger import log
 
@@ -127,8 +129,11 @@ class Reactor(object):
     def active_peers(self):
         peers = set()
         for key, peer in self._peers.items():
-            if not peer.neighbor['passive'] or peer.proto:
-                peers.add(key)
+            if getenv().bgp.passive or peer.neighbor['passive']:
+                continue
+            if not peer.proto:
+                continue
+            peers.add(key)
         return peers
 
     def established_peers(self):
