@@ -8,6 +8,8 @@ Version 4.2.13
  reported by: iddq
  * Fix: healthcheck was not ending if/when exabgp did
  reported by: mzealey
+ * Fix: issue with poller
+ reported by: emilstahl97
 
 Version 4.2.12
  * Fix: issue with flow fragment (issue #1027)
