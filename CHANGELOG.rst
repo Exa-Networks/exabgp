@@ -6,6 +6,8 @@ Version explained:
 Version 4.2.14
  * Fix: issue reading data from the peer
    reported by: isjerryxiao
+ * Feature: allow IPv6 redirect
+   patch by: rzalamena
 
 Version 4.2.13
  * Fix: issue when there is no route to the peer and the connection looked like it established with the API
