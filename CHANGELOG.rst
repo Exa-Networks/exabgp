@@ -3,6 +3,10 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.14
+ * Fix: issue reading data from the peer
+   reported by: isjerryxiao
+
 Version 4.2.13
  * Fix: issue when there is no route to the peer and the connection looked like it established with the API
    reported by: iddq

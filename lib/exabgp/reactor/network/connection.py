@@ -158,12 +158,14 @@ class Connection(object):
                     data += read
 
                     number -= len(read)
-                    if not number:
-                        self.logger.debug(LazyFormat('received TCP payload', data), self.session())
-                        yield data
-                        return
-
-                    yield b''
+                    if number > 0:
+                        self.logger.debug(LazyFormat('received incomplete TCP payload', read), self.session())
+                        yield b''
+                        continue
+    
+                    self.logger.debug(LazyFormat('received complete TCP payload', data), self.session())
+                    yield data
+                    return
             except socket.timeout as exc:
                 self.close()
                 self.logger.warning('%s %s peer is too slow' % (self.name(), self.peer), self.session())
