@@ -18,6 +18,8 @@ Version 5.0.0:
  * Fix: Flowspec fragment (issue 1027)
  * Fix: left-over process (issue 1029 - can not be backported as python3 only)
    patch: Vincent Bernat
+ * Feature: allow Ipv6 redirect
+   patch: rzalamena
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
