@@ -46,5 +46,5 @@ class MED(Attribute):
         return hash(self.med)
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         return cls(unpack('!L', data)[0])

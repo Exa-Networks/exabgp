@@ -43,5 +43,5 @@ class LocalPreference(Attribute):
         return str(self.localpref)
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         return cls(unpack('!L', data)[0], data)

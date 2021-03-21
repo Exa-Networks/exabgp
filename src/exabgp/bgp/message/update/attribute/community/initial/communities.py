@@ -52,11 +52,11 @@ class Communities(Attribute):
         return "[ %s ]" % ", ".join(community.json() for community in self.communities)
 
     @staticmethod
-    def unpack(data, negotiated):
+    def unpack(data, direction, negotiated):
         communities = Communities()
         while data:
             if data and len(data) < 4:
                 raise Notify(3, 1, 'could not decode community %s' % str([hex(_) for _ in data]))
-            communities.add(Community.unpack(data[:4], negotiated))
+            communities.add(Community.unpack(data[:4], direction, negotiated))
             data = data[4:]
         return communities

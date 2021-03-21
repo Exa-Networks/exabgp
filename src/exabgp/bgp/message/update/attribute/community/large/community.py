@@ -54,7 +54,7 @@ class LargeCommunity(Attribute):
         return 12
 
     @classmethod
-    def unpack(cls, large_community, negotiated):
+    def unpack(cls, large_community, direction, negotiated):
         return cls(large_community)
 
     @classmethod

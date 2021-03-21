@@ -60,7 +60,7 @@ class Aggregator(Attribute):
         return '{ "asn" : %d, "speaker" : "%d" }' % (self.asn, self.speaker)
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         if negotiated.asn4:
             return cls(ASN.unpack(data[:4]), IPv4.unpack(data[-4:]))
         return cls(ASN.unpack(data[:2]), IPv4.unpack(data[-4:]))

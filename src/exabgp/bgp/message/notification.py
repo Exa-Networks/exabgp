@@ -155,7 +155,7 @@ class Notification(Message):
         )
 
     @classmethod
-    def unpack_message(cls, data, negotiated=None):
+    def unpack_message(cls, data, direction=None, negotiated=None):
         return cls(data[0], data[1], data[2:])
 
 

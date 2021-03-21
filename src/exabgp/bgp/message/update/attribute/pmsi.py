@@ -114,7 +114,7 @@ class PMSI(Attribute):
         return pmsi
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         flags, subtype = unpack('!BB', data[:2])
         raw_label = unpack('!L', b'\0' + data[2:5])[0]
         label = raw_label >> 4

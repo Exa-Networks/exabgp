@@ -61,7 +61,7 @@ class Transcoder(object):
             self.negotiated.sent(self.seen_open['send'])
             self.negotiated.received(self.seen_open['receive'])
 
-    def _from_json(self, json_string):
+    def _from_json(self, direction, json_string):
         try:
             parsed = json.loads(json_string)
         except ValueError:
@@ -161,7 +161,7 @@ class Transcoder(object):
             print('invalid message sequence, open not exchange not complete', json_string, file=sys.stderr)
             sys.exit(1)
 
-        message = Message.unpack(category, data, self.negotiated)
+        message = Message.unpack(category, data, direction, self.negotiated)
 
         if content == 'update':
             return self.encoder.update(neighbor, direction, message, None, header, body)

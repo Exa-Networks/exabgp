@@ -282,11 +282,11 @@ class Attributes(dict):
         return self._idx
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         if cls.cached and data == cls.previous:
             return cls.cached
 
-        attributes = cls().parse(data, negotiated)
+        attributes = cls().parse(data, direction, negotiated)
 
         if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes:
             return attributes
@@ -315,7 +315,7 @@ class Attributes(dict):
             length = data[2]
             return flag, attr, data[3 : length + 3]
 
-    def parse(self, data, negotiated):
+    def parse(self, data, direction, negotiated):
         if not data:
             return self
 
@@ -358,16 +358,16 @@ class Attributes(dict):
                 % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                 'parser',
             )
-            return self.parse(left, negotiated)
+            return self.parse(left, direction, negotiated)
 
         # handle the attribute if we know it
         if Attribute.registered(aid, flag):
             if length == 0 and aid not in self.VALID_ZERO:
                 self.add(TreatAsWithdraw(aid))
-                return self.parse(left, negotiated)
+                return self.parse(left, direction, negotiated)
 
             try:
-                decoded = Attribute.unpack(aid, flag, attribute, negotiated)
+                decoded = Attribute.unpack(aid, flag, attribute, direction, negotiated)
             except IndexError as exc:
                 if aid in self.TREAT_AS_WITHDRAW:
                     decoded = TreatAsWithdraw(aid)
@@ -381,7 +381,7 @@ class Attributes(dict):
                 else:
                     raise exc
             self.add(decoded)
-            return self.parse(left, negotiated)
+            return self.parse(left, direction, negotiated)
 
         # XXX: FIXME: we could use a fallback function here like capability
 
@@ -400,14 +400,14 @@ class Attributes(dict):
                     % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                     'parser',
                 )
-                return self.parse(left, negotiated)
+                return self.parse(left, direction, negotiated)
             # XXX: Check if we are missing any
             log.debug(
                 'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) unspecified (should not happen)'
                 % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                 'parser',
             )
-            return self.parse(left, negotiated)
+            return self.parse(left, direction, negotiated)
 
         # it is an unknown transitive attribute we need to pass on
         if flag & Attribute.Flag.TRANSITIVE:
@@ -417,11 +417,11 @@ class Attributes(dict):
             except IndexError:
                 decoded = TreatAsWithdraw(aid)
             self.add(decoded, attribute)
-            return self.parse(left, negotiated)
+            return self.parse(left, direction, negotiated)
 
         # it is an unknown non-transitive attribute we can ignore.
         log.debug('ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
-        return self.parse(left, negotiated)
+        return self.parse(left, direction, negotiated)
 
     def merge_attributes(self):
         as2path = self[Attribute.CODE.AS_PATH]

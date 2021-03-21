@@ -75,7 +75,7 @@ class MPURNLRI(Attribute, Family):
         return "MP_UNREACH_NLRI for %s %s with %d NLRI(s)" % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         nlris = []
 
         # -- Reading AFI/SAFI
