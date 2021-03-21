@@ -98,7 +98,7 @@ class ExtendedCommunityBase(Attribute):
         return hash(self.community)
 
     @classmethod
-    def unpack(cls, data, negotiated=None):
+    def unpack(cls, data, direction=None, negotiated=None):
         # 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
         community = (data[0] & 0x0F, data[1])
         if community in cls.registered_extended:

@@ -167,10 +167,10 @@ class Message(Exception):
         raise cls.klass_notify(2, 4, 'can not handle message %s' % what)
 
     @classmethod
-    def unpack(cls, message, data, negotiated):
+    def unpack(cls, message, data, direction, negotiated):
         if message in cls.registered_message:
-            return cls.klass(message).unpack_message(data, negotiated)
-        return cls.klass_unknown(message, data, negotiated)
+            return cls.klass(message).unpack_message(data, direction, negotiated)
+        return cls.klass_unknown(message, data, direction, negotiated)
 
     @classmethod
     def code(cls, name):

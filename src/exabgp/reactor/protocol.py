@@ -35,6 +35,8 @@ from exabgp.bgp.message import Notify
 from exabgp.bgp.message import Operational
 
 from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message.direction import Direction
+
 from exabgp.bgp.message.update.attribute import Attribute
 
 from exabgp.protocol.ip import IP
@@ -171,7 +173,7 @@ class Protocol(object):
         code = 'send-%s' % Message.CODE.short(raw[18])
         self.peer.stats[code] = self.peer.stats.get(code, 0) + 1
         if self.neighbor.api.get(code, False):
-            message = Update.unpack_message(raw[19:], self.negotiated)
+            message = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)
             self._to_api('send', message, raw)
 
         for boolean in self.connection.writer(raw):
@@ -227,7 +229,7 @@ class Protocol(object):
                     return
 
             try:
-                message = Message.unpack(msg_id, body, self.negotiated)
+                message = Message.unpack(msg_id, body, Direction.IN, self.negotiated)
             except (KeyboardInterrupt, SystemExit, Notify):
                 raise
             except Exception as exc:

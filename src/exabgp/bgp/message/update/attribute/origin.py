@@ -49,7 +49,7 @@ class Origin(Attribute):
         return 'invalid'
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         return cls(data[0], data)
 
     @classmethod

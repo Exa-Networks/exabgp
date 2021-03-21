@@ -43,7 +43,7 @@ class NextHop(Attribute, IP):
         return self._attribute(self.ton())
 
     @classmethod
-    def unpack(cls, data, negotiated=None):
+    def unpack(cls, data, direction=None, negotiated=None):
         if not data:
             return NoNextHop
         return IP.unpack(data, NextHop)

@@ -309,7 +309,7 @@ def redirect(tokeniser):
             if asn >= pow(2, 32):
                 raise ValueError('asn is a 32 bits number, value too large %s' % asn)
             return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, asn))
-    
+
         raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
 
 def redirect_next_hop(tokeniser):
