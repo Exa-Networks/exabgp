@@ -49,8 +49,14 @@ class ParseFamily(Section):
             'flow': (AFI.ipv6, SAFI.flow_ip),
             'flow-vpn': (AFI.ipv6, SAFI.flow_vpn),
         },
-        'l2vpn': {'vpls': (AFI.l2vpn, SAFI.vpls), 'evpn': (AFI.l2vpn, SAFI.evpn),},
-        'bgp-ls': {'bgp-ls': (AFI.bgpls, SAFI.bgp_ls), 'bgp-ls-vpn': (AFI.bgpls, SAFI.bgp_ls_vpn),},
+        'l2vpn': {
+            'vpls': (AFI.l2vpn, SAFI.vpls),
+            'evpn': (AFI.l2vpn, SAFI.evpn),
+        },
+        'bgp-ls': {
+            'bgp-ls': (AFI.bgpls, SAFI.bgp_ls),
+            'bgp-ls-vpn': (AFI.bgpls, SAFI.bgp_ls_vpn),
+        },
     }
 
     action = {

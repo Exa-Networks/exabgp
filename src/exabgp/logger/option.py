@@ -95,12 +95,22 @@ class option(object):
         now = str(time.time())
 
         if cls.destination == 'stdout':
-            cls.logger = getLogger(f'ExaBGP stdout {now}', format='%(message)s', stream=sys.stderr, level=cls.level,)
+            cls.logger = getLogger(
+                f'ExaBGP stdout {now}',
+                format='%(message)s',
+                stream=sys.stderr,
+                level=cls.level,
+            )
             cls.formater = formater(env.log.short, 'stdout')
             return
 
         if cls.destination == 'stdout':
-            cls.logger = getLogger(f'ExaBGP stderr {now}', format='%(message)s', stream=sys.stderr, level=cls.level,)
+            cls.logger = getLogger(
+                f'ExaBGP stderr {now}',
+                format='%(message)s',
+                stream=sys.stderr,
+                level=cls.level,
+            )
             cls.formater = formater(env.log.short, 'stderr')
             return
 

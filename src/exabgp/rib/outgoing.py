@@ -89,7 +89,7 @@ class OutgoingRIB(Cache):
                 if family not in self._enhanced_refresh_start:
                     self._enhanced_refresh_start.append(family)
 
-        changes = list(self.cached_changes(requested_families, [OUT.ANNOUNCE,OUT.WITHDRAW]))
+        changes = list(self.cached_changes(requested_families, [OUT.ANNOUNCE, OUT.WITHDRAW]))
         for change in changes:
             self.del_from_rib(change)
 
@@ -228,7 +228,12 @@ class OutgoingRIB(Cache):
                     yield Update([change.nlri for change in changes.values()], attributes)
                 else:
                     for change in changes.values():
-                        yield Update([change.nlri,], attributes)
+                        yield Update(
+                            [
+                                change.nlri,
+                            ],
+                            attributes,
+                        )
 
         # If we are performing a route-refresh, indicating that the
         # update were all sent

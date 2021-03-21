@@ -70,7 +70,12 @@ class AFI(Resource):
 
     codes = dict(
         (k.lower().replace('_', '-'), v)
-        for (k, v) in {'ipv4': ipv4, 'ipv6': ipv6, 'l2vpn': l2vpn, 'bgp-ls': bgpls,}.items()
+        for (k, v) in {
+            'ipv4': ipv4,
+            'ipv6': ipv6,
+            'l2vpn': l2vpn,
+            'bgp-ls': bgpls,
+        }.items()
     )
 
     cache = dict([(r, r) for (l, r) in codes.items()])

@@ -44,7 +44,12 @@ class Multicast(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s:%s" % (self._prefix(), self.rd._str(), self.etag, self.ip,)
+        return "%s:%s:%s:%s" % (
+            self._prefix(),
+            self.rd._str(),
+            self.etag,
+            self.ip,
+        )
 
     def __hash__(self):
         return hash((self.afi, self.safi, self.CODE, self.rd, self.etag, self.ip))

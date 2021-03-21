@@ -171,7 +171,7 @@ def memory_usage(proc=-1, interval=0.1, timeout=None):
 
 
 def _find_script(script_name):
-    """ Find the script.
+    """Find the script.
 
     If the input is not a file, then $PATH will be searched.
     """
@@ -208,8 +208,7 @@ class LineProfiler:
         return f
 
     def add_function(self, func):
-        """ Record line profiling information for the given Python function.
-        """
+        """Record line profiling information for the given Python function."""
         try:
             # func_code does not exist in Python3
             code = func.__code__
@@ -223,8 +222,7 @@ class LineProfiler:
             self.functions.append(func)
 
     def wrap_function(self, func):
-        """ Wrap a function to profile it.
-        """
+        """Wrap a function to profile it."""
 
         def f(*args, **kwds):
             self.enable_by_count()
@@ -237,16 +235,14 @@ class LineProfiler:
         return f
 
     def run(self, cmd):
-        """ Profile a single executable statment in the main namespace.
-        """
+        """Profile a single executable statment in the main namespace."""
         import __main__
 
         main_dict = __main__.__dict__
         return self.runctx(cmd, main_dict, main_dict)
 
     def runctx(self, cmd, globals, locals):
-        """ Profile a single executable statement in the given namespaces.
-        """
+        """Profile a single executable statement in the given namespaces."""
         self.enable_by_count()
         try:
             exec(cmd, globals, locals)
@@ -255,8 +251,7 @@ class LineProfiler:
         return self
 
     def runcall(self, func, *args, **kw):
-        """ Profile a single function call.
-        """
+        """Profile a single function call."""
         # XXX where is this used ? can be removed ?
         self.enable_by_count()
         try:
@@ -265,14 +260,13 @@ class LineProfiler:
             self.disable_by_count()
 
     def enable_by_count(self):
-        """ Enable the profiler if it hasn't been enabled before.
-        """
+        """Enable the profiler if it hasn't been enabled before."""
         if self.enable_count == 0:
             self.enable()
         self.enable_count += 1
 
     def disable_by_count(self):
-        """ Disable the profiler if the number of disable requests matches the
+        """Disable the profiler if the number of disable requests matches the
         number of enable requests.
         """
         if self.enable_count > 0:
@@ -391,7 +385,7 @@ def show_results(prof, stream=None, precision=3):
 
 # A lprun-style %mprun magic for IPython.
 def magic_mprun(self, parameter_s=''):
-    """ Execute a statement under the line-by-line memory profiler from the
+    """Execute a statement under the line-by-line memory profiler from the
     memory_profilser module.
 
     Usage:
@@ -494,7 +488,9 @@ def magic_mprun(self, parameter_s=''):
         page(output, screen_lines=self.shell.rc.screen_length)
     else:
         page(output)
-    print(message,)
+    print(
+        message,
+    )
 
     text_file = opts.T[0]
     if text_file:

@@ -30,15 +30,32 @@ from exabgp.configuration.static.mpls import route_distinguisher
 
 class AnnounceVPN(ParseAnnounce):
     # put next-hop first as it is a requirement atm
-    definition = ['  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n',] + AnnounceLabel.definition
+    definition = [
+        '  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n',
+    ] + AnnounceLabel.definition
 
     syntax = '<safi> <ip>/<netmask> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known = dict(AnnounceLabel.known, **{'rd': route_distinguisher,})
+    known = dict(
+        AnnounceLabel.known,
+        **{
+            'rd': route_distinguisher,
+        },
+    )
 
-    action = dict(AnnounceLabel.action, **{'rd': 'nlri-set',})
+    action = dict(
+        AnnounceLabel.action,
+        **{
+            'rd': 'nlri-set',
+        },
+    )
 
-    assign = dict(AnnounceLabel.assign, **{'rd': 'rd',})
+    assign = dict(
+        AnnounceLabel.assign,
+        **{
+            'rd': 'rd',
+        },
+    )
 
     name = 'vpn'
     afi = None

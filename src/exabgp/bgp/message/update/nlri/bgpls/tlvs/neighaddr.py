@@ -36,7 +36,11 @@ class NeighAddr(object):
         return cls(addr=addr)
 
     def json(self):
-        content = ' '.join(['"neighbor-address": "%s"' % self.addr,])
+        content = ' '.join(
+            [
+                '"neighbor-address": "%s"' % self.addr,
+            ]
+        )
         return content
 
     def __eq__(self, other):

@@ -157,11 +157,17 @@ class Configuration(_Configuration):
                     'template': self.template.name,
                 },
             },
-            self.process.name: {'class': self.process, 'commands': self.process.known.keys(), 'sections': {},},
+            self.process.name: {
+                'class': self.process,
+                'commands': self.process.known.keys(),
+                'sections': {},
+            },
             self.template.name: {
                 'class': self.template,
                 'commands': self.template.known.keys(),
-                'sections': {'neighbor': self.template_neighbor.name,},
+                'sections': {
+                    'neighbor': self.template_neighbor.name,
+                },
             },
             self.template_neighbor.name: {
                 'class': self.template_neighbor,
@@ -195,16 +201,39 @@ class Configuration(_Configuration):
                     'announce': self.announce.name,
                 },
             },
-            self.family.name: {'class': self.family, 'commands': self.family.known.keys(), 'sections': {},},
-            self.capability.name: {'class': self.capability, 'commands': self.capability.known.keys(), 'sections': {},},
-            self.nexthop.name: {'class': self.nexthop, 'commands': self.nexthop.known.keys(), 'sections': {},},
-            self.addpath.name: {'class': self.addpath, 'commands': self.addpath.known.keys(), 'sections': {},},
+            self.family.name: {
+                'class': self.family,
+                'commands': self.family.known.keys(),
+                'sections': {},
+            },
+            self.capability.name: {
+                'class': self.capability,
+                'commands': self.capability.known.keys(),
+                'sections': {},
+            },
+            self.nexthop.name: {
+                'class': self.nexthop,
+                'commands': self.nexthop.known.keys(),
+                'sections': {},
+            },
+            self.addpath.name: {
+                'class': self.addpath,
+                'commands': self.addpath.known.keys(),
+                'sections': {},
+            },
             self.api.name: {
                 'class': self.api,
                 'commands': self.api.known.keys(),
-                'sections': {'send': self.api_send.name, 'receive': self.api_receive.name,},
+                'sections': {
+                    'send': self.api_send.name,
+                    'receive': self.api_receive.name,
+                },
             },
-            self.api_send.name: {'class': self.api_send, 'commands': self.api_send.known.keys(), 'sections': {},},
+            self.api_send.name: {
+                'class': self.api_send,
+                'commands': self.api_send.known.keys(),
+                'sections': {},
+            },
             self.api_receive.name: {
                 'class': self.api_receive,
                 'commands': self.api_receive.known.keys(),
@@ -229,11 +258,19 @@ class Configuration(_Configuration):
                 'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn'],
                 'sections': {},
             },
-            self.announce_l2vpn.name: {'class': self.announce_l2vpn, 'commands': ['vpls',], 'sections': {},},
+            self.announce_l2vpn.name: {
+                'class': self.announce_l2vpn,
+                'commands': [
+                    'vpls',
+                ],
+                'sections': {},
+            },
             self.static.name: {
                 'class': self.static,
                 'commands': ['route', 'attributes'],
-                'sections': {'route': self.static_route.name,},
+                'sections': {
+                    'route': self.static_route.name,
+                },
             },
             self.static_route.name: {
                 'class': self.static_route,
@@ -243,7 +280,9 @@ class Configuration(_Configuration):
             self.flow.name: {
                 'class': self.flow,
                 'commands': self.flow.known.keys(),
-                'sections': {'route': self.flow_route.name,},
+                'sections': {
+                    'route': self.flow_route.name,
+                },
             },
             self.flow_route.name: {
                 'class': self.flow_route,
@@ -254,15 +293,29 @@ class Configuration(_Configuration):
                     'scope': self.flow_scope.name,
                 },
             },
-            self.flow_match.name: {'class': self.flow_match, 'commands': self.flow_match.known.keys(), 'sections': {},},
-            self.flow_then.name: {'class': self.flow_then, 'commands': self.flow_then.known.keys(), 'sections': {},},
+            self.flow_match.name: {
+                'class': self.flow_match,
+                'commands': self.flow_match.known.keys(),
+                'sections': {},
+            },
+            self.flow_then.name: {
+                'class': self.flow_then,
+                'commands': self.flow_then.known.keys(),
+                'sections': {},
+            },
             self.flow_scope.name: {'class': self.flow_scope, 'commands': self.flow_scope.known.keys(), 'sections': {}},
             self.l2vpn.name: {
                 'class': self.l2vpn,
                 'commands': self.l2vpn.known.keys(),
-                'sections': {'vpls': self.vpls.name,},
+                'sections': {
+                    'vpls': self.vpls.name,
+                },
             },
-            self.vpls.name: {'class': self.vpls, 'commands': self.l2vpn.known.keys(), 'sections': {},},
+            self.vpls.name: {
+                'class': self.vpls,
+                'commands': self.l2vpn.known.keys(),
+                'sections': {},
+            },
             self.operational.name: {
                 'class': self.operational,
                 'commands': self.operational.known.keys(),

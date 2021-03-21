@@ -37,7 +37,12 @@ class SrAlgorithm(object):
     def unpack(cls, data, length):
         # Looks like IOS XR advertises len 0 on this sub TLV
         # when using default SPF.
-        return cls([_ for _ in data] or [0,])
+        return cls(
+            [_ for _ in data]
+            or [
+                0,
+            ]
+        )
 
     def json(self, compact=None):
         return '"sr-algorithms": {}'.format(json.dumps(self.sr_algos))

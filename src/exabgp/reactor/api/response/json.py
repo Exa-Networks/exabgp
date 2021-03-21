@@ -110,12 +110,36 @@ class JSON(object):
 
     def up(self, neighbor):
         return self._header(
-            self._neighbor(neighbor, None, self._kv({'state': 'up',})), '', '', neighbor, message_type='state'
+            self._neighbor(
+                neighbor,
+                None,
+                self._kv(
+                    {
+                        'state': 'up',
+                    }
+                ),
+            ),
+            '',
+            '',
+            neighbor,
+            message_type='state',
         )
 
     def connected(self, neighbor):
         return self._header(
-            self._neighbor(neighbor, None, self._kv({'state': 'connected',})), '', '', neighbor, message_type='state'
+            self._neighbor(
+                neighbor,
+                None,
+                self._kv(
+                    {
+                        'state': 'connected',
+                    }
+                ),
+            ),
+            '',
+            '',
+            neighbor,
+            message_type='state',
         )
 
     def down(self, neighbor, reason=''):
@@ -125,7 +149,16 @@ class JSON(object):
             return reason.replace('[', '(').replace(']', ')').replace('{', '(').replace('}', ')').replace('"', '\\"')
 
         return self._header(
-            self._neighbor(neighbor, None, self._kv({'state': 'down', 'reason': escape_quote(reason),})),
+            self._neighbor(
+                neighbor,
+                None,
+                self._kv(
+                    {
+                        'state': 'down',
+                        'reason': escape_quote(reason),
+                    }
+                ),
+            ),
             '',
             '',
             neighbor,
@@ -133,7 +166,17 @@ class JSON(object):
         )
 
     def shutdown(self):
-        return self._header(self._kv({'notification': 'shutdown',}), '', '', None, message_type='notification')
+        return self._header(
+            self._kv(
+                {
+                    'notification': 'shutdown',
+                }
+            ),
+            '',
+            '',
+            None,
+            message_type='notification',
+        )
 
     def _negotiated(self, negotiated):
         return {
@@ -181,7 +224,16 @@ class JSON(object):
 
     def signal(self, neighbor, signal):
         return self._header(
-            self._neighbor(neighbor, None, self._kv({'code': '%d' % signal, 'name': Signal.name(signal),})),
+            self._neighbor(
+                neighbor,
+                None,
+                self._kv(
+                    {
+                        'code': '%d' % signal,
+                        'name': Signal.name(signal),
+                    }
+                ),
+            ),
             '',
             '',
             neighbor,
@@ -196,7 +248,13 @@ class JSON(object):
                 self._kv(
                     {
                         'notification': '{ %s } '
-                        % self._kv({'code': message.code, 'subcode': message.subcode, 'data': hexstring(message.data),})
+                        % self._kv(
+                            {
+                                'code': message.code,
+                                'subcode': message.subcode,
+                                'data': hexstring(message.data),
+                            }
+                        )
                     }
                 ),
             ),
@@ -209,7 +267,13 @@ class JSON(object):
     def packets(self, neighbor, direction, category, negotiated, header, body):
         message = {
             'message': '{ %s } '
-            % self._kv({'category': category, 'header': hexstring(header), 'body': hexstring(body),})
+            % self._kv(
+                {
+                    'category': category,
+                    'header': hexstring(header),
+                    'body': hexstring(body),
+                }
+            )
         }
         if negotiated:
             message.update(self._negotiated(negotiated))

@@ -91,7 +91,12 @@ class Message(Exception):
     # otherwise we can not dynamically create different UnknownMessage
     # TYPE = None
 
-    MARKER = bytes([0xFF,] * 16)
+    MARKER = bytes(
+        [
+            0xFF,
+        ]
+        * 16
+    )
     HEADER_LEN = 19
 
     registered_message = {}

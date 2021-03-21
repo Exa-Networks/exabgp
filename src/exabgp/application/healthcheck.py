@@ -370,7 +370,7 @@ def loop(options):
         metric = vars(options).get("{0}_metric".format(str(target).lower()), 0)
         as_path = vars(options).get("{0}_as_path".format(str(target).lower()), None)
         if as_path is None:
-             as_path = options.as_path
+            as_path = options.as_path
         for ip in options.ips:
             if options.withdraw_on_down or target is states.EXIT:
                 command = "announce" if target is states.UP else "withdraw"

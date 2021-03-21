@@ -12,6 +12,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from enum import Enum
 
+
 class OUT(object):
     UNSET = 0x00
     ANNOUNCE = 0x01

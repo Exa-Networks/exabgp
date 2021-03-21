@@ -29,15 +29,32 @@ from exabgp.configuration.static.parser import path_information
 
 class AnnouncePath(AnnounceIP):
     # put next-hop first as it is a requirement atm
-    definition = ['label <15 bits number>',] + AnnounceIP.definition
+    definition = [
+        'label <15 bits number>',
+    ] + AnnounceIP.definition
 
     syntax = '<safi> <ip>/<netmask> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known = dict(AnnounceIP.known, **{'path-information': path_information,})
+    known = dict(
+        AnnounceIP.known,
+        **{
+            'path-information': path_information,
+        },
+    )
 
-    action = dict(AnnounceIP.action, **{'path-information': 'nlri-set',})
+    action = dict(
+        AnnounceIP.action,
+        **{
+            'path-information': 'nlri-set',
+        },
+    )
 
-    assign = dict(AnnounceIP.assign, **{'path-information': 'path_info',})
+    assign = dict(
+        AnnounceIP.assign,
+        **{
+            'path-information': 'path_info',
+        },
+    )
 
     name = 'path'
     afi = None

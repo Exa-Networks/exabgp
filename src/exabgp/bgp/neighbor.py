@@ -53,43 +53,36 @@ class Neighbor(dict):
             'add-path': 0,
             'route-refresh': 0,
             'nexthop': None,
-            'aigp': None, 
-        }    
+            'aigp': None,
+        }
 
     defaults = {
         # Those are the field from the configuration
         'description': '',
         'router-id': None,
-
         'local-address': None,
         'peer-address': None,
         'local-as': None,
         'peer-as': None,
-
         # passive indicate that we do not establish outgoing connections
         'passive': False,
         # the port to listen on ( zero mean that we do not listen )
         'listen': 0,
         # the port to connect to
         'connect': 0,
-
         'hold-time': HoldTime(180),
         'rate-limit': 0,
-
         'host-name': host(),
         'domain-name': domain(),
-
         'group-updates': True,
         'auto-flush': True,
         'adj-rib-in': True,
         'adj-rib-out': True,
         'manual-eor': False,
-
         # XXX: this should be under an MD5 sub-dict/object ?
         'md5-password': None,
         'md5-base64': False,
         'md5-ip': None,
-
         'outgoing-ttl': None,
         'incoming-ttl': None,
     }
@@ -356,13 +349,31 @@ class Neighbor(dict):
             _send = []
 
             for api, name in _extension_global.items():
-                _global.extend(['\t\t%s;\n' % name,] if process in self.api[api] else [])
+                _global.extend(
+                    [
+                        '\t\t%s;\n' % name,
+                    ]
+                    if process in self.api[api]
+                    else []
+                )
 
             for api, name in _extension_receive.items():
-                _receive.extend(['\t\t\t%s;\n' % name,] if process in self.api[api] else [])
+                _receive.extend(
+                    [
+                        '\t\t\t%s;\n' % name,
+                    ]
+                    if process in self.api[api]
+                    else []
+                )
 
             for api, name in _extension_send.items():
-                _send.extend(['\t\t\t%s;\n' % name,] if process in self.api[api] else [])
+                _send.extend(
+                    [
+                        '\t\t\t%s;\n' % name,
+                    ]
+                    if process in self.api[api]
+                    else []
+                )
 
             _api = '\tapi {\n'
             _api += '\t\tprocesses [ %s ];\n' % process
@@ -430,9 +441,11 @@ class Neighbor(dict):
                 '\tincoming-ttl %s;\n' % self['incoming-ttl'] if self['incoming-ttl'] else '',
                 '\t\tasn4 %s;\n' % ('enable' if self['capability']['asn4'] else 'disable'),
                 '\t\troute-refresh %s;\n' % ('enable' if self['capability']['route-refresh'] else 'disable'),
-                '\t\tgraceful-restart %s;\n' % (self['capability']['graceful-restart'] if self['capability']['graceful-restart'] else 'disable'),
+                '\t\tgraceful-restart %s;\n'
+                % (self['capability']['graceful-restart'] if self['capability']['graceful-restart'] else 'disable'),
                 '\t\tnexthop %s;\n' % ('enable' if self['capability']['nexthop'] else 'disable'),
-                '\t\tadd-path %s;\n' % (AddPath.string[self['capability']['add-path']] if self['capability']['add-path'] else 'disable'),
+                '\t\tadd-path %s;\n'
+                % (AddPath.string[self['capability']['add-path']] if self['capability']['add-path'] else 'disable'),
                 '\t\tmulti-session %s;\n' % ('enable' if self['capability']['multi-session'] else 'disable'),
                 '\t\toperational %s;\n' % ('enable' if self['capability']['operational'] else 'disable'),
                 '\t\taigp %s;\n' % ('enable' if self['capability']['aigp'] else 'disable'),

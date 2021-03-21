@@ -89,8 +89,7 @@ class Processes(object):
         process = self._process[process_name]
         del self._process[process_name]
         self._update_fds()
-        thread = Thread(target=self._terminate_run,
-                        args=(process, process_name))
+        thread = Thread(target=self._terminate_run, args=(process, process_name))
         thread.start()
         return thread
 
@@ -100,8 +99,7 @@ class Processes(object):
             try:
                 process.wait(timeout=2)
             except subprocess.TimeoutExpired:
-                log.debug('force kill unresponsive %s' % process_name,
-                          'process')
+                log.debug('force kill unresponsive %s' % process_name, 'process')
                 process.kill()
                 process.wait(timeout=1)
         except (OSError, KeyError, subprocess.TimeoutExpired):

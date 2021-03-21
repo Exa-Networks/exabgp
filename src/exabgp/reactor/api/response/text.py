@@ -61,7 +61,12 @@ class Text(object):
         )
 
     def packets(self, neighbor, direction, category, negotiated, header, body):
-        return 'neighbor %s %s %d%s\n' % (neighbor['peer-address'], direction, category, self._header_body(header, body))
+        return 'neighbor %s %s %d%s\n' % (
+            neighbor['peer-address'],
+            direction,
+            category,
+            self._header_body(header, body),
+        )
 
     def keepalive(self, neighbor, direction, negotiated, header, body):
         return 'neighbor %s %s keepalive%s\n' % (neighbor['peer-address'], direction, self._header_body(header, body))
@@ -79,7 +84,10 @@ class Text(object):
         )
 
     def update(self, neighbor, direction, update, negotiated, header, body):
-        prefix = 'neighbor %s %s update' % (neighbor['peer-address'], direction,)
+        prefix = 'neighbor %s %s update' % (
+            neighbor['peer-address'],
+            direction,
+        )
 
         r = '%s start\n' % prefix
 

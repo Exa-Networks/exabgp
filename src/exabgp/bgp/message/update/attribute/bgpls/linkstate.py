@@ -134,7 +134,15 @@ class FlagLS(BaseLS):
         valid_flags = [''.join(item) + '0' * pad for item in itertools.product('01', repeat=repeat)]
         valid_flags.append('0000')
         if bits in valid_flags:
-            flags = dict(zip(cls.FLAGS, [0,] * len(cls.FLAGS)))
+            flags = dict(
+                zip(
+                    cls.FLAGS,
+                    [
+                        0,
+                    ]
+                    * len(cls.FLAGS),
+                )
+            )
             flags.update(dict((k, int(v)) for k, v in zip(cls.FLAGS, bits)))
         else:
             raise Notify(3, 5, "Invalid SR flags mask")
