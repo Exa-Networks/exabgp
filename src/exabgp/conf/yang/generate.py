@@ -4,9 +4,10 @@
 import os
 import astunparse
 
+import pprint
+
 from exabgp.conf.yang import Parser 
 from exabgp.conf.yang import Code
-
 
 class Generate(object):
     intro = '# yang model structure and validation\n# autogenerate by exabgp\n\n'

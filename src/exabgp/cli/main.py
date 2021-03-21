@@ -47,8 +47,8 @@ def main():
     # if True:
     #     init_modules()
 
-    if not (arg.load and arg.commit):
-        airbag.enable()
+    # if not (arg.load and arg.commit):
+    #     airbag.enable()
 
     user = getpass.getuser()
     host = socket.gethostname()
@@ -131,7 +131,7 @@ def main():
 
         if cmd.startswith('set '):
             yang.traverse(cmd[4:])
-            if not yang.final and xml.is_leaf(cmd[4:].split()):
+            if not yang.final: # and xml.is_leaf(cmd[4:].split()):
                 print('command incomplete')
                 message[msg.command] = cmd
                 continue
