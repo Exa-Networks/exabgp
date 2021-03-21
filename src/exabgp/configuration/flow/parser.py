@@ -312,6 +312,7 @@ def redirect(tokeniser):
 
         raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
 
+
 def redirect_next_hop(tokeniser):
     return ExtendedCommunities().add(TrafficNextHopSimpson(False))
 

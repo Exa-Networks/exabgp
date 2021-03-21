@@ -379,7 +379,11 @@ class Protocol(object):
         # Send EOR to let our peer know he can perform a RIB update
         if self.negotiated.families:
             families = (
-                self.negotiated.families if (afi, safi) == (AFI.undefined, SAFI.undefined) else [(afi, safi),]
+                self.negotiated.families
+                if (afi, safi) == (AFI.undefined, SAFI.undefined)
+                else [
+                    (afi, safi),
+                ]
             )
             for eor_afi, eor_safi in families:
                 for _ in self.new_eor(eor_afi, eor_safi):

@@ -69,7 +69,7 @@ class Code(object):
     def _if_pattern(self, pattern):
         self.imported.add('re')
         # fix known ietf regex use
-        pattern = pattern.replace('\\p{N}\\p{L}','\\w')
+        pattern = pattern.replace('\\p{N}\\p{L}', '\\w')
         return [
             If(
                 test=UnaryOp(
@@ -172,9 +172,7 @@ class Code(object):
     @staticmethod
     def _if_lt(value):
         if value >= 0:
-            comparators = [
-                Constant(value=value, kind=None)
-            ]
+            comparators = [Constant(value=value, kind=None)]
         else:
             comparators = [
                 UnaryOp(
@@ -207,9 +205,7 @@ class Code(object):
     @staticmethod
     def _if_gt(value):
         if value >= 0:
-            comparators = [
-                Constant(value=value, kind=None)
-            ]
+            comparators = [Constant(value=value, kind=None)]
         else:
             comparators = [
                 UnaryOp(
@@ -358,5 +354,3 @@ class Code(object):
             body=list(self._imported()) + body,
         )
         return ast
-
-

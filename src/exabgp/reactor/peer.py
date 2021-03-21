@@ -284,7 +284,9 @@ class Peer(object):
         except Stop:
             # Connection failed
             if not connected and self.proto:
-                self.proto.close('connection to %s:%d failed' % (self.neighbor['peer-address'], self.neighbor['connect']))
+                self.proto.close(
+                    'connection to %s:%d failed' % (self.neighbor['peer-address'], self.neighbor['connect'])
+                )
 
             # A connection arrived before we could establish !
             if not connected or self.proto:
@@ -660,7 +662,10 @@ class Peer(object):
 
         if have_peer:
             peer.update(
-                {'multi-session': self.proto.negotiated.multisession, 'operational': self.proto.negotiated.operational,}
+                {
+                    'multi-session': self.proto.negotiated.multisession,
+                    'operational': self.proto.negotiated.operational,
+                }
             )
 
         if have_open:

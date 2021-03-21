@@ -45,7 +45,8 @@ def getLogger(name=None, **kwargs):
 def _syslog(**kwargs):
     formating = kwargs.get('format', SHORT)
     handler = handlers.SysLogHandler(
-        address=kwargs.get('address', '/dev/log'), facility=kwargs.get('facility', 'syslog'),
+        address=kwargs.get('address', '/dev/log'),
+        facility=kwargs.get('facility', 'syslog'),
     )
     handler.setFormatter(logging.Formatter(formating))
     return handler
@@ -53,7 +54,9 @@ def _syslog(**kwargs):
 
 def _stream(**kwargs):
     formating = kwargs.get('format', CLEAR)
-    handler = logging.StreamHandler(stream=kwargs.get('stream', sys.stderr),)
+    handler = logging.StreamHandler(
+        stream=kwargs.get('stream', sys.stderr),
+    )
     handler.setFormatter(logging.Formatter(formating))
     return handler
 

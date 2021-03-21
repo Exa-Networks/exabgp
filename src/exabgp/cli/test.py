@@ -15,7 +15,7 @@ def test_complete():
 
     xml = load_configuration()
 
-    completer = VyOSCompleter(xml,{})
+    completer = VyOSCompleter(xml, {})
     for _ in completer._set_complete(cmd):
         print(_)
     print()
@@ -51,4 +51,3 @@ if __name__ == '__main__':
         test_validate()
     except KeyboardInterrupt:
         pass
-

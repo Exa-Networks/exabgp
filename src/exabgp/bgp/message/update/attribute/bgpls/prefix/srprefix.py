@@ -83,5 +83,8 @@ class SrPrefix(FlagLS):
 
     def json(self, compact=None):
         return '"sr-prefix-flags": {}, "sids": {}, "undecoded-sids": {}, "sr-algorithm": {}'.format(
-            json.dumps(self.flags), json.dumps(self.sids), json.dumps(self.undecoded), json.dumps(self.sr_algo),
+            json.dumps(self.flags),
+            json.dumps(self.sids),
+            json.dumps(self.undecoded),
+            json.dumps(self.sr_algo),
         )

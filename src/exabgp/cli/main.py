@@ -8,12 +8,14 @@ import argparse
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
+
 # from prompt_toolkit.completion import Completer
 # from prompt_toolkit.completion import Completion
 # from prompt_toolkit.validation import Validator
 from prompt_toolkit.validation import ValidationError
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.key_binding import KeyBindings
+
 # from prompt_toolkit import print_formatted_text
 # from prompt_toolkit.formatted_text import to_formatted_text
 # from prompt_toolkit import prompt
@@ -131,7 +133,7 @@ def main():
 
         if cmd.startswith('set '):
             yang.traverse(cmd[4:])
-            if not yang.final: # and xml.is_leaf(cmd[4:].split()):
+            if not yang.final:  # and xml.is_leaf(cmd[4:].split()):
                 print('command incomplete')
                 message[msg.command] = cmd
                 continue

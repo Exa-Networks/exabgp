@@ -2,6 +2,7 @@ import re
 from copy import deepcopy
 
 from prompt_toolkit.validation import ThreadedValidator as Validator
+
 # from prompt_toolkit.validation import Validator
 from prompt_toolkit.validation import ValidationError
 from prompt_toolkit.document import Document

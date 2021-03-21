@@ -15,9 +15,7 @@ DEBUG = False
 TAB = '     '
 
 # TODO ..
-paths = {
-    'vyos_completion_dir' : os.environ.get('vyos_completion_dir', './src/conf_mode')
-}
+paths = {'vyos_completion_dir': os.environ.get('vyos_completion_dir', './src/conf_mode')}
 
 
 class VyOSCompleter(Completer):
@@ -86,7 +84,7 @@ class VyOSCompleter(Completer):
             if matches[0] == cmd:
                 yield Completion(' ')
                 return
-            yield Completion(matches[0][len(cmd):])
+            yield Completion(matches[0][len(cmd) :])
             return
 
         for option in command.public.keys():
@@ -113,7 +111,7 @@ class VyOSCompleter(Completer):
         for option in options:
             if option.startswith(word):
                 # yield Completion(option[len(words[-1]):])
-                yield Completion(option[len(word):])
+                yield Completion(option[len(word) :])
             elif not word:
                 yield Completion(option)
 
@@ -138,7 +136,7 @@ class VyOSCompleter(Completer):
 
         # only one incomplete answer possible, we complete it
         if len(self.xml.options) == 1:
-            yield Completion(self.xml.options[0][len(self.xml.word):])
+            yield Completion(self.xml.options[0][len(self.xml.word) :])
             return
 
         # XXX: This should not be hardcoded !
@@ -163,7 +161,7 @@ class VyOSCompleter(Completer):
         # completion options
 
         if kw.completion in self.xml.tree:
-            completion_dir = os.environ.get('vyos_completion_dir','/usr/libexec/vyos/completion/')
+            completion_dir = os.environ.get('vyos_completion_dir', '/usr/libexec/vyos/completion/')
             completion = self.xml.tree[kw.completion]
             if kw.script in completion:
                 script = completion[kw.script].replace('${vyos_completion_dir}', completion_dir)

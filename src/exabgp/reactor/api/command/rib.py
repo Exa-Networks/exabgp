@@ -55,8 +55,22 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
     return callback
 
 
-@Command.register('text', 'show adj-rib out', False, ['extensive',])
-@Command.register('text', 'show adj-rib in', False, ['extensive',])
+@Command.register(
+    'text',
+    'show adj-rib out',
+    False,
+    [
+        'extensive',
+    ],
+)
+@Command.register(
+    'text',
+    'show adj-rib in',
+    False,
+    [
+        'extensive',
+    ],
+)
 def show_adj_rib(self, reactor, service, line):
     words = line.split()
     extensive = line.endswith(' extensive')

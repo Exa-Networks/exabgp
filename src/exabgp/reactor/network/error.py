@@ -40,7 +40,12 @@ class error:
         )
     )
 
-    unavailable = set((errno.ECONNREFUSED, errno.EHOSTUNREACH,))
+    unavailable = set(
+        (
+            errno.ECONNREFUSED,
+            errno.EHOSTUNREACH,
+        )
+    )
 
 
 class NetworkError(Exception):

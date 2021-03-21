@@ -30,15 +30,32 @@ from exabgp.configuration.static.mpls import label
 
 class AnnounceLabel(AnnouncePath):
     # put next-hop first as it is a requirement atm
-    definition = ['label <15 bits number>',] + AnnouncePath.definition
+    definition = [
+        'label <15 bits number>',
+    ] + AnnouncePath.definition
 
     syntax = '<safi> <ip>/<netmask> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known = dict(AnnouncePath.known, **{'label': label,})
+    known = dict(
+        AnnouncePath.known,
+        **{
+            'label': label,
+        },
+    )
 
-    action = dict(AnnouncePath.action, **{'label': 'nlri-set',})
+    action = dict(
+        AnnouncePath.action,
+        **{
+            'label': 'nlri-set',
+        },
+    )
 
-    assign = dict(AnnouncePath.assign, **{'label': 'labels',})
+    assign = dict(
+        AnnouncePath.assign,
+        **{
+            'label': 'labels',
+        },
+    )
 
     name = 'vpn'
     afi = None

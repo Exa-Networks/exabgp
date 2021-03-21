@@ -36,7 +36,10 @@ class Attributes(object):
     @classmethod
     def decode(cls, data):
         while data:
-            length, atype, = unpack(cls.Header.PACK, data[: cls.Header.LEN])
+            (
+                length,
+                atype,
+            ) = unpack(cls.Header.PACK, data[: cls.Header.LEN])
             if len(data) < length:
                 raise AttributesError("Buffer underrun %d < %d" % (len(data), length))
             payload = data[cls.Header.LEN : length]

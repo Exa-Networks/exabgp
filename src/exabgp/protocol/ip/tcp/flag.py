@@ -26,7 +26,14 @@ class TCPFlag(BitResource):
 
     codes = dict(
         (k.lower().replace('_', '-'), v)
-        for (k, v) in {'FIN': FIN, 'SYN': SYN, 'RST': RST, 'PUSH': PUSH, 'ACK': ACK, 'URGENT': URGENT,}.items()
+        for (k, v) in {
+            'FIN': FIN,
+            'SYN': SYN,
+            'RST': RST,
+            'PUSH': PUSH,
+            'ACK': ACK,
+            'URGENT': URGENT,
+        }.items()
     )
 
     names = dict([(r, l) for (l, r) in codes.items()])

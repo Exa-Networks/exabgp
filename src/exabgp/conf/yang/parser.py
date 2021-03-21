@@ -200,7 +200,7 @@ class Tree(object):
 
         if string in ('range', 'length'):
             self.pop(Token.Punctuation, ';')
-            tree[kw[string]] = [_ for _ in name.replace(' ', '').replace('..',' ').split()]
+            tree[kw[string]] = [_ for _ in name.replace(' ', '').replace('..', ' ').split()]
             return
 
         if string == 'import':

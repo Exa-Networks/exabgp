@@ -72,7 +72,21 @@ class ParseNextHop(Section):
         return seen
 
     def ipv4(self, tokeniser):
-        return self._family(tokeniser, 'ipv4', ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'], ['ipv6',])
+        return self._family(
+            tokeniser,
+            'ipv4',
+            ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'],
+            [
+                'ipv6',
+            ],
+        )
 
     def ipv6(self, tokeniser):
-        return self._family(tokeniser, 'ipv6', ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'], ['ipv4',])
+        return self._family(
+            tokeniser,
+            'ipv6',
+            ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'],
+            [
+                'ipv4',
+            ],
+        )

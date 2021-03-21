@@ -1,4 +1,3 @@
-
 # encoding: utf-8
 """
 yang/model.py
@@ -111,7 +110,7 @@ class Model(object):
             self._write(f'🥵 not-yang {name} does not contain a yang module')
             return False
 
-		# XXX: removed tests - check later
+        # XXX: removed tests - check later
         return True
 
         self._write(f'🔍 checking {name} for correct yaml')
