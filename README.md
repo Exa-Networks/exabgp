@@ -1,4 +1,4 @@
-![CI](https://github.com/Exa-Networks/exabgp/workflows/CI/badge.svg)
+[![CI](https://github.com/Exa-Networks/exabgp/actions/workflows/ci.yaml/badge.svg)](https://github.com/Exa-Networks/exabgp/actions/workflows/ci.yaml)
 [![PyPI Status](https://img.shields.io/pypi/status/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI](https://img.shields.io/pypi/v/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI Wheel](https://img.shields.io/pypi/wheel/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
