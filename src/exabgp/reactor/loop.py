@@ -128,10 +128,10 @@ class Reactor(object):
 
     def active_peers(self):
         peers = set()
+        if getenv().bgp.passive:
+            return peers
         for key, peer in self._peers.items():
-            if getenv().bgp.passive or peer.neighbor['passive']:
-                continue
-            if not peer.proto:
+            if peer.neighbor['passive'] and not peer.proto:
                 continue
             peers.add(key)
         return peers

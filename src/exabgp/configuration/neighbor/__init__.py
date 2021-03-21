@@ -259,7 +259,7 @@ class ParseNeighbor(Section):
             return self.error.set('local-address and peer-address must be of the same family')
         neighbor.range_size = neighbor['peer-address'].mask.size()
 
-        if neighbor.range_size > 1 and not neighbor['passive'] and not getenv().bgp.passive:
+        if neighbor.range_size > 1 and not (neighbor['passive'] or getenv().bgp.passive):
             return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
         if neighbor.index() in self._neighbors:
