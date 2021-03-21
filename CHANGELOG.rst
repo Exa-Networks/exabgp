@@ -8,6 +8,8 @@ Version 4.2.14
    reported by: isjerryxiao
  * Feature: allow IPv6 redirect
    patch by: rzalamena
+ * Fix: fix decoding of path information (inbound vs outbound)
+   reported by: isjerryxiao
 
 Version 4.2.13
  * Fix: issue when there is no route to the peer and the connection looked like it established with the API
