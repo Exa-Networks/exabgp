@@ -73,7 +73,7 @@ class Community(object):
         return 4
 
     @classmethod
-    def unpack(cls, community, negotiated):
+    def unpack(cls, community, direction, negotiated):
         return cls(community)
 
     @classmethod
