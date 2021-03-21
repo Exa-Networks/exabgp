@@ -216,10 +216,12 @@ class CI(dict):
 
     @classmethod
     def display(cls):
-        sys.stdout.write('\r')
+        # sys.stdout.write('\r')
         for k in cls._tests:
             sys.stdout.write('%s%s ' % (CI.color(k), k))
         sys.stdout.write(Color.NONE)
+        # same line printing now buggy
+        sys.stdout.write('\n')
         sys.stdout.flush()
 
     @classmethod

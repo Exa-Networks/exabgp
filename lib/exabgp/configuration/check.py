@@ -29,6 +29,8 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
+from exabgp.bgp.message.direction import Direction
+
 from exabgp.logger import Logger
 
 # check_neighbor
@@ -105,7 +107,7 @@ def check_neighbor(neighbors):
                 logger.debug('')  # new line
 
                 pack1s = pack1[19:] if pack1.startswith(b'\xFF' * 16) else pack1
-                update = Update.unpack_message(pack1s, negotiated)
+                update = Update.unpack_message(pack1s, Direction.IN, negotiated)
 
                 change2 = Change(update.nlris[0], update.attributes)
                 str2 = change2.extensive()
@@ -260,7 +262,7 @@ def check_update(neighbor, raw):
 
         try:
             # This does not take the BGP header - let's assume we will not break that :)
-            update = Update.unpack_message(injected, negotiated)
+            update = Update.unpack_message(injected, Direction.IN, negotiated)
         except KeyboardInterrupt:
             raise
         except Notify:
@@ -288,7 +290,7 @@ def check_update(neighbor, raw):
 
 
 def check_notification(raw):
-    notification = Notification.unpack_message(raw[18:], None)
+    notification = Notification.unpack_message(raw[18:], None, None)
     # XXX: FIXME: should be using logger here
     print(notification)
     return True

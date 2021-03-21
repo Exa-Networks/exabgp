@@ -275,7 +275,7 @@ class Attribute(object):
         raise Notify(2, 4, 'can not handle attribute id %s' % attribute_id)
 
     @classmethod
-    def unpack(cls, attribute_id, flag, data, negotiated):
+    def unpack(cls, attribute_id, flag, data, direction, negotiated):
         cache = cls.caching and cls.CACHING
 
         if cache and data in cls.cache.get(cls.ID, {}):
@@ -283,7 +283,7 @@ class Attribute(object):
 
         key = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in Attribute.registered_attributes.keys():
-            instance = cls.klass(attribute_id, flag).unpack(data, negotiated)
+            instance = cls.klass(attribute_id, flag).unpack(data, direction, negotiated)
 
             if cache:
                 cls.cache[cls.ID].cache(data, instance)

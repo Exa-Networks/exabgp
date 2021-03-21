@@ -209,7 +209,7 @@ class ASPath(Attribute):
         return cls(as_seq, as_set, as_cseq, as_cset, backup)
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         if not data:
             return None  # ASPath.Empty
         return cls._new_aspaths(data, negotiated.asn4, ASPath)
@@ -232,7 +232,7 @@ class AS4Path(ASPath):
         ASPath.pack(self, True)
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         if not data:
             return None  # AS4Path.Empty
         return cls._new_aspaths(data, True, AS4Path)

@@ -18,12 +18,12 @@ class LargeCommunities(Communities):
     ID = Attribute.CODE.LARGE_COMMUNITY
 
     @staticmethod
-    def unpack(data, negotiated):
+    def unpack(data, direction, negotiated):
         large_communities = LargeCommunities()
         while data:
             if data and len(data) < 12:
                 raise Notify(3, 1, 'could not decode large community %s' % str([hex(ordinal(_)) for _ in data]))
-            lc = LargeCommunity.unpack(data[:12], negotiated)
+            lc = LargeCommunity.unpack(data[:12], direction, negotiated)
             data = data[12:]
             if lc in large_communities.communities:
                 continue

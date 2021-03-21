@@ -19,6 +19,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message.direction import OUT
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.eor import EOR
 
@@ -213,7 +214,7 @@ class Update(Message):
 
     # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
     @classmethod
-    def unpack_message(cls, data, negotiated):
+    def unpack_message(cls, data, direction, negotiated):
         logger = Logger()
 
         logger.debug(LazyFormat('parsing UPDATE', data), 'parser')
@@ -224,20 +225,23 @@ class Update(Message):
         if length == 4 and data == b'\x00\x00\x00\x00':
             return EOR(AFI.ipv4, SAFI.unicast)  # pylint: disable=E1101
         if length == 11 and data.startswith(EOR.NLRI.PREFIX):
-            return EOR.unpack_message(data, negotiated)
+            return EOR.unpack_message(data, direction, negotiated)
 
         withdrawn, _attributes, announced = cls.split(data)
 
         if not withdrawn:
             logger.debug('withdrawn NLRI none', 'routes')
 
-        attributes = Attributes.unpack(_attributes, negotiated)
+        attributes = Attributes.unpack(_attributes, direction, negotiated)
 
         if not announced:
             logger.debug('announced NLRI none', 'routes')
 
         # Is the peer going to send us some Path Information with the route (AddPath)
-        addpath = negotiated.addpath.receive(AFI.ipv4, SAFI.unicast)
+        if direction == Direction.IN:
+            addpath = negotiated.addpath.receive(AFI.ipv4, SAFI.unicast)
+        else:
+            addpath = negotiated.addpath.send(AFI.ipv4, SAFI.unicast)
 
         # empty string for NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
         nexthop = attributes.get(Attribute.CODE.NEXT_HOP, NoNextHop)

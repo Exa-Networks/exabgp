@@ -29,7 +29,7 @@ class KeepAlive(Message):
         return "KEEPALIVE"
 
     @classmethod
-    def unpack_message(cls, data, negotiated):  # pylint: disable=W0613
+    def unpack_message(cls, data, direction, negotiated):  # pylint: disable=W0613
         # This can not happen at decode time as we check the length of the KEEPALIVE message
         # But could happen when calling the function programmatically
         if data:

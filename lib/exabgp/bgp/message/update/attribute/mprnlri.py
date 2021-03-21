@@ -21,6 +21,7 @@ from exabgp.protocol.family import Family
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message.direction import Direction
 
 # from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attribute
@@ -117,7 +118,7 @@ class MPRNLRI(Attribute, Family):
         return "MP_REACH_NLRI for %s %s with %d NLRI(s)" % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         nlris = []
 
         # -- Reading AFI/SAFI
@@ -140,7 +141,10 @@ class MPRNLRI(Attribute, Family):
         length, rd = Family.size[(afi, safi)]
 
         # Is the peer going to send us some Path Information with the route (AddPath)
-        addpath = negotiated.addpath.receive(afi, safi)
+        if direction == Direction.IN:
+            addpath = negotiated.addpath.receive(afi, safi)
+        else:
+            addpath = negotiated.addpath.send(afi, safi)
 
         if negotiated.nexthop:
             if len_nh in (16, 32, 24):

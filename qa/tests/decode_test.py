@@ -32,6 +32,7 @@ from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 
+from exabgp.bgp.message.direction import Direction
 
 from exabgp.configuration.setup import environment
 from exabgp.logger import Logger
@@ -386,13 +387,13 @@ class TestUpdateDecoding(unittest.TestCase):
         for asn4, body in bodies:
             if asn4:
                 continue
-            Update.unpack_message(data_from_body(body), self.negotiated[asn4])
+            Update.unpack_message(data_from_body(body), Direction.IN, self.negotiated[asn4])
 
     def test_decoding_udpate_asn4(self):
         for asn4, body in bodies:
             if not asn4:
                 continue
-            Update.unpack_message(data_from_body(body), self.negotiated[asn4])
+            Update.unpack_message(data_from_body(body), Direction.IN, self.negotiated[asn4])
 
 
 if __name__ == '__main__':
