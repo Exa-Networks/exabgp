@@ -221,6 +221,18 @@ class Reactor(object):
                 return True
         return False
 
+    def check(self, route):
+        from exabgp.configuration.check import check_message
+
+        if not self.reload():
+            return 1
+
+        neighbors = self.configuration.neighbors
+        for neighbor in neighbors.values():
+            if not check_message(neighbor, route):
+                return 1
+        return 0
+
     def run(self):
         self.daemon.daemonise()
 
