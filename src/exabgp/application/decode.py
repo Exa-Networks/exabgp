@@ -23,7 +23,7 @@ def setargs(sub):
     sub.add_argument('-d', '--debug', help='start the python debugger errors', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on fault', action='store_true')
     sub.add_argument('configuration', help='configuration file(s)', type=str)
-    sub.add_argument('payload', help='the BGP payload in hexadecimal', nargs='+', type=str)
+    sub.add_argument('payload', help='the BGP payload in hexadecimal', type=str)
     # fmt:on
 
 
@@ -50,8 +50,8 @@ def cmdline(cmdarg):
         sys.exit(1)
 
     env = getenv()
+    env.bgp.passive = True
     env.log.parser = True
-    env.debug.route = route
     env.tcp.bind = ''
 
     if cmdarg.debug:
@@ -62,8 +62,9 @@ def cmdline(cmdarg):
         env.debug.pdb = True
 
     log.init(env)
-    Reactor([getconf(cmdarg.configuration)]).run()
 
-
+    sanitized = ''.join(cmdarg.payload).replace(':', '').replace(' ', '')
+    Reactor([getconf(cmdarg.configuration)]).check(sanitized)
+  
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

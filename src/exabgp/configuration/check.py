@@ -176,19 +176,22 @@ def check_message(neighbor, message):
     msghexa = [message[i * 2 : (i * 2) + 2] for i in range(len(message) // 2)]
     raw = bytes([int(_, 16) for _ in msghexa])
 
-    if raw.startswith(b'\xff' * 16):
-        kind = raw[18]
-        # XXX: FIXME: check size
-        # size = (raw[16] << 16) + raw[17]
-
-        if kind == 1:
-            return check_open(neighbor, raw[18:])
-        elif kind == 2:
-            return check_update(neighbor, raw)
-        elif kind == 3:
-            return check_notification(raw)
-    else:
+    if not raw.startswith(b'\xff' * 16):
         return check_update(neighbor, raw)
+
+    kind = raw[18]
+    # XXX: FIXME: check size
+    # size = (raw[16] << 16) + raw[17]
+
+    if kind == 1:
+        return check_open(neighbor, raw[18:])
+    if kind == 2:
+        return check_update(neighbor, raw)
+    if kind == 3:
+        return check_notification(raw)
+
+    print("unknown type %d", kind)
+    return False
 
 
 # ================================================================= check_update
@@ -205,8 +208,6 @@ def check_open(neighbor, raw):
 
 def check_update(neighbor, raw):
     option.enabled['parser'] = True
-
-    neighbor = neighbor[list(neighbor)[0]]
 
     path = {}
     for f in NLRI.known_families():
