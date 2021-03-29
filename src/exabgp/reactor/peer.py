@@ -333,6 +333,12 @@ class Peer(object):
         # try to establish the outgoing connection
         self.fsm.change(FSM.ACTIVE)
 
+        if getenv().bgp.passive:
+            while not self.proto:
+                yield ACTION.LATER
+
+        self.fsm.change(FSM.IDLE)
+
         if not self.proto:
             for action in self._connect():
                 if action in ACTION.ALL:
