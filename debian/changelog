@@ -1,3 +1,10 @@
+exabgp (4.2.8-2) unstable; urgency=medium
+
+  * Patch exabgp.service to fix socket creation on start.
+    Closes: #886568.
+
+ -- Vincent Bernat <bernat@debian.org>  Sun, 02 May 2021 17:48:55 +0200
+
 exabgp (4.2.8-1) unstable; urgency=medium
 
   * New upstream release.
