@@ -10,13 +10,10 @@ ConditionPathExists=/etc/exabgp/exabgp.conf
 User=exabgp
 Group=exabgp
 Environment=exabgp_daemon_daemonize=false
-PermissionsStartOnly=true
-ExecStartPre=-/usr/bin/env mkfifo /run/exabgp.in
-ExecStartPre=-/usr/bin/env mkfifo /run/exabgp.out
-ExecStartPre=/usr/bin/env chmod 600 /run/exabgp.in
-ExecStartPre=/usr/bin/env chmod 600 /run/exabgp.out
-ExecStartPre=/usr/bin/env chown exabgp.exabgp /run/exabgp.in
-ExecStartPre=/usr/bin/env chown exabgp.exabgp /run/exabgp.out
+RuntimeDirectory=exabgp
+RuntimeDirectoryMode=0750
+ExecStartPre=-/usr/bin/mkfifo /run/exabgp/exabgp.in
+ExecStartPre=-/usr/bin/mkfifo /run/exabgp/exabgp.out
 ExecStart=/usr/sbin/exabgp /etc/exabgp/exabgp.conf
 ExecReload=/bin/kill -USR1 $MAINPID
 Restart=always
