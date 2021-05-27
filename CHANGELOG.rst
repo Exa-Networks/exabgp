@@ -3,6 +3,10 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.15
+ * Fix: #1035 Socket remains in CLOSED state after the interface goes down
+   patch: borjam
+
 Version 4.2.14
  * Fix: issue reading data from the peer
    reported by: isjerryxiao
