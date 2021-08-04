@@ -214,6 +214,9 @@ class IPRange(IP):
 class _NoNextHop(object):
     packed = ''
 
+    afi = AFI.undefined
+    safi = SAFI.undefined
+
     def pack(self, data, negotiated=None):
         return ''
 
