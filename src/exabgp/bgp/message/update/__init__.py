@@ -113,15 +113,30 @@ class Update(Message):
         mp_nlris = {}
 
         for nlri in sorted(self.nlris):
-            if nlri.family() in negotiated.families:
-                if (
-                    nlri.afi == AFI.ipv4
-                    and nlri.safi in [SAFI.unicast, SAFI.multicast]
-                    and nlri.nexthop.afi == AFI.ipv4
-                ):
-                    nlris.append(nlri)
-                else:
-                    mp_nlris.setdefault(nlri.family(), {}).setdefault(nlri.action, []).append(nlri)
+            if nlri.family() not in negotiated.families:
+                continue
+
+            add_v4 = nlri.afi == AFI.ipv4
+            add_v4 = add_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
+
+            del_v4 = add_v4 and nlri.action == OUT.WITHDRAW
+
+            if del_v4:
+                nlris.append(nlri)
+                continue
+
+            add_v4 = add_v4 and nlri.action == OUT.ANNOUNCE
+            add_v4 = add_v4 and nlri.nexthop.afi == AFI.ipv4
+
+            if add_v4:
+                nlris.append(nlri)
+                continue
+
+            if nlri.nexthop.afi != AFI.undefined:
+                mp_nlris.setdefault(nlri.family(), {}).setdefault(nlri.action, []).append(nlri)
+                continue
+
+            raise ValueError("unexpected nlri definition (%s)" % nlri)
 
         if not nlris and not mp_nlris:
             return
