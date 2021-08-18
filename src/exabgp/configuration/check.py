@@ -11,6 +11,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import copy
 
+from exabgp.environment import getenv
+
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
@@ -255,12 +257,16 @@ def check_update(neighbor, raw):
 
             log.error('could not parse the message', 'parser')
             log.error(traceback.format_exc(), 'parser')
+            if getenv().debug.pdb:
+                raise
             return False
         except Exception:
             import traceback
 
             log.error('could not parse the message', 'parser')
             log.error(traceback.format_exc(), 'parser')
+            if getenv().debug.pdb:
+                raise
             return False
 
         log.debug('', 'parser')  # new line

@@ -5,6 +5,8 @@ import syslog
 import string
 import argparse
 
+from exabgp.debug import trace_interceptor
+
 from exabgp.environment import Env
 from exabgp.environment import getenv
 from exabgp.environment import getconf
@@ -62,9 +64,11 @@ def cmdline(cmdarg):
         env.debug.pdb = True
 
     log.init(env)
+    trace_interceptor(env.debug.pdb)
 
     sanitized = ''.join(cmdarg.payload).replace(':', '').replace(' ', '')
     Reactor([getconf(cmdarg.configuration)]).check(sanitized)
-  
+
+
 if __name__ == '__main__':
     sys.exit(main())
