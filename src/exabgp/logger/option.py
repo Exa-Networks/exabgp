@@ -80,7 +80,7 @@ class option(object):
 
         if destination in ('stdout', 'stderr', 'syslog'):
             cls.destination = destination
-        elif destination.startwith('file:'):
+        elif destination.startswith('file:'):
             cls.destination = destination[5:]
         else:
             cls.destination = 'stdout'
