@@ -13,7 +13,7 @@ We want to make contributing to this project as easy as possible, whether it's:
 
 We use github to host code, to track issues and feature requests. We accept pull requests but may request some changes before we pull them.
 
-The lastest code is available directly on master.
+The latest code is available directly on master.
 
 We will review all code changes sent via Pull Requests and welcome them. There is no strong convention for git commits due to the low number of external contributions.
 
@@ -23,7 +23,7 @@ To contribute:
 2. If you've added code that should be tested, please consider adding tests.
 3. Ensure the test suite passes. You can run it locally (see below)
 4. If you've changed APIs, please update the documentation.
-5. Make sure your code is formated with black (see below)
+5. Make sure your code is formatted with black (see below)
 6. Issue the pull request!
 
 ## License
@@ -69,7 +69,7 @@ env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFF
 
 ## Coding Style
 
-Really coding style is not somethign we really have strong opinion but to make things consitent, we format the code using black once in while with:
+Really coding style is not something we really have strong opinion but to make things consistent, we format the code using black once in while with:
 ```
 black -S -l 120
 ```
