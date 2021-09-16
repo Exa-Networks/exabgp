@@ -1,0 +1,34 @@
+version: "3"
+
+services:
+  exabgp:
+    image: exabgp
+    container_name: exabgp
+    networks:
+      issue_1041_network:
+        ipv4_address: 10.0.1.2
+        ipv6_address: AA:BB:CC:DD::2
+    command: exabgp server -d /etc/exabgp/exabgp.conf
+    volumes:
+      - ./exabgp.env:/etc/exabgp/exabgp.env
+      - ./exabgp.conf:/etc/exabgp/exabgp.conf
+      - ./exabgp_process.sh:/etc/exabgp/exabgp_process.sh
+
+  peer:
+    image: pierky/bird:2.0.8
+    container_name: peer
+    networks:
+      issue_1041_network:
+        ipv4_address: 10.0.1.3
+        ipv6_address: AA:BB:CC:DD::3
+    volumes:
+      - ./bird.conf:/etc/bird/bird.conf
+
+networks:
+  issue_1041_network:
+    name: issue_1041_network
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+        - subnet: AA:BB:CC:DD::/64

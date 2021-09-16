@@ -1,0 +1,27 @@
+name: Reproduce issue 1041
+
+on: push
+
+jobs:
+  reproduce_issue_1041:
+    name: Reproduce issue 1041
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build the image
+        run: docker build -t exabgp ./
+
+      - name: Run Docker compose
+        run: docker-compose --project-directory .github/workflows/issue_1041 up --remove-orphans -d
+
+      - name: Wait a bit for the Docker scenario to run
+        run: sleep 20
+
+      - name: Print the ExaBGP Logs
+        run: docker logs exabgp
+
+      - name: Fail if ExaBGP crashed
+        run: "{ docker logs exabgp 2>&1 | grep -q Traceback && echo Failed || echo Succeeded } | grep Succeeded"
