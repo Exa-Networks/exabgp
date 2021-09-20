@@ -21,9 +21,9 @@ Other uses include keeping an eye on network changes done as was done by [RIPE](
 
 The master branch is now what will be ExaBGP 5.0.x. It is going to be a major rewrite of the software. Lots has changed in 11 years. ExaBGP is nearly as old as Python3.
 
-Suport for python2 has already been dropped. The code will be updated to take advantage of Python3 'new' async-io and new features are being investigated (such as configuration edition via a interactive CLI). A large part of the configuration parsing will surely be changed which mean the configuration format will most likely change too.
+Support for python2 has already been dropped. The code will be updated to take advantage of Python3 'new' async-io and new features are being investigated (such as configuration edition via a interactive CLI). A large part of the configuration parsing will surely be changed which mean the configuration format will most likely change too.
 
-The program command line arguments has already been changed and is no longer backward compatible with version 3 and 4. For these reasons, we do not recommand the use of the master branch in production.
+The program command line arguments has already been changed and is no longer backward compatible with version 3 and 4. For these reasons, we do not recommend the use of the master branch in production.
 
 ## Who is using ExaBGP ?
 
