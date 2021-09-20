@@ -705,11 +705,13 @@ class Peer(object):
         for family in self.neighbor.families():
             if have_open:
                 common = True if family in self.proto.negotiated.families else False
-                addpath = self.proto.negotiated.addpath.send(*family) and self.proto.negotiated.addpath.receive(*family)
+                send_addpath = self.proto.negotiated.addpath.send(*family)
+                recv_addpath = self.proto.negotiated.addpath.receive(*family)
             else:
                 common = None
-                addpath = None if family in self.neighbor.addpaths() else False
-            families[family] = (True, common, addpath)
+                send_addpath = None if family in self.neighbor.addpaths() else False
+                recv_addpath = None if family in self.neighbor.addpaths() else False
+            families[family] = (True, common, send_addpath, recv_addpath)
 
         messages = {}
         total_sent = 0
