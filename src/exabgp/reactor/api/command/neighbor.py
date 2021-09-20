@@ -88,20 +88,20 @@ Neighbor %(peer-address)s
 
         for (a, s), (l, r, p) in answer['families'].items():
             k = '%s %s' % (a, s)
-            formated['local']['families'][k] = _en(l)
-            formated['peer']['families'][k] = _en(p)
+            formated['local']['families'][k] = l
+            formated['peer']['families'][k] = p
             if r:
                 formated['families'].append(k)
 
         for k, (l, p) in answer['capabilities'].items():
-            formated['local']['capabilities'][k] = _en(l)
-            formated['peer']['capabilities'][k] = _en(p)
+            formated['local']['capabilities'][k] = l
+            formated['peer']['capabilities'][k] = p
             if l and p:
                 formated['capabilities'].append(k)
 
         for k, (s, r) in answer['messages'].items():
-            formated['messages']['sent'][k] = str(s)
-            formated['messages']['received'][k] = str(r)
+            formated['messages']['sent'][k] = s
+            formated['messages']['received'][k] = r
 
         formated['local']['address'] = answer['local-address']
         formated['local']['as'] = answer['local-as']
