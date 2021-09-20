@@ -32,6 +32,16 @@ def _pr(value):
     return '%s' % value
 
 
+def _addpath(send, receive):
+    if send and receive:
+        return "send/receive"
+    if send:
+        return "send"
+    if receive:
+        return "receive"
+    return "disabled"
+
+
 class Neighbor(object):
     extensive_kv = '   %-20s %15s %15s %15s'
     extensive_template = """\
@@ -73,10 +83,12 @@ Neighbor %(peer-address)s
             'local': {
                 'capabilities': {},
                 'families': {},
+                'add-path': {},
             },
             'peer': {
                 'capabilities': {},
                 'families': {},
+                'add-path': {},
             },
             'messages': {
                 'sent': {},
@@ -84,14 +96,18 @@ Neighbor %(peer-address)s
             },
             'capabilities': [],
             'families': [],
+            'add-path': {},
         }
 
-        for (a, s), (l, r, p) in answer['families'].items():
+        for (a, s), (l, p, aps, apr) in answer['families'].items():
             k = '%s %s' % (a, s)
             formated['local']['families'][k] = l
             formated['peer']['families'][k] = p
-            if r:
+            formated['local']['add-path'][k] = aps
+            formated['peer']['add-path'][k] = apr
+            if l and p:
                 formated['families'].append(k)
+            formated['add-path'][k] = _addpath(aps, apr)
 
         for k, (l, p) in answer['capabilities'].items():
             formated['local']['capabilities'][k] = l
@@ -133,8 +149,8 @@ Neighbor %(peer-address)s
                 cls.extensive_kv % ('%s:' % k, _en(l), _en(p), '') for k, (l, p) in answer['capabilities'].items()
             ),
             'families': '\n'.join(
-                cls.extensive_kv % ('%s %s:' % (a, s), _en(l), _en(r), _en(p))
-                for (a, s), (l, r, p) in answer['families'].items()
+                cls.extensive_kv % ('%s %s:' % (a, s), _en(l), _en(r), _addpath(aps, apr))
+                for (a, s), (l, r, apr, aps) in answer['families'].items()
             ),
             'messages': '\n'.join(
                 cls.extensive_kv % ('%s:' % k, str(s), str(r), '') for k, (s, r) in answer['messages'].items()
