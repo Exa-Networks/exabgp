@@ -7,6 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import json
+
 from datetime import timedelta
 
 from exabgp.reactor.api.command.command import Command
@@ -59,6 +61,59 @@ Neighbor %(peer-address)s
 
     summary_header = 'Peer            AS        up/down state       |     #sent     #recvd'
     summary_template = '%-15s %-7s %9s %-12s %10d %10d'
+
+    @classmethod
+    def as_dict(cls, answer):
+        up = answer['duration']
+
+        formated = {
+            'state': 'up' if up else 'down',
+            'duration': answer['duration'] if up else answer['down'],
+            'fsm': answer['state'],
+            'local': {
+                'capabilities': {},
+                'families': {},
+            },
+            'peer': {
+                'capabilities': {},
+                'families': {},
+            },
+            'messages': {
+                'sent': {},
+                'received': {}
+            },
+            'capabilities': [],
+            'families': [],
+        }
+
+        for (a, s), (l, r, p) in answer['families'].items():
+            k = '%s %s' % (a, s)
+            formated['local']['families'][k] = _en(l)
+            formated['peer']['families'][k] = _en(p)
+            if r:
+                formated['families'].append(k)
+
+        for k, (l, p) in answer['capabilities'].items():
+            formated['local']['capabilities'][k] = _en(l)
+            formated['peer']['capabilities'][k] = _en(p)
+            if l and p:
+                formated['capabilities'].append(k)
+
+        for k, (s, r) in answer['messages'].items():
+            formated['messages']['sent'][k] = str(s)
+            formated['messages']['received'][k] = str(r)
+
+        formated['local']['address'] = answer['local-address']
+        formated['local']['as'] = answer['local-as']
+        formated['local']['id'] = answer['local-id']
+        formated['local']['hold'] = answer['local-hold']
+
+        formated['peer']['address'] = answer['peer-address']
+        formated['peer']['as'] = answer['peer-as']
+        formated['peer']['id'] = answer['peer-id']
+        formated['peer']['hold'] = answer['peer-hold']
+
+        return formated
 
     @classmethod
     def extensive(cls, answer):
@@ -126,13 +181,14 @@ def teardown(self, reactor, service, line):
         return False
 
 
-@Command.register('text', 'show neighbor', False, ['summary', 'extensive', 'configuration'])
+@Command.register('text', 'show neighbor', False, ['summary', 'extensive', 'configuration', 'json'])
 def show_neighbor(self, reactor, service, command):
     words = command.split()
 
     extensive = 'extensive' in words
     configuration = 'configuration' in words
     summary = 'summary' in words
+    jason = 'json' in words
 
     if summary:
         words.remove('summary')
@@ -140,6 +196,8 @@ def show_neighbor(self, reactor, service, command):
         words.remove('extensive')
     if configuration:
         words.remove('configuration')
+    if jason:
+        words.remove('json')
 
     limit = words[-1] if words[-1] != 'neighbor' else ''
 
@@ -153,6 +211,15 @@ def show_neighbor(self, reactor, service, command):
             for line in str(neighbor).split('\n'):
                 reactor.processes.write(service, line)
                 yield True
+        reactor.processes.answer_done(service)
+
+    def callback_json():
+        p = []
+        for peer_name in reactor.peers():
+            p.append(Neighbor.as_dict(reactor.neighbor_cli_data(peer_name)))
+        for line in json.dumps(p).split('\n'):
+            reactor.processes.write(service, line)
+            yield True
         reactor.processes.answer_done(service)
 
     def callback_extensive():
@@ -173,6 +240,10 @@ def show_neighbor(self, reactor, service, command):
                 reactor.processes.write(service, line)
                 yield True
         reactor.processes.answer_done(service)
+
+    if jason:
+        reactor.asynchronous.schedule(service, command, callback_json())
+        return True
 
     if summary:
         reactor.asynchronous.schedule(service, command, callback_summary())
