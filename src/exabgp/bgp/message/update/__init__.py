@@ -321,7 +321,7 @@ class Update(Message):
             from exabgp.reactor.api.response import Response
             from exabgp.version import json as json_version
 
-            return 'json %s' % Response.JSON(json_version).update(negotiated.neighbor, 'in', update, None, '', '')
+            return 'json %s' % Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, None, '', '')
 
         logfunc.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
 
