@@ -136,6 +136,10 @@ class Update(Message):
                 mp_nlris.setdefault(nlri.family(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
 
+            if nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn):
+                mp_nlris.setdefault(nlri.family(), {}).setdefault(nlri.action, []).append(nlri)
+                continue
+
             raise ValueError("unexpected nlri definition (%s)" % nlri)
 
         if not nlris and not mp_nlris:
