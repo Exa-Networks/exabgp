@@ -213,8 +213,14 @@ class RequirePath(object):
         union.extend([k for k in receive.keys() if k not in send.keys()])
 
         for k in union:
-            self._send[k] = bool(send.get(k, self.CANT) & self.SEND and receive.get(k, self.CANT) & self.RECEIVE)
-            self._receive[k] = bool(send.get(k, self.CANT) & self.RECEIVE and receive.get(k, self.CANT) & self.SEND)
+            here_will_send = bool(send.get(k, self.CANT) & self.SEND)
+            they_will_recv = bool(receive.get(k, self.CANT) & self.RECEIVE)
+
+            here_will_recv = bool(send.get(k, self.CANT) & self.RECEIVE)
+            they_will_send = bool(receive.get(k, self.CANT) & self.SEND)
+
+            self._send[k] = here_will_send and they_will_recv
+            self._receive[k] = here_will_recv and they_will_send
 
     def send(self, afi, safi):
         return self._send.get((afi, safi), False)
