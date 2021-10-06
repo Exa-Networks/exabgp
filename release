@@ -321,7 +321,7 @@ def generate_binary(args):
     }
 
     if debug:
-        params['interpreter'] = '/usr/bin/env VYOSEXTRA_DEBUG=1 python3'
+        params['interpreter'] = '/usr/bin/env EXABGP_DEBUG_PDB=1 EXABGP_DEBUG_CONFIGURATION=1 EXABGP_DEBUG_ROUTE=1 python3'
     if sys.version_info.minor >= 7:
         params['compressed'] = not debug
 
