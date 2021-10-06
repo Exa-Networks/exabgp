@@ -87,6 +87,7 @@ class BinaryOperator(CommonOperator):
     INCLUDE = 0x00  # 0b00000000
     NOT = 0x02  # 0b00000010
     MATCH = 0x01  # 0b00000001
+    DIFF = NOT | MATCH
 
 
 def _len_to_bit(value):
