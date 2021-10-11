@@ -122,6 +122,8 @@ def _operator_binary(string):
         if string[0] == '=':
             return BinaryOperator.MATCH, string[1:]
         elif string[0] == '!':
+            if string.startswith('!='):
+                return BinaryOperator.DIFF, string[2:]
             return BinaryOperator.NOT, string[1:]
         else:
             return BinaryOperator.INCLUDE, string
