@@ -193,9 +193,8 @@ class CI(dict):
             sys.stdout.write('%s%s ' % (CI.color(k), k))
         sys.stdout.write(Color.NONE)
         # same line printing now buggy
-        sys.stdout.write('\n')
+        sys.stdout.write('\r')
         sys.stdout.flush()
-        sys.stderr.flush()
 
     @classmethod
     def listing(cls):
