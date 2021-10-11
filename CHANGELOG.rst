@@ -3,6 +3,8 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.17
+
 
 Version 4.2.16
  * Fix: bacckport of fix for #1051 tcp-flag operators != and &!= return syntax error
