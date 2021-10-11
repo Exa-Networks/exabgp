@@ -5,7 +5,8 @@ Version explained:
 
 
 Version 4.2.16
-
+ * Fix: bacckport of fix for #1051 tcp-flag operators != and &!= return syntax error
+   reported by: enag11
 
 Version 4.2.15
  * Fix: #1035 Socket remains in CLOSED state after the interface goes down
