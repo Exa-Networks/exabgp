@@ -129,9 +129,9 @@ class ASPath(Attribute):
                     asn4 = True
             astrans.append(local)
 
-        message = ASPath(astrans)._asn_pack(negotiated.asn4)
+        message = ASPath._asn_pack(astrans, negotiated.asn4)
         if asn4:
-            message += AS4Path(self.aspath)._asn_pack(asn4)
+            message += AS4Path._asn_pack(self.aspath, asn4)
 
         return message
 
