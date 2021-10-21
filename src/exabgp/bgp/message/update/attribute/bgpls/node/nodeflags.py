@@ -38,5 +38,5 @@ class NodeFlags(FlagLS):
     REPR = 'Node Flags'
     JSON = 'node-flags'
     TLV = 1024
-    LS_NODE_FLAGS = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
+    FLAGS = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
     LEN = 1
