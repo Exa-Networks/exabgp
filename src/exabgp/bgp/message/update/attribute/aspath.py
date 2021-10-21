@@ -158,8 +158,6 @@ class ASPath(Attribute):
                 'value': list(content),
             }
 
-        import pdb; pdb.set_trace()
-
         self._json = json.dumps(jason)
         return self._json
 
