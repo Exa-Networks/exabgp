@@ -4,6 +4,8 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.0:
+ * Compatibility: The text encoding of AS-SEQUENCE in the AS-PATH has changed
+ * Compatibility: The AS-PATH JSON format has changed
  * Compatibility: The BGP-LS Adjacency SID JSON format has changed
  * Compatibility: The command line format has changed
    whilst trying to keep backward compatibility for most usual commands
@@ -22,6 +24,7 @@ Version 5.0.0:
    patch: rzalamena
  * Fix: AddPath parsing issue (issue 1041)
  * Feature: Added show neighbor json to the CLI
+ * Feature: use as-path with a series of [] () [{}]({}) : [] sequence, () set, {} for confed
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates

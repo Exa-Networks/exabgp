@@ -199,8 +199,9 @@ class Attribute(object):
 
     # ---------------------------------------------------------------------------
 
-    def _attribute(self, value):
-        flag = self.FLAG
+    @classmethod
+    def _attribute(klass, value):
+        flag = klass.FLAG
         if flag & Attribute.Flag.OPTIONAL and not value:
             return b''
         length = len(value)
@@ -210,7 +211,7 @@ class Attribute(object):
             len_value = pack('!H', length)
         else:
             len_value = bytes([length])
-        return bytes([flag, self.ID]) + len_value + value
+        return bytes([flag, klass.ID]) + len_value + value
 
     def _len(self, value):
         length = len(value)

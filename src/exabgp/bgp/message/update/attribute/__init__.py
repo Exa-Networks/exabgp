@@ -16,6 +16,10 @@ from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.aspath import AS4Path
+from exabgp.bgp.message.update.attribute.aspath import SET
+from exabgp.bgp.message.update.attribute.aspath import SEQUENCE
+from exabgp.bgp.message.update.attribute.aspath import CONFED_SET
+from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.attribute.nexthop import NextHopSelf
 from exabgp.bgp.message.update.attribute.med import MED
