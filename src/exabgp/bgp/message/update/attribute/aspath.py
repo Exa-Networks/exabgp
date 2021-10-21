@@ -10,6 +10,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from struct import unpack
 from struct import error
 
+import json
+
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -19,138 +21,150 @@ from exabgp.bgp.message.notification import Notify
 # =================================================================== ASPath (2)
 # only 2-4% of duplicated data therefore it is not worth to cache
 
+class SET(list):
+    ID = 0x01
+    NAME = "as-set"
+    HEAD = "["
+    TAIL = "]"
+
+
+class SEQUENCE(list):
+    ID = 0x02
+    NAME = "as-sequence"
+    HEAD = "("
+    TAIL = ")"
+
+
+class CONFED_SEQUENCE(list):
+    ID = 0x03
+    NAME = "as-sequence"
+    HEAD = "{("
+    TAIL = ")}"
+
+
+class CONFED_SET(list):
+    ID = 0x04
+    NAME = "as-sequence"
+    HEAD = "{["
+    TAIL = "]}"
+
+    # def __getslice__(self, i, j):
+    #     return CONFED_SET(list.__getslice__(self, i, j))
+
+    # def __add__(self, other):
+    #     return CONFED_SET(list.__add__(self,other))
+
 
 @Attribute.register()
 class ASPath(Attribute):
-    AS_SET = 0x01
-    AS_SEQUENCE = 0x02
-    AS_CONFED_SEQUENCE = 0x03
-    AS_CONFED_SET = 0x04
+    AS_SET = SET.ID
+    AS_SEQUENCE = SEQUENCE.ID
+    AS_CONFED_SEQUENCE = CONFED_SEQUENCE.ID
+    AS_CONFED_SET = CONFED_SET.ID
     ASN4 = False
 
     ID = Attribute.CODE.AS_PATH
     FLAG = Attribute.Flag.TRANSITIVE
 
-    def __init__(self, as_sequence, as_set, as_conf_sequence=None, as_conf_set=None, index=None):
-        self.as_seq = as_sequence
-        self.as_set = as_set
-        self.as_cseq = as_conf_sequence if as_conf_sequence is not None else []
-        self.as_cset = as_conf_set if as_conf_set is not None else []
+    _DISPATCH = {
+        SET.ID: SET,
+        SEQUENCE.ID: SEQUENCE,
+        CONFED_SEQUENCE.ID: CONFED_SEQUENCE,
+        CONFED_SET.ID: CONFED_SET,
+    }
+
+    def __init__(self, as_path=[], data=None):
+        self.aspath = as_path
         self.segments = b''
-        self._packed = {True: b'', False: b''}
-        self.index = index  # the original packed data, use for indexing
+        self.index = data  # the original packed data, use for indexing
         self._str = ''
-        self._json = {}
+        self._json = ''
 
     def __eq__(self, other):
         return (
             self.ID == other.ID
             and self.FLAG == other.FLAG
             and self.ASN4 == other.ASN4
-            and self.as_seq == other.as_seq
-            and self.as_set == other.as_set
+            and self.aspath == other.aspath
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def _segment(self, seg_type, values, asn4):
+    @classmethod
+    def _segment(cls, seg_type, values, asn4):
         length = len(values)
         if length:
             if length > 255:
-                return self._segment(seg_type, values[:255], asn4) + self._segment(seg_type, values[255:], asn4)
+                return cls._segment(seg_type, values[:255], asn4) + cls._segment(seg_type, values[255:], asn4)
             return bytes([seg_type, len(values)]) + b''.join(v.pack(asn4) for v in values)
         return b""
 
-    def _segments(self, asn4):
+    @classmethod
+    def _segments(cls, aspath, asn4):
         segments = b''
-        if self.as_cseq:
-            segments += self._segment(self.AS_CONFED_SEQUENCE, self.as_cseq, asn4)
-        if self.as_cset:
-            segments += self._segment(self.AS_CONFED_SET, self.as_cset, asn4)
-        if self.as_seq:
-            segments += self._segment(self.AS_SEQUENCE, self.as_seq, asn4)
-        if self.as_set:
-            segments += self._segment(self.AS_SET, self.as_set, asn4)
+        for content in aspath:
+            segments += cls._segment(content.ID, content, asn4)
         return segments
 
-    def asn_pack(self, negotiated, force_asn4=False):
-        asn4 = True if force_asn4 else negotiated.asn4
-        if not self._packed[asn4]:
-            self._packed[asn4] = self._attribute(self._segments(asn4))
-        return self._packed[asn4]
+    @classmethod
+    def _asn_pack(self, aspath, asn4):
+        return self._attribute(self._segments(aspath, asn4))
 
     def pack(self, negotiated):
-        # if the peer does not understand ASN4, we need to build a transitive AS4_PATH
         if negotiated.asn4:
-            return self.asn_pack(negotiated)
+            return self._asn_pack(self.aspath, negotiated.asn4)
 
-        as2_seq = [_ if not _.asn4() else AS_TRANS for _ in self.as_seq]
-        as2_set = [_ if not _.asn4() else AS_TRANS for _ in self.as_set]
+        # if the peer does not understand ASN4, we need to build a transitive AS4_PATH
+        astrans = []
+        asn4 = False
 
-        message = ASPath(as2_seq, as2_set, self.as_cseq, self.as_cset).asn_pack(negotiated, False)
-        if AS_TRANS in as2_seq or AS_TRANS in as2_set:
-            message += AS4Path(self.as_seq, self.as_set, self.as_cseq, self.as_cset).asn_pack(negotiated, True)
+        for content in self.aspath:
+            local = content.__class__()
+            for asn in content:
+                if not asn.asn4():
+                    local.append(asn)
+                else:
+                    local.append(AS_TRANS)
+                    asn4 = True
+            astrans.append(local)
+
+        message = ASPath(astrans).asn_pack(negotiated.asn4)
+        if asn4:
+            message += AS4Path(self.aspath).asn_pack(asn4)
+
         return message
 
     def __len__(self):
         raise RuntimeError('it makes no sense to ask for the size of this object')
 
-    def __repr__(self, confed=False):
-        if self._str:
-            return self._str
+    def __repr__(self):
+        if not self._str:
+            self._str = self.string()
+        return self._str
 
-        if self.as_cseq or self.as_cset:
-            string = self.string(self.as_seq, self.as_set) + self.string(self.as_cseq, self.as_cset)
-        else:
-            string = self.string(self.as_seq, self.as_set)
+    def string(self):
+        parts = []
+        for content in self.aspath:
+            part = "%s %s %s" % (content.HEAD, " ".join((str(_) for _ in content)), content.TAIL) 
+            parts.append(part)
+        return " ".join(parts)
 
-        self._str = string
-        return string
+    def json(self):
+        jason = {}
+        for pos, content in enumerate(self.aspath):
+            jason[pos] = {
+                'element': content.NAME,
+                'value': list(content),
+            }
 
-    def string(self, aseq, aset):
-        lseq = len(aseq)
-        lset = len(aset)
-        if lseq == 1:
-            if not lset:
-                string = '[ %d ]' % aseq[0]
-            else:
-                string = '[ %s %s]' % (aseq[0], '( %s ) ' % (' '.join([str(_) for _ in aset])))
-        elif lseq > 1:
-            if lset:
-                string = '[ %s %s]' % (
-                    (' '.join([str(_) for _ in aseq])),
-                    '( %s ) ' % (' '.join([str(_) for _ in aset])),
-                )
-            else:
-                string = '[ %s ]' % ' '.join([str(_) for _ in aseq])
-        else:  # lseq == 0
-            if lset:
-                string = '[ ( %s )]' % (' '.join([str(_) for _ in aset]))
-            else:
-                string = '[ ]'
-        return string
+        import pdb; pdb.set_trace()
 
-    def json(self, name):
-        match = {
-            # data , default representation
-            'as-path': (self.as_seq, '[]'),
-            'as-set': (self.as_set, ''),
-            'confederation-path': (self.as_cseq, '[]'),
-            'confederation-set': (self.as_cset, ''),
-        }
-
-        data, default = match[name]
-        self._json[name] = '[ %s ]' % ', '.join([str(_) for _ in data]) if data else default
-        return self._json[name]
+        self._json = json.dumps(jason)
+        return self._json
 
     @classmethod
     def _new_aspaths(cls, data, asn4, klass=None):
-        as_set = []
-        as_seq = []
-        as_cset = []
-        as_cseq = []
-
         backup = data
 
         unpacker = {
@@ -161,35 +175,32 @@ class ASPath(Attribute):
             False: 2,
             True: 4,
         }
-        as_choice = {
-            ASPath.AS_SEQUENCE: as_seq,
-            ASPath.AS_SET: as_set,
-            ASPath.AS_CONFED_SEQUENCE: as_cseq,
-            ASPath.AS_CONFED_SET: as_cset,
-        }
 
         upr = unpacker[asn4]
         length = size[asn4]
 
-        try:
+        aspath = []
 
+        try:
             while data:
                 stype = data[0]
                 slen = data[1]
 
-                if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE, ASPath.AS_CONFED_SEQUENCE, ASPath.AS_CONFED_SET):
+                if stype not in cls._DISPATCH:
                     raise Notify(3, 11, 'invalid AS Path type sent %d' % stype)
 
                 end = 2 + (slen * length)
                 sdata = data[2:end]
                 data = data[end:]
                 # Eat the data and ignore it if the ASPath attribute is know known
-                asns = as_choice.get(stype, [])
+                asns = cls._DISPATCH[stype]()
 
                 for _ in range(slen):
                     asn = unpack(upr, sdata[:length])[0]
                     asns.append(ASN(asn))
                     sdata = sdata[length:]
+
+                aspath.append(asns)
 
         except IndexError:
             raise Notify(3, 11, 'not enough data to decode AS_PATH or AS4_PATH')
@@ -197,8 +208,8 @@ class ASPath(Attribute):
             raise Notify(3, 11, 'not enough data to decode AS_PATH or AS4_PATH')
 
         if klass:
-            return klass(as_seq, as_set, as_cseq, as_cset, backup)
-        return cls(as_seq, as_set, as_cseq, as_cset, backup)
+            return klass(aspath, backup)
+        return cls(aspath, backup)
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
@@ -207,7 +218,7 @@ class ASPath(Attribute):
         return cls._new_aspaths(data, negotiated.asn4, ASPath)
 
 
-ASPath.Empty = ASPath([], [])
+ASPath.Empty = ASPath([])
 
 
 # ================================================================= AS4Path (17)

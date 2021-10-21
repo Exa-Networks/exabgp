@@ -31,6 +31,10 @@ from exabgp.bgp.message.update.attribute import NextHopSelf
 from exabgp.bgp.message.update.attribute import Origin
 from exabgp.bgp.message.update.attribute import MED
 from exabgp.bgp.message.update.attribute import ASPath
+from exabgp.bgp.message.update.attribute import SET
+from exabgp.bgp.message.update.attribute import SEQUENCE
+from exabgp.bgp.message.update.attribute import CONFED_SET
+from exabgp.bgp.message.update.attribute import CONFED_SEQUENCE
 from exabgp.bgp.message.update.attribute import LocalPreference
 from exabgp.bgp.message.update.attribute import AtomicAggregate
 from exabgp.bgp.message.update.attribute import Aggregator
@@ -190,37 +194,58 @@ def med(tokeniser):
 
 
 def as_path(tokeniser):
-    as_seq = []
-    as_set = []
-    value = tokeniser()
-    inset = False
-    try:
+    as_path = []
+    insert = None
+
+    while True:
+        value = tokeniser()
+
         if value == '[':
-            while True:
-                value = tokeniser()
-                if value == ',':
-                    continue
-                if value in ('(', '['):
-                    inset = True
-                    while True:
-                        value = tokeniser()
-                        if value in (')', ']'):
-                            break
-                        as_set.append(ASN.from_string(value))
-                if value == ')':
-                    inset = False
-                    continue
-                if value == ']':
-                    if inset:
-                        inset = False
-                        continue
-                    break
-                as_seq.append(ASN.from_string(value))
+            value = tokeniser.peek()
+
+            if value != '{':
+                insert = SEQUENCE()
+            else:
+                insert = CONFED_SEQUENCE()
+
+        elif value == '(':
+            value = tokeniser.peek()
+
+            if value != '{':
+                insert = SET()
+            else:
+                insert = CONFED_SET()
+
+        elif len(as_path) == 0:
+            try:
+                return ASPath(ASN.from_string(value))
+            except ValueError:
+                raise ValueError('could not parse as-path')
         else:
-            as_seq.append(ASN.from_string(value))
-    except ValueError:
-        raise ValueError('could not parse as-path')
-    return ASPath(as_seq, as_set)
+            raise ValueError('could not parse as-path')
+
+        while True:
+            value = tokeniser()
+
+            # could be too nice eating a trailing and ignore a erroneous },,
+            # but simpler that way
+            if value in (',', '}'):
+                continue
+
+            if value in (')', ']'):
+                as_path.append(insert)
+
+                value = tokeniser.peek()
+                if value in ('[', '('):
+                    break
+
+                return ASPath(as_path)
+
+            try:
+                insert.append(ASN.from_string(value))
+                continue
+            except ValueError:
+                raise ValueError('could not parse as-path')
 
 
 def local_preference(tokeniser):

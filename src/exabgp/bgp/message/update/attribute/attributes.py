@@ -96,13 +96,7 @@ class Attributes(dict):
     representation = {
         # key:  (how, default, name, text_presentation, json_presentation),
         Attribute.CODE.ORIGIN: ('string', '', 'origin', '%s', '%s'),
-        Attribute.CODE.AS_PATH: (
-            'multiple',
-            '',
-            ('as-path', 'as-set', 'confederation-path', 'confederation-set'),
-            '%s',
-            '%s',
-        ),
+        Attribute.CODE.AS_PATH: ('list', '', 'as-path', '%s', '%s'),
         Attribute.CODE.NEXT_HOP: ('string', '', 'next-hop', '%s', '%s'),
         Attribute.CODE.MED: ('integer', '', 'med', '%s', '%s'),
         Attribute.CODE.LOCAL_PREF: ('integer', '', 'local-preference', '%s', '%s'),
