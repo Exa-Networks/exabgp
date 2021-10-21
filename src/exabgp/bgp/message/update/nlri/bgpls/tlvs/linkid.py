@@ -62,7 +62,7 @@ class LinkIdentifier(object):
         return self.__str__()
 
     def __len__(self):
-        if self._packed is None:
+        if not self._packed:
             return 0
         return len(self._packed)
 
