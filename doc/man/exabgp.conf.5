@@ -92,7 +92,7 @@ group <groupname> {
         destination-port <portnumber-expression>;
         protocol [ udp | tcp ]; // IPv4 only
         next-header [ udp | tcp ]; // IPv6 only
-        tcp-flags [ fin | syn | rst | push | ack | urgent ];
+        tcp-flags [ fin | syn | rst | push | ack | urg | ece | cwr | ns ];
         icmp-type [ echo-reply | echo-request | info-reply |
 		    info-request | mask-reply | mask-request |
 		    parameter-problem | redirect | router-advertisment |

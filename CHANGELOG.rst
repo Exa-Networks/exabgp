@@ -4,7 +4,8 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.17
-
+ * Feature: add flags ECE, CW and NS to TCP, (not sure if any flowspec implementation uses them) #1053
+   reported by: enag11 
 
 Version 4.2.16
  * Fix: bacckport of fix for #1051 tcp-flag operators != and &!= return syntax error

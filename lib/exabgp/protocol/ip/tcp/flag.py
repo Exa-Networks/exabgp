@@ -22,11 +22,17 @@ class TCPFlag(BitResource):
     RST = 0x04
     PUSH = 0x08
     ACK = 0x10
-    URGENT = 0x20
+    URG = 0x20
+    ECE = 0x40
+    CWR = 0x80
+    NS = 0x100
 
     codes = dict(
         (k.lower().replace('_', '-'), v)
-        for (k, v) in {'FIN': FIN, 'SYN': SYN, 'RST': RST, 'PUSH': PUSH, 'ACK': ACK, 'URGENT': URGENT,}.items()
+        for (k, v) in {'FIN': FIN, 'SYN': SYN, 'RST': RST, 'PUSH': PUSH, 'ACK': ACK, 'URG': URG,}.items()
     )
 
     names = dict([(r, l) for (l, r) in codes.items()])
+
+    # Backward compatibility
+    codes['urgent'] = URG
