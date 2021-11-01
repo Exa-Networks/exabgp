@@ -447,7 +447,7 @@ class FlowICMPCode(IOperationByte, NumericString, IPv4, IPv6):
     decoder = staticmethod(decoder(_number, ICMPCode))
 
 
-class FlowTCPFlag(IOperationByte, BinaryString, IPv4, IPv6):
+class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID = 0x09
     NAME = 'tcp-flags'
     FLAG = True
