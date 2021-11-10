@@ -25,6 +25,10 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+
+from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message.direction import Direction
 
 from exabgp.logger import log
@@ -211,12 +215,21 @@ def check_message(neighbor, message):
 def check_nlri(neighbor, routes):
     option.enabled['parser'] = True
 
-    raw = _hexa(routes)
+    announced = _hexa(routes)
     negotiated = _negotiated(neighbor)
 
+    afi = AFI.ipv4
+    safi = SAFI.unicast
+
+    # Is the peer going to send us some Path Information with the route (AddPath)
+    addpath = negotiated.addpath.send(afi, safi)
+
+    nlris = []
     try:
-        # This does not take the BGP header - let's assume we will not break that :)
-        nlris = Update.unpack_nlri(raw, Direction.IN, negotiated)
+        while announced:
+            log.debug('parsing NLRI %s' % announced, 'parser')
+            nlri, announced = NLRI.unpack_nlri(afi, safi, announced, IN.ANNOUNCED, addpath)
+            nlris.append(nlri)
     except Exception:
         import traceback
 
@@ -228,7 +241,6 @@ def check_nlri(neighbor, routes):
 
     log.debug('', 'parser')  # new line
     for nlri in nlris:
-        import pdb; pdb.set_trace()
         log.info('nlri json %s' % nlri.json(), 'parser')
     return True
 
