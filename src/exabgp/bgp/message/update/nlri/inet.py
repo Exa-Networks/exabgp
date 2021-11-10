@@ -139,7 +139,7 @@ class INET(NLRI):
         size = CIDR.size(mask)
 
         if len(bgp) < size:
-            raise Notify(3, 10, 'could not decode route with family %s (AFI %d) %s (SAFI %d)' % (AFI(afi), int(afi), SAFI(safi), int(safi)))
+            raise Notify(3, 10, 'could not decode nlri with family %s (AFI %d) %s (SAFI %d)' % (AFI(afi), int(afi), SAFI(safi), int(safi)))
 
         network, bgp = bgp[:size], bgp[size:]
 

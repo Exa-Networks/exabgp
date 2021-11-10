@@ -48,6 +48,35 @@ from exabgp.bgp.message import Notification
 from exabgp.version import json as json_version
 
 
+def _hexa(data):
+    full = data.replace(':', '')
+    hexa = [full[i * 2 : (i * 2) + 2] for i in range(len(full) // 2)]
+    return bytes([int(_, 16) for _ in hexa])
+
+
+def _negotiated(neighbor):
+    path = {}
+    for f in NLRI.known_families():
+        if neighbor['capability']['add-path']:
+            path[f] = neighbor['capability']['add-path']
+
+    capa = Capabilities().new(neighbor, False)
+    capa[Capability.CODE.ADD_PATH] = path
+    capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
+    # capa[Capability.CODE.FOUR_BYTES_ASN] = True
+
+    routerid_1 = str(neighbor['router-id'])
+    routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor['router-id']).split('.', -1))
+
+    o1 = Open(Version(4), ASN(neighbor['local-as']), HoldTime(180), RouterID(routerid_1), capa)
+    o2 = Open(Version(4), ASN(neighbor['peer-as']), HoldTime(180), RouterID(routerid_2), capa)
+    negotiated = Negotiated(neighbor)
+    negotiated.sent(o1)
+    negotiated.received(o2)
+    # grouped = False
+    return negotiated
+
+
 # =============================================================== check_neighbor
 # ...
 
@@ -58,26 +87,7 @@ def check_generation(neighbors):
     for name in neighbors.keys():
         neighbor = copy.deepcopy(neighbors[name])
         neighbor['local-as'] = neighbor['peer-as']
-
-        path = {}
-        for f in NLRI.known_families():
-            if neighbor['capability']['add-path']:
-                path[f] = neighbor['capability']['add-path']
-
-        capa = Capabilities().new(neighbor, False)
-        if path:
-            capa[Capability.CODE.ADD_PATH] = path
-        capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
-
-        routerid_1 = str(neighbor['router-id'])
-        routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor['router-id']).split('.', -1))
-
-        o1 = Open(Version(4), ASN(neighbor['local-as']), HoldTime(180), RouterID(routerid_1), capa)
-        o2 = Open(Version(4), ASN(neighbor['peer-as']), HoldTime(180), RouterID(routerid_2), capa)
-        negotiated = Negotiated(neighbor)
-        negotiated.sent(o1)
-        negotiated.received(o2)
-        # grouped = False
+        negotiated = _negotiated(neighbor)
 
         for _ in neighbor.rib.outgoing.updates(False):
             pass
@@ -174,9 +184,7 @@ def check_generation(neighbors):
 
 
 def check_message(neighbor, message):
-    message = message.replace(':', '')
-    msghexa = [message[i * 2 : (i * 2) + 2] for i in range(len(message) // 2)]
-    raw = bytes([int(_, 16) for _ in msghexa])
+    raw = _hexa(message)
 
     if not raw.startswith(b'\xff' * 16):
         return check_update(neighbor, raw)
@@ -196,7 +204,36 @@ def check_message(neighbor, message):
     return False
 
 
-# ================================================================= check_update
+# =================================================================== check_nlri
+#
+
+
+def check_nlri(neighbor, routes):
+    option.enabled['parser'] = True
+
+    raw = _hexa(routes)
+    negotiated = _negotiated(neighbor)
+
+    try:
+        # This does not take the BGP header - let's assume we will not break that :)
+        nlris = Update.unpack_nlri(raw, Direction.IN, negotiated)
+    except Exception:
+        import traceback
+
+        log.error('could not parse the nlri', 'parser')
+        log.error(traceback.format_exc(), 'parser')
+        if getenv().debug.pdb:
+            raise
+        return False
+
+    log.debug('', 'parser')  # new line
+    for nlri in nlris:
+        import pdb; pdb.set_trace()
+        log.info('nlri json %s' % nlri.json(), 'parser')
+    return True
+
+
+# =================================================================== check_open
 #
 
 
@@ -210,26 +247,7 @@ def check_open(neighbor, raw):
 
 def check_update(neighbor, raw):
     option.enabled['parser'] = True
-
-    path = {}
-    for f in NLRI.known_families():
-        if neighbor['capability']['add-path']:
-            path[f] = neighbor['capability']['add-path']
-
-    capa = Capabilities().new(neighbor, False)
-    capa[Capability.CODE.ADD_PATH] = path
-    capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
-    # capa[Capability.CODE.FOUR_BYTES_ASN] = True
-
-    routerid_1 = str(neighbor['router-id'])
-    routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor['router-id']).split('.', -1))
-
-    o1 = Open(Version(4), ASN(neighbor['local-as']), HoldTime(180), RouterID(routerid_1), capa)
-    o2 = Open(Version(4), ASN(neighbor['peer-as']), HoldTime(180), RouterID(routerid_2), capa)
-    negotiated = Negotiated(neighbor)
-    negotiated.sent(o1)
-    negotiated.received(o2)
-    # grouped = False
+    negotiated = _negotiated(neighbor)
 
     while raw:
         if raw.startswith(b'\xff' * 16):
