@@ -219,15 +219,18 @@ class Reactor(object):
                 return True
         return False
 
-    def check(self, route):
+    def check(self, route, nlri_only=False):
         from exabgp.configuration.check import check_message
+        from exabgp.configuration.check import check_nlri
 
         if not self.reload():
             return 1
 
+        check = check_nlri if nlri_only else check_message
+
         neighbors = self.configuration.neighbors
         for neighbor in neighbors.values():
-            if not check_message(neighbor, route):
+            if not check(neighbor, route):
                 return 1
         return 0
 

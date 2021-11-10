@@ -22,6 +22,7 @@ def is_bgp(message):
 
 def setargs(sub):
     # fmt:off
+    sub.add_argument('-n', '--nlri', help='the data is only the NLRI', action='store_true')
     sub.add_argument('-d', '--debug', help='start the python debugger errors', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on fault', action='store_true')
     sub.add_argument('configuration', help='configuration file(s)', type=str)
@@ -67,7 +68,7 @@ def cmdline(cmdarg):
     trace_interceptor(env.debug.pdb)
 
     sanitized = ''.join(cmdarg.payload).replace(':', '').replace(' ', '')
-    Reactor([getconf(cmdarg.configuration)]).check(sanitized)
+    Reactor([getconf(cmdarg.configuration)]).check(sanitized, cmdarg.nlri)
 
 
 if __name__ == '__main__':
