@@ -218,8 +218,7 @@ def check_nlri(neighbor, routes):
     announced = _hexa(routes)
     negotiated = _negotiated(neighbor)
 
-    afi = AFI.ipv4
-    safi = SAFI.unicast
+    afi, safi = neighbor.families()[0]
 
     # Is the peer going to send us some Path Information with the route (AddPath)
     addpath = negotiated.addpath.send(afi, safi)
