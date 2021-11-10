@@ -330,22 +330,3 @@ class Update(Message):
         logfunc.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
 
         return update
-
-    # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
-    @classmethod
-    def unpack_nlri(cls, announced, direction, negotiated):
-        logfunc.debug(lazyformat('parsing NLRI', announced), 'parser')
-
-        # Is the peer going to send us some Path Information with the route (AddPath)
-        if direction == Direction.IN:
-            addpath = negotiated.addpath.receive(AFI.ipv4, SAFI.unicast)
-        else:
-            addpath = negotiated.addpath.send(AFI.ipv4, SAFI.unicast)
-
-        nlris = []
-
-        while announced:
-            nlri, announced = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, IN.ANNOUNCED, addpath)
-            nlris.append(nlri)
-
-        return nlris
