@@ -71,6 +71,8 @@ PROTO_CODES = {
     4: 'direct',
     5: 'static',
     6: 'ospfv3',
+    # not RFC/draft defined
+    227: 'freertr',
 }
 
 
