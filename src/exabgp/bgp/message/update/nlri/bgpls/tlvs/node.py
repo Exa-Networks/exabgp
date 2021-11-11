@@ -80,6 +80,7 @@ class NodeDescriptor(object):
                 iso_node = ISO.unpack_sysid(data[4 : 4 + 6])
                 psn = unpack('!B', data[4 + 6 : 4 + 7])[0]
                 return cls(node_id=iso_node, dtype=dtype, psn=psn, packed=data[: 4 + dlength]), data[4 + 7 :]
+            raise Notify(3, 5, 'could not decode Local Node descriptor')
         elif dtype == 512 and dlength == 4:
             # ASN
             return (
