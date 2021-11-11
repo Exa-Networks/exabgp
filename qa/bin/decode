@@ -1,2 +1,4 @@
 # a weird packet from Cisco 7600 with attribute not no NLRI (so not an EOR, just a junk, unless packet)
-./sbin/exabgp qa/conf/simple-v4.conf  --decode ffffffffffffffffffffffffffffffff004f02000000384001010040020e02030000aaaa0000aaaa0000aaaac0070800aa00aa0a0a0a0a4006004003040a0a0a0a8004040000000040050400000064
+./sbin/exabgp decode etc/exabgp/conf-new-v4.conf ffffffffffffffffffffffffffffffff004f02000000384001010040020e02030000aaaa0000aaaa0000aaaac0070800aa00aa0a0a0a0a4006004003040a0a0a0a8004040000000040050400000064 
+# decoding bgp-ls
+./sbin/exabgp decode --nlri etc/exabgp/conf-bgpls.conf "00 02 FF FF 03 00 00 00 00 00 00 00 00 01 00 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 0a 0a 0a 01 01 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 02 02 02"
