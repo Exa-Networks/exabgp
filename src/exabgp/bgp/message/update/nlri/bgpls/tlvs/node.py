@@ -60,11 +60,11 @@ class NodeDescriptor(object):
         # of the node: sec 3.2.1.4.
         elif dtype == 515:
             # OSPFv{2,3} non-pseudonode
-            if (igp == 3 or igp == 6) and dlength == 4:
+            if (igp == 3 or igp == 6 or igp == 227) and dlength == 4:
                 r_id = IP.unpack(data[4 : 4 + 4])
                 return cls(node_id=r_id, dtype=dtype, packed=data[: 4 + dlength]), data[4 + 4 :]
             # OSPFv{2,3} LAN pseudonode
-            if (igp == 3 or igp == 6) and dlength == 8:
+            if (igp == 3 or igp == 6 or igp == 227) and dlength == 8:
                 r_id = IP.unpack(data[4 : 4 + 4])
                 dr_id = IP.unpack(data[8 : 4 + 8])
                 return cls(node_id=r_id, dtype=dtype, psn=None, dr_id=dr_id, packed=data[: 4 + dlength]), data[4 + 8 :]
