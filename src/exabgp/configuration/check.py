@@ -198,7 +198,7 @@ def check_message(neighbor, message):
     # size = (raw[16] << 16) + raw[17]
 
     if kind == 1:
-        return check_open(neighbor, raw[18:])
+        return check_open(neighbor, raw[19:])
     if kind == 2:
         return check_update(neighbor, raw)
     if kind == 3:
@@ -249,8 +249,19 @@ def check_nlri(neighbor, routes):
 
 
 def check_open(neighbor, raw):
-    pass
+    import sys
+    import traceback
+    sys.excepthook = traceback.print_exception
 
+    try:
+        o = Open.unpack_message(raw, Direction.IN, _negotiated(neighbor))
+        print(o)
+    except Exception as exc:
+        print()
+        print("we could not decode this open message")
+        print("here is the traceback to help to figure out why")
+        print()
+        raise
 
 # ================================================================= check_update
 #
