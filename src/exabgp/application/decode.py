@@ -5,6 +5,8 @@ import syslog
 import string
 import argparse
 
+from exabgp.configuration.configuration import Configuration
+
 from exabgp.debug import trace_interceptor
 
 from exabgp.environment import Env
@@ -15,6 +17,18 @@ from exabgp.environment import ROOT
 from exabgp.reactor.loop import Reactor
 from exabgp.logger import log
 
+conf_all = """\
+neighbor 127.0.0.1 {
+        router-id 10.0.0.2;
+        local-address 127.0.0.1;
+        local-as 65533;
+        peer-as 65533;
+
+        family {
+                all
+        }
+}
+"""
 
 def is_bgp(message):
     return all(c in string.hexdigits or c == ':' for c in message)
@@ -25,7 +39,7 @@ def setargs(sub):
     sub.add_argument('-n', '--nlri', help='the data is only the NLRI', action='store_true')
     sub.add_argument('-d', '--debug', help='start the python debugger errors', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on fault', action='store_true')
-    sub.add_argument('configuration', help='configuration file(s)', type=str)
+    sub.add_argument('-c', '--configuration', help='configuration file(s)', type=str)
     sub.add_argument('payload', help='the BGP payload in hexadecimal', type=str)
     # fmt:on
 
@@ -68,7 +82,11 @@ def cmdline(cmdarg):
     trace_interceptor(env.debug.pdb)
 
     sanitized = ''.join(cmdarg.payload).replace(':', '').replace(' ', '')
-    Reactor([getconf(cmdarg.configuration)]).check(sanitized, cmdarg.nlri)
+    if cmdarg.configuration:
+        configuration = Configuration([getconf(cmdarg.configuration)])
+    else:
+        configuration = Configuration([conf_all], text=True)
+    Reactor(configuration).check(sanitized, cmdarg.nlri)
 
 
 if __name__ == '__main__':
