@@ -10,10 +10,11 @@ import argparse
 from exabgp.environment import getenv
 from exabgp.environment import getconf
 
+from exabgp.configuration.configuration import Configuration
+
 from exabgp.debug import trace_interceptor
 from exabgp.logger import log
 
-from exabgp.reactor.loop import Reactor
 from exabgp.configuration.check import check_generation
 
 
@@ -51,7 +52,7 @@ def cmdline(cmdarg):
             log.critical(f'{configuration} is not an exabgp config file', 'configuration')
             sys.exit(1)
 
-        config = Reactor([location]).configuration
+        config = Configuration([location])
 
         if not config.reload():
             log.critical(f'{configuration} is not a valid config file', 'configuration')

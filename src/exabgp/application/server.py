@@ -15,6 +15,7 @@ from exabgp.debug import trace_interceptor
 
 # import before the fork to improve copy on write memory savings
 from exabgp.reactor.loop import Reactor
+from exabgp.configuration.configuration import Configuration
 
 from exabgp.util.dns import warn
 from exabgp.logger import log
@@ -195,8 +196,10 @@ def run(comment, configurations, pid=0):
             log.info('to send commands  %s%s.in' % (pipe, pipename), 'cli control')
             log.info('to read responses %s%s.out' % (pipe, pipename), 'cli control')
 
+    configuration = Configuration(configurations)
+
     if not env.profile.enable:
-        exit_code = Reactor(configurations).run()
+        exit_code = Reactor(configuration).run()
         __exit(env.debug.memory, exit_code)
 
     try:
@@ -205,7 +208,7 @@ def run(comment, configurations, pid=0):
         import profile
 
     if env.profile.file == 'stdout':
-        profiled = 'Reactor(%s).run()' % (str(configurations))
+        profiled = 'Reactor(configuration).run()'
         exit_code = profile.run(profiled)
         __exit(env.debug.memory, exit_code)
 
@@ -226,7 +229,7 @@ def run(comment, configurations, pid=0):
         profiler = profile.Profile()
         profiler.enable()
         try:
-            exit_code = Reactor(configurations).run()
+            exit_code = Reactor(configuration).run()
         except Exception:
             exit_code = Reactor.Exit.unknown
             raise
@@ -249,7 +252,7 @@ def run(comment, configurations, pid=0):
         log.debug("-" * len(notice), 'reactor')
         log.debug(notice, 'reactor')
         log.debug("-" * len(notice), 'reactor')
-        Reactor(configurations).run()
+        Reactor(configuration).run()
         __exit(env.debug.memory, 1)
 
 

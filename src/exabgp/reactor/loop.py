@@ -22,7 +22,6 @@ from exabgp.reactor.asynchronous import ASYNC
 from exabgp.reactor.interrupt import Signal
 
 from exabgp.reactor.api import API
-from exabgp.configuration.configuration import Configuration
 from exabgp.environment import getenv
 
 from exabgp.bgp.fsm import FSM
@@ -51,7 +50,7 @@ class Reactor(object):
     # [hex(ord(c)) for c in os.popen('clear').read()]
     clear = b''.join(bytes([int(c, 16)]) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
-    def __init__(self, configurations):
+    def __init__(self, configuration):
         self._ips = getenv().tcp.bind
         self._port = getenv().tcp.port
         self._stopping = getenv().tcp.once
@@ -65,7 +64,7 @@ class Reactor(object):
 
         self.processes = None
 
-        self.configuration = Configuration(configurations)
+        self.configuration = configuration
         self.asynchronous = ASYNC()
         self.signal = Signal()
         self.daemon = Daemon(self)
