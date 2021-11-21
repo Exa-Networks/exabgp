@@ -151,7 +151,7 @@ class Notification(Message):
         return "%s / %s%s" % (
             self._str_code.get(self.code, 'unknown error'),
             self._str_subcode.get((self.code, self.subcode), 'unknow reason'),
-            '%s' % (' / %s' % self.data.decode("utf-8") if self.data else ''),
+            ' / %s' % self.data.decode('ascii') if self.data else '',
         )
 
     @classmethod
