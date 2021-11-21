@@ -81,8 +81,9 @@ class Open(Message):
     def unpack_message(cls, data, direction=None, negotiated=None):
         version = data[0]
         if version != 4:
-            # Only version 4 is supported nowdays..
-            raise Notify(2, 1, bytes(data[0], 'ascii'))
+            # Only version 4 is supported nowdays ..
+            raise Notify(2, 1, 'version number: %d' % data[0])
+
         asn = unpack('!H', data[1:3])[0]
         hold_time = unpack('!H', data[3:5])[0]
         numeric = unpack('!L', data[5:9])[0]
