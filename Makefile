@@ -1,5 +1,5 @@
-PYTHON_CMD ?= python
-PIP_CMD ?= pip
+PYTHON_CMD ?= python3
+PIP_CMD ?= pip3
 
 # set local bin in PATH for poetry
 export PATH := $(HOME)/.local/bin:$(PATH)
