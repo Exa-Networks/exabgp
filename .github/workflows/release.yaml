@@ -1,24 +1,24 @@
-# name: Publish packages
+name: Publish packages
 
-# on:
-#   push:
-#     tags:
-#     - 'v*'
+on:
+  push:
+    tags:
+    - 'v*'
 
-# jobs:
-#   assets:
-#     name: Release packages
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Check out src from Git
-#         uses: actions/checkout@v2
-#         with:
-#           fetch-depth: 0
+jobs:
+  assets:
+    name: Release packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out src from Git
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-#       - name: Set up Python 3.8
-#         uses: actions/setup-python@v1
-#         with:
-#           python-version: 3.8
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
 
 #     - name: Build
 #       run: |
