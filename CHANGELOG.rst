@@ -3,6 +3,8 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.18
+
 Version 4.2.17
  * Feature: add flags ECE, CW and NS to TCP, (not sure if any flowspec implementation uses them) #1053
    reported by: enag11
