@@ -2,14 +2,14 @@ Source: exabgp
 Maintainer: Vincent Bernat <bernat@debian.org>
 Section: net
 Priority: optional
-Build-Depends: debhelper (>= 9),
+Build-Depends: debhelper-compat (= 13),
                dh-python,
                python3-all,
                python3-setuptools,
 Build-Depends-Indep: python3-nose,
                      python3-psutil,
                      python3-six,
-Standards-Version: 4.1.1.0
+Standards-Version: 4.6.0.1
 Homepage: https://github.com/Exa-Networks/exabgp
 Vcs-Browser: https://github.com/Exa-Networks/exabgp/tree/debian/sid
 Vcs-Git: https://github.com/Exa-Networks/exabgp.git -b debian/sid
