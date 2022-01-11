@@ -16,7 +16,7 @@ gen_env_config() {
 
 case "$1" in
 configure)
-    adduser --quiet --system --group --disabled-login --home /var/run/exabgp exabgp
+    adduser --quiet --system --group --disabled-login --home /run/exabgp exabgp
     gen_env_config
     ;;
 esac

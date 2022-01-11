@@ -21,7 +21,7 @@ NAME=exabgp
 CONFIG="/etc/exabgp/exabgp.conf"
 DAEMON=/usr/sbin/exabgp
 DAEMON_OPTS="$CONFIG"
-PIDFILE=/var/run/$NAME/$NAME.pid
+PIDFILE=/run/$NAME/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed

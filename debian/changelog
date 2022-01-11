@@ -3,6 +3,7 @@ exabgp (4.2.17-1) unstable; urgency=medium
   * New upstream release
   * d/control: update Standards-Version
   * d/control: use debhelper-compat
+  * d/postinst: use /run instead of /var/run
 
  -- Vincent Bernat <bernat@debian.org>  Tue, 11 Jan 2022 22:57:34 +0100
 
