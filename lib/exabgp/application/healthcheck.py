@@ -87,10 +87,6 @@ def parse():
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__, formatter_class=formatter)
 
     g = parser.add_mutually_exclusive_group()
-    g.add_argument("--debug", "-d", action="store_true", default=False, help="enable debugging")
-    g.add_argument(
-        "--no-ack", "-a", action="store_true", default=False, help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false"
-    )
     g.add_argument("--silent", "-s", action="store_true", default=False, help="don't log to console")
     g.add_argument(
         "--syslog-facility",
@@ -101,8 +97,14 @@ def parse():
         default="daemon",
         help=("log to syslog using FACILITY, " "default FACILITY is daemon"),
     )
-    g.add_argument("--sudo", action="store_true", default=False, help="use sudo to setup ip addresses")
     g.add_argument("--no-syslog", action="store_true", help="disable syslog logging")
+
+    parser.add_argument(
+        "--no-ack", "-a", action="store_true", default=False, help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false"
+    )
+    parser.add_argument("--sudo", action="store_true", default=False, help="use sudo to setup ip addresses")
+    parser.add_argument("--debug", "-d", action="store_true", default=False, help="enable debugging")
+
     parser.add_argument("--name", "-n", metavar="NAME", help="name for this healthchecker")
     parser.add_argument("--config", "-F", metavar="FILE", type=open, help="read configuration from a file")
     parser.add_argument(
@@ -211,12 +213,14 @@ def parse():
         help="announce IPs with the supplied community when disabled",
     )
     g.add_argument("--as-path", metavar="ASPATH", type=str, default=None, help="announce IPs with the supplied as-path")
+    g.add_argument("--up-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is up")
+    g.add_argument("--down-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is down")
+    g.add_argument("--disabled-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is disabled")
     g.add_argument(
         "--withdraw-on-down",
         action="store_true",
         help=("Instead of increasing the metric on health failure, " "withdraw the route"),
     )
-
     g = parser.add_argument_group("reporting")
     g.add_argument("--execute", metavar='CMD', type=str, action="append", help="execute CMD on state change")
     g.add_argument(
@@ -469,14 +473,6 @@ def loop(options):
             return
         if target in (states.END,):
             return
-        # dynamic ip management. When the service fail, remove the loopback
-        if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
-            logger.info("exiting, deleting loopback ips")
-            remove_ips(options.ips, options.label, options.sudo)
-        # dynamic ip management. When the service fail, remove the loopback
-        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
-            logger.info("service down, deleting loopback ips")
-            remove_ips(options.ips, options.label, options.sudo)
         # if ips was deleted with dyn ip, re-setup them
         if target == states.UP and options.ip_dynamic:
             logger.info("service up, restoring loopback ips")
@@ -484,6 +480,9 @@ def loop(options):
 
         logger.info("send announces for %s state to ExaBGP", target)
         metric = vars(options).get("{0}_metric".format(str(target).lower()), 0)
+        as_path = vars(options).get("{0}_as_path".format(str(target).lower()), None)
+        if as_path is None:
+            as_path = options.as_path
         for ip in options.ips:
             if options.withdraw_on_down or target is states.EXIT:
                 command = "announce" if target is states.UP else "withdraw"
@@ -506,8 +505,8 @@ def loop(options):
                     announce = "{0} extended-community [ {1} ]".format(announce, options.extended_community)
                 if options.large_community:
                     announce = "{0} large-community [ {1} ]".format(announce, options.large_community)
-                if options.as_path:
-                    announce = "{0} as-path [ {1} ]".format(announce, options.as_path)
+                if as_path:
+                    announce = "{0} as-path [ {1} ]".format(announce, as_path)
 
             metric += options.increase
 
@@ -523,6 +522,15 @@ def loop(options):
             if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
                 continue
             sys.stdin.readline()
+
+        # dynamic ip management. When the service fail, remove the loopback
+        if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
+            logger.info("exiting, deleting loopback ips")
+            remove_ips(options.ips, options.label, options.sudo)
+        # dynamic ip management. When the service fail, remove the loopback
+        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
+            logger.info("service down, deleting loopback ips")
+            remove_ips(options.ips, options.label, options.sudo)
 
     def trigger(target):
         """Trigger a state change and execute the appropriate commands"""
@@ -606,7 +614,7 @@ def loop(options):
 
     signal.signal(signal.SIGTERM, sigterm_handler)
 
-    while True:
+    while os.getppid() != 1:
         checks, state = one(checks, state)
 
         try:

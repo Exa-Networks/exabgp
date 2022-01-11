@@ -41,7 +41,7 @@ class AtomicAggregate(Attribute):
         return 0
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         if data:
             raise Notify(3, 2, 'invalid ATOMIC_AGGREGATE %s' % [hex(ordinal(_)) for _ in data])
         return cls()

@@ -3,6 +3,51 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.17
+ * Feature: add flags ECE, CW and NS to TCP, (not sure if any flowspec implementation uses them) #1053
+   reported by: enag11
+ * Fix: bug with IGP Metric #1056
+   patch by: hkml2000
+
+Version 4.2.16
+ * Fix: bacckport of fix for #1051 tcp-flag operators != and &!= return syntax error
+   reported by: enag11
+
+Version 4.2.15
+ * Fix: #1035 Socket remains in CLOSED state after the interface goes down
+   patch: borjam
+ * Fix: #1041 backport
+
+Version 4.2.14
+ * Fix: issue reading data from the peer
+   reported by: isjerryxiao
+ * Feature: allow IPv6 redirect
+   patch by: rzalamena
+ * Fix: fix decoding of path information (inbound vs outbound)
+   reported by: isjerryxiao
+
+Version 4.2.13
+ * Fix: issue when there is no route to the peer and the connection looked like it established with the API
+   reported by: iddq
+ * Fix: healthcheck was not ending if/when exabgp did
+   reported by: mzealey
+ * Fix: issue with poller
+   reported by: emilstahl97
+
+Version 4.2.12
+ * Fix: issue with flow fragment (issue #1027)
+
+Version 4.2.11
+ * Feature: new release code allowing the creation of zipapp
+
+ Version 4.2.10:
+ * Fix: cache invalidation on clear command
+ patch by: Boris Murashov
+
+Version 4.2.9
+ * Fix: healthcheck --sudo, --debug and --no-ack are not exclusive
+   reported by: sincerywaing
+
 Version 4.2.8:
  * Fix: restore python -m exabgp
 

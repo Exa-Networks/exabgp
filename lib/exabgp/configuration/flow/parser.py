@@ -122,6 +122,8 @@ def _operator_binary(string):
         if string[0] == '=':
             return BinaryOperator.MATCH, string[1:]
         elif string[0] == '!':
+            if string.startswith('!='):
+                return BinaryOperator.DIFF, string[2:]
             return BinaryOperator.NOT, string[1:]
         else:
             return BinaryOperator.INCLUDE, string
@@ -298,10 +300,22 @@ def redirect(tokeniser):
             raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
         return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, route_target))
     else:
-        elements = data.split(':')
-        ip = ':'.join(elements[:-1])
-        asn = int(elements[-1])
-        return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, asn))
+        explicit_v6 = ']:' in data
+
+        # ipv4
+        if not explicit_v6 and data.count(':') == 1:
+            return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))
+
+        # ipv6 using []: notation
+        if explicit_v6:
+            ip, asn = data.split(']:')
+            ip = ip.replace('[', '', 1)
+            # FIXME: should this be 2^16 ??
+            if asn >= pow(2, 32):
+                raise ValueError('asn is a 32 bits number, value too large %s' % asn)
+            return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, asn))
+
+        raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
 
 
 def redirect_next_hop(tokeniser):

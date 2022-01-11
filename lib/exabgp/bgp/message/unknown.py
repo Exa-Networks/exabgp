@@ -30,7 +30,7 @@ class UnknownMessage(Message):
         return "UNKNOWN"
 
     @classmethod
-    def unpack_message(cls, data):  # pylint: disable=W0613
+    def unpack_message(cls, data, direction=None, negotiated=None):  # pylint: disable=W0613
         raise RuntimeError('should not have been used')
 
 

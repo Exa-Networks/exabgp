@@ -17,6 +17,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
 from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.nlri import NLRI
 
@@ -80,7 +81,7 @@ class MPURNLRI(Attribute, Family):
         return "MP_UNREACH_NLRI for %s %s with %d NLRI(s)" % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         nlris = []
 
         # -- Reading AFI/SAFI
@@ -91,8 +92,11 @@ class MPURNLRI(Attribute, Family):
         if negotiated and (afi, safi) not in negotiated.families:
             raise Notify(3, 0, 'presented a non-negotiated family %s %s' % (AFI.create(afi), SAFI.create(safi)))
 
-        # Is the peer going to send us some Path Information with the route (AddPath)
-        addpath = negotiated.addpath.receive(afi, safi)
+        # Do we need to handle Path Information with the route (AddPath)
+        if direction == Direction.IN:
+            addpath = negotiated.addpath.receive(afi, safi)
+        else:
+            addpath = negotiated.addpath.send(afi, safi)
 
         while data:
             nlri, data = NLRI.unpack_nlri(afi, safi, data, IN.WITHDRAWN, addpath)

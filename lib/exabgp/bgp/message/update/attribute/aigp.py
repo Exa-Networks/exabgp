@@ -99,7 +99,7 @@ class AIGP(Attribute):
         return '0x' + ''.join('%02x' % ordinal(_) for _ in self.aigp[-8:])
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         if not negotiated.neighbor.aigp:
             # AIGP must only be accepted on configured sessions
             return None

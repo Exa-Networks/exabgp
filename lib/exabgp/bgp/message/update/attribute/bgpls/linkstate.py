@@ -49,7 +49,7 @@ class LINKSTATE(Attribute):
         return lsid in cls.registered_lsids
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         ls_attrs = []
         while data:
             scode, length = unpack('!HH', data[:4])

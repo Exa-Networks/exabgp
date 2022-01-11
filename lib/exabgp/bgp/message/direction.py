@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # =================================================================== Direction
 #
 
+from enum import Enum
 
 class OUT(object):
     UNSET = 0x00
@@ -21,3 +22,8 @@ class IN(object):
     UNSET = 0x00
     ANNOUNCED = 0x01
     WITHDRAWN = 0x02
+
+
+class Direction(Enum):
+    IN = 1
+    OUT = 2

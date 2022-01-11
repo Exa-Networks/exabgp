@@ -39,7 +39,7 @@ class Outgoing(Connection):
                 bind(self.io, self.local, self.afi)
             asynchronous(self.io, self.peer)
             return None
-        except NetworkError as exc:
+        except Exception as exc:
             self.io.close()
             self.io = None
             return exc
@@ -52,7 +52,9 @@ class Outgoing(Connection):
         try:
             connect(self.io, self.peer, self.port, self.afi, self.md5)
             return None
-        except NetworkError as exc:
+        except Exception as exc:
+            self.io.close()
+            self.io = None
             return exc
 
     def establish(self):

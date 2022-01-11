@@ -61,7 +61,7 @@ class BitResource(Resource):
     def bits(self):
         value = int(self)
         for bit in self.names.keys():
-            if value & bit:
+            if value & bit or value == bit:
                 yield self.names[bit]
                 value -= bit
         if value:

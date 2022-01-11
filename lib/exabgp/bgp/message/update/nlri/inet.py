@@ -99,6 +99,8 @@ class INET(NLRI):
         nlri = cls(afi, safi, action)
 
         if addpath:
+            if len(bgp) <= 4:
+                raise ValueError("Trying to extract path-information but we do not have enough data")
             nlri.path_info = PathInfo(bgp[:4])
             bgp = bgp[4:]
 

@@ -11,6 +11,12 @@ import os
 import sys
 import fileinput
 
+import glob
+import shutil
+import zipapp
+import argparse
+
+
 CHANGELOG = 'CHANGELOG.rst'
 
 
@@ -25,7 +31,7 @@ class Path:
     build_root = os.path.join(root, 'build')
 
     @classmethod
-    def remove_egg(cls):
+    def remove_egg(cls, *args):
         from shutil import rmtree
 
         print('removing left-over egg')
@@ -52,8 +58,8 @@ version = os.environ.get('EXABGP_VERSION',release)
 # Do not change the first line as it is parsed by scripts
 
 if __name__ == '__main__':
-	import sys
-	sys.stdout.write(version)
+    import sys
+    sys.stdout.write(version)
 """
 
     @staticmethod
@@ -177,7 +183,7 @@ class Git(Command):
 #
 
 
-def release_github():
+def release_github(args):
 
     print()
     print('updating Github')
@@ -194,7 +200,7 @@ def release_github():
 
     tags = Git.tags()
     if release in tags:
-        print('this version/tag was already released/used')
+        print(f'version {release} was already released/used')
         return 1
 
     candidates = Version.candidates(Version.latest(tags))
@@ -252,7 +258,9 @@ def release_github():
     return 0
 
 
-def release_pypi(test):
+def release_pypi(args):
+    test = args.test
+
     print()
     print('updating PyPI')
 
@@ -279,55 +287,96 @@ def release_pypi(test):
     return 0
 
 
-def help():
-    print(
-        """\
-release help     this help
-release cleanup  delete left-over file from release
-release github   tag a new version on github, and update pypi
-release pypi     create egg/wheel
-release install  local installation
-"""
-    )
+def remove_cache():
+    for name in glob.glob('./lib/*/__pycache__'):
+        shutil.rmtree(name)
+    for name in glob.glob('./lib/*/*/__pycache__'):
+        shutil.rmtree(name)
+
+    for name in glob.glob('./lib/*/*.pyc'):
+        os.remove(name)
+    for name in glob.glob('./lib/*/*/*.pyc'):
+        os.remove(name)
+
+
+def generate_binary(args):
+    target = args.target
+    debug = args.debug
+
+    if sys.version_info.minor < 5:
+        sys.exit('zipapp is only available with python 3.5+')
+
+    FOLDER = os.path.dirname(os.path.realpath(__file__))
+    IMPORT = os.path.abspath(os.path.join(FOLDER, 'lib'))
+
+    if not os.path.exists(IMPORT):
+        sys.exit(f'could not import "{IMPORT}"')
+    sys.path = [IMPORT]
+
+    params = {
+        'source': 'lib',
+        'target': target,
+        'interpreter': '/usr/bin/env python3',
+        'main': 'exabgp.application.main:main',
+    }
+
+    if debug:
+        params['interpreter'] = '/usr/bin/env VYOSEXTRA_DEBUG=1 python3'
+    if sys.version_info.minor >= 7:
+        params['compressed'] = not debug
+
+    here = os.path.dirname(os.path.realpath(__file__))
+    data = os.path.abspath(os.path.join(here, 'data'))
+
+    zipapp.create_archive(**params)
+
+
+def show_version(args):
+    if args.version == 'current':
+        print(Version.current())
+    if args.version == 'release':
+        print(Version.changelog())
 
 
 def main():
+    # To late for it .. but here as a reminder that it can be done
+    os.environ['PYTHONDONTWRITEBYTECODE'] = ""
+
     if os.environ.get("SCRUTINIZER", "") == "true":
         sys.exit(0)
 
-    if len(sys.argv) < 2:
-        help()
-        sys.exit(1)
-
-    if sys.argv[1] == 'cleanup':
-        sys.exit(Path.remove_egg())
-
-    if sys.argv[1] == 'github':
-        sys.exit(release_github())
-
-    if sys.argv[1] == 'pypi':
-        sys.exit(release_pypi('--test' in sys.argv or 'test' in sys.argv))
-
-    # "internal" commands
-
-    if sys.argv[1] == 'current':
-        sys.stdout.write("%s\n" % Version.current())
-        sys.exit(0)
-
-    if sys.argv[1] == 'release':
-        sys.stdout.write("%s\n" % Version.changelog())
-        sys.exit(0)
-
-    if '--help' in sys.argv or 'help' in sys.argv:
-        help()
-        sys.exit(1)
-
-    if sys.argv[1] == 'debian':
+    if len(sys.argv) > 1 and sys.argv[1] == 'debian':
         release = Version.changelog()
         Debian.set(release)
         sys.exit(0)
 
-    sys.exit(1)
+    parser = argparse.ArgumentParser(description='exabgp release tool')
+    root = parser.add_subparsers()
+
+    binary = root.add_parser('binary',help='release an exabgp binary')
+    binary.add_argument('target', help='name of the binary to create', default='./vyos')
+    binary.add_argument('-d', '--debug', help='run python with pdb', action='store_true')
+    binary.set_defaults(func=generate_binary)
+
+    pypi = root.add_parser('pypi', help='create egg/wheel')
+    pypi.add_argument('-t', '--test', help='only test', action='store_true')
+    pypi.set_defaults(func=release_pypi)
+
+    github = root.add_parser('github', help='tag a new version on github, and update pypi')
+    github.set_defaults(func=release_github)
+
+    cleanup = root.add_parser('cleanup', help='delete left-over file from release')
+    cleanup.set_defaults(func=Path.remove_egg)
+
+    show = root.add_parser('show', help='show exabgp version')
+    show.add_argument('version', help='which version', choices=['current', 'release'])
+    show.set_defaults(func=show_version)
+
+    args = parser.parse_args()
+    if 'func' not in dir(args):
+        sys.exit(1)
+    args.func(args)
+    sys.exit(0)
 
 
 if __name__ == '__main__':

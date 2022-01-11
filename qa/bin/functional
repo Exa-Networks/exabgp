@@ -14,53 +14,13 @@ import sys
 import glob
 import time
 import signal
+import argparse
 import itertools
 import subprocess
 
 PROGRAM = os.path.realpath(__file__)
 ROOT = os.path.abspath(os.path.join(os.path.dirname(PROGRAM), os.path.join('..', '..')))
-LIBRARY = os.path.join(ROOT, 'lib')
-
-try:
-    import docopt
-except ImportError as exc:
-    # PROGRAM = os.path.abspath(os.path.join(os.getcwd(),sys.argv[0]))
-    LIBRARY = os.path.abspath(os.path.join(os.path.dirname(PROGRAM), os.path.join('..', '..', 'lib')))
-    sys.path.append(LIBRARY)
-    from exabgp.vendoring import docopt
-
-
-USAGE = """\
-usage:
-  functional help|--help
-  functional listing
-  functional all [--timeout <timeout>][--port <port>]
-  functional client <test> [--dry] [--timeout <timeout>][--port <port>]
-  functional server <test> [--dry] [--timeout <timeout>][--port <port>]
-  functional run [<test>] [--timeout <timeout>][--port <port>][--steps <steps>]
-  functional explain <test> [--timeout <timeout>][--port <port>]
-  functional decode <test> <payload>
-  functional edit <test>
-
-The BGP swiss army knife of networking functional testing tool
-
-commands:
-  listing    list all functional test available
-  all        run all available test
-  explain    show what command for a test are run
-  run        run a particular test
-  client     start the client for a specific test
-  server     start the server for a specific test
-  decode     use the cond
-  edit       start $EDITOR to edit a specific test
-
-optional arguments:
-  --help,           -h          this page
-  --dry,            -d          show what command would be run but does nothing
-  --port <port>,    -p <port>   base port to use [default: 1790]
-  --timeout <time>, -t <time>   timeout for test failure [default: 60]
-  --steps <steps>,  -s <steps>  number of test to run simultaneously [default: 0]
-"""
+LIBRARY = os.path.join(ROOT, 'src')
 
 EXPLAIN = """
 ExaBGP command line
@@ -82,8 +42,6 @@ export exabgp_debug_rotate=true
 export exabgp_debug_defensive=true
 """
 
-OPTIONS = docopt.docopt(USAGE, help=False)
-
 
 class Color(object):
     NONE = '\033[0m' + '\033[0m' + ' '  # NONE
@@ -93,29 +51,43 @@ class Color(object):
     SUCCESS = '\033[1m' + '\033[92m' + '+'  # GREEN
 
 
-class Identifier(object):
+class Identifier(dict):
     _listing = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    _from_name = {}
+    _from_nick = {}
     _next = 0
     _nl = 3
 
     @classmethod
-    def get(cls):
+    def get(cls, name):
+        letter = cls._listing[cls._next]
+        cls._from_name[name] = letter
+        cls._from_nick[letter] = name
         cls._next += 1
-        return cls._listing[cls._next - 1]
+        return letter
 
     @classmethod
     def identifiers(cls):
         for n in range(0, cls._next):
             yield cls._listing[n], not (n + 1) % cls._nl
 
+    @classmethod
+    def nick(cls, name):
+        return cls._from_name[name]
+
+    @classmethod
+    def name(cls, nick):
+        return cls._from_nick[nick]
+
 
 class Port(object):
-    _next = int(OPTIONS['--port']) - 1
+    base = 1790
 
     @classmethod
     def get(cls):
-        cls._next += 1
-        return cls._next
+        current = cls.base
+        cls.base += 1
+        return current
 
 
 class Path(object):
@@ -150,11 +122,11 @@ class CI(dict):
     @classmethod
     def make(cls):
         for filename in Path.ALL_CI:
-            index = Identifier.get()
             name, extension = os.path.splitext(filename.split('/')[-1])
+            nick = Identifier.get(name)
             with open(filename, 'r') as reader:
                 content = reader.readline()
-                cls._content[index] = {
+                cls._content[nick] = {
                     'name': name,
                     'confs': [os.path.join(Path.ETC, _) for _ in content.split()],
                     'ci': os.path.join(Path.CI, name) + '.ci',
@@ -216,10 +188,12 @@ class CI(dict):
 
     @classmethod
     def display(cls):
-        sys.stdout.write('\r')
+        # sys.stdout.write('\r')
         for k in cls._tests:
             sys.stdout.write('%s%s ' % (CI.color(k), k))
         sys.stdout.write(Color.NONE)
+        # same line printing now buggy
+        sys.stdout.write('\r')
         sys.stdout.flush()
 
     @classmethod
@@ -382,7 +356,7 @@ class Command(dict):
         return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s \\\n    %(msg)s' % config
 
     @staticmethod
-    def dispatch(running):
+    def dispatch(running, timeout):
         completed = True
         names = []
         for name in running:
@@ -403,7 +377,7 @@ class Command(dict):
                 CI.display()
                 time.sleep(0.02)
 
-        exit_time = time.time() + int(OPTIONS['--timeout'])
+        exit_time = time.time() + timeout
 
         while names and time.time() < exit_time:
             CI.display()
@@ -436,70 +410,115 @@ class Command(dict):
         return completed
 
 
+def _run(to_run, chunk, timeout):
+    success = True
+    while to_run and success:
+        running, to_run = to_run[:chunk], to_run[chunk:]
+        success = Command.dispatch(running, timeout)
+    sys.stdout.write('\n')
+
+    sys.exit(0 if success else 1)
+
+
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='The BGP swiss army knife of networking functional testing tool')
+    subparsers = parser.add_subparsers()
 
-    if OPTIONS['help'] or OPTIONS['--help']:
-        print(USAGE)
+    def all(parsed):
+        to_run = [index for index, _ in Identifier.identifiers()]
+        chunk = 1
+        _run(to_run, chunk, parsed.timeout)
+
+    sub = subparsers.add_parser('all', help='run all available test')
+    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
+    sub.add_argument('--port', help='base port to use', type=int, default=1790)
+    sub.set_defaults(func=all)
+
+    def run(parsed):
+        Port.base = parsed.port
+        if parsed.test:
+            to_run = [
+                parsed.test,
+            ]
+        else:
+            to_run = [index for index, _ in Identifier.identifiers()]
+        chunk = len(to_run) if not parsed.steps else parsed.steps
+        _run(to_run, chunk, parsed.timeout)
+
+    sub = subparsers.add_parser('run', help='run a particular test')
+    sub.add_argument('test', help='name of the test to run', nargs='?', default=None)
+    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
+    sub.add_argument('--port', help='base port to use', type=int, default=1790)
+    sub.add_argument('--steps', help='number of test to run simultaneously', type=int, default=0)
+    sub.set_defaults(func=run)
+
+    def client(parsed):
+        command = Command.client(parsed.test)
+        print(f'> {command}')
+        if not parsed.dry:
+            sys.exit(os.system(command))
         sys.exit(0)
 
-    if OPTIONS['listing']:
-        CI.listing()
+    sub = subparsers.add_parser('client', help='start the client for a specific test')
+    sub.add_argument('test', help='name of the test to run')
+    sub.add_argument('-d', '--dry', help='show what command would be run but does nothing', action='store_true')
+    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
+    sub.add_argument('--port', help='base port to use', type=int, default=1790)
+    sub.set_defaults(func=client)
+
+    def server(parsed):
+        command = Command.server(parsed.test)
+        print(f'> {command}')
+        if not parsed.dry:
+            sys.exit(os.system(command))
         sys.exit(0)
 
-    if OPTIONS['explain']:
-        Command.explain(OPTIONS['<test>'])
+    sub = subparsers.add_parser('server', help='start the server for a specific test')
+    sub.add_argument('test', help='name of the test to run')
+    sub.add_argument('-d', '--dry', help='show what command would be run but does nothing', action='store_true')
+    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
+    sub.add_argument('--port', help='base port to use', type=int, default=1790)
+    sub.set_defaults(func=server)
+
+    def explain(parsed):
+        Command.explain(parsed.test)
         sys.exit(0)
 
-    if OPTIONS['edit']:
-        files = CI.files(OPTIONS['<test>'])
+    sub = subparsers.add_parser('explain', help='show what command for a test are run')
+    sub.add_argument('test', help='name of the test to explain')
+    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
+    sub.add_argument('--port', help='base port to use', type=int, default=1790)
+    sub.set_defaults(func=explain)
+
+    def edit(parsed):
+        files = CI.files(parsed.test)
         if not files:
             sys.exit('no such test')
         editor = os.environ.get('EDITOR', 'vi')
         os.system('%s %s' % (editor, ' '.join(files)))
         sys.exit(0)
 
-    if OPTIONS['decode']:
-        test = CI.get(OPTIONS['<test>'])
-        command = '%s -d %s --decode "%s"' % (Path.EXABGP, test['confs'][0], OPTIONS['<payload>'])
+    sub = subparsers.add_parser('edit', help='start $EDITOR to edit a specific test')
+    sub.add_argument('test', help='name of the test to edit')
+    sub.set_defaults(func=edit)
+
+    def decode(parsed):
+        test = CI.get(parsed.test)
+        command = '%s decode %s  "%s"' % (Path.EXABGP, test['confs'][0], ''.join(parsed.payload))
         print('> %s' % command)
         os.system(command)
         sys.exit(0)
 
-    if OPTIONS['client']:
-        command = Command.client(OPTIONS['<test>'])
-        print('> ' + command)
-        if not OPTIONS['--dry']:
-            sys.exit(os.system(command))
-        sys.exit(0)
+    sub = subparsers.add_parser('decode', help='use the test configuration to decode a packet')
+    sub.add_argument('test', help='name of the test to use to know the BGP configuration')
+    sub.add_argument('payload', nargs='+', help='the hexadecimal representation of the packet')
+    sub.set_defaults(func=decode)
 
-    if OPTIONS['server']:
-        command = Command.server(OPTIONS['<test>'])
-        print('> ' + command)
-        if not OPTIONS['--dry']:
-            sys.exit(os.system(command))
-        sys.exit(0)
+    sub = subparsers.add_parser('listing', help='list all functional test available')
+    sub.set_defaults(func=lambda _: CI.listing())
 
-    if OPTIONS['run']:
-        test = OPTIONS['<test>']
-        to_run = (
-            [index for index, _ in Identifier.identifiers()] if test is None else [test,]
-        )
-        chunk = len(to_run) if not int(OPTIONS['--steps']) else int(OPTIONS['--steps'])
-    elif OPTIONS['all']:
-        to_run = [index for index, _ in Identifier.identifiers()]
-        chunk = 1
+    parsed = parser.parse_args()
+    if vars(parsed):
+        parsed.func(parsed)
     else:
-        print(USAGE)
-        sys.exit(1)
-
-    CI.listing()
-    success = True
-    while to_run and success:
-        running, to_run = to_run[:chunk], to_run[chunk:]
-        success = Command.dispatch(running)
-    sys.stdout.write('\n')
-
-    sys.exit(0 if success else 1)
-
-    print(USAGE)
-    sys.exit(1)
+        parser.print_help()

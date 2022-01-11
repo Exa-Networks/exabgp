@@ -268,7 +268,7 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
             self,
             community
             if community is not None
-            else pack("!BB16sH", 0x00, 0x02, socket.inet_aton(socket.AF_INET6, ip), asn),
+            else pack("!BB16sH", 0x00, 0x02, socket.inet_pton(socket.AF_INET6, ip), asn),
         )
 
     def __str__(self):

@@ -45,7 +45,7 @@ class PrefixSid(Attribute):
         return register_srid
 
     @classmethod
-    def unpack(cls, data, negotiated):
+    def unpack(cls, data, direction, negotiated):
         sr_attrs = []
         while data:
             # Type = 1 octet

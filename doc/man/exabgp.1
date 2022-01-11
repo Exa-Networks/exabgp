@@ -6,13 +6,17 @@
 .Nd Influence or control network using BGP
 .Sh SYNOPSIS
 .Nm
-.Op Fl -folder Ar folder | Fl f Ar folder
+.Op Fl -help | Fl h
+.Op Fl -version | Fl v
+.Op Fl -root | Fl f
 .Op Fl -env Ar env-config | Fl e Ar env-config
 .Op Fl -full-ini | Fl -fi
 .Op Fl -diff-ini | Fl -di
 .Op Fl -full-env | Fl -fe
 .Op Fl -diff-env | Fl -de
+.Op Fl -run Ar helper
 .Op Fl -debug | Fl d
+.Op Fl -validate
 .Op Fl -signal Ar time
 .Op Fl -once | Fl 1
 .Op Fl -pdb | Fl p
@@ -20,8 +24,6 @@
 .Op Fl -profile Ar profile
 .Op Fl -test | Fl t
 .Op Fl -decode Ar hex-message | Fl x Ar hex-message
-.Op Fl -help | Fl h
-.Op Fl -version | Fl v
 .Op Ar configuration ...
 .Sh DESCRIPTION
 .Nm
@@ -37,8 +39,15 @@ formatted text.
 .Pp
 The arguments are as follows:
 .Bl -tag -width indent
-.It Fl -folder Ar folder | Fl f Ar folder
-Specify the directory where the configuration file can be found.
+
+.It Fl -help | Fl h
+Display summary of usage and configuration of exabgp.
+.It Fl -version | Fl v
+Display the
+.Nm
+version number and exit.
+.It Fl -root Ar folder | Fl f Ar folder
+Root folder where etc, bin, sbin are located.
 .It Fl -env Ar env-config | Fl e Ar env-config
 Specify where the environment configuration file can be found.
 .It Fl -full-ini | Fl -fi
@@ -52,11 +61,15 @@ Display the full environment configuration on stdout using the env
 format.
 .It Fl -diff-env | Fl -de
 Display the non-default configuration on stdout using the env format.
+.It Fl -run Ar helper
+Do not run ExaBGP but one of its helper programs, options are: healthcheck and cli
 .It Fl -debug | Fl d
 Start the python debugger on serious logging on and on reception of
 the SIGTERM signal.  
 This is a shortcut for exabgp.log.all=true and
 exabgp.log.level=DEBUG.
+.It Fl -validate
+Validate the configuration file format only.
 .It Fl -signal Ar time
 Issue a SIGUSR1 signal to reload the configuration after the specified
 number of seconds, only useful for code debugging.
@@ -77,12 +90,7 @@ exabgp.profile.file=profile.
 Only do a configuration validity check.
 .It Fl -decode Ar hex-message | Fl x Ar hex-message
 Decode a raw route packet in hexadecimal string.
-.It Fl -help | Fl h
-Display summary of usage and configuration of exabgp.
-.It Fl -version | Fl v
-Display the
-.Nm
-version number and exit.
+
 .El
 .Sh ENVIRONMENT
 The configuration of exabgp is split in two:
