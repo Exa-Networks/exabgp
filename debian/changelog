@@ -4,6 +4,7 @@ exabgp (4.2.17-1) unstable; urgency=medium
   * d/control: update Standards-Version
   * d/control: use debhelper-compat
   * d/postinst: use /run instead of /var/run
+  * d/control: add ${misc:Pre-Depends}
 
  -- Vincent Bernat <bernat@debian.org>  Tue, 11 Jan 2022 22:57:34 +0100
 
