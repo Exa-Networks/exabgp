@@ -34,3 +34,4 @@ fake-eggs
 init
 artifacts
 requirements.txt
+poetry.lock
