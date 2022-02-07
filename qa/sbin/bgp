@@ -18,7 +18,7 @@ import threading
 import signal
 import asyncore
 import subprocess
-from struct import unpack
+from struct import unpack, pack
 
 SIGNAL = dict([(name, getattr(signal, name)) for name in dir(signal) if name.startswith('SIG')])
 
@@ -234,7 +234,27 @@ class BGPHandler(asyncore.dispatcher_with_send):
         # reply with a IBGP response with the same capability (just changing routerID)
         header, body = self.read_message()
         routerid = bytearray([body[8] + 1 & 0xFF])
-        o = header + body[:8] + routerid + body[9:]
+
+        if self.options['local-as'] is None:
+                # Use the same ASN as the peer. A iBGP Peering is formed.
+                o = header + body[:8] + routerid + body[9:]
+        else:
+            #Check if peer supports Four-Octet Autonomous System (RFC6793)
+            opt_params = body[10:]
+            offset = 0
+            while offset < len(opt_params):
+                param_type = opt_params[offset]
+                param_len  = opt_params[offset+1]
+                if param_type == 2: # Capabilities Optional Parameter
+                    cap_code = opt_params[offset+2]
+                    if cap_code == 65: # Support for 4 octet AS number capability
+                        o = header + body[0:1] + pack("!H", self.options['local-as']) + body[3:8] + routerid + body[9:10] + \
+                                opt_params[:offset+2+2] + pack("!I", self.options['local-as']) + opt_params[offset+2+2+4:]
+                        break
+                offset += param_len + 2
+            else:
+                # No "Support for 4 octet AS number capability" found simply replace the 16-bit ASN number field.
+                o = header + body[0:1] + pack("!H", self.options['local-as']) + body[3:8] + routerid + body[9:]
 
         if self.options['send-unknown-capability']:
             # hack capability 66 into the message
@@ -433,6 +453,7 @@ class BGPServer(asyncore.dispatcher):
             'send-notification': False,  # send notification messages to the backend
             'signal-SIGUSR1': 0,  # send SIGUSR1 after X seconds
             'single-shot': False,  # we can not test signal on python 2.6
+            'local-as': None, # Don't modify the local AS per default. 
             'sink': False,  # just accept whatever is sent
             'echo': False,  # just accept whatever is sent
         }
@@ -531,15 +552,18 @@ def main():
     port = os.environ.get('exabgp.tcp.port', os.environ.get('exabgp_tcp_port', '179'))
 
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('--help', help='this help :-)')
-    parser.add_argument('--echo', help='accept any BGP messages send it back to the emiter', action='store_true')
-    parser.add_argument('--sink', help='accept any BGP messages and reply with a keepalive', action='store_true')
-    parser.add_argument('--port', help='port to bind to', type=int, default=port)
-    parser.add_argument('checks', help='a list of expected route announcement/withdrawl', nargs='?', type=open)
+    parser.add_argument('--help',     help='this help :-)')
+    parser.add_argument('--echo',     help='accept any BGP messages send it back to the emiter', action='store_true')
+    parser.add_argument('--sink',     help='accept any BGP messages and reply with a keepalive', action='store_true')
+    parser.add_argument('--local-as', help='use this ASN instead of the peers ASN. Usefull for testing eBGP-Peerings', type=int, default=None)
+    parser.add_argument('--port',     help='port to bind to', type=int, default=port)
+    parser.add_argument('checks',     help='a list of expected route announcement/withdrawl', nargs='?', type=open)
 
     cmdarg = parser.parse_args()
 
-    if cmdarg.port <= 0 and port > 65535 or cmdarg.help:
+    if cmdarg.help or \
+       cmdarg.port <= 0 or cmdarg.port > 65535 or \
+       cmdarg.local_as < 0 or cmdarg.local_as > 65535: # Don't allow 4-byte ASN, as peer maybe not supports 4-byte asn
         parser.print_help()
         flushed('a list of expected route announcement/withdrawl in the format:')
         flushed(
@@ -554,6 +578,7 @@ def main():
         'sink': cmdarg.sink,
         'echo': cmdarg.echo,
         'port': cmdarg.port,
+        'local-as': cmdarg.local_as,
         'messages': []
     }
     # fmt: on
