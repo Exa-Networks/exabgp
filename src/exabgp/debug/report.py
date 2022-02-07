@@ -21,13 +21,16 @@ from exabgp.logger import log
 from exabgp.logger import history
 
 
-def format_exception(exception):
+def string_exception(exception):
     buff = StringIO()
     traceback.print_exc(file=buff)
     trace = buff.getvalue()
     buff.close()
+    return trace
 
-    return '\n'.join([_NO_PANIC + _INFO, '', '', str(type(exception)), str(exception), trace, _FOOTER])
+
+def format_exception(exception):
+    return '\n'.join([_NO_PANIC + _INFO, '', '', str(type(exception)), str(exception), string_exception(exception), _FOOTER])
 
 
 def format_panic(dtype, value, trace):

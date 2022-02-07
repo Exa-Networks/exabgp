@@ -229,11 +229,10 @@ def check_nlri(neighbor, routes):
             log.debug('parsing NLRI %s' % announced, 'parser')
             nlri, announced = NLRI.unpack_nlri(afi, safi, announced, IN.ANNOUNCED, addpath)
             nlris.append(nlri)
-    except Exception:
-        import traceback
-
+    except Exception as exc:
         log.error('could not parse the nlri', 'parser')
-        log.error(traceback.format_exc(), 'parser')
+        from exabgp.debug import string_exception
+        log.error(string_exception(exc), 'parser')
         if getenv().debug.pdb:
             raise
         return False
