@@ -561,9 +561,10 @@ def main():
 
     cmdarg = parser.parse_args()
 
+    # Don't allow 4-byte ASN, as peer maybe not supports 4-byte asn
     if cmdarg.help or \
        cmdarg.port <= 0 or cmdarg.port > 65535 or \
-       cmdarg.local_as < 0 or cmdarg.local_as > 65535: # Don't allow 4-byte ASN, as peer maybe not supports 4-byte asn
+       cmdarg.local_as is not None and (cmdarg.local_as < 0 or cmdarg.local_as > 65535):
         parser.print_help()
         flushed('a list of expected route announcement/withdrawl in the format:')
         flushed(
