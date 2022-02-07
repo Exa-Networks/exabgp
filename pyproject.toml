@@ -120,10 +120,17 @@ statistics = true
 exclude = '.git,.tox,__pycache__,build,dist,tests/*,src/exabgp/vendoring/*,'
 
 select = 'B,C,E,F,W,T4,B9'
+# E131 continuation line unaligned for hanging indent
+# E203 whitespace before ':'
 # E222 multiple spaces after operator
 # E231 missing whitespace after ','
 # E241 multiple spaces after ':'
-# E131 continuation line unaligned for hanging indent
+# E266 
+# E501 line too long
+# W191
+# W503
+# F401 imported but unused
+# F403
 # the last , is required otherwise the last error ignore is not applied
 ignore = 'E222,E231,E241,E131,E203,E266,E501,W503,F403,F401,'
 variable-rgx = "[a-z_][a-z0-9_]{0,30}$"
