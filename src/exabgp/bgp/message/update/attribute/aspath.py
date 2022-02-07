@@ -94,18 +94,15 @@ class ASPath(Attribute):
     @classmethod
     def _segment(cls, seg_type, values, asn4):
         length = len(values)
-        if length:
-            if length > 255:
-                return cls._segment(seg_type, values[:255], asn4) + cls._segment(seg_type, values[255:], asn4)
-            return bytes([seg_type, len(values)]) + b''.join(v.pack(asn4) for v in values)
-        return b""
+        if length == 0:
+            return b""
+        if length > 255:
+            return cls._segment(seg_type, values[:255], asn4) + cls._segment(seg_type, values[255:], asn4)
+        return bytes([seg_type, length]) + b''.join(v.pack(asn4) for v in values)
 
     @classmethod
     def _segments(cls, aspath, asn4):
-        segments = b''
-        for content in aspath:
-            segments += cls._segment(content.ID, content, asn4)
-        return segments
+        return cls._segment(cls.ID, aspath, asn4)
 
     @classmethod
     def _asn_pack(self, aspath, asn4):
