@@ -36,7 +36,7 @@ test: poetry.lock
 	@echo "Target test"
 	./qa/bin/parsing
 	./qa/bin/functional run
-	./sbin/exabgp decode ./etc/exabgp/api-open.conf FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
+	./sbin/exabgp decode -c ./etc/exabgp/api-open.conf FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
 	env exabgp_log_enable=false nosetests --with-coverage ./tests/*_test.py
 
 syntax: poetry.lock
