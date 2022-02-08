@@ -3,3 +3,5 @@ flake8
 coveralls
 nose
 psutil
+pytest
+pytest-cov
