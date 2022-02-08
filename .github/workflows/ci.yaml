@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
+        pip install flake8 pytest nose
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         if [ -f qa/requirements.txt ]; then pip install -r qa/requirements.txt; fi
     - name: Lint with flake8

@@ -25,6 +25,8 @@ Version 5.0.0:
  * Fix: AddPath parsing issue (issue 1041)
  * Feature: Added show neighbor json to the CLI
  * Feature: use as-path with a series of [] () [{}]({}) : [] sequence, () set, {} for confed
+ * Feature: support for Poetry
+   patch: Ahmet Demir
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
