@@ -41,7 +41,7 @@ include = ["*.txt", "*.rst"]
 # url = 'http://example.com/simple'
 
 [tool.poetry.dependencies]
-python = "~3.6 || ~3.7 || ^3.8"  # Compatible python versions must be declared here
+python = "~3.7 || ^3.8 || ^3.9"  # Compatible python versions must be declared here
 pygments-yang-lexer = "^0.2"
 pyang = "^2.3.2"
 pyangbind="^0.8.1"
@@ -58,7 +58,7 @@ flake8-bugbear = "^20.11.1"
 flakehell = "^0.9.0"
 isort = "^5.7.0"
 nose = "^1.3.7"
-pex = { version="^2.1.28", python = ">=3.6,<3.10" }
+pex = { version="^2.1.28", python = ">=3.7,<3.10" }
 psutil = "^5.7.2"
 pudb = "^2019.2"
 pytest = "^7.0.0"
