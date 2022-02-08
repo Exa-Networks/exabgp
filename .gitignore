@@ -5,6 +5,7 @@ __pycache__/
 /dist/
 /sdist/
 /cover/
+/htmlcov/
 
 *.sln
 

@@ -37,7 +37,7 @@ test: poetry.lock
 	./qa/bin/parsing
 	./qa/bin/functional run
 	./sbin/exabgp decode -c ./etc/exabgp/api-open.conf FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
-	env exabgp_log_enable=false nosetests --with-coverage ./tests/*_test.py
+	env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
 
 syntax: poetry.lock
 	@echo "Target syntax"

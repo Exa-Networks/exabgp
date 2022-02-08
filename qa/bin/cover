@@ -1,2 +1,2 @@
 #/bin/sh
-nosetests --cover-erase --with-coverage --cover-html --pdb
+env exabgp_log_enable=false pytest --cov --cov-reset --cov-report=html ./tests/*_test.py
