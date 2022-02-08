@@ -101,16 +101,19 @@ class ASPath(Attribute):
         return bytes([seg_type, length]) + b''.join(v.pack(asn4) for v in values)
 
     @classmethod
-    def _segments(cls, aspath, asn4):
-        return cls._segment(cls.ID, aspath, asn4)
+    def pack_segments(cls, aspath, asn4):
+        segments = b''
+        for content in aspath:
+            segments += cls._segment(content.ID, content, asn4)
+        return cls._attribute(segments)
 
     @classmethod
     def _asn_pack(self, aspath, asn4):
-        return self._attribute(self._segments(aspath, asn4))
+        return self._attribute(self._segment(self.ID, aspath, asn4))
 
     def pack(self, negotiated):
         if negotiated.asn4:
-            return self._asn_pack(self.aspath, negotiated.asn4)
+            return self.pack_segments(self.aspath, negotiated.asn4)
 
         # if the peer does not understand ASN4, we need to build a transitive AS4_PATH
         astrans = []
@@ -126,9 +129,9 @@ class ASPath(Attribute):
                     asn4 = True
             astrans.append(local)
 
-        message = ASPath._asn_pack(astrans, negotiated.asn4)
+        message = ASPath.pack_segments(astrans, negotiated.asn4)
         if asn4:
-            message += AS4Path._asn_pack(self.aspath, asn4)
+            message += AS4Path.pack_segments(self.aspath, asn4)
 
         return message
 
