@@ -64,12 +64,17 @@ class PrefixSid(Attribute):
         return '{ %s }' % (content)
 
     def __str__(self):
+        # First, we try to decode path attribute for SR-MPLS
         label_index = next((i for i in self.sr_attrs if i.TLV == 1), None)
-        srgb = next((i for i in self.sr_attrs if i.TLV == 3), None)
-        if srgb:
-            return "[ {}, {} ]".format(str(label_index), str(srgb))
-        else:
-            return "[ {} ]".format(str(label_index))
+        if label_index is not None:
+            srgb = next((i for i in self.sr_attrs if i.TLV == 3), None)
+            if srgb is not None:
+                return "[ {}, {} ]".format(str(label_index), str(srgb))
+            else:
+                return "[ {} ]".format(str(label_index))
+        
+        # if not, we try to decode path attribute for SRv6
+        return "[ " + ", ".join([str(attr) for attr in self.sr_attrs]) + " ]"
 
     def pack(self, negotiated=None):
         return self._packed
