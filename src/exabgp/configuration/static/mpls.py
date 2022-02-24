@@ -116,7 +116,7 @@ def prefix_sid(tokeniser):
     return PrefixSid(sr_attrs)
 
 
-# { ipv6 <ipv6-addr> | vpn <ipv6-addr> | l3vpn <ipv6-addr> }
+# ( ipv6 <ipv6-addr> | vpn <ipv6-addr> | l3vpn <ipv6-addr> )
 def prefix_sid_srv6(tokeniser):
     sr_attrs = []
     value = tokeniser()
