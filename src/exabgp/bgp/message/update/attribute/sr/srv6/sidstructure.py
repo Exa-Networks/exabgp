@@ -5,6 +5,7 @@ srv6/sidstructure.py
 Created by Ryoga Saito 2022-02-24
 Copyright (c) 2022 Ryoga Saito. All rights reserved.
 """
+import json
 from struct import pack
 
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
@@ -83,5 +84,13 @@ class Srv6SidStructure:
         )
 
     def json(self, compact=None):
-        # TODO:
-        return ""
+        pairs = {
+            "locator-block-length": self.loc_block_len,
+            "locator-node-length": self.loc_node_len,
+            "function-length": self.func_len,
+            "argument-length": self.arg_len,
+            "transposition-length": self.tpose_len,
+            "transposition-offset": self.tpose_offset,
+        }
+
+        return '"structure": %s' % json.dumps(pairs)

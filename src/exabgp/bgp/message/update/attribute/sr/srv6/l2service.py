@@ -77,5 +77,5 @@ class Srv6L2Service(object):
         return "l2-service [ " + ", ".join([str(subtlv) for subtlv in self.subtlvs]) + " ]"
 
     def json(self, compact=None):
-        # TODO:
-        return ""
+        content = "[ " + ", ".join(subtlv.json() for subtlv in self.subtlvs) + " ]"
+        return '"l2-service": %s' % content

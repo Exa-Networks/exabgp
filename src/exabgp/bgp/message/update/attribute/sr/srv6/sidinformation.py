@@ -98,5 +98,10 @@ class Srv6SidInformation:
         return s
 
     def json(self, compact=None):
-        # TODO:
-        return ""
+        s = '{ "sid": "%s", "flags": 0, "endpoint_behavior": %d' 
+        content = ", ".join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
+        if content:
+            s += ", %s" % content
+        s += " }"
+        return s
+
