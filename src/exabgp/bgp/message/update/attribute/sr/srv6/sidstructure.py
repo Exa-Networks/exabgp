@@ -74,7 +74,7 @@ class Srv6SidStructure:
         )
 
     def __str__(self):
-        return "sib-structure [%d,%d,%d,%d,%d,%d]" % (
+        return "sid-structure [%d,%d,%d,%d,%d,%d]" % (
             self.loc_block_len,
             self.loc_node_len,
             self.func_len,
