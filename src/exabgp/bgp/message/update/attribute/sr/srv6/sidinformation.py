@@ -91,7 +91,7 @@ class Srv6SidInformation:
         )
 
     def __str__(self):
-        s = "sid-information [ sid:%s endpoint_behavior:0x%x " % (str(self.sid), self.behavior)
+        s = "sid-information [ sid:%s flags:0 endpoint_behavior:0x%x " % (str(self.sid), self.behavior)
         if len(self.subsubtlvs) != 0:
             s += " [ " + ", ".join([str(subsubtlv) for subsubtlv in self.subsubtlvs]) + " ]"
         s + " ]"
