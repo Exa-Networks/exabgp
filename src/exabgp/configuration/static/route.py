@@ -76,7 +76,7 @@ class ParseStaticRoute(Section):
         'cluster-list <ipv4>',
         'label <15 bits number>',
         'bgp-prefix-sid [ 32 bits number> ] | [ <32 bits number>, [ ( <24 bits number>,<24 bits number> ) ]]',
-        'bgp-prefix-sid-srv6 ( ipv6 <ipv6 formated number> | l3vpn <ipv6 formated number> | vpn <ipv6 formated number> )',
+        'bgp-prefix-sid-srv6 ( l3-service|l2-service <ipv6> <behavior> [<LBL>,<LNL>,<FL>,<AL>,<Tpose-Len>,<Tpose-Offset>])',
         'aggregator ( <asn16>:<ipv4> )',
         'aigp <40 bits number>',
         'attribute [ generic attribute format ]' 'name <mnemonic>',

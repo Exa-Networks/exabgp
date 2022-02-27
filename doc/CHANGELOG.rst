@@ -27,6 +27,11 @@ Version 5.0.0:
  * Feature: use as-path with a series of [] () [{}]({}) : [] sequence, () set, {} for confed
  * Feature: support for Poetry
    patch: Ahmet Demir
+ * Feature: drop support for deprecated Prefix-SID Sub-type (type-2, type-4)
+   patch: proelbtn
+ * Feature: add support for Prefix-SID Sub-type
+   defined in draft-ietf-bess-srv6-services-11 (type-5, type-6)
+   patch: proelbtn
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
