@@ -9,14 +9,17 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import pack
 
+from exabgp.protocol.ip import IPv6
+
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
-from exabgp.bgp.message.update.attribute.sr.ipv6sid import SrV6Sid
-from exabgp.bgp.message.update.attribute.sr.srv6vpnsid import Srv6VpnSid
-from exabgp.bgp.message.update.attribute.sr.srv6l3vpnsid import Srv6L3vpnSid
 from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
+from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
+from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
+from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
+from exabgp.bgp.message.update.attribute.sr.srv6.sidstructure import Srv6SidStructure
 
 
 def label(tokeniser):
@@ -116,34 +119,63 @@ def prefix_sid(tokeniser):
     return PrefixSid(sr_attrs)
 
 
-# { ipv6 <ipv6-addr> | vpn <ipv6-addr> | l3vpn <ipv6-addr> }
+# ( [l2-service|l3-service] <SID:ipv6-addr> )
+# ( [l2-service|l3-service] <SID:ipv6-addr> <Endpoint Behavior:int> )
+# ( [l2-service|l3-service] <SID:ipv6-addr> <Endpoint Behavior:int> [<LBL:int>, <LNL:int>, <FL:int>, <AL:int>, <Tpose-len:int>, <Tpose-offset:int>] )
 def prefix_sid_srv6(tokeniser):
-    sr_attrs = []
     value = tokeniser()
-    try:
-        if value == '(':
+    if value != "(":
+        raise Exception("expect '(', but received '%s'" % value)
+
+    service_type = tokeniser()
+    if service_type not in ["l3-service", "l2-service"]:
+        raise Exception("expect 'l3-service' or 'l2-service', but received '%s'" % value)
+
+    sid = IPv6.unpack(IPv6.pton(tokeniser()))
+    behavior = 0xffff
+    subtlvs = []
+    subsubtlvs = []
+    value = tokeniser()
+    if value != ")":
+        base = 10 if not value.startswith("0x") else 16
+        behavior = int(value, base)
+        value = tokeniser()
+        if value == "[":
+            values = []
+            for i in range(6):
+                if i != 0:
+                    value = tokeniser()
+                    if value != ",":
+                        raise Exception("expect ',', but received '%s'" % value)
+                value = tokeniser()
+                base = 10 if not value.startswith("0x") else 16
+                values.append(int(value, base))
+
             value = tokeniser()
-            if value == 'ipv6':
-                value = tokeniser()
-                sr_attrs.append(SrV6Sid(value))
-                value = tokeniser()
-                if value == ')':
-                    return PrefixSid(sr_attrs)
+            if value != "]":
+                raise Exception("expect ']', but received '%s'" % value)
 
-            if value == 'vpn':
-                value = tokeniser()
-                sr_attrs.append(Srv6VpnSid(value))
-                value = tokeniser()
-                if value == ')':
-                    return PrefixSid(sr_attrs)
+            value = tokeniser()
 
-            if value == 'l3vpn':
-                value = tokeniser()
-                sr_attrs.append(Srv6L3vpnSid(value))
-                value = tokeniser()
-                if value == ')':
-                    return PrefixSid(sr_attrs)
+            subsubtlvs.append(Srv6SidStructure(
+                loc_block_len=values[0],
+                loc_node_len=values[1],
+                func_len=values[2],
+                arg_len=values[3],
+                tpose_len=values[4],
+                tpose_offset=values[5],
+            ))
 
-        raise Exception("format error")
-    except Exception as e:
-        raise ValueError('could not parse BGP PrefixSid Srv6 attribute: {}'.format(e))
+    subtlvs.append(Srv6SidInformation(
+        sid=sid,
+        behavior=behavior,
+        subsubtlvs=subsubtlvs,
+    ))
+
+    if value != ")":
+        raise Exception("expect ')', but received '%s'" % value)
+
+    if service_type == "l3-service":
+        return PrefixSid([Srv6L3Service(subtlvs=subtlvs)])
+    elif service_type == "l2-service":
+        return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])
