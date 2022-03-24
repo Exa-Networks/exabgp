@@ -67,7 +67,7 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 %post -n exabgp
 %systemd_post exabgp.service
 # Default env
-[ -f %{_sysconfdir}/exabgp/exabgp.env ] || %{_sbindir}/exabgp --fi > %{_sysconfdir}/exabgp/exabgp.env
+[ -f %{_sysconfdir}/exabgp/exabgp.env ] || %{_sbindir}/exabgp  > %{_sysconfdir}/exabgp/exabgp.env
 
 %preun -n exabgp
 %systemd_preun exabgp.service
