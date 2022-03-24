@@ -121,17 +121,11 @@ class Protocol(object):
     def close(self, reason='protocol closed, reason unspecified'):
         if self.connection:
             log.debug(reason, self.connection.session())
+            self.peer.stats['down'] = self.peer.stats.get('down', 0) + 1
 
-            # must be first otherwise we could have a loop caused by the raise in the below
             self.connection.close()
             self.connection = None
 
-            self.peer.stats['down'] = self.peer.stats.get('down', 0) + 1
-            try:
-                if self.peer.neighbor.api['neighbor-changes']:
-                    self.peer.reactor.processes.down(self.peer.neighbor, reason)
-            except ProcessError:
-                log.debug('could not send notification of neighbor close to API', self.connection.session())
 
     def _to_api(self, direction, message, raw):
         packets = self.neighbor.api['%s-packets' % direction]

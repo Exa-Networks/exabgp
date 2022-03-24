@@ -113,6 +113,13 @@ class Peer(object):
         return 'peer-%s' % self.neighbor.uid
 
     def _reset(self, message='', error=''):
+        if self.fsm != FSM.IDLE:
+            try:
+                if self.neighbor.api['neighbor-changes']:
+                    self.reactor.processes.down(self.neighbor, message)
+            except ProcessError:
+                log.debug('could not send notification of neighbor close to API', self.connection.session())
+
         self.fsm.change(FSM.IDLE)
         self.stats = {
             'fsm': self.fsm,
