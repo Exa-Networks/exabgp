@@ -18,9 +18,7 @@ class ICMPType(Resource):
     NAME = 'icmp type'
 
     ECHO_REPLY = 0x00
-    # DESTINATION_UNREACHEABLE = 0x03
     UNREACHABLE = 0x03
-    SOURCE_QUENCH = 0x04
     REDIRECT = 0x05
     ECHO_REQUEST = 0x08
     ROUTER_ADVERTISEMENT = 0x09
@@ -29,18 +27,16 @@ class ICMPType(Resource):
     PARAMETER_PROBLEM = 0x0C
     TIMESTAMP = 0x0D
     TIMESTAMP_REPLY = 0x0E
-    INFO_REQUEST = 0x0F
-    INFO_REPLY = 0x10
-    MASK_REQUEST = 0x11
-    MASK_REPLY = 0x12
-    TRACEROUTE = 0x1E
+    PHOTURIS = 0x28
+    EXPERIMENTAL_MOBILITY = 0x29
+    EXTENDED_ECHO_REQUEST = 0x2A
+    EXTENDED_ECHO_REPLY = 0x2B
 
     codes = dict(
         (k.lower().replace('_', '-'), v)
         for (k, v) in {
             'ECHO_REPLY': ECHO_REPLY,
             'UNREACHABLE': UNREACHABLE,
-            'SOURCE_QUENCH': SOURCE_QUENCH,
             'REDIRECT': REDIRECT,
             'ECHO_REQUEST': ECHO_REQUEST,
             'ROUTER_ADVERTISEMENT': ROUTER_ADVERTISEMENT,
@@ -49,11 +45,10 @@ class ICMPType(Resource):
             'PARAMETER_PROBLEM': PARAMETER_PROBLEM,
             'TIMESTAMP': TIMESTAMP,
             'TIMESTAMP_REPLY': TIMESTAMP_REPLY,
-            'INFO_REQUEST': INFO_REQUEST,
-            'INFO_REPLY': INFO_REPLY,
-            'MASK_REQUEST': MASK_REQUEST,
-            'MASK_REPLY': MASK_REPLY,
-            'TRACEROUTE': TRACEROUTE,
+            'PHOTURIS': PHOTURIS,
+            'EXPERIMENTAL_MOBILITY': EXPERIMENTAL_MOBILITY,
+            'EXTENDED_ECHO_REQUEST': EXTENDED_ECHO_REQUEST,
+            'EXTENDED_ECHO_REPLY': EXTENDED_ECHO_REPLY,
         }.items()
     )
 
