@@ -80,7 +80,7 @@ def setargs(sub):
 
 def cmdline(cmdarg):
     if not os.path.isfile(ENVFILE):
-        comment = 'environment file missing\ngenerate it using "exabgp env --fi > %s"' % ENVFILE
+        comment = 'environment file missing\ngenerate it using "exabgp env > %s"' % ENVFILE
     else:
         comment = ''
 
