@@ -34,6 +34,8 @@ user = 'exa'
 EOF
 
 ENV PYTHONPATH=/opt/exabgp/src
+ENV PATH=$PATH:/opt/exabgp/sbin/
+
 # ENTRYPOINT [ "/bin/bash"]
 ENTRYPOINT [ \
     "/usr/bin/dumb-init", "--", \ 
