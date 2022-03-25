@@ -113,7 +113,7 @@ class Peer(object):
         return 'peer-%s' % self.neighbor.uid
 
     def _reset(self, message='', error=''):
-        if self.fsm != FSM.IDLE:
+        if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
             try:
                 if self.neighbor.api['neighbor-changes']:
                     self.reactor.processes.down(self.neighbor, message)
