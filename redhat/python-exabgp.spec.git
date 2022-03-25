@@ -23,7 +23,6 @@ BuildRequires:  git
 BuildRequires:  git-extras
 BuildRequires:  python-setuptools
 Requires:       python3 >= 3.6
-Requires:       python-ipaddr
 
 %description
 ExaBGP python module
