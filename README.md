@@ -49,7 +49,15 @@ Therefore so should [`YOU`](https://en.wikipedia.org/wiki/Bandwagon_effect)! :gr
 
 ## Installation
 
-The program is packaged for Debian, Ubuntu, ArchLinux, Gentoo, Mint, FreeBSD, OSX and OmniOS (and probably more).
+ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (master branch on git) are targeting python 3 only (3.6+).
+
+### OS packages
+
+The program is packaged for Debian, Ubuntu, ArchLinux, Gentoo, Mint, FreeBSD, OSX and OmniOS (and probably more). However many OS have quite ancient releases, however the code will often come with a pre-set systemd setup and therefore may be easier to use.
+
+Should you encounter any issue, we would then recommend to use pip.
+
+### pip releases
 
 The latest version is available on [`pypi`](https://pypi.python.org/pypi), the Python Package Index
 
@@ -63,12 +71,14 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 > python -m exabgp healthcheck --help
  ```
 
-It is also possible to download the latest archive from github
+### github releases
+
+It is also possible to download releases from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.6.tar.gz | tar zx
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.17.tar.gz | tar zx
 
-> cd exabgp-4.2.6
+> cd exabgp-4.2.17
 > ./sbin/exabgp --version
 > ./sbin/exabgp --help
 
@@ -77,7 +87,9 @@ It is also possible to download the latest archive from github
 > ./bin/healthcheck --help
 ```
 
-or to use git master
+### git master
+
+In case of issues, we are asking user to run the lastest code directly for a local `git clone`.
 
 ```sh
 > git clone https://github.com/Exa-Networks/exabgp exabgp-git
@@ -91,30 +103,48 @@ or to use git master
 > ./bin/healthcheck --help
 ```
 
-or change git to use any previous release (here 4.2.6)
+Obviously, it is then possible to change git to use any previous release (here 4.2.6)
 
 ```sh
 > git checkout 4.2.6
 > ./sbin/exabgp --version
 ```
 
-It is possible to create a self-contained executable which only requires an installed python3 interpreter
+### zipapp
 
-```
-> cd exabgp-git
-> python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main  -p "/usr/bin/env python3" src
-> /usr/local/sbin/exabgp --version
-```
-or
-```
+From the source folder, it is possible to create a self-contained executable which only requires an installed python3 interpreter
+
+```sh
 > cd exabgp-git
 > release binary /usr/local/sbin/exabgp
 > /usr/local/sbin/exabgp --version
 ```
 
-Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
+which is an helper function and create a python zipapp
 
-ExaBGP 3.4 and previous versions are python2 applications. ExaBGP 4.0 had support for both Python2 and 3. current version of ExaBGP are targeting python3 (3.6+) only.
+```sh
+> cd exabgp-git
+> python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main  -p "/usr/bin/env python3" src
+> /usr/local/sbin/exabgp --version
+```
+
+### docker
+
+Alternatively, you can use the repository to create a docker image
+
+```sh
+> cd exabgp-git
+> docker build -t exabgp ./
+> docker run -p 179:1790 --mount type=bind,source=`pwd`/etc/exabgp,target=/etc/exabgp -it exabgp -v /etc/exabgp/parse-simple-v4.conf
+```
+
+It is possible add your configuration file within the docker image or use the container like you would use the exabgp binary, or use the `Docker.remote` file to build it using pip (does not require any other file)
+
+### pick and choose
+
+Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives, docker, and/or local git repositories.
+
+Please make sure to remove any non `git master` installations if you are trying the latest master release or are planning to report issues. Verify the binary by running `exabgp version` and use exabgp with the option `-d` when reporting issues. The `FULL` output of the logs is often required.
 
 ## Upgrade
 
