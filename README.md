@@ -19,11 +19,13 @@ Other uses include keeping an eye on network changes done as was done by [RIPE](
 
 ## Development
 
-The master branch is now what will be ExaBGP 5.0.x. It is going to be a major rewrite of the software. Lots has changed in 11 years. ExaBGP is nearly as old as Python3.
+The master branch is now what will be ExaBGP 5.0.x. The program command line arguments has already been changed and are no longer fully backward compatible with version 3 and 4.
 
-Support for python2 has already been dropped. The code will be updated to take advantage of Python3 'new' async-io and new features are being investigated (such as configuration edition via a interactive CLI). A large part of the configuration parsing will surely be changed which mean the configuration format will most likely change too.
+ExaBGP is nearly as old as Python3. Lots has changed in 11 years. Support for python2 has already been dropped.
 
-The program command line arguments has already been changed and is no longer backward compatible with version 3 and 4. For these reasons, we do not recommend the use of the master branch in production.
+master has already seen a big rewrite but more is still to come. The application need work to take advantage of Python3 'new' async-io (as we run an home-made async core engine) and new features are being investigated (such as configuration edition via a interactive CLI).
+
+For these reasons, we recommend the use of the 4.2 releases in production, but running master is sometimes required for the latest and greatest features.
 
 ## Who is using ExaBGP ?
 
@@ -49,13 +51,13 @@ Therefore so should [`YOU`](https://en.wikipedia.org/wiki/Bandwagon_effect)! :gr
 
 ## Installation
 
-ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (master branch on git) are targeting python 3 only (3.6+).
+ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (4.2 and master) are targeting python 3 only (3.6+).
 
 ### OS packages
 
-The program is packaged for Debian, Ubuntu, ArchLinux, Gentoo, Mint, FreeBSD, OSX and OmniOS (and probably more). However many OS have quite ancient releases, however the code will often come with a pre-set systemd setup and therefore may be easier to use.
+The program is packaged for Debian, Ubuntu, ArchLinux, Gentoo, Mint, FreeBSD, OSX and OmniOS (and probably more). Many OS have quite ancient releases (sometimes over a year old). On the plus side, the package will most likely come with systemd pre-setup and therefore may be easier to use.
 
-Should you encounter any issue, we would then recommend to use pip.
+As it is often the recommended way to get software onto server, feel free to use them but should you encounter any issues we would then recommend a pip installation, as it will install the latest stable version.
 
 ### pip releases
 
@@ -144,8 +146,6 @@ It is possible add your configuration file within the docker image or use the co
 
 Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives, docker, and/or local git repositories.
 
-Please make sure to remove any non `git master` installations if you are trying the latest master release or are planning to report issues. Verify the binary by running `exabgp version` and use exabgp with the option `-d` when reporting issues. The `FULL` output of the logs is often required.
-
 ## Upgrade
 
 ExaBGP is self-contained and easy to upgrade/downgrade by:
@@ -175,9 +175,15 @@ The configuration file and API format may change from time to time, but every ef
 
 ExaBGP is supported through Github's [issue tracker](https://github.com/Exa-Networks/exabgp/issues). So should you encounter any problems, please do not hesitate to [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you.
 
-During "day time" (GMT/BST) feel free to contact us on [`Slack`](https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTMwNmZlMGMyNTQyNWY3Y2RjYmQxODgyYzY2MGFkZmYwODMxNDZkZjc4YmMyM2QzNzA1YWM0MmZjODhlYThjNTQ). We will try to respond if available. ExaBGP also has a channel on `Freenode` [`#exabgp`](irc://irc.freenode.net:6667/exabgp) but it is not monitored and an historical room on gitter not monitored anymore [`Gitter`](https://gitter.im/Exa-Networks/exabgp)
+During "day time" (GMT/BST) feel free to contact us on [`Slack`](https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTMwNmZlMGMyNTQyNWY3Y2RjYmQxODgyYzY2MGFkZmYwODMxNDZkZjc4YmMyM2QzNzA1YWM0MmZjODhlYThjNTQ). We will try to respond if available.
 
-The best way to be kept informed about our progress/releases is to follow us on [Twitter](https://twitter.com/#!/search/exabgp). You can also use and subscribe to our low volume [mailing list](https://groups.google.com/group/exabgp-users).
+The best way to be kept informed about our progress/releases is to follow us on [Twitter](https://twitter.com/#!/search/exabgp). You can also use and subscribe to our very low volume [mailing list](https://groups.google.com/group/exabgp-users).
+
+In case of bugs, we will ask you to help us fix the issue using the master branch. We will then try to backport any fixes to the 4.2 stable branch, when possible.
+
+Please make sure to remove any non `git master` installations if you are trying the latest master release, to prevent to run the wrong code by accident, it happens more than you think, and verify the binary by running `exabgp version`.
+
+We will nearly systematically ask for the `FULL` output exabgp with the option `-d`.
 
 ## Documentation
 
