@@ -16,7 +16,6 @@ Provides:       exabgp-libs
 
 BuildRequires:  python-setuptools
 Requires:       python3 >= 3.6
-Requires:       python-ipaddr
 
 %description
 ExaBGP python module
