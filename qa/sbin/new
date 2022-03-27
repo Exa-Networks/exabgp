@@ -1,0 +1,687 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+"""
+bgp
+
+Created by Thomas Mangin
+Copyright (c) 2013-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
+from email.quoprimime import header_decode
+import os
+import pdb
+import sys
+import time
+import queue
+import threading
+import signal
+import asyncio
+import argparse
+
+from struct import unpack, pack
+from enum import Enum
+
+
+class FSM(Enum):
+    BUG = 0
+    OPEN = 1
+    MSG = 2
+    STOP = 3
+
+
+def flushed(output):
+    print(output)
+    sys.stdout.flush()
+
+
+def indent(msg, indent=12):
+    sys.stdout.write(' '*indent)
+    flushed(msg)
+
+
+def msg_bytes(message):
+    if len(message) % 2:
+        flushed(f'invalid BGP message:\n    {message}')
+    data = b''
+    while message:
+        b, message = message[:2], message[2:]
+        value = int(b, 16)
+        data += value.to_bytes(1, byteorder='big')
+    return data
+
+
+def bytestream(value):
+    return ''.join(['%02X' % _ for _ in value])
+
+
+def payload(prefix, header, body):
+    flushed(
+        '{:12s}'.format(prefix)
+        + f'{bytestream(header[:16])}:'
+        + f'{bytestream(header[16:18])}:'
+        + f'{bytestream(header[18:])}:'
+        + f'{bytestream(body)}'
+    )
+
+
+def dump(value):
+    def spaced(value):
+        even = None
+        for v in value:
+            if even is False:
+                yield ' '
+            yield '%02X' % v
+            even = not even
+
+    return ''.join(spaced(value))
+
+
+def cdr_to_length(cidr):
+    if cidr > 24:
+        return 4
+    if cidr > 16:
+        return 3
+    if cidr > 8:
+        return 2
+    if cidr > 0:
+        return 1
+    return 0
+
+
+def kill(skip, signal_name='SIGUSR1'):
+    names = [name for name in dir(signal) if name.startswith('SIG')]
+    signals = dict([(name, getattr(signal, name)) for name in names])
+    number = signals.get(signal_name, '')
+
+    if not number:
+        raise f'invalid signal name: {signal_name}'
+    # conf_name = sys.argv[1].split('/')[-1].split('.')[0]
+
+    processes = []
+
+    for line in os.popen("/bin/ps x"):
+        low = line.strip().lower()
+        if not low:
+            continue
+
+        if 'python' not in low and 'pypy' not in low:
+            continue
+
+        cmdline = line.strip().split()[4:]
+        pid = line.strip().split()[0]
+
+        if len(cmdline) > 1 and not cmdline[1].endswith('/main.py'):
+            continue
+
+        # FIXME: to check
+        if skip not in cmdline[-1]:
+            continue
+
+        if not cmdline[-1].endswith('.conf'):
+            continue
+
+        processes.append(pid)
+
+    if len(processes) == 0:
+        flushed('no process found, quitting')
+        return False
+
+    if len(processes) > 1:
+        flushed('more than one process running, quitting')
+        return False
+
+    flushed(f'sending signal {signal_name} to ExaBGP (pid {processes[0]})\n')
+    try:
+        os.kill(int(processes[0]), number)
+        return True
+    except Exception as exc:
+        flushed('\nfailed: %s' % str(exc))
+        return False
+
+
+class Message:
+    @staticmethod
+    def keepalive():
+        return bytearray(
+            [0xFF, ] * 16
+            + [0x0, 0x13, 0x4]
+        )
+
+    @staticmethod
+    def eor():
+        return bytearray(
+            [0xFF, ] * 16
+            + [0x0, 0x17, 0x02] +
+            + [0x00, 0x00, 0x00, 0x00]
+        )
+
+    @staticmethod
+    def default_route():
+        return bytearray(
+            [0xFF, ] * 16
+            + [0x00, 0x31]
+            + [
+                0x02,
+            ]
+            + [0x00, 0x00]
+            + [0x00, 0x15]
+            + []
+            + [0x40, 0x01, 0x01, 0x00]
+            + []
+            + [0x40, 0x02, 0x00]
+            + []
+            + [0x40, 0x03, 0x04, 0x7F, 0x00, 0x00, 0x01]
+            + []
+            + [0x40, 0x05, 0x04, 0x00, 0x00, 0x00, 0x64]
+            + [0x20, 0x00, 0x00, 0x00, 0x00]
+        )
+
+    @staticmethod
+    def notify(self, notification):
+        self.writer.write(
+            bytearray(
+                [0xFF, ] * 16
+                + [0x00, 19 + 2 + len(notification)]
+                + [0x03]
+                + [0x06]
+                + [0x00]
+            )
+            + notification
+        )
+
+    _name = {
+        b'\x01': 'OPEN',
+        b'\x02': 'UPDATE',
+        b'\x03': 'NOTIFICATION',
+        b'\x04': 'KEEPALIVE',
+    }
+
+    def __init__(self, header, body):
+        self.header = header
+        self.body = body
+
+    def kind(self):
+        return self.header[18]
+
+    def is_open(self):
+        return self.kind() == 1
+
+    def is_update(self):
+        return self.kind() == 2
+
+    def is_notification(self):
+        return self.kind() == 3
+
+    def is_keepalive(self):
+        return self.kind() == 4
+
+    def name(self, header):
+        return self._name.get(self.kind(), 'SOME WEIRD RFC PACKET')
+
+    def notification(self):
+        yield 'notification:%d,%d' % (body[0], body[1]), bytestream(body)
+
+    def routes(self):
+        body_len = len(self.body)
+
+        len_w = unpack('!H', self.body[0:2])[0]
+        withdrawn = bytearray([_ for _ in self.body[2 : 2 + len_w]])
+
+        len_a = unpack('!H', self.body[2 + len_w : 2 + len_w + 2])[0]
+        announced = bytearray([_ for _ in self.body[2 + len_w + 2 + len_a :]])
+
+        if not withdrawn and not announced:
+            if body_len == 4:
+                yield 'eor:1:1'
+            elif body_len == 11:
+                yield 'eor:%d:%d' % (self.body[-2], self.body[-1])
+            else:  # undecoded MP route
+                yield 'mp:'
+            return
+
+        while withdrawn:
+            cdr, withdrawn = withdrawn[0], withdrawn[1:]
+            size = cdr_to_length(cdr)
+            r = [0, 0, 0, 0]
+            for index in range(size):
+                r[index], withdrawn = withdrawn[0], withdrawn[1:]
+            yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(cdr)
+
+        while announced:
+            cdr, announced = announced[0], announced[1:]
+            size = cdr_to_length(cdr)
+            r = [0, 0, 0, 0]
+            for index in range(size):
+                r[index], announced = announced[0], announced[1:]
+            yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(cdr)
+
+    def parser(self, raw):
+        if raw:
+            if self.body:
+                yield bytestream(self.header + self.body)
+            return
+
+        if self.is_update():
+            for _ in self.routes():
+                yield _
+            return
+
+        if self.is_notification():
+            for _ in self.notification():
+                yield _
+            return
+
+        if self.is_keepalive():
+            # ignore keepalive
+            return
+        flushed(f'kind is not known {self.kind()}, ignoring')
+
+    @staticmethod
+    def _add_capa66(adding, open):
+        if not adding:
+            return open
+
+        # hack capability 66 into the message
+        content = b'loremipsum'
+        cap66 = bytearray([66, len(content)]) + content
+        param = bytearray([2, len(cap66)]) + cap66
+        return (
+            open[:17]
+            + bytearray([open[17] + len(param)])
+            + open[18:28]
+            + bytearray([open[28] + len(param)])
+            + open[29:]
+            + param
+        )
+
+    def open(self, asn, add_capa66):
+        # lower byte of the router_id
+        byte_id = self.body[8]
+
+        if not asn:
+            byte_id = bytearray([byte_id + 1 & 0xFF])
+            open = self.header + self.body[:8] + byte_id + self.body[9:]
+            return self._add_capa66(add_capa66, open)
+
+        # Check if peer supports Four-Octet Autonomous System (RFC6793)
+        opt_params = self.body[10:]
+        offset = 0
+        open = ''
+
+        while offset < len(opt_params):
+            param_type = opt_params[offset]
+            param_len = opt_params[offset + 1]
+            if param_type == 2:  # Capabilities Optional Parameter
+                cap_code = opt_params[offset + 2]
+                if cap_code == 65:  # Support for 4 octet AS number capability
+                    open = (
+                        self.header
+                        + self.body[0:1]
+                        + pack("!H", asn)
+                        + self.body[3:8]
+                        + byte_id
+                        + self.body[9:10]
+                        + opt_params[: offset + 2 + 2]
+                        + pack("!I", asn)
+                        + opt_params[offset + 2 + 2 + 4 :]
+                    )
+                    return self._add_capa66(add_capa66, open)
+            offset += param_len + 2
+
+        # No "Support for 4 octet AS number capability" found simply replace the 16-bit ASN number field.
+        open = self.header + self.body[0:1] + pack("!H", asn) + self.body[3:8] + byte_id + self.body[9:]
+        return self._add_capa66(add_capa66, open)
+
+
+class Checker(object):
+    def __init__(self, expected):
+        self.raw = False
+        self.messages = []
+
+        self.sequences = self.group_messages(expected)
+        self._next_messages()
+
+        if not self.messages:
+            return
+
+        flushed('\nexpecting:')
+        for message in self.messages:
+            indent(message)
+        flushed('received:')
+
+    # split all the messages and group them with the provided index
+    # 1:raw:<raw bgp>
+    # 1:raw:<raw bgp>
+    # 2:raw:<raw bgp>
+    # will return a list of two lists, first with 2 elements, second with one
+    # A1:raw:<raw bgp>
+    # B1:raw:<raw bgp>
+    # B2:raw:<raw bgp>
+    # C1:raw:<raw bgp>
+    # is for when we have two different BGP connections
+
+    # FIXME: we need to redo how we deal with raw vs parsed packets
+
+    def group_messages(self, expected):
+        group = {}
+        for rule in expected:
+            rule = rule.replace(' ', '').lower()
+            try:
+                seq, encoding, content = rule.split(':', 2)
+            except ValueError:
+                flushed(f'invalid rule: {rule}')
+                sys.exit(0)
+
+            conn = seq[0] if seq[0].isalpha() else 'A'
+            self.raw = self.raw or encoding == 'raw'
+            msg = content.replace(':', '')
+            if self.raw:
+                group.setdefault(conn, {}).setdefault(seq, []).append(msg.upper())
+            else:
+                group.setdefault(conn, {}).setdefault(seq, []).append(f'{encoding.lower()}:{msg.upper()}')
+
+        ordered = []
+        for kg in sorted(list(group.keys())):
+            source = group[kg]
+            appending = []
+            for ks in sorted(list(source.keys())):
+                appending.extend(source[ks])
+            ordered.append(appending)
+        return ordered
+
+    def _next_messages(self):
+        if self.messages:
+            return True
+
+        if self.sequences:
+            self.messages = self.sequences.pop(0)
+            return self._send_signal_if_requested()
+
+        return False
+
+    def _send_signal_if_requested(self):
+        if not self.messages:
+            return self._next_messages()
+
+        if not self.messages[0].startswith('signal:'):
+            return True
+
+        message = self.messages.pop(0)
+        name = message.split(':')[-1]
+        kill(name)
+        return self._send_signal_if_requested()
+
+    def is_eor(self, message):
+        if message == bytestream(Message.eor()):
+            return True
+        if message.startswith('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003'):
+            # payload with the AFI/SAFI
+            return True
+        return False
+
+    def expected(self, message):
+        if not self.messages:
+            if self.is_eor(message):
+                return True
+            flushed('received extra message')
+            # FIXME: change API to not have to convert
+            payload('additional', msg_bytes(message[:19*2]), msg_bytes(message[19*2:]))
+            return False
+
+        for check in self.messages:
+            compare = message if not self.raw or check.startswith('F' * 32) else message[32:]
+
+            if message == compare:
+                self.messages.remove(check)
+                return True
+
+        nb_options = len(self.messages)
+        flushed(f'\nunexpected message, counting {nb_options} valid option(s):')
+        for message in self.messages:
+            # FIXME: change API to not have to convert
+            if self.raw:
+                msg = msg_bytes(message)
+                payload('option', msg[:19], msg[19:])
+            else:
+                indent(message)
+        return False
+
+    def completed(self):
+        return len(self.messages) == 0 and len(self.sequences) == 0
+
+
+class BGPService(object):
+    def __init__(self, loop, queue, options, expect):
+        self.options = options
+        self.checker = Checker(expect)
+        self.loop = loop
+        self.queue = queue
+
+    def exit(self, code):
+        self.queue.put(code)
+        self.loop.stop()
+
+
+class BGPProtocol(asyncio.Protocol):
+    counter = 0
+
+    def __init__(self, service, reader, writer):
+        self.service = service
+        self.reader = reader
+        self.writer = writer
+
+    async def read_message(self):
+        header = await self.reader.read(19)
+        length = unpack('!H', header[16:18])[0]
+        body = await self.reader.read(length - 19)
+        return header, body
+        # return bytearray(header), bytearray(body)
+
+    async def handle_bgp(self):
+        state = FSM.OPEN
+        while state != FSM.STOP:
+            header, body = await self.read_message()
+            if not header:
+                asyncio.sleep(1)
+                continue
+
+            msg = Message(header, body)
+
+            if state == FSM.OPEN:
+                payload('open recv', header, body)
+                state = self.handle_open(msg)
+                continue
+
+            if state == FSM.MSG:
+                payload('msg  recv', header, body)
+                state = self.handle_message(msg)
+                continue
+
+            flushed(f'FSM issue {state}')
+            sys.exit(1)
+
+    def handle_open(self, msg):
+        option_asn = self.service.options['asn']
+        option_capa66 = self.service.options['send-unknown-capability']
+        option_default = self.service.options['send-default-route']
+
+        open = msg.open(option_asn, option_capa66)
+        self.writer.write(open)
+        self.writer.write(Message.keepalive())
+
+        if option_default:
+            flushed('sending default-route\n')
+            self.writer.write(Message.default_route())
+
+        return FSM.MSG
+
+    def handle_message(self, msg):
+        self.counter += 1
+        header, body = msg.header, msg.body
+
+        if self.service.options['sink']:
+            payload(f'sank     #{self.counter}', header, body)
+            self.writer.write(Message.keepalive())
+            return FSM.MSG
+
+        if self.service.options['echo']:
+            payload(f'echo\'d  #{self.counter}', header, body)
+            self.writer.write(header + body)
+            return FSM.MSG
+
+        self.writer.write(Message.keepalive())
+
+        # FIXME: raw is probably not where it should
+        for announcement in msg.parser(raw=self.service.checker.raw):
+            if announcement.startswith('eor:'):  # skip EOR
+                indent(f'skipping eor {announcement}')
+                continue
+
+            if announcement.startswith('mp:'):  # skip unparsed MP
+                indent(f'skipping multiprotocol : {dump(body)}')
+                continue
+
+            if not self.service.checker.expected(announcement):
+                self.service.exit(1)
+                return FSM.STOP
+
+            indent(announcement)
+
+            if self.service.checker.completed():
+                if self.service.options['send-notification']:
+                    notification = b'closing session because we can'
+                    self.writer.write(Message.notify(notification))
+                    indent('sent closing notification')
+                self.service.exit(0)
+                return FSM.STOP
+
+        return FSM.MSG
+
+
+def parse_cmdline():
+    port = os.environ.get('exabgp.tcp.port', os.environ.get('exabgp_tcp_port', '179'))
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--help', help='this help :-)')
+    parser.add_argument('--echo', help='accept any BGP messages send it back to the emiter', action='store_true')
+    parser.add_argument('--sink', help='accept any BGP messages and reply with a keepalive', action='store_true')
+    parser.add_argument('--asn', help='ASN to use (otherwise extracted from the OPEN)', type=int, default=None)
+    parser.add_argument('--port', help='port to bind to', type=int, default=port)
+    parser.add_argument('checks', help='a list of expected route announcement/withdrawl', nargs='?', type=open)
+
+    cmdarg = parser.parse_args()
+
+    # Don't allow 4-byte ASN, as peer maybe not supports 4-byte asn
+    if (
+        cmdarg.help
+        or cmdarg.port <= 0
+        or cmdarg.port > 65535
+        or cmdarg.asn is not None
+        and (cmdarg.asn < 0 or cmdarg.asn > 65535)
+    ):
+        parser.print_help()
+        flushed('a list of expected route announcement/withdrawl in the format:')
+        flushed(
+            '<number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>'
+        )
+        flushed('for example:', sys.argv[0], '1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8')
+        flushed('routes with the same <number> can arrive in any order')
+        sys.exit(1)
+
+    # fmt: off
+    options = {
+        'send-unknown-capability': False,  # add an unknown capability to the open message
+        'send-default-route': False,  # send a default route to the peer
+        'send-notification': False,  # send notification messages to the backend
+        'signal-SIGUSR1': 0,  # send SIGUSR1 to exabgp after X seconds
+        'asn': None,  # Don't modify the local AS per default.
+        'sink': False,  # just accept whatever is sent
+        'echo': False,  # just accept whatever is sent
+        'expect': []
+    }
+
+    options.update({
+        'sink': cmdarg.sink,
+        'echo': cmdarg.echo,
+        'port': cmdarg.port,
+        'asn': cmdarg.asn,
+    })
+    # fmt: on
+
+    if not cmdarg.checks:
+        return options
+
+    content = [_.strip() for _ in cmdarg.checks.readlines() if _.strip() and '#' not in _]
+    expect = []
+    for message in content:
+        if message.strip() == 'option:open:send-unknown-capability':
+            options['send-unknown-capability'] = True
+            continue
+        if message.strip() == 'option:update:send-default-route':
+            options['send-default-route'] = True
+            continue
+        if message.strip() == 'option:notification:send-notification':
+            options['send-notification'] = True
+            continue
+        if message.strip().startswith('option:SIGUSR1:'):
+            delay = int(message.split(':')[-1])
+            myself = os.getpid()
+
+            def notify(delay, myself):
+                time.sleep(delay)
+                signal(myself)
+                time.sleep(10)
+
+            threading.Thread(target=notify, args=(delay, myself))
+
+        expect.append(message)
+
+    options['expect'] = expect
+    return options
+
+
+async def main(queue):
+    options = parse_cmdline()
+
+    # self.set_reuse_addr()
+    # self.bind((host, options['port']))
+    # self.listen(5)
+
+    if options['sink']:
+        flushed('\nsink mode - send us whatever, we can take it ! :p\n')
+    elif options['echo']:
+        flushed('\necho mode - send us whatever, we can parrot it ! :p\n')
+    elif not options['expect']:
+        flushed('no test data available to test against')
+        sys.exit(1)
+
+    loop = asyncio.get_running_loop()
+    service = BGPService(loop, queue, options, options['expect'])
+
+    server = await asyncio.start_server(
+        lambda reader, writer: BGPProtocol(service, reader, writer).handle_bgp(),
+        '127.0.0.1', options['port']
+    )
+    # perhaps set backlog to 1 ..
+
+    async with server:
+        await server.serve_forever()
+
+
+if __name__ == '__main__':
+    queue = queue.Queue()
+    try:
+        asyncio.run(main(queue))
+    except RuntimeError:
+        if queue.empty():
+            flushed(f'failed with no code')
+            sys.exit(1)
+
+        code = queue.get()
+        if code != 0:
+            flushed(f'failed with code {code}')
+            sys.exit(code)
+
+    flushed('successful')
+    sys.exit(0)
