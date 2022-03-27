@@ -514,7 +514,7 @@ if __name__ == '__main__':
     sub.add_argument('payload', nargs='+', help='the hexadecimal representation of the packet')
     sub.set_defaults(func=decode)
 
-    sub = subparsers.add_parser('listing', help='list all functional test available')
+    sub = subparsers.add_parser('list', help='list all functional test available')
     sub.set_defaults(func=lambda _: CI.listing())
 
     parsed = parser.parse_args()
