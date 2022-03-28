@@ -96,7 +96,8 @@ def kill(skip, signal_name='SIGUSR1'):
 
     if not number:
         raise f'invalid signal name: {signal_name}'
-    # conf_name = sys.argv[1].split('/')[-1].split('.')[0]
+
+    conf_name = sys.argv[1].split('/')[-1].split('.')[0]
 
     processes = []
 
@@ -114,8 +115,7 @@ def kill(skip, signal_name='SIGUSR1'):
         if len(cmdline) > 1 and not cmdline[1].endswith('/main.py'):
             continue
 
-        # FIXME: to check
-        if skip not in cmdline[-1]:
+        if conf_name not in cmdline[-1]:
             continue
 
         if not cmdline[-1].endswith('.conf'):
@@ -178,17 +178,14 @@ class Message:
         )
 
     @staticmethod
-    def notify(self, notification):
-        self.writer.write(
-            bytearray(
-                [0xFF, ] * 16
-                + [0x00, 19 + 2 + len(notification)]
-                + [0x03]
-                + [0x06]
-                + [0x00]
-            )
-            + notification
-        )
+    def notify(notification):
+        return bytearray(
+            [0xFF, ] * 16
+            + [0x00, 19 + 2 + len(notification)]
+            + [0x03]
+            + [0x06]
+            + [0x00]
+        ) + notification.encode('utf-8')
 
     _name = {
         b'\x01': 'OPEN',
@@ -273,7 +270,7 @@ class Message:
             return
 
         if self.is_keepalive():
-            # ignore keepalive
+            yield "keepalive"
             return
         flushed(f'kind is not known {self.kind()}, ignoring')
 
@@ -374,9 +371,10 @@ class Checker(object):
                 sys.exit(0)
 
             conn = seq[0] if seq[0].isalpha() else 'A'
-            self.raw = self.raw or encoding == 'raw'
+            raw = (encoding == 'raw')
+            self.raw = self.raw or raw
             msg = content.replace(':', '')
-            if self.raw:
+            if raw:
                 group.setdefault(conn, {}).setdefault(seq, []).append(msg.upper())
             else:
                 group.setdefault(conn, {}).setdefault(seq, []).append(f'{encoding.lower()}:{msg.upper()}')
@@ -421,13 +419,16 @@ class Checker(object):
         return False
 
     def expected(self, message):
-        if not self.messages:
-            if self.is_eor(message):
-                return True
-            flushed('received extra message')
-            # FIXME: change API to not have to convert
-            payload('additional', msg_bytes(message[:19*2]), msg_bytes(message[19*2:]))
-            return False
+        if not self.sequences:
+            if not self.messages:
+                if self.is_eor(message):
+                    return True
+                flushed('received extra message')
+                # FIXME: change API to not have to convert
+                payload('additional', msg_bytes(message[:19*2]), msg_bytes(message[19*2:]))
+                return False
+
+        self._send_signal_if_requested()
 
         for check in self.messages:
             compare = message if not self.raw or check.startswith('F' * 32) else message[32:]
@@ -473,6 +474,8 @@ class BGPProtocol(asyncio.Protocol):
 
     async def read_message(self):
         header = await self.reader.read(19)
+        if not header:
+            return '',''
         length = unpack('!H', header[16:18])[0]
         body = await self.reader.read(length - 19)
         return header, body
@@ -483,7 +486,7 @@ class BGPProtocol(asyncio.Protocol):
         while state != FSM.STOP:
             header, body = await self.read_message()
             if not header:
-                asyncio.sleep(1)
+                await asyncio.sleep(1)
                 continue
 
             msg = Message(header, body)
@@ -535,7 +538,7 @@ class BGPProtocol(asyncio.Protocol):
         # FIXME: raw is probably not where it should
         for announcement in msg.parser(raw=self.service.checker.raw):
             if announcement.startswith('eor:'):  # skip EOR
-                indent(f'skipping eor {announcement}')
+                indent(f'skipping {announcement}')
                 continue
 
             if announcement.startswith('mp:'):  # skip unparsed MP
@@ -550,7 +553,7 @@ class BGPProtocol(asyncio.Protocol):
 
             if self.service.checker.completed():
                 if self.service.options['send-notification']:
-                    notification = b'closing session because we can'
+                    notification = 'closing session because we can'
                     self.writer.write(Message.notify(notification))
                     indent('sent closing notification')
                 self.service.exit(0)
@@ -628,12 +631,12 @@ def parse_cmdline():
             delay = int(message.split(':')[-1])
             myself = os.getpid()
 
-            def notify(delay, myself):
+            def suicide(delay, myself):
                 time.sleep(delay)
                 signal(myself)
                 time.sleep(10)
 
-            threading.Thread(target=notify, args=(delay, myself))
+            threading.Thread(target=suicide, args=(delay, myself))
 
         expect.append(message)
 

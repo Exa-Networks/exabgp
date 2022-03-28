@@ -5,11 +5,15 @@ import sys
 import time
 
 try:
+    time.sleep(1)
+    # this will never be received by the peer
+    sys.stdout.write('announce route 1.2.3.4 next-hop 5.6.7.8\n')
     now = time.time()
     while os.getppid() != 1 and time.time() < now + 5:
         line = sys.stdin.readline().strip()
         if not line or 'shutdown' in line:
             break
         time.sleep(1)
+    # This route will never be sent
 except IOError:
     pass
