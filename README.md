@@ -51,7 +51,7 @@ Therefore so should [`YOU`](https://en.wikipedia.org/wiki/Bandwagon_effect)! :gr
 
 ## Installation
 
-ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (4.2 and master) are targeting python 3 only (3.6+).
+ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (4.2 and master) are targeting python 3 only (3.7+).
 
 ### OS packages
 

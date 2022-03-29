@@ -15,7 +15,7 @@ BuildArch:      noarch
 Provides:       exabgp-libs
 
 BuildRequires:  python-setuptools
-Requires:       python3 >= 3.6
+Requires:       python3 >= 3.7
 
 %description
 ExaBGP python module
