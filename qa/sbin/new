@@ -8,9 +8,9 @@ Copyright (c) 2013-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from email.quoprimime import header_decode
 import os
 import pdb
+import socket
 import sys
 import time
 import queue
@@ -659,12 +659,15 @@ async def main(queue):
         flushed('no test data available to test against')
         sys.exit(1)
 
+    sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    sock.bind(('::', options['port']))
+
     loop = asyncio.get_running_loop()
     service = BGPService(loop, queue, options, options['expect'])
 
     server = await asyncio.start_server(
         lambda reader, writer: BGPProtocol(service, reader, writer).handle_bgp(),
-        '127.0.0.1', options['port']
+        sock=sock
     )
     # perhaps set backlog to 1 ..
 
