@@ -43,8 +43,8 @@ class Path:
 
 
 class Version:
-    JSON = '4.0.1'
-    TEXT = '4.0.1'
+    JSON = '5.0.0'
+    TEXT = '5.0.0'
 
     template = """\
 import os
