@@ -22,7 +22,7 @@ BuildRequires:  sed
 BuildRequires:  git
 BuildRequires:  git-extras
 BuildRequires:  python-setuptools
-Requires:       python3 >= 3.6
+Requires:       python3 >= 3.7
 
 %description
 ExaBGP python module
