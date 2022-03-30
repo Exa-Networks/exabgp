@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2006-2008, David Allouche, Jp Calderone, Itamar Shtull-Trauring,
 # Johan Dahlin, Olivier Grisel <olivier.grisel@ensta.org>
