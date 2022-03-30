@@ -70,7 +70,7 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 > exabgp --help
 
 > exabgp --run healthcheck --help
-> python -m exabgp healthcheck --help
+> python3 -m exabgp healthcheck --help
  ```
 
 ### github releases
@@ -85,7 +85,7 @@ It is also possible to download releases from github
 > ./sbin/exabgp --help
 
 > ./sbin/exabgp --run healthcheck --help
-> env PYTHONPATH=./src python -m exabgp healthcheck --help
+> env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 > ./bin/healthcheck --help
 ```
 
@@ -101,7 +101,7 @@ In case of issues, we are asking user to run the lastest code directly for a loc
 > ./sbin/exabgp --help
 
 > ./sbin/exabgp --run healthcheck --help
-> env PYTHONPATH=./src python -m exabgp healthcheck --help
+> env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 > ./bin/healthcheck --help
 ```
 
@@ -122,7 +122,7 @@ From the source folder, it is possible to create a self-contained executable whi
 > /usr/local/sbin/exabgp --version
 ```
 
-which is an helper function and create a python zipapp
+which is an helper function and create a python3 zipapp
 
 ```sh
 > cd exabgp-git
