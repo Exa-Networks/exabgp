@@ -130,13 +130,13 @@ class Tokeniser(object):
                         if current.endswith('\\'):
                             line += current
                             continue
-                        elif line:
+                        if line:
                             yield line + current
                             line = ''
-                        else:
-                            yield current
+                            continue
+                        yield current
                     if line:
-                        yield line
+                        yield line + current
 
                 for _ in self._tokenise(formated()):
                     yield _
