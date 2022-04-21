@@ -136,5 +136,8 @@ def tokens(stream):
                 word += char
                 nb_chars += 1
 
+        if word:
+            raise ValueError('invalid syntax line %d: "%s"' % (nb_lines, word))
+
         if parsed:
-            raise ValueError('invalid syntax')
+            raise ValueError('invalid syntax line %d: "%s"' % (nb_lines, parsed))
