@@ -31,6 +31,8 @@ class ICMPType(Resource):
     EXPERIMENTAL_MOBILITY = 0x29
     EXTENDED_ECHO_REQUEST = 0x2A
     EXTENDED_ECHO_REPLY = 0x2B
+    EXPERIMENTAL_ONE = 0xFD
+    EXPERIMENTAL_TWO = 0xFE
 
     codes = dict(
         (k.lower().replace('_', '-'), v)
@@ -49,6 +51,8 @@ class ICMPType(Resource):
             'EXPERIMENTAL_MOBILITY': EXPERIMENTAL_MOBILITY,
             'EXTENDED_ECHO_REQUEST': EXTENDED_ECHO_REQUEST,
             'EXTENDED_ECHO_REPLY': EXTENDED_ECHO_REPLY,
+            'EXPERIMENTAL_ONE': EXPERIMENTAL_ONE,
+            'EXPERIMENTAL_TWO': EXPERIMENTAL_TWO,
         }.items()
     )
 
