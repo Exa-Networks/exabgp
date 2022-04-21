@@ -199,6 +199,7 @@ The following projects are related to ExaBGP
 
 **FIB**
   - [IOS-XR Solenoid](https://github.com/ios-xr/Solenoid) a FIB for ExaBGP
+  - [FBGP](https://github.com/trungdtbk/fbgp2)a FIB (pushing routes to a Faucet SDN controller)
 
 **Other BGP implementation**
   - [Full list](https://github.com/Exa-Networks/exabgp/wiki/Other-OSS-BGP-implementations) of known open source BGP implementation
