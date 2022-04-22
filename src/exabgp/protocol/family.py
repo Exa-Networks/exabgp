@@ -172,7 +172,7 @@ class _SAFI(int):
         return self in (SAFI.nlri_mpls, SAFI.mpls_vpn)
 
     def has_rd(self):
-        return self in (SAFI.nlri_mpls, SAFI.mpls_vpn, SAFI.flow_vpn)
+        return self in (SAFI.mpls_vpn, SAFI.flow_vpn)
         # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
     def has_path(self):
