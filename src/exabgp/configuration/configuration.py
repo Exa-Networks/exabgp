@@ -556,7 +556,12 @@ class Configuration(_Configuration):
         if name not in self._structure:
             return self.error.set('option %s is not allowed here' % name)
 
-        return self.dispatch(name)
+        if not self.dispatch(name):
+            return False
+
+        instance = self._structure[name].get('class', None)
+        instance.post()
+        return True
 
     def run(self, name, command):
         # restore 'anounce attribute' to provide backward 3.4 compatibility

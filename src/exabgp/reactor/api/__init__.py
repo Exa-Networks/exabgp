@@ -91,6 +91,9 @@ class API(Command):
         if not self.configuration.partial('static', line):
             return []
 
+        if self.configuration.scope.location():
+            return []
+
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
         return changes
