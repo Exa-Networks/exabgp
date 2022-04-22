@@ -56,8 +56,7 @@ class LinkState(Attribute):
         while data:
             scode, length = unpack('!HH', data[:4])
             payload = data[4 : length + 4]
-            if len(payload) != length:
-                raise Notify(3, 5, f'Unable to decode attribute, wrong size for {cls.REPR}')
+            cls.check_length(payload, length)
             data = data[length + 4 :]
             klass = cls.klass(scode).unpack(payload)
             klass.TLV = scode
@@ -82,7 +81,7 @@ class BaseLS(object):
     TLV = -1
     JSON = 'json-name-unset'
     REPR = 'repr name unset'
-    LEN = None
+    LEN = 0
     MERGE = False
 
     def __init__(self, content):
@@ -95,10 +94,13 @@ class BaseLS(object):
         return "%s: %s" % (self.REPR, self.content)
 
     @classmethod
-    def check(cls, length):
-        if cls.LEN is not None and length != cls.LEN:
+    def check_length(cls, data, length):
+        if length and len(data) != length:
             raise Notify(3, 5, f'Unable to decode attribute, wrong size for {cls.REPR}')
 
+    @classmethod
+    def check(cls, data):
+        return cls.check_length(data, cls.LEN)
 
 class GenericLSID(BaseLS):
     def __init__(self, code, content):
@@ -151,6 +153,6 @@ class FlagLS(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        cls.check(len(data))
+        cls.check(data)
         # We only support IS-IS for now.
         return cls(cls.unpack_flags(data[0:1]))

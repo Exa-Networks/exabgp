@@ -33,5 +33,5 @@ class RsvpBw(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        cls.check(len(data))
+        cls.check(data)
         return cls(unpack('!f', data)[0])

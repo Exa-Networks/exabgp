@@ -33,5 +33,5 @@ class UnRsvpBw(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        cls.check(len(data))
+        cls.check(data)
         return cls(unpack('!ffffffff', data))
