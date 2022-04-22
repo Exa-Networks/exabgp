@@ -223,15 +223,15 @@ class Reactor(object):
         from exabgp.configuration.check import check_nlri
 
         if not self.reload():
-            return 1
+            return False
 
         check = check_nlri if nlri_only else check_message
 
         neighbors = self.configuration.neighbors
         for neighbor in neighbors.values():
             if not check(neighbor, route):
-                return 1
-        return 0
+                return False
+        return True
 
     def run(self):
         self.daemon.daemonise()

@@ -99,10 +99,8 @@ def cmdline(cmdarg):
     sanitized = ''.join(cmdarg.payload).replace(':', '').replace(' ', '')
     if cmdarg.configuration:
         configuration = Configuration([getconf(cmdarg.configuration)])
-        Reactor(configuration).check(sanitized, cmdarg.nlri)
-        return
 
-    if cmdarg.family:
+    elif cmdarg.family:
         families = cmdarg.family.split()
         if len(families) % 2:
             sys.stdout.write('families provided are invalid')
@@ -112,11 +110,14 @@ def cmdline(cmdarg):
         families_text = ';'.join([f'{a} {s}' for a, s in families_pair])
         conf = conf_none.replace('[families]', families_text)
         configuration = Configuration([conf], text=True)
-        Reactor(configuration).check(sanitized, cmdarg.nlri)
-        return
 
-    configuration = Configuration([conf_all], text=True)
-    Reactor(configuration).check(sanitized, cmdarg.nlri)
+    else:
+        configuration = Configuration([conf_all], text=True)
+
+    valid_nlri = Reactor(configuration).check(sanitized, cmdarg.nlri)
+    if valid_nlri:
+        return 0
+    return 1
 
 
 if __name__ == '__main__':
