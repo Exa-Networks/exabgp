@@ -48,8 +48,7 @@ jobs:
 
     - name: Decoding Checks
       run: |
-        ./sbin/exabgp decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
-        ./sbin/exabgp decode --configuration etc/exabgp/conf-bgpls.conf --nlri "00 02 FF FF 03 00 00 00 00 00 00 00 00 01 00 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 0a 0a 0a 01 01 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 02 02 02"
+        ./qa/bin/decode
 
     - name: Test Coverage
       run: |

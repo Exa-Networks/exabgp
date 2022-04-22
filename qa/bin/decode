@@ -1,4 +1,31 @@
+#!/bin/sh
+
+# exit if any command fails
+set -e
+
+dirname=`dirname $0`
+retval=0
+
+case $dirname in
+	/*)
+		cd $dirname/../.. > /dev/null
+		path=`pwd`
+		cd - > /dev/null
+	;;
+	*)
+		cd `pwd`/$dirname/../.. > /dev/null
+		path=`pwd`
+		cd - > /dev/null
+	;;
+esac
+
+export PYTHONPATH=$path/src
 # a weird packet from Cisco 7600 with attribute not no NLRI (so not an EOR, just a junk, unless packet)
-./sbin/exabgp decode etc/exabgp/conf-new-v4.conf ffffffffffffffffffffffffffffffff004f02000000384001010040020e02030000aaaa0000aaaa0000aaaac0070800aa00aa0a0a0a0a4006004003040a0a0a0a8004040000000040050400000064 
+$path/sbin/exabgp decode -f 'ipv4 unicast' ffffffffffffffffffffffffffffffff004f02000000384001010040020e02030000aaaa0000aaaa0000aaaac0070800aa00aa0a0a0a0a4006004003040a0a0a0a8004040000000040050400000064
+
+# a simple ipv4 route
+$path/sbin/exabgp decode -f 'ipv4 unicast'  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
+
 # decoding bgp-ls
-./sbin/exabgp decode --nlri etc/exabgp/conf-bgpls.conf "00 02 FF FF 03 00 00 00 00 00 00 00 00 01 00 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 0a 0a 0a 01 01 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 02 02 02"
+$path/sbin/exabgp decode -f 'bgp-ls bgp-ls' --nlri "00 02 FF FF 03 00 00 00 00 00 00 00 00 01 00 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 0a 0a 0a 01 01 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 02 02 02"
+$path/sbin/exabgp decode -d -f 'bgp-ls bgp-ls' '0000 0093 800E 7240 0447 04C0 A8FF 1D00 0002 0065 0300 0000 0000 0000 0001 0000 2002 0000 0400 00FD E902 0100 0400 0000 0002 0200 0400 0000 0002 0300 040A 0101 0101 0100 2402 0000 0400 00FD E902 0100 0400 0000 0002 0200 0400 0000 0002 0300 080A 0104 010A 0101 0201 0300 040A 0101 0101 0400 040A 0101 0240 0101 0040 0206 0201 0000 FDE9 8004 0400 0000 0080 1D07 0447 0003 0000 01'

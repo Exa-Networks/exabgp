@@ -79,11 +79,12 @@ def main():
     options = vars(cmdarg)
 
     if 'func' in options:
-        cmdarg.func(cmdarg)
+        return cmdarg.func(cmdarg)
     else:
         parser.print_help()
         environ.default()
+        return 1
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
