@@ -32,5 +32,5 @@ class TeMetric(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        cls.check(len(data))
+        cls.check(data)
         return cls(unpack('!L', data)[0])

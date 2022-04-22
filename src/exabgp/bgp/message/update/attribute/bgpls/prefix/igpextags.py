@@ -29,8 +29,9 @@ class IgpExTags(BaseLS):
     TLV = 1154
     REPR = 'IGP Extended Route Tags'
     JSON = 'igp-extended-route-tags'
+    # XXX: can we find a LEN to check?
 
     @classmethod
     def unpack(cls, data):
-        # XXX: cls.check(len(data))
+        cls.check(data)
         return cls([unpack("!Q", _)[0] for _ in split(data, 8)])
