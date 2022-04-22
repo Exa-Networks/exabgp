@@ -56,7 +56,7 @@ class SrCapabilities(FlagLS):
         return "%s: %s, sids: %s" % (self.JSON, self.flags, self.sids)
 
     @classmethod
-    def unpack(cls, data, length):
+    def unpack(cls, data):
         # Extract node capability flags
         flags = cls.unpack_flags(data[0:1])
         # Move pointer past flags and reserved bytes

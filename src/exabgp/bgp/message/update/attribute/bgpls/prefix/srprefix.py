@@ -43,7 +43,7 @@ class SrPrefix(FlagLS):
         return "prefix_flags: %s, sids: %s, undecoded_sid: %s" % (self.flags, self.sids, self.undecoded)
 
     @classmethod
-    def unpack(cls, data, length):
+    def unpack(cls, data):
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         #

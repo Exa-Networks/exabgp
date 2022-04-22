@@ -32,13 +32,13 @@ class LocalTeRid(object):
         return "Local TE Router IDs: %s" % ', '.join(self.terids)
 
     @classmethod
-    def unpack(cls, data, length):
-        size = len(data)
+    def unpack(cls, data):
+        length = len(data)
 
-        if size not in (4, 16):
+        if length not in (4, 16):
             raise Notify(3, 5, "Invalid remote-te size")
 
-        return cls([str(IP.unpack(data[:size]))])
+        return cls([str(IP.unpack(data))])
 
     def json(self, compact=None):
         return '"local-te-router-ids": ["%s"]' % '", "'.join(self.terids)

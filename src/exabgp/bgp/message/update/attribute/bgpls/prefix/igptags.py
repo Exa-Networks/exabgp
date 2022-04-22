@@ -34,5 +34,6 @@ class IgpTags(BaseLS):
     JSON = 'igp-route-tags'
 
     @classmethod
-    def unpack(cls, data, length):
+    def unpack(cls, data):
+        # XXX: cls.check(len(data))
         return cls([unpack("!L", _)[0] for _ in split(data, 4)])

@@ -55,9 +55,12 @@ class LinkState(Attribute):
         ls_attrs = []
         while data:
             scode, length = unpack('!HH', data[:4])
-            klass = cls.klass(scode).unpack(data[4 : length + 4], length)
-            klass.TLV = scode
+            payload = data[4 : length + 4]
+            if len(payload) != length:
+                raise Notify(3, 5, f'Unable to decode attribute, wrong size for {cls.REPR}')
             data = data[length + 4 :]
+            klass = cls.klass(scode).unpack(payload)
+            klass.TLV = scode
             if klass.MERGE:
                 for k in ls_attrs:
                     if k.TLV == klass.TLV:
@@ -147,7 +150,7 @@ class FlagLS(BaseLS):
         return flags
 
     @classmethod
-    def unpack(cls, data, length):
-        cls.check(length)
+    def unpack(cls, data):
+        cls.check(len(data))
         # We only support IS-IS for now.
         return cls(cls.unpack_flags(data[0:1]))

@@ -38,5 +38,5 @@ class NodeOpaque(object):
         return "Node Opaque attribute: %s" % (self.opaque)
 
     @classmethod
-    def unpack(cls, data, length):
-        return cls(unpack("!%ds" % length, data[:length])[0])
+    def unpack(cls, data):
+        return cls(unpack("!%ds" % len(data), data)[0])
