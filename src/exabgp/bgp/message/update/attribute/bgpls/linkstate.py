@@ -44,7 +44,12 @@ class LinkState(Attribute):
 
     @classmethod
     def klass(cls, code):
-        return cls.registered_lsids.get(code, GenericLSID)
+        klass = cls.registered_lsids.get(code, None)
+        if klass is None:
+            unknown = type('GenericLSID%d' % code, GenericLSID.__bases__, dict(GenericLSID.__dict__))
+            unknown.code = code
+            return unknown
+        return klass
 
     @classmethod
     def registered(cls, lsid, flag=None):
@@ -104,9 +109,10 @@ class BaseLS(object):
 
 
 class GenericLSID(BaseLS):
+    code = 0
+
     def __init__(self, code, content):
         BaseLS.__init__(self, content)
-        self.code = code
 
     def __repr__(self):
         return "Attribute with code [ %s ] not implemented" % (self.code)
@@ -115,8 +121,8 @@ class GenericLSID(BaseLS):
         return '"generic-LSID-{}": {}'.format(self.code, json.dumps(self.content))
 
     @classmethod
-    def unpack(cls, scode, data):
-        return cls(scode, binascii.b2a_uu(data[:]))
+    def unpack(cls, data):
+        return cls(binascii.b2a_uu(data[:]))
 
 
 class FlagLS(BaseLS):
