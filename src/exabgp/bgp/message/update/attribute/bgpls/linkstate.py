@@ -48,6 +48,7 @@ class LinkState(Attribute):
         if klass is None:
             unknown = type('GenericLSID%d' % code, GenericLSID.__bases__, dict(GenericLSID.__dict__))
             unknown.code = code
+            cls.registered_lsids[code] = unknown
             return unknown
         return klass
 
