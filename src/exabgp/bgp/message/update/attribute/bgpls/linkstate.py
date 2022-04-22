@@ -57,7 +57,11 @@ class LinkState(Attribute):
         ls_attrs = []
         while data:
             scode, length = unpack('!HH', data[:4])
-            klass = cls.klass(scode).unpack(data[4 : length + 4], length)
+            klass = cls.klass(scode)
+            if klass.__name__ == "GenericLSID":
+                klass = klass.unpack(scode, data)
+            else:
+                klass = klass.unpack(data[4: length + 4], length)
             klass.TLV = scode
             data = data[length + 4 :]
             if klass.MERGE:
@@ -79,10 +83,10 @@ class LinkState(Attribute):
 
 class BaseLS(object):
     TLV = -1
-    TLV = -1
     JSON = 'json-name-unset'
     REPR = 'repr name unset'
     LEN = None
+    MERGE = False
 
     def __init__(self, content):
         self.content = content
