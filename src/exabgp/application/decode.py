@@ -19,16 +19,30 @@ from exabgp.logger import log
 
 conf_all = """\
 neighbor 127.0.0.1 {
-        router-id 10.0.0.2;
-        local-address 127.0.0.1;
-        local-as 65533;
-        peer-as 65533;
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as 65533;
+    peer-as 65533;
 
-        family {
-                all
-        }
+    family {
+        all
+    }
 }
 """
+
+conf_none = """\
+neighbor 127.0.0.1 {
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as 65533;
+    peer-as 65533;
+
+    family {
+        [families];
+    }
+}
+"""
+
 
 def is_bgp(message):
     return all(c in string.hexdigits or c == ':' for c in message)
@@ -40,6 +54,7 @@ def setargs(sub):
     sub.add_argument('-d', '--debug', help='start the python debugger errors', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on fault', action='store_true')
     sub.add_argument('-c', '--configuration', help='configuration file(s)', type=str)
+    sub.add_argument('-f', '--family', help='family expected', type=str)
     sub.add_argument('payload', help='the BGP payload in hexadecimal', type=str)
     # fmt:on
 
@@ -84,8 +99,23 @@ def cmdline(cmdarg):
     sanitized = ''.join(cmdarg.payload).replace(':', '').replace(' ', '')
     if cmdarg.configuration:
         configuration = Configuration([getconf(cmdarg.configuration)])
-    else:
-        configuration = Configuration([conf_all], text=True)
+        Reactor(configuration).check(sanitized, cmdarg.nlri)
+        return
+
+    if cmdarg.family:
+        families = cmdarg.family.split()
+        if len(families) % 2:
+            sys.stdout.write('families provided are invalid')
+            sys.stdout.flush()
+            sys.exit(1)
+        families_pair = [families[n:n+2] for n in range(0, len(families), 2)]
+        families_text = ';'.join([f'{a} {s}' for a, s in families_pair])
+        conf = conf_none.replace('[families]', families_text)
+        configuration = Configuration([conf], text=True)
+        Reactor(configuration).check(sanitized, cmdarg.nlri)
+        return
+
+    configuration = Configuration([conf_all], text=True)
     Reactor(configuration).check(sanitized, cmdarg.nlri)
 
 
