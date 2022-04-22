@@ -34,8 +34,6 @@ class LinkState(Attribute):
     @classmethod
     def register(cls, lsid=None, flag=None):
         def register_lsid(klass):
-            if not hasattr(klass, 'MERGE'):
-                klass.MERGE = False
             scode = klass.TLV if lsid is None else lsid
             if scode in cls.registered_lsids:
                 raise RuntimeError('only one class can be registered per BGP link state attribute type')
@@ -79,10 +77,10 @@ class LinkState(Attribute):
 
 class BaseLS(object):
     TLV = -1
-    TLV = -1
     JSON = 'json-name-unset'
     REPR = 'repr name unset'
     LEN = None
+    MERGE = False
 
     def __init__(self, content):
         self.content = content
