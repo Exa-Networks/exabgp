@@ -48,7 +48,7 @@ class ParseStatic(ParseStaticRoute):
         return True
 
     def post(self):
-        return True
+        return ParseStaticRoute.post(self)
 
 
 @ParseStatic.register('route', 'append-route')
