@@ -56,7 +56,7 @@ class LinkState(Attribute):
         while data:
             scode, length = unpack('!HH', data[:4])
             payload = data[4 : length + 4]
-            cls.check_length(payload, length)
+            BaseLS.check_length(payload, length)
             data = data[length + 4 :]
             klass = cls.klass(scode).unpack(payload)
             klass.TLV = scode
@@ -101,6 +101,7 @@ class BaseLS(object):
     @classmethod
     def check(cls, data):
         return cls.check_length(data, cls.LEN)
+
 
 class GenericLSID(BaseLS):
     def __init__(self, code, content):
