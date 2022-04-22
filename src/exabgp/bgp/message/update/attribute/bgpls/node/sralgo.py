@@ -34,7 +34,7 @@ class SrAlgorithm(object):
         return "SrAlgorithms: %s" % (self.sr_algos)
 
     @classmethod
-    def unpack(cls, data, length):
+    def unpack(cls, data):
         # Looks like IOS XR advertises len 0 on this sub TLV
         # when using default SPF.
         return cls(

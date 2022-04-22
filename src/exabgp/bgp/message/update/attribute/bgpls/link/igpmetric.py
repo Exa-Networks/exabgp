@@ -36,7 +36,7 @@ class IgpMetric(BaseLS):
     JSON = 'igp-metric'
 
     @classmethod
-    def unpack(cls, data, length):
+    def unpack(cls, data):
         if len(data) == 2:
             # OSPF
             return cls(unpack('!H', data)[0])

@@ -32,6 +32,6 @@ class PrefixMetric(BaseLS):
     LEN = 4
 
     @classmethod
-    def unpack(cls, data, length):
-        cls.check(length)
+    def unpack(cls, data):
+        cls.check(len(data))
         return cls(int(unpack("!L", data)[0]))

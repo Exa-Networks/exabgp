@@ -34,6 +34,6 @@ class LinkOpaque(object):
     REPR = 'opaque-link'
 
     @classmethod
-    def unpack(cls, data, length):
-        # XXX: cls.check(length)
-        return cls(unpack("!%ds" % length, data[:length])[0])
+    def unpack(cls, data):
+        length = len(data)
+        return cls(unpack("!%ds" % length, data)[0])

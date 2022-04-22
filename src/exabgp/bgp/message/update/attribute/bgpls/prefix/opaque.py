@@ -32,5 +32,5 @@ class PrefixOpaque(BaseLS):
     JSON = 'opaque-prefix'
 
     @classmethod
-    def unpack(cls, data, length):
-        return cls(unpack("!%ds" % length, data[:length])[0])
+    def unpack(cls, data):
+        return cls(unpack("!%ds" % len(data), data)[0])

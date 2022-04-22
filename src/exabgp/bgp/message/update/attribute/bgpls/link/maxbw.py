@@ -29,6 +29,6 @@ class MaxBw(BaseLS):
     LEN = 4
 
     @classmethod
-    def unpack(cls, data, length):
-        cls.check(length)
+    def unpack(cls, data):
+        cls.check(len(data))
         return cls(unpack('!f', data)[0])

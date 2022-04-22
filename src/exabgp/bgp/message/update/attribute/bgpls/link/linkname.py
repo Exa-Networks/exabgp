@@ -31,7 +31,7 @@ class LinkName(BaseLS):
     JSON = 'link-name'
 
     @classmethod
-    def unpack(cls, data, length):
-        if length > 255:
+    def unpack(cls, data):
+        if len(data) > 255:
             raise Notify(3, 5, "Link Name TLV length too large")
-        return cls(binascii.b2a_uu(data[:length]))
+        return cls(binascii.b2a_uu(data))

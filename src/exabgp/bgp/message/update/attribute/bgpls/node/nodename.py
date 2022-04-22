@@ -34,11 +34,11 @@ class NodeName(object):
         return "nodename: %s" % (self.nodename)
 
     @classmethod
-    def unpack(cls, data, length):
-        if length > 255:
+    def unpack(cls, data):
+        if len(data) > 255:
             raise Notify(3, 5, "Node Name TLV length too large")
 
-        return cls(data[:length].decode('ascii'))
+        return cls(data.decode('ascii'))
 
     def json(self, compact=None):
         return '"node-name": "%s"' % str(self.nodename)

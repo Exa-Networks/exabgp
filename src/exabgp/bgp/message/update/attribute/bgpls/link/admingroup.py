@@ -21,6 +21,6 @@ class AdminGroup(BaseLS):
     LEN = 4
 
     @classmethod
-    def unpack(cls, data, length):
-        cls.check(length)
+    def unpack(cls, data):
+        cls.check(len(data))
         return cls(unpack('!L', data[:4])[0])

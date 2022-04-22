@@ -50,7 +50,7 @@ class SrAdjacencyLan(FlagLS):
         return "sr-adj-lan-sids: {}".format(self.sr_adj_lan_sids)
 
     @classmethod
-    def unpack(cls, data, length):
+    def unpack(cls, data):
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         # Parse adj weight
