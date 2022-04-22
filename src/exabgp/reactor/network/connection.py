@@ -61,9 +61,7 @@ class Connection(object):
 
     # Just in case ..
     def __del__(self):
-        if self.io:
-            self.close()
-            log.warning('connection to %s closed' % self.peer, self.session())
+        self.close()
 
     def name(self):
         return "%s-%d %s-%s" % (self.direction, self.id, self.local, self.peer)
@@ -83,6 +81,7 @@ class Connection(object):
             if self.io:
                 self.io.close()
                 self.io = None
+            log.warning('connection to %s closed' % self.peer, self.session())
         except Exception:
             self.io = None
 
