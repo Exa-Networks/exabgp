@@ -12,7 +12,7 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-
+from exabgp.util import hexstring
 
 @Attribute.register()
 class LinkState(Attribute):
@@ -112,18 +112,18 @@ class BaseLS(object):
 class GenericLSID(BaseLS):
     code = 0
 
-    def __init__(self, code, content):
+    def __init__(self, content):
         BaseLS.__init__(self, content)
 
     def __repr__(self):
         return "Attribute with code [ %s ] not implemented" % (self.code)
 
     def json(self):
-        return '"generic-LSID-{}": {}'.format(self.code, json.dumps(self.content))
+        return '"generic-lsid-{}": "{}"'.format(self.code, hexstring(self.content))
 
     @classmethod
     def unpack(cls, data):
-        return cls(binascii.b2a_uu(data[:]))
+        return cls(binascii.b2a_uu(data))
 
 
 class FlagLS(BaseLS):
