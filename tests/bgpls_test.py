@@ -23,12 +23,12 @@ class TestTlvs(unittest.TestCase):
 
     def test_igp_tags(self,):
         data = b'\x00\x00\xff\xfe'
-        tlv = IgpTags.unpack(data, len(data))
+        tlv = IgpTags.unpack(data)
         self.assertEqual(tlv.json(), '"igp-route-tags": [65534]')
 
     def test_prefix_metric(self,):
         data = b'\x00\x00\x00\x14'
-        tlv = PrefixMetric.unpack(data, len(data))
+        tlv = PrefixMetric.unpack(data)
         self.assertEqual(tlv.json(), '"prefix-metric": 20')
 
     def test_ospf_route_type(self,):
