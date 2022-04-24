@@ -266,7 +266,7 @@ def release_pypi(args):
 
     Path.remove_egg()
 
-    if Command.run('python setup.py sdist bdist_wheel'):
+    if Command.run('python3 setup.py sdist bdist_wheel'):
         print('could not generate egg')
         return 1
 
