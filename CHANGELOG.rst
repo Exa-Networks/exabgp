@@ -4,6 +4,9 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.18
+ * Feature: add ICMP experimental codes
+   reported: enag11
+ * Feature: PGP signing releases
 
 Version 4.2.17
  * Feature: add flags ECE, CW and NS to TCP, (not sure if any flowspec implementation uses them) #1053
