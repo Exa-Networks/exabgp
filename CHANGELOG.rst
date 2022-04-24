@@ -3,6 +3,9 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.19
+ * Feature: force PGP signing of tags
+
 Version 4.2.18
  * Feature: add ICMP experimental codes
    reported: enag11

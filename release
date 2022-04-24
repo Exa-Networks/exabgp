@@ -156,7 +156,7 @@ class Git(Command):
 
     @staticmethod
     def tags():
-        return os.popen('git tag').read().split('-')[0].strip().split('\n')
+        return os.popen('git tag -s').read().split('-')[0].strip().split('\n')
 
     @staticmethod
     def tag(release):
