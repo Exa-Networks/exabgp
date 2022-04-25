@@ -34,6 +34,8 @@ class ICMPType(Resource):
     MASK_REQUEST = 0x11
     MASK_REPLY = 0x12
     TRACEROUTE = 0x1E
+    EXPERIMENTAL_ONE = 0xFD
+    EXPERIMENTAL_TWO = 0xFE
 
     codes = dict(
         (k.lower().replace('_', '-'), v)
@@ -54,6 +56,8 @@ class ICMPType(Resource):
             'MASK_REQUEST': MASK_REQUEST,
             'MASK_REPLY': MASK_REPLY,
             'TRACEROUTE': TRACEROUTE,
+            'EXPERIMENTAL_ONE': EXPERIMENTAL_ONE,
+            'EXPERIMENTAL_TWO': EXPERIMENTAL_TWO,
         }.items()
     )
 
