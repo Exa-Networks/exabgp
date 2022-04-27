@@ -82,7 +82,7 @@ class LINK(BGPLS):
         self.neigh_addrs = neigh_addrs
         self.iface_addrs = iface_addrs
         self.link_ids = link_ids
-        self.topology_ids = topology_ids
+        self.topology_ids = topology_ids if topology_ids else MTID([])
         self.nexthop = nexthop
         self.route_d = route_d
         self._packed = packed
