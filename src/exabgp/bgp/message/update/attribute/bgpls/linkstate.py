@@ -71,6 +71,7 @@ class LinkState(Attribute):
             scode, length = unpack('!HH', data[:4])
             payload = data[4 : length + 4]
             BaseLS.check_length(payload, length)
+
             data = data[length + 4 :]
             klass = cls.klass(scode)
             instance = klass.unpack(payload)
@@ -81,7 +82,7 @@ class LinkState(Attribute):
 
             for k in ls_attrs:
                 if k.TLV == instance.TLV:
-                    k.merge(k)
+                    k.merge(instance)
                     break
             else:
                 ls_attrs.append(instance)
@@ -128,19 +129,24 @@ class BaseLS(object):
 
 class GenericLSID(BaseLS):
     TLV = 0
+    MERGE = True
 
     def __init__(self, content):
-        BaseLS.__init__(self, content)
+        BaseLS.__init__(self, [content, ])
 
     def __repr__(self):
         return "Attribute with code [ %s ] not implemented" % (self.TLV)
 
     def json(self):
-        return '"generic-lsid-{}": "{}"'.format(self.TLV, hexstring(self.content))
+        merged = ', '.join(['"{}"'.format(hexstring(_)) for _ in self.content])
+        return '"generic-lsid-{}": [{}]'.format(self.TLV, merged)
 
     @classmethod
     def unpack(cls, data):
         return cls(binascii.b2a_uu(data))
+
+    def merge(self, other):
+        self.content.extend(other.content)
 
 
 class FlagLS(BaseLS):
