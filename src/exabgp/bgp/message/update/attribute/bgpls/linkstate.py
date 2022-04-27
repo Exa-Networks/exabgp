@@ -65,14 +65,15 @@ class LinkState(Attribute):
             payload = data[4 : length + 4]
             BaseLS.check_length(payload, length)
             data = data[length + 4 :]
-            klass = cls.klass(scode).unpack(payload)
-            klass.TLV = scode
-            if klass.MERGE:
+            klass = cls.klass(scode)
+            instance = klass.unpack(payload)
+            instance.TLV = scode
+            if instance.MERGE:
                 for k in ls_attrs:
-                    if k.TLV == klass.TLV:
+                    if k.TLV == instance.TLV:
                         k.merge(k)
                         continue
-            ls_attrs.append(klass)
+            ls_attrs.append(instance)
 
         return cls(ls_attrs=ls_attrs)
 
