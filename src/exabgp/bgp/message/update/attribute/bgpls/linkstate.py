@@ -128,7 +128,7 @@ class BaseLS(object):
 
     def merge(self, other):
         if not self.MERGE:
-            raise Notify(3, 5, f'Invalid merge, issue decoding {cls.REPR}')
+            raise Notify(3, 5, f'Invalid merge, issue decoding {self.REPR}')
         self.content.extend(other.content)
 
 
