@@ -28,12 +28,11 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 class NodeName(BaseLS):
     TLV = 1026
     MERGE = False
+    REPR = "Node Name"
+    JSON = "node-name"
 
     def __init__(self, nodename):
         BaseLS.__init__(self, nodename)
-
-    def __repr__(self):
-        return "nodename: %s" % (self.content)
 
     @classmethod
     def unpack(cls, data):
@@ -43,4 +42,4 @@ class NodeName(BaseLS):
         return cls(data.decode('ascii'))
 
     def json(self, compact=None):
-        return '"node-name": {}'.format(json.dumps(self.content))
+        return '"{}": {}'.format(self.JSON, json.dumps(self.content))

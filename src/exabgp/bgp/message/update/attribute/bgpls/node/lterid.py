@@ -25,12 +25,11 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register(lsid=1029)
 class LocalTeRid(BaseLS):
     MERGE = True
+    REPR = "Local TE Router IDs"
+    JSON = "local-te-router-ids"
 
     def __init__(self, terids):
         BaseLS.__init__(self, terids)
-
-    def __repr__(self):
-        return "Local TE Router IDs: %s" % ', '.join(self.content)
 
     @classmethod
     def unpack(cls, data):
@@ -42,4 +41,4 @@ class LocalTeRid(BaseLS):
         return cls([str(IP.unpack(data))])
 
     def json(self, compact=None):
-        return '"local-te-router-ids": ["%s"]' % '", "'.join(self.content)
+        return '"{}": ["{}"]'.format(self.JSON, '", "'.join(self.content))

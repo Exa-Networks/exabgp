@@ -22,16 +22,15 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register()
 class IsisArea(BaseLS):
     TLV = 1027
+    REPR = "ISIS area id"
+    JSON = "area-id"
 
     def __init__(self, areaid):
         BaseLS.__init__(self, areaid)
-
-    def __repr__(self):
-        return "ISIS area id: %s" % (self.content)
 
     @classmethod
     def unpack(cls, data):
         return cls(int(data.hex(), 16))
 
     def json(self, compact=None):
-        return '"area-id": "%s"' % str(self.content)
+        return '"{}": "{}"'.format(self.JSON, self.content)
