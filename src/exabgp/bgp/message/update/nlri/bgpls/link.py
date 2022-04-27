@@ -114,7 +114,7 @@ class LINK(BGPLS):
                     # follows IGP type
                     node, left = NodeDescriptor.unpack(value, proto_id)
                     local_node.append(node)
-                    if left == tlvs:
+                    if left == value:
                         raise RuntimeError("sub-calls should consume data")
                     value = left
                 continue
@@ -125,7 +125,7 @@ class LINK(BGPLS):
                 while value:
                     node, left = NodeDescriptor.unpack(value, proto_id)
                     remote_node.append(node)
-                    if left == tlvs:
+                    if left == value:
                         raise RuntimeError("sub-calls should consume data")
                     value = left
                 continue
