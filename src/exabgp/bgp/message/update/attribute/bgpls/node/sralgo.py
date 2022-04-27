@@ -27,12 +27,11 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register()
 class SrAlgorithm(BaseLS):
     TLV = 1035
+    REPR = "SrAlgorithms"
+    JSON = "sr-algorithms"
 
     def __init__(self, sr_algos):
         BaseLS.__init__(self, sr_algos)
-
-    def __repr__(self):
-        return "SrAlgorithms: %s" % (self.content)
 
     @classmethod
     def unpack(cls, data):
@@ -46,4 +45,4 @@ class SrAlgorithm(BaseLS):
         )
 
     def json(self, compact=None):
-        return '"sr-algorithms": {}'.format(json.dumps(self.content))
+        return '"{}": {}'.format(self.JSON, json.dumps(self.content))
