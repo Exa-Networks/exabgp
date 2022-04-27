@@ -28,6 +28,7 @@ from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidIn
 #
 #           Figure 5: SRv6 SID Structure Sub-Sub-TLV
 
+
 @Srv6SidInformation.register()
 class Srv6SidStructure:
     TLV = 1

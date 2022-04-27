@@ -11,7 +11,7 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceSubTlv
 
 # 2.  SRv6 Services TLVs
-# 
+#
 #  0                   1                   2                   3
 #  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -21,6 +21,7 @@ from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6Servi
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #
 #                   Figure 1: SRv6 Service TLVs
+
 
 @PrefixSid.register()
 class Srv6L2Service(object):
@@ -53,11 +54,11 @@ class Srv6L2Service(object):
             code = data[0]
             length = unpack("!H", data[1:3])[0]
             if code in cls.registered_subtlvs:
-                subtlv = klass = cls.registered_subtlvs[code].unpack(data[3:length+3], length)
+                subtlv = klass = cls.registered_subtlvs[code].unpack(data[3 : length + 3], length)
             else:
-                subtlv = GenericSrv6ServiceSubTlv(code, data[3:length+3])
+                subtlv = GenericSrv6ServiceSubTlv(code, data[3 : length + 3])
             subtlvs.append(subtlv)
-            data = data[length+3:]
+            data = data[length + 3 :]
 
         return cls(subtlvs=subtlvs)
 

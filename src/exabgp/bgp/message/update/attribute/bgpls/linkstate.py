@@ -14,6 +14,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.util import hexstring
 
+
 @Attribute.register()
 class LinkState(Attribute):
     ID = Attribute.CODE.BGP_LS

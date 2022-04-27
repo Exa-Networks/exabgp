@@ -132,7 +132,7 @@ def prefix_sid_srv6(tokeniser):
         raise Exception("expect 'l3-service' or 'l2-service', but received '%s'" % value)
 
     sid = IPv6.unpack(IPv6.pton(tokeniser()))
-    behavior = 0xffff
+    behavior = 0xFFFF
     subtlvs = []
     subsubtlvs = []
     value = tokeniser()
@@ -157,20 +157,24 @@ def prefix_sid_srv6(tokeniser):
 
             value = tokeniser()
 
-            subsubtlvs.append(Srv6SidStructure(
-                loc_block_len=values[0],
-                loc_node_len=values[1],
-                func_len=values[2],
-                arg_len=values[3],
-                tpose_len=values[4],
-                tpose_offset=values[5],
-            ))
+            subsubtlvs.append(
+                Srv6SidStructure(
+                    loc_block_len=values[0],
+                    loc_node_len=values[1],
+                    func_len=values[2],
+                    arg_len=values[3],
+                    tpose_len=values[4],
+                    tpose_offset=values[5],
+                )
+            )
 
-    subtlvs.append(Srv6SidInformation(
-        sid=sid,
-        behavior=behavior,
-        subsubtlvs=subsubtlvs,
-    ))
+    subtlvs.append(
+        Srv6SidInformation(
+            sid=sid,
+            behavior=behavior,
+            subsubtlvs=subsubtlvs,
+        )
+    )
 
     if value != ")":
         raise Exception("expect ')', but received '%s'" % value)
