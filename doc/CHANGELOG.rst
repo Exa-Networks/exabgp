@@ -32,6 +32,7 @@ Version 5.0.0:
  * Feature: add support for Prefix-SID Sub-type
    defined in draft-ietf-bess-srv6-services-11 (type-5, type-6)
    patch: proelbtn
+ * Compatibility: Generic LSID are now returning lists (otherwise keys are not unique in JSON)
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
