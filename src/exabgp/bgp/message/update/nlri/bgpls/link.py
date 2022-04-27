@@ -14,6 +14,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.neighaddr import NeighAddr
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
+from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 
 
 #      0                   1                   2                   3
@@ -65,12 +66,13 @@ class LINK(BGPLS):
         remote_node,
         neigh_addrs=None,
         iface_addrs=None,
-        packed=None,
+        topology_ids=None,
         link_ids=None,
         nexthop=None,
         action=None,
         route_d=None,
         addpath=None,
+        packed=None,
     ):
         BGPLS.__init__(self, action, addpath)
         self.domain = domain
@@ -80,9 +82,10 @@ class LINK(BGPLS):
         self.neigh_addrs = neigh_addrs
         self.iface_addrs = iface_addrs
         self.link_ids = link_ids
+        self.topology_ids = topology_ids
         self.nexthop = nexthop
         self.route_d = route_d
-        self._pack = packed
+        self._packed = packed
 
     @classmethod
     def unpack_nlri(cls, data, rd):
@@ -90,6 +93,7 @@ class LINK(BGPLS):
         iface_addrs = []
         neigh_addrs = []
         link_identifiers = []
+        topologies = []
         remote_node = []
         local_node = []
         if proto_id not in PROTO_CODES.keys():
@@ -99,50 +103,53 @@ class LINK(BGPLS):
 
         while tlvs:
             tlv_type, tlv_length = unpack('!HH', tlvs[:4])
+            value = tlvs[4 : 4 + tlv_length]
+            tlvs = tlvs[4 + tlv_length :]
+
             if tlv_type == 256:
-                values = tlvs[4 : 4 + tlv_length]
                 local_node = []
-                while values:
+                while value:
                     # Unpack Local Node Descriptor Sub-TLVs
                     # We pass proto_id as TLV interpretation
                     # follows IGP type
-                    node, left = NodeDescriptor.unpack(values, proto_id)
+                    node, left = NodeDescriptor.unpack(value, proto_id)
                     local_node.append(node)
                     if left == tlvs:
                         raise RuntimeError("sub-calls should consume data")
-                    values = left
-                tlvs = tlvs[4 + tlv_length :]
+                    value = left
                 continue
-            elif tlv_type == 257:
+
+            if tlv_type == 257:
                 # Remote Node Descriptor
-                values = tlvs[4 : 4 + tlv_length]
                 remote_node = []
-                while values:
-                    node, left = NodeDescriptor.unpack(values, proto_id)
+                while value:
+                    node, left = NodeDescriptor.unpack(value, proto_id)
                     remote_node.append(node)
                     if left == tlvs:
                         raise RuntimeError("sub-calls should consume data")
-                    values = left
-                tlvs = tlvs[4 + tlv_length :]
+                    value = left
                 continue
-            elif tlv_type == 258:
+
+            if tlv_type == 258:
                 # Link Local/Remote identifiers
-                value = tlvs[4 : 4 + 8]
                 link_identifiers = LinkIdentifier.unpack(value)
-                tlvs = tlvs[4 + 8 :]
                 continue
-            elif tlv_type in [259, 261]:
+
+            if tlv_type in [259, 261]:
                 # IPv{4,6} Interface Address
-                value = tlvs[4 : 4 + tlv_length]
                 iface_addrs.append(IfaceAddr.unpack(value))
-                tlvs = tlvs[4 + tlv_length :]
                 continue
-            elif tlv_type in [260, 262]:
+
+            if tlv_type in [260, 262]:
                 # IPv{4,6} Neighbor Address
-                value = tlvs[4 : 4 + tlv_length]
                 neigh_addrs.append(NeighAddr.unpack(value))
-                tlvs = tlvs[4 + tlv_length :]
                 continue
+
+            if tlv_type == 263:
+                topologies = MTID.unpack(value)
+                continue
+
+            raise RuntimeError('Not implemented')
 
         return cls(
             domain=domain,
@@ -152,6 +159,7 @@ class LINK(BGPLS):
             neigh_addrs=neigh_addrs,
             iface_addrs=iface_addrs,
             link_ids=link_identifiers,
+            topology_ids=topologies,
             route_d=rd,
             packed=data,
         )
@@ -162,6 +170,7 @@ class LINK(BGPLS):
             and self.CODE == other.CODE
             and self.domain == other.domain
             and self.proto_id == other.proto_id
+            and self.topology_ids == other.topology_ids
             and self.route_d == other.route_d
         )
 
@@ -175,7 +184,9 @@ class LINK(BGPLS):
         return hash((self))
 
     def pack(self, negotiated=None):
-        return self._pack
+        if self.packed:
+            return self._packed
+        raise RuntimeError('Not implemented')
 
     def json(self, compact=None):
         local = ', '.join(d.json() for d in self.local_node)
@@ -188,7 +199,9 @@ class LINK(BGPLS):
         content += '"local-node-descriptors": { %s }, ' % local
         content += '"remote-node-descriptors": { %s }, ' % remote
         content += '"interface-address": { %s }, ' % interface_addrs
-        content += '"neighbor-address": { %s }' % neighbor_addrs
+        content += '"neighbor-address": { %s }, ' % neighbor_addrs
+        content += '"multi-topology-id": %s' % self.topology_ids.json()
+        # content is ending without a , here in purpose
         if self.link_ids:
             links = ', '.join(d.json() for d in self.link_ids)
             content += '" ,link-identifiers": { %s }' % links

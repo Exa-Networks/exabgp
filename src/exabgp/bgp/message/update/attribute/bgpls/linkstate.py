@@ -95,7 +95,11 @@ class BaseLS(object):
         self.content = content
 
     def json(self, compact=None):
-        return '"{}": {}'.format(self.JSON, json.dumps(self.content))
+        try:
+            return '"{}": {}'.format(self.JSON, json.dumps(self.content))
+        except TypeError:
+            # not a basic type
+            return '"{}": "{}"'.format(self.JSON, str(self.content))
 
     def __repr__(self):
         return "%s: %s" % (self.REPR, self.content)
