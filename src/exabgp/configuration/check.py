@@ -232,6 +232,7 @@ def check_nlri(neighbor, routes):
     except Exception as exc:
         log.error('could not parse the nlri', 'parser')
         from exabgp.debug import string_exception
+
         log.error(string_exception(exc), 'parser')
         if getenv().debug.pdb:
             raise
@@ -250,6 +251,7 @@ def check_nlri(neighbor, routes):
 def check_open(neighbor, raw):
     import sys
     import traceback
+
     sys.excepthook = traceback.print_exception
 
     try:
@@ -261,6 +263,7 @@ def check_open(neighbor, raw):
         print("here is the traceback to help to figure out why")
         print()
         raise
+
 
 # ================================================================= check_update
 #

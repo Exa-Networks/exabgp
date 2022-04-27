@@ -31,6 +31,7 @@ from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6Servi
 
 #            Figure 3: SRv6 SID Information Sub-TLV
 
+
 @Srv6L2Service.register()
 @Srv6L3Service.register()
 class Srv6SidInformation:
@@ -66,11 +67,11 @@ class Srv6SidInformation:
             code = data[0]
             length = unpack("!H", data[1:3])[0]
             if code in cls.registered_subsubtlvs:
-                subsubtlv = klass = cls.registered_subsubtlvs[code].unpack(data[3:length+3], length)
+                subsubtlv = klass = cls.registered_subsubtlvs[code].unpack(data[3 : length + 3], length)
             else:
-                subsubtlv = GenericSrv6ServiceDataSubSubTlv(code, data[3:length+3])
+                subsubtlv = GenericSrv6ServiceDataSubSubTlv(code, data[3 : length + 3])
             subsubtlvs.append(subsubtlv)
-            data = data[length+3:]
+            data = data[length + 3 :]
 
         return cls(sid=sid, behavior=behavior, subsubtlvs=subsubtlvs)
 
@@ -98,10 +99,9 @@ class Srv6SidInformation:
         return s
 
     def json(self, compact=None):
-        s = '{ "sid": "%s", "flags": 0, "endpoint_behavior": %d' 
+        s = '{ "sid": "%s", "flags": 0, "endpoint_behavior": %d'
         content = ", ".join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
         if content:
             s += ", %s" % content
         s += " }"
         return s
-

@@ -126,7 +126,6 @@ class Protocol(object):
             self.connection.close()
             self.connection = None
 
-
     def _to_api(self, direction, message, raw):
         packets = self.neighbor.api['%s-packets' % direction]
         parsed = self.neighbor.api['%s-parsed' % direction]

@@ -72,7 +72,7 @@ class PrefixSid(Attribute):
                 return "[ {}, {} ]".format(str(label_index), str(srgb))
             else:
                 return "[ {} ]".format(str(label_index))
-        
+
         # if not, we try to decode path attribute for SRv6
         return "[ " + ", ".join([str(attr) for attr in self.sr_attrs]) + " ]"
 

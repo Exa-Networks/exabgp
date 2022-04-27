@@ -106,7 +106,7 @@ def cmdline(cmdarg):
             sys.stdout.write('families provided are invalid')
             sys.stdout.flush()
             sys.exit(1)
-        families_pair = [families[n:n+2] for n in range(0, len(families), 2)]
+        families_pair = [families[n : n + 2] for n in range(0, len(families), 2)]
         families_text = ';'.join([f'{a} {s}' for a, s in families_pair])
         conf = conf_none.replace('[families]', families_text)
         configuration = Configuration([conf], text=True)

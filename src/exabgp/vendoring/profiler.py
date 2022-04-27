@@ -190,7 +190,7 @@ def _find_script(script_name):
 
 
 class LineProfiler:
-    """ A profiler that records the amount of memory for each line """
+    """A profiler that records the amount of memory for each line"""
 
     def __init__(self, **kw):
         self.functions = list()

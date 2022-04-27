@@ -11,7 +11,7 @@ version = os.environ.get('EXABGP_VERSION', release)
 
 if sys.version_info.major < 3:
     sys.exit('exabgp requires python3.7 or later')
-if (sys.version_info.major == 3 and sys.version_info.minor < 7):
+if sys.version_info.major == 3 and sys.version_info.minor < 7:
     sys.exit('exabgp requires python3.7 or later')
 
 if __name__ == '__main__':
