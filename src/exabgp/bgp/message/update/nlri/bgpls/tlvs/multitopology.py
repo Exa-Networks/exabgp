@@ -49,18 +49,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import struct
 
 
-class _Topology:
-    def __init__(self, bits, tid):
-        self.bits = bits
-        self.tid = tid
-
-    def json(self):
-        return '{ "bits": "%s", "multi-topology-id": %d }' % (
-            (('0000' + bin(self.bits)[2:])[-4:]),
-            self.tid
-        )
-
-
 class MTID(object):
     def __init__(self, topologies, packed=None):
         self.topologies = topologies
@@ -68,17 +56,17 @@ class MTID(object):
 
     @classmethod
     def unpack(cls, data):
-        tids = []
-        for i in range(0, len(data), 2):
-            payload = struct.unpack('!H', data[i:i+2])[0]
-            bits = payload >> (16-4)
-            tid = payload & 0x0FFF
-            tids.append(_Topology(bits, tid))
+        # tids = []
+        # for i in range(0, len(data), 2):
+        #     payload = struct.unpack('!H', data[i:i+2])[0]
+        #     tids.append(payload & 0x0FFF)
+        tids = struct.unpack('!H', data[:2])[0]
         return cls(tids, data)
 
     def json(self):
-        tids = ', '.join(_.json() for _ in self.topologies)
-        return f'[{tids}]'
+        return str(self.topologies)
+        # tids = ', '.join(_ for _ in self.topologies)
+        # return f'[{tids}]'
 
     def __eq__(self, other):
         return self.topologies == other.topologies

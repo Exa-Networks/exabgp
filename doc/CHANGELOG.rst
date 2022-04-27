@@ -33,6 +33,10 @@ Version 5.0.0:
    defined in draft-ietf-bess-srv6-services-11 (type-5, type-6)
    patch: proelbtn
  * Compatibility: Generic LSID are now returning lists (otherwise keys are not unique in JSON)
+ * Compatibitily: Many TLV could be returned many times and were not given as list
+   local-node-descriptors, remote-node-descriptors, interface-address, neighbor-address
+ * Compatibility: General use of plural for the following keys
+   interface-address -> interface-addresses, neighbor-address -> neighbor-addresses
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates

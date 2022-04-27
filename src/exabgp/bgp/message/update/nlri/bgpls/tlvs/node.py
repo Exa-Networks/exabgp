@@ -116,7 +116,7 @@ class NodeDescriptor(object):
         if self.dtype == 513:
             bgpls_id = '"bgp-ls-identifier": "%d"' % self.node_id
         content = ', '.join(d for d in [ospf, designated, psn, router_id, asn, bgpls_id] if d)
-        return content
+        return '{ %s }' % content
 
     def __eq__(self, other):
         return isinstance(other, NodeDescriptor) and self.node_id == other.node_id

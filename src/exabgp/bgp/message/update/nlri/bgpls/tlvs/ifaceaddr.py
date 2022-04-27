@@ -38,7 +38,7 @@ class IfaceAddr(object):
         return cls(iface_addr=addr)
 
     def json(self, compact=None):
-        return '"interface-address": "%s"' % self.iface_address
+        return '"%s"' % self.iface_address
 
     def __eq__(self, other):
         return self.iface_address == other.iface_address

@@ -79,10 +79,10 @@ class LINK(BGPLS):
         self.proto_id = proto_id
         self.local_node = local_node
         self.remote_node = remote_node
-        self.neigh_addrs = neigh_addrs
-        self.iface_addrs = iface_addrs
-        self.link_ids = link_ids
-        self.topology_ids = topology_ids if topology_ids else MTID([])
+        self.neigh_addrs = neigh_addrs if neigh_addrs else []
+        self.iface_addrs = iface_addrs if iface_addrs else []
+        self.link_ids = link_ids if link_ids else []
+        self.topology_ids = topology_ids if topology_ids else [] 
         self.nexthop = nexthop
         self.route_d = route_d
         self._packed = packed
@@ -90,10 +90,11 @@ class LINK(BGPLS):
     @classmethod
     def unpack_nlri(cls, data, rd):
         proto_id = unpack('!B', data[0:1])[0]
+        # FIXME: all these list should probably be defined in the objects 
         iface_addrs = []
         neigh_addrs = []
         link_identifiers = []
-        topologies = []
+        topology_ids = []
         remote_node = []
         local_node = []
         if proto_id not in PROTO_CODES.keys():
@@ -146,7 +147,7 @@ class LINK(BGPLS):
                 continue
 
             if tlv_type == 263:
-                topologies = MTID.unpack(value)
+                topology_ids.append(MTID.unpack(value))
                 continue
 
             raise RuntimeError('Not implemented')
@@ -159,7 +160,7 @@ class LINK(BGPLS):
             neigh_addrs=neigh_addrs,
             iface_addrs=iface_addrs,
             link_ids=link_identifiers,
-            topology_ids=topologies,
+            topology_ids=topology_ids,
             route_d=rd,
             packed=data,
         )
@@ -189,22 +190,30 @@ class LINK(BGPLS):
         raise RuntimeError('Not implemented')
 
     def json(self, compact=None):
-        local = ', '.join(d.json() for d in self.local_node)
-        remote = ', '.join(d.json() for d in self.remote_node)
-        interface_addrs = ', '.join(d.json() for d in self.iface_addrs)
-        neighbor_addrs = ', '.join(d.json() for d in self.neigh_addrs)
         content = '"ls-nlri-type": "%s", ' % self.NAME
         content += '"l3-routing-topology": %d, ' % int(self.domain)
         content += '"protocol-id": %d, ' % int(self.proto_id)
-        content += '"local-node-descriptors": { %s }, ' % local
-        content += '"remote-node-descriptors": { %s }, ' % remote
-        content += '"interface-address": { %s }, ' % interface_addrs
-        content += '"neighbor-address": { %s }, ' % neighbor_addrs
-        content += '"multi-topology-id": %s' % self.topology_ids.json()
-        # content is ending without a , here in purpose
-        if self.link_ids:
-            links = ', '.join(d.json() for d in self.link_ids)
-            content += '" ,link-identifiers": { %s }' % links
+
+        local = ', '.join(_.json() for _ in self.local_node)
+        content += '"local-node-descriptors": [ %s ], ' % local
+
+        remote = ', '.join(_.json() for _ in self.remote_node)
+        content += '"remote-node-descriptors": [ %s ], ' % remote
+
+        interface_addrs = ', '.join(_.json() for _ in self.iface_addrs)
+        content += '"interface-addresses": [ %s ], ' % interface_addrs
+
+        neighbor_addrs = ', '.join(_.json() for _ in self.neigh_addrs)
+        content += '"neighbor-addresses": [ %s ], ' % neighbor_addrs
+
+        topology_ids = ', '.join(_.json() for _ in self.topology_ids)
+        content += '"multi-topology-ids": [ %s ], ' % topology_ids
+
+        links = ', '.join(_.json() for _ in self.link_ids)
+        content += '"link-identifiers": [ %s ]' % links
+        # # content is ending without a , here in purpose
+
         if self.route_d:
             content += ", { %s }" % self.route_d.json()
+
         return '{ %s }' % content
