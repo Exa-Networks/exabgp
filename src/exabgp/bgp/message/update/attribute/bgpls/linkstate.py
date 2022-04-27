@@ -34,24 +34,31 @@ class LinkState(Attribute):
 
     @classmethod
     def register(cls, lsid=None, flag=None):
-        def register_lsid(klass):
-            scode = klass.TLV if lsid is None else lsid
-            if scode in cls.registered_lsids:
+        def register_class(klass):
+            if klass.TLV in cls.registered_lsids:
                 raise RuntimeError('only one class can be registered per BGP link state attribute type')
-            cls.registered_lsids[scode] = klass
+            cls.registered_lsids[klass.TLV] = klass
             return klass
+
+        def register_lsid(klass):
+            if not lsid:
+                return register_class(klass)
+
+            kls = type('%s_%d' % (klass.__name__, lsid), klass.__bases__, dict(klass.__dict__))
+            kls.TLV = lsid
+            return register_class(kls)
 
         return register_lsid
 
     @classmethod
     def klass(cls, code):
         klass = cls.registered_lsids.get(code, None)
-        if klass is None:
-            unknown = type('GenericLSID%d' % code, GenericLSID.__bases__, dict(GenericLSID.__dict__))
-            unknown.code = code
-            cls.registered_lsids[code] = unknown
-            return unknown
-        return klass
+        if klass is not None:
+            return klass
+        unknown = type('GenericLSID_%d' % code, GenericLSID.__bases__, dict(GenericLSID.__dict__))
+        unknown.TLV = code
+        cls.registered_lsids[code] = unknown
+        return unknown
 
     @classmethod
     def registered(cls, lsid, flag=None):
@@ -67,13 +74,17 @@ class LinkState(Attribute):
             data = data[length + 4 :]
             klass = cls.klass(scode)
             instance = klass.unpack(payload)
-            instance.TLV = scode
-            if instance.MERGE:
-                for k in ls_attrs:
-                    if k.TLV == instance.TLV:
-                        k.merge(k)
-                        continue
-            ls_attrs.append(instance)
+
+            if not instance.MERGE:
+                ls_attrs.append(instance)
+                continue
+
+            for k in ls_attrs:
+                if k.TLV == instance.TLV:
+                    k.merge(k)
+                    break
+            else:
+                ls_attrs.append(instance)
 
         return cls(ls_attrs=ls_attrs)
 
@@ -116,16 +127,16 @@ class BaseLS(object):
 
 
 class GenericLSID(BaseLS):
-    code = 0
+    TLV = 0
 
     def __init__(self, content):
         BaseLS.__init__(self, content)
 
     def __repr__(self):
-        return "Attribute with code [ %s ] not implemented" % (self.code)
+        return "Attribute with code [ %s ] not implemented" % (self.TLV)
 
     def json(self):
-        return '"generic-lsid-{}": "{}"'.format(self.code, hexstring(self.content))
+        return '"generic-lsid-{}": "{}"'.format(self.TLV, hexstring(self.content))
 
     @classmethod
     def unpack(cls, data):
