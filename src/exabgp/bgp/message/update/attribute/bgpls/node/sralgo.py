@@ -8,6 +8,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 import json
 
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #     draft-gredler-idr-bgp-ls-segment-routing-ext-03
@@ -24,14 +25,14 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class SrAlgorithm(object):
+class SrAlgorithm(BaseLS):
     TLV = 1035
 
     def __init__(self, sr_algos):
-        self.sr_algos = sr_algos
+        BaseLS.__init__(self, sr_algos)
 
     def __repr__(self):
-        return "SrAlgorithms: %s" % (self.sr_algos)
+        return "SrAlgorithms: %s" % (self.content)
 
     @classmethod
     def unpack(cls, data):
@@ -45,4 +46,4 @@ class SrAlgorithm(object):
         )
 
     def json(self, compact=None):
-        return '"sr-algorithms": {}'.format(json.dumps(self.sr_algos))
+        return '"sr-algorithms": {}'.format(json.dumps(self.content))

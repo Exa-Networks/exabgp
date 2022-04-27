@@ -6,10 +6,11 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
-import binascii
+import json
 
 from exabgp.bgp.message.notification import Notify
 
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
@@ -24,14 +25,15 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class NodeName(object):
+class NodeName(BaseLS):
     TLV = 1026
+    MERGE = False
 
     def __init__(self, nodename):
-        self.nodename = nodename
+        BaseLS.__init__(self, nodename)
 
     def __repr__(self):
-        return "nodename: %s" % (self.nodename)
+        return "nodename: %s" % (self.content)
 
     @classmethod
     def unpack(cls, data):
@@ -41,4 +43,4 @@ class NodeName(object):
         return cls(data.decode('ascii'))
 
     def json(self, compact=None):
-        return '"node-name": "%s"' % str(self.nodename)
+        return '"node-name": {}'.format(json.dumps(self.content))

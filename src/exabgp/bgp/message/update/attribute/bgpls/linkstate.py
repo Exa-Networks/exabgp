@@ -126,6 +126,11 @@ class BaseLS(object):
     def check(cls, data):
         return cls.check_length(data, cls.LEN)
 
+    def merge(self, other):
+        if not self.MERGE:
+            raise Notify(3, 5, f'Invalid merge, issue decoding {cls.REPR}')
+        self.content.extend(other.content)
+
 
 class GenericLSID(BaseLS):
     TLV = 0
@@ -144,9 +149,6 @@ class GenericLSID(BaseLS):
     @classmethod
     def unpack(cls, data):
         return cls(binascii.b2a_uu(data))
-
-    def merge(self, other):
-        self.content.extend(other.content)
 
 
 class FlagLS(BaseLS):

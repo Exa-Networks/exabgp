@@ -9,6 +9,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
@@ -22,14 +23,14 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 @LinkState.register(lsid=1028)
 @LinkState.register(lsid=1029)
-class LocalTeRid(object):
+class LocalTeRid(BaseLS):
     MERGE = True
 
     def __init__(self, terids):
-        self.terids = terids
+        BaseLS.__init__(self, terids)
 
     def __repr__(self):
-        return "Local TE Router IDs: %s" % ', '.join(self.terids)
+        return "Local TE Router IDs: %s" % ', '.join(self.content)
 
     @classmethod
     def unpack(cls, data):
@@ -41,7 +42,4 @@ class LocalTeRid(object):
         return cls([str(IP.unpack(data))])
 
     def json(self, compact=None):
-        return '"local-te-router-ids": ["%s"]' % '", "'.join(self.terids)
-
-    def merge(self, klass):
-        self.terids.extend(klass.terids)
+        return '"local-te-router-ids": ["%s"]' % '", "'.join(self.content)

@@ -6,6 +6,7 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #      0                   1                   2                   3
@@ -19,18 +20,18 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class IsisArea(object):
+class IsisArea(BaseLS):
     TLV = 1027
 
     def __init__(self, areaid):
-        self.areaid = areaid
+        BaseLS.__init__(self, areaid)
 
     def __repr__(self):
-        return "ISIS area id: %s" % (self.areaid)
+        return "ISIS area id: %s" % (self.content)
 
     @classmethod
     def unpack(cls, data):
         return cls(int(data.hex(), 16))
 
     def json(self, compact=None):
-        return '"area-id": "%s"' % str(self.areaid)
+        return '"area-id": "%s"' % str(self.content)
