@@ -6,11 +6,10 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
-from struct import pack
+import json
 from struct import unpack
 
-from exabgp.bgp.message.notification import Notify
-
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #
@@ -28,15 +27,18 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class NodeOpaque(object):
+class NodeOpaque(BaseLS):
     TLV = 1025
 
     def __init__(self, opaque):
-        self.opaque = opaque
+        BaseLS.__init__(self, opaque)
 
     def __repr__(self):
-        return "Node Opaque attribute: %s" % (self.opaque)
+        return "Node Opaque attribute: %s" % (self.content)
 
     @classmethod
     def unpack(cls, data):
         return cls(unpack("!%ds" % len(data), data)[0])
+
+    def json(self, compact=None):
+        return '"opaque": {}'.format(json.dumps(self.content))
