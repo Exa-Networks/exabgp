@@ -77,8 +77,8 @@ class LINK(BGPLS):
         BGPLS.__init__(self, action, addpath)
         self.domain = domain
         self.proto_id = proto_id
-        self.local_node = local_node
-        self.remote_node = remote_node
+        self.local_node = local_node if local_node else []
+        self.remote_node = remote_node if remote_node else []
         self.neigh_addrs = neigh_addrs if neigh_addrs else []
         self.iface_addrs = iface_addrs if iface_addrs else []
         self.link_ids = link_ids if link_ids else []
