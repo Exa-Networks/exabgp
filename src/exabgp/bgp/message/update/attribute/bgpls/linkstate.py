@@ -148,7 +148,7 @@ class GenericLSID(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        return cls(binascii.b2a_uu(data))
+        return cls(data)
 
 
 class FlagLS(BaseLS):
