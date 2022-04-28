@@ -81,7 +81,7 @@ class API(Command):
             return []
 
         self.configuration.scope.to_context()
-        changes = self.configuration.scope.pop('l2vpn')
+        changes = self.configuration.scope.pop_routes()
         return changes
 
     def api_attributes(self, command, peers):
