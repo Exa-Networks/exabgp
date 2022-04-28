@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.attribute.attribute import Discard
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
+from exabgp.bgp.message.update.attribute.aspath import SEQUENCE
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 
@@ -228,13 +229,12 @@ class Attributes(dict):
 
         default = {
             Attribute.CODE.ORIGIN: lambda left, right: Origin(Origin.IGP),
-            Attribute.CODE.AS_PATH: lambda left, right: ASPath([], [])
+            Attribute.CODE.AS_PATH: lambda left, right: ASPath([])
             if left == right
             else ASPath(
-                [
+                [SEQUENCE([
                     local_asn,
-                ],
-                [],
+                ]),],
             ),
             Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference(100) if left == right else NOTHING,
         }
