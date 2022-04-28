@@ -29,6 +29,10 @@ class FSM(Enum):
     STOP = 3
 
 
+def bytestream(value):
+    return ''.join(['%02X' % _ for _ in value])
+
+
 def flushed(output):
     print(output)
     sys.stdout.flush()
@@ -39,6 +43,11 @@ def indent(msg, indent=12):
     flushed(msg)
 
 
+def print_prefixed(prefix, message):
+    flushed('{:12s}{}'.format(prefix, message))
+
+
+# FIXME: we may be able to not have to use this
 def msg_bytes(message):
     if len(message) % 2:
         flushed(f'invalid BGP message:\n    {message}')
@@ -50,17 +59,17 @@ def msg_bytes(message):
     return data
 
 
-def bytestream(value):
-    return ''.join(['%02X' % _ for _ in value])
+def format_message(header, body):
+    return f'{header[:16]}:{header[16:18]}:{header[18:]}:{body}'
 
 
-def payload(prefix, header, body):
+def print_payload(prefix, header, body):
+    print_rule(prefix, bytestream(header) + bytestream(body))
+
+
+def print_rule(prefix, rule):
     flushed(
-        '{:12s}'.format(prefix)
-        + f'{bytestream(header[:16])}:'
-        + f'{bytestream(header[16:18])}:'
-        + f'{bytestream(header[18:])}:'
-        + f'{bytestream(body)}'
+        f'{prefix:12}{rule[:32]}:{rule[32:36]}:{rule[36:38]}:{rule[38:]}'
     )
 
 
@@ -96,9 +105,11 @@ def kill(skip, signal_name='SIGUSR1'):
     if not number:
         raise f'invalid signal name: {signal_name}'
 
-    conf_name = sys.argv[1].split('/')[-1].split('.')[0]
+    # --view is argv[1]
+    conf_name = sys.argv[2].split('/')[-1].split('.')[0]
 
     processes = []
+    cmdlines = []
 
     for line in os.popen("/bin/ps x"):
         low = line.strip().lower()
@@ -121,22 +132,24 @@ def kill(skip, signal_name='SIGUSR1'):
             continue
 
         processes.append(pid)
+        cmdlines.append(' '.join(cmdline))
 
     if len(processes) == 0:
         flushed('no process found, quitting')
-        return False
+        sys.exit(1)
 
     if len(processes) > 1:
         flushed('more than one process running, quitting')
-        return False
+        sys.exit(1)
 
-    flushed(f'sending signal {signal_name} to ExaBGP (pid {processes[0]})\n')
+    flushed(f'\nsending signal {signal_name} to pid {processes[0]}')
+    flushed(f'pid {processes[0]}: {cmdlines[0]}\n')
+
     try:
         os.kill(int(processes[0]), number)
-        return True
     except Exception as exc:
         flushed('\nfailed: %s' % str(exc))
-        return False
+        sys.exit(1)
 
 
 class Message:
@@ -216,7 +229,8 @@ class Message:
         return self._name.get(self.kind(), 'SOME WEIRD RFC PACKET')
 
     def notification(self):
-        yield 'notification:%d,%d' % (body[0], body[1]), bytestream(body)
+        yield bytestream(self.body)
+        # yield 'notification:%d,%d' % (self.body[0], self.body[1])
 
     def routes(self):
         body_len = len(self.body)
@@ -316,7 +330,7 @@ class Message:
                         + self.body[0:1]
                         + pack("!H", asn)
                         + self.body[3:8]
-                        + byte_id
+                        + pack("!H", byte_id)[1:]
                         + self.body[9:10]
                         + opt_params[: offset + 2 + 2]
                         + pack("!I", asn)
@@ -326,7 +340,14 @@ class Message:
             offset += param_len + 2
 
         # No "Support for 4 octet AS number capability" found simply replace the 16-bit ASN number field.
-        open = self.header + self.body[0:1] + pack("!H", asn) + self.body[3:8] + byte_id + self.body[9:]
+        open = (
+            self.header
+            + self.body[0:1]
+            + pack("!H", asn)
+            + self.body[3:8]
+            + pack("!H", byte_id)[1:]
+            + self.body[9:]
+        )
         return self._add_capa66(add_capa66, open)
 
 
@@ -336,15 +357,24 @@ class Checker(object):
         self.messages = []
 
         self.sequences = self.group_messages(expected)
-        self._next_messages()
 
-        if not self.messages:
-            return
-
+    def expecting(self):
         flushed('\nexpecting:')
         for message in self.messages:
             indent(message)
-        flushed('received:')
+
+    def rules(self):
+        flushed('rules:')
+        idx = 0
+        for messages in self.sequences:
+            if idx:
+                flushed('')
+            idx += 1
+            for message in messages:
+                if message.startswith('F' * 32):
+                    print_rule(f'       {idx:02}', f'{message}')
+                    continue
+                print_prefixed(f'       {idx:02}', f'{message}')
 
     # split all the messages and group them with the provided index
     # 1:raw:<raw bgp>
@@ -362,7 +392,9 @@ class Checker(object):
     def group_messages(self, expected):
         group = {}
         for rule in expected:
-            rule = rule.replace(' ', '').lower()
+            if 'notification:' not in rule:
+                rule = rule.replace(' ', '').lower()
+
             try:
                 seq, encoding, content = rule.split(':', 2)
             except ValueError:
@@ -372,11 +404,11 @@ class Checker(object):
             conn = seq[0] if seq[0].isalpha() else 'A'
             raw = (encoding == 'raw')
             self.raw = self.raw or raw
-            msg = content.replace(':', '')
             if raw:
-                group.setdefault(conn, {}).setdefault(seq, []).append(msg.upper())
+                content = content.replace(':', '')
+                group.setdefault(conn, {}).setdefault(seq, []).append(content.upper())
             else:
-                group.setdefault(conn, {}).setdefault(seq, []).append(f'{encoding.lower()}:{msg.upper()}')
+                group.setdefault(conn, {}).setdefault(seq, []).append(f'{encoding.lower()}:{content.lower()}')
 
         ordered = []
         for kg in sorted(list(group.keys())):
@@ -387,27 +419,51 @@ class Checker(object):
             ordered.append(appending)
         return ordered
 
-    def _next_messages(self):
+    def init(self):
         if self.messages:
-            return True
-
-        if self.sequences:
-            self.messages = self.sequences.pop(0)
-            return self._send_signal_if_requested()
-
-        return False
+            return False
+        if not self.sequences:
+            return False
+ 
+        self.messages = self.sequences.pop(0)
+        return self
 
     def _send_signal_if_requested(self):
         if not self.messages:
-            return self._next_messages()
+            return False
 
         if not self.messages[0].startswith('signal:'):
-            return True
+            return False
 
         message = self.messages.pop(0)
         name = message.split(':')[-1]
         kill(name)
-        return self._send_signal_if_requested()
+
+        self._update_messages_if_required()
+        return True
+
+    def _send_notification_if_requested(self, writer):
+        if not self.messages:
+            return False
+
+        if not self.messages[0].startswith('notification:'):
+            return False
+
+        notification = self.messages.pop(0).split(':')[-1]
+        writer.write(Message.notify(notification))
+        flushed(f'\nsending closing notification: "{notification}"\n')
+
+        self._update_messages_if_required()
+        return True
+
+    def perform_actions_if_required(self, writer):
+        self._update_messages_if_required()
+        self._send_signal_if_requested()
+        self._send_notification_if_requested(writer)
+
+    def _update_messages_if_required(self):
+        if not self.messages and self.sequences:
+            self.messages = self.sequences.pop(0)
 
     def is_eor(self, message):
         if message == bytestream(Message.eor()):
@@ -417,34 +473,42 @@ class Checker(object):
             return True
         return False
 
-    def expected(self, message):
+    def expected(self, received, writer):
         if not self.sequences:
             if not self.messages:
-                if self.is_eor(message):
+                if self.is_eor(received):
                     return True
                 flushed('received extra message')
                 # FIXME: change API to not have to convert
-                payload('additional', msg_bytes(message[:19*2]), msg_bytes(message[19*2:]))
+                print_payload('additional', msg_bytes(received[:19*2]), msg_bytes(received[19*2:]))
                 return False
 
-        self._send_signal_if_requested()
-
         for check in self.messages:
-            compare = message if not self.raw or check.startswith('F' * 32) else message[32:]
+            if self.raw:
+                if not check.startswith('F' * 32) and ':' not in check:
+                    received = received[32:]
 
-            if message == compare:
+            if check == received:
                 self.messages.remove(check)
+                self.perform_actions_if_required(writer)
                 return True
 
         nb_options = len(self.messages)
-        flushed(f'\nunexpected message, counting {nb_options} valid option(s):')
+        flushed('')
+        flushed('unexpected message:')
+        print_prefixed('received', received)
+
+        flushed(f'\ncounting {nb_options} valid option(s):')
+        idx = 0
         for message in self.messages:
+            idx += 1
             # FIXME: change API to not have to convert
-            if self.raw:
+            if self.raw and '\xff' in message:
                 msg = msg_bytes(message)
-                payload('option', msg[:19], msg[19:])
+                print_payload(f'option {idx:02}', msg[:19], msg[19:])
             else:
-                indent(message)
+                print_prefixed(f'option {idx:02}', message)
+        self.rules()
         return False
 
     def completed(self):
@@ -452,9 +516,9 @@ class Checker(object):
 
 
 class BGPService(object):
-    def __init__(self, loop, queue, options, expect):
+    def __init__(self, loop, queue, options, checker):
         self.options = options
-        self.checker = Checker(expect)
+        self.checker = checker
         self.loop = loop
         self.queue = queue
 
@@ -471,8 +535,16 @@ class BGPProtocol(asyncio.Protocol):
         self.reader = reader
         self.writer = writer
 
+        if not service.checker.init():
+            flushed('some messages are from previous session:')
+
     async def read_message(self):
-        header = await self.reader.read(19)
+        try:
+            header = await self.reader.read(19)
+        except ConnectionResetError:
+            if self.service.checker.completed():
+                self.service.exit(0)
+            return '',''
         if not header:
             return '',''
         length = unpack('!H', header[16:18])[0]
@@ -491,12 +563,13 @@ class BGPProtocol(asyncio.Protocol):
             msg = Message(header, body)
 
             if state == FSM.OPEN:
-                payload('open recv', header, body)
+                flushed('\nnew session:')
+                print_payload('open recv', header, body)
                 state = self.handle_open(msg)
                 continue
 
             if state == FSM.MSG:
-                payload('msg  recv', header, body)
+                print_payload('msg  recv', header, body)
                 state = self.handle_message(msg)
                 continue
 
@@ -509,8 +582,11 @@ class BGPProtocol(asyncio.Protocol):
         option_default = self.service.options['send-default-route']
 
         open = msg.open(option_asn, option_capa66)
+        print_payload('open sent', open[:19], open[19:])
         self.writer.write(open)
         self.writer.write(Message.keepalive())
+
+        self.service.checker.perform_actions_if_required(self.writer)
 
         if option_default:
             flushed('sending default-route\n')
@@ -523,12 +599,12 @@ class BGPProtocol(asyncio.Protocol):
         header, body = msg.header, msg.body
 
         if self.service.options['sink']:
-            payload(f'sank     #{self.counter}', header, body)
+            print_payload(f'sank     #{self.counter}', header, body)
             self.writer.write(Message.keepalive())
             return FSM.MSG
 
         if self.service.options['echo']:
-            payload(f'echo\'d  #{self.counter}', header, body)
+            print_payload(f'echo\'d  #{self.counter}', header, body)
             self.writer.write(header + body)
             return FSM.MSG
 
@@ -536,6 +612,10 @@ class BGPProtocol(asyncio.Protocol):
 
         # FIXME: raw is probably not where it should
         for announcement in msg.parser(raw=self.service.checker.raw):
+            if announcement == 'keepalive':  # skip keepalive
+                indent(f'skipping {announcement}')
+                continue
+
             if announcement.startswith('eor:'):  # skip EOR
                 indent(f'skipping {announcement}')
                 continue
@@ -544,17 +624,11 @@ class BGPProtocol(asyncio.Protocol):
                 indent(f'skipping multiprotocol : {dump(body)}')
                 continue
 
-            if not self.service.checker.expected(announcement):
+            if not self.service.checker.expected(announcement, self.writer):
                 self.service.exit(1)
                 return FSM.STOP
 
-            indent(announcement)
-
             if self.service.checker.completed():
-                if self.service.options['send-notification']:
-                    notification = 'closing session because we can'
-                    self.writer.write(Message.notify(notification))
-                    indent('sent closing notification')
                 self.service.exit(0)
                 return FSM.STOP
 
@@ -570,6 +644,7 @@ def parse_cmdline():
     parser.add_argument('--sink', help='accept any BGP messages and reply with a keepalive', action='store_true')
     parser.add_argument('--asn', help='ASN to use (otherwise extracted from the OPEN)', type=int, default=None)
     parser.add_argument('--port', help='port to bind to', type=int, default=port)
+    parser.add_argument('--view', help='look at the expected packets', action='store_true')
     parser.add_argument('checks', help='a list of expected route announcement/withdrawl', nargs='?', type=open)
 
     cmdarg = parser.parse_args()
@@ -595,8 +670,6 @@ def parse_cmdline():
     options = {
         'send-unknown-capability': False,  # add an unknown capability to the open message
         'send-default-route': False,  # send a default route to the peer
-        'send-notification': False,  # send notification messages to the backend
-        'signal-SIGUSR1': 0,  # send SIGUSR1 to exabgp after X seconds
         'asn': None,  # Don't modify the local AS per default.
         'sink': False,  # just accept whatever is sent
         'echo': False,  # just accept whatever is sent
@@ -608,6 +681,7 @@ def parse_cmdline():
         'echo': cmdarg.echo,
         'port': cmdarg.port,
         'asn': cmdarg.asn,
+        'view': cmdarg.view,
     })
     # fmt: on
 
@@ -623,8 +697,8 @@ def parse_cmdline():
         if message.strip() == 'option:update:send-default-route':
             options['send-default-route'] = True
             continue
-        if message.strip() == 'option:notification:send-notification':
-            options['send-notification'] = True
+        if message.strip().startswith('option:asn:'):
+            options['asn'] = int(message.strip().split(':')[-1])
             continue
         if message.strip().startswith('option:SIGUSR1:'):
             delay = int(message.split(':')[-1])
@@ -643,9 +717,7 @@ def parse_cmdline():
     return options
 
 
-async def main(queue):
-    options = parse_cmdline()
-
+async def main(options, checker, queue):
     # self.set_reuse_addr()
     # self.bind((host, options['port']))
     # self.listen(5)
@@ -662,7 +734,7 @@ async def main(queue):
     sock.bind(('::', options['port']))
 
     loop = asyncio.get_running_loop()
-    service = BGPService(loop, queue, options, options['expect'])
+    service = BGPService(loop, queue, options, checker)
 
     server = await asyncio.start_server(
         lambda reader, writer: BGPProtocol(service, reader, writer).handle_bgp(),
@@ -675,18 +747,29 @@ async def main(queue):
 
 
 if __name__ == '__main__':
+    options = parse_cmdline()
+    checker = Checker(options['expect'])
+
+    if options['view']:
+        flushed('')
+        checker.rules()
+
     queue = queue.Queue()
     try:
-        asyncio.run(main(queue))
+        asyncio.run(main(options, checker, queue))
     except RuntimeError:
-        if queue.empty():
-            flushed(f'failed with no code')
-            sys.exit(1)
+        pass
 
-        code = queue.get()
-        if code != 0:
-            flushed(f'failed with code {code}')
-            sys.exit(code)
+    flushed('\n')
+
+    if queue.empty():
+        flushed(f'failed with no code')
+        sys.exit(1)
+
+    code = queue.get()
+    if code != 0:
+        flushed(f'failed with code {code}')
+        sys.exit(code)
 
     flushed('successful')
     sys.exit(0)
