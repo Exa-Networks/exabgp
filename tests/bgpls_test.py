@@ -42,11 +42,11 @@ class TestDescriptors(unittest.TestCase):
         data = b'\x02\x00\x00\x04\x00\x00\xff\xfd\x02\x01\x00\x04\x00\x00\x00\x00\x02\x03\x00\x04\nq?\xf0'
         igp_type = 3
         descriptor, remain = NodeDescriptor.unpack(data, igp_type)
-        self.assertEqual(descriptor.json(), '"autonomous-system": 65533')
+        self.assertEqual(descriptor.json(), '{ "autonomous-system": 65533 }')
         descriptor, remain = NodeDescriptor.unpack(remain, igp_type)
-        self.assertEqual(descriptor.json(), '"bgp-ls-identifier": "0"')
+        self.assertEqual(descriptor.json(), '{ "bgp-ls-identifier": "0" }')
         descriptor, remain = NodeDescriptor.unpack(remain, igp_type)
-        self.assertEqual(descriptor.json(), '"router-id": "10.113.63.240"')
+        self.assertEqual(descriptor.json(), '{ "router-id": "10.113.63.240" }')
 
 
 if __name__ == '__main__':
