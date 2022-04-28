@@ -144,8 +144,13 @@ class Neighbor(dict):
         if self['md5-ip'] is None:
             self['md5-ip'] = self['local-address']
 
-        if self['capability']['graceful-restart'] == 0:
-            self['capability']['graceful-restart'] = int(self['hold-time'])
+        # Because (0 == False) == True when it should not!
+        if self['capability']['graceful-restart'] is False:
+            return
+        if self['capability']['graceful-restart'] != 0:
+            return
+
+        self['capability']['graceful-restart'] = int(self['hold-time'])
 
     def id(self):
         return 'neighbor-%s' % self.uid
