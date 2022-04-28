@@ -42,7 +42,7 @@ from exabgp.bgp.message.notification import Notify
 @LinkState.register()
 class SrCapabilities(FlagLS):
     REPR = 'SR Capability Flags'
-    JSON = 'sr_capability_flags'
+    JSON = 'sr-capability-flags'
     TLV = 1034
     FLAGS = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
 
@@ -73,13 +73,13 @@ class SrCapabilities(FlagLS):
             if t != 1161:
                 raise Notify(3, 5, "Invalid sub-TLV type: {}".format(t))
             if l == 3:
-                sids.append((range_size, unpack('!L', bytes([0]) + data[:3])[0]))
+                sids.append([range_size, unpack('!I', bytes([0]) + data[7 : l + 7])[0] & 0xfffff])
             elif l == 4:
                 # XXX: really we are reading 7+ but then re-parsing it again ??
-                sids.append((range_size, unpack('!I', data[7 : l + 7])[0]))
+                sids.append([range_size, unpack('!I', data[7 : l + 7])[0]])
             data = data[l + 7 :]
 
         return cls(flags, sids)
 
     def json(self, compact=None):
-        return '"{}": {}, "sids": {}'.format(self.JSON, FlagLS.json(self), self.sids)
+        return '{}, "sids": {}'.format(FlagLS.json(self), self.sids)

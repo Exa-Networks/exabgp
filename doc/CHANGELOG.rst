@@ -37,6 +37,7 @@ Version 5.0.0:
    local-node-descriptors, remote-node-descriptors, interface-address, neighbor-address
  * Compatibility: General use of plural for the following keys
    interface-address -> interface-addresses, neighbor-address -> neighbor-addresses
+ * Compatibility: change JSON for sr_capability_flags to be sr-capability-flags and data format
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
