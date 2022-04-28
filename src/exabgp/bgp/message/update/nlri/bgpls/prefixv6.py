@@ -129,7 +129,7 @@ class PREFIXv6(BGPLS):
                 '"ls-nlri-type": "%s"' % self.NAME,
                 '"l3-routing-topology": %d' % int(self.domain),
                 '"protocol-id": %d' % int(self.proto_id),
-                '"node-descriptors": { %s }' % nodes,
+                '"node-descriptors": [ %s ]' % nodes,
                 self.prefix.json(),
                 '"nexthop": "%s"' % self.nexthop,
             ]
