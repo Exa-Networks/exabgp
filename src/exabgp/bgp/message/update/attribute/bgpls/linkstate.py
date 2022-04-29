@@ -112,7 +112,7 @@ class BaseLS(object):
             return '"{}": {}'.format(self.JSON, json.dumps(self.content))
         except TypeError:
             # not a basic type
-            return '"{}": "{}"'.format(self.JSON, str(self.content))
+            return '"{}": "{}"'.format(self.JSON, self.content.decode('utf-8'))
 
     def __repr__(self):
         return "%s: %s" % (self.REPR, self.content)
