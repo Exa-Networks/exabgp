@@ -6,10 +6,12 @@ Created by Evelio Vila 2017-02-16
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
-import binascii
+
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+
+from exabgp.util import hexstring
 
 # =====================================================================
 # draft-ietf-idr-bgp-prefix-sid
@@ -92,9 +94,7 @@ class GenericSRId(object):
 
     @classmethod
     def unpack(cls, scode, data):
-        length = len(data)
-        info = binascii.b2a_uu(data[:length])
-        return cls(code=scode, rep=info)
+        return cls(code=scode, rep=data)
 
     def json(self, compact=None):
-        return '"attribute-not-implemented": "%s"' % (self.code)
+        return '"attribute-not-implemented-%s": "%s"' % (self.code, hexstring(data))
