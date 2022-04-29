@@ -24,98 +24,106 @@ from exabgp.bgp.message.notification import Notify
 #            https://tools.ietf.org/html/rfc7752#section-3.2.1.4
 # ================================================================== NODE-DESC-SUB-TLVs
 
-NODE_TLVS = {
-    512: 'autonomous-system',
-    513: 'bgp-ls-id',
-    514: 'ospf-area-id',
-    515: 'igp-rid',
-}
-
-
-# TODO
-# 3.2.1.5.  Multi-Topology ID
-
 
 class NodeDescriptor(object):
-    def __init__(self, node_id, dtype, psn=None, dr_id=None, packed=None):
+    _known_tlvs = {
+        512: 'autonomous-system',
+        513: 'bgp-ls-identifier',
+        514: 'ospf-area-id',
+        515: 'router-id',
+    }
+
+    _error_tlvs = {
+        512: 'Invalid autonomous-system sub-tlv',
+        513: 'Invalid bgp-ls-identifier sub-tlv',
+        514: 'Invalid ospf-area-id sub-tlv',
+        515: 'Invalid router-id sub-tlv',
+    }
+
+    def __init__(self, node_id, node_type, psn=None, dr_id=None, packed=None):
         self.node_id = node_id
-        self.dtype = dtype
+        self.node_type = node_type
         self.psn = psn
         self.dr_id = dr_id
         self._packed = packed
 
     @classmethod
     def unpack(cls, data, igp):
-        dtype, dlength = unpack('!HH', data[0:4])
-        if dtype not in NODE_TLVS.keys():
-            raise Exception("Unknown Node Descriptor Sub-TLV")
-        # OSPF Area-ID
-        if dtype == 514:
-            return (
-                cls(node_id=IP.unpack(data[4 : 4 + dlength]), dtype=dtype, packed=data[: 4 + dlength]),
-                data[4 + dlength :],
-            )
+        node_type, length = unpack('!HH', data[0:4])
+        packed = data[: 4 + length]
+        payload = packed[4:]
+        remaining = data[4 + length:]
+
+        node_id = None
+        dr_id = None
+        psn = None
+
+        # autonomous-system
+        if node_type == 512:
+            if length != 4:
+                raise Exception(cls._error_tlvs[node_type])
+            node_id = unpack('!L', payload)[0]
+            return cls(node_id, node_type, psn, dr_id, packed), remaining
+
+        # bgp-ls-id
+        if node_type == 513:
+            if length != 4:
+                raise Exception(cls._error_tlvs[node_type])
+            node_id = unpack('!L', payload)[0]
+            return cls(node_id, node_type, psn, dr_id, packed), remaining
+
+        # ospf-area-id
+        if node_type == 514:
+            if length not in (4, 16):  # FIXME: it may only need to be 4
+                raise Exception(cls._error_tlvs[node_type])
+            node_id = IP.unpack(payload)
+            return cls(node_id, node_type, psn, dr_id, packed), remaining
+
         # IGP Router-ID: The TLV size in combination with the protocol
-        # identifier enables the decoder to determine the type
+        # identifier enables the decoder to determine the node_typee
         # of the node: sec 3.2.1.4.
-        elif dtype == 515:
-            # OSPFv{2,3} non-pseudonode
-            if (igp == 3 or igp == 6 or igp == 227) and dlength == 4:
-                r_id = IP.unpack(data[4 : 4 + 4])
-                return cls(node_id=r_id, dtype=dtype, packed=data[: 4 + dlength]), data[4 + 4 :]
-            # OSPFv{2,3} LAN pseudonode
-            if (igp == 3 or igp == 6 or igp == 227) and dlength == 8:
-                r_id = IP.unpack(data[4 : 4 + 4])
-                dr_id = IP.unpack(data[8 : 4 + 8])
-                return cls(node_id=r_id, dtype=dtype, psn=None, dr_id=dr_id, packed=data[: 4 + dlength]), data[4 + 8 :]
+        if node_type == 515:
+
             # IS-IS non-pseudonode
-            if (igp == 1 or igp == 2) and dlength == 6:
-                return (
-                    cls(node_id=ISO.unpack_sysid(data[4 : 4 + 6]), dtype=dtype, packed=data[: 4 + dlength]),
-                    data[4 + 6 :],
-                )
-            # IS-IS LAN pseudonode = ISO Node-ID + PSN
-            # Unpack ISO address
-            if (igp == 1 or igp == 2) and dlength == 7:
-                iso_node = ISO.unpack_sysid(data[4 : 4 + 6])
-                psn = unpack('!B', data[4 + 6 : 4 + 7])[0]
-                return cls(node_id=iso_node, dtype=dtype, psn=psn, packed=data[: 4 + dlength]), data[4 + 7 :]
-            raise Notify(3, 5, 'could not decode Local Node descriptor')
-        elif dtype == 512 and dlength == 4:
-            # ASN
-            return (
-                cls(node_id=unpack('!L', data[4 : 4 + dlength])[0], dtype=dtype, packed=data[: 4 + dlength]),
-                data[4 + 4 :],
-            )
-        elif dtype == 513 and dlength == 4:
-            # BGP-LS
-            return (
-                cls(node_id=unpack('!L', data[4 : 4 + dlength])[0], dtype=dtype, packed=data[: 4 + dlength]),
-                data[4 + 4 :],
-            )
-        else:
-            raise Notify(3, 5, 'could not decode Local Node descriptor')
+            if igp in (1, 2):
+                if length not in (6, 7):
+                    raise Exception(cls._error_tlvs[node_type])
+                node_id = ISO.unpack_sysid(payload),
+                if length == 7:
+                    psn = unpack('!B', payload[6:7])[0]
+                return cls(node_id, node_type, psn, dr_id, packed), remaining
+
+            # OSPFv{2,3} non-pseudonode
+            if igp in (3, 5, 6, 227):
+                if length not in (4, 8):
+                    raise Exception(cls._error_tlvs[node_type])
+                node_id = IP.unpack(payload[:4]),
+                if length == 8:
+                    dr_id = IP.unpack(payload[4:8])
+                return cls(node_id, node_type, psn, dr_id, packed), remaining
+
+        raise Exception("unknown node descriptor sub-tlv ({}, {})".format(
+            f'node-type: {node_type}',
+            f'igp: {igp}',
+        ))
 
     def json(self, compact=None):
-        ospf = None
+        node = None
+        if self.node_type == 512:
+            node = '"autonomous-system": %d' % self.node_id
+        if self.node_type == 513:
+            node = '"bgp-ls-identifier": "%d"' % self.node_id
+        if self.node_type == 514:
+            node = '"ospf-area-id": "%s"' % self.node_id
+        if self.node_type == 515:
+            node = '"router-id": "%s"' % self.node_id
         designated = None
-        psn = None
-        router_id = None
-        asn = None
-        bgpls_id = None
-        if self.dtype == 514:
-            ospf = '"ospf-area-id": "%s"' % self.node_id
-        if self.dr_id is not None:
+        if self.dr_id:
             designated = '"designated-router-id": "%s"' % self.dr_id
-        if self.psn is not None:
+        psn = None
+        if self.psn:
             psn = '"psn": "%s"' % self.psn
-        if self.dtype == 515:
-            router_id = '"router-id": "%s"' % self.node_id
-        if self.dtype == 512:
-            asn = '"autonomous-system": %d' % self.node_id
-        if self.dtype == 513:
-            bgpls_id = '"bgp-ls-identifier": "%d"' % self.node_id
-        content = ', '.join(d for d in [ospf, designated, psn, router_id, asn, bgpls_id] if d)
+        content = ', '.join(_ for _ in [node, designated, psn] if _)
         return '{ %s }' % content
 
     def __eq__(self, other):
@@ -149,4 +157,6 @@ class NodeDescriptor(object):
         return hash(str(self))
 
     def pack(self):
-        return self._packed
+        if self._packed:
+            return self._packed
+        raise RuntimeError('pack when not fully implemented for {self.__name__}')
