@@ -137,6 +137,10 @@ class IP(object):
     def __repr__(self):
         return self._string
 
+    def decode(self, encoding='utf-8', errors='strict'):
+        assert (encoding in ('utf-8', 'ascii'))
+        return self._string
+
     def __eq__(self, other):
         if not isinstance(other, IP):
             return False
