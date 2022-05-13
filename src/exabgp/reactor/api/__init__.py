@@ -30,12 +30,12 @@ class API(Command):
         self.configuration = Configuration([])
 
     def log_message(self, message, level='INFO'):
-        log.info(message, 'api', level)
+        log.info(message, 'processes', level)
 
     def log_failure(self, message, level='ERR'):
         error = str(self.configuration.tokeniser.error)
         report = '%s\nreason: %s' % (message, error) if error else message
-        log.error(report, 'api', level)
+        log.error(report, 'processes', level)
 
     def text(self, reactor, service, command):
         for registered in self.functions:
