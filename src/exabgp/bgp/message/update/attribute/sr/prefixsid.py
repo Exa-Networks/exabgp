@@ -97,4 +97,4 @@ class GenericSRId(object):
         return cls(code=scode, rep=data)
 
     def json(self, compact=None):
-        return '"attribute-not-implemented-%s": "%s"' % (self.code, hexstring(data))
+        return '"attribute-not-implemented-%s": "%s"' % (self.code, hexstring(self.rep))
