@@ -114,7 +114,7 @@ def show_adj_rib(self, reactor, service, line):
 def flush_adj_rib_out(self, reactor, service, line):
     def callback(self, peers):
         self.log_message(
-            "Flushing adjb-rib out for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers'
+            "flushing adjb-rib out for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers'
         )
         for peer_name in peers:
             reactor.neighbor_rib_resend(peer_name)
