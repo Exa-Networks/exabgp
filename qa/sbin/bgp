@@ -496,7 +496,10 @@ class Checker(object):
         nb_options = len(self.messages)
         flushed('')
         flushed('unexpected message:')
-        print_prefixed('received', received)
+        if self.raw:
+            print_payload('received', msg_bytes(received[:19*2]), msg_bytes(received[19*2:]))
+        else:
+            print_prefixed('received', received)
 
         flushed(f'\ncounting {nb_options} valid option(s):')
         idx = 0
