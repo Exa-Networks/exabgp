@@ -15,7 +15,6 @@ import glob
 import time
 import signal
 import argparse
-import itertools
 import subprocess
 
 PROGRAM = os.path.realpath(__file__)
