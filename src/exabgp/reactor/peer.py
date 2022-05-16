@@ -519,7 +519,7 @@ class Peer(object):
                     send_eor = False
                     for _ in self.proto.new_eors():
                         yield ACTION.NOW
-                    log.debug('>> EOR(s)', self.id())
+                    log.debug('>> all EOR(s) sent', self.id())
 
                 # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
                 elif not command_eor and self.neighbor.eor:
