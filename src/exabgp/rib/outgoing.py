@@ -6,7 +6,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
-import sys
+# from copy import deepcopy
+from exabgp.logger import log
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -99,8 +100,7 @@ class OutgoingRIB(Cache):
 
     def replace(self, previous, changes):
         for change in previous:
-            change.nlri.action = OUT.WITHDRAW
-            self.add_to_rib(change, True)
+            self.del_from_rib(change)
 
         for change in changes:
             self.add_to_rib(change, True)
@@ -132,11 +132,17 @@ class OutgoingRIB(Cache):
                 self._watchdog[watchdog].setdefault('-', {})[change.index()] = change
                 self._watchdog[watchdog]['+'].pop(change.index())
 
-    def del_from_rib(self, change, force=False):
-        return self.add_to_rib(change, force, True)
+    def del_from_rib(self, change):
+        log.debug('remove %s' % change, 'rib')
+        # change = deepcopy(change)
+        change.nlri.action = OUT.WITHDRAW
+        return self._add_to_rib(change, force=True)
 
-    # _withdraw should only be used by del_from_rib
-    def add_to_rib(self, change, force=False, _withdraw=False):
+    def add_to_rib(self, change, force=False):
+        log.debug('insert %s' % change, 'rib')
+        return self._add_to_rib(change, force)
+
+    def _add_to_rib(self, change, force):
         # WARNING: do not call change.nlri.index as it does not prepend the family
         # WARNING : this function can run while we are in the updates() loop
 
@@ -160,9 +166,8 @@ class OutgoingRIB(Cache):
 
         in_cache, same_in_cache = self.in_cache(change)
 
-        if same_in_cache:
-            if not force and not _withdraw:
-                return
+        if same_in_cache and not force:
+            return
 
         # withdrawal of a route before we had time to announce it ?
 
@@ -173,9 +178,6 @@ class OutgoingRIB(Cache):
         # cancel a announcement done a long time ago)
         # So to work correctly, you need to track sent changes (which costs)
         # And the yield makes it very cpu/memory intensive ..
-
-        if _withdraw:
-            change.nlri.action = OUT.WITHDRAW
 
         # always remove previous announcement if cancelled or replaced before being sent
         if change.nlri.action == OUT.WITHDRAW:
