@@ -411,6 +411,7 @@ class Peer(object):
                 # XXX: In the main loop we do exit on this kind of error
                 raise Notify(6, 0, 'ExaBGP Internal error, sorry.')
 
+        routes_per_iteration = 1 if self.neighbor['rate-limit'] > 0 else 25
         send_eor = not self.neighbor['manual-eor']
         new_routes = None
         self._resend_routes = SEND.NORMAL
@@ -506,9 +507,8 @@ class Peer(object):
                     new_routes = self.proto.new_update(include_withdraw)
 
                 if new_routes:
-                    count = 1 if self.neighbor['rate-limit'] > 0 else 25
                     try:
-                        for _ in range(count):
+                        for _ in range(routes_per_iteration):
                             # This can raise a NetworkError
                             next(new_routes)
                     except StopIteration:
