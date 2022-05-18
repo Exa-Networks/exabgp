@@ -46,25 +46,24 @@ class Cache(object):
         # as the route removed before we could announce it
         return change.index() not in self._seen.get(change.nlri.family(), {})
 
-    # return a tuple exists in cache, same in cache
     def in_cache(self, change):
         if not self.cache:
-            return False, False
+            return False
 
-        old_change = self._seen.get(change.nlri.family(), {}).get(change.index(), None)
-        if not old_change:
-            return False, False
+        cached = self._seen.get(change.nlri.family(), {}).get(change.index(), None)
+        if not cached:
+            return False
 
         if change.nlri.action != OUT.ANNOUNCE:
-            return True, False
+            return False
 
-        if old_change.attributes.index() != change.attributes.index():
-            return True, False
+        if cached.attributes.index() != change.attributes.index():
+            return False
 
-        if old_change.nlri.nexthop.index() != change.nlri.nexthop.index():
-            return True, False
+        if cached.nlri.nexthop.index() != change.nlri.nexthop.index():
+            return False
 
-        return True, True
+        return True
 
     # add a change to the cache of seen Change
     def update_cache(self, change):
