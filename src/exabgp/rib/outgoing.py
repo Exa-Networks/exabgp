@@ -164,9 +164,7 @@ class OutgoingRIB(Cache):
         new_nlri = self._new_nlri
         new_attr = self._new_attribute
 
-        in_cache, same_in_cache = self.in_cache(change)
-
-        if same_in_cache and not force:
+        if self.in_cache(change) and not force:
             return
 
         # withdrawal of a route before we had time to announce it ?
