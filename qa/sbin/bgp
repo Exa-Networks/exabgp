@@ -402,6 +402,8 @@ class Checker(object):
                 sys.exit(0)
 
             conn = seq[0] if seq[0].isalpha() else 'A'
+            seq = seq[1:] if seq[0].isalpha() else seq
+
             raw = (encoding == 'raw')
             self.raw = self.raw or raw
             if raw:
@@ -415,8 +417,9 @@ class Checker(object):
             source = group[kg]
             appending = []
             for ks in sorted(list(source.keys())):
-                appending.extend(source[ks])
-            ordered.append(appending)
+                ordered.append(source[ks])
+        import pprint
+        pprint.pprint(ordered)
         return ordered
 
     def init(self):
