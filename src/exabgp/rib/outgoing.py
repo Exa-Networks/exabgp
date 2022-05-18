@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
-# from copy import deepcopy
+from copy import deepcopy
 from exabgp.logger import log
 
 from exabgp.protocol.family import AFI
@@ -134,7 +134,7 @@ class OutgoingRIB(Cache):
 
     def del_from_rib(self, change):
         log.debug('remove %s' % change, 'rib')
-        # change = deepcopy(change)
+        change = deepcopy(change)
         change.nlri.action = OUT.WITHDRAW
         return self._add_to_rib(change, force=True)
 
