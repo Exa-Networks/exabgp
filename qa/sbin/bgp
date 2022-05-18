@@ -514,6 +514,7 @@ class Checker(object):
                 print_payload(f'option {idx:02}', msg[:19], msg[19:])
             else:
                 print_prefixed(f'option {idx:02}', message)
+        flushed('')
         self.rules()
         return False
 
