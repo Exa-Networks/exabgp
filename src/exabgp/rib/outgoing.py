@@ -156,6 +156,9 @@ class OutgoingRIB(Cache):
             self._enhanced_refresh_delay.append(change)
             return
 
+        if self.in_cache(change) and not force:
+            return
+
         change_index = change.index()
         change_family = change.nlri.family()
         change_attr_index = change.attributes.index()
@@ -163,9 +166,6 @@ class OutgoingRIB(Cache):
         attr_af_nlri = self._new_attr_af_nlri
         new_nlri = self._new_nlri
         new_attr = self._new_attribute
-
-        if self.in_cache(change) and not force:
-            return
 
         # withdrawal of a route before we had time to announce it ?
 
