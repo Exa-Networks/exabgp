@@ -222,10 +222,6 @@ class IOperationByteShortLong(IOperation):
             return 2, pack('!H', value)
         return 4, pack('!L', value)
 
-    # XXX: buggy as it assumes 4 bytes but may be less
-    # def decode (self, bgp):
-    # 	return unpack('!L',bgp[:4])[0],bgp[4:]
-
 
 # String representation for Numeric and Binary Tests
 
