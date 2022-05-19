@@ -533,6 +533,7 @@ class BGPService(object):
 
 
 class BGPProtocol(asyncio.Protocol):
+    allow_reuse_address = True
     counter = 0
 
     def __init__(self, service, reader, writer):
