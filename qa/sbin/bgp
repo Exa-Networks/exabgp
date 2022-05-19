@@ -418,8 +418,6 @@ class Checker(object):
             appending = []
             for ks in sorted(list(source.keys())):
                 ordered.append(source[ks])
-        import pprint
-        pprint.pprint(ordered)
         return ordered
 
     def init(self):
