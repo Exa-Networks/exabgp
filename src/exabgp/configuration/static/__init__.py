@@ -17,7 +17,7 @@ from exabgp.configuration.announce.vpn import AnnounceVPN
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri import CIDR
 from exabgp.bgp.message.update.nlri import INET
 from exabgp.bgp.message.update.nlri import Label
@@ -53,7 +53,7 @@ class ParseStatic(ParseStaticRoute):
 
 @ParseStatic.register('route', 'append-route')
 def route(tokeniser):
-    action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
     check = lambda change, afi: True
 
@@ -106,7 +106,7 @@ def route(tokeniser):
 
 @ParseStatic.register('attributes', 'append-route')
 def attributes(tokeniser):
-    action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(lambda: tokeniser.tokens[-1])
     tokeniser.afi = ipmask.afi
 
@@ -160,7 +160,7 @@ def attributes(tokeniser):
             break
 
         ipmask = prefix(tokeniser)
-        new = Change(nlri.__class__(nlri.afi, nlri.safi, OUT.UNSET), attr)
+        new = Change(nlri.__class__(nlri.afi, nlri.safi, Action.UNSET), attr)
         new.nlri.cidr = CIDR(ipmask.pack(), ipmask.mask)
         if labels:
             new.nlri.labels = labels

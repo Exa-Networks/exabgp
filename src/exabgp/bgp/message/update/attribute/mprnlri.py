@@ -14,7 +14,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
-from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
 
 # from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -182,13 +182,13 @@ class MPRNLRI(Attribute, Family):
         while data:
             if nexthops:
                 for nexthop in nexthops:
-                    nlri, left = NLRI.unpack_nlri(afi, safi, data, IN.ANNOUNCED, addpath)
+                    nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)
                     # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
                     if nlri:
                         nlri.nexthop = NextHop.unpack(nexthop)
                         nlris.append(nlri)
             else:
-                nlri, left = NLRI.unpack_nlri(afi, safi, data, IN.ANNOUNCED, addpath)
+                nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)
                 # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
                 if nlri:
                     nlris.append(nlri)

@@ -10,8 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # Every Message should be imported from this file
 # as it makes sure that all the registering decorator are run
 
-from exabgp.bgp.message.direction import OUT
-from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message.action import Action
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.nop import NOP

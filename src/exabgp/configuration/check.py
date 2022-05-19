@@ -28,7 +28,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
 
 from exabgp.logger import log
@@ -227,7 +227,7 @@ def check_nlri(neighbor, routes):
     try:
         while announced:
             log.debug('parsing NLRI %s' % announced, 'parser')
-            nlri, announced = NLRI.unpack_nlri(afi, safi, announced, IN.ANNOUNCED, addpath)
+            nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath)
             nlris.append(nlri)
     except Exception as exc:
         log.error('could not parse the nlri', 'parser')

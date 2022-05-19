@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -85,7 +85,7 @@ class BGPLS(NLRI):
     NAME = 'Unknown'
     SHORT_NAME = 'unknown'
 
-    def __init__(self, action=OUT.UNSET, addpath=None):
+    def __init__(self, action=Action.UNSET, addpath=None):
         NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
         self._packed = b''
 

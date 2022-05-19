@@ -11,7 +11,7 @@ from exabgp.protocol.ip import NoNextHop
 
 from exabgp.rib.change import Change
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -71,14 +71,14 @@ class AnnounceVPN(ParseAnnounce):
         if not AnnounceLabel.check(change, afi):
             return False
 
-        if change.nlri.action == OUT.ANNOUNCE and change.nlri.has_rd() and change.nlri.rd is RouteDistinguisher.NORD:
+        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_rd() and change.nlri.rd is RouteDistinguisher.NORD:
             return False
 
         return True
 
 
 def ip_vpn(tokeniser, afi, safi):
-    action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
     nlri = IPVPN(afi, safi, action)

@@ -19,7 +19,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
@@ -36,12 +36,12 @@ class RTC(NLRI):
         self.nexthop = NoNextHop
 
     def feedback(self, action):
-        if self.nexthop is None and action == OUT.ANNOUNCE:
+        if self.nexthop is None and action == Action.ANNOUNCE:
             return 'rtc nlri next-hop missing'
         return ''
 
     @classmethod
-    def new(cls, afi, safi, origin, rt, nexthop=NoNextHop, action=OUT.UNSET):
+    def new(cls, afi, safi, origin, rt, nexthop=NoNextHop, action=Action.UNSET):
         instance = cls(afi, safi, action, origin, rt)
         instance.origin = origin
         instance.rt = rt

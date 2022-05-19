@@ -11,7 +11,7 @@ from exabgp.protocol.ip import NoNextHop
 
 from exabgp.rib.change import Change
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -132,7 +132,7 @@ class AnnounceIP(ParseAnnounce):
     @staticmethod
     def check(change, afi):
         if (
-            change.nlri.action == OUT.ANNOUNCE
+            change.nlri.action == Action.ANNOUNCE
             and change.nlri.nexthop is NoNextHop
             and change.nlri.afi == afi
             and change.nlri.safi in (SAFI.unicast, SAFI.multicast)
@@ -143,7 +143,7 @@ class AnnounceIP(ParseAnnounce):
 
 
 def ip(tokeniser, afi, safi):
-    action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
     nlri = INET(afi, safi, action)
@@ -177,7 +177,7 @@ def ip(tokeniser, afi, safi):
 
 
 def ip_multicast(tokeniser, afi, safi):
-    action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
     nlri = INET(afi, safi, action)

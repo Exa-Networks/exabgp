@@ -13,7 +13,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.ip.port import Port
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message.direction import OUT
+from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
@@ -527,14 +527,14 @@ for content in dir():
 @NLRI.register(AFI.ipv4, SAFI.flow_vpn)
 @NLRI.register(AFI.ipv6, SAFI.flow_vpn)
 class Flow(NLRI):
-    def __init__(self, afi=AFI.ipv4, safi=SAFI.flow_ip, action=OUT.UNSET):
+    def __init__(self, afi=AFI.ipv4, safi=SAFI.flow_ip, action=Action.UNSET):
         NLRI.__init__(self, afi, safi, action)
         self.rules = {}
         self.nexthop = NoNextHop
         self.rd = RouteDistinguisher.NORD
 
     def feedback(self, action):
-        if self.nexthop is None and action == OUT.ANNOUNCE:
+        if self.nexthop is None and action == Action.ANNOUNCE:
             return 'flow nlri next-hop missing'
         return ''
 

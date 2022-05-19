@@ -13,7 +13,6 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
-from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.nlri import NLRI
@@ -94,7 +93,7 @@ class MPURNLRI(Attribute, Family):
             addpath = negotiated.addpath.send(afi, safi)
 
         while data:
-            nlri, data = NLRI.unpack_nlri(afi, safi, data, IN.WITHDRAWN, addpath)
+            nlri, data = NLRI.unpack_nlri(afi, safi, data, Action.WITHDRAW, addpath)
             # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
             if nlri:
                 nlris.append(nlri)

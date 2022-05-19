@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -30,17 +30,17 @@ from exabgp.protocol.family import Family
 @NLRI.register(AFI.ipv4, SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6, SAFI.mpls_vpn)
 class IPVPN(Label):
-    def __init__(self, afi, safi, action=OUT.UNSET):
+    def __init__(self, afi, safi, action=Action.UNSET):
         Label.__init__(self, afi, safi, action)
         self.rd = RouteDistinguisher.NORD
 
     def feedback(self, action):
-        if self.nexthop is None and action == OUT.ANNOUNCE:
+        if self.nexthop is None and action == Action.ANNOUNCE:
             return 'ip-vpn nlri next-hop missing'
         return ''
 
     @classmethod
-    def new(cls, afi, safi, packed, mask, labels, rd, nexthop=None, action=OUT.UNSET):
+    def new(cls, afi, safi, packed, mask, labels, rd, nexthop=None, action=Action.UNSET):
         instance = cls(afi, safi, action)
         instance.cidr = CIDR(packed, mask)
         instance.labels = labels

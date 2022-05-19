@@ -11,7 +11,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
@@ -30,7 +30,7 @@ class Label(INET):
         self.labels = Labels.NOLABEL
 
     def feedback(self, action):
-        if self.nexthop is None and action == OUT.ANNOUNCE:
+        if self.nexthop is None and action == Action.ANNOUNCE:
             return 'labelled nlri next-hop missing'
         return ''
 
@@ -84,7 +84,7 @@ class Label(INET):
     # 		# The last bit is set for the last label
     # 		labels.append(label >> 4)
     # 		# This is a route withdrawal
-    # 		if label == 0x800000 and action == IN.WITHDRAWN:
+    # 		if label == 0x800000 and action == Action.WITHDRAW:
     # 			break
     # 		# This is a next-hop
     # 		if label == 0x000000:
