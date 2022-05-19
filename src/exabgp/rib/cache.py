@@ -38,13 +38,6 @@ class Cache(object):
                 if change.nlri.action in actions:
                     yield change
 
-    def is_cached(self, change):
-        if not self.cache:
-            return False
-        # if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
-        # as the route removed before we could announce it
-        return change.index() not in self._seen.get(change.nlri.family(), {})
-
     def in_cache(self, change):
         if not self.cache:
             return False
