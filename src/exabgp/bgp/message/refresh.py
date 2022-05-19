@@ -48,6 +48,9 @@ class RouteRefresh(Message):
     def message(self, negotiated=None):
         return self._message(self.afi.pack() + bytes([self.reserved]) + self.safi.pack())
 
+    def messages(self, negotiated, include_withdraw):
+        yield self.message(negotiated)
+
     def __str__(self):
         return "REFRESH"
 
