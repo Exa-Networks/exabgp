@@ -213,11 +213,6 @@ class IOperationByteShort(IOperation):
             return 1, bytes([value])
         return 2, pack('!H', value)
 
-    # XXX: buggy as it assumes 2 bytes but may be less
-    # def decode (self, bgp):
-    # 	import pdb; pdb.set_trace()
-    # 	return unpack('!H',bgp[:2])[0],bgp[2:]
-
 
 class IOperationByteShortLong(IOperation):
     def encode(self, value):
