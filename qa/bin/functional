@@ -71,6 +71,18 @@ class Identifier(dict):
             yield cls._listing[n], not (n + 1) % cls._nl
 
     @classmethod
+    def tests(cls):
+        step = cls._next // cls._nl
+        if cls._next % cls._nl:
+            step += 1
+        nl = 1
+        for c in range(0, step):
+            for r in range(cls._nl):
+                n = c + (r*step)
+                yield cls._listing[n], not (nl % cls._nl)
+                nl += 1
+
+    @classmethod
     def nick(cls, name):
         return cls._from_name[name]
 
@@ -200,14 +212,10 @@ class CI(dict):
         sys.stdout.write('\n')
         sys.stdout.write('The available functional tests are:\n')
         sys.stdout.write('\n')
-        for index, nl in Identifier.identifiers():
+        for index, nl in Identifier.tests():
             name = cls._content[index]['name']
             sys.stdout.write(' %-2s %s%s' % (index, name, ' ' * (25 - len(name))))
             sys.stdout.write('\n' if nl else '')
-        sys.stdout.write('\n')
-        sys.stdout.write('\n')
-        sys.stdout.write('\n')
-        sys.stdout.write('checking\n')
         sys.stdout.write('\n')
         sys.stdout.flush()
 
