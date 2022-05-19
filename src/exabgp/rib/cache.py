@@ -50,11 +50,11 @@ class Cache(object):
         if not self.cache:
             return False
 
-        cached = self._seen.get(change.nlri.family(), {}).get(change.index(), None)
-        if not cached:
+        if change.nlri.action == OUT.WITHDRAW:
             return False
 
-        if change.nlri.action != OUT.ANNOUNCE:
+        cached = self._seen.get(change.nlri.family(), {}).get(change.index(), None)
+        if not cached:
             return False
 
         if cached.attributes.index() != change.attributes.index():
