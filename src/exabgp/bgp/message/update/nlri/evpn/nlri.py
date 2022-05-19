@@ -11,7 +11,7 @@ from struct import pack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 from exabgp.bgp.message.update.nlri import NLRI
 
@@ -37,7 +37,7 @@ class EVPN(NLRI):
     NAME = 'Unknown'
     SHORT_NAME = 'unknown'
 
-    def __init__(self, action=OUT.UNSET, addpath=None):
+    def __init__(self, action=Action.UNSET, addpath=None):
         NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
         self._packed = b''
 
@@ -60,7 +60,7 @@ class EVPN(NLRI):
         return str(self)
 
     def feedback(self, action):
-        # if self.nexthop is None and action == OUT.ANNOUNCE:
+        # if self.nexthop is None and action == Action.ANNOUNCE:
         # 	return 'evpn nlri next-hop is missing'
         return ''
 

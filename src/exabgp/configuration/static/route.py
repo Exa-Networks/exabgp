@@ -12,7 +12,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -181,7 +181,7 @@ class ParseStaticRoute(Section):
     def check(change):
         if (
             change.nlri.nexthop is NoNextHop
-            and change.nlri.action == OUT.ANNOUNCE
+            and change.nlri.action == Action.ANNOUNCE
             and change.nlri.afi == AFI.ipv4
             and change.nlri.safi in (SAFI.unicast, SAFI.multicast)
         ):
@@ -232,7 +232,7 @@ class ParseStaticRoute(Section):
         # generate the new routes
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
-            nlri = klass(afi, safi, OUT.ANNOUNCE)
+            nlri = klass(afi, safi, Action.ANNOUNCE)
             nlri.cidr = CIDR(pack_int(afi, ip), cut)
             nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             if safi.has_path():

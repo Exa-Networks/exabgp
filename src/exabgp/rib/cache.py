@@ -7,8 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.bgp.message import IN
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 
 class Cache(object):
@@ -29,7 +28,7 @@ class Cache(object):
             if family not in families:
                 del self._seen[family]
 
-    def cached_changes(self, families=None, actions=[OUT.ANNOUNCE]):
+    def cached_changes(self, families=None, actions=[Action.ANNOUNCE]):
         # families can be None or []
         requested_families = self.families if families is None else set(families).intersection(self.families)
 
@@ -50,7 +49,7 @@ class Cache(object):
         if not self.cache:
             return False
 
-        if change.nlri.action == OUT.WITHDRAW:
+        if change.nlri.action == Action.WITHDRAW:
             return False
 
         cached = self._seen.get(change.nlri.family(), {}).get(change.index(), None)
@@ -71,7 +70,7 @@ class Cache(object):
             return
         family = change.nlri.family()
         index = change.index()
-        if change.nlri.action == OUT.ANNOUNCE:
+        if change.nlri.action == Action.ANNOUNCE:
             self._seen.setdefault(family, {})[index] = change
         elif family in self._seen:
             self._seen[family].pop(index, None)

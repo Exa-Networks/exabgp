@@ -11,7 +11,7 @@ from exabgp.protocol.ip import NoNextHop
 
 from exabgp.rib.change import Change
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -71,14 +71,14 @@ class AnnounceLabel(AnnouncePath):
         if not AnnouncePath.check(change, afi):
             return False
 
-        if change.nlri.action == OUT.ANNOUNCE and change.nlri.has_label() and change.nlri.labels is Labels.NOLABEL:
+        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_label() and change.nlri.labels is Labels.NOLABEL:
             return False
 
         return True
 
 
 def ip_label(tokeniser, afi, safi):
-    action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
     nlri = Label(afi, safi, action)

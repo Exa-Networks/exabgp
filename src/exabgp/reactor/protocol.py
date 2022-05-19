@@ -34,7 +34,7 @@ from exabgp.bgp.message import Notification
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message import Operational
 
-from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
 
 from exabgp.bgp.message.update.attribute import Attribute
@@ -235,7 +235,7 @@ class Protocol(object):
             if message.TYPE == Update.TYPE:
                 if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in message.attributes:
                     for nlri in message.nlris:
-                        nlri.action = IN.WITHDRAWN
+                        nlri.action = Action.WITHDRAW
 
             if for_api:
                 negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None

@@ -18,7 +18,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.neighbor import Neighbor
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 # from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -226,12 +226,12 @@ class ParseNeighbor(Section):
         for section in ('static', 'l2vpn', 'flow'):
             routes = local.get(section, {}).get('routes', [])
             for route in routes:
-                route.nlri.action = OUT.ANNOUNCE
+                route.nlri.action = Action.ANNOUNCE
             neighbor.changes.extend(routes)
 
         routes = local.get('routes', [])
         for route in routes:
-            route.nlri.action = OUT.ANNOUNCE
+            route.nlri.action = Action.ANNOUNCE
         neighbor.changes.extend(routes)
 
         messages = local.get('operational', {}).get('routes', [])

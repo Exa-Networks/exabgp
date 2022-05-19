@@ -1,8 +1,8 @@
 # encoding: utf-8
 """
-direction.py
+action.py
 
-Created by Thomas Mangin on 2010-01-15.
+Created by Thomas Mangin on 2022-05-19.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
@@ -10,9 +10,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # =================================================================== Direction
 #
 
-from enum import Enum
+from enum import IntEnum
 
 
-class Direction(Enum):
-    IN = 1
-    OUT = 2
+class Action(IntEnum):
+    UNSET = 0x00
+    ANNOUNCE = 0x01
+    WITHDRAW = 0x02

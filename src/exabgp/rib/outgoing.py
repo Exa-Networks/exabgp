@@ -12,7 +12,7 @@ from exabgp.logger import log
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute import Attributes
@@ -90,7 +90,7 @@ class OutgoingRIB(Cache):
                 if family not in self._enhanced_refresh_start:
                     self._enhanced_refresh_start.append(family)
 
-        changes = list(self.cached_changes(requested_families, [OUT.ANNOUNCE, OUT.WITHDRAW]))
+        changes = list(self.cached_changes(requested_families, [Action.ANNOUNCE, Action.WITHDRAW]))
         for change in changes:
             self.del_from_rib(change)
 
@@ -119,7 +119,7 @@ class OutgoingRIB(Cache):
     def announce_watchdog(self, watchdog):
         if watchdog in self._watchdog:
             for change in list(self._watchdog[watchdog].get('-', {}).values()):
-                change.nlri.action = OUT.ANNOUNCE  # pylint: disable=E1101
+                change.nlri.action = Action.ANNOUNCE  # pylint: disable=E1101
                 self.add_to_rib(change)
                 self._watchdog[watchdog].setdefault('+', {})[change.index()] = change
                 self._watchdog[watchdog]['-'].pop(change.index())
@@ -127,7 +127,7 @@ class OutgoingRIB(Cache):
     def withdraw_watchdog(self, watchdog):
         if watchdog in self._watchdog:
             for change in list(self._watchdog[watchdog].get('+', {}).values()):
-                change.nlri.action = OUT.WITHDRAW
+                change.nlri.action = Action.WITHDRAW
                 self.add_to_rib(change)
                 self._watchdog[watchdog].setdefault('-', {})[change.index()] = change
                 self._watchdog[watchdog]['+'].pop(change.index())
@@ -135,7 +135,7 @@ class OutgoingRIB(Cache):
     def del_from_rib(self, change):
         log.debug('remove %s' % change, 'rib')
         change = deepcopy(change)
-        change.nlri.action = OUT.WITHDRAW
+        change.nlri.action = Action.WITHDRAW
         return self._add_to_rib(change, force=True)
 
     def add_to_rib(self, change, force=False):
@@ -149,7 +149,7 @@ class OutgoingRIB(Cache):
         # import traceback
         # traceback.print_stack()
         # print("\n\n\n")
-        # print("%s %s" % ('inserting' if change.nlri.action == OUT.ANNOUNCE else 'withdrawing', change.extensive()))
+        # print("%s %s" % ('inserting' if change.nlri.action == Action.ANNOUNCE else 'withdrawing', change.extensive()))
         # print("\n\n\n")
 
         if not force and self._enhanced_refresh_start:
@@ -178,7 +178,7 @@ class OutgoingRIB(Cache):
         # And the yield makes it very cpu/memory intensive ..
 
         # always remove previous announcement if cancelled or replaced before being sent
-        if change.nlri.action == OUT.WITHDRAW:
+        if change.nlri.action == Action.WITHDRAW:
             prev_change = new_nlri.get(change_index, None)
             if prev_change:
                 prev_change_index = prev_change.index()

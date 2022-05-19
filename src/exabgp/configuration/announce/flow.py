@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from exabgp.rib.change import Change
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -181,7 +181,7 @@ class AnnounceFlow(ParseAnnounce):
 
 
 def flow(tokeniser, afi, safi):
-    change = Change(Flow(afi, safi, OUT.ANNOUNCE), Attributes())
+    change = Change(Flow(afi, safi, Action.ANNOUNCE), Attributes())
 
     while True:
         command = tokeniser()

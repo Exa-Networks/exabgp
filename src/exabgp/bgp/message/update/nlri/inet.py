@@ -14,8 +14,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
-from exabgp.bgp.message import IN
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier import Labels
@@ -29,7 +28,7 @@ from exabgp.bgp.message.notification import Notify
 @NLRI.register(AFI.ipv4, SAFI.multicast)
 @NLRI.register(AFI.ipv6, SAFI.multicast)
 class INET(NLRI):
-    def __init__(self, afi, safi, action=OUT.UNSET):
+    def __init__(self, afi, safi, action=Action.UNSET):
         NLRI.__init__(self, afi, safi, action)
         self.path_info = PathInfo.NOPATH
         self.cidr = CIDR.NOCIDR
@@ -45,7 +44,7 @@ class INET(NLRI):
         return self.extensive()
 
     def feedback(self, action):
-        if self.nexthop is None and action == OUT.ANNOUNCE:
+        if self.nexthop is None and action == Action.ANNOUNCE:
             return 'inet nlri next-hop missing'
         return ''
 
@@ -115,7 +114,7 @@ class INET(NLRI):
                 # The last bit is set for the last label
                 labels.append(label >> 4)
                 # This is a route withdrawal
-                if label == 0x800000 and action == IN.WITHDRAWN:
+                if label == 0x800000 and action == Action.WITHDRAW:
                     break
                 # This is a next-hop
                 if label == 0x000000:

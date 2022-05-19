@@ -15,7 +15,7 @@ import time
 from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message import IN
+from exabgp.bgp.message import Action
 
 from exabgp.environment import getenv
 from exabgp.bgp.message.open.capability.refresh import REFRESH
@@ -322,9 +322,9 @@ class JSON(object):
 
         for nlri in update.nlris:
             nexthop = str(nlri.nexthop) if nlri.nexthop else 'null'
-            if nlri.action == IN.ANNOUNCED:  # pylint: disable=E1101
+            if nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
                 plus.setdefault(nlri.family(), {}).setdefault(nexthop, []).append(nlri)
-            if nlri.action == IN.WITHDRAWN:  # pylint: disable=E1101
+            if nlri.action == Action.WITHDRAW:  # pylint: disable=E1101
                 minus.setdefault(nlri.family(), []).append(nlri)
 
         add = []

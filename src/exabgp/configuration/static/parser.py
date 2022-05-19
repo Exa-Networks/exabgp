@@ -17,7 +17,7 @@ from exabgp.protocol.family import AFI
 
 # from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri import CIDR
 from exabgp.bgp.message.update.nlri import INET
 from exabgp.bgp.message.update.nlri import IPVPN
@@ -94,25 +94,25 @@ def next_hop(tokeniser):
         return ip, NextHop(ip.top())
 
 
-# XXX: using OUT.UNSET should we use the following ?
-# action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+# XXX: using Action.UNSET should we use the following ?
+# action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
 
 def inet(tokeniser):
     ipmask = prefix(tokeniser)
-    inet = INET(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=OUT.UNSET)
+    inet = INET(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=Action.UNSET)
     inet.cidr = CIDR(ipmask.ton(), ipmask.mask)
 
     return Change(inet, Attributes())
 
 
-# XXX: using OUT.ANNOUNCE should we use the following ?
-# action = OUT.ANNOUNCE if tokeniser.announce else OUT.WITHDRAW
+# XXX: using Action.ANNOUNCE should we use the following ?
+# action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
 
 def mpls(tokeniser):
     ipmask = prefix(tokeniser)
-    mpls = IPVPN(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=OUT.ANNOUNCE)
+    mpls = IPVPN(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=Action.ANNOUNCE)
     mpls.cidr = CIDR(ipmask.ton(), ipmask.mask)
 
     return Change(mpls, Attributes())

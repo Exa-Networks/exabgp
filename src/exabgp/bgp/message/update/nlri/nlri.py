@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import log
@@ -24,7 +24,7 @@ class NLRI(Family):
     registered_nlri = dict()
     registered_families = [(AFI.ipv4, SAFI.multicast)]
 
-    def __init__(self, afi, safi, action=OUT.UNSET):
+    def __init__(self, afi, safi, action=Action.UNSET):
         Family.__init__(self, afi, safi)
         self.action = action
 

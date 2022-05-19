@@ -12,7 +12,7 @@ from struct import unpack
 from struct import pack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message.direction import OUT
+from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -34,7 +34,7 @@ class VPLS(NLRI):
     # XXX: Should take AFI, SAFI and OUT.direction as parameter to match other NLRI
     def __init__(self, rd, endpoint, base, offset, size):
         NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
-        self.action = OUT.ANNOUNCE
+        self.action = Action.ANNOUNCE
         self.nexthop = None
         self.rd = rd
         self.base = base
@@ -44,7 +44,7 @@ class VPLS(NLRI):
         self.unique = next(unique)
 
     def feedback(self, action):
-        if self.nexthop is None and action == OUT.ANNOUNCE:
+        if self.nexthop is None and action == Action.ANNOUNCE:
             return 'vpls nlri next-hop missing'
         if self.endpoint is None:
             return 'vpls nlri endpoint missing'

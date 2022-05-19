@@ -11,7 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import os
 
 from exabgp.util import hexstring
-from exabgp.bgp.message import IN
+from exabgp.bgp.message import Action
 
 
 class Text(object):
@@ -95,7 +95,7 @@ class Text(object):
         for nlri in update.nlris:
             if nlri.EOR:
                 r += '%s route %s\n' % (prefix, nlri.extensive())
-            elif nlri.action == IN.ANNOUNCED:  # pylint: disable=E1101
+            elif nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
                 if nlri.nexthop:
                     r += '%s announced %s%s\n' % (prefix, nlri.extensive(), attributes)
                 else:

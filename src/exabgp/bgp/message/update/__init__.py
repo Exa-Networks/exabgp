@@ -14,8 +14,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message.direction import IN
-from exabgp.bgp.message.direction import OUT
+from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
 
 from exabgp.bgp.message.message import Message
@@ -119,13 +118,13 @@ class Update(Message):
             add_v4 = nlri.afi == AFI.ipv4
             add_v4 = add_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
 
-            del_v4 = add_v4 and nlri.action == OUT.WITHDRAW
+            del_v4 = add_v4 and nlri.action == Action.WITHDRAW
 
             if del_v4:
                 nlris.append(nlri)
                 continue
 
-            add_v4 = add_v4 and nlri.action == OUT.ANNOUNCE
+            add_v4 = add_v4 and nlri.action == Action.ANNOUNCE
             add_v4 = add_v4 and nlri.nexthop.afi == AFI.ipv4
 
             if add_v4:
@@ -158,7 +157,7 @@ class Update(Message):
                 afi, safi = family
                 if safi not in (SAFI.unicast, SAFI.multicast):
                     break
-                if set(actions.keys()) != {OUT.WITHDRAW}:
+                if set(actions.keys()) != {Action.WITHDRAW}:
                     break
             # no break
             else:
@@ -184,7 +183,7 @@ class Update(Message):
         for nlri in nlris:
             packed = nlri.pack(negotiated)
             if len(announced + withdraws + packed) <= msg_size:
-                if nlri.action == OUT.ANNOUNCE:
+                if nlri.action == Action.ANNOUNCE:
                     announced += packed
                 elif include_withdraw:
                     withdraws += packed
@@ -200,7 +199,7 @@ class Update(Message):
             else:
                 yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
 
-            if nlri.action == OUT.ANNOUNCE:
+            if nlri.action == Action.ANNOUNCE:
                 announced = packed
                 withdraws = b''
             elif include_withdraw:
@@ -220,8 +219,8 @@ class Update(Message):
             afi, safi = family
             mp_reach = b''
             mp_unreach = b''
-            mp_announce = MPRNLRI(afi, safi, mp_nlris[family].get(OUT.ANNOUNCE, []))
-            mp_withdraw = MPURNLRI(afi, safi, mp_nlris[family].get(OUT.WITHDRAW, []))
+            mp_announce = MPRNLRI(afi, safi, mp_nlris[family].get(Action.ANNOUNCE, []))
+            mp_withdraw = MPURNLRI(afi, safi, mp_nlris[family].get(Action.WITHDRAW, []))
 
             for mprnlri in mp_announce.packed_attributes(negotiated, msg_size - len(withdraws + announced)):
                 if mp_reach:
@@ -286,13 +285,13 @@ class Update(Message):
 
         nlris = []
         while withdrawn:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, IN.WITHDRAWN, addpath)
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath)
             log.debug('withdrawn NLRI %s' % nlri, 'routes')
             withdrawn = left
             nlris.append(nlri)
 
         while announced:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, IN.ANNOUNCED, addpath)
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath)
             nlri.nexthop = nexthop
             log.debug('announced NLRI %s' % nlri, 'routes')
             announced = left

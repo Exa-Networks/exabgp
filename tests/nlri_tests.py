@@ -37,7 +37,7 @@ from exabgp.bgp.message.update.nlri.qualifier.mac import MAC
 
 from exabgp.protocol.ip import IP
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 
 
 class TestNLRIs(unittest.TestCase):
@@ -56,7 +56,7 @@ class TestNLRIs(unittest.TestCase):
         )
 
         packed = nlri.pack()
-        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, OUT.UNSET, None)
+        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
 
         self.assertEqual(0, len(leftover))
 
@@ -86,7 +86,7 @@ class TestNLRIs(unittest.TestCase):
 
         packed = nlri.pack()
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, OUT.UNSET, None)
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None)
 
         self.assertEqual(0, len(leftover))
 
@@ -112,7 +112,7 @@ class TestNLRIs(unittest.TestCase):
 
         packed = nlri.pack()
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, OUT.UNSET, None)
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None)
 
         self.assertEqual(0, len(leftover))
 
@@ -140,7 +140,7 @@ class TestNLRIs(unittest.TestCase):
 
         packed = nlri.pack()
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, OUT.UNSET, None)
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None)
 
         self.assertEqual(0, len(leftover))
 
@@ -284,7 +284,7 @@ class TestNLRIs(unittest.TestCase):
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 64512, RouteTarget(64577, 123))
 
         packed = nlri.pack()
-        unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, OUT.UNSET, None)
+        unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
 
         self.assertEqual(0, len(leftover))
 
@@ -305,7 +305,7 @@ class TestNLRIs(unittest.TestCase):
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 0, None)
 
         packed = nlri.pack()
-        unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, OUT.UNSET, None)
+        unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
 
         self.assertEqual(0, len(leftover))
 

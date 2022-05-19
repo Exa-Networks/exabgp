@@ -8,7 +8,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from exabgp.protocol.ip import IP
 
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 from exabgp.rib.change import Change
 
 from exabgp.protocol.family import AFI
@@ -73,7 +73,7 @@ class ParseAnnounce(Section):
         # generate the new routes
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
-            nlri = klass(afi, safi, OUT.ANNOUNCE)
+            nlri = klass(afi, safi, Action.ANNOUNCE)
             nlri.cidr = CIDR(pack_int(afi, ip), cut)
             nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             nlri.path_info = path_info

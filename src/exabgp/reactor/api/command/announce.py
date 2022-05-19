@@ -12,7 +12,7 @@ from exabgp.reactor.api.command.limit import match_neighbors
 from exabgp.reactor.api.command.limit import extract_neighbors
 
 from exabgp.protocol.ip import NoNextHop
-from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute import NextHop
 
 from exabgp.configuration.static import ParseStaticRoute
@@ -47,7 +47,7 @@ def announce_route(self, reactor, service, line):
                         'invalid route for %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
                     )
                     continue
-                change.nlri.action = OUT.ANNOUNCE
+                change.nlri.action = Action.ANNOUNCE
                 reactor.configuration.inject_change(peers, change)
                 self.log_message(
                     'route added to %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
@@ -89,7 +89,7 @@ def withdraw_route(self, reactor, service, line):
 
             for change in changes:
                 # Change the action to withdraw before checking the route
-                change.nlri.action = OUT.WITHDRAW
+                change.nlri.action = Action.WITHDRAW
                 # NextHop is a mandatory field (but we do not require in)
                 if change.nlri.nexthop is NoNextHop:
                     change.nlri.nexthop = NextHop('0.0.0.0')
@@ -144,7 +144,7 @@ def announce_vpls(self, reactor, service, line):
                 return
 
             for change in changes:
-                change.nlri.action = OUT.ANNOUNCE
+                change.nlri.action = Action.ANNOUNCE
                 reactor.configuration.inject_change(peers, change)
                 self.log_message(
                     'vpls added to %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
@@ -186,7 +186,7 @@ def withdraw_vpls(self, reactor, service, line):
                 return
 
             for change in changes:
-                change.nlri.action = OUT.WITHDRAW
+                change.nlri.action = Action.WITHDRAW
                 if reactor.configuration.inject_change(peers, change):
                     self.log_message(
                         'vpls removed from %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
@@ -233,7 +233,7 @@ def announce_attributes(self, reactor, service, line):
                 return
 
             for change in changes:
-                change.nlri.action = OUT.ANNOUNCE
+                change.nlri.action = Action.ANNOUNCE
                 reactor.configuration.inject_change(peers, change)
                 self.log_message(
                     'route added to %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
@@ -274,7 +274,7 @@ def withdraw_attribute(self, reactor, service, line):
                 return
 
             for change in changes:
-                change.nlri.action = OUT.WITHDRAW
+                change.nlri.action = Action.WITHDRAW
                 if reactor.configuration.inject_change(peers, change):
                     self.log_message(
                         'route removed from %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
@@ -320,7 +320,7 @@ def announce_flow(self, reactor, service, line):
                 return
 
             for change in changes:
-                change.nlri.action = OUT.ANNOUNCE
+                change.nlri.action = Action.ANNOUNCE
                 reactor.configuration.inject_change(peers, change)
                 self.log_message(
                     'flow added to %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
@@ -362,7 +362,7 @@ def withdraw_flow(self, reactor, service, line):
                 return
 
             for change in changes:
-                change.nlri.action = OUT.WITHDRAW
+                change.nlri.action = Action.WITHDRAW
                 if reactor.configuration.inject_change(peers, change):
                     self.log_message(
                         'flow removed from %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
