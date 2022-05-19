@@ -26,8 +26,6 @@ from exabgp.environment import getenv
 
 from exabgp.bgp.fsm import FSM
 
-from exabgp.environment import getenv
-
 from exabgp.version import version
 from exabgp.logger import log
 
@@ -194,14 +192,14 @@ class Reactor(object):
         if not peer:
             log.critical('could not find referenced peer', 'reactor')
             return
-        peer.neighbor.rib.outgoing.resend(None, peer.neighbor['capability']['route-refresh'])
+        peer.resend(peer.neighbor['capability']['route-refresh'])
 
     def neighbor_rib_out_withdraw(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
             log.critical('could not find referenced peer', 'reactor')
             return
-        peer.neighbor.rib.outgoing.withdraw(None, peer.neighbor['capability']['route-refresh'])
+        peer.neighbor.rib.outgoing.withdraw()
 
     def neighbor_rib_in_clear(self, peer_name):
         peer = self._peers.get(peer_name, None)

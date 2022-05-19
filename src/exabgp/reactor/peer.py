@@ -44,13 +44,6 @@ class ACTION(object):
     ALL = [CLOSE, LATER, NOW]
 
 
-class SEND(object):
-    DONE = 0x01
-    NORMAL = 0x02
-    REFRESH = 0x04
-    ALL = [DONE, NORMAL, REFRESH]
-
-
 # As we can not know if this is our first start or not, this flag is used to
 # always make the program act like it was recovering from a failure
 # If set to FALSE, no EOR and OPEN Flags set for Restart will be set in the
@@ -100,8 +93,6 @@ class Peer(object):
 
         # We want to remove routes which are not in the configuration anymore after a signal to reload
         self._reconfigure = True
-        # We want to send all the known routes
-        self._resend_routes = SEND.DONE
 
         # We have been asked to teardown the session with this code
         self._teardown = None
@@ -184,8 +175,8 @@ class Peer(object):
         self._stop("shutting down")
         self.stop()
 
-    def resend(self):
-        self._resend_routes = SEND.NORMAL
+    def resend(self, enhanced, send_families=None):
+        self.neighbor.rib.outgoing.resend(enhanced, send_families)
         self._delay.reset()
 
     def reestablish(self, restart_neighbor=None):
@@ -193,7 +184,6 @@ class Peer(object):
         self._teardown = 3
         self._restart = True
         self._restarted = True
-        self._resend_routes = SEND.NORMAL
         self._neighbor = restart_neighbor
         self._delay.reset()
 
@@ -201,7 +191,6 @@ class Peer(object):
         # we want to update the route which were in the configuration file
         self._reconfigure = True
         self._neighbor = restart_neighbor
-        self._resend_routes = SEND.NORMAL
         self._neighbor = restart_neighbor
 
     def teardown(self, code, restart=True):
@@ -414,8 +403,6 @@ class Peer(object):
         routes_per_iteration = 1 if self.neighbor['rate-limit'] > 0 else 25
         send_eor = not self.neighbor['manual-eor']
         new_routes = None
-        self._resend_routes = SEND.NORMAL
-        send_families = []
 
         # Every last asm message should be re-announced on restart
         for family in self.neighbor.asm:
@@ -426,7 +413,7 @@ class Peer(object):
         refresh = None
         command_eor = None
         number = 0
-        refresh_enhanced = True if self.proto.negotiated.refresh == REFRESH.ENHANCED else False
+        refresh_enhanced = (self.proto.negotiated.refresh == REFRESH.ENHANCED)
 
         send_ka = KA(self.proto.connection.session, self.proto)
 
@@ -449,9 +436,9 @@ class Peer(object):
                         logfunc.debug(lazyformat('   UPDATE #%d nlri ' % number, nlri, str), self.id())
 
                 elif message.TYPE == RouteRefresh.TYPE:
-                    if message.reserved == RouteRefresh.request:
-                        self._resend_routes = SEND.REFRESH
-                        send_families.append((message.afi, message.safi))
+                    enhanced = (message.reserved == RouteRefresh.request)
+                    enhanced = enhanced and refresh_enhanced
+                    self.resend(enhanced, (message.afi, message.safi))
 
                 # SEND OPERATIONAL
                 if self.neighbor['capability']['operational']:
@@ -493,13 +480,6 @@ class Peer(object):
                         self.neighbor.rib.outgoing.replace(self._neighbor.backup_changes, self._neighbor.changes)
                         # do not keep the previous routes in memory as they are not useful anymore
                         self._neighbor.backup_changes = []
-
-                # Take the routes already sent to that peer and resend them
-                if self._resend_routes != SEND.DONE:
-                    enhanced = True if refresh_enhanced and self._resend_routes == SEND.REFRESH else False
-                    self._resend_routes = SEND.DONE
-                    self.neighbor.rib.outgoing.resend(send_families, enhanced)
-                    send_families = []
 
                 # Need to send update
                 if not new_routes and self.neighbor.rib.outgoing.pending():
