@@ -694,7 +694,7 @@ class Peer(object):
         families = {}
         for family in self.neighbor.families():
             if have_open:
-                common = True if family in self.proto.negotiated.families else False
+                common = (family in self.proto.negotiated.families)
                 send_addpath = self.proto.negotiated.addpath.send(*family)
                 recv_addpath = self.proto.negotiated.addpath.receive(*family)
             else:

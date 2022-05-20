@@ -52,7 +52,7 @@ def main():
     if len(sys.argv) >= 3:
         reverse = reversed if sys.argv[2].startswith('rev') else lambda _: _
         skip = 0 if not sys.argv[2].isdigit() else int(sys.argv[2])
-        show = True if sys.argv[2] == 'show' else False
+        show = (sys.argv[2] == 'show')
     else:
         reverse = lambda _: _
         skip = 0

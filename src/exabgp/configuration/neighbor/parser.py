@@ -33,7 +33,7 @@ def hostname(tokeniser):
         raise ValueError('bad host-name (alphanumeric)')
     if '..' in value:
         raise ValueError('bad host-name (double period)')
-    if not all(True if c in ascii_letters + digits + '.-' else False for c in value):
+    if not all(c in ascii_letters + digits + '.-' for c in value):
         raise ValueError('bad host-name (charset)')
     if len(value) > 255:
         raise ValueError('bad host-name (length)')
@@ -51,7 +51,7 @@ def domainname(tokeniser):
         raise ValueError('bad domain-name')
     if '..' in value:
         raise ValueError('bad domain-name')
-    if not all(True if c in ascii_letters + digits + '.-' else False for c in value):
+    if not all(c in ascii_letters + digits + '.-' for c in value):
         raise ValueError('bad domain-name')
     if len(value) > 255:
         raise ValueError('bad domain-name (length)')
