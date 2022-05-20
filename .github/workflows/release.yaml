@@ -5,6 +5,9 @@ on:
     tags:
     - 'v*'
 
+permissions:
+  contents: read
+
 jobs:
   assets:
     name: Release packages
