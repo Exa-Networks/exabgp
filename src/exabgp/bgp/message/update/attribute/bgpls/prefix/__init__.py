@@ -5,6 +5,8 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
+# flake8: noqa: F401,E261
+
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #  +---------------+----------------------+----------+-----------------+
@@ -22,6 +24,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #  |               | Attribute            |          |                 |
 #  +---------------+----------------------+----------+-----------------+
 #  https://tools.ietf.org/html/rfc7752#section-3.3.3
+
 from exabgp.bgp.message.update.attribute.bgpls.prefix.igpflags import IgpFlags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.igpextags import IgpExTags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.igptags import IgpTags
@@ -40,6 +43,7 @@ from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import Prefix
 #   |    1161    | SID/Label TLV           | variable | Section 2.3.7.2 |
 # Note: Only IS-IS IGP extensions as defined in draft-ietf-isis-segment-routing-extensions
 # are currently parsed by ExaBGP. Binding segments are not supported (3.5.  Binding Segment)
+
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID

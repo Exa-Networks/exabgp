@@ -7,13 +7,10 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import sys
-
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-
 
 # =============================================================== AGGREGATOR (7)
 #

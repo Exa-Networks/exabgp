@@ -6,7 +6,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import unpack
-import json
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES

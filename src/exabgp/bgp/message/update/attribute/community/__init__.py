@@ -7,6 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+# flake8: noqa: F401,E261
+
 from exabgp.bgp.message.update.attribute.community.initial import Community
 from exabgp.bgp.message.update.attribute.community.initial import Communities
 

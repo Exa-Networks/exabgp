@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import logging
 
 from exabgp.logger.handler import getLogger
 from exabgp.logger.format import formater

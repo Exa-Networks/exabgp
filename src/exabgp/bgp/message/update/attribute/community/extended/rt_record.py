@@ -1,3 +1,12 @@
+# encoding: utf-8
+"""
+rt_record.py
+
+Created by Thomas Mangin on <unset>
+Copyright (c) 2009-2022 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import rt
 

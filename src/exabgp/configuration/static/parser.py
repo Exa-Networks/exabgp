@@ -8,14 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
-import sys
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPSelf
 from exabgp.protocol.ip import IPRange
-from exabgp.protocol.family import AFI
-
-# from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri import CIDR
@@ -38,7 +34,7 @@ from exabgp.bgp.message.update.attribute import CONFED_SEQUENCE
 from exabgp.bgp.message.update.attribute import LocalPreference
 from exabgp.bgp.message.update.attribute import AtomicAggregate
 from exabgp.bgp.message.update.attribute import Aggregator
-from exabgp.bgp.message.update.attribute import Aggregator4
+from exabgp.bgp.message.update.attribute import Aggregator4  # noqa: F401,E261
 from exabgp.bgp.message.update.attribute import OriginatorID
 from exabgp.bgp.message.update.attribute import ClusterID
 from exabgp.bgp.message.update.attribute import ClusterList

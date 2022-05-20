@@ -11,8 +11,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import base64
 from copy import deepcopy
 
-from exabgp.util.dns import host, domain
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -20,15 +18,11 @@ from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.bgp.message import Action
 
-# from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.holdtime import HoldTime
-
 from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.neighbor.api import ParseAPI
 from exabgp.configuration.neighbor.family import ParseFamily
-from exabgp.configuration.neighbor.nexthop import ParseNextHop
 from exabgp.configuration.neighbor.family import ParseAddPath
 
 from exabgp.configuration.parser import boolean

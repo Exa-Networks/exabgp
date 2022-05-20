@@ -7,7 +7,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-
 from exabgp.environment import parsing
 from exabgp.environment.environment import Env
 

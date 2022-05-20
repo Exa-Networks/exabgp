@@ -1,7 +1,6 @@
 # encoding: utf-8
 
 import sys
-import syslog
 import string
 import argparse
 
@@ -12,10 +11,10 @@ from exabgp.debug import trace_interceptor
 from exabgp.environment import Env
 from exabgp.environment import getenv
 from exabgp.environment import getconf
-from exabgp.environment import ROOT
 
 from exabgp.reactor.loop import Reactor
 from exabgp.logger import log
+
 
 conf_all = """\
 neighbor 127.0.0.1 {

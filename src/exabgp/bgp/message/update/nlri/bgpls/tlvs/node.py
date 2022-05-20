@@ -11,7 +11,6 @@ from struct import unpack
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.iso import ISO
-from exabgp.bgp.message.notification import Notify
 
 #           +--------------------+-------------------+----------+
 #           | Sub-TLV Code Point | Description       |   Length |

@@ -13,7 +13,6 @@ from exabgp.protocol.family import Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.logger import log
 from exabgp.logger import logfunc
 from exabgp.logger import lazynlri
 

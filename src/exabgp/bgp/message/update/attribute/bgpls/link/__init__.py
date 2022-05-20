@@ -5,6 +5,8 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
+# flake8: noqa: F401,E261
+
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #  +-----------+---------------------+--------------+------------------+

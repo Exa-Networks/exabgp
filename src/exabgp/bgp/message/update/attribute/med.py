@@ -12,7 +12,6 @@ from struct import unpack
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
-
 # ====================================================================== MED (4)
 #
 

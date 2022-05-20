@@ -1,10 +1,16 @@
+# encoding: utf-8
+"""
+chso.py
+
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
 from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 # draft-fm-bess-service-chaining
-
 
 @ExtendedCommunity.register
 class ConsistentHashSortOrder(ExtendedCommunity):

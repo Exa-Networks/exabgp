@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import time
 import copy
-from collections import defaultdict
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.parser import boolean
