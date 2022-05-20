@@ -254,7 +254,7 @@ def check_open(neighbor, raw):
     try:
         o = Open.unpack_message(raw, Direction.IN, _negotiated(neighbor))
         print(o)
-    except Exception as exc:
+    except Exception:
         print()
         print("we could not decode this open message")
         print("here is the traceback to help to figure out why")
