@@ -95,12 +95,20 @@ class OutgoingRIB(Cache):
         for change in self._new_nlri.values():
             yield change
 
-    def replace(self, previous, changes):
-        for change in previous:
-            self.del_from_rib(change)
+    def replace(self, previous, new):
+        # this requires that all changes are announcements
+        indexed = {}
 
-        for change in changes:
-            self.add_to_rib(change, True)
+        for change in previous:
+            indexed[change.index()] = change
+
+        for change in new:
+            if indexed.pop(change.index(), None) is None:
+                self.add_to_rib(change, True)
+                continue
+
+        for index in list(indexed):
+            self.del_from_rib(indexed.pop(index))
 
     def add_to_rib_watchdog(self, change):
         watchdog = change.attributes.watchdog()
