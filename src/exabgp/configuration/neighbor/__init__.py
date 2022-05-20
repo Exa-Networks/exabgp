@@ -133,12 +133,13 @@ class ParseNeighbor(Section):
     def pre(self):
         return self.parse(self.name, 'peer-address')
 
-    def post(self):
+    def _post_get_scope(self):
         for inherited in self.scope.pop('inherit', []):
             data = self.scope.template('neighbor', inherited)
             self.scope.inherit(data)
-        local = self.scope.get()
+        return self.scope.get()
 
+    def _post_neighbor(self, local, families):
         neighbor = Neighbor()
 
         for option in neighbor.defaults:
@@ -146,73 +147,93 @@ class ParseNeighbor(Section):
             if conf is not None:
                 neighbor[option] = conf
 
-        # XXX: use the right class for the data type
-        # XXX: we can use the scope.nlri interface ( and rename it ) to set some values
+        if neighbor['local-address'] is None:
+            neighbor.auto_discovery = True
+            neighbor['local-address'] = None
+            neighbor['md5-ip'] = None
 
+        if not neighbor['router-id']:
+            if neighbor['peer-address'].afi == AFI.ipv4 and not neighbor.auto_discovery:
+                neighbor['router-id'] = neighbor['local-address']
+
+        for family in families:
+            neighbor.add_family(family)
+
+        return neighbor
+
+    def _post_families(self, local):
+        families = []
+        for family in ParseFamily.convert:
+            for pair in local.get('family', {}).get(family, []):
+                families.append(pair)
+
+        return families or NLRI.known_families()
+
+    def _post_capa_default(self, neighbor, local):
         capability = local.get('capability', {})
         for option in neighbor.Capability.defaults:
             conf = capability.get(option, None)
             if conf is not None:
                 neighbor['capability'][option] = conf
 
-        neighbor.api = ParseAPI.flatten(local.pop('api', {}))
+    def _post_capa_addpath(self, neighbor, local, families):
+        if not neighbor['capability']['add-path']:
+            return
 
-        missing = neighbor.missing()
-        if missing:
-            return self.error.set(missing)
-        neighbor.infer()
+        add_path = local.get('add-path', {})
+        if not add_path:
+            for family in families:
+                neighbor.add_addpath(family)
+            return
 
-        families = []
-        for family in ParseFamily.convert:
-            for pair in local.get('family', {}).get(family, []):
-                families.append(pair)
+        for family in ParseAddPath.convert:
+            for pair in add_path.get(family, []):
+                if pair not in families:
+                    log.debug(
+                        'skipping add-path family ' + str(pair) + ' as it is not negotiated',
+                        'configuration'
+                    )
+                    continue
+                neighbor.add_addpath(pair)
 
-        families = families or NLRI.known_families()
-
-        for family in families:
-            neighbor.add_family(family)
-
-        if neighbor['capability']['add-path']:
-            add_path = local.get('add-path', {})
-            if add_path:
-                for family in ParseAddPath.convert:
-                    for pair in add_path.get(family, []):
-                        if pair not in families:
-                            log.debug(
-                                'skipping add-path family ' + str(pair) + ' as it is not negotiated', 'configuration'
-                            )
-                            continue
-                        neighbor.add_addpath(pair)
-            else:
-                for family in families:
-                    neighbor.add_addpath(family)
-
+    def _post_capa_nexthop(self, neighbor, local):
         # The default is to auto-detect by the presence of the nexthop block
         # if this is manually set, then we honor it
         nexthop = local.get('nexthop', {})
         if neighbor['capability']['nexthop'] is None and nexthop:
             neighbor['capability']['nexthop'] = True
 
-        if neighbor['capability']['nexthop']:
-            nexthops = []
-            for family in nexthop:
-                nexthops.extend(nexthop[family])
-            if nexthops:
-                for afi, safi, nhafi in nexthops:
-                    if (afi, safi) not in neighbor.families():
-                        log.debug(
-                            'skipping nexthop afi,safi ' + str(afi) + '/' + str(safi) + ' as it is not negotiated',
-                            'configuration',
-                        )
-                        continue
-                    if (nhafi, safi) not in neighbor.families():
-                        log.debug(
-                            'skipping nexthop afi ' + str(nhafi) + '/' + str(safi) + ' as it is not negotiated',
-                            'configuration',
-                        )
-                        continue
-                    neighbor.add_nexthop(afi, safi, nhafi)
+        if not neighbor['capability']['nexthop']:
+            return
 
+        nexthops = []
+        for family in nexthop:
+            nexthops.extend(nexthop[family])
+
+        if not nexthops:
+            return
+
+        for afi, safi, nhafi in nexthops:
+            if (afi, safi) not in neighbor.families():
+                log.debug(
+                    'skipping nexthop afi,safi ' + str(afi) + '/' + str(safi) + ' as it is not negotiated',
+                    'configuration',
+                )
+                continue
+            if (nhafi, safi) not in neighbor.families():
+                log.debug(
+                    'skipping nexthop afi ' + str(nhafi) + '/' + str(safi) + ' as it is not negotiated',
+                    'configuration',
+                )
+                continue
+            neighbor.add_nexthop(afi, safi, nhafi)
+
+    def _post_capa_rr(self, neighbor):
+        if neighbor['capability']['route-refresh']:
+            if neighbor['adj-rib-out']:
+                log.debug('route-refresh requested, enabling adj-rib-out', 'configuration')
+
+    def _post_routes(self, neighbor, local):
         neighbor.changes = []
         neighbor.changes.extend(self.scope.pop_routes())
 
@@ -228,26 +249,37 @@ class ParseNeighbor(Section):
             route.nlri.action = Action.ANNOUNCE
         neighbor.changes.extend(routes)
 
-        messages = local.get('operational', {}).get('routes', [])
+    def _init_neighbor(self, neighbor, local):
+        families = neighbor.families()
+        for change in neighbor.changes:
+            if change.nlri.family() in families:
+                # This add the family to neighbor.families()
+                neighbor.rib.outgoing.add_to_rib_watchdog(change)
 
-        if neighbor['local-address'] is None:
-            neighbor.auto_discovery = True
-            neighbor['local-address'] = None
-            neighbor['md5-ip'] = None
+        for message in local.get('operational', {}).get('routes', []):
+            if message.family() in families:
+                if message.name == 'ASM':
+                    neighbor.asm[message.family()] = message
+                else:
+                    neighbor.messages.append(message)
+        self.neighbors[neighbor.name()] = neighbor
 
-        if not neighbor['router-id']:
-            if neighbor['peer-address'].afi == AFI.ipv4 and not neighbor.auto_discovery:
-                neighbor['router-id'] = neighbor['local-address']
-            else:
-                return self.error.set('missing router-id for the peer, it can not be set using the local-ip')
+    def post(self):
+        local = self._post_get_scope()
+        families = self._post_families(local)
+        neighbor = self._post_neighbor(local, families)
 
-        if neighbor['capability']['route-refresh']:
-            if neighbor['adj-rib-out']:
-                log.debug('route-refresh requested, enabling adj-rib-out', 'configuration')
+        self._post_capa_default(neighbor, local)
+        self._post_capa_addpath(neighbor, local, families)
+        self._post_capa_nexthop(neighbor, local)
+        self._post_routes(neighbor, local)
+
+        neighbor.api = ParseAPI.flatten(local.pop('api', {}))
 
         missing = neighbor.missing()
         if missing:
             return self.error.set('incomplete neighbor, missing %s' % missing)
+        neighbor.infer()
 
         if not neighbor.auto_discovery and neighbor['local-address'].afi != neighbor['peer-address'].afi:
             return self.error.set('local-address and peer-address must be of the same family')
@@ -278,20 +310,6 @@ class ParseNeighbor(Section):
                     % change.nlri.family()
                 )
 
-        def _init_neighbor(neighbor):
-            families = neighbor.families()
-            for change in neighbor.changes:
-                if change.nlri.family() in families:
-                    # This add the family to neighbor.families()
-                    neighbor.rib.outgoing.add_to_rib_watchdog(change)
-            for message in messages:
-                if message.family() in families:
-                    if message.name == 'ASM':
-                        neighbor.asm[message.family()] = message
-                    else:
-                        neighbor.messages.append(message)
-            self.neighbors[neighbor.name()] = neighbor
-
         # create one neighbor object per family for multisession
         if neighbor['capability']['multi-session'] and len(neighbor.families()) > 1:
             for family in neighbor.families():
@@ -299,10 +317,10 @@ class ParseNeighbor(Section):
                 m_neighbor = deepcopy(neighbor)
                 m_neighbor.make_rib()
                 m_neighbor.rib.outgoing.families = [family]
-                _init_neighbor(m_neighbor)
+                self._init_neighbor(m_neighbor, local)
         else:
             neighbor.make_rib()
-            _init_neighbor(neighbor)
+            self._init_neighbor(neighbor, local)
 
         local.clear()
         return True
