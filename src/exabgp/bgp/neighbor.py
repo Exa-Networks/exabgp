@@ -131,15 +131,6 @@ class Neighbor(dict):
         self.uid = '%d' % self._GLOBAL['uid']
         self._GLOBAL['uid'] += 1
 
-    def missing(self):
-        if self['local-as'] is None:
-            return 'incomplete neighbor, missing local-address'
-        if self['local-as'] is None:
-            return 'incomplete neighbor, missing local-as'
-        if self['peer-as'] is None:
-            return 'incomplete neighbor, missing peer-as'
-        return ''
-
     def infer(self):
         if self['md5-ip'] is None:
             self['md5-ip'] = self['local-address']
