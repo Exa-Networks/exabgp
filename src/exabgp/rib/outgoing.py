@@ -95,7 +95,23 @@ class OutgoingRIB(Cache):
         for change in self._new_nlri.values():
             yield change
 
-    def replace(self, previous, new):
+    def replace_restart(self, previous, new):
+        # this requires that all changes are announcements
+        indexed = {}
+
+        for change in previous:
+            indexed[change.index()] = change
+
+        for change in new:
+            indexed.pop(change.index(), None)
+
+        for change in self.cached_changes(self.families):
+            self.add_to_rib(change, True)
+
+        for index in list(indexed):
+            self.del_from_rib(indexed.pop(index))
+
+    def replace_reload(self, previous, new):
         # this requires that all changes are announcements
         indexed = {}
 
