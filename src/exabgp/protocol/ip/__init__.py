@@ -109,10 +109,10 @@ class IP(object):
         raise ValueError('unrecognised ip address %s' % ip)
 
     def ipv4(self):
-        return True if len(self._packed) == 4 else False
+        return len(self._packed) == 4
 
     def ipv6(self):
-        return False if len(self._packed) == 4 else True
+        return len(self._packed) != 4
 
     def address(self):
         value = 0

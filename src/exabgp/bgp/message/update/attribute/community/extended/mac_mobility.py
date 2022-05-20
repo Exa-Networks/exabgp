@@ -40,4 +40,4 @@ class MacMobility(ExtendedCommunity):
     @staticmethod
     def unpack(data):
         flags, seq = unpack('!BxI', data[2:8])
-        return MacMobility(seq, True if flags == 1 else False)
+        return MacMobility(seq, flags == 1)

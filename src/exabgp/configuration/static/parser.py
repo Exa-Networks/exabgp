@@ -261,7 +261,7 @@ def atomic_aggregate(tokeniser):
 
 def aggregator(tokeniser):
     agg = tokeniser()
-    eat = True if agg == '(' else False
+    eat = (agg == '(')
 
     if eat:
         agg = tokeniser()
