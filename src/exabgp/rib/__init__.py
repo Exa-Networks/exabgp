@@ -35,6 +35,8 @@ class RIB(object):
 
         if not adj_rib_out:
             self.outgoing.clear()
+        if not adj_rib_in:
+            self.incoming.clear()
 
     def reset(self):
         self.incoming.reset()
