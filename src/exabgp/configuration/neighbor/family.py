@@ -64,6 +64,7 @@ class ParseFamily(Section):
         'ipv6': 'append-command',
         'l2vpn': 'append-command',
         'bgp-ls': 'append-command',
+        'all': 'append-command',
     }
 
     name = 'family'
@@ -75,6 +76,7 @@ class ParseFamily(Section):
             'ipv6': self.ipv6,
             'l2vpn': self.l2vpn,
             'bgp-ls': self.bgpls,
+            'all': self.all,
         }
         self._all = ''
         self._seen = []

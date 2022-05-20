@@ -25,7 +25,7 @@ neighbor 127.0.0.1 {
     peer-as 65533;
 
     family {
-        all
+        all;
     }
 }
 """
