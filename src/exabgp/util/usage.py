@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import sys
 import resource
 
+
 if sys.platform == 'darwin':
     # darwin returns bytes
     DIVISOR = 1024.0 * 1024.0

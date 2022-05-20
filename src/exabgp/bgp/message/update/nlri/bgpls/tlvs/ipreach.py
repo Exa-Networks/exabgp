@@ -12,8 +12,6 @@ from __future__ import division
 from struct import unpack
 from ipaddress import ip_address
 
-from exabgp.protocol.ip import IP
-
 #   The IP Reachability Information TLV is a mandatory TLV that contains
 #   one IP address prefix (IPv4 or IPv6) originally advertised in the IGP
 #   topology.  Its purpose is to glue a particular BGP service NLRI by

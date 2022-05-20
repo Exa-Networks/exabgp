@@ -23,9 +23,7 @@ from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import MPRNLRI
-from exabgp.bgp.message.update.attribute import EMPTY_MPRNLRI
 from exabgp.bgp.message.update.attribute import MPURNLRI
-from exabgp.bgp.message.update.attribute import EMPTY_MPURNLRI
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI

@@ -10,7 +10,6 @@ from struct import unpack
 
 from exabgp.util import split
 
-from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 

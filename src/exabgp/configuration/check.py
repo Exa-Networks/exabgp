@@ -25,9 +25,6 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
 

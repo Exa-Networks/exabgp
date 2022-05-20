@@ -1,3 +1,12 @@
+# encoding: utf-8
+"""
+pipe.py
+
+Created by Thomas Mangin on <unset>.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
 import os
 import sys
 import fcntl

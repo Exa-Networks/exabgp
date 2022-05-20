@@ -8,9 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.configuration.core import Section
-from exabgp.configuration.neighbor import ParseNeighbor
-
-from exabgp.configuration.neighbor.api import ParseAPI
 
 
 class ParseTemplate(Section):

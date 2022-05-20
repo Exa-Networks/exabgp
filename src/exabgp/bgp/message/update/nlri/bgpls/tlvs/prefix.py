@@ -7,6 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from exabgp.protocol.ip import IP
+
 #   https://tools.ietf.org/html/rfc5305#section-3.2
 # 	This sub-TLV contains a 4-octet IPv4 address for the interface
 #   described by the (main) TLV.  This sub-TLV can occur multiple times.
@@ -18,8 +20,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 #   interface described by the containing Extended IS Reachability TLV.
 #   This sub-TLV can occur multiple times.
 # ================================================================== InterfaceAddress
-
-from exabgp.protocol.ip import IP
 
 
 class Prefix(object):

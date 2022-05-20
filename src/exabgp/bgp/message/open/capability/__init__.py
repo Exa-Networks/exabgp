@@ -10,6 +10,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # Every Capability should be imported from this file
 # as it makes sure that all the registering decorator are run
 
+# flake8: noqa: F401,E261
+
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capabilities import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated

@@ -2,14 +2,14 @@ import os
 
 # this is where the environment should be taken from
 # it makes sure the environment is setup before it is imported
-import exabgp.environment.setup
 
-from exabgp.environment.environment import Env
+import exabgp.environment.setup                  # noqa: F401,E261
+from exabgp.environment.environment import Env   # noqa: F401,E261
 
-from exabgp.environment.base import APPLICATION
-from exabgp.environment.base import ENVFILE
-from exabgp.environment.base import ROOT
-from exabgp.environment.base import ETC
+from exabgp.environment.base import APPLICATION  # noqa: F401,E261
+from exabgp.environment.base import ENVFILE      # noqa: F401,E261
+from exabgp.environment.base import ROOT         # noqa: F401,E261
+from exabgp.environment.base import ETC          # noqa: F401,E261
 
 # As soon as we import anything, a COPY is made in the local
 # namespace, it mean that we can not import the GlobalHashTable

@@ -11,7 +11,6 @@ from struct import pack
 from exabgp.util import hexstring
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
-
 # ============================================================= GenericAttribute
 #
 

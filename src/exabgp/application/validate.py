@@ -4,7 +4,6 @@
 
 
 import sys
-import syslog
 import argparse
 
 from exabgp.environment import getenv

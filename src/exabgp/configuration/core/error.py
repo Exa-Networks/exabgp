@@ -1,4 +1,3 @@
-import sys
 import pdb
 
 from exabgp.environment import getenv

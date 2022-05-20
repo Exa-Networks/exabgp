@@ -12,8 +12,6 @@ import uuid
 import copy
 import socket
 
-from exabgp.util.errstr import errstr
-
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
 

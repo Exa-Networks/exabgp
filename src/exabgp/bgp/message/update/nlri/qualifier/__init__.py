@@ -9,6 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # Every Qualifier should be imported from this file
 
+# flake8: noqa: F401,E261
+
 from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
 from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels

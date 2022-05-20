@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.neighbor.family import ParseFamily

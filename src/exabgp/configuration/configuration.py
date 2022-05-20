@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
-import sys
 
 from exabgp.logger import log
 
@@ -46,12 +45,12 @@ from exabgp.configuration.operational import ParseOperational
 from exabgp.environment import getenv
 
 # for registration
-from exabgp.configuration.announce.ip import AnnounceIP
-from exabgp.configuration.announce.path import AnnouncePath
-from exabgp.configuration.announce.label import AnnounceLabel
-from exabgp.configuration.announce.vpn import AnnounceVPN
-from exabgp.configuration.announce.flow import AnnounceFlow
-from exabgp.configuration.announce.vpls import AnnounceVPLS
+from exabgp.configuration.announce.ip import AnnounceIP        # noqa: F401,E261,E501
+from exabgp.configuration.announce.path import AnnouncePath    # noqa: F401,E261,E501
+from exabgp.configuration.announce.label import AnnounceLabel  # noqa: F401,E261,E501
+from exabgp.configuration.announce.vpn import AnnounceVPN      # noqa: F401,E261,E501
+from exabgp.configuration.announce.flow import AnnounceFlow    # noqa: F401,E261,E501
+from exabgp.configuration.announce.vpls import AnnounceVPLS    # noqa: F401,E261,E501
 
 
 class _Configuration(object):

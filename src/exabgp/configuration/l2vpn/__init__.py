@@ -13,8 +13,6 @@ from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.rib.change import Change
 
-from exabgp.configuration.announce import ParseAnnounce
-
 
 class ParseL2VPN(ParseVPLS):
     syntax = 'vpls %s;\n' % ' '.join(ParseVPLS.definition)

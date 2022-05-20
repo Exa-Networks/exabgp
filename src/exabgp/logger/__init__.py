@@ -1,17 +1,15 @@
-import sys
 import time
-import logging
 
 from exabgp.logger.option import option
-from exabgp.logger.handler import getLogger
-from exabgp.logger.format import formater
+from exabgp.logger.handler import getLogger      # noqa: F401,E261,E501
+from exabgp.logger.format import formater        # noqa: F401,E261,E501
 
-from exabgp.logger.format import lazyformat
-from exabgp.logger.format import lazyattribute
-from exabgp.logger.format import lazynlri
+from exabgp.logger.format import lazyformat      # noqa: F401,E261,E501
+from exabgp.logger.format import lazyattribute   # noqa: F401,E261,E501
+from exabgp.logger.format import lazynlri        # noqa: F401,E261,E501
 
-from exabgp.logger.history import history
-from exabgp.logger.history import record
+from exabgp.logger.history import history        # noqa: F401,E261,E501
+from exabgp.logger.history import record         # noqa: F401,E261,E501
 
 
 class _log(object):
