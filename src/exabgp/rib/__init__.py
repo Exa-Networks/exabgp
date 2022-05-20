@@ -33,10 +33,8 @@ class RIB(object):
         self.outgoing.families = families
         self.outgoing.delete_cached_family(families)
 
-        if adj_rib_out:
-            self.outgoing.resend(False)
-            return
-        self.outgoing.clear()
+        if not adj_rib_out:
+            self.outgoing.clear()
 
     def reset(self):
         self.incoming.reset()
