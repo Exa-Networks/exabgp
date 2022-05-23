@@ -504,16 +504,19 @@ def _extended_community(value):
                         header + pack('!BBBBH', *[int(_) for _ in ga.split('.')] + [int(la)])
                     )
 
-        iga = int(ga[:-1]) if 'L' in ga else int(ga)
-        ila = int(la[:-1]) if 'L' in la else int(la)
+        iga = int(ga)
+        ila = int(la)
+
+        if iga > _SIZE_H and ila > _SIZE_H:
+            raise ValueError('invalid extended community, values are too large')
 
         if command == 'target':
-            if ga.endswith('L') or iga > _SIZE_H:
+            if iga > _SIZE_H:
                 return ExtendedCommunity.unpack(_HEADER['target4'] + pack('!LH', iga, ila), None)
             else:
                 return ExtendedCommunity.unpack(header + pack('!HI', iga, ila), None)
         if command == 'origin':
-            if ga.endswith('L') or iga > _SIZE_H:
+            if iga > _SIZE_H:
                 return ExtendedCommunity.unpack(_HEADER['origin4'] + pack('!LH', iga, ila), None)
             else:
                 return ExtendedCommunity.unpack(header + pack('!HI', iga, ila), None)

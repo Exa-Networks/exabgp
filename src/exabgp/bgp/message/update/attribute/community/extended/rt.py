@@ -117,7 +117,7 @@ class RouteTargetASN4Number(RouteTarget):
         return hash((self.asn, self.number))
 
     def __repr__(self):
-        return "%s:%dL:%d" % (self.DESCRIPTION, self.asn, self.number)
+        return "%s:%d:%d" % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
     def unpack(cls, data):
