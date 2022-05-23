@@ -79,6 +79,8 @@ class Identifier(dict):
         for c in range(0, step):
             for r in range(cls._nl):
                 n = c + (r*step)
+                if n >= cls._next:
+                    return
                 yield cls._listing[n], not (nl % cls._nl)
                 nl += 1
 
