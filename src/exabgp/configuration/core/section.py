@@ -55,7 +55,7 @@ class Section(Error):
     def post(self):
         return True
 
-    def parse(self, name, command):
+    def parse(self, name, command):  # noqa: C901
         identifier = command if command in self.known else (self.name, command)
         if identifier not in self.known:
             return self.error.set(

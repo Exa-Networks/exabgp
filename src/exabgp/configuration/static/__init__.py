@@ -31,6 +31,10 @@ from exabgp.configuration.static.mpls import label
 from exabgp.configuration.static.mpls import route_distinguisher
 
 
+def _check_true(change, afi):
+    return True
+
+
 class ParseStatic(ParseStaticRoute):
     syntax = 'route <ip>/<netmask> %s;' % ' '.join(ParseStaticRoute.definition)
 
@@ -55,7 +59,7 @@ class ParseStatic(ParseStaticRoute):
 def route(tokeniser):
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
-    check = lambda change, afi: True
+    check = _check_true
 
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
         nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
