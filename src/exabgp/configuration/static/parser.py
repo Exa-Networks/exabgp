@@ -459,7 +459,7 @@ _SIZE = {
 # fmt: on
 
 _SIZE_H = 0xFFFF
-
+_SIZE_L = 0xFFFFFFFF
 
 def _extended_community(value):
     if value[:2].lower() == '0x':
@@ -510,6 +510,12 @@ def _extended_community(value):
         if iga > _SIZE_H and ila > _SIZE_H:
             raise ValueError('invalid extended community, values are too large')
 
+        if iga > _SIZE_L:
+            raise ValueError('invalid extended community target, left value is too large')
+
+        if ila > _SIZE_L:
+            raise ValueError('invalid extended community target, right value is too large')
+
         if command == 'target':
             if iga > _SIZE_H:
                 return ExtendedCommunity.unpack(_HEADER['target4'] + pack('!LH', iga, ila), None)
@@ -522,15 +528,23 @@ def _extended_community(value):
                 return ExtendedCommunity.unpack(header + pack('!HI', iga, ila), None)
 
         if command == 'target4':
+            if ila > _SIZE_H:
+                raise ValueError('invalid extended community target, right value is too large')
             return ExtendedCommunity.unpack(_HEADER['target4'] + pack('!LH', iga, ila), None)
 
         if command == 'origin4':
+            if ila > _SIZE_H:
+                raise ValueError('invalid extended community target, right value is too large')
             return ExtendedCommunity.unpack(_HEADER['origin4'] + pack('!LH', iga, ila), None)
 
         if command == 'redirect':
+            if iga > _SIZE_H:
+                raise ValueError('invalid extended community target, left value is too large')
             return ExtendedCommunity.unpack(header + pack('!HL', iga, ila), None)
 
         if command == 'bandwidth':
+            if iga > _SIZE_H:
+                raise ValueError('invalid extended community target, left value is too large')
             return ExtendedCommunity.unpack(_HEADER['bandwidth'] + pack('!Hf', iga, ila), None)
 
         raise ValueError('invalid extended community %s' % command)
