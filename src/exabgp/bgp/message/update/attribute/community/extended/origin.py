@@ -97,7 +97,7 @@ class OriginASN4Number(Origin):
         Origin.__init__(self, community if community else pack('!2sLH', self._subtype(), asn, number))
 
     def __repr__(self):
-        return "origin:%sL:%s" % (self.asn, self.number)
+        return "origin:%s:%s" % (self.asn, self.number)
 
     @staticmethod
     def unpack(data):
