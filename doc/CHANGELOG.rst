@@ -40,6 +40,7 @@ Version 5.0.0:
  * Compatibility: change JSON for sr_capability_flags to be sr-capability-flags and data format
  * Compatibility: change node-descriptors to be list
  * Compatibility: remove L from target in JSON extended communities
+ * Fix: issue with extended community generation (still not supporting ASN)
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates

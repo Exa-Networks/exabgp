@@ -507,7 +507,7 @@ class Checker(object):
         for message in self.messages:
             idx += 1
             # FIXME: change API to not have to convert
-            if self.raw and '\xff' in message:
+            if self.raw or '\xff' in message:
                 msg = msg_bytes(message)
                 print_payload(f'option {idx:02}', msg[:19], msg[19:])
             else:

@@ -436,127 +436,102 @@ def large_community(tokeniser):
 _HEADER = {
     # header and subheader
     'target':   bytes([0x00, 0x02]),
-    'target4':  bytes([0x02, 0x02]),
+    'target4':  bytes([0x01, 0x02]),
+    # TODO: OriginASN4Number (2,2)
     'origin':   bytes([0x00, 0x03]),
-    'origin4':  bytes([0x02, 0x03]),
+    'origin4':  bytes([0x01, 0x03]),
+    # TODO: RouteTargetASN4Number (2,3)
     'redirect': bytes([0x80, 0x08]),
     'l2info':   bytes([0x80, 0x0A]),
     'redirect-to-nexthop': bytes([0x08, 0x00]),
     'bandwidth': bytes([0x40, 0x04]),
 }
 
-_SIZE = {
-    # fmt: off
-    'target':   2,
-    'target4':  2,
-    'origin':   2,
-    'origin4':  2,
-    'redirect': 2,
-    'l2info':   4,
-    'redirect-to-nexthop': 0,
-    'bandwidth': 2,
+# fmt: off
+_ENCODE = {
+    'target':   'HL',
+    'target4':  'LH',
+    'origin':   'HL',
+    'origin4':  'LH',
+    'redirect': 'HL',
+    'l2info':   'BBHH',
+    'bandwidth': 'Hf',
 }
 # fmt: on
 
+_SIZE_B = 0xFF
 _SIZE_H = 0xFFFF
 _SIZE_L = 0xFFFFFFFF
 
+
+# backward compatibility hack
+def _integer(string):
+    base = 10
+    if string.startswith('0x'):
+        string = string[2:]
+        base = 16
+    if string[-1] == 'L':
+        return int(string[:-1])
+    return int(string, base)
+
+
+def _ip(string, error):
+    if '.' not in string:
+        raise ValueError('invalid extended community: %s' % error)
+    v = [int(_) for _ in string.split('.')]
+    # could use b''.join() - for speed?
+    return (v[0] << 24) + (v[1] << 16) + (v[2] << 8) + v[3]
+
+
+def _encode(command, components, parts):
+    if command not in _HEADER:
+        raise ValueError('invalid extended community type %s' % command)
+
+    if command in ('origin', 'target'):
+        if components[0] > _SIZE_H or '.' in parts[0]:
+            command += '4'
+
+    encoding = _ENCODE[command]
+
+    if len(components) != len(encoding):
+        raise ValueError('invalid extended community %s, expecting %d fields' % (command, len(components)))
+
+    for size, value in zip(encoding, components):
+        if size == 'B' and value > _SIZE_B:
+            raise ValueError('invalid extended community, value is too large %d' % value)
+        if size == 'H' and value > _SIZE_H:
+            raise ValueError('invalid extended community, value is too large %d' % value)
+        if size in ('L', 'f') and value > _SIZE_L:
+            raise ValueError('invalid extended community, value is too large %d' % value)
+
+    return _HEADER[command], '!' + _ENCODE[command]
+
+
+def _extended_community_hex(value):
+    # we could raise if the length is not 8 bytes (16 chars)
+    if len(value) % 2:
+        raise ValueError('invalid extended community %s' % value)
+    raw = b''.join(bytes([int(value[_ : _ + 2], 16)]) for _ in range(2, len(value), 2))
+    return ExtendedCommunity.unpack(raw)
+
+
 def _extended_community(value):
-    if value[:2].lower() == '0x':
-        # we could raise if the length is not 8 bytes (16 chars)
-        if len(value) % 2:
-            raise ValueError('invalid extended community %s' % value)
-        raw = b''.join(bytes([int(value[_ : _ + 2], 16)]) for _ in range(2, len(value), 2))
-        return ExtendedCommunity.unpack(raw)
-    elif value.count(':'):
-        components = value.split(':')
-        command = 'target' if len(components) == 2 else components.pop(0)
+    if not value.count(':'):
+        if value[:2].lower() == '0x':
+            return _extended_community_hex(value)
 
-        if command not in _HEADER:
-            raise ValueError('invalid extended community %s (only origin,target or l2info are supported) ' % command)
+        if value == 'redirect-to-nexthop':
+            header = _HEADER[value]
+            return ExtendedCommunity.unpack(header + pack('!HL', 0, 0), None)
 
-        if len(components) != _SIZE[command]:
-            raise ValueError('invalid extended community %s, expecting %d fields ' % (command, len(components)))
-
-        header = _HEADER.get(command, None)
-
-        if header is None:
-            raise ValueError('unknown extended community %s' % command)
-
-        if command == 'l2info':
-            # encaps, control, mtu, site
-            return ExtendedCommunity.unpack(header + pack('!BBHH', *[int(_) for _ in components]))
-
-        _ga, _la = components
-        ga, la = _ga.upper(), _la.upper()
-
-        if command in ('target', 'origin'):
-            # global admin, local admin
-            if '.' in ga or '.' in la:
-                gc = ga.count('.')
-                lc = la.count('.')
-                if gc == 0 and lc == 3:
-                    # ASN first, IP second
-                    return ExtendedCommunity.unpack(header + pack('!HBBBB', int(ga), *[int(_) for _ in la.split('.')]))
-                if gc == 3 and lc == 0:
-                    # IP first, ASN second
-                    return ExtendedCommunity.unpack(
-                        header + pack('!BBBBH', *[int(_) for _ in ga.split('.')] + [int(la)])
-                    )
-
-        iga = int(ga)
-        ila = int(la)
-
-        if iga > _SIZE_H and ila > _SIZE_H:
-            raise ValueError('invalid extended community, values are too large')
-
-        if iga > _SIZE_L:
-            raise ValueError('invalid extended community target, left value is too large')
-
-        if ila > _SIZE_L:
-            raise ValueError('invalid extended community target, right value is too large')
-
-        if command == 'target':
-            if iga > _SIZE_H:
-                return ExtendedCommunity.unpack(_HEADER['target4'] + pack('!LH', iga, ila), None)
-            else:
-                return ExtendedCommunity.unpack(header + pack('!HI', iga, ila), None)
-        if command == 'origin':
-            if iga > _SIZE_H:
-                return ExtendedCommunity.unpack(_HEADER['origin4'] + pack('!LH', iga, ila), None)
-            else:
-                return ExtendedCommunity.unpack(header + pack('!HI', iga, ila), None)
-
-        if command == 'target4':
-            if ila > _SIZE_H:
-                raise ValueError('invalid extended community target, right value is too large')
-            return ExtendedCommunity.unpack(_HEADER['target4'] + pack('!LH', iga, ila), None)
-
-        if command == 'origin4':
-            if ila > _SIZE_H:
-                raise ValueError('invalid extended community target, right value is too large')
-            return ExtendedCommunity.unpack(_HEADER['origin4'] + pack('!LH', iga, ila), None)
-
-        if command == 'redirect':
-            if iga > _SIZE_H:
-                raise ValueError('invalid extended community target, left value is too large')
-            return ExtendedCommunity.unpack(header + pack('!HL', iga, ila), None)
-
-        if command == 'bandwidth':
-            if iga > _SIZE_H:
-                raise ValueError('invalid extended community target, left value is too large')
-            return ExtendedCommunity.unpack(_HEADER['bandwidth'] + pack('!Hf', iga, ila), None)
-
-        raise ValueError('invalid extended community %s' % command)
-    elif value == 'redirect-to-nexthop':
-        header = _HEADER[value]
-        return ExtendedCommunity.unpack(header + pack('!HL', 0, 0), None)
-    else:
         raise ValueError('invalid extended community %s - lc+gc' % value)
 
+    parts = value.split(':')
+    command = 'target' if len(parts) == 2 else parts.pop(0)
+    components = [_integer(_) if _.isdigit() else _ip(_, value) for _ in parts]
+    header, packed = _encode(command, components, parts)
 
-# The previous code was extracting the extended-community class from the attributes
-# And adding to it.
+    return ExtendedCommunity.unpack(header + pack(packed, *components))
 
 
 def extended_community(tokeniser):
