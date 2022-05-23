@@ -62,7 +62,7 @@ def unescape(string):
 # A coroutine which return the producer token, or string if quoted from the stream
 
 
-def tokens(stream):
+def tokens(stream):  # noqa: C901
     spaces = [' ', '\t', '\r', '\n']
     strings = ['"', "'"]
     syntax = [',', '[', ']']

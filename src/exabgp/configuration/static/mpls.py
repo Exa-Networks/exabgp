@@ -64,7 +64,7 @@ def route_distinguisher(tokeniser):
 
 
 # [ 300, [ ( 800000,100 ), ( 1000000,5000 ) ] ]
-def prefix_sid(tokeniser):
+def prefix_sid(tokeniser):  # noqa: C901
     sr_attrs = []
     srgbs = []
     srgb_data = []
