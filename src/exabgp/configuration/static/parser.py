@@ -464,6 +464,12 @@ _SIZE_H = 0xFFFF
 _SIZE_L = 0xFFFFFFFF
 
 
+def _digit(string):
+    if string.endswith('L'):
+        string = string[:-1]
+    return string.isdigit()
+
+
 # backward compatibility hack
 def _integer(string):
     base = 10
@@ -488,7 +494,7 @@ def _encode(command, components, parts):
         raise ValueError('invalid extended community type %s' % command)
 
     if command in ('origin', 'target'):
-        if components[0] > _SIZE_H or '.' in parts[0]:
+        if components[0] > _SIZE_H or '.' in parts[0] or parts[0][-1] == 'L':
             command += '4'
 
     encoding = _ENCODE[command]
@@ -528,7 +534,7 @@ def _extended_community(value):
 
     parts = value.split(':')
     command = 'target' if len(parts) == 2 else parts.pop(0)
-    components = [_integer(_) if _.isdigit() else _ip(_, value) for _ in parts]
+    components = [_integer(_) if _digit(_) else _ip(_, value) for _ in parts]
     header, packed = _encode(command, components, parts)
 
     return ExtendedCommunity.unpack(header + pack(packed, *components))
