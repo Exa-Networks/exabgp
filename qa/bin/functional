@@ -43,11 +43,11 @@ export exabgp_debug_defensive=true
 
 
 class Color(object):
-    NONE = '\033[0m' + '\033[0m' + ' '  # NONE
-    STARTING = '\033[0m' + '\033[96m' + '~'  # LIGHT BLUE
-    READY = '\033[0m' + '\033[94m' + '='  # PENDING
-    FAIL = '\033[0m' + '\033[91m' + '-'  # RED
-    SUCCESS = '\033[1m' + '\033[92m' + '+'  # GREEN
+    NONE = '\033[0m' + '\033[0m' + ''  # NONE
+    STARTING = '\033[0m' + '\033[96m' + ''  # LIGHT BLUE
+    READY = '\033[0m' + '\033[94m' + ''  # PENDING
+    FAIL = '\033[0m' + '\033[91m' + ''  # RED
+    SUCCESS = '\033[1m' + '\033[92m' + ''  # GREEN
 
 
 class Identifier(dict):
@@ -163,7 +163,10 @@ class CI(dict):
 
     @classmethod
     def color(cls, name):
-        return cls._status.get(name, Color.NONE)
+        color = cls._status.get(name, Color.NONE)
+        if color == Color.SUCCESS:
+            return color + '✓'
+        return color + name
 
     @classmethod
     def reset(cls, name):
@@ -203,7 +206,7 @@ class CI(dict):
     def display(cls):
         # sys.stdout.write('\r')
         for k in cls._tests:
-            sys.stdout.write('%s%s ' % (CI.color(k), k))
+            sys.stdout.write('%s ' % CI.color(k))
         sys.stdout.write(Color.NONE)
         # same line printing now buggy
         sys.stdout.write('\r')
