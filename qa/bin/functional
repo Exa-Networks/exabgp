@@ -52,40 +52,42 @@ class Color(object):
 
 class Identifier(dict):
     _listing = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-    _from_name = {}
-    _from_nick = {}
-    _next = 0
-    _nl = 3
 
-    def get(cls, name):
-        letter = cls._listing[cls._next]
-        cls._from_name[name] = letter
-        cls._from_nick[letter] = name
-        cls._next += 1
+    def __init__(self):
+        self._from_name = {}
+        self._from_nick = {}
+        self._next = 0
+        self._nl = 3
+
+    def get(self, name):
+        letter = self._listing[self._next]
+        self._from_name[name] = letter
+        self._from_nick[letter] = name
+        self._next += 1
         return letter
 
-    def identifiers(cls):
-        for n in range(0, cls._next):
-            yield cls._listing[n], not (n + 1) % cls._nl
+    def identifiers(self):
+        for n in range(0, self._next):
+            yield self._listing[n], not (n + 1) % self._nl
 
-    def tests(cls):
-        step = cls._next // cls._nl
-        if cls._next % cls._nl:
+    def tests(self):
+        step = self._next // self._nl
+        if self._next % self._nl:
             step += 1
         nl = 1
         for c in range(0, step):
-            for r in range(cls._nl):
+            for r in range(self._nl):
                 n = c + (r*step)
-                if n >= cls._next:
+                if n >= self._next:
                     return
-                yield cls._listing[n], not (nl % cls._nl)
+                yield self._listing[n], not (nl % self._nl)
                 nl += 1
 
-    def nick(cls, name):
-        return cls._from_name[name]
+    def nick(self, name):
+        return self._from_name[name]
 
-    def name(cls, nick):
-        return cls._from_nick[nick]
+    def name(self, nick):
+        return self._from_nick[nick]
 
 
 class Port(object):
@@ -121,64 +123,57 @@ class Path(object):
             sys.exit('could not find the sequence daemon')
 
 
-class CI(dict):
+class FunctionalTests(dict):
     API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
     _content = {}
     _status = {}
     _tests = []
-    Tests = Identifier()
 
-    @classmethod
-    def make(cls):
+    def __init__(self):
+        self.tests = Identifier()
+
         for filename in Path.ALL_CI:
             name, extension = os.path.splitext(filename.split('/')[-1])
-            nick = cls.Tests.get(name)
+            nick = self.tests.get(name)
             with open(filename, 'r') as reader:
                 content = reader.readline()
-                cls._content[nick] = {
+                self._content[nick] = {
                     'name': name,
                     'confs': [os.path.join(Path.ETC, _) for _ in content.split()],
                     'ci': os.path.join(Path.CI, name) + '.ci',
                     'msg': os.path.join(Path.CI, name) + '.msg',
                     'port': Port.get(),
                 }
-        cls._tests.extend(sorted(cls._content.keys()))
+        self._tests.extend(sorted(self._content.keys()))
 
-    @classmethod
-    def get(cls, k):
-        return cls._content.get(k, None)
+    def get(self, k):
+        return self._content.get(k, None)
 
-    @classmethod
-    def state(cls, name):
-        if name not in cls._status:
-            cls._status[name] = Color.NONE
-        elif cls._status[name] == Color.NONE:
-            cls._status[name] = Color.STARTING
-        elif cls._status[name] == Color.STARTING:
-            cls._status[name] = Color.READY
+    def state(self, name):
+        if name not in self._status:
+            self._status[name] = Color.NONE
+        elif self._status[name] == Color.NONE:
+            self._status[name] = Color.STARTING
+        elif self._status[name] == Color.STARTING:
+            self._status[name] = Color.READY
 
-    @classmethod
-    def color(cls, name):
-        color = cls._status.get(name, Color.NONE)
+    def color(self, name):
+        color = self._status.get(name, Color.NONE)
         if color == Color.SUCCESS:
             return color + '✓'
         return color + name
 
-    @classmethod
-    def reset(cls, name):
-        cls._status[name] = Color.NONE
+    def reset(self, name):
+        self._status[name] = Color.NONE
 
-    @classmethod
-    def passed(cls, name):
-        cls._status[name] = Color.SUCCESS
+    def passed(self, name):
+        self._status[name] = Color.SUCCESS
 
-    @classmethod
-    def failed(cls, name):
-        cls._status[name] = Color.FAIL
+    def failed(self, name):
+        self._status[name] = Color.FAIL
 
-    @classmethod
-    def files(cls, k):
-        test = cls._content.get(k, None)
+    def files(self, k):
+        test = self._content.get(k, None)
         if not test:
             return []
         files = [
@@ -188,7 +183,7 @@ class CI(dict):
             files.append(f)
             with open(f) as reader:
                 for line in reader:
-                    found = cls.API.match(line)
+                    found = self.API.match(line)
                     if not found:
                         continue
                     name = found.group(1)
@@ -198,23 +193,21 @@ class CI(dict):
                         files.append(name)
         return [f for f in files if os.path.isfile(f)]
 
-    @classmethod
-    def display(cls):
+    def display(self):
         # sys.stdout.write('\r')
-        for k in cls._tests:
-            sys.stdout.write('%s ' % CI.color(k))
+        for k in self._tests:
+            sys.stdout.write('%s ' % self.color(k))
         sys.stdout.write(Color.NONE)
         # same line printing now buggy
         sys.stdout.write('\r')
         sys.stdout.flush()
 
-    @classmethod
-    def listing(cls):
+    def listing(self):
         sys.stdout.write('\n')
         sys.stdout.write('The available functional tests are:\n')
         sys.stdout.write('\n')
-        for index, nl in cls.Tests.tests():
-            name = cls._content[index]['name']
+        for index, nl in self.tests.tests():
+            name = self._content[index]['name']
             sys.stdout.write(' %-2s %s%s' % (index, name, ' ' * (25 - len(name))))
             sys.stdout.write('\n' if nl else '')
         sys.stdout.write('\n')
@@ -222,8 +215,6 @@ class CI(dict):
 
 
 Path.validate()
-CI.make()
-# CI.display()
 
 
 class Alarm(Exception):
@@ -320,7 +311,8 @@ class Command(dict):
 
     @staticmethod
     def client(index):
-        test = CI.get(index)
+        ci = FunctionalTests()
+        test = ci.get(index)
         if not test:
             sys.exit("can not find any test called '%s'" % index)
 
@@ -346,7 +338,8 @@ class Command(dict):
 
     @staticmethod
     def server(index):
-        test = CI.get(index)
+        ci = FunctionalTests()
+        test = ci.get(index)
 
         if not test:
             sys.exit("can not find any test called '%s'" % index)
@@ -364,31 +357,31 @@ class Command(dict):
         return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s --view \\\n    %(msg)s' % config
 
     @staticmethod
-    def dispatch(running, timeout):
+    def dispatch(ci, running, timeout):
         completed = True
         names = []
         for name in running:
-            if CI.get(name) is None:
+            if ci.get(name) is None:
                 sys.exit("can not find any test called '%s'" % name)
-            CI.state(name)
+            ci.state(name)
             names.append(name)
 
         for side in ['server', 'client']:
             for name in running:
                 process = subprocess.Popen(
-                    [sys.argv[0], side, name, '--port', str(CI.get(name)['port'])],
+                    [sys.argv[0], side, name, '--port', str(ci.get(name)['port'])],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
                 Process.add(name, side, process)
-                CI.state(name)
-                CI.display()
+                ci.state(name)
+                ci.display()
                 time.sleep(0.02)
 
         exit_time = time.time() + timeout
 
         while names and time.time() < exit_time:
-            CI.display()
+            ci.display()
             for name in list(names):
                 for side in ('server', 'client'):
                     if not Process._ready(name, side):
@@ -400,12 +393,12 @@ class Command(dict):
                         names.remove(name)
 
                     if Process.success(name):
-                        CI.passed(name)
+                        ci.passed(name)
                     else:
-                        CI.failed(name)
+                        ci.failed(name)
                         completed = False
 
-                    CI.display()
+                    ci.display()
             time.sleep(0.2)
 
         Process.terminate()
@@ -414,15 +407,15 @@ class Command(dict):
             print('\server stderr\n------\n%s' % str(Process.output(name, 'server')).replace('\\n', '\n'))
             print('\client stdout\n------\n%s' % str(Process.output(name, 'client')).replace('\\n', '\n'))
 
-        CI.display()
+        ci.display()
         return completed
 
 
-def _run(to_run, chunk, timeout):
+def _run(ci, to_run, chunk, timeout):
     success = True
     while to_run and success:
         running, to_run = to_run[:chunk], to_run[chunk:]
-        success = Command.dispatch(running, timeout)
+        success = Command.dispatch(ci, running, timeout)
     sys.stdout.write('\n')
 
     sys.exit(0 if success else 1)
@@ -433,9 +426,10 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers()
 
     def all(parsed):
-        to_run = [index for index, _ in CI.Tests.identifiers()]
+        ci = FunctionalTests()
+        to_run = [index for index, _ in ci.tests.identifiers()]
         chunk = 1
-        _run(to_run, chunk, parsed.timeout)
+        _run(ci, to_run, chunk, parsed.timeout)
 
     sub = subparsers.add_parser('all', help='run all available test')
     sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
@@ -443,15 +437,16 @@ if __name__ == '__main__':
     sub.set_defaults(func=all)
 
     def run(parsed):
+        ci = FunctionalTests()
         Port.base = parsed.port
         if parsed.test:
             to_run = [
                 parsed.test,
             ]
         else:
-            to_run = [index for index, _ in CI.Tests.identifiers()]
+            to_run = [index for index, _ in ci.tests.identifiers()]
         chunk = len(to_run) if not parsed.steps else parsed.steps
-        _run(to_run, chunk, parsed.timeout)
+        _run(ci, to_run, chunk, parsed.timeout)
 
     sub = subparsers.add_parser('run', help='run a particular test')
     sub.add_argument('test', help='name of the test to run', nargs='?', default=None)
@@ -499,7 +494,8 @@ if __name__ == '__main__':
     sub.set_defaults(func=explain)
 
     def edit(parsed):
-        files = CI.files(parsed.test)
+        ci = FunctionalTests()
+        files = ci.files(parsed.test)
         if not files:
             sys.exit('no such test')
         editor = os.environ.get('EDITOR', 'vi')
@@ -511,7 +507,8 @@ if __name__ == '__main__':
     sub.set_defaults(func=edit)
 
     def decode(parsed):
-        test = CI.get(parsed.test)
+        ci = FunctionalTests()
+        test = ci.get(parsed.test)
         command = '%s decode %s  "%s"' % (Path.EXABGP, test['confs'][0], ''.join(parsed.payload))
         print('> %s' % command)
         os.system(command)
@@ -522,8 +519,12 @@ if __name__ == '__main__':
     sub.add_argument('payload', nargs='+', help='the hexadecimal representation of the packet')
     sub.set_defaults(func=decode)
 
+    def listing(parsed):
+        ci = FunctionalTests()
+        ci.listing()
+
     sub = subparsers.add_parser('list', help='list all functional test available')
-    sub.set_defaults(func=lambda _: CI.listing())
+    sub.set_defaults(func=listing)
 
     parsed = parser.parse_args()
     if vars(parsed):
