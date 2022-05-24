@@ -43,11 +43,11 @@ export exabgp_debug_defensive=true
 
 
 class Color(object):
-    NONE = '\033[0m' + '\033[0m' + ''  # NONE
-    STARTING = '\033[0m' + '\033[96m' + ''  # LIGHT BLUE
-    READY = '\033[0m' + '\033[94m' + ''  # PENDING
-    FAIL = '\033[0m' + '\033[91m' + ''  # RED
-    SUCCESS = '\033[1m' + '\033[92m' + ''  # GREEN
+    NONE = '\033[0m' + '\033[0m'       # NONE
+    STARTING = '\033[0m' + '\033[96m'  # LIGHT BLUE
+    READY = '\033[0m' + '\033[94m'     # PENDING
+    FAIL = '\033[0m' + '\033[91m'      # RED
+    SUCCESS = '\033[1m' + '\033[92m'   # GREEN
 
 
 class Identifier(dict):
@@ -57,7 +57,6 @@ class Identifier(dict):
     _next = 0
     _nl = 3
 
-    @classmethod
     def get(cls, name):
         letter = cls._listing[cls._next]
         cls._from_name[name] = letter
@@ -65,12 +64,10 @@ class Identifier(dict):
         cls._next += 1
         return letter
 
-    @classmethod
     def identifiers(cls):
         for n in range(0, cls._next):
             yield cls._listing[n], not (n + 1) % cls._nl
 
-    @classmethod
     def tests(cls):
         step = cls._next // cls._nl
         if cls._next % cls._nl:
@@ -84,11 +81,9 @@ class Identifier(dict):
                 yield cls._listing[n], not (nl % cls._nl)
                 nl += 1
 
-    @classmethod
     def nick(cls, name):
         return cls._from_name[name]
 
-    @classmethod
     def name(cls, nick):
         return cls._from_nick[nick]
 
@@ -131,12 +126,13 @@ class CI(dict):
     _content = {}
     _status = {}
     _tests = []
+    Tests = Identifier()
 
     @classmethod
     def make(cls):
         for filename in Path.ALL_CI:
             name, extension = os.path.splitext(filename.split('/')[-1])
-            nick = Identifier.get(name)
+            nick = cls.Tests.get(name)
             with open(filename, 'r') as reader:
                 content = reader.readline()
                 cls._content[nick] = {
@@ -217,7 +213,7 @@ class CI(dict):
         sys.stdout.write('\n')
         sys.stdout.write('The available functional tests are:\n')
         sys.stdout.write('\n')
-        for index, nl in Identifier.tests():
+        for index, nl in cls.Tests.tests():
             name = cls._content[index]['name']
             sys.stdout.write(' %-2s %s%s' % (index, name, ' ' * (25 - len(name))))
             sys.stdout.write('\n' if nl else '')
@@ -437,7 +433,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers()
 
     def all(parsed):
-        to_run = [index for index, _ in Identifier.identifiers()]
+        to_run = [index for index, _ in CI.Tests.identifiers()]
         chunk = 1
         _run(to_run, chunk, parsed.timeout)
 
@@ -453,7 +449,7 @@ if __name__ == '__main__':
                 parsed.test,
             ]
         else:
-            to_run = [index for index, _ in Identifier.identifiers()]
+            to_run = [index for index, _ in CI.Tests.identifiers()]
         chunk = len(to_run) if not parsed.steps else parsed.steps
         _run(to_run, chunk, parsed.timeout)
 
