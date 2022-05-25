@@ -5,6 +5,7 @@ Version explained:
 
 Version 4.2.19
  * Feature: force PGP signing of tags
+ * Feature: backport ICMP types
 
 Version 4.2.18
  * Feature: add ICMP experimental codes
