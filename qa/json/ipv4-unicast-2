@@ -1,0 +1,3 @@
+update ipv4 unicast
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF004F02000000384001010040020E02030000AAAA0000AAAA0000AAAAC0070800AA00AA0A0A0A0A4006004003040A0A0A0A8004040000000040050400000064
+{ "exabgp": "5.0.0", "time": 1653383995.997971, "host" : "MacBook-Pro-2.local", "pid" : 31843, "ppid" : 55846, "counter": 1, "type": "update", "neighbor": {     "address": { "local": "127.0.0.1", "peer": "127.0.0.1" },     "asn": { "local": 65533, "peer": 65533 }     , "direction": "in", "message": { "update": { "attribute": { "origin": "igp", "as-path": {"0": {"element": "as-sequence", "value": [43690, 43690, 43690]}}, "med": 0, "local-preference": 100, "atomic-aggregate": true, "aggregator": "11141290:10.10.10.10" } } } } }
