@@ -603,7 +603,7 @@ if __name__ == '__main__':
     sub.set_defaults(func=explain)
 
     def edit(parsed):
-        test = encoding_tests.select(parsed.test) or Test('', '')
+        test = encoding_tests.select(parsed.test) or Record('', '')
         if not test.files:
             sys.exit('no such test')
         editor = os.environ.get('EDITOR', 'vi')
