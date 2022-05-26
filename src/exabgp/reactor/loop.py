@@ -231,6 +231,21 @@ class Reactor(object):
                 return False
         return True
 
+    def display(self, route, nlri_only=False):
+        from exabgp.configuration.check import display_message
+        from exabgp.configuration.check import display_nlri
+
+        if not self.reload():
+            return False
+
+        display = display_nlri if nlri_only else display_message
+
+        neighbors = self.configuration.neighbors
+        for neighbor in neighbors.values():
+            if not display(neighbor, route):
+                return False
+        return True
+
     def run(self):
         self.daemon.daemonise()
 

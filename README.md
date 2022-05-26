@@ -311,9 +311,6 @@ You can decode UPDATE messages using ExaBGP `decode` option.
 ```sh
 # env exabgp_tcp_bind='' ./sbin/exabgp decode -c ./etc/exabgp/api-open.conf FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
 ```
-```
-21:24:59 | 37750  | parser        | update json 
-```
 ```json
 { "exabgp": "4.0.1", "time": 1560371099.404008, "host" : "ptr-41.212.219.82.rev.exa.net.uk", "pid" : 37750, "ppid" : 10834, "counter": 1, "type": "update", "neighbor": { "address": { "local": "127.0.0.1", "peer": "127.0.0.1" }, "asn": { "local": 1, "peer": 1 } , "direction": "in", "message": { "update": { "attribute": { "origin": "igp", "med": 200, "local-preference": 100 }, "announce": { "ipv4 unicast": { "101.1.101.1": [ { "nlri": "1.1.1.1/32", "path-information": "0.0.0.0" } ] } } } } } }
 ```

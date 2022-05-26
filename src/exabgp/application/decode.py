@@ -65,6 +65,7 @@ def main():
 
 
 def cmdline(cmdarg):
+    log.disable()
     route = ''.join(cmdarg.payload).replace(' ', '')
 
     if not is_bgp(route):
@@ -113,7 +114,7 @@ def cmdline(cmdarg):
     else:
         configuration = Configuration([conf_all], text=True)
 
-    valid_nlri = Reactor(configuration).check(sanitized, cmdarg.nlri)
+    valid_nlri = Reactor(configuration).display(sanitized, cmdarg.nlri)
     if valid_nlri:
         return 0
     return 1

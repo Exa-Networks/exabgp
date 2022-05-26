@@ -205,11 +205,32 @@ def check_message(neighbor, message):
     return False
 
 
+
+def display_message(neighbor, message):
+    raw = _hexa(message)
+
+    if not raw.startswith(b'\xff' * 16):
+        return check_update(neighbor, raw)
+
+    kind = raw[18]
+    # XXX: FIXME: check size
+    # size = (raw[16] << 16) + raw[17]
+
+    if kind == 1:
+        return display_open(neighbor, raw[19:])
+    if kind == 2:
+        return display_update(neighbor, raw)
+    if kind == 3:
+        return display_notification(raw)
+
+    print("unknown type %d", kind)
+    return False
+
 # =================================================================== check_nlri
 #
 
 
-def check_nlri(neighbor, routes):
+def _make_nlri(neighbor, routes):
     option.enabled['parser'] = True
 
     announced = _hexa(routes)
@@ -233,6 +254,14 @@ def check_nlri(neighbor, routes):
         log.error(string_exception(exc), 'parser')
         if getenv().debug.pdb:
             raise
+        return []
+
+    return nlris
+
+
+def check_nlri(neighbor, routes):
+    nlris = _make_nlri(neighbor, routes)
+    if not nlris:
         return False
 
     log.debug('', 'parser')  # new line
@@ -240,6 +269,15 @@ def check_nlri(neighbor, routes):
         log.info('nlri json %s' % nlri.json(), 'parser')
     return True
 
+
+def display_nlri(neighbor, routes):
+    nlris = _make_nlri(neighbor, routes)
+    if not nlris:
+        return False
+
+    for nlri in nlris:
+        print(nlri.json())
+    return True
 
 # =================================================================== check_open
 #
@@ -262,11 +300,20 @@ def check_open(neighbor, raw):
         raise
 
 
+def display_open(neighbor, raw):
+    try:
+        o = Open.unpack_message(raw, Direction.IN, _negotiated(neighbor))
+        print(o.json())
+        return True
+    except Exception:
+        return False
+
+
 # ================================================================= check_update
 #
 
 
-def check_update(neighbor, raw):
+def _make_update(neighbor, raw):
     option.enabled['parser'] = True
     negotiated = _negotiated(neighbor)
 
@@ -279,13 +326,11 @@ def check_update(neighbor, raw):
 
             if kind == 2:
                 log.debug('the message is an update', 'parser')
-                decoding = 'update'
             else:
                 log.debug('the message is not an update (%d) - aborting' % kind, 'parser')
                 return False
         else:
             log.debug('header missing, assuming this message is ONE update', 'parser')
-            decoding = 'update'
             injected, raw = raw, ''
 
         try:
@@ -298,7 +343,7 @@ def check_update(neighbor, raw):
             log.error(traceback.format_exc(), 'parser')
             if getenv().debug.pdb:
                 raise
-            return False
+            return None
         except Exception:
             import traceback
 
@@ -306,14 +351,33 @@ def check_update(neighbor, raw):
             log.error(traceback.format_exc(), 'parser')
             if getenv().debug.pdb:
                 raise
-            return False
+            return None
 
-        log.debug('', 'parser')  # new line
-        for number in range(len(update.nlris)):
-            change = Change(update.nlris[number], update.attributes)
-            log.info('decoded %s %s %s' % (decoding, change.nlri.action, change.extensive()), 'parser')
-        log.info('update json %s' % Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''), 'parser')
+        return update
 
+    return None
+
+
+def check_update(neighbor, raw):
+    update = _make_update(neighbor, raw)
+    if not update:
+        return False
+
+    log.debug('', 'parser')  # new line
+    for number in range(len(update.nlris)):
+        change = Change(update.nlris[number], update.attributes)
+        log.info('decoded %s %s %s' % ('update', change.nlri.action, change.extensive()), 'parser')
+    log.info('update json %s' % Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''), 'parser')
+
+    return True
+
+
+def display_update(neighbor, raw):
+    update = _make_update(neighbor, raw)
+    if not update:
+        return False
+
+    print(Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''))
     return True
 
 
