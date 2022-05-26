@@ -51,7 +51,7 @@ jobs:
 
     - name: Decoding Checks
       run: |
-        ./qa/bin/decode
+        ./qa/bin/functional decoding
 
     - name: Test Coverage
       run: |
