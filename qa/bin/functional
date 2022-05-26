@@ -519,6 +519,7 @@ class DecodingTests(Tests):
         for test in self.selected():
             self.display()
             success = test.result(test.success()) and success
+            time.sleep(0.005)
 
         self.display()
         return success
