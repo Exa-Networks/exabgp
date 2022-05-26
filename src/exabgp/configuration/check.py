@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # common
 
 import copy
+import struct
 
 from exabgp.environment import getenv
 
@@ -205,12 +206,15 @@ def check_message(neighbor, message):
     return False
 
 
-
 def display_message(neighbor, message):
     raw = _hexa(message)
 
     if not raw.startswith(b'\xff' * 16):
-        return check_update(neighbor, raw)
+        header = b'\xff' * 16
+        header += struct.pack('!H', len(raw) + 19)
+        header += struct.pack('!B', 2)
+        # XXX: should be calling message not update
+        return display_update(neighbor, header + raw)
 
     kind = raw[18]
     # XXX: FIXME: check size
@@ -220,8 +224,6 @@ def display_message(neighbor, message):
         return display_open(neighbor, raw[19:])
     if kind == 2:
         return display_update(neighbor, raw)
-    if kind == 3:
-        return display_notification(raw)
 
     print("unknown type %d", kind)
     return False

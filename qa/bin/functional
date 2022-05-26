@@ -11,6 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import os
 import re
 import sys
+import json
 import glob
 import time
 import signal
@@ -103,8 +104,10 @@ class Exec(object):
         self.stdout = b''
         self.stderr = b''
         self._process = None
+        self.command = []
 
     def run(self, command):
+        self.command = ' '.join([_ if ' ' not in _ else f"'{_}'" for _ in command])
         self._process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
@@ -226,7 +229,7 @@ class EncodingTest(Record, Exec):
         self._check = b'successful'
 
     def success(self):
-        self.terminate()
+        self.collect()
         return self._check in self.stdout or self._check in self.stderr
 
 
@@ -432,31 +435,44 @@ class EncodingTests(Tests):
         return success
 
 
-# class DecodingTests(Tests):
-#     class DecodingTest(Record):
-#         def __init__(self, nick, name):
-#             super().__init__(nick, name)
-
-#         def success(self):
-#             print(self.conf)
-#             time.sleep(0.1)
-#             return True
-
-#     def __init__(self):
-#         super().__init__(self.DecodingTest)
-
-
 class DecodingTest(Record, Exec):
     def __init__(self, nick, name):
         Record.__init__(self, nick, name)
         Exec.__init__(self)
 
+    def _cleanup(self, decoded):
+        decoded.pop('exabgp', None)
+        decoded.pop('host', None)
+        decoded.pop('pid', None)
+        decoded.pop('ppid', None)
+        decoded.pop('time', None)
+        decoded.pop('version', None)
+        return decoded
+
     def success(self):
-        self.terminate()
-        print(self.conf)
-        print(self.stdout)
-        print(self.stderr)
-        time.sleep(0.1)
+        self.collect()
+        if self.stderr:
+            print('issue, got data on stderr from exabgp')
+            print(self.command)
+            print(self.stderr)
+            return False
+        if not self.stdout:
+            print('issue, not data on stdout from exabgp')
+            print(self.command)
+            return False
+        try:
+            decoded = json.loads(self.stdout)
+            self._cleanup(decoded)
+        except Exception:
+            print('issue, failed to decode the JSON')
+            print(self.command)
+            print(self.stdout)
+            return False
+        if decoded != self.conf['json']:
+            print('issue, JSON does not match')
+            print(decoded)
+            print(self.conf['json'])
+            return False
         return True
 
 
@@ -469,10 +485,13 @@ class DecodingTests(Tests):
             test = self.new(name)
             with open(filename, 'r') as reader:
                 words = reader.readline().split()
-                test.conf['type'] = words[0]
+                test.conf['type'] = '--' + words[0]
                 test.conf['family'] = f'{words[1]} {words[2]}'
-                test.conf['packet'] = reader.readline()
-                test.conf['json'] = reader.readline()
+                packet = reader.readline().replace(' ', '').strip()
+                test.conf['packet'] = packet
+                expected = reader.readline().strip()
+                decoded = json.loads(expected)
+                test.conf['json'] = test._cleanup(decoded)
             test.files.extend(filename)
 
     def listing(self):
@@ -493,7 +512,8 @@ class DecodingTests(Tests):
             self.display()
             test.run([
                 Path.EXABGP,
-                'decode','-f', test.conf['family']
+                'decode', '-f', test.conf['family'], test.conf['type'],
+                test.conf['packet']
             ])
 
         for test in self.selected():
