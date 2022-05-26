@@ -288,8 +288,8 @@ ExaBGP comes with a set of functional tests, each test starts an IBGP daemon exp
 You can see all the existing tests running `./qa/bin/functional listing`. Each test is numbered and can be run independently (please note that 03 is not the same as 3).
 
 ```sh
-# ./qa/bin/functional run     # (run all the test)
-# ./qa/bin/functional run 03  # (run test 03 as reported by listing)
+# ./qa/bin/functional encoding     # (run all the test)
+# ./qa/bin/functional encoding 03  # (run test 03 as reported by listing)
 ```
 
 You can also manually run both the server and client for any given test:
