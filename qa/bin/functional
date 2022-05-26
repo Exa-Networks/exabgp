@@ -99,10 +99,9 @@ class Sequence:
 
 
 class Exec(object):
-    def __init__(self, check=b'successful'):
+    def __init__(self):
         self.stdout = b''
         self.stderr = b''
-        self._check = check
         self._process = None
 
     def run(self, command):
@@ -112,10 +111,6 @@ class Exec(object):
             stderr=subprocess.PIPE,
         )
         return self
-
-    def success(self):
-        self.terminate()
-        return self._check in self.stdout or self._check in self.stderr
 
     def ready(self):
         try:
@@ -224,11 +219,15 @@ class Record:
         return success
 
 
-
-class ExecTest(Record, Exec):
+class EncodingTest(Record, Exec):
     def __init__(self, nick, name):
         Record.__init__(self, nick, name)
         Exec.__init__(self)
+        self._check = b'successful'
+
+    def success(self):
+        self.terminate()
+        return self._check in self.stdout or self._check in self.stderr
 
 
 class Tests:
@@ -303,7 +302,7 @@ class EncodingTests(Tests):
     API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 
     def __init__(self):
-        super().__init__(ExecTest)
+        super().__init__(EncodingTest)
 
         for filename in Path.ALL_CI:
             name = os.path.basename(filename)[:-3]
@@ -433,26 +432,47 @@ class EncodingTests(Tests):
         return success
 
 
+# class DecodingTests(Tests):
+#     class DecodingTest(Record):
+#         def __init__(self, nick, name):
+#             super().__init__(nick, name)
+
+#         def success(self):
+#             print(self.conf)
+#             time.sleep(0.1)
+#             return True
+
+#     def __init__(self):
+#         super().__init__(self.DecodingTest)
+
+
+class DecodingTest(Record, Exec):
+    def __init__(self, nick, name):
+        Record.__init__(self, nick, name)
+        Exec.__init__(self)
+
+    def success(self):
+        self.terminate()
+        print(self.conf)
+        print(self.stdout)
+        print(self.stderr)
+        time.sleep(0.1)
+        return True
+
+
 class DecodingTests(Tests):
-    class DecodingTest(Record):
-        def __init__(self, nick, name):
-            super().__init__(nick, name)
-
-        def success(self):
-            time.sleep(0.1)
-            return True
-
     def __init__(self):
-        super().__init__(self.DecodingTest)
+        super().__init__(DecodingTest)
 
         for filename in Path.ALL_JSON:
             name = os.path.basename(filename).split('.')[0]
             test = self.new(name)
             with open(filename, 'r') as reader:
-                test.conf['encoding'] = reader.readline()
+                words = reader.readline().split()
+                test.conf['type'] = words[0]
+                test.conf['family'] = f'{words[1]} {words[2]}'
                 test.conf['packet'] = reader.readline()
                 test.conf['json'] = reader.readline()
-                test.running()
             test.files.extend(filename)
 
     def listing(self):
@@ -467,6 +487,14 @@ class DecodingTests(Tests):
 
     def run_active(self, timeout):
         success = True
+
+        for test in self.selected():
+            test.running()
+            self.display()
+            test.run([
+                Path.EXABGP,
+                'decode','-f', test.conf['family']
+            ])
 
         for test in self.selected():
             self.display()
