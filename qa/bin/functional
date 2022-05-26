@@ -116,6 +116,7 @@ class Exec(object):
         return self
 
     def ready(self):
+        signal.signal(signal.SIGALRM, alarm_handler)
         try:
             signal.alarm(1)
             polled = self._process.poll()
@@ -131,8 +132,10 @@ class Exec(object):
     def collect(self):
         if self.stdout or self.stderr:
             return
+
+        signal.signal(signal.SIGALRM, alarm_handler)
         try:
-            signal.alarm(1)
+            signal.alarm(2)
             self.stdout, self.stderr = self._process.communicate()
             signal.alarm(0)
         except ValueError:  # I/O operation on closed file
