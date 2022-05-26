@@ -47,7 +47,7 @@ jobs:
 
     - name: Functional Checks
       run: |
-        ./qa/bin/functional run
+        ./qa/bin/functional encoding
 
     - name: Decoding Checks
       run: |

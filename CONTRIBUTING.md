@@ -60,7 +60,7 @@ People *love* thorough and clear bug reports. It make a big difference.
 ## Code testing
 
 ```
-./qa/bin/functional run
+./qa/bin/functional encoding
 ./qa/bin/parsing
 env exabgp_log_enable=false pytest --with-coverage ./tests/*_test.py
 env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
