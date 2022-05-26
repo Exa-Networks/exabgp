@@ -171,6 +171,14 @@ class Test(Exec):
     def skip(self):
         self.state = State.SKIP
 
+    def activate(self, test):
+        if test:
+            self.state = State.NONE
+            return self
+        else:
+            self.state = State.SKIP
+            return None
+
     def is_active(self):
         return self.state not in (State.SKIP, State.FAIL, State.SUCCESS)
 
@@ -218,20 +226,22 @@ class Tests:
         self._from_nick[test.nick] = test
         return test
 
-    def get_test(self, nick):
-        return self._from_nick[nick]
-
-    def filter(self, nick):
+    def select(self, nick):
         if not nick:
-            return self
-        for code, test in list(self._from_code.items()):
-            if test.nick == nick:
-                continue
-            test.skip()
-        return self
+            return None
+        activated = None
+        for test in self._from_code.values():
+            activated = test.activate(test.nick == nick) or activated
+        return activated
 
     def all(self):
-        return [_ for _ in self._from_code.values()]
+        for test in self._from_code.values():
+            test.state = State.SKIP
+
+        for test in self._from_code.values():
+            if test.state == State.SKIP:
+                test.state = State.NONE
+            test.result(self.run_active(parsed.timeout))
 
     def selected(self):
         return [_ for _ in self._from_code.values() if _.is_active()]
@@ -302,18 +312,7 @@ class TestPacketGeneration(Tests):
                         if name not in test.files:
                             test.files.append(name)
 
-
-class Alarm(Exception):
-    pass
-
-
-def alarm_handler(number, frame):  # pylint: disable=W0613
-    raise Alarm()
-
-
-class Functional:
-    @classmethod
-    def explain(cls, index):
+    def explain(self, index):
         template = '\n'
         template += 'exabgp\n'
         template += '-'*55 + '\n\n'
@@ -327,20 +326,15 @@ class Functional:
         template += 'export exabgp_debug_defensive=true\n'
 
         print(template % {
-            'client': cls.client(index),
-            'server': cls.server(index),
+            'client': self.client(index),
+            'server': self.server(index),
         })
         sys.exit(1)
 
-    @staticmethod
-    def client(index):
-        tests = TestPacketGeneration()
-        test = tests.get_test(index)
+    def client(self, index):
+        test = self.select(index)
         if not test:
-            sys.exit("can not find any test called '%s'" % index)
-
-        if os.getuid() and os.getgid() and test.conf['port'] <= 1024:
-            sys.exit('you need to have root privileges to bind to port 79')
+            sys.exit("no such test")
 
         config = {
             'env': ' \\\n  '.join(
@@ -359,16 +353,11 @@ class Functional:
         }
         return 'env \\\n  %(env)s \\\n   %(exabgp)s -d -p \\\n    %(confs)s' % config
 
-    @staticmethod
-    def server(index):
-        ci = TestPacketGeneration()
-        test = ci.get_test(index)
+    def server(self, index):
+        test = self.select(index)
 
         if not test:
-            sys.exit("can not find any test called '%s'" % index)
-
-        if os.getuid() and os.getgid() and test.conf['port'] <= 1024:
-            sys.exit('you need to have root privileges to bind to port 79')
+            sys.exit("no such test")
 
         config = {
             'env': ' \\\n  '.join(['exabgp_tcp_port=%d' % test.conf['port'],]),
@@ -379,14 +368,13 @@ class Functional:
 
         return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s --view \\\n    %(msg)s' % config
 
-    @staticmethod
-    def run_active(tests, timeout):
+    def run_active(self, timeout):
         success = True
         client = dict()
 
-        for test in tests.selected():
+        for test in self.selected():
             test.setup()
-            tests.display()
+            self.display()
             test.run([
                 sys.argv[0],
                 'server', test.nick,
@@ -396,9 +384,9 @@ class Functional:
 
         time.sleep(0.02)
 
-        for test in tests.selected():
+        for test in self.selected():
             test.setup()
-            tests.display()
+            self.display()
             client[test.nick] = Exec().run([
                 sys.argv[0],
                 'client', test.nick,
@@ -408,10 +396,10 @@ class Functional:
 
         exit_time = time.time() + timeout
 
-        running = set(test for test in tests.selected())
+        running = set(test for test in self.selected())
 
         while running and time.time() < exit_time:
-            tests.display()
+            self.display()
             for test in list(running):
                 if not test.ready():
                     continue
@@ -420,31 +408,30 @@ class Functional:
                 running.remove(test)
                 client[test.nick].terminate()
                 success = test.result(test.success()) and success
-                tests.display()
+                self.display()
             time.sleep(0.1)
 
-        tests.display()
+        self.display()
         return success
+
+
+class Alarm(Exception):
+    pass
+
+
+def alarm_handler(number, frame):  # pylint: disable=W0613
+    raise Alarm()
 
 
 if __name__ == '__main__':
     Path.validate()
+    tests = TestPacketGeneration()
 
     parser = argparse.ArgumentParser(description='The BGP swiss army knife of networking functional testing tool')
     subparsers = parser.add_subparsers()
 
     def all(parsed):
-        tests = TestPacketGeneration()
-        all = tests.all()
-        for run in all:
-            for test in all:
-                if test == run:
-                    test.state = State.NONE
-                else:
-                    test.state = State.SKIP  
-            if not Functional.run_active(tests, parsed.timeout):
-                sys.stdout.write('\n')
-                return
+        tests.all()
         sys.stdout.write('\n')
 
     sub = subparsers.add_parser('all', help='run all available test')
@@ -453,8 +440,8 @@ if __name__ == '__main__':
     sub.set_defaults(func=all)
 
     def run(parsed):
-        tests = TestPacketGeneration()
-        Functional.run_active(tests.filter(parsed.test), parsed.timeout)
+        tests.select(parsed.test)
+        tests.run_active(parsed.timeout)
         sys.stdout.write('\n')
 
     sub = subparsers.add_parser('run', help='run a particular test')
@@ -465,7 +452,7 @@ if __name__ == '__main__':
     sub.set_defaults(func=run)
 
     def client(parsed):
-        command = Functional.client(parsed.test)
+        command = tests.client(parsed.test)
         print(f'> {command}')
         if not parsed.dry:
             sys.exit(os.system(command))
@@ -479,7 +466,7 @@ if __name__ == '__main__':
     sub.set_defaults(func=client)
 
     def server(parsed):
-        command = Functional.server(parsed.test)
+        command = tests.server(parsed.test)
         print(f'> {command}')
         if not parsed.dry:
             sys.exit(os.system(command))
@@ -493,7 +480,7 @@ if __name__ == '__main__':
     sub.set_defaults(func=server)
 
     def explain(parsed):
-        Functional.explain(parsed.test)
+        tests.explain(parsed.test)
         sys.exit(0)
 
     sub = subparsers.add_parser('explain', help='show what command for a test are run')
@@ -503,12 +490,11 @@ if __name__ == '__main__':
     sub.set_defaults(func=explain)
 
     def edit(parsed):
-        tests = TestPacketGeneration()
-        files = tests.get_test(parsed.test).files
-        if not files:
+        test = tests.select(parsed.test) or Test('', '')
+        if not test.files:
             sys.exit('no such test')
         editor = os.environ.get('EDITOR', 'vi')
-        os.system('%s %s' % (editor, ' '.join(files)))
+        os.system('%s %s' % (editor, ' '.join(test.files)))
         sys.exit(0)
 
     sub = subparsers.add_parser('edit', help='start $EDITOR to edit a specific test')
@@ -516,7 +502,6 @@ if __name__ == '__main__':
     sub.set_defaults(func=edit)
 
     def decode(parsed):
-        tests = TestPacketGeneration()
         test = tests.get(parsed.test)
         command = '%s decode %s  "%s"' % (Path.EXABGP, test['confs'][0], ''.join(parsed.payload))
         print('> %s' % command)
