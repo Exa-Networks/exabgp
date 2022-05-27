@@ -391,6 +391,23 @@ class EncodingTests(Tests):
 
         return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s --view \\\n    %(msg)s' % config
 
+    def dry(self):
+        result = []
+        for test in self.selected():
+            result.append(' '.join([
+                '>',
+                sys.argv[0],
+                'encoding', '--server', test.nick,
+                '--port', f'{test.conf["port"]}'
+            ]))
+            result.append(' '.join([
+                '>',
+                sys.argv[0],
+                'encoding', '--client', test.nick,
+                '--port', f'{test.conf["port"]}'
+            ]))
+        return '\n'.join(result)
+
     def run_active(self, timeout):
         success = True
         client = dict()
@@ -506,6 +523,17 @@ class DecodingTests(Tests):
         sys.stdout.write('\n')
         sys.stdout.flush()
 
+    def dry(self):
+        result = []
+        for test in self.selected():
+            result.append(' '.join([
+                '>',
+                Path.EXABGP,
+                'decode', '-f', f"'{test.conf['family']}'", test.conf['type'],
+                test.conf['packet']
+            ]))
+        return '\n'.join(result)
+
     def run_active(self, timeout):
         success = True
 
@@ -561,6 +589,16 @@ class ParsingTests(Tests):
         sys.stdout.write('\n')
         sys.stdout.flush()
 
+    def dry(self):
+        result = []
+        for test in self.selected():
+            result.append(' '.join([
+                '>',
+                Path.EXABGP,
+                'validate', '-nrv', test.conf['fname']
+            ]))
+        return '\n'.join(result)
+
     def run_active(self, timeout):
         success = True
 
@@ -582,18 +620,17 @@ class ParsingTests(Tests):
 
 
 def add_test(subparser, name, tests, extra):
-    boolean = argparse.BooleanOptionalAction
     sub = subparser.add_parser(name, help=f'run {name} test')
     if 'dry' in extra:
-        sub.add_argument('--dry', help='show the action', action=boolean)
+        sub.add_argument('--dry', help='show the action', action='store_true')
     if 'server' in extra:
-        sub.add_argument('--server', help='start the server for a test', action=boolean)
+        sub.add_argument('--server', help='start the server for a test', action='store_true')
     if 'client' in extra:
-        sub.add_argument('--client', help='start the client for a test', action=boolean)
+        sub.add_argument('--client', help='start the client for a test', action='store_true')
     if 'list' in extra:
-        sub.add_argument('--list', help='list the files making a test', action=boolean)
+        sub.add_argument('--list', help='list the files making a test', action='store_true')
     if 'edit' in extra:
-        sub.add_argument('--edit', help='edit the files making a test', action=boolean)
+        sub.add_argument('--edit', help='edit the files making a test', action='store_true')
     if 'timeout' in extra:
         sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
     if 'port' in extra:
@@ -633,10 +670,14 @@ def add_test(subparser, name, tests, extra):
         if 'timeout' not in parsed:
             parsed.timeout = 0
         tests.select(parsed.test)
+        if parsed.dry:
+            command = tests.dry()
+            print(command)
+            sys.exit(0)
         exit = tests.run_active(parsed.timeout)
         if not exit:
             sys.stdout.write('\n')
-        sys.exit(exit)
+        sys.exit(0 if exit else 1)
 
     sub.set_defaults(func=func)
 
