@@ -56,6 +56,8 @@ class Path:
     BGP = os.path.join(ROOT, 'qa', 'sbin', 'bgp')
     CI = os.path.join(os.path.join(ROOT, 'qa', 'ci'))
     JSON = os.path.join(os.path.join(ROOT, 'qa', 'json'))
+    ALL_ETC = glob.glob(os.path.join(ETC, '*.conf'))
+    ALL_ETC.sort()
     ALL_JSON = glob.glob(os.path.join(JSON, '*'))
     ALL_JSON.sort()
     ALL_CI = glob.glob(os.path.join(CI, '*.ci'))
@@ -101,6 +103,7 @@ class Sequence:
 
 class Exec(object):
     def __init__(self):
+        self.code = -1
         self.stdout = b''
         self.stderr = b''
         self._process = None
@@ -138,12 +141,11 @@ class Exec(object):
             signal.alarm(2)
             self.stdout, self.stderr = self._process.communicate()
             signal.alarm(0)
+            self.code = self._process.returncode
         except ValueError:  # I/O operation on closed file
             pass
         except Alarm:
             pass
-        # self.stdout = self.stdout.replace('\\n', '\n')
-        # self.stderr = self.stderr.replace('\\n', '\n')
 
     def terminate(self):
         try:
@@ -225,17 +227,6 @@ class Record:
         return success
 
 
-class EncodingTest(Record, Exec):
-    def __init__(self, nick, name):
-        Record.__init__(self, nick, name)
-        Exec.__init__(self)
-        self._check = b'successful'
-
-    def success(self):
-        self.collect()
-        return self._check in self.stdout or self._check in self.stderr
-
-
 class Tests:
     def __init__(self, klass):
         self.klass = klass
@@ -305,10 +296,20 @@ class Tests:
 
 
 class EncodingTests(Tests):
+    class Test(Record, Exec):
+        def __init__(self, nick, name):
+            Record.__init__(self, nick, name)
+            Exec.__init__(self)
+            self._check = b'successful'
+
+        def success(self):
+            self.collect()
+            return self._check in self.stdout or self._check in self.stderr
+
     API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 
     def __init__(self):
-        super().__init__(EncodingTest)
+        super().__init__(self.Test)
 
         for filename in Path.ALL_CI:
             name = os.path.basename(filename)[:-3]
@@ -352,7 +353,6 @@ class EncodingTests(Tests):
             'client': self.client(index),
             'server': self.server(index),
         })
-        sys.exit(1)
 
     def client(self, index):
         test = self.select(index)
@@ -400,7 +400,7 @@ class EncodingTests(Tests):
             self.display()
             test.run([
                 sys.argv[0],
-                'server', test.nick,
+                'encoding', '--server', test.nick,
                 '--port', f'{test.conf["port"]}'
             ])
             time.sleep(0.005)
@@ -412,7 +412,7 @@ class EncodingTests(Tests):
             self.display()
             client[test.nick] = Exec().run([
                 sys.argv[0],
-                'client', test.nick,
+                'encoding', '--client', test.nick,
                 '--port', f'{test.conf["port"]}'
             ])
             time.sleep(0.005)
@@ -438,50 +438,49 @@ class EncodingTests(Tests):
         return success
 
 
-class DecodingTest(Record, Exec):
-    def __init__(self, nick, name):
-        Record.__init__(self, nick, name)
-        Exec.__init__(self)
-
-    def _cleanup(self, decoded):
-        decoded.pop('exabgp', None)
-        decoded.pop('host', None)
-        decoded.pop('pid', None)
-        decoded.pop('ppid', None)
-        decoded.pop('time', None)
-        decoded.pop('version', None)
-        return decoded
-
-    def success(self):
-        self.collect()
-        if self.stderr:
-            print('issue, got data on stderr from exabgp')
-            print(self.command)
-            print(self.stderr)
-            return False
-        if not self.stdout:
-            print('issue, not data on stdout from exabgp')
-            print(self.command)
-            return False
-        try:
-            decoded = json.loads(self.stdout)
-            self._cleanup(decoded)
-        except Exception:
-            print('issue, failed to decode the JSON')
-            print(self.command)
-            print(self.stdout)
-            return False
-        if decoded != self.conf['json']:
-            print('issue, JSON does not match')
-            print(decoded)
-            print(self.conf['json'])
-            return False
-        return True
-
-
 class DecodingTests(Tests):
+    class Test(Record, Exec):
+        def __init__(self, nick, name):
+            Record.__init__(self, nick, name)
+            Exec.__init__(self)
+
+        def _cleanup(self, decoded):
+            decoded.pop('exabgp', None)
+            decoded.pop('host', None)
+            decoded.pop('pid', None)
+            decoded.pop('ppid', None)
+            decoded.pop('time', None)
+            decoded.pop('version', None)
+            return decoded
+
+        def success(self):
+            self.collect()
+            if self.stderr:
+                print('issue, got data on stderr from exabgp')
+                print(self.command)
+                print(self.stderr)
+                return False
+            if not self.stdout:
+                print('issue, no data on stdout from exabgp')
+                print(self.command)
+                return False
+            try:
+                decoded = json.loads(self.stdout)
+                self._cleanup(decoded)
+            except Exception:
+                print('issue, failed to decode the JSON')
+                print(self.command)
+                print(self.stdout)
+                return False
+            if decoded != self.conf['json']:
+                print('issue, JSON does not match')
+                print(decoded)
+                print(self.conf['json'])
+                return False
+            return True
+
     def __init__(self):
-        super().__init__(DecodingTest)
+        super().__init__(self.Test)
 
         for filename in Path.ALL_JSON:
             name = os.path.basename(filename).split('.')[0]
@@ -495,7 +494,7 @@ class DecodingTests(Tests):
                 expected = reader.readline().strip()
                 decoded = json.loads(expected)
                 test.conf['json'] = test._cleanup(decoded)
-            test.files.extend(filename)
+            test.files.append(filename)
 
     def listing(self):
         sys.stdout.write('\n')
@@ -528,121 +527,132 @@ class DecodingTests(Tests):
         return success
 
 
+class ParsingTests(Tests):
+    class Test(Record, Exec):
+        def __init__(self, nick, name):
+            Record.__init__(self, nick, name)
+            Exec.__init__(self)
+
+        def success(self):
+            self.collect()
+            if self.code != 0:
+                print('issue, got error code from exabgp')
+                print(self.command)
+                return False
+
+            return self.code == 0
+
+    def __init__(self):
+        super().__init__(self.Test)
+
+        for filename in Path.ALL_ETC:
+            name = os.path.basename(filename).split('.')[0]
+            test = self.new(name)
+            test.conf['fname'] = filename
+            test.files.append(filename)
+
+    def listing(self):
+        sys.stdout.write('\n')
+        sys.stdout.write('The available tests are:\n')
+        sys.stdout.write('\n')
+        for nick, name, nl in self._iterate():
+            sys.stdout.write(f' {nick:2} {name:25}')
+            sys.stdout.write('\n' if nl else '')
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
+    def run_active(self, timeout):
+        success = True
+
+        for test in self.selected():
+            test.running()
+            self.display()
+            test.run([
+                Path.EXABGP,
+                'validate', '-nrv', test.conf['fname']
+            ])
+
+        for test in self.selected():
+            self.display()
+            success = test.result(test.success()) and success
+            time.sleep(0.005)
+
+        self.display()
+        return success
+
+
+def add_test(subparser, name, tests, extra):
+    boolean = argparse.BooleanOptionalAction
+    sub = subparser.add_parser(name, help=f'run {name} test')
+    if 'dry' in extra:
+        sub.add_argument('--dry', help='show the action', action=boolean)
+    if 'server' in extra:
+        sub.add_argument('--server', help='start the server for a test', action=boolean)
+    if 'client' in extra:
+        sub.add_argument('--client', help='start the client for a test', action=boolean)
+    if 'list' in extra:
+        sub.add_argument('--list', help='list the files making a test', action=boolean)
+    if 'edit' in extra:
+        sub.add_argument('--edit', help='edit the files making a test', action=boolean)
+    if 'timeout' in extra:
+        sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
+    if 'port' in extra:
+        sub.add_argument('--port', help='base port to use', type=int, default=1790)
+    sub.add_argument('test', help='name of the test to run', nargs='?', default=None)
+
+    def func(parsed):
+        if 'edit' in extra and parsed.edit:
+            test = tests.select(parsed.test) or Record('', '')
+            if not test.files:
+                sys.exit('no such test')
+            editor = os.environ.get('EDITOR', 'vi')
+            command = '%s %s' % (editor, ' '.join(test.files))
+            print(f'> {command}')
+            if not parsed.dry:
+                sys.exit(os.system(command))
+            return
+
+        if 'list' in extra and parsed.list:
+            tests.listing()
+            return
+
+        if 'client' in extra and parsed.client:
+            command = tests.client(parsed.test)
+            print(f'> {command}')
+            if not parsed.dry:
+                sys.exit(os.system(command))
+            return
+
+        if 'server' in extra and parsed.server:
+            command = tests.server(parsed.test)
+            print(f'> {command}')
+            if not parsed.dry:
+                sys.exit(os.system(command))
+            return
+
+        if 'timeout' not in parsed:
+            parsed.timeout = 0
+        tests.select(parsed.test)
+        tests.run_active(parsed.timeout)
+        sys.stdout.write('\n')
+        return
+
+    sub.set_defaults(func=func)
+
+
 if __name__ == '__main__':
     Path.validate()
-    decoding_tests = DecodingTests()
-    encoding_tests = EncodingTests()
+
+    decoding = DecodingTests()
+    encoding = EncodingTests()
+    parsing = ParsingTests()
 
     parser = argparse.ArgumentParser(description='The BGP swiss army knife of networking functional testing tool')
-    subparsers = parser.add_subparsers()
+    subparser = parser.add_subparsers()
 
-    def decoding(parsed):
-        parsed.timeout = 0
-        decoding_tests.select(parsed.test)
-        decoding_tests.run_active(parsed.timeout)
-        sys.stdout.write('\n')
-
-    sub = subparsers.add_parser('decoding', help='run decoding test')
-    sub.add_argument('test', help='name of the test to run', nargs='?', default=None)
-    sub.set_defaults(func=decoding)
-
-    def all(parsed):
-        encoding_tests.select(parsed.test)
-        encoding_tests.run_active(parsed.timeout)
-        sys.stdout.write('\n')
-
-    sub = subparsers.add_parser('all', help='run encoding test')
-    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
-    sub.add_argument('--port', help='base port to use', type=int, default=1790)
-    sub.set_defaults(func=all)
-
-    def encoding(parsed):
-        encoding_tests.select(parsed.test)
-        encoding_tests.run_active(parsed.timeout)
-        sys.stdout.write('\n')
-
-    sub = subparsers.add_parser('encoding', help='run a particular test')
-    sub.add_argument('test', help='name of the test to run', nargs='?', default=None)
-    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
-    sub.add_argument('--port', help='base port to use', type=int, default=1790)
-    sub.add_argument('--steps', help='number of test to run simultaneously', type=int, default=0)
-    sub.set_defaults(func=encoding)
-
-    def client(parsed):
-        command = encoding_tests.client(parsed.test)
-        print(f'> {command}')
-        if not parsed.dry:
-            sys.exit(os.system(command))
-        sys.exit(0)
-
-    sub = subparsers.add_parser('client', help='start the client for a specific test')
-    sub.add_argument('test', help='name of the test to run')
-    sub.add_argument('-d', '--dry', help='show what command would be run but does nothing', action='store_true')
-    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
-    sub.add_argument('--port', help='base port to use', type=int, default=1790)
-    sub.set_defaults(func=client)
-
-    def server(parsed):
-        command = encoding_tests.server(parsed.test)
-        print(f'> {command}')
-        if not parsed.dry:
-            sys.exit(os.system(command))
-        sys.exit(0)
-
-    sub = subparsers.add_parser('server', help='start the server for a specific test')
-    sub.add_argument('test', help='name of the test to run')
-    sub.add_argument('-d', '--dry', help='show what command would be run but does nothing', action='store_true')
-    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
-    sub.add_argument('--port', help='base port to use', type=int, default=1790)
-    sub.set_defaults(func=server)
-
-    def explain(parsed):
-        encoding_tests.explain(parsed.test)
-        sys.exit(0)
-
-    sub = subparsers.add_parser('explain', help='show what command for a test are run')
-    sub.add_argument('test', help='name of the test to explain')
-    sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
-    sub.add_argument('--port', help='base port to use', type=int, default=1790)
-    sub.set_defaults(func=explain)
-
-    def edit(parsed):
-        test = encoding_tests.select(parsed.test) or Record('', '')
-        if not test.files:
-            sys.exit('no such test')
-        editor = os.environ.get('EDITOR', 'vi')
-        os.system('%s %s' % (editor, ' '.join(test.files)))
-        sys.exit(0)
-
-    sub = subparsers.add_parser('edit', help='start $EDITOR to edit a specific test')
-    sub.add_argument('test', help='name of the test to edit')
-    sub.set_defaults(func=edit)
-
-    def decode(parsed):
-        test = encoding_tests.get(parsed.test)
-        command = '%s decode %s  "%s"' % (Path.EXABGP, test['confs'][0], ''.join(parsed.payload))
-        print('> %s' % command)
-        os.system(command)
-        sys.exit(0)
-
-    sub = subparsers.add_parser('decode', help='use the test configuration to decode a packet')
-    sub.add_argument('test', help='name of the test to use to know the BGP configuration')
-    sub.add_argument('payload', nargs='+', help='the hexadecimal representation of the packet')
-    sub.set_defaults(func=decode)
-
-    def listing(parsed):
-        if parsed.test in ('encoding', ''):
-            EncodingTests().listing()
-            return
-        if parsed.test == 'decoding':
-            DecodingTests().listing()
-            return
-        print('option [%s]' % parsed.test)
-        sys.exit('invalid option')
-
-    sub = subparsers.add_parser('list', help='list all functional test available')
-    sub.add_argument('test', help='name of the test to explain (encoding, decoding)')
-    sub.set_defaults(func=listing)
+    add_test(subparser, 'decoding', decoding, ['list', 'edit', 'dry', 'timeout', 'port'])
+    add_test(subparser, 'encoding', encoding, ['list', 'edit', 'dry', 'timeout', 'port', 'server', 'client'])
+    add_test(subparser, 'parsing', parsing, ['list', 'dry', 'edit'])
 
     parsed = parser.parse_args()
     if vars(parsed):
