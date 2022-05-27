@@ -575,7 +575,7 @@ class ParsingTests(Tests):
         for test in self.selected():
             self.display()
             success = test.result(test.success()) and success
-            time.sleep(0.005)
+            time.sleep(0.05)
 
         self.display()
         return success
@@ -633,9 +633,10 @@ def add_test(subparser, name, tests, extra):
         if 'timeout' not in parsed:
             parsed.timeout = 0
         tests.select(parsed.test)
-        tests.run_active(parsed.timeout)
-        sys.stdout.write('\n')
-        return
+        exit = tests.run_active(parsed.timeout)
+        if not exit:
+            sys.stdout.write('\n')
+        sys.exit(exit)
 
     sub.set_defaults(func=func)
 
