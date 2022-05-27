@@ -43,7 +43,7 @@ jobs:
 
     - name: Configuration Parsing Checks
       run: |
-        ./qa/bin/parsing
+        ./qa/bin/functional parsing
 
     - name: Functional Checks
       run: |

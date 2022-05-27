@@ -285,18 +285,18 @@ If you want to check any code changes, the repository comes with a `qa` folder, 
 
 ExaBGP comes with a set of functional tests, each test starts an IBGP daemon expecting a number of per recorded UPDATEs for the matching configuration file.
 
-You can see all the existing tests running `./qa/bin/functional listing`. Each test is numbered and can be run independently (please note that 03 is not the same as 3).
+You can see all the existing tests running `./qa/bin/functional encoding --list`. Each test is numbered and can be run independently (please note that 03 is not the same as 3).
 
 ```sh
-# ./qa/bin/functional encoding     # (run all the test)
-# ./qa/bin/functional encoding 03  # (run test 03 as reported by listing)
+# ./qa/bin/functional encoding    # (run all the test)
+# ./qa/bin/functional encoding A  # (run test 03 as reported by listing)
 ```
 
 You can also manually run both the server and client for any given test:
 
 ```sh
-shell1# ./qa/bin/functional server 03
-shell2# ./qa/bin/functional client 03
+shell1# ./qa/bin/functional encoding --server A
+shell2# ./qa/bin/functional encoding --client A
 ```
 
 A test suite is also present to complement the functional testing.
