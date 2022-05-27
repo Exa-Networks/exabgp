@@ -625,6 +625,9 @@ class ParsingTests(Tests):
                 Path.EXABGP,
                 'validate', '-nrv', test.conf['fname']
             ])
+            time.sleep(0.05)
+
+        time.sleep(0.2)
 
         for test in self.selected():
             self.display()
