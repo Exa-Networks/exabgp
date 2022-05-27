@@ -133,7 +133,11 @@ class Exec(object):
         return True
 
     def collect(self):
-        if self.stdout or self.stderr:
+        if self.stdout:
+            return
+        if self.stderr:
+            return
+        if self.code != -1:
             return
 
         signal.signal(signal.SIGALRM, alarm_handler)
