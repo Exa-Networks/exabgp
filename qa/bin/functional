@@ -140,8 +140,8 @@ class Exec(object):
         try:
             signal.alarm(2)
             self.stdout, self.stderr = self._process.communicate()
-            signal.alarm(0)
             self.code = self._process.returncode
+            signal.alarm(0)
         except ValueError:  # I/O operation on closed file
             pass
         except Alarm:
@@ -549,7 +549,20 @@ class DecodingTests(Tests):
         for test in self.selected():
             self.display()
             success = test.result(test.success()) and success
-            time.sleep(0.005)
+            time.sleep(0.05)
+
+        exit_time = time.time() + timeout
+        running = set(test for test in self.selected())
+
+        while running and time.time() < exit_time:
+            self.display()
+            for test in list(running):
+                if not test.ready():
+                    continue
+                running.remove(test)
+                success = test.result(test.success()) and success
+                self.display()
+            time.sleep(0.1)
 
         self.display()
         return success
@@ -565,7 +578,6 @@ class ParsingTests(Tests):
             self.collect()
             if self.code != 0:
                 print('issue, got error code from exabgp')
-                print(self.command)
                 return False
 
             return self.code == 0
@@ -614,6 +626,19 @@ class ParsingTests(Tests):
             self.display()
             success = test.result(test.success()) and success
             time.sleep(0.05)
+
+        exit_time = time.time() + timeout
+        running = set(test for test in self.selected())
+
+        while running and time.time() < exit_time:
+            self.display()
+            for test in list(running):
+                if not test.ready():
+                    continue
+                running.remove(test)
+                success = test.result(test.success()) and success
+                self.display()
+            time.sleep(0.1)
 
         self.display()
         return success
@@ -675,8 +700,7 @@ def add_test(subparser, name, tests, extra):
             print(command)
             sys.exit(0)
         exit = tests.run_active(parsed.timeout)
-        if not exit:
-            sys.stdout.write('\n')
+        sys.stdout.write('\n')
         sys.exit(0 if exit else 1)
 
     sub.set_defaults(func=func)
