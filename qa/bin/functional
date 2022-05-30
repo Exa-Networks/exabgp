@@ -132,6 +132,13 @@ class Exec(object):
             return False
         return True
 
+    def failed(self, reason='issue, got data on stderr from exabgp'):
+        print(reason)
+        print(f'> {self.command}')
+        print(f'stdout: {self.stdout}')
+        print(f'stderr: {self.stderr}')
+        return False
+
     def collect(self):
         if self.stdout:
             return
@@ -308,7 +315,15 @@ class EncodingTests(Tests):
 
         def success(self):
             self.collect()
-            return self._check in self.stdout or self._check in self.stderr
+            if self.code == -1:
+                return self.failed()
+
+            if self._check in self.stdout:
+                return True
+            if self._check in self.stderr:
+                return True
+
+            return self.failed()
 
     API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 
@@ -476,28 +491,20 @@ class DecodingTests(Tests):
 
         def success(self):
             self.collect()
-            if self.stderr:
-                print('issue, got data on stderr from exabgp')
-                print(self.command)
-                print(self.stderr)
-                return False
             if not self.stdout:
-                print('issue, no data on stdout from exabgp')
-                print(self.command)
-                return False
+                return self.failed()
+            if self.stderr:
+                return self.failed()
             try:
                 decoded = json.loads(self.stdout)
                 self._cleanup(decoded)
             except Exception:
-                print('issue, failed to decode the JSON')
-                print(self.command)
-                print(self.stdout)
-                return False
+                return self.failed('issue, failed to decode the JSON')
             if decoded != self.conf['json']:
-                print('issue, JSON does not match')
-                print(decoded)
-                print(self.conf['json'])
-                return False
+                failure = 'issue, JSON does not match'
+                failure += f'\ndecoded : {decoded}\n'
+                failure += f'\nexpected: {self.conf["json"]}'
+                return self.failed(failure)
             return True
 
     def __init__(self):
@@ -581,8 +588,7 @@ class ParsingTests(Tests):
         def success(self):
             self.collect()
             if self.code != 0:
-                print('issue, got error code from exabgp')
-                return False
+                return self.failed()
 
             return self.code == 0
 
