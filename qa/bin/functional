@@ -316,13 +316,11 @@ class EncodingTests(Tests):
 
         def success(self):
             self.collect()
-            if self.code == -1:
-                return self.failed()
-
-            if self._check in self.stdout:
-                return True
-            if self._check in self.stderr:
-                return True
+            if self.code == 0:
+                if self._check in self.stdout:
+                    return True
+                if self._check in self.stderr:
+                    return True
 
             return self.failed()
 
