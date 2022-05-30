@@ -132,9 +132,10 @@ class Exec(object):
             return False
         return True
 
-    def failed(self, reason='issue, got data on stderr from exabgp'):
+    def failed(self, reason='issue with exabgp'):
         print(reason)
         print(f'> {self.command}')
+        print(f'return: {self.code}')
         print(f'stdout: {self.stdout}')
         print(f'stderr: {self.stderr}')
         return False
@@ -634,11 +635,6 @@ class ParsingTests(Tests):
             time.sleep(0.05)
 
         time.sleep(0.2)
-
-        for test in self.selected():
-            self.display()
-            success = test.result(test.success()) and success
-            time.sleep(0.05)
 
         exit_time = time.time() + timeout
         running = set(test for test in self.selected())
