@@ -356,13 +356,13 @@ def setup_ips(ips, label, sudo=False):
                 cmd.insert(0, "sudo")
             if label:
                 cmd += ["label", "{0}:{1}".format(loopback(), label)]
-                try:
-                    subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
-                except subprocess.CalledProcessError as e:
-                    # the IP address is already setup, ignoring
-                    if cmd[0] == "ip" and cmd[2] == "add" and e.returncode == 2:
-                        continue
-                    raise e
+            try:
+                subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
+            except subprocess.CalledProcessError as e:
+                # the IP address is already setup, ignoring
+                if cmd[0] == "ip" and cmd[2] == "add" and e.returncode == 2:
+                    continue
+                raise e
 
 
 def remove_ips(ips, label, sudo=False):
