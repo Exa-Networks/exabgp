@@ -6,6 +6,8 @@ Version explained:
 Version 4.2.19
  * Feature: force PGP signing of tags
  * Feature: backport ICMP types
+ * Fix: backport healthcheck setup_ips requiring a label
+   backport by: Steven Honson
 
 Version 4.2.18
  * Feature: add ICMP experimental codes
