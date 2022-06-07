@@ -3,6 +3,8 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.20
+
 Version 4.2.19
  * Feature: force PGP signing of tags
  * Feature: backport ICMP types
