@@ -160,7 +160,7 @@ class Git(Command):
 
     @staticmethod
     def tag(release):
-        return Git.run('git tag -a %s -m "release %s"' % (release, release))
+        return Git.run('git tag -s -a %s -m "release %s"' % (release, release))
 
     @staticmethod
     def pending():
@@ -266,7 +266,7 @@ def release_pypi(args):
 
     Path.remove_egg()
 
-    if Command.run('python setup.py sdist bdist_wheel'):
+    if Command.run('python3 setup.py sdist bdist_wheel'):
         print('could not generate egg')
         return 1
 

@@ -53,7 +53,7 @@ class IgpMetric(object):
         elif len(data) == 3:
             # ISIS wide metrics
             b = BitArray(bytes=data)
-            igpmetric = b.unpack('uintbe:24')
+            igpmetric = b.unpack('uintbe:24')[0]
             return cls(igpmetric=igpmetric)
         else:
             raise Notify(3, 5, "Incorrect IGP Metric Size")
