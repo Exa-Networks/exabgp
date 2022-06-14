@@ -4,6 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.20
+ * Fix: correctly filter routes announced by the API to the right peer #1005
 
 Version 4.2.19
  * Feature: force PGP signing of tags

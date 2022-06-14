@@ -144,8 +144,12 @@ class Reactor(object):
                 peers.add(key)
         return peers
 
-    def peers(self):
-        return list(self._peers)
+    def peers(self, service):
+        matching = []
+        for peer_name, peer in self._peers.items():
+            if service in peer.neighbor.api['processes']:
+                matching.append(peer_name)
+        return matching
 
     def handle_connection(self, peer_name, connection):
         peer = self._peers.get(peer_name, None)
