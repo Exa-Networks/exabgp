@@ -110,6 +110,7 @@ def setargs(parser):
     g.add_argument("--down-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is down")
     g.add_argument("--disabled-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is disabled")
     g.add_argument("--withdraw-on-down", action="store_true", help="Instead of increasing the metric on health failure, withdraw the route")
+    g.add_argument("--path-id", metavar='PATHID', type=int, default=None, help="path ID to advertise for the route")
 
     g = parser.add_argument_group("reporting")
     g.add_argument("--execute", metavar='CMD', type=str, action="append", help="execute CMD on state change")
@@ -395,6 +396,10 @@ def loop(options):
                     announce = "{0} large-community [ {1} ]".format(announce, options.large_community)
                 if as_path:
                     announce = "{0} as-path [ {1} ]".format(announce, options.as_path)
+
+            # append path ID if required
+            if options.path_id:
+                announce = "{0} path-information {1}".format(announce, options.path_id)
 
             metric += options.increase
 
