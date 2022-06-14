@@ -41,6 +41,7 @@ Version 5.0.0:
  * Compatibility: change node-descriptors to be list
  * Compatibility: remove L from target in JSON extended communities
  * Fix: issue with extended community generation (still not supporting ASN)
+ * Feature: add support for setting BGP path ID for healthcheck.py advertised routes
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
