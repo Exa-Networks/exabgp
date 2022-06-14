@@ -221,6 +221,9 @@ def parse():
         action="store_true",
         help=("Instead of increasing the metric on health failure, " "withdraw the route"),
     )
+    g.add_argument("--path-id", metavar='PATHID', type=int, default=None, help="path ID to advertise for the route")
+    g.add_argument("--neighbor", metavar='NEIGHBOR', type=ip_address, dest="neighbors", action="append", help="advertise the route to the selected neigbors")
+
     g = parser.add_argument_group("reporting")
     g.add_argument("--execute", metavar='CMD', type=str, action="append", help="execute CMD on state change")
     g.add_argument(
@@ -507,6 +510,17 @@ def loop(options):
                     announce = "{0} large-community [ {1} ]".format(announce, options.large_community)
                 if as_path:
                     announce = "{0} as-path [ {1} ]".format(announce, as_path)
+
+            # append path ID if required
+            if options.path_id:
+                announce = "{0} path-information {1}".format(announce, options.path_id)
+
+            # allow filtering neighbors that the route should be advertised to
+            if options.neighbors:
+                # routes are filtered to specific neighbors; format them and put into a list
+                neighbors = ["neighbor {0}".format(neighbor) for neighbor in options.neighbors]
+                # comma seperate the neighbor list and prepend to announcement command
+                command = "{0} {1}".format(", ".join(neighbors), command)
 
             metric += options.increase
 
