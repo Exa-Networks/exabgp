@@ -249,7 +249,7 @@ def show_neighbor(self, reactor, service, command):
 
     def callback_summary():
         reactor.processes.write(service, Neighbor.summary_header)
-        for peer_name in reactor.established_peers():
+        for peer_name in reactor.peers():
             if limit and limit != reactor.neighbor_ip(peer_name):
                 continue
             for line in Neighbor.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
