@@ -150,7 +150,7 @@ class Exec(object):
 
         signal.signal(signal.SIGALRM, alarm_handler)
         try:
-            signal.alarm(2)
+            signal.alarm(5)
             self.stdout, self.stderr = self._process.communicate()
             self.code = self._process.returncode
             signal.alarm(0)
