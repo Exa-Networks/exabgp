@@ -6,13 +6,14 @@ import time
 
 messages = [
     'announce route 2.2.2.2/32 next-hop 127.0.0.1',
+    'shutdown',
 ]
 
 while messages:
     message = messages.pop(0)
     sys.stdout.write(message + '\n')
     sys.stdout.flush()
-    time.sleep(1)
+    time.sleep(5)
 
 try:
     now = time.time()
