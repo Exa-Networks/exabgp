@@ -455,7 +455,7 @@ class FlowTrafficClass(IOperationByte, NumericString, IPv6):
 
 
 # BinaryOperator
-class FlowFragment(IOperationByteShort, BinaryString, IPv4):
+class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID = 0x0C
     NAME = 'fragment'
     FLAG = True
