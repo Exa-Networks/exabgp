@@ -452,7 +452,7 @@ class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
     NAME = 'tcp-flags'
     FLAG = True
     converter = staticmethod(converter(TCPFlag.named))
-    decoder = staticmethod(decoder(ord, TCPFlag))
+    decoder = staticmethod(decoder(_number, TCPFlag))
 
 
 class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):

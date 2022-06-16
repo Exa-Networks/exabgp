@@ -6,6 +6,7 @@ Version explained:
 Version 4.2.20
  * Fix: correctly filter routes announced by the API to the right peer #1005
  * Feature: healthcheck neighbor filtering and path-information backport of #1098 and #1099
+ * Fix: backport #1101 fix parsing of FlowSpec TCPFlags with NS
 
 Version 4.2.19
  * Feature: force PGP signing of tags
