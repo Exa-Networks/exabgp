@@ -143,7 +143,7 @@ class Control(object):
                 return os.read(standard_in, number)
             except OSError as exc:
                 if exc.errno in error.block:
-                    return ''
+                    return b''
                 sys.exit(1)
 
         @monitor
@@ -161,7 +161,7 @@ class Control(object):
                 return os.read(self.r_pipe, number)
             except OSError as exc:
                 if exc.errno in error.block:
-                    return ''
+                    return b''
                 sys.exit(1)
 
         @monitor

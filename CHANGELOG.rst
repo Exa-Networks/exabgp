@@ -3,6 +3,13 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.20
+ * Fix: correctly filter routes announced by the API to the right peer #1005
+ * Feature: healthcheck neighbor filtering and path-information backport of #1098 and #1099
+ * Fix: backport #1101 fix parsing of FlowSpec TCPFlags with NS
+ * Fix: backport #1102 fix parsing of Fragment with IPv6 destinations/sources
+ * Fix: bug in CLI when failing to read data
+
 Version 4.2.19
  * Feature: force PGP signing of tags
  * Feature: backport ICMP types
