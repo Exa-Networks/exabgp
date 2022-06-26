@@ -1,3 +1,9 @@
+exabgp (4.2.20-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Bernat <bernat@debian.org>  Sun, 26 Jun 2022 08:47:05 +0200
+
 exabgp (4.2.19-1) unstable; urgency=medium
 
   * New upstream release
