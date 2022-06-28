@@ -37,5 +37,5 @@ ENV PATH=$PATH:/opt/exabgp/sbin/
 # ENTRYPOINT [ "/bin/bash"]
 ENTRYPOINT [ \
     "/usr/bin/dumb-init", "--", \ 
-    "python3", "/opt/exabgp/src/exabgp/application/main.py" \
+    "/opt/exabgp/sbin/exabgp" \
 ]
