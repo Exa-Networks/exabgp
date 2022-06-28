@@ -28,8 +28,8 @@ RUN chown exa /run/exabgp.out
 RUN chmod 600 /run/exabgp.in
 RUN chmod 600 /run/exabgp.out
 
-RUN echo "[exabgp.daemon]" > /opt/exabgp/src/exabgp/application/etc/exabgp/exabgp.env
-RUN echo "user = 'exa'" >> /opt/exabgp/src/exabgp/application/etc/exabgp/exabgp.env
+RUN echo "[exabgp.daemon]" > /opt/exabgp/etc/exabgp/exabgp.env
+RUN echo "user = 'exa'" >> /opt/exabgp/etc/exabgp/exabgp.env
 
 ENV PYTHONPATH=/opt/exabgp/src
 ENV PATH=$PATH:/opt/exabgp/sbin/
