@@ -4,6 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.21
+ * Fix: regressing on announcing routes from the API #1108
 
 Version 4.2.20
  * Fix: correctly filter routes announced by the API to the right peer #1005
