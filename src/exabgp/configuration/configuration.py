@@ -419,9 +419,10 @@ class Configuration(_Configuration):
             if not self.tokeniser.set_file(target):
                 return False
 
+        # XXX: Should it be in neighbor ?
+        self.process.add_api()
+
         if self.parseSection('root') is not True:
-            # XXX: Should it be in neighbor ?
-            self.process.add_api()
             self._rollback_reload()
 
             return self.error.set(
@@ -431,7 +432,6 @@ class Configuration(_Configuration):
                 "\n%s" % (self.scope.location(), self.tokeniser.number, ' '.join(self.tokeniser.line), str(self.error))
             )
 
-        self.process.add_api()
         self._commit_reload()
         self._link()
 
