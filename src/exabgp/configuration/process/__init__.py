@@ -18,6 +18,8 @@ from exabgp.configuration.process.parser import run
 
 from exabgp.configuration.parser import boolean
 
+API_PREFIX = 'api-internal-cli'
+
 
 class ParseProcess(Section):
     syntax = 'process name-of-process {\n' '   run /path/to/command with its args;\n' '   encoder text|json;\n' '}'
@@ -71,10 +73,11 @@ class ParseProcess(Section):
     def add_api(self):
         if not os.environ.get('exabgp_cli_pipe', ''):
             return
-        name = 'api-internal-cli-%x' % uuid.uuid1().fields[0]
+        name = '%s-%x' % (API_PREFIX, uuid.uuid1().fields[0])
+        prog = os.path.join(os.environ.get('PWD', ''), sys.argv[0])
         api = {
             name: {
-                'run': [sys.executable, os.path.join(os.environ.get('PWD', ''), sys.argv[0])],
+                'run': [sys.executable, prog],
                 'encoder': 'text',
                 'respawn': True,
             }
