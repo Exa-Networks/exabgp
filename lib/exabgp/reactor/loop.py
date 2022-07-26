@@ -147,8 +147,15 @@ class Reactor(object):
     def peers(self, service=''):
         matching = []
         for peer_name, peer in self._peers.items():
-            if service == '' or service in peer.neighbor.api['processes']:
+            if service == '':
                 matching.append(peer_name)
+                continue
+            if service.startswith('api-internal-cli'):
+                matching.append(peer_name)
+                continue
+            if service in peer.neighbor.api['processes']:
+                matching.append(peer_name)
+                continue
         return matching
 
     def handle_connection(self, peer_name, connection):
