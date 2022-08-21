@@ -6,7 +6,7 @@ Build-Depends: debhelper-compat (= 13),
                dh-python,
                python3-all,
                python3-setuptools,
-Build-Depends-Indep: python3-nose,
+Build-Depends-Indep: python3-pytest,
                      python3-psutil,
                      python3-six,
 Standards-Version: 4.6.0.1

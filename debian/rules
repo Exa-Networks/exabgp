@@ -20,7 +20,7 @@ ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 		PYMAJOR=`echo $$pyvers | cut -d '.' -f 1`; \
 		env INTERPRETER=python$$pyvers sbin/exabgp --fi > etc/exabgp/exabgp.env ; \
 		env INTERPRETER=python$$pyvers ./qa/bin/parsing ; \
-		env INTERPRETER=python$$pyvers ETC=$(CURDIR)/etc/exabgp exabgp_log_enable=false python$$pyvers -m nose ./qa/tests/*_test.py ; \
+		env INTERPRETER=python$$pyvers PYTHONPATH=./lib ETC=$(CURDIR)/etc/exabgp exabgp_log_enable=false python$$pyvers -m pytest qa/tests ; \
 	done
 endif
 
