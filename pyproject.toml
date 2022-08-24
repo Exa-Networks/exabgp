@@ -63,7 +63,7 @@ pudb = "^2019.2"
 pytest = "^7.0.0"
 pytest-cov = "^3.0.0"
 wheel = "^0.35.1"
-mistune = { version="<2.0.0" }
+mistune = { version="<3.0.0" }
 
 [tool.poetry.extras]
 debug = ["pudb"]
