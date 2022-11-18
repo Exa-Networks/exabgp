@@ -31,6 +31,15 @@ class _log(object):
         cls.fatal = eat
 
     @classmethod
+    def silence(cls):
+        def eat(cls, message, source='', level=''):
+            pass
+        cls.debug = eat
+        cls.info = eat
+        cls.warning = eat
+        cls.error = eat
+
+    @classmethod
     def debug(cls, message, source='', level='DEBUG'):
         cls.logger(option.logger.debug, message, source, level)
 
