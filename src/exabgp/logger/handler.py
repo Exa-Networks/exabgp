@@ -43,10 +43,16 @@ def getLogger(name=None, **kwargs):
 
 
 def _syslog(**kwargs):
+    syslog_file = '/dev/log'
+    if sys.platform == 'netbsd':
+        syslog_file = '/var/run/log'
+    if sys.platform == 'darwin':
+        syslog_file = '/var/run/syslog'
+
     formating = kwargs.get('format', SHORT)
     handler = handlers.SysLogHandler(
-        address=kwargs.get('address', '/dev/log'),
-        facility=kwargs.get('facility', 'syslog'),
+        address=kwargs.get('address', syslog_file),
+        facility=kwargs.get('facility', 'daemon'),
     )
     handler.setFormatter(logging.Formatter(formating))
     return handler
