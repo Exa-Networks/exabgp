@@ -67,7 +67,7 @@ def main():
 
 def cmdline(cmdarg):
     log.disable()
-    route = ''.join(cmdarg.payload).replace(' ', '')
+    route = ''.join(cmdarg.payload).replace(' ', '').strip()
 
     if not is_bgp(route):
         # parser.print_usage()
