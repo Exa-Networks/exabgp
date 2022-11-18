@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.neighaddr import NeighAddr
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 
+from exabgp.logger import log
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -104,8 +105,8 @@ class LINK(BGPLS):
 
         while tlvs:
             tlv_type, tlv_length = unpack('!HH', tlvs[:4])
-            value = tlvs[4 : 4 + tlv_length]
-            tlvs = tlvs[4 + tlv_length :]
+            value = tlvs[4: 4 + tlv_length]
+            tlvs = tlvs[4 + tlv_length:]
 
             if tlv_type == 256:
                 local_node = []
@@ -150,7 +151,7 @@ class LINK(BGPLS):
                 topology_ids.append(MTID.unpack(value))
                 continue
 
-            raise RuntimeError('Not implemented')
+            log.critical('unknown link TLV %d', tlv_type)
 
         return cls(
             domain=domain,

@@ -13,6 +13,8 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 
+from exabgp.logger import log
+
 #   The IPv4 and IPv6 Prefix NLRIs (NLRI Type = 3 and Type = 4) use the
 #   same format, as shown in the following figure.
 #
@@ -70,32 +72,31 @@ class PREFIXv6(BGPLS):
 
         while tlvs:
             tlv_type, tlv_length = unpack('!HH', tlvs[:4])
+            value = tlvs[4: 4 + tlv_length]
+            tlvs = tlvs[4 + tlv_length:]
+
             if tlv_type == 256:
-                values = tlvs[4 : 4 + tlv_length]
                 local_node = []
-                while values:
+                while value:
                     # Unpack Local Node Descriptor Sub-TLVs
                     # We pass proto_id as TLV interpretation
                     # follows IGP type
-                    node, left = NodeDescriptor.unpack(values, proto_id)
+                    node, left = NodeDescriptor.unpack(value, proto_id)
                     local_node.append(node)
-                    if left == values:
+                    if left == value:
                         raise RuntimeError("sub-calls should consume data")
-                    values = left
-                tlvs = tlvs[4 + tlv_length :]
-                continue
-            if tlv_type == 264:
-                values = tlvs[4 : 4 + tlv_length]
-                ospf_type = OspfRoute.unpack(values)
-                tlvs = tlvs[4 + tlv_length :]
-                continue
-            if tlv_type == 265:
-                values = tlvs[4 : 4 + tlv_length]
-                prefix = IpReach.unpack(values, 4)
-                tlvs = tlvs[4 + tlv_length :]
+                    value = left
                 continue
 
-            raise RuntimeError('Not implemented')
+            if tlv_type == 264:
+                ospf_type = OspfRoute.unpack(value)
+                continue
+
+            if tlv_type == 265:
+                prefix = IpReach.unpack(value, 4)
+                continue
+
+            log.critical('unknown prefix v6 TLV %d', tlv_type)
 
         return cls(
             domain=domain,
