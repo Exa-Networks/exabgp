@@ -88,10 +88,14 @@ class PREFIXv6(BGPLS):
                 values = tlvs[4 : 4 + tlv_length]
                 ospf_type = OspfRoute.unpack(values)
                 tlvs = tlvs[4 + tlv_length :]
+                continue
             if tlv_type == 265:
                 values = tlvs[4 : 4 + tlv_length]
                 prefix = IpReach.unpack(values, 4)
                 tlvs = tlvs[4 + tlv_length :]
+                continue
+
+            raise RuntimeError('Not implemented')
 
         return cls(
             domain=domain,
