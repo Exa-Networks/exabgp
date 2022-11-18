@@ -13,6 +13,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 
+
 from exabgp.logger import log
 
 #   The IPv4 and IPv6 Prefix NLRIs (NLRI Type = 3 and Type = 4) use the
@@ -96,7 +97,7 @@ class PREFIXv6(BGPLS):
                 prefix = IpReach.unpack(value, 4)
                 continue
 
-            log.critical('unknown prefix v6 TLV %d', tlv_type)
+            log.critical('unknown prefix v6 TLV %d' % tlv_type)
 
         return cls(
             domain=domain,
