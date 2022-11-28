@@ -99,14 +99,6 @@ class OutgoingRIB(Cache):
         for change in self._new_nlri.values():
             yield change
 
-    def replace(self, previous, changes):
-        for change in previous:
-            change.nlri.action = OUT.WITHDRAW
-            self.add_to_rib(change, True)
-
-        for change in changes:
-            self.add_to_rib(change, True)
-
     def add_to_rib_watchdog(self, change):
         watchdog = change.attributes.watchdog()
         withdraw = change.attributes.withdraw()

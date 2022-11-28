@@ -4,6 +4,8 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.22
+ * Fix: route reload for offline neighbors #1126
+   patch: Malcolm Dodds
 
 Version 4.2.21
  * Fix: regressing on announcing routes from the API #1108
