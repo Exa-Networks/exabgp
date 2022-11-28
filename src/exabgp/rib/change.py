@@ -8,16 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 
-class Source(object):
-    UNSET = 0
-    CONFIGURATION = 1
-    API = 2
-    NETWORK = 3
-
-
 class Change(object):
-    SOURCE = Source.UNSET
-
     @staticmethod
     def family_prefix(family):
         return b'%02x%02x' % family
@@ -64,15 +55,3 @@ class Change(object):
         if self.nlri is not None:
             return self.nlri.feedback(self.nlri.action)
         return 'no check implemented for the family %s %s' % self.nlri.family()
-
-
-class ConfigurationChange(Change):
-    SOURCE = Source.CONFIGURATION
-
-
-class APIChange(Change):
-    SOURCE = Source.API
-
-
-class NetworkChange(Change):
-    SOURCE = Source.NETWORK
