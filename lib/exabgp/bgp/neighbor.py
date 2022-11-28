@@ -196,10 +196,7 @@ class Neighbor(object):
             self._addpath.remove(family)
 
     def process_previous_changes(self, previous_changes):
-        # Withdraw any configuration routes which have been removed
-        for change in previous_changes:
-            if change not in self.changes:
-                self.rib.outgoing.del_from_rib(change)
+        self.rib.outgoing.replace(previous_changes, self.changes)
 
     def missing(self):
         if self.local_address is None and not self.auto_discovery:
