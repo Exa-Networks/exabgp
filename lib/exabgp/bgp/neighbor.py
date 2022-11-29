@@ -87,8 +87,6 @@ class Neighbor(object):
 
         # The routes we have parsed from the configuration
         self.changes = []
-        # On signal update, the previous routes so we can compare what changed
-        self.backup_changes = []
 
         self.operational = None
         self.eor = deque()
@@ -196,6 +194,9 @@ class Neighbor(object):
     def remove_addpath(self, family):
         if family in self.addpaths():
             self._addpath.remove(family)
+
+    def process_previous_changes(self, previous_changes):
+        self.rib.outgoing.replace(previous_changes, self.changes)
 
     def missing(self):
         if self.local_address is None and not self.auto_discovery:

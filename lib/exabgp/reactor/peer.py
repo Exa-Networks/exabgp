@@ -482,13 +482,6 @@ class Peer(object):
                 if self._reconfigure:
                     self._reconfigure = False
 
-                    # we are here following a configuration change
-                    if self._neighbor:
-                        # see what changed in the configuration
-                        self.neighbor.rib.outgoing.replace(self._neighbor.backup_changes, self._neighbor.changes)
-                        # do not keep the previous routes in memory as they are not useful anymore
-                        self._neighbor.backup_changes = []
-
                 # Take the routes already sent to that peer and resend them
                 if self._resend_routes != SEND.DONE:
                     enhanced = True if refresh_enhanced and self._resend_routes == SEND.REFRESH else False

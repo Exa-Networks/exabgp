@@ -329,10 +329,10 @@ class Configuration(_Configuration):
         self.processes = self.process.processes
         self._neighbors = {}
 
-        # Add the changes prior to the reload to the neighbor to correct handling of deleted routes
+        # Withdraw any old changes
         for neighbor in self.neighbors:
             if neighbor in self._previous_neighbors:
-                self.neighbors[neighbor].backup_changes = self._previous_neighbors[neighbor].changes
+                self.neighbors[neighbor].process_previous_changes(self._previous_neighbors[neighbor].changes)
 
         self._previous_neighbors = {}
         self._cleanup()

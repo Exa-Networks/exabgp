@@ -100,9 +100,12 @@ class OutgoingRIB(Cache):
             yield change
 
     def replace(self, previous, changes):
+        nlri = [c.nlri for c in changes]
+
         for change in previous:
-            change.nlri.action = OUT.WITHDRAW
-            self.add_to_rib(change, True)
+            if change.nlri not in nlri:
+                change.nlri.action = OUT.WITHDRAW
+                self.add_to_rib(change, True)
 
         for change in changes:
             self.add_to_rib(change, True)
