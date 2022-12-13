@@ -17,8 +17,8 @@ ExecStartPre=-/usr/bin/mkfifo /run/exabgp/exabgp.out
 ExecStart=/usr/sbin/exabgp /etc/exabgp/exabgp.conf
 ExecReload=/bin/kill -USR1 $MAINPID
 Restart=always
-CapabilityBoundingSet=CAP_NET_ADMIN
-AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target
