@@ -17,6 +17,14 @@ Thanks to modern routers' flow balancing, ExaBGP can also be used to save you mo
 
 Other uses include keeping an eye on network changes done as was done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
+## Note
+
+The default branch name for ExaBGP was changed from "master" to "main".
+
+To prevent any nasty surprises, the "master" branch was NOT deleted from the repository and still provides the code as it was at the time of the branch name change on the 16th of December 2022.
+
+It is expected that the "master" branch will be deleted at some point during 2023.
+
 ## Installation
 
 ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (4.2 and master) are targeting python 3 only (3.7+).
