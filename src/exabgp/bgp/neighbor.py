@@ -114,8 +114,7 @@ class Neighbor(dict):
 
         # The routes we have parsed from the configuration
         self.changes = []
-        # On signal update, the previous routes so we can compare what changed
-        self.backup_changes = []
+        self.previous = None
 
         self.eor = deque()
         self.asm = dict()

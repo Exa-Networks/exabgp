@@ -377,7 +377,7 @@ class Configuration(_Configuration):
         # Add the changes prior to the reload to the neighbor to correct handling of deleted routes
         for neighbor in self.neighbors:
             if neighbor in self._previous_neighbors:
-                self.neighbors[neighbor].backup_changes = self._previous_neighbors[neighbor].changes
+                self.neighbors[neighbor].previous = self._previous_neighbors[neighbor]
 
         self._previous_neighbors = {}
         self._cleanup()

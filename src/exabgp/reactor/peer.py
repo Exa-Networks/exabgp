@@ -412,16 +412,22 @@ class Peer(object):
 
         send_ka = KA(self.proto.connection.session, self.proto)
 
-        # we restarted and we need to make sure to send what was already issued by the api
-        self.neighbor.rib.outgoing.replace_restart(self.neighbor.backup_changes, self.neighbor.changes)
+        # we need to make sure to send what was already issued by the api
+        # from the previous time
+        previous = self.neighbor.previous.changes if self.neighbor.previous else []
+        current = self.neighbor.changes
+        self.neighbor.rib.outgoing.replace_restart(previous, current)
+        self.neighbor.previous = None
 
         while not self._teardown:
             # we are here following a configuration change
             if self._neighbor:
                 # see what changed in the configuration
-                self.neighbor.rib.outgoing.replace_reload(self._neighbor.backup_changes, self._neighbor.changes)
+                previous = self._neighbor.previous.changes
+                current = self._neighbor.changes
+                self.neighbor.rib.outgoing.replace_reload(previous, current)
                 # do not keep the previous routes in memory as they are not useful anymore
-                self._neighbor.backup_changes = []
+                self._neighbor.previous = None
                 self._neighbor = None
 
             for message in self.proto.read_message():
