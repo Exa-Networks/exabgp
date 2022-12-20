@@ -91,9 +91,6 @@ class Peer(object):
         # The peer was restarted (to know what kind of open to send for graceful restart)
         self._restarted = FORCE_GRACEFUL
 
-        # We want to remove routes which are not in the configuration anymore after a signal to reload
-        self._reconfigure = True
-
         # We have been asked to teardown the session with this code
         self._teardown = None
 
@@ -189,7 +186,6 @@ class Peer(object):
 
     def reconfigure(self, restart_neighbor=None):
         # we want to update the route which were in the configuration file
-        self._reconfigure = True
         self._neighbor = restart_neighbor
 
     def teardown(self, code, restart=True):
@@ -472,16 +468,13 @@ class Peer(object):
                         except StopIteration:
                             refresh = None
 
-                # Take the routes already sent to that peer and resend them
-                if self._reconfigure:
-                    self._reconfigure = False
-
-                    # we are here following a configuration change
-                    if self._neighbor:
-                        # see what changed in the configuration
-                        self.neighbor.rib.outgoing.replace_reload(self._neighbor.backup_changes, self._neighbor.changes)
-                        # do not keep the previous routes in memory as they are not useful anymore
-                        self._neighbor.backup_changes = []
+                # we are here following a configuration change
+                if self._neighbor:
+                    # see what changed in the configuration
+                    self.neighbor.rib.outgoing.replace_reload(self._neighbor.backup_changes, self._neighbor.changes)
+                    # do not keep the previous routes in memory as they are not useful anymore
+                    self._neighbor.backup_changes = []
+                    self._neighbor = None
 
                 # Need to send update
                 if not new_routes and self.neighbor.rib.outgoing.pending():
