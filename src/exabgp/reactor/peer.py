@@ -134,7 +134,7 @@ class Peer(object):
 
         self.generator = None
         self._teardown = None
-        self.neighbor.rib.reset()
+        self.neighbor.reset_rib()
 
         # If we are restarting, and the neighbor definition is different, update the neighbor
         if self._neighbor:
