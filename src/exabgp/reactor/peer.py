@@ -191,7 +191,6 @@ class Peer(object):
         # we want to update the route which were in the configuration file
         self._reconfigure = True
         self._neighbor = restart_neighbor
-        self._neighbor = restart_neighbor
 
     def teardown(self, code, restart=True):
         self._restart = restart
