@@ -416,6 +416,14 @@ class Peer(object):
         self.neighbor.rib.outgoing.replace_restart(self.neighbor.backup_changes, self.neighbor.changes)
 
         while not self._teardown:
+            # we are here following a configuration change
+            if self._neighbor:
+                # see what changed in the configuration
+                self.neighbor.rib.outgoing.replace_reload(self._neighbor.backup_changes, self._neighbor.changes)
+                # do not keep the previous routes in memory as they are not useful anymore
+                self._neighbor.backup_changes = []
+                self._neighbor = None
+
             for message in self.proto.read_message():
                 self.recv_timer.check_ka(message)
 
@@ -467,14 +475,6 @@ class Peer(object):
                             next(refresh)
                         except StopIteration:
                             refresh = None
-
-                # we are here following a configuration change
-                if self._neighbor:
-                    # see what changed in the configuration
-                    self.neighbor.rib.outgoing.replace_reload(self._neighbor.backup_changes, self._neighbor.changes)
-                    # do not keep the previous routes in memory as they are not useful anymore
-                    self._neighbor.backup_changes = []
-                    self._neighbor = None
 
                 # Need to send update
                 if not new_routes and self.neighbor.rib.outgoing.pending():
