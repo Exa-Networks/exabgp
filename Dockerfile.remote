@@ -30,7 +30,7 @@ RUN useradd -r exa \
     && chmod 600 /run/exabgp.out
 
 COPY <<EOF /usr/local/etc/exabgp/exabgp.env
-[exabgp.daemon]
+\[exabgp.daemon\]
 user = 'exa'
 EOF
 
