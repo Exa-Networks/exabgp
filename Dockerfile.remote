@@ -29,10 +29,8 @@ RUN useradd -r exa \
     && chmod 600 /run/exabgp.in \
     && chmod 600 /run/exabgp.out
 
-COPY <<EOF /usr/local/etc/exabgp/exabgp.env
-[exabgp.daemon]
-user = 'exa'
-EOF
+RUN echo "[exabgp.daemon]" > /opt/exabgp/etc/exabgp/exabgp.env
+RUN echo "user = 'exa'" >> /opt/exabgp/etc/exabgp/exabgp.env
 
 RUN cd /tmp \
     && echo Building ${version} \
