@@ -43,7 +43,7 @@ python = ">=3.8.1,<3.12"
 bandit = { version= "^1.7.4" }
 black = { version= "^22.12.0" }
 coveralls = { version= "^3.3.1" }
-dephell = { version= "^0.8.3", optional = true  }
+# dephell = { version= "^0.8.3", optional = true  }
 flake8 = { version= "^6.0.0" }
 flake8-bugbear = { version= "^22.12.6" }
 flakehell = { version= "^0.9.0" }
