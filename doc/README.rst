@@ -10,7 +10,7 @@ ExaBGP
    :target: https://pypi.python.org/pypi/exabgp/
    :alt: Downloads
 
-.. image:: https://coveralls.io/repos/github/Exa-Networks/exabgp/badge.svg?branch=master
+.. image:: https://coveralls.io/repos/github/Exa-Networks/exabgp/badge.svg?branch=main
    :target: https://coveralls.io/r/Exa-Networks/exabgp
    :alt: Coverage
 

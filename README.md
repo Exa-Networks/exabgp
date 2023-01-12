@@ -1,4 +1,4 @@
-[![License](https://img.shields.io/pypi/l/exabgp.svg)](https://github.com/Exa-Networks/exabgp/blob/master/LICENCE.txt)
+[![License](https://img.shields.io/pypi/l/exabgp.svg)](https://github.com/Exa-Networks/exabgp/blob/main/LICENCE.txt)
 [![CI](https://github.com/Exa-Networks/exabgp/actions/workflows/ci.yaml/badge.svg)](https://github.com/Exa-Networks/exabgp/actions/workflows/ci.yaml)
 [![PyPI Status](https://img.shields.io/pypi/status/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI](https://img.shields.io/pypi/v/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
@@ -17,17 +17,10 @@ Thanks to modern routers' flow balancing, ExaBGP can also be used to save you mo
 
 Other uses include keeping an eye on network changes done as was done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
-## Note
-
-The default branch name for ExaBGP was changed from "master" to "main".
-
-To prevent any nasty surprises, the "master" branch was NOT deleted from the repository and still provides the code as it was at the time of the branch name change on the 16th of December 2022.
-
-It is expected that the "master" branch will be deleted at some point during 2023.
 
 ## Installation
 
-ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (4.2 and master) are targeting python 3 only (3.7+).
+ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (4.2 and main) are targeting python 3 only (3.7+).
 
 ### OS packages
 
@@ -67,7 +60,7 @@ It is also possible to download releases from github
 > ./bin/healthcheck --help
 ```
 
-### git master
+### git main
 
 In case of issues, we are asking user to run the lastest code directly for a local `git clone`.
 
@@ -129,13 +122,13 @@ Multiple versions can be used simultaneously without conflict when ExaBGP is ran
 ExaBGP is self-contained and easy to upgrade/downgrade by:
 
 * replacing the downloaded release folder, for releases download
-* running `git pull` in the repository folder, for installation using git master
+* running `git pull` in the repository folder, for installation using git main
 * running `pip install -U exabgp`, for pip installations
 * running `apt update; apt upgrade exabgp` for Debian/Ubuntu
 
 *If you are migrating your application from ExaBGP 3.4 to 4.x please read this [wiki](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.0) entry*.
 
-The configuration file and API format may change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG) and check their setup after upgrade.
+The configuration file and API format may change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/main/CHANGELOG) and check their setup after upgrade.
 
 ## Support
 
@@ -145,19 +138,19 @@ During "day time" (GMT/BST) feel free to contact us on [`Slack`](https://join.sl
 
 The best way to be kept informed about our progress/releases is to follow us on [Twitter](https://twitter.com/#!/search/exabgp).
 
-In case of bugs, we will ask you to help us fix the issue using the master branch. We will then try to backport any fixes to the 4.2 stable branch.
+In case of bugs, we will ask you to help us fix the issue using the main branch. We will then try to backport any fixes to the 4.2 stable branch.
 
-Please make sure to remove any non `git master` installations if you are trying the latest master release, to prevent to run the wrong code by accident, it happens more than you think, and verify the binary by running `exabgp version`.
+Please make sure to remove any non `git main` installations if you are trying the latest release, to prevent to run the wrong code by accident, it happens more than you think, and verify the binary by running `exabgp version`.
 
 We will nearly systematically ask for the `FULL` output exabgp with the option `-d`.
 
 ## Development
 
-The master branch is now what will be ExaBGP 5.0.x. The program command line arguments has already been changed and are no longer fully backward compatible with version 3 and 4.
+The main branch (which was master) is now what will be ExaBGP 5.0.x. The program command line arguments has already been changed and are no longer fully backward compatible with version 3 and 4.
 
 ExaBGP is nearly as old as Python3. Lots has changed in 11 years. Support for python2 has already been dropped.
 
-master has already seen a big rewrite but more is still to come. The application need work to take advantage of Python3 'new' async-io (as we run an home-made async core engine) and new features are being investigated (such as configuration edition via a interactive CLI).
+the main branch has already seen a big rewrite but more is still to come. The application need work to take advantage of Python3 'new' async-io (as we run an home-made async core engine) and new features are being investigated (such as configuration edition via a interactive CLI).
 
 For these reasons, we recommend the use of the 4.2 releases in production, but running master is sometimes required for the latest and greatest features.
 
@@ -188,7 +181,7 @@ The documentation is known to be imperfect. One could even say wanting, limited,
 
 Other users did however do a fair bit of [`documentation`](https://github.com/Exa-Networks/exabgp/wiki/Related-articles), just not on the [`wiki`](https://github.com/Exa-Networks/exabgp/wiki). 😭
 
-To understand how ExaBGP should be configured, please have a look into the [`etc/exabgp`](https://github.com/Exa-Networks/exabgp/tree/master/etc/exabgp) folder of the repository where a great many examples are available.
+To understand how ExaBGP should be configured, please have a look into the [`etc/exabgp`](https://github.com/Exa-Networks/exabgp/tree/main/etc/exabgp) folder of the repository where a great many examples are available.
 
 `exabgp --help`  is also a treasure trove of information.
 

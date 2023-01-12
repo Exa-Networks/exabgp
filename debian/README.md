@@ -31,7 +31,7 @@ To build a package for a specific unreleased version, use the
 following commands:
 
     sudo apt install build-essential devscripts fakeroot
-    git checkout master
+    git checkout main
     git checkout debian/sid -- debian
     rm debian/source/format
     rm -rf debian/patches
