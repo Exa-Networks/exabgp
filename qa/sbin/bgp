@@ -650,6 +650,7 @@ def parse_cmdline():
     parser.add_argument('--asn', help='ASN to use (otherwise extracted from the OPEN)', type=int, default=None)
     parser.add_argument('--port', help='port to bind to', type=int, default=port)
     parser.add_argument('--view', help='look at the expected packets', action='store_true')
+    parser.add_argument('--ipv6', help='bind using ipv6', action='store_true')
     parser.add_argument('checks', help='a list of expected route announcement/withdrawl', nargs='?', type=open)
 
     cmdarg = parser.parse_args()
@@ -678,6 +679,7 @@ def parse_cmdline():
         'asn': None,  # Don't modify the local AS per default.
         'sink': False,  # just accept whatever is sent
         'echo': False,  # just accept whatever is sent
+        'ipv6': False,  # bind to ipv4 by default
         'expect': []
     }
 
@@ -686,6 +688,7 @@ def parse_cmdline():
         'echo': cmdarg.echo,
         'port': cmdarg.port,
         'asn': cmdarg.asn,
+        'ipv6': cmdarg.ipv6,
         'view': cmdarg.view,
     })
     # fmt: on
@@ -696,6 +699,9 @@ def parse_cmdline():
     content = [_.strip() for _ in cmdarg.checks.readlines() if _.strip() and '#' not in _]
     expect = []
     for message in content:
+        if message.strip() == 'option:bind:ipv6':
+            options['ipv6'] = True
+            continue
         if message.strip() == 'option:open:send-unknown-capability':
             options['send-unknown-capability'] = True
             continue
@@ -737,7 +743,10 @@ async def main(options, checker, queue):
 
     sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-    sock.bind(('::', options['port']))
+    if options['ipv6']:
+        sock.bind(('::1', options['port']))
+    else:
+        sock.bind(('127.0.0.1', options['port']))
 
     loop = asyncio.get_running_loop()
     service = BGPService(loop, queue, options, checker)
