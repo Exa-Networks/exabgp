@@ -13,13 +13,13 @@ We want to make contributing to this project as easy as possible, whether it's:
 
 We use github to host code, to track issues and feature requests. We accept pull requests but may request some changes before we pull them.
 
-The latest code is available directly on master.
+The latest code is available directly on the main branch.
 
 We will review all code changes sent via Pull Requests and welcome them. There is no strong convention for git commits due to the low number of external contributions.
 
 To contribute:
 
-1. Fork the repo and create your branch from `master`.
+1. Fork the repo and create your branch from `main`.
 2. If you've added code that should be tested, please consider adding tests.
 3. Ensure the test suite passes. You can run it locally (see below)
 4. If you've changed APIs, please update the documentation.
@@ -32,7 +32,7 @@ By contributing, you agree that your contributions will be licensed under the BS
 We do not ask for transfer of ownership.
 
 In short, when you submit code changes, your submissions are understood to be under the same
-[BSD License](https://github.com/Exa-Networks/exabgp/blob/master/LICENCE.txt) that covers the project
+[BSD License](https://github.com/Exa-Networks/exabgp/blob/main/LICENCE.txt) that covers the project
 and the copyright remains yours (or your employer).
 
 ## Report bugs using Github's [issues](https://github.com/Exa-Networks/exabgp/issues/new/choose)
@@ -66,7 +66,7 @@ env exabgp_log_enable=false pytest --with-coverage ./tests/*_test.py
 env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
 ```
 
-using master, more options are available: only decoding nlri for example:
+using `main`, more options are available: only decoding nlri for example:
 ```
 ./sbin/exabgp decode --nlri etc/exabgp/conf-bgpls.conf "00 02 FF FF 03 00 00 00 00 00 00 00 00 01 00 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 0a 0a 0a 01 01 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 02 02 02"
 { "ls-nlri-type": "bgpls-link", "l3-routing-topology": 0, "protocol-id": 3, "local-node-descriptors": { "autonomous-system": 1, "bgp-ls-identifier": "3232266878", "ospf-area-id": "0.0.0.0", "router-id": "10.10.10.10" }, "remote-node-descriptors": { "autonomous-system": 1, "bgp-ls-identifier": "3232266878", "ospf-area-id": "0.0.0.0", "router-id": "10.2.2.2" }, "interface-address": {  }, "neighbor-address": {  } }

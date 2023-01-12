@@ -3,15 +3,15 @@
 # how to build and run exabgp using docker (from github with pip)
 # this Dockerfile does not require a local installation but the container is bigger
 
-# docker build --build-arg version=master -f Dockerfile.remote -t exabgp.remote ./
+# docker build --build-arg version=main -f Dockerfile.remote -t exabgp.remote ./
 # docker run -it exabgp.remote exabgp
 
 # debug the build
-# docker build --progress=plain --no-cache --build-arg version=master -f Dockerfile.remote -t exabgp ./
+# docker build --progress=plain --no-cache --build-arg version=main -f Dockerfile.remote -t exabgp ./
 
 FROM python:3-slim-buster
 
-ARG version="master"
+ARG version="main"
 
 RUN apt update \
     && apt -y dist-upgrade \
