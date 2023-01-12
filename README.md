@@ -20,7 +20,7 @@ Other uses include keeping an eye on network changes done as was done by [RIPE](
 
 ## Installation
 
-ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (4.2 and main) are targeting python 3 only (3.7+).
+ExaBGP 3.4 and previous versions are python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. current version of ExaBGP (4.2 and main) are targeting python 3 only. The code should work with all recent versions (>= 3.7), but the requirement is set to 3.8.1 as some of the tooling now requires it (such as flake8).
 
 ### OS packages
 
