@@ -746,7 +746,7 @@ async def main(options, checker, queue):
     if options['ipv6']:
         sock.bind(('::1', options['port']))
     else:
-        sock.bind(('127.0.0.1', options['port']))
+        sock.bind(('::FFFF:127.0.0.1', options['port']))
 
     loop = asyncio.get_running_loop()
     service = BGPService(loop, queue, options, checker)
