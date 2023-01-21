@@ -97,9 +97,9 @@ class AFI(Resource):
     @staticmethod
     def implemented_safi(afi):
         if afi == 'ipv4':
-            return ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn']
+            return ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn', 'mup']
         if afi == 'ipv6':
-            return ['unicast', 'mpls-vpn', 'flow', 'flow-vpn']
+            return ['unicast', 'mpls-vpn', 'flow', 'flow-vpn', 'mup']
         if afi == 'l2vpn':
             return ['vpls', 'evpn']
         if afi == 'bgp-ls':
@@ -128,6 +128,7 @@ class _SAFI(int):
     EVPN = 70  # [draft-ietf-l2vpn-evpn]
     BGPLS = 71  # [RFC7752]
     BGPLS_VPN = 72  # [RFC7752]
+    MUP = 85  # [draft-mpmz-bess-mup-safi]
     MPLS_VPN = 128  # [RFC4364]
     RTC = 132  # [RFC4684]
     FLOW_IP = 133  # [RFC5575]
@@ -156,6 +157,7 @@ class _SAFI(int):
         EVPN: 'evpn',
         BGPLS: 'bgp-ls',
         BGPLS_VPN: 'bgp-ls-vpn',
+        MUP: 'mup',
         MPLS_VPN: 'mpls-vpn',
         RTC: 'rtc',
         FLOW_IP: 'flow',
@@ -172,7 +174,7 @@ class _SAFI(int):
         return self in (SAFI.nlri_mpls, SAFI.mpls_vpn)
 
     def has_rd(self):
-        return self in (SAFI.mpls_vpn, SAFI.flow_vpn)
+        return self in (SAFI.mup, SAFI.mpls_vpn, SAFI.flow_vpn)
         # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
     def has_path(self):
@@ -195,6 +197,7 @@ class SAFI(Resource):
     evpn = _SAFI(_SAFI.EVPN)
     bgp_ls = _SAFI(_SAFI.BGPLS)
     bgp_ls_vpn = _SAFI(_SAFI.BGPLS_VPN)
+    mup = _SAFI(_SAFI.MUP)
     mpls_vpn = _SAFI(_SAFI.MPLS_VPN)
     rtc = _SAFI(_SAFI.RTC)
     flow_ip = _SAFI(_SAFI.FLOW_IP)
@@ -209,6 +212,7 @@ class SAFI(Resource):
         evpn.pack(): evpn,
         bgp_ls.pack(): bgp_ls,
         bgp_ls_vpn.pack(): bgp_ls_vpn,
+        mup.pack(): mup,
         mpls_vpn.pack(): mpls_vpn,
         rtc.pack(): rtc,
         flow_ip.pack(): flow_ip,
@@ -225,6 +229,7 @@ class SAFI(Resource):
             'evpn': evpn,
             'bgp-ls': bgp_ls,
             'bgp-ls-vpn': bgp_ls_vpn,
+            'mup': mup,
             'mpls-vpn': mpls_vpn,
             'rtc': rtc,
             'flow': flow_ip,
@@ -262,12 +267,14 @@ class Family(object):
         (AFI.ipv4, SAFI.unicast): ((4,), 0),
         (AFI.ipv4, SAFI.multicast): ((4,), 0),
         (AFI.ipv4, SAFI.nlri_mpls): ((4,), 0),
+        (AFI.ipv4, SAFI.mup): ((4, 16), 0),
         (AFI.ipv4, SAFI.mpls_vpn): ((12,), 8),
         (AFI.ipv4, SAFI.flow_ip): ((0, 4), 0),
         (AFI.ipv4, SAFI.flow_vpn): ((0, 4), 0),
         (AFI.ipv4, SAFI.rtc): ((4, 16), 0),
         (AFI.ipv6, SAFI.unicast): ((16, 32), 0),
         (AFI.ipv6, SAFI.nlri_mpls): ((16, 32), 0),
+        (AFI.ipv6, SAFI.mup): ((4, 16), 0),
         (AFI.ipv6, SAFI.mpls_vpn): ((24, 40), 8),
         (AFI.ipv6, SAFI.flow_ip): ((0, 16, 32), 0),
         (AFI.ipv6, SAFI.flow_vpn): ((0, 16, 32), 0),

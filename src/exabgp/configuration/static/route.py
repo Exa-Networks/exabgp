@@ -52,7 +52,6 @@ from exabgp.configuration.static.mpls import label
 from exabgp.configuration.static.mpls import prefix_sid
 from exabgp.configuration.static.mpls import prefix_sid_srv6
 
-
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int(afi, integer):
     return b''.join(bytes([(integer >> (offset * 8)) & 0xFF]) for offset in range(IP.length(afi) - 1, -1, -1))
@@ -77,7 +76,6 @@ class ParseStaticRoute(Section):
         'label <15 bits number>',
         'bgp-prefix-sid [ 32 bits number> ] | [ <32 bits number>, [ ( <24 bits number>,<24 bits number> ) ]]',
         'bgp-prefix-sid-srv6 ( l3-service|l2-service <ipv6> <behavior> [<LBL>,<LNL>,<FL>,<AL>,<Tpose-Len>,<Tpose-Offset>])',
-        'aggregator ( <asn16>:<ipv4> )',
         'aigp <40 bits number>',
         'attribute [ generic attribute format ]' 'name <mnemonic>',
         'split /<mask>',
@@ -121,6 +119,8 @@ class ParseStaticRoute(Section):
         'label': 'nlri-set',
         'bgp-prefix-sid': 'attribute-add',
         'bgp-prefix-sid-srv6': 'attribute-add',
+        'bgp-srv6-mup': 'nlri-set',
+        'bgp-srv6-mup-ext': 'attribute-set',
         'attribute': 'attribute-add',
         'next-hop': 'nexthop-and-attribute',
         'origin': 'attribute-add',

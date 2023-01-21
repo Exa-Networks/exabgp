@@ -8,8 +8,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from struct import pack
-
+from ipaddress import ip_address
+from ipaddress import IPv4Address
+from ipaddress import IPv6Address
+from exabgp.protocol.ip import IPv4
 from exabgp.protocol.ip import IPv6
+from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -20,6 +24,11 @@ from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
 from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
 from exabgp.bgp.message.update.attribute.sr.srv6.sidstructure import Srv6SidStructure
+from exabgp.bgp.message.update.nlri.mup import InterworkSegmentDiscoveryRoute
+from exabgp.bgp.message.update.nlri.mup import DirectSegmentDiscoveryRoute
+from exabgp.bgp.message.update.nlri.mup import Type1SessionTransformedRoute
+from exabgp.bgp.message.update.nlri.mup import Type2SessionTransformedRoute
+from exabgp.bgp.message.update.attribute.community.extended.mup import MUPExtendedCommunity
 
 
 def label(tokeniser):
@@ -183,3 +192,142 @@ def prefix_sid_srv6(tokeniser):
         return PrefixSid([Srv6L3Service(subtlvs=subtlvs)])
     elif service_type == "l2-service":
         return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])
+
+def parse_ip_prefix(tokeninser):
+    addrstr, length = tokeninser.split("/")
+    if length == None:
+        raise Exception("unexpect prefix format '%s'" % tokeninser)
+
+    addr = ip_address(addrstr)
+    if isinstance(addr, IPv4Address):
+        ip = IPv4.unpack(IPv4.pton(addrstr))
+    elif isinstance(addr, IPv6Address):
+        ip = IPv6.unpack(IPv6.pton(addrstr))
+    else:
+        raise Exception("unexpect ipaddress format '%s'" % addrstr)
+
+    return ip, length
+
+# 'mup-isd <ip prefix> rd <rd>',
+def srv6_mup_isd(tokeniser, afi):
+    ip, length = parse_ip_prefix(tokeniser())
+    
+    value = tokeniser()
+    if "rd" == value:
+        rd = route_distinguisher(tokeniser)
+    else:
+        raise Exception("expect rd, but received '%s'" % value)
+ 
+    # raise Exception("check")
+    return InterworkSegmentDiscoveryRoute(
+        rd=rd,
+        ipprefix_len=int(length),
+        ipprefix=ip,
+        afi=afi,
+    )
+
+# 'mup-dsd <ip address> rd <rd>',
+def srv6_mup_dsd(tokeniser, afi):
+    if afi == AFI.ipv4:
+        ip = IPv4.unpack(IPv4.pton(tokeniser()))
+    elif afi == AFI.ipv6:
+        ip = IPv6.unpack(IPv6.pton(tokeniser()))
+    else:
+        raise Exception("unexpect afi: %s" % afi)
+    value = tokeniser()
+    if "rd" == value:
+        rd = route_distinguisher(tokeniser)
+    else:
+        raise Exception("expect rd, but received '%s'" % value)
+
+    return DirectSegmentDiscoveryRoute(
+        rd=rd,
+        ip=ip,
+        afi=afi,
+    )
+
+# 'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint>',
+def srv6_mup_t1st(tokeniser, afi):
+    ip, length = parse_ip_prefix(tokeniser())
+    
+    value = tokeniser()
+    if "rd" == value:
+        rd = route_distinguisher(tokeniser)
+    else:
+        raise Exception("expect rd, but received '%s'" % value)
+
+    value = tokeniser()
+    if "teid" == value:
+        teid = tokeniser()
+    else:
+        raise Exception("expect teid, but received '%s'" % value)
+
+    value = tokeniser()
+    if "qfi" == value:
+        qfi = tokeniser()
+    else:
+        raise Exception("expect qfi, but received '%s'" % value)
+
+    value = tokeniser()
+    if "endpoint" == value:
+        if afi == AFI.ipv4:
+            endpoint_ip = IPv4.unpack(IPv4.pton(tokeniser()))
+            endpoint_ip_len = 32
+        elif afi == AFI.ipv6:
+            endpoint_ip = IPv6.unpack(IPv6.pton(tokeniser()))
+            endpoint_ip_len = 128
+        else:
+            raise Exception("unexpect afi: %s" % afi)
+    else:
+        raise Exception("expect endpoint, but received '%s'" % value)
+
+    return Type1SessionTransformedRoute(
+        rd=rd,
+        ipprefix_len=int(length),
+        ipprefix=ip,
+        teid=int(teid),
+        qfi=int(qfi),
+        afi=afi,
+        endpoint_ip=endpoint_ip,
+        endpoint_ip_len=int(endpoint_ip_len),
+    )
+
+# 'mup-t2st <endpoint address> rd <rd> teid <teid>',
+def srv6_mup_t2st(tokeniser, afi):
+    if afi == AFI.ipv4:
+        endpoint_ip = IPv4.unpack(IPv4.pton(tokeniser()))
+        endpoint_ip_len = 32
+    elif afi == AFI.ipv6:
+        endpoint_ip = IPv6.unpack(IPv6.pton(tokeniser()))
+        endpoint_ip_len = 128
+    else:
+        raise Exception("unexpect afi: %s" % afi)
+    
+    value = tokeniser()
+    if "rd" == value:
+        rd = route_distinguisher(tokeniser)
+    else:
+        raise Exception("expect rd, but received '%s'" % value)
+
+    value = tokeniser()
+    if "teid" == value:
+        teid = tokeniser()
+    else:
+        raise Exception("expect teid, but received '%s'" % value)
+
+    return Type2SessionTransformedRoute(
+        rd=rd,
+        endpoint_ip_len=int(endpoint_ip_len),
+        endpoint_ip=endpoint_ip,
+        teid=int(teid),
+        afi=afi,
+    )
+
+# 'mup-ext <segid2>:<segid4>'
+def srv6_mup_ext(tokeniser):
+    data = tokeniser()
+    separator = data.split(":")
+    if len(separator) != 2:
+        raise ValueError('invalid format')
+
+    return MUPExtendedCommunity(int(separator[0]), int(separator[1]))
