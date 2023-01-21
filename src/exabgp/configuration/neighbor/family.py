@@ -23,9 +23,11 @@ class ParseFamily(Section):
         '   ipv4 multicast;\n'
         '   ipv4 nlri-mpls;\n'
         '   ipv4 mpls-vpn;\n'
+        '   ipv4 mup;\n'
         '   ipv4 flow;\n'
         '   ipv4 flow-vpn;\n'
         '   ipv6 unicast;\n'
+        '   ipv6 mup;\n'
         '   ipv6 flow;\n'
         '   ipv6 flow-vpn;\n'
         '   l2vpn vpls;\n'
@@ -41,11 +43,13 @@ class ParseFamily(Section):
             'mpls-vpn': (AFI.ipv4, SAFI.mpls_vpn),
             'flow': (AFI.ipv4, SAFI.flow_ip),
             'flow-vpn': (AFI.ipv4, SAFI.flow_vpn),
+            'mup': (AFI.ipv4, SAFI.mup),
         },
         'ipv6': {
             'unicast': (AFI.ipv6, SAFI.unicast),
             'nlri-mpls': (AFI.ipv6, SAFI.nlri_mpls),
             'mpls-vpn': (AFI.ipv6, SAFI.mpls_vpn),
+            'mup': (AFI.ipv6, SAFI.mup),
             'flow': (AFI.ipv6, SAFI.flow_ip),
             'flow-vpn': (AFI.ipv6, SAFI.flow_vpn),
         },

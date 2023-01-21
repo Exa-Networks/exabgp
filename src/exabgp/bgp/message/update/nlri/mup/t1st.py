@@ -1,0 +1,161 @@
+"""
+t1st.py
+
+Created by Takeru Hayasaka on 2023-01-21.
+Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
+"""
+
+from exabgp.protocol.ip import IP
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.protocol.family import AFI
+
+from exabgp.bgp.message.update.nlri.mup.nlri import MUP
+from struct import pack
+
+
+# +-----------------------------------+
+# |           RD  (8 octets)          |
+# +-----------------------------------+
+# |      Prefix Length (1 octet)      |
+# +-----------------------------------+
+# |         Prefix (variable)         |
+# +-----------------------------------+
+# | Architecture specific (variable)  |
+# +-----------------------------------+
+
+# 3gpp-5g Specific BGP Type 1 ST Route
+# +-----------------------------------+
+# |          TEID (4 octets)          |
+# +-----------------------------------+
+# |          QFI (1 octet)            |
+# +-----------------------------------+
+# | Endpoint Address Length (1 octet) |
+# +-----------------------------------+
+# |    Endpoint Address (variable)    |
+# +-----------------------------------+
+
+
+@MUP.register
+class Type1SessionTransformedRoute(MUP):
+    ARCHTYPE = 1
+    CODE = 3
+    NAME = "Type1SessionTransformedRoute"
+    SHORT_NAME = "T1ST"
+
+    def __init__(
+        self,
+        rd,
+        ipprefix_len,
+        ipprefix,
+        teid,
+        qfi,
+        endpoint_ip_len,
+        endpoint_ip,
+        afi,
+        packed=None,
+    ):
+        MUP.__init__(self, afi)
+        self.rd = rd
+        self.ipprefix_len = ipprefix_len
+        self.ipprefix = ipprefix
+        self.teid = teid
+        self.qfi = qfi
+        self.endpoint_ip_len = endpoint_ip_len
+        self.endpoint_ip = endpoint_ip
+        self._pack(packed)
+
+    def index(self):
+        return MUP.index(self)
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, Type1SessionTransformedRoute)
+            and self.ARCHTYPE == other.ARCHTYPE
+            and self.CODE == other.CODE
+            and self.rd == other.rd
+            and self.ipprefix_len == other.ipprefix_len
+            and self.ipprefix == other.ipprefix
+            and self.teid == other.teid
+            and self.qfi == other.qfi
+            and self.endpoint_ip_len == other.endpoint_ip_len
+            and self.endpoint_ip == other.endpoint_ip
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __str__(self):
+        return "%s:%s:%s%s:%s:%s:%s:%s" % (
+            self._prefix(),
+            self.rd._str(),
+            self.ipprefix,
+            "/%d" % self.ipprefix_len,
+            self.teid,
+            self.qfi,
+            self.endpoint_ip_len,
+            self.endpoint_ip,
+        )
+
+    def __hash__(self):
+        return hash(
+            (
+                self.rd,
+                self.ipprefix_len,
+                self.ipprefix,
+                self.teid,
+                self.qfi,
+                self.endpoint_ip_len,
+                self.endpoint_ip,
+            )
+        )
+
+    def _pack(self, packed=None):
+        if self._packed:
+            return self._packed
+
+        if packed:
+            self._packed = packed
+            return packed
+
+        # fmt: off
+        self._packed = (
+            self.rd.pack()
+            + pack('!B',self.ipprefix_len)
+            + self.ipprefix.pack()
+            + pack('!IB',self.teid, self.qfi)
+            + pack('!B',self.endpoint_ip_len)
+            + self.endpoint_ip.pack()
+        )
+        # fmt: on
+        return self._packed
+
+    @classmethod
+    def unpack(cls, data, afi):
+        rd = RouteDistinguisher.unpack(data[:8])
+        ipprefix_len = data[8]
+        size = 4 if afi != AFI.ipv6 else 16
+        ipprefix = IP.unpack(data[9: 9 + size])
+        size += 9
+        teid = int.from_bytes(data[size: size + 3], "big")
+        size += 4
+        qfi = data[size]
+        size += 1
+        endpoint_ip_len = data[size]
+        size += 1
+        endpoint_ip = IP.unpack(data[size:])
+        return cls(rd, ipprefix_len, ipprefix, teid, qfi, endpoint_ip_len, endpoint_ip, afi)
+
+    def json(self, compact=None):
+        content = ' "arch": %d, ' % self.ARCHTYPE
+        content += '"code": %d, ' % self.CODE
+        content += '"parsed": true, '
+        content += '"raw": "%s", ' % self._raw()
+        content += '"name": "%s", ' % self.NAME
+        content += '%s, ' % self.rd.json()
+        content += '"ipprefix len"%d, ' % self.ipprefix_len
+        content += '"ipprefix": "%s"' % str(self.ipprefix)
+        content += '"teid": "%s"' % str(self.teid)
+        content += '"qfi": "%s"' % str(self.qfi)
+        content += '"endpoint_ip len"%d, ' % self.endpoint_ip_len
+        content += '"endpoint_ip": "%s"' % str(self.endpoint_ip)
+        return '{%s }' % content

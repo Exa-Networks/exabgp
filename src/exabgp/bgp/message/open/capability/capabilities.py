@@ -62,6 +62,8 @@ class Capabilities(dict):
         (AFI.ipv6, SAFI.nlri_mpls),
         (AFI.ipv4, SAFI.mpls_vpn),
         (AFI.ipv6, SAFI.mpls_vpn),
+        (AFI.ipv4, SAFI.mup),
+        (AFI.ipv6, SAFI.mup),
     ]
 
     _NEXTHOP = [
