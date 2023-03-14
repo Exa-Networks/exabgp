@@ -44,6 +44,9 @@ Version 5.0.0:
  * Feature: add support for setting BGP path ID for healthcheck.py advertised routes
  * Feature: allow routes advertised by healthcheck.py to be filtered to specific neighbors
  * Compatibility: now using 'daemon' instead of 'syslog' as syslog facility
+ * Feature: Support for BGP-MUP SAFI and Extended Community
+   defined in draft-mpmz-bess-mup-safi-02
+   patch: Takeru Hayasaka
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
@@ -85,7 +88,7 @@ Version 4.2.1:
  * Feature: support for single announcement for the healthcheck
 
 Version 4.2.0:
- * Feature: Support additional sub-type of BGP-Prefix-SID for SRv6-VPN 
+ * Feature: Support additional sub-type of BGP-Prefix-SID for SRv6-VPN
    patch by: Hiroki SHIROKURA
  * Fix: issue with pypi release (can not pip install)
    reported by: Thomas Faivre

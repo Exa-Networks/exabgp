@@ -40,3 +40,4 @@ from exabgp.bgp.message.update.attribute.community.extended.chso import Consiste
 from exabgp.bgp.message.update.attribute.community.extended.rt_record import RTRecord
 from exabgp.bgp.message.update.attribute.community.extended.flowspec_scope import InterfaceSet
 from exabgp.bgp.message.update.attribute.community.extended.mac_mobility import MacMobility
+from exabgp.bgp.message.update.attribute.community.extended.mup import MUPExtendedCommunity
