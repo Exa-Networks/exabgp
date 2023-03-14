@@ -113,11 +113,10 @@ class Type2SessionTransformedRoute(MUP):
     def json(self, compact=None):
         content = ' "arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += '"parsed": true, '
         content += '"raw": "%s", ' % self._raw()
         content += '"name": "%s", ' % self.NAME
-        content += '%s, ' % self.rd.json()
-        content += '"endpoint_ip len"%d, ' % self.endpoint_ip_len
-        content += '"endpoint_ip": "%s"' % str(self.endpoint_ip)
+        content += '"rd": "%s", ' % self.rd.json()
+        content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
+        content += '"endpoint_ip": "%s", ' % str(self.endpoint_ip)
         content += '"teid": "%s"' % str(self.teid)
-        return '{%s }' % content
+        return '{ %s }' % content

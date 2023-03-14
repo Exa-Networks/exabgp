@@ -146,16 +146,15 @@ class Type1SessionTransformedRoute(MUP):
         return cls(rd, ipprefix_len, ipprefix, teid, qfi, endpoint_ip_len, endpoint_ip, afi)
 
     def json(self, compact=None):
-        content = ' "arch": %d, ' % self.ARCHTYPE
+        content = '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += '"parsed": true, '
         content += '"raw": "%s", ' % self._raw()
         content += '"name": "%s", ' % self.NAME
-        content += '%s, ' % self.rd.json()
-        content += '"ipprefix len"%d, ' % self.ipprefix_len
-        content += '"ipprefix": "%s"' % str(self.ipprefix)
-        content += '"teid": "%s"' % str(self.teid)
-        content += '"qfi": "%s"' % str(self.qfi)
-        content += '"endpoint_ip len"%d, ' % self.endpoint_ip_len
+        content += '"rd": "%s", ' % self.rd.json()
+        content += '"ipprefix_len": %d, ' % self.ipprefix_len
+        content += '"ipprefix": "%s", ' % str(self.ipprefix)
+        content += '"teid": "%s", ' % str(self.teid)
+        content += '"qfi": "%s", ' % str(self.qfi)
+        content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
         content += '"endpoint_ip": "%s"' % str(self.endpoint_ip)
-        return '{%s }' % content
+        return '{ %s }' % content

@@ -114,4 +114,4 @@ class GenericMUP(MUP):
             return packed
 
     def json(self, compact=None):
-        return '{ "arch": %d, "code": %d, "parsed": false, "raw": "%s" }' % (self.ARCHTYPE, self.CODE, self._raw())
+        return '{ "arch": %d, "code": %d, "raw": "%s" }' % (self.ARCHTYPE, self.CODE, self._raw())

@@ -97,12 +97,11 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return cls(rd, ipprefix_len, ipprefix, afi)
 
     def json(self, compact=None):
-        content = ' "arch": %d, ' % self.ARCHTYPE
+        content = '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += '"parsed": true, '
         content += '"raw": "%s", ' % self._raw()
         content += '"name": "%s", ' % self.NAME
-        content += '%s, ' % self.rd.json()
-        content += '"ipprefix len"%d, ' % self.ipprefix_len
+        content += '"rd": "%s", ' % self.rd.json()
+        content += '"ipprefix_len": %d, ' % self.ipprefix_len
         content += '"ipprefix": "%s"' % str(self.ipprefix)
-        return '{%s }' % content
+        return '{ %s }' % content
