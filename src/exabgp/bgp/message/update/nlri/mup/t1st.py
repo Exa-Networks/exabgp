@@ -8,6 +8,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
+from exabgp.protocol.family import Family
 
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from struct import pack
@@ -64,9 +65,6 @@ class Type1SessionTransformedRoute(MUP):
         self.endpoint_ip = endpoint_ip
         self._pack(packed)
 
-    def index(self):
-        return MUP.index(self)
-
     def __eq__(self, other):
         return (
             isinstance(other, Type1SessionTransformedRoute)
@@ -95,6 +93,18 @@ class Type1SessionTransformedRoute(MUP):
             self.endpoint_ip_len,
             self.endpoint_ip,
         )
+
+    def pack_index(self):
+        # removed teid, qfi, endpointip
+        packed = (
+            self.rd.pack()
+            + pack('!B',self.ipprefix_len)
+            + self.ipprefix.pack()
+        )
+        return pack('!BHB', self.ARCHTYPE, self.CODE, len(packed)) + packed
+
+    def index(self):
+        return Family.index(self) + self.pack_index()
 
     def __hash__(self):
         return hash(
