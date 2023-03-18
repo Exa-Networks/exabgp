@@ -136,7 +136,7 @@ class Type1SessionTransformedRoute(MUP):
         size = 4 if afi != AFI.ipv6 else 16
         ipprefix = IP.unpack(data[9: 9 + size])
         size += 9
-        teid = int.from_bytes(data[size: size + 3], "big")
+        teid = int.from_bytes(data[size: size + 4], "big")
         size += 4
         qfi = data[size]
         size += 1
