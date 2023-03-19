@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import time
+
+announce_unicast = 'announce ipv4 unicast 10.0.1.0/24 next-hop 10.0.1.254 local-preference 200'
+withdraw_unicast = 'withdraw ipv4 unicast 10.0.1.0/24 next-hop 10.0.1.254 local-preference 200'
+announce_mup = 'announce ipv4 mup mup-isd 10.0.1.0/24 rd 100:100 next-hop 2001::1 extended-community [ target:10:10 ] bgp-prefix-sid-srv6 ( l3-service 2001:db8:1:1:: 0x48 [64,24,16,0,0,0] )'
+withdraw_mup = 'withdraw ipv4 mup mup-isd 10.0.1.0/24 rd 100:100 next-hop 2001::1 extended-community [ target:10:10 ] bgp-prefix-sid-srv6 ( l3-service 2001:db8:1:1:: 0x48 [64,24,16,0,0,0] )'
+
+messages = [
+    announce_unicast,
+    announce_mup,
+    withdraw_unicast,
+    withdraw_mup,
+]
+
+time.sleep(3)
+
+while messages:
+    message = messages.pop(0)
+    sys.stdout.write(message + '\n')
+    sys.stdout.flush()
+    time.sleep(1)
+
+try:
+    now = time.time()
+    while os.getppid() != 1 and time.time() < now + 5:
+        line = sys.stdin.readline().strip()
+        if not line or 'shutdown' in line:
+            break
+        time.sleep(1)
+except IOError:
+    pass
