@@ -59,6 +59,36 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
+    def api_announce_v4(self, command):
+        action, line = command.split(' ', 1)
+        _, line = line.split(' ', 1)
+
+        self.configuration.static.clear()
+        if not self.configuration.partial('ipv4', line, action):
+            return []
+
+        if self.configuration.scope.location():
+            return []
+
+        self.configuration.scope.to_context()
+        changes = self.configuration.scope.pop_routes()
+        return changes
+
+    def api_announce_v6(self, command):
+        action, line = command.split(' ', 1)
+        _, line = line.split(' ', 1)
+
+        self.configuration.static.clear()
+        if not self.configuration.partial('ipv6', line, action):
+            return []
+
+        if self.configuration.scope.location():
+            return []
+
+        self.configuration.scope.to_context()
+        changes = self.configuration.scope.pop_routes()
+        return changes
+
     def api_flow(self, command):
         action, flow, line = command.split(' ', 2)
 

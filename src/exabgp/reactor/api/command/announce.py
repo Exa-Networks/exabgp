@@ -512,3 +512,175 @@ def announce_operational(self, reactor, service, command):
         self.log_failure('issue parsing the command')
         reactor.processes.answer_error(service)
         return False
+
+
+@Command.register('text', 'announce ipv4')
+def announce_ipv4(self, reactor, service, line):
+    def callback():
+        try:
+            descriptions, command = extract_neighbors(line)
+            peers = match_neighbors(reactor.peers(service), descriptions)
+            if not peers:
+                self.log_failure('no neighbor matching the command : %s' % command)
+                reactor.processes.answer_error(service)
+                yield True
+                return
+
+            changes = self.api_announce_v4(command)
+            if not changes:
+                self.log_failure('command could not parse ipv4 in : %s' % command)
+                reactor.processes.answer_error(service)
+                yield True
+                return
+
+            for change in changes:
+                change.nlri.action = Action.ANNOUNCE
+                reactor.configuration.inject_change(peers, change)
+                self.log_message(
+                    'ipv4 added to %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
+                )
+                yield False
+
+            reactor.processes.answer_done(service)
+        except ValueError:
+            self.log_failure('issue parsing the ipv4')
+            reactor.processes.answer_error(service)
+            yield True
+        except IndexError:
+            self.log_failure('issue parsing the ipv4')
+            reactor.processes.answer_error(service)
+            yield True
+
+    reactor.asynchronous.schedule(service, line, callback())
+    return True
+
+@Command.register('text', 'withdraw ipv4')
+def withdraw_ipv4(self, reactor, service, line):
+    def callback():
+        try:
+            descriptions, command = extract_neighbors(line)
+            peers = match_neighbors(reactor.peers(service), descriptions)
+            if not peers:
+                self.log_failure('no neighbor matching the command : %s' % command)
+                reactor.processes.answer_error(service)
+                yield True
+                return
+
+            changes = self.api_announce_v4(command)
+
+            if not changes:
+                self.log_failure('command could not parse ipv4 in : %s' % command)
+                reactor.processes.answer_error(service)
+                yield True
+                return
+
+            for change in changes:
+                change.nlri.action = Action.WITHDRAW
+                if reactor.configuration.inject_change(peers, change):
+                    self.log_message(
+                        'ipv4 removed from %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
+                    )
+                else:
+                    self.log_failure(
+                        'ipv4 not found on %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
+                    )
+                yield False
+
+            reactor.processes.answer_done(service)
+        except ValueError:
+            self.log_failure('issue parsing the ipv4')
+            reactor.processes.answer_error(service)
+            yield True
+        except IndexError:
+            self.log_failure('issue parsing the ipv4')
+            reactor.processes.answer_error(service)
+            yield True
+
+    reactor.asynchronous.schedule(service, line, callback())
+    return True
+
+
+@Command.register('text', 'announce ipv6')
+def announce_ipv6(self, reactor, service, line):
+    def callback():
+        try:
+            descriptions, command = extract_neighbors(line)
+            peers = match_neighbors(reactor.peers(service), descriptions)
+            if not peers:
+                self.log_failure('no neighbor matching the command : %s' % command)
+                reactor.processes.answer_error(service)
+                yield True
+                return
+
+            changes = self.api_announce_v6(command)
+            if not changes:
+                self.log_failure('command could not parse ipv6 in : %s' % command)
+                reactor.processes.answer_error(service)
+                yield True
+                return
+
+            for change in changes:
+                change.nlri.action = Action.ANNOUNCE
+                reactor.configuration.inject_change(peers, change)
+                self.log_message(
+                    'ipv6 added to %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
+                )
+                yield False
+
+            reactor.processes.answer_done(service)
+        except ValueError:
+            self.log_failure('issue parsing the ipv6')
+            reactor.processes.answer_error(service)
+            yield True
+        except IndexError:
+            self.log_failure('issue parsing the ipv6')
+            reactor.processes.answer_error(service)
+            yield True
+
+    reactor.asynchronous.schedule(service, line, callback())
+    return True
+
+@Command.register('text', 'withdraw ipv6')
+def withdraw_ipv6(self, reactor, service, line):
+    def callback():
+        try:
+            descriptions, command = extract_neighbors(line)
+            peers = match_neighbors(reactor.peers(service), descriptions)
+            if not peers:
+                self.log_failure('no neighbor matching the command : %s' % command)
+                reactor.processes.answer_error(service)
+                yield True
+                return
+
+            changes = self.api_announce_v6(command)
+
+            if not changes:
+                self.log_failure('command could not parse ipv6 in : %s' % command)
+                reactor.processes.answer_error(service)
+                yield True
+                return
+
+            for change in changes:
+                change.nlri.action = Action.WITHDRAW
+                if reactor.configuration.inject_change(peers, change):
+                    self.log_message(
+                        'ipv6 removed from %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
+                    )
+                else:
+                    self.log_failure(
+                        'ipv6 not found on %s : %s' % (', '.join(peers) if peers else 'all peers', change.extensive())
+                    )
+                yield False
+
+            reactor.processes.answer_done(service)
+        except ValueError:
+            self.log_failure('issue parsing the ipv6')
+            reactor.processes.answer_error(service)
+            yield True
+        except IndexError:
+            self.log_failure('issue parsing the ipv6')
+            reactor.processes.answer_error(service)
+            yield True
+
+    reactor.asynchronous.schedule(service, line, callback())
+    return True
