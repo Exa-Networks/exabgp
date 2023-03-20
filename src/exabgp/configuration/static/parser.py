@@ -445,6 +445,7 @@ _HEADER = {
     'l2info':   bytes([0x80, 0x0A]),
     'redirect-to-nexthop': bytes([0x08, 0x00]),
     'bandwidth': bytes([0x40, 0x04]),
+    'mup': bytes([0x0C, 0x00]),
 }
 
 # fmt: off
@@ -456,6 +457,7 @@ _ENCODE = {
     'redirect': 'HL',
     'l2info':   'BBHH',
     'bandwidth': 'Hf',
+    'mup': 'HL',
 }
 # fmt: on
 
