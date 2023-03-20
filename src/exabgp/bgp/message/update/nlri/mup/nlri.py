@@ -85,7 +85,7 @@ class MUP(NLRI):
         end = length + 4
         key = "%s:%s" % (arch, code)
         if key in cls.registered:
-            klass = cls.registered[key].unpack(bgp[4 : end + 1], afi)
+            klass = cls.registered[key].unpack(bgp[4 : end], afi)
         else:
             klass = GenericMUP(arch, afi, code, bgp[4 : end])
         klass.CODE = code
