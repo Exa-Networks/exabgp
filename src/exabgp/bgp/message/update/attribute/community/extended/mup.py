@@ -27,7 +27,6 @@ class MUPExtendedCommunity(ExtendedCommunity):
     # Direct-Type Segment Identifier type
     COMMUNITY_SUBTYPE = 0x00
     LIMIT = 4
-    DESCRIPTION = 'MUPExtendedCommunity'
 
     def __init__(self, sgid2, sgid4, transitive=True, community=None):
         self.sgid2 = sgid2
@@ -50,7 +49,7 @@ class MUPExtendedCommunity(ExtendedCommunity):
         return hash((self.sgid2, self.sgid4))
 
     def __repr__(self):
-        return "%s:%d:%d" % (self.DESCRIPTION, self.sgid2, self.sgid4)
+        return "%s:%d:%d" % ("mup", self.sgid2, self.sgid4)
 
     @classmethod
     def unpack(cls, data):

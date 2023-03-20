@@ -28,7 +28,6 @@ from exabgp.bgp.message.update.nlri.mup import InterworkSegmentDiscoveryRoute
 from exabgp.bgp.message.update.nlri.mup import DirectSegmentDiscoveryRoute
 from exabgp.bgp.message.update.nlri.mup import Type1SessionTransformedRoute
 from exabgp.bgp.message.update.nlri.mup import Type2SessionTransformedRoute
-from exabgp.bgp.message.update.attribute.community.extended.mup import MUPExtendedCommunity
 
 
 def label(tokeniser):
@@ -211,14 +210,13 @@ def parse_ip_prefix(tokeninser):
 # 'mup-isd <ip prefix> rd <rd>',
 def srv6_mup_isd(tokeniser, afi):
     ip, length = parse_ip_prefix(tokeniser())
-    
+
     value = tokeniser()
     if "rd" == value:
         rd = route_distinguisher(tokeniser)
     else:
         raise Exception("expect rd, but received '%s'" % value)
- 
-    # raise Exception("check")
+
     return InterworkSegmentDiscoveryRoute(
         rd=rd,
         ipprefix_len=int(length),
@@ -249,7 +247,7 @@ def srv6_mup_dsd(tokeniser, afi):
 # 'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint>',
 def srv6_mup_t1st(tokeniser, afi):
     ip, length = parse_ip_prefix(tokeniser())
-    
+
     value = tokeniser()
     if "rd" == value:
         rd = route_distinguisher(tokeniser)
@@ -302,7 +300,7 @@ def srv6_mup_t2st(tokeniser, afi):
         endpoint_ip_len = 128
     else:
         raise Exception("unexpect afi: %s" % afi)
-    
+
     value = tokeniser()
     if "rd" == value:
         rd = route_distinguisher(tokeniser)
@@ -322,12 +320,3 @@ def srv6_mup_t2st(tokeniser, afi):
         teid=int(teid),
         afi=afi,
     )
-
-# 'mup-ext <segid2>:<segid4>'
-def srv6_mup_ext(tokeniser):
-    data = tokeniser()
-    separator = data.split(":")
-    if len(separator) != 2:
-        raise ValueError('invalid format')
-
-    return MUPExtendedCommunity(int(separator[0]), int(separator[1]))
