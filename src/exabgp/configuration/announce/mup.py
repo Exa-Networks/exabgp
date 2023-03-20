@@ -23,9 +23,7 @@ from exabgp.configuration.static.mpls import srv6_mup_isd
 from exabgp.configuration.static.mpls import srv6_mup_dsd
 from exabgp.configuration.static.mpls import srv6_mup_t1st
 from exabgp.configuration.static.mpls import srv6_mup_t2st
-from exabgp.configuration.static.mpls import srv6_mup_ext
 from exabgp.configuration.static.parser import extended_community
-
 
 from exabgp.configuration.announce import ParseAnnounce
 
@@ -37,8 +35,7 @@ class AnnounceMup(ParseAnnounce):
         'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint>',
         'mup-t2st <endpoint address> rd <rd> teid <teid>',
         'next-hop <ip>',
-        'extended-community target:<16 bits number>:<ipv4 formated number>',
-        'mup-ext <segid2>:<segid4>',
+        'extended-community [ mup:<16 bits number>:<ipv4 formated number> target:<16 bits number>:<ipv4 formated number> ]',
         'bgp-prefix-sid-srv6 ( l3-service <ipv6> <behavior> [<LBL>,<LNL>,<FL>,<AL>,<Tpose-Len>,<Tpose-Offset>])',
     ]
 
@@ -47,14 +44,12 @@ class AnnounceMup(ParseAnnounce):
     known = {
         'label': label,
         'bgp-prefix-sid-srv6': prefix_sid_srv6,
-        'mup-ext': srv6_mup_ext,
         'next-hop': next_hop,
         'extended-community': extended_community,
     }
     action = {
         'label': 'nlri-set',
         'next-hop': 'nexthop-and-attribute',
-        'mup-ext': 'attribute-add',
         'bgp-prefix-sid-srv6': 'attribute-add',
         'extended-community': 'attribute-add',
     }
