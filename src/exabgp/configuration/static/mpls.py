@@ -309,7 +309,15 @@ def srv6_mup_t2st(tokeniser, afi):
 
     value = tokeniser()
     if "teid" == value:
-        teid = tokeniser()
+        value = tokeniser()
+        parse_teid = value.split("/")
+        if len(parse_teid) != 2:
+            raise Exception("unexpect teid format, this expect format <teid>/<length, expect 0 ~ 32")
+        if not (0 <= int(parse_teid[1]) <= 32):
+            raise Exception("unexpect teid format, this expect format <teid>/<length, expect 0 ~ 32>")
+
+        teid = int(parse_teid[0])
+        teid_len = int(parse_teid[1])
     else:
         raise Exception("expect teid, but received '%s'" % value)
 
@@ -317,6 +325,7 @@ def srv6_mup_t2st(tokeniser, afi):
         rd=rd,
         endpoint_ip_len=int(endpoint_ip_len),
         endpoint_ip=endpoint_ip,
-        teid=int(teid),
+        teid=teid,
+        teid_len=teid_len,
         afi=afi,
     )
