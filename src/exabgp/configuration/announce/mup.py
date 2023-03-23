@@ -102,7 +102,7 @@ def mup(tokeniser, afi, safi):
         elif action == 'attribute-add':
             change.attributes.add(AnnounceMup.known[command](tokeniser))
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceMup.known[command](tokeniser)
+            nexthop, attribute = AnnounceMup.known[command](tokeniser, afi)
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         elif action == 'nop':
