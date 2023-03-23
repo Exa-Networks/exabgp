@@ -127,11 +127,17 @@ class Type1SessionTransformedRoute(MUP):
             self._packed = packed
             return packed
 
+        offset = self.ipprefix_len // 8
+        remainder = self.ipprefix_len % 8
+        if remainder != 0:
+            offset += 1
+
+        ipprefix_packed = self.ipprefix.pack()
         # fmt: off
         self._packed = (
             self.rd.pack()
             + pack('!B',self.ipprefix_len)
-            + self.ipprefix.pack()
+            + ipprefix_packed[0: offset]
             + pack('!IB',self.teid, self.qfi)
             + pack('!B',self.endpoint_ip_len)
             + self.endpoint_ip.pack()
@@ -143,8 +149,19 @@ class Type1SessionTransformedRoute(MUP):
     def unpack(cls, data, afi):
         rd = RouteDistinguisher.unpack(data[:8])
         ipprefix_len = data[8]
-        size = 4 if afi != AFI.ipv6 else 16
-        ipprefix = IP.unpack(data[9: 9 + size])
+        ip_offset = ipprefix_len // 8
+        ip_remainder = ipprefix_len % 8
+        if ip_remainder != 0:
+            ip_offset += 1
+
+        ip = data[9: 9 + ip_offset]
+        ip_size = 4 if afi != AFI.ipv6 else 16
+        ip_padding = ip_size - ip_offset
+        if ip_padding != 0 and 0 < ip_padding:
+            ip += bytes(ip_padding)
+
+        size = ip_offset
+        ipprefix = IP.unpack(ip)
         size += 9
         teid = int.from_bytes(data[size: size + 4], "big")
         size += 4
