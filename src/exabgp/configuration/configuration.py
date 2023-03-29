@@ -64,6 +64,7 @@ class _Configuration(object):
             if neighbor_name in peers:
                 neighbor = self.neighbors[neighbor_name]
                 if change.nlri.family() in neighbor.families():
+                    # remove_self may well have side effects on change
                     neighbor.rib.outgoing.add_to_rib(neighbor.remove_self(change))
                 else:
                     log.error('the route family is not configured on neighbor', 'configuration')
