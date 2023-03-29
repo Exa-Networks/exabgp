@@ -300,8 +300,6 @@ IPv4.register()
 
 
 class IPv6(IP):
-    SELF = False
-
     # lower case to match the class Address API
     afi = AFI.ipv6
 
