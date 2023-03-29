@@ -234,24 +234,28 @@ class ParseNeighbor(Section):
                 log.debug('route-refresh requested, enabling adj-rib-out', 'configuration')
 
     def _post_routes(self, neighbor, local):
+        # NOTE: this may modify change but does not matter as want to modified
+
         neighbor.changes = []
-        neighbor.changes.extend(self.scope.pop_routes())
+        for change in self.scope.pop_routes():
+            neighbor.changes.append(neighbor.remove_self(change))
 
         # old format
         for section in ('static', 'l2vpn', 'flow'):
             routes = local.get(section, {}).get('routes', [])
             for route in routes:
                 route.nlri.action = Action.ANNOUNCE
-            neighbor.changes.extend(routes)
+                neighbor.changes.append(neighbor.remove_self(route))
 
         routes = local.get('routes', [])
         for route in routes:
             route.nlri.action = Action.ANNOUNCE
-        neighbor.changes.extend(routes)
+            neighbor.changes.append(neighbor.remove_self(route))
 
     def _init_neighbor(self, neighbor, local):
         families = neighbor.families()
         for change in neighbor.changes:
+            change = neighbor.remove_self(change)
             if change.nlri.family() in families:
                 # This add the family to neighbor.families()
                 neighbor.rib.outgoing.add_to_rib_watchdog(change)

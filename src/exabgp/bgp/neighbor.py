@@ -18,6 +18,9 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.open.holdtime import HoldTime
 
+from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.attribute import NextHop
+
 from exabgp.rib import RIB
 
 
@@ -456,7 +459,7 @@ class Neighbor(dict):
         # '\t\tsend {\n%s\t\t}\n' % send if send else '',
         return returned.replace('\t', '  ')
 
-    def self(self, afi):
+    def ip_self(self, afi):
         if afi == self['local-address'].afi:
             return self['local-address']
 
@@ -468,6 +471,15 @@ class Neighbor(dict):
             'use of "next-hop self": the route (%s) does not have the same family as the BGP tcp session (%s)'
             % (afi, self['local-address'].afi)
         )
+
+    def remove_self(self, change):
+        if not change.nlri.nexthop.SELF:
+            return change
+        neighbor_self = self.ip_self(change.nlri.afi)
+        change.nlri.nexthop = neighbor_self
+        if Attribute.CODE.NEXT_HOP in change.attributes:
+            change.attributes[Attribute.CODE.NEXT_HOP] = NextHop(str(neighbor_self),neighbor_self.pack())
+        return change
 
     def __str__(self):
         return self.string(False)

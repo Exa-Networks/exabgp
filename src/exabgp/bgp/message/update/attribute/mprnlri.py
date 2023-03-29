@@ -63,6 +63,7 @@ class MPRNLRI(Attribute, Family):
                 _, rd_size = Family.size.get(self.family(), (0, 0))
                 nh_rd = bytes([0]) * rd_size if rd_size else b''
                 try:
+                    # TODO: remove nlri.afi as it should be in the nexthop already
                     nexthop = nh_rd + nlri.nexthop.ton(negotiated, nlri.afi)
                 except TypeError:
                     # we could not match "next-hop self" with the BGP AFI of the BGP sesion

@@ -172,7 +172,7 @@ class Negotiated(object):
         return None
 
     def nexthopself(self, afi):
-        return self.neighbor.self(afi)
+        return self.neighbor.ip_self(afi)
 
 
 # =================================================================== RequirePath
