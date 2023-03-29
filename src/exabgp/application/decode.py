@@ -16,20 +16,7 @@ from exabgp.reactor.loop import Reactor
 from exabgp.logger import log
 
 
-conf_all = """\
-neighbor 127.0.0.1 {
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as 65533;
-    peer-as 65533;
-
-    family {
-        all;
-    }
-}
-"""
-
-conf_none = """\
+conf_template = """\
 neighbor 127.0.0.1 {
     router-id 10.0.0.2;
     local-address 127.0.0.1;
@@ -38,6 +25,10 @@ neighbor 127.0.0.1 {
 
     family {
         [families];
+    }
+
+    capability {
+        [path-information]
     }
 }
 """
@@ -54,7 +45,8 @@ def setargs(sub):
     sub.add_argument('-d', '--debug', help='start the python debugger errors', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on fault', action='store_true')
     sub.add_argument('-c', '--configuration', help='configuration file(s)', type=str)
-    sub.add_argument('-f', '--family', help='family expected', type=str)
+    sub.add_argument('-f', '--family', help='family expected (format like "ipv4 unicast")', type=str)
+    sub.add_argument('-i', '--path-information', help='decode path-information', action='store_true')
     sub.add_argument('payload', help='the BGP payload in hexadecimal', type=str)
     # fmt:on
 
@@ -97,6 +89,8 @@ def cmdline(cmdarg):
     log.init(env)
     trace_interceptor(env.debug.pdb)
 
+    conf = conf_template.replace('[path-information]', 'add-path send/receive;' if cmdarg.path_information else '')
+
     sanitized = ''.join(cmdarg.payload).replace(':', '').replace(' ', '')
     if cmdarg.configuration:
         configuration = Configuration([getconf(cmdarg.configuration)])
@@ -109,11 +103,12 @@ def cmdline(cmdarg):
             sys.exit(1)
         families_pair = [families[n : n + 2] for n in range(0, len(families), 2)]
         families_text = ';'.join([f'{a} {s}' for a, s in families_pair])
-        conf = conf_none.replace('[families]', families_text)
+        conf = conf.replace('[families]', families_text)
         configuration = Configuration([conf], text=True)
 
     else:
-        configuration = Configuration([conf_all], text=True)
+        conf = conf.replace('[families]', 'all')
+        configuration = Configuration([conf], text=True)
 
     valid_nlri = Reactor(configuration).display(sanitized, cmdarg.nlri)
     if valid_nlri:

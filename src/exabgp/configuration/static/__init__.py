@@ -29,6 +29,7 @@ from exabgp.rib.change import Change
 
 from exabgp.configuration.static.mpls import label
 from exabgp.configuration.static.mpls import route_distinguisher
+from exabgp.configuration.static.parser import path_information
 
 
 def _check_true(change, afi):
@@ -89,6 +90,10 @@ def route(tokeniser):
             nlri.rd = route_distinguisher(tokeniser)
             continue
 
+        if command == 'path-information':
+            nlri.path_info = path_information(tokeniser)
+            continue
+
         action = ParseStatic.action.get(command, '')
 
         if action == 'attribute-add':
@@ -126,6 +131,7 @@ def attributes(tokeniser):
 
     labels = None
     rd = None
+    path = None
 
     while True:
         command = tokeniser()
@@ -138,6 +144,10 @@ def attributes(tokeniser):
 
         if command == 'label':
             labels = label(tokeniser)
+            continue
+
+        if command == 'path-information':
+            path = path_information(tokeniser)
             continue
 
         if command == 'rd' or command == 'route-distinguisher':
@@ -160,6 +170,7 @@ def attributes(tokeniser):
             raise ValueError('unknown command "%s"' % command)
 
     changes = []
+
     while True:
         peeked_nlri = tokeniser.peek()
         if not peeked_nlri:
@@ -172,6 +183,8 @@ def attributes(tokeniser):
             new.nlri.labels = labels
         if rd:
             new.nlri.rd = rd
+        if path:
+            new.nlri.path_info = path
         new.nlri.nexthop = nlri.nexthop
         changes.append(new)
 
