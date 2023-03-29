@@ -21,8 +21,8 @@ except ImportError:
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.open.capability import NextHop
-from exabgp.bgp.message.open.capability import AddPath
+from exabgp.bgp.message.update.attribute import NextHop
+from exabgp.bgp.message.update.attribute import Attribute
 
 from exabgp.rib import RIB
 
@@ -404,6 +404,29 @@ class Neighbor(object):
         # '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
         # '\t\tsend {\n%s\t\t}\n' % send if send else '',
         return returned.replace('\t', '  ')
+
+    def ip_self(self, afi):
+        if afi == self.local_address.afi:
+            return self.local_address
+
+        # attempting to not barf for next-hop self when the peer is IPv6
+        if afi == AFI.ipv4:
+            return self.router_id
+
+        raise TypeError(
+            'use of "next-hop self": the route (%s) does not have the same family as the BGP tcp session (%s)'
+            % (afi, self.local_address.afi)
+        )
+
+    # NOTE: this may very well modify the change object passed to the function
+    def remove_self(self, change):
+        if not change.nlri.nexthop.SELF:
+            return change
+        neighbor_self = self.ip_self(change.nlri.afi)
+        change.nlri.nexthop = neighbor_self
+        if Attribute.CODE.NEXT_HOP in change.attributes:
+            change.attributes[Attribute.CODE.NEXT_HOP] = NextHop(str(neighbor_self),neighbor_self.pack())
+        return change
 
     def __str__(self):
         return self.string(False)

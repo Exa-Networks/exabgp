@@ -246,19 +246,23 @@ class ParseNeighbor(Section):
                     neighbor.add_nexthop(afi, safi, nhafi)
 
         neighbor.changes = []
-        neighbor.changes.extend(self.scope.pop_routes())
+        for change in self.scope.pop_routes():
+            # remove_self may well have side effects on change
+            neighbor.changes.append(neighbor.remove_self(change))
 
         # old format
         for section in ('static', 'l2vpn', 'flow'):
             routes = local.get(section, {}).get('routes', [])
             for route in routes:
                 route.nlri.action = OUT.ANNOUNCE
-            neighbor.changes.extend(routes)
+                # remove_self may well have side effects on change
+                neighbor.changes.append(neighbor.remove_self(route))
 
         routes = local.get('routes', [])
         for route in routes:
             route.nlri.action = OUT.ANNOUNCE
-        neighbor.changes.extend(routes)
+            # remove_self may well have side effects on change
+            neighbor.changes.append(neighbor.remove_self(route))
 
         messages = local.get('operational', {}).get('routes', [])
 
