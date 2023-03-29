@@ -472,6 +472,7 @@ class Neighbor(dict):
             % (afi, self['local-address'].afi)
         )
 
+    # NOTE: this may very well modify the change object passed to the function
     def remove_self(self, change):
         if not change.nlri.nexthop.SELF:
             return change

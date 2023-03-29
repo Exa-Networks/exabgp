@@ -238,6 +238,7 @@ class ParseNeighbor(Section):
 
         neighbor.changes = []
         for change in self.scope.pop_routes():
+            # remove_self may well have side effects on change
             neighbor.changes.append(neighbor.remove_self(change))
 
         # old format
@@ -245,16 +246,19 @@ class ParseNeighbor(Section):
             routes = local.get(section, {}).get('routes', [])
             for route in routes:
                 route.nlri.action = Action.ANNOUNCE
+                # remove_self may well have side effects on change
                 neighbor.changes.append(neighbor.remove_self(route))
 
         routes = local.get('routes', [])
         for route in routes:
             route.nlri.action = Action.ANNOUNCE
+            # remove_self may well have side effects on change
             neighbor.changes.append(neighbor.remove_self(route))
 
     def _init_neighbor(self, neighbor, local):
         families = neighbor.families()
         for change in neighbor.changes:
+            # remove_self may well have side effects on change
             change = neighbor.remove_self(change)
             if change.nlri.family() in families:
                 # This add the family to neighbor.families()
