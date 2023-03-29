@@ -131,7 +131,7 @@ def attributes(tokeniser):
 
     labels = None
     rd = None
-    path = None
+    path_info = None
 
     while True:
         command = tokeniser()
@@ -147,7 +147,7 @@ def attributes(tokeniser):
             continue
 
         if command == 'path-information':
-            path = path_information(tokeniser)
+            path_info = path_information(tokeniser)
             continue
 
         if command == 'rd' or command == 'route-distinguisher':
@@ -183,8 +183,8 @@ def attributes(tokeniser):
             new.nlri.labels = labels
         if rd:
             new.nlri.rd = rd
-        if path:
-            new.nlri.path_info = path
+        if path_info:
+            new.nlri.path_info = path_info
         new.nlri.nexthop = nlri.nexthop
         changes.append(new)
 
