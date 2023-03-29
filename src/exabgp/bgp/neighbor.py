@@ -456,5 +456,18 @@ class Neighbor(dict):
         # '\t\tsend {\n%s\t\t}\n' % send if send else '',
         return returned.replace('\t', '  ')
 
+    def self(self, afi):
+        if afi == self['local-address'].afi:
+            return self['local-address']
+
+        # attempting to not barf for next-hop self when the peer is IPv6
+        if afi == AFI.ipv4:
+            return self['router-id']
+
+        raise TypeError(
+            'use of "next-hop self": the route (%s) does not have the same family as the BGP tcp session (%s)'
+            % (afi, self['local-address'].afi)
+        )
+
     def __str__(self):
         return self.string(False)

@@ -172,17 +172,7 @@ class Negotiated(object):
         return None
 
     def nexthopself(self, afi):
-        if afi == self.neighbor['local-address'].afi:
-            return self.neighbor['local-address']
-
-        # attempting to not barf for next-hop self when the peer is IPv6
-        if afi == AFI.ipv4:
-            return self.neighbor['router-id']
-
-        raise TypeError(
-            'use of "next-hop self": the route (%s) does not have the same family as the BGP tcp session (%s)'
-            % (afi, self.neighbor['local-address'].afi)
-        )
+        return self.neighbor.self(afi)
 
 
 # =================================================================== RequirePath
