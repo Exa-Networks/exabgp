@@ -23,6 +23,8 @@ from exabgp.protocol.ip.netmask import NetMask
 
 
 class IPSelf(object):
+    SELF = True
+
     def __init__(self, afi):
         self.afi = afi
 
@@ -43,6 +45,8 @@ class IPSelf(object):
 
 
 class IP(object):
+    SELF = False
+
     afi = None  # here for the API, changed in init which does not change this
     _known = dict()
 
@@ -216,6 +220,8 @@ class IPRange(IP):
 
 
 class _NoNextHop(object):
+    SELF = False
+
     packed = ''
 
     afi = AFI.undefined
@@ -294,6 +300,8 @@ IPv4.register()
 
 
 class IPv6(IP):
+    SELF = False
+
     # lower case to match the class Address API
     afi = AFI.ipv6
 

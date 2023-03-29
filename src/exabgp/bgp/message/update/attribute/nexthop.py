@@ -69,3 +69,6 @@ class NextHopSelf(NextHop):
 
     def ton(self, negotiated=None, afi=AFI.undefined):
         return negotiated.nexthopself(afi).ton()
+
+    def __eq__(self, other):
+        raise RuntimeError('do not use __eq__ with NextHop')
