@@ -144,7 +144,9 @@ def attributes(tokeniser):
             rd = route_distinguisher(tokeniser)
             continue
 
-        action = ParseStatic.action[command]
+        action = ParseStatic.action.get(command, '')
+        if action == '':
+            raise ValueError(f"The command '{command}' is not known or valid where used")
 
         if action == 'attribute-add':
             attr.add(ParseStatic.known[command](tokeniser))
