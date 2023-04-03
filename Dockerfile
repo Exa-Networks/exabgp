@@ -6,6 +6,7 @@
 # docker build -t exabgp-main ./
 # docker run -p 179:1790 --mount type=bind,source=`pwd`/etc/exabgp,target=/etc/exabgp exabgp-main version
 # docker run -it exabgp-main version
+# docker run -it exabgp-main etc/exabgp/exabgp.conf
 
 # debug the build
 # docker build --progress=plain --no-cache -t exabgp ./

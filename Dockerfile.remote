@@ -5,7 +5,8 @@
 
 # docker build . --build-arg version=main -f Dockerfile.remote -t exabgp.remote
 # docker run -p 179:1790 --mount type=bind,source=`pwd`/etc/exabgp,target=/etc/exabgp exabgp.remote version
-# docker run -it exabgp.remote exabgp
+# docker run -it exabgp.remote version
+# docker run -it exabgp-main etc/exabgp/exabgp.conf
 
 # debug the build
 # docker build --progress=plain --no-cache --build-arg version=main -f Dockerfile.remote -t exabgp ./
@@ -35,10 +36,13 @@ RUN useradd -r exa \
 RUN echo "[exabgp.daemon]" > /opt/exabgp/etc/exabgp/exabgp.env
 RUN echo "user = 'exa'" >> /opt/exabgp/etc/exabgp/exabgp.env
 
+# set the version to the date to pass setuptool PEP 440 check
+# it will not change the version when the program is running
+
 RUN cd /tmp \
     && echo Building ${version} \
     && pip install -U setuptools \
-    && pip install git+https://github.com/Exa-Networks/exabgp.git@${version}
+    && env EXABGP_VERSION=`date +%Y.%m.%d` pip install git+https://github.com/Exa-Networks/exabgp.git@${version}
 
 WORKDIR /etc/exabgp
 
