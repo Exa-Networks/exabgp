@@ -3,7 +3,8 @@
 # how to build and run exabgp using docker (from github with pip)
 # this Dockerfile does not require a local installation but the container is bigger
 
-# docker build --build-arg version=main -f Dockerfile.remote -t exabgp.remote ./
+# docker build . --build-arg version=main -f Dockerfile.remote -t exabgp.remote
+# docker run -p 179:1790 --mount type=bind,source=`pwd`/etc/exabgp,target=/etc/exabgp exabgp.remote version
 # docker run -it exabgp.remote exabgp
 
 # debug the build
@@ -18,6 +19,8 @@ RUN apt update \
     && apt install -y git \
     && apt install -y dumb-init \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+RUN pip install --upgrade pip
 
 ADD . /opt/exabgp
 RUN useradd -r exa \

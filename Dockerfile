@@ -3,8 +3,9 @@
 # how to build and run exabgp using docker (using the local copy)
 # this dockerfile install exabgp in the container /opt
 
-# docker build -t exabgp ./
-# docker run -p 179:1790 --mount type=bind,source=`pwd`/etc/exabgp,target=/etc/
+# docker build -t exabgp-main ./
+# docker run -p 179:1790 --mount type=bind,source=`pwd`/etc/exabgp,target=/etc/exabgp exabgp-main version
+# docker run -it exabgp-main version
 
 # debug the build
 # docker build --progress=plain --no-cache -t exabgp ./
