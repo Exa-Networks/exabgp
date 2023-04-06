@@ -11,7 +11,7 @@
 # debug the build
 # docker build --progress=plain --no-cache -t exabgp ./
 
-FROM python:3-slim-buster
+FROM python:3-slim
 
 # update packages
 RUN apt update
