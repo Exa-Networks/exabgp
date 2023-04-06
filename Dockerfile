@@ -11,32 +11,30 @@
 # debug the build
 # docker build --progress=plain --no-cache -t exabgp ./
 
-FROM python:3-slim-buster
+FROM python:3-slim
 
-# update packages
-RUN apt update
-RUN apt -y dist-upgrade
-RUN apt install -y dumb-init
-RUN rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+# install deps
+RUN apt-get update \
+    && apt-get install -y iproute2 git dumb-init \
+    && apt-get clean
 
 # Add ExaBGP
 ADD . /opt/exabgp
-RUN useradd -r exa
-RUN mkdir /etc/exabgp
-RUN mkfifo /run/exabgp.in
-RUN mkfifo /run/exabgp.out
-RUN chown exa /run/exabgp.in
-RUN chown exa /run/exabgp.out
-RUN chmod 600 /run/exabgp.in
-RUN chmod 600 /run/exabgp.out
+RUN useradd -r exa \
+    && mkdir /etc/exabgp \
+    && mkfifo /run/exabgp.in \
+    && mkfifo /run/exabgp.out \
+    && chown exa /run/exabgp.in \
+    && chown exa /run/exabgp.out \
+    && chmod 600 /run/exabgp.in \
+    && chmod 600 /run/exabgp.out
 
-RUN echo "[exabgp.daemon]" > /opt/exabgp/etc/exabgp/exabgp.env
-RUN echo "user = 'exa'" >> /opt/exabgp/etc/exabgp/exabgp.env
+RUN echo "[exabgp.daemon]" > /opt/exabgp/etc/exabgp/exabgp.env \
+    && echo "user = 'exa'" >> /opt/exabgp/etc/exabgp/exabgp.env
 
 ENV PYTHONPATH=/opt/exabgp/src
 ENV PATH=$PATH:/opt/exabgp/sbin/
 
-# ENTRYPOINT [ "/bin/bash"]
 ENTRYPOINT [ \
     "/usr/bin/dumb-init", "--", \ 
     "/opt/exabgp/sbin/exabgp" \

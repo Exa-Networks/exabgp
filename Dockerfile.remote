@@ -11,15 +11,13 @@
 # debug the build
 # docker build --progress=plain --no-cache --build-arg version=main -f Dockerfile.remote -t exabgp ./
 
-FROM python:3-slim-buster
+FROM python:3-slim
 
 ARG version="main"
 
-RUN apt update \
-    && apt -y dist-upgrade \
-    && apt install -y git \
-    && apt install -y dumb-init \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+RUN apt-get update \
+    && apt-get install -y iproute2 git dumb-init \
+    && apt-get clean
 
 RUN pip install --upgrade pip
 
