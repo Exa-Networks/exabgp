@@ -13,11 +13,10 @@
 
 FROM python:3-slim
 
-# update packages
-RUN apt update
-RUN apt -y dist-upgrade
-RUN apt install -y dumb-init
-RUN rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+# install deps
+RUN apt-get update \
+    && apt-get install -y iproute2 git dumb-init \
+    && apt-get clean
 
 # Add ExaBGP
 ADD . /opt/exabgp
