@@ -7,8 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import os
-import uuid
+from copy import deepcopy
 
 from collections import deque
 
@@ -418,8 +417,8 @@ class Neighbor(object):
             % (afi, self.local_address.afi)
         )
 
-    # NOTE: this may very well modify the change object passed to the function
-    def remove_self(self, change):
+    def remove_self(self, changes):
+        change = deepcopy(changes)
         if not change.nlri.nexthop.SELF:
             return change
         neighbor_self = self.ip_self(change.nlri.afi)
