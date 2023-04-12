@@ -638,9 +638,7 @@ class Flow(NLRI):
                 if idx and not rule.operations & NumericOperator.AND:
                     s.append(', ')
                 if rule.FLAG:
-                    op = rule.operations & (CommonOperator.EOL ^ 0xFF)
-                    op_flag = rule._string.get(op, "")
-                    s.append(', '.join('"%s%s"' % (op_flag, flag) for flag in rule.value.named_bits()))
+                    s.append('"' + rule.__str__() + '"')
                     if rule.ID == 0x0C and s[-1]:
                         s[-1] = s[-1].replace('!is-fragment', rule.value.names.get(rule.value.NOT))
                 else:
