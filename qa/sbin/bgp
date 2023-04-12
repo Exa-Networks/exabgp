@@ -664,12 +664,15 @@ def parse_cmdline():
         and (cmdarg.asn < 0 or cmdarg.asn > 65535)
     ):
         parser.print_help()
+        flushed('\n')
         flushed('a list of expected route announcement/withdrawl in the format:')
         flushed(
-            '<number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>'
+            '    <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>'
         )
-        flushed('for example:', sys.argv[0], '1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8')
-        flushed('routes with the same <number> can arrive in any order')
+        flushed('    (routes defined under the same <number> are not ordered)')
+        flushed('\n')
+        flushed('for example:')
+        flushed(f'    {sys.argv[0]} 1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8')
         sys.exit(1)
 
     # fmt: off
