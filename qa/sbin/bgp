@@ -644,7 +644,7 @@ def parse_cmdline():
     port = os.environ.get('exabgp.tcp.port', os.environ.get('exabgp_tcp_port', '179'))
 
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('--help', help='this help :-)')
+    parser.add_argument('--help', help='this help :-)', action='store_true')
     parser.add_argument('--echo', help='accept any BGP messages send it back to the emiter', action='store_true')
     parser.add_argument('--sink', help='accept any BGP messages and reply with a keepalive', action='store_true')
     parser.add_argument('--asn', help='ASN to use (otherwise extracted from the OPEN)', type=int, default=None)
