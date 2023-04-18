@@ -613,12 +613,7 @@ class Flow(NLRI):
                 # only add ' ' after the first element
                 if idx and not rule.operations & NumericOperator.AND:
                     s.append(', ')
-                if rule.FLAG:
-                    s.append('"' + rule.__str__() + '"')
-                    if rule.ID == 0x0C and s[-1]:
-                        s[-1] = s[-1].replace('!is-fragment', rule.value.names.get(rule.value.NOT))
-                else:
-                    s.append('"%s"' % rule)
+                s.append('"%s"' % rule)
             string.append(' "%s": [ %s ]' % (rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
         nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
         rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
