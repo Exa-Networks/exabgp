@@ -37,7 +37,7 @@ class ParseFlowMatch(Section):
         'packet-length [ >200&<300 >400&<500 ]',
         'tcp-flags [ 0x20+0x8+0x1 #name-here ]  # to check',
         '(ipv4 only) protocol [ udp tcp ]',
-        '(ipv4 only) fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]',
+        '(ipv4 only) fragment [ dont-fragment is-fragment first-fragment last-fragment ]',
         '(ipv6 only) next-header [ udp tcp ]',
         '(ipv6 only) flow-label >100&<2000',
         '(ipv6 only) icmp-type 35  # to check',

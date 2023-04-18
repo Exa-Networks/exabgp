@@ -49,6 +49,7 @@ Version 5.0.0:
    patch: Takeru Hayasaka
  * Feature: Support for the 'ipv4' and 'ipv6' options in the Announce statement to exabgp-cli
    patch: Takeru Hayasaka
+ * Compatibility: remove "alias" not-a-fragment which should be not expressed as !is-fragment
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates

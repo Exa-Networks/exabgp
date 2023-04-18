@@ -103,7 +103,7 @@
 			},
 			"complex-attack": {
 				"packet-length": [ [[">",200],["<",300]], [[">",400],["<",500]] ],
-				"_fragment": ["not-a-fragment"],
+				"_fragment": ["!is-fragment"],
 				"fragment": ["first-fragment","last-fragment" ],
 				"_icmp-type": [ "unreachable", "echo-request", "echo-reply" ],
 				"icmp-code": [ "host-unreachable", "network-unreachable" ],

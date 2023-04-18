@@ -167,7 +167,7 @@ neighbor <ip-address> {
                             source-route-failed |
                             ttl-eq-zero-during-reassembly |
                             ttl-eq-zero-during-transit ];
-                fragment [ not-a-fragment | dont-fragment | is-fragment |
+                fragment [ dont-fragment | is-fragment |
                            first-fragment | last-fragment ];
                 // fragment is IPv4 only, poorly tested
                 dscp <dscp-value>;
