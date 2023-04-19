@@ -55,14 +55,14 @@ class Path:
     EXABGP = os.path.join(ROOT, 'sbin', 'exabgp')
     BGP = os.path.join(ROOT, 'qa', 'sbin', 'bgp')
     DECODING = os.path.join(os.path.join(ROOT, 'qa', 'decoding'))
-    CI = os.path.join(os.path.join(ROOT, 'qa', 'ci'))
+    ENCODING = os.path.join(os.path.join(ROOT, 'qa', 'encoding'))
 
     ALL_ETC = glob.glob(os.path.join(ETC, '*.conf'))
     ALL_ETC.sort()
     ALL_DECODING = glob.glob(os.path.join(DECODING, '*'))
     ALL_DECODING.sort()
-    ALL_CI = glob.glob(os.path.join(CI, '*.ci'))
-    ALL_CI.sort()
+    ALL_ENCODING = glob.glob(os.path.join(ENCODING, '*.ci'))
+    ALL_ENCODING.sort()
 
     @staticmethod
     def etc(fname):
@@ -70,15 +70,15 @@ class Path:
 
     @staticmethod
     def ci(fname, ext):
-        return os.path.abspath(os.path.join(Path.CI, fname) + '.' + ext)
+        return os.path.abspath(os.path.join(Path.ENCODING, fname) + '.' + ext)
 
     @classmethod
     def validate(cls):
         if not os.path.isdir(cls.ETC):
             sys.exit('could not find etc folder')
 
-        if not os.path.isdir(cls.CI):
-            sys.exit('could not find tests in the qa/ci folder')
+        if not os.path.isdir(cls.ENCODING):
+            sys.exit('could not find tests in the qa/encoding folder')
 
         if not os.path.isdir(cls.DECODING):
             sys.exit('could not find the tests in qa/decoding')
@@ -330,7 +330,7 @@ class EncodingTests(Tests):
     def __init__(self):
         super().__init__(self.Test)
 
-        for filename in Path.ALL_CI:
+        for filename in Path.ALL_ENCODING:
             name = os.path.basename(filename)[:-3]
             test = self.new(name)
             with open(filename, 'r') as reader:
