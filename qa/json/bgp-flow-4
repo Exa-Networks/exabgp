@@ -1,0 +1,3 @@
+update ipv4 flow
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E:02:000000274001010040020040050400000064C010088006000000000000800E0B000185000005090090C241
+{ "exabgp": "5.0.0", "time": 1681904638.920432, "host" : "MacBook-Pro-2.local", "pid" : 50775, "ppid" : 50442, "counter": 1, "type": "update", "neighbor": {     "address": { "local": "127.0.0.1", "peer": "127.0.0.1" },     "asn": { "local": 65533, "peer": 65533 }     , "direction": "in", "message": { "update": { "attribute": { "origin": "igp", "local-preference": 100, "extended-community": [ { "value": 9225060886715039744, "string": "rate-limit:0" } ] }, "announce": { "ipv4 flow": { "no-nexthop": [ { "tcp-flags": [ "ack+cwr&!fin+ece" ], "string": "flow tcp-flags [ ack+cwr&!fin+ece ]" } ] } } } } } }
