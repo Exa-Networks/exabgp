@@ -54,12 +54,13 @@ class Path:
     ETC = os.path.join(ROOT, 'etc', 'exabgp')
     EXABGP = os.path.join(ROOT, 'sbin', 'exabgp')
     BGP = os.path.join(ROOT, 'qa', 'sbin', 'bgp')
+    DECODING = os.path.join(os.path.join(ROOT, 'qa', 'decoding'))
     CI = os.path.join(os.path.join(ROOT, 'qa', 'ci'))
-    JSON = os.path.join(os.path.join(ROOT, 'qa', 'json'))
+
     ALL_ETC = glob.glob(os.path.join(ETC, '*.conf'))
     ALL_ETC.sort()
-    ALL_JSON = glob.glob(os.path.join(JSON, '*'))
-    ALL_JSON.sort()
+    ALL_DECODING = glob.glob(os.path.join(DECODING, '*'))
+    ALL_DECODING.sort()
     ALL_CI = glob.glob(os.path.join(CI, '*.ci'))
     ALL_CI.sort()
 
@@ -79,8 +80,8 @@ class Path:
         if not os.path.isdir(cls.CI):
             sys.exit('could not find tests in the qa/ci folder')
 
-        if not os.path.isdir(cls.JSON):
-            sys.exit('could not find the tests in qa/json')
+        if not os.path.isdir(cls.DECODING):
+            sys.exit('could not find the tests in qa/decoding')
 
         if not os.path.isfile(cls.EXABGP):
             sys.exit('could not find exabgp')
@@ -509,7 +510,7 @@ class DecodingTests(Tests):
     def __init__(self):
         super().__init__(self.Test)
 
-        for filename in Path.ALL_JSON:
+        for filename in Path.ALL_DECODING:
             name = os.path.basename(filename).split('.')[0]
             test = self.new(name)
             with open(filename, 'r') as reader:
