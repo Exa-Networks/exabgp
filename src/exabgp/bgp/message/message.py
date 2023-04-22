@@ -48,7 +48,7 @@ class _MessageCode(int):
         UPDATE: 'update',
         NOTIFICATION: 'notification',
         KEEPALIVE: 'keepalive',
-        ROUTE_REFRESH: 'route refresh',
+        ROUTE_REFRESH: 'route-refresh',
         OPERATIONAL: 'operational',
     }
 
@@ -65,7 +65,7 @@ class _MessageCode(int):
         return str(self)
 
     def short(self):
-        return self.short_names.get(self, 'unknown')
+        return self.short_names.get(self, '%s' % self)
 
 
 # ================================================================== BGP Message

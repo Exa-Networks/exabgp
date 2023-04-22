@@ -139,6 +139,9 @@ class IPrefix4(IPrefix, IComponent, IPv4):
         # ID is defined in subclasses
         return bytes([self.ID]) + raw  # pylint: disable=E1101
 
+    def short(self):
+        return str(self.cidr)
+
     def __str__(self):
         return str(self.cidr)
 
@@ -163,6 +166,9 @@ class IPrefix6(IPrefix, IComponent, IPv6):
     def pack(self):
         # ID is defined in subclasses
         return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()  # pylint: disable=E1101
+
+    def short(self):
+        return "%s/%s" % (self.cidr, self.offset)
 
     def __str__(self):
         return "%s/%s" % (self.cidr, self.offset)
@@ -250,11 +256,16 @@ class NumericString(object):
         NumericOperator.AND | NumericOperator.FALSE: '&false',
     }
 
-    def __str__(self):
+    def short(self):
         op = self.operations & (CommonOperator.EOL ^ 0xFF)
         if op in [NumericOperator.TRUE, NumericOperator.FALSE]:
             return self._string[op]
-        return "%s%s" % (self._string.get(op, "%02X" % op), self.value)
+        # ugly hack as dynamic languages are what they are and use used __str__ in the past
+        value = self.value.short() if hasattr(self.value, 'short') else str(self.value)
+        return "%s%s" % (self._string.get(op, "%02X" % op), value)
+
+    def __str__(self):
+        return self.short()
 
 
 class BinaryString(object):
@@ -273,10 +284,12 @@ class BinaryString(object):
         BinaryOperator.AND | BinaryOperator.NOT | BinaryOperator.MATCH: '&!=',
     }
 
-    def __str__(self):
+    def short(self):
         op = self.operations & (CommonOperator.EOL ^ 0xFF)
         return "%s%s" % (self._string.get(op, "%02X" % op), self.value)
 
+    def __str__(self):
+        return self.short()
 
 # Components ..............................
 
@@ -584,14 +597,15 @@ class Flow(NLRI):
         string = []
         for index in sorted(self.rules):
             rules = self.rules[index]
-            s = []
+            r_str = []
             for idx, rule in enumerate(rules):
                 # only add ' ' after the first element
                 if idx and not rule.operations & NumericOperator.AND:
-                    s.append(' ')
-                s.append(rule)
-            line = ''.join(str(_) for _ in s)
-            if len(s) > 1:
+                    r_str.append(' ')
+                # ugly hack as dynamic languages are what they are and use used __str__ in the past
+                r_str.append(rule.short() if hasattr(rule,'short') else str(rule))
+            line = ''.join(r_str)
+            if len(r_str) > 1:
                 line = '[ %s ]' % line
             string.append(' %s %s' % (rules[0].NAME, line))
         return ''.join(string)

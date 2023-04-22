@@ -25,8 +25,11 @@ class Resource(int):
         Resource.cache[cls][key] = instance
         return instance
 
+    def short(self):
+        return self.names.get(self, '%ld' % self)
+
     def __str__(self):
-        return self.names.get(self, 'unknown %s type %ld' % (self.NAME, int(self)))
+        return self.names.get(self, 'unknown %s type %ld' % (self.NAME, self))
 
     @classmethod
     def _value(cls, string):
@@ -52,7 +55,7 @@ class Resource(int):
 
 
 class BitResource(Resource):
-    def bits(self):
+    def named_bits(self):
         value = int(self)
         for bit in self.names.keys():
             if value & bit or value == bit:
@@ -61,9 +64,17 @@ class BitResource(Resource):
         if value:
             yield self.names.get(self, 'unknown %s type %ld' % (self.NAME, int(self)))
 
-    def named_bits(self):
-        for value in self.bits():
-            yield value
+    def bits(self):
+        value = int(self)
+        for bit in self.names.keys():
+            if value & bit or value == bit:
+                yield self.names[bit]
+                value -= bit
+        if value:
+            yield self.names.get(self, '%s' % hex(self))
+
+    def short(self):
+        return '+'.join(self.bits())
 
     def __str__(self):
-        return '+'.join(self.bits())
+        return '+'.join(self.named_bits())

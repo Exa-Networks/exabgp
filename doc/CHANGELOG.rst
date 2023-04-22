@@ -50,6 +50,8 @@ Version 5.0.0:
  * Feature: Support for the 'ipv4' and 'ipv6' options in the Announce statement to exabgp-cli
    patch: Takeru Hayasaka
  * Compatibility: remove "alias" not-a-fragment which should be not expressed as !is-fragment
+ * Compatibility: the JSON string changed
+ * Compatibility: "route refresh" is now "route-refresh"
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
