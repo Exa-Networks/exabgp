@@ -170,11 +170,11 @@ def cmdline(cmdarg):
         # we read some data but it is not ending by a new line (ie: not a command completion)
         if rbuffer[-1] != 10:  # \n
             continue
-        if AnswerStream.done.endswith(rbuffer[-len(AnswerStream.done) :]):
+        if AnswerStream.done.endswith(rbuffer.decode()[-len(AnswerStream.done) :]):
             break
-        if AnswerStream.error.endswith(rbuffer[-len(AnswerStream.error) :]):
+        if AnswerStream.error.endswith(rbuffer.decode()[-len(AnswerStream.error) :]):
             break
-        if AnswerStream.shutdown.endswith(rbuffer[-len(AnswerStream.shutdown) :]):
+        if AnswerStream.shutdown.endswith(rbuffer.decode()[-len(AnswerStream.shutdown) :]):
             break
 
     renamed = ['']
