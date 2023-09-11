@@ -346,9 +346,9 @@ def _community(value):
 
     else:
         low = value.lower()
-        if low == 'no-export':
+        if low == 'no-export' or low == 'no_export':
             return Community(Community.NO_EXPORT)
-        elif low == 'no-advertise':
+        elif low == 'no-advertise' or low == 'no_advertise':
             return Community(Community.NO_ADVERTISE)
         elif low == 'no-export-subconfed':
             return Community(Community.NO_EXPORT_SUBCONFED)
