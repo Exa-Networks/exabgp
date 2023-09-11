@@ -27,4 +27,4 @@ class Delay(object):
         self._next = min(int(1 + self._next * 1.2), 60)
 
     def backoff(self):
-        return self._time > time.time()
+        return time.time() <= self._time
