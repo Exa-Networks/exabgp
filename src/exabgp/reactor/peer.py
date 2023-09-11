@@ -419,6 +419,7 @@ class Peer(object):
         self.neighbor.rib.outgoing.replace_restart(previous, current)
         self.neighbor.previous = None
 
+        self._delay.reset()
         while not self._teardown:
             # we are here following a configuration change
             if self._neighbor:
