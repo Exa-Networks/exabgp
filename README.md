@@ -11,6 +11,8 @@ ExaBGP has been used to:
 From the source folder, it is possible to create a self-contained executable which only requires an installed python3 interpreter
 
 ```sh
+> git clone https://github.com/Exa-Networks/exabgp exabgp-git
+
 > cd exabgp-git
 > release binary /usr/local/sbin/exabgp
 > /usr/local/sbin/exabgp --version
@@ -19,6 +21,8 @@ From the source folder, it is possible to create a self-contained executable whi
 which is a helper function and creates a python3 zipapp
 
 ```sh
+> git clone https://github.com/Exa-Networks/exabgp exabgp-git
+
 > cd exabgp-git
 > python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main  -p "/usr/bin/env python3" src
 > /usr/local/sbin/exabgp --version
@@ -52,6 +56,8 @@ It is then possible to change git to use any release (here 4.2.18)
 You can also use the repository to create a docker image
 
 ```sh
+> git clone https://github.com/Exa-Networks/exabgp exabgp-git
+
 > cd exabgp-git
 > docker build -t exabgp ./
 > docker run -p 179:1790 --mount type=bind,source=`pwd`/etc/exabgp,target=/etc/exabgp -it exabgp -v /etc/exabgp/parse-simple-v4.conf
