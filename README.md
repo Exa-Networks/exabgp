@@ -93,6 +93,8 @@ It is also possible to download releases from GitHub
 
 The program is packaged for many systems such as [Debian](https://packages.debian.org/search?keywords=exabgp), [Ubuntu](https://packages.ubuntu.com/search?keywords=exabgp), [ArchLinux](https://aur.archlinux.org/packages/exabgp), [Gentoo](https://packages.gentoo.org/packages/net-misc/exabgp), [FreeBSD](https://www.freshports.org/net/exabgp/), [OSX](https://ports.macports.org/port/exabgp/).
 
+RHEL users can find help [here](https://github.com/Exa-Networks/exabgp/wiki/RedHat).
+
 Many OS provide old, not say ancient, releases but on the plus side, the packaged version will integrate with systemd.
 
 As it is often the recommended way to get software onto the server, feel free to use them. However, we recommend a pip installation as it will install the latest stable version. should you encounter any issues, we will ask you to install the latest code (the main branch).
