@@ -9,6 +9,7 @@ Version 4.2.22
  * Fix: make sure we compare next-hop self and next-hop IP correctly (#1153)
    reported: gitneep
  * Compatibility: remove "not-a-fragment" "!is-fragment" should be used instead
+ * Upgrade six to the latest version
 
 Version 4.2.21
  * Fix: regressing on announcing routes from the API #1108
