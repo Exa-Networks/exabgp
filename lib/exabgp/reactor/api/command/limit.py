@@ -63,6 +63,8 @@ def extract_neighbors(command):
 
 def match_neighbor(description, name):
     for string in description:
+        if string.strip() == 'neighbor *':
+            return True
         if re.search(r'(^|\s)%s($|\s|,)' % re.escape(string), name) is None:
             return False
     return True
