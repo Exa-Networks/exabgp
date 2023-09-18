@@ -4,6 +4,8 @@ ExaBGP has been used to:
 - mitigate network attacks, centrally deploying network-level filters (blackhole and/or flowspec)
 - gather network information ( using BGP-LS, or BGP with Add-Path)
 
+More information is available on the [wiki](https://github.com/Exa-Networks/exabgp/wiki).
+
 ## Installation
 
 ### zipapp
