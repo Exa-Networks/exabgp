@@ -7,6 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import re
 import time
 import uuid
 import select
@@ -151,6 +152,10 @@ class Reactor(object):
             if service in peer.neighbor.api['processes']:
                 matching.append(peer_name)
                 continue
+            if any(True for r in peer.neighbor.api['processes-match'] if re.match(r, service)):
+                matching.append(peer_name)
+                continue
+
         return matching
 
     def handle_connection(self, peer_name, connection):
