@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import os
+import re
 
 from exabgp.logger import log
 
@@ -445,19 +446,49 @@ class Configuration(_Configuration):
 
     def validate(self):
         for neighbor in self.neighbors.values():
+            if "processes" in neighbor.api and neighbor.api["processes"] and "processes-match" in neighbor.api and neighbor.api["processes-match"]:
+                return self.error.set(
+                    "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '%s' configuration.\n\n"
+                    % neighbor['peer-address'],
+                )
+
             for notification in neighbor.api:
+                errors = []
                 for api in neighbor.api[notification]:
-                    if not self.processes[api].get('run', ''):
-                        return self.error.set(
-                            "\n\nan api called '%s' is used by neighbor '%s' but not defined\n\n"
-                            % (api, neighbor['peer-address']),
-                        )
-        return None
+                    if notification == "processes":
+                        if not self.processes[api].get('run', False):
+                            return self.error.set(
+                                "\n\nan api called '%s' is used by neighbor '%s' but not defined\n\n"
+                                % (api, neighbor['peer-address']),
+                            )
+                    elif notification == "processes-match":
+                        if not any(v.get('run', False) for k, v in self.processes.items() if re.match(api, k)):
+                            errors.append(
+                                "\n\nAny process match regex '%s' for neighbor '%s'.\n\n"
+                                % (api, neighbor['peer-address']),
+                            )
+
+                # matching mode is an "or", we test all rules and check
+                # if any of rule had a match
+                if len(errors) > 0 and len(errors) == len(neighbor.api[notification]):
+                    return self.error.set(" ".join(errors),)
+
 
     def _link(self):
         for neighbor in self.neighbors.values():
             api = neighbor.api
-            for process in api.get('processes', []):
+            processes = []
+            if api.get('processes', []):
+                processes = api["processes"]
+            elif api.get('processes-match', []):
+                processes = [
+                    k
+                    for k in self.processes.keys()
+                    for pm in api["processes-match"]
+                    if re.match(pm, k)
+                ]
+
+            for process in processes:
                 self.processes.setdefault(process, {})['neighbor-changes'] = api['neighbor-changes']
                 self.processes.setdefault(process, {})['negotiated'] = api['negotiated']
                 self.processes.setdefault(process, {})['fsm'] = api['fsm']
