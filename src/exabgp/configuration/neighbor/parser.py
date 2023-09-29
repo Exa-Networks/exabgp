@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2014-07-01.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
-
+import re
 import socket
 from string import ascii_letters
 from string import digits
@@ -137,6 +137,29 @@ def processes(tokeniser):
             break
         if token == ',':
             continue
+        result.append(token)
+
+    return result
+
+
+def processes_match(tokeniser):
+    result = []
+    token = tokeniser()
+    if token != '[':
+        raise ValueError('invalid processes-match, does not start with [')
+
+    while True:
+        token = tokeniser()
+        if not token:
+            raise ValueError('invalid processes-match, does not end with ]')
+        if token == ']':
+            break
+        if token == ',':
+            continue
+        try:
+            re.compile(token)
+        except re.error:
+            raise ValueError('"%s" is not a valid regex, "re" lib returns error %s.' % (token, re.error))
         result.append(token)
 
     return result

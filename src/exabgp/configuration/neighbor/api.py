@@ -13,6 +13,7 @@ import copy
 from exabgp.configuration.core import Section
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.neighbor.parser import processes
+from exabgp.configuration.neighbor.parser import processes_match
 
 
 class _ParseDirection(Section):
@@ -83,6 +84,7 @@ class ParseAPI(Section):
     syntax = (
         'process {\n'
         '  processes [ name-of-processes ];\n'
+        '  processes-match [ regex-of-processes ];\n'
         '  neighbor-changes;\n'
         '  %s\n'
         '  %s\n'
@@ -91,6 +93,7 @@ class ParseAPI(Section):
 
     known = {
         'processes': processes,
+        'processes-match': processes_match,
         'neighbor-changes': boolean,
         'negotiated': boolean,
         'fsm': boolean,
@@ -99,6 +102,7 @@ class ParseAPI(Section):
 
     action = {
         'processes': 'set-command',
+        'processes-match': 'set-command',
         'neighbor-changes': 'set-command',
         'negotiated': 'set-command',
         'fsm': 'set-command',
@@ -118,6 +122,7 @@ class ParseAPI(Section):
         'fsm': [],
         'signal': [],
         'processes': [],
+        'processes-match': [],
     }
 
     name = 'api'
@@ -155,8 +160,10 @@ class ParseAPI(Section):
 
         for api in apis.values():
             procs = api.get('processes', [])
+            mprocs = api.get('processes-match', [])
 
             built.setdefault('processes', []).extend(procs)
+            built.setdefault('processes-match', []).extend(mprocs)
 
             for command in ('neighbor-changes', 'negotiated', 'fsm', 'signal'):
                 built.setdefault(command, []).extend(procs if api.get(command, False) else [])
