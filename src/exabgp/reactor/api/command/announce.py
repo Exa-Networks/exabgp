@@ -254,6 +254,7 @@ def announce_attributes(self, reactor, service, line):
     return True
 
 
+@Command.register('text', 'withdraw attribute')
 @Command.register('text', 'withdraw attributes')
 def withdraw_attribute(self, reactor, service, line):
     def callback():
