@@ -275,10 +275,32 @@ def rate_limit(tokeniser):
 def redirect(tokeniser):
     data = tokeniser()
     count = data.count(':')
+
+    # the redirect is an IPv4
     if count == 0:
         return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))
-    if count == 1:
+
+    # the redirect is an IPv6
+    if data.startswith('[') and data.endswith(']'):
+        return IP.create(data[1:-1]), ExtendedCommunities().add(TrafficNextHopSimpson(False))
+
+    # the redirect is an ipv6:asn using []: notation
+    if count > 1:
+        if ']:' not in data:
+            raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
+
+        ip, asn = data.split(']:')
+        ip = ip.replace('[', '', 1)
+
+        # FIXME: should this be 2^16 ??
+        if asn >= pow(2, 32):
+            raise ValueError('asn is a 32 bits number, value too large %s' % asn)
+        return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, asn))
+
+    # the redirect is an ASN:RT
+    if True:  # count == 1:
         prefix, suffix = data.split(':', 1)
+
         if prefix.count('.'):
             raise ValueError(
                 'this format has been deprecated as it does not make sense and it is not supported by other vendors'
@@ -289,30 +311,17 @@ def redirect(tokeniser):
 
         if asn >= pow(2, 32):
             raise ValueError('asn is a 32 bits number, value too large %s' % asn)
+
         if asn >= pow(2, 16):
             if route_target >= pow(2, 16):
                 raise ValueError('asn is a 32 bits number, route target can only be 16 bit %s' % route_target)
             return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, route_target))
-        if route_target >= pow(2, 32):
-            raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, route_target))
-    else:
-        explicit_v6 = ']:' in data
+        else:
+            if route_target >= pow(2, 32):
+                raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
+            return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, route_target))
 
-        # ipv4
-        if not explicit_v6 and data.count(':') == 1:
-            return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))
-
-        # ipv6 using []: notation
-        if explicit_v6:
-            ip, asn = data.split(']:')
-            ip = ip.replace('[', '', 1)
-            # FIXME: should this be 2^16 ??
-            if asn >= pow(2, 32):
-                raise ValueError('asn is a 32 bits number, value too large %s' % asn)
-            return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, asn))
-
-        raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
+    raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
 
 
 def redirect_next_hop(tokeniser):
