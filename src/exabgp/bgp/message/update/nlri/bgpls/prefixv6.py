@@ -73,8 +73,8 @@ class PREFIXv6(BGPLS):
 
         while tlvs:
             tlv_type, tlv_length = unpack('!HH', tlvs[:4])
-            value = tlvs[4: 4 + tlv_length]
-            tlvs = tlvs[4 + tlv_length:]
+            value = tlvs[4 : 4 + tlv_length]
+            tlvs = tlvs[4 + tlv_length :]
 
             if tlv_type == 256:
                 local_node = []

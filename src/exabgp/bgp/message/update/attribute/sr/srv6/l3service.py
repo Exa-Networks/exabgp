@@ -67,12 +67,7 @@ class Srv6L3Service(object):
         length = len(subtlvs_packed) + 1
         reserved = 0
 
-        return (
-            pack("!B", self.TLV)
-            + pack("!H", length)
-            + pack("!B", reserved)
-            + subtlvs_packed
-        )
+        return pack("!B", self.TLV) + pack("!H", length) + pack("!B", reserved) + subtlvs_packed
 
     def __str__(self):
         return "l3-service [ " + ", ".join([str(subtlv) for subtlv in self.subtlvs]) + " ]"

@@ -73,7 +73,7 @@ class SrCapabilities(FlagLS):
             if t != 1161:
                 raise Notify(3, 5, "Invalid sub-TLV type: {}".format(t))
             if l == 3:
-                sids.append([range_size, unpack('!I', bytes([0]) + data[7 : l + 7])[0] & 0xfffff])
+                sids.append([range_size, unpack('!I', bytes([0]) + data[7 : l + 7])[0] & 0xFFFFF])
             elif l == 4:
                 # XXX: really we are reading 7+ but then re-parsing it again ??
                 sids.append([range_size, unpack('!I', data[7 : l + 7])[0]])

@@ -232,9 +232,13 @@ class Attributes(dict):
             Attribute.CODE.AS_PATH: lambda left, right: ASPath([])
             if left == right
             else ASPath(
-                [SEQUENCE([
-                    local_asn,
-                ]),],
+                [
+                    SEQUENCE(
+                        [
+                            local_asn,
+                        ]
+                    ),
+                ],
             ),
             Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference(100) if left == right else NOTHING,
         }

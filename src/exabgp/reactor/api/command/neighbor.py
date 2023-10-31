@@ -90,10 +90,7 @@ Neighbor %(peer-address)s
                 'families': {},
                 'add-path': {},
             },
-            'messages': {
-                'sent': {},
-                'received': {}
-            },
+            'messages': {'sent': {}, 'received': {}},
             'capabilities': [],
             'families': [],
             'add-path': {},

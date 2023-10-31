@@ -508,6 +508,7 @@ def loop(options):
 
     checks = 0
     state = states.INIT
+
     # Do cleanups on SIGTERM
     def sigterm_handler(signum, frame):  # pylint: disable=W0612,W0613
         exabgp(states.EXIT)

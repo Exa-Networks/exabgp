@@ -27,14 +27,12 @@ try:
     def _get_memory(pid):
         process = psutil.Process(pid)
         try:
-            mem = float(process.get_memory_info()[0]) / (1024 ** 2)
+            mem = float(process.get_memory_info()[0]) / (1024**2)
         except psutil.AccessDenied:
             mem = -1
         return mem
 
-
 except ImportError:
-
     warnings.warn("psutil module not found. memory_profiler will be slow")
 
     if os.name == 'posix':

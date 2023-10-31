@@ -91,7 +91,7 @@ class Type2SessionTransformedRoute(MUP):
             self._packed = packed
             return packed
 
-        teid_packed = pack('!I',self.teid)
+        teid_packed = pack('!I', self.teid)
         offset = self.teid_len // 8
         remainder = self.teid_len % 8
         if remainder != 0:
@@ -118,10 +118,10 @@ class Type2SessionTransformedRoute(MUP):
         if not (0 <= teid_len <= 32):
             raise Exception("teid len is %d, but len range 0 ~ 32" % teid_len)
 
-        endpoint_ip = IP.unpack(data[9: 9 + size])
+        endpoint_ip = IP.unpack(data[9 : 9 + size])
         size += 9
         if 0 < teid_len:
-            teid = int.from_bytes(data[size: ], "big")
+            teid = int.from_bytes(data[size:], "big")
         else:
             teid = 0
         return cls(rd, endpoint_ip_len, endpoint_ip, teid, teid_len, afi)

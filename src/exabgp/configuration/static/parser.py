@@ -92,6 +92,7 @@ def next_hop(tokeniser, afi=None):
             ip = IP.create("::ffff:%s" % ip)
         return ip, NextHop(ip.top())
 
+
 # XXX: using Action.UNSET should we use the following ?
 # action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
@@ -259,7 +260,7 @@ def atomic_aggregate(tokeniser):
 
 def aggregator(tokeniser):
     agg = tokeniser()
-    eat = (agg == '(')
+    eat = agg == '('
 
     if eat:
         agg = tokeniser()

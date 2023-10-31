@@ -135,7 +135,7 @@ class _SAFI(int):
     FLOW_VPN = 134  # [RFC5575]
     # deprecated = 3            # [RFC4760]
     # mcast_vpn = 5             # [draft-ietf-l3vpn-2547bis-mcast-bgp] (TEMPORARY - Expires 2008-06-19)
-    # pseudowire = 6            # [draft-ietf-pwe3-dynamic-ms-pw] (TEMPORARY - Expires 2008-08-23) Dynamic Placement of Multi-Segment Pseudowires
+    # pseudowire = 6            # [draft-ietf-pwe3-dynamic-ms-pw] (TEMPORARY - Expires 2008-08-23)
     # encapsulation = 7         # [RFC5512]
     # tunel = 64                # [Nalawade]
     # bgp_mdt = 66              # [Nalawade]
@@ -147,7 +147,7 @@ class _SAFI(int):
     # vpn_ad = 140              # [draft-ietf-l3vpn-bgpvpn-auto]
     # private = [_ for _ in range(241,254)]   # [RFC4760]
     # unassigned = [_ for _ in range(8,64)] + [_ for _ in range(70,128)]
-    # reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,]    # [RFC4760]
+    # reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,] # [RFC4760]
 
     _names = {
         UNICAST: 'unicast',
@@ -280,7 +280,7 @@ class Family(object):
         (AFI.ipv6, SAFI.flow_vpn): ((0, 16, 32), 0),
         (AFI.l2vpn, SAFI.vpls): ((4,), 0),
         (AFI.l2vpn, SAFI.evpn): ((4,), 0),
-        (AFI.bgpls, SAFI.bgp_ls): ((4,16), 0),
+        (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
     }
 
     def __init__(self, afi, safi):

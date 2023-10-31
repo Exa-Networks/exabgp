@@ -555,6 +555,7 @@ def announce_ipv4(self, reactor, service, line):
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
+
 @Command.register('text', 'withdraw ipv4')
 def withdraw_ipv4(self, reactor, service, line):
     def callback():
@@ -640,6 +641,7 @@ def announce_ipv6(self, reactor, service, line):
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
+
 
 @Command.register('text', 'withdraw ipv6')
 def withdraw_ipv6(self, reactor, service, line):

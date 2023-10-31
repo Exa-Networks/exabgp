@@ -192,6 +192,7 @@ def prefix_sid_srv6(tokeniser):
     elif service_type == "l2-service":
         return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])
 
+
 def parse_ip_prefix(tokeninser):
     addrstr, length = tokeninser.split("/")
     if length == None:
@@ -206,6 +207,7 @@ def parse_ip_prefix(tokeninser):
         raise Exception("unexpect ipaddress format '%s'" % addrstr)
 
     return ip, length
+
 
 # 'mup-isd <ip prefix> rd <rd>',
 def srv6_mup_isd(tokeniser, afi):
@@ -223,6 +225,7 @@ def srv6_mup_isd(tokeniser, afi):
         ipprefix=ip,
         afi=afi,
     )
+
 
 # 'mup-dsd <ip address> rd <rd>',
 def srv6_mup_dsd(tokeniser, afi):
@@ -243,6 +246,7 @@ def srv6_mup_dsd(tokeniser, afi):
         ip=ip,
         afi=afi,
     )
+
 
 # 'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint>',
 def srv6_mup_t1st(tokeniser, afi):
@@ -289,6 +293,7 @@ def srv6_mup_t1st(tokeniser, afi):
         endpoint_ip=endpoint_ip,
         endpoint_ip_len=int(endpoint_ip_len),
     )
+
 
 # 'mup-t2st <endpoint address> rd <rd> teid <teid>',
 def srv6_mup_t2st(tokeniser, afi):

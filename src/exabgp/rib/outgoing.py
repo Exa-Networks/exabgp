@@ -166,9 +166,9 @@ class OutgoingRIB(Cache):
         if prev_change:
             prev_change_index = prev_change.index()
             prev_change_attr_index = prev_change.attributes.index()
-            attr_af_nlri.setdefault(prev_change_attr_index, {}).setdefault(
-                change_family, RIBdict({})
-            ).pop(prev_change_index, None)
+            attr_af_nlri.setdefault(prev_change_attr_index, {}).setdefault(change_family, RIBdict({})).pop(
+                prev_change_index, None
+            )
 
         change = deepcopy(change)
         change.nlri.action = Action.WITHDRAW
@@ -196,9 +196,7 @@ class OutgoingRIB(Cache):
         new_attr = self._new_attribute
 
         # add the route to the list to be announced/withdrawn
-        attr_af_nlri.setdefault(change_attr_index, {}).setdefault(
-            change_family, RIBdict({})
-        )[change_index] = change
+        attr_af_nlri.setdefault(change_attr_index, {}).setdefault(change_family, RIBdict({}))[change_index] = change
         new_nlri[change_index] = change
         new_attr[change_attr_index] = change.attributes
         self.update_cache(change)

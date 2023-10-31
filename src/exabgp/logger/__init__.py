@@ -1,15 +1,15 @@
 import time
 
 from exabgp.logger.option import option
-from exabgp.logger.handler import getLogger      # noqa: F401,E261,E501
-from exabgp.logger.format import formater        # noqa: F401,E261,E501
+from exabgp.logger.handler import getLogger  # noqa: F401,E261,E501
+from exabgp.logger.format import formater  # noqa: F401,E261,E501
 
-from exabgp.logger.format import lazyformat      # noqa: F401,E261,E501
-from exabgp.logger.format import lazyattribute   # noqa: F401,E261,E501
-from exabgp.logger.format import lazynlri        # noqa: F401,E261,E501
+from exabgp.logger.format import lazyformat  # noqa: F401,E261,E501
+from exabgp.logger.format import lazyattribute  # noqa: F401,E261,E501
+from exabgp.logger.format import lazynlri  # noqa: F401,E261,E501
 
-from exabgp.logger.history import history        # noqa: F401,E261,E501
-from exabgp.logger.history import record         # noqa: F401,E261,E501
+from exabgp.logger.history import history  # noqa: F401,E261,E501
+from exabgp.logger.history import record  # noqa: F401,E261,E501
 
 
 class _log(object):
@@ -23,6 +23,7 @@ class _log(object):
     def disable(cls):
         def eat(cls, message, source='', level=''):
             pass
+
         cls.debug = eat
         cls.info = eat
         cls.warning = eat
@@ -34,6 +35,7 @@ class _log(object):
     def silence(cls):
         def eat(cls, message, source='', level=''):
             pass
+
         cls.debug = eat
         cls.info = eat
         cls.warning = eat

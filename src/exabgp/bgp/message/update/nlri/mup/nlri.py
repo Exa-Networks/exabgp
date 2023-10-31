@@ -85,14 +85,14 @@ class MUP(NLRI):
         end = length + 4
         key = "%s:%s" % (arch, code)
         if key in cls.registered:
-            klass = cls.registered[key].unpack(bgp[4 : end], afi)
+            klass = cls.registered[key].unpack(bgp[4:end], afi)
         else:
-            klass = GenericMUP(arch, afi, code, bgp[4 : end])
+            klass = GenericMUP(arch, afi, code, bgp[4:end])
         klass.CODE = code
         klass.action = action
         klass.addpath = addpath
 
-        return klass, bgp[end :]
+        return klass, bgp[end:]
 
     def _raw(self):
         return ''.join('%02X' % _ for _ in self.pack_nlri())
