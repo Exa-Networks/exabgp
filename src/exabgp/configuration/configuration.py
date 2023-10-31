@@ -69,7 +69,9 @@ class _Configuration(object):
                     neighbor.rib.outgoing.add_to_rib(neighbor.remove_self(change))
                     result = True
                 else:
-                    log.error('the route family is not configured on neighbor', 'configuration')
+                    log.error(
+                        'the route family (%s) is not configured on neighbor %s' %
+                        (change.nlri.short(), neighbor_name), 'configuration')
         return result
 
     def inject_eor(self, peers, family):
