@@ -33,7 +33,7 @@ include = ["*.txt", "*.rst"]
 # url = 'http://example.com/simple'
 
 [tool.poetry.dependencies]
-python = ">=3.8.1,<3.12"
+python = ">=3.8.1,<3.13"
 # pygments-yang-lexer = "^0.2"
 # pyang = "^2.3.2"
 # pyangbind="^0.8.1"
