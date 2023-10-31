@@ -23,7 +23,7 @@ class Change(object):
 
     def index(self):
         if not self.__index:
-            self.__index = b'%02x%02x' % self.nlri.family() + self.nlri.index()
+            self.__index = b'%02x%02x' % self.nlri.family().afi_safi() + self.nlri.index()
         return self.__index
 
     def __eq__(self, other):
@@ -54,4 +54,4 @@ class Change(object):
     def feedback(self):
         if self.nlri is not None:
             return self.nlri.feedback(self.nlri.action)
-        return 'no check implemented for the family %s %s' % self.nlri.family()
+        return 'no check implemented for the family %s %s' % self.nlri.family().afi_safi()

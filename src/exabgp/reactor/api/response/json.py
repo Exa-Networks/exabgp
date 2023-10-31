@@ -323,9 +323,9 @@ class JSON(object):
         for nlri in update.nlris:
             nexthop = str(nlri.nexthop) if nlri.nexthop else 'null'
             if nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
-                plus.setdefault(nlri.family(), {}).setdefault(nexthop, []).append(nlri)
+                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
             if nlri.action == Action.WITHDRAW:  # pylint: disable=E1101
-                minus.setdefault(nlri.family(), []).append(nlri)
+                minus.setdefault(nlri.family().afi_safi(), []).append(nlri)
 
         add = []
         for family in plus:

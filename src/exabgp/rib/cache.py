@@ -45,7 +45,7 @@ class Cache(object):
         if change.nlri.action == Action.WITHDRAW:
             return False
 
-        cached = self._seen.get(change.nlri.family(), {}).get(change.index(), None)
+        cached = self._seen.get(change.nlri.family().afi_safi(), {}).get(change.index(), None)
         if not cached:
             return False
 
@@ -61,7 +61,7 @@ class Cache(object):
     def update_cache(self, change):
         if not self.cache:
             return
-        family = change.nlri.family()
+        family = change.nlri.family().afi_safi()
         index = change.index()
         if change.nlri.action == Action.ANNOUNCE:
             self._seen.setdefault(family, {})[index] = change
