@@ -46,13 +46,14 @@ from exabgp.configuration.operational import ParseOperational
 from exabgp.environment import getenv
 
 # for registration
-from exabgp.configuration.announce.ip import AnnounceIP        # noqa: F401,E261,E501
-from exabgp.configuration.announce.path import AnnouncePath    # noqa: F401,E261,E501
+from exabgp.configuration.announce.ip import AnnounceIP  # noqa: F401,E261,E501
+from exabgp.configuration.announce.path import AnnouncePath  # noqa: F401,E261,E501
 from exabgp.configuration.announce.label import AnnounceLabel  # noqa: F401,E261,E501
-from exabgp.configuration.announce.vpn import AnnounceVPN      # noqa: F401,E261,E501
-from exabgp.configuration.announce.flow import AnnounceFlow    # noqa: F401,E261,E501
-from exabgp.configuration.announce.vpls import AnnounceVPLS    # noqa: F401,E261,E501
-from exabgp.configuration.announce.mup import AnnounceMup      # noqa: F401,E261,E501
+from exabgp.configuration.announce.vpn import AnnounceVPN  # noqa: F401,E261,E501
+from exabgp.configuration.announce.flow import AnnounceFlow  # noqa: F401,E261,E501
+from exabgp.configuration.announce.vpls import AnnounceVPLS  # noqa: F401,E261,E501
+from exabgp.configuration.announce.mup import AnnounceMup  # noqa: F401,E261,E501
+
 
 class _Configuration(object):
     def __init__(self):
@@ -70,8 +71,9 @@ class _Configuration(object):
                     result = True
                 else:
                     log.error(
-                        'the route family (%s) is not configured on neighbor %s' %
-                        (change.nlri.short(), neighbor_name), 'configuration')
+                        'the route family (%s) is not configured on neighbor %s' % (change.nlri.short(), neighbor_name),
+                        'configuration',
+                    )
         return result
 
     def inject_eor(self, peers, family):
@@ -448,7 +450,9 @@ class Configuration(_Configuration):
 
     def validate(self):
         for neighbor in self.neighbors.values():
-            if "processes" in neighbor.api and neighbor.api["processes"] and "processes-match" in neighbor.api and neighbor.api["processes-match"]:
+            has_procs = "processes" in neighbor.api and neighbor.api["processes"]
+            has_match = "processes-match" in neighbor.api and neighbor.api["processes-match"]
+            if has_procs and has_match:
                 return self.error.set(
                     "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '%s' configuration.\n\n"
                     % neighbor['peer-address'],
@@ -473,8 +477,9 @@ class Configuration(_Configuration):
                 # matching mode is an "or", we test all rules and check
                 # if any of rule had a match
                 if len(errors) > 0 and len(errors) == len(neighbor.api[notification]):
-                    return self.error.set(" ".join(errors),)
-
+                    return self.error.set(
+                        " ".join(errors),
+                    )
 
     def _link(self):
         for neighbor in self.neighbors.values():
@@ -483,12 +488,7 @@ class Configuration(_Configuration):
             if api.get('processes', []):
                 processes = api["processes"]
             elif api.get('processes-match', []):
-                processes = [
-                    k
-                    for k in self.processes.keys()
-                    for pm in api["processes-match"]
-                    if re.match(pm, k)
-                ]
+                processes = [k for k in self.processes.keys() for pm in api["processes-match"] if re.match(pm, k)]
 
             for process in processes:
                 self.processes.setdefault(process, {})['neighbor-changes'] = api['neighbor-changes']

@@ -12,7 +12,6 @@ from exabgp.rib.outgoing import OutgoingRIB
 
 
 class RIB(object):
-
     # when we perform a configuration reload using SIGUSR, we must not use the RIB
     # without the cache, all the updates previously sent via the API are lost
 

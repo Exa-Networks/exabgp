@@ -408,7 +408,7 @@ class Peer(object):
         refresh = None
         command_eor = None
         number = 0
-        refresh_enhanced = (self.proto.negotiated.refresh == REFRESH.ENHANCED)
+        refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED
 
         send_ka = KA(self.proto.connection.session, self.proto)
 
@@ -449,7 +449,7 @@ class Peer(object):
                         logfunc.debug(lazyformat('   UPDATE #%d nlri ' % number, nlri, str), self.id())
 
                 elif message.TYPE == RouteRefresh.TYPE:
-                    enhanced = (message.reserved == RouteRefresh.request)
+                    enhanced = message.reserved == RouteRefresh.request
                     enhanced = enhanced and refresh_enhanced
                     self.resend(enhanced, (message.afi, message.safi))
 
@@ -693,7 +693,7 @@ class Peer(object):
         families = {}
         for family in self.neighbor.families():
             if have_open:
-                common = (family in self.proto.negotiated.families)
+                common = family in self.proto.negotiated.families
                 send_addpath = self.proto.negotiated.addpath.send(*family)
                 recv_addpath = self.proto.negotiated.addpath.receive(*family)
             else:

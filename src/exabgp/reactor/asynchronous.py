@@ -33,7 +33,7 @@ class ASYNC(object):
             self._async = deque()
             return
         running = deque()
-        for (uid, generator) in self._async:
+        for uid, generator in self._async:
             if uid != deluid:
                 running.append((uid, generator))
         self._async = running

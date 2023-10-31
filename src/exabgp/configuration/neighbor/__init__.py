@@ -189,10 +189,7 @@ class ParseNeighbor(Section):
         for family in ParseAddPath.convert:
             for pair in add_path.get(family, []):
                 if pair not in families:
-                    log.debug(
-                        'skipping add-path family ' + str(pair) + ' as it is not negotiated',
-                        'configuration'
-                    )
+                    log.debug('skipping add-path family ' + str(pair) + ' as it is not negotiated', 'configuration')
                     continue
                 neighbor.add_addpath(pair)
 

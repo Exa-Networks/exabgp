@@ -83,7 +83,7 @@ class LINK(BGPLS):
         self.neigh_addrs = neigh_addrs if neigh_addrs else []
         self.iface_addrs = iface_addrs if iface_addrs else []
         self.link_ids = link_ids if link_ids else []
-        self.topology_ids = topology_ids if topology_ids else [] 
+        self.topology_ids = topology_ids if topology_ids else []
         self.nexthop = nexthop
         self.route_d = route_d
         self._packed = packed
@@ -91,7 +91,7 @@ class LINK(BGPLS):
     @classmethod
     def unpack_nlri(cls, data, rd):
         proto_id = unpack('!B', data[0:1])[0]
-        # FIXME: all these list should probably be defined in the objects 
+        # FIXME: all these list should probably be defined in the objects
         iface_addrs = []
         neigh_addrs = []
         link_identifiers = []
@@ -105,8 +105,8 @@ class LINK(BGPLS):
 
         while tlvs:
             tlv_type, tlv_length = unpack('!HH', tlvs[:4])
-            value = tlvs[4: 4 + tlv_length]
-            tlvs = tlvs[4 + tlv_length:]
+            value = tlvs[4 : 4 + tlv_length]
+            tlvs = tlvs[4 + tlv_length :]
 
             if tlv_type == 256:
                 local_node = []

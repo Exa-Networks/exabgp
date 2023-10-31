@@ -131,7 +131,6 @@ class Processes(object):
             return
 
         try:
-
             if process in self._process:
                 log.debug('process already running', 'process')
                 return

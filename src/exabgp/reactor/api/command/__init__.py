@@ -1,4 +1,4 @@
-from exabgp.reactor.api.command.command import Command # noqa: F401,E261
+from exabgp.reactor.api.command.command import Command  # noqa: F401,E261
 
 from exabgp.reactor.api.command.reactor import register_reactor
 from exabgp.reactor.api.command.neighbor import register_neighbor

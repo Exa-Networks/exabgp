@@ -11,12 +11,12 @@ from struct import pack
 
 
 class _MessageCode(int):
-    NOP = 0x00  # .   0 - internal
-    OPEN = 0x01  # .   1
-    UPDATE = 0x02  # .   2
-    NOTIFICATION = 0x03  # .   3
-    KEEPALIVE = 0x04  # .   4
-    ROUTE_REFRESH = 0x05  # .   5
+    NOP = 0x00  # .           0 - internal
+    OPEN = 0x01  # .          1
+    UPDATE = 0x02  # .        2
+    NOTIFICATION = 0x03  # .  3
+    KEEPALIVE = 0x04  # .     4
+    ROUTE_REFRESH = 0x05  # . 5
     OPERATIONAL = 0x06  # .   6  # Not IANA assigned yet
 
     names = {

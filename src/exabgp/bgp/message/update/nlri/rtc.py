@@ -73,7 +73,6 @@ class RTC(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
-
         length = bgp[0]
 
         if length == 0:

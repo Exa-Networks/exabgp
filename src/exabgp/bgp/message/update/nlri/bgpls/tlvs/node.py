@@ -51,7 +51,7 @@ class NodeDescriptor(object):
         node_type, length = unpack('!HH', data[0:4])
         packed = data[: 4 + length]
         payload = packed[4:]
-        remaining = data[4 + length:]
+        remaining = data[4 + length :]
 
         node_id = None
         dr_id = None
@@ -82,12 +82,11 @@ class NodeDescriptor(object):
         # identifier enables the decoder to determine the node_typee
         # of the node: sec 3.2.1.4.
         if node_type == 515:
-
             # IS-IS non-pseudonode
             if igp in (1, 2):
                 if length not in (6, 7):
                     raise Exception(cls._error_tlvs[node_type])
-                node_id = ISO.unpack_sysid(payload),
+                node_id = (ISO.unpack_sysid(payload),)
                 if length == 7:
                     psn = unpack('!B', payload[6:7])[0]
                 return cls(node_id, node_type, psn, dr_id, packed), remaining
@@ -96,15 +95,17 @@ class NodeDescriptor(object):
             if igp in (3, 5, 6, 227):
                 if length not in (4, 8):
                     raise Exception(cls._error_tlvs[node_type])
-                node_id = IP.unpack(payload[:4]),
+                node_id = (IP.unpack(payload[:4]),)
                 if length == 8:
                     dr_id = IP.unpack(payload[4:8])
                 return cls(node_id, node_type, psn, dr_id, packed), remaining
 
-        raise Exception("unknown node descriptor sub-tlv ({}, {})".format(
-            f'node-type: {node_type}',
-            f'igp: {igp}',
-        ))
+        raise Exception(
+            "unknown node descriptor sub-tlv ({}, {})".format(
+                f'node-type: {node_type}',
+                f'igp: {igp}',
+            )
+        )
 
     def json(self, compact=None):
         node = None

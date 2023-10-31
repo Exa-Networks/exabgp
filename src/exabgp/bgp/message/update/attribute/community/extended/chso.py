@@ -12,6 +12,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 # draft-fm-bess-service-chaining
 
+
 @ExtendedCommunity.register
 class ConsistentHashSortOrder(ExtendedCommunity):
     COMMUNITY_TYPE = 0x03

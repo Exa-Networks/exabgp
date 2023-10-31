@@ -1,6 +1,7 @@
 import os
 import sys
 
+
 def _find_root():
     app_folder = 'src/exabgp/application'
     root = os.environ.get('EXABGP_ROOT', '')
@@ -26,6 +27,3 @@ APPLICATION = 'exabgp'
 ROOT = _find_root()
 ETC = os.path.join(ROOT, 'etc', APPLICATION)
 ENVFILE = os.path.join(ETC, f'{APPLICATION}.env')
-
-
-

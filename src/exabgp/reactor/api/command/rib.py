@@ -41,13 +41,21 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
                             reactor.processes.write(
                                 service,
                                 '%s %s %s'
-                                % (reactor.neighbor_name(key), '%s %s' % change.nlri.family().afi_safi(), change.extensive()),
+                                % (
+                                    reactor.neighbor_name(key),
+                                    '%s %s' % change.nlri.family().afi_safi(),
+                                    change.extensive(),
+                                ),
                             )
                         else:
                             reactor.processes.write(
                                 service,
                                 'neighbor %s %s %s'
-                                % (reactor.neighbor_ip(key), '%s %s' % change.nlri.family().afi_safi(), str(change.nlri)),
+                                % (
+                                    reactor.neighbor_ip(key),
+                                    '%s %s' % change.nlri.family().afi_safi(),
+                                    str(change.nlri),
+                                ),
                             )
                 yield True
         reactor.processes.answer_done(service)

@@ -75,6 +75,7 @@ class AnnounceMup(ParseAnnounce):
     def check(self):
         return True
 
+
 def mup(tokeniser, afi, safi):
     muptype = tokeniser()
     if "mup-isd" == muptype:
@@ -112,9 +113,11 @@ def mup(tokeniser, afi, safi):
 
     return [change]
 
+
 @ParseAnnounce.register('mup', 'extend-name', 'ipv4')
 def mup_ip_v4(tokeniser):
     return mup(tokeniser, AFI.ipv4, SAFI.mup)
+
 
 @ParseAnnounce.register('mup', 'extend-name', 'ipv6')
 def mup_ip_v6(tokeniser):

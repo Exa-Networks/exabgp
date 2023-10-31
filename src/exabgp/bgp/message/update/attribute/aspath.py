@@ -21,6 +21,7 @@ from exabgp.bgp.message.notification import Notify
 # =================================================================== ASPath (2)
 # only 2-4% of duplicated data therefore it is not worth to cache
 
+
 class SET(list):
     ID = 0x01
     NAME = "as-set"
@@ -82,10 +83,7 @@ class ASPath(Attribute):
 
     def __eq__(self, other):
         return (
-            self.ID == other.ID
-            and self.FLAG == other.FLAG
-            and self.ASN4 == other.ASN4
-            and self.aspath == other.aspath
+            self.ID == other.ID and self.FLAG == other.FLAG and self.ASN4 == other.ASN4 and self.aspath == other.aspath
         )
 
     def __ne__(self, other):
@@ -146,7 +144,7 @@ class ASPath(Attribute):
     def string(self):
         parts = []
         for content in self.aspath:
-            part = "%s %s %s" % (content.HEAD, " ".join((str(_) for _ in content)), content.TAIL) 
+            part = "%s %s %s" % (content.HEAD, " ".join((str(_) for _ in content)), content.TAIL)
             parts.append(part)
         return " ".join(parts)
 

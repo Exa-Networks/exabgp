@@ -142,7 +142,7 @@ class IP(object):
         return self._string
 
     def decode(self, encoding='utf-8', errors='strict'):
-        assert (encoding in ('utf-8', 'ascii'))
+        assert encoding in ('utf-8', 'ascii')
         return self._string
 
     def __eq__(self, other):

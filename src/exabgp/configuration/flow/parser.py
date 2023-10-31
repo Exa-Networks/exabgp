@@ -1,51 +1,50 @@
-from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
-from exabgp.protocol.family import AFI
-
-from exabgp.bgp.message.open.asn import ASN
-
-# from exabgp.bgp.message.update.nlri.flow import Flow
-from exabgp.bgp.message.update.nlri.flow import BinaryOperator
-from exabgp.bgp.message.update.nlri.flow import NumericOperator
-from exabgp.bgp.message.update.nlri.flow import Flow4Source
-from exabgp.bgp.message.update.nlri.flow import Flow4Destination
-from exabgp.bgp.message.update.nlri.flow import Flow6Source
-from exabgp.bgp.message.update.nlri.flow import Flow6Destination
-from exabgp.bgp.message.update.nlri.flow import FlowSourcePort
-from exabgp.bgp.message.update.nlri.flow import FlowDestinationPort
-from exabgp.bgp.message.update.nlri.flow import FlowAnyPort
-from exabgp.bgp.message.update.nlri.flow import FlowIPProtocol
-from exabgp.bgp.message.update.nlri.flow import FlowNextHeader
-from exabgp.bgp.message.update.nlri.flow import FlowTCPFlag
-from exabgp.bgp.message.update.nlri.flow import FlowFragment
-from exabgp.bgp.message.update.nlri.flow import FlowPacketLength
-from exabgp.bgp.message.update.nlri.flow import FlowICMPType
-from exabgp.bgp.message.update.nlri.flow import FlowICMPCode
-from exabgp.bgp.message.update.nlri.flow import FlowDSCP
-from exabgp.bgp.message.update.nlri.flow import FlowTrafficClass
-from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
-from exabgp.bgp.message.update.nlri import Flow
-
-from exabgp.bgp.message.update.attribute import NextHop
-from exabgp.bgp.message.update.attribute import NextHopSelf
-from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.bgp.message.update.attribute.community.extended import TrafficRate
-from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
-from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirect
-from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirectASN4
-from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
-from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirectIPv6
-from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopIPv4IETF
-from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopIPv6IETF
-from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopSimpson
-
-from exabgp.bgp.message.update.attribute.community.extended import InterfaceSet
-
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunitiesIPv6
-
+from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.family import (
+    AFI,
+)
+from exabgp.bgp.message.open.asn import (
+    ASN,
+)
+from exabgp.bgp.message.update.nlri import (
+    Flow,
+)
+from exabgp.bgp.message.update.nlri.flow import (
+    BinaryOperator,
+    NumericOperator,
+    Flow4Source,
+    Flow4Destination,
+    Flow6Source,
+    Flow6Destination,
+    FlowSourcePort,
+    FlowDestinationPort,
+    FlowAnyPort,
+    FlowIPProtocol,
+    FlowNextHeader,
+    FlowTCPFlag,
+    FlowFragment,
+    FlowPacketLength,
+    FlowICMPType,
+    FlowICMPCode,
+    FlowDSCP,
+    FlowTrafficClass,
+    FlowFlowLabel,
+)
+from exabgp.bgp.message.update.attribute import NextHop, NextHopSelf, Attributes
+from exabgp.bgp.message.update.attribute.community.extended import (
+    TrafficRate,
+    TrafficAction,
+    TrafficRedirect,
+    TrafficRedirectASN4,
+    TrafficMark,
+    TrafficRedirectIPv6,
+    TrafficNextHopIPv4IETF,
+    TrafficNextHopIPv6IETF,
+    TrafficNextHopSimpson,
+    InterfaceSet,
+    ExtendedCommunities,
+    ExtendedCommunitiesIPv6,
+)
 from exabgp.rib.change import Change
-
 from exabgp.logger import log
 
 

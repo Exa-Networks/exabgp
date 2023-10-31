@@ -291,6 +291,7 @@ class BinaryString(object):
     def __str__(self):
         return self.short()
 
+
 # Components ..............................
 
 
@@ -603,7 +604,7 @@ class Flow(NLRI):
                 if idx and not rule.operations & NumericOperator.AND:
                     r_str.append(' ')
                 # ugly hack as dynamic languages are what they are and use used __str__ in the past
-                r_str.append(rule.short() if hasattr(rule,'short') else str(rule))
+                r_str.append(rule.short() if hasattr(rule, 'short') else str(rule))
             line = ''.join(r_str)
             if len(r_str) > 1:
                 line = '[ %s ]' % line

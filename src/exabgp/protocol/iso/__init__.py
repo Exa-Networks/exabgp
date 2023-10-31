@@ -12,7 +12,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 class ISO(object):
     def __init__(self, sysid, selector=None, area_id=None, afi=49):
-
         self.sysid = sysid
         self.area_id = area_id
         self.selector = selector

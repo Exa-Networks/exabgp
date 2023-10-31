@@ -82,7 +82,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         size = data_len - 8
         if not size in [4, 16]:
             raise Notify(3, 5, "Invalid IP size, expect 4 or 16 octets. accuracy size %d" % size)
-        ip = IP.unpack(data[8: 8 + size])
+        ip = IP.unpack(data[8 : 8 + size])
 
         return cls(rd, ip, afi)
 

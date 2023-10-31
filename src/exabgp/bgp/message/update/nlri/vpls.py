@@ -30,7 +30,6 @@ unique = _unique()
 
 @NLRI.register(AFI.l2vpn, SAFI.vpls)
 class VPLS(NLRI):
-
     # XXX: Should take AFI, SAFI and OUT.direction as parameter to match other NLRI
     def __init__(self, rd, endpoint, base, offset, size):
         NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)

@@ -137,7 +137,12 @@ class GenericLSID(BaseLS):
     MERGE = True
 
     def __init__(self, content):
-        BaseLS.__init__(self, [content, ])
+        BaseLS.__init__(
+            self,
+            [
+                content,
+            ],
+        )
 
     def __repr__(self):
         return "Attribute with code [ %s ] not implemented" % (self.TLV)

@@ -228,6 +228,7 @@ def display_message(neighbor, message):
     print("unknown type %d", kind)
     return False
 
+
 # =================================================================== check_nlri
 #
 
@@ -280,6 +281,7 @@ def display_nlri(neighbor, routes):
     for nlri in nlris:
         print(nlri.json())
     return True
+
 
 # =================================================================== check_open
 #
