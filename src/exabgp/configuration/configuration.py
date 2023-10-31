@@ -60,16 +60,16 @@ class _Configuration(object):
         self.neighbors = {}
 
     def inject_change(self, peers, change):
-        result = True
+        result = False
         for neighbor_name in self.neighbors:
             if neighbor_name in peers:
                 neighbor = self.neighbors[neighbor_name]
                 if change.nlri.family() in neighbor.families():
                     # remove_self may well have side effects on change
                     neighbor.rib.outgoing.add_to_rib(neighbor.remove_self(change))
+                    result = True
                 else:
                     log.error('the route family is not configured on neighbor', 'configuration')
-                    result = False
         return result
 
     def inject_eor(self, peers, family):
