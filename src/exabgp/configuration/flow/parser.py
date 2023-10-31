@@ -287,7 +287,11 @@ def redirect(tokeniser):
     # the redirect is an ipv6:asn using []: notation
     if count > 1:
         if ']:' not in data:
-            raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
+            try:
+                ip = IP.create(data)
+                return ip, ExtendedCommunities().add(TrafficNextHopSimpson(False))
+            except Exception:
+                raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
 
         ip, asn = data.split(']:')
         ip = ip.replace('[', '', 1)
