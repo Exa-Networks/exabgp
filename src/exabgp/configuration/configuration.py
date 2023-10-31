@@ -64,7 +64,7 @@ class _Configuration(object):
         for neighbor_name in self.neighbors:
             if neighbor_name in peers:
                 neighbor = self.neighbors[neighbor_name]
-                if change.nlri.family() in neighbor.families():
+                if change.nlri.family().afi_safi() in neighbor.families():
                     # remove_self may well have side effects on change
                     neighbor.rib.outgoing.add_to_rib(neighbor.remove_self(change))
                     result = True
@@ -84,9 +84,9 @@ class _Configuration(object):
         result = True
         for neighbor in self.neighbors:
             if neighbor in peers:
-                if operational.family() in self.neighbors[neighbor].families():
+                if operational.family().afi_safi() in self.neighbors[neighbor].families():
                     if operational.name == 'ASM':
-                        self.neighbors[neighbor].asm[operational.family()] = operational
+                        self.neighbors[neighbor].asm[operational.family().afi_safi()] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:
                     log.error('the route family is not configured on neighbor', 'configuration')

@@ -314,8 +314,14 @@ class Family(object):
     def __ge__(self, other):
         raise RuntimeError('comparing Family for ordering does not make sense')
 
-    def family(self):
+    def afi_safi(self):
         return (self.afi, self.safi)
+
+    def family(self):
+        return Family(self.afi, self.safi)
+
+    def short(self):
+        return '%s/%s' % (self.afi, self.safi)
 
     def extensive(self):
         return 'afi %s safi %s' % (self.afi, self.safi)

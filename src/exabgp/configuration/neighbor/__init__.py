@@ -260,14 +260,14 @@ class ParseNeighbor(Section):
         for change in neighbor.changes:
             # remove_self may well have side effects on change
             change = neighbor.remove_self(change)
-            if change.nlri.family() in families:
+            if change.nlri.family().afi_safi() in families:
                 # This add the family to neighbor.families()
                 neighbor.rib.outgoing.add_to_rib_watchdog(change)
 
         for message in local.get('operational', {}).get('routes', []):
-            if message.family() in families:
+            if message.family().afi_safi() in families:
                 if message.name == 'ASM':
-                    neighbor.asm[message.family()] = message
+                    neighbor.asm[message.family().afi_safi()] = message
                 else:
                     neighbor.messages.append(message)
         self.neighbors[neighbor.name()] = neighbor
@@ -311,11 +311,11 @@ class ParseNeighbor(Section):
 
         # check we are not trying to announce routes without the right MP announcement
         for change in neighbor.changes:
-            family = change.nlri.family()
+            family = change.nlri.family().afi_safi()
             if family not in families and family != (AFI.ipv4, SAFI.unicast):
                 return self.error.set(
                     'Trying to announce a route of type %s,%s when we are not announcing the family to our peer'
-                    % change.nlri.family()
+                    % change.nlri.family().afi_safi()
                 )
 
         # create one neighbor object per family for multisession

@@ -156,7 +156,7 @@ class OutgoingRIB(Cache):
         log.debug('remove %s' % change, 'rib')
 
         change_index = change.index()
-        change_family = change.nlri.family()
+        change_family = change.nlri.family().afi_safi()
 
         attr_af_nlri = self._new_attr_af_nlri
         new_nlri = self._new_nlri
@@ -188,7 +188,7 @@ class OutgoingRIB(Cache):
     def _update_rib(self, change):
         # change.nlri.index does not prepend the family
         change_index = change.index()
-        change_family = change.nlri.family()
+        change_family = change.nlri.family().afi_safi()
         change_attr_index = change.attributes.index()
 
         attr_af_nlri = self._new_attr_af_nlri

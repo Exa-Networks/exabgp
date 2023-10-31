@@ -48,7 +48,7 @@ class MPURNLRI(Attribute, Family):
 
         mpurnlri = []
         for nlri in self.nlris:
-            if nlri.family() != self.family():  # nlri is not part of specified family
+            if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
                 continue
             mpurnlri.append(nlri.pack(negotiated))
 

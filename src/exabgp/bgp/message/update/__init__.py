@@ -110,7 +110,7 @@ class Update(Message):
         mp_nlris = {}
 
         for nlri in sorted(self.nlris):
-            if nlri.family() not in negotiated.families:
+            if nlri.family().afi_safi() not in negotiated.families:
                 continue
 
             add_v4 = nlri.afi == AFI.ipv4
@@ -130,11 +130,11 @@ class Update(Message):
                 continue
 
             if nlri.nexthop.afi != AFI.undefined:
-                mp_nlris.setdefault(nlri.family(), {}).setdefault(nlri.action, []).append(nlri)
+                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
 
             if nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn):
-                mp_nlris.setdefault(nlri.family(), {}).setdefault(nlri.action, []).append(nlri)
+                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
 
             raise ValueError("unexpected nlri definition (%s)" % nlri)

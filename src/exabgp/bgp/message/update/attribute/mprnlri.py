@@ -54,13 +54,13 @@ class MPRNLRI(Attribute, Family):
         # nexthopself = negotiated.nexthopself(self.afi)
         mpnlri = {}
         for nlri in self.nlris:
-            if nlri.family() != self.family():  # nlri is not part of specified family
+            if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
                 continue
             if nlri.nexthop is NoNextHop:
                 # EOR and Flow may not have any next_hop
                 nexthop = b''
             else:
-                _, rd_size = Family.size.get(self.family(), (0, 0))
+                _, rd_size = Family.size.get(self.family().afi_safi(), (0, 0))
                 nh_rd = bytes([0]) * rd_size if rd_size else b''
                 try:
                     # TODO: remove nlri.afi as it should be in the nexthop already
