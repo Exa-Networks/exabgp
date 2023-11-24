@@ -275,15 +275,15 @@ def redirect(tokeniser):
     data = tokeniser()
     count = data.count(':')
 
-    # the redirect is an IPv4
+    # the redirect is an IPv4 nexthop
     if count == 0:
         return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
-    # the redirect is an IPv6
+    # the redirect is an IPv6 nexthop using [] notation
     if data.startswith('[') and data.endswith(']'):
         return IP.create(data[1:-1]), ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
-    # the redirect is an ipv6:NN using []: notation
+    # the redirect is an ipv6:NN route-target using []: notation
     if count > 1:
         if ']:' not in data:
             try:
@@ -299,7 +299,7 @@ def redirect(tokeniser):
             raise ValueError('Local administrator field is a 16 bits number, value too large %s' % nn)
         return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, nn))
 
-    # the redirect is an ASN:NN
+    # the redirect is an ASN:NN route-target
     if True:  # count == 1:
         prefix, suffix = data.split(':', 1)
 
