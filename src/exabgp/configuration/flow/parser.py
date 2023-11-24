@@ -275,8 +275,8 @@ def redirect(tokeniser):
     data = tokeniser()
     count = data.count(':')
 
-    # the redirect is an IPv4 nexthop
-    if count == 0:
+    # the redirect is an IPv4 or an IPv6 nexthop
+    if count == 0 or (count > 1 and '[' not in data and ']' not in data):
         return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
     # the redirect is an IPv6 nexthop using [] notation
@@ -323,7 +323,7 @@ def redirect(tokeniser):
                 raise ValueError('Local administrator field is a 32 bits number, value too large %s' % nn)
             return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn))
 
-    raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
+    raise ValueError('redirect format incorrect')
 
 
 def redirect_next_hop(tokeniser):
