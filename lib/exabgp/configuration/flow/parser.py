@@ -308,12 +308,11 @@ def redirect(tokeniser):
 
         # ipv6 using []: notation
         if explicit_v6:
-            ip, asn = data.split(']:')
+            ip, nn = data.split(']:')
             ip = ip.replace('[', '', 1)
-            # FIXME: should this be 2^16 ??
-            if asn >= pow(2, 32):
-                raise ValueError('asn is a 32 bits number, value too large %s' % asn)
-            return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, asn))
+            if nn >= pow(2, 16):
+                raise ValueError('Local administrator field is a 16 bits number, value too large %s' % nn)
+            return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, nn))
 
         raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
 
