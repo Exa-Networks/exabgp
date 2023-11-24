@@ -283,7 +283,7 @@ def redirect(tokeniser):
     if data.startswith('[') and data.endswith(']'):
         return IP.create(data[1:-1]), ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
-    # the redirect is an ipv6:asn using []: notation
+    # the redirect is an ipv6:NN using []: notation
     if count > 1:
         if ']:' not in data:
             try:
@@ -292,13 +292,12 @@ def redirect(tokeniser):
             except Exception:
                 raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
 
-        ip, asn = data.split(']:')
+        ip, nn = data.split(']:')
         ip = ip.replace('[', '', 1)
 
-        # FIXME: should this be 2^16 ??
-        if asn >= pow(2, 32):
-            raise ValueError('asn is a 32 bits number, value too large %s' % asn)
-        return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, asn))
+        if nn >= pow(2, 16):
+            raise ValueError('Local administrator field is a 16 bits number, value too large %s' % nn)
+        return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, nn))
 
     # the redirect is an ASN:RT
     if True:  # count == 1:
