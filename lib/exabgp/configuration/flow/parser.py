@@ -278,8 +278,8 @@ def rate_limit(tokeniser):
 def redirect(tokeniser):
     data = tokeniser()
     count = data.count(':')
-    if count == 0:
-        # the redirect is an IPv4 nexthop
+    if count == 0 or (count > 1 and '[' not in data and ']' not in data):
+        # the redirect is an IPv4 or IPv6 nexthop
         return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))  
     if count == 1:
         # the redirect is an ASN:NN route-target
@@ -316,7 +316,7 @@ def redirect(tokeniser):
                 raise ValueError('Local administrator field is a 16 bits number, value too large %s' % nn)
             return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, nn))
 
-        raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
+        raise ValueError('redirect format incorrect')
 
 
 def redirect_next_hop(tokeniser):
