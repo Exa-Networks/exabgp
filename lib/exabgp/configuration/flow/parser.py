@@ -279,8 +279,10 @@ def redirect(tokeniser):
     data = tokeniser()
     count = data.count(':')
     if count == 0:
-        return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))
+        # the redirect is an IPv4 nexthop
+        return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))  
     if count == 1:
+        # the redirect is an ASN:NN route-target
         prefix, suffix = data.split(':', 1)
         if prefix.count('.'):
             raise ValueError(
@@ -306,8 +308,8 @@ def redirect(tokeniser):
         if not explicit_v6 and data.count(':') == 1:
             return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
-        # ipv6 using []: notation
         if explicit_v6:
+            # the redirect is an ipv6:NN route-target using []: notation
             ip, nn = data.split(']:')
             ip = ip.replace('[', '', 1)
             if nn >= pow(2, 16):
