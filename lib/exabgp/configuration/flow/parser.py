@@ -288,17 +288,17 @@ def redirect(tokeniser):
             )
 
         asn = int(prefix)
-        route_target = int(suffix)
+        nn = int(suffix)
 
         if asn >= pow(2, 32):
             raise ValueError('asn is a 32 bits number, value too large %s' % asn)
         if asn >= pow(2, 16):
-            if route_target >= pow(2, 16):
-                raise ValueError('asn is a 32 bits number, route target can only be 16 bit %s' % route_target)
-            return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, route_target))
-        if route_target >= pow(2, 32):
-            raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, route_target))
+            if nn >= pow(2, 16):
+                raise ValueError('asn is a 32 bits number, local administrator field  can only be 16 bit %s' % nn)
+            return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, nn))
+        if nn >= pow(2, 32):
+            raise ValueError('Local administrator field is a 32 bits number, value too large %s' % nn)
+        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn))
     else:
         explicit_v6 = ']:' in data
 
