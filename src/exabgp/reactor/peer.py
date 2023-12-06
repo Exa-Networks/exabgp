@@ -100,15 +100,15 @@ class Peer(object):
     def id(self):
         return 'peer-%s' % self.neighbor.uid
 
-    def _reset(self, message='', error=''):
+    def _close(self, message='', error=''):
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
             try:
                 if self.neighbor.api['neighbor-changes']:
                     self.reactor.processes.down(self.neighbor, message)
             except ProcessError:
                 log.debug('could not send notification of neighbor close to API', self.connection.session())
-
         self.fsm.change(FSM.IDLE)
+
         self.stats = {
             'fsm': self.fsm,
             'creation': self.stats['creation'],
@@ -124,6 +124,9 @@ class Peer(object):
         self._delay.increase()
 
         self.proto = None
+
+    def _reset(self, message='', error=''):
+        self._close(message, error)
 
         if not self._restart or self.neighbor.generated:
             self.generator = False
@@ -141,8 +144,7 @@ class Peer(object):
     def _stop(self, message):
         self.generator = None
         if self.proto:
-            self.proto.close('stop, message [%s]' % message)
-            self.proto = None
+            self._close('stop, message [%s]' % message)
 
     # logging
 
@@ -236,7 +238,7 @@ class Peer(object):
                 % connection.name(),
                 self.id(),
             )
-            self.proto.close('closing outgoing connection as we have another incoming on with higher router-id')
+            self._close('closing outgoing connection as we have another incoming on with higher router-id')
 
         self.proto = Protocol(self).accept(connection)
         self.generator = None
@@ -275,7 +277,7 @@ class Peer(object):
         except Stop:
             # Connection failed
             if not connected and self.proto:
-                self.proto.close(
+                self._close(
                     'connection to %s:%d failed' % (self.neighbor['peer-address'], self.neighbor['connect'])
                 )
 
@@ -532,7 +534,7 @@ class Peer(object):
             Capability.CODE.GRACEFUL_RESTART
         ):
             log.error('closing the session without notification', self.id())
-            self.proto.close('graceful restarted negotiated, closing without sending any notification')
+            self._close('graceful restarted negotiated, closing without sending any notification')
             raise NetworkError('closing')
 
         # notify our peer of the shutdown
