@@ -32,7 +32,7 @@ class AnnounceMup(ParseAnnounce):
     definition = [
         'mup-isd <ip prefix> rd <rd>',
         'mup-dsd <ip address> rd <rd>',
-        'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint>',
+        'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint> [source <source_addr>]',
         'mup-t2st <endpoint address> rd <rd> teid <teid>',
         'next-hop <ip>',
         'extended-community [ mup:<16 bits number>:<ipv4 formated number> target:<16 bits number>:<ipv4 formated number> ]',
