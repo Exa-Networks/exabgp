@@ -93,18 +93,21 @@ class Type1SessionTransformedRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s%s:%s:%s:%s:%s:%s:%s" % (
+        s = "%s:%s:%s%s:%s:%s:%s%s" % (
             self._prefix(),
             self.rd._str(),
             self.ipprefix,
             "/%d" % self.ipprefix_len,
             self.teid,
             self.qfi,
-            self.endpoint_ip_len,
             self.endpoint_ip,
-            self.source_ip_len,
-            self.source_ip,
+            "/%d" % self.ipprefix_len,
         )
+
+        if self.source_ip_len != 0 and self.source_ip != b'':
+            s += "%s%s" % (self.source_ip, "/%d" % self.source_ip_len)
+
+        return s
 
     def pack_index(self):
         # removed teid, qfi, endpointip
@@ -190,17 +193,17 @@ class Type1SessionTransformedRoute(MUP):
             endpoint_ip = IP.unpack(data[size : size + endpoint_ip_len])
             size += endpoint_ip_len
         else:
-            raise RuntimeError('endpoint ip length is not 4 or 16')
+            raise RuntimeError('mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len)
 
         source_ip_size = datasize - size
         if 0 < source_ip_size:
             source_ip_len = data[size]
             size += 1
-            if source_ip_len in [4, 16]:
+            if source_ip_len in [32, 128]:
                 source_ip = IP.unpack(data[size : size + source_ip_len])
                 size += source_ip_len
             else:
-                raise RuntimeError('source ip length is not 4 or 16')
+                raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
 
         return cls(rd, ipprefix_len, ipprefix, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)
 
