@@ -93,7 +93,7 @@ class Type1SessionTransformedRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        s = "%s:%s:%s%s:%s:%s:%s%s" % (
+        return"%s:%s:%s%s:%s:%s:%s%s:%s%s" % (
             self._prefix(),
             self.rd._str(),
             self.ipprefix,
@@ -102,12 +102,9 @@ class Type1SessionTransformedRoute(MUP):
             self.qfi,
             self.endpoint_ip,
             "/%d" % self.ipprefix_len,
+            self.source_ip if self.source_ip != b"" else "",
+            "/%d" % (self.source_ip_len if self.source_ip_len != 0 else 0),
         )
-
-        if self.source_ip_len != 0 and self.source_ip != b'':
-            s += "%s%s" % (self.source_ip, "/%d" % self.source_ip_len)
-
-        return s
 
     def pack_index(self):
         # removed teid, qfi, endpointip
