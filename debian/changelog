@@ -1,4 +1,4 @@
-exabgp (4.2.21-2) UNRELEASED; urgency=medium
+exabgp (4.2.21-2) unstable; urgency=medium
 
   [ Chris Hofstaedtler ]
   * d/rules: let debhelper place systemd unit. (Closes: #1058775)
