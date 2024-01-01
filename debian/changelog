@@ -1,8 +1,19 @@
 exabgp (4.2.21-2) UNRELEASED; urgency=medium
 
+  [ Chris Hofstaedtler ]
+  * d/rules: let debhelper place systemd unit. (Closes: #1058775)
+
+  [ Vincent Bernat ]
   * d/control: use pytest for tests.
 
- -- Vincent Bernat <bernat@debian.org>  Sun, 21 Aug 2022 15:24:46 +0200
+ -- Vincent Bernat <bernat@debian.org>  Mon, 01 Jan 2024 08:58:46 +0100
+
+exabgp (4.2.21-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * No source change upload to rebuild with debhelper 13.10.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 15 Oct 2022 12:02:54 +0200
 
 exabgp (4.2.21-1) unstable; urgency=medium
 

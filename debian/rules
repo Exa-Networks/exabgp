@@ -13,6 +13,8 @@ override_dh_auto_install:
 	mkdir -p $(CURDIR)/debian/python3-exabgp/usr/sbin
 	mv $(CURDIR)/debian/python3-exabgp/usr/bin/exabgp $(CURDIR)/debian/python3-exabgp/usr/sbin/python3-exabgp
 	mv $(CURDIR)/debian/python3-exabgp/usr/bin/exabgpcli $(CURDIR)/debian/python3-exabgp/usr/sbin/python3-exabgpcli
+	# Let dh place the systemd unit.
+	cp $(CURDIR)/etc/systemd/exabgp.service $(CURDIR)/debian/exabgp.service
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
@@ -26,4 +28,4 @@ endif
 
 override_dh_auto_clean:
 	dh_auto_clean --buildsystem=pybuild
-	rm -f etc/exabgp/exabgp.env
+	rm -f etc/exabgp/exabgp.env debian/exabgp.service
