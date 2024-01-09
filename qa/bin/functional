@@ -501,9 +501,10 @@ class DecodingTests(Tests):
             except Exception:
                 return self.failed('issue, failed to decode the JSON')
             if decoded != self.conf['json']:
+                from pprint import pformat
                 failure = 'issue, JSON does not match'
-                failure += f'\ndecoded : {decoded}\n'
-                failure += f'\nexpected: {self.conf["json"]}'
+                failure += f'\ndecoded : {pformat(decoded)}\n'
+                failure += f'\nexpected: {pformat(self.conf["json"])}'
                 return self.failed(failure)
             return True
 
