@@ -25,15 +25,19 @@ from struct import pack
 # +-----------------------------------+
 
 # 3gpp-5g Specific BGP Type 1 ST Route
-# +-----------------------------------+
-# |          TEID (4 octets)          |
-# +-----------------------------------+
-# |          QFI (1 octet)            |
-# +-----------------------------------+
-# | Endpoint Address Length (1 octet) |
-# +-----------------------------------+
-# |    Endpoint Address (variable)    |
-# +-----------------------------------+
+#   +-----------------------------------+
+#   |          TEID (4 octets)          |
+#   +-----------------------------------+
+#   |          QFI (1 octet)            |
+#   +-----------------------------------+
+#   | Endpoint Address Length (1 octet) |
+#   +-----------------------------------+
+#   |    Endpoint Address (variable)    |
+#   +-----------------------------------+
+#   |  Source Address Length (1 octet)  |
+#   +-----------------------------------+
+#   |     Source Address (variable)     |
+#   +-----------------------------------+
 
 
 @MUP.register
@@ -53,6 +57,8 @@ class Type1SessionTransformedRoute(MUP):
         endpoint_ip_len,
         endpoint_ip,
         afi,
+        source_ip_len,
+        source_ip,
         packed=None,
     ):
         MUP.__init__(self, afi)
@@ -63,6 +69,8 @@ class Type1SessionTransformedRoute(MUP):
         self.qfi = qfi
         self.endpoint_ip_len = endpoint_ip_len
         self.endpoint_ip = endpoint_ip
+        self.source_ip_len = source_ip_len
+        self.source_ip = source_ip
         self._pack(packed)
 
     def __eq__(self, other):
@@ -77,22 +85,29 @@ class Type1SessionTransformedRoute(MUP):
             and self.qfi == other.qfi
             and self.endpoint_ip_len == other.endpoint_ip_len
             and self.endpoint_ip == other.endpoint_ip
+            and self.source_ip_len == other.source_ip_len
+            and self.source_ip == other.source_ip
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s%s:%s:%s:%s:%s" % (
+        s = "%s:%s:%s%s:%s:%s:%s%s" % (
             self._prefix(),
             self.rd._str(),
             self.ipprefix,
             "/%d" % self.ipprefix_len,
             self.teid,
             self.qfi,
-            self.endpoint_ip_len,
             self.endpoint_ip,
+            "/%d" % self.ipprefix_len,
         )
+
+        if self.source_ip_len != 0 and self.source_ip != b'':
+            s += ":%s/%d" % (self.source_ip, self.source_ip_len)
+
+        return s
 
     def pack_index(self):
         # removed teid, qfi, endpointip
@@ -112,6 +127,8 @@ class Type1SessionTransformedRoute(MUP):
                 self.qfi,
                 self.endpoint_ip_len,
                 self.endpoint_ip,
+                self.source_ip_len,
+                self.source_ip,
             )
         )
 
@@ -129,6 +146,7 @@ class Type1SessionTransformedRoute(MUP):
             offset += 1
 
         ipprefix_packed = self.ipprefix.pack()
+
         # fmt: off
         self._packed = (
             self.rd.pack()
@@ -138,11 +156,16 @@ class Type1SessionTransformedRoute(MUP):
             + pack('!B',self.endpoint_ip_len)
             + self.endpoint_ip.pack()
         )
+
+        if self.source_ip_len != 0:
+            self._packed += pack('!B', self.source_ip_len) + self.source_ip.pack()
+
         # fmt: on
         return self._packed
 
     @classmethod
     def unpack(cls, data, afi):
+        datasize = len(data)
         rd = RouteDistinguisher.unpack(data[:8])
         ipprefix_len = data[8]
         ip_offset = ipprefix_len // 8
@@ -165,8 +188,24 @@ class Type1SessionTransformedRoute(MUP):
         size += 1
         endpoint_ip_len = data[size]
         size += 1
-        endpoint_ip = IP.unpack(data[size:])
-        return cls(rd, ipprefix_len, ipprefix, teid, qfi, endpoint_ip_len, endpoint_ip, afi)
+
+        if endpoint_ip_len in [32, 128]:
+            endpoint_ip = IP.unpack(data[size : size + endpoint_ip_len])
+            size += endpoint_ip_len
+        else:
+            raise RuntimeError('mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len)
+
+        source_ip_size = datasize - size
+        if 0 < source_ip_size:
+            source_ip_len = data[size]
+            size += 1
+            if source_ip_len in [32, 128]:
+                source_ip = IP.unpack(data[size : size + source_ip_len])
+                size += source_ip_len
+            else:
+                raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
+
+        return cls(rd, ipprefix_len, ipprefix, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)
 
     def json(self, compact=None):
         content = '"arch": %d, ' % self.ARCHTYPE
@@ -180,4 +219,6 @@ class Type1SessionTransformedRoute(MUP):
         content += '"qfi": "%s", ' % str(self.qfi)
         content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
         content += '"endpoint_ip": "%s"' % str(self.endpoint_ip)
+        content += '"source_ip_len": %d, ' % self.source_ip_len
+        content += '"source_ip": "%s"' % str(self.source_ip)
         return '{ %s }' % content

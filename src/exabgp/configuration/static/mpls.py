@@ -248,7 +248,7 @@ def srv6_mup_dsd(tokeniser, afi):
     )
 
 
-# 'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint>',
+# 'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint> [source <source>]',
 def srv6_mup_t1st(tokeniser, afi):
     ip, length = parse_ip_prefix(tokeniser())
 
@@ -283,6 +283,19 @@ def srv6_mup_t1st(tokeniser, afi):
     else:
         raise Exception("expect endpoint, but received '%s'" % value)
 
+    source_ip = b""
+    source_ip_len = 0
+    if "source" == tokeniser.peek():
+        tokeniser()
+        if afi == AFI.ipv4:
+            source_ip = IPv4.unpack(IPv4.pton(tokeniser()))
+            source_ip_len = 32
+        elif afi == AFI.ipv6:
+            source_ip = IPv6.unpack(IPv6.pton(tokeniser()))
+            source_ip_len = 128
+        else:
+            raise Exception("unexpect afi: %s" % afi)
+
     return Type1SessionTransformedRoute(
         rd=rd,
         ipprefix_len=int(length),
@@ -290,8 +303,10 @@ def srv6_mup_t1st(tokeniser, afi):
         teid=int(teid),
         qfi=int(qfi),
         afi=afi,
-        endpoint_ip=endpoint_ip,
         endpoint_ip_len=int(endpoint_ip_len),
+        endpoint_ip=endpoint_ip,
+        source_ip_len=int(source_ip_len),
+        source_ip=source_ip,
     )
 
 
