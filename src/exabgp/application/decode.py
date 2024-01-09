@@ -58,7 +58,6 @@ def main():
 
 
 def cmdline(cmdarg):
-    log.silence()
     route = ''.join(cmdarg.payload).replace(' ', '').strip()
 
     if not is_bgp(route):
@@ -82,6 +81,8 @@ def cmdline(cmdarg):
     if cmdarg.debug:
         env.log.all = True
         env.log.level = 'DEBUG'
+    else:
+        log.silence()
 
     if cmdarg.pdb:
         env.debug.pdb = True
