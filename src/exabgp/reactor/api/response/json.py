@@ -321,7 +321,10 @@ class JSON(object):
         # all the next-hops should be the same but let's not assume it
 
         for nlri in update.nlris:
-            nexthop = str(nlri.nexthop) if nlri.nexthop else 'null'
+            try:
+                nexthop = str(nlri.nexthop)
+            except:
+                nexthop = 'null'
             if nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
                 plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
             if nlri.action == Action.WITHDRAW:  # pylint: disable=E1101
