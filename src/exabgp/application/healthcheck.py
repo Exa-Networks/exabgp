@@ -112,6 +112,7 @@ def setargs(parser):
     g.add_argument("--withdraw-on-down", action="store_true", help="Instead of increasing the metric on health failure, withdraw the route")
     g.add_argument("--path-id", metavar='PATHID', type=int, default=None, help="path ID to advertise for the route")
     g.add_argument("--neighbor", metavar='NEIGHBOR', type=ip_address, dest="neighbors", action="append", help="advertise the route to the selected neigbors")
+    g.add_argument("--debounce", action="store_true", dest="debounce", help="announce only on state changes, instead of every iteration")
 
     g = parser.add_argument_group("reporting")
     g.add_argument("--execute", metavar='CMD', type=str, action="append", help="execute CMD on state change")
@@ -459,6 +460,7 @@ def loop(options):
         """Execute one loop iteration."""
         disabled = options.disable is not None and os.path.exists(options.disable)
         successful = disabled or check(options.command, options.timeout)
+        state_before_iteration = state
         # FSM
         if state != states.DISABLED and disabled:
             state = trigger(states.DISABLED)
@@ -501,9 +503,11 @@ def loop(options):
         else:
             raise ValueError("Unhandled state: {0}".format(str(state)))
 
-        # Send announces. We announce them on a regular basis in case
-        # we lose connection with a peer and the adj-rib-out is disabled.
-        exabgp(state)
+        # Send announces. We announce them on a regular basis (unless --debounce flag is set),
+        # in case we lose connection with a peer and the adj-rib-out is disabled.
+        if not options.debounce or state != state_before_iteration:
+            exabgp(state)
+
         return checks, state
 
     checks = 0
