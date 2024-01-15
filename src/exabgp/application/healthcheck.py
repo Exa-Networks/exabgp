@@ -112,7 +112,7 @@ def setargs(parser):
     g.add_argument("--withdraw-on-down", action="store_true", help="Instead of increasing the metric on health failure, withdraw the route")
     g.add_argument("--path-id", metavar='PATHID', type=int, default=None, help="path ID to advertise for the route")
     g.add_argument("--neighbor", metavar='NEIGHBOR', type=ip_address, dest="neighbors", action="append", help="advertise the route to the selected neigbors")
-    g.add_argument("--debounce", default=False, action="store_false", dest="debounce", help="announce only on state changes, instead of every iteration")
+    g.add_argument("--debounce", action="store_true", dest="debounce", help="announce only on state changes, instead of every iteration")
 
     g = parser.add_argument_group("reporting")
     g.add_argument("--execute", metavar='CMD', type=str, action="append", help="execute CMD on state change")
