@@ -1,8 +1,9 @@
 import os
 import sys
+from datetime import datetime
 
 commit = "99de31e8"
-release = "main"
+release = "5.0.0dev%s" % datetime.now().strftime('%Y%m%d%H%M%S')
 json = "5.0.0"
 text = "5.0.0"
 version = os.environ.get('EXABGP_VERSION', release)
