@@ -21,7 +21,7 @@ from exabgp.util import hexstring
 @Attribute.register()
 class PrefixSid(Attribute):
     ID = Attribute.CODE.BGP_PREFIX_SID
-    FLAG = FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     CACHING = True
     TLV = -1
 
