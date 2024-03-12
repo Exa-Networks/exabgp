@@ -174,8 +174,7 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
         sh.setFormatter(logging.Formatter("{0}[{1}]: %(message)s".format(healthcheck_name, os.getpid())))
         logger.addHandler(sh)
     # To console
-    toconsole = hasattr(sys.stderr, "isatty") and sys.stderr.isatty() and not silent  # pylint: disable=E1101
-    if toconsole:
+    if not silent:
         ch = logging.StreamHandler()
         ch.setFormatter(logging.Formatter("%(levelname)s[%(name)s] %(message)s"))
         logger.addHandler(ch)
