@@ -261,7 +261,7 @@ def remove_ips(ips, label, sudo=False):
     existing = set(loopback_ips(label, True))
 
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
-    toremove = set([ip_network(ip) for net in ips for ip in net]) & existing
+    toremove = set([ip_network(ip) for net in ips for ip in net]) | existing
     for ip in toremove:
         logger.debug("Remove loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
