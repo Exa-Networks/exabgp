@@ -220,7 +220,7 @@ def loopback_ips(label, label_only):
                     continue
                 if lmo.groupdict().get("label", "").startswith(label):
                     addresses.append(ip)
-            elif not label_only:
+            elif not label_only or label is None:
                 addresses.append(ip)
 
     logger.debug("Loopback addresses: %s", addresses)
