@@ -83,6 +83,7 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 %defattr(-,root,root,-)
 %attr(755, root, root) %{_sbindir}/exabgp
 %attr(755, root, root) %{_sbindir}/exabgpcli
+%attr(755, root, root) %{_sbindir}/exabgp-cli
 %attr(755, root, root) %{_sbindir}/exabgp-healthcheck
 %dir %{_sysconfdir}/exabgp
 %{_sysconfdir}/exabgp/exabgp.conf
