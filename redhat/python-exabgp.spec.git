@@ -85,7 +85,7 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 %files
 %defattr(-,root,root,-)
 %{python3_sitelib}/*
-%doc COPYRIGHT CHANGELOG README.md
+%doc CHANGELOG.rst README.md
 
 %files -n exabgp
 %defattr(-,root,root,-)
@@ -100,7 +100,7 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 %{_unitdir}/exabgp.service
 %{_unitdir}/exabgp@.service
 %attr(644, root, root) %{_unitdir}/*
-%doc COPYRIGHT CHANGELOG README.md
+%doc CHANGELOG.rst README.md
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 
