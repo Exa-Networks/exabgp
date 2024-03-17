@@ -96,7 +96,7 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 %dir %{_sysconfdir}/exabgp
 %{_sysconfdir}/exabgp/exabgp.conf
 %dir %{_sysconfdir}/exabgp/examples
-%attr(744, root, root) %{_prefix}/share/exabgp/*
+%attr(744, root, root) %{_prefix}/etc/exabgp/*
 %attr(744, root, root) %{_sysconfdir}/exabgp/examples/*
 %{_unitdir}/exabgp.service
 %{_unitdir}/exabgp@.service
