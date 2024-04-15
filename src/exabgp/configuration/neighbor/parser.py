@@ -101,6 +101,12 @@ def local_address(tokeniser):
     except (IndexError, ValueError, socket.error):
         raise ValueError('"%s" is an invalid IP address' % value)
 
+def source_interface(tokeniser):
+    try:
+        return string(tokeniser)
+    except Exception:
+        raise ValueError('bad source interface')
+
 
 def router_id(tokeniser):
     value = tokeniser()

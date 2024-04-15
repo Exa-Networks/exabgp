@@ -103,7 +103,8 @@ class Protocol(object):
         md5 = self.neighbor['md5-password']
         md5_base64 = self.neighbor['md5-base64']
         ttl_out = self.neighbor['outgoing-ttl']
-        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out)
+        itf = self.neighbor['source-interface']
+        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
 
         for connected in self.connection.establish():
             yield False

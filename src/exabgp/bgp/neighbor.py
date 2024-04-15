@@ -66,6 +66,7 @@ class Neighbor(dict):
         'description': '',
         'router-id': None,
         'local-address': None,
+        'source-interface': None,
         'peer-address': None,
         'local-as': None,
         'peer-as': None,
@@ -397,6 +398,7 @@ class Neighbor(dict):
             '\thost-name %s;\n'
             '\tdomain-name %s;\n'
             '\tlocal-address %s;\n'
+            '\tsource-interface %s;\n'
             '\tlocal-as %s;\n'
             '\tpeer-as %s;\n'
             '\thold-time %s;\n'
@@ -421,6 +423,7 @@ class Neighbor(dict):
                 self['host-name'],
                 self['domain-name'],
                 self['local-address'] if not self.auto_discovery else 'auto',
+                self['source-interface'],
                 self['local-as'],
                 self['peer-as'],
                 self['hold-time'],
