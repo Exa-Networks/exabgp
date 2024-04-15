@@ -38,6 +38,7 @@ from exabgp.configuration.neighbor.parser import md5
 from exabgp.configuration.neighbor.parser import hold_time
 from exabgp.configuration.neighbor.parser import router_id
 from exabgp.configuration.neighbor.parser import local_address
+from exabgp.configuration.neighbor.parser import source_interface
 from exabgp.configuration.neighbor.parser import hostname
 from exabgp.configuration.neighbor.parser import domainname
 from exabgp.configuration.neighbor.parser import description
@@ -63,6 +64,7 @@ class ParseNeighbor(Section):
         'hold-time': hold_time,
         'rate-limit': rate_limit,
         'local-address': local_address,
+        'source-interface': source_interface,
         'peer-address': peer_ip,
         'local-as': auto_asn,
         'peer-as': auto_asn,
@@ -90,6 +92,7 @@ class ParseNeighbor(Section):
         'hold-time': 'set-command',
         'rate-limit': 'set-command',
         'local-address': 'set-command',
+        'source-interface': 'set-command',
         'peer-address': 'set-command',
         'local-as': 'set-command',
         'peer-as': 'set-command',

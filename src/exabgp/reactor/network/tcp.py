@@ -32,7 +32,7 @@ from exabgp.reactor.network.error import AsyncError
 from exabgp.logger import log
 
 
-def create(afi):
+def create(afi, interface=None):
     try:
         if afi == AFI.ipv4:
             io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
@@ -46,6 +46,15 @@ def create(afi):
             io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # pylint: disable=E1101
         except (socket.error, AttributeError):
             pass
+
+        if interface is not None:
+            try:
+                if not hasattr(socket,'SO_BINDTODEVICE') :
+                    socket.SO_BINDTODEVICE = 25
+
+                io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, str(interface + '\0').encode("utf-8"))
+            except socket.error:
+                raise NotConnected(f'Could not bind to device {interface}')
     except socket.error:
         raise NotConnected('Could not create socket')
     return io

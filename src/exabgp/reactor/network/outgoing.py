@@ -19,7 +19,7 @@ from exabgp.logger import log
 class Outgoing(Connection):
     direction = 'outgoing'
 
-    def __init__(self, afi, peer, local, port=179, md5='', md5_base64=False, ttl=None):
+    def __init__(self, afi, peer, local, port=179, md5='', md5_base64=False, ttl=None, itf=None):
         Connection.__init__(self, afi, peer, local)
 
         self.ttl = ttl
@@ -27,10 +27,11 @@ class Outgoing(Connection):
         self.md5 = md5
         self.md5_base64 = md5_base64
         self.port = port
+        self.interface = itf
 
     def _setup(self):
         try:
-            self.io = create(self.afi)
+            self.io = create(self.afi, self.interface)
             MD5(self.io, self.peer, self.port, self.md5, self.md5_base64)
             if self.afi == AFI.ipv4:
                 TTL(self.io, self.peer, self.ttl)
