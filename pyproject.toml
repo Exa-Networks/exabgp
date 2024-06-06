@@ -66,9 +66,8 @@ exabgp-cli = 'exabgp.application.cli:main'
 exabgp-healthcheck = 'exabgp.application.healthcheck:main'
 
 [tool.black]
-optional = true
 line-length = 120
-target-version = ['py36', 'py37', 'py38']
+target-version = ['py36', 'py37', 'py38', 'py39', 'py310', 'py311', 'py312', 'py313']
 skip_string_normalization = '1'
 include = '\.pyi?$'
 exclude = '''

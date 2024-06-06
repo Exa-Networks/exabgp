@@ -49,7 +49,7 @@ def create(afi, interface=None):
 
         if interface is not None:
             try:
-                if not hasattr(socket,'SO_BINDTODEVICE') :
+                if not hasattr(socket, 'SO_BINDTODEVICE'):
                     socket.SO_BINDTODEVICE = 25
 
                 io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, str(interface + '\0').encode("utf-8"))

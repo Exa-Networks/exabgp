@@ -250,9 +250,11 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
         self.asn = asn
         ExtendedCommunityIPv6.__init__(
             self,
-            community
-            if community is not None
-            else pack("!BB16sH", 0x00, 0x02, socket.inet_pton(socket.AF_INET6, ip), asn),
+            (
+                community
+                if community is not None
+                else pack("!BB16sH", 0x00, 0x02, socket.inet_pton(socket.AF_INET6, ip), asn)
+            ),
         )
 
     def __str__(self):

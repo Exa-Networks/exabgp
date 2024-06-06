@@ -7,6 +7,7 @@ Copyright (c) 2008-2015 Marius Gedminas <marius@pov.lt> and contributors
 
 Released under the MIT licence.
 """
+
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
 # to deal in the Software without restriction, including without limitation

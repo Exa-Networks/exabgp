@@ -60,7 +60,7 @@ class Application(object):
                 run,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                preexec_fn=preexec_helper
+                preexec_fn=preexec_helper,
                 # This flags exists for python 2.7.3 in the documentation but on on my MAC
                 # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
             )

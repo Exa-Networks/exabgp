@@ -277,9 +277,7 @@ class Peer(object):
         except Stop:
             # Connection failed
             if not connected and self.proto:
-                self._close(
-                    'connection to %s:%d failed' % (self.neighbor['peer-address'], self.neighbor['connect'])
-                )
+                self._close('connection to %s:%d failed' % (self.neighbor['peer-address'], self.neighbor['connect']))
 
             # A connection arrived before we could establish !
             if not connected or self.proto:
