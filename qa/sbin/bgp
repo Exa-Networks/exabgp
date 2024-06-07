@@ -580,6 +580,7 @@ class BGPProtocol(asyncio.Protocol):
 
             flushed(f'FSM issue {state}')
             sys.exit(1)
+        self.writer.close()
 
     def handle_open(self, msg):
         option_asn = self.service.options['asn']
