@@ -149,6 +149,9 @@ def check_generation(neighbors):
                         # we do not decode non-transitive attributes
                         log.debug('skipping string check on update with non-transitive attribute(s)', 'parser')
                         skip = True
+                    elif '=http' in str1r or '=ndl-aas' in str1r:
+                        log.debug('skipping string check on update with named flow attribute(s)', 'parser')
+                        skip = True
                     else:
                         log.debug('strings are different:', 'parser')
                         log.debug('[%s]' % (str1r), 'parser')
