@@ -93,18 +93,6 @@ class Path:
             sys.exit('could not find the sequence daemon')
 
 
-class Sequence:
-    def __init__(self):
-        self._next = 0
-
-    def increase(self):
-        self._next += 1
-        return self._next - 1
-
-    def current(self):
-        return self._next
-
-
 class Exec(object):
     def __init__(self):
         self.code = -1
@@ -178,6 +166,7 @@ State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP')
 
 
 class Record:
+    _index = 0
     _listing = \
         '0123456789' + \
         'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + \
@@ -189,23 +178,29 @@ class Record:
         self.name = name
         self.conf = dict()
         self.files = []
-        self.state = State.NONE
+        self.state = State.SKIP
 
     @classmethod
-    def new(cls, number, name):
-        nick = cls._listing[number]
-        return cls(nick, name)
+    def new(cls, name):
+        return cls(cls.next_nick(), name)
+
+    @classmethod
+    def next_nick(cls):
+        nick = cls._listing[cls._index]
+        cls._index += 1
+        return nick
 
     def skip(self):
         self.state = State.SKIP
+        return self
 
-    def activate(self, test):
-        if test:
-            self.state = State.NONE
-            return self
-        else:
-            self.state = State.SKIP
-            return None
+    def fail(self):
+        self.state = State.FAIL
+        return self
+
+    def activate(self):
+        self.state = State.NONE
+        return self
 
     def is_active(self):
         return self.state not in (State.SKIP, State.FAIL, State.SUCCESS)
@@ -246,66 +241,63 @@ class Record:
 class Tests:
     def __init__(self, klass):
         self.klass = klass
-        self._sequence = Sequence()
-        self._from_code = {}
-        self._from_nick = {}
+        self._by_nick = {}
+        self._ordered = []
         self._nl = 3
 
     def new(self, name):
-        code = self._sequence.increase()
-        test = self.klass.new(code, name)
-        self._from_code[code] = test
-        self._from_nick[test.nick] = test
+        test = self.klass.new(name)
+        self._by_nick[test.nick] = test
+        self._ordered.append(test.nick)
+        self._ordered.sort()
         return test
 
-    def select(self, nick):
-        if not nick:
-            return None
-        activated = None
-        for test in self._from_code.values():
-            activated = test.activate(test.nick == nick) or activated
-        return activated
+    def enable_by_nick(self, nick):
+        if nick in self._by_nick:
+            self._by_nick[nick].activate()
+            return True
+        return False
 
-    def all(self):
-        for test in self._from_code.values():
-            test.state = State.SKIP
+    def enable_all(self):
+        for nick in self._by_nick:
+            self._by_nick[nick].activate()
 
-        for test in self._from_code.values():
-            if test.state == State.SKIP:
-                test.state = State.NONE
-            test.result(self.run_active(parsed.timeout))
+    def get_by_nick(self, nick):
+        return self._by_nick[nick]
+
+    def registered(self):
+        return [self._by_nick[nick] for nick in self._ordered]
 
     def selected(self):
-        return [_ for _ in self._from_code.values() if _.is_active()]
+        return [self._by_nick[nick] for nick in self._ordered if self._by_nick[nick].is_active()]
 
     def _iterate(self):
-        last = self._sequence.current()
-        step = last // self._nl
-        if last % self._nl:
-            step += 1
-        nl = 1
+        number = len(self._ordered)
+        lines = number // self._nl
 
-        for c in range(0, step):
-            for r in range(self._nl):
-                n = c + (r*step)
-                if n >= last:
-                    return
-                test = self._from_code[n]
-                yield test.nick, test.name, not (nl % self._nl)
-                nl += 1
+        for line in range(0, lines):
+            tests = []
+            start = line*self._nl
+            for n in range(start, start+self._nl):
+                if n >= number:
+                    continue
+                nick = self._ordered[n]
+                tests.append(self._by_nick[nick])
+            yield tests
 
     def listing(self):
         sys.stdout.write('\n')
         sys.stdout.write('The available tests are:\n')
         sys.stdout.write('\n')
-        for nick, name, nl in self._iterate():
-            sys.stdout.write(f' {nick:2} {name:25}')
-            sys.stdout.write('\n' if nl else '')
+        for tests in self._iterate():
+            for test in tests:
+                sys.stdout.write(f' {test.nick:2} {test.name:25}')
+            sys.stdout.write('\n')
         sys.stdout.write('\n')
         sys.stdout.flush()
 
     def display(self):
-        for test in self._from_code.values():
+        for test in self.registered():
             sys.stdout.write(' %s' % test.colored())
         sys.stdout.write('%s\r' % color(0, 0))
         sys.stdout.flush()
@@ -317,6 +309,15 @@ class EncodingTests(Tests):
             Record.__init__(self, nick, name)
             Exec.__init__(self)
             self._check = b'successful'
+
+        # def __eq__ (self, other):
+        #     return self.nick.__eq__(other.nick)
+
+        # def __lt__ (self, other):
+        #     return self.nick.__lt__(other.nick)
+        
+        # def __hash__ (self):
+        #     return self.nick.__hash__()
 
         def success(self):
             self.collect()
@@ -358,7 +359,7 @@ class EncodingTests(Tests):
                         if name not in test.files:
                             test.files.append(name)
 
-    def explain(self, index):
+    def explain(self, nick):
         template = '\n'
         template += 'exabgp\n'
         template += '-'*55 + '\n\n'
@@ -372,14 +373,14 @@ class EncodingTests(Tests):
         template += 'export exabgp_debug_defensive=true\n'
 
         print(template % {
-            'client': self.client(index),
-            'server': self.server(index),
+            'client': self.client(nick),
+            'server': self.server(nick),
         })
 
-    def client(self, index):
-        test = self.select(index)
-        if not test:
+    def client(self, nick):
+        if not self.enable_by_nick(nick):
             sys.exit("no such test")
+        test = self.get_by_nick(nick)
 
         config = {
             'env': ' \\\n  '.join(
@@ -398,11 +399,10 @@ class EncodingTests(Tests):
         }
         return 'env \\\n  %(env)s \\\n   %(exabgp)s -d -p \\\n    %(confs)s' % config
 
-    def server(self, index):
-        test = self.select(index)
-
-        if not test:
+    def server(self, nick):
+        if not self.enable_by_nick(nick):
             sys.exit("no such test")
+        test = self.get_by_nick(nick)
 
         config = {
             'env': ' \\\n  '.join(['exabgp_tcp_port=%d' % test.conf['port'],]),
@@ -430,7 +430,7 @@ class EncodingTests(Tests):
             ]))
         return '\n'.join(result)
 
-    def run_active(self, timeout):
+    def run_selected(self, timeout):
         success = True
         client = dict()
 
@@ -458,7 +458,7 @@ class EncodingTests(Tests):
 
         exit_time = time.time() + timeout
 
-        running = set(test for test in self.selected())
+        running = set(self.selected())
 
         while running and time.time() < exit_time:
             self.display()
@@ -472,6 +472,10 @@ class EncodingTests(Tests):
                 success = test.result(test.success()) and success
                 self.display()
             time.sleep(0.1)
+
+        for test in running:
+            test.fail()
+            test.terminate()
 
         self.display()
         return success
@@ -532,9 +536,10 @@ class DecodingTests(Tests):
         sys.stdout.write('\n')
         sys.stdout.write('The available tests are:\n')
         sys.stdout.write('\n')
-        for nick, name, nl in self._iterate():
-            sys.stdout.write(f' {nick:2} {name:25}')
-            sys.stdout.write('\n' if nl else '')
+        for tests in self._iterate():
+            for test in tests:
+                sys.stdout.write(f' {test.nick:2} {test.name:25}')
+            sys.stdout.write('\n')
         sys.stdout.write('\n')
         sys.stdout.flush()
 
@@ -549,7 +554,7 @@ class DecodingTests(Tests):
             ]))
         return '\n'.join(result)
 
-    def run_active(self, timeout):
+    def run_selected(self, timeout):
         success = True
 
         for test in self.selected():
@@ -567,7 +572,7 @@ class DecodingTests(Tests):
             time.sleep(0.05)
 
         exit_time = time.time() + timeout
-        running = set(test for test in self.selected())
+        running = set(self.selected())
 
         while running and time.time() < exit_time:
             self.display()
@@ -578,6 +583,10 @@ class DecodingTests(Tests):
                 success = test.result(test.success()) and success
                 self.display()
             time.sleep(0.1)
+
+        for test in running:
+            test.fail()
+            test.terminate()
 
         self.display()
         return success
@@ -609,9 +618,10 @@ class ParsingTests(Tests):
         sys.stdout.write('\n')
         sys.stdout.write('The available tests are:\n')
         sys.stdout.write('\n')
-        for nick, name, nl in self._iterate():
-            sys.stdout.write(f' {nick:2} {name:25}')
-            sys.stdout.write('\n' if nl else '')
+        for tests in self._iterate():
+            for test in tests:
+                sys.stdout.write(f' {test.nick:2} {test.name:25}')
+            sys.stdout.write('\n')
         sys.stdout.write('\n')
         sys.stdout.flush()
 
@@ -625,25 +635,27 @@ class ParsingTests(Tests):
             ]))
         return '\n'.join(result)
 
-    def run_active(self, timeout):
+    def run_selected(self, timeout):
         success = True
 
         for test in self.selected():
             test.running()
-            self.display()
             test.run([
                 Path.EXABGP,
                 'validate', '-nrv', test.conf['fname']
             ])
-            time.sleep(0.05)
+            time.sleep(0.005)
 
-        time.sleep(0.2)
+        time.sleep(0.02)
+
+        for test in self.selected():
+            success = test.result(test.success()) and success
+            time.sleep(0.005)
 
         exit_time = time.time() + timeout
-        running = set(test for test in self.selected())
+        running = set(self.selected())
 
         while running and time.time() < exit_time:
-            self.display()
             for test in list(running):
                 if not test.ready():
                     continue
@@ -651,6 +663,10 @@ class ParsingTests(Tests):
                 success = test.result(test.success()) and success
                 self.display()
             time.sleep(0.1)
+
+        for test in running:
+            test.fail()
+            test.terminate()
 
         self.display()
         return success
@@ -676,9 +692,11 @@ def add_test(subparser, name, tests, extra):
 
     def func(parsed):
         if 'edit' in extra and parsed.edit:
-            test = tests.select(parsed.test) or Record('', '')
-            if not test.files:
+            if not tests.enable_by_nick(parsed.test):
                 sys.exit('no such test')
+            test = tests.get_by_nick(parsed.test)
+            if not test.files:
+                sys.exit('no file for the test')
             editor = os.environ.get('EDITOR', 'vi')
             command = '%s %s' % (editor, ' '.join(test.files))
             print(f'> {command}')
@@ -706,12 +724,19 @@ def add_test(subparser, name, tests, extra):
 
         if 'timeout' not in parsed:
             parsed.timeout = 0
-        tests.select(parsed.test)
+
+        if parsed.test:
+            if not tests.enable_by_nick(parsed.test):
+                sys.exit(f'could not find test {parsed.test}')
+        else:
+            tests.enable_all()
+
         if parsed.dry:
             command = tests.dry()
             print(command)
             sys.exit(0)
-        exit = tests.run_active(parsed.timeout)
+
+        exit = tests.run_selected(parsed.timeout)
         sys.stdout.write('\n')
         sys.exit(0 if exit else 1)
 
