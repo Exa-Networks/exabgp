@@ -8,10 +8,11 @@ time.sleep(2)  # let the EOR pass
 
 
 messages = [
-    'announce flow route { match { source 0.0.0.0/32; } then { rate-limit 0; } }',
-    'announce flow route { match { source 1.1.1.1/32; } then { discard; } }',
-    'announce flow route { match { source 2.2.2.2/32; } scope { interface-set [ non-transitive:input:3405770241:1 ]; } then { discard; } }',
-    'announce flow route { match { source 2.2.2.2/32; } scope { interface-set [ non-transitive:input:3405770241:1 transitive:output:254:254 ]; } then { discard; } }',
+    'announce flow route { match { source 4.4.4.4/32; } then { rate-limit 0; } }',
+    'announce flow route { match { source 5.5.5.5/32; } then { discard; } }',
+    'announce flow route { match { source 6.6.6.6/32; } scope { interface-set [ non-transitive:input:3405770241:1 ]; } then { discard; } }',
+    'announce flow route { match { source 7.7.7.7/32; } scope { interface-set [ non-transitive:input:3405770241:1 transitive:output:254:254 ]; } then { discard; } }',
+    # 'announce flow route { match { source 8.8.8.8/32; } scope { interface-set [ transitive:input-output:1234:10 transitive:input:1234:10 transitive:output:0:0]; } then { discard; } }',    
 ]
 
 while messages:
