@@ -48,6 +48,9 @@ class IP(object):
     SELF = False
 
     afi = None  # here for the API, changed in init which does not change this
+    bits = None
+    bytes = None
+
     _known = dict()
 
     _UNICAST = SAFI.unicast
@@ -256,6 +259,8 @@ NoNextHop = _NoNextHop()
 class IPv4(IP):
     # lower case to match the class Address API
     afi = AFI.ipv4
+    bits = 32
+    bytes = 4
 
     def __init__(self, string, packed=None):
         self.init(string, packed if packed else IP.pton(string))
@@ -302,6 +307,8 @@ IPv4.register()
 class IPv6(IP):
     # lower case to match the class Address API
     afi = AFI.ipv6
+    bits = 128
+    bytes = 16
 
     def __init__(self, string, packed=None):
         self.init(string, packed if packed else socket.inet_pton(socket.AF_INET6, string))
