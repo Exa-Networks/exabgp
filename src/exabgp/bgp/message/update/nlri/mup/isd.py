@@ -101,7 +101,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         content += '"code": %d, ' % self.CODE
         content += '"raw": "%s", ' % self._raw()
         content += '"name": "%s", ' % self.NAME
-        content += '"rd": "%s", ' % self.rd.json()
+        content += self.rd.json() + ', '
         content += '"ipprefix_len": %d, ' % self.ipprefix_len
         content += '"ipprefix": "%s"' % str(self.ipprefix)
         return '{ %s }' % content

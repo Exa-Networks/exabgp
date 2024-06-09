@@ -131,7 +131,7 @@ class Type2SessionTransformedRoute(MUP):
         content += '"code": %d, ' % self.CODE
         content += '"raw": "%s", ' % self._raw()
         content += '"name": "%s", ' % self.NAME
-        content += '"rd": "%s", ' % self.rd.json()
+        content += self.rd.json() + ', '
         content += '"endpoint_len": %d, ' % self.endpoint_len
         content += '"endpoint_ip": "%s", ' % str(self.endpoint_ip)
         content += '"teid": "%s"' % str(self.teid)

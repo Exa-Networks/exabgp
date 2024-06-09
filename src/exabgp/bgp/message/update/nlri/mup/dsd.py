@@ -91,6 +91,6 @@ class DirectSegmentDiscoveryRoute(MUP):
         content += '"code": %d, ' % self.CODE
         content += '"raw": "%s", ' % self._raw()
         content += '"name": "%s", ' % self.NAME
-        content += '"rd": "%s", ' % self.rd.json()
+        content += self.rd.json() + ', '
         content += '"ip": "%s"' % str(self.ip)
         return '{ %s }' % content
