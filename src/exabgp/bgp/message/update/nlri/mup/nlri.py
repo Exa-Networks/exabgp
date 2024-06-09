@@ -31,8 +31,8 @@ class MUP(NLRI):
     registered = dict()
 
     # NEED to be defined in the subclasses
-    ARCHTYPE = -1
-    CODE = -1
+    ARCHTYPE = 0
+    CODE = 0
     NAME = 'Unknown'
     SHORT_NAME = 'unknown'
 

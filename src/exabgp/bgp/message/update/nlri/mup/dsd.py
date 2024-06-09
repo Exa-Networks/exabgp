@@ -40,8 +40,6 @@ class DirectSegmentDiscoveryRoute(MUP):
     def __eq__(self, other):
         return (
             isinstance(other, DirectSegmentDiscoveryRoute)
-            and self.ARCHTYPE == other.ARCHTYPE
-            and self.CODE == other.CODE
             and self.rd == other.rd
             and self.ip == other.ip
         )
@@ -87,10 +85,10 @@ class DirectSegmentDiscoveryRoute(MUP):
         return cls(rd, ip, afi)
 
     def json(self, compact=None):
-        content = '"arch": %d, ' % self.ARCHTYPE
+        content = '"name": "%s", ' % self.NAME
+        content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += '"raw": "%s", ' % self._raw()
-        content += '"name": "%s", ' % self.NAME
-        content += self.rd.json() + ', '
-        content += '"ip": "%s"' % str(self.ip)
+        content += '"ip": "%s", ' % str(self.ip)
+        content += self.rd.json()
+        content += ', "raw": "%s"' % self._raw()
         return '{ %s }' % content

@@ -30,11 +30,11 @@ class InterworkSegmentDiscoveryRoute(MUP):
     NAME = "InterworkSegmentDiscoveryRoute"
     SHORT_NAME = "ISD"
 
-    def __init__(self, rd, ipprefix_len, ipprefix, afi, packed=None):
+    def __init__(self, rd, prefix_ip_len, prefix_ip, afi, packed=None):
         MUP.__init__(self, afi)
         self.rd = rd
-        self.ipprefix_len = ipprefix_len
-        self.ipprefix = ipprefix
+        self.prefix_ip_len = prefix_ip_len
+        self.prefix_ip = prefix_ip
         self._pack(packed)
 
     def index(self):
@@ -43,21 +43,19 @@ class InterworkSegmentDiscoveryRoute(MUP):
     def __eq__(self, other):
         return (
             isinstance(other, InterworkSegmentDiscoveryRoute)
-            and self.ARCHTYPE == other.ARCHTYPE
-            and self.CODE == other.CODE
             and self.rd == other.rd
-            and self.ipprefix_len == other.ipprefix_len
-            and self.ipprefix == other.ipprefix
+            and self.prefix_ip_len == other.prefix_ip_len
+            and self.prefix_ip == other.prefix_ip
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s%s" % (self._prefix(), self.rd._str(), self.ipprefix, "/%d" % self.ipprefix_len)
+        return "%s:%s:%s%s" % (self._prefix(), self.rd._str(), self.prefix_ip, "/%d" % self.prefix_ip_len)
 
     def __hash__(self):
-        return hash((self.rd, self.ipprefix_len, self.ipprefix))
+        return hash((self.rd, self.prefix_ip_len, self.prefix_ip))
 
     def _pack(self, packed=None):
         if self._packed:
@@ -67,17 +65,17 @@ class InterworkSegmentDiscoveryRoute(MUP):
             self._packed = packed
             return packed
 
-        offset = self.ipprefix_len // 8
-        remainder = self.ipprefix_len % 8
+        offset = self.prefix_ip_len // 8
+        remainder = self.prefix_ip_len % 8
         if remainder != 0:
             offset += 1
 
-        ipprefix_packed = self.ipprefix.pack()
+        prefix_ip_packed = self.prefix_ip.pack()
         # fmt: off
         self._packed = (
             self.rd.pack()
-            + pack('!B',self.ipprefix_len)
-            + ipprefix_packed[0: offset]
+            + pack('!B',self.prefix_ip_len)
+            + prefix_ip_packed[0: offset]
         )
         # fmt: on
         return self._packed
@@ -85,23 +83,22 @@ class InterworkSegmentDiscoveryRoute(MUP):
     @classmethod
     def unpack(cls, data, afi):
         rd = RouteDistinguisher.unpack(data[:8])
-        ipprefix_len = data[8]
+        prefix_ip_len = data[8]
         size = 4 if afi != AFI.ipv6 else 16
         ip = data[9:]
         padding = size - len(ip)
         if padding != 0 and 0 < padding:
             ip += bytes(padding)
+        prefix_ip = IP.unpack(ip)
 
-        ipprefix = IP.unpack(ip)
-
-        return cls(rd, ipprefix_len, ipprefix, afi)
+        return cls(rd, prefix_ip_len, prefix_ip, afi)
 
     def json(self, compact=None):
-        content = '"arch": %d, ' % self.ARCHTYPE
+        content = '"name": "%s", ' % self.NAME
+        content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += '"raw": "%s", ' % self._raw()
-        content += '"name": "%s", ' % self.NAME
-        content += self.rd.json() + ', '
-        content += '"ipprefix_len": %d, ' % self.ipprefix_len
-        content += '"ipprefix": "%s"' % str(self.ipprefix)
+        content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
+        content += '"prefix_ip": "%s", ' % str(self.prefix_ip)
+        content += self.rd.json() 
+        content += ', "raw": "%s"' % self._raw()
         return '{ %s }' % content

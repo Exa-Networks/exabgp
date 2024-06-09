@@ -50,21 +50,21 @@ class Type1SessionTransformedRoute(MUP):
     def __init__(
         self,
         rd,
-        ipprefix_len,
-        ipprefix,
+        prefix_ip_len,
+        prefix_ip,
         teid,
         qfi,
         endpoint_ip_len,
         endpoint_ip,
-        afi,
         source_ip_len,
         source_ip,
+        afi,
         packed=None,
     ):
         MUP.__init__(self, afi)
         self.rd = rd
-        self.ipprefix_len = ipprefix_len
-        self.ipprefix = ipprefix
+        self.prefix_ip_len = prefix_ip_len
+        self.prefix_ip = prefix_ip
         self.teid = teid
         self.qfi = qfi
         self.endpoint_ip_len = endpoint_ip_len
@@ -76,11 +76,11 @@ class Type1SessionTransformedRoute(MUP):
     def __eq__(self, other):
         return (
             isinstance(other, Type1SessionTransformedRoute)
-            and self.ARCHTYPE == other.ARCHTYPE
-            and self.CODE == other.CODE
+            # and self.ARCHTYPE == other.ARCHTYPE
+            # and self.CODE == other.CODE
             and self.rd == other.rd
-            and self.ipprefix_len == other.ipprefix_len
-            and self.ipprefix == other.ipprefix
+            and self.prefix_ip_len == other.prefix_ip_len
+            and self.prefix_ip == other.prefix_ip
             and self.teid == other.teid
             and self.qfi == other.qfi
             and self.endpoint_ip_len == other.endpoint_ip_len
@@ -96,12 +96,12 @@ class Type1SessionTransformedRoute(MUP):
         s = "%s:%s:%s%s:%s:%s:%s%s" % (
             self._prefix(),
             self.rd._str(),
-            self.ipprefix,
-            "/%d" % self.ipprefix_len,
+            self.prefix_ip,
+            "/%d" % self.prefix_ip_len,
             self.teid,
             self.qfi,
             self.endpoint_ip,
-            "/%d" % self.ipprefix_len,
+            "/%d" % self.prefix_ip_len,
         )
 
         if self.source_ip_len != 0 and self.source_ip != b'':
@@ -111,7 +111,7 @@ class Type1SessionTransformedRoute(MUP):
 
     def pack_index(self):
         # removed teid, qfi, endpointip
-        packed = self.rd.pack() + pack('!B', self.ipprefix_len) + self.ipprefix.pack()
+        packed = self.rd.pack() + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack()
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(packed)) + packed
 
     def index(self):
@@ -121,8 +121,8 @@ class Type1SessionTransformedRoute(MUP):
         return hash(
             (
                 self.rd,
-                self.ipprefix_len,
-                self.ipprefix,
+                self.prefix_ip_len,
+                self.prefix_ip,
                 self.teid,
                 self.qfi,
                 self.endpoint_ip_len,
@@ -140,18 +140,18 @@ class Type1SessionTransformedRoute(MUP):
             self._packed = packed
             return packed
 
-        offset = self.ipprefix_len // 8
-        remainder = self.ipprefix_len % 8
+        offset = self.prefix_ip_len // 8
+        remainder = self.prefix_ip_len % 8
         if remainder != 0:
             offset += 1
 
-        ipprefix_packed = self.ipprefix.pack()
+        prefix_ip_packed = self.prefix_ip.pack()
 
         # fmt: off
         self._packed = (
             self.rd.pack()
-            + pack('!B',self.ipprefix_len)
-            + ipprefix_packed[0: offset]
+            + pack('!B',self.prefix_ip_len)
+            + prefix_ip_packed[0: offset]
             + pack('!IB',self.teid, self.qfi)
             + pack('!B',self.endpoint_ip_len)
             + self.endpoint_ip.pack()
@@ -167,9 +167,9 @@ class Type1SessionTransformedRoute(MUP):
     def unpack(cls, data, afi):
         datasize = len(data)
         rd = RouteDistinguisher.unpack(data[:8])
-        ipprefix_len = data[8]
-        ip_offset = ipprefix_len // 8
-        ip_remainder = ipprefix_len % 8
+        prefix_ip_len = data[8]
+        ip_offset = prefix_ip_len // 8
+        ip_remainder = prefix_ip_len % 8
         if ip_remainder != 0:
             ip_offset += 1
 
@@ -180,7 +180,7 @@ class Type1SessionTransformedRoute(MUP):
             ip += bytes(ip_padding)
 
         size = ip_offset
-        ipprefix = IP.unpack(ip)
+        prefix_ip = IP.unpack(ip)
         size += 9
         teid = int.from_bytes(data[size : size + 4], "big")
         size += 4
@@ -189,42 +189,41 @@ class Type1SessionTransformedRoute(MUP):
         endpoint_ip_len = data[size]
         size += 1
 
-        if endpoint_ip_len in [32, 128]:
-            ep_len = endpoint_ip_len // 8
-            endpoint_ip = IP.unpack(data[size : size + ep_len])
-            size += ep_len
-        else:
+        if endpoint_ip_len not in [32, 128]:
             raise RuntimeError('mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len)
+
+        ep_len = endpoint_ip_len // 8
+        endpoint_ip = IP.unpack(data[size : size + ep_len])
+        size += ep_len
 
         source_ip_size = datasize - size
 
         source_ip_len = 0
         source_ip = b''
 
-        if 0 < source_ip_size:
+        if source_ip_size > 0:
             source_ip_len = data[size]
             size += 1
-            if source_ip_len in [32, 128]:
-                sip_len = source_ip_len // 8
-                source_ip = IP.unpack(data[size : size + sip_len])
-                size += sip_len
-            else:
+            if source_ip_len not in [32, 128]:
                 raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
+            sip_len = source_ip_len // 8
+            source_ip = IP.unpack(data[size : size + sip_len])
+            size += sip_len
 
-        return cls(rd, ipprefix_len, ipprefix, teid, qfi, endpoint_ip_len, endpoint_ip, afi, source_ip_len, source_ip)
+        return cls(rd, prefix_ip_len, prefix_ip, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)
 
     def json(self, compact=None):
-        content = '"arch": %d, ' % self.ARCHTYPE
+        content = '"name": "%s", ' % self.NAME
+        content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += '"raw": "%s", ' % self._raw()
-        content += '"name": "%s", ' % self.NAME
-        content +=  self.rd.json() + ', '
-        content += '"ipprefix_len": %d, ' % self.ipprefix_len
-        content += '"ipprefix": "%s", ' % str(self.ipprefix)
+        content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
+        content += '"prefix_ip": "%s", ' % str(self.prefix_ip)
         content += '"teid": "%s", ' % str(self.teid)
         content += '"qfi": "%s", ' % str(self.qfi)
+        content +=  self.rd.json() + ', '
         content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
         content += '"endpoint_ip": "%s"' % str(self.endpoint_ip)
         content += '"source_ip_len": %d, ' % self.source_ip_len
-        content += '"source_ip": "%s"' % str(self.source_ip)
+        content += '"source_ip": "%s", ' % str(self.source_ip)
+        content += '"raw": "%s"' % self._raw()
         return '{ %s }' % content

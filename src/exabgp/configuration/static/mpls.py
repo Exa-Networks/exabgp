@@ -198,6 +198,9 @@ def parse_ip_prefix(tokeninser):
     if length == None:
         raise Exception("unexpect prefix format '%s'" % tokeninser)
 
+    if not length.isdigit():
+        raise Exception("unexpect prefix format '%s'" % tokeninser)
+
     addr = ip_address(addrstr)
     if isinstance(addr, IPv4Address):
         ip = IPv4.unpack(IPv4.pton(addrstr))
@@ -206,23 +209,22 @@ def parse_ip_prefix(tokeninser):
     else:
         raise Exception("unexpect ipaddress format '%s'" % addrstr)
 
-    return ip, length
+    return ip, int(length)
 
 
 # 'mup-isd <ip prefix> rd <rd>',
 def srv6_mup_isd(tokeniser, afi):
-    ip, length = parse_ip_prefix(tokeniser())
+    prefix_ip, prefix_len = parse_ip_prefix(tokeniser())
 
     value = tokeniser()
-    if "rd" == value:
-        rd = route_distinguisher(tokeniser)
-    else:
+    if value != "rd":
         raise Exception("expect rd, but received '%s'" % value)
+    rd = route_distinguisher(tokeniser)
 
     return InterworkSegmentDiscoveryRoute(
         rd=rd,
-        ipprefix_len=int(length),
-        ipprefix=ip,
+        prefix_ip_len=prefix_len,
+        prefix_ip=prefix_ip,
         afi=afi,
     )
 
@@ -235,11 +237,11 @@ def srv6_mup_dsd(tokeniser, afi):
         ip = IPv6.unpack(IPv6.pton(tokeniser()))
     else:
         raise Exception("unexpect afi: %s" % afi)
+    
     value = tokeniser()
-    if "rd" == value:
-        rd = route_distinguisher(tokeniser)
-    else:
+    if value != "rd":
         raise Exception("expect rd, but received '%s'" % value)
+    rd = route_distinguisher(tokeniser)
 
     return DirectSegmentDiscoveryRoute(
         rd=rd,
@@ -250,43 +252,35 @@ def srv6_mup_dsd(tokeniser, afi):
 
 # 'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint> [source <source>]',
 def srv6_mup_t1st(tokeniser, afi):
-    ip, length = parse_ip_prefix(tokeniser())
+    prefix_ip, prefix_ip_len = parse_ip_prefix(tokeniser())
 
+    tokeniser.consume("rd")
+    rd = route_distinguisher(tokeniser)
+
+    tokeniser.consume("teid")
     value = tokeniser()
-    if "rd" == value:
-        rd = route_distinguisher(tokeniser)
-    else:
-        raise Exception("expect rd, but received '%s'" % value)
+    if not value.isdigit():
+        raise Exception("expect teid to be a number, but received '%s'" % value)
+    teid = int(value)
 
+    tokeniser.consume("qfi")
     value = tokeniser()
-    if "teid" == value:
-        teid = tokeniser()
-    else:
-        raise Exception("expect teid, but received '%s'" % value)
+    if not value.isdigit():
+        raise Exception("expect qfi to be a number, but received '%s'" % value)
+    qfi = int(value)
 
-    value = tokeniser()
-    if "qfi" == value:
-        qfi = tokeniser()
+    tokeniser.consume("endpoint")
+    if afi == AFI.ipv4:
+        endpoint_ip = IPv4.unpack(IPv4.pton(tokeniser()))
+    elif afi == AFI.ipv6:
+        endpoint_ip = IPv6.unpack(IPv6.pton(tokeniser()))
     else:
-        raise Exception("expect qfi, but received '%s'" % value)
+        raise Exception("unexpect afi: %s" % afi)
 
-    value = tokeniser()
-    if "endpoint" == value:
-        if afi == AFI.ipv4:
-            endpoint_ip = IPv4.unpack(IPv4.pton(tokeniser()))
-            endpoint_ip_len = 32
-        elif afi == AFI.ipv6:
-            endpoint_ip = IPv6.unpack(IPv6.pton(tokeniser()))
-            endpoint_ip_len = 128
-        else:
-            raise Exception("unexpect afi: %s" % afi)
-    else:
-        raise Exception("expect endpoint, but received '%s'" % value)
-
-    source_ip = b""
     source_ip_len = 0
-    if "source" == tokeniser.peek():
-        tokeniser()
+    source_ip = b""
+
+    if tokeniser.consume_if_match("source"):
         if afi == AFI.ipv4:
             source_ip = IPv4.unpack(IPv4.pton(tokeniser()))
             source_ip_len = 32
@@ -298,15 +292,15 @@ def srv6_mup_t1st(tokeniser, afi):
 
     return Type1SessionTransformedRoute(
         rd=rd,
-        ipprefix_len=int(length),
-        ipprefix=ip,
-        teid=int(teid),
-        qfi=int(qfi),
-        afi=afi,
-        endpoint_ip_len=int(endpoint_ip_len),
+        prefix_ip_len=prefix_ip_len,
+        prefix_ip=prefix_ip,
+        teid=teid,
+        qfi=qfi,
+        endpoint_ip_len=endpoint_ip.bits,
         endpoint_ip=endpoint_ip,
-        source_ip_len=int(source_ip_len),
+        source_ip_len=source_ip_len,
         source_ip=source_ip,
+        afi=afi,
     )
 
 
@@ -314,38 +308,37 @@ def srv6_mup_t1st(tokeniser, afi):
 def srv6_mup_t2st(tokeniser, afi):
     if afi == AFI.ipv4:
         endpoint_ip = IPv4.unpack(IPv4.pton(tokeniser()))
-        endpoint_ip_len = 32
     elif afi == AFI.ipv6:
         endpoint_ip = IPv6.unpack(IPv6.pton(tokeniser()))
-        endpoint_ip_len = 128
     else:
         raise Exception("unexpect afi: %s" % afi)
 
-    value = tokeniser()
-    if "rd" == value:
-        rd = route_distinguisher(tokeniser)
-    else:
+    if "rd" != tokeniser():
         raise Exception("expect rd, but received '%s'" % value)
 
-    value = tokeniser()
-    if "teid" == value:
-        value = tokeniser()
-        parse_teid = value.split("/")
-        if len(parse_teid) != 2:
-            raise Exception("unexpect teid format, this expect format <teid>/<length, expect 0 ~ 32")
-        if not (0 <= int(parse_teid[1]) <= 32):
-            raise Exception("unexpect teid format, this expect format <teid>/<length, expect 0 ~ 32>")
+    rd = route_distinguisher(tokeniser)
 
-        teid = int(parse_teid[0])
-        teid_len = int(parse_teid[1])
-    else:
+    value = tokeniser()
+    if value != "teid":
         raise Exception("expect teid, but received '%s'" % value)
+
+    teids = tokeniser().split("/")
+    if len(teids) != 2:
+        raise Exception("unexpect teid format, this expect format <teid>/<length, expect 0 ~ 32")
+
+    teid = int(teids[0])
+    teid_len = int(teids[1])
+
+    if not (0 <= teid_len <= 32):
+        raise Exception("unexpect teid format, this expect format <teid>/<length, expect 0 ~ 32>")
+
+    if teid >= pow(2,teid_len):
+        raise Exception(f"unexpect teid format, we can not store {teid} using {teid_len} bits")
 
     return Type2SessionTransformedRoute(
         rd=rd,
-        endpoint_ip_len=int(endpoint_ip_len),
+        endpoint_len=endpoint_ip.bits + teid_len,  # 32 or 128
         endpoint_ip=endpoint_ip,
         teid=teid,
-        teid_len=teid_len,
         afi=afi,
     )
