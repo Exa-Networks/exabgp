@@ -197,6 +197,10 @@ class Type1SessionTransformedRoute(MUP):
             raise RuntimeError('mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len)
 
         source_ip_size = datasize - size
+
+        source_ip_len = 0
+        source_ip = b''
+
         if 0 < source_ip_size:
             source_ip_len = data[size]
             size += 1
