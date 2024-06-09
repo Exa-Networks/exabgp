@@ -313,7 +313,8 @@ def srv6_mup_t2st(tokeniser, afi):
     else:
         raise Exception("unexpect afi: %s" % afi)
 
-    if "rd" != tokeniser():
+    value = tokeniser()
+    if "rd" != value:
         raise Exception("expect rd, but received '%s'" % value)
 
     rd = route_distinguisher(tokeniser)
