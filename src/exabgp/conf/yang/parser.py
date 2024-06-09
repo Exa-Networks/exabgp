@@ -16,6 +16,12 @@ from exabgp.conf.yang.datatypes import kw
 from exabgp.conf.yang.datatypes import words
 from exabgp.conf.yang.datatypes import types
 
+import sys
+if sys.version_info[:3] < (3,7):
+    def breakpoint():
+        import pdb;
+        pdb.set_trace()
+        pass
 
 DEBUG = True
 
