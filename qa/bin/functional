@@ -275,7 +275,7 @@ class Tests:
         number = len(self._ordered)
         lines = number // self._nl
 
-        for line in range(0, lines):
+        for line in range(0, lines+1):
             tests = []
             start = line*self._nl
             for n in range(start, start+self._nl):
