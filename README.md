@@ -140,7 +140,7 @@ We will nearly systematically ask for the `FULL` output exabgp with the option `
 
 ## Development
 
-ExaBGP 3.4 and previous versions are Python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. The current version of ExaBGP (4.2 and main) targets Python 3 only. The code should work with all recent versions (>= 3.7), but the requirement is set to 3.8.1 as some of the tooling now requires it (such as flake8).
+ExaBGP 3.4 and previous versions are Python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. The current version of ExaBGP (4.2 and main) targets Python 3 only. The code should work with all recent versions (>= 3.6), but the requirement is set to 3.8.1 as some of the tooling now requires it (such as flake8).
 
 ExaBGP is nearly as old as Python3. A lot has changed since 2009; the application does not use Python3 'new' async-io (as we run a homemade async core engine). It may never do as development slowed, and our primary goal is ensuring reliably for current and new users.
 
