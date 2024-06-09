@@ -190,8 +190,9 @@ class Type1SessionTransformedRoute(MUP):
         size += 1
 
         if endpoint_ip_len in [32, 128]:
-            endpoint_ip = IP.unpack(data[size : size + endpoint_ip_len])
-            size += endpoint_ip_len
+            ep_len = endpoint_ip_len // 8
+            endpoint_ip = IP.unpack(data[size : size + ep_len])
+            size += ep_len
         else:
             raise RuntimeError('mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len)
 
@@ -200,12 +201,13 @@ class Type1SessionTransformedRoute(MUP):
             source_ip_len = data[size]
             size += 1
             if source_ip_len in [32, 128]:
-                source_ip = IP.unpack(data[size : size + source_ip_len])
-                size += source_ip_len
+                sip_len = source_ip_len // 8
+                source_ip = IP.unpack(data[size : size + sip_len])
+                size += sip_len
             else:
                 raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
 
-        return cls(rd, ipprefix_len, ipprefix, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)
+        return cls(rd, ipprefix_len, ipprefix, teid, qfi, endpoint_ip_len, endpoint_ip, afi, source_ip_len, source_ip)
 
     def json(self, compact=None):
         content = '"arch": %d, ' % self.ARCHTYPE
