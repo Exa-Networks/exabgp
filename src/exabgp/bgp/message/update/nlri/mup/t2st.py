@@ -12,6 +12,7 @@ from exabgp.protocol.family import AFI
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from struct import pack
 
+# https://datatracker.ietf.org/doc/html/draft-mpmz-bess-mup-safi-03
 
 # +-----------------------------------+
 # |           RD  (8 octets)          |
@@ -37,14 +38,12 @@ class Type2SessionTransformedRoute(MUP):
     NAME = "Type2SessionTransformedRoute"
     SHORT_NAME = "T2ST"
 
-    def __init__(self, rd, endpoint_ip_len, endpoint_ip, teid, teid_len, afi, packed=None):
+    def __init__(self, rd, endpoint_len, endpoint_ip, teid, afi, packed=None):
         MUP.__init__(self, afi)
         self.rd = rd
-        self.teid = teid
-        self.teid_len = teid_len
+        self.endpoint_len = endpoint_len
         self.endpoint_ip = endpoint_ip
-        self.endpoint_ip_len = endpoint_ip_len
-        self.endpoint_len = teid_len + endpoint_ip_len
+        self.teid = teid
         self._pack(packed)
 
     def index(self):
@@ -53,12 +52,10 @@ class Type2SessionTransformedRoute(MUP):
     def __eq__(self, other):
         return (
             isinstance(other, Type2SessionTransformedRoute)
-            and self.ARCHTYPE == other.ARCHTYPE
-            and self.CODE == other.CODE
             and self.rd == other.rd
             and self.teid == other.teid
-            and self.endpoint_ip == other.endpoint_ip
             and self.endpoint_len == self.endpoint_len
+            and self.endpoint_ip == other.endpoint_ip
         )
 
     def __ne__(self, other):
@@ -91,48 +88,62 @@ class Type2SessionTransformedRoute(MUP):
             self._packed = packed
             return packed
 
-        teid_packed = pack('!I', self.teid)
-        offset = self.teid_len // 8
-        remainder = self.teid_len % 8
-        if remainder != 0:
-            offset += 1
-
         # fmt: off
         self._packed = (
             self.rd.pack()
             + pack('!B', self.endpoint_len)
             + self.endpoint_ip.pack()
         )
-        if 0 < self.teid_len:
-            self._packed += teid_packed[0: offset]
         # fmt: on
+
+        endpoint_size = 32 if self.endpoint_ip.afi == AFI.ipv4 else 128
+        teid_size = self.endpoint_len - endpoint_size
+
+        if teid_size < 0 or teid_size > 32:
+            raise Exception("teid is too large %d (range 0~32)"  % teid_size)
+
+        teid_packed = pack('!I', self.teid)
+
+        offset = teid_size // 8
+        remainder = teid_size % 8
+        if remainder != 0:
+            offset += 1
+
+        # as the fix is part of a large patch ..
+        # this is where the main problem was: taking wrong bits
+        if teid_size > 0:
+            self._packed += teid_packed[-offset:]
+
         return self._packed
 
     @classmethod
     def unpack(cls, data, afi):
+        afi_bit_size = 32 if afi == AFI.ipv4 else 128
+        afi_bytes_size = 4 if afi == AFI.ipv4 else 16
         rd = RouteDistinguisher.unpack(data[:8])
-        size = 4 if afi != AFI.ipv6 else 16
         endpoint_len = data[8]
-        endpoint_ip_len = size * 8
-        teid_len = endpoint_len - endpoint_ip_len
-        if not (0 <= teid_len <= 32):
-            raise Exception("teid len is %d, but len range 0 ~ 32" % teid_len)
+        end = 9 + afi_bytes_size
+        endpoint_ip = IP.unpack(data[9 : end])
 
-        endpoint_ip = IP.unpack(data[9 : 9 + size])
-        size += 9
-        if 0 < teid_len:
-            teid = int.from_bytes(data[size:], "big")
-        else:
-            teid = 0
-        return cls(rd, endpoint_ip_len, endpoint_ip, teid, teid_len, afi)
+        teid = 0
+        if endpoint_len > afi_bit_size:
+            teid_len = endpoint_len - afi_bit_size
+            if afi == AFI.ipv4 and teid_len > 32:
+                raise Exception("endpoint length is too large %d (max 64 for Ipv4)" % endpoint_len)
+            if afi == AFI.ipv6 and teid_len > 32:
+                raise Exception("endpoint length is too large %d (max 160 for Ipv6)" % endpoint_len)
+
+            teid = int.from_bytes(data[end:], "big")
+
+        return cls(rd, endpoint_len, endpoint_ip, teid, afi)
 
     def json(self, compact=None):
-        content = ' "arch": %d, ' % self.ARCHTYPE
+        content = '"name": "%s", ' % self.NAME
+        content += ' "arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += '"raw": "%s", ' % self._raw()
-        content += '"name": "%s", ' % self.NAME
-        content += self.rd.json() + ', '
         content += '"endpoint_len": %d, ' % self.endpoint_len
         content += '"endpoint_ip": "%s", ' % str(self.endpoint_ip)
-        content += '"teid": "%s"' % str(self.teid)
+        content += self.rd.json() + ', '
+        content += '"teid": "%s", ' % str(self.teid)
+        content += '"raw": "%s"' % self._raw()
         return '{ %s }' % content
