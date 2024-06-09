@@ -1,0 +1,50 @@
+name: Functional Testing
+
+on:
+  push:
+    branches: [ main, 4.2, 3.4 ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    # runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.7", "3.8", "3.9", "3.10", "3.11", "3.12" ]
+        os: [ "ubuntu-latest" ]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5.1.0
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: run python version
+      run: |
+        python --version
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --no-cache-dir --upgrade pip
+        pip install --no-cache-dir -r requirements.txt
+        pip install psutil
+
+    - name: Configuration
+      run: |
+        ./qa/bin/functional parsing
+
+    - name: Functional
+      run: |
+        ./qa/bin/functional encoding
+
+    - name: Decoding
+      run: |
+        ./qa/bin/functional decoding
