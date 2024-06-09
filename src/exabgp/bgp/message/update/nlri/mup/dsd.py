@@ -38,11 +38,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         return MUP.index(self)
 
     def __eq__(self, other):
-        return (
-            isinstance(other, DirectSegmentDiscoveryRoute)
-            and self.rd == other.rd
-            and self.ip == other.ip
-        )
+        return isinstance(other, DirectSegmentDiscoveryRoute) and self.rd == other.rd and self.ip == other.ip
 
     def __ne__(self, other):
         return not self.__eq__(other)

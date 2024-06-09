@@ -237,7 +237,7 @@ def srv6_mup_dsd(tokeniser, afi):
         ip = IPv6.unpack(IPv6.pton(tokeniser()))
     else:
         raise Exception("unexpect afi: %s" % afi)
-    
+
     value = tokeniser()
     if value != "rd":
         raise Exception("expect rd, but received '%s'" % value)
@@ -333,7 +333,7 @@ def srv6_mup_t2st(tokeniser, afi):
     if not (0 <= teid_len <= 32):
         raise Exception("unexpect teid format, this expect format <teid>/<length, expect 0 ~ 32>")
 
-    if teid >= pow(2,teid_len):
+    if teid >= pow(2, teid_len):
         raise Exception(f"unexpect teid format, we can not store {teid} using {teid_len} bits")
 
     return Type2SessionTransformedRoute(
