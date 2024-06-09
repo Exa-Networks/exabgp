@@ -48,6 +48,18 @@ class Iterator(object):
         except StopIteration:
             return ''
 
+    def consume(self, name):
+        next = self.__call__()
+        if next != name:
+            raise ValueError(f"expected '{name}' but found '{next}' instead")
+
+    def consume_if_match(self, name):
+        next = self.peek()
+        if next == name:
+            self.__call__()
+            return True
+        return False
+
 
 class Tokeniser(object):
     @staticmethod
