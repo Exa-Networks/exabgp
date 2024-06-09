@@ -100,7 +100,7 @@ class Type2SessionTransformedRoute(MUP):
         teid_size = self.endpoint_len - endpoint_size
 
         if teid_size < 0 or teid_size > 32:
-            raise Exception("teid is too large %d (range 0~32)"  % teid_size)
+            raise Exception("teid is too large %d (range 0~32)" % teid_size)
 
         teid_packed = pack('!I', self.teid)
 
@@ -123,7 +123,7 @@ class Type2SessionTransformedRoute(MUP):
         rd = RouteDistinguisher.unpack(data[:8])
         endpoint_len = data[8]
         end = 9 + afi_bytes_size
-        endpoint_ip = IP.unpack(data[9 : end])
+        endpoint_ip = IP.unpack(data[9:end])
 
         teid = 0
         if endpoint_len > afi_bit_size:

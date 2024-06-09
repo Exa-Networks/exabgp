@@ -220,7 +220,7 @@ class Type1SessionTransformedRoute(MUP):
         content += '"prefix_ip": "%s", ' % str(self.prefix_ip)
         content += '"teid": "%s", ' % str(self.teid)
         content += '"qfi": "%s", ' % str(self.qfi)
-        content +=  self.rd.json() + ', '
+        content += self.rd.json() + ', '
         content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
         content += '"endpoint_ip": "%s"' % str(self.endpoint_ip)
         content += '"source_ip_len": %d, ' % self.source_ip_len
