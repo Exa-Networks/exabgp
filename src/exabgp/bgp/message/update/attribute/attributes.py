@@ -193,24 +193,22 @@ class Attributes(dict):
         # we return None as attribute if the unpack code must not generate them
         if attribute is None:
             return
+
         if attribute.ID in self:
+            if attribute.ID != Attribute.CODE.EXTENDED_COMMUNITY:
+                # attempting to add duplicate attribute when not allowed
+                return
+
+            self._str = ''
+            self._json = ''
+
+            for community in attribute.communities:
+                self[attribute.ID].add(community)
             return
 
         self._str = ''
         self._json = ''
-
         self[attribute.ID] = attribute
-
-    # This is as when we generate flow spec we can have multiple keywords
-    # which are all adding information in the extended-community
-    def add_and_merge(self, attribute):
-        if attribute.ID not in self:
-            self.add(attribute)
-            return
-
-        if attribute.ID == Attribute.CODE.EXTENDED_COMMUNITY:
-            for community in attribute.communities:
-                self[attribute.ID].add(community)
 
     def remove(self, attrid):
         self.pop(attrid)
