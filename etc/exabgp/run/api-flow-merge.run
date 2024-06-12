@@ -25,6 +25,7 @@ while messages:
     try:
         sys.stdout.write(message + '\n')
         sys.stdout.flush()
+        time.sleep(0.05)
     except IOError:
         sys.stderr.write('IOError - ExaBGP exited ? ')
         sys.stderr.write('Could not write message: %s\n' % message)
