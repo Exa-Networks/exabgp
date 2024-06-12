@@ -126,6 +126,8 @@ The configuration file and API format may change occasionally, but every effort 
 
 ## Support
 
+The most common issue reported (ExaBGP stopping/hanging) is caused by using code written for ExaBGP 3.4 with 4.2 or master without having read https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.x
+
 ExaBGP is supported through Github's [issue tracker](https://github.com/Exa-Networks/exabgp/issues). So should you encounter any problems, please do not hesitate to [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you.
 
 During "day time" (GMT/BST) feel free to contact us on [`Slack`](https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTMwNmZlMGMyNTQyNWY3Y2RjYmQxODgyYzY2MGFkZmYwODMxNDZkZjc4YmMyM2QzNzA1YWM0MmZjODhlYThjNTQ). We will try to respond if available.
