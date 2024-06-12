@@ -3,6 +3,9 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.23
+
+
 Version 4.2.22
  * Fix: route reload for offline neighbors #1126
    patch: Malcolm Dodds
