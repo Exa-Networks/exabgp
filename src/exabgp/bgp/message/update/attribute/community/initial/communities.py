@@ -30,6 +30,7 @@ class Communities(Attribute):
 
     def add(self, data):
         self.communities.append(data)
+        self.communities.sort()
         return self
 
     def pack(self, negotiated=None):
