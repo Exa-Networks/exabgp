@@ -43,4 +43,4 @@ jobs:
 
     - name: Python 3.6 Coverage
       run: |
-        ./qa/bin/functional-3.6 run
+        ./qa/bin/functional-3.6 all
