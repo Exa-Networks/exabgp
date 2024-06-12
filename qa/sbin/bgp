@@ -396,13 +396,17 @@ class Checker(object):
                 rule = rule.replace(' ', '').lower()
 
             try:
-                seq, encoding, content = rule.split(':', 2)
+                prefix, encoding, content = rule.split(':', 2)
             except ValueError:
                 flushed(f'invalid rule: {rule}')
                 sys.exit(0)
 
-            conn = seq[0] if seq[0].isalpha() else 'A'
-            seq = seq[1:] if seq[0].isalpha() else seq
+            conn = prefix[0]
+            if conn.isalpha():
+                seq = int(prefix[1:])
+            else:
+                conn = 'A'
+                seq = int(prefix)
 
             raw = (encoding == 'raw')
             self.raw = self.raw or raw

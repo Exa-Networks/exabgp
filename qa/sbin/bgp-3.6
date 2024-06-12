@@ -180,7 +180,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
             if announcement.startswith('raw:'):
                 self.raw = True
                 announcement = ''.join(announcement[4:].replace(':', ''))
-            self.sequence.setdefault(sequence, []).append(announcement)
+            self.sequence.setdefault(int(sequence), []).append(announcement)
         self.update_sequence()
         return self
 
