@@ -87,4 +87,10 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        code = main()
+        sys.exit(code)
+    except BrokenPipeError:
+        # there was a PIPE ( ./sbin/exabgp | command )
+        # and command does not work as should
+        sys.exit(1)
