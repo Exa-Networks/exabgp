@@ -101,9 +101,7 @@ class Scope(Error):
         self._current[name] = value
 
     def attribute_add(self, name, data):
-        # .add_and_merge() and not .add() is required
-        # flow spec to have multiple keywords adding to the extended-community
-        self.get_route().attributes.add_and_merge(data)
+        self.get_route().attributes.add(data)
         if name not in self._added:
             self._added.add(name)
 

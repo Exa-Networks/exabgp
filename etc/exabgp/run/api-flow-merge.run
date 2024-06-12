@@ -16,8 +16,8 @@ messages = [
     'announce flow route { match { source 9.9.9.9/32; } then { discard; } scope { interface-set [ non-transitive:input:3405770241:1 transitive:output:254:254 ]; } }',
     'announce flow route { match { source 10.10.10.10/32; } scope { interface-set [ transitive:input-output:1234:10 transitive:input:1234:10 transitive:output:0:0]; } then { discard; } }',
 
-    # 'announce flow route destination 133.130.1.219/32 discard interface-set [ transitive:input:1234:10]',
-    # 'announce flow route destination 133.130.1.19/32 interface-set [ transitive:input:1234:10 ] discard',
+    'announce flow route destination 133.130.1.219/32 discard interface-set [ transitive:input:1234:10]',
+    'announce flow route destination 133.130.1.19/32 interface-set [ transitive:input:1234:10 ] discard',
 ]
 
 while messages:
