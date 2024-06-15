@@ -7,8 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import os
-import uuid
+from copy import deepcopy
 
 from collections import deque
 
@@ -21,8 +20,8 @@ except ImportError:
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.open.capability import NextHop
-from exabgp.bgp.message.open.capability import AddPath
+from exabgp.bgp.message.update.attribute import NextHop
+from exabgp.bgp.message.update.attribute import Attribute
 
 from exabgp.rib import RIB
 
@@ -87,8 +86,6 @@ class Neighbor(object):
 
         # The routes we have parsed from the configuration
         self.changes = []
-        # On signal update, the previous routes so we can compare what changed
-        self.backup_changes = []
 
         self.operational = None
         self.eor = deque()
@@ -196,6 +193,9 @@ class Neighbor(object):
     def remove_addpath(self, family):
         if family in self.addpaths():
             self._addpath.remove(family)
+
+    def process_previous_changes(self, previous_changes):
+        self.rib.outgoing.replace(previous_changes, self.changes)
 
     def missing(self):
         if self.local_address is None and not self.auto_discovery:
@@ -403,6 +403,29 @@ class Neighbor(object):
         # '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
         # '\t\tsend {\n%s\t\t}\n' % send if send else '',
         return returned.replace('\t', '  ')
+
+    def ip_self(self, afi):
+        if afi == self.local_address.afi:
+            return self.local_address
+
+        # attempting to not barf for next-hop self when the peer is IPv6
+        if afi == AFI.ipv4:
+            return self.router_id
+
+        raise TypeError(
+            'use of "next-hop self": the route (%s) does not have the same family as the BGP tcp session (%s)'
+            % (afi, self.local_address.afi)
+        )
+
+    def remove_self(self, changes):
+        change = deepcopy(changes)
+        if not change.nlri.nexthop.SELF:
+            return change
+        neighbor_self = self.ip_self(change.nlri.afi)
+        change.nlri.nexthop = neighbor_self
+        if Attribute.CODE.NEXT_HOP in change.attributes:
+            change.attributes[Attribute.CODE.NEXT_HOP] = NextHop(str(neighbor_self),neighbor_self.pack())
+        return change
 
     def __str__(self):
         return self.string(False)

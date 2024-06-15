@@ -68,10 +68,11 @@ class _Configuration(object):
 
     def inject_change(self, peers, change):
         result = True
-        for neighbor in self.neighbors:
-            if neighbor in peers:
-                if change.nlri.family() in self.neighbors[neighbor].families():
-                    self.neighbors[neighbor].rib.outgoing.add_to_rib(change)
+        for neighbor_name in self.neighbors:
+            if neighbor_name in peers:
+                neighbor = self.neighbors[neighbor_name]
+                if change.nlri.family() in neighbor.families():
+                    neighbor.rib.outgoing.add_to_rib(neighbor.remove_self(change))
                 else:
                     self.logger.error('the route family is not configured on neighbor', 'configuration')
                     result = False
@@ -329,10 +330,10 @@ class Configuration(_Configuration):
         self.processes = self.process.processes
         self._neighbors = {}
 
-        # Add the changes prior to the reload to the neighbor to correct handling of deleted routes
+        # Withdraw any old changes
         for neighbor in self.neighbors:
             if neighbor in self._previous_neighbors:
-                self.neighbors[neighbor].backup_changes = self._previous_neighbors[neighbor].changes
+                self.neighbors[neighbor].process_previous_changes(self._previous_neighbors[neighbor].changes)
 
         self._previous_neighbors = {}
         self._cleanup()

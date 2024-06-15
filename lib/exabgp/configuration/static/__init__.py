@@ -29,6 +29,7 @@ from exabgp.rib.change import Change
 
 from exabgp.configuration.static.mpls import label
 from exabgp.configuration.static.mpls import route_distinguisher
+from exabgp.configuration.static.parser import path_information
 
 
 class ParseStatic(ParseStaticRoute):
@@ -85,6 +86,10 @@ def route(tokeniser):
             nlri.rd = route_distinguisher(tokeniser)
             continue
 
+        if command == 'path-information':
+            nlri.path_info = path_information(tokeniser)
+            continue
+
         action = ParseStatic.action.get(command, '')
 
         if action == 'attribute-add':
@@ -122,6 +127,7 @@ def attributes(tokeniser):
 
     labels = None
     rd = None
+    path_info = None
 
     while True:
         command = tokeniser()
@@ -138,6 +144,10 @@ def attributes(tokeniser):
 
         if command == 'rd' or command == 'route-distinguisher':
             rd = route_distinguisher(tokeniser)
+            continue
+
+        if command == 'path-information':
+            path_info = path_information(tokeniser)
             continue
 
         action = ParseStatic.action[command]
@@ -166,6 +176,8 @@ def attributes(tokeniser):
             new.nlri.labels = labels
         if rd:
             new.nlri.rd = rd
+        if path_info:
+            new.nlri.path_info = path_info
         new.nlri.nexthop = nlri.nexthop
         changes.append(new)
 

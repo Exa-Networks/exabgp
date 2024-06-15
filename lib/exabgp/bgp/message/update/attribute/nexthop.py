@@ -53,6 +53,9 @@ class NextHop(Attribute, IP):
 
 
 class NextHopSelf(NextHop):
+    ID = Attribute.CODE.NEXT_HOP
+    FLAG = Attribute.Flag.TRANSITIVE
+    CACHING = True
     SELF = True
 
     def __init__(self, afi):
@@ -69,3 +72,6 @@ class NextHopSelf(NextHop):
 
     def ton(self, negotiated=None, afi=AFI.undefined):
         return negotiated.nexthopself(afi).ton()
+
+    def __eq__(self, other):
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.ton() == other.ton()

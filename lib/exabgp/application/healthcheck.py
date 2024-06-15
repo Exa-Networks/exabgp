@@ -488,12 +488,12 @@ def loop(options):
             as_path = options.as_path
         for ip in options.ips:
             if options.withdraw_on_down or target is states.EXIT:
-                command = "announce" if target is states.UP else "withdraw"
+                command = "neighbor * announce" if target is states.UP else "neighbor * withdraw"
             else:
-                command = "announce"
+                command = "neighbor * announce"
             announce = "route {0} next-hop {1}".format(str(ip), options.next_hop or "self")
 
-            if command == "announce":
+            if command == "neighbor * announce":
                 announce = "{0} med {1}".format(announce, metric)
                 if options.local_preference >= 0:
                     announce = "{0} local-preference {1}".format(announce, options.local_preference)
