@@ -96,6 +96,7 @@ def setargs(parser):
     g.add_argument("--no-ip-setup", action="store_false", dest="ip_setup", help="don't setup missing IP addresses")
     g.add_argument("--dynamic-ip-setup", default=False, action="store_true", dest="ip_dynamic", help="delete existing loopback ips on state down and " "disabled, then restore loopback when up")
     g.add_argument("--label", default=None, help="use the provided label to match loopback addresses")
+    g.add_argument("--label-exact-match", default=False, action="store_true", help="use the provided label to exactly match loopback addresses, not a prefix match")
     g.add_argument("--start-ip", metavar='N', type=int, default=0, help="index of the first IP in the list of IP addresses")
     g.add_argument("--up-metric", metavar='M', type=int, default=100, help="first IP get the metric M when the service is up")
     g.add_argument("--down-metric", metavar='M', type=int, default=1000, help="first IP get the metric M when the service is down")
@@ -180,7 +181,7 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
         logger.addHandler(ch)
 
 
-def loopback_ips(label, label_only):
+def loopback_ips(label, label_only, label_exact_match):
     """Retrieve loopback IP addresses"""
     logger.debug("Retrieve loopback IP addresses")
     addresses = []
@@ -188,7 +189,7 @@ def loopback_ips(label, label_only):
     if sys.platform.startswith("linux"):
         # Use "ip" (ifconfig is not able to see all addresses)
         ipre = re.compile(r"^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+" r"(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*")
-        labelre = re.compile(r".*\s+lo:(?P<label>\S+).*")
+        labelre = re.compile(r".*\s+lo:(?P<label>[^\\\s]+).*")
         cmd = subprocess.Popen("/sbin/ip -o address show dev lo".split(), shell=False, stdout=subprocess.PIPE)
     else:
         # Try with ifconfig
@@ -217,7 +218,10 @@ def loopback_ips(label, label_only):
                 lmo = labelre.match(line)
                 if not lmo:
                     continue
-                if lmo.groupdict().get("label", "").startswith(label):
+                if label_exact_match:
+                    if lmo.groupdict().get("label", "") == label:
+                        addresses.append(ip)
+                elif lmo.groupdict().get("label", "").startswith(label):
                     addresses.append(ip)
             elif not label_only or label is None:
                 addresses.append(ip)
@@ -233,10 +237,10 @@ def loopback():
     return lo
 
 
-def setup_ips(ips, label, sudo=False):
+def setup_ips(ips, label, label_exact_match, sudo=False):
     """Setup missing IP on loopback interface"""
 
-    existing = set(loopback_ips(label, False))
+    existing = set(loopback_ips(label, False, label_exact_match))
     toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
         logger.debug("Setup loopback IP address %s", ip)
@@ -255,9 +259,9 @@ def setup_ips(ips, label, sudo=False):
                 raise e
 
 
-def remove_ips(ips, label, sudo=False):
+def remove_ips(ips, label, label_exact_match, sudo=False):
     """Remove added IP on loopback interface"""
-    existing = set(loopback_ips(label, True))
+    existing = set(loopback_ips(label, True, label_exact_match))
 
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
     toremove = set([ip_network(ip) for net in ips for ip in net]) & existing
@@ -366,7 +370,7 @@ def loop(options):
         # if ips was deleted with dyn ip, re-setup them
         if target == states.UP and options.ip_dynamic:
             logger.info("service up, restoring loopback ips")
-            setup_ips(options.ips, options.label, options.sudo)
+            setup_ips(options.ips, options.label, options.label_exact_match, options.sudo)
 
         logger.info("send announces for %s state to ExaBGP", target)
         metric = vars(options).get("{0}_metric".format(str(target).lower()), 0)
@@ -427,11 +431,11 @@ def loop(options):
         # dynamic ip management. When the service fail, remove the loopback
         if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
             logger.info("exiting, deleting loopback ips")
-            remove_ips(options.ips, options.label, options.sudo)
+            remove_ips(options.ips, options.label, options.label_exact_match, options.sudo)
         # dynamic ip management. When the service fail, remove the loopback
         if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
             logger.info("service down, deleting loopback ips")
-            remove_ips(options.ips, options.label, options.sudo)
+            remove_ips(options.ips, options.label, options.label_exact_match, options.sudo)
 
     def trigger(target):
         """Trigger a state change and execute the appropriate commands"""
@@ -551,12 +555,12 @@ def main():
         options.pid.close()
     try:
         # Setup IP to use
-        options.ips = options.ips or loopback_ips(options.label, False)
+        options.ips = options.ips or loopback_ips(options.label, False, options.label_exact_match)
         if not options.ips:
             logger.error("No IP found")
             sys.exit(1)
         if options.ip_setup:
-            setup_ips(options.ips, options.label, options.sudo)
+            setup_ips(options.ips, options.label, options.label_exact_match, options.sudo)
         drop_privileges(options.user, options.group)
 
         # Parse defined networks into a list of IPs for advertisement
