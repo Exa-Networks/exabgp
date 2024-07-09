@@ -429,7 +429,7 @@ class Checker(object):
             return False
         if not self.sequences:
             return False
- 
+
         self.messages = self.sequences.pop(0)
         return self
 
@@ -590,11 +590,22 @@ class BGPProtocol(asyncio.Protocol):
         option_asn = self.service.options['asn']
         option_capa66 = self.service.options['send-unknown-capability']
         option_default = self.service.options['send-default-route']
+        option_open = self.service.options['inspect-open-message']
 
         open = msg.open(option_asn, option_capa66)
         print_payload('open sent', open[:19], open[19:])
         self.writer.write(open)
         self.writer.write(Message.keepalive())
+
+        if option_open:
+            for announcement in msg.parser(raw=self.service.checker.raw):
+                if not self.service.checker.expected(announcement, self.writer):
+                    self.service.exit(1)
+                    return FSM.STOP
+
+                if self.service.checker.completed():
+                    self.service.exit(0)
+                    return FSM.STOP
 
         self.service.checker.perform_actions_if_required(self.writer)
 
@@ -684,6 +695,7 @@ def parse_cmdline():
     options = {
         'send-unknown-capability': False,  # add an unknown capability to the open message
         'send-default-route': False,  # send a default route to the peer
+        'inspect-open-message': False, # check for received OPEN message
         'asn': None,  # Don't modify the local AS per default.
         'sink': False,  # just accept whatever is sent
         'echo': False,  # just accept whatever is sent
@@ -712,6 +724,9 @@ def parse_cmdline():
             continue
         if message.strip() == 'option:open:send-unknown-capability':
             options['send-unknown-capability'] = True
+            continue
+        if message.strip() == 'option:open:inspect-open-message':
+            options['inspect-open-message'] = True
             continue
         if message.strip() == 'option:update:send-default-route':
             options['send-default-route'] = True
