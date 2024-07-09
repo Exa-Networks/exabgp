@@ -28,15 +28,23 @@ class HostName(Capability):
         return '{ "host-name": "%s", "domain-name": "%s" }' % (self.host_name, self.domain_name)
 
     def extract(self):
-        hostname = self.host_name.encode('utf-8')
-        if len(hostname) > self.HOSTNAME_MAX_LEN:
-            hostname = hostname[:self.HOSTNAME_MAX_LEN]
+        ret = b''
 
-        domainname = self.domain_name.encode('utf-8')
-        if len(domainname) > self.HOSTNAME_MAX_LEN:
-            domainname = domainname[:self.HOSTNAME_MAX_LEN]
+        if self.host_name:
+            hostname = self.host_name.encode('utf-8')
+            if len(hostname) > self.HOSTNAME_MAX_LEN:
+                hostname = hostname[: self.HOSTNAME_MAX_LEN]
+            ret += bytes([len(hostname)]) + hostname
 
-        return [bytes([len(hostname)]) + hostname + bytes([len(domainname)]) + domainname]
+            if self.domain_name:
+                domainname = self.domain_name.encode('utf-8')
+                if len(domainname) > self.HOSTNAME_MAX_LEN:
+                    domainname = domainname[: self.HOSTNAME_MAX_LEN]
+                ret += bytes([len(domainname)]) + domainname
+            else:
+                ret += bytes([0]) + b''
+
+        return [ret]
 
     @staticmethod
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613

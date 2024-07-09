@@ -170,6 +170,8 @@ class Capabilities(dict):
         parameters = b''
         for k, capabilities in self.items():
             for capability in capabilities.extract():
+                if len(capability) == 0:
+                    continue
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += bytes([2, len(encoded)]) + encoded
 
