@@ -151,7 +151,7 @@ class Exec(object):
         except ValueError as exc:  # I/O operation on closed file
             self.message = str(exc)
             pass
-        except Alarm:
+        except Alarm as exc:
             self.message = str(exc)
             pass
 
