@@ -162,7 +162,7 @@ class Capabilities(dict):
         self._refresh(neighbor)
         self._operational(neighbor)
         self._extended_message(neighbor)
-        # self._hostname(neighbor)  # Cumulus draft - disabling until -01 is out
+        self._hostname(neighbor)  # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
         self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
         return self
 
