@@ -7,7 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-# https://tools.ietf.org/html/draft-walton-bgp-hostname-capability-02
+# https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
 
 
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -15,6 +15,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 
 class HostName(Capability):
     ID = Capability.CODE.HOSTNAME
+    HOSTNAME_MAX_LEN = 64
 
     def __init__(self, host_name, domain_name):
         self.host_name = host_name
@@ -27,7 +28,15 @@ class HostName(Capability):
         return '{ "host-name": "%s", "domain-name": "%s" }' % (self.host_name, self.domain_name)
 
     def extract(self):
-        return [bytes([len(self.host_name)]) + self.host_name + bytes([len(self.domain_name)]) + self.domain_name]
+        hostname = self.host_name.encode('utf-8')
+        if len(hostname) > self.HOSTNAME_MAX_LEN:
+            hostname = hostname[:self.HOSTNAME_MAX_LEN]
+
+        domainname = self.domain_name.encode('utf-8')
+        if len(domainname) > self.HOSTNAME_MAX_LEN:
+            domainname = domainname[:self.HOSTNAME_MAX_LEN]
+
+        return [bytes([len(hostname)]) + hostname + bytes([len(domainname)]) + domainname]
 
     @staticmethod
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
