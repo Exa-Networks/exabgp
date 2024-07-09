@@ -36,7 +36,7 @@ class _CapabilityCode(int):
     # 128-255   Reserved for Private Use [RFC5492]
     MULTISESSION_CISCO = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
 
-    HOSTNAME = 0xB8  # ExaBGP only ...
+    HOSTNAME = 0x49  # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
     OPERATIONAL = 0xB9  # ExaBGP only ...
 
     # Internal
@@ -60,7 +60,7 @@ class _CapabilityCode(int):
         ROUTE_REFRESH_CISCO: 'cisco-route-refresh',
         MULTISESSION_CISCO: 'cisco-multi-sesion',
         AIGP: 'aigp',
-        HOSTNAME: 'exabgp-experimental-hostname',
+        HOSTNAME: 'hostname',
     }
 
     def __new__(cls, value):
