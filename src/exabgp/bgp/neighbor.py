@@ -59,6 +59,7 @@ class Neighbor(dict):
             'route-refresh': 0,
             'nexthop': None,
             'aigp': None,
+            'software-version': None,
         }
 
     defaults = {
@@ -406,7 +407,7 @@ class Neighbor(dict):
             '\tmanual-eor %s;\n'
             '%s%s%s%s%s%s%s%s%s%s%s\n'
             '\tcapability {\n'
-            '%s%s%s%s%s%s%s%s%s\t}\n'
+            '%s%s%s%s%s%s%s%s%s%s\t}\n'
             '\tfamily {%s\n'
             '\t}\n'
             '\tnexthop {%s\n'
@@ -446,6 +447,8 @@ class Neighbor(dict):
                 '\t\troute-refresh %s;\n' % ('enable' if self['capability']['route-refresh'] else 'disable'),
                 '\t\tgraceful-restart %s;\n'
                 % (self['capability']['graceful-restart'] if self['capability']['graceful-restart'] else 'disable'),
+                '\t\tsoftware-version %s;\n'
+                % ('enable' if self['capability']['software-version'] else 'disable'),
                 '\t\tnexthop %s;\n' % ('enable' if self['capability']['nexthop'] else 'disable'),
                 '\t\tadd-path %s;\n'
                 % (AddPath.string[self['capability']['add-path']] if self['capability']['add-path'] else 'disable'),
