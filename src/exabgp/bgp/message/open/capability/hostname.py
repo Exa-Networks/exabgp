@@ -11,13 +11,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.util.dns import host, domain
 
 
+@Capability.register()
 class HostName(Capability):
     ID = Capability.CODE.HOSTNAME
     HOSTNAME_MAX_LEN = 64
 
-    def __init__(self, host_name, domain_name):
+    def __init__(self, host_name = host(), domain_name = domain()):
         self.host_name = host_name
         self.domain_name = domain_name
 
