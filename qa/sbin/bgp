@@ -146,7 +146,7 @@ def find_exabgp_pid():
         if len(cmdline) < 1:
             continue
 
-        if not any_ends_in_list(cmdline, ['/main.py','/exabgp']):
+        if not any_ends_in_list(cmdline, ['/main.py']):
             continue
 
         if not any_word_in_list(cmdline, [conf_name]):
