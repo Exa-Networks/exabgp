@@ -146,7 +146,7 @@ def find_exabgp_pid():
         if len(cmdline) < 1:
             continue
 
-        if not any_ends_in_list(cmdline, ['/main.py']):
+        if not any_ends_in_list(cmdline, ['/main.py','/exabgp']):
             continue
 
         if not any_word_in_list(cmdline, [conf_name]):
@@ -483,10 +483,10 @@ class Checker(object):
             return False
 
         message = self.messages.pop(0)
+        self._update_messages_if_required()
+
         name = message.split(':')[-1]
         kill(name)
-
-        self._update_messages_if_required()
         return True
 
     def _send_notification_if_requested(self, writer):
@@ -506,6 +506,7 @@ class Checker(object):
     def perform_actions_if_required(self, writer):
         self._update_messages_if_required()
         self._send_signal_if_requested()
+        self._update_messages_if_required()
         self._send_notification_if_requested(writer)
 
     def _update_messages_if_required(self):
