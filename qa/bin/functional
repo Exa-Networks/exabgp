@@ -29,6 +29,11 @@ class Alarm(Exception):
     pass
 
 
+def flush(*args, **kwars):
+    print(*args, **kwars)
+    sys.stdout.flush()
+
+
 def alarm_handler(number, frame):  # pylint: disable=W0613
     raise Alarm()
 
@@ -127,12 +132,12 @@ class Exec(object):
         return True
 
     def report(self, reason='issue with exabgp'):
-        print(reason)
-        print(f'> {self.command}')
-        print(f'return: {self.code}')
-        print(f'stdout: {self.stdout.decode()}')
-        print(f'stderr: {self.stderr.decode()}')
-        print(f'message: {self.message}')
+        flush(reason)
+        flush(f'command> {self.command}')
+        flush(f'return: {self.code}')
+        flush(f'stdout: {self.stdout.decode()}')
+        flush(f'stderr: {self.stderr.decode()}')
+        flush(f'message: {self.message}')
 
     def collect(self):
         if self.stdout:
@@ -377,7 +382,7 @@ class EncodingTests(Tests):
         template += 'export exabgp_debug_rotate=true\n'
         template += 'export exabgp_debug_defensive=true\n'
 
-        print(
+        flush(
             template
             % {
                 'client': self.client(nick),
@@ -701,7 +706,7 @@ def add_test(subparser, name, tests, extra):
                 sys.exit('no file for the test')
             editor = os.environ.get('EDITOR', 'vi')
             command = '%s %s' % (editor, ' '.join(test.files))
-            print(f'> {command}')
+            flush(f'> {command}')
             if not parsed.dry:
                 sys.exit(os.system(command))
             return
@@ -712,14 +717,14 @@ def add_test(subparser, name, tests, extra):
 
         if 'client' in extra and parsed.client:
             command = tests.client(parsed.test)
-            print(f'> {command}')
+            flush(f'client> {command}')
             if not parsed.dry:
                 sys.exit(os.system(command))
             return
 
         if 'server' in extra and parsed.server:
             command = tests.server(parsed.test)
-            print(f'> {command}')
+            flush(f'server> {command}')
             if not parsed.dry:
                 sys.exit(os.system(command))
             return
@@ -735,7 +740,7 @@ def add_test(subparser, name, tests, extra):
 
         if parsed.dry:
             command = tests.dry()
-            print(command)
+            flush(command)
             sys.exit(0)
 
         exit = tests.run_selected(parsed.timeout)
