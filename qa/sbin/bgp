@@ -97,13 +97,13 @@ def cdr_to_length(cidr):
     return 0
 
 
-def kill(skip, signal_name='SIGUSR1'):
+def kill(signal_name='SIGUSR1'):
     names = [name for name in dir(signal) if name.startswith('SIG')]
     signals = dict([(name, getattr(signal, name)) for name in names])
-    number = signals.get(signal_name, '')
+    number = signals.get(signal_name.upper(), '')
 
     if not number:
-        raise f'invalid signal name: {signal_name}'
+        raise ValueError(f'invalid signal name: {signal_name}')
 
     # --view is argv[1]
     conf_name = sys.argv[2].split('/')[-1].split('.')[0]
