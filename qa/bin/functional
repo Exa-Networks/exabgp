@@ -36,6 +36,7 @@ def alarm_handler(number, frame):  # pylint: disable=W0613
 def color(prefix, suffix):
     def code(value):
         return f'\033[{value}m'
+
     return code(prefix) + code(suffix)
 
 
@@ -170,11 +171,7 @@ State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP')
 
 class Record:
     _index = 0
-    _listing = \
-        '0123456789' + \
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + \
-        'abcdefghijklmnopqrstuvwxyz' + \
-        'αβγδεζηθικλμνξοπρςστυφχψω'
+    _listing = '0123456789' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + 'αβγδεζηθικλμνξοπρςστυφχψω'
 
     def __init__(self, nick, name):
         self.nick = nick
@@ -229,9 +226,9 @@ class Record:
         if self.state == State.FAIL:
             return color(0, 91) + self.nick  # RED
         if self.state == State.SUCCESS:
-            return color(1, 92) + '✓'        # GREEN
+            return color(1, 92) + '✓'  # GREEN
         if self.state == State.SKIP:
-            return color(0, 34) + '✖'        # BLUE
+            return color(0, 34) + '✖'  # BLUE
 
     def result(self, success):
         if success:
@@ -278,10 +275,10 @@ class Tests:
         number = len(self._ordered)
         lines = number // self._nl
 
-        for line in range(0, lines+1):
+        for line in range(0, lines + 1):
             tests = []
-            start = line*self._nl
-            for n in range(start, start+self._nl):
+            start = line * self._nl
+            for n in range(start, start + self._nl):
                 if n >= number:
                     continue
                 nick = self._ordered[n]
@@ -318,7 +315,7 @@ class EncodingTests(Tests):
 
         # def __lt__ (self, other):
         #     return self.nick.__lt__(other.nick)
-        
+
         # def __hash__ (self):
         #     return self.nick.__hash__()
 
@@ -370,20 +367,23 @@ class EncodingTests(Tests):
     def explain(self, nick):
         template = '\n'
         template += 'exabgp\n'
-        template += '-'*55 + '\n\n'
+        template += '-' * 55 + '\n\n'
         template += '%(client)s\n\n\n'
         template += 'bgp deamon\n'
-        template += '-'*55 + '\n\n'
+        template += '-' * 55 + '\n\n'
         template += '%(server)s\n\n\n'
         template += 'The following extra configuration options could be used\n'
-        template += '-'*55 + '\n\n'
+        template += '-' * 55 + '\n\n'
         template += 'export exabgp_debug_rotate=true\n'
         template += 'export exabgp_debug_defensive=true\n'
 
-        print(template % {
-            'client': self.client(nick),
-            'server': self.server(nick),
-        })
+        print(
+            template
+            % {
+                'client': self.client(nick),
+                'server': self.server(nick),
+            }
+        )
 
     def client(self, nick):
         if not self.enable_by_nick(nick):
@@ -413,7 +413,11 @@ class EncodingTests(Tests):
         test = self.get_by_nick(nick)
 
         config = {
-            'env': ' \\\n  '.join(['exabgp_tcp_port=%d' % test.conf['port'],]),
+            'env': ' \\\n  '.join(
+                [
+                    'exabgp_tcp_port=%d' % test.conf['port'],
+                ]
+            ),
             'interpreter': INTERPRETER,
             'bgp': Path.BGP,
             'msg': test.conf['msg'],
@@ -424,18 +428,12 @@ class EncodingTests(Tests):
     def dry(self):
         result = []
         for test in self.selected():
-            result.append(' '.join([
-                '>',
-                sys.argv[0],
-                'encoding', '--server', test.nick,
-                '--port', f'{test.conf["port"]}'
-            ]))
-            result.append(' '.join([
-                '>',
-                sys.argv[0],
-                'encoding', '--client', test.nick,
-                '--port', f'{test.conf["port"]}'
-            ]))
+            result.append(
+                ' '.join(['>', sys.argv[0], 'encoding', '--server', test.nick, '--port', f'{test.conf["port"]}'])
+            )
+            result.append(
+                ' '.join(['>', sys.argv[0], 'encoding', '--client', test.nick, '--port', f'{test.conf["port"]}'])
+            )
         return '\n'.join(result)
 
     def run_selected(self, timeout):
@@ -445,11 +443,7 @@ class EncodingTests(Tests):
         for test in self.selected():
             test.setup()
             self.display()
-            test.run([
-                sys.argv[0],
-                'encoding', '--server', test.nick,
-                '--port', f'{test.conf["port"]}'
-            ])
+            test.run([sys.argv[0], 'encoding', '--server', test.nick, '--port', f'{test.conf["port"]}'])
             time.sleep(0.005)
 
         time.sleep(0.02)
@@ -457,11 +451,9 @@ class EncodingTests(Tests):
         for test in self.selected():
             test.setup()
             self.display()
-            client[test.nick] = Exec().run([
-                sys.argv[0],
-                'encoding', '--client', test.nick,
-                '--port', f'{test.conf["port"]}'
-            ])
+            client[test.nick] = Exec().run(
+                [sys.argv[0], 'encoding', '--client', test.nick, '--port', f'{test.conf["port"]}']
+            )
             time.sleep(0.005)
 
         exit_time = time.time() + timeout
@@ -520,6 +512,7 @@ class DecodingTests(Tests):
                 return False
             if decoded != self.conf['json']:
                 from pprint import pformat
+
                 failure = 'issue, JSON does not match'
                 failure += f'\ndecoded : {pformat(decoded)}\n'
                 failure += f'\nexpected: {pformat(self.conf["json"])}'
@@ -558,12 +551,19 @@ class DecodingTests(Tests):
     def dry(self):
         result = []
         for test in self.selected():
-            result.append(' '.join([
-                '>',
-                Path.EXABGP,
-                'decode', '-f', f"'{test.conf['family']}'", test.conf['type'],
-                test.conf['packet']
-            ]))
+            result.append(
+                ' '.join(
+                    [
+                        '>',
+                        Path.EXABGP,
+                        'decode',
+                        '-f',
+                        f"'{test.conf['family']}'",
+                        test.conf['type'],
+                        test.conf['packet'],
+                    ]
+                )
+            )
         return '\n'.join(result)
 
     def run_selected(self, timeout):
@@ -572,11 +572,7 @@ class DecodingTests(Tests):
         for test in self.selected():
             test.running()
             self.display()
-            test.run([
-                Path.EXABGP,
-                'decode', '-f', test.conf['family'], test.conf['type'],
-                test.conf['packet']
-            ])
+            test.run([Path.EXABGP, 'decode', '-f', test.conf['family'], test.conf['type'], test.conf['packet']])
 
         for test in self.selected():
             self.display()
@@ -641,11 +637,7 @@ class ParsingTests(Tests):
     def dry(self):
         result = []
         for test in self.selected():
-            result.append(' '.join([
-                '>',
-                Path.EXABGP,
-                'validate', '-nrv', test.conf['fname']
-            ]))
+            result.append(' '.join(['>', Path.EXABGP, 'validate', '-nrv', test.conf['fname']]))
         return '\n'.join(result)
 
     def run_selected(self, timeout):
@@ -653,10 +645,7 @@ class ParsingTests(Tests):
 
         for test in self.selected():
             test.running()
-            test.run([
-                Path.EXABGP,
-                'validate', '-nrv', test.conf['fname']
-            ])
+            test.run([Path.EXABGP, 'validate', '-nrv', test.conf['fname']])
             time.sleep(0.005)
 
         time.sleep(0.02)
@@ -683,6 +672,7 @@ class ParsingTests(Tests):
 
         self.display()
         return success
+
 
 def add_test(subparser, name, tests, extra):
     sub = subparser.add_parser(name, help=f'run {name} test')

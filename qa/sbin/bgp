@@ -39,7 +39,7 @@ def flushed(output):
 
 
 def indent(msg, indent=12):
-    sys.stdout.write(' '*indent)
+    sys.stdout.write(' ' * indent)
     flushed(msg)
 
 
@@ -68,9 +68,7 @@ def print_payload(prefix, header, body):
 
 
 def print_rule(prefix, rule):
-    flushed(
-        f'{prefix:12}{rule[:32]}:{rule[32:36]}:{rule[36:38]}:{rule[38:]}'
-    )
+    flushed(f'{prefix:12}{rule[:32]}:{rule[32:36]}:{rule[36:38]}:{rule[38:]}')
 
 
 def dump(value):
@@ -170,22 +168,31 @@ class Message:
     @staticmethod
     def keepalive():
         return bytearray(
-            [0xFF, ] * 16
+            [
+                0xFF,
+            ]
+            * 16
             + [0x0, 0x13, 0x4]
         )
 
     @staticmethod
     def eor():
         return bytearray(
-            [0xFF, ] * 16
-            + [0x0, 0x17, 0x02] +
-            + [0x00, 0x00, 0x00, 0x00]
+            [
+                0xFF,
+            ]
+            * 16
+            + [0x0, 0x17, 0x02]
+            + +[0x00, 0x00, 0x00, 0x00]
         )
 
     @staticmethod
     def default_route():
         return bytearray(
-            [0xFF, ] * 16
+            [
+                0xFF,
+            ]
+            * 16
             + [0x00, 0x31]
             + [
                 0x02,
@@ -206,7 +213,10 @@ class Message:
     @staticmethod
     def notify(notification):
         return bytearray(
-            [0xFF, ] * 16
+            [
+                0xFF,
+            ]
+            * 16
             + [0x00, 19 + 2 + len(notification)]
             + [0x03]
             + [0x06]
@@ -354,14 +364,7 @@ class Message:
             offset += param_len + 2
 
         # No "Support for 4 octet AS number capability" found simply replace the 16-bit ASN number field.
-        open = (
-            self.header
-            + self.body[0:1]
-            + pack("!H", asn)
-            + self.body[3:8]
-            + pack("!H", byte_id)[1:]
-            + self.body[9:]
-        )
+        open = self.header + self.body[0:1] + pack("!H", asn) + self.body[3:8] + pack("!H", byte_id)[1:] + self.body[9:]
         return self._add_capa66(add_capa66, open)
 
 
@@ -422,7 +425,7 @@ class Checker(object):
                 conn = 'A'
                 seq = int(prefix)
 
-            raw = (encoding == 'raw')
+            raw = encoding == 'raw'
             self.raw = self.raw or raw
             if raw:
                 content = content.replace(':', '')
@@ -443,7 +446,7 @@ class Checker(object):
             return False
         if not self.sequences:
             return False
- 
+
         self.messages = self.sequences.pop(0)
         return self
 
@@ -499,7 +502,7 @@ class Checker(object):
                     return True
                 flushed('received extra message')
                 # FIXME: change API to not have to convert
-                print_payload('additional', msg_bytes(received[:19*2]), msg_bytes(received[19*2:]))
+                print_payload('additional', msg_bytes(received[: 19 * 2]), msg_bytes(received[19 * 2 :]))
                 return False
 
         for check in self.messages:
@@ -516,7 +519,7 @@ class Checker(object):
         flushed('')
         flushed('unexpected message:')
         if self.raw:
-            print_payload('received', msg_bytes(received[:19*2]), msg_bytes(received[19*2:]))
+            print_payload('received', msg_bytes(received[: 19 * 2]), msg_bytes(received[19 * 2 :]))
         else:
             print_prefixed('received', received)
 
@@ -567,9 +570,9 @@ class BGPProtocol(asyncio.Protocol):
         except ConnectionResetError:
             if self.service.checker.completed():
                 self.service.exit(0)
-            return '',''
+            return '', ''
         if not header:
-            return '',''
+            return '', ''
         length = unpack('!H', header[16:18])[0]
         body = await self.reader.read(length - 19)
         return header, body
@@ -778,8 +781,7 @@ async def main(options, checker, queue):
     service = BGPService(loop, queue, options, checker)
 
     server = await asyncio.start_server(
-        lambda reader, writer: BGPProtocol(service, reader, writer).handle_bgp(),
-        sock=sock
+        lambda reader, writer: BGPProtocol(service, reader, writer).handle_bgp(), sock=sock
     )
     # perhaps set backlog to 1 ..
 
