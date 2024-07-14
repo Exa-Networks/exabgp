@@ -122,13 +122,27 @@ def kill(signal_name='SIGUSR1'):
         cmdline = line.strip().split()[4:]
         pid = line.strip().split()[0]
 
-        if len(cmdline) > 1 and not cmdline[1].endswith('/main.py'):
+        if len(cmdline) < 1:
             continue
 
-        if conf_name not in cmdline[-1]:
+        for word in cmdline:
+            if word.endswith('sbin/exabgp'):
+                break
+            if word.endswith('/main.py'):
+                break
+        else:
             continue
 
-        if not cmdline[-1].endswith('.conf'):
+        for word in cmdline:
+            if conf_name in word:
+                break
+        else:
+            continue
+
+        for word in cmdline:
+            if word.endswith('.conf'):
+                break
+        else:
             continue
 
         processes.append(pid)
