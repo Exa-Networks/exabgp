@@ -129,8 +129,8 @@ class Exec(object):
         print(reason)
         print(f'> {self.command}')
         print(f'return: {self.code}')
-        print(f'stdout: {self.stdout}')
-        print(f'stderr: {self.stderr}')
+        print(f'stdout: {self.stdout.decode()}')
+        print(f'stderr: {self.stderr.decode()}')
         print(f'message: {self.message}')
         return False
 
