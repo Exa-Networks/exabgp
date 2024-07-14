@@ -95,14 +95,37 @@ def cdr_to_length(cidr):
     return 0
 
 
-def kill(signal_name='SIGUSR1'):
-    names = [name for name in dir(signal) if name.startswith('SIG')]
-    signals = dict([(name, getattr(signal, name)) for name in names])
-    number = signals.get(signal_name.upper(), '')
+def any_word_in_line(line, words):
+    for word in words:
+        if word in line:
+            return True
+    return False
 
-    if not number:
-        raise ValueError(f'invalid signal name: {signal_name}')
 
+def any_ends_in_line(line, words):
+    for word in words:
+        if line.endswith(word):
+            return True
+    return False
+
+
+def any_word_in_list(searched, words):
+    for word in words:
+        for search in searched:
+            if word in search:
+                return True
+    return False
+
+
+def any_ends_in_list(searched, words):
+    for word in words:
+        for search in searched:
+            if search.endswith(word):
+                return True
+    return False
+
+
+def find_exabgp_pid():
     # --view is argv[1]
     conf_name = sys.argv[2].split('/')[-1].split('.')[0]
 
@@ -114,7 +137,7 @@ def kill(signal_name='SIGUSR1'):
         if not low:
             continue
 
-        if 'python' not in low and 'pypy' not in low:
+        if not any_word_in_line(low, ['/python ', '/python3 ', '/pypy ', '/pypy3 ']):
             continue
 
         cmdline = line.strip().split()[4:]
@@ -123,24 +146,13 @@ def kill(signal_name='SIGUSR1'):
         if len(cmdline) < 1:
             continue
 
-        for word in cmdline:
-            if word.endswith('sbin/exabgp'):
-                break
-            if word.endswith('/main.py'):
-                break
-        else:
+        if not any_ends_in_list(cmdline, ['/main.py']):
             continue
 
-        for word in cmdline:
-            if conf_name in word:
-                break
-        else:
+        if not any_word_in_list(cmdline, [conf_name]):
             continue
 
-        for word in cmdline:
-            if word.endswith('.conf'):
-                break
-        else:
+        if not any_word_in_list(cmdline, ['.conf']):
             continue
 
         processes.append(pid)
@@ -154,11 +166,24 @@ def kill(signal_name='SIGUSR1'):
         flushed('more than one process running, quitting')
         sys.exit(1)
 
-    flushed(f'\nsending signal {signal_name} to pid {processes[0]}')
-    flushed(f'pid {processes[0]}: {cmdlines[0]}\n')
+    return processes[0], cmdlines[0]
+
+
+def kill(signal_name='SIGUSR1'):
+    names = [name for name in dir(signal) if name.startswith('SIG')]
+    signals = dict([(name, getattr(signal, name)) for name in names])
+    number = signals.get(signal_name.upper(), '')
+
+    if not number:
+        raise ValueError(f'invalid signal name: {signal_name}')
+
+    pid, cmd_lime = find_exabgp_pid()
+
+    flushed(f'\nsending signal {signal_name} to pid {pid}')
+    flushed(f'pid {pid}: {cmd_lime}\n')
 
     try:
-        os.kill(int(processes[0]), number)
+        os.kill(int(pid), number)
     except Exception as exc:
         flushed('\nfailed: %s' % str(exc))
         sys.exit(1)
