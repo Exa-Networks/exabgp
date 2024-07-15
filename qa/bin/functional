@@ -398,6 +398,7 @@ class EncodingTests(Tests):
         config = {
             'env': ' \\\n  '.join(
                 [
+                    'exabgp_version=5.0.0-0+test',
                     'exabgp_tcp_once=true',
                     'exabgp_api_cli=false',
                     'exabgp_debug_rotate=true',

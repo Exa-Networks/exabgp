@@ -9,7 +9,7 @@ commit = "unset"
 release = "5.0.0-%s+uncontrolled" % date.strftime('%Y%m%d')
 json = "5.0.0"
 text = "5.0.0"
-version = os.environ.get('EXABGP_VERSION', release)
+version = os.environ.get('exabgp_version', release)
 
 # Do not change the first line as it is parsed by scripts
 
