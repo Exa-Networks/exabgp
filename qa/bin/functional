@@ -534,7 +534,7 @@ class DecodingTests(Tests):
             with open(filename, 'r') as reader:
                 words = reader.readline().split()
                 test.conf['type'] = words[0]
-                test.conf['family'] = f'{words[1]} {words[2]}' if words[0] == 'update' else ''
+                test.conf['family'] = '' if words[0] == 'open' else f'{words[1]} {words[2]}'
                 packet = reader.readline().replace(' ', '').strip()
                 test.conf['packet'] = packet
                 expected = reader.readline().strip()
@@ -578,7 +578,7 @@ class DecodingTests(Tests):
             message = test.conf['type']
             if message == 'open':
                 cmd = [Path.EXABGP, 'decode', f'--{test.conf['type']}', test.conf['packet']]
-            elif message == 'update':
+            elif message in ['update', 'nlri']:
                 cmd = [Path.EXABGP, 'decode', '-f', test.conf['family'], f'--{test.conf['type']}', test.conf['packet']]
             else:
                 raise ValueError(f'invalid message type: {message}')
