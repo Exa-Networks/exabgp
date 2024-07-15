@@ -41,7 +41,8 @@ def is_bgp(message):
 def setargs(sub):
     # fmt:off
     sub.add_argument('-n', '--nlri', help='the data is only the NLRI', action='store_true')
-    sub.add_argument('-u', '--update', help='the data is update', action='store_true')
+    sub.add_argument('-u', '--update', help='the data is an update message (does nothing)', action='store_true')
+    sub.add_argument('-o', '--open', help='the data is an open message (does nothing)', action='store_true')
     sub.add_argument('-d', '--debug', help='start the python debugger errors', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on fault', action='store_true')
     sub.add_argument('-c', '--configuration', help='configuration file(s)', type=str)
