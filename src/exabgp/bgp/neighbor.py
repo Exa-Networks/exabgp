@@ -447,8 +447,7 @@ class Neighbor(dict):
                 '\t\troute-refresh %s;\n' % ('enable' if self['capability']['route-refresh'] else 'disable'),
                 '\t\tgraceful-restart %s;\n'
                 % (self['capability']['graceful-restart'] if self['capability']['graceful-restart'] else 'disable'),
-                '\t\tsoftware-version %s;\n'
-                % ('enable' if self['capability']['software-version'] else 'disable'),
+                '\t\tsoftware-version %s;\n' % ('enable' if self['capability']['software-version'] else 'disable'),
                 '\t\tnexthop %s;\n' % ('enable' if self['capability']['nexthop'] else 'disable'),
                 '\t\tadd-path %s;\n'
                 % (AddPath.string[self['capability']['add-path']] if self['capability']['add-path'] else 'disable'),
