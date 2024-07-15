@@ -504,7 +504,7 @@ class DecodingTests(Tests):
         def success(self):
             self.collect()
             if self.stderr:
-                self.report('stderr is \n' + self.stderr)
+                self.report('stderr is \n' + self.stderr.decode())
                 return False
             if not self.stdout:
                 self.report('no stdout received')
