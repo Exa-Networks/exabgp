@@ -14,7 +14,7 @@ from exabgp.version import version
 
 
 @Capability.register()
-class SoftwareVersion(Capability):
+class Software(Capability):
     ID = Capability.CODE.SOFTWARE_VERSION
     SOFTWARE_VERSION_MAX_LEN = 64
 
@@ -25,10 +25,10 @@ class SoftwareVersion(Capability):
         self.software_version = software_version
 
     def __str__(self):
-        return 'SoftwareVersion(%s)' % self.software_version
+        return 'Software(%s)' % self.software_version
 
     def json(self):
-        return '{ "software-version": "%s" }' % self.software_version
+        return '{ "software": "%s" }' % self.software_version
 
     def extract(self):
         return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]
