@@ -22,7 +22,7 @@ from exabgp.bgp.message.open.capability.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.bgp.message.open.capability.hostname import HostName
-from exabgp.bgp.message.open.capability.software_version import SoftwareVersion
+from exabgp.bgp.message.open.capability.software import Software
 
 from exabgp.bgp.message.notification import Notify
 
@@ -147,7 +147,7 @@ class Capabilities(dict):
         if not neighbor['capability']['software-version']:
             return
 
-        self[Capability.CODE.SOFTWARE_VERSION] = SoftwareVersion()
+        self[Capability.CODE.SOFTWARE_VERSION] = Software()
 
     def _operational(self, neighbor):
         if not neighbor['capability']['operational']:
