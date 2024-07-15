@@ -309,7 +309,7 @@ def check_open(neighbor, raw):
 
 def display_open(neighbor, raw):
     try:
-        o = Open.unpack_message(raw, Direction.IN, _negotiated(neighbor))
+        o = Open.unpack_message(raw)
         print(Response.JSON(json_version).open(neighbor, 'in', o, None, '', ''))
         return True
     except Exception:
