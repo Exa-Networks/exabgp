@@ -6,11 +6,14 @@ from vyos.xml import kw
 from vyos.util import call
 from vyos.util import popen
 
-if sys.version_info[:3] < (3,7):
+if sys.version_info[:3] < (3, 7):
+
     def breakpoint():
-        import pdb;
+        import pdb
+
         pdb.set_trace()
         pass
+
 
 def _nop(config, path):
     order = path[0]

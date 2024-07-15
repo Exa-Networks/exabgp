@@ -23,11 +23,15 @@ from exabgp.conf.yang.datatypes import kw
 from exabgp.conf.yang.datatypes import ranges
 
 import sys
-if sys.version_info[:3] < (3,7):
+
+if sys.version_info[:3] < (3, 7):
+
     def breakpoint():
-        import pdb;
+        import pdb
+
         pdb.set_trace()
         pass
+
 
 class Code(object):
     def __init__(self, tree):

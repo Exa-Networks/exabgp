@@ -21,7 +21,7 @@ class Software(Capability):
     def __init__(self):
         software_version = f"ExaBGP/{version}"
         if len(software_version) > self.SOFTWARE_VERSION_MAX_LEN:
-            software_version = software_version[:self.SOFTWARE_VERSION_MAX_LEN - 3] + '...'
+            software_version = software_version[: self.SOFTWARE_VERSION_MAX_LEN - 3] + '...'
         self.software_version = software_version
 
     def __str__(self):

@@ -19,7 +19,7 @@ class HostName(Capability):
     ID = Capability.CODE.HOSTNAME
     HOSTNAME_MAX_LEN = 64
 
-    def __init__(self, host_name = host(), domain_name = domain()):
+    def __init__(self, host_name=host(), domain_name=domain()):
         self.host_name = host_name
         self.domain_name = domain_name
 
