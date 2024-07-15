@@ -22,6 +22,7 @@ from exabgp.bgp.message.open.capability.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.bgp.message.open.capability.hostname import HostName
+from exabgp.bgp.message.open.capability.software_version import SoftwareVersion
 
 from exabgp.bgp.message.notification import Notify
 
@@ -142,6 +143,12 @@ class Capabilities(dict):
     def _hostname(self, neighbor):
         self[Capability.CODE.HOSTNAME] = HostName(neighbor['host-name'], neighbor['domain-name'])
 
+    def _software_version(self, neighbor):
+        if not neighbor['capability']['software-version']:
+            return
+
+        self[Capability.CODE.SOFTRWARE_VERSION] = SoftwareVersion()
+
     def _operational(self, neighbor):
         if not neighbor['capability']['operational']:
             return
@@ -163,6 +170,7 @@ class Capabilities(dict):
         self._operational(neighbor)
         self._extended_message(neighbor)
         self._hostname(neighbor)  # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
+        self._software_version(neighbor)  # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
         self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
         return self
 

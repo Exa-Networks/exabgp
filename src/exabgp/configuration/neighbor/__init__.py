@@ -44,6 +44,7 @@ from exabgp.configuration.neighbor.parser import domainname
 from exabgp.configuration.neighbor.parser import description
 from exabgp.configuration.neighbor.parser import inherit
 from exabgp.configuration.neighbor.parser import rate_limit
+from exabgp.version import version
 
 from exabgp.environment import getenv
 

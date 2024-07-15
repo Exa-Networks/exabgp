@@ -71,6 +71,7 @@ class ParseCapability(Section):
         '   operational enable|disable;\n'
         '   refresh enable|disable;\n'
         '   extended-message enable|disable;\n'
+        '   software-version enable|disable;\n'
         '}\n'
     )
 
@@ -84,6 +85,7 @@ class ParseCapability(Section):
         'route-refresh': boolean,
         'aigp': boolean,
         'extended-message': boolean,
+        'software-version': boolean,
     }
 
     action = {
@@ -96,6 +98,7 @@ class ParseCapability(Section):
         'route-refresh': 'set-command',
         'aigp': 'set-command',
         'extended-message': 'set-command',
+        'software-version': 'set-command',
     }
 
     default = {
@@ -107,6 +110,7 @@ class ParseCapability(Section):
         'route-refresh': True,
         'aigp': True,
         'extended-message': True,
+        'software-version': False,
     }
 
     name = 'capability'

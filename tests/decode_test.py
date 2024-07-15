@@ -33,7 +33,7 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.bgp.message.direction import Direction
- 
+
 from exabgp.logger import log
 from exabgp.environment import getenv
 
@@ -328,6 +328,7 @@ class FakeNeighbor(dict):
                 'aigp': None,
                 'operational': None,
                 'extended-message': True,
+                'software-version': False,
              },
         })
 

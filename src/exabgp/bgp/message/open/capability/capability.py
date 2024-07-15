@@ -37,6 +37,7 @@ class _CapabilityCode(int):
     MULTISESSION_CISCO = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
 
     HOSTNAME = 0x49  # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
+    SOFTWARE_VERSION = 0x4B  # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
     OPERATIONAL = 0xB9  # ExaBGP only ...
 
     # Internal
@@ -61,6 +62,7 @@ class _CapabilityCode(int):
         MULTISESSION_CISCO: 'cisco-multi-sesion',
         AIGP: 'aigp',
         HOSTNAME: 'hostname',
+        SOFTWARE_VERSION: 'software-version',
     }
 
     def __new__(cls, value):
@@ -105,6 +107,7 @@ class Capability(object):
         ROUTE_REFRESH_CISCO =      _CapabilityCode(_CapabilityCode.ROUTE_REFRESH_CISCO)
         MULTISESSION_CISCO =       _CapabilityCode(_CapabilityCode.MULTISESSION_CISCO)
         HOSTNAME =                 _CapabilityCode(_CapabilityCode.HOSTNAME)
+        SOFTRWARE_VERSION =        _CapabilityCode(_CapabilityCode.SOFTWARE_VERSION)
         OPERATIONAL =              _CapabilityCode(_CapabilityCode.OPERATIONAL)
         AIGP =                     _CapabilityCode(_CapabilityCode.AIGP)
         # fmt: on
