@@ -54,7 +54,7 @@ commit = "%s"
 release = "%s"
 json = "%s"
 text = "%s"
-version = os.environ.get('EXABGP_VERSION',release)
+version = os.environ.get('exabgp_version',release)
 
 # Do not change the first line as it is parsed by scripts
 

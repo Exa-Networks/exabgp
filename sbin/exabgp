@@ -5,17 +5,18 @@ git status 2> /dev/null > /dev/null
 # returns 128 if not in a git repo
 # returns 127 if git is not installed
 
-if [ $? -eq  0 ]; then
-    GIT_TAG=`git status | egrep 'detached at 3|4' | wc -l`
-    if [ $GIT_TAG -eq 0 ]; then
-        GIT_BRANCH=`git branch | grep "*" | awk '{ print $2}'`
-        GIT_COMMIT=`git rev-parse --short=10 HEAD`
-        export EXABGP_VERSION="5.0.0-$(date +%Y%m%d)+${GIT_BRANCH}-${GIT_COMMIT}"
+if [ -z "$exabgp_version" ]; then
+    if [ $? -eq  0 ]; then
+        GIT_TAG=`git status | egrep 'detached at 3|4' | wc -l`
+        if [ $GIT_TAG -eq 0 ]; then
+            GIT_BRANCH=`git branch | grep "*" | awk '{ print $2}'`
+            GIT_COMMIT=`git rev-parse --short=10 HEAD`
+            export exabgp_version="5.0.0-$(date +%Y%m%d)+${GIT_BRANCH}-${GIT_COMMIT}"
+        fi
+    else
+        export exabgp_version="5.0.0-$(date -r $0 +%Y%m%d)+uncontrolled"
     fi
-else
-    export EXABGP_VERSION="5.0.0-$(date -r $0 +%Y%m%d)+uncontrolled"
 fi
-
 
 path="$(cd "$(dirname "$0")"/.. ; pwd)"
 
