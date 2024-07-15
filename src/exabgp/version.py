@@ -2,8 +2,11 @@ import os
 import sys
 from datetime import datetime
 
-commit = "99de31e8"
-release = "5.0.0-%s+uncontrolled" % datetime.now().strftime('%Y%m%d')
+modification_time = modification_time = os.path.getmtime(os.path.abspath(__file__))
+date = datetime.fromtimestamp(modification_time)
+
+commit = "unset"
+release = "5.0.0-%s+uncontrolled" % date.strftime('%Y%m%d')
 json = "5.0.0"
 text = "5.0.0"
 version = os.environ.get('EXABGP_VERSION', release)
