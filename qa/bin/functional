@@ -564,7 +564,7 @@ class DecodingTests(Tests):
                         Path.EXABGP,
                         'decode',
                         f"'-f {test.conf['family']}'" if test.conf['family'] else '',
-                        f'--{test.conf['type']}',
+                        '--%s' % test.conf['type'],
                         test.conf['packet'],
                     ]
                 )
