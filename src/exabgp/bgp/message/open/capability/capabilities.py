@@ -147,7 +147,7 @@ class Capabilities(dict):
         if not neighbor['capability']['software-version']:
             return
 
-        self[Capability.CODE.SOFTRWARE_VERSION] = SoftwareVersion()
+        self[Capability.CODE.SOFTWARE_VERSION] = SoftwareVersion()
 
     def _operational(self, neighbor):
         if not neighbor['capability']['operational']:
