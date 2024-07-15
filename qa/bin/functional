@@ -578,9 +578,9 @@ class DecodingTests(Tests):
             self.display()
             message = test.conf['type']
             if message == 'open':
-                cmd = [Path.EXABGP, 'decode', f'--{test.conf['type']}', test.conf['packet']]
+                cmd = [Path.EXABGP, 'decode', '--%s' % test.conf['type'], test.conf['packet']]
             elif message in ['update', 'nlri']:
-                cmd = [Path.EXABGP, 'decode', '-f', test.conf['family'], f'--{test.conf['type']}', test.conf['packet']]
+                cmd = [Path.EXABGP, 'decode', '-f', test.conf['family'], '--%s' % test.conf['type'], test.conf['packet']]
             else:
                 raise ValueError(f'invalid message type: {message}')
             test.run(cmd)
