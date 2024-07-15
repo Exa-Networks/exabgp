@@ -15,23 +15,23 @@ from exabgp.version import version
 
 @Capability.register()
 class SoftwareVersion(Capability):
-    ID = Capability.CODE.SOFTRWARE_VERSION
+    ID = Capability.CODE.SOFTWARE_VERSION
     SOFTWARE_VERSION_MAX_LEN = 64
 
     def __init__(self):
-        self.software_version = f"ExaBGP/{version}"
+        software_version = f"ExaBGP/{version}"
+        if len(software_version) > self.SOFTWARE_VERSION_MAX_LEN:
+            software_version = software_version[:self.SOFTWARE_VERSION_MAX_LEN - 3] + '...'
+        self.software_version = software_version
 
     def __str__(self):
-        return f'SoftwareVersion({self.software_version})'
+        return 'SoftwareVersion(%s)' % self.software_version
 
     def json(self):
-        return f'{ "software-version": "{self.software_version}" }'
+        return '{ "software-version": "%s" }' % self.software_version
 
     def extract(self):
-        software_version = self.software_version.encode('utf-8')
-        if len(software_version) > self.SOFTWARE_VERSION_MAX_LEN:
-            software_version = software_version[: self.SOFTWARE_VERSION_MAX_LEN]
-        return [bytes([len(software_version)]) + software_version]
+        return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]
 
     @staticmethod
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613

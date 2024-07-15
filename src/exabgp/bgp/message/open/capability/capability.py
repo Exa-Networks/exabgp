@@ -107,7 +107,7 @@ class Capability(object):
         ROUTE_REFRESH_CISCO =      _CapabilityCode(_CapabilityCode.ROUTE_REFRESH_CISCO)
         MULTISESSION_CISCO =       _CapabilityCode(_CapabilityCode.MULTISESSION_CISCO)
         HOSTNAME =                 _CapabilityCode(_CapabilityCode.HOSTNAME)
-        SOFTRWARE_VERSION =        _CapabilityCode(_CapabilityCode.SOFTWARE_VERSION)
+        SOFTWARE_VERSION =         _CapabilityCode(_CapabilityCode.SOFTWARE_VERSION)
         OPERATIONAL =              _CapabilityCode(_CapabilityCode.OPERATIONAL)
         AIGP =                     _CapabilityCode(_CapabilityCode.AIGP)
         # fmt: on
