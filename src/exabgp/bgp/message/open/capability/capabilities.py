@@ -26,6 +26,7 @@ from exabgp.bgp.message.open.capability.software import Software
 
 from exabgp.bgp.message.notification import Notify
 
+from struct import pack
 
 # =================================================================== Parameter
 #
@@ -182,6 +183,19 @@ class Capabilities(dict):
                     continue
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += bytes([2, len(encoded)]) + encoded
+
+        # If this is an extended optional parameters version, re-encode
+        # the OPEN message.
+        if len(parameters) >= 255:
+            parameters = b''
+            for k, capabilities in self.items():
+                for capability in capabilities.extract():
+                    if len(capability) == 0:
+                        continue
+                    encoded = bytes([k, len(capability)]) + capability
+                    parameters += pack('!BH', 2, len(encoded)) + encoded
+
+            return pack('!BBH', 255, 255, len(parameters)) + parameters
 
         return bytes([len(parameters)]) + parameters
 
