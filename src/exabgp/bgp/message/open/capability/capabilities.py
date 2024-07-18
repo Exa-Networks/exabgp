@@ -184,20 +184,21 @@ class Capabilities(dict):
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += bytes([2, len(encoded)]) + encoded
 
+        if len(parameters) < 255:
+            return bytes([len(parameters)]) + parameters
+
         # If this is an extended optional parameters version, re-encode
         # the OPEN message.
-        if len(parameters) >= 255:
-            parameters = b''
-            for k, capabilities in self.items():
-                for capability in capabilities.extract():
-                    if len(capability) == 0:
-                        continue
-                    encoded = bytes([k, len(capability)]) + capability
-                    parameters += pack('!BH', 2, len(encoded)) + encoded
 
-            return pack('!BBH', 255, 255, len(parameters)) + parameters
+        parameters = b''
+        for k, capabilities in self.items():
+            for capability in capabilities.extract():
+                if len(capability) == 0:
+                    continue
+                encoded = bytes([k, len(capability)]) + capability
+                parameters += pack('!BH', 2, len(encoded)) + encoded
 
-        return bytes([len(parameters)]) + parameters
+        return pack('!BBH', 255, 255, len(parameters)) + parameters
 
     @staticmethod
     def unpack(data):
@@ -230,28 +231,24 @@ class Capabilities(dict):
 
         capabilities = Capabilities()
 
-        option_len = data[0]
         # Extended optional parameters
-        ext_opt_params = False
-        # Non-Ext OP Len.
-        if option_len == 255:
-            # Non-Ext OP Type
-            if data[1] == 255:
-                ext_opt_params = True
-                # Extended Opt. Parm. Length
-                option_len = unpack('!H', data[2:4])[0]
-                data = data[4 : option_len + 4]
+        option_len = data[0]
+        option_type = data[1]
+
+        if option_len == 255 and option_type == 255:
+            option_len = unpack('!H', data[2:4])[0]
+            data = data[4 : option_len + 4]
+            decoder = _extended_type_length
         else:
             data = data[1 : option_len + 1]
+            decoder = _key_values
 
         if not option_len:
             return capabilities
 
         while data:
-            if ext_opt_params:
-                key, value, data = _extended_type_length('parameter', data)
-            else:
-                key, value, data = _key_values('parameter', data)
+            key, value, data = decoder('parameter', data)
+
             # Parameters must only be sent once.
             if key == Parameter.AUTHENTIFICATION_INFORMATION:
                 raise Notify(2, 5)
