@@ -31,7 +31,7 @@ from exabgp.bgp.message.open.capability import Capabilities
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 # |                         BGP Identifier                        |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-# | Opt Parm Len  |
+# |Non-Ext OP Len.|Non-Ext OP Type|  Extended Opt. Parm. Length   |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 # |                                                               |
 # |             Optional Parameters (variable)                    |
@@ -40,11 +40,14 @@ from exabgp.bgp.message.open.capability import Capabilities
 
 # Optional Parameters:
 
-# 0                   1
-# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
-# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-...
-# |  Parm. Type   | Parm. Length  |  Parameter Value (variable)
-# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-...
+# 0                   1                   2
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |  Parm. Type   |        Parameter Length       |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# ~            Parameter Value (variable)         ~
+# |                                               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
 @Message.register

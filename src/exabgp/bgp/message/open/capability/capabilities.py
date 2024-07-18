@@ -26,6 +26,7 @@ from exabgp.bgp.message.open.capability.software import Software
 
 from exabgp.bgp.message.notification import Notify
 
+from struct import pack, unpack
 
 # =================================================================== Parameter
 #
@@ -183,10 +184,38 @@ class Capabilities(dict):
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += bytes([2, len(encoded)]) + encoded
 
+        # If this is an extended optional parameters version, re-encode
+        # the OPEN message.
+        if len(parameters) >= 255:
+            parameters = b''
+            for k, capabilities in self.items():
+                for capability in capabilities.extract():
+                    if len(capability) == 0:
+                        continue
+                    encoded = bytes([k, len(capability)]) + capability
+                    parameters += pack('!BH', 2, len(encoded)) + encoded
+
+            return pack('!BBH', 255, 255, len(parameters)) + parameters
+
         return bytes([len(parameters)]) + parameters
 
     @staticmethod
     def unpack(data):
+        def _extended_type_length(name, data):
+            if len(data) < 3:
+                raise Notify(2, 0, "Bad length for OPEN (extended) %s (<3) %s" % (name, Capability.hex(data)))
+            # Optional parameters length
+            ld = unpack('!H', data[1:3])[0]
+            boundary = ld + 3
+            if len(data) < boundary:
+                raise Notify(
+                    2, 0, "Bad length for OPEN (extended) %s (buffer underrun) %s" % (name, Capability.hex(data))
+                )
+            key = data[0]
+            value = data[3:boundary]
+            rest = data[boundary:]
+            return key, value, rest
+
         def _key_values(name, data):
             if len(data) < 2:
                 raise Notify(2, 0, "Bad length for OPEN %s (<2) %s" % (name, Capability.hex(data)))
@@ -202,12 +231,27 @@ class Capabilities(dict):
         capabilities = Capabilities()
 
         option_len = data[0]
+        # Extended optional parameters
+        ext_opt_params = False
+        # Non-Ext OP Len.
+        if option_len == 255:
+            # Non-Ext OP Type
+            if data[1] == 255:
+                ext_opt_params = True
+                # Extended Opt. Parm. Length
+                option_len = unpack('!H', data[2:4])[0]
+                data = data[4 : option_len + 4]
+        else:
+            data = data[1 : option_len + 1]
+
         if not option_len:
             return capabilities
 
-        data = data[1 : option_len + 1]
         while data:
-            key, value, data = _key_values('parameter', data)
+            if ext_opt_params:
+                key, value, data = _extended_type_length('parameter', data)
+            else:
+                key, value, data = _key_values('parameter', data)
             # Parameters must only be sent once.
             if key == Parameter.AUTHENTIFICATION_INFORMATION:
                 raise Notify(2, 5)
