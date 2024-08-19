@@ -2,7 +2,21 @@ import os
 import sys
 from datetime import datetime
 
-modification_time = modification_time = os.path.getmtime(os.path.abspath(__file__))
+def get_zipapp():
+    return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-2]))
+
+def get_root():
+    if os.path.isfile(get_zipapp()):
+        return get_zipapp()
+    return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-1]))
+
+try:
+    file = os.path.abspath(__file__)
+    modification_time = modification_time = os.path.getmtime(file)
+except NotADirectoryError:
+    zipapp = get_zipapp()
+    modification_time = modification_time = os.path.getmtime(zipapp)
+
 date = datetime.fromtimestamp(modification_time)
 
 commit = "unset"
