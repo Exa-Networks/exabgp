@@ -2,12 +2,12 @@
 
 """exabgp current version"""
 
+import os
 import sys
 import argparse
 import platform
 
-from exabgp.version import version
-
+from exabgp.version import version, get_root
 
 def setargs(sub):
     # fmt:off
@@ -25,6 +25,7 @@ def cmdline(cmdarg):
     sys.stdout.write('ExaBGP : %s\n' % version)
     sys.stdout.write('Python : %s\n' % sys.version.replace('\n', ' '))
     sys.stdout.write('Uname  : %s\n' % ' '.join(platform.uname()[:5]))
+    sys.stdout.write('From   : %s\n' % get_root())
     sys.stdout.flush()
 
 
