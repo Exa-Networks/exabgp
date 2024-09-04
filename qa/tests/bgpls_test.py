@@ -8,7 +8,6 @@ import unittest
 
 
 class TestTlvs(unittest.TestCase):
-
     def test_ip_reach_ipv4(self,):
         data = b'\n\n\x00'
 
@@ -18,7 +17,9 @@ class TestTlvs(unittest.TestCase):
     def test_ip_reach_ipv6(self,):
         data = b'\x7f \x01\x07\x00\x00\x00\x80'
         tlv = IpReach.unpack(data, 4)
-        self.assertEqual(tlv.json(), '"ip-reachability-tlv": "2001:700:0:8000::", "ip-reach-prefix": "2001:700:0:8000::/127"')
+        self.assertEqual(
+            tlv.json(), '"ip-reachability-tlv": "2001:700:0:8000::", "ip-reach-prefix": "2001:700:0:8000::/127"'
+        )
 
     def test_igp_tags(self,):
         data = b'\x00\x00\xff\xfe'
@@ -37,7 +38,6 @@ class TestTlvs(unittest.TestCase):
 
 
 class TestDescriptors(unittest.TestCase):
-
     def test_node_descriptor(self,):
         data = b'\x02\x00\x00\x04\x00\x00\xff\xfd\x02\x01\x00\x04\x00\x00\x00\x00\x02\x03\x00\x04\nq?\xf0'
         igp_type = 3

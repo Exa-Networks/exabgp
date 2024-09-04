@@ -56,9 +56,9 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.6.tar.gz | tar zx
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.22.tar.gz | tar zx
 
-> cd exabgp-4.2.6
+> cd exabgp-4.2.22
 > ./sbin/exabgp --version
 > ./sbin/exabgp --help
 
@@ -81,11 +81,19 @@ or to use git master
 > ./bin/healthcheck --help
 ```
 
-or change git to use any previous release (here 4.2.6)
+or change git to use any previous release (here 4.2.22)
 
 ```sh
-> git checkout 4.2.6
+> git checkout 4.2.22
 > ./sbin/exabgp --version
+```
+
+once you have the code, it is possible to create a self-contained executable which only requires an install python3 interpreter
+
+```
+> cd exabgp-git
+> python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main  -p "/usr/bin/env python3" lib
+>  /usr/local/sbin/exabgp --version
 ```
 
 Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
@@ -191,6 +199,7 @@ The following projects are related to ExaBGP
 
 **FIB**
   - [IOS-XR Solenoid](https://github.com/ios-xr/Solenoid) a FIB for ExaBGP
+  - [FBGP](https://github.com/trungdtbk/fbgp2)a FIB (pushing routes to a Faucet SDN controller)
 
 **Other BGP implementation**
   - [Full list](https://github.com/Exa-Networks/exabgp/wiki/Other-OSS-BGP-implementations) of known open source BGP implementation

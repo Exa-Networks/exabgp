@@ -22,23 +22,24 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     https://tools.ietf.org/html/rfc7752 Sec 3.3.1.3.  Node Name TLV
 
+
 @LINKSTATE.register()
 class NodeName(object):
-	TLV = 1026
+    TLV = 1026
 
-	def __init__ (self, nodename):
-		self.nodename = nodename
+    def __init__(self, nodename):
+        self.nodename = nodename
 
-	def __repr__ (self):
-		return "nodename: %s" % (self.nodename)
+    def __repr__(self):
+        return "nodename: %s" % (self.nodename)
 
-	@classmethod
-	def unpack (cls,data,length):
-		if length > 255:
-			raise Notify(3,5, "Node Name TLV length too large")
-		else:
-			nodename = data[:length].decode('ascii')
-			return cls(nodename=nodename)
+    @classmethod
+    def unpack(cls, data, length):
+        if length > 255:
+            raise Notify(3, 5, "Node Name TLV length too large")
+        else:
+            nodename = data[:length].decode('ascii')
+            return cls(nodename=nodename)
 
-	def json (self,compact=None):
-		return '"node-name": "%s"' % str(self.nodename)
+    def json(self, compact=None):
+        return '"node-name": "%s"' % str(self.nodename)

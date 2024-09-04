@@ -11,16 +11,18 @@ from functools import wraps
 from exabgp.vendoring import six
 
 
-def each (function):
-	@wraps(function)
-	def start (*args, **kwargs):
-		generator = function(*args, **kwargs)
-		return lambda: six.next(generator)  # noqa
-	return start
+def each(function):
+    @wraps(function)
+    def start(*args, **kwargs):
+        generator = function(*args, **kwargs)
+        return lambda: six.next(generator)  # noqa
+
+    return start
 
 
-def join (function):
-	@wraps(function)
-	def start (*args, **kwargs):
-		return ''.join(function(*args, **kwargs))
-	return start
+def join(function):
+    @wraps(function)
+    def start(*args, **kwargs):
+        return ''.join(function(*args, **kwargs))
+
+    return start

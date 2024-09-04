@@ -6,29 +6,32 @@ import pwd
 import socket
 
 
-def drop ():
-	uid = os.getuid()
-	gid = os.getgid()
+def drop():
+    uid = os.getuid()
+    gid = os.getgid()
 
-	if uid and gid:
-		return
+    if uid and gid:
+        return
 
-	for name in ['nobody',]:
-		try:
-			user = pwd.getpwnam(name)
-			nuid = int(user.pw_uid)
-			ngid = int(user.pw_uid)
-		except KeyError:
-			pass
+    for name in [
+        'nobody',
+    ]:
+        try:
+            user = pwd.getpwnam(name)
+            nuid = int(user.pw_uid)
+            ngid = int(user.pw_uid)
+        except KeyError:
+            pass
 
-	if not gid:
-		os.setgid(ngid)
-	if not uid:
-		os.setuid(nuid)
+    if not gid:
+        os.setgid(ngid)
+    if not uid:
+        os.setuid(nuid)
+
 
 if len(sys.argv) != 4:
-	print sys.argv[0], '<host> <port> <hex file to create>'
-	sys.exit(1)
+    print sys.argv[0], '<host> <port> <hex file to create>'
+    sys.exit(1)
 
 drop()
 
@@ -37,24 +40,25 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Connect the socket to the port on the server given by the caller
 server_address = (sys.argv[1], int(sys.argv[2]))
-print >>sys.stderr, 'connecting to %s port %s' % server_address
+print >> sys.stderr, 'connecting to %s port %s' % server_address
 sock.connect(server_address)
 
 with open(sys.argv[3]) as record:
-	try:
-		while True:
-			count = 0
-			even = False
-			byte = sock.recv(1)
-			if byte == '': break
-			record.write('%02X' % ord(byte))
-			count = (count + 1) % 8
-			if not count:
-				record.write('\n')
-				even = False
-			else:
-				even != even
-				if even:
-					record.write(' ')
-	finally:
-		sock.close()
+    try:
+        while True:
+            count = 0
+            even = False
+            byte = sock.recv(1)
+            if byte == '':
+                break
+            record.write('%02X' % ord(byte))
+            count = (count + 1) % 8
+            if not count:
+                record.write('\n')
+                even = False
+            else:
+                even != even
+                if even:
+                    record.write(' ')
+    finally:
+        sock.close()

@@ -13,9 +13,9 @@ import sys
 import platform
 
 if sys.version_info[0] < 3:
-	_max = sys.maxint
+    _max = sys.maxint
 else:
-	_max = sys.maxsize
+    _max = sys.maxsize
 
 PANIC = """
 ********************************************************************************
@@ -53,7 +53,12 @@ Python version : %s
 System Uname   : %s
 System MaxInt  : %s
 
-""" % (version,sys.version.replace('\n',' '),platform.version(),str(_max))
+""" % (
+    version,
+    sys.version.replace('\n', ' '),
+    platform.version(),
+    str(_max),
+)
 
 
 NO_PANIC = """
@@ -92,7 +97,12 @@ Python version : %s
 System Uname   : %s
 System MaxInt  : %s
 
-""" % (version,sys.version.replace('\n',' '),platform.version(),str(_max))
+""" % (
+    version,
+    sys.version.replace('\n', ' '),
+    platform.version(),
+    str(_max),
+)
 
 FOOTER = """\
 ********************************************************************************

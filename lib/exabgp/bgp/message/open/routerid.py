@@ -16,12 +16,12 @@ from exabgp.util import ordinal
 #
 
 
-class RouterID (IPv4):
-	def __init__ (self, ip, packed=None):
-		if IPv4.toafi(ip) != AFI.ipv4:
-			raise ValueError('wrong address family')
-		IPv4.__init__(self,ip,packed)
+class RouterID(IPv4):
+    def __init__(self, ip, packed=None):
+        if IPv4.toafi(ip) != AFI.ipv4:
+            raise ValueError('wrong address family')
+        IPv4.__init__(self, ip, packed)
 
-	@classmethod
-	def unpack (cls, data):  # pylint: disable=W0221
-		return cls('.'.join(str(ordinal(_)) for _ in data),data)
+    @classmethod
+    def unpack(cls, data):  # pylint: disable=W0221
+        return cls('.'.join(str(ordinal(_)) for _ in data), data)

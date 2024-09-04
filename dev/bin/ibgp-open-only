@@ -7,43 +7,44 @@ from struct import unpack
 
 
 class BGPHandler(asyncore.dispatcher_with_send):
-	def read_message (self):
-		header = self.recv(19)
-		length = unpack('!H',header[16:18])[0]
-		body = self.recv(length)
-		return header,body
+    def read_message(self):
+        header = self.recv(19)
+        length = unpack('!H', header[16:18])[0]
+        body = self.recv(length)
+        return header, body
 
-	def handle_read (self):
-		# reply with a IBGP response with the same capability (just changing routerID)
-		print "reading open"
-		header,body = self.read_message()
-		routerid = chr((ord(body[8])+1) & 0xFF)
-		o = header+body[:8]+routerid+body[9:]
-		self.send(o)
+    def handle_read(self):
+        # reply with a IBGP response with the same capability (just changing routerID)
+        print "reading open"
+        header, body = self.read_message()
+        routerid = chr((ord(body[8]) + 1) & 0xFF)
+        o = header + body[:8] + routerid + body[9:]
+        self.send(o)
+
 
 class BGPServer(asyncore.dispatcher):
-	def __init__ (self, host, port):
-		asyncore.dispatcher.__init__(self)
-		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.set_reuse_addr()
-		self.bind((host, port))
-		self.listen(5)
+    def __init__(self, host, port):
+        asyncore.dispatcher.__init__(self)
+        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.set_reuse_addr()
+        self.bind((host, port))
+        self.listen(5)
 
-	def handle_accept (self):
-		pair = self.accept()
-		if pair is not None:
-			# The if prevent invalid unpacking
-			sock, addr = pair  # pylint: disable=W0633
-			print "new BGP connection from", addr
-			handler = BGPHandler(sock)
+    def handle_accept(self):
+        pair = self.accept()
+        if pair is not None:
+            # The if prevent invalid unpacking
+            sock, addr = pair  # pylint: disable=W0633
+            print "new BGP connection from", addr
+            handler = BGPHandler(sock)
 
 
-if os.environ.get('exabgp.tcp.port','').isdigit():
-	port = int(os.environ.get('exabgp.tcp.port'))
-elif os.environ.get('exabgp_tcp_port','').isdigit():
-	port = int(os.environ.get('exabgp_tcp_port'))
+if os.environ.get('exabgp.tcp.port', '').isdigit():
+    port = int(os.environ.get('exabgp.tcp.port'))
+elif os.environ.get('exabgp_tcp_port', '').isdigit():
+    port = int(os.environ.get('exabgp_tcp_port'))
 else:
-	port = 179
+    port = 179
 
 server = BGPServer('localhost', port)
 asyncore.loop()

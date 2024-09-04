@@ -15,20 +15,20 @@ from exabgp.bgp.message.open.capability.capability import Capability
 
 
 @Capability.register()
-class Operational (Capability,list):
-	ID = Capability.CODE.OPERATIONAL
+class Operational(Capability, list):
+    ID = Capability.CODE.OPERATIONAL
 
-	def __str__ (self):
-		# XXX: FIXME: could be more verbose
-		return 'Operational'
+    def __str__(self):
+        # XXX: FIXME: could be more verbose
+        return 'Operational'
 
-	def json (self):
-		return '{ "name": "operational" }'
+    def json(self):
+        return '{ "name": "operational" }'
 
-	def extract (self):
-		return [b'']
+    def extract(self):
+        return [b'']
 
-	@staticmethod
-	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
-		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
-		return instance
+    @staticmethod
+    def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+        # XXX: FIXME: we should set that that instance was seen and raise if seen twice
+        return instance

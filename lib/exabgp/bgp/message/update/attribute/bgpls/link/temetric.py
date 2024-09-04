@@ -21,23 +21,24 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #    https://tools.ietf.org/html/rfc7752#section-3.3.2.3 TE Metric
 
+
 @LINKSTATE.register()
 class TeMetric(object):
-	TLV = 1092
+    TLV = 1092
 
-	def __init__ (self, temetric):
-		self.temetric = temetric
+    def __init__(self, temetric):
+        self.temetric = temetric
 
-	def __repr__ (self):
-		return "TE Default Metric: %s" % (self.temetric)
+    def __repr__(self):
+        return "TE Default Metric: %s" % (self.temetric)
 
-	@classmethod
-	def unpack (cls,data,length):
-		if len(data) != 4:
-			raise Notify(3,5, "Incorrect TE Metric Size")
-		else:
-			temetric = unpack('!L',data)[0]
-			return cls(temetric=temetric)
+    @classmethod
+    def unpack(cls, data, length):
+        if len(data) != 4:
+            raise Notify(3, 5, "Incorrect TE Metric Size")
+        else:
+            temetric = unpack('!L', data)[0]
+            return cls(temetric=temetric)
 
-	def json (self,compact=None):
-		return '"te-metric": %d' % int(str(self.temetric))
+    def json(self, compact=None):
+        return '"te-metric": %d' % int(str(self.temetric))

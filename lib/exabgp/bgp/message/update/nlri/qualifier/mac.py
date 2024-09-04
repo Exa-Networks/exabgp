@@ -17,52 +17,53 @@ from exabgp.util import concat_bytes_i
 # ========================================================================== MAC
 #
 
-class MAC (object):
 
-	__slots__ = ['mac','_packed']
+class MAC(object):
 
-	def __init__ (self, mac=None,packed=None):
-		self.mac = mac
-		self._packed = packed if packed else concat_bytes_i(character(int(_,16)) for _ in mac.split(":"))
+    __slots__ = ['mac', '_packed']
 
-	def __eq__ (self, other):
-		return self.mac == other.mac
+    def __init__(self, mac=None, packed=None):
+        self.mac = mac
+        self._packed = packed if packed else concat_bytes_i(character(int(_, 16)) for _ in mac.split(":"))
 
-	def __neq__ (self, other):
-		return self.mac != other.mac
+    def __eq__(self, other):
+        return self.mac == other.mac
 
-	def __lt__ (self, other):
-		raise RuntimeError('comparing MAC for ordering does not make sense')
+    def __neq__(self, other):
+        return self.mac != other.mac
 
-	def __le__ (self, other):
-		raise RuntimeError('comparing MAC for ordering does not make sense')
+    def __lt__(self, other):
+        raise RuntimeError('comparing MAC for ordering does not make sense')
 
-	def __gt__ (self, other):
-		raise RuntimeError('comparing MAC for ordering does not make sense')
+    def __le__(self, other):
+        raise RuntimeError('comparing MAC for ordering does not make sense')
 
-	def __ge__ (self, other):
-		raise RuntimeError('comparing MAC for ordering does not make sense')
+    def __gt__(self, other):
+        raise RuntimeError('comparing MAC for ordering does not make sense')
 
-	def __str__ (self):
-		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
+    def __ge__(self, other):
+        raise RuntimeError('comparing MAC for ordering does not make sense')
 
-	def __repr__ (self):
-		return self.__str__()
+    def __str__(self):
+        return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
-	def pack (self):
-		return self._packed
+    def __repr__(self):
+        return self.__str__()
 
-	# Orange code was returning 10 !
-	def __len__ (self):
-		return 6
+    def pack(self):
+        return self._packed
 
-	# XXX: FIXME: improve for better performance ?
-	def __hash__ (self):
-		return hash(str(self))
+    # Orange code was returning 10 !
+    def __len__(self):
+        return 6
 
-	@classmethod
-	def unpack (cls, data):
-		return cls(':'.join('%02X' % ordinal(_) for _ in data[:6]),data[:6])
+    # XXX: FIXME: improve for better performance ?
+    def __hash__(self):
+        return hash(str(self))
 
-	def json (self, compact=None):
-		return '"mac": "%s"' % str(self)
+    @classmethod
+    def unpack(cls, data):
+        return cls(':'.join('%02X' % ordinal(_) for _ in data[:6]), data[:6])
+
+    def json(self, compact=None):
+        return '"mac": "%s"' % str(self)

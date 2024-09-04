@@ -26,21 +26,21 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
 @LINKSTATE.register()
 class PrefixMetric(object):
-	TLV = 1155
+    TLV = 1155
 
-	def __init__ (self, prefixmetric):
-		self.prefixmetric = prefixmetric
+    def __init__(self, prefixmetric):
+        self.prefixmetric = prefixmetric
 
-	def __repr__ (self):
-		return "prefix_metric: %s" % (self.prefixmetric)
+    def __repr__(self):
+        return "prefix_metric: %s" % (self.prefixmetric)
 
-	@classmethod
-	def unpack (cls,data,length):
-		if length != 4:
-			raise Notify(3,5, "Incorrect Prefix Metric size")
-		else:
-			metric = unpack("!L", data)[0]
-			return cls(prefixmetric=metric)
+    @classmethod
+    def unpack(cls, data, length):
+        if length != 4:
+            raise Notify(3, 5, "Incorrect Prefix Metric size")
+        else:
+            metric = unpack("!L", data)[0]
+            return cls(prefixmetric=metric)
 
-	def json (self,compact=None):
-		return '"prefix-metric": %d' % int(self.prefixmetric)
+    def json(self, compact=None):
+        return '"prefix-metric": %d' % int(self.prefixmetric)

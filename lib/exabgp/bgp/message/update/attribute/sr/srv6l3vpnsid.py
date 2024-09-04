@@ -30,34 +30,34 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
 @PrefixSid.register()
 class Srv6L3vpnSid(object):
-	TLV = 5
-	LENGTH = 21
+    TLV = 5
+    LENGTH = 21
 
-	def __init__ (self,l3vpnsid,packed=None):
-		self.l3vpnsid = l3vpnsid
-		self.packed = self.pack()
+    def __init__(self, l3vpnsid, packed=None):
+        self.l3vpnsid = l3vpnsid
+        self.packed = self.pack()
 
-	def __repr__ (self):
-		return "srv6-l3vpn-sid %s" % (self.l3vpnsid)
+    def __repr__(self):
+        return "srv6-l3vpn-sid %s" % (self.l3vpnsid)
 
-	def pack (self):
-		return concat_bytes(
-			pack('!B', self.TLV),
-			pack('!H', self.LENGTH),
-			pack('!B', 0),
-			IP.pton(self.l3vpnsid),
-			pack('!B', 0),
-			pack('!H', 0xffff),
-			pack('!B', 0),
-		)
+    def pack(self):
+        return concat_bytes(
+            pack('!B', self.TLV),
+            pack('!H', self.LENGTH),
+            pack('!B', 0),
+            IP.pton(self.l3vpnsid),
+            pack('!B', 0),
+            pack('!H', 0xFFFF),
+            pack('!B', 0),
+        )
 
-	@classmethod
-	def unpack (cls,data,length):
-		l3vpnsid = -1
-		if cls.LENGTH != length:
-			raise Notify(3,5, "Invalid TLV size. Should be {0} but {1} received".format(cls.LENGTH, length))
-		l3vpnsid = IP.unpack(data[1:17])
-		return cls(l3vpnsid=str(l3vpnsid),packed=data)
+    @classmethod
+    def unpack(cls, data, length):
+        l3vpnsid = -1
+        if cls.LENGTH != length:
+            raise Notify(3, 5, "Invalid TLV size. Should be {0} but {1} received".format(cls.LENGTH, length))
+        l3vpnsid = IP.unpack(data[1:17])
+        return cls(l3vpnsid=str(l3vpnsid), packed=data)
 
-	def json (self, compact=None):
-		return '"srv6-l3vpn-sid": "%s"' % (self.l3vpnsid)
+    def json(self, compact=None):
+        return '"srv6-l3vpn-sid": "%s"' % (self.l3vpnsid)

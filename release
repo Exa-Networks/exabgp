@@ -11,34 +11,42 @@ import os
 import sys
 import fileinput
 
+import glob
+import shutil
+import zipapp
+import argparse
+
+
 CHANGELOG = 'CHANGELOG.rst'
 
-class Path:
-	root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
-	changelog = os.path.join(root,CHANGELOG)
-	lib_exa = os.path.join(root, 'lib/exabgp')
-	version = os.path.join(root, 'lib/exabgp/version.py')
-	debian = os.path.join(root, 'debian/changelog')
-	egg = os.path.join(root, 'lib/exabgp.egg-info')
-	build_exabgp = os.path.join(root, 'build/lib/exabgp')
-	build_root = os.path.join(root, 'build')
 
-	@classmethod
-	def remove_egg(cls):
-		from shutil import rmtree
-		print('removing left-over egg')
-		if os.path.exists(cls.egg):
-			rmtree(cls.egg)
-		if os.path.exists(cls.build_exabgp):
-			rmtree(cls.build_root)
-		return 0
+class Path:
+    root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
+    changelog = os.path.join(root, CHANGELOG)
+    lib_exa = os.path.join(root, 'lib/exabgp')
+    version = os.path.join(root, 'lib/exabgp/version.py')
+    debian = os.path.join(root, 'debian/changelog')
+    egg = os.path.join(root, 'lib/exabgp.egg-info')
+    build_exabgp = os.path.join(root, 'build/lib/exabgp')
+    build_root = os.path.join(root, 'build')
+
+    @classmethod
+    def remove_egg(cls, *args):
+        from shutil import rmtree
+
+        print('removing left-over egg')
+        if os.path.exists(cls.egg):
+            rmtree(cls.egg)
+        if os.path.exists(cls.build_exabgp):
+            rmtree(cls.build_root)
+        return 0
 
 
 class Version:
-	JSON = '4.0.1'
-	TEXT = '4.0.1'
+    JSON = '4.0.1'
+    TEXT = '4.0.1'
 
-	template = """\
+    template = """\
 import os
 
 commit = "%s"
@@ -50,68 +58,58 @@ version = os.environ.get('EXABGP_VERSION',release)
 # Do not change the first line as it is parsed by scripts
 
 if __name__ == '__main__':
-	import sys
-	sys.stdout.write(version)
+    import sys
+    sys.stdout.write(version)
 """
 
-	@staticmethod
-	def current():
-		sys.path.append(Path.lib_exa)
-		from version import version as release
+    @staticmethod
+    def current():
+        sys.path.append(Path.lib_exa)
+        from version import version as release
 
-		# transitional fix
-		if "-" in release:
-			release = release.split("-")[0]
+        # transitional fix
+        if "-" in release:
+            release = release.split("-")[0]
 
-		return release
+        return release
 
-	@staticmethod
-	def changelog():
-		with open(Path.changelog) as f:
-			f.readline()
-			for line in f:
-				if line.lower().startswith('version '):
-					return line.split()[1].rstrip().rstrip(':').strip()
-		return ''
+    @staticmethod
+    def changelog():
+        with open(Path.changelog) as f:
+            f.readline()
+            for line in f:
+                if line.lower().startswith('version '):
+                    return line.split()[1].rstrip().rstrip(':').strip()
+        return ''
 
-	@staticmethod
-	def set(tag,commit):
-		with open(Path.version, 'w') as f:
-			f.write(Version.template % (
-				commit, tag,
-				Version.JSON,
-				Version.TEXT
-			))
-		return Version.current() == tag
+    @staticmethod
+    def set(tag, commit):
+        with open(Path.version, 'w') as f:
+            f.write(Version.template % (commit, tag, Version.JSON, Version.TEXT))
+        return Version.current() == tag
 
-	@staticmethod
-	def latest (tags):
-		valid = [
-			[int(_) for _ in tag.split('.')] for tag in tags
-			if Version.valid(tag)
-		]
-		return '.'.join(str(_) for _ in sorted(valid)[-1])
+    @staticmethod
+    def latest(tags):
+        valid = [[int(_) for _ in tag.split('.')] for tag in tags if Version.valid(tag)]
+        return '.'.join(str(_) for _ in sorted(valid)[-1])
 
-	@staticmethod
-	def valid (tag):
-		parts = tag.split('.')
-		return len(parts) == 3 \
-			and parts[0].isdigit() \
-			and parts[1].isdigit() \
-			and parts[2].isdigit()
+    @staticmethod
+    def valid(tag):
+        parts = tag.split('.')
+        return len(parts) == 3 and parts[0].isdigit() and parts[1].isdigit() and parts[2].isdigit()
 
-	@staticmethod
-	def candidates(tag):
-		latest = [int(_) for _ in tag.split('.')]
-		return [
-			'.'.join([str(_) for _ in (latest[0], latest[1], latest[2] + 1)]),
-			'.'.join([str(_) for _ in (latest[0], latest[1] + 1, 0)]),
-			'.'.join([str(_) for _ in (latest[0] + 1, 0, 0)]),
-		]
+    @staticmethod
+    def candidates(tag):
+        latest = [int(_) for _ in tag.split('.')]
+        return [
+            '.'.join([str(_) for _ in (latest[0], latest[1], latest[2] + 1)]),
+            '.'.join([str(_) for _ in (latest[0], latest[1] + 1, 0)]),
+            '.'.join([str(_) for _ in (latest[0] + 1, 0, 0)]),
+        ]
 
 
 class Debian:
-	template = """\
+    template = """\
 exabgp (%s-0) unstable; urgency=low
 
   * Latest ExaBGP release.
@@ -119,217 +117,267 @@ exabgp (%s-0) unstable; urgency=low
  -- Vincent Bernat <bernat@debian.org>  %s
 
 """
-	@staticmethod
-	def set(version):
-		from email.utils import formatdate
-		with open(Path.debian, 'w') as w:
-			w.write(Debian.template % (version, formatdate()))
-		print('updated debian/changelog')
+
+    @staticmethod
+    def set(version):
+        from email.utils import formatdate
+
+        with open(Path.debian, 'w') as w:
+            w.write(Debian.template % (version, formatdate()))
+        print('updated debian/changelog')
 
 
 class Command:
-	dryrun = 'dry-run' if os.environ.get('DRY', os.environ.get('DRYRUN', os.environ.get('DRY_RUN', False))) else ''
+    dryrun = 'dry-run' if os.environ.get('DRY', os.environ.get('DRYRUN', os.environ.get('DRY_RUN', False))) else ''
 
-	@staticmethod
-	def run(cmd):
-		print('>', cmd)
-		return Git.dryrun or os.system(cmd)
+    @staticmethod
+    def run(cmd):
+        print('>', cmd)
+        return Git.dryrun or os.system(cmd)
 
 
-class Git (Command):
-	@staticmethod
-	def commit (comment):
-		return Git.run('git commit -a -m "%s"' % comment)
+class Git(Command):
+    @staticmethod
+    def commit(comment):
+        return Git.run('git commit -a -m "%s"' % comment)
 
-	@staticmethod
-	def push(tag=False,repo=''):
-		command = 'git push'
-		if tag:
-			command += ' --tags'
-		if repo:
-			command += ' %s' % repo
-		return Git.run(command)
+    @staticmethod
+    def push(tag=False, repo=''):
+        command = 'git push'
+        if tag:
+            command += ' --tags'
+        if repo:
+            command += ' %s' % repo
+        return Git.run(command)
 
-	@staticmethod
-	def head_commit():
-		return os.popen('git rev-parse --short HEAD').read().strip()
+    @staticmethod
+    def head_commit():
+        return os.popen('git rev-parse --short HEAD').read().strip()
 
-	@staticmethod
-	def tags():
-		return os.popen('git tag').read().split('-')[0].strip().split('\n')
+    @staticmethod
+    def tags():
+        return os.popen('git tag').read().split('-')[0].strip().split('\n')
 
-	@staticmethod
-	def tag(release):
-		return Git.run('git tag -a %s -m "release %s"' % (release, release))
+    @staticmethod
+    def tag(release):
+        return Git.run('git tag -s -a %s -m "release %s"' % (release, release))
 
-	@staticmethod
-	def pending():
-		# XXX: terrible please rewrite
-		commit = None
-		for line in os.popen('git status').read().split('\n'):
-			if 'modified:' in line:
-				if 'lib/exabgp/version.py' in line or 'debian/changelog' in line or 'README' in line:
-					if commit is not False:
-						commit = True
-				else:
-					return False
-			elif 'renamed:' in line:
-				return False
-		return commit
+    @staticmethod
+    def pending():
+        # XXX: terrible please rewrite
+        commit = None
+        for line in os.popen('git status').read().split('\n'):
+            if 'modified:' in line:
+                if 'lib/exabgp/version.py' in line or 'debian/changelog' in line or 'README' in line:
+                    if commit is not False:
+                        commit = True
+                else:
+                    return False
+            elif 'renamed:' in line:
+                return False
+        return commit
+
 
 #
 # Check that that there is no version inconsistancy before any pypi action
 #
 
-def release_github():
 
-	print()
-	print('updating Github')
+def release_github(args):
 
-	current = Version.current()
-	print('current version is %s (from version.py)' % current)
+    print()
+    print('updating Github')
 
-	release = Version.changelog()
-	print('release version is %s (from %s)' % (release, CHANGELOG))
+    current = Version.current()
+    print('current version is %s (from version.py)' % current)
 
-	if not Version.valid(release):
-		print('invalid new version in %s' % CHANGELOG)
-		return 1
+    release = Version.changelog()
+    print('release version is %s (from %s)' % (release, CHANGELOG))
 
-	tags = Git.tags()
-	if release in tags:
-		print('this version/tag was already released/used')
-		return 1
+    if not Version.valid(release):
+        print('invalid new version in %s' % CHANGELOG)
+        return 1
 
-	candidates = Version.candidates(Version.latest(tags))
-	if release not in candidates:
-		print('valid versions are:', ', '.join(candidates))
-		print('this release is not one of the candidates')
+    tags = Git.tags()
+    if release in tags:
+        print(f'version {release} was already released/used')
+        return 1
 
-	print('updating lib/exabgp/version.py')
-	Version.set(release, Git.head_commit())
-	print('updating debian/changelog')
-	Debian.set(release)
+    candidates = Version.candidates(Version.latest(tags))
+    if release not in candidates:
+        print('valid versions are:', ', '.join(candidates))
+        print('this release is not one of the candidates')
 
-	print('updating ', end='')
-	for readme in ('README.md', 'README.rst'):
-		print(readme + ' ', end='')
-		with fileinput.FileInput(readme, inplace=True) as replacer:
-			for line in replacer:
-				print(line.replace(current, release), end='')
-	print()
+    print('updating lib/exabgp/version.py')
+    Version.set(release, Git.head_commit())
+    print('updating debian/changelog')
+    Debian.set(release)
 
-	print('checking if we need to commit a version.py change')
-	status = Git.pending()
-	if status is None:
-		print('all is already set for release')
-	elif status is False:
-		print('more than one file is modified and need updating, aborting')
-		return 1
-	else:
-		if Git.commit('updating version to %s' % release):
-			print('could not commit version change (%s)' % release)
-			return 1
-		print('version was updated')
+    print('updating ', end='')
+    for readme in ('README.md', 'README.rst'):
+        print(readme + ' ', end='')
+        with fileinput.FileInput(readme, inplace=True) as replacer:
+            for line in replacer:
+                print(line.replace(current, release), end='')
+    print()
 
-	print('tagging the new version')
-	if Git.tag(release):
-		print('could not tag version (%s)' % release)
-		return 1
+    print('checking if we need to commit a version.py change')
+    status = Git.pending()
+    if status is None:
+        print('all is already set for release')
+    elif status is False:
+        print('more than one file is modified and need updating, aborting')
+        return 1
+    else:
+        if Git.commit('updating version to %s' % release):
+            print('could not commit version change (%s)' % release)
+            return 1
+        print('version was updated')
 
-	print('pushing the new tag')
-	if Git.push(tag=True, repo='origin'):
-		print('could not push release tag to origin')
-		return 1
+    print('tagging the new version')
+    if Git.tag(release):
+        print('could not tag version (%s)' % release)
+        return 1
 
-	if Git.push(tag=False, repo='origin'):
-		print('could not push release version to origin')
-		return 1
+    print('pushing the new tag')
+    if Git.push(tag=True, repo='origin'):
+        print('could not push release tag to origin')
+        return 1
 
-	if Git.push(tag=True, repo='upstream'):
-		print('could not push release tag to upstream')
-		return 1
+    if Git.push(tag=False, repo='origin'):
+        print('could not push release version to origin')
+        return 1
 
-	if Git.push(tag=False, repo='upstream'):
-		print('could not push release version to upstream')
-		return 1
-	return 0
+    if Git.push(tag=True, repo='upstream'):
+        print('could not push release tag to upstream')
+        return 1
 
-
-def release_pypi(test):
-	print()
-	print('updating PyPI')
-
-	Path.remove_egg()
-
-	if Command.run('python setup.py sdist bdist_wheel'):
-		print('could not generate egg')
-		return 1
-
-	# keyring used to save credential
-	# https://pypi.org/project/twine/
-
-	release = Version.latest(Git.tags())
-
-	server = ''
-	if test:
-		server = '--repository-url https://test.pypi.org/legacy/'
-
-	if Command.run('twine upload %s dist/exabgp-%s.tar.gz' % (server, release)):
-		print('could not upload with twine')
-		return 1
-
-	print('all done.')
-	return 0
+    if Git.push(tag=False, repo='upstream'):
+        print('could not push release version to upstream')
+        return 1
+    return 0
 
 
-def help():
-	print("""\
-release help     this help
-release cleanup  delete left-over file from release
-release github   tag a new version on github, and update pypi
-release pypi     create egg/wheel
-release install  local installation
-""")
+def release_pypi(args):
+    test = args.test
 
-def main ():
-	if os.environ.get("SCRUTINIZER", "") == "true":
-		sys.exit(0)
+    print()
+    print('updating PyPI')
 
-	if len(sys.argv) < 2:
-		help()
-		sys.exit(1)
+    Path.remove_egg()
 
-	if sys.argv[1] == 'cleanup':
-		sys.exit(Path.remove_egg())
+    if Command.run('python3 setup.py sdist bdist_wheel'):
+        print('could not generate egg')
+        return 1
 
-	if sys.argv[1] == 'github':
-		sys.exit(release_github())
+    # keyring used to save credential
+    # https://pypi.org/project/twine/
 
-	if sys.argv[1] == 'pypi':
-		sys.exit(release_pypi('--test' in sys.argv or 'test' in sys.argv))
+    release = Version.latest(Git.tags())
 
-	# "internal" commands
+    server = ''
+    if test:
+        server = '--repository-url https://test.pypi.org/legacy/'
 
-	if sys.argv[1] == 'current':
-		sys.stdout.write("%s\n" % Version.current())
-		sys.exit(0)
+    if Command.run('twine upload %s dist/exabgp-%s.tar.gz' % (server, release)):
+        print('could not upload with twine')
+        return 1
 
-	if sys.argv[1] == 'release':
-		sys.stdout.write("%s\n" % Version.changelog())
-		sys.exit(0)
+    print('all done.')
+    return 0
 
-	if '--help' in sys.argv or 'help' in sys.argv:
-		help()
-		sys.exit(1)
 
-	if sys.argv[1] == 'debian':
-		release = Version.changelog()
-		Debian.set(release)
-		sys.exit(0)
+def remove_cache():
+    for name in glob.glob('./lib/*/__pycache__'):
+        shutil.rmtree(name)
+    for name in glob.glob('./lib/*/*/__pycache__'):
+        shutil.rmtree(name)
 
-	sys.exit(1)
+    for name in glob.glob('./lib/*/*.pyc'):
+        os.remove(name)
+    for name in glob.glob('./lib/*/*/*.pyc'):
+        os.remove(name)
+
+
+def generate_binary(args):
+    target = args.target
+    debug = args.debug
+
+    if sys.version_info.minor < 5:
+        sys.exit('zipapp is only available with python 3.5+')
+
+    FOLDER = os.path.dirname(os.path.realpath(__file__))
+    IMPORT = os.path.abspath(os.path.join(FOLDER, 'lib'))
+
+    if not os.path.exists(IMPORT):
+        sys.exit(f'could not import "{IMPORT}"')
+    sys.path = [IMPORT]
+
+    params = {
+        'source': 'lib',
+        'target': target,
+        'interpreter': '/usr/bin/env python3',
+        'main': 'exabgp.application.main:main',
+    }
+
+    if debug:
+        params['interpreter'] = '/usr/bin/env VYOSEXTRA_DEBUG=1 python3'
+    if sys.version_info.minor >= 7:
+        params['compressed'] = not debug
+
+    here = os.path.dirname(os.path.realpath(__file__))
+    data = os.path.abspath(os.path.join(here, 'data'))
+
+    zipapp.create_archive(**params)
+
+
+def show_version(args):
+    if args.version == 'current':
+        print(Version.current())
+    if args.version == 'release':
+        print(Version.changelog())
+
+
+def main():
+    # To late for it .. but here as a reminder that it can be done
+    os.environ['PYTHONDONTWRITEBYTECODE'] = ""
+
+    if os.environ.get("SCRUTINIZER", "") == "true":
+        sys.exit(0)
+
+    if len(sys.argv) > 1 and sys.argv[1] == 'debian':
+        release = Version.changelog()
+        Debian.set(release)
+        sys.exit(0)
+
+    parser = argparse.ArgumentParser(description='exabgp release tool')
+    root = parser.add_subparsers()
+
+    binary = root.add_parser('binary',help='release an exabgp binary')
+    binary.add_argument('target', help='name of the binary to create', default='./vyos')
+    binary.add_argument('-d', '--debug', help='run python with pdb', action='store_true')
+    binary.set_defaults(func=generate_binary)
+
+    pypi = root.add_parser('pypi', help='create egg/wheel')
+    pypi.add_argument('-t', '--test', help='only test', action='store_true')
+    pypi.set_defaults(func=release_pypi)
+
+    github = root.add_parser('github', help='tag a new version on github, and update pypi')
+    github.set_defaults(func=release_github)
+
+    cleanup = root.add_parser('cleanup', help='delete left-over file from release')
+    cleanup.set_defaults(func=Path.remove_egg)
+
+    show = root.add_parser('show', help='show exabgp version')
+    show.add_argument('version', help='which version', choices=['current', 'release'])
+    show.set_defaults(func=show_version)
+
+    args = parser.parse_args()
+    if 'func' not in dir(args):
+        sys.exit(1)
+    args.func(args)
+    sys.exit(0)
 
 
 if __name__ == '__main__':
-	main()
+    main()

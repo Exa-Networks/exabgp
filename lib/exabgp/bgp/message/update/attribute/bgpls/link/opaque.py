@@ -28,15 +28,15 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
 @LINKSTATE.register()
 class LinkOpaque(object):
-	TLV = 1097
+    TLV = 1097
 
-	def __init__ (self, opaque):
-		self.opaque = opaque
+    def __init__(self, opaque):
+        self.opaque = opaque
 
-	def __repr__ (self):
-		return "Link Opaque attribute: %s" % (self.opaque)
+    def __repr__(self):
+        return "Link Opaque attribute: %s" % (self.opaque)
 
-	@classmethod
-	def unpack (cls,data,length):
-		opaque = unpack("!%ds" % length, data[:length])[0]
-		return cls(opaque=opaque)
+    @classmethod
+    def unpack(cls, data, length):
+        opaque = unpack("!%ds" % length, data[:length])[0]
+        return cls(opaque=opaque)

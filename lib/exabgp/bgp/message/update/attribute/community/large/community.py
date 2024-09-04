@@ -14,58 +14,58 @@ from struct import pack
 from struct import unpack
 
 
-class LargeCommunity (Attribute):
-	MAX = 0xFFFFFFFFFFFFFFFFFFFFFFFF
+class LargeCommunity(Attribute):
+    MAX = 0xFFFFFFFFFFFFFFFFFFFFFFFF
 
-	cache = {}
-	caching = True
+    cache = {}
+    caching = True
 
-	__slots__ = ['large_community','_str']
+    __slots__ = ['large_community', '_str']
 
-	def __init__ (self, large_community):
-		self.large_community = large_community
-		self._str = "%d:%d:%d" % unpack('!LLL', self.large_community)
+    def __init__(self, large_community):
+        self.large_community = large_community
+        self._str = "%d:%d:%d" % unpack('!LLL', self.large_community)
 
-	def __eq__ (self, other):
-		return self.large_community == other.large_community
+    def __eq__(self, other):
+        return self.large_community == other.large_community
 
-	def __ne__ (self, other):
-		return self.large_community != other.large_community
+    def __ne__(self, other):
+        return self.large_community != other.large_community
 
-	def __lt__ (self, other):
-		return self.large_community < other.large_community
+    def __lt__(self, other):
+        return self.large_community < other.large_community
 
-	def __le__ (self, other):
-		return self.large_community <= other.large_community
+    def __le__(self, other):
+        return self.large_community <= other.large_community
 
-	def __gt__ (self, other):
-		return self.large_community > other.large_community
+    def __gt__(self, other):
+        return self.large_community > other.large_community
 
-	def __ge__ (self, other):
-		return self.large_community >= other.large_community
+    def __ge__(self, other):
+        return self.large_community >= other.large_community
 
-	def json (self):
-		return "[ %d, %d , %d ]" % unpack('!LLL', self.large_community)
+    def json(self):
+        return "[ %d, %d , %d ]" % unpack('!LLL', self.large_community)
 
-	def pack (self, negotiated=None):
-		return self.large_community
+    def pack(self, negotiated=None):
+        return self.large_community
 
-	def __repr__ (self):
-		return self._str
+    def __repr__(self):
+        return self._str
 
-	def __len__ (self):
-		return 12
+    def __len__(self):
+        return 12
 
-	@classmethod
-	def unpack (cls, large_community, negotiated):
-		return cls(large_community)
+    @classmethod
+    def unpack(cls, large_community, direction, negotiated):
+        return cls(large_community)
 
-	@classmethod
-	def cached (cls, large_community):
-		if not cls.caching:
-			return cls(large_community)
-		if large_community in cls.cache:
-			return cls.cache[large_community]
-		instance = cls(large_community)
-		cls.cache[large_community] = instance
-		return instance
+    @classmethod
+    def cached(cls, large_community):
+        if not cls.caching:
+            return cls(large_community)
+        if large_community in cls.cache:
+            return cls.cache[large_community]
+        instance = cls(large_community)
+        cls.cache[large_community] = instance
+        return instance

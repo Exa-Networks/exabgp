@@ -11,12 +11,13 @@ from exabgp.util import ordinal
 from exabgp.util import concat_strs_i
 
 
-def od (value):
-	def spaced (value):
-		even = None
-		for v in value:
-			if even is False:
-				yield ' '
-			yield '%02X' % ordinal(v)
-			even = not even
-	return concat_strs_i(spaced(value))
+def od(value):
+    def spaced(value):
+        even = None
+        for v in value:
+            if even is False:
+                yield ' '
+            yield '%02X' % ordinal(v)
+            even = not even
+
+    return concat_strs_i(spaced(value))

@@ -8,9 +8,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 
-class Sequence (int):
-	_instance = dict()
+class Sequence(int):
+    _instance = dict()
 
-	def __new__ (cls):
-		cls._instance['next'] = cls._instance.get('next', 0) + 1
-		return cls._instance['next']
+    def __new__(cls):
+        cls._instance['next'] = cls._instance.get('next', 0) + 1
+        return cls._instance['next']
