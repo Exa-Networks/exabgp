@@ -7,6 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
+
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -25,24 +26,25 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #   | 'Reserved' | Reserved for future use                  |           |
 #   +------------+------------------------------------------+-----------+
 
+
 @LINKSTATE.register()
 class MplsMask(object):
-	TLV = 1094
+    TLV = 1094
 
-	def __init__ (self, mplsflags):
-		self.mplsflags = mplsflags
+    def __init__(self, mplsflags):
+        self.mplsflags = mplsflags
 
-	def __repr__ (self):
-		return "MPLS Protocol mask: %s" % (self.mplsflags)
+    def __repr__(self):
+        return "MPLS Protocol mask: %s" % (self.mplsflags)
 
-	@classmethod
-	def unpack (cls,data,length):
+    @classmethod
+    def unpack(cls, data, length):
 
-		if length > 1:
-			raise Notify(3,5, "LINK TLV length too large")
-		else:
-			mpls_mask = LsGenericFlags.unpack(data[0:1],LsGenericFlags.LS_MPLS_MASK)
-			return cls(mplsflags=mpls_mask)
+        if length > 1:
+            raise Notify(3, 5, "LINK TLV length too large")
+        else:
+            mpls_mask = LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_MPLS_MASK)
+            return cls(mplsflags=mpls_mask)
 
-	def json (self,compact=None):
-		return '"mpls-mask": {}'.format(self.mplsflags.json())
+    def json(self, compact=None):
+        return '"mpls-mask": {}'.format(self.mplsflags.json())

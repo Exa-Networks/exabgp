@@ -52,43 +52,45 @@ from exabgp.bgp.message.open.capability import Capabilities
 
 
 @Message.register
-class Open (Message):
-	ID = Message.CODE.OPEN
-	TYPE = character(Message.CODE.OPEN)
+class Open(Message):
+    ID = Message.CODE.OPEN
+    TYPE = character(Message.CODE.OPEN)
 
-	def __init__ (self, version, asn, hold_time, router_id, capabilities):
-		self.version = version
-		self.asn = asn
-		self.hold_time = hold_time
-		self.router_id = router_id
-		self.capabilities = capabilities
+    def __init__(self, version, asn, hold_time, router_id, capabilities):
+        self.version = version
+        self.asn = asn
+        self.hold_time = hold_time
+        self.router_id = router_id
+        self.capabilities = capabilities
 
-	def message (self,negotiated=None):
-		return self._message(concat_bytes(
-			self.version.pack(),
-			self.asn.trans().pack(),
-			self.hold_time.pack(),
-			self.router_id.pack(),
-			self.capabilities.pack()
-		))
+    def message(self, negotiated=None):
+        return self._message(
+            concat_bytes(
+                self.version.pack(),
+                self.asn.trans().pack(),
+                self.hold_time.pack(),
+                self.router_id.pack(),
+                self.capabilities.pack(),
+            )
+        )
 
-	def __str__ (self):
-		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn.trans(), self.hold_time, self.router_id,self.capabilities)
+    def __str__(self):
+        return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (
+            self.version,
+            self.asn.trans(),
+            self.hold_time,
+            self.router_id,
+            self.capabilities,
+        )
 
-	@classmethod
-	def unpack_message (cls, data, _=None):
-		version = ordinal(data[0])
-		if version != 4:
-			# Only version 4 is supported nowdays..
-			raise Notify(2,1,bytes_ascii(data[0]))
-		asn = unpack('!H',data[1:3])[0]
-		hold_time = unpack('!H',data[3:5])[0]
-		numeric = unpack('!L',data[5:9])[0]
-		router_id = "%d.%d.%d.%d" % (numeric >> 24,(numeric >> 16) & 0xFF,(numeric >> 8) & 0xFF,numeric & 0xFF)
-		return cls(
-			Version(version),
-			ASN(asn),
-			HoldTime(hold_time),
-			RouterID(router_id),
-			Capabilities.unpack(data[9:])
-		)
+    @classmethod
+    def unpack_message(cls, data, direction=None, negotiated=None):
+        version = ordinal(data[0])
+        if version != 4:
+            # Only version 4 is supported nowdays..
+            raise Notify(2, 1, bytes_ascii(data[0]))
+        asn = unpack('!H', data[1:3])[0]
+        hold_time = unpack('!H', data[3:5])[0]
+        numeric = unpack('!L', data[5:9])[0]
+        router_id = "%d.%d.%d.%d" % (numeric >> 24, (numeric >> 16) & 0xFF, (numeric >> 8) & 0xFF, numeric & 0xFF)
+        return cls(Version(version), ASN(asn), HoldTime(hold_time), RouterID(router_id), Capabilities.unpack(data[9:]))

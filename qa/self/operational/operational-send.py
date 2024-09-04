@@ -29,17 +29,17 @@ print('announce operational lpcp afi ipv4 safi unicast sequence %d counter 250' 
 time.sleep(1)
 
 while True:
-	try:
-		time.sleep(1)
-		if counter % 2:
-			print('announce operational adm afi ipv4 safi unicast advisory "this is dynamic message #%d"' % counter)
-			sys.stdout.flush()
-		else:
-			print('announce operational asm afi ipv4 safi unicast advisory "we SHOULD not send asm from the API"')
-			sys.stdout.flush()
+    try:
+        time.sleep(1)
+        if counter % 2:
+            print('announce operational adm afi ipv4 safi unicast advisory "this is dynamic message #%d"' % counter)
+            sys.stdout.flush()
+        else:
+            print('announce operational asm afi ipv4 safi unicast advisory "we SHOULD not send asm from the API"')
+            sys.stdout.flush()
 
-		counter += 1
-	except KeyboardInterrupt:
-		pass
-	except IOError:
-		break
+        counter += 1
+    except KeyboardInterrupt:
+        pass
+    except IOError:
+        break

@@ -4,24 +4,25 @@ import sys
 import socket
 
 if len(sys.argv) != 4:
-	print sys.argv[0], '<host> <port> <raw file to stream>'
-	sys.exit(1)
+    print sys.argv[0], '<host> <port> <raw file to stream>'
+    sys.exit(1)
 
 try:
-	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	server_address = (sys.argv[1], int(sys.argv[2]))
-	print >> sys.stderr, 'connecting to %s port %s' % server_address
-	sock.connect(server_address)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_address = (sys.argv[1], int(sys.argv[2]))
+    print >> sys.stderr, 'connecting to %s port %s' % server_address
+    sock.connect(server_address)
 except socket.error:
-	print "failed to connect to server"
-	sys.exit(1)
+    print "failed to connect to server"
+    sys.exit(1)
 
-with open(sys.argv[3],'r') as record:
-	try:
-		while True:
-			data = record.read(10240)
-			print "read", len(data)
-			if not data: break
-			sock.send(data)
-	finally:
-		sock.close()
+with open(sys.argv[3], 'r') as record:
+    try:
+        while True:
+            data = record.read(10240)
+            print "read", len(data)
+            if not data:
+                break
+            sock.send(data)
+    finally:
+        sock.close()

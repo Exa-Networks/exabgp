@@ -29,33 +29,34 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     //      IGP Link Metric (variable length)      //
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+
 @LINKSTATE.register()
 class IgpMetric(object):
-	TLV = 1095
+    TLV = 1095
 
-	def __init__ (self, igpmetric):
-		self.igpmetric = igpmetric
+    def __init__(self, igpmetric):
+        self.igpmetric = igpmetric
 
-	def __repr__ (self):
-		return "IGP Metric: %s" % (self.igpmetric)
+    def __repr__(self):
+        return "IGP Metric: %s" % (self.igpmetric)
 
-	@classmethod
-	def unpack (cls,data,length):
-		if len(data) == 2:
-			# OSPF
-			igpmetric = unpack('!H',data)[0]
-			return cls(igpmetric=igpmetric)
-		elif len(data) == 1:
-			# ISIS small metrics
-			igpmetric = six.indexbytes(data,0)
-			return cls(igpmetric=igpmetric)
-		elif len(data) == 3:
-			# ISIS wide metrics
-			b = BitArray(bytes=data)
-			igpmetric = b.unpack('uintbe:24')
-			return cls(igpmetric=igpmetric)
-		else:
-			raise Notify(3,5, "Incorrect IGP Metric Size")
+    @classmethod
+    def unpack(cls, data, length):
+        if len(data) == 2:
+            # OSPF
+            igpmetric = unpack('!H', data)[0]
+            return cls(igpmetric=igpmetric)
+        elif len(data) == 1:
+            # ISIS small metrics
+            igpmetric = six.indexbytes(data, 0)
+            return cls(igpmetric=igpmetric)
+        elif len(data) == 3:
+            # ISIS wide metrics
+            b = BitArray(bytes=data)
+            igpmetric = b.unpack('uintbe:24')[0]
+            return cls(igpmetric=igpmetric)
+        else:
+            raise Notify(3, 5, "Incorrect IGP Metric Size")
 
-	def json (self,compact=None):
-		return '"igp-metric": %d' % int(self.igpmetric[0])
+    def json(self, compact=None):
+        return '"igp-metric": %d' % int(self.igpmetric)

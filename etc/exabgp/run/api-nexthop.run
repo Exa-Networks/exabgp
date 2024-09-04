@@ -15,11 +15,11 @@ sys.stdout.write('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::1
 sys.stdout.flush()
 
 try:
-	now = time.time()
-	while True and time.time() < now + 5:
-		line = sys.stdin.readline().strip()
-		if not line or 'shutdown' in line:
-			break
-		time.sleep(1)
+    now = time.time()
+    while True and time.time() < now + 5:
+        line = sys.stdin.readline().strip()
+        if not line or 'shutdown' in line:
+            break
+        time.sleep(1)
 except IOError:
-	pass
+    pass

@@ -8,26 +8,37 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 
-def run_exabgp ():
-	from exabgp.application.bgp import main
-	main()
+def main():
+    from exabgp.application.main import main
+
+    main()
 
 
-def run_exabmp ():
-	from exabgp.application.bmp import main
-	main()
+def run_exabgp():
+    from exabgp.application.bgp import main
+
+    main()
 
 
-def run_healthcheck ():
-	from exabgp.application.healthcheck import main
-	main()
+def run_exabmp():
+    from exabgp.application.bmp import main
+
+    main()
 
 
-def run_cli ():
-	from exabgp.application.cli import main
-	main()
+def run_healthcheck():
+    from exabgp.application.healthcheck import main
+
+    main()
 
 
-def run_control ():
-	from exabgp.application.control import main
-	main()
+def run_cli():
+    from exabgp.application.cli import main
+
+    main()
+
+
+def run_control():
+    from exabgp.application.control import main
+
+    main()

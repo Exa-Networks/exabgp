@@ -3,7 +3,84 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
-Version 4.3.0:
+Version 4.2.22
+ * Fix: route reload for offline neighbors #1126
+   patch: Malcolm Dodds
+ * Fix: make sure we compare next-hop self and next-hop IP correctly (#1153)
+   reported: gitneep
+ * Compatibility: remove "not-a-fragment" "!is-fragment" should be used instead
+ * Upgrade six to the latest version
+
+Version 4.2.21
+ * Fix: regressing on announcing routes from the API #1108
+
+Version 4.2.20
+ * Fix: correctly filter routes announced by the API to the right peer #1005
+ * Feature: healthcheck neighbor filtering and path-information backport of #1098 and #1099
+ * Fix: backport #1101 fix parsing of FlowSpec TCPFlags with NS
+ * Fix: backport #1102 fix parsing of Fragment with IPv6 destinations/sources
+ * Fix: bug in CLI when failing to read data
+
+Version 4.2.19
+ * Feature: force PGP signing of tags
+ * Feature: backport ICMP types
+ * Fix: backport healthcheck setup_ips requiring a label
+   backport by: Steven Honson
+
+Version 4.2.18
+ * Feature: add ICMP experimental codes
+   reported: enag11
+ * Feature: PGP signing releases
+
+Version 4.2.17
+ * Feature: add flags ECE, CW and NS to TCP, (not sure if any flowspec implementation uses them) #1053
+   reported by: enag11
+ * Fix: bug with IGP Metric #1056
+   patch by: hkml2000
+
+Version 4.2.16
+ * Fix: bacckport of fix for #1051 tcp-flag operators != and &!= return syntax error
+   reported by: enag11
+
+Version 4.2.15
+ * Fix: #1035 Socket remains in CLOSED state after the interface goes down
+   patch: borjam
+ * Fix: #1041 backport
+
+Version 4.2.14
+ * Fix: issue reading data from the peer
+   reported by: isjerryxiao
+ * Feature: allow IPv6 redirect
+   patch by: rzalamena
+ * Fix: fix decoding of path information (inbound vs outbound)
+   reported by: isjerryxiao
+
+Version 4.2.13
+ * Fix: issue when there is no route to the peer and the connection looked like it established with the API
+   reported by: iddq
+ * Fix: healthcheck was not ending if/when exabgp did
+   reported by: mzealey
+ * Fix: issue with poller
+   reported by: emilstahl97
+
+Version 4.2.12
+ * Fix: issue with flow fragment (issue #1027)
+
+Version 4.2.11
+ * Feature: new release code allowing the creation of zipapp
+
+ Version 4.2.10:
+ * Fix: cache invalidation on clear command
+ patch by: Boris Murashov
+
+Version 4.2.9
+ * Fix: healthcheck --sudo, --debug and --no-ack are not exclusive
+   reported by: sincerywaing
+
+Version 4.2.8:
+ * Fix: restore python -m exabgp
+
+Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates
  * Fix: issue during restart
  * Fix: add ipv6 mpls to add-path
@@ -16,6 +93,8 @@ Version 4.3.0:
    patch: tomjshine
  * reported: the RIB code so withdraw message before any announce are sent
         this does change the RIB behaviour sending withdrawal when it was not previously
+ * Fix: bad parsing in some case when capability next-hop was used
+   reported: alexejli
 
 Version 4.2.6:
  * Fix: prevent the deletion of IP addresses not added by the healthchecker

@@ -12,9 +12,9 @@ import traceback
 from exabgp.vendoring.six.moves import StringIO
 
 
-def trace ():
-	buff = StringIO()
-	traceback.print_exc(file=buff)
-	r = buff.getvalue()
-	buff.close()
-	return r
+def trace():
+    buff = StringIO()
+    traceback.print_exc(file=buff)
+    r = buff.getvalue()
+    buff.close()
+    return r

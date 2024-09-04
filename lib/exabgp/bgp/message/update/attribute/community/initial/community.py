@@ -14,84 +14,85 @@ from struct import unpack
 # ==================================================================== Community
 #
 
-class Community (object):
-	MAX = 0xFFFFFFFF
 
-	NO_EXPORT            = pack('!L',0xFFFFFF01)
-	NO_ADVERTISE         = pack('!L',0xFFFFFF02)
-	NO_EXPORT_SUBCONFED  = pack('!L',0xFFFFFF03)
-	NO_PEER              = pack('!L',0xFFFFFF04)
-	BLACKHOLE            = pack('!L',0xFFFF029A)
+class Community(object):
+    MAX = 0xFFFFFFFF
 
-	cache = {}
-	caching = True
+    NO_EXPORT = pack('!L', 0xFFFFFF01)
+    NO_ADVERTISE = pack('!L', 0xFFFFFF02)
+    NO_EXPORT_SUBCONFED = pack('!L', 0xFFFFFF03)
+    NO_PEER = pack('!L', 0xFFFFFF04)
+    BLACKHOLE = pack('!L', 0xFFFF029A)
 
-	__slots__ = ['community','_str']
+    cache = {}
+    caching = True
 
-	def __init__ (self, community):
-		self.community = community
-		if community == self.NO_EXPORT:
-			self._str = 'no-export'
-		elif community == self.NO_ADVERTISE:
-			self._str = 'no-advertise'
-		elif community == self.NO_EXPORT_SUBCONFED:
-			self._str = 'no-export-subconfed'
-		elif community == self.NO_PEER:
-			self._str = 'no-peer'
-		elif community == self.BLACKHOLE:
-			self._str = 'blackhole'
-		else:
-			self._str = "%d:%d" % unpack('!HH',self.community)
+    __slots__ = ['community', '_str']
 
-	def __eq__ (self, other):
-		return self.community == other.community
+    def __init__(self, community):
+        self.community = community
+        if community == self.NO_EXPORT:
+            self._str = 'no-export'
+        elif community == self.NO_ADVERTISE:
+            self._str = 'no-advertise'
+        elif community == self.NO_EXPORT_SUBCONFED:
+            self._str = 'no-export-subconfed'
+        elif community == self.NO_PEER:
+            self._str = 'no-peer'
+        elif community == self.BLACKHOLE:
+            self._str = 'blackhole'
+        else:
+            self._str = "%d:%d" % unpack('!HH', self.community)
 
-	def __ne__ (self, other):
-		return self.community != other.community
+    def __eq__(self, other):
+        return self.community == other.community
 
-	def __lt__ (self, other):
-		return self.community < other.community
+    def __ne__(self, other):
+        return self.community != other.community
 
-	def __le__ (self, other):
-		return self.community <= other.community
+    def __lt__(self, other):
+        return self.community < other.community
 
-	def __gt__ (self, other):
-		return self.community > other.community
+    def __le__(self, other):
+        return self.community <= other.community
 
-	def __ge__ (self, other):
-		return self.community >= other.community
+    def __gt__(self, other):
+        return self.community > other.community
 
-	def json (self):
-		return "[ %d, %d ]" % unpack('!HH',self.community)
+    def __ge__(self, other):
+        return self.community >= other.community
 
-	def pack (self, negotiated=None):
-		return self.community
+    def json(self):
+        return "[ %d, %d ]" % unpack('!HH', self.community)
 
-	def __repr__ (self):
-		return self._str
+    def pack(self, negotiated=None):
+        return self.community
 
-	def __len__ (self):
-		return 4
+    def __repr__(self):
+        return self._str
 
-	@classmethod
-	def unpack (cls, community, negotiated):
-		return cls(community)
+    def __len__(self):
+        return 4
 
-	@classmethod
-	def cached (cls, community):
-		if not cls.caching:
-			return cls(community)
-		if community in cls.cache:
-			return cls.cache[community]
-		instance = cls(community)
-		cls.cache[community] = instance
-		return instance
+    @classmethod
+    def unpack(cls, community, direction, negotiated):
+        return cls(community)
+
+    @classmethod
+    def cached(cls, community):
+        if not cls.caching:
+            return cls(community)
+        if community in cls.cache:
+            return cls.cache[community]
+        instance = cls(community)
+        cls.cache[community] = instance
+        return instance
 
 
 # Always cache well-known communities, they will be used a lot
 if not Community.cache:
-	Community.cache[Community.NO_EXPORT] = Community(Community.NO_EXPORT)
-	Community.cache[Community.NO_ADVERTISE] = Community(Community.NO_ADVERTISE)
-	Community.cache[Community.NO_EXPORT_SUBCONFED] = Community(Community.NO_EXPORT_SUBCONFED)
-	Community.cache[Community.NO_PEER] = Community(Community.NO_PEER)
-	Community.cache[Community.BLACKHOLE] = Community(Community.BLACKHOLE)
+    Community.cache[Community.NO_EXPORT] = Community(Community.NO_EXPORT)
+    Community.cache[Community.NO_ADVERTISE] = Community(Community.NO_ADVERTISE)
+    Community.cache[Community.NO_EXPORT_SUBCONFED] = Community(Community.NO_EXPORT_SUBCONFED)
+    Community.cache[Community.NO_PEER] = Community(Community.NO_PEER)
+    Community.cache[Community.BLACKHOLE] = Community(Community.BLACKHOLE)

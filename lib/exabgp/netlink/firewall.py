@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # import socket
 from struct import calcsize
+
 # from collections import namedtuple
 
 from exabgp.netlink.message import Message
@@ -52,12 +53,12 @@ from exabgp.netlink.message import Message
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-class Firewall (Message):
-	class Header (object):
-		PACK = "BxxxI"
-		LEN = calcsize(PACK)
+class Firewall(Message):
+    class Header(object):
+        PACK = "BxxxI"
+        LEN = calcsize(PACK)
 
-	class Packet (object):
-		class Header (object):
-			PACK = "IIIIIIIHHHHII"
-			LEN = calcsize(PACK)
+    class Packet(object):
+        class Header(object):
+            PACK = "IIIIIIIHHHHII"
+            LEN = calcsize(PACK)

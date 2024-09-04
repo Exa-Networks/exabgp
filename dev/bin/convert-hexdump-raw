@@ -4,15 +4,15 @@ import sys
 from struct import pack
 
 if len(sys.argv) > 2:
-	destination = open(sys.argv[2],'w')
+    destination = open(sys.argv[2], 'w')
 else:
-	destination = sys.stdout
+    destination = sys.stdout
 
-with open(sys.argv[1],'r') as record:
-	connect = record.readline()
-	for line in record.readlines():
-		split = line.rstrip().split()
-		format = '!' +'H'*len(split)
-		destination.write(pack(format,*[int(_,16) for _ in split]))
+with open(sys.argv[1], 'r') as record:
+    connect = record.readline()
+    for line in record.readlines():
+        split = line.rstrip().split()
+        format = '!' + 'H' * len(split)
+        destination.write(pack(format, *[int(_, 16) for _ in split]))
 
 destination.close()

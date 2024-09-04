@@ -29,24 +29,25 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #        +-----------------+-------------------------+------------+
 # 		https://tools.ietf.org/html/rfc7752 sec 3.3.1.1 Node Flag Bits Definitions
 
+
 @LINKSTATE.register()
 class NodeFlags(object):
-	TLV = 1024
+    TLV = 1024
 
-	def __init__ (self, nodeflags):
-		self.nodeflags = nodeflags
+    def __init__(self, nodeflags):
+        self.nodeflags = nodeflags
 
-	def __repr__ (self):
-		return "nodeflags: %s" % (self.nodeflags)
+    def __repr__(self):
+        return "nodeflags: %s" % (self.nodeflags)
 
-	@classmethod
-	def unpack (cls,data,length):
+    @classmethod
+    def unpack(cls, data, length):
 
-		if length > 1:
-			raise Notify(3,5, "Node Flags TLV length too large")
-		else:
-			flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.LS_NODE_FLAGS)
-		return cls(nodeflags=flags)
+        if length > 1:
+            raise Notify(3, 5, "Node Flags TLV length too large")
+        else:
+            flags = LsGenericFlags.unpack(data[0:1], LsGenericFlags.LS_NODE_FLAGS)
+        return cls(nodeflags=flags)
 
-	def json (self,compact=None):
-		return '"node-flags": {}'.format(self.nodeflags.json())
+    def json(self, compact=None):
+        return '"node-flags": {}'.format(self.nodeflags.json())

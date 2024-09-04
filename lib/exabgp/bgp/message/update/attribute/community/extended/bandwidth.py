@@ -17,26 +17,21 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 
 @ExtendedCommunity.register
-class Bandwidth (ExtendedCommunity):
-	COMMUNITY_TYPE = 0x40
-	COMMUNITY_SUBTYPE = 0x04
+class Bandwidth(ExtendedCommunity):
+    COMMUNITY_TYPE = 0x40
+    COMMUNITY_SUBTYPE = 0x04
 
-	__slots__ = ['encaps','control','mtu','reserved']
+    __slots__ = ['encaps', 'control', 'mtu', 'reserved']
 
-	def __init__ (self, asn, speed, community=None):
-		self.asn = asn
-		self.speed = speed
-		ExtendedCommunity.__init__(
-			self,
-			community if community is not None else pack(
-				"!Hf",asn,speed
-			)
-		)
+    def __init__(self, asn, speed, community=None):
+        self.asn = asn
+        self.speed = speed
+        ExtendedCommunity.__init__(self, community if community is not None else pack("!Hf", asn, speed))
 
-	def __repr__ (self):
-		return "bandwith:%d:%0.f" % (self.asn,self.speed)
+    def __repr__(self):
+        return "bandwith:%d:%0.f" % (self.asn, self.speed)
 
-	@staticmethod
-	def unpack (data):
-		asn, speed = unpack('!Hf',data[2:8])
-		return Bandwidth(asn,speed,data[:8])
+    @staticmethod
+    def unpack(data):
+        asn, speed = unpack('!Hf', data[2:8])
+        return Bandwidth(asn, speed, data[:8])
