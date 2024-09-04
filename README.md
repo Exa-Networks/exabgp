@@ -46,10 +46,10 @@ In case of issues, we are asking users to run the latest code directly for a loc
 > ./bin/healthcheck --help
 ```
 
-It is then possible to change git to use any release (here 4.2.18)
+It is then possible to change git to use any release (here 4.2.22)
 
 ```sh
-> git checkout 4.2.18
+> git checkout 4.2.22
 > ./sbin/exabgp --version
 ```
 
@@ -86,9 +86,9 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download releases from GitHub
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.18.tar.gz | tar zx
+> curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.22.tar.gz | tar zx
 
-> cd exabgp-4.2.18
+> cd exabgp-4.2.22
 > ./sbin/exabgp --version
 > ./sbin/exabgp --help
 
