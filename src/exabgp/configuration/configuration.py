@@ -50,6 +50,7 @@ from exabgp.configuration.announce.ip import AnnounceIP  # noqa: F401,E261,E501
 from exabgp.configuration.announce.path import AnnouncePath  # noqa: F401,E261,E501
 from exabgp.configuration.announce.label import AnnounceLabel  # noqa: F401,E261,E501
 from exabgp.configuration.announce.vpn import AnnounceVPN  # noqa: F401,E261,E501
+from exabgp.configuration.announce.mvpn import AnnounceMVPN  # noqa: F401,E261,E501
 from exabgp.configuration.announce.flow import AnnounceFlow  # noqa: F401,E261,E501
 from exabgp.configuration.announce.vpls import AnnounceVPLS  # noqa: F401,E261,E501
 from exabgp.configuration.announce.mup import AnnounceMup  # noqa: F401,E261,E501
@@ -256,12 +257,12 @@ class Configuration(_Configuration):
             },
             self.announce_ipv4.name: {
                 'class': self.announce_ipv4,
-                'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn', 'mup'],
+                'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
                 'sections': {},
             },
             self.announce_ipv6.name: {
                 'class': self.announce_ipv6,
-                'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'flow', 'flow-vpn', 'mup'],
+                'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
                 'sections': {},
             },
             self.announce_l2vpn.name: {
