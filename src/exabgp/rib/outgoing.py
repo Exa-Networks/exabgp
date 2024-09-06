@@ -223,6 +223,15 @@ class OutgoingRIB(Cache):
                     yield Update(nlris, attributes)
                     continue
 
+                if family == (AFI.ipv4, SAFI.mcast_vpn) and grouped:
+                    nlris = [change.nlri for change in changes.values()]
+                    yield Update(nlris, attributes)
+                    continue
+                if family == (AFI.ipv6, SAFI.mcast_vpn) and grouped:
+                    nlris = [change.nlri for change in changes.values()]
+                    yield Update(nlris, attributes)
+                    continue
+
                 for change in changes.values():
                     yield Update([change.nlri], attributes)
 

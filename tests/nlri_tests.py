@@ -29,6 +29,11 @@ from exabgp.bgp.message.update.nlri.evpn.multicast import Multicast as EVPNMulti
 from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix as EVPNPrefix
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
+from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
+from exabgp.bgp.message.update.nlri.mvpn.sourcead import SourceAD as MVPN_SourceAD
+from exabgp.bgp.message.update.nlri.mvpn.sourcejoin import SourceJoin as MVPN_SourceJoin
+from exabgp.bgp.message.update.nlri.mvpn.sharedjoin import SharedJoin as MVPN_SharedJoin
+
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
@@ -41,6 +46,129 @@ from exabgp.bgp.message import Action
 
 
 class TestNLRIs(unittest.TestCase):
+
+    # Tests on MVPN NLRIs
+    def test300_MVPNSourceAD_CreatePackUnpack(self):
+        '''Test pack/unpack for MVPN Source A-D route'''
+        nlri = MVPN_SourceAD(
+            afi=AFI.ipv4,
+            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
+            source=IP.create("1.2.3.0"),
+            group=IP.create("226.0.0.1"),
+        )
+
+        packed = nlri.pack()
+        unpacked, leftover = MVPN.unpack_nlri(
+            afi=AFI.ipv4, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+        )
+
+        self.assertEqual(0, len(leftover))
+        self.assertTrue(isinstance(unpacked, MVPN_SourceAD))
+        self.assertEqual("1.2.3.0", str(unpacked.source))
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual("226.0.0.1", str(unpacked.group))
+
+        nlri = MVPN_SourceAD(
+            afi=AFI.ipv6,
+            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
+            source=IP.create("fd12::2"),
+            group=IP.create("ff0e::1"),
+        )
+
+        packed = nlri.pack()
+        unpacked, leftover = MVPN.unpack_nlri(
+            afi=AFI.ipv6, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+        )
+
+        self.assertEqual(0, len(leftover))
+        self.assertTrue(isinstance(unpacked, MVPN_SourceAD))
+        self.assertEqual("fd12::2", str(unpacked.source))
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual("ff0e::1", str(unpacked.group))
+
+    def test300_MVPNSourceJoin_CreatePackUnpack(self):
+        '''Test pack/unpack for MVPN Source-Join route'''
+        nlri = MVPN_SourceJoin(
+            afi=AFI.ipv4,
+            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
+            source=IP.create("1.2.3.0"),
+            group=IP.create("226.0.0.1"),
+            source_as=1234,
+        )
+
+        packed = nlri.pack()
+        unpacked, leftover = MVPN.unpack_nlri(
+            afi=AFI.ipv4, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+        )
+
+        self.assertEqual(0, len(leftover))
+        self.assertTrue(isinstance(unpacked, MVPN_SourceJoin))
+        self.assertEqual("1.2.3.0", str(unpacked.source))
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual("226.0.0.1", str(unpacked.group))
+        self.assertEqual(1234, unpacked.source_as)
+
+        nlri = MVPN_SourceJoin(
+            afi=AFI.ipv6,
+            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
+            source=IP.create("fd12::2"),
+            group=IP.create("ff0e::1"),
+            source_as=1234,
+        )
+
+        packed = nlri.pack()
+        unpacked, leftover = MVPN.unpack_nlri(
+            afi=AFI.ipv6, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+        )
+
+        self.assertEqual(0, len(leftover))
+        self.assertTrue(isinstance(unpacked, MVPN_SourceJoin))
+        self.assertEqual("fd12::2", str(unpacked.source))
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual("ff0e::1", str(unpacked.group))
+        self.assertEqual(1234, unpacked.source_as)
+
+    def test300_MVPNSharedJoin_CreatePackUnpack(self):
+        '''Test pack/unpack for MVPN Shared-Join route'''
+        nlri = MVPN_SharedJoin(
+            afi=AFI.ipv4,
+            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
+            source=IP.create("1.2.3.0"),
+            group=IP.create("226.0.0.1"),
+            source_as=1234,
+        )
+
+        packed = nlri.pack()
+        unpacked, leftover = MVPN.unpack_nlri(
+            afi=AFI.ipv4, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+        )
+
+        self.assertEqual(0, len(leftover))
+        self.assertTrue(isinstance(unpacked, MVPN_SharedJoin))
+        self.assertEqual("1.2.3.0", str(unpacked.source))
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual("226.0.0.1", str(unpacked.group))
+        self.assertEqual(1234, unpacked.source_as)
+
+        nlri = MVPN_SharedJoin(
+            afi=AFI.ipv6,
+            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
+            source=IP.create("fd12::2"),
+            group=IP.create("ff0e::1"),
+            source_as=1234,
+        )
+
+        packed = nlri.pack()
+        unpacked, leftover = MVPN.unpack_nlri(
+            afi=AFI.ipv6, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+        )
+
+        self.assertEqual(0, len(leftover))
+        self.assertTrue(isinstance(unpacked, MVPN_SharedJoin))
+        self.assertEqual("fd12::2", str(unpacked.source))
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual("ff0e::1", str(unpacked.group))
+        self.assertEqual(1234, unpacked.source_as)
 
     # Tests on IPVPN NLRIs
 
@@ -207,7 +335,14 @@ class TestNLRIs(unittest.TestCase):
         # ESI
         nlri1 = EVPNMAC(
             RouteDistinguisher.fromElements("42.42.42.42", 5),
-            ESI(bytes([1,] * 10)),
+            ESI(
+                bytes(
+                    [
+                        1,
+                    ]
+                    * 10
+                )
+            ),
             EthernetTag(111),
             MAC("01:02:03:04:05:06"),
             6 * 8,

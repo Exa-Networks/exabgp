@@ -28,6 +28,9 @@ from exabgp.bgp.message.update.nlri.mup import InterworkSegmentDiscoveryRoute
 from exabgp.bgp.message.update.nlri.mup import DirectSegmentDiscoveryRoute
 from exabgp.bgp.message.update.nlri.mup import Type1SessionTransformedRoute
 from exabgp.bgp.message.update.nlri.mup import Type2SessionTransformedRoute
+from exabgp.bgp.message.update.nlri.mvpn import SourceAD
+from exabgp.bgp.message.update.nlri.mvpn import SourceJoin
+from exabgp.bgp.message.update.nlri.mvpn import SharedJoin
 
 
 def label(tokeniser):
@@ -210,6 +213,85 @@ def parse_ip_prefix(tokeninser):
         raise Exception("unexpect ipaddress format '%s'" % addrstr)
 
     return ip, int(length)
+
+
+# shared-join rp <ip> group <ip> rd <rd> source-as <source-as>
+def mvpn_sharedjoin(tokeniser, afi, action):
+    if afi == AFI.ipv4:
+        tokeniser.consume("rp")
+        sourceip = IPv4.unpack(IPv4.pton(tokeniser()))
+        tokeniser.consume("group")
+        groupip = IPv4.unpack(IPv4.pton(tokeniser()))
+    elif afi == AFI.ipv6:
+        tokeniser.consume("rp")
+        sourceip = IPv6.unpack(IPv6.pton(tokeniser()))
+        tokeniser.consume("group")
+        groupip = IPv6.unpack(IPv6.pton(tokeniser()))
+    else:
+        raise Exception("unexpect afi: %s" % afi)
+
+    tokeniser.consume("rd")
+    rd = route_distinguisher(tokeniser)
+
+    tokeniser.consume("source-as")
+    value = tokeniser()
+    if not value.isdigit():
+        raise Exception("expect source-as to be a integer in the range 0-4294967295, but received '%s'" % value)
+    asnum = int(value)
+    if asnum > 4294967295:
+        raise Exception("expect source-as to be a integer in the range 0-4294967295, but received '%s'" % value)
+
+    return SharedJoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
+
+
+# source-join source <ip> group <ip> rd <rd> source-as <source-as>
+def mvpn_sourcejoin(tokeniser, afi, action):
+    if afi == AFI.ipv4:
+        tokeniser.consume("source")
+        sourceip = IPv4.unpack(IPv4.pton(tokeniser()))
+        tokeniser.consume("group")
+        groupip = IPv4.unpack(IPv4.pton(tokeniser()))
+    elif afi == AFI.ipv6:
+        tokeniser.consume("source")
+        sourceip = IPv6.unpack(IPv6.pton(tokeniser()))
+        tokeniser.consume("group")
+        groupip = IPv6.unpack(IPv6.pton(tokeniser()))
+    else:
+        raise Exception("unexpect afi: %s" % afi)
+
+    tokeniser.consume("rd")
+    rd = route_distinguisher(tokeniser)
+
+    tokeniser.consume("source-as")
+    value = tokeniser()
+    if not value.isdigit():
+        raise Exception("expect source-as to be a integer in the range 0-4294967295, but received '%s'" % value)
+    asnum = int(value)
+    if asnum > 4294967295:
+        raise Exception("expect source-as to be a integer in the range 0-4294967295, but received '%s'" % value)
+
+    return SourceJoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
+
+
+#'source-ad source <ip address> group <ip address> rd <rd>'
+def mvpn_sourcead(tokeniser, afi, action):
+    if afi == AFI.ipv4:
+        tokeniser.consume("source")
+        sourceip = IPv4.unpack(IPv4.pton(tokeniser()))
+        tokeniser.consume("group")
+        groupip = IPv4.unpack(IPv4.pton(tokeniser()))
+    elif afi == AFI.ipv6:
+        tokeniser.consume("source")
+        sourceip = IPv6.unpack(IPv6.pton(tokeniser()))
+        tokeniser.consume("group")
+        groupip = IPv6.unpack(IPv6.pton(tokeniser()))
+    else:
+        raise Exception("unexpect afi: %s" % afi)
+
+    tokeniser.consume("rd")
+    rd = route_distinguisher(tokeniser)
+
+    return SourceAD(rd=rd, afi=afi, source=sourceip, group=groupip, action=action)
 
 
 # 'mup-isd <ip prefix> rd <rd>',
