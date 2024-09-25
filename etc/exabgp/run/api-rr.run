@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import time
+
+def check_ok():
+    line = sys.stdin.readline().strip()
+    if line != 'done':
+        sys.stdout.write(f'debug expected "done" not "{line}"\n')
+        sys.stdout.write('announce route 255.255.255.255/32 next-hop 255.255.255.255\n')
+        sys.stdout.flush()
+
+try:
+    time.sleep(0.2)
+
+    sys.stdout.write('announce route 192.168.0.0/32 next-hop 10.0.0.0\n')
+    sys.stdout.flush()
+    time.sleep(0.2)
+    check_ok()    
+
+    sys.stdout.write('announce route 192.168.0.1/32 next-hop 10.0.0.1\n')
+    sys.stdout.flush()
+    time.sleep(0.2)
+    check_ok()    
+
+    sys.stdout.write('announce route-refresh ipv4 unicast\n')
+    sys.stdout.flush()
+    time.sleep(0.2)
+    check_ok()    
+
+    valid = True
+
+    rr = sys.stdin.readline()
+    if '"nlri": "192.168.0.0/32"' not in rr:
+        valid = False
+        sys.stdout.write("debug " + rr + '\n')
+        sys.stdout.flush()
+
+    rr = sys.stdin.readline()
+    if '"nlri": "192.168.0.1/32"' not in rr:
+        valid = False
+        sys.stdout.write("debug " + rr + '\n')
+        sys.stdout.flush()
+
+    if valid:
+        sys.stdout.write('announce route 192.168.0.2/32 next-hop 10.0.0.1\n')
+    else:
+        sys.stdout.write('announce route 255.255.255.255/32 next-hop 255.255.255.255\n')
+    sys.stdout.flush()
+
+    now = time.time()
+    while os.getppid() != 1 and time.time() < now + 15:
+        line = sys.stdin.readline().strip()
+        if not line or 'shutdown' in line:
+            break
+        time.sleep(1)
+except IOError:
+    pass
