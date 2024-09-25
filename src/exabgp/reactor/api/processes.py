@@ -251,8 +251,11 @@ class Processes(object):
                         line, raw = raw.split('\n', 1)
                         line = line.rstrip()
                         consumed_data = True
-                        log.debug('command from process %s : %s ' % (process, line), 'process')
-                        yield (process, formated(line))
+                        if line.startswith('debug '):
+                            log.warning('debug info from %s : %s ' % (process, line[6:]), 'api')
+                        else:
+                            log.debug('command from process %s : %s ' % (process, line), 'process')
+                            yield (process, formated(line))
 
                     self._buffer[process] = raw
 

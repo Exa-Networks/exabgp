@@ -25,7 +25,7 @@ _END = '\033[0m'
 def source(level, message):
     color = _RECORD.get(level, '')
     if color:
-        return f'{color}{message:<13}{_END}'
+        return f'{color}{message:<15}{_END}'
     return message
 
 
