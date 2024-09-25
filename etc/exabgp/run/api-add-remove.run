@@ -7,15 +7,18 @@ import time
 messages = [
     'announce route 1.1.0.0/24 next-hop 101.1.101.1',
     'announce route 1.1.0.0/25 next-hop 101.1.101.1',
+    'sleep',
     'withdraw route 1.1.0.0/24',
     'withdraw route 1.1.0.0/25 next-hop 0.0.0.0',
 ]
 
 while messages:
     message = messages.pop(0)
+    if message == 'sleep':
+        time.sleep(0.2)
+        continue
     sys.stdout.write(message + '\n')
     sys.stdout.flush()
-    time.sleep(0.3)
 
 try:
     now = time.time()

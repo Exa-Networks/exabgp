@@ -14,7 +14,7 @@ while messages:
     message = messages.pop(0)
     sys.stdout.write(message + '\n')
     sys.stdout.flush()
-    time.sleep(0.3)
+    time.sleep(0.2)
 
 try:
     now = time.time()

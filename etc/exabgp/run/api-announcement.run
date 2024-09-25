@@ -16,7 +16,7 @@ messages = [
     'neighbor 127.0.0.1 local-as 2 peer-as 3 local-ip 127.0.0.1 router-id 1.2.3.4 announce route 1.8.0.0/21 next-hop 101.1.101.1 med 200 large-community [2914:1:0]',
 ]
 
-time.sleep(0.5)
+time.sleep(0.2)
 
 while messages:
     message = messages.pop(0)

@@ -13,7 +13,7 @@ while messages:
     message = messages.pop(0)
     sys.stdout.write(message + '\n')
     sys.stdout.flush()
-    time.sleep(5)
+    time.sleep(1)
 
 try:
     now = time.time()
