@@ -23,17 +23,17 @@ messages3 = [
     'announce route 0.0.0.0/0  next-hop 1.101.1.101',
 ]
 
-time.sleep(2)
+time.sleep(0.2)
 
 sys.stdout.write('\n'.join(messages1) + '\n')
 sys.stdout.flush()
 
-time.sleep(1)
+time.sleep(0.2)
 
 sys.stdout.write('\n'.join(messages2) + '\n')
 sys.stdout.flush()
 
-time.sleep(1)
+time.sleep(0.2)
 
 while messages3:
     message = messages3.pop(0)

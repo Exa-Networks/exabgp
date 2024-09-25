@@ -9,12 +9,12 @@ messages = [
     'announce route 3.3.3.3/32 next-hop 33.33.33.33',
 ]
 
-time.sleep(2.0)
+time.sleep(0.2)
 while messages:
     message = messages.pop(0)
     sys.stdout.write(message + '\n')
     sys.stdout.flush()
-    time.sleep(1.0)
+    time.sleep(0.2)
 
 try:
     now = time.time()

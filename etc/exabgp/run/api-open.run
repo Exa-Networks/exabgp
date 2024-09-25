@@ -42,7 +42,7 @@ try:
     sys.stdout.write('announce route 1.1.1.1/32 next-hop 101.1.101.1 med 200\n')
     sys.stdout.flush()
 
-    time.sleep(1)
+    time.sleep(0.2)
 
     line = sys.stdin.readline().strip()
     if not line or line in ['done', 'shutdown']:

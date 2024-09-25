@@ -10,7 +10,7 @@ withdraw_flow_1 = (
 )
 announce_flow_2 = 'announce flow route { match { source 255.255.255.255/32; destination 255.255.255.255/32; } then { rate-limit 65535; } }'
 
-time.sleep(2)  # let the EOR pass
+time.sleep(0.2)  # let the EOR pass
 
 messages = [
     withdraw_flow_1,

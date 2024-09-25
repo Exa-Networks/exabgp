@@ -6,11 +6,11 @@ import time
 
 sys.stdout.write('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::1 local-preference 500\n')
 sys.stdout.flush()
-time.sleep(0.3)
+time.sleep(0.2)
 
 sys.stdout.write('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::2 local-preference 500\n')
 sys.stdout.flush()
-time.sleep(0.3)
+time.sleep(0.2)
 
 sys.stdout.write('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::1 local-preference 500\n')
 sys.stdout.flush()

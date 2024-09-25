@@ -19,14 +19,14 @@ routes = [
 for r in routes:
     sys.stdout.write('announce ' + r + '\n')
     sys.stdout.flush()
-    time.sleep(0.3)
+    time.sleep(0.1)
 
 time.sleep(5)
 
 for r in routes:
     sys.stdout.write('withdraw ' + r + '\n')
     sys.stdout.flush()
-    time.sleep(0.3)
+    time.sleep(0.1)
 
 try:
     now = time.time()

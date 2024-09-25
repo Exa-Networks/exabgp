@@ -19,7 +19,7 @@ try:
         ):
             sys.stdout.write('neighbor 127.0.0.1 announce route 0.0.0.0/0 next-hop 255.255.255.255\n')
             sys.stdout.flush()
-            time.sleep(5)
+            time.sleep(1)
             sys.exit(1)
         break
 
