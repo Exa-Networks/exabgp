@@ -21,6 +21,8 @@ from exabgp.configuration.static import ParseStaticRoute
 def register_announce():
     pass
 
+# @Command.register('text', 'debug')
+# the command debug is hardcoded in the process code
 
 @Command.register('text', 'announce route')
 def announce_route(self, reactor, service, line):
