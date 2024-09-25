@@ -123,7 +123,7 @@ class CI(dict):
     def make(cls):
         for filename in Path.ALL_CI:
             name, extension = os.path.splitext(filename.split('/')[-1])
-            if name in ['api-reload', 'api-notification', 'conf-ebgp', 'conf-ipself6', 'conf-cap-software-version', 'conf-hostname']:
+            if name in ['api-reload', 'api-notification', 'conf-ebgp', 'conf-ipself6', 'conf-cap-software-version', 'conf-hostname', 'api-rr']:
                 continue
             nick = Identifier.get(name)
             with open(filename, 'r') as reader:
