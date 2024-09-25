@@ -156,8 +156,8 @@ class Argument(ChildPattern):
 
     @classmethod
     def parse(cls, source):
-        name = re.findall('(<\S*?>)', source)[0]
-        value = re.findall('\[default: (.*)\]', source, flags=re.I)
+        name = re.findall(r'(<\S*?>)', source)[0]
+        value = re.findall(r'\[default: (.*)\]', source, flags=re.I)
         return cls(name, value[0] if value else None)
 
 
@@ -196,7 +196,7 @@ class Option(ChildPattern):
             else:
                 argcount = 1
         if argcount:
-            matched = re.findall('\[default: (.*)\]', description, flags=re.I)
+            matched = re.findall(r'\[default: (.*)\]', description, flags=re.I)
             value = matched[0] if matched else None
         return cls(short, long, argcount, value)
 
@@ -434,7 +434,7 @@ def parse_argv(tokens, options, options_first=False):
 
 def parse_defaults(doc):
     # in python < 2.7 you can't pass flags=re.MULTILINE
-    split = re.split('\n *(<\S+?>|-\S+?)', doc)[1:]
+    split = re.split(r'\n *(<\S+?>|-\S+?)', doc)[1:]
     split = [s1 + s2 for s1, s2 in zip(split[::2], split[1::2])]
     options = [Option.parse(s) for s in split if s.startswith('-')]
     # arguments = [Argument.parse(s) for s in split if s.startswith('<')]

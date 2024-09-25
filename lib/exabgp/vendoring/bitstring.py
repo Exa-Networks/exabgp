@@ -11,13 +11,13 @@ ConstBitStream -- An immutable container with streaming methods.
 BitStream -- A mutable container with streaming methods.
 
                       Bits (base class)
-                     /    \
- + mutating methods /      \ + streaming methods
-                   /        \
+                     /    \\
+ + mutating methods /      \\ + streaming methods
+                   /        \\
               BitArray   ConstBitStream
-                   \        /
-                    \      /
-                     \    /
+                   \\        /
+                    \\      /
+                     \\    /
                     BitStream
 
 Functions:
