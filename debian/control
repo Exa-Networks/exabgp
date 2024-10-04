@@ -39,7 +39,6 @@ Pre-Depends: debconf (>= 1.5.34),
              dpkg (>= 1.15.7.2),
              ${misc:Pre-Depends}
 Depends: adduser,
-         lsb-base (>= 3.2-14),
          python3-exabgp (= ${binary:Version}),
          ucf,
          ${misc:Depends},

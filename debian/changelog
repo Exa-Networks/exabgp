@@ -1,6 +1,7 @@
 exabgp (4.2.22-2) unstable; urgency=medium
 
   * d/control: drop dependency on pkg-resources. Closes: #1083382.
+  * d/control: drop dependency on lsb-base.
 
  -- Vincent Bernat <bernat@debian.org>  Fri, 04 Oct 2024 13:53:57 +0200
 
