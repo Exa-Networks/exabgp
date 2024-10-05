@@ -116,6 +116,11 @@ def cmdline(cmdarg):
 
     command = cmdarg.command
 
+    if command == []:
+        sys.stdout.write('no commmand provided, sending "help"\n')
+        sys.stdout.flush()
+        command = ['help']
+
     pipes = named_pipe(ROOT, pipename)
     if len(pipes) != 1:
         sys.stdout.write('could not find ExaBGP\'s named pipes (%s.in and %s.out) for the cli\n' % (pipename, pipename))
