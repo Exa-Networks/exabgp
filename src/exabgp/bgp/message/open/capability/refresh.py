@@ -28,6 +28,15 @@ class REFRESH(object):
             return 'enhanced'
         return 'unknown'
 
+    def __str__ (self):
+        if self == REFRESH.ABSENT:
+            return 'absent'
+        if self == REFRESH.NORMAL:
+            return 'normal'
+        if self == REFRESH.ENHANCED:
+            return 'enhanced'
+        return 'unknown'
+
 
 @Capability.register()
 @Capability.register(Capability.CODE.ROUTE_REFRESH_CISCO)
