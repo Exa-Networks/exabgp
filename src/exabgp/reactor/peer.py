@@ -174,8 +174,8 @@ class Peer(object):
         self._stop("shutting down")
         self.stop()
 
-    def resend(self, enhanced, send_families=None):
-        self.neighbor.rib.outgoing.resend(enhanced, send_families)
+    def resend(self, enhanced, family=None):
+        self.neighbor.rib.outgoing.resend(enhanced, family)
         self._delay.reset()
 
     def reestablish(self, restart_neighbor=None):
