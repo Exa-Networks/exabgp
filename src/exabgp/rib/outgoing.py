@@ -69,11 +69,11 @@ class OutgoingRIB(Cache):
     def pending(self):
         return len(self._new_nlri) != 0 or len(self._refresh_changes) != 0
 
-    def resend(self, enhanced_refresh, families=None):
-        # families can be None or []
-        if not families:
-            families = self.families
-        requested_families = set(families).intersection(self.families)
+    def resend(self, enhanced_refresh, family=None):
+        requested_families = set(self.families)
+
+        if family is not None:
+            requested_families = set(self.families).intersection([family])
 
         if enhanced_refresh:
             for family in requested_families:
