@@ -47,7 +47,6 @@ from exabgp.bgp.message.update.attribute.community.extended import (
 from exabgp.rib.change import Change
 from exabgp.logger import log
 
-from exabgp.configuration.flow.parser import source, destination
 
 def flow(tokeniser):
     return Change(Flow(), Attributes())
