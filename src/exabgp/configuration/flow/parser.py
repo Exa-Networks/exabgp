@@ -47,40 +47,50 @@ from exabgp.bgp.message.update.attribute.community.extended import (
 from exabgp.rib.change import Change
 from exabgp.logger import log
 
+from exabgp.configuration.flow.parser import source, destination
 
 def flow(tokeniser):
     return Change(Flow(), Attributes())
 
 
 def source(tokeniser):
+    """
+    Update source to handle both IPv4 and IPv6 flows.
+    """
     data = tokeniser()
+    # Check if it's IPv4
     if data.count('.') == 3 and data.count(':') == 0:
         ip, netmask = data.split('/')
         raw = b''.join(bytes([int(_)]) for _ in ip.split('.'))
         yield Flow4Source(raw, int(netmask))
-    elif data.count('/') == 1:
+    # Check if it's IPv6 without an offset
+    elif data.count(':') > 1 and data.count('/') == 1:
         ip, netmask = data.split('/')
-        offset = 0
-        yield Flow6Source(IP.pton(ip), int(netmask), int(offset))
-    else:
+        yield Flow6Source(IP.pton(ip), int(netmask), 0)
+    # Check if it's IPv6 with an offset
+    elif data.count(':') > 1 and data.count('/') == 2:
         ip, netmask, offset = data.split('/')
         yield Flow6Source(IP.pton(ip), int(netmask), int(offset))
 
 
 def destination(tokeniser):
+    """
+    Update destination to handle both IPv4 and IPv6 flows.
+    """
     data = tokeniser()
+    # Check if it's IPv4
     if data.count('.') == 3 and data.count(':') == 0:
         ip, netmask = data.split('/')
         raw = b''.join(bytes([int(_)]) for _ in ip.split('.'))
         yield Flow4Destination(raw, int(netmask))
-    elif data.count('/') == 1:
+    # Check if it's IPv6 without an offset
+    elif data.count(':') > 1 and data.count('/') == 1:
         ip, netmask = data.split('/')
-        offset = 0
-        yield Flow6Destination(IP.pton(ip), int(netmask), int(offset))
-    else:
+        yield Flow6Destination(IP.pton(ip), int(netmask), 0)
+    # Check if it's IPv6 with an offset
+    elif data.count(':') > 1 and data.count('/') == 2:
         ip, netmask, offset = data.split('/')
         yield Flow6Destination(IP.pton(ip), int(netmask), int(offset))
-
 
 # Expressions
 
