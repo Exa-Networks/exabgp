@@ -32,38 +32,28 @@ def _pr(value):
     return '%s' % value
 
 
-def _addpath(send, receive):
-    if send and receive:
-        return "send/receive"
-    if send:
-        return "send"
-    if receive:
-        return "receive"
-    return "disabled"
-
-
 class Neighbor(object):
     extensive_kv = '   %-20s %15s %15s %15s'
     extensive_template = """\
 Neighbor %(peer-address)s
 
-    Session                         Local
+	Session                         Local
 %(local-address)s
 %(state)s
 %(duration)s
 
-    Setup                           Local          Remote
+	Setup                           Local          Remote
 %(as)s
 %(id)s
 %(hold)s
 
-    Capability                      Local          Remote
+	Capability                      Local          Remote
 %(capabilities)s
 
-    Families                        Local          Remote        Add-Path
+	Families                        Local          Remote        Add-Path
 %(families)s
 
-    Message Statistic                Sent        Received
+	Message Statistic                Sent        Received
 %(messages)s
 """.replace(
         '\t', '  '
@@ -73,99 +63,98 @@ Neighbor %(peer-address)s
     summary_template = '%-15s %-7s %9s %-12s %10d %10d'
 
     @classmethod
-    def as_dict(cls, answer):
-        up = answer['duration']
-
-        formated = {
-            'state': 'up' if up else 'down',
-            'duration': answer['duration'] if up else answer['down'],
-            'fsm': answer['state'],
-            'local': {
-                'capabilities': {},
-                'families': {},
-                'add-path': {},
-            },
-            'peer': {
-                'capabilities': {},
-                'families': {},
-                'add-path': {},
-            },
-            'messages': {'sent': {}, 'received': {}},
-            'capabilities': [],
-            'families': [],
-            'add-path': {},
-        }
-
-        for (a, s), (l, p, aps, apr) in answer['families'].items():
-            k = '%s %s' % (a, s)
-            formated['local']['families'][k] = l
-            formated['peer']['families'][k] = p
-            formated['local']['add-path'][k] = aps
-            formated['peer']['add-path'][k] = apr
-            if l and p:
-                formated['families'].append(k)
-            formated['add-path'][k] = _addpath(aps, apr)
-
-        for k, (l, p) in answer['capabilities'].items():
-            formated['local']['capabilities'][k] = l
-            formated['peer']['capabilities'][k] = p
-            if l and p:
-                formated['capabilities'].append(k)
-
-        for k, (s, r) in answer['messages'].items():
-            formated['messages']['sent'][k] = s
-            formated['messages']['received'][k] = r
-
-        formated['local']['address'] = answer['local-address']
-        formated['local']['as'] = answer['local-as']
-        formated['local']['id'] = answer['local-id']
-        formated['local']['hold'] = answer['local-hold']
-
-        formated['peer']['address'] = answer['peer-address']
-        formated['peer']['as'] = answer['peer-as']
-        formated['peer']['id'] = answer['peer-id']
-        formated['peer']['hold'] = answer['peer-hold']
-
-        return formated
-
-    @classmethod
-    def extensive(cls, answer):
+    def extensive(cls, answer, output_format='text'):
         if answer['duration']:
             duration = cls.extensive_kv % ('up for', timedelta(seconds=answer['duration']), '', '')
         else:
             duration = cls.extensive_kv % ('down for', timedelta(seconds=answer['down']), '', '')
-        formated = {
-            'peer-address': answer['peer-address'],
-            'local-address': cls.extensive_kv % ('local', answer['local-address'], '', ''),
-            'state': cls.extensive_kv % ('state', answer['state'], '', ''),
-            'duration': duration,
-            'as': cls.extensive_kv % ('AS', answer['local-as'], _pr(answer['peer-as']), ''),
-            'id': cls.extensive_kv % ('ID', answer['local-id'], _pr(answer['peer-id']), ''),
-            'hold': cls.extensive_kv % ('hold-time', answer['local-hold'], _pr(answer['peer-hold']), ''),
-            'capabilities': '\n'.join(
-                cls.extensive_kv % ('%s:' % k, _en(l), _en(p), '') for k, (l, p) in answer['capabilities'].items()
-            ),
-            'families': '\n'.join(
-                cls.extensive_kv % ('%s %s:' % (a, s), _en(l), _en(r), _addpath(aps, apr))
-                for (a, s), (l, r, apr, aps) in answer['families'].items()
-            ),
-            'messages': '\n'.join(
-                cls.extensive_kv % ('%s:' % k, str(s), str(r), '') for k, (s, r) in answer['messages'].items()
-            ),
-        }
 
-        return cls.extensive_template % formated
+        if output_format == 'text':
+            formated = {
+                'peer-address': answer['peer-address'],
+                'local-address': cls.extensive_kv % ('local', answer['local-address'], '', ''),
+                'state': cls.extensive_kv % ('state', answer['state'], '', ''),
+                'duration': duration,
+                'as': cls.extensive_kv % ('AS', answer['local-as'], _pr(answer['peer-as']), ''),
+                'id': cls.extensive_kv % ('ID', answer['local-id'], _pr(answer['peer-id']), ''),
+                'hold': cls.extensive_kv % ('hold-time', answer['local-hold'], _pr(answer['peer-hold']), ''),
+                'capabilities': '\n'.join(
+                    cls.extensive_kv % ('%s:' % k, _en(l), _en(p), '') for k, (l, p) in answer['capabilities'].items()
+                ),
+                'families': '\n'.join(
+                    cls.extensive_kv % ('%s %s:' % (a, s), _en(l), _en(r), _en(p))
+                    for (a, s), (l, r, p) in answer['families'].items()
+                ),
+                'messages': '\n'.join(
+                    cls.extensive_kv % ('%s:' % k, str(s), str(r), '') for k, (s, r) in answer['messages'].items()
+                ),
+            }
+            return cls.extensive_template % formated
+        else:
+            json_output = {
+                "Neighbor": answer['peer-address'],
+                "Session": {
+                    "Local": answer['local-address'],
+                    "State": answer['state'],
+                    "Up For": str(timedelta(seconds=answer['duration']))
+                },
+                "Setup": {
+                    "AS": {
+                        "Local": answer['local-as'],
+                        "Remote": answer['peer-as']
+                    },
+                    "ID": {
+                        "Local": answer['local-id'],
+                        "Remote": answer['peer-id']
+                    },
+                    "hold-time": {
+                        "Local": answer['local-hold'],
+                        "Remote": answer['peer-hold']
+                    }
+                },
+                "Capability": {
+                    k: {
+                        "Local": _en(l),
+                        "Remote": _en(p)
+                    } for k, (l, p) in answer['capabilities'].items()
+                },
+                "Families": [
+                    {
+                        "Family": f"{a} {s}",
+                        "Local": _en(l),
+                        "Remote": _en(r),
+                        "Add-Path": _en(p)
+                    } for (a, s), (l, r, p) in answer['families'].items()
+                ],
+                "Message Statistic": {
+                    k: {
+                        "Sent": s,
+                        "Received": r
+                    } for k, (s, r) in answer['messages'].items()
+                }
+            }
+            return json_output
 
     @classmethod
-    def summary(cls, answer):
-        return cls.summary_template % (
-            answer['peer-address'],
-            _pr(answer['peer-as']),
-            timedelta(seconds=answer['duration']) if answer['duration'] else 'down',
-            answer['state'].lower(),
-            answer['messages']['update'][0],
-            answer['messages']['update'][1],
-        )
+    def summary(cls, answer, output_format='text'):
+        if output_format == 'text':
+            return cls.summary_template % (
+                answer['peer-address'],
+                _pr(answer['peer-as']),
+                timedelta(seconds=answer['duration']) if answer['duration'] else 'down',
+                answer['state'].lower(),
+                answer['messages']['update'][0],
+                answer['messages']['update'][1],
+            )
+        else :
+            return {
+                "Peer": answer['peer-address'],
+                "AS": answer['peer-as'],
+                "Up/Down": str(timedelta(seconds=answer['duration'])) if answer['duration'] else 'down',
+                "State": answer['state'].lower(),
+                "Sent": answer['messages']['update'][0],
+                "Recvd": answer['messages']['update'][1],
+            }
 
 
 @Command.register('text', 'teardown', True)
@@ -194,14 +183,15 @@ def teardown(self, reactor, service, line):
         return False
 
 
-@Command.register('text', 'show neighbor', False, ['summary', 'extensive', 'configuration', 'json'])
+@Command.register('text', 'show neighbor', False, ['summary', 'extensive', 'configuration'])
+@Command.register('text', 'show neighbor json', False, ['summary', 'extensive'])
 def show_neighbor(self, reactor, service, command):
     words = command.split()
 
     extensive = 'extensive' in words
     configuration = 'configuration' in words
     summary = 'summary' in words
-    jason = 'json' in words
+    json_output = 'json' in words
 
     if summary:
         words.remove('summary')
@@ -209,7 +199,7 @@ def show_neighbor(self, reactor, service, command):
         words.remove('extensive')
     if configuration:
         words.remove('configuration')
-    if jason:
+    if json_output:
         words.remove('json')
 
     limit = words[-1] if words[-1] != 'neighbor' else ''
@@ -226,37 +216,44 @@ def show_neighbor(self, reactor, service, command):
                 yield True
         reactor.processes.answer_done(service)
 
-    def callback_json():
-        p = []
-        for peer_name in reactor.peers():
-            p.append(Neighbor.as_dict(reactor.neighbor_cli_data(peer_name)))
-        for line in json.dumps(p).split('\n'):
-            reactor.processes.write(service, line)
-            yield True
-        reactor.processes.answer_done(service)
-
     def callback_extensive():
+        peers_extensive_info = []
+        output_format = 'json' if json_output else 'text'
         for peer_name in reactor.peers():
             if limit and limit not in reactor.neighbor_name(peer_name):
                 continue
-            for line in Neighbor.extensive(reactor.neighbor_cli_data(peer_name)).split('\n'):
-                reactor.processes.write(service, line)
-                yield True
+            extensive_info = Neighbor.extensive(reactor.neighbor_cli_data(peer_name), output_format)
+            if output_format == 'text':
+                for line in extensive_info.split('\n'):
+                    reactor.processes.write(service, line)
+            else :
+                peers_extensive_info.append(extensive_info)
+            yield True
+        if output_format == 'json':
+            reactor.processes.write(service, json.dumps(peers_extensive_info, indent=4) )
+
         reactor.processes.answer_done(service)
 
     def callback_summary():
-        reactor.processes.write(service, Neighbor.summary_header)
-        for peer_name in reactor.peers():
+        peers_summary = []
+        output_format = 'json' if json_output else 'text'
+
+        if output_format == 'text':
+            reactor.processes.write(service, Neighbor.summary_header)
+        for peer_name in reactor.established_peers():
             if limit and limit != reactor.neighbor_ip(peer_name):
                 continue
-            for line in Neighbor.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
-                reactor.processes.write(service, line)
-                yield True
-        reactor.processes.answer_done(service)
+            summary_info = Neighbor.summary(reactor.neighbor_cli_data(peer_name), output_format)
+            if output_format == 'text':
+                for line in summary_info.split('\n'):
+                    reactor.processes.write(service, line)
+            else :
+                peers_summary.append(summary_info)
+            yield True
 
-    if jason:
-        reactor.asynchronous.schedule(service, command, callback_json())
-        return True
+        if output_format == 'json':
+            reactor.processes.write(service, json.dumps(peers_summary, indent=4) )
+        reactor.processes.answer_done(service)
 
     if summary:
         reactor.asynchronous.schedule(service, command, callback_summary())
