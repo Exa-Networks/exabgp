@@ -173,19 +173,31 @@ class Neighbor(dict):
         self.messages = deque()
         self.refresh = deque()
 
-    def name(self):
+    def name(self, json=False):
         if self['capability']['multi-session']:
             session = '/'.join("%s-%s" % (afi.name(), safi.name()) for (afi, safi) in self.families())
         else:
             session = 'in-open'
-        return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (
-            self['peer-address'],
-            self['local-address'] if self['peer-address'] is not None else 'auto',
-            self['local-as'] if self['local-as'] is not None else 'auto',
-            self['peer-as'] if self['peer-as'] is not None else 'auto',
-            self['router-id'],
-            session,
-        )
+        data = {
+            "neighbor": self.peer_address,
+            "local-ip": self.local_address if self.peer_address is not None else 'auto',
+            "local-as": self.local_as if self.local_as is not None else 'auto',
+            "peer-as": self.peer_as if self.peer_as is not None else 'auto',
+            "router-id": self.router_id,
+            "family-allowed": session
+        }
+
+        if json:
+            return data
+        else:
+            return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (
+                data["neighbor"],
+                data["local-ip"],
+                data["local-as"],
+                data["peer-as"],
+                data["router-id"],
+                data["family-allowed"]
+            )
 
     def families(self):
         # this list() is important .. as we use the function to modify self._families

@@ -172,12 +172,16 @@ class Reactor(object):
             return
         return peer.neighbor
 
-    def neighbor_name(self, peer_name):
+    def neighbor_name(self, peer_name, json=False):
         peer = self._peers.get(peer_name, None)
         if not peer:
             log.critical('could not find referenced peer', 'reactor')
             return ""
-        return peer.neighbor.name()
+        if json:
+            return peer.neighbor.name(json=True)
+        else:
+            return peer.neighbor.name()
+
 
     def neighbor_ip(self, peer_name):
         peer = self._peers.get(peer_name, None)
