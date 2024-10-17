@@ -117,7 +117,6 @@ def show_adj_rib(self, reactor, service, line, use_json):
     elif 'l2vpn' in words:
         klass = (VPLS, EVPN)
 
-    use_json = False
     if 'json' in words:
         words.remove('json')
         use_json = True
