@@ -38,9 +38,12 @@ errno_block = set(
 
 
 class AnswerStream:
-    done = '\n%s\n' % Answer.done
-    error = '\n%s\n' % Answer.error
-    shutdown = '\n%s\n' % Answer.error
+    text_done = '\n%s\n' % Answer.text_done
+    text_error = '\n%s\n' % Answer.text_error
+    text_shutdown = '\n%s\n' % Answer.text_error
+    json_done = '\n%s\n' % Answer.json_done
+    json_error = '\n%s\n' % Answer.json_error
+    json_shutdown = '\n%s\n' % Answer.json_error
     buffer_size = Answer.buffer_size + 2
 
 
@@ -174,13 +177,21 @@ def cmdline(cmdarg):
             break
 
         # we read some data but it is not ending by a new line (ie: not a command completion)
-        if rbuffer[-1] != 10:  # \n
+        if rbuffer[-1] != ord('\n'):
             continue
-        if AnswerStream.done.endswith(rbuffer.decode()[-len(AnswerStream.done) :]):
+
+        if AnswerStream.done.endswith(rbuffer.decode()[-len(AnswerStream.text_done) :]):
             break
-        if AnswerStream.error.endswith(rbuffer.decode()[-len(AnswerStream.error) :]):
+        if AnswerStream.error.endswith(rbuffer.decode()[-len(AnswerStream.text_error) :]):
             break
-        if AnswerStream.shutdown.endswith(rbuffer.decode()[-len(AnswerStream.shutdown) :]):
+        if AnswerStream.shutdown.endswith(rbuffer.decode()[-len(AnswerStream.text_shutdown) :]):
+            break
+
+        if AnswerStream.done.endswith(rbuffer.decode()[-len(AnswerStream.json_done) :]):
+            break
+        if AnswerStream.error.endswith(rbuffer.decode()[-len(AnswerStream.json_error) :]):
+            break
+        if AnswerStream.shutdown.endswith(rbuffer.decode()[-len(AnswerStream.json_shutdown) :]):
             break
 
     renamed = ['']
@@ -293,15 +304,15 @@ def cmdline(cmdarg):
         while b'\n' in buf:
             line, buf = buf.split(b'\n', 1)
             string = line.decode()
-            if string == Answer.done:
+            if string == Answer.text_done or string == Answer.json_done:
                 done = True
                 break
-            if string == Answer.shutdown:
+            if string == Answer.text_shutdown or string == Answer.json_shutdown:
                 sys.stderr.write('ExaBGP is shutting down, command aborted\n')
                 sys.stderr.flush()
                 done = True
                 break
-            if string == Answer.error:
+            if string == Answer.text_error or string == Answer.json_error:
                 done = True
                 sys.stderr.write('ExaBGP returns an error (see ExaBGP\'s logs for more information)\n')
                 sys.stderr.write('use help for a list of available commands\n')

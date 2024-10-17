@@ -418,7 +418,7 @@ class Reactor(object):
 
                 # read at least on message per process if there is some and parse it
                 for service, command in self.processes.received():
-                    self.api.text(self, service, command)
+                    self.api.process(self, service, command)
                     sleep = 0
 
                 self.asynchronous.run()

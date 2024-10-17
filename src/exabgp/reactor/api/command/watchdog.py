@@ -14,8 +14,8 @@ def register_watchdog():
     pass
 
 
-@Command.register('text', 'announce watchdog')
-def announce_watchdog(self, reactor, service, line):
+@Command.register('announce watchdog')
+def announce_watchdog(self, reactor, service, line, use_json):
     def callback(name):
         # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():
@@ -25,7 +25,7 @@ def announce_watchdog(self, reactor, service, line):
             neighbor.rib.outgoing.announce_watchdog(name)
             yield False
 
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done(service, use_json)
 
     try:
         name = line.split(' ')[2]
@@ -35,8 +35,8 @@ def announce_watchdog(self, reactor, service, line):
     return True
 
 
-@Command.register('text', 'withdraw watchdog')
-def withdraw_watchdog(self, reactor, service, line):
+@Command.register('withdraw watchdog')
+def withdraw_watchdog(self, reactor, service, line, use_json):
     def callback(name):
         # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():
@@ -46,7 +46,7 @@ def withdraw_watchdog(self, reactor, service, line):
             neighbor.rib.outgoing.withdraw_watchdog(name)
             yield False
 
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done(service, use_json)
 
     try:
         name = line.split(' ')[2]

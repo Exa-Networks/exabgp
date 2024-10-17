@@ -321,11 +321,29 @@ class Processes(object):
             log.debug('responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
-    def answer_done(self, service):
-        self._answer(service, Answer.done)
+    def answer_done(self, service, use_json):
+        if use_json:
+            self.answer_json_done(service)
+        else:
+            self.answer_text_done(service)
 
-    def answer_error(self, service):
-        self._answer(service, Answer.error)
+    def answer_text_done(self, service):
+        self._answer(service, Answer.text_done)
+
+    def answer_json_done(self, service):
+        self._answer(service, Answer.json_done)
+
+    def answer_error(self, service, use_json):
+        if use_json:
+            self.answer_json_error(service)
+        else:
+            self.answer_text_error(service)
+
+    def answer_text_error(self, service):
+        self._answer(service, Answer.text_error)
+
+    def answer_json_error(self, service):
+        self._answer(service, Answer.json_error)
 
     def _notify(self, neighbor, event):
         for process in neighbor.api[event]:

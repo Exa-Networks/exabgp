@@ -21,25 +21,25 @@ from exabgp.configuration.static import ParseStaticRoute
 def register_announce():
     pass
 
-# @Command.register('text', 'debug')
+# @Command.register('debug')
 # the command debug is hardcoded in the process code
 
-@Command.register('text', 'announce route')
-def announce_route(self, reactor, service, line):
+@Command.register('announce route')
+def announce_route(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
             changes = self.api_route(command)
             if not changes:
                 self.log_failure('command could not parse route in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -56,36 +56,36 @@ def announce_route(self, reactor, service, line):
                 )
                 yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'withdraw route')
-def withdraw_route(self, reactor, service, line):
+@Command.register('withdraw route')
+def withdraw_route(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
             changes = self.api_route(command)
             if not changes:
                 self.log_failure('command could not parse route in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -112,36 +112,36 @@ def withdraw_route(self, reactor, service, line):
                     )
                     yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'announce vpls')
-def announce_vpls(self, reactor, service, line):
+@Command.register('announce vpls')
+def announce_vpls(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
             changes = self.api_vpls(command)
             if not changes:
                 self.log_failure('command could not parse vpls in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -153,29 +153,29 @@ def announce_vpls(self, reactor, service, line):
                 )
                 yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the vpls')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the vpls')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'withdraw vpls')
-def withdraw_vpls(self, reactor, service, line):
+@Command.register('withdraw vpls')
+def withdraw_vpls(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -183,7 +183,7 @@ def withdraw_vpls(self, reactor, service, line):
 
             if not changes:
                 self.log_failure('command could not parse vpls in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -200,37 +200,37 @@ def withdraw_vpls(self, reactor, service, line):
                     )
                     yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the vpls')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the vpls')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'announce attribute')
-@Command.register('text', 'announce attributes')
-def announce_attributes(self, reactor, service, line):
+@Command.register('announce attribute')
+@Command.register('announce attributes')
+def announce_attributes(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
             changes = self.api_attributes(command, peers)
             if not changes:
                 self.log_failure('command could not parse route in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -242,37 +242,37 @@ def announce_attributes(self, reactor, service, line):
                 )
                 yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'withdraw attribute')
-@Command.register('text', 'withdraw attributes')
-def withdraw_attribute(self, reactor, service, line):
+@Command.register('withdraw attribute')
+@Command.register('withdraw attributes')
+def withdraw_attribute(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
             changes = self.api_attributes(command, peers)
             if not changes:
                 self.log_failure('command could not parse route in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -289,36 +289,36 @@ def withdraw_attribute(self, reactor, service, line):
                     )
                     yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'announce flow')
-def announce_flow(self, reactor, service, line):
+@Command.register('announce flow')
+def announce_flow(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
             changes = self.api_flow(command)
             if not changes:
                 self.log_failure('command could not parse flow in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -330,29 +330,29 @@ def announce_flow(self, reactor, service, line):
                 )
                 yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the flow')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the flow')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'withdraw flow')
-def withdraw_flow(self, reactor, service, line):
+@Command.register('withdraw flow')
+def withdraw_flow(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -360,7 +360,7 @@ def withdraw_flow(self, reactor, service, line):
 
             if not changes:
                 self.log_failure('command could not parse flow in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -376,27 +376,27 @@ def withdraw_flow(self, reactor, service, line):
                     )
                 yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the flow')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the flow')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'announce eor')
-def announce_eor(self, reactor, service, command):
+@Command.register('announce eor')
+def announce_eor(self, reactor, service, line, use_json):
     def callback(self, command, peers):
         family = self.api_eor(command)
         if not family:
             self.log_failure("Command could not parse eor : %s" % command)
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
             return
 
@@ -407,34 +407,34 @@ def announce_eor(self, reactor, service, command):
         )
         yield False
 
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done(service, use_json)
 
     try:
-        descriptions, command = extract_neighbors(command)
+        descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.established_peers(), descriptions)
         if not peers:
             self.log_failure('no neighbor matching the command : %s' % command)
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             return False
         reactor.asynchronous.schedule(service, command, callback(self, command, peers))
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error(service, use_json)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error(service, use_json)
         return False
 
 
-@Command.register('text', 'announce route-refresh')
-def announce_refresh(self, reactor, service, command):
+@Command.register('announce route-refresh')
+def announce_refresh(self, reactor, service, line, use_json):
     def callback(self, command, peers):
         refreshes = self.api_refresh(command)
         if not refreshes:
             self.log_failure("Command could not parse route-refresh command : %s" % command)
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
             return
 
@@ -446,34 +446,34 @@ def announce_refresh(self, reactor, service, command):
             )
 
         yield False
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done(service, use_json)
 
     try:
-        descriptions, command = extract_neighbors(command)
+        descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.established_peers(), descriptions)
         if not peers:
             self.log_failure('no neighbor matching the command : %s' % command)
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             return False
         reactor.asynchronous.schedule(service, command, callback(self, command, peers))
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error(service, use_json)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error(service, use_json)
         return False
 
 
-@Command.register('text', 'announce operational')
-def announce_operational(self, reactor, service, command):
+@Command.register('announce operational')
+def announce_operational(self, reactor, service, line, use_json):
     def callback(self, command, peers):
         operational = self.api_operational(command)
         if not operational:
             self.log_failure("Command could not parse operational command : %s" % command)
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
             return
 
@@ -483,9 +483,9 @@ def announce_operational(self, reactor, service, command):
             % (', '.join(peers if peers else []) if peers is not None else 'all peers', operational.extensive())
         )
         yield False
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done(service, use_json)
 
-    if (command.split() + ['be', 'safe'])[2].lower() not in (
+    if (line.split() + ['be', 'safe'])[2].lower() not in (
         'asm',
         'adm',
         'rpcq',
@@ -495,44 +495,44 @@ def announce_operational(self, reactor, service, command):
         'lpcq',
         'lpcp',
     ):
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done(service, use_json)
         return False
 
     try:
-        descriptions, command = extract_neighbors(command)
+        descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.peers(service), descriptions)
         if not peers:
             self.log_failure('no neighbor matching the command : %s' % command)
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             return False
         reactor.asynchronous.schedule(service, command, callback(self, command, peers))
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error(service, use_json)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error(service, use_json)
         return False
 
 
-@Command.register('text', 'announce ipv4')
-def announce_ipv4(self, reactor, service, line):
+@Command.register('announce ipv4')
+def announce_ipv4(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
             changes = self.api_announce_v4(command)
             if not changes:
                 self.log_failure('command could not parse ipv4 in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -544,29 +544,29 @@ def announce_ipv4(self, reactor, service, line):
                 )
                 yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the ipv4')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the ipv4')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'withdraw ipv4')
-def withdraw_ipv4(self, reactor, service, line):
+@Command.register('withdraw ipv4')
+def withdraw_ipv4(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -574,7 +574,7 @@ def withdraw_ipv4(self, reactor, service, line):
 
             if not changes:
                 self.log_failure('command could not parse ipv4 in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -590,36 +590,36 @@ def withdraw_ipv4(self, reactor, service, line):
                     )
                 yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the ipv4')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the ipv4')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'announce ipv6')
-def announce_ipv6(self, reactor, service, line):
+@Command.register('announce ipv6')
+def announce_ipv6(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
             changes = self.api_announce_v6(command)
             if not changes:
                 self.log_failure('command could not parse ipv6 in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -631,29 +631,29 @@ def announce_ipv6(self, reactor, service, line):
                 )
                 yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the ipv6')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the ipv6')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
 
 
-@Command.register('text', 'withdraw ipv6')
-def withdraw_ipv6(self, reactor, service, line):
+@Command.register('withdraw ipv6')
+def withdraw_ipv6(self, reactor, service, line, use_json):
     def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure('no neighbor matching the command : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -661,7 +661,7 @@ def withdraw_ipv6(self, reactor, service, line):
 
             if not changes:
                 self.log_failure('command could not parse ipv6 in : %s' % command)
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error(service, use_json)
                 yield True
                 return
 
@@ -677,14 +677,14 @@ def withdraw_ipv6(self, reactor, service, line):
                     )
                 yield False
 
-            reactor.processes.answer_done(service)
+            reactor.processes.answer_done(service, use_json)
         except ValueError:
             self.log_failure('issue parsing the ipv6')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
         except IndexError:
             self.log_failure('issue parsing the ipv6')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error(service, use_json)
             yield True
 
     reactor.asynchronous.schedule(service, line, callback())

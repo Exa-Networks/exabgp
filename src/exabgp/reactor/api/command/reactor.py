@@ -17,10 +17,11 @@ def register_reactor():
     pass
 
 
-@Command.register('text', 'help', False)
-def manual(self, reactor, service, _):
+@Command.register('help', False)
+def manual(self, reactor, service, line, use_json):
     lines = []
-    for command in sorted(self.callback['text']):
+    encoding = 'json' if use_json else 'text'
+    for command in sorted(self.callback[encoding]):
         if self.callback['options'][command]:
             extended = '%s [ %s ]' % (command, ' | '.join(self.callback['options'][command]))
         else:
@@ -41,55 +42,55 @@ def manual(self, reactor, service, _):
     for line in sorted(lines):
         reactor.processes.write(service, line, True)
     reactor.processes.write(service, '', True)
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_text_done(service)
     return True
 
 
-@Command.register('text', 'shutdown', False)
-def shutdown(self, reactor, service, _):
+@Command.register('shutdown', False)
+def shutdown(self, reactor, service, line, use_json):
     reactor.signal.received = reactor.signal.SHUTDOWN
     reactor.processes.write(service, 'shutdown in progress')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_text_done(service)
     return True
 
 
-@Command.register('text', 'reload', False)
-def reload(self, reactor, service, _):
+@Command.register('reload', False)
+def reload(self, reactor, service, line, use_json):
     reactor.signal.received = reactor.signal.RELOAD
     reactor.processes.write(service, 'reload in progress')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_text_done(service)
     return True
 
 
-@Command.register('text', 'restart', False)
-def restart(self, reactor, service, _):
+@Command.register('restart', False)
+def restart(self, reactor, service, line, use_json):
     reactor.signal.received = reactor.signal.RESTART
     reactor.processes.write(service, 'restart in progress')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_text_done(service)
     return True
 
 
-@Command.register('text', 'version', False)
-def version(self, reactor, service, _):
+@Command.register('version', False)
+def version(self, reactor, service, line, use_json):
     reactor.processes.write(service, 'exabgp %s' % _version)
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_text_done(service)
     return True
 
 
-@Command.register('text', '#', False)
-def comment(self, reactor, service, line):
+@Command.register('#', False)
+def comment(self, reactor, service, line, use_json):
     log.debug(line.lstrip().lstrip('#').strip(), 'process')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_text_done(service)
     return True
 
 
-@Command.register('text', 'reset', False)
-def reset(self, reactor, service, line):
+@Command.register('reset', False)
+def reset(self, reactor, service, line, use_json):
     reactor.asynchronous.clear(service)
 
 
-@Command.register('text', 'crash')
-def crash(self, reactor, service, line):
+@Command.register('crash')
+def crash(self, reactor, service, line, use_json):
     def callback():
         raise ValueError('crash test of the API')
         yield None
