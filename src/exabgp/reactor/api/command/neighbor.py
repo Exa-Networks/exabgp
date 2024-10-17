@@ -129,11 +129,12 @@ Neighbor %(peer-address)s
         return formated
 
     @classmethod
-    def extensive(cls, answer):
+    def formated_dict(cls, answer):
         if answer['duration']:
             duration = cls.extensive_kv % ('up for', timedelta(seconds=answer['duration']), '', '')
         else:
             duration = cls.extensive_kv % ('down for', timedelta(seconds=answer['down']), '', '')
+
         formated = {
             'peer-address': answer['peer-address'],
             'local-address': cls.extensive_kv % ('local', answer['local-address'], '', ''),
@@ -154,7 +155,11 @@ Neighbor %(peer-address)s
             ),
         }
 
-        return cls.extensive_template % formated
+        return formated
+
+    @classmethod
+    def extensive(cls, answer):
+        return cls.extensive_template % cls.formated_dict(answer)
 
     @classmethod
     def summary(cls, answer):
