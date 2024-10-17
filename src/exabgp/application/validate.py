@@ -10,6 +10,7 @@ from exabgp.environment import getenv
 from exabgp.environment import getconf
 
 from exabgp.configuration.configuration import Configuration
+from exabgp.bgp.neighbor import NeighborTemplate
 
 from exabgp.debug import trace_interceptor
 from exabgp.logger import log
@@ -61,7 +62,7 @@ def cmdline(cmdarg):
         if cmdarg.neighbor:
             log.warning('checking neighbors', 'configuration')
             for name, neighbor in config.neighbors.items():
-                reparsed = neighbor.string()
+                reparsed = NeighborTemplate.configuration(neighbor)
                 log.debug(reparsed, configuration)
                 log.info(f'\u2713 neighbor  {name.split()[1]}', 'configuration')
 

@@ -37,11 +37,29 @@ class API(Command):
         report = '%s\nreason: %s' % (message, error) if error else message
         log.error(report, 'processes', level)
 
+    def process(self, reactor, service, command):
+        # it to allow a global "set encoding json"
+        # it to allow a global "set encoding text"
+        # to not have to set the encoding on each command
+        if 'json' in command.split(' '):
+            return self.json(reactor, service, command)
+        if 'text' in command.split(' '):
+            return self.text(reactor, service, command)
+        return self.text(reactor, service, command)
+
     def text(self, reactor, service, command):
         for registered in self.functions:
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
-                return self.callback['text'][registered](self, reactor, service, command)
-        reactor.processes.answer_error(service)
+                return self.callback['text'][registered](self, reactor, service, command, False)
+        reactor.processes.answer_text_error(service)
+        log.warning('command from process not understood : %s' % command, 'api')
+        return False
+
+    def json(self, reactor, service, command):
+        for registered in self.functions:
+            if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
+                return self.callback['json'][registered](self, reactor, service, command, True)
+        reactor.processes.answer_json_error(service)
         log.warning('command from process not understood : %s' % command, 'api')
         return False
 
