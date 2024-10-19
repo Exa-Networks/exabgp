@@ -80,7 +80,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
                 else:
                     to_text(key, changes)
                 yield True
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
 
     return callback
 
@@ -93,7 +93,7 @@ def show_adj_rib(self, reactor, service, line, use_json):
     try:
         rib = words[2]
         if not rib in ('in', 'out'):
-            reactor.processes.answer_error(service, use_json)
+            reactor.processes.answer_error(service)
             return False
     except IndexError:
         if words[1] == 'adj-rib-in':
@@ -101,11 +101,11 @@ def show_adj_rib(self, reactor, service, line, use_json):
         elif words[1] == 'adj-rib-out':
             rib = 'out'
         else:
-            reactor.processes.answer_error(service, use_json)
+            reactor.processes.answer_error(service)
             return False
 
     if rib not in ('in', 'out'):
-        reactor.processes.answer_error(service, use_json)
+        reactor.processes.answer_error(service)
         return False
 
     klass = NLRI
@@ -140,24 +140,24 @@ def flush_adj_rib_out(self, reactor, service, line, use_json):
             reactor.neighbor_rib_resend(peer_name)
             yield False
 
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
 
     try:
         descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.established_peers(), descriptions)
         if not peers:
             self.log_failure('no neighbor matching the command : %s' % command, 'warning')
-            reactor.processes.answer_error(service, use_json)
+            reactor.processes.answer_error(service)
             return False
         reactor.asynchronous.schedule(service, command, callback(self, peers))
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service, use_json)
+        reactor.processes.answer_error(service)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service, use_json)
+        reactor.processes.answer_error(service)
         return False
 
 
@@ -175,14 +175,14 @@ def clear_adj_rib(self, reactor, service, line, use_json):
                 reactor.neighbor_rib_in_clear(peer_name)
             yield False
 
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
 
     try:
         descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.peers(), descriptions)
         if not peers:
             self.log_failure('no neighbor matching the command : %s' % command, 'warning')
-            reactor.processes.answer_error(service, use_json)
+            reactor.processes.answer_error(service)
             return False
         words = command.split()
         direction = 'in' if 'adj-rib-in' in words or 'in' in words else 'out'
@@ -190,9 +190,9 @@ def clear_adj_rib(self, reactor, service, line, use_json):
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service, use_json)
+        reactor.processes.answer_error(service)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service, use_json)
+        reactor.processes.answer_error(service)
         return False
