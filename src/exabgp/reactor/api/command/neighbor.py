@@ -26,24 +26,24 @@ def teardown(self, reactor, service, line, use_json):
     try:
         descriptions, line = extract_neighbors(line)
         if ' ' not in line:
-            reactor.processes.answer_error(service, use_json)
+            reactor.processes.answer_error(service)
             return False
         _, code = line.split(' ', 1)
         if not code.isdigit():
-            reactor.processes.answer_error(service, use_json)
+            reactor.processes.answer_error(service)
             return False
         for key in reactor.established_peers():
             for description in descriptions:
                 if match_neighbor(description, key):
                     reactor.teardown_peer(key, int(code))
                     self.log_message('teardown scheduled for %s' % ' '.join(description))
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
         return True
     except ValueError:
-        reactor.processes.answer_error(service, use_json)
+        reactor.processes.answer_error(service)
         return False
     except IndexError:
-        reactor.processes.answer_error(service, use_json)
+        reactor.processes.answer_error(service)
         return False
 
 
@@ -80,7 +80,7 @@ def show_neighbor(self, reactor, service, line, use_json):
             for line in str(neighbor).split('\n'):
                 reactor.processes.write(service, line)
                 yield True
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
 
     def callback_json():
         p = []
@@ -89,7 +89,7 @@ def show_neighbor(self, reactor, service, line, use_json):
         for line in json.dumps(p).split('\n'):
             reactor.processes.write(service, line)
             yield True
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
 
     def callback_extensive():
         for peer_name in reactor.peers():
@@ -98,7 +98,7 @@ def show_neighbor(self, reactor, service, line, use_json):
             for line in NeighborTemplate.extensive(reactor.neighbor_cli_data(peer_name)).split('\n'):
                 reactor.processes.write(service, line)
                 yield True
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
 
     def callback_summary():
         reactor.processes.write(service, NeighborTemplate.summary_header)
@@ -108,7 +108,7 @@ def show_neighbor(self, reactor, service, line, use_json):
             for line in NeighborTemplate.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
                 reactor.processes.write(service, line)
                 yield True
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
 
     if use_json:
         reactor.asynchronous.schedule(service, line, callback_json())
@@ -128,4 +128,4 @@ def show_neighbor(self, reactor, service, line, use_json):
 
     reactor.processes.write(service, 'please specify summary, extensive or configuration')
     reactor.processes.write(service, 'you can filter by peer ip address adding it after the word neighbor')
-    reactor.processes.answer_done(service, use_json)
+    reactor.processes.answer_done(service)

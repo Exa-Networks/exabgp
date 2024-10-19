@@ -42,7 +42,7 @@ def manual(self, reactor, service, line, use_json):
     for line in sorted(lines):
         reactor.processes.write(service, line, True)
     reactor.processes.write(service, '', True)
-    reactor.processes.answer_text_done(service)
+    reactor.processes.answer_done(service)
     return True
 
 
@@ -50,7 +50,7 @@ def manual(self, reactor, service, line, use_json):
 def shutdown(self, reactor, service, line, use_json):
     reactor.signal.received = reactor.signal.SHUTDOWN
     reactor.processes.write(service, 'shutdown in progress')
-    reactor.processes.answer_text_done(service)
+    reactor.processes.answer_done(service)
     return True
 
 
@@ -58,7 +58,7 @@ def shutdown(self, reactor, service, line, use_json):
 def reload(self, reactor, service, line, use_json):
     reactor.signal.received = reactor.signal.RELOAD
     reactor.processes.write(service, 'reload in progress')
-    reactor.processes.answer_text_done(service)
+    reactor.processes.answer_done(service)
     return True
 
 
@@ -66,21 +66,21 @@ def reload(self, reactor, service, line, use_json):
 def restart(self, reactor, service, line, use_json):
     reactor.signal.received = reactor.signal.RESTART
     reactor.processes.write(service, 'restart in progress')
-    reactor.processes.answer_text_done(service)
+    reactor.processes.answer_done(service)
     return True
 
 
 @Command.register('version', False)
 def version(self, reactor, service, line, use_json):
     reactor.processes.write(service, 'exabgp %s' % _version)
-    reactor.processes.answer_text_done(service)
+    reactor.processes.answer_done(service)
     return True
 
 
 @Command.register('#', False)
 def comment(self, reactor, service, line, use_json):
     log.debug(line.lstrip().lstrip('#').strip(), 'process')
-    reactor.processes.answer_text_done(service)
+    reactor.processes.answer_done(service)
     return True
 
 

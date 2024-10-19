@@ -25,7 +25,7 @@ def announce_watchdog(self, reactor, service, line, use_json):
             neighbor.rib.outgoing.announce_watchdog(name)
             yield False
 
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
 
     try:
         name = line.split(' ')[2]
@@ -46,7 +46,7 @@ def withdraw_watchdog(self, reactor, service, line, use_json):
             neighbor.rib.outgoing.withdraw_watchdog(name)
             yield False
 
-        reactor.processes.answer_done(service, use_json)
+        reactor.processes.answer_done(service)
 
     try:
         name = line.split(' ')[2]

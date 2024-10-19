@@ -70,6 +70,7 @@ class Processes(object):
         self.fds = []
         self._process = {}
         self._encoder = {}
+        self._ackjson = {}
         self._broken = []
         self._respawning = {}
 
@@ -146,8 +147,10 @@ class Processes(object):
 
             run = configuration.get('run', '')
             if run:
-                api = configuration.get('encoder', '')
-                self._encoder[process] = Response.Text(text_version) if api == 'text' else Response.JSON(json_version)
+                use_json = configuration.get('encoder', 'text') == 'json'
+                self._encoder[process] = Response.JSON(json_version) if use_json else Response.Text(text_version)
+                # XXX: add an option to ack in JSON (do not break backward compatibility)
+                self._ackjson[process] = False
 
                 self._process[process] = subprocess.Popen(
                     run,
@@ -321,29 +324,17 @@ class Processes(object):
             log.debug('responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
-    def answer_done(self, service, use_json):
-        if use_json:
-            self.answer_json_done(service)
+    def answer_done(self, service):
+        if self._ackjson[service]:
+            self._answer(service, Answer.json_done)
         else:
-            self.answer_text_done(service)
+            self._answer(service, Answer.text_done)
 
-    def answer_text_done(self, service):
-        self._answer(service, Answer.text_done)
-
-    def answer_json_done(self, service):
-        self._answer(service, Answer.json_done)
-
-    def answer_error(self, service, use_json):
-        if use_json:
-            self.answer_json_error(service)
+    def answer_error(self, service):
+        if self._ackjson[service]:
+            self._answer(service, Answer.json_error)
         else:
-            self.answer_text_error(service)
-
-    def answer_text_error(self, service):
-        self._answer(service, Answer.text_error)
-
-    def answer_json_error(self, service):
-        self._answer(service, Answer.json_error)
+            self._answer(service, Answer.text_error)
 
     def _notify(self, neighbor, event):
         for process in neighbor.api[event]:
