@@ -8,6 +8,7 @@ import platform
 
 from exabgp.version import version, get_root
 
+
 def setargs(sub):
     # fmt:off
     pass

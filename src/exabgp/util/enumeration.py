@@ -25,4 +25,4 @@ class Enumeration(object):
 
 # Taken from Vincent Bernat
 def Enum(*sequential):
-    return type(str("Enum"), (), dict(zip(sequential, sequential)))
+    return type(str('Enum'), (), dict(zip(sequential, sequential)))

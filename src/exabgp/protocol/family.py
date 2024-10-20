@@ -84,7 +84,7 @@ class AFI(Resource):
     inet_names = dict([(inst, name.replace('ipv', 'inet')) for (name, inst) in codes.items()])
 
     def name(self):
-        return self.inet_names.get(self, "unknown afi")
+        return self.inet_names.get(self, 'unknown afi')
 
     @staticmethod
     def unpack(data):
@@ -337,4 +337,4 @@ class Family(object):
         return b'%02x%02x' % (self.afi, self.safi)
 
     def __repr__(self):
-        return "%s %s" % (str(self.afi), str(self.safi))
+        return '%s %s' % (str(self.afi), str(self.safi))

@@ -86,7 +86,7 @@ class Env(object):
                 if cls.definition[section][k]['write'] == parsing.quote:
                     yield "%s.%s.%s='%s'" % (base.APPLICATION, section, k, v)
                     continue
-                yield "%s.%s.%s=%s" % (
+                yield '%s.%s.%s=%s' % (
                     base.APPLICATION,
                     section,
                     k,

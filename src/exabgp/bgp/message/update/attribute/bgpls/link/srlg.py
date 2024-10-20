@@ -38,5 +38,5 @@ class Srlg(BaseLS):
     @classmethod
     def unpack(cls, data):
         if len(data) % 4:
-            raise Notify(3, 5, "Unable to decode SRLG")
+            raise Notify(3, 5, 'Unable to decode SRLG')
         return cls([unpack('!L', _)[0] for _ in split(data, 4)])

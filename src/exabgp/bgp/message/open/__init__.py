@@ -72,7 +72,7 @@ class Open(Message):
         )
 
     def __str__(self):
-        return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (
+        return 'OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]' % (
             self.version,
             self.asn.trans(),
             self.hold_time,
@@ -90,5 +90,5 @@ class Open(Message):
         asn = unpack('!H', data[1:3])[0]
         hold_time = unpack('!H', data[3:5])[0]
         numeric = unpack('!L', data[5:9])[0]
-        router_id = "%d.%d.%d.%d" % (numeric >> 24, (numeric >> 16) & 0xFF, (numeric >> 8) & 0xFF, numeric & 0xFF)
+        router_id = '%d.%d.%d.%d' % (numeric >> 24, (numeric >> 16) & 0xFF, (numeric >> 8) & 0xFF, numeric & 0xFF)
         return cls(Version(version), ASN(asn), HoldTime(hold_time), RouterID(router_id), Capabilities.unpack(data[9:]))

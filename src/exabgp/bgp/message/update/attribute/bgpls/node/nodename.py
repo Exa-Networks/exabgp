@@ -28,8 +28,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 class NodeName(BaseLS):
     TLV = 1026
     MERGE = False
-    REPR = "Node Name"
-    JSON = "node-name"
+    REPR = 'Node Name'
+    JSON = 'node-name'
 
     def __init__(self, nodename):
         BaseLS.__init__(self, nodename)
@@ -37,7 +37,7 @@ class NodeName(BaseLS):
     @classmethod
     def unpack(cls, data):
         if len(data) > 255:
-            raise Notify(3, 5, "Node Name TLV length too large")
+            raise Notify(3, 5, 'Node Name TLV length too large')
 
         return cls(data.decode('ascii'))
 

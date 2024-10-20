@@ -13,8 +13,8 @@ Copyright (c) 2020 Exa Networks. All rights reserved.
 # is used to generate code from the AST created
 
 from ast import Module, Import, FunctionDef, arguments, arg, alias
-from ast import Load, Call, Return, Name, Attribute, Constant #, Param
-from ast import If, Compare, Gt, Lt, And #, Add, GtE, LtE, Or
+from ast import Load, Call, Return, Name, Attribute, Constant  # , Param
+from ast import If, Compare, Gt, Lt, And  # , Add, GtE, LtE, Or
 from ast import BoolOp, UnaryOp, Not, USub
 
 # import astunparse

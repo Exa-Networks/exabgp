@@ -42,7 +42,7 @@ class EVPN(NLRI):
         self._packed = b''
 
     def __hash__(self):
-        return hash("%s:%s:%s:%s" % (self.afi, self.safi, self.CODE, self._packed))
+        return hash('%s:%s:%s:%s' % (self.afi, self.safi, self.CODE, self._packed))
 
     def __len__(self):
         return len(self._packed) + 2
@@ -51,7 +51,7 @@ class EVPN(NLRI):
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self):
-        return "evpn:%s:%s" % (
+        return 'evpn:%s:%s' % (
             self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower(),
             '0x' + ''.join('%02x' % _ for _ in self._packed),
         )
@@ -65,7 +65,7 @@ class EVPN(NLRI):
         return ''
 
     def _prefix(self):
-        return "evpn:%s:" % (self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower())
+        return 'evpn:%s:' % (self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower())
 
     def pack_nlri(self, negotiated=None):
         # XXX: addpath not supported yet

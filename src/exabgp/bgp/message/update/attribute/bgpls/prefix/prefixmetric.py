@@ -32,4 +32,4 @@ class PrefixMetric(BaseLS):
     @classmethod
     def unpack(cls, data):
         cls.check(data)
-        return cls(int(unpack("!L", data)[0]))
+        return cls(int(unpack('!L', data)[0]))

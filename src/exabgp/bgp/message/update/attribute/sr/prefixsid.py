@@ -70,12 +70,12 @@ class PrefixSid(Attribute):
         if label_index is not None:
             srgb = next((i for i in self.sr_attrs if i.TLV == 3), None)
             if srgb is not None:
-                return "[ {}, {} ]".format(str(label_index), str(srgb))
+                return '[ {}, {} ]'.format(str(label_index), str(srgb))
             else:
-                return "[ {} ]".format(str(label_index))
+                return '[ {} ]'.format(str(label_index))
 
         # if not, we try to decode path attribute for SRv6
-        return "[ " + ", ".join([str(attr) for attr in self.sr_attrs]) + " ]"
+        return '[ ' + ', '.join([str(attr) for attr in self.sr_attrs]) + ' ]'
 
     def pack(self, negotiated=None):
         return self._packed
@@ -89,7 +89,7 @@ class GenericSRId(object):
         self.code = code
 
     def __repr__(self):
-        return "Attribute with code [ %s ] not implemented" % (self.code)
+        return 'Attribute with code [ %s ] not implemented' % (self.code)
 
     @classmethod
     def unpack(cls, scode, data):

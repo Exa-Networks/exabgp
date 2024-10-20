@@ -178,20 +178,20 @@ class Attribute(object):
             r = []
             v = int(self)
             if v & 0x10:
-                r.append("EXTENDED_LENGTH")
+                r.append('EXTENDED_LENGTH')
                 v -= 0x10
             if v & 0x20:
-                r.append("PARTIAL")
+                r.append('PARTIAL')
                 v -= 0x20
             if v & 0x40:
-                r.append("TRANSITIVE")
+                r.append('TRANSITIVE')
                 v -= 0x40
             if v & 0x80:
-                r.append("OPTIONAL")
+                r.append('OPTIONAL')
                 v -= 0x80
             if v:
-                r.append("UNKNOWN %s" % hex(v))
-            return " ".join(r)
+                r.append('UNKNOWN %s' % hex(v))
+            return ' '.join(r)
 
         def matches(self, value):
             return self | 0x10 == value | 0x10

@@ -29,8 +29,8 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 @EVPN.register
 class Multicast(EVPN):
     CODE = 3
-    NAME = "Inclusive Multicast Ethernet Tag"
-    SHORT_NAME = "Multicast"
+    NAME = 'Inclusive Multicast Ethernet Tag'
+    SHORT_NAME = 'Multicast'
 
     def __init__(self, rd, etag, ip, packed=None, nexthop=None, action=None, addpath=None):
         EVPN.__init__(self, action, addpath)
@@ -44,7 +44,7 @@ class Multicast(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s:%s" % (
+        return '%s:%s:%s:%s' % (
             self._prefix(),
             self.rd._str(),
             self.etag,
@@ -71,7 +71,7 @@ class Multicast(EVPN):
         etag = EthernetTag.unpack(data[8:12])
         iplen = data[12]
         if iplen not in (4 * 8, 16 * 8):
-            raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
+            raise Exception('IP len is %d, but EVPN route currently support only IPv4' % iplen)
         ip = IP.unpack(data[13 : 13 + iplen // 8])
         return cls(rd, etag, ip, data)
 

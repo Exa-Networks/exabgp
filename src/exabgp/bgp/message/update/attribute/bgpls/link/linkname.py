@@ -31,5 +31,5 @@ class LinkName(BaseLS):
     @classmethod
     def unpack(cls, data):
         if len(data) > 255:
-            raise Notify(3, 5, "Link Name TLV length too large")
+            raise Notify(3, 5, 'Link Name TLV length too large')
         return cls(data)

@@ -56,14 +56,15 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
                 # log something about this drop?
                 continue
 
-            routes.append({
-                "prefix": str(change.nlri.cidr.prefix()),
-                "family": str(change.nlri.family()).strip("()").replace(",", "")
-            })
+            routes.append(
+                {
+                    'prefix': str(change.nlri.cidr.prefix()),
+                    'family': str(change.nlri.family()).strip('()').replace(',', ''),
+                }
+            )
 
             for line in json.dumps(jason).split('\n'):
                 reactor.processes.write(service, line)
-
 
     def callback():
         lines_per_yield = getenv().api.chunk
@@ -85,8 +86,22 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
     return callback
 
 
-@Command.register('show adj-rib out', False, ['extensive',], True)
-@Command.register('show adj-rib in', False, ['extensive',], True)
+@Command.register(
+    'show adj-rib out',
+    False,
+    [
+        'extensive',
+    ],
+    True,
+)
+@Command.register(
+    'show adj-rib in',
+    False,
+    [
+        'extensive',
+    ],
+    True,
+)
 def show_adj_rib(self, reactor, service, line, use_json):
     words = line.split()
     extensive = line.endswith(' extensive')
@@ -134,7 +149,7 @@ def show_adj_rib(self, reactor, service, line, use_json):
 def flush_adj_rib_out(self, reactor, service, line, use_json):
     def callback(self, peers):
         self.log_message(
-            "flushing adjb-rib out for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers'
+            'flushing adjb-rib out for %s' % ', '.join(peers if peers else []) if peers is not None else 'all peers'
         )
         for peer_name in peers:
             reactor.neighbor_rib_resend(peer_name)
@@ -165,7 +180,7 @@ def flush_adj_rib_out(self, reactor, service, line, use_json):
 def clear_adj_rib(self, reactor, service, line, use_json):
     def callback(self, peers, direction):
         self.log_message(
-            "clearing adjb-rib-%s for %s"
+            'clearing adjb-rib-%s for %s'
             % (direction, ', '.join(peers if peers else []) if peers is not None else 'all peers')
         )
         for peer_name in peers:

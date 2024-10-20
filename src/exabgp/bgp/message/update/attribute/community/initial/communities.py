@@ -44,13 +44,13 @@ class Communities(Attribute):
     def __repr__(self):
         lc = len(self.communities)
         if lc > 1:
-            return "[ %s ]" % " ".join(repr(community) for community in sorted(self.communities))
+            return '[ %s ]' % ' '.join(repr(community) for community in sorted(self.communities))
         if lc == 1:
             return repr(self.communities[0])
-        return ""
+        return ''
 
     def json(self):
-        return "[ %s ]" % ", ".join(community.json() for community in self.communities)
+        return '[ %s ]' % ', '.join(community.json() for community in self.communities)
 
     @staticmethod
     def unpack(data, direction, negotiated):

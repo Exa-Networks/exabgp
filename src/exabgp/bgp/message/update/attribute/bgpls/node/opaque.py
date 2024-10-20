@@ -29,15 +29,15 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register()
 class NodeOpaque(BaseLS):
     TLV = 1025
-    REPR = "Node Opaque attribute"
-    JSON = "opaque"
+    REPR = 'Node Opaque attribute'
+    JSON = 'opaque'
 
     def __init__(self, opaque):
         BaseLS.__init__(self, opaque)
 
     @classmethod
     def unpack(cls, data):
-        return cls(unpack("!%ds" % len(data), data)[0])
+        return cls(unpack('!%ds' % len(data), data)[0])
 
     def json(self, compact=None):
         return '"{}": {}'.format(self.JSON, json.dumps(self.content))

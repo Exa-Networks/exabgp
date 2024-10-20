@@ -28,7 +28,7 @@ class NLRI(Family):
         self.action = action
 
     def __hash__(self):
-        return hash("%s:%s:%s" % (self.afi, self.safi, self.pack_nlri()))
+        return hash('%s:%s:%s' % (self.afi, self.safi, self.pack_nlri()))
 
     def __eq__(self, other):
         return self.index() == other.index()

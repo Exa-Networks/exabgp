@@ -25,7 +25,7 @@ class KeepAlive(Message):
         return self._message(b'')
 
     def __str__(self):
-        return "KEEPALIVE"
+        return 'KEEPALIVE'
 
     @classmethod
     def unpack_message(cls, data, direction, negotiated):  # pylint: disable=W0613

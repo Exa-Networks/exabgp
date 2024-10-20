@@ -30,4 +30,4 @@ class PrefixOpaque(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        return cls(unpack("!%ds" % len(data), data)[0])
+        return cls(unpack('!%ds' % len(data), data)[0])

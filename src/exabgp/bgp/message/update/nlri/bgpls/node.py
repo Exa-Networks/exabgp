@@ -35,8 +35,8 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 @BGPLS.register
 class NODE(BGPLS):
     CODE = 1
-    NAME = "bgpls-node"
-    SHORT_NAME = "Node"
+    NAME = 'bgpls-node'
+    SHORT_NAME = 'Node'
 
     def __init__(self, domain, proto_id, node_ids, packed=None, nexthop=None, action=None, route_d=None, addpath=None):
         BGPLS.__init__(self, action, addpath)
@@ -83,7 +83,7 @@ class NODE(BGPLS):
             node_id, left = NodeDescriptor.unpack(values, proto_id)
             node_ids.append(node_id)
             if left == values:
-                raise RuntimeError("sub-calls should consume data")
+                raise RuntimeError('sub-calls should consume data')
             values = left
 
         return cls(domain=domain, proto_id=proto_id, node_ids=node_ids, route_d=rd, packed=data)

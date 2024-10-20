@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
 
-
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.version import version
 
@@ -19,7 +18,7 @@ class Software(Capability):
     SOFTWARE_VERSION_MAX_LEN = 64
 
     def __init__(self):
-        software_version = f"ExaBGP/{version}"
+        software_version = f'ExaBGP/{version}'
         if len(software_version) > self.SOFTWARE_VERSION_MAX_LEN:
             software_version = software_version[: self.SOFTWARE_VERSION_MAX_LEN - 3] + '...'
         self.software_version = software_version

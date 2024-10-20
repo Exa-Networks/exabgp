@@ -5,6 +5,7 @@ srv6/sidinformation.py
 Created by Ryoga Saito 2022-02-24
 Copyright (c) 2022 Ryoga Saito. All rights reserved.
 """
+
 from struct import pack, unpack
 
 from exabgp.protocol.ip import IPv6
@@ -59,13 +60,13 @@ class Srv6SidInformation:
     @classmethod
     def unpack(cls, data, length):
         sid = IPv6.unpack(data[1:17])
-        behavior = unpack("!H", data[18:20])[0]
+        behavior = unpack('!H', data[18:20])[0]
         subsubtlvs = []
 
         data = data[21:]
         while data:
             code = data[0]
-            length = unpack("!H", data[1:3])[0]
+            length = unpack('!H', data[1:3])[0]
             if code in cls.registered_subsubtlvs:
                 subsubtlv = cls.registered_subsubtlvs[code].unpack(data[3 : length + 3], length)
             else:
@@ -76,32 +77,32 @@ class Srv6SidInformation:
         return cls(sid=sid, behavior=behavior, subsubtlvs=subsubtlvs)
 
     def pack(self):
-        subsubtlvs_packed = b"".join([_.pack() for _ in self.subsubtlvs])
+        subsubtlvs_packed = b''.join([_.pack() for _ in self.subsubtlvs])
         length = len(subsubtlvs_packed) + 21
         reserved, flags = 0, 0
 
         return (
-            pack("!B", self.TLV)
-            + pack("!H", length)
-            + pack("!B", reserved)
+            pack('!B', self.TLV)
+            + pack('!H', length)
+            + pack('!B', reserved)
             + self.sid.pack()
-            + pack("!B", flags)
-            + pack("!H", self.behavior)
-            + pack("!B", reserved)
+            + pack('!B', flags)
+            + pack('!H', self.behavior)
+            + pack('!B', reserved)
             + subsubtlvs_packed
         )
 
     def __str__(self):
-        s = "sid-information [ sid:%s flags:0 endpoint_behavior:0x%x " % (str(self.sid), self.behavior)
+        s = 'sid-information [ sid:%s flags:0 endpoint_behavior:0x%x ' % (str(self.sid), self.behavior)
         if len(self.subsubtlvs) != 0:
-            s += " [ " + ", ".join([str(subsubtlv) for subsubtlv in self.subsubtlvs]) + " ]"
-        s + " ]"
+            s += ' [ ' + ', '.join([str(subsubtlv) for subsubtlv in self.subsubtlvs]) + ' ]'
+        s + ' ]'
         return s
 
     def json(self, compact=None):
         s = '{ "sid": "%s", "flags": 0, "endpoint_behavior": %d'
-        content = ", ".join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
+        content = ', '.join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
         if content:
-            s += ", %s" % content
-        s += " }"
+            s += ', %s' % content
+        s += ' }'
         return s

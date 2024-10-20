@@ -24,30 +24,30 @@ from exabgp.bgp.message.notification import Notify
 
 class SET(list):
     ID = 0x01
-    NAME = "as-set"
-    HEAD = "["
-    TAIL = "]"
+    NAME = 'as-set'
+    HEAD = '['
+    TAIL = ']'
 
 
 class SEQUENCE(list):
     ID = 0x02
-    NAME = "as-sequence"
-    HEAD = "("
-    TAIL = ")"
+    NAME = 'as-sequence'
+    HEAD = '('
+    TAIL = ')'
 
 
 class CONFED_SEQUENCE(list):
     ID = 0x03
-    NAME = "as-sequence"
-    HEAD = "{("
-    TAIL = ")}"
+    NAME = 'as-sequence'
+    HEAD = '{('
+    TAIL = ')}'
 
 
 class CONFED_SET(list):
     ID = 0x04
-    NAME = "as-sequence"
-    HEAD = "{["
-    TAIL = "]}"
+    NAME = 'as-sequence'
+    HEAD = '{['
+    TAIL = ']}'
 
     # def __getslice__(self, i, j):
     #     return CONFED_SET(list.__getslice__(self, i, j))
@@ -93,7 +93,7 @@ class ASPath(Attribute):
     def _segment(cls, seg_type, values, asn4):
         length = len(values)
         if length == 0:
-            return b""
+            return b''
         if length > 255:
             return cls._segment(seg_type, values[:255], asn4) + cls._segment(seg_type, values[255:], asn4)
         return bytes([seg_type, length]) + b''.join(v.pack(asn4) for v in values)
@@ -144,9 +144,9 @@ class ASPath(Attribute):
     def string(self):
         parts = []
         for content in self.aspath:
-            part = "%s %s %s" % (content.HEAD, " ".join((str(_) for _ in content)), content.TAIL)
+            part = '%s %s %s' % (content.HEAD, ' '.join((str(_) for _ in content)), content.TAIL)
             parts.append(part)
-        return " ".join(parts)
+        return ' '.join(parts)
 
     def json(self):
         jason = {}

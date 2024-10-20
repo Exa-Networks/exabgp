@@ -19,8 +19,8 @@ from exabgp.protocol.ip import IP
 @MVPN.register
 class SourceAD(MVPN):
     CODE = 5
-    NAME = "Source Active A-D Route"
-    SHORT_NAME = "SourceAD"
+    NAME = 'Source Active A-D Route'
+    SHORT_NAME = 'SourceAD'
 
     def __init__(self, rd, afi, source, group, packed=None, action=None, addpath=None):
         MVPN.__init__(self, afi=afi, action=action, addpath=addpath)
@@ -67,7 +67,7 @@ class SourceAD(MVPN):
     def unpack(cls, data, afi):
         datalen = len(data)
         if datalen not in (18, 42):  # IPv4 or IPv6
-            raise Notify(3, 5, f"Unsupported Source Active A-D route length ({datalen} bytes).")
+            raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')
         cursor = 0
         rd = RouteDistinguisher.unpack(data[cursor:8])
         cursor += 8
@@ -77,7 +77,7 @@ class SourceAD(MVPN):
             raise Notify(
                 3,
                 5,
-                f"Unsupported Source Active A-D Route Multicast Source IP length ({sourceiplen*8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).",
+                f'Unsupported Source Active A-D Route Multicast Source IP length ({sourceiplen*8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
         sourceip = IP.unpack(data[cursor : cursor + sourceiplen])
         cursor += sourceiplen
@@ -87,7 +87,7 @@ class SourceAD(MVPN):
             raise Notify(
                 3,
                 5,
-                f"Unsupported Source Active A-D Route Multicast Group IP length ({groupiplen*8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).",
+                f'Unsupported Source Active A-D Route Multicast Group IP length ({groupiplen*8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
         groupip = IP.unpack(data[cursor : cursor + groupiplen])
 

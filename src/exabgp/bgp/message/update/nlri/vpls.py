@@ -85,7 +85,7 @@ class VPLS(NLRI):
         return '{ %s }' % (content)
 
     def extensive(self):
-        return "vpls%s endpoint %s base %s offset %s size %s %s" % (
+        return 'vpls%s endpoint %s base %s offset %s size %s %s' % (
             self.rd,
             self.endpoint,
             self.base,

@@ -79,7 +79,7 @@ class Model(object):
             if not site:
                 raise RuntimeError('unimplemented namespace case')
 
-            url = f"{site}/{yang}"
+            url = f'{site}/{yang}'
         else:
             raise RuntimeError('unimplemented yang-library case')
 

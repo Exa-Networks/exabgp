@@ -50,7 +50,7 @@ def create(afi, interface=None):
                 if not hasattr(socket, 'SO_BINDTODEVICE'):
                     socket.SO_BINDTODEVICE = 25
 
-                io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, str(interface + '\0').encode("utf-8"))
+                io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, str(interface + '\0').encode('utf-8'))
             except socket.error:
                 raise NotConnected(f'Could not bind to device {interface}')
     except socket.error:
@@ -141,7 +141,7 @@ def MD5(io, ip, port, md5, md5_base64):
                     try:
                         md5_bytes = base64.b64decode(md5)
                     except TypeError:
-                        raise MD5Error("Failed to decode base 64 encoded PSK")
+                        raise MD5Error('Failed to decode base 64 encoded PSK')
                 elif md5_base64 is None and not re.match('.*[^a-f0-9].*', md5):  # auto
                     options = [md5 + '==', md5 + '=', md5]
                     for md5 in options:

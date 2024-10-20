@@ -106,7 +106,7 @@ class MPRNLRI(Attribute, Family):
         # return len(self.pack(False))
 
     def __repr__(self):
-        return "MP_REACH_NLRI for %s %s with %d NLRI(s)" % (self.afi, self.safi, len(self.nlris))
+        return 'MP_REACH_NLRI for %s %s with %d NLRI(s)' % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
@@ -195,7 +195,7 @@ class MPRNLRI(Attribute, Family):
                     nlris.append(nlri)
 
             if left == data:
-                raise RuntimeError("sub-calls should consume data")
+                raise RuntimeError('sub-calls should consume data')
 
             data = left
         return cls(afi, safi, nlris)

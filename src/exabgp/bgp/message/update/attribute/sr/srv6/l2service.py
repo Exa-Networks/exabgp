@@ -5,6 +5,7 @@ srv6/l2service.py
 Created by Ryoga Saito 2022-02-24
 Copyright (c) 2022 Ryoga Saito. All rights reserved.
 """
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
@@ -52,7 +53,7 @@ class Srv6L2Service(object):
         data = data[1:]
         while data:
             code = data[0]
-            length = unpack("!H", data[1:3])[0]
+            length = unpack('!H', data[1:3])[0]
             if code in cls.registered_subtlvs:
                 subtlv = cls.registered_subtlvs[code].unpack(data[3 : length + 3], length)
             else:
@@ -63,15 +64,15 @@ class Srv6L2Service(object):
         return cls(subtlvs=subtlvs)
 
     def pack(self):
-        subtlvs_packed = b"".join([_.pack() for _ in self.subtlvs])
+        subtlvs_packed = b''.join([_.pack() for _ in self.subtlvs])
         length = len(subtlvs_packed) + 1
         reserved = 0
 
-        return pack("!B", self.TLV) + pack("!H", length) + pack("!B", reserved) + subtlvs_packed
+        return pack('!B', self.TLV) + pack('!H', length) + pack('!B', reserved) + subtlvs_packed
 
     def __str__(self):
-        return "l2-service [ " + ", ".join([str(subtlv) for subtlv in self.subtlvs]) + " ]"
+        return 'l2-service [ ' + ', '.join([str(subtlv) for subtlv in self.subtlvs]) + ' ]'
 
     def json(self, compact=None):
-        content = "[ " + ", ".join(subtlv.json() for subtlv in self.subtlvs) + " ]"
+        content = '[ ' + ', '.join(subtlv.json() for subtlv in self.subtlvs) + ' ]'
         return '"l2-service": %s' % content

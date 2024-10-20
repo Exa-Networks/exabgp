@@ -49,4 +49,4 @@ class IgpMetric(BaseLS):
             # ISIS wide metrics
             return cls(unpack('!L', bytes([0]) + data)[0])
 
-        raise Notify(3, 5, "Incorrect IGP Metric Size")
+        raise Notify(3, 5, 'Incorrect IGP Metric Size')

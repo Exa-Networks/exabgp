@@ -101,7 +101,7 @@ class NodeDescriptor(object):
                 return cls(node_id, node_type, psn, dr_id, packed), remaining
 
         raise Exception(
-            "unknown node descriptor sub-tlv ({}, {})".format(
+            'unknown node descriptor sub-tlv ({}, {})'.format(
                 f'node-type: {node_type}',
                 f'igp: {igp}',
             )

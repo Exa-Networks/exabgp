@@ -33,8 +33,8 @@ from exabgp.bgp.message.notification import Notify
 @EVPN.register
 class EthernetSegment(EVPN):
     CODE = 4
-    NAME = "Ethernet Segment"
-    SHORT_NAME = "Segment"
+    NAME = 'Ethernet Segment'
+    SHORT_NAME = 'Segment'
 
     def __init__(self, rd, esi, ip, packed=None, nexthop=None, action=None, addpath=None):
         EVPN.__init__(self, action, addpath)
@@ -57,7 +57,7 @@ class EthernetSegment(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s:%s" % (self._prefix(), self.rd._str(), self.esi, self.ip if self.ip else "")
+        return '%s:%s:%s:%s' % (self._prefix(), self.rd._str(), self.esi, self.ip if self.ip else '')
 
     def __hash__(self):
         # esi and label MUST *NOT* be part of the hash
@@ -91,7 +91,7 @@ class EthernetSegment(EVPN):
             raise Notify(
                 3,
                 5,
-                "IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits" % iplen,
+                'IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits' % iplen,
             )
 
         ip = IP.unpack(data[19 : 19 + (iplen // 8)])

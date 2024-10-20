@@ -109,7 +109,7 @@ def check_generation(neighbors):
             try:
                 log.debug('')  # new line
 
-                pack1s = pack1[19:] if pack1.startswith(b'\xFF' * 16) else pack1
+                pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
                 update = Update.unpack_message(pack1s, Direction.IN, negotiated)
 
                 change2 = Change(update.nlris[0], update.attributes)
@@ -205,7 +205,7 @@ def check_message(neighbor, message):
     if kind == 3:
         return check_notification(raw)
 
-    print("unknown type %d", kind)
+    print('unknown type %d', kind)
     return False
 
 
@@ -228,7 +228,7 @@ def display_message(neighbor, message):
     if kind == 2:
         return display_update(neighbor, raw)
 
-    print("unknown type %d", kind)
+    print('unknown type %d', kind)
     return False
 
 
@@ -301,8 +301,8 @@ def check_open(neighbor, raw):
         print(o)
     except Exception:
         print()
-        print("we could not decode this open message")
-        print("here is the traceback to help to figure out why")
+        print('we could not decode this open message')
+        print('here is the traceback to help to figure out why')
         print()
         raise
 

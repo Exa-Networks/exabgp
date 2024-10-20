@@ -128,7 +128,7 @@ class NetLinkRoute(object):
         while data:
             length, ntype, flags, seq, pid = unpack(cls.Header.PACK, data[: cls.Header.LEN])
             if len(data) < length:
-                raise NetLinkError("Buffer underrun")
+                raise NetLinkError('Buffer underrun')
             yield cls.format(ntype, flags, seq, pid, data[cls.Header.LEN : length])
             data = data[length:]
 
@@ -146,7 +146,7 @@ class NetLinkRoute(object):
                 if seq != sequence:
                     if cls._IGNORE_SEQ_FAULTS:
                         continue
-                    raise NetLinkError("netlink seq mismatch")
+                    raise NetLinkError('netlink seq mismatch')
                 if mtype == NetLinkRoute.Command.NLMSG_DONE:
                     raise StopIteration()
                 elif dtype in cls.errors:
@@ -186,7 +186,7 @@ class Attributes(object):
                 atype,
             ) = unpack(cls.Header.PACK, data[: cls.Header.LEN])
             if len(data) < length:
-                raise AttributesError("Buffer underrun %d < %d" % (len(data), length))
+                raise AttributesError('Buffer underrun %d < %d' % (len(data), length))
             payload = data[cls.Header.LEN : length]
             yield atype, payload
             data = data[int((length + 3) / 4) * 4 :]
@@ -590,7 +590,7 @@ class Network(_Message):
 
 class TC(_Message):
     class Header(object):
-        PACK = "BxxxiIII"
+        PACK = 'BxxxiIII'
         LEN = calcsize(PACK)
 
     class Command(object):
@@ -650,10 +650,10 @@ class TC(_Message):
 
 class Firewall(_Message):
     class Header(object):
-        PACK = "BxxxI"
+        PACK = 'BxxxI'
         LEN = calcsize(PACK)
 
     class Packet(object):
         class Header(object):
-            PACK = "IIIIIIIHHHHII"
+            PACK = 'IIIIIIIHHHHII'
             LEN = calcsize(PACK)

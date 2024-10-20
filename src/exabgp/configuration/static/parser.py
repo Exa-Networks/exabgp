@@ -89,7 +89,7 @@ def next_hop(tokeniser, afi=None):
     else:
         ip = IP.create(value)
         if ip.afi == AFI.ipv4 and afi == AFI.ipv6:
-            ip = IP.create("::ffff:%s" % ip)
+            ip = IP.create('::ffff:%s' % ip)
         return ip, NextHop(ip.top())
 
 

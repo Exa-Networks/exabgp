@@ -91,6 +91,7 @@ def destination(tokeniser):
         ip, netmask, offset = data.split('/')
         yield Flow6Destination(IP.pton(ip), int(netmask), int(offset))
 
+
 # Expressions
 
 
@@ -165,11 +166,11 @@ def _generic_condition(tokeniser, klass):
             yield klass(AND | operator, klass.converter(value))
             if data:
                 if data[0] != '&':
-                    raise ValueError("Unknown binary operator %s" % data[0])
+                    raise ValueError('Unknown binary operator %s' % data[0])
                 AND = BinaryOperator.AND
                 data = data[1:]
                 if not data:
-                    raise ValueError("Can not finish an expresion on an &")
+                    raise ValueError('Can not finish an expresion on an &')
             else:
                 AND = BinaryOperator.NOP
                 data = tokeniser()
@@ -180,7 +181,7 @@ def _generic_condition(tokeniser, klass):
             yield klass(operator | AND, klass.converter(value))
             if data:
                 if data[0] != '&':
-                    raise ValueError("Unknown binary operator %s" % data[0])
+                    raise ValueError('Unknown binary operator %s' % data[0])
                 AND = BinaryOperator.AND
                 data = data[1:]
 
@@ -273,10 +274,10 @@ def rate_limit(tokeniser):
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
     speed = int(tokeniser())
     if speed < 9600 and speed != 0:
-        log.warning("rate-limiting flow under 9600 bytes per seconds may not work", 'configuration')
+        log.warning('rate-limiting flow under 9600 bytes per seconds may not work', 'configuration')
     if speed > 1000000000000:
         speed = 1000000000000
-        log.warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % speed, 'configuration')
+        log.warning('rate-limiting changed for 1 000 000 000 000 bytes from %s' % speed, 'configuration')
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 

@@ -122,19 +122,19 @@ class Transcoder(object):
             data = data[1:]
 
             if shutdown_length == 0:
-                message.data = "empty Shutdown Communication."
+                message.data = 'empty Shutdown Communication.'
                 # move offset past length field
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             if len(data) < shutdown_length:
-                message.data = "invalid Shutdown Communication (buffer underrun) length : %i [%s]" % (
+                message.data = 'invalid Shutdown Communication (buffer underrun) length : %i [%s]' % (
                     shutdown_length,
                     hexstring(data),
                 )
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             if shutdown_length > 128:
-                message.data = "invalid Shutdown Communication (too large) length : %i [%s]" % (
+                message.data = 'invalid Shutdown Communication (too large) length : %i [%s]' % (
                     shutdown_length,
                     hexstring(data),
                 )
@@ -145,7 +145,7 @@ class Transcoder(object):
                     '\r', ' '
                 ).replace('\n', ' ')
             except UnicodeDecodeError:
-                message.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (
+                message.data = 'invalid Shutdown Communication (invalid UTF-8) length : %i [%s]' % (
                     shutdown_length,
                     hexstring(data),
                 )
@@ -153,7 +153,7 @@ class Transcoder(object):
 
             trailer = data[shutdown_length:]
             if trailer:
-                message.data += ", trailing data: " + hexstring(trailer)
+                message.data += ', trailing data: ' + hexstring(trailer)
 
             return self.encoder.notification(neighbor, direction, message, None, header, body)
 

@@ -56,8 +56,8 @@ from exabgp.logger import log
 @BGPLS.register
 class LINK(BGPLS):
     CODE = 2
-    NAME = "bgpls-link"
-    SHORT_NAME = "Link"
+    NAME = 'bgpls-link'
+    SHORT_NAME = 'Link'
 
     def __init__(
         self,
@@ -117,7 +117,7 @@ class LINK(BGPLS):
                     node, left = NodeDescriptor.unpack(value, proto_id)
                     local_node.append(node)
                     if left == value:
-                        raise RuntimeError("sub-calls should consume data")
+                        raise RuntimeError('sub-calls should consume data')
                     value = left
                 continue
 
@@ -128,7 +128,7 @@ class LINK(BGPLS):
                     node, left = NodeDescriptor.unpack(value, proto_id)
                     remote_node.append(node)
                     if left == value:
-                        raise RuntimeError("sub-calls should consume data")
+                        raise RuntimeError('sub-calls should consume data')
                     value = left
                 continue
 
@@ -215,6 +215,6 @@ class LINK(BGPLS):
         # # content is ending without a , here in purpose
 
         if self.route_d:
-            content += ", { %s }" % self.route_d.json()
+            content += ', { %s }' % self.route_d.json()
 
         return '{ %s }' % content

@@ -65,24 +65,25 @@ class JSON(object):
         body = '"body": "%s", ' % hexstring(body) if body else ''
         mtype = '"type": "%s", ' % message_type if message_type else 'default'
 
-        return (
-            '{ '
-            '"exabgp": "%s", '
-            '"time": %s, '
-            '%s%s%s%s%s%s%s%s '
-            '}' % (self.version, self.time(time.time()), peer, pid, ppid, counter, mtype, header, body, content)
+        return '{ ' '"exabgp": "%s", ' '"time": %s, ' '%s%s%s%s%s%s%s%s ' '}' % (
+            self.version,
+            self.time(time.time()),
+            peer,
+            pid,
+            ppid,
+            counter,
+            mtype,
+            header,
+            body,
+            content,
         )
 
-    __neighbor = '''\
+    __neighbor = """\
 "neighbor": {
     "address": { "local": "%s", "peer": "%s" },
     "asn": { "local": %s, "peer": %s }
     %s%s%s%s
-}'''.replace(
-        '\t', ''
-    ).replace(
-        '\n', ' '
-    )
+}""".replace('\t', '').replace('\n', ' ')
 
     def _neighbor(self, neighbor, direction, content):
         return self.__neighbor % (
@@ -97,16 +98,16 @@ class JSON(object):
         )
 
     def _kv(self, extra):
-        return ", ".join('"%s": %s' % (k, self._string(v)) for (k, v) in extra.items())
+        return ', '.join('"%s": %s' % (k, self._string(v)) for (k, v) in extra.items())
 
     def _json_kv(self, extra):
-        return ", ".join('"%s": %s' % (k, v.json()) for (k, v) in extra.items())
+        return ', '.join('"%s": %s' % (k, v.json()) for (k, v) in extra.items())
 
     def _json_list(self, extra):
-        return ", ".join('%s' % (v.json()) for v in extra.items())
+        return ', '.join('%s' % (v.json()) for v in extra.items())
 
     def _minimalkv(self, extra):
-        return ", ".join('"%s": %s' % (k, self._string(v)) for (k, v) in extra.items() if v)
+        return ', '.join('"%s": %s' % (k, self._string(v)) for (k, v) in extra.items() if v)
 
     def up(self, neighbor):
         return self._header(

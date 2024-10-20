@@ -13,11 +13,11 @@ class GenericSrv6ServiceSubTlv:
         self.packed = packed
 
     def __repr__(self):
-        return "SRv6 Service Sub-TLV type %d not implemented" % self.code
+        return 'SRv6 Service Sub-TLV type %d not implemented' % self.code
 
     def json(self, compact=None):
         # TODO:
-        return ""
+        return ''
 
     def pack(self):
         return self.packed
@@ -29,11 +29,11 @@ class GenericSrv6ServiceDataSubSubTlv:
         self.packed = packed
 
     def __repr__(self):
-        return "SRv6 Service Data Sub-Sub-TLV type %d not implemented" % self.code
+        return 'SRv6 Service Data Sub-Sub-TLV type %d not implemented' % self.code
 
     def json(self, compact=None):
         # TODO:
-        return ""
+        return ''
 
     def pack(self):
         return self.packed

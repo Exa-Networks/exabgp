@@ -51,8 +51,8 @@ from exabgp.bgp.message.notification import Notify
 @EVPN.register
 class Prefix(EVPN):
     CODE = 5
-    NAME = "IP Prefix Advertisement"
-    SHORT_NAME = "PrfxAdv"
+    NAME = 'IP Prefix Advertisement'
+    SHORT_NAME = 'PrfxAdv'
 
     def __init__(self, rd, esi, etag, label, ip, iplen, gwip, packed=None, nexthop=None, action=None, addpath=None):
         """
@@ -92,20 +92,20 @@ class Prefix(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s:%s:%s%s:%s:%s" % (
+        return '%s:%s:%s:%s:%s%s:%s:%s' % (
             self._prefix(),
             self.rd._str(),
             self.esi,
             self.etag,
             self.ip,
-            "/%d" % self.iplen,
+            '/%d' % self.iplen,
             self.gwip,
             self.label,
         )
 
     def __hash__(self):
         # esi, and label, gwip must *not* be part of the hash
-        return hash("%s:%s:%s:%s" % (self.rd, self.etag, self.ip, self.iplen))
+        return hash('%s:%s:%s:%s' % (self.rd, self.etag, self.ip, self.iplen))
 
     def _pack(self, packed=None):
         if self._packed:
@@ -159,7 +159,7 @@ class Prefix(EVPN):
             raise Notify(
                 3,
                 5,
-                "Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6(34 or 58)"
+                'Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6(34 or 58)'
                 % datalen,
             )
 

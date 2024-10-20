@@ -44,8 +44,8 @@ class Graceful(Capability, dict):
 
     def __str__(self):
         families = [(str(afi), str(safi), hex(self[(afi, safi)])) for (afi, safi) in self.keys()]
-        sfamilies = ' '.join(["%s/%s=%s" % (afi, safi, family) for (afi, safi, family) in families])
-        return "Graceful Restart Flags %s Time %d %s" % (hex(self.restart_flag), self.restart_time, sfamilies)
+        sfamilies = ' '.join(['%s/%s=%s' % (afi, safi, family) for (afi, safi, family) in families])
+        return 'Graceful Restart Flags %s Time %d %s' % (hex(self.restart_flag), self.restart_time, sfamilies)
 
     def json(self):
         d = {

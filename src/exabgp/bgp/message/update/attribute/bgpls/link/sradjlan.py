@@ -47,7 +47,7 @@ class SrAdjacencyLan(FlagLS):
         self.sr_adj_lan_sids = []
 
     def __repr__(self):
-        return "sr-adj-lan-sids: {}".format(self.sr_adj_lan_sids)
+        return 'sr-adj-lan-sids: {}'.format(self.sr_adj_lan_sids)
 
     @classmethod
     def unpack(cls, data):

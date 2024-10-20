@@ -5,6 +5,7 @@ srv6/sidstructure.py
 Created by Ryoga Saito 2022-02-24
 Copyright (c) 2022 Ryoga Saito. All rights reserved.
 """
+
 import json
 from struct import pack
 
@@ -64,18 +65,18 @@ class Srv6SidStructure:
 
     def pack(self):
         return (
-            pack("!B", self.TLV)
-            + pack("!H", 6)
-            + pack("!B", self.loc_block_len)
-            + pack("!B", self.loc_node_len)
-            + pack("!B", self.func_len)
-            + pack("!B", self.arg_len)
-            + pack("!B", self.tpose_len)
-            + pack("!B", self.tpose_offset)
+            pack('!B', self.TLV)
+            + pack('!H', 6)
+            + pack('!B', self.loc_block_len)
+            + pack('!B', self.loc_node_len)
+            + pack('!B', self.func_len)
+            + pack('!B', self.arg_len)
+            + pack('!B', self.tpose_len)
+            + pack('!B', self.tpose_offset)
         )
 
     def __str__(self):
-        return "sid-structure [%d,%d,%d,%d,%d,%d]" % (
+        return 'sid-structure [%d,%d,%d,%d,%d,%d]' % (
             self.loc_block_len,
             self.loc_node_len,
             self.func_len,
@@ -86,12 +87,12 @@ class Srv6SidStructure:
 
     def json(self, compact=None):
         pairs = {
-            "locator-block-length": self.loc_block_len,
-            "locator-node-length": self.loc_node_len,
-            "function-length": self.func_len,
-            "argument-length": self.arg_len,
-            "transposition-length": self.tpose_len,
-            "transposition-offset": self.tpose_offset,
+            'locator-block-length': self.loc_block_len,
+            'locator-node-length': self.loc_node_len,
+            'function-length': self.func_len,
+            'argument-length': self.arg_len,
+            'transposition-length': self.tpose_len,
+            'transposition-offset': self.tpose_offset,
         }
 
         return '"structure": %s' % json.dumps(pairs)

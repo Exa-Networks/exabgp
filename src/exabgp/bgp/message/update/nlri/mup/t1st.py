@@ -44,8 +44,8 @@ from struct import pack
 class Type1SessionTransformedRoute(MUP):
     ARCHTYPE = 1
     CODE = 3
-    NAME = "Type1SessionTransformedRoute"
-    SHORT_NAME = "T1ST"
+    NAME = 'Type1SessionTransformedRoute'
+    SHORT_NAME = 'T1ST'
 
     def __init__(
         self,
@@ -93,19 +93,19 @@ class Type1SessionTransformedRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        s = "%s:%s:%s%s:%s:%s:%s%s" % (
+        s = '%s:%s:%s%s:%s:%s:%s%s' % (
             self._prefix(),
             self.rd._str(),
             self.prefix_ip,
-            "/%d" % self.prefix_ip_len,
+            '/%d' % self.prefix_ip_len,
             self.teid,
             self.qfi,
             self.endpoint_ip,
-            "/%d" % self.prefix_ip_len,
+            '/%d' % self.prefix_ip_len,
         )
 
         if self.source_ip_len != 0 and self.source_ip != b'':
-            s += ":%s/%d" % (self.source_ip, self.source_ip_len)
+            s += ':%s/%d' % (self.source_ip, self.source_ip_len)
 
         return s
 
@@ -182,7 +182,7 @@ class Type1SessionTransformedRoute(MUP):
         size = ip_offset
         prefix_ip = IP.unpack(ip)
         size += 9
-        teid = int.from_bytes(data[size : size + 4], "big")
+        teid = int.from_bytes(data[size : size + 4], 'big')
         size += 4
         qfi = data[size]
         size += 1

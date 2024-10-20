@@ -2,7 +2,6 @@
 
 """exabgp configuration validation"""
 
-
 import sys
 import argparse
 

@@ -57,10 +57,10 @@ class INET(NLRI):
         return Family.index(self) + addpath + self.cidr.pack_nlri()
 
     def prefix(self):
-        return "%s%s" % (self.cidr.prefix(), str(self.path_info))
+        return '%s%s' % (self.cidr.prefix(), str(self.path_info))
 
     def extensive(self):
-        return "%s%s" % (self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)
+        return '%s%s' % (self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)
 
     def _internal(self, announced=True):
         return [self.path_info.json()]
@@ -68,7 +68,7 @@ class INET(NLRI):
     # The announced feature is not used by ExaBGP, is it by BAGPIPE ?
 
     def json(self, announced=True, compact=False):
-        internal = ", ".join([_ for _ in self._internal(announced) if _])
+        internal = ', '.join([_ for _ in self._internal(announced) if _])
         if internal:
             return '{ "nlri": "%s", %s }' % (self.cidr.prefix(), internal)
         if compact:
@@ -94,7 +94,7 @@ class INET(NLRI):
 
         if addpath:
             if len(bgp) <= 4:
-                raise ValueError("Trying to extract path-information but we do not have enough data")
+                raise ValueError('Trying to extract path-information but we do not have enough data')
             nlri.path_info = PathInfo(bgp[:4])
             bgp = bgp[4:]
 

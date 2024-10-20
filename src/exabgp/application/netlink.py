@@ -37,7 +37,7 @@ def addresses():
         hwaddr = '<no addr>'
         if Address.Type.Attribute.IFLA_ADDRESS in ifi.attributes:
             hwaddr = ':'.join(x.encode('hex') for x in ifi.attributes[Address.Type.Attribute.IFLA_ADDRESS])
-        print("%d: %s %s" % (ifi.index, ifi.attributes[Address.Type.Attribute.IFLA_IFNAME][:-1], hwaddr))
+        print('%d: %s %s' % (ifi.index, ifi.attributes[Address.Type.Attribute.IFLA_IFNAME][:-1], hwaddr))
 
         for ifa in addrs.get(ifi.index, {}):
             address = ifa.attributes.get(Attributes.Type.IFA_ADDRESS)
