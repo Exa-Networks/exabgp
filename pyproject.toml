@@ -71,6 +71,14 @@ exabgp = 'exabgp.application.main:main'
 exabgp-cli = 'exabgp.application.cli:main'
 exabgp-healthcheck = 'exabgp.application.healthcheck:main'
 
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+
 [tool.black]
 line-length = 120
 target-version = [
