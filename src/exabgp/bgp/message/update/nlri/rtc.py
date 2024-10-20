@@ -53,7 +53,7 @@ class RTC(NLRI):
         return (4 + len(self.rt)) * 8 if self.rt else 1
 
     def __str__(self):
-        return "rtc %s:%s" % (self.origin, self.rt) if self.rt else "rtc wildcard"
+        return 'rtc %s:%s' % (self.origin, self.rt) if self.rt else 'rtc wildcard'
 
     def __repr__(self):
         return str(self)
@@ -68,8 +68,8 @@ class RTC(NLRI):
         # because in an RTC route these flags never appear.
         if self.rt:
             packedRT = self.rt.pack()
-            return pack("!BLB", len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]
-        return pack("!B", 0)
+            return pack('!BLB', len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]
+        return pack('!B', 0)
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
@@ -79,7 +79,7 @@ class RTC(NLRI):
             return cls(afi, safi, action, ASN(0), None), bgp[1:]
 
         if length < 8 * 4:
-            raise Exception("incorrect RT length: %d (should be >=32,<=96)" % length)
+            raise Exception('incorrect RT length: %d (should be >=32,<=96)' % length)
 
         # We are reseting the flags on the RouteTarget extended
         # community, because they do not make sense for an RTC route

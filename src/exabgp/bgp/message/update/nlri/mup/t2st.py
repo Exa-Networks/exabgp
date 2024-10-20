@@ -35,8 +35,8 @@ from struct import pack
 class Type2SessionTransformedRoute(MUP):
     ARCHTYPE = 1
     CODE = 4
-    NAME = "Type2SessionTransformedRoute"
-    SHORT_NAME = "T2ST"
+    NAME = 'Type2SessionTransformedRoute'
+    SHORT_NAME = 'T2ST'
 
     def __init__(self, rd, endpoint_len, endpoint_ip, teid, afi, packed=None):
         MUP.__init__(self, afi)
@@ -62,7 +62,7 @@ class Type2SessionTransformedRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s:%s:%s:" % (
+        return '%s:%s:%s:%s:%s:' % (
             self._prefix(),
             self.rd._str(),
             self.endpoint_len,
@@ -100,7 +100,7 @@ class Type2SessionTransformedRoute(MUP):
         teid_size = self.endpoint_len - endpoint_size
 
         if teid_size < 0 or teid_size > 32:
-            raise Exception("teid is too large %d (range 0~32)" % teid_size)
+            raise Exception('teid is too large %d (range 0~32)' % teid_size)
 
         teid_packed = pack('!I', self.teid)
 
@@ -129,11 +129,11 @@ class Type2SessionTransformedRoute(MUP):
         if endpoint_len > afi_bit_size:
             teid_len = endpoint_len - afi_bit_size
             if afi == AFI.ipv4 and teid_len > 32:
-                raise Exception("endpoint length is too large %d (max 64 for Ipv4)" % endpoint_len)
+                raise Exception('endpoint length is too large %d (max 64 for Ipv4)' % endpoint_len)
             if afi == AFI.ipv6 and teid_len > 32:
-                raise Exception("endpoint length is too large %d (max 160 for Ipv6)" % endpoint_len)
+                raise Exception('endpoint length is too large %d (max 160 for Ipv6)' % endpoint_len)
 
-            teid = int.from_bytes(data[end:], "big")
+            teid = int.from_bytes(data[end:], 'big')
 
         return cls(rd, endpoint_len, endpoint_ip, teid, afi)
 

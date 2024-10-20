@@ -15,11 +15,11 @@ __warned = False
 __host_name = ''
 __domain_name = ''
 
-__warning = '''
+__warning = """
 Your OS is very slow when returning the host FQDN
 Most likely you do not have valid forward/reverse DNS setup
 Adding your hostname to the /etc/hosts file should fix the issue
-'''
+"""
 
 
 def host():

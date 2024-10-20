@@ -62,7 +62,7 @@ class CIDR(object):
         return self.prefix()
 
     def prefix(self):
-        return "%s/%s" % (self.top(), self.mask)
+        return '%s/%s' % (self.top(), self.mask)
 
     def index(self):
         return str(self.mask) + str(self._packed[: CIDR.size(self.mask)])

@@ -434,10 +434,10 @@ class Configuration(_Configuration):
             self._rollback_reload()
 
             return self.error.set(
-                "\n"
-                "syntax error in section %s\n"
-                "line %d: %s\n"
-                "\n%s" % (self.scope.location(), self.tokeniser.number, ' '.join(self.tokeniser.line), str(self.error))
+                '\n'
+                'syntax error in section %s\n'
+                'line %d: %s\n'
+                '\n%s' % (self.scope.location(), self.tokeniser.number, ' '.join(self.tokeniser.line), str(self.error))
             )
 
         self._commit_reload()
@@ -451,8 +451,8 @@ class Configuration(_Configuration):
 
     def validate(self):
         for neighbor in self.neighbors.values():
-            has_procs = "processes" in neighbor.api and neighbor.api["processes"]
-            has_match = "processes-match" in neighbor.api and neighbor.api["processes-match"]
+            has_procs = 'processes' in neighbor.api and neighbor.api['processes']
+            has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']
             if has_procs and has_match:
                 return self.error.set(
                     "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '%s' configuration.\n\n"
@@ -462,13 +462,13 @@ class Configuration(_Configuration):
             for notification in neighbor.api:
                 errors = []
                 for api in neighbor.api[notification]:
-                    if notification == "processes":
+                    if notification == 'processes':
                         if not self.processes[api].get('run', False):
                             return self.error.set(
                                 "\n\nan api called '%s' is used by neighbor '%s' but not defined\n\n"
                                 % (api, neighbor['peer-address']),
                             )
-                    elif notification == "processes-match":
+                    elif notification == 'processes-match':
                         if not any(v.get('run', False) for k, v in self.processes.items() if re.match(api, k)):
                             errors.append(
                                 "\n\nAny process match regex '%s' for neighbor '%s'.\n\n"
@@ -479,7 +479,7 @@ class Configuration(_Configuration):
                 # if any of rule had a match
                 if len(errors) > 0 and len(errors) == len(neighbor.api[notification]):
                     return self.error.set(
-                        " ".join(errors),
+                        ' '.join(errors),
                     )
 
     def _link(self):
@@ -487,9 +487,9 @@ class Configuration(_Configuration):
             api = neighbor.api
             processes = []
             if api.get('processes', []):
-                processes = api["processes"]
+                processes = api['processes']
             elif api.get('processes-match', []):
-                processes = [k for k in self.processes.keys() for pm in api["processes-match"] if re.match(pm, k)]
+                processes = [k for k in self.processes.keys() for pm in api['processes-match'] if re.match(pm, k)]
 
             for process in processes:
                 self.processes.setdefault(process, {})['neighbor-changes'] = api['neighbor-changes']
@@ -498,11 +498,11 @@ class Configuration(_Configuration):
                 self.processes.setdefault(process, {})['signal'] = api['signal']
                 for way in ('send', 'receive'):
                     for name in ('parsed', 'packets', 'consolidate'):
-                        key = "%s-%s" % (way, name)
+                        key = '%s-%s' % (way, name)
                         if api[key]:
                             self.processes[process].setdefault(key, []).append(neighbor['router-id'])
                     for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-                        key = "%s-%s" % (way, name)
+                        key = '%s-%s' % (way, name)
                         if api[key]:
                             self.processes[process].setdefault(key, []).append(neighbor['router-id'])
 
@@ -515,10 +515,10 @@ class Configuration(_Configuration):
         if self.parseSection(section) is not True:
             self._rollback_reload()
             log.debug(
-                "\n"
-                "syntax error in api command %s\n"
-                "line %d: %s\n"
-                "\n%s" % (self.scope.location(), self.tokeniser.number, ' '.join(self.tokeniser.line), str(self.error)),
+                '\n'
+                'syntax error in api command %s\n'
+                'line %d: %s\n'
+                '\n%s' % (self.scope.location(), self.tokeniser.number, ' '.join(self.tokeniser.line), str(self.error)),
                 'configuration',
             )
             return False
@@ -526,7 +526,7 @@ class Configuration(_Configuration):
 
     def _enter(self, name):
         location = self.tokeniser.iterate()
-        log.debug("> %-16s | %s" % (location, self.tokeniser.params()), 'configuration')
+        log.debug('> %-16s | %s' % (location, self.tokeniser.params()), 'configuration')
 
         if location not in self._structure[name]['sections']:
             return self.error.set('section %s is invalid in %s, %s' % (location, name, self.scope.location()))
@@ -553,12 +553,12 @@ class Configuration(_Configuration):
             return self.error.set('closing too many parenthesis')
         self.scope.to_context()
 
-        log.debug("< %-16s | %s" % (left, self.tokeniser.params()), 'configuration')
+        log.debug('< %-16s | %s' % (left, self.tokeniser.params()), 'configuration')
         return True
 
     def _run(self, name):
         command = self.tokeniser.iterate()
-        log.debug(". %-16s | %s" % (command, self.tokeniser.params()), 'configuration')
+        log.debug('. %-16s | %s' % (command, self.tokeniser.params()), 'configuration')
 
         if not self.run(name, command):
             return False

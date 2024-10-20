@@ -15,7 +15,7 @@ from exabgp.bgp.message.update.attribute.community.extended import rt
 
 class RTRecord(rt.RouteTarget):
     COMMUNITY_SUBTYPE = 0x13
-    DESCRIPTION = "rtrecord"
+    DESCRIPTION = 'rtrecord'
 
     @classmethod
     def from_rt(cls, route_target):

@@ -28,7 +28,7 @@ class REFRESH(object):
             return 'enhanced'
         return 'unknown'
 
-    def __str__ (self):
+    def __str__(self):
         if self == REFRESH.ABSENT:
             return 'absent'
         if self == REFRESH.NORMAL:

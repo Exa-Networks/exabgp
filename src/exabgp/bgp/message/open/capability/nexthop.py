@@ -31,7 +31,7 @@ class NextHop(Capability, list):
 
     def __str__(self):
         return (
-            'NextHop(' + ','.join(["%s %s %s" % (str(afi), str(safi), str(nhafi)) for (afi, safi, nhafi) in self]) + ')'
+            'NextHop(' + ','.join(['%s %s %s' % (str(afi), str(safi), str(nhafi)) for (afi, safi, nhafi) in self]) + ')'
         )
 
     def json(self):
@@ -42,7 +42,7 @@ class NextHop(Capability, list):
     def extract(self):
         rs = b''
         for afi, safi, nhafi in self:
-            rs += afi.pack() + pack("!B", 0) + safi.pack() + nhafi.pack()
+            rs += afi.pack() + pack('!B', 0) + safi.pack() + nhafi.pack()
         return [
             rs,
         ]

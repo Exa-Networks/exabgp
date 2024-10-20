@@ -50,7 +50,7 @@ class IPVPN(Label):
         return instance
 
     def extensive(self):
-        return "%s%s" % (Label.extensive(self), str(self.rd))
+        return '%s%s' % (Label.extensive(self), str(self.rd))
 
     def __str__(self):
         return self.extensive()

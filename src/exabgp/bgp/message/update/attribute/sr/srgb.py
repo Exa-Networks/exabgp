@@ -5,6 +5,7 @@ sr/srgb.py
 Created by Evelio Vila 2017-02-16
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
+
 import json
 from struct import pack
 from struct import unpack
@@ -47,13 +48,13 @@ class SrGb(object):
     def __repr__(self):
         items = []
         for base, srange in self.srgbs:
-            items.append("( {},{} )".format(base, srange))
+            items.append('( {},{} )'.format(base, srange))
         return '[ {} ]'.format(', '.join(items))
 
     def pack(self):
         payload = pack('!H', 0)  # flags
         for b, r in self.srgbs:
-            payload = payload + pack("!L", b)[1:] + pack("!L", r)[1:]
+            payload = payload + pack('!L', b)[1:] + pack('!L', r)[1:]
         return pack('!B', self.TLV) + pack('!H', len(payload)) + payload
 
     @classmethod

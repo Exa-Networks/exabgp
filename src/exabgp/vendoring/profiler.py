@@ -5,7 +5,7 @@
 
 __version__ = '0.26'
 
-_CMD_USAGE = "python -m memory_profiler script_file.py"
+_CMD_USAGE = 'python -m memory_profiler script_file.py'
 
 import time  # noqa: E402
 import sys  # noqa: E402
@@ -36,7 +36,7 @@ try:
         return mem
 
 except ImportError:
-    warnings.warn("psutil module not found. memory_profiler will be slow")
+    warnings.warn('psutil module not found. memory_profiler will be slow')
 
     if os.name == 'posix':
 
@@ -214,7 +214,7 @@ class LineProfiler:
             # func_code does not exist in Python3
             code = func.__code__
         except AttributeError:
-            warnings.warn("Could not extract a code object for the object %r" % (func,))
+            warnings.warn('Could not extract a code object for the object %r' % (func,))
             return
         if code not in self.code_map:
             self.code_map[code] = {}
@@ -331,15 +331,15 @@ def show_results(prof, stream=None, precision=3):
             # .. measurements are empty ..
             continue
         filename = code.co_filename
-        if filename.endswith((".pyc", ".pyo")):
+        if filename.endswith(('.pyc', '.pyo')):
             filename = filename[:-1]
         stream.write('Filename: ' + filename + '\n\n')
         if not os.path.exists(filename):
             stream.write('ERROR: Could not find file ' + filename + '\n')
-            if filename.startswith("ipython-input") or filename.startswith("<ipython-input"):
+            if filename.startswith('ipython-input') or filename.startswith('<ipython-input'):
                 print(
-                    "NOTE: %mprun can only be used on functions defined in "
-                    "physical files, and not in the IPython environment."
+                    'NOTE: %mprun can only be used on functions defined in '
+                    'physical files, and not in the IPython environment.'
                 )
             continue
         all_lines = linecache.getlines(filename)
@@ -433,7 +433,7 @@ def magic_mprun(self, parameter_s=''):
 
     # Escape quote markers.
     opts_def = Struct(T=[''], f=[])
-    parameter_s = parameter_s.replace('"', r'\"').replace("'", r"\'")
+    parameter_s = parameter_s.replace('"', r'\"').replace("'", r'\'')
     opts, arg_str = self.parse_options(parameter_s, 'rf:T:', list_all=True)
     opts.merge(opts_def)
     global_ns = self.shell.user_global_ns
@@ -470,9 +470,9 @@ def magic_mprun(self, parameter_s=''):
             profile.runctx(arg_str, global_ns, local_ns)
             message = ''
         except SystemExit:
-            message = "*** SystemExit exception caught in code being profiled."
+            message = '*** SystemExit exception caught in code being profiled.'
         except KeyboardInterrupt:
-            message = "*** KeyboardInterrupt exception caught in code being " "profiled."
+            message = '*** KeyboardInterrupt exception caught in code being ' 'profiled.'
     finally:
         if had_profile:
             builtins.__dict__['profile'] = old_profile
@@ -584,20 +584,20 @@ if __name__ == '__main__':
     parser = OptionParser(usage=_CMD_USAGE, version=__version__)
     parser.disable_interspersed_args()
     parser.add_option(
-        "--pdb-mmem",
-        dest="max_mem",
-        metavar="MAXMEM",
-        type="float",
-        action="store",
-        help="step into the debugger when memory exceeds MAXMEM",
+        '--pdb-mmem',
+        dest='max_mem',
+        metavar='MAXMEM',
+        type='float',
+        action='store',
+        help='step into the debugger when memory exceeds MAXMEM',
     )
     parser.add_option(
         '--precision',
-        dest="precision",
-        type="int",
-        action="store",
+        dest='precision',
+        type='int',
+        action='store',
         default=3,
-        help="precision of memory output in number of significant digits",
+        help='precision of memory output in number of significant digits',
     )
 
     if not sys.argv[1:]:

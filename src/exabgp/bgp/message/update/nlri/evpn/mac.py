@@ -41,8 +41,8 @@ from exabgp.bgp.message.notification import Notify
 @EVPN.register
 class MAC(EVPN):
     CODE = 2
-    NAME = "MAC/IP advertisement"
-    SHORT_NAME = "MACAdv"
+    NAME = 'MAC/IP advertisement'
+    SHORT_NAME = 'MACAdv'
 
     def __init__(self, rd, esi, etag, mac, maclen, label, ip, packed=None, nexthop=None, action=None, addpath=None):
         EVPN.__init__(self, action, addpath)
@@ -75,14 +75,14 @@ class MAC(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s:%s:%s%s:%s:%s" % (
+        return '%s:%s:%s:%s:%s%s:%s:%s' % (
             self._prefix(),
             self.rd._str(),
             self.esi,
             self.etag,
             self.mac,
-            "" if len(self.mac) == 48 else "/%d" % self.maclen,
-            self.ip if self.ip else "",
+            '' if len(self.mac) == 48 else '/%d' % self.maclen,
+            self.ip if self.ip else '',
             self.label,
         )
 
@@ -132,14 +132,14 @@ class MAC(EVPN):
         if datalen in [33, 36]:  # No IP information (1 or 2 labels)
             iplenUnpack = 0
             if iplen != 0:
-                raise Notify(3, 5, "IP length is given as %d, but current MAC route has no IP information" % iplen)
+                raise Notify(3, 5, 'IP length is given as %d, but current MAC route has no IP information' % iplen)
         elif datalen in [37, 40]:  # Using IPv4 addresses (1 or 2 labels)
             iplenUnpack = 4
             if iplen > 32 or iplen < 0:
                 raise Notify(
                     3,
                     5,
-                    "IP field length is given as %d, but current MAC route is IPv4 and valus is out of range" % iplen,
+                    'IP field length is given as %d, but current MAC route is IPv4 and valus is out of range' % iplen,
                 )
         elif datalen in [49, 52]:  # Using IPv6 addresses (1 or 2 labels)
             iplenUnpack = 16
@@ -147,11 +147,11 @@ class MAC(EVPN):
                 raise Notify(
                     3,
                     5,
-                    "IP field length is given as %d, but current MAC route is IPv6 and valus is out of range" % iplen,
+                    'IP field length is given as %d, but current MAC route is IPv6 and valus is out of range' % iplen,
                 )
         else:
             raise Notify(
-                3, 5, "Data field length is given as %d, but does not match one of the expected lengths" % datalen
+                3, 5, 'Data field length is given as %d, but does not match one of the expected lengths' % datalen
             )
 
         payload = data[end + 1 : end + 1 + iplenUnpack]

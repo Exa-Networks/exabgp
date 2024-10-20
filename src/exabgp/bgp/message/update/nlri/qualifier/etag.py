@@ -46,7 +46,7 @@ class EthernetTag(object):
         return repr(self.tag)
 
     def pack(self):
-        return pack("!L", self.tag)
+        return pack('!L', self.tag)
 
     def __len__(self):
         return 4
@@ -56,7 +56,7 @@ class EthernetTag(object):
 
     @classmethod
     def unpack(cls, data):
-        return cls(unpack("!L", data[:4])[0])
+        return cls(unpack('!L', data[:4])[0])
 
     def json(self, compact=None):
         return '"ethernet-tag": %s' % self.tag

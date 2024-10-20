@@ -16,7 +16,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 class MAC(object):
     def __init__(self, mac=None, packed=None):
         self.mac = mac
-        self._packed = packed if packed else b''.join(bytes([int(_, 16)]) for _ in mac.split(":"))
+        self._packed = packed if packed else b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))
 
     def __eq__(self, other):
         return self.mac == other.mac

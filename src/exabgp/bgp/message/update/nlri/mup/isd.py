@@ -27,8 +27,8 @@ from struct import pack
 class InterworkSegmentDiscoveryRoute(MUP):
     ARCHTYPE = 1
     CODE = 1
-    NAME = "InterworkSegmentDiscoveryRoute"
-    SHORT_NAME = "ISD"
+    NAME = 'InterworkSegmentDiscoveryRoute'
+    SHORT_NAME = 'ISD'
 
     def __init__(self, rd, prefix_ip_len, prefix_ip, afi, packed=None):
         MUP.__init__(self, afi)
@@ -52,7 +52,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s%s" % (self._prefix(), self.rd._str(), self.prefix_ip, "/%d" % self.prefix_ip_len)
+        return '%s:%s:%s%s' % (self._prefix(), self.rd._str(), self.prefix_ip, '/%d' % self.prefix_ip_len)
 
     def __hash__(self):
         return hash((self.rd, self.prefix_ip_len, self.prefix_ip))

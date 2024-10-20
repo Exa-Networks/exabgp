@@ -40,7 +40,7 @@ class Community(object):
         elif community == self.BLACKHOLE:
             self._str = 'blackhole'
         else:
-            self._str = "%d:%d" % unpack('!HH', self.community)
+            self._str = '%d:%d' % unpack('!HH', self.community)
 
     def __eq__(self, other):
         return self.community == other.community
@@ -61,7 +61,7 @@ class Community(object):
         return self.community >= other.community
 
     def json(self):
-        return "[ %d, %d ]" % unpack('!HH', self.community)
+        return '[ %d, %d ]' % unpack('!HH', self.community)
 
     def pack(self, negotiated=None):
         return self.community

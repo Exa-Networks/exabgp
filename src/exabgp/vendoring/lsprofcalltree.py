@@ -15,7 +15,7 @@ import sys
 try:
     import cProfile
 except ImportError:
-    raise SystemExit("This script requires cProfile from Python 2.5")
+    raise SystemExit('This script requires cProfile from Python 2.5')
 
 
 def label(code):
@@ -32,7 +32,7 @@ class KCacheGrind(object):
 
     def output(self, out_file):
         self.out_file = out_file
-        print(u'events: Ticks', file=out_file)
+        print('events: Ticks', file=out_file)
         self._print_summary()
         for entry in self.data:
             self._entry(entry)
@@ -42,7 +42,7 @@ class KCacheGrind(object):
         for entry in self.data:
             totaltime = int(entry.totaltime * 1000)
             max_cost = max(max_cost, totaltime)
-        print(u'summary: %d' % (max_cost,), file=self.out_file)
+        print('summary: %d' % (max_cost,), file=self.out_file)
 
     def _entry(self, entry):
         out_file = self.out_file
@@ -50,16 +50,16 @@ class KCacheGrind(object):
         code = entry.code
         # print(u'ob=%s' % (code.co_filename,), file=out_file)
         if isinstance(code, str):
-            print(u'fi=~', file=out_file)
+            print('fi=~', file=out_file)
         else:
-            print(u'fi=%s' % (code.co_filename,), file=out_file)
-        print(u'fn=%s' % (label(code),), file=out_file)
+            print('fi=%s' % (code.co_filename,), file=out_file)
+        print('fn=%s' % (label(code),), file=out_file)
 
         inlinetime = int(entry.inlinetime * 1000)
         if isinstance(code, str):
-            print(u'0 ', inlinetime, file=out_file)
+            print('0 ', inlinetime, file=out_file)
         else:
-            print(u'%d %d' % (code.co_firstlineno, inlinetime), file=out_file)
+            print('%d %d' % (code.co_firstlineno, inlinetime), file=out_file)
 
         # recursive calls are counted in entry.calls
         if entry.calls:
@@ -74,29 +74,29 @@ class KCacheGrind(object):
 
         for subentry in calls:
             self._subentry(lineno, subentry)
-        print(u'', file=out_file)
+        print('', file=out_file)
 
     def _subentry(self, lineno, subentry):
         out_file = self.out_file
         code = subentry.code
         # print(u'cob=%s' % (code.co_filename,), file=out_file)
-        print(u'cfn=%s' % (label(code),), file=out_file)
+        print('cfn=%s' % (label(code),), file=out_file)
         if isinstance(code, str):
-            print(u'cfi=~', file=out_file)
-            print(u'calls=%d 0' % (subentry.callcount,), file=out_file)
+            print('cfi=~', file=out_file)
+            print('calls=%d 0' % (subentry.callcount,), file=out_file)
         else:
-            print(u'cfi=%s' % (code.co_filename,), file=out_file)
-            print(u'calls=%d %d' % (subentry.callcount, code.co_firstlineno), file=out_file)
+            print('cfi=%s' % (code.co_filename,), file=out_file)
+            print('calls=%d %d' % (subentry.callcount, code.co_firstlineno), file=out_file)
 
         totaltime = int(subentry.totaltime * 1000)
-        print(u'%d %d' % (lineno, totaltime), file=out_file)
+        print('%d %d' % (lineno, totaltime), file=out_file)
 
 
 def main(args):
-    usage = "%s [-o output_file_path] scriptfile [arg] ..."
+    usage = '%s [-o output_file_path] scriptfile [arg] ...'
     parser = optparse.OptionParser(usage=usage % sys.argv[0])
     parser.allow_interspersed_args = False
-    parser.add_option('-o', '--outfile', dest="outfile", help="Save stats to <outfile>", default=None)
+    parser.add_option('-o', '--outfile', dest='outfile', help='Save stats to <outfile>', default=None)
 
     if not sys.argv[1:]:
         parser.print_usage()

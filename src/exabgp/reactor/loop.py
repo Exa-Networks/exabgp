@@ -176,21 +176,21 @@ class Reactor(object):
         peer = self._peers.get(peer_name, None)
         if not peer:
             log.critical('could not find referenced peer', 'reactor')
-            return ""
+            return ''
         return peer.neighbor.name()
 
     def neighbor_ip(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
             log.critical('could not find referenced peer', 'reactor')
-            return ""
+            return ''
         return str(peer.neighbor['peer-address'])
 
     def neighbor_cli_data(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
             log.critical('could not find referenced peer', 'reactor')
-            return ""
+            return ''
         return peer.cli_data()
 
     def neighor_rib(self, peer_name, rib_name, advertised=False):
@@ -303,7 +303,7 @@ class Reactor(object):
             self.processes.start(self.configuration.processes)
 
         if not self.daemon.drop_privileges():
-            log.critical('could not drop privileges to \'%s\' refusing to run as root' % self.daemon.user, 'reactor')
+            log.critical("could not drop privileges to '%s' refusing to run as root" % self.daemon.user, 'reactor')
             log.critical('set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor')
             return self.Exit.privileges
 

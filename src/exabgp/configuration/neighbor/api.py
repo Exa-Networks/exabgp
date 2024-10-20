@@ -181,7 +181,7 @@ class ParseAPI(Section):
                     'refresh',
                     'operational',
                 ):
-                    built.setdefault("%s-%s" % (direction, action), []).extend(procs if data.get(action, False) else [])
+                    built.setdefault('%s-%s' % (direction, action), []).extend(procs if data.get(action, False) else [])
 
         return built
 
@@ -198,4 +198,4 @@ for way in ('send', 'receive'):
         'refresh',
         'operational',
     ):
-        ParseAPI.DEFAULT_API["%s-%s" % (way, name)] = []
+        ParseAPI.DEFAULT_API['%s-%s' % (way, name)] = []

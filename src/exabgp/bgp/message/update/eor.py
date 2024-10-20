@@ -22,7 +22,7 @@ class EOR(Message):
     TYPE = bytes([Message.CODE.UPDATE])
 
     class NLRI(_NLRI):
-        PREFIX = b'\x00\x00\x00\x07\x90\x0F\x00\x03'
+        PREFIX = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
         MP_LENGTH = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
         EOR = True
 

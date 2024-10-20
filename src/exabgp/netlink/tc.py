@@ -29,7 +29,7 @@ from exabgp.netlink.message import Message
 
 class TC(Message):
     class Header(object):
-        PACK = "BxxxiIII"
+        PACK = 'BxxxiIII'
         LEN = calcsize(PACK)
 
     class Command(object):

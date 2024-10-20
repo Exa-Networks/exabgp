@@ -115,7 +115,7 @@ class BaseLS(object):
             return '"{}": "{}"'.format(self.JSON, self.content.decode('utf-8'))
 
     def __repr__(self):
-        return "%s: %s" % (self.REPR, self.content)
+        return '%s: %s' % (self.REPR, self.content)
 
     @classmethod
     def check_length(cls, data, length):
@@ -145,7 +145,7 @@ class GenericLSID(BaseLS):
         )
 
     def __repr__(self):
-        return "Attribute with code [ %s ] not implemented" % (self.TLV)
+        return 'Attribute with code [ %s ] not implemented' % (self.TLV)
 
     def json(self):
         merged = ', '.join(['"{}"'.format(hexstring(_)) for _ in self.content])
@@ -161,7 +161,7 @@ class FlagLS(BaseLS):
         self.flags = flags
 
     def __repr__(self):
-        return "%s: %s" % (self.REPR, self.flags)
+        return '%s: %s' % (self.REPR, self.flags)
 
     def json(self, compact=None):
         return '"{}": {}'.format(self.JSON, json.dumps(self.flags))
@@ -186,7 +186,7 @@ class FlagLS(BaseLS):
             )
             flags.update(dict((k, int(v)) for k, v in zip(cls.FLAGS, bits)))
         else:
-            raise Notify(3, 5, "Invalid SR flags mask")
+            raise Notify(3, 5, 'Invalid SR flags mask')
         return flags
 
     @classmethod

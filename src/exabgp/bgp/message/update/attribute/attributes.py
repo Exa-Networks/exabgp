@@ -436,7 +436,7 @@ class Attributes(dict):
 
         # this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
         # so adding the: make the length odd and unique
-        key = "%s:%s" % (as2path.index, as4path.index)
+        key = '%s:%s' % (as2path.index, as4path.index)
 
         # found a cache copy
         cached = Attribute.cache.get(Attribute.CODE.AS_PATH, {}).get(key, None)

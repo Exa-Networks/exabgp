@@ -32,5 +32,5 @@ class OspfForwardingAddress(BaseLS):
     def unpack(cls, data):
         length = len(data)
         if length not in (4, 16):
-            raise Notify(3, 5, "Error parsing OSPF Forwarding Address. Wrong size")
+            raise Notify(3, 5, 'Error parsing OSPF Forwarding Address. Wrong size')
         return cls(IP.unpack(data))

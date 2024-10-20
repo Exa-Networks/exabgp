@@ -64,10 +64,10 @@ class Connection(object):
         self.close()
 
     def name(self):
-        return "%s-%d %s-%s" % (self.direction, self.id, self.local, self.peer)
+        return '%s-%d %s-%s' % (self.direction, self.id, self.local, self.peer)
 
     def session(self):
-        return "%s-%d" % (self.direction, self.id)
+        return '%s-%d' % (self.direction, self.id)
 
     def fd(self):
         if self.io:

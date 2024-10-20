@@ -36,8 +36,8 @@ from exabgp.logger import log
 @BGPLS.register
 class PREFIXv6(BGPLS):
     CODE = 4
-    NAME = "bgpls-prefix-v6"
-    SHORT_NAME = "PREFIX_V6"
+    NAME = 'bgpls-prefix-v6'
+    SHORT_NAME = 'PREFIX_V6'
 
     def __init__(
         self,
@@ -85,7 +85,7 @@ class PREFIXv6(BGPLS):
                     node, left = NodeDescriptor.unpack(value, proto_id)
                     local_node.append(node)
                     if left == value:
-                        raise RuntimeError("sub-calls should consume data")
+                        raise RuntimeError('sub-calls should consume data')
                     value = left
                 continue
 

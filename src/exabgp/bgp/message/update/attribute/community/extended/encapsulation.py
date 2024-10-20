@@ -35,25 +35,25 @@ class Encapsulation(ExtendedCommunity):
         MPLS_UDP = 0x0D
 
     _string = {
-        Type.DEFAULT: "Default",
-        Type.L2TPv3: "L2TPv3",
-        Type.GRE: "GRE",
-        Type.IPIP: "IP-in-IP",
-        Type.VXLAN: "VXLAN",
-        Type.NVGRE: "NVGRE",
-        Type.MPLS: "MPLS",
-        Type.VXLAN_GPE: "VXLAN-GPE",
-        Type.MPLS_UDP: "MPLS-in-UDP",
+        Type.DEFAULT: 'Default',
+        Type.L2TPv3: 'L2TPv3',
+        Type.GRE: 'GRE',
+        Type.IPIP: 'IP-in-IP',
+        Type.VXLAN: 'VXLAN',
+        Type.NVGRE: 'NVGRE',
+        Type.MPLS: 'MPLS',
+        Type.VXLAN_GPE: 'VXLAN-GPE',
+        Type.MPLS_UDP: 'MPLS-in-UDP',
     }
 
     def __init__(self, tunnel_type, community=None):
         self.tunnel_type = tunnel_type
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack("!2sLH", self._subtype(), 0, self.tunnel_type)
+            self, community if community is not None else pack('!2sLH', self._subtype(), 0, self.tunnel_type)
         )
 
     def __repr__(self):
-        return "encap:%s" % Encapsulation._string.get(self.tunnel_type, "encap:UNKNOWN-%d" % self.tunnel_type)
+        return 'encap:%s' % Encapsulation._string.get(self.tunnel_type, 'encap:UNKNOWN-%d' % self.tunnel_type)
 
     @staticmethod
     def unpack(data):

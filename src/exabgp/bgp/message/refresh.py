@@ -52,7 +52,7 @@ class RouteRefresh(Message):
         yield self.message(negotiated)
 
     def __str__(self):
-        return "REFRESH"
+        return 'REFRESH'
 
     def extensive(self):
         return 'route refresh %s/%d/%s' % (self.afi, self.reserved, self.safi)

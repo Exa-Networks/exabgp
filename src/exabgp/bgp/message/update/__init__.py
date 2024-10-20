@@ -137,7 +137,7 @@ class Update(Message):
                 mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
 
-            raise ValueError("unexpected nlri definition (%s)" % nlri)
+            raise ValueError('unexpected nlri definition (%s)' % nlri)
 
         if not nlris and not mp_nlris:
             return

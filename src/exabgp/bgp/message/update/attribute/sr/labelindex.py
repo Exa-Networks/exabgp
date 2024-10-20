@@ -5,6 +5,7 @@ sr/labelindex.py
 Created by Evelio Vila 2017-02-16
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.notification import Notify
@@ -32,7 +33,7 @@ class SrLabelIndex(object):
         self.packed = self.pack()
 
     def __repr__(self):
-        return "%s" % (self.labelindex)
+        return '%s' % (self.labelindex)
 
     def pack(self):
         reserved, flags = 0, 0
@@ -48,7 +49,7 @@ class SrLabelIndex(object):
     def unpack(cls, data, length):
         labelindex = -1
         if cls.LENGTH != length:
-            raise Notify(3, 5, "Invalid TLV size. Should be 7 but {0} received".format(length))
+            raise Notify(3, 5, 'Invalid TLV size. Should be 7 but {0} received'.format(length))
         # Shift reserved bits
         data = data[1:]
         # Shift Flags

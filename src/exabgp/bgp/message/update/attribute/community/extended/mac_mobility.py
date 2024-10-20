@@ -32,9 +32,9 @@ class MacMobility(ExtendedCommunity):
         return hash((self.sticky, self.sequence))
 
     def __repr__(self):
-        s = "%s:%d" % (self.DESCRIPTION, self.sequence)
+        s = '%s:%d' % (self.DESCRIPTION, self.sequence)
         if self.sticky:
-            s += ":sticky"
+            s += ':sticky'
         return s
 
     @staticmethod

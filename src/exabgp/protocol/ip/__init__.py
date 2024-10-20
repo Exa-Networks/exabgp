@@ -61,7 +61,7 @@ class IP(object):
     # deprecate the string API in favor of top()
 
     def __init__(self):
-        raise RuntimeError("You should use IP.create() to use IP")
+        raise RuntimeError('You should use IP.create() to use IP')
 
     def init(self, string, packed=None):
         # XXX: the str should not be needed

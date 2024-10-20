@@ -49,7 +49,7 @@ class MUPExtendedCommunity(ExtendedCommunity):
         return hash((self.sgid2, self.sgid4))
 
     def __repr__(self):
-        return "%s:%d:%d" % ("mup", self.sgid2, self.sgid4)
+        return '%s:%d:%d' % ('mup', self.sgid2, self.sgid4)
 
     @classmethod
     def unpack(cls, data):

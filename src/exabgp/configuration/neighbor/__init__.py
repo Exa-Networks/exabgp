@@ -304,7 +304,7 @@ class ParseNeighbor(Section):
             try:
                 md5 = base64.b64decode(neighbor['md5-password']) if neighbor['md5-base64'] else neighbor['md5-password']
             except TypeError as e:
-                return self.error.set(f"Invalid base64 encoding of MD5 password ({e})")
+                return self.error.set(f'Invalid base64 encoding of MD5 password ({e})')
             else:
                 if len(md5) > 80:
                     return self.error.set('MD5 password must be no larger than 80 characters')

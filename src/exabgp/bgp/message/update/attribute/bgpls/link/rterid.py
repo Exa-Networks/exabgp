@@ -29,5 +29,5 @@ class RemoteTeRid(BaseLS):
     def unpack(cls, data):
         length = len(data)
         if length not in (4, 16):
-            raise Notify(3, 5, "Invalid remote-te size")
+            raise Notify(3, 5, 'Invalid remote-te size')
         return cls(IP.unpack(data))

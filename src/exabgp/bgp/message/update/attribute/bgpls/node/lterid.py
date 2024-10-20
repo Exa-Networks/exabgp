@@ -25,8 +25,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register(lsid=1029)
 class LocalTeRid(BaseLS):
     MERGE = True
-    REPR = "Local TE Router IDs"
-    JSON = "local-te-router-ids"
+    REPR = 'Local TE Router IDs'
+    JSON = 'local-te-router-ids'
 
     def __init__(self, terids):
         BaseLS.__init__(self, terids)
@@ -36,7 +36,7 @@ class LocalTeRid(BaseLS):
         length = len(data)
 
         if length not in (4, 16):
-            raise Notify(3, 5, "Invalid remote-te size")
+            raise Notify(3, 5, 'Invalid remote-te size')
 
         return cls([str(IP.unpack(data))])
 

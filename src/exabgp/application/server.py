@@ -2,7 +2,6 @@
 
 """exabgp server"""
 
-
 import os
 import sys
 import time
@@ -212,7 +211,7 @@ def run(comment, configurations, pid=0):
         __exit(env.debug.memory, exit_code)
 
     if pid:
-        profile_name = "%s-pid-%d" % (env.profile.file, pid)
+        profile_name = '%s-pid-%d' % (env.profile.file, pid)
     else:
         profile_name = env.profile.file
 
@@ -243,14 +242,14 @@ def run(comment, configurations, pid=0):
                     kprofile.output(write)
             except IOError:
                 notice = 'could not save profiling in formation at: ' + destination
-                log.debug("-" * len(notice), 'reactor')
+                log.debug('-' * len(notice), 'reactor')
                 log.debug(notice, 'reactor')
-                log.debug("-" * len(notice), 'reactor')
+                log.debug('-' * len(notice), 'reactor')
             __exit(env.debug.memory, exit_code)
     else:
-        log.debug("-" * len(notice), 'reactor')
+        log.debug('-' * len(notice), 'reactor')
         log.debug(notice, 'reactor')
-        log.debug("-" * len(notice), 'reactor')
+        log.debug('-' * len(notice), 'reactor')
         Reactor(configuration).run()
         __exit(env.debug.memory, 1)
 

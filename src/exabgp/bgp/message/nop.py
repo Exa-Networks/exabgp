@@ -21,7 +21,7 @@ class NOP(Message):
         raise RuntimeError('NOP messages can not be sent on the wire')
 
     def __str__(self):
-        return "NOP"
+        return 'NOP'
 
     @classmethod
     def unpack_message(cls, data, direction, negotiated):  # pylint: disable=W0613

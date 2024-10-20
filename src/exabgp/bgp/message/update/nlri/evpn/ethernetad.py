@@ -29,8 +29,8 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 @EVPN.register
 class EthernetAD(EVPN):
     CODE = 1
-    NAME = "Ethernet Auto-Discovery"
-    SHORT_NAME = "EthernetAD"
+    NAME = 'Ethernet Auto-Discovery'
+    SHORT_NAME = 'EthernetAD'
 
     def __init__(self, rd, esi, etag, label, packed=None, nexthop=None, action=None, addpath=None):
         EVPN.__init__(self, action, addpath)
@@ -54,7 +54,7 @@ class EthernetAD(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s:%s:%s" % (self._prefix(), self.rd._str(), self.esi, self.etag, self.label)
+        return '%s:%s:%s:%s:%s' % (self._prefix(), self.rd._str(), self.esi, self.etag, self.label)
 
     def __hash__(self):
         # esi and label MUST *NOT* be part of the hash

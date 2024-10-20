@@ -55,12 +55,12 @@ from ipaddress import ip_network
 from ipaddress import ip_address
 
 
-logger = logging.getLogger("healthcheck")
+logger = logging.getLogger('healthcheck')
 
 
 def enum(*sequential):
     """Create a simple enumeration."""
-    return type(str("Enum"), (), dict(zip(sequential, sequential)))
+    return type(str('Enum'), (), dict(zip(sequential, sequential)))
 
 
 def setargs(parser):
@@ -135,9 +135,9 @@ def parse():
         # build an equivalent command line.
         args = sum(
             [
-                "--{0}".format(line.strip()).split("=", 1)
+                '--{0}'.format(line.strip()).split('=', 1)
                 for line in options.config.readlines()
-                if not line.strip().startswith("#") and line.strip()
+                if not line.strip().startswith('#') and line.strip()
             ],
             [],
         )
@@ -152,65 +152,65 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
 
     def syslog_address():
         """Return a sensible syslog address"""
-        if sys.platform == "darwin":
-            return "/var/run/syslog"
-        if sys.platform.startswith("freebsd"):
-            return "/var/run/log"
-        if sys.platform.startswith("netbsd"):
-            return "/var/run/log"
-        if sys.platform.startswith("linux"):
-            return "/dev/log"
-        raise EnvironmentError("Unable to guess syslog address for your " "platform, try to disable syslog")
+        if sys.platform == 'darwin':
+            return '/var/run/syslog'
+        if sys.platform.startswith('freebsd'):
+            return '/var/run/log'
+        if sys.platform.startswith('netbsd'):
+            return '/var/run/log'
+        if sys.platform.startswith('linux'):
+            return '/dev/log'
+        raise EnvironmentError('Unable to guess syslog address for your ' 'platform, try to disable syslog')
 
     logger.setLevel(debug and logging.DEBUG or logging.INFO)
     enable_syslog = syslog and not debug
     # To syslog
     if enable_syslog:
-        facility = getattr(logging.handlers.SysLogHandler, "LOG_{0}".format(syslog_facility.upper()))
+        facility = getattr(logging.handlers.SysLogHandler, 'LOG_{0}'.format(syslog_facility.upper()))
         sh = logging.handlers.SysLogHandler(address=str(syslog_address()), facility=facility)
         if name:
-            healthcheck_name = "healthcheck-{0}".format(name)
+            healthcheck_name = 'healthcheck-{0}'.format(name)
         else:
-            healthcheck_name = "healthcheck"
-        sh.setFormatter(logging.Formatter("{0}[{1}]: %(message)s".format(healthcheck_name, os.getpid())))
+            healthcheck_name = 'healthcheck'
+        sh.setFormatter(logging.Formatter('{0}[{1}]: %(message)s'.format(healthcheck_name, os.getpid())))
         logger.addHandler(sh)
     # To console
     if not silent:
         ch = logging.StreamHandler()
-        ch.setFormatter(logging.Formatter("%(levelname)s[%(name)s] %(message)s"))
+        ch.setFormatter(logging.Formatter('%(levelname)s[%(name)s] %(message)s'))
         logger.addHandler(ch)
 
 
 def loopback_ips(label, label_only, label_exact_match):
     """Retrieve loopback IP addresses"""
-    logger.debug("Retrieve loopback IP addresses")
+    logger.debug('Retrieve loopback IP addresses')
     addresses = []
 
-    if sys.platform.startswith("linux"):
+    if sys.platform.startswith('linux'):
         # Use "ip" (ifconfig is not able to see all addresses)
-        ipre = re.compile(r"^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+" r"(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*")
-        labelre = re.compile(r".*\s+lo:(?P<label>[^\\\s]+).*")
-        cmd = subprocess.Popen("/sbin/ip -o address show dev lo".split(), shell=False, stdout=subprocess.PIPE)
+        ipre = re.compile(r'^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+' r'(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*')
+        labelre = re.compile(r'.*\s+lo:(?P<label>[^\\\s]+).*')
+        cmd = subprocess.Popen('/sbin/ip -o address show dev lo'.split(), shell=False, stdout=subprocess.PIPE)
     else:
         # Try with ifconfig
         ipre = re.compile(
-            r"^inet6?\s+(alias\s+)?(?P<ip>[\da-f.:]+)\s+"
-            r"(?:netmask 0x(?P<netmask>[0-9a-f]+)|"
-            r"prefixlen (?P<mask>\d+)).*"
+            r'^inet6?\s+(alias\s+)?(?P<ip>[\da-f.:]+)\s+'
+            r'(?:netmask 0x(?P<netmask>[0-9a-f]+)|'
+            r'prefixlen (?P<mask>\d+)).*'
         )
-        cmd = subprocess.Popen("/sbin/ifconfig lo0".split(), shell=False, stdout=subprocess.PIPE)
-        labelre = re.compile(r"")
+        cmd = subprocess.Popen('/sbin/ifconfig lo0'.split(), shell=False, stdout=subprocess.PIPE)
+        labelre = re.compile(r'')
     for line in cmd.stdout:
-        line = line.decode("ascii", "ignore").strip()
+        line = line.decode('ascii', 'ignore').strip()
         mo = ipre.match(line)
         if not mo:
             continue
-        if mo.group("mask"):
-            mask = int(mo.group("mask"))
+        if mo.group('mask'):
+            mask = int(mo.group('mask'))
         else:
-            mask = bin(int(mo.group("netmask"), 16)).count("1")
+            mask = bin(int(mo.group('netmask'), 16)).count('1')
         try:
-            ip = ip_network("{0}/{1}".format(mo.group("ip"), mask))
+            ip = ip_network('{0}/{1}'.format(mo.group('ip'), mask))
         except ValueError:
             continue
         if not ip.is_loopback:
@@ -219,21 +219,21 @@ def loopback_ips(label, label_only, label_exact_match):
                 if not lmo:
                     continue
                 if label_exact_match:
-                    if lmo.groupdict().get("label", "") == label:
+                    if lmo.groupdict().get('label', '') == label:
                         addresses.append(ip)
-                elif lmo.groupdict().get("label", "").startswith(label):
+                elif lmo.groupdict().get('label', '').startswith(label):
                     addresses.append(ip)
             elif not label_only or label is None:
                 addresses.append(ip)
 
-    logger.debug("Loopback addresses: %s", addresses)
+    logger.debug('Loopback addresses: %s', addresses)
     return addresses
 
 
 def loopback():
-    lo = "lo0"
-    if sys.platform.startswith("linux"):
-        lo = "lo"
+    lo = 'lo0'
+    if sys.platform.startswith('linux'):
+        lo = 'lo'
     return lo
 
 
@@ -243,18 +243,18 @@ def setup_ips(ips, label, label_exact_match, sudo=False):
     existing = set(loopback_ips(label, False, label_exact_match))
     toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
-        logger.debug("Setup loopback IP address %s", ip)
-        with open(os.devnull, "w") as fnull:
-            cmd = ["ip", "address", "add", str(ip), "dev", loopback()]
+        logger.debug('Setup loopback IP address %s', ip)
+        with open(os.devnull, 'w') as fnull:
+            cmd = ['ip', 'address', 'add', str(ip), 'dev', loopback()]
             if sudo:
-                cmd.insert(0, "sudo")
+                cmd.insert(0, 'sudo')
             if label:
-                cmd += ["label", "{0}:{1}".format(loopback(), label)]
+                cmd += ['label', '{0}:{1}'.format(loopback(), label)]
             try:
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError as e:
                 # the IP address is already setup, ignoring
-                if cmd[0] == "ip" and cmd[2] == "add" and e.returncode == 2:
+                if cmd[0] == 'ip' and cmd[2] == 'add' and e.returncode == 2:
                     continue
                 raise e
 
@@ -266,19 +266,19 @@ def remove_ips(ips, label, label_exact_match, sudo=False):
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
     toremove = set([ip_network(ip) for net in ips for ip in net]) & existing
     for ip in toremove:
-        logger.debug("Remove loopback IP address %s", ip)
-        with open(os.devnull, "w") as fnull:
-            cmd = ["ip", "address", "delete", str(ip), "dev", loopback()]
+        logger.debug('Remove loopback IP address %s', ip)
+        with open(os.devnull, 'w') as fnull:
+            cmd = ['ip', 'address', 'delete', str(ip), 'dev', loopback()]
             if sudo:
-                cmd.insert(0, "sudo")
+                cmd.insert(0, 'sudo')
             if label:
-                cmd += ["label", "{0}:{1}".format(loopback(), label)]
+                cmd += ['label', '{0}:{1}'.format(loopback(), label)]
             try:
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError:
                 logger.warn(
-                    "Unable to remove loopback IP address %s - is \
-                    healthcheck running as root?",
+                    'Unable to remove loopback IP address %s - is \
+                    healthcheck running as root?',
                     str(ip),
                 )
 
@@ -289,7 +289,7 @@ def drop_privileges(user, group):
         import grp
 
         gid = grp.getgrnam(group).gr_gid
-        logger.debug("Dropping privileges to group {0}/{1}".format(group, gid))
+        logger.debug('Dropping privileges to group {0}/{1}'.format(group, gid))
         try:
             os.setresgid(gid, gid, gid)
         except AttributeError:
@@ -298,7 +298,7 @@ def drop_privileges(user, group):
         import pwd
 
         uid = pwd.getpwnam(user).pw_uid
-        logger.debug("Dropping privileges to user {0}/{1}".format(user, uid))
+        logger.debug('Dropping privileges to user {0}/{1}'.format(user, uid))
         try:
             os.setresuid(uid, uid, uid)
         except AttributeError:
@@ -325,7 +325,7 @@ def check(cmd, timeout):
         """Handle SIGALRM signal."""
         raise Alarm()
 
-    logger.debug("Checking command %s", repr(cmd))
+    logger.debug('Checking command %s', repr(cmd))
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
     if timeout:
         signal.signal(signal.SIGALRM, alarm_handler)
@@ -336,14 +336,14 @@ def check(cmd, timeout):
         if timeout:
             signal.alarm(0)
         if p.returncode != 0:
-            logger.warn("Check command was unsuccessful: %s", p.returncode)
+            logger.warn('Check command was unsuccessful: %s', p.returncode)
             if stdout.strip():
-                logger.info("Output of check command: %s", stdout)
+                logger.info('Output of check command: %s', stdout)
             return False
-        logger.debug("Command was executed successfully %s %s", p.returncode, stdout)
+        logger.debug('Command was executed successfully %s %s', p.returncode, stdout)
         return True
     except Alarm:
-        logger.warn("Timeout (%s) while running check command %s", timeout, cmd)
+        logger.warn('Timeout (%s) while running check command %s', timeout, cmd)
         os.killpg(p.pid, signal.SIGKILL)
         return False
 
@@ -351,14 +351,14 @@ def check(cmd, timeout):
 def loop(options):
     """Main loop."""
     states = enum(
-        "INIT",  # Initial state
-        "DISABLED",  # Disabled state
-        "RISING",  # Checks are currently succeeding.
-        "FALLING",  # Checks are currently failing.
-        "UP",  # Service is considered as up.
-        "DOWN",  # Service is considered as down.
-        "EXIT",  # Exit state
-        "END",  # End state, exiting but without removing loopback and/or announced routes
+        'INIT',  # Initial state
+        'DISABLED',  # Disabled state
+        'RISING',  # Checks are currently succeeding.
+        'FALLING',  # Checks are currently failing.
+        'UP',  # Service is considered as up.
+        'DOWN',  # Service is considered as down.
+        'EXIT',  # Exit state
+        'END',  # End state, exiting but without removing loopback and/or announced routes
     )
 
     def exabgp(target):
@@ -369,72 +369,72 @@ def loop(options):
             return
         # if ips was deleted with dyn ip, re-setup them
         if target == states.UP and options.ip_dynamic:
-            logger.info("service up, restoring loopback ips")
+            logger.info('service up, restoring loopback ips')
             setup_ips(options.ips, options.label, options.label_exact_match, options.sudo)
 
-        logger.info("send announces for %s state to ExaBGP", target)
-        metric = vars(options).get("{0}_metric".format(str(target).lower()), 0)
-        as_path = vars(options).get("{0}_as_path".format(str(target).lower()), None)
+        logger.info('send announces for %s state to ExaBGP', target)
+        metric = vars(options).get('{0}_metric'.format(str(target).lower()), 0)
+        as_path = vars(options).get('{0}_as_path'.format(str(target).lower()), None)
         if as_path is None:
             as_path = options.as_path
         for ip in options.ips:
             if options.withdraw_on_down or target is states.EXIT:
-                command = "neighbor * announce" if target is states.UP else "neighbor * withdraw"
+                command = 'neighbor * announce' if target is states.UP else 'neighbor * withdraw'
             else:
-                command = "neighbor * announce"
-            announce = "route {0} next-hop {1}".format(str(ip), options.next_hop or "self")
+                command = 'neighbor * announce'
+            announce = 'route {0} next-hop {1}'.format(str(ip), options.next_hop or 'self')
 
-            if command == "neighbor * announce":
-                announce = "{0} med {1}".format(announce, metric)
+            if command == 'neighbor * announce':
+                announce = '{0} med {1}'.format(announce, metric)
                 if options.local_preference >= 0:
-                    announce = "{0} local-preference {1}".format(announce, options.local_preference)
+                    announce = '{0} local-preference {1}'.format(announce, options.local_preference)
                 if options.community or options.disabled_community:
                     community = options.community
                     if target in (states.DOWN, states.DISABLED):
                         if options.disabled_community:
                             community = options.disabled_community
                     if community:
-                        announce = "{0} community [ {1} ]".format(announce, community)
+                        announce = '{0} community [ {1} ]'.format(announce, community)
                 if options.extended_community:
-                    announce = "{0} extended-community [ {1} ]".format(announce, options.extended_community)
+                    announce = '{0} extended-community [ {1} ]'.format(announce, options.extended_community)
                 if options.large_community:
-                    announce = "{0} large-community [ {1} ]".format(announce, options.large_community)
+                    announce = '{0} large-community [ {1} ]'.format(announce, options.large_community)
                 if as_path:
-                    announce = "{0} as-path [ {1} ]".format(announce, options.as_path)
+                    announce = '{0} as-path [ {1} ]'.format(announce, options.as_path)
 
             # append path ID if required
             if options.path_id:
-                announce = "{0} path-information {1}".format(announce, options.path_id)
+                announce = '{0} path-information {1}'.format(announce, options.path_id)
 
             # allow filtering neighbors that the route should be advertised to
             if options.neighbors:
                 # routes are filtered to specific neighbors; format them and put into a list
-                neighbors = ["neighbor {0}".format(neighbor) for neighbor in options.neighbors]
+                neighbors = ['neighbor {0}'.format(neighbor) for neighbor in options.neighbors]
                 # comma seperate the neighbor list and prepend to announcement command
-                command = "{0} {1}".format(", ".join(neighbors), command)
+                command = '{0} {1}'.format(', '.join(neighbors), command)
 
             metric += options.increase
 
             # Send and flush command
-            logger.debug("exabgp: {0} {1}".format(command, announce))
-            print("{0} {1}".format(command, announce))
+            logger.debug('exabgp: {0} {1}'.format(command, announce))
+            print('{0} {1}'.format(command, announce))
             sys.stdout.flush()
 
             # Wait for confirmation from ExaBGP if expected
             if options.no_ack:
                 continue
             # if the program is not ran manually, do not read the input
-            if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+            if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
                 continue
             sys.stdin.readline()
 
         # dynamic ip management. When the service fail, remove the loopback
         if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
-            logger.info("exiting, deleting loopback ips")
+            logger.info('exiting, deleting loopback ips')
             remove_ips(options.ips, options.label, options.label_exact_match, options.sudo)
         # dynamic ip management. When the service fail, remove the loopback
         if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
-            logger.info("service down, deleting loopback ips")
+            logger.info('service down, deleting loopback ips')
             remove_ips(options.ips, options.label, options.label_exact_match, options.sudo)
 
     def trigger(target):
@@ -446,15 +446,15 @@ def loop(options):
             target = states.DOWN
 
         # Log and execute commands
-        logger.debug("Transition to %s", str(target))
+        logger.debug('Transition to %s', str(target))
         cmds = []
-        cmds.extend(vars(options).get("{0}_execute".format(str(target).lower()), []) or [])
-        cmds.extend(vars(options).get("execute", []) or [])
+        cmds.extend(vars(options).get('{0}_execute'.format(str(target).lower()), []) or [])
+        cmds.extend(vars(options).get('execute', []) or [])
         for cmd in cmds:
-            logger.debug("Transition to %s, execute `%s`", str(target), cmd)
+            logger.debug('Transition to %s, execute `%s`', str(target), cmd)
             env = os.environ.copy()
-            env.update({"STATE": str(target)})
-            with open(os.devnull, "w") as fnull:
+            env.update({'STATE': str(target)})
+            with open(os.devnull, 'w') as fnull:
                 subprocess.call(cmd, shell=True, stdout=fnull, stderr=fnull, env=env)
 
         return target
@@ -504,7 +504,7 @@ def loop(options):
                 state = trigger(states.RISING)
                 checks = 1
         else:
-            raise ValueError("Unhandled state: {0}".format(str(state)))
+            raise ValueError('Unhandled state: {0}'.format(str(state)))
 
         # Send announces. We announce them on a regular basis (unless --debounce flag is set),
         # in case we lose connection with a peer and the adj-rib-out is disabled.
@@ -531,7 +531,7 @@ def loop(options):
             if state in (states.FALLING, states.RISING):
                 time.sleep(options.fast)
             elif options.interval == 0:
-                logger.info("interval set to zero, exiting after the announcement")
+                logger.info('interval set to zero, exiting after the announcement')
                 exabgp(states.END)
                 break
             else:
@@ -551,13 +551,13 @@ def main():
     options = parse()
     setup_logging(options.debug, options.silent, options.name, options.syslog_facility, not options.no_syslog)
     if options.pid:
-        options.pid.write("{0}\n".format(os.getpid()))
+        options.pid.write('{0}\n'.format(os.getpid()))
         options.pid.close()
     try:
         # Setup IP to use
         options.ips = options.ips or loopback_ips(options.label, False, options.label_exact_match)
         if not options.ips:
-            logger.error("No IP found")
+            logger.error('No IP found')
             sys.exit(1)
         if options.ip_setup:
             setup_ips(options.ips, options.label, options.label_exact_match, options.sudo)
@@ -573,9 +573,9 @@ def main():
         # Main loop
         loop(options)
     except Exception as e:  # pylint: disable=W0703
-        logger.exception("Uncaught exception: %s", e)
+        logger.exception('Uncaught exception: %s', e)
         sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

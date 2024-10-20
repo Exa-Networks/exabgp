@@ -29,7 +29,7 @@ from exabgp.cli import msg
 from exabgp.conf import Config
 
 corrections = {
-    "neighbour": "neighbor",
+    'neighbour': 'neighbor',
 }
 
 
@@ -40,10 +40,10 @@ running = True
 
 def main():
     parser = argparse.ArgumentParser(description='configure ExaBGP')
-    parser.add_argument('--load', type=str, help="configuration file to load")
-    parser.add_argument('--commit', action='store_true', help="commit the configuration on load")
-    parser.add_argument('--show', action='store_true', help="show loaded configuration")
-    parser.add_argument('--no-cli', action='store_true', help="do not start the cli")
+    parser.add_argument('--load', type=str, help='configuration file to load')
+    parser.add_argument('--commit', action='store_true', help='commit the configuration on load')
+    parser.add_argument('--show', action='store_true', help='show loaded configuration')
+    parser.add_argument('--no-cli', action='store_true', help='do not start the cli')
     arg = parser.parse_args()
 
     # if True:

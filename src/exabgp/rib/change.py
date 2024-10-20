@@ -46,7 +46,7 @@ class Change(object):
 
     def extensive(self):
         # If you change this you must change as well extensive in Update
-        return "%s%s" % (str(self.nlri), str(self.attributes))
+        return '%s%s' % (str(self.nlri), str(self.attributes))
 
     def __repr__(self):
         return self.extensive()

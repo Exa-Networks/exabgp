@@ -34,12 +34,12 @@ class InterfaceSet(ExtendedCommunity):
         self.transitive = trans
         new_target = (direction << 14) + target
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack("!2sLH", self._subtype(self.transitive), asn, new_target)
+            self, community if community is not None else pack('!2sLH', self._subtype(self.transitive), asn, new_target)
         )
 
     def __repr__(self):
         str_direction = self.names.get(self.direction, str(self.direction))
-        return "interface-set:%s:%s:%s" % (str_direction, str(self.asn), str(self.target))
+        return 'interface-set:%s:%s:%s' % (str_direction, str(self.asn), str(self.target))
 
     @staticmethod
     def unpack(data):

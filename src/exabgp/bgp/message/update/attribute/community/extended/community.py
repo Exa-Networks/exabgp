@@ -92,7 +92,7 @@ class ExtendedCommunityBase(Attribute):
         for byte in self.community:
             h <<= 8
             h += byte
-        return "0x%016X" % h
+        return '0x%016X' % h
 
     def __hash__(self):
         return hash(self.community)

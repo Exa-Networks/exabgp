@@ -168,10 +168,10 @@ class IPrefix6(IPrefix, IComponent, IPv6):
         return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()  # pylint: disable=E1101
 
     def short(self):
-        return "%s/%s" % (self.cidr, self.offset)
+        return '%s/%s' % (self.cidr, self.offset)
 
     def __str__(self):
-        return "%s/%s" % (self.cidr, self.offset)
+        return '%s/%s' % (self.cidr, self.offset)
 
     @classmethod
     def make(cls, bgp):
@@ -262,7 +262,7 @@ class NumericString(object):
             return self._string[op]
         # ugly hack as dynamic languages are what they are and use used __str__ in the past
         value = self.value.short() if hasattr(self.value, 'short') else str(self.value)
-        return "%s%s" % (self._string.get(op, "%02X" % op), value)
+        return '%s%s' % (self._string.get(op, '%02X' % op), value)
 
     def __str__(self):
         return self.short()
@@ -286,7 +286,7 @@ class BinaryString(object):
 
     def short(self):
         op = self.operations & (CommonOperator.EOL ^ 0xFF)
-        return "%s%s" % (self._string.get(op, "%02X" % op), self.value)
+        return '%s%s' % (self._string.get(op, '%02X' % op), self.value)
 
     def __str__(self):
         return self.short()
@@ -315,7 +315,7 @@ def decoder(function, klass=int):
 
 
 def PacketLength(data):
-    _str_bad_length = "cloudflare already found that invalid max-packet length for for you .."
+    _str_bad_length = 'cloudflare already found that invalid max-packet length for for you ..'
     number = int(data)
     if number > 0xFFFF:
         raise ValueError(_str_bad_length)
@@ -323,7 +323,7 @@ def PacketLength(data):
 
 
 def PortValue(data):
-    _str_bad_port = "you tried to set an invalid port number .."
+    _str_bad_port = 'you tried to set an invalid port number ..'
     try:
         number = Port.named(data)
     except ValueError:
@@ -332,7 +332,7 @@ def PortValue(data):
 
 
 def DSCPValue(data):
-    _str_bad_dscp = "you tried to filter a flow using an invalid dscp for a component .."
+    _str_bad_dscp = 'you tried to filter a flow using an invalid dscp for a component ..'
     number = int(data)
     if number < 0 or number > 0x3F:  # 0b00111111
         raise ValueError(_str_bad_dscp)
@@ -340,7 +340,7 @@ def DSCPValue(data):
 
 
 def ClassValue(data):
-    _str_bad_class = "you tried to filter a flow using an invalid traffic class for a component .."
+    _str_bad_class = 'you tried to filter a flow using an invalid traffic class for a component ..'
     number = int(data)
     if number < 0 or number > 0xFFFF:
         raise ValueError(_str_bad_class)
@@ -348,7 +348,7 @@ def ClassValue(data):
 
 
 def LabelValue(data):
-    _str_bad_label = "you tried to filter a flow using an invalid traffic label for a component .."
+    _str_bad_label = 'you tried to filter a flow using an invalid traffic label for a component ..'
     number = int(data)
     if number < 0 or number > 0xFFFFF:  # 20 bits 5 bytes
         raise ValueError(_str_bad_label)
@@ -591,7 +591,7 @@ class Flow(NLRI):
         raise Notify(
             3,
             0,
-            "my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can",
+            'my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can',
         )
 
     def _rules(self):

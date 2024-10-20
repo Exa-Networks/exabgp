@@ -21,7 +21,7 @@ class LargeCommunity(Attribute):
 
     def __init__(self, large_community):
         self.large_community = large_community
-        self._str = "%d:%d:%d" % unpack('!LLL', self.large_community)
+        self._str = '%d:%d:%d' % unpack('!LLL', self.large_community)
 
     def __eq__(self, other):
         return self.large_community == other.large_community
@@ -42,7 +42,7 @@ class LargeCommunity(Attribute):
         return self.large_community >= other.large_community
 
     def json(self):
-        return "[ %d, %d , %d ]" % unpack('!LLL', self.large_community)
+        return '[ %d, %d , %d ]' % unpack('!LLL', self.large_community)
 
     def pack(self, negotiated=None):
         return self.large_community

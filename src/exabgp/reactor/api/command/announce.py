@@ -21,8 +21,10 @@ from exabgp.configuration.static import ParseStaticRoute
 def register_announce():
     pass
 
+
 # @Command.register('debug')
 # the command debug is hardcoded in the process code
+
 
 @Command.register('announce route')
 def announce_route(self, reactor, service, line, use_json):
@@ -395,14 +397,14 @@ def announce_eor(self, reactor, service, line, use_json):
     def callback(self, command, peers):
         family = self.api_eor(command)
         if not family:
-            self.log_failure("Command could not parse eor : %s" % command)
+            self.log_failure('Command could not parse eor : %s' % command)
             reactor.processes.answer_error(service)
             yield True
             return
 
         reactor.configuration.inject_eor(peers, family)
         self.log_message(
-            "Sent to %s : %s"
+            'Sent to %s : %s'
             % (', '.join(peers if peers else []) if peers is not None else 'all peers', family.extensive())
         )
         yield False
@@ -433,7 +435,7 @@ def announce_refresh(self, reactor, service, line, use_json):
     def callback(self, command, peers):
         refreshes = self.api_refresh(command)
         if not refreshes:
-            self.log_failure("Command could not parse route-refresh command : %s" % command)
+            self.log_failure('Command could not parse route-refresh command : %s' % command)
             reactor.processes.answer_error(service)
             yield True
             return
@@ -441,7 +443,7 @@ def announce_refresh(self, reactor, service, line, use_json):
         reactor.configuration.inject_refresh(peers, refreshes)
         for refresh in refreshes:
             self.log_message(
-                "Sent to %s : %s"
+                'Sent to %s : %s'
                 % (', '.join(peers if peers else []) if peers is not None else 'all peers', refresh.extensive())
             )
 
@@ -472,14 +474,14 @@ def announce_operational(self, reactor, service, line, use_json):
     def callback(self, command, peers):
         operational = self.api_operational(command)
         if not operational:
-            self.log_failure("Command could not parse operational command : %s" % command)
+            self.log_failure('Command could not parse operational command : %s' % command)
             reactor.processes.answer_error(service)
             yield True
             return
 
         reactor.configuration.inject_operational(peers, operational)
         self.log_message(
-            "operational message sent to %s : %s"
+            'operational message sent to %s : %s'
             % (', '.join(peers if peers else []) if peers is not None else 'all peers', operational.extensive())
         )
         yield False

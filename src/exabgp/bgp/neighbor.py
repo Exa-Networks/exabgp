@@ -179,10 +179,10 @@ class Neighbor(dict):
 
     def name(self):
         if self['capability']['multi-session']:
-            session = '/'.join("%s-%s" % (afi.name(), safi.name()) for (afi, safi) in self.families())
+            session = '/'.join('%s-%s' % (afi.name(), safi.name()) for (afi, safi) in self.families())
         else:
             session = 'in-open'
-        return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (
+        return 'neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s' % (
             self['peer-address'],
             self['local-address'] if self['peer-address'] is not None else 'auto',
             self['local-as'] if self['local-as'] is not None else 'auto',
@@ -335,12 +335,12 @@ def _pr(value):
 
 def _addpath(send, receive):
     if send and receive:
-        return "send/receive"
+        return 'send/receive'
     if send:
-        return "send"
+        return 'send'
     if receive:
-        return "receive"
-    return "disabled"
+        return 'receive'
+    return 'disabled'
 
 
 class NeighborTemplate(object):
@@ -366,9 +366,7 @@ Neighbor %(peer-address)s
 
     Message Statistic                Sent        Received
 %(messages)s
-""".replace(
-        '\t', '  '
-    )
+""".replace('\t', '  ')
 
     summary_header = 'Peer            AS        up/down state       |     #sent     #recvd'
     summary_template = '%-15s %-7s %9s %-12s %10d %10d'
@@ -523,18 +521,28 @@ Neighbor %(peer-address)s
                 '\tadj-rib-out %s;\n' % ('true' if neighbor['adj-rib-out'] else 'false'),
                 '\tmd5-password "%s";\n' % neighbor['md5-password'] if neighbor['md5-password'] else '',
                 '\tmd5-base64 %s;\n'
-                % ('true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'),
+                % (
+                    'true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'
+                ),
                 '\tmd5-ip "%s";\n' % neighbor['md5-ip'] if not neighbor.auto_discovery else '',
                 '\toutgoing-ttl %s;\n' % neighbor['outgoing-ttl'] if neighbor['outgoing-ttl'] else '',
                 '\tincoming-ttl %s;\n' % neighbor['incoming-ttl'] if neighbor['incoming-ttl'] else '',
                 '\t\tasn4 %s;\n' % ('enable' if neighbor['capability']['asn4'] else 'disable'),
                 '\t\troute-refresh %s;\n' % ('enable' if neighbor['capability']['route-refresh'] else 'disable'),
                 '\t\tgraceful-restart %s;\n'
-                % (neighbor['capability']['graceful-restart'] if neighbor['capability']['graceful-restart'] else 'disable'),
+                % (
+                    neighbor['capability']['graceful-restart']
+                    if neighbor['capability']['graceful-restart']
+                    else 'disable'
+                ),
                 '\t\tsoftware-version %s;\n' % ('enable' if neighbor['capability']['software-version'] else 'disable'),
                 '\t\tnexthop %s;\n' % ('enable' if neighbor['capability']['nexthop'] else 'disable'),
                 '\t\tadd-path %s;\n'
-                % (AddPath.string[neighbor['capability']['add-path']] if neighbor['capability']['add-path'] else 'disable'),
+                % (
+                    AddPath.string[neighbor['capability']['add-path']]
+                    if neighbor['capability']['add-path']
+                    else 'disable'
+                ),
                 '\t\tmulti-session %s;\n' % ('enable' if neighbor['capability']['multi-session'] else 'disable'),
                 '\t\toperational %s;\n' % ('enable' if neighbor['capability']['operational'] else 'disable'),
                 '\t\taigp %s;\n' % ('enable' if neighbor['capability']['aigp'] else 'disable'),
@@ -549,7 +557,6 @@ Neighbor %(peer-address)s
         # '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
         # '\t\tsend {\n%s\t\t}\n' % send if send else '',
         return returned.replace('\t', '  ')
-
 
     @classmethod
     def as_dict(cls, answer):
@@ -638,7 +645,7 @@ Neighbor %(peer-address)s
 
     @classmethod
     def to_json(cls, answer):
-       return json.dumps(cls.formated_dict(answer)) 
+        return json.dumps(cls.formated_dict(answer))
 
     @classmethod
     def extensive(cls, answer):
@@ -654,4 +661,3 @@ Neighbor %(peer-address)s
             answer['messages']['update'][0],
             answer['messages']['update'][1],
         )
-

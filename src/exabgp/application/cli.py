@@ -3,7 +3,6 @@
 
 """exabgp command line interface"""
 
-
 import os
 import sys
 import time
@@ -126,7 +125,7 @@ def cmdline(cmdarg):
 
     pipes = named_pipe(ROOT, pipename)
     if len(pipes) != 1:
-        sys.stdout.write('could not find ExaBGP\'s named pipes (%s.in and %s.out) for the cli\n' % (pipename, pipename))
+        sys.stdout.write("could not find ExaBGP's named pipes (%s.in and %s.out) for the cli\n" % (pipename, pipename))
         sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
         sys.stdout.write('\n - '.join(pipes))
         sys.stdout.flush()
@@ -314,7 +313,7 @@ def cmdline(cmdarg):
                 break
             if string == Answer.text_error or string == Answer.json_error:
                 done = True
-                sys.stderr.write('ExaBGP returns an error (see ExaBGP\'s logs for more information)\n')
+                sys.stderr.write("ExaBGP returns an error (see ExaBGP's logs for more information)\n")
                 sys.stderr.write('use help for a list of available commands\n')
                 sys.stderr.flush()
                 break

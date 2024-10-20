@@ -117,9 +117,9 @@ class Peer(object):
         }
         if self.proto:
             try:
-                message = u"peer reset, message [{0}] error[{1}]".format(message, error)
+                message = 'peer reset, message [{0}] error[{1}]'.format(message, error)
             except UnicodeDecodeError as msg_err:
-                message = u"peer reset, message [{0}] error[{1}]".format(message, msg_err)
+                message = 'peer reset, message [{0}] error[{1}]'.format(message, msg_err)
             self.proto.close(message)
         self._delay.increase()
 
@@ -149,7 +149,7 @@ class Peer(object):
     # logging
 
     def me(self, message):
-        return "peer %s ASN %-7s %s" % (self.neighbor['peer-address'], self.neighbor['peer-as'], message)
+        return 'peer %s ASN %-7s %s' % (self.neighbor['peer-address'], self.neighbor['peer-as'], message)
 
     # control
 
@@ -167,11 +167,11 @@ class Peer(object):
         self.neighbor.rib.uncache()
 
     def remove(self):
-        self._stop("removed")
+        self._stop('removed')
         self.stop()
 
     def shutdown(self):
-        self._stop("shutting down")
+        self._stop('shutting down')
         self.stop()
 
     def resend(self, enhanced, family=None):
@@ -201,7 +201,7 @@ class Peer(object):
         return -1
 
     def handle_connection(self, connection):
-        log.debug("state machine for the peer is %s" % self.fsm.name(), self.id())
+        log.debug('state machine for the peer is %s' % self.fsm.name(), self.id())
 
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:
@@ -251,12 +251,12 @@ class Peer(object):
 
     def negotiated_families(self):
         if self.proto:
-            families = ["%s/%s" % (x[0], x[1]) for x in self.proto.negotiated.families]
+            families = ['%s/%s' % (x[0], x[1]) for x in self.proto.negotiated.families]
         else:
-            families = ["%s/%s" % (x[0], x[1]) for x in self.neighbor.families()]
+            families = ['%s/%s' % (x[0], x[1]) for x in self.neighbor.families()]
 
         if len(families) > 1:
-            return "[ %s ]" % " ".join(families)
+            return '[ %s ]' % ' '.join(families)
         elif len(families) == 1:
             return families[0]
 

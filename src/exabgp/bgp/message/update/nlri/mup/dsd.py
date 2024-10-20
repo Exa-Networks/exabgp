@@ -24,8 +24,8 @@ from exabgp.bgp.message.notification import Notify
 class DirectSegmentDiscoveryRoute(MUP):
     ARCHTYPE = 1
     CODE = 2
-    NAME = "DirectSegmentDiscoveryRoute"
-    SHORT_NAME = "DSD"
+    NAME = 'DirectSegmentDiscoveryRoute'
+    SHORT_NAME = 'DSD'
 
     def __init__(self, rd, ip, afi, packed=None):
         MUP.__init__(self, afi)
@@ -43,7 +43,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        return "%s:%s:%s" % (
+        return '%s:%s:%s' % (
             self._prefix(),
             self.rd._str(),
             self.ip,
@@ -74,7 +74,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         rd = RouteDistinguisher.unpack(data[:8])
         size = data_len - 8
         if size not in [4, 16]:
-            raise Notify(3, 5, "Invalid IP size, expect 4 or 16 octets. accuracy size %d" % size)
+            raise Notify(3, 5, 'Invalid IP size, expect 4 or 16 octets. accuracy size %d' % size)
         ip = IP.unpack(data[8 : 8 + size])
 
         return cls(rd, ip, afi)

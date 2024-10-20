@@ -26,7 +26,6 @@ Released under the MIT licence.
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-
 import codecs
 import gc
 import re
@@ -46,11 +45,11 @@ except ImportError:
     InstanceType = None
 
 
-__author__ = "Marius Gedminas (marius@gedmin.as)"
-__copyright__ = "Copyright (c) 2008-2015 Marius Gedminas and contributors"
-__license__ = "MIT"
-__version__ = "2.0.1"
-__date__ = "2015-07-28"
+__author__ = 'Marius Gedminas (marius@gedmin.as)'
+__copyright__ = 'Copyright (c) 2008-2015 Marius Gedminas and contributors'
+__license__ = 'MIT'
+__version__ = '2.0.1'
+__date__ = '2015-07-28'
 
 
 try:
@@ -554,8 +553,7 @@ def show_chain(*chains, **kw):
     You can specify if you want that chain traced backwards or forwards
     by passing a ``backrefs`` keyword argument, e.g.
 
-        >>> show_chain(find_ref_chain(obj, is_proper_module),
-        ...            backrefs=False)
+        >>> show_chain(find_ref_chain(obj, is_proper_module), backrefs=False)
 
     Ideally this shouldn't matter, but for some objects
     :func:`gc.get_referrers` and :func:`gc.get_referents` are not perfectly
@@ -673,7 +671,7 @@ def _show_graph(
         dot_filename = filename
     else:
         fd, dot_filename = tempfile.mkstemp(prefix='objgraph-', suffix='.dot', text=True)
-        f = os.fdopen(fd, "w")
+        f = os.fdopen(fd, 'w')
         if getattr(f, 'encoding', None):
             # Python 3 will wrap the file in the user's preferred encoding
             # Re-wrap it for utf-8
@@ -759,24 +757,24 @@ def _show_graph(
         if skipped > 0:
             h, s, v = _gradient((0, 1, 1), (0, 1, 0.3), tdepth + 1, max_depth)
             if swap_source_target:
-                label = "%d more references" % skipped
-                edge = "%s->too_many_%s" % (_obj_node_id(target), _obj_node_id(target))
+                label = '%d more references' % skipped
+                edge = '%s->too_many_%s' % (_obj_node_id(target), _obj_node_id(target))
             else:
-                label = "%d more backreferences" % skipped
-                edge = "too_many_%s->%s" % (_obj_node_id(target), _obj_node_id(target))
+                label = '%d more backreferences' % skipped
+                edge = 'too_many_%s->%s' % (_obj_node_id(target), _obj_node_id(target))
             f.write('  %s[color=red,style=dotted,len=0.25,weight=10];\n' % edge)
             f.write(
                 '  too_many_%s[label="%s",shape=box,height=0.25,'
                 'color=red,fillcolor="%g,%g,%g",fontsize=6];\n' % (_obj_node_id(target), label, h, s, v)
             )
             f.write('  too_many_%s[fontcolor=white];\n' % (_obj_node_id(target)))
-    f.write("}\n")
+    f.write('}\n')
     if output:
         return
     # The file should only be closed if this function was in charge of opening
     # the file.
     f.close()
-    print("Graph written to %s (%d nodes)" % (dot_filename, nodes))
+    print('Graph written to %s (%d nodes)' % (dot_filename, nodes))
     _present_graph(dot_filename, filename)
 
 
@@ -794,11 +792,11 @@ def _present_graph(dot_filename, filename=None):
         # nothing to do, the user asked for a .dot file and got it
         return
     if not filename and _program_in_path('xdot'):
-        print("Spawning graph viewer (xdot)")
+        print('Spawning graph viewer (xdot)')
         subprocess.Popen(['xdot', dot_filename], close_fds=True)
     elif _program_in_path('dot'):
         if not filename:
-            print("Graph viewer (xdot) not found, generating a png instead")
+            print('Graph viewer (xdot) not found, generating a png instead')
             filename = dot_filename[:-4] + '.png'
         stem, ext = os.path.splitext(filename)
         cmd = ['dot', '-T' + ext[1:], '-o' + filename, dot_filename]
@@ -808,12 +806,12 @@ def _present_graph(dot_filename, filename=None):
             # XXX: shouldn't this go to stderr or a log?
             print('dot failed (exit code %d) while executing "%s"' % (dot.returncode, ' '.join(cmd)))
         else:
-            print("Image generated as %s" % filename)
+            print('Image generated as %s' % filename)
     else:
         if not filename:
-            print("Graph viewer (xdot) and image renderer (dot) not found," " not doing anything else")
+            print('Graph viewer (xdot) and image renderer (dot) not found,' ' not doing anything else')
         else:
-            print("Image renderer (dot) not found, not doing anything else")
+            print('Image renderer (dot) not found, not doing anything else')
 
 
 def _obj_node_id(obj):
@@ -839,7 +837,7 @@ def _obj_label(obj, extra_info=None, refcounts=False, shortnames=True):
 
 
 def _quote(s):
-    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\0", "\\\\0")
+    return s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\0', '\\\\0')
 
 
 def _get_obj_type(obj):
@@ -940,7 +938,7 @@ def _edge_label(source, target, shortnames=True):
                         tn = _short_typename(k)
                     else:
                         tn = _long_typename(k)
-                    return ' [label="%s"]' % _quote(tn + "\n" + _safe_repr(k))
+                    return ' [label="%s"]' % _quote(tn + '\n' + _safe_repr(k))
     return ''
 
 
@@ -949,7 +947,7 @@ _is_identifier = re.compile('[a-zA-Z_][a-zA-Z_0-9]*$').match
 
 def _program_in_path(program):
     # XXX: Consider using distutils.spawn.find_executable or shutil.which
-    path = os.environ.get("PATH", os.defpath).split(os.pathsep)
+    path = os.environ.get('PATH', os.defpath).split(os.pathsep)
     path = [os.path.join(dir, program) for dir in path]
     path = [True for file in path if os.path.isfile(file) or os.path.isfile(file + '.exe')]
     return bool(path)

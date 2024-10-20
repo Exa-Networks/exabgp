@@ -30,11 +30,11 @@ class L2Info(ExtendedCommunity):
         # reserved is called preference in draft-ietf-l2vpn-vpls-multihoming-07
         ExtendedCommunity.__init__(
             self,
-            community if community is not None else pack("!2sBBHH", self._subtype(), encaps, control, mtu, reserved),
+            community if community is not None else pack('!2sBBHH', self._subtype(), encaps, control, mtu, reserved),
         )
 
     def __repr__(self):
-        return "l2info:%s:%s:%s:%s" % (self.encaps, self.control, self.mtu, self.reserved)
+        return 'l2info:%s:%s:%s:%s' % (self.encaps, self.control, self.mtu, self.reserved)
 
     @staticmethod
     def unpack(data):

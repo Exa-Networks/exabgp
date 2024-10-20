@@ -7,7 +7,7 @@ _max_history = 20
 
 
 def history():
-    return "\n".join(formater(*_) for _ in _history)
+    return '\n'.join(formater(*_) for _ in _history)
 
 
 def record(message, source, level, timestamp):

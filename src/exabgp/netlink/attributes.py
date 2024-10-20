@@ -41,7 +41,7 @@ class Attributes(object):
                 atype,
             ) = unpack(cls.Header.PACK, data[: cls.Header.LEN])
             if len(data) < length:
-                raise AttributesError("Buffer underrun %d < %d" % (len(data), length))
+                raise AttributesError('Buffer underrun %d < %d' % (len(data), length))
             payload = data[cls.Header.LEN : length]
             yield atype, payload
             data = data[int((length + 3) / 4) * 4 :]

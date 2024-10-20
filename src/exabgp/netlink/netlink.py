@@ -109,7 +109,7 @@ class NetLink(object):
         while data:
             length, format_type, control_flags, sequence, pid = unpack(cls.Header.PACK, data[: cls.Header.LEN])
             if len(data) < length:
-                raise NetLinkError("Buffer underrun")
+                raise NetLinkError('Buffer underrun')
             yield cls.format(format_type, control_flags, sequence, pid, data[cls.Header.LEN : length])
             data = data[length:]
 
@@ -134,9 +134,9 @@ class NetLink(object):
                 if response_sequence != sequence:
                     if cls._IGNORE_SEQ_FAULTS:
                         continue
-                    raise NetLinkError("netlink sequence mismatch")
+                    raise NetLinkError('netlink sequence mismatch')
                 elif response_pid != pid:
-                    raise NetLinkError("netlink pid mismatch")
+                    raise NetLinkError('netlink pid mismatch')
                 # elif response_flags != control_flags:
                 # 	raise NetLinkError("netlink flags mismatch")
                 elif response_type in cls.errors:

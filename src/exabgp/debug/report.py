@@ -36,12 +36,12 @@ def format_exception(exception):
 def format_panic(dtype, value, trace):
     result = _PANIC + _INFO
 
-    result += "-- Traceback\n\n"
+    result += '-- Traceback\n\n'
     result += ''.join(traceback.format_exception(dtype, value, trace))
 
-    result += "\n\n-- Logging History\n\n"
+    result += '\n\n-- Logging History\n\n'
     result += history()
-    result += "\n\n\n"
+    result += '\n\n\n'
 
     result += _FOOTER
 

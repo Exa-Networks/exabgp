@@ -65,25 +65,25 @@ class Daemon(object):
             try:
                 pid = open(self.pid, 'r').readline().strip()
                 if self.check_pid(int(pid)):
-                    log.debug("PIDfile already exists and program still running %s" % self.pid, 'daemon')
+                    log.debug('PIDfile already exists and program still running %s' % self.pid, 'daemon')
                     return False
                 else:
                     # If pid is not running, reopen file without O_EXCL
                     fd = os.open(self.pid, flags ^ os.O_EXCL, mode)
             except (OSError, IOError, ValueError):
-                log.debug("issue accessing PID file %s (most likely permission or ownership)" % self.pid, 'daemon')
+                log.debug('issue accessing PID file %s (most likely permission or ownership)' % self.pid, 'daemon')
                 return False
 
         try:
             f = os.fdopen(fd, 'w')
-            line = "%d\n" % ownid
+            line = '%d\n' % ownid
             f.write(line)
             f.close()
             self._saved_pid = True
         except IOError:
-            log.warning("Can not create PIDfile %s" % self.pid, 'daemon')
+            log.warning('Can not create PIDfile %s' % self.pid, 'daemon')
             return False
-        log.warning("Created PIDfile %s with value %d" % (self.pid, ownid), 'daemon')
+        log.warning('Created PIDfile %s with value %d' % (self.pid, ownid), 'daemon')
         return True
 
     def removepid(self):
@@ -95,9 +95,9 @@ class Daemon(object):
             if exc.errno == errno.ENOENT:
                 pass
             else:
-                log.error("Can not remove PIDfile %s" % self.pid, 'daemon')
+                log.error('Can not remove PIDfile %s' % self.pid, 'daemon')
                 return
-        log.debug("Removed PIDfile %s" % self.pid, 'daemon')
+        log.debug('Removed PIDfile %s' % self.pid, 'daemon')
 
     def drop_privileges(self):
         """return true if we are left with insecure privileges"""
@@ -200,7 +200,7 @@ class Daemon(object):
                 os.close(fd)
             except OSError:
                 pass
-        os.open("/dev/null", os.O_RDWR)
+        os.open('/dev/null', os.O_RDWR)
         os.dup2(0, 1)
         os.dup2(0, 2)
 

@@ -38,7 +38,7 @@ def integer(data):
 
 
 def string(data):
-    return type(data) == type(u'') or type(data) == type('')  # noqa
+    return type(data) == type('') or type(data) == type('')  # noqa
 
 
 def array(data):

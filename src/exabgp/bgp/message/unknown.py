@@ -25,7 +25,7 @@ class UnknownMessage(Message):
         return self._message(self.data)
 
     def __str__(self):
-        return "UNKNOWN"
+        return 'UNKNOWN'
 
     @classmethod
     def unpack_message(cls, data):  # pylint: disable=W0613

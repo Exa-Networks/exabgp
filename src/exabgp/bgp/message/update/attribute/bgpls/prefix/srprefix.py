@@ -40,7 +40,7 @@ class SrPrefix(FlagLS):
         self.undecoded = undecoded
 
     def __repr__(self):
-        return "prefix_flags: %s, sids: %s, undecoded_sid: %s" % (self.flags, self.sids, self.undecoded)
+        return 'prefix_flags: %s, sids: %s, undecoded_sid: %s' % (self.flags, self.sids, self.undecoded)
 
     @classmethod
     def unpack(cls, data):

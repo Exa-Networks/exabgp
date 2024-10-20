@@ -5,6 +5,7 @@ nlri.py
 Created by Takeru Hayasaka on 2023-01-21.
 Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 """
+
 from struct import pack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -40,7 +41,7 @@ class MUP(NLRI):
         self._packed = b''
 
     def __hash__(self):
-        return hash("%s:%s:%s:%s:%s" % (self.afi, self.safi, self.ARCHTYPE, self.CODE, self._packed))
+        return hash('%s:%s:%s:%s:%s' % (self.afi, self.safi, self.ARCHTYPE, self.CODE, self._packed))
 
     def __len__(self):
         return len(self._packed) + 2
@@ -49,7 +50,7 @@ class MUP(NLRI):
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self):
-        return "mup:%s:%s" % (
+        return 'mup:%s:%s' % (
             self.registered.get(self.CODE, self).SHORT_NAME.lower(),
             '0x' + ''.join('%02x' % _ for _ in self._packed),
         )
@@ -61,14 +62,14 @@ class MUP(NLRI):
         return ''
 
     def _prefix(self):
-        return "mup:%s:" % (self.registered.get(self.CODE, self).SHORT_NAME.lower())
+        return 'mup:%s:' % (self.registered.get(self.CODE, self).SHORT_NAME.lower())
 
     def pack_nlri(self, negotiated=None):
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
     @classmethod
     def register(cls, klass):
-        key = "%s:%s" % (klass.ARCHTYPE, klass.CODE)
+        key = '%s:%s' % (klass.ARCHTYPE, klass.CODE)
         if key in cls.registered:
             raise RuntimeError('only one Mup registration allowed')
         cls.registered[key] = klass
@@ -77,12 +78,12 @@ class MUP(NLRI):
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
         arch = bgp[0]
-        code = int.from_bytes(bgp[1:3], "big")
+        code = int.from_bytes(bgp[1:3], 'big')
         length = bgp[3]
 
         # arch and code byte size is 4 byte
         end = length + 4
-        key = "%s:%s" % (arch, code)
+        key = '%s:%s' % (arch, code)
         if key in cls.registered:
             klass = cls.registered[key].unpack(bgp[4:end], afi)
         else:

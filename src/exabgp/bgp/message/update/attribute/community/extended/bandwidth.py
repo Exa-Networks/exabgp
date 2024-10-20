@@ -24,10 +24,10 @@ class Bandwidth(ExtendedCommunity):
     def __init__(self, asn, speed, community=None):
         self.asn = asn
         self.speed = speed
-        ExtendedCommunity.__init__(self, community if community is not None else pack("!Hf", asn, speed))
+        ExtendedCommunity.__init__(self, community if community is not None else pack('!Hf', asn, speed))
 
     def __repr__(self):
-        return "bandwith:%d:%0.f" % (self.asn, self.speed)
+        return 'bandwith:%d:%0.f' % (self.asn, self.speed)
 
     @staticmethod
     def unpack(data):
