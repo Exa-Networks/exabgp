@@ -5,7 +5,7 @@ from prompt_toolkit.validation import ThreadedValidator as Validator
 
 # from prompt_toolkit.validation import Validator
 from prompt_toolkit.validation import ValidationError
-from prompt_toolkit.document import Document
+# from prompt_toolkit.document import Document
 
 from vyos.modules import validation
 from vyos.cli import msg

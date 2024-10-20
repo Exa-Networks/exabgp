@@ -29,8 +29,6 @@ from exabgp.reactor.network.error import NagleError
 from exabgp.reactor.network.error import TTLError
 from exabgp.reactor.network.error import AsyncError
 
-from exabgp.logger import log
-
 
 def create(afi, interface=None):
     try:

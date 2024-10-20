@@ -189,9 +189,9 @@ class IOperation(IComponent):
         self.first = None  # handled by pack/str
 
     def pack(self):
-        l, v = self.encode(self.value)
-        op = self.operations | _len_to_bit(l)
-        return bytes([op]) + v
+        length, value = self.encode(self.value)
+        op = self.operations | _len_to_bit(length)
+        return bytes([op]) + value
 
     def encode(self, value):
         raise NotImplementedError('this method must be implemented by subclasses')

@@ -99,7 +99,7 @@ class Notification(Message):
             self.data = data
             return
 
-        if not (code, subcode) in [(6, 2), (6, 4)]:
+        if (code, subcode) not in [(6, 2), (6, 4)]:
             self.data = data if not len([_ for _ in str(data) if _ not in string.printable]) else hexbytes(data)
             return
 

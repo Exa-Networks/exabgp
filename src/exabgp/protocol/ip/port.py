@@ -4954,7 +4954,7 @@ class Port(Resource):
         48556: 'com-bardac-dw',
     }
 
-    codes = dict([(r, l) for (l, r) in names.items()])
+    codes = dict([(inst, name) for (name, inst) in names.items()])
 
 
 # try:

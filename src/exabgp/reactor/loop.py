@@ -83,7 +83,7 @@ class Reactor(object):
 
     def _prevent_spin(self):
         second = int(time.time())
-        if not second in self._busyspin:
+        if second not in self._busyspin:
             self._busyspin = {second: 0}
         self._busyspin[second] += 1
         if self._busyspin[second] > self.max_loop_time:
@@ -96,7 +96,7 @@ class Reactor(object):
             return False
         second = int(time.time())
         ratelimit = self._ratelimit.get(peer, {})
-        if not second in ratelimit:
+        if second not in ratelimit:
             self._ratelimit[peer] = {second: rate - 1}
             return False
         if self._ratelimit[peer][second] > 0:
@@ -524,8 +524,11 @@ class Reactor(object):
         """Kill the BGP session and restart it"""
         log.info('performing restart of exabgp %s' % version, 'reactor')
 
-        # XXX: FIXME: Could return False, in case there is interference with old config...
         reloaded = self.configuration.reload()
+
+        if not reloaded:
+            # XXX: FIXME: Could return False, in case there is interference with old config...
+            pass
 
         for key in self._peers.keys():
             if key not in self.configuration.neighbors.keys():

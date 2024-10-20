@@ -65,7 +65,7 @@ class NetMask(Resource):
         0: '0.0.0.0',
     }
 
-    codes = dict([(r, l) for (l, r) in names.items()])
+    codes = dict([(inst, name) for (name, inst) in names.items()])
 
     @classmethod
     def create(cls, string, afi):

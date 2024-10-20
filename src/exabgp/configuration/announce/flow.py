@@ -136,7 +136,6 @@ class AnnounceFlow(ParseAnnounce):
         'fragment': 'nlri-add',
         'icmp-code': 'nlri-add',
         'icmp-type': 'nlri-add',
-        'packet-length': 'nlri-add',
         'dscp': 'nlri-add',
         'traffic-class': 'nlri-add',
         'flow-label': 'nlri-add',

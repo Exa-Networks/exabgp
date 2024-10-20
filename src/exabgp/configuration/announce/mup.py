@@ -9,8 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from exabgp.rib.change import Change
 
-from exabgp.bgp.message import Action
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 

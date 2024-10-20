@@ -18,7 +18,7 @@ from collections import Counter
 from datetime import timedelta
 
 from exabgp.protocol.family import AFI
-from exabgp.util.dns import host, domain
+# from exabgp.util.dns import host, domain
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
@@ -575,25 +575,25 @@ Neighbor %(peer-address)s
             'add-path': {},
         }
 
-        for (a, s), (l, p, aps, apr) in answer['families'].items():
+        for (a, s), (lf, pf, aps, apr) in answer['families'].items():
             k = '%s %s' % (a, s)
-            formated['local']['families'][k] = l
-            formated['peer']['families'][k] = p
+            formated['local']['families'][k] = lf
+            formated['peer']['families'][k] = pf
             formated['local']['add-path'][k] = aps
             formated['peer']['add-path'][k] = apr
-            if l and p:
+            if lf and pf:
                 formated['families'].append(k)
             formated['add-path'][k] = _addpath(aps, apr)
 
-        for k, (l, p) in answer['capabilities'].items():
-            formated['local']['capabilities'][k] = l
-            formated['peer']['capabilities'][k] = p
-            if l and p:
+        for k, (lc, pc) in answer['capabilities'].items():
+            formated['local']['capabilities'][k] = lc
+            formated['peer']['capabilities'][k] = pc
+            if locals and pc:
                 formated['capabilities'].append(k)
 
-        for k, (s, r) in answer['messages'].items():
-            formated['messages']['sent'][k] = s
-            formated['messages']['received'][k] = r
+        for k, (ms, mr) in answer['messages'].items():
+            formated['messages']['sent'][k] = ms
+            formated['messages']['received'][k] = mr
 
         formated['local']['address'] = answer['local-address']
         formated['local']['as'] = answer['local-as']
@@ -623,14 +623,14 @@ Neighbor %(peer-address)s
             'id': cls.extensive_kv % ('ID', answer['local-id'], _pr(answer['peer-id']), ''),
             'hold': cls.extensive_kv % ('hold-time', answer['local-hold'], _pr(answer['peer-hold']), ''),
             'capabilities': '\n'.join(
-                cls.extensive_kv % ('%s:' % k, _en(l), _en(p), '') for k, (l, p) in answer['capabilities'].items()
+                cls.extensive_kv % ('%s:' % k, _en(lc), _en(pc), '') for k, (lc, pc) in answer['capabilities'].items()
             ),
             'families': '\n'.join(
-                cls.extensive_kv % ('%s %s:' % (a, s), _en(l), _en(r), _addpath(aps, apr))
-                for (a, s), (l, r, apr, aps) in answer['families'].items()
+                cls.extensive_kv % ('%s %s:' % (a, s), _en(lf), _en(rf), _addpath(aps, apr))
+                for (a, s), (lf, rf, apr, aps) in answer['families'].items()
             ),
             'messages': '\n'.join(
-                cls.extensive_kv % ('%s:' % k, str(s), str(r), '') for k, (s, r) in answer['messages'].items()
+                cls.extensive_kv % ('%s:' % k, str(ms), str(mr), '') for k, (ms, mr) in answer['messages'].items()
             ),
         }
 

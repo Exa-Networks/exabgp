@@ -7,12 +7,15 @@ __version__ = '0.26'
 
 _CMD_USAGE = "python -m memory_profiler script_file.py"
 
-import time, sys, os, pdb
-import warnings
-import linecache
-import inspect
-import subprocess
-from copy import copy
+import time  # noqa: E402
+import sys  # noqa: E402
+import os  # noqa: E402
+import pdb  # noqa: E402
+import warnings  # noqa: E402
+import linecache  # noqa: E402
+import inspect  # noqa: E402
+import subprocess  # noqa: E402
+from copy import copy  # noqa: E402
 
 # TODO: provide alternative when multprocessing is not available
 try:
@@ -211,8 +214,6 @@ class LineProfiler:
             # func_code does not exist in Python3
             code = func.__code__
         except AttributeError:
-            import warnings
-
             warnings.warn("Could not extract a code object for the object %r" % (func,))
             return
         if code not in self.code_map:
@@ -368,16 +369,16 @@ def show_results(prof, stream=None, precision=3):
         mem_old = max(lines_normalized[first_line])
         precision = int(precision)
         template_mem = '{{0:{0}.{1}'.format(precision + 6, precision) + 'f} MB'
-        for i, l in enumerate(linenos):
+        for idx, line in enumerate(linenos):
             mem = ''
             inc = ''
-            if l in lines_normalized:
-                mem = max(lines_normalized[l])
+            if line in lines_normalized:
+                mem = max(lines_normalized[line])
                 inc = mem - mem_old
                 mem_old = mem
                 mem = template_mem.format(mem)
                 inc = template_mem.format(inc)
-            stream.write(template.format(l, mem, inc, sub_lines[i]))
+            stream.write(template.format(line, mem, inc, sub_lines[idx]))
         stream.write('\n\n')
 
 

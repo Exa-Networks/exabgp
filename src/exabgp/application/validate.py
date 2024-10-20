@@ -12,7 +12,7 @@ from exabgp.environment import getconf
 from exabgp.configuration.configuration import Configuration
 from exabgp.bgp.neighbor import NeighborTemplate
 
-from exabgp.debug import trace_interceptor
+from exabgp.debug.intercept import trace_interceptor
 from exabgp.logger import log
 
 from exabgp.configuration.check import check_generation

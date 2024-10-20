@@ -78,10 +78,10 @@ class AFI(Resource):
         }.items()
     )
 
-    cache = dict([(r, r) for (l, r) in codes.items()])
-    names = dict([(r, l) for (l, r) in codes.items()])
+    cache = dict([(inst, inst) for (_, inst) in codes.items()])
+    names = dict([(inst, name) for (name, inst) in codes.items()])
 
-    inet_names = dict([(r, l.replace('ipv', 'inet')) for (l, r) in codes.items()])
+    inet_names = dict([(inst, name.replace('ipv', 'inet')) for (name, inst) in codes.items()])
 
     def name(self):
         return self.inet_names.get(self, "unknown afi")
@@ -244,7 +244,7 @@ class SAFI(Resource):
 
     names = _SAFI._names
 
-    cache = dict([(r, r) for (l, r) in codes.items()])
+    cache = dict([(inst, inst) for (_, inst) in codes.items()])
 
     @staticmethod
     def unpack(data):

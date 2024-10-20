@@ -10,7 +10,7 @@ import signal
 import argparse
 import platform
 
-from exabgp.debug import trace_interceptor
+from exabgp.debug.intercept import trace_interceptor
 
 # import before the fork to improve copy on write memory savings
 from exabgp.reactor.loop import Reactor

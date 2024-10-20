@@ -563,6 +563,7 @@ class Network(_Message):
             attributes,
         )
 
+        _ = neighbor
         # prefix = '\20\x7f\0\0\2'
 
         for _ in self.extract(Network.Command.RTM_NEWROUTE, network_flags, family):

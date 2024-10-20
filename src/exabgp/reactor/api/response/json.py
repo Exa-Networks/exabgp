@@ -323,7 +323,7 @@ class JSON(object):
         for nlri in update.nlris:
             try:
                 nexthop = str(nlri.nexthop)
-            except:
+            except Exception:
                 nexthop = 'null'
             if nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
                 plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)

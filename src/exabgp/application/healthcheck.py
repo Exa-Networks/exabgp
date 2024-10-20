@@ -135,9 +135,9 @@ def parse():
         # build an equivalent command line.
         args = sum(
             [
-                "--{0}".format(l.strip()).split("=", 1)
-                for l in options.config.readlines()
-                if not l.strip().startswith("#") and l.strip()
+                "--{0}".format(line.strip()).split("=", 1)
+                for line in options.config.readlines()
+                if not line.strip().startswith("#") and line.strip()
             ],
             [],
         )

@@ -11,7 +11,7 @@ from .tcp import TTL
 from .tcp import TTLv6
 from .tcp import asynchronous
 from .tcp import ready
-from .error import NetworkError
+# from .error import NetworkError
 
 from exabgp.logger import log
 
