@@ -4,7 +4,7 @@ from vyos.xml import load_configuration
 from vyos.cli.completer import VyOSCompleter
 from vyos.cli.validator import VyOSValidator
 from vyos.cli.validator import ValidationError
-from vyos.cli.command import dispatch
+# from vyos.cli.command import dispatch
 from vyos.cli import msg
 
 

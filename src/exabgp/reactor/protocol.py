@@ -40,7 +40,6 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.update.attribute import Attribute
 
 from exabgp.protocol.ip import IP
-from exabgp.reactor.api.processes import ProcessError
 
 from exabgp.logger import log
 

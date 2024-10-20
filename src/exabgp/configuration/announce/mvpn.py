@@ -5,7 +5,6 @@ from exabgp.rib.change import Change
 from exabgp.bgp.message import Action
 
 from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.attribute import Attributes
 

@@ -67,7 +67,7 @@ class Srv6SidInformation:
             code = data[0]
             length = unpack("!H", data[1:3])[0]
             if code in cls.registered_subsubtlvs:
-                subsubtlv = klass = cls.registered_subsubtlvs[code].unpack(data[3 : length + 3], length)
+                subsubtlv = cls.registered_subsubtlvs[code].unpack(data[3 : length + 3], length)
             else:
                 subsubtlv = GenericSrv6ServiceDataSubSubTlv(code, data[3 : length + 3])
             subsubtlvs.append(subsubtlv)

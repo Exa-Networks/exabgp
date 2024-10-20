@@ -221,7 +221,7 @@ class Tree(object):
             if string == '{':
                 self.pop(Token.Punctuation, '{')
                 self.pop(Token.Keyword, 'prefix')
-                prefix = self.formated(self.pop(Token.Literal.String))
+                # prefix = self.formated(self.pop(Token.Literal.String))
                 self.pop(Token.Punctuation, ';')
                 self.pop(Token.Punctuation, '}')
                 self.imports(name)

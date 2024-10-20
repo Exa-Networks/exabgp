@@ -92,7 +92,7 @@ def show_adj_rib(self, reactor, service, line, use_json):
     extensive = line.endswith(' extensive')
     try:
         rib = words[2]
-        if not rib in ('in', 'out'):
+        if rib not in ('in', 'out'):
             reactor.processes.answer_error(service)
             return False
     except IndexError:

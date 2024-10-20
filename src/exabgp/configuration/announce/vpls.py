@@ -35,7 +35,7 @@ from exabgp.configuration.static.parser import withdraw
 
 from exabgp.configuration.static.mpls import route_distinguisher
 
-from exabgp.configuration.l2vpn.parser import vpls
+# from exabgp.configuration.l2vpn.parser import vpls
 from exabgp.configuration.l2vpn.parser import vpls_endpoint
 from exabgp.configuration.l2vpn.parser import vpls_size
 from exabgp.configuration.l2vpn.parser import vpls_offset

@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from struct import pack
 from struct import unpack
-import sys
 
 from exabgp.protocol.resource import Resource
 

@@ -69,15 +69,15 @@ class SrCapabilities(FlagLS):
             # SID/Label: If length is set to 3, then the 20 rightmost bits
             # represent a label.  If length is set to 4, then the value
             # represents a 32 bit SID.
-            t, l = unpack('!HH', data[3:7])
-            if t != 1161:
-                raise Notify(3, 5, "Invalid sub-TLV type: {}".format(t))
-            if l == 3:
-                sids.append([range_size, unpack('!I', bytes([0]) + data[7 : l + 7])[0] & 0xFFFFF])
-            elif l == 4:
+            sub_type, length = unpack('!HH', data[3:7])
+            if sub_type != 1161:
+                raise Notify(3, 5, "Invalid sub-TLV type: {}".format(sub_type))
+            if length == 3:
+                sids.append([range_size, unpack('!I', bytes([0]) + data[7 : length + 7])[0] & 0xFFFFF])
+            elif length == 4:
                 # XXX: really we are reading 7+ but then re-parsing it again ??
-                sids.append([range_size, unpack('!I', data[7 : l + 7])[0]])
-            data = data[l + 7 :]
+                sids.append([range_size, unpack('!I', data[7 : length + 7])[0]])
+            data = data[length + 7 :]
 
         return cls(flags, sids)
 

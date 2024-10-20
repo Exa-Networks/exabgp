@@ -56,7 +56,7 @@ class ICMPType(Resource):
         }.items()
     )
 
-    names = dict([(r, l) for (l, r) in codes.items()])
+    names = dict([(value, name) for (name, value) in codes.items()])
 
 
 # https://www.iana.org/assignments/icmp-parameters

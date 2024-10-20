@@ -16,8 +16,6 @@ from exabgp.version import version
 from exabgp.environment import Env
 from exabgp.environment import ROOT
 
-
-from exabgp.logger import log
 from exabgp.logger import history
 
 

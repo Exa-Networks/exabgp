@@ -9,11 +9,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # flake8: noqa: F401,E261
 
-from exabgp.bgp.message.update.attribute.community.initial import Community
-from exabgp.bgp.message.update.attribute.community.initial import Communities
+from exabgp.bgp.message.update.attribute.community.initial.community import Community
+from exabgp.bgp.message.update.attribute.community.initial.communities import Communities
 
-from exabgp.bgp.message.update.attribute.community.large import LargeCommunity
-from exabgp.bgp.message.update.attribute.community.large import LargeCommunities
+from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
+from exabgp.bgp.message.update.attribute.community.large.communities import LargeCommunities
 
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities

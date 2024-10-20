@@ -26,8 +26,8 @@ def dump():
 
             lines, line_num = inspect.getsourcelines(type(x))
             print("	line num:", line_num)
-            for l in lines:
-                print("		line:", l.rstrip("\n"))
+            for line in lines:
+                print("		line:", line.rstrip("\n"))
         except Exception:
             pass
 

@@ -1,6 +1,4 @@
 import sys
-import argparse
-import os
 
 from vyos.xml import kw
 from vyos.util import call

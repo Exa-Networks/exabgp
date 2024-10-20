@@ -6,7 +6,7 @@ import argparse
 
 from exabgp.configuration.configuration import Configuration
 
-from exabgp.debug import trace_interceptor
+from exabgp.debug.intercept import trace_interceptor
 
 from exabgp.environment import Env
 from exabgp.environment import getenv

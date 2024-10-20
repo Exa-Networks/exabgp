@@ -11,7 +11,6 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 
 from exabgp.bgp.message.notification import Notify
-from struct import pack
 
 
 # +-----------------------------------+
@@ -74,7 +73,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         data_len = len(data)
         rd = RouteDistinguisher.unpack(data[:8])
         size = data_len - 8
-        if not size in [4, 16]:
+        if size not in [4, 16]:
             raise Notify(3, 5, "Invalid IP size, expect 4 or 16 octets. accuracy size %d" % size)
         ip = IP.unpack(data[8 : 8 + size])
 

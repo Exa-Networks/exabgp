@@ -72,7 +72,7 @@ class Labels(object):
     def json(self):
         if len(self.labels) >= 1:
             return '"label": [ %s ]' % ', '.join(
-                ["[%d%s]" % (l, opt_raw_label(r, ', %d')) for (l, r) in zip(self.labels, self.raw_labels)]
+                ["[%d%s]" % (label, opt_raw_label(raw, ', %d')) for (label, raw) in zip(self.labels, self.raw_labels)]
             )
         else:
             return ''
@@ -80,7 +80,7 @@ class Labels(object):
     def __str__(self):
         if len(self.labels) > 1:
             return ' label [ %s ]' % ' '.join(
-                ["%d%s" % (l, opt_raw_label(r)) for (l, r) in zip(self.labels, self.raw_labels)]
+                ["%d%s" % (label, opt_raw_label(raw)) for (label, raw) in zip(self.labels, self.raw_labels)]
             )
         elif len(self.labels) == 1:
             return ' label %d%s' % (self.labels[0], opt_raw_label(self.raw_labels[0]))
@@ -89,7 +89,7 @@ class Labels(object):
 
     def __repr__(self):
         if len(self.labels) > 1:
-            return '[ %s ]' % ','.join(["%d%s" % (l, opt_raw_label(r)) for (l, r) in zip(self.labels, self.raw_labels)])
+            return '[ %s ]' % ','.join(["%d%s" % (label, opt_raw_label(raw)) for (label, raw) in zip(self.labels, self.raw_labels)])
         elif len(self.labels) == 1:
             return '%d%s' % (self.labels[0], opt_raw_label(self.raw_labels[0]))
         else:

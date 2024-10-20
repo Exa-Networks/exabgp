@@ -6,8 +6,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute.community.initial import Communities
-from exabgp.bgp.message.update.attribute.community.large import LargeCommunity
+from exabgp.bgp.message.update.attribute.community.initial.communities import Communities
+from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
 
 from exabgp.bgp.message.notification import Notify
 

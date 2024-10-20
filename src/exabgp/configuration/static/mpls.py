@@ -198,7 +198,7 @@ def prefix_sid_srv6(tokeniser):
 
 def parse_ip_prefix(tokeninser):
     addrstr, length = tokeninser.split("/")
-    if length == None:
+    if length is None:
         raise Exception("unexpect prefix format '%s'" % tokeninser)
 
     if not length.isdigit():

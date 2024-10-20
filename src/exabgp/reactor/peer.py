@@ -34,7 +34,7 @@ from exabgp.logger import log
 from exabgp.logger import logfunc
 from exabgp.logger import lazyformat
 
-from exabgp.debug import format_exception
+from exabgp.debug.report import format_exception
 
 
 class ACTION(object):

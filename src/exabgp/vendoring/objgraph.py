@@ -844,7 +844,7 @@ def _quote(s):
 
 def _get_obj_type(obj):
     objtype = type(obj)
-    if type(obj) == InstanceType:
+    if type(obj) is InstanceType:
         objtype = obj.__class__
     return objtype
 
@@ -866,7 +866,7 @@ def _long_typename(obj):
 def _safe_repr(obj):
     try:
         return _short_repr(obj)
-    except:
+    except Exception:
         return '(unrepresentable)'
 
 
