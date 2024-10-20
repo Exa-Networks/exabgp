@@ -32,7 +32,12 @@ jobs:
           pip install -r requirements.txt
           pip install psutil
           pip install flake8
+          pip install ruff
 
       - name: flake8
         run: |
           flake8 . --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: ruff
+        run: |
+          ruff check src
