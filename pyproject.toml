@@ -64,6 +64,7 @@ requires = ["setuptools", "wheel"]
 
 [tool.ruff]
 line-length = 120
+exclude = ["dev", "lib/exabgp/vendoring"]
 
 [tool.ruff.format]
 quote-style = "single"
