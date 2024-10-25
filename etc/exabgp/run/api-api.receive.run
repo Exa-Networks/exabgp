@@ -25,12 +25,12 @@ while os.getppid() != 1:
             sys.stderr.write('   (ok) api.receive 0.0.0.0/32 received\n%s\n' % line)
             sys.stdout.flush()
             time.sleep(2)  # make sure the other process is faster if it gets any data
-            sys.stdout.write("announce route 6.6.6.0/24 next-hop 1.1.1.1\n")
+            sys.stdout.write('announce route 6.6.6.0/24 next-hop 1.1.1.1\n')
             sys.stdout.flush()
         else:
             sys.stderr.write('   (failure) api.receive received unexpected data:\n%s' % line)
             sys.stderr.flush()
-            sys.stdout.write("announce route 6.6.6.0/24 next-hop 9.9.9.9\n")
+            sys.stdout.write('announce route 6.6.6.0/24 next-hop 9.9.9.9\n')
             sys.stdout.flush()
             time.sleep(3)
             sys.exit(1)

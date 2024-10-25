@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 # encoding utf-8
 
-"""
-"""
+""" """
 
 import os
 import sys
@@ -26,9 +25,9 @@ import urllib.parse
 #       (no-advertise may also be set in the router route-map (belt and suspenders))
 #
 
-delay        = 600
-specs4       = ' next-hop 192.0.2.1 community [65535:666 no-advertise]'
-specs6       = ' next-hop 100::1 community [65535:666 no-advertise]'
+delay = 600
+specs4 = ' next-hop 192.0.2.1 community [65535:666 no-advertise]'
+specs6 = ' next-hop 100::1 community [65535:666 no-advertise]'
 
 #
 # Blocklists mostly currated from:
@@ -42,15 +41,16 @@ specs6       = ' next-hop 100::1 community [65535:666 no-advertise]'
 #
 
 blocklists = [
-                { 'url': 'https://www.spamhaus.org/drop/drop.txt', 'refresh': 7200 },
-                { 'url': 'https://www.spamhaus.org/drop/edrop.txt', 'refresh': 7200 },
-                { 'url': 'https://www.spamhaus.org/drop/dropv6.txt', 'refresh': 7200 },
-                { 'url': 'https://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt', 'refresh': 7200 },
-                { 'url': 'https://blocklist.greensnow.co/greensnow.txt', 'refresh': 7200 },
-                { 'url': 'https://www.darklist.de/raw.php', 'refresh': 7200 },
-                { 'url': 'https://sigs.interserver.net/ipslim.txt', 'refresh': 7200 },
-                { 'url': 'https://api.blocklist.de/getlast.php?time=3600', 'refresh': 3600 }
-             ]
+    {'url': 'https://www.spamhaus.org/drop/drop.txt', 'refresh': 7200},
+    {'url': 'https://www.spamhaus.org/drop/edrop.txt', 'refresh': 7200},
+    {'url': 'https://www.spamhaus.org/drop/dropv6.txt', 'refresh': 7200},
+    {'url': 'https://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt', 'refresh': 7200},
+    {'url': 'https://blocklist.greensnow.co/greensnow.txt', 'refresh': 7200},
+    {'url': 'https://www.darklist.de/raw.php', 'refresh': 7200},
+    {'url': 'https://sigs.interserver.net/ipslim.txt', 'refresh': 7200},
+    {'url': 'https://api.blocklist.de/getlast.php?time=3600', 'refresh': 3600},
+]
+
 
 def requestsGet(url):
     r_session = requests.session()
@@ -58,6 +58,7 @@ def requestsGet(url):
     r = r_session.get(url, stream=True)
     r.raise_for_status()
     return r
+
 
 def lineFilter(line):
     if not line:
@@ -67,23 +68,23 @@ def lineFilter(line):
         return None
     if l.startswith('#'):
         return None
-    return (l.split(' ')[0].split(';')[0].split('#')[0].strip())
+    return l.split(' ')[0].split(';')[0].split('#')[0].strip()
+
 
 class blocklistThread(object):
-
     def __init__(self, url=None, refresh=86400):
         try:
-             refresh = int(refresh)
+            refresh = int(refresh)
         except ValueError:
-             raise ValueError('{} is not a valid refresh time interval'.format(refresh))
+            raise ValueError('{} is not a valid refresh time interval'.format(refresh))
         if refresh < 60:
-             raise ValueError('{} is not a valid refresh interval of at least 60 seconds'.format(refresh))
+            raise ValueError('{} is not a valid refresh interval of at least 60 seconds'.format(refresh))
         try:
             result = urllib.parse.urlparse(url)
         except ValueError:
-             raise ValueError('{} is not a valid url'.format(url))
-        if not all ([result.scheme, result.netloc]):
-             raise ValueError('{} is not a valid url'.format(url))
+            raise ValueError('{} is not a valid url'.format(url))
+        if not all([result.scheme, result.netloc]):
+            raise ValueError('{} is not a valid url'.format(url))
         self._prefixes = []
         self._valid = False
         self._url = url
@@ -101,7 +102,7 @@ class blocklistThread(object):
     def getPrefixes(self):
         # Give our thread a chance to get data once
         count = 0
-        while ((not self._valid) and (count < 12)):
+        while (not self._valid) and (count < 12):
             count = count + 1
             time.sleep(5)
         self._valid = True
@@ -137,8 +138,8 @@ class blocklistThread(object):
             # We add in a little jitter to assist source site load
             time.sleep(refresh + random.randint(-300, 300))
 
-class responseThread(object):
 
+class responseThread(object):
     def __init__(self):
         thread = threading.Thread(target=self.run, args=())
         thread.daemon = True
@@ -159,20 +160,20 @@ class responseThread(object):
                     sys.stderr.write('error {} reading from stdin.\n'.format(e.errno))
                     sys.stderr.flush()
             else:
-                if (line == 'shutdown'):
+                if line == 'shutdown':
                     sys.stderr.write('shutdown request received, terminating process.\n')
                     sys.stderr.flush()
                     os._exit(1)
-                if (line != 'done'):
+                if line != 'done':
                     sys.stderr.write('unexpected response {} received.\n'.format(line))
                     sys.stderr.flush()
+
 
 #
 # Start at the start
 #
 
 if __name__ == '__main__':
-
     # Start our blocklist retrival threads
 
     blocklistThreads = []
@@ -193,7 +194,6 @@ if __name__ == '__main__':
     currentBlocklist = dict()
 
     while True:
-
         newBlocklist = dict()
         for blt in blocklistThreads:
             for prefix in blt.getPrefixes():
@@ -223,5 +223,4 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             sys.stderr.write('\nshutting down due to user request\n')
             sys.stderr.flush()
-            os._exit(1) 
-
+            os._exit(1)

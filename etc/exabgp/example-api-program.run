@@ -37,7 +37,12 @@ errno_fatal = set(
     )
 )
 
-errno_unavailable = set((errno.ECONNREFUSED, errno.EHOSTUNREACH,))
+errno_unavailable = set(
+    (
+        errno.ECONNREFUSED,
+        errno.EHOSTUNREACH,
+    )
+)
 
 
 def asynchronous(fd):
@@ -57,7 +62,7 @@ def sync(fd):
 
 
 if not asynchronous(sys.stdin):
-    sys.stderr.write("could not set stdin/stdout non blocking\n")
+    sys.stderr.write('could not set stdin/stdout non blocking\n')
     sys.stderr.flush()
     sys.exit(1)
 
@@ -73,15 +78,15 @@ def _reader():
                 yield ''
                 continue
             elif exc.args[0] in errno_fatal:
-                sys.stderr.write("fatal error while reading on stdin : %s" % str(exc))
+                sys.stderr.write('fatal error while reading on stdin : %s' % str(exc))
                 sys.exit(1)
             else:
-                sys.stderr.write("unknown error while reading on stdin : %s" % str(exc))
+                sys.stderr.write('unknown error while reading on stdin : %s' % str(exc))
                 sys.exit(1)
 
         if not data:
             # we lost the pipe
-            sys.stderr.write("the read pipe was closed by the other side : %s" % str(exc))
+            sys.stderr.write('the read pipe was closed by the other side : %s' % str(exc))
             sys.exit(1)
 
         received += data
@@ -95,7 +100,12 @@ def _reader():
 reader = _reader().next
 
 
-def write(data='', memory=['',]):
+def write(
+    data='',
+    memory=[
+        '',
+    ],
+):
     left = memory.pop()
     left += data
     try:
@@ -109,11 +119,11 @@ def write(data='', memory=['',]):
         if exc.args[0] in errno_block:
             return not not left
         elif exc.args[0] in errno_fatal:
-            sys.stderr.write("fatal error while writing on stdout : %s" % str(exc))
+            sys.stderr.write('fatal error while writing on stdout : %s' % str(exc))
             sys.stderr.flush()
             sys.exit(1)
         else:
-            sys.stderr.write("unknown error while writing on stdout : %s" % str(exc))
+            sys.stderr.write('unknown error while writing on stdout : %s' % str(exc))
             sys.stderr.flush()
             sys.exit(1)
 
@@ -122,18 +132,25 @@ def write(data='', memory=['',]):
 
 def read(timeout):
     try:
-        r, w, x = select.select([sys.stdin], [], [sys.stdin,], timeout)  # pylint: disable=W0612
+        r, w, x = select.select(
+            [sys.stdin],
+            [],
+            [
+                sys.stdin,
+            ],
+            timeout,
+        )  # pylint: disable=W0612
     except IOError as exc:
         if exc.args[0] in errno_block:
             return ''
         elif exc.args[0] in errno_fatal:
             # this may not send anything ...
-            sys.stderr.write("fatal error during select : %s" % str(exc))
+            sys.stderr.write('fatal error during select : %s' % str(exc))
             sys.stderr.flush()
             sys.exit(1)
         else:
             # this may not send anything ...
-            sys.stderr.write("unexpected error during select : %s" % str(exc))
+            sys.stderr.write('unexpected error during select : %s' % str(exc))
             sys.stderr.flush()
             sys.exit(1)
 
