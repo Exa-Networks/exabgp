@@ -1,4 +1,5 @@
 # running the test suite/code
+ruff
 flake8
 coveralls
 nose

@@ -29,14 +29,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install psutil
-          pip install flake8
-          pip install ruff
+          pip install -r qa/requirements.txt
 
       - name: flake8
         run: |
-          flake8 . --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --max-line-length 120 --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: ruff
         run: |
