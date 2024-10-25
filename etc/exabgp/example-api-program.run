@@ -86,7 +86,7 @@ def _reader():
 
         if not data:
             # we lost the pipe
-            sys.stderr.write('the read pipe was closed by the other side : %s' % str(exc))
+            sys.stderr.write('the read pipe was closed by the other side')
             sys.exit(1)
 
         received += data

@@ -331,8 +331,8 @@ def generate_binary(args):
     if sys.version_info.minor >= 7:
         params['compressed'] = not debug
 
-    here = os.path.dirname(os.path.realpath(__file__))
-    data = os.path.abspath(os.path.join(here, 'data'))
+    # here = os.path.dirname(os.path.realpath(__file__))
+    # data = os.path.abspath(os.path.join(here, 'data'))
 
     zipapp.create_archive(**params)
 
