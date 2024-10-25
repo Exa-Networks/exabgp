@@ -167,7 +167,12 @@ class BGPHandler(asyncore.dispatcher_with_send):
         yield 'notification:%d,%d' % (body[0], body[1]), bytestream(body)
 
     def announce(self, *args):
-        flushed('    ', self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0])
+        flushed(
+            '    ',
+            self.ip,
+            self.port,
+            ' '.join(str(_) for _ in args) if len(args) > 1 else args[0],
+        )
 
     def check_signal(self):
         if self.messages and self.messages[0].startswith('signal:'):
@@ -307,7 +312,12 @@ class BGPHandler(asyncore.dispatcher_with_send):
                 % (
                     self.counter,
                     '%s:%s:%s:%s'
-                    % (bytestream(header[:16]), bytestream(header[16:18]), bytestream(header[18:]), bytestream(body)),
+                    % (
+                        bytestream(header[:16]),
+                        bytestream(header[16:18]),
+                        bytestream(header[18:]),
+                        bytestream(body),
+                    ),
                 )
             )
             self.send(self.keepalive)
@@ -319,7 +329,12 @@ class BGPHandler(asyncore.dispatcher_with_send):
                 % (
                     self.counter,
                     '%s:%s:%s:%s'
-                    % (bytestream(header[:16]), bytestream(header[16:18]), bytestream(header[18:]), bytestream(body)),
+                    % (
+                        bytestream(header[:16]),
+                        bytestream(header[16:18]),
+                        bytestream(header[18:]),
+                        bytestream(body),
+                    ),
                 )
             )
             self.send(header + body)
@@ -328,7 +343,12 @@ class BGPHandler(asyncore.dispatcher_with_send):
                 % (
                     self.counter,
                     '%s:%s:%s:%s'
-                    % (bytestream(header[:16]), bytestream(header[16:18]), bytestream(header[18:]), bytestream(body)),
+                    % (
+                        bytestream(header[:16]),
+                        bytestream(header[16:18]),
+                        bytestream(header[18:]),
+                        bytestream(body),
+                    ),
                 )
             )
             return
@@ -352,11 +372,17 @@ class BGPHandler(asyncore.dispatcher_with_send):
                         self.announce(
                             'received %d (%1s%s):' % (self.counter, self.options['letter'], self.step),
                             '%s:%s:%s:%s'
-                            % (announcement[:32], announcement[32:36], announcement[36:38], announcement[38:]),
+                            % (
+                                announcement[:32],
+                                announcement[32:36],
+                                announcement[36:38],
+                                announcement[38:],
+                            ),
                         )
                     else:
                         self.announce(
-                            'received %d (%1s%s):' % (self.counter, self.options['letter'], self.step), announcement
+                            'received %d (%1s%s):' % (self.counter, self.options['letter'], self.step),
+                            announcement,
                         )
                     self.check_signal()
                 else:
@@ -380,7 +406,12 @@ class BGPHandler(asyncore.dispatcher_with_send):
                             if message.startswith('F' * 32):
                                 self.announce(
                                     '                 %s:%s:%s:%s'
-                                    % (message[:32], message[32:36], message[36:38], message[38:])
+                                    % (
+                                        message[:32],
+                                        message[32:36],
+                                        message[36:38],
+                                        message[38:],
+                                    )
                                 )
                             else:
                                 self.announce('                 %s' % message)
@@ -389,7 +420,12 @@ class BGPHandler(asyncore.dispatcher_with_send):
                         if message.startswith('F' * 32):
                             self.announce(
                                 'expected       : %s:%s:%s:%s'
-                                % (message[:32], message[32:36], message[36:38], message[38:])
+                                % (
+                                    message[:32],
+                                    message[32:36],
+                                    message[36:38],
+                                    message[38:],
+                                )
                             )
                         else:
                             self.announce('expected       : %s' % message)
@@ -520,7 +556,7 @@ class BGPServer(asyncore.dispatcher):
         pair = self.accept()
         if pair is not None:
             sock, addr = pair
-            handler = BGPHandler(sock).setup(*addr[:2], messages=messages, options=self.options)
+            BGPHandler(sock).setup(*addr[:2], messages=messages, options=self.options)
 
 
 def drop():
@@ -556,7 +592,11 @@ def main():
         flushed(
             'a list of expected route announcement/withdrawl in the format <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>'
         )
-        flushed('for example:', sys.argv[0], '1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8 ')
+        flushed(
+            'for example:',
+            sys.argv[0],
+            '1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8 ',
+        )
         flushed('routes with the same <number> can arrive in any order')
         sys.exit(1)
 
@@ -564,12 +604,10 @@ def main():
 
     for arg in sys.argv[1:]:
         if arg == '--sink':
-            messages = []
             options['sink'] = True
             continue
 
         if arg == '--echo':
-            messages = []
             options['echo'] = True
             continue
 
@@ -598,7 +636,7 @@ def main():
         BGPServer('127.0.0.1', options)
         try:
             BGPServer('::1', options)
-        except:
+        except Exception:
             # does not work on travis-ci
             pass
         drop()

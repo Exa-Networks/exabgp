@@ -328,11 +328,11 @@ class EncodingTests(Tests):
             self.collect()
             if self.code == 0:
                 if self._check in self.stdout:
-                    if os.getenv('DEBUG', None) != None:
+                    if os.getenv('DEBUG', None) is not None:
                         self.report('completed successfully')
                     return True
                 if self._check in self.stderr:
-                    if os.getenv('DEBUG', None) != None:
+                    if os.getenv('DEBUG', None) is not None:
                         self.report('completed successfully')
                     return True
 
@@ -435,10 +435,30 @@ class EncodingTests(Tests):
         result = []
         for test in self.selected():
             result.append(
-                ' '.join(['>', sys.argv[0], 'encoding', '--server', test.nick, '--port', f'{test.conf["port"]}'])
+                ' '.join(
+                    [
+                        '>',
+                        sys.argv[0],
+                        'encoding',
+                        '--server',
+                        test.nick,
+                        '--port',
+                        f'{test.conf["port"]}',
+                    ]
+                )
             )
             result.append(
-                ' '.join(['>', sys.argv[0], 'encoding', '--client', test.nick, '--port', f'{test.conf["port"]}'])
+                ' '.join(
+                    [
+                        '>',
+                        sys.argv[0],
+                        'encoding',
+                        '--client',
+                        test.nick,
+                        '--port',
+                        f'{test.conf["port"]}',
+                    ]
+                )
             )
         return '\n'.join(result)
 
@@ -449,7 +469,16 @@ class EncodingTests(Tests):
         for test in self.selected():
             test.setup()
             self.display()
-            test.run([sys.argv[0], 'encoding', '--server', test.nick, '--port', f'{test.conf["port"]}'])
+            test.run(
+                [
+                    sys.argv[0],
+                    'encoding',
+                    '--server',
+                    test.nick,
+                    '--port',
+                    f'{test.conf["port"]}',
+                ]
+            )
             time.sleep(0.005)
 
         time.sleep(0.02)
@@ -458,7 +487,14 @@ class EncodingTests(Tests):
             test.setup()
             self.display()
             client[test.nick] = Exec().run(
-                [sys.argv[0], 'encoding', '--client', test.nick, '--port', f'{test.conf["port"]}']
+                [
+                    sys.argv[0],
+                    'encoding',
+                    '--client',
+                    test.nick,
+                    '--port',
+                    f'{test.conf["port"]}',
+                ]
             )
             time.sleep(0.005)
 
@@ -578,7 +614,12 @@ class DecodingTests(Tests):
             self.display()
             message = test.conf['type']
             if message == 'open':
-                cmd = [Path.EXABGP, 'decode', '--%s' % test.conf['type'], test.conf['packet']]
+                cmd = [
+                    Path.EXABGP,
+                    'decode',
+                    '--%s' % test.conf['type'],
+                    test.conf['packet'],
+                ]
             elif message in ['update', 'nlri']:
                 cmd = [
                     Path.EXABGP,
@@ -774,7 +815,12 @@ if __name__ == '__main__':
     subparser = parser.add_subparsers()
 
     add_test(subparser, 'decoding', decoding, ['list', 'edit', 'dry', 'timeout', 'port'])
-    add_test(subparser, 'encoding', encoding, ['list', 'edit', 'dry', 'timeout', 'port', 'server', 'client'])
+    add_test(
+        subparser,
+        'encoding',
+        encoding,
+        ['list', 'edit', 'dry', 'timeout', 'port', 'server', 'client'],
+    )
     add_test(subparser, 'parsing', parsing, ['list', 'dry', 'edit'])
 
     parsed = parser.parse_args()

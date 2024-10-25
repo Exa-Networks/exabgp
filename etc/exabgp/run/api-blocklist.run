@@ -8,7 +8,6 @@ import sys
 import errno
 import threading
 import time
-import json
 import ipaddress
 import traceback
 import requests
@@ -44,7 +43,10 @@ blocklists = [
     {'url': 'https://www.spamhaus.org/drop/drop.txt', 'refresh': 7200},
     {'url': 'https://www.spamhaus.org/drop/edrop.txt', 'refresh': 7200},
     {'url': 'https://www.spamhaus.org/drop/dropv6.txt', 'refresh': 7200},
-    {'url': 'https://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt', 'refresh': 7200},
+    {
+        'url': 'https://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt',
+        'refresh': 7200,
+    },
     {'url': 'https://blocklist.greensnow.co/greensnow.txt', 'refresh': 7200},
     {'url': 'https://www.darklist.de/raw.php', 'refresh': 7200},
     {'url': 'https://sigs.interserver.net/ipslim.txt', 'refresh': 7200},
@@ -63,12 +65,12 @@ def requestsGet(url):
 def lineFilter(line):
     if not line:
         return None
-    l = line.strip()
-    if l.startswith(';'):
+    line = line.strip()
+    if line.startswith(';'):
         return None
-    if l.startswith('#'):
+    if line.startswith('#'):
         return None
-    return l.split(' ')[0].split(';')[0].split('#')[0].strip()
+    return line.split(' ')[0].split(';')[0].split('#')[0].strip()
 
 
 class blocklistThread(object):
@@ -200,7 +202,7 @@ if __name__ == '__main__':
                 newBlocklist[prefix] = None
 
         for prefix in currentBlocklist:
-            if not prefix in newBlocklist:
+            if prefix not in newBlocklist:
                 specs = specs4
                 if ipaddress.ip_network(prefix).version == 6:
                     specs = specs6
@@ -208,7 +210,7 @@ if __name__ == '__main__':
                 sys.stdout.flush()
 
         for prefix in newBlocklist:
-            if not prefix in currentBlocklist:
+            if prefix not in currentBlocklist:
                 specs = specs4
                 if ipaddress.ip_network(prefix).version == 6:
                     specs = specs6

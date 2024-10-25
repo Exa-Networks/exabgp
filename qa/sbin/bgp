@@ -460,7 +460,6 @@ class Checker(object):
         ordered = []
         for kg in sorted(list(group.keys())):
             source = group[kg]
-            appending = []
             for ks in sorted(list(source.keys())):
                 ordered.append(source[ks])
         return ordered
@@ -692,13 +691,31 @@ def parse_cmdline():
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--help', help='this help :-)', action='store_true')
-    parser.add_argument('--echo', help='accept any BGP messages send it back to the emiter', action='store_true')
-    parser.add_argument('--sink', help='accept any BGP messages and reply with a keepalive', action='store_true')
-    parser.add_argument('--asn', help='ASN to use (otherwise extracted from the OPEN)', type=int, default=None)
+    parser.add_argument(
+        '--echo',
+        help='accept any BGP messages send it back to the emiter',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--sink',
+        help='accept any BGP messages and reply with a keepalive',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--asn',
+        help='ASN to use (otherwise extracted from the OPEN)',
+        type=int,
+        default=None,
+    )
     parser.add_argument('--port', help='port to bind to', type=int, default=port)
     parser.add_argument('--view', help='look at the expected packets', action='store_true')
     parser.add_argument('--ipv6', help='bind using ipv6', action='store_true')
-    parser.add_argument('checks', help='a list of expected route announcement/withdrawl', nargs='?', type=open)
+    parser.add_argument(
+        'checks',
+        help='a list of expected route announcement/withdrawl',
+        nargs='?',
+        type=open,
+    )
 
     cmdarg = parser.parse_args()
 
@@ -801,7 +818,8 @@ async def main(options, checker, queue):
     service = BGPService(loop, queue, options, checker)
 
     server = await asyncio.start_server(
-        lambda reader, writer: BGPProtocol(service, reader, writer).handle_bgp(), sock=sock
+        lambda reader, writer: BGPProtocol(service, reader, writer).handle_bgp(),
+        sock=sock,
     )
     # perhaps set backlog to 1 ..
 
@@ -826,7 +844,7 @@ if __name__ == '__main__':
     flushed('\n')
 
     if queue.empty():
-        flushed(f'failed with no code')
+        flushed('failed with no code')
         sys.exit(1)
 
     code = queue.get()

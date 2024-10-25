@@ -8,49 +8,41 @@ import unittest
 
 
 class TestTlvs(unittest.TestCase):
-    def test_ip_reach_ipv4(
-        self,
-    ):
+    def test_ip_reach_ipv4(self):
         data = b'\n\n\x00'
 
         tlv = IpReach.unpack(data, 3)
-        self.assertEqual(tlv.json(), '"ip-reachability-tlv": "10.0.0.0", "ip-reach-prefix": "10.0.0.0/10"')
+        self.assertEqual(
+            tlv.json(),
+            '"ip-reachability-tlv": "10.0.0.0", "ip-reach-prefix": "10.0.0.0/10"',
+        )
 
-    def test_ip_reach_ipv6(
-        self,
-    ):
+    def test_ip_reach_ipv6(self):
         data = b'\x7f \x01\x07\x00\x00\x00\x80'
         tlv = IpReach.unpack(data, 4)
         self.assertEqual(
-            tlv.json(), '"ip-reachability-tlv": "2001:700:0:8000::", "ip-reach-prefix": "2001:700:0:8000::/127"'
+            tlv.json(),
+            '"ip-reachability-tlv": "2001:700:0:8000::", "ip-reach-prefix": "2001:700:0:8000::/127"',
         )
 
-    def test_igp_tags(
-        self,
-    ):
+    def test_igp_tags(self):
         data = b'\x00\x00\xff\xfe'
         tlv = IgpTags.unpack(data)
         self.assertEqual(tlv.json(), '"igp-route-tags": [65534]')
 
-    def test_prefix_metric(
-        self,
-    ):
+    def test_prefix_metric(self):
         data = b'\x00\x00\x00\x14'
         tlv = PrefixMetric.unpack(data)
         self.assertEqual(tlv.json(), '"prefix-metric": 20')
 
-    def test_ospf_route_type(
-        self,
-    ):
+    def test_ospf_route_type(self):
         data = b'\x04'
         tlv = OspfRoute.unpack(data)
         self.assertEqual(tlv.json(), '"ospf-route-type": 4')
 
 
 class TestDescriptors(unittest.TestCase):
-    def test_node_descriptor(
-        self,
-    ):
+    def test_node_descriptor(self):
         data = b'\x02\x00\x00\x04\x00\x00\xff\xfd\x02\x01\x00\x04\x00\x00\x00\x00\x02\x03\x00\x04\nq?\xf0'
         igp_type = 3
         descriptor, remain = NodeDescriptor.unpack(data, igp_type)
