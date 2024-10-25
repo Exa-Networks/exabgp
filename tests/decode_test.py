@@ -11,15 +11,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # pylint: ignore=E131
 # pylama:ignore=E131
 
-import sys
+import unittest
 
 # INET include is required as it perform some AFI/SAFI registration
 from exabgp.bgp.message.update.nlri import INET  # noqa
 
-from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.ip import IPv4
-from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.holdtime import HoldTime
 
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import Open
@@ -306,37 +303,37 @@ bodies.append((True, body))
 
 class FakeNeighbor(dict):
     def __init__(self):
-        self.update({
-            'description': 'a test neighbor',
-            'router-id': RouterID('127.0.0.1'),
-            'local-address': IPv4('127.0.0.1'),
-            'peer-address': IPv4('127.0.0.1'),
-            'host-name': 'localhost',
-            'domain-name': 'localdomain',
-            'peer-as': ASN('65500'),
-            'local-as': ASN('65500'),
-            'hold-time': HoldTime(180),
-            'capability': {
-                'asn4': False,
-                'add-path': 0,
-                'extended_message': False,
-                'nexthop': None,
-                'route-refresh': False,
-                'graceful-restart': False,
-                'multi-session': None,
-                'add-path': None,
-                'aigp': None,
-                'operational': None,
-                'extended-message': True,
-                'software-version': False,
-             },
-        })
+        self.update(
+            {
+                'description': 'a test neighbor',
+                'router-id': RouterID('127.0.0.1'),
+                'local-address': IPv4('127.0.0.1'),
+                'peer-address': IPv4('127.0.0.1'),
+                'host-name': 'localhost',
+                'domain-name': 'localdomain',
+                'peer-as': ASN('65500'),
+                'local-as': ASN('65500'),
+                'hold-time': HoldTime(180),
+                'capability': {
+                    'asn4': False,
+                    'add-path': 0,
+                    'extended_message': False,
+                    'nexthop': None,
+                    'route-refresh': False,
+                    'graceful-restart': False,
+                    'multi-session': None,
+                    'aigp': None,
+                    'operational': None,
+                    'extended-message': True,
+                    'software-version': False,
+                },
+            }
+        )
 
     @staticmethod
     def families():
         return NLRI.known_families()
 
-import unittest
 
 # from contextlib import contextmanager
 # @contextmanager
@@ -371,8 +368,20 @@ class TestUpdateDecoding(unittest.TestCase):
             routerid_1 = str(neighbor['router-id'])
             routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor['router-id']).split('.', -1))
 
-            o1 = Open(Version(4), ASN(neighbor['local-as']), HoldTime(180), RouterID(routerid_1), capa)
-            o2 = Open(Version(4), ASN(neighbor['peer-as']), HoldTime(180), RouterID(routerid_2), capa)
+            o1 = Open(
+                Version(4),
+                ASN(neighbor['local-as']),
+                HoldTime(180),
+                RouterID(routerid_1),
+                capa,
+            )
+            o2 = Open(
+                Version(4),
+                ASN(neighbor['peer-as']),
+                HoldTime(180),
+                RouterID(routerid_2),
+                capa,
+            )
 
             negotiated = Negotiated(neighbor)
             negotiated.sent(o1)

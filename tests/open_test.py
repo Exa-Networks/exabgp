@@ -8,7 +8,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import sys
 import unittest
 
 from exabgp.protocol.family import AFI
@@ -19,7 +18,6 @@ from exabgp.bgp.message.open import Version
 from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.open import RouterID
 from exabgp.bgp.message.open import HoldTime
-from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import RouteRefresh
 

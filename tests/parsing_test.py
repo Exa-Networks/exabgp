@@ -42,7 +42,11 @@ class TestControl(unittest.TestCase):
             print(filename)
             print('=' * 80)
             sys.stdout.flush()
-            configuration = Configuration([filename,])
+            configuration = Configuration(
+                [
+                    filename,
+                ]
+            )
             configuration.reload()
             del configuration
 

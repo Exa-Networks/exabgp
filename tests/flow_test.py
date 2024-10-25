@@ -28,8 +28,8 @@ class TestFlow(unittest.TestCase):
 
     def test_rule(self):
         components = {
-            'destination': Flow4Destination(IPv4.pton("192.0.2.0"), 24),
-            'source': Flow4Source(IPv4.pton("10.1.2.0"), 24),
+            'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
+            'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
             'anyport_1': FlowAnyPort(NumericOperator.EQ, 25),
         }
         messages = {
@@ -41,13 +41,15 @@ class TestFlow(unittest.TestCase):
         for key in ['destination', 'source', 'anyport_1']:
             component = components[key].pack()
             message = bytes(messages[key])
+            _ = component
+            _ = message
             # if component != message:
             # 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % _ for _ in component],['0x%02X' % _ for _ in message]))
 
     def test_rule_and(self):
         components = {
-            'destination': Flow4Destination(IPv4.pton("192.0.2.0"), 24),
-            'source': Flow4Source(IPv4.pton("10.1.2.0"), 24),
+            'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
+            'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
             'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, 25),
             'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, 80),
         }
@@ -59,7 +61,7 @@ class TestFlow(unittest.TestCase):
         }
 
         flow = Flow()
-        message = b""
+        message = b''
         for key in ['destination', 'source', 'anyport_1', 'anyport_2']:
             flow.add(components[key])
             message += bytes(messages[key])
@@ -70,8 +72,8 @@ class TestFlow(unittest.TestCase):
 
     def test_nlri(self):
         components = {
-            'destination': Flow4Destination(IPv4.pton("192.0.2.0"), 24),
-            'source': Flow4Source(IPv4.pton("10.1.2.0"), 24),
+            'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
+            'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
             'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, 25),
             'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, 80),
         }
@@ -83,7 +85,7 @@ class TestFlow(unittest.TestCase):
         }
 
         flow = Flow()
-        message = b""
+        message = b''
         for key in ['destination', 'source', 'anyport_1', 'anyport_2']:
             flow.add(components[key])
             message += bytes(messages[key])
@@ -99,8 +101,8 @@ class TestFlow(unittest.TestCase):
 
     def test_compare(self):
         components = {
-            'destination': Flow4Destination(IPv4.pton("192.0.2.0"), 24),
-            'source': Flow4Source(IPv4.pton("10.1.2.0"), 24),
+            'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
+            'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
             'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, 25),
             'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, 80),
             'anyport_3': FlowAnyPort(NumericOperator.EQ, 80),
