@@ -73,8 +73,8 @@ if __name__ == '__main__':
         from version import version as release
 
         # transitional fix
-        if "-" in release:
-            release = release.split("-")[0]
+        if '-' in release:
+            release = release.split('-')[0]
 
         return release
 
@@ -189,7 +189,6 @@ class Git(Command):
 
 
 def release_github(args):
-
     print()
     print('updating Github')
 
@@ -326,7 +325,9 @@ def generate_binary(args):
     }
 
     if debug:
-        params['interpreter'] = '/usr/bin/env EXABGP_DEBUG_PDB=1 EXABGP_DEBUG_CONFIGURATION=1 EXABGP_DEBUG_ROUTE=1 python3'
+        params['interpreter'] = (
+            '/usr/bin/env EXABGP_DEBUG_PDB=1 EXABGP_DEBUG_CONFIGURATION=1 EXABGP_DEBUG_ROUTE=1 python3'
+        )
     if sys.version_info.minor >= 7:
         params['compressed'] = not debug
 
@@ -345,9 +346,9 @@ def show_version(args):
 
 def main():
     # To late for it .. but here as a reminder that it can be done
-    os.environ['PYTHONDONTWRITEBYTECODE'] = ""
+    os.environ['PYTHONDONTWRITEBYTECODE'] = ''
 
-    if os.environ.get("SCRUTINIZER", "") == "true":
+    if os.environ.get('SCRUTINIZER', '') == 'true':
         sys.exit(0)
 
     if len(sys.argv) > 1 and sys.argv[1] == 'debian':
@@ -358,7 +359,7 @@ def main():
     parser = argparse.ArgumentParser(description='exabgp release tool')
     root = parser.add_subparsers()
 
-    binary = root.add_parser('binary',help='release an exabgp binary')
+    binary = root.add_parser('binary', help='release an exabgp binary')
     binary.add_argument('target', help='name of the binary to create', default='./vyos')
     binary.add_argument('-d', '--debug', help='run python with pdb', action='store_true')
     binary.set_defaults(func=generate_binary)
