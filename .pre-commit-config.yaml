@@ -8,10 +8,4 @@ repos:
         args: [--fix]
       # Run the formatter.
       - id: ruff-format
-
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v1.2.3
-    hooks:
-      - id: flake8
-        args: [--exclude src/exabgp/vendoring]
-        additional_dependencies: [flake8-bugbear]
+ 

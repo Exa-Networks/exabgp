@@ -52,7 +52,6 @@ dev-dependencies = [
 	"pytest",
 	"pytest-cov",
 	"coveralls",
-	"flake8",
 	"psutil",
 ]
 
@@ -72,16 +71,6 @@ indent-style = "space"
 docstring-code-format = true
 
 
-[tool.flake8]
-max-line-length = 120
-show-source = true
-max-complexity = 18
-statistics = true
-exclude = '.git,.tox,__pycache__,build,dist,tests/*,src/exabgp/vendoring/*,'
-select = 'B,C,E,F,W,T4,B9'
-variable-rgx = "[a-z_][a-z0-9_]{0,30}$"
-ignore = 'E222,E231,E241,E131,E203,E266,E501,W503,F403,F401,'
-
 # E131 continuation line unaligned for hanging indent
 # E203 whitespace before ':'
 # E222 multiple spaces after operator
@@ -94,40 +83,3 @@ ignore = 'E222,E231,E241,E131,E203,E266,E501,W503,F403,F401,'
 # F401 imported but unused
 # F403
 # the last , is required otherwise the last error ignore is not applied
-
-
-# pycodestyle (formerly called pep8)
-# [tool.pycodestyle]
-# max_line_length = 120
-# ignore = 'W191'
-
-
-# [tool.black]
-# line-length = 120
-# target-version = [
-# 	'py36',
-# 	'py37',
-# 	'py38',
-# 	'py39',
-# 	'py310',
-# 	'py311',
-# 	'py312',
-# 	'py313',
-# ]
-# skip_string_normalization = '1'
-# include = '\.pyi?$'
-# exclude = '''
-# /(
-#     \.eggs
-#   | \.git
-#   | \.hg
-#   | \.mypy_cache
-#   | \.tox
-#   | \.venv
-#   | _build
-#   | buck-out
-#   | build
-#   | dist
-#   | tests/data
-# )/
-# '''
