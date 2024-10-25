@@ -18,7 +18,7 @@ while os.getppid() != 1:
     try:
         line = sys.stdin.readline().strip()
         sys.stdout.flush()
-        if line == "":
+        if line == '':
             counter += 1
             if counter > 100:
                 break
