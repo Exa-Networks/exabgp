@@ -11,7 +11,6 @@ import platform
 import os
 import sys
 import setuptools
-from distutils.core import setup
 
 # less magic for readers than adding src/exabgp to sys.path and using importlib
 
