@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-import os
 import sys
-import time
 
 # When the parent dies we are seeing continual newlines, so we only access so many before stopping
 counter = 0
@@ -10,7 +8,7 @@ counter = 0
 while True:
     try:
         line = sys.stdin.readline().strip()
-        if line == "":
+        if line == '':
             counter += 1
             if counter > 100:
                 break

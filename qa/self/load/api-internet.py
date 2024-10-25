@@ -13,7 +13,7 @@ def write(data):
 
 def main():
     if len(sys.argv) < 2:
-        print("%s <number of routes> <updates per second thereafter>")
+        print('%s <number of routes> <updates per second thereafter>')
         sys.exit(1)
 
     initial = sys.argv[1]
