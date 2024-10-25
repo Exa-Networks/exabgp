@@ -34,15 +34,15 @@ class TestL2VPN(unittest.TestCase):
         l2vpn:endpoint:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.4:13
         l2vpn:endpoint:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.3:11
         """
-        self.encoded_l2vpn_nlri1 = bytearray.fromhex(u'0011 0001 AC1E 0504 000D 0003 0001 0008 4000 11')
-        self.encoded_l2vpn_nlri2 = bytearray.fromhex(u'0011 0001 AC1E 0503 000B 0003 0001 0008 4000 11')
+        self.encoded_l2vpn_nlri1 = bytearray.fromhex('0011 0001 AC1E 0504 000D 0003 0001 0008 4000 11')
+        self.encoded_l2vpn_nlri2 = bytearray.fromhex('0011 0001 AC1E 0503 000B 0003 0001 0008 4000 11')
         self.decoded_l2vpn_nlri1 = VPLS(TestL2VPN.generate_rd('172.30.5.4:13'), 3, 262145, 1, 8)
         self.decoded_l2vpn_nlri2 = VPLS(TestL2VPN.generate_rd('172.30.5.3:11'), 3, 262145, 1, 8)
         """
         output from Juniper
         Communities: target:54591:6 Layer2-info: encaps: VPLS, control flags:[0x0] , mtu: 0, site preference: 100
         """
-        self.encoded_ext_community = bytearray.fromhex(u'0002 D53F 0000 0006 800A 1300 0000 0064')
+        self.encoded_ext_community = bytearray.fromhex('0002 D53F 0000 0006 800A 1300 0000 0064')
 
     def test_l2vpn_decode(self):
         """

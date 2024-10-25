@@ -14,15 +14,9 @@ import unittest
 
 from exabgp.bgp.message.open.asn import ASN
 
-from exabgp.bgp.message import Open
-from exabgp.bgp.message.open import Capabilities
 
 # from exabgp.bgp.message import Notification
-from exabgp.bgp.message import KeepAlive
-from exabgp.bgp.message import Update
-from exabgp.bgp.message.update import Attributes
 
-from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
 
 

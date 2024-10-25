@@ -19,10 +19,10 @@ def test():
     OPEN = ''.join(
         [
             chr(int(_, 16))
-            for _ in "FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 1D 01 04 78 14 00 5A 52 DB 00 45 00".split()
+            for _ in 'FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 1D 01 04 78 14 00 5A 52 DB 00 45 00'.split()
         ]
     )
-    KEEP = ''.join([chr(int(_, 16)) for _ in "FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 00 04".split()])
+    KEEP = ''.join([chr(int(_, 16)) for _ in 'FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 00 04'.split()])
 
     from exabgp.reactor.network.outgoing import Outgoing
 

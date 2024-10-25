@@ -15,9 +15,15 @@ from exabgp.reactor.protocol import AFI, SAFI
 from exabgp.bgp.message.update import Attributes
 
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.extended import RouteTargetASN2Number as RouteTarget
-from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
+from exabgp.bgp.message.update.attribute.community.extended.communities import (
+    ExtendedCommunities,
+)
+from exabgp.bgp.message.update.attribute.community.extended import (
+    RouteTargetASN2Number as RouteTarget,
+)
+from exabgp.bgp.message.update.attribute.community.extended.encapsulation import (
+    Encapsulation,
+)
 from exabgp.bgp.message.update.attribute.community.extended import RTRecord
 
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
@@ -46,141 +52,164 @@ from exabgp.bgp.message import Action
 
 
 class TestNLRIs(unittest.TestCase):
-
     # Tests on MVPN NLRIs
     def test300_MVPNSourceAD_CreatePackUnpack(self):
-        '''Test pack/unpack for MVPN Source A-D route'''
+        """Test pack/unpack for MVPN Source A-D route"""
         nlri = MVPN_SourceAD(
             afi=AFI.ipv4,
-            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
-            source=IP.create("1.2.3.0"),
-            group=IP.create("226.0.0.1"),
+            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            source=IP.create('1.2.3.0'),
+            group=IP.create('226.0.0.1'),
         )
 
         packed = nlri.pack()
         unpacked, leftover = MVPN.unpack_nlri(
-            afi=AFI.ipv4, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+            afi=AFI.ipv4,
+            safi=SAFI.mcast_vpn,
+            bgp=packed,
+            action=Action.UNSET,
+            addpath=None,
         )
 
         self.assertEqual(0, len(leftover))
         self.assertTrue(isinstance(unpacked, MVPN_SourceAD))
-        self.assertEqual("1.2.3.0", str(unpacked.source))
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
-        self.assertEqual("226.0.0.1", str(unpacked.group))
+        self.assertEqual('1.2.3.0', str(unpacked.source))
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
+        self.assertEqual('226.0.0.1', str(unpacked.group))
 
         nlri = MVPN_SourceAD(
             afi=AFI.ipv6,
-            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
-            source=IP.create("fd12::2"),
-            group=IP.create("ff0e::1"),
+            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            source=IP.create('fd12::2'),
+            group=IP.create('ff0e::1'),
         )
 
         packed = nlri.pack()
         unpacked, leftover = MVPN.unpack_nlri(
-            afi=AFI.ipv6, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+            afi=AFI.ipv6,
+            safi=SAFI.mcast_vpn,
+            bgp=packed,
+            action=Action.UNSET,
+            addpath=None,
         )
 
         self.assertEqual(0, len(leftover))
         self.assertTrue(isinstance(unpacked, MVPN_SourceAD))
-        self.assertEqual("fd12::2", str(unpacked.source))
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
-        self.assertEqual("ff0e::1", str(unpacked.group))
+        self.assertEqual('fd12::2', str(unpacked.source))
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
+        self.assertEqual('ff0e::1', str(unpacked.group))
 
     def test300_MVPNSourceJoin_CreatePackUnpack(self):
-        '''Test pack/unpack for MVPN Source-Join route'''
+        """Test pack/unpack for MVPN Source-Join route"""
         nlri = MVPN_SourceJoin(
             afi=AFI.ipv4,
-            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
-            source=IP.create("1.2.3.0"),
-            group=IP.create("226.0.0.1"),
+            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            source=IP.create('1.2.3.0'),
+            group=IP.create('226.0.0.1'),
             source_as=1234,
         )
 
         packed = nlri.pack()
         unpacked, leftover = MVPN.unpack_nlri(
-            afi=AFI.ipv4, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+            afi=AFI.ipv4,
+            safi=SAFI.mcast_vpn,
+            bgp=packed,
+            action=Action.UNSET,
+            addpath=None,
         )
 
         self.assertEqual(0, len(leftover))
         self.assertTrue(isinstance(unpacked, MVPN_SourceJoin))
-        self.assertEqual("1.2.3.0", str(unpacked.source))
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
-        self.assertEqual("226.0.0.1", str(unpacked.group))
+        self.assertEqual('1.2.3.0', str(unpacked.source))
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
+        self.assertEqual('226.0.0.1', str(unpacked.group))
         self.assertEqual(1234, unpacked.source_as)
 
         nlri = MVPN_SourceJoin(
             afi=AFI.ipv6,
-            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
-            source=IP.create("fd12::2"),
-            group=IP.create("ff0e::1"),
+            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            source=IP.create('fd12::2'),
+            group=IP.create('ff0e::1'),
             source_as=1234,
         )
 
         packed = nlri.pack()
         unpacked, leftover = MVPN.unpack_nlri(
-            afi=AFI.ipv6, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+            afi=AFI.ipv6,
+            safi=SAFI.mcast_vpn,
+            bgp=packed,
+            action=Action.UNSET,
+            addpath=None,
         )
 
         self.assertEqual(0, len(leftover))
         self.assertTrue(isinstance(unpacked, MVPN_SourceJoin))
-        self.assertEqual("fd12::2", str(unpacked.source))
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
-        self.assertEqual("ff0e::1", str(unpacked.group))
+        self.assertEqual('fd12::2', str(unpacked.source))
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
+        self.assertEqual('ff0e::1', str(unpacked.group))
         self.assertEqual(1234, unpacked.source_as)
 
     def test300_MVPNSharedJoin_CreatePackUnpack(self):
-        '''Test pack/unpack for MVPN Shared-Join route'''
+        """Test pack/unpack for MVPN Shared-Join route"""
         nlri = MVPN_SharedJoin(
             afi=AFI.ipv4,
-            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
-            source=IP.create("1.2.3.0"),
-            group=IP.create("226.0.0.1"),
+            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            source=IP.create('1.2.3.0'),
+            group=IP.create('226.0.0.1'),
             source_as=1234,
         )
 
         packed = nlri.pack()
         unpacked, leftover = MVPN.unpack_nlri(
-            afi=AFI.ipv4, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+            afi=AFI.ipv4,
+            safi=SAFI.mcast_vpn,
+            bgp=packed,
+            action=Action.UNSET,
+            addpath=None,
         )
 
         self.assertEqual(0, len(leftover))
         self.assertTrue(isinstance(unpacked, MVPN_SharedJoin))
-        self.assertEqual("1.2.3.0", str(unpacked.source))
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
-        self.assertEqual("226.0.0.1", str(unpacked.group))
+        self.assertEqual('1.2.3.0', str(unpacked.source))
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
+        self.assertEqual('226.0.0.1', str(unpacked.group))
         self.assertEqual(1234, unpacked.source_as)
 
         nlri = MVPN_SharedJoin(
             afi=AFI.ipv6,
-            rd=RouteDistinguisher.fromElements("42.42.42.42", 5),
-            source=IP.create("fd12::2"),
-            group=IP.create("ff0e::1"),
+            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            source=IP.create('fd12::2'),
+            group=IP.create('ff0e::1'),
             source_as=1234,
         )
 
         packed = nlri.pack()
         unpacked, leftover = MVPN.unpack_nlri(
-            afi=AFI.ipv6, safi=SAFI.mcast_vpn, bgp=packed, action=Action.UNSET, addpath=None
+            afi=AFI.ipv6,
+            safi=SAFI.mcast_vpn,
+            bgp=packed,
+            action=Action.UNSET,
+            addpath=None,
         )
 
         self.assertEqual(0, len(leftover))
         self.assertTrue(isinstance(unpacked, MVPN_SharedJoin))
-        self.assertEqual("fd12::2", str(unpacked.source))
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
-        self.assertEqual("ff0e::1", str(unpacked.group))
+        self.assertEqual('fd12::2', str(unpacked.source))
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
+        self.assertEqual('ff0e::1', str(unpacked.group))
         self.assertEqual(1234, unpacked.source_as)
 
     # Tests on IPVPN NLRIs
 
     def test200_IPVPNCreatePackUnpack(self):
-        '''Test pack/unpack for IPVPN routes'''
+        """Test pack/unpack for IPVPN routes"""
         nlri = IPVPN.new(
             AFI.ipv4,
             SAFI.mpls_vpn,
-            IP.pton("1.2.3.0"),
+            IP.pton('1.2.3.0'),
             24,
             Labels([42], True),
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
         )
 
         packed = nlri.pack()
@@ -193,23 +222,23 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertTrue(isinstance(unpacked, IPVPN))
 
-        self.assertEqual("1.2.3.0/24", unpacked.cidr.prefix())
+        self.assertEqual('1.2.3.0/24', unpacked.cidr.prefix())
         self.assertEqual(1, len(unpacked.labels.labels))
         self.assertEqual(42, unpacked.labels.labels[0])
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
 
     # Tests on EVPN NLRIs
 
     def test99_EVPNMACCreatePackUnpack(self):
-        '''Test pack/unpack for E-VPN MAC routes'''
+        """Test pack/unpack for E-VPN MAC routes"""
         nlri = EVPNMAC(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(),
             EthernetTag(111),
-            MAC("01:02:03:04:05:06"),
+            MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels([42], True),
-            IP.create("1.1.1.1"),
+            IP.create('1.1.1.1'),
         )
 
         packed = nlri.pack()
@@ -223,20 +252,24 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertTrue(isinstance(unpacked, EVPNMAC))
 
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
         self.assertEqual(ESI.DEFAULT, unpacked.esi.esi)
         self.assertEqual(EthernetTag(111), unpacked.etag)
-        self.assertEqual(MAC("01:02:03:04:05:06"), unpacked.mac)
+        self.assertEqual(MAC('01:02:03:04:05:06'), unpacked.mac)
 
-        self.assertEqual(IP.create("1.1.1.1"), unpacked.ip)
+        self.assertEqual(IP.create('1.1.1.1'), unpacked.ip)
 
         self.assertEqual(1, len(unpacked.label.labels))
         self.assertEqual(42, unpacked.label.labels[0])
 
     def test99_EVPNMulticastCreatePackUnpack(self):
-        '''Test pack/unpack for E-VPN Multicast routes'''
+        """Test pack/unpack for E-VPN Multicast routes"""
 
-        nlri = EVPNMulticast(RouteDistinguisher.fromElements("42.42.42.42", 5), EthernetTag(111), IP.create("1.1.1.1"))
+        nlri = EVPNMulticast(
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
+            EthernetTag(111),
+            IP.create('1.1.1.1'),
+        )
 
         packed = nlri.pack()
 
@@ -249,21 +282,21 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertTrue(isinstance(unpacked, EVPNMulticast))
 
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
         self.assertEqual(EthernetTag(111), unpacked.etag)
-        self.assertEqual(IP.create("1.1.1.1"), unpacked.ip)
+        self.assertEqual(IP.create('1.1.1.1'), unpacked.ip)
 
     def test99_EVPNPrefixCreatePackUnpack(self):
-        '''Test pack/unpack for E-VPN Prefix routes'''
+        """Test pack/unpack for E-VPN Prefix routes"""
 
         nlri = EVPNPrefix(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(),
             EthernetTag(111),
             Labels([42], True),
-            IP.create("1.1.1.0"),
+            IP.create('1.1.1.0'),
             24,
-            IP.create("2.2.2.2"),
+            IP.create('2.2.2.2'),
         )
 
         packed = nlri.pack()
@@ -277,64 +310,64 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertTrue(isinstance(unpacked, EVPNPrefix))
 
-        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual('42.42.42.42:5', unpacked.rd._str())
         self.assertEqual(ESI.DEFAULT, unpacked.esi.esi)
         self.assertEqual(EthernetTag(111), unpacked.etag)
-        self.assertEqual(IP.create("1.1.1.0"), unpacked.ip)
+        self.assertEqual(IP.create('1.1.1.0'), unpacked.ip)
         self.assertEqual(24, unpacked.iplen)
-        self.assertEqual(IP.create("2.2.2.2"), unpacked.gwip)
+        self.assertEqual(IP.create('2.2.2.2'), unpacked.gwip)
         self.assertEqual(1, len(unpacked.label.labels))
         self.assertEqual(42, unpacked.label.labels[0])
 
     def test100_EVPNMACHashEqual(self):
-        '''
+        """
         Two indistinct EVPN NLRI should
         hash to the same value, and be equal
-        '''
+        """
 
         nlri1 = EVPNMAC(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(),
             EthernetTag(111),
-            MAC("01:02:03:04:05:06"),
+            MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels([42], True),
-            IP.create("1.1.1.1"),
+            IP.create('1.1.1.1'),
         )
 
         nlri2 = EVPNMAC(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(),
             EthernetTag(111),
-            MAC("01:02:03:04:05:06"),
+            MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels([42], True),
-            IP.create("1.1.1.1"),
+            IP.create('1.1.1.1'),
         )
 
         self.assertEqual(hash(nlri1), hash(nlri2))
         self.assertEqual(nlri1, nlri2)
 
     def test101_EVPNHashEqual_somefieldsvary(self):
-        '''
+        """
         Two EVPN MAC NLRIs differing by their ESI or label or RD,
         or nexthop, but otherwise identical should hash to the same value,
         and be equal
-        '''
+        """
 
         nlri0 = EVPNMAC(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(),
             EthernetTag(111),
-            MAC("01:02:03:04:05:06"),
+            MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels([42], True),
-            IP.create("1.1.1.1"),
+            IP.create('1.1.1.1'),
         )
 
         # ESI
         nlri1 = EVPNMAC(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(
                 bytes(
                     [
@@ -344,54 +377,54 @@ class TestNLRIs(unittest.TestCase):
                 )
             ),
             EthernetTag(111),
-            MAC("01:02:03:04:05:06"),
+            MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels([42], True),
-            IP.create("1.1.1.1"),
+            IP.create('1.1.1.1'),
         )
 
         # label
         nlri2 = EVPNMAC(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(),
             EthernetTag(111),
-            MAC("01:02:03:04:05:06"),
+            MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels([4444], True),
-            IP.create("1.1.1.1"),
+            IP.create('1.1.1.1'),
         )
 
         # IP: different IPs, but same MACs: different route
         nlri3 = EVPNMAC(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(),
             EthernetTag(111),
-            MAC("01:02:03:04:05:06"),
+            MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels([42], True),
-            IP.create("2.2.2.2"),
+            IP.create('2.2.2.2'),
         )
 
         # with a next hop...
         nlri4 = EVPNMAC(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(),
             EthernetTag(111),
-            MAC("01:02:03:04:05:06"),
+            MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels([42], True),
-            IP.create("1.1.1.1"),
-            IP.pton("10.10.10.10"),
+            IP.create('1.1.1.1'),
+            IP.pton('10.10.10.10'),
         )
         nlri5 = EVPNMAC(
-            RouteDistinguisher.fromElements("42.42.42.42", 5),
+            RouteDistinguisher.fromElements('42.42.42.42', 5),
             ESI(),
             EthernetTag(111),
-            MAC("01:02:03:04:05:06"),
+            MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels([42], True),
-            IP.create("1.1.1.1"),
-            IP.pton("11.11.11.11"),
+            IP.create('1.1.1.1'),
+            IP.pton('11.11.11.11'),
         )
 
         self.assertEqual(hash(nlri0), hash(nlri1))
@@ -414,7 +447,7 @@ class TestNLRIs(unittest.TestCase):
     # tests on RTC NLRI
 
     def test99_RTCCreatePackUnpack(self):
-        '''Test pack/unpack for RTC routes'''
+        """Test pack/unpack for RTC routes"""
 
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 64512, RouteTarget(64577, 123))
 
@@ -435,7 +468,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(123, unpacked.rt.number)
 
     def test98_RTCWildcardPackUnpack(self):
-        '''Test pack/unpack for RTC routes'''
+        """Test pack/unpack for RTC routes"""
 
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 0, None)
 
@@ -527,6 +560,7 @@ class TestNLRIs(unittest.TestCase):
     def test12_RTRecord(self):
         rt = RouteTarget(64512, 22)
         rt_record = RTRecord.from_rt(rt)
+        _ = rt_record
 
 
 if __name__ == '__main__':
