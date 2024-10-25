@@ -123,7 +123,15 @@ class CI(dict):
     def make(cls):
         for filename in Path.ALL_CI:
             name, extension = os.path.splitext(filename.split('/')[-1])
-            if name in ['api-reload', 'api-notification', 'conf-ebgp', 'conf-ipself6', 'conf-cap-software-version', 'conf-hostname', 'api-rr']:
+            if name in [
+                'api-reload',
+                'api-notification',
+                'conf-ebgp',
+                'conf-ipself6',
+                'conf-cap-software-version',
+                'conf-hostname',
+                'api-rr',
+            ]:
                 continue
             nick = Identifier.get(name)
             with open(filename, 'r') as reader:
@@ -308,7 +316,11 @@ class Command(dict):
     @classmethod
     def explain(cls, index):
         print(
-            EXPLAIN % {'client': cls.client(index), 'server': cls.server(index),}
+            EXPLAIN
+            % {
+                'client': cls.client(index),
+                'server': cls.server(index),
+            }
         )
         sys.exit(1)
 
@@ -328,7 +340,7 @@ class Command(dict):
                     'exabgp_api_cli=false',
                     'exabgp_debug_rotate=true',
                     'exabgp_debug_configuration=true',
-                    'exabgp_tcp_bind=\'\'',
+                    "exabgp_tcp_bind=''",
                     'exabgp_tcp_port=%d' % test['port'],
                     'INTERPRETER=%s ' % os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
                 ]
@@ -349,7 +361,11 @@ class Command(dict):
             sys.exit('you need to have root privileges to bind to port 79')
 
         config = {
-            'env': ' \\\n  '.join(['exabgp_tcp_port=%d' % test['port'],]),
+            'env': ' \\\n  '.join(
+                [
+                    'exabgp_tcp_port=%d' % test['port'],
+                ]
+            ),
             'interpreter': os.environ.get('__PYVENV_LAUNCHER__', sys.executable),
             'bgp': Path.BGP,
             'msg': test['msg'],

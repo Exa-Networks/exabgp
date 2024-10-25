@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 from __future__ import print_function
-import os
 import sys
 import time
 
-flow = "flow route { match { source 10.0.0.1/32; destination 10.0.0.2/32; destination-port =3128; protocol tcp; } then { discard; } }"
+flow = 'flow route { match { source 10.0.0.1/32; destination 10.0.0.2/32; destination-port =3128; protocol tcp; } then { discard; } }'
 
 # When the parent dies we are seeing continual newlines, so we only access so many before stopping
 counter = 1

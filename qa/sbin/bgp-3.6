@@ -59,7 +59,13 @@ def cdr_to_length(cidr):
 class BGPHandler(asyncore.dispatcher_with_send):
     counter = 0
 
-    keepalive = bytearray([0xFF,] * 16 + [0x0, 0x13, 0x4])
+    keepalive = bytearray(
+        [
+            0xFF,
+        ]
+        * 16
+        + [0x0, 0x13, 0x4]
+    )
 
     _name = {
         b'\x01': 'OPEN',
@@ -79,7 +85,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
         processes = []
 
-        for line in os.popen("/bin/ps x"):
+        for line in os.popen('/bin/ps x'):
             low = line.strip().lower()
             if not low:
                 continue
@@ -250,9 +256,14 @@ class BGPHandler(asyncore.dispatcher_with_send):
         if self.options['send-default-route']:
             self.send(
                 bytearray(
-                    [0xFF,] * 16
+                    [
+                        0xFF,
+                    ]
+                    * 16
                     + [0x00, 0x31]
-                    + [0x02,]
+                    + [
+                        0x02,
+                    ]
                     + [0x00, 0x00]
                     + [0x00, 0x15]
                     + []
@@ -376,7 +387,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
                     elif self.messages:
                         message = self.messages[0].upper()
                         if message.startswith('F' * 32):
-                            self.announce('expected       : %s:%s:%s:%s' % (message[:32], message[32:36], message[36:38], message[38:]))
+                            self.announce(
+                                'expected       : %s:%s:%s:%s'
+                                % (message[:32], message[32:36], message[36:38], message[38:])
+                            )
                         else:
                             self.announce('expected       : %s' % message)
                     else:
@@ -401,7 +415,17 @@ class BGPHandler(asyncore.dispatcher_with_send):
         if self.options['send-notification']:
             notification = b'closing session because we can'
             self.send(
-                bytearray([0xFF,] * 16 + [0x00, 19 + 2 + len(notification)] + [0x03] + [0x06] + [0x00]) + notification
+                bytearray(
+                    [
+                        0xFF,
+                    ]
+                    * 16
+                    + [0x00, 19 + 2 + len(notification)]
+                    + [0x03]
+                    + [0x06]
+                    + [0x00]
+                )
+                + notification
             )
 
     _decoder = {

@@ -20,7 +20,7 @@ import subprocess
 from enum import Enum
 
 
-INTERPRETER = os.environ.get('INTERPRETER', "")
+INTERPRETER = os.environ.get('INTERPRETER', '')
 if not INTERPRETER:
     INTERPRETER = os.environ.get('__PYVENV_LAUNCHER__', sys.executable)
 
@@ -392,7 +392,7 @@ class EncodingTests(Tests):
 
     def client(self, nick):
         if not self.enable_by_nick(nick):
-            sys.exit("no such test")
+            sys.exit('no such test')
         test = self.get_by_nick(nick)
 
         config = {
@@ -403,7 +403,7 @@ class EncodingTests(Tests):
                     'exabgp_api_cli=false',
                     'exabgp_debug_rotate=true',
                     'exabgp_debug_configuration=true',
-                    'exabgp_tcp_bind=\'\'',
+                    "exabgp_tcp_bind=''",
                     'exabgp_tcp_port=%d' % test.conf['port'],
                     'INTERPRETER=%s' % INTERPRETER,
                 ]
@@ -415,7 +415,7 @@ class EncodingTests(Tests):
 
     def server(self, nick):
         if not self.enable_by_nick(nick):
-            sys.exit("no such test")
+            sys.exit('no such test')
         test = self.get_by_nick(nick)
 
         config = {
@@ -580,7 +580,14 @@ class DecodingTests(Tests):
             if message == 'open':
                 cmd = [Path.EXABGP, 'decode', '--%s' % test.conf['type'], test.conf['packet']]
             elif message in ['update', 'nlri']:
-                cmd = [Path.EXABGP, 'decode', '-f', test.conf['family'], '--%s' % test.conf['type'], test.conf['packet']]
+                cmd = [
+                    Path.EXABGP,
+                    'decode',
+                    '-f',
+                    test.conf['family'],
+                    '--%s' % test.conf['type'],
+                    test.conf['packet'],
+                ]
             else:
                 raise ValueError(f'invalid message type: {message}')
             test.run(cmd)

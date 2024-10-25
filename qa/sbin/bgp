@@ -68,7 +68,7 @@ def print_payload(prefix, header, body):
 
 
 def print_rule(prefix, rule):
-    print_tab(prefix,f'{rule[:32]}:{rule[32:36]}:{rule[36:38]}:{rule[38:]}')
+    print_tab(prefix, f'{rule[:32]}:{rule[32:36]}:{rule[36:38]}:{rule[38:]}')
 
 
 def print_tab(prefix, rule):
@@ -136,7 +136,7 @@ def find_exabgp_pid():
     processes = []
     cmdlines = []
 
-    for line in os.popen("/bin/ps x"):
+    for line in os.popen('/bin/ps x'):
         low = line.strip().lower()
         if not low:
             continue
@@ -374,19 +374,19 @@ class Message:
                     open = (
                         self.header
                         + self.body[0:1]
-                        + pack("!H", asn)
+                        + pack('!H', asn)
                         + self.body[3:8]
-                        + pack("!H", byte_id)[1:]
+                        + pack('!H', byte_id)[1:]
                         + self.body[9:10]
                         + opt_params[: offset + 2 + 2]
-                        + pack("!I", asn)
+                        + pack('!I', asn)
                         + opt_params[offset + 2 + 2 + 4 :]
                     )
                     return self._add_capa66(add_capa66, open)
             offset += param_len + 2
 
         # No "Support for 4 octet AS number capability" found simply replace the 16-bit ASN number field.
-        open = self.header + self.body[0:1] + pack("!H", asn) + self.body[3:8] + pack("!H", byte_id)[1:] + self.body[9:]
+        open = self.header + self.body[0:1] + pack('!H', asn) + self.body[3:8] + pack('!H', byte_id)[1:] + self.body[9:]
         return self._add_capa66(add_capa66, open)
 
 
@@ -506,7 +506,7 @@ class Checker(object):
         if msg.is_route_refresh():
             for header, body in self.updates_seen:
                 print_payload('rr   sent', header, body)
-                writer.write(Message(header,body).packet())
+                writer.write(Message(header, body).packet())
             writer.write(Message.keepalive())
 
     def perform_actions_if_required(self, writer, msg):
@@ -542,7 +542,7 @@ class Checker(object):
             if check == received:
                 self.messages.remove(check)
                 if msg.is_update() and not msg.is_eor():
-                    self.updates_seen.append((msg.header,msg.body))
+                    self.updates_seen.append((msg.header, msg.body))
 
                 self.perform_actions_if_required(writer, msg)
                 return True
@@ -628,7 +628,6 @@ class BGPProtocol(asyncio.Protocol):
             sys.exit(1)
         self.writer.close()
 
-
     def handle_open(self, msg):
         option_asn = self.service.options['asn']
         option_capa66 = self.service.options['send-unknown-capability']
@@ -669,7 +668,7 @@ class BGPProtocol(asyncio.Protocol):
             return FSM.MSG
 
         if self.service.options['echo']:
-            print_payload(f'echo\'d  #{self.counter}', header, body)
+            print_payload(f"echo'd  #{self.counter}", header, body)
             self.writer.write(header + body)
             return FSM.MSG
 
@@ -686,6 +685,7 @@ class BGPProtocol(asyncio.Protocol):
             return FSM.STOP
 
         return FSM.MSG
+
 
 def parse_cmdline():
     port = os.environ.get('exabgp.tcp.port', os.environ.get('exabgp_tcp_port', '179'))
@@ -793,7 +793,7 @@ async def main(options, checker, queue):
         port = options['port']
         sock.bind((host, port))
     except PermissionError as exc:
-        flushed(f"could not bind to {host}:{port}")
+        flushed(f'could not bind to {host}:{port}')
         flushed(exc)
         sys.exit(1)
 
