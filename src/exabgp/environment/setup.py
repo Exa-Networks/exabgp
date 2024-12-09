@@ -135,6 +135,12 @@ CONFIGURATION = {
             'value': 'true',
             'help': 'report networking information (TCP/IP, network state,...)',
         },
+        'statistics': {
+            'read': parsing.boolean,
+            'write': parsing.lower,
+            'value': 'true',
+            'help': 'report packet statistics',
+        },
         'packets': {
             'read': parsing.boolean,
             'write': parsing.lower,

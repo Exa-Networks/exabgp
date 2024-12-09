@@ -59,6 +59,27 @@ class Stop(Exception):
     pass
 
 
+# ======================================================================== Counter
+
+
+class Stats(dict):
+    __format = {'complete': lambda t: 'time %s' % time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t))}
+
+    def __init__(self, *args):
+        dict.__init__(self, args)
+        self.__changed = set()
+
+    def __setitem__(self, key, val):
+        dict.__setitem__(self, key, val)
+        self.__changed.add(key)
+
+    def changed_statistics(self):
+        for name in self.__changed:
+            formater = self.__format.get(name, lambda v: 'counter %s' % v)
+            yield 'statistics for %s %s' % (name, formater(self[name]))
+        self.__changed = set()
+
+
 # ======================================================================== Peer
 # Present a File like interface to socket.socket
 
@@ -78,12 +99,28 @@ class Peer(object):
 
         self.proto = None
         self.fsm = FSM(self, FSM.IDLE)
-        self.stats = {
-            'fsm': self.fsm,
-            'creation': now,
-            'reset': now,
-            'complete': 0,
-        }
+        self.stats = Stats()
+        self.stats.update(
+            {
+                'fsm': self.fsm,
+                'creation': now,  # when the peer was created
+                'reset': now,  # time of last reset
+                'complete': 0,  # when did the peer got established
+                'up': 0,
+                'down': 0,
+                'receive-open': 0,
+                'send-open': 0,
+                'receive-notification': 0,
+                'send-notification': 0,
+                'receive-update': 0,
+                'send-update': 0,
+                'receive-refresh': 0,
+                'send-refresh': 0,
+                'receive-keepalive': 0,
+                'send-keepalive': 0,
+            }
+        )
+
         self.generator = None
 
         # The peer should restart after a stop
@@ -106,15 +143,30 @@ class Peer(object):
                 if self.neighbor.api['neighbor-changes']:
                     self.reactor.processes.down(self.neighbor, message)
             except ProcessError:
-                log.debug('could not send notification of neighbor close to API', self.connection.session())
+                log.debug(
+                    'could not send notification of neighbor close to API',
+                    self.connection.session(),
+                )
         self.fsm.change(FSM.IDLE)
 
-        self.stats = {
-            'fsm': self.fsm,
-            'creation': self.stats['creation'],
-            'reset': time.time(),
-            'complete': 0,
-        }
+        self.stats.update(
+            {
+                'fsm': self.fsm,
+                'reset': time.time(),
+                'complete': 0,
+                'receive-open': 0,
+                'send-open': 0,
+                'receive-notification': 0,
+                'send-notification': 0,
+                'receive-update': 0,
+                'send-update': 0,
+                'receive-refresh': 0,
+                'send-refresh': 0,
+                'receive-keepalive': 0,
+                'send-keepalive': 0,
+            }
+        )
+
         if self.proto:
             try:
                 message = 'peer reset, message [{0}] error[{1}]'.format(message, error)
@@ -149,7 +201,11 @@ class Peer(object):
     # logging
 
     def me(self, message):
-        return 'peer %s ASN %-7s %s' % (self.neighbor['peer-address'], self.neighbor['peer-as'], message)
+        return 'peer %s ASN %-7s %s' % (
+            self.neighbor['peer-address'],
+            self.neighbor['peer-as'],
+            message,
+        )
 
     # control
 
@@ -159,11 +215,23 @@ class Peer(object):
         self._restarted = False
         self._delay.reset()
         self.fsm.change(FSM.IDLE)
-        self.stats = {
-            'fsm': self.fsm,
-            'creation': self.stats['creation'],
-            'reset': time.time(),
-        }
+        self.stats.update(
+            {
+                'fsm': self.fsm,
+                'reset': time.time(),
+                'complete': 0,
+                'receive-open': 0,
+                'send-open': 0,
+                'receive-notification': 0,
+                'send-notification': 0,
+                'receive-update': 0,
+                'send-update': 0,
+                'receive-refresh': 0,
+                'send-refresh': 0,
+                'receive-keepalive': 0,
+                'send-keepalive': 0,
+            }
+        )
         self.neighbor.rib.uncache()
 
     def remove(self):
@@ -205,7 +273,10 @@ class Peer(object):
 
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:
-            log.debug('we already have a peer in state established for %s' % connection.name(), self.id())
+            log.debug(
+                'we already have a peer in state established for %s' % connection.name(),
+                self.id(),
+            )
             return connection.notification(6, 7, 'could not accept the connection, already established')
 
         # 6.8 The convention is to compare the BGP Identifiers of the peers
@@ -294,7 +365,11 @@ class Peer(object):
     def _read_open(self):
         wait = getenv().bgp.openwait
         opentimer = ReceiveTimer(
-            self.proto.connection.session, wait, 1, 1, 'waited for open too long, we do not like stuck in active'
+            self.proto.connection.session,
+            wait,
+            1,
+            1,
+            'waited for open too long, we do not like stuck in active',
         )
         # Only yield if we have not the open, otherwise the reactor can run the other connection
         # which would be bad as we need to do the collission check without going to the other peer
@@ -384,8 +459,11 @@ class Peer(object):
         include_withdraw = False
 
         # Announce to the process BGP is up
-        log.info('connected to %s with %s' % (self.id(), self.proto.connection.name()), 'reactor')
-        self.stats['up'] = self.stats.get('up', 0) + 1
+        log.info(
+            'connected to %s with %s' % (self.id(), self.proto.connection.name()),
+            'reactor',
+        )
+        self.stats['up'] += 1
         if self.neighbor.api['neighbor-changes']:
             try:
                 self.reactor.processes.up(self.neighbor)
@@ -438,6 +516,8 @@ class Peer(object):
                     # we need and will send a keepalive
                     while send_ka() is None:
                         yield ACTION.NOW
+                for counter_line in self.stats.changed_statistics():
+                    log.info(counter_line, 'statistics')
 
                 # Received update
                 if message.TYPE == Update.TYPE:
@@ -446,7 +526,10 @@ class Peer(object):
 
                     for nlri in message.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
-                        logfunc.debug(lazyformat('   UPDATE #%d nlri ' % number, nlri, str), self.id())
+                        logfunc.debug(
+                            lazyformat('   UPDATE #%d nlri ' % number, nlri, str),
+                            self.id(),
+                        )
 
                 elif message.TYPE == RouteRefresh.TYPE:
                     enhanced = message.reserved == RouteRefresh.request
@@ -551,7 +634,10 @@ class Peer(object):
         except NetworkError as network:
             # we tried to connect once, it failed and it was not a manual request, we stop
             if self.once and not self._teardown:
-                log.debug('only one attempt to connect is allowed, stopping the peer', self.id())
+                log.debug(
+                    'only one attempt to connect is allowed, stopping the peer',
+                    self.id(),
+                )
                 self.stop()
 
             self._reset('closing connection', network)
@@ -579,10 +665,16 @@ class Peer(object):
         except Notification as notification:
             # we tried to connect once, it failed and it was not a manual request, we stop
             if self.once and not self._teardown:
-                log.debug('only one attempt to connect is allowed, stopping the peer', self.id())
+                log.debug(
+                    'only one attempt to connect is allowed, stopping the peer',
+                    self.id(),
+                )
                 self.stop()
 
-            self._reset('notification received (%d,%d)' % (notification.code, notification.subcode), notification)
+            self._reset(
+                'notification received (%d,%d)' % (notification.code, notification.subcode),
+                notification,
+            )
             return
 
         # RECEIVED a Message TYPE we did not expect
@@ -682,12 +774,30 @@ class Peer(object):
 
         capabilities = {
             'asn4': (tri(self.neighbor['capability']['asn4']), tri(peer['asn4'])),
-            'route-refresh': (tri(self.neighbor['capability']['route-refresh']), tri(peer['route-refresh'])),
-            'multi-session': (tri(self.neighbor['capability']['multi-session']), tri(peer['multi-session'])),
-            'operational': (tri(self.neighbor['capability']['operational']), tri(peer['operational'])),
-            'add-path': (tri(self.neighbor['capability']['add-path']), tri(peer['add-path'])),
-            'extended-message': (tri(self.neighbor['capability']['extended-message']), tri(peer['extended-message'])),
-            'graceful-restart': (tri(self.neighbor['capability']['graceful-restart']), tri(peer['graceful-restart'])),
+            'route-refresh': (
+                tri(self.neighbor['capability']['route-refresh']),
+                tri(peer['route-refresh']),
+            ),
+            'multi-session': (
+                tri(self.neighbor['capability']['multi-session']),
+                tri(peer['multi-session']),
+            ),
+            'operational': (
+                tri(self.neighbor['capability']['operational']),
+                tri(peer['operational']),
+            ),
+            'add-path': (
+                tri(self.neighbor['capability']['add-path']),
+                tri(peer['add-path']),
+            ),
+            'extended-message': (
+                tri(self.neighbor['capability']['extended-message']),
+                tri(peer['extended-message']),
+            ),
+            'graceful-restart': (
+                tri(self.neighbor['capability']['graceful-restart']),
+                tri(peer['graceful-restart']),
+            ),
         }
 
         families = {}
@@ -706,8 +816,8 @@ class Peer(object):
         total_sent = 0
         total_rcvd = 0
         for message in ('open', 'notification', 'keepalive', 'update', 'refresh'):
-            sent = self.stats.get('send-%s' % message, 0)
-            rcvd = self.stats.get('receive-%s' % message, 0)
+            sent = self.stats['send-%s' % message]
+            rcvd = self.stats['receive-%s' % message]
             total_sent += sent
             total_rcvd += rcvd
             messages[message] = (sent, rcvd)
@@ -715,7 +825,7 @@ class Peer(object):
 
         return {
             'down': int(self.stats['reset'] - self.stats['creation']),
-            'duration': int(time.time() - self.stats['complete']) if self.stats['complete'] else 0,
+            'duration': (int(time.time() - self.stats['complete']) if self.stats['complete'] else 0),
             'local-address': str(self.neighbor['local-address']),
             'peer-address': str(self.neighbor['peer-address']),
             'local-as': int(self.neighbor['local-as']),

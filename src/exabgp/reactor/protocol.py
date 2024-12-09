@@ -80,7 +80,11 @@ class Protocol(object):
     # XXX: we use self.peer.neighbor['peer-address'] when we could use self.neighbor['peer-address']
 
     def me(self, message):
-        return '%s/%s %s' % (self.peer.neighbor['peer-address'], self.peer.neighbor['peer-as'], message)
+        return '%s/%s %s' % (
+            self.peer.neighbor['peer-address'],
+            self.peer.neighbor['peer-as'],
+            message,
+        )
 
     def accept(self, incoming):
         self.connection = incoming
@@ -121,7 +125,7 @@ class Protocol(object):
     def close(self, reason='protocol closed, reason unspecified'):
         if self.connection:
             log.debug(reason, self.connection.session())
-            self.peer.stats['down'] = self.peer.stats.get('down', 0) + 1
+            self.peer.stats['down'] += 1
 
             self.connection.close()
             self.connection = None
@@ -135,27 +139,50 @@ class Protocol(object):
         if consolidate:
             if packets:
                 self.peer.reactor.processes.message(
-                    message.ID, self.peer.neighbor, direction, message, negotiated, raw[:19], raw[19:]
+                    message.ID,
+                    self.peer.neighbor,
+                    direction,
+                    message,
+                    negotiated,
+                    raw[:19],
+                    raw[19:],
                 )
             else:
                 self.peer.reactor.processes.message(
-                    message.ID, self.peer.neighbor, direction, message, negotiated, b'', b''
+                    message.ID,
+                    self.peer.neighbor,
+                    direction,
+                    message,
+                    negotiated,
+                    b'',
+                    b'',
                 )
         else:
             if packets:
                 self.peer.reactor.processes.packets(
-                    self.peer.neighbor, direction, int(message.ID), negotiated, raw[:19], raw[19:]
+                    self.peer.neighbor,
+                    direction,
+                    int(message.ID),
+                    negotiated,
+                    raw[:19],
+                    raw[19:],
                 )
             if parsed:
                 self.peer.reactor.processes.message(
-                    message.ID, self.peer.neighbor, direction, message, negotiated, b'', b''
+                    message.ID,
+                    self.peer.neighbor,
+                    direction,
+                    message,
+                    negotiated,
+                    b'',
+                    b'',
                 )
 
     def write(self, message, negotiated=None):
         raw = message.message(negotiated)
 
         code = 'send-%s' % Message.CODE.short(message.ID)
-        self.peer.stats[code] = self.peer.stats.get(code, 0) + 1
+        self.peer.stats[code] += 1
         if self.neighbor.api.get(code, False):
             self._to_api('send', message, raw)
 
@@ -164,7 +191,7 @@ class Protocol(object):
 
     def send(self, raw):
         code = 'send-%s' % Message.CODE.short(raw[18])
-        self.peer.stats[code] = self.peer.stats.get(code, 0) + 1
+        self.peer.stats[code] += 1
         if self.neighbor.api.get(code, False):
             message = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)
             self._to_api('send', message, raw)
@@ -191,11 +218,25 @@ class Protocol(object):
                 if self.neighbor.api.get(code, False):
                     if consolidate:
                         self.peer.reactor.processes.notification(
-                            self.peer.neighbor, 'receive', notify.code, notify.subcode, str(notify), None, header, body
+                            self.peer.neighbor,
+                            'receive',
+                            notify.code,
+                            notify.subcode,
+                            str(notify),
+                            None,
+                            header,
+                            body,
                         )
                     elif parsed:
                         self.peer.reactor.processes.notification(
-                            self.peer.neighbor, 'receive', notify.code, notify.subcode, str(notify), None, b'', b''
+                            self.peer.neighbor,
+                            'receive',
+                            notify.code,
+                            notify.subcode,
+                            str(notify),
+                            None,
+                            b'',
+                            b'',
                         )
                     elif packets:
                         self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)
@@ -206,10 +247,13 @@ class Protocol(object):
                 yield _NOP
                 continue
 
-            log.debug('<< message of type %s' % Message.CODE.name(msg_id), self.connection.session())
+            log.debug(
+                '<< message of type %s' % Message.CODE.name(msg_id),
+                self.connection.session(),
+            )
 
             code = 'receive-%s' % Message.CODE.short(msg_id)
-            self.peer.stats[code] = self.peer.stats.get(code, 0) + 1
+            self.peer.stats[code] += 1
             for_api = self.neighbor.api.get(code, False)
 
             if for_api and packets and not consolidate:
@@ -241,7 +285,13 @@ class Protocol(object):
                 negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None
                 if consolidate:
                     self.peer.reactor.processes.message(
-                        msg_id, self.neighbor, 'receive', message, negotiated, header, body
+                        msg_id,
+                        self.neighbor,
+                        'receive',
+                        message,
+                        negotiated,
+                        header,
+                        body,
                     )
                 elif parsed:
                     self.peer.reactor.processes.message(msg_id, self.neighbor, 'receive', message, negotiated, b'', b'')
@@ -264,16 +314,25 @@ class Protocol(object):
 
         if self.negotiated.mismatch:
             log.warning(
-                '--------------------------------------------------------------------', self.connection.session()
+                '--------------------------------------------------------------------',
+                self.connection.session(),
             )
-            log.warning('the connection can not carry the following family/families', self.connection.session())
+            log.warning(
+                'the connection can not carry the following family/families',
+                self.connection.session(),
+            )
             for reason, (afi, safi) in self.negotiated.mismatch:
-                log.warning(' - %s is not configured for %s/%s' % (reason, afi, safi), self.connection.session())
+                log.warning(
+                    ' - %s is not configured for %s/%s' % (reason, afi, safi),
+                    self.connection.session(),
+                )
             log.warning(
-                'therefore no routes of this kind can be announced on the connection', self.connection.session()
+                'therefore no routes of this kind can be announced on the connection',
+                self.connection.session(),
             )
             log.warning(
-                '--------------------------------------------------------------------', self.connection.session()
+                '--------------------------------------------------------------------',
+                self.connection.session(),
             )
 
     def read_open(self, ip):
@@ -284,7 +343,11 @@ class Protocol(object):
                 break
 
         if received_open.TYPE != Open.TYPE:
-            raise Notify(5, 1, 'The first packet received is not an open message (%s)' % received_open)
+            raise Notify(
+                5,
+                1,
+                'The first packet received is not an open message (%s)' % received_open,
+            )
 
         log.debug('<< %s' % received_open, self.connection.session())
         yield received_open
@@ -334,7 +397,10 @@ class Protocol(object):
         for _ in self.write(keepalive):
             yield _NOP
 
-        log.debug('>> KEEPALIVE%s' % (' (%s)' % comment if comment else ''), self.connection.session())
+        log.debug(
+            '>> KEEPALIVE%s' % (' (%s)' % comment if comment else ''),
+            self.connection.session(),
+        )
 
         yield keepalive
 
@@ -343,7 +409,11 @@ class Protocol(object):
             yield _NOP
         log.debug(
             '>> NOTIFICATION (%d,%d,"%s")'
-            % (notification.code, notification.subcode, notification.data.decode('utf-8')),
+            % (
+                notification.code,
+                notification.subcode,
+                notification.data.decode('utf-8'),
+            ),
             self.connection.session(),
         )
         yield notification
