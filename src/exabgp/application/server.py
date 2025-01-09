@@ -200,14 +200,11 @@ def run(comment, configurations, pid=0):
         exit_code = Reactor(configuration).run()
         __exit(env.debug.memory, exit_code)
 
-    try:
-        import cProfile as profile
-    except ImportError:
-        import profile
+    import cProfile
 
     if env.profile.file == 'stdout':
         profiled = 'Reactor(configuration).run()'
-        exit_code = profile.run(profiled)
+        exit_code = cProfile.run(profiled)
         __exit(env.debug.memory, exit_code)
 
     if pid:
@@ -221,37 +218,33 @@ def run(comment, configurations, pid=0):
     if os.path.exists(profile_name):
         notice = 'profile can not use this filename as output, it already exists (%s)' % profile_name
 
-    if not notice:
-        cwd = os.getcwd()
-        log.debug('profiling ....', 'reactor')
-        profiler = profile.Profile()
-        profiler.enable()
-        try:
-            exit_code = Reactor(configuration).run()
-        except Exception:
-            exit_code = Reactor.Exit.unknown
-            raise
-        finally:
-            from exabgp.vendoring import lsprofcalltree
-
-            profiler.disable()
-            kprofile = lsprofcalltree.KCacheGrind(profiler)
-            try:
-                destination = profile_name if profile_name.startswith('/') else os.path.join(cwd, profile_name)
-                with open(destination, 'w+') as write:
-                    kprofile.output(write)
-            except IOError:
-                notice = 'could not save profiling in formation at: ' + destination
-                log.debug('-' * len(notice), 'reactor')
-                log.debug(notice, 'reactor')
-                log.debug('-' * len(notice), 'reactor')
-            __exit(env.debug.memory, exit_code)
-    else:
+    if notice:
         log.debug('-' * len(notice), 'reactor')
         log.debug(notice, 'reactor')
         log.debug('-' * len(notice), 'reactor')
-        Reactor(configuration).run()
-        __exit(env.debug.memory, 1)
+
+    cwd = os.getcwd()
+    log.debug('profiling ....', 'reactor')
+
+    destination = profile_name if profile_name.startswith('/') else os.path.join(cwd, profile_name)
+
+    with cProfile.Profile() as profiler:
+        exit_code = 0
+        try:
+            exit_code = Reactor(configuration).run()
+        except Exception as e:
+            exit_code = Reactor.Exit.unknown
+            log.critical(str(e))
+
+        try:
+            profiler.dump_stats(destination)
+        except Exception:
+            notice = 'could not save profiling in formation at: ' + destination
+            log.debug('-' * len(notice), 'reactor')
+            log.debug(notice, 'reactor')
+            log.debug('-' * len(notice), 'reactor')
+
+        __exit(env.debug.memory, exit_code)
 
 
 def main():
