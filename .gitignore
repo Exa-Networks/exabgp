@@ -36,3 +36,5 @@ fake-eggs
 init
 artifacts
 requirements.txt
+
+.codegpt
