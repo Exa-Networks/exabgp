@@ -7,11 +7,11 @@ assignees: ''
 
 ---
 
-We are sorry that you are experiencing an issue with ExaBGP.
+We are sorry to hear that you are experiencing an issue with ExaBGP.
 
 Before opening this issue could you please:
+ - check if the problem is still present on main branch
  - make sure the problem was not already reported to avoid duplicates.
- - check if the problem is still present on main
 
 **Common issues**
 
