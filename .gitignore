@@ -38,3 +38,6 @@ artifacts
 requirements.txt
 
 .codegpt
+
+# spot
+bgpls-receiver.log

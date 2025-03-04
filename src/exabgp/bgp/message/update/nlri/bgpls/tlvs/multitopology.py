@@ -102,3 +102,29 @@ class MTID(object):
         if self._packed:
             return self._packed
         raise RuntimeError('Not implemented')
+
+class MultiTopology(object):
+    def __init__(self, mt_ids):
+        self.type = 263
+        self.length = len(mt_ids) * 2
+        self.mt_ids = mt_ids
+
+    def pack(self):
+        return struct.pack('!HH', self.type, self.length) + b''.join(struct.pack('!H', mt_id) for mt_id in self.mt_ids)
+
+    @classmethod
+    def unpack(cls, data):
+        mt_ids = []
+        while data:
+            mt_id = struct.unpack('!H', data[:2])[0]
+            mt_ids.append(mt_id)
+            data = data[2:]
+        return MultiTopology(mt_ids)
+
+    def json(self, compact=None):
+        content = ', '.join([
+            '"type": %d' % self.type,
+            '"length": %d' % self.length,
+            '"mt_ids": [ %s ]' % ', '.join(str(mt_id) for mt_id in self.mt_ids)
+        ])
+        return '{ %s }' % (content)

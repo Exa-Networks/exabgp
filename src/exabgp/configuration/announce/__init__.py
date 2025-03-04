@@ -139,3 +139,10 @@ class AnnounceL2VPN(ParseAnnounce):
 
     def clear(self):
         return True
+
+class AnnounceBGPLSAFI(ParseAnnounce):
+    name = 'bgp-ls'
+    afi = AFI.bgpls
+
+    def clear(self):
+        return True

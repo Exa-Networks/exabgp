@@ -32,6 +32,7 @@ from exabgp.configuration.announce import SectionAnnounce
 from exabgp.configuration.announce import AnnounceIPv4
 from exabgp.configuration.announce import AnnounceIPv6
 from exabgp.configuration.announce import AnnounceL2VPN
+from exabgp.configuration.announce import AnnounceBGPLSAFI
 from exabgp.configuration.static import ParseStatic
 from exabgp.configuration.static import ParseStaticRoute
 from exabgp.configuration.flow import ParseFlow
@@ -54,6 +55,7 @@ from exabgp.configuration.announce.mvpn import AnnounceMVPN  # noqa: F401,E261,E
 from exabgp.configuration.announce.flow import AnnounceFlow  # noqa: F401,E261,E501
 from exabgp.configuration.announce.vpls import AnnounceVPLS  # noqa: F401,E261,E501
 from exabgp.configuration.announce.mup import AnnounceMup  # noqa: F401,E261,E501
+from exabgp.configuration.announce.bgpls import AnnounceBGPLSSAFI  # noqa: F401,E261,E501
 
 
 class _Configuration(object):
@@ -143,6 +145,7 @@ class Configuration(_Configuration):
         self.announce_ipv4 = AnnounceIPv4(*params)
         self.announce_ipv6 = AnnounceIPv6(*params)
         self.announce_l2vpn = AnnounceL2VPN(*params)
+        self.announce_bgpls_afi = AnnounceBGPLSAFI(*params)
         self.flow = ParseFlow(*params)
         self.flow_route = ParseFlowRoute(*params)
         self.flow_match = ParseFlowMatch(*params)
@@ -253,6 +256,7 @@ class Configuration(_Configuration):
                     'ipv4': self.announce_ipv4.name,
                     'ipv6': self.announce_ipv6.name,
                     'l2vpn': self.announce_l2vpn.name,
+                    'bgp-ls': self.announce_bgpls_afi.name,
                 },
             },
             self.announce_ipv4.name: {
@@ -269,6 +273,13 @@ class Configuration(_Configuration):
                 'class': self.announce_l2vpn,
                 'commands': [
                     'vpls',
+                ],
+                'sections': {},
+            },
+            self.announce_bgpls_afi.name: {
+                'class': self.announce_bgpls_afi,
+                'commands': [
+                    'bgp-ls',
                 ],
                 'sections': {},
             },
@@ -357,6 +368,7 @@ class Configuration(_Configuration):
         self.announce_ipv6.clear()
         self.announce_ipv4.clear()
         self.announce_l2vpn.clear()
+        self.announce_bgpls_afi.clear()
         self.announce.clear()
         self.static.clear()
         self.static_route.clear()

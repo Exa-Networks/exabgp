@@ -27,6 +27,7 @@ from exabgp.bgp.message.update.attribute import MPURNLRI
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.bgp.message.update.nlri.bgpls.srv6sid import SRv6SID
 
 from exabgp.logger import log
 from exabgp.logger import logfunc
@@ -127,6 +128,10 @@ class Update(Message):
 
             if add_v4:
                 nlris.append(nlri)
+                continue
+
+            if isinstance(nlri, SRv6SID):
+                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
 
             if nlri.nexthop.afi != AFI.undefined:
