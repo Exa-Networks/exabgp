@@ -2,7 +2,7 @@
 from exabgp.protocol.family import AFI
 
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.attribute import NextHopSelf
+from exabgp.bgp.message.update.attribute import NextHopSelf, Origin
 
 from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
@@ -16,6 +16,16 @@ def protocol_id(tokeniser):
 
 def identifier(tokeniser):
     return int(tokeniser())
+
+def origin(tokeniser):
+    value = tokeniser().lower()
+    if value == 'igp':
+        return Origin(Origin.IGP)
+    if value == 'egp':
+        return Origin(Origin.EGP)
+    if value == 'incomplete':
+        return Origin(Origin.INCOMPLETE)
+    raise ValueError('unknown origin %s' % value)
 
 def local_node_descriptor(tokeniser):
     value = tokeniser()

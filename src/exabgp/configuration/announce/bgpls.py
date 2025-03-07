@@ -18,6 +18,7 @@ from exabgp.configuration.announce import ParseAnnounce
 
 from exabgp.configuration.bgpls.parser import protocol_id
 from exabgp.configuration.bgpls.parser import identifier
+from exabgp.configuration.bgpls.parser import origin
 from exabgp.configuration.bgpls.parser import local_node_descriptor
 from exabgp.configuration.bgpls.parser import srv6_sid_information
 from exabgp.configuration.bgpls.parser import multi_topologies
@@ -30,6 +31,7 @@ class AnnounceBGPLSSAFI(ParseAnnounce):
     definition = [
         'protocol-id <protocol id; 8 bits number>',
         'identifier <identifier; 64 bits number>',
+        'origin IGP|EGP|INCOMPLETE',
         'local-node-descriptor ( <asn> <bgp ls identifier; 32 bits number> <ip> <confederation member; 32 bits number> )',
         'srv6-sid-information [ <ipv6>.. ]',
         'multi-topologies [ ( <mt id; 16 bits number>.. ).. ]',
@@ -42,6 +44,7 @@ class AnnounceBGPLSSAFI(ParseAnnounce):
     known = {
         'protocol-id': protocol_id,
         'identifier': identifier,
+        'origin': origin,
         'local-node-descriptor': local_node_descriptor,
         'srv6-sid-information': srv6_sid_information,
         'multi-topologies': multi_topologies,
@@ -52,6 +55,7 @@ class AnnounceBGPLSSAFI(ParseAnnounce):
     action = {
         'protocol-id': 'nlri-set',
         'identifier': 'nlri-set',
+        'origin': 'attribute-add',
         'local-node-descriptor': 'nlri-set',
         'srv6-sid-information': 'nlri-set',
         'multi-topologies': 'nlri-set',
@@ -62,6 +66,7 @@ class AnnounceBGPLSSAFI(ParseAnnounce):
     assign = {
         'protocol-id': 'protocol_id',
         'identifier': 'identifier',
+        'origin': 'origin',
         'local-node-descriptor': 'local_node_descriptor',
         'srv6-sid-information': 'srv6_sid_information',
         'multi-topologies': 'multi_topologies',
