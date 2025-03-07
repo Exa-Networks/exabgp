@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-
+import json
 import sys
 import os
 
 # ExaBGPのソースディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from exabgp.bgp.message.update.nlri.bgpls.srv6sid import SRv6SID
+from exabgp.bgp.message.update.nlri.bgpls.srv6sid import SRv6SID, LocalNodeDescriptorSub
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
 from exabgp.bgp.message.update.attribute.sr.srv6.sidstructure import Srv6SidStructure
 from exabgp.bgp.message.update.nlri.bgpls.srv6sid import LocalNodeDescriptor, SRv6SIDDescriptor
@@ -31,12 +31,12 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.opaquemetadata import OpaqueMetad
 def encode_srv6_sid_nlri():
     protocol_id = 7 # https://www.iana.org/assignments/bgp-ls-parameters/bgp-ls-parameters.xhtml#protocol-ids
     identifier = 0
-    local_node_descriptor = LocalNodeDescriptor(
-        as_number=65000,
-        bgp_ls_identifier=0,
-        ospf_area_id=0,
-        router_id='192.168.255.1'
-    )
+    local_node_descriptor = LocalNodeDescriptor([
+        LocalNodeDescriptorSub(512, 65000),
+        LocalNodeDescriptorSub(513, 0),
+        LocalNodeDescriptorSub(516, "192.168.255.1"),
+        LocalNodeDescriptorSub(517, 1)
+    ])
     srv6_sid_information = [
         SRv6SIDDescriptor(sid='fd00::1')
     ]
@@ -77,37 +77,9 @@ def decode_srv6_sid_nlri(packed_nlri):
     try:
         unpacked_nlri = SRv6SID.unpack_nlri(packed_nlri, None)
         print("Decoded SRv6 SID NLRI:")
-
-        print(f"Protocol ID: {unpacked_nlri.protocol_id}")
-        print(f"Identifier: {unpacked_nlri.identifier}")
-        print("Local Node Descriptor:")
-        print(f"  AS Number: {unpacked_nlri.local_node_descriptor.as_number}")
-        print(f"  BGP-LS Identifier: {unpacked_nlri.local_node_descriptor.bgp_ls_identifier}")
-        print(f"  OSPF Area ID: {unpacked_nlri.local_node_descriptor.ospf_area_id}")
-        print(f"  Router ID: {unpacked_nlri.local_node_descriptor.router_id}")
-        print("SRv6 SID Information:")
-        for srv6_sid_information in unpacked_nlri.srv6_sid_information:
-            print(f"  SID: {srv6_sid_information.sid}")
-        print("Multi Topologies:")
-        for multi_topology in unpacked_nlri.multi_topologies:
-            print(f"  Type: {multi_topology.type}")
-            print(f"  Length: {multi_topology.length}")
-            print(f"  Multi Topology IDs: {multi_topology.mt_ids}")
-        print("Service Chainings:")
-        for service_chaining in unpacked_nlri.service_chainings:
-            print(f"  Type: {service_chaining.type}")
-            print(f"  Length: {service_chaining.length}")
-            print(f"  Service Type: {service_chaining.service_type}")
-            print(f"  Flags: {service_chaining.flags}")
-            print(f"  Traffic Type: {service_chaining.traffic_type}")
-            print(f"  Reserved: {service_chaining.reserved}")
-        print("Opaque Metadata:")
-        for opaque_metadata in unpacked_nlri.opaque_metadata:
-            print(f"  Type: {opaque_metadata.type}")
-            print(f"  Length: {opaque_metadata.length}")
-            print(f"  Opaque Type: {opaque_metadata.opaque_type}")
-            print(f"  Flags: {opaque_metadata.flags}")
-            print(f"  Value: {opaque_metadata.value}")
+        unpacked_json = unpacked_nlri.json()
+        cleaned_json = json.loads(unpacked_json)
+        print(json.dumps(cleaned_json, indent=4, ensure_ascii=False))
 
         return unpacked_nlri
     except Exception as e:

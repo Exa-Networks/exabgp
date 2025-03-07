@@ -30,11 +30,11 @@ class AnnounceBGPLSSAFI(ParseAnnounce):
     definition = [
         'protocol-id <protocol id; 8 bits number>',
         'identifier <identifier; 64 bits number>',
-        'local-node-descriptor ( <asn> <bgp ls identifier; 32 bits number> <ospf area id; 32 bits number> <ip> )',
+        'local-node-descriptor ( <asn> <bgp ls identifier; 32 bits number> <ip> <confederation member; 32 bits number> )',
         'srv6-sid-information [ <ipv6>.. ]',
         'multi-topologies [ ( <mt id; 16 bits number>.. ).. ]',
         'service-chainings [ ( <service type; 16 bits number> <flags; 8 bits number> <traffic type; 8 bits number> <reserved; 16 bits number> ).. ]',
-        'opaque-metadata [ ( <length; 16 bits number> <opaque type; 16 bits number> <flags; 8 bits number> <value; string> ).. ]',
+        'opaque-metadata [ ( <opaque type; 16 bits number> <flags; 8 bits number> <value; string> ).. ]',
     ]
 
     syntax = 'bgp-ls %s\n' % '  '.join(definition)

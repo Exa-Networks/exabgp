@@ -60,17 +60,21 @@ class SRv6SID(BGPLS):
     def unpack_nlri(cls, data, rd):
         protocol_id = unpack('!B', data[:1])[0]
         identifier = unpack('!Q', data[1:9])[0]
-        local_node_descriptor = LocalNodeDescriptor.unpack(data[9:])
+        local_node_descriptor = []
         multi_topologies = []
         srv6_sid_information = []
         service_chainings = []
         opaque_metadata = []
-        tlvs = data[9+16:]
+        tlvs = data[9:]
 
         while tlvs:
             tlv_type, tlv_length = unpack('!HH', tlvs[:4])
             value = tlvs[4 : 4 + tlv_length]
             tlvs = tlvs[4 + tlv_length :]
+
+            if tlv_type == 256:
+                local_node_descriptor = LocalNodeDescriptor.unpack(value)
+                continue
 
             if tlv_type == 263:
                 multi_topologies.append(MultiTopology.unpack(value))
@@ -124,7 +128,7 @@ class SRv6SID(BGPLS):
             [
                 '"protocol-id": %d' % int(self.protocol_id),
                 '"identifier": %d' % int(self.identifier),
-                '"local-node-descriptor": { %s }' % self.local_node_descriptor.json(),
+                '"local-node-descriptor": %s' % self.local_node_descriptor.json(),
                 '"srv6-sid-information": [ %s ]' % srv6_sid_information,
             ]
         )
@@ -135,39 +139,73 @@ class SRv6SID(BGPLS):
         if self.opaque_metadata:
             content += ', "opaque-metadata": [ %s ]' % ', '.join(om.json() for om in self.opaque_metadata)
 
-        return '{ %s }' % (content)
+        return '{ %s }' % content
 
-# TODO: NodeDescriptorを使えるか確認
-class LocalNodeDescriptor:
-    def __init__(self, as_number, bgp_ls_identifier, ospf_area_id, router_id):
-        self.as_number = int(as_number)
-        self.bgp_ls_identifier = int(bgp_ls_identifier)
-        self.ospf_area_id = int(ospf_area_id)
-        self.router_id = router_id
+
+class LocalNodeDescriptorSub:
+    def __init__(self, tlv_type, unpacked_value):
+        self.tlv_type = tlv_type
+        self.unpacked_value = unpacked_value
+        if self.tlv_type in (512, 513, 514, 517):
+            self.packed_value = pack('!I', int(unpacked_value))
+        elif self.tlv_type in (515, 516):
+            self.packed_value = IP.pton(unpacked_value)
+        else:
+            raise NotImplemented
+        self.length = len(self.packed_value)
 
     def pack(self):
-        return (
-            pack('!I', self.as_number) +
-            pack('!I', self.bgp_ls_identifier) +
-            pack('!I', self.ospf_area_id) +
-            IP.pton(self.router_id)
-        )
+        return pack('!HH', self.tlv_type, self.length) + self.packed_value
 
     @staticmethod
     def unpack(data):
-        as_number = unpack('!I', data[:4])[0]
-        bgp_ls_identifier = unpack('!I', data[4:8])[0]
-        ospf_area_id = unpack('!I', data[8:12])[0]
-        router_id = IP.ntop(data[12:16])
-        return LocalNodeDescriptor(as_number, bgp_ls_identifier, ospf_area_id, router_id)
+        tlv_type, length = unpack('!HH', data[:4])
+        packed_value = data[4:4+length]
+        if tlv_type in (512, 513, 514):
+            unpacked_value = unpack('!I', packed_value)[0]
+        elif tlv_type in (515, 516):
+            unpacked_value = IP.ntop(packed_value)
+        else:
+            return None
+        return LocalNodeDescriptorSub(tlv_type, unpacked_value)
+
+    def json(self):
+        content = ', '.join([
+            '"type": %d' % self.tlv_type,
+            '"length": %d' % self.length,
+            '"value": "%s"' % self.unpacked_value
+        ])
+        return '{ %s }' % content
+
+
+class LocalNodeDescriptor:
+    def __init__(self, sub_tlvs):
+        self.tlv_type = 256
+        self.sub_tlvs = sub_tlvs
+        self.length = sum(4 + sub_tlv.length for sub_tlv in self.sub_tlvs)
+
+    def pack(self):
+        return pack('!HH', self.tlv_type, self.length) + b''.join(sub_tlv.pack() for sub_tlv in self.sub_tlvs)
+
+    @staticmethod
+    def unpack(data):
+        sub_tlvs = []
+        while data:
+            sub_tlv = LocalNodeDescriptorSub.unpack(data)
+            if sub_tlv is None: # TODO: 要確認
+                break
+            sub_tlvs.append(sub_tlv)
+            data = data[4 + sub_tlv.length:]
+        return LocalNodeDescriptor(sub_tlvs)
 
     def json(self, compact=None):
-        return ', '.join([
-            '"as-number": %d' % self.as_number,
-            '"bgp-ls-identifier": %d' % self.bgp_ls_identifier,
-            '"ospf-area-id": %d' % self.ospf_area_id,
-            '"router-id": "%s"' % self.router_id
+        sub_tlvs = ', '.join(sub_tlv.json() for sub_tlv in self.sub_tlvs)
+        content = ', '.join([
+            '"type": %d' % self.tlv_type,
+            '"length": %d' % self.length,
+            '"sub-tlvs": [ %s ]' % sub_tlvs
         ])
+        return '{ %s }' % content
 
 
 class SRv6SIDDescriptor:
@@ -189,4 +227,4 @@ class SRv6SIDDescriptor:
             '"length": %d' % self.length,
             '"sid": "%s"' % self.sid
         ])
-        return '{ %s }' % (content)
+        return '{ %s }' % content

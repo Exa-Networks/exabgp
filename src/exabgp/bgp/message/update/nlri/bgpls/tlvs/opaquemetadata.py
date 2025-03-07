@@ -5,11 +5,11 @@ class OpaqueMetadata(object):
         self.type = 65001
         self.opaque_type = int(opaque_type)
         self.flags = int(flags)
-        self.value = str(value).encode('utf-8') + b'\x00'
-        self.length = len(pack('!HB', self.opaque_type, self.flags) + self.value)
+        self.value = str(value).encode('utf-8')
+        self.length = len(pack('!HB', self.opaque_type, self.flags) + self.value + b'\x00')
 
     def pack(self):
-        return pack('!HHHB', self.type, self.length, self.opaque_type, self.flags) + self.value
+        return pack('!HHHB', self.type, self.length, self.opaque_type, self.flags) + self.value + b'\x00'
 
     @staticmethod
     def unpack(data):
