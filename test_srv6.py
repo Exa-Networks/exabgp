@@ -15,55 +15,50 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MultiTopolog
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.servicechaining import ServiceChaining
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.opaquemetadata import OpaqueMetadata
 
+# GoBGP
+# ./gobgp global rib add -a ls srv6sid bgp
+# identifier 0
+# local-asn 65000
+# local-bgp-ls-id 0
+# local-bgp-router-id 192.168.255.1
+# local-bgp-confederation-member 1
+# sids fd00::1
+# multi-topology-id 1
+# service-type 1 traffic-type 1
+# opaque-type 1 value vvf-param-hoge
+
 # https://www.rfc-editor.org/rfc/rfc9514.html#name-srv6-sid-nlri
 def encode_srv6_sid_nlri():
-    protocol_id = 5 # https://www.iana.org/assignments/bgp-ls-parameters/bgp-ls-parameters.xhtml#protocol-ids
-    identifier = 0x0000000000000001
+    protocol_id = 7 # https://www.iana.org/assignments/bgp-ls-parameters/bgp-ls-parameters.xhtml#protocol-ids
+    identifier = 0
     local_node_descriptor = LocalNodeDescriptor(
         as_number=65000,
-        bgp_ls_identifier=1,
+        bgp_ls_identifier=0,
         ospf_area_id=0,
-        router_id='127.0.0.1'
+        router_id='192.168.255.1'
     )
     srv6_sid_information = [
-        SRv6SIDDescriptor(sid='2001:db8:85a3::8a2e:370:7335'),
-        SRv6SIDDescriptor(sid='2001:db8:85a3::8a2e:370:7336')
+        SRv6SIDDescriptor(sid='fd00::1')
     ]
     multi_topologies = [
         MultiTopology(
-            mt_ids=[1, 2, 3]
-        ),
-        MultiTopology(
-            mt_ids=[4, 5]
+            mt_ids=[1]
         )
     ]
     service_chainings = [
         ServiceChaining(
             service_type=1,
             flags=0,
-            traffic_type=0,
+            traffic_type=1,
             reserved=0
         ),
-        ServiceChaining(
-            service_type=2,
-            flags=0,
-            traffic_type=0,
-            reserved=0
-        )
     ]
     opaque_metadata = [
         OpaqueMetadata(
-            length=8,
             opaque_type=1,
             flags=0,
-            value='first'
+            value='vvf-param-hoge'
         ),
-        OpaqueMetadata(
-            length=9,
-            opaque_type=2,
-            flags=0,
-            value='second'
-        )
     ]
     srv6_sid_nlri = SRv6SID(
         protocol_id,

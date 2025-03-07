@@ -85,7 +85,7 @@ class SRv6SID(BGPLS):
                 continue
 
             if tlv_type == 65001:
-                opaque_metadata.append(OpaqueMetadata.unpack(tlv_length, value))
+                opaque_metadata.append(OpaqueMetadata.unpack(value))
                 continue
 
         return cls(
@@ -117,7 +117,7 @@ class SRv6SID(BGPLS):
             f"multi_topologies={self.multi_topologies}, service_chainings={self.service_chainings}, "
             f"opaque_metadata={self.opaque_metadata})"
         )
-    
+
     def json(self, compact=None):
         srv6_sid_information = ', '.join(d.json() for d in self.srv6_sid_information)
         content = ', '.join(
@@ -160,7 +160,7 @@ class LocalNodeDescriptor:
         ospf_area_id = unpack('!I', data[8:12])[0]
         router_id = IP.ntop(data[12:16])
         return LocalNodeDescriptor(as_number, bgp_ls_identifier, ospf_area_id, router_id)
-    
+
     def json(self, compact=None):
         return ', '.join([
             '"as-number": %d' % self.as_number,
@@ -182,7 +182,7 @@ class SRv6SIDDescriptor:
     @staticmethod
     def unpack(data):
         return SRv6SIDDescriptor(IPv6.ntop(data))
-    
+
     def json(self, compact=None):
         content = ', '.join([
             '"type": %d' % self.type,
