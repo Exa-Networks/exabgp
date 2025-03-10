@@ -85,7 +85,7 @@ def named_pipe(root, pipename='exabgp'):
 
 def root_folder(options, locations):
     if options['--root']:
-        return os.path.realpath(os.path.normpath(options['ROOT'])).rstrip('/')
+        return os.path.realpath(os.path.normpath(options['--root'])).rstrip('/')
 
     argv = os.path.realpath(os.path.normpath(os.path.join(os.getcwd(), sys.argv[0])))
 
@@ -96,7 +96,7 @@ def root_folder(options, locations):
 
 
 def get_envfile(options, etc):
-    envfile = 'exabgp.env' if not options["--env"] else options["ENV"]
+    envfile = 'exabgp.env' if not options["--env"] else options["--env"]
     if not envfile.startswith('/'):
         envfile = '%s/%s' % (etc, envfile)
     return envfile
@@ -177,7 +177,7 @@ def main():
     from exabgp.configuration.setup import environment
 
     if options["--decode"]:
-        decode = ''.join(options["HEX_MESSAGE"]).replace(':', '').replace(' ', '')
+        decode = ''.join(options["--decode"]).replace(':', '').replace(' ', '')
         if not is_bgp(decode):
             sys.stdout.write(usage)
             sys.stdout.write('Environment values are:\n%s\n\n' % '\n'.join(' - %s' % _ for _ in environment.default()))
@@ -193,8 +193,8 @@ def main():
     else:
         decode = ''
 
-    if options["--signal"] and options["TIME"].isdigit():
-        duration = options["TIME"]
+    if options["--signal"] and options["--signal"].isdigit():
+        duration = options["--signal"]
         pid = os.fork()
         if pid:
             import time
@@ -228,12 +228,12 @@ def main():
 
     if options["--profile"]:
         env.profile.enable = True
-        if options["PROFILE"].lower() in ['1', 'true']:
+        if options["--profile"].lower() in ['1', 'true']:
             env.profile.file = True
-        elif options["PROFILE"].lower() in ['0', 'false']:
+        elif options["--profile"].lower() in ['0', 'false']:
             env.profile.file = False
         else:
-            env.profile.file = options["PROFILE"]
+            env.profile.file = options["--profile"]
 
     if envfile and not os.path.isfile(envfile):
         comment = 'environment file missing\ngenerate it using "exabgp --fi > %s"' % envfile
