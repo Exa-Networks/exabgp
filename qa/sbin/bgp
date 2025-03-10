@@ -16,7 +16,10 @@ import errno
 import socket
 import threading
 import signal
-import asyncore
+try:
+    import asyncore
+except:
+    import py_asyncore as asyncore
 import subprocess
 from struct import unpack
 

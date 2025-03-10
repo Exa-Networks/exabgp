@@ -3,7 +3,10 @@
 import os
 import sys
 import pwd
-import asyncore
+try:
+    import asyncore
+except:
+    import py_asyncore as asyncore
 import socket
 import errno
 from struct import unpack

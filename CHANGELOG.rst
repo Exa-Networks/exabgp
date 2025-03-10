@@ -6,6 +6,7 @@ Version explained:
 Version 4.2.23
  * Fix: update doctopt to master to fix issues with python3.13
  * Fix: issue with code with python 3.13
+ * Fix: workaround for deprecated asyncore
 
 Version 4.2.22
  * Fix: route reload for offline neighbors #1126

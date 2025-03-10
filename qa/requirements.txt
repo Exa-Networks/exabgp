@@ -3,3 +3,4 @@ six
 coveralls
 nose
 psutil
+pyasyncore
