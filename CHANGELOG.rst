@@ -3,7 +3,10 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.25
+
 Version 4.2.24
+ * Fix: remove unused vendored code breaking 4.2.23
 
 Version 4.2.23
  * Fix: update doctopt to master to fix issues with python3.13
