@@ -4,7 +4,8 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.23
-
+ * Fix: update doctopt to master to fix issues with python3.13
+ * Fix: issue with code with python 3.13
 
 Version 4.2.22
  * Fix: route reload for offline neighbors #1126
