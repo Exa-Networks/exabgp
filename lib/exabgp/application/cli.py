@@ -43,9 +43,9 @@ errno_block = set(
 usage = """\
 The BGP swiss army knife of networking
 
-usage: exabgpcli [--root ROOT]
+usage: exabgpcli [--root=ROOT]
 \t\t\t\t\t\t\t\t [--help|<command>...]
-\t\t\t\t\t\t\t\t [--env ENV]
+\t\t\t\t\t\t\t\t [--env=ENV]
 
 positional arguments:
 \tcommand               valid exabgpcli command (see below)
