@@ -125,8 +125,6 @@ def open_writer(send):
 
 def main():
     options = docopt.docopt(usage, help=False)
-    if options['--env'] is None:
-        options['--env'] = ''
 
     root = root_folder(options, ['/bin/exabgpcli', '/sbin/exabgpcli', '/lib/exabgp/application/cli.py'])
     prefix = '' if root == '/usr' else root
