@@ -3,6 +3,8 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.26
+
 Version 4.2.25
  * Fix: regression in 4.2.23 introduced by doctopt changes
 
