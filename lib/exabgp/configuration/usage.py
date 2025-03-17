@@ -19,7 +19,7 @@ usage: exabgp [--help] [--version]
               [--memory | -s] [--profile=PROFILE]
               [--validate]
               [--run=HELPER]
-              [--decode=HEX_MESSAGE | -x=HEX_MESSAGE ]...
+              [--decode=HEX_MESSAGE | -x=HEX_MESSAGE]...
               [<configuration>...]
 
 positional arguments:
