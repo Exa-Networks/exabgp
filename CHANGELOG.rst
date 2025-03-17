@@ -4,6 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 4.2.25
+ * Fix: regression in 4.2.23 introduced by doctopt changes
 
 Version 4.2.24
  * Fix: remove unused vendored code breaking 4.2.23

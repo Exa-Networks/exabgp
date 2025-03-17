@@ -15,11 +15,11 @@ usage: exabgp [--help] [--version]
               [[--full-ini | --diff-ini | --full-env | --diff-env] |
               [--fi | --di | --fe | --de]]
               [--debug | -d] [--pdb | -p] [--test | -t]
-              [--once] [--signal=TIME]
-              [--memory] [--profile=PROFILE]
+              [--once | -1] [--signal=TIME]
+              [--memory | -s] [--profile=PROFILE]
               [--validate]
               [--run=HELPER]
-              [--decode=HEX_MESSAGE]...
+              [--decode=HEX_MESSAGE | -x=HEX_MESSAGE ]...
               [<configuration>...]
 
 positional arguments:
