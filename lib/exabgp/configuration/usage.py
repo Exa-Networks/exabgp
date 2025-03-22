@@ -11,15 +11,15 @@ usage = """\
 The BGP swiss army knife of networking
 
 usage: exabgp [--help] [--version]
-              [--root ROOT] [--env ENV]
+              [--root=ROOT] [--env=ENV]
               [[--full-ini | --diff-ini | --full-env | --diff-env] |
               [--fi | --di | --fe | --de]]
-              [--debug] [--pdb] [--test]
-              [--once] [--signal TIME]
-              [--memory] [--profile PROFILE]
+              [--debug | -d] [--pdb | -p] [--test | -t]
+              [--once | -1] [--signal=TIME]
+              [--memory | -s] [--profile=PROFILE]
               [--validate]
-              [--run HELPER]
-              [--decode HEX_MESSAGE]...
+              [--run=HELPER]
+              [--decode=HEX_MESSAGE | -x=HEX_MESSAGE]...
               [<configuration>...]
 
 positional arguments:

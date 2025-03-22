@@ -3,6 +3,19 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 4.2.26
+
+Version 4.2.25
+ * Fix: regression in 4.2.23 introduced by doctopt changes
+
+Version 4.2.24
+ * Fix: remove unused vendored code breaking 4.2.23
+
+Version 4.2.23
+ * Fix: update doctopt to master to fix issues with python3.13
+ * Fix: issue with code with python 3.13
+ * Fix: workaround for deprecated asyncore
+
 Version 4.2.22
  * Fix: route reload for offline neighbors #1126
    patch: Malcolm Dodds
@@ -122,7 +135,7 @@ Version 4.2.1:
  * Feature: support for single announcement for the healthcheck
 
 Version 4.2.0:
- * Feature: Support additional sub-type of BGP-Prefix-SID for SRv6-VPN 
+ * Feature: Support additional sub-type of BGP-Prefix-SID for SRv6-VPN
    patch by: Hiroki SHIROKURA
  * Fix: issue with pypi release (can not pip install)
    reported by: Thomas Faivre
@@ -204,4 +217,3 @@ Version 4.1.0
    reported by: MosesN
  * Fix: badly deciding when to send or not AddPath from parsing the Capability
    reported by: ivan-balan
-

@@ -403,8 +403,8 @@ class Command(dict):
         Process.terminate()
 
         for name in names:
-            print('\server stderr\n------\n%s' % str(Process.output(name, 'server')).replace('\\n', '\n'))
-            print('\client stdout\n------\n%s' % str(Process.output(name, 'client')).replace('\\n', '\n'))
+            print('\nserver stderr\n------\n%s' % str(Process.output(name, 'server')).replace('\\n', '\n'))
+            print('\nclient stdout\n------\n%s' % str(Process.output(name, 'client')).replace('\\n', '\n'))
 
         CI.display()
         return completed

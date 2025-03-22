@@ -10,12 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from copy import deepcopy
 
 from collections import deque
-
-# collections.counter is python2.7 only ..
-try:
-    from collections import Counter
-except ImportError:
-    from exabgp.vendoring.counter import Counter
+from collections import Counter
 
 from exabgp.protocol.family import AFI
 

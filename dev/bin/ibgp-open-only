@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 import os
-import asyncore
+try:
+    import asyncore
+except:
+    import py_asyncore as asyncore
 import socket
 from struct import unpack
 
