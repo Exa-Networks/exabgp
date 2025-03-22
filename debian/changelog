@@ -1,3 +1,11 @@
+exabgp (4.2.25-1) unstable; urgency=medium
+
+  * New upstream version.
+  * d/control: Remove outdated debconf version constraint.
+  * d/control: remove pre-dependency on dpkg as well.
+
+ -- Vincent Bernat <bernat@debian.org>  Sat, 22 Mar 2025 17:32:22 +0100
+
 exabgp (4.2.22-2) unstable; urgency=medium
 
   * d/control: drop dependency on pkg-resources. Closes: #1083382.
