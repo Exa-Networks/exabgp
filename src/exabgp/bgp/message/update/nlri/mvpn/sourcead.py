@@ -77,7 +77,7 @@ class SourceAD(MVPN):
             raise Notify(
                 3,
                 5,
-                f'Unsupported Source Active A-D Route Multicast Source IP length ({sourceiplen*8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
+                f'Unsupported Source Active A-D Route Multicast Source IP length ({sourceiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
         sourceip = IP.unpack(data[cursor : cursor + sourceiplen])
         cursor += sourceiplen
@@ -87,7 +87,7 @@ class SourceAD(MVPN):
             raise Notify(
                 3,
                 5,
-                f'Unsupported Source Active A-D Route Multicast Group IP length ({groupiplen*8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
+                f'Unsupported Source Active A-D Route Multicast Group IP length ({groupiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
         groupip = IP.unpack(data[cursor : cursor + groupiplen])
 

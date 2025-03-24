@@ -22,7 +22,7 @@ API_PREFIX = 'api-internal-cli'
 
 
 class ParseProcess(Section):
-    syntax = 'process name-of-process {\n' '   run /path/to/command with its args;\n' '   encoder text|json;\n' '}'
+    syntax = 'process name-of-process {\n   run /path/to/command with its args;\n   encoder text|json;\n}'
     known = {
         'encoder': encoder,
         'respawn': boolean,

@@ -399,13 +399,13 @@ class Configuration(_Configuration):
             if getenv().debug.configuration:
                 raise
             return self.error.set(
-                'problem parsing configuration file line %d\n' 'error message: %s' % (self.tokeniser.index_line, exc)
+                'problem parsing configuration file line %d\nerror message: %s' % (self.tokeniser.index_line, exc)
             )
         except Exception as exc:
             if getenv().debug.configuration:
                 raise
             return self.error.set(
-                'problem parsing configuration file line %d\n' 'error message: %s' % (self.tokeniser.index_line, exc)
+                'problem parsing configuration file line %d\nerror message: %s' % (self.tokeniser.index_line, exc)
             )
 
     def _reload(self):

@@ -84,7 +84,7 @@ class SourceJoin(MVPN):
             raise Notify(
                 3,
                 5,
-                f'Invalid C-Multicast Route length ({sourceiplen*8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
+                f'Invalid C-Multicast Route length ({sourceiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
         sourceip = IP.unpack(data[cursor : cursor + sourceiplen])
         cursor += sourceiplen
@@ -94,7 +94,7 @@ class SourceJoin(MVPN):
             raise Notify(
                 3,
                 5,
-                f'Invalid C-Multicast Route length ({groupiplen*8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
+                f'Invalid C-Multicast Route length ({groupiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
         groupip = IP.unpack(data[cursor : cursor + groupiplen])
         return cls(afi=afi, rd=rd, source=sourceip, group=groupip, source_as=source_as, packed=data)

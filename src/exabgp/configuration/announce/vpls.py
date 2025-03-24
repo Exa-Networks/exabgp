@@ -61,7 +61,7 @@ class AnnounceVPLS(ParseAnnounce):
         'originator-id <ipv4>',
         'cluster-list <ipv4>',
         'label <15 bits number>',
-        'attribute [ generic attribute format ]' 'name <mnemonic>',
+        'attribute [ generic attribute format ]name <mnemonic>',
         'split /<mask>',
         'watchdog <watchdog-name>',
         'withdraw',

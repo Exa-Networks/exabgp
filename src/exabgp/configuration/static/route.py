@@ -78,13 +78,13 @@ class ParseStaticRoute(Section):
         'bgp-prefix-sid [ 32 bits number> ] | [ <32 bits number>, [ ( <24 bits number>,<24 bits number> ) ]]',
         'bgp-prefix-sid-srv6 ( l3-service|l2-service <ipv6> <behavior> [<LBL>,<LNL>,<FL>,<AL>,<Tpose-Len>,<Tpose-Offset>])',
         'aigp <40 bits number>',
-        'attribute [ generic attribute format ]' 'name <mnemonic>',
+        'attribute [ generic attribute format ]name <mnemonic>',
         'split /<mask>',
         'watchdog <watchdog-name>',
         'withdraw',
     ]
 
-    syntax = 'route <ip>/<netmask> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
+    syntax = 'route <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
     known = {
         'path-information': path_information,

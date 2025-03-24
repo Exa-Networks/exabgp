@@ -31,7 +31,7 @@ class AnnouncePath(AnnounceIP):
         'label <15 bits number>',
     ] + AnnounceIP.definition
 
-    syntax = '<safi> <ip>/<netmask> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
+    syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
     known = dict(
         AnnounceIP.known,

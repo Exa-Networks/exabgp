@@ -54,7 +54,7 @@ except ImportError:
                 return -1
 
     else:
-        raise NotImplementedError('The psutil module is required for non-unix ' 'platforms')
+        raise NotImplementedError('The psutil module is required for non-unix platforms')
 
 
 class Timer(Process):
@@ -472,7 +472,7 @@ def magic_mprun(self, parameter_s=''):
         except SystemExit:
             message = '*** SystemExit exception caught in code being profiled.'
         except KeyboardInterrupt:
-            message = '*** KeyboardInterrupt exception caught in code being ' 'profiled.'
+            message = '*** KeyboardInterrupt exception caught in code being profiled.'
     finally:
         if had_profile:
             builtins.__dict__['profile'] = old_profile

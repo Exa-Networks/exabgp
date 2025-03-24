@@ -23,7 +23,7 @@ class AnnounceMVPN(ParseAnnounce):
         'source-join source <ip> group <ip> rd <rd> source-as <source-as>',
     ] + AnnounceIP.definition
 
-    syntax = '<safi> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
+    syntax = '<safi> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
     known = dict(
         AnnounceIP.known,

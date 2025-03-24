@@ -73,7 +73,7 @@ class NODE(BGPLS):
         node_type, node_length = unpack('!HH', data[9:13])
         if node_type != 256:
             raise Exception(
-                'Unknown type: {}. Only Local Node descriptors are allowed in' 'Node type msg'.format(node_type)
+                'Unknown type: {}. Only Local Node descriptors are allowed inNode type msg'.format(node_type)
             )
         values = data[13 : 13 + node_length]
 

@@ -160,7 +160,7 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
             return '/var/run/log'
         if sys.platform.startswith('linux'):
             return '/dev/log'
-        raise EnvironmentError('Unable to guess syslog address for your ' 'platform, try to disable syslog')
+        raise EnvironmentError('Unable to guess syslog address for your platform, try to disable syslog')
 
     logger.setLevel(debug and logging.DEBUG or logging.INFO)
     enable_syslog = syslog and not debug
