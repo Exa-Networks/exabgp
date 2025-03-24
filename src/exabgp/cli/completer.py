@@ -67,7 +67,7 @@ class VyOSCompleter(Completer):
         for data in (
             ('debug', f'counter: {self.counter}', ''),
             ('debug', f'inside: {self.xml.inside}', ''),
-            ('debug', f'node: {self.xml.tree.get(kw.node,"not a node")}', ''),
+            ('debug', f'node: {self.xml.tree.get(kw.node, "not a node")}', ''),
             ('debug', f'check: {self.xml.check}', ''),
             ('debug', f'typing: {self.xml.filling}', ''),
             ('debug', f'options: {self.xml.options}', ''),

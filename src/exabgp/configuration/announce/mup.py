@@ -37,7 +37,7 @@ class AnnounceMup(ParseAnnounce):
         'bgp-prefix-sid-srv6 ( l3-service <ipv6> <behavior> [<LBL>,<LNL>,<FL>,<AL>,<Tpose-Len>,<Tpose-Offset>])',
     ]
 
-    syntax = 'mup {\n' '  <safi> %s;\n' '}' % ';\n  '.join(definition)
+    syntax = 'mup {\n  <safi> %s;\n}' % ';\n  '.join(definition)
 
     known = {
         'label': label,

@@ -12,7 +12,7 @@ from exabgp.configuration.neighbor import ParseNeighbor
 
 
 class ParseTemplateNeighbor(Section):
-    syntax = 'neighbor {\n' '   <neighbor commands>\n' '}'
+    syntax = 'neighbor {\n   <neighbor commands>\n}'
 
     known = ParseNeighbor.known
     action = ParseNeighbor.action

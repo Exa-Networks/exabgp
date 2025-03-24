@@ -32,7 +32,7 @@ class AnnounceVPN(ParseAnnounce):
         '  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n',
     ] + AnnounceLabel.definition
 
-    syntax = '<safi> <ip>/<netmask> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
+    syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
     known = dict(
         AnnounceLabel.known,

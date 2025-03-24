@@ -65,7 +65,7 @@ class JSON(object):
         body = '"body": "%s", ' % hexstring(body) if body else ''
         mtype = '"type": "%s", ' % message_type if message_type else 'default'
 
-        return '{ ' '"exabgp": "%s", ' '"time": %s, ' '%s%s%s%s%s%s%s%s ' '}' % (
+        return '{ "exabgp": "%s", "time": %s, %s%s%s%s%s%s%s%s }' % (
             self.version,
             self.time(time.time()),
             peer,

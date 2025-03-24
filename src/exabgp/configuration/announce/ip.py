@@ -63,13 +63,13 @@ class AnnounceIP(ParseAnnounce):
         'bgp-prefix-sid [ 32 bits number> ] | [ <32 bits number>, [ ( <24 bits number>,<24 bits number> ) ]]',
         'aggregator ( <asn16>:<ipv4> )',
         'aigp <40 bits number>',
-        'attribute [ generic attribute format ]' 'name <mnemonic>',
+        'attribute [ generic attribute format ]name <mnemonic>',
         'split /<mask>',
         'watchdog <watchdog-name>',
         'withdraw',
     ]
 
-    syntax = '<safi> <ip>/<netmask> { ' '\n   ' + ' ;\n   '.join(definition) + '\n}'
+    syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
     known = {
         'attribute': attribute,

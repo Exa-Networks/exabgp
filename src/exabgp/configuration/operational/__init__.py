@@ -20,7 +20,7 @@ from exabgp.configuration.operational.parser import lpcp
 
 
 class ParseOperational(Section):
-    syntax = 'syntax:\n' ''
+    syntax = 'syntax:\n'
 
     known = {
         'asm': asm,

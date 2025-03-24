@@ -678,7 +678,7 @@ def _show_graph(
             import io
 
             f = io.TextIOWrapper(f.detach(), 'utf-8')
-    f.write('digraph ObjectGraph {\n' '  node[shape=box, style=filled, fillcolor=white];\n')
+    f.write('digraph ObjectGraph {\n  node[shape=box, style=filled, fillcolor=white];\n')
     queue = []
     depth = {}
     ignore = set(extra_ignore)
@@ -809,7 +809,7 @@ def _present_graph(dot_filename, filename=None):
             print('Image generated as %s' % filename)
     else:
         if not filename:
-            print('Graph viewer (xdot) and image renderer (dot) not found,' ' not doing anything else')
+            print('Graph viewer (xdot) and image renderer (dot) not found, not doing anything else')
         else:
             print('Image renderer (dot) not found, not doing anything else')
 

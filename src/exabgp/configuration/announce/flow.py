@@ -80,7 +80,7 @@ class AnnounceFlow(ParseAnnounce):
         'action sample|terminal|sample-terminal',
     ]
 
-    syntax = 'flow {\n' '  <safi> %s;\n' '}' % ';\n  '.join(definition)
+    syntax = 'flow {\n  <safi> %s;\n}' % ';\n  '.join(definition)
 
     known = {
         'source': source,
