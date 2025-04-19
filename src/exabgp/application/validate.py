@@ -76,7 +76,7 @@ def cmdline(cmdarg):
 def main():
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     setargs(parser)
-    cmdline(parser, parser.parse_args())
+    cmdline(parser.parse_args())
 
 
 if __name__ == '__main__':
