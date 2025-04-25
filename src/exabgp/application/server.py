@@ -40,7 +40,7 @@ def __exit(memory, code):
         sys.stdout.write(objgraph.show_most_common_types(limit=20))
         sys.stdout.write('\n\n\n')
         sys.stdout.write('generating memory utilisation graph\n\n')
-        sys.stdout.write()
+        sys.stdout.write('')
         obj = objgraph.by_type('Reactor')
         objgraph.show_backrefs([obj], max_depth=10)
     sys.exit(code)
