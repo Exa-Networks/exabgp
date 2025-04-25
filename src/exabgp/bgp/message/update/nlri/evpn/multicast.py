@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Orange. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag

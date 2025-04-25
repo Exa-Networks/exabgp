@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
 
+from __future__ import annotations
+
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.version import version
 

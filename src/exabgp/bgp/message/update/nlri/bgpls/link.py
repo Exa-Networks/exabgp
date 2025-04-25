@@ -6,6 +6,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
 from struct import unpack
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS

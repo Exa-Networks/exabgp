@@ -5,6 +5,8 @@ scope.py
 Created by Stephane Litkowski on 2017-02-24.
 """
 
+from __future__ import annotations
+
 from exabgp.configuration.core import Section
 
 from exabgp.configuration.flow.parser import interface_set

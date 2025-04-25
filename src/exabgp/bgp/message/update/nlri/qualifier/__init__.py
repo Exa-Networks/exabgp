@@ -11,6 +11,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # flake8: noqa: F401,E261
 
+from __future__ import annotations
+
 from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
 from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels

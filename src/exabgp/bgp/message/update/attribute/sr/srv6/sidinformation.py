@@ -6,6 +6,8 @@ Created by Ryoga Saito 2022-02-24
 Copyright (c) 2022 Ryoga Saito. All rights reserved.
 """
 
+from __future__ import annotations
+
 from struct import pack, unpack
 
 from exabgp.protocol.ip import IPv6

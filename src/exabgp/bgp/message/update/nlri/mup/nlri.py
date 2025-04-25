@@ -6,6 +6,8 @@ Created by Takeru Hayasaka on 2023-01-21.
 Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 """
 
+from __future__ import annotations
+
 from struct import pack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # based on netlink.py at ....
 # https://gforge.inria.fr/scm/viewvc.php/canso/trunk/tools/netlink.py?view=markup&revision=1360&root=mehani&pathrev=1360
 # https://www.linuxjournal.com/article/7356?page=0,1

@@ -5,6 +5,8 @@ Created by Takeru Hayasaka on 2023-01-21.
 Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 """
 
+from __future__ import annotations
+
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI

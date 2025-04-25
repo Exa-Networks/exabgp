@@ -3,6 +3,8 @@
 
 # flake8: noqa: F401,E261
 
+from __future__ import annotations
+
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 
 from exabgp.bgp.message.update.nlri.mvpn.sourcead import SourceAD

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from exabgp.protocol.ip import IP, NoNextHop
 from exabgp.protocol.family import (
     AFI,

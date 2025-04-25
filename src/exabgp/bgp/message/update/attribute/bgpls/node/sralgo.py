@@ -6,6 +6,8 @@ Created by Evelio Vila
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
+from __future__ import annotations
+
 import json
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS

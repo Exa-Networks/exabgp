@@ -9,6 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # flake8: noqa: F401,E261
 
+from __future__ import annotations
+
 from exabgp.configuration.core.error import Error
 from exabgp.configuration.core.scope import Scope
 from exabgp.configuration.core.section import Section

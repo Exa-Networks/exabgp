@@ -1,5 +1,7 @@
 # A wrapper class around logging to make it easier to use
 
+from __future__ import annotations
+
 import sys
 import logging
 import logging.handlers as handlers

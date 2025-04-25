@@ -1,4 +1,6 @@
 # http://teethgrinder.co.uk/perm.php?a=Python-memory-leak-detector
+from __future__ import annotations
+
 import gc
 import inspect
 

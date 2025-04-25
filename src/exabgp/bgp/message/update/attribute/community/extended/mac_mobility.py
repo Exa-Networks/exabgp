@@ -5,6 +5,8 @@ mac_mobility.py
 Created by Anton Aksola on 2018-11-03
 """
 
+from __future__ import annotations
+
 from struct import pack
 from struct import unpack
 

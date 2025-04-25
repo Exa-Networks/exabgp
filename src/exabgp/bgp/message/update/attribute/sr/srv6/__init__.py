@@ -10,6 +10,8 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 
 # flake8: noqa: F401,E261
 
+from __future__ import annotations
+
 from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
 from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation

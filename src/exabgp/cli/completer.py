@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 from prompt_toolkit.completion import Completer

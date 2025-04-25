@@ -9,6 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # Do not create a dependency loop by using exabgp.bgp.message as import
 
+from __future__ import annotations
+
 from exabgp.bgp.message.notification import Notify
 
 

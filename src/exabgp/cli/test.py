@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from vyos.xml import load_configuration
 from vyos.cli.completer import VyOSCompleter
 from vyos.cli.validator import VyOSValidator
