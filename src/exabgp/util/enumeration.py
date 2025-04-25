@@ -7,6 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
 
 # int are immutable once created: can not set ._str in __init__
 class _integer(int):

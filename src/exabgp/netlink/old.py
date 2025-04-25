@@ -6,6 +6,8 @@
 # http://smacked.org/docs/netlink.pdf
 # RFC 3549 - https://tools.ietf.org/html/rfc3549
 
+from __future__ import annotations
+
 import os
 import socket
 from struct import pack

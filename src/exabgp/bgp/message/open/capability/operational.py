@@ -7,6 +7,8 @@ Copyright (c) 2013-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # https://tools.ietf.org/html/draft-ietf-idr-operational-message-00

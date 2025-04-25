@@ -5,6 +5,8 @@ flowspec_scope.py
 Created by Stephane Litkowski on 2017-02-24.
 """
 
+from __future__ import annotations
+
 from struct import pack
 from struct import unpack
 

@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 """
 
+from __future__ import annotations
+
 import time
 
 

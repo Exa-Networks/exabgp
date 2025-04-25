@@ -7,6 +7,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
 from collections import defaultdict
 
 

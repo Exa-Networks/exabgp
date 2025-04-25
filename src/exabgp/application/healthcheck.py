@@ -40,6 +40,8 @@ labelled ``lo:haproxy1``, ``lo:haproxy2``, etc.
 
 """
 
+from __future__ import annotations
+
 import sys
 import os
 import subprocess

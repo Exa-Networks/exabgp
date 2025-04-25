@@ -10,6 +10,8 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 # flake8: noqa: F401,E261
 
+from __future__ import annotations
+
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 
 from exabgp.bgp.message.update.nlri.mup.isd import InterworkSegmentDiscoveryRoute

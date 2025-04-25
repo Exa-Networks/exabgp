@@ -10,6 +10,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # ============================================================== Communities (8)
 # https://www.iana.org/assignments/bgp-extended-communities
 
+from __future__ import annotations
+
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.initial.community import Community
 

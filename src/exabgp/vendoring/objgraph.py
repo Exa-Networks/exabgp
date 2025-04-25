@@ -26,6 +26,8 @@ Released under the MIT licence.
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+from __future__ import annotations
+
 import codecs
 import gc
 import re

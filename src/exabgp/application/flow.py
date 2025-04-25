@@ -9,6 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # based on the blog at: http://blog.sflow.com/2017/07/bgp-flowspec-on-white-box-switch.html
 
+from __future__ import annotations
+
 import os
 import sys
 import json

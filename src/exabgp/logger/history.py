@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import deque
 
 from exabgp.logger.format import _long_color_formater as formater

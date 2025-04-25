@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.notification import Notify

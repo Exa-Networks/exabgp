@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Orange. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
 from struct import pack
 
 from exabgp.protocol.family import AFI

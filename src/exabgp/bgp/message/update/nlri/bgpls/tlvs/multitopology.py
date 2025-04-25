@@ -46,6 +46,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # topologies where the node is reachable is allowed.
 # ================================================================== InterfaceAddress
 
+from __future__ import annotations
+
 import struct
 
 

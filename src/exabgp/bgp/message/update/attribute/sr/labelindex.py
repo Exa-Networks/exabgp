@@ -6,6 +6,8 @@ Created by Evelio Vila 2017-02-16
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
+from __future__ import annotations
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.notification import Notify

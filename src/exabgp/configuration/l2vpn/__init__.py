@@ -7,6 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
 from exabgp.configuration.l2vpn.vpls import ParseVPLS
 
 from exabgp.bgp.message.update.nlri import VPLS

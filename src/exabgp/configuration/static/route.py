@@ -9,6 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # This is a legacy file to handle 3.4.x like format
 
+from __future__ import annotations
+
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 

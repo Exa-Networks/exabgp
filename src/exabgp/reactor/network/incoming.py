@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from exabgp.util.errstr import errstr
 
 from .connection import Connection

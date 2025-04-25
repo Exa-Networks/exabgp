@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from exabgp.reactor.api.command.command import Command  # noqa: F401,E261
 
 from exabgp.reactor.api.command.reactor import register_reactor

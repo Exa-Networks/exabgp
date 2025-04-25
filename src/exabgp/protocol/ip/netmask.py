@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 """
 
+from __future__ import annotations
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.resource import Resource
 

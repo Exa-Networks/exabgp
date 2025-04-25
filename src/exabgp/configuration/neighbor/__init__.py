@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # import sys
+from __future__ import annotations
+
 import base64
 from copy import deepcopy
 

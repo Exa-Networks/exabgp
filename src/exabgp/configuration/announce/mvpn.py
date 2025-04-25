@@ -1,5 +1,7 @@
 # encoding: utf-8
 
+from __future__ import annotations
+
 from exabgp.rib.change import Change
 
 from exabgp.bgp.message import Action

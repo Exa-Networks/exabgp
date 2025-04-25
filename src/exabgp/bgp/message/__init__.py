@@ -12,6 +12,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # flake8: noqa: F401,E261
 
+from __future__ import annotations
+
 from exabgp.bgp.message.action import Action
 
 from exabgp.bgp.message.message import Message

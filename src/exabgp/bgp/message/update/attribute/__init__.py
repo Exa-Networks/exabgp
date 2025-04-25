@@ -12,6 +12,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # flake8: noqa: F401,E261
 
+from __future__ import annotations
+
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute

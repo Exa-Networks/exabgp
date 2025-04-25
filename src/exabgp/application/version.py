@@ -2,6 +2,8 @@
 
 """exabgp current version"""
 
+from __future__ import annotations
+
 import sys
 import argparse
 import platform

@@ -1,5 +1,7 @@
 # encoding: utf-8
 
+from __future__ import annotations
+
 import sys
 import string
 import argparse

@@ -9,6 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # common
 
+from __future__ import annotations
+
 import copy
 import struct
 

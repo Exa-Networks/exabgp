@@ -5,6 +5,8 @@ chso.py
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
 from struct import pack
 from struct import unpack
 

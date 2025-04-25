@@ -11,6 +11,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
 # (since draft-ietf-l2vpn-evpn-05)
 
+from __future__ import annotations
+
 from struct import pack
 from struct import unpack
 

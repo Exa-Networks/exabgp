@@ -9,6 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
 
+from __future__ import annotations
+
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.util.dns import host, domain
 
