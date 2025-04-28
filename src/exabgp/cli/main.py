@@ -121,8 +121,6 @@ def main():
         vi_mode=True,
     )
 
-    global running
-
     while running:
         level = ['edit'] + config.get_level()
         edit = ' '.join(level)
