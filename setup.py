@@ -50,6 +50,8 @@ if 'systemd' in sys.argv:
 
 
 setuptools.setup(
+    packages=setuptools.find_namespace_packages(where="src"),
+    package_dir={"": "src"},
     download_url=download_url,
     data_files=data_files,
 )

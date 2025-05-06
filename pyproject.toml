@@ -5,7 +5,7 @@ description = 'BGP swiss army knife'
 authors = [
 	{ name = "Thomas Mangin", email = "thomas.mangin@exa-networks.co.uk" },
 ]
-license = { 'file' = 'LICENCE.txt' }
+dynamic = ['license']
 requires-python = ">=3.8.1,<=3.13"
 keywords = [
 	'bgp',
@@ -21,7 +21,6 @@ classifiers = [
 	'Environment :: Console',
 	'Intended Audience :: System Administrators',
 	'Intended Audience :: Telecommunications Industry',
-	'License :: OSI Approved :: BSD License',
 	'Operating System :: POSIX',
 	'Operating System :: MacOS :: MacOS X',
 	'Programming Language :: Python',
@@ -76,7 +75,7 @@ docstring-code-format = true
 # E222 multiple spaces after operator
 # E231 missing whitespace after ','
 # E241 multiple spaces after ':'
-# E266 
+# E266
 # E501 line too long
 # W191
 # W503
