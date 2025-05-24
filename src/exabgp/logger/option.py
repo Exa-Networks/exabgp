@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-from exabgp.logger.handler import getLogger
+from exabgp.logger.handler import get_logger
 from exabgp.logger.format import formater
 
 
@@ -98,7 +98,7 @@ class option(object):
         now = str(time.time())
 
         if cls.destination == 'stdout':
-            cls.logger = getLogger(
+            cls.logger = get_logger(
                 f'ExaBGP stdout {now}',
                 format='%(message)s',
                 stream=sys.stderr,
@@ -108,7 +108,7 @@ class option(object):
             return
 
         if cls.destination == 'stdout':
-            cls.logger = getLogger(
+            cls.logger = get_logger(
                 f'ExaBGP stderr {now}',
                 format='%(message)s',
                 stream=sys.stderr,
@@ -119,11 +119,11 @@ class option(object):
 
         # if cls.destination == 'file':
         #     os.path.realpath(os.path.normpath(os.path.join(cls._cwd, destination)))
-        #     _logger = getLogger('ExaBGP file', filename='')
+        #     _logger = get_logger('ExaBGP file', filename='')
         #     _format = formater(cls.enabled, 'stderr')
 
         if cls.destination == 'syslog':
-            cls.logger = getLogger(
+            cls.logger = get_logger(
                 f'ExaBGP syslog {now}',
                 format='%(message)s',
                 address='/var/run/syslog' if sys.platform == 'darwin' else '/dev/log',

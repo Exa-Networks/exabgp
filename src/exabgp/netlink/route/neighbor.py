@@ -71,5 +71,5 @@ class Neighbor(Message):
             NDA_PROBES = 0x04
 
     @classmethod
-    def getNeighbors(cls):
+    def get_neighbors(cls):
         return cls.extract(Neighbor.Command.RTM_GETNEIGH)

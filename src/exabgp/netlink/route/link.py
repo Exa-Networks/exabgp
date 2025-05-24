@@ -83,5 +83,5 @@ class Link(Message):
             IFLA_STATS = 0x07
 
     @classmethod
-    def getLinks(cls):
+    def get_links(cls):
         return cls.extract(Link.Command.RTM_GETLINK)

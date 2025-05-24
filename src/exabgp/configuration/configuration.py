@@ -432,7 +432,7 @@ class Configuration(_Configuration):
         # XXX: Should it be in neighbor ?
         self.process.add_api()
 
-        if self.parseSection('root') is not True:
+        if self.parse_section('root') is not True:
             self._rollback_reload()
 
             return self.error.set(
@@ -514,7 +514,7 @@ class Configuration(_Configuration):
         self.tokeniser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
         self.tokeniser.set_action(action)
 
-        if self.parseSection(section) is not True:
+        if self.parse_section(section) is not True:
             self._rollback_reload()
             log.debug(
                 '\n'
@@ -589,7 +589,7 @@ class Configuration(_Configuration):
             return self.error.set('invalid syntax line %d' % self.tokeniser.index_line)
         return False
 
-    def parseSection(self, name):
+    def parse_section(self, name):
         if name not in self._structure:
             return self.error.set('option %s is not allowed here' % name)
 

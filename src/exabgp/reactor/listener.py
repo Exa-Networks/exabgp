@@ -19,8 +19,8 @@ from exabgp.protocol.family import AFI
 
 # from exabgp.util.coroutine import each
 from exabgp.reactor.peer import Peer
-from exabgp.reactor.network.tcp import MD5
-from exabgp.reactor.network.tcp import MIN_TTL
+from exabgp.reactor.network.tcp import md5
+from exabgp.reactor.network.tcp import min_ttl
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
 from exabgp.reactor.network.error import NetworkError
@@ -62,17 +62,17 @@ class Listener(object):
                 continue
             if local_port != port:
                 continue
-            MD5(sock, peer_ip.top(), 0, md5, md5_base64)
+            md5(sock, peer_ip.top(), 0, md5, md5_base64)
             if ttl_in:
-                MIN_TTL(sock, peer_ip, ttl_in)
+                min_ttl(sock, peer_ip, ttl_in)
             return
 
         try:
             sock = self._new_socket(local_ip)
             # MD5 must match the peer side of the TCP, not the local one
-            MD5(sock, peer_ip.top(), 0, md5, md5_base64)
+            md5(sock, peer_ip.top(), 0, md5, md5_base64)
             if ttl_in:
-                MIN_TTL(sock, peer_ip, ttl_in)
+                min_ttl(sock, peer_ip, ttl_in)
             try:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 if local_ip.ipv6():

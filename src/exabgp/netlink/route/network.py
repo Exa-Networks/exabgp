@@ -118,11 +118,11 @@ class Network(Message):
             RTA_TABLE = 0x0F
 
     @classmethod
-    def getRoutes(cls):
+    def get_routes(cls):
         return cls.extract(Network.Command.RTM_GETROUTE)
 
     @classmethod
-    def newRoute(cls):
+    def new_route(cls):
         network_flags = NetLink.Flags.NLM_F_REQUEST
         network_flags |= NetLink.Flags.NLM_F_ACK
         network_flags |= NetLink.Flags.NLM_F_CREATE
@@ -158,5 +158,5 @@ class Network(Message):
         return cls.extract(Network.Command.RTM_NEWROUTE, network_flags, family, neighbor)
 
     @classmethod
-    def delRoute(cls):
+    def del_route(cls):
         return cls.extract(Network.Command.RTM_DELROUTE)

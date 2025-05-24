@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 
 from exabgp.logger.option import option
-from exabgp.logger.handler import getLogger  # noqa: F401,E261,E501
+from exabgp.logger.handler import get_logger  # noqa: F401,E261,E501
 from exabgp.logger.format import formater  # noqa: F401,E261,E501
 
 from exabgp.logger.format import lazyformat  # noqa: F401,E261,E501
