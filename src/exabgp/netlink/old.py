@@ -300,7 +300,7 @@ class Link(_Message):
             IFLA_QDISC = 0x06
             IFLA_STATS = 0x07
 
-    def getLinks(self):
+    def get_links(self):
         return self.extract(Link.Command.RTM_GETLINK)
 
 
@@ -373,7 +373,7 @@ class Address(_Message):
             IFLA_VF_PORTS = 0x18
             IFLA_PORT_SELF = 0x19
 
-    def getAddresses(self):
+    def get_addresses(self):
         return self.extract(Address.Command.RTM_GETADDR)
 
 
@@ -431,7 +431,7 @@ class Neighbor(_Message):
             NDA_CACHEINFO = 0x03  # Cache statistics
             NDA_PROBES = 0x04
 
-    def getNeighbors(self):
+    def get_neighbors(self):
         return self.extract(Neighbor.Command.RTM_GETNEIGH)
 
 
@@ -533,7 +533,7 @@ class Network(_Message):
             # RTA_MP_ALGO     = 0x0E
             RTA_TABLE = 0x0F
 
-    def getRoutes(self):
+    def get_routes(self):
         return self.extract(Network.Command.RTM_GETROUTE)
 
     # def _create (self, family):
@@ -541,7 +541,7 @@ class Network(_Message):
     # 	for _ in self.extract(Network.Command.RTM_NEWROUTE,flags,family):
     # 		yield _
 
-    def newRoute(self):
+    def new_route(self):
         network_flags = NetLinkRoute.Flags.NLM_F_REQUEST
         network_flags |= NetLinkRoute.Flags.NLM_F_CREATE
         network_flags |= NetLinkRoute.Flags.NLM_F_EXCL
@@ -571,7 +571,7 @@ class Network(_Message):
         for _ in self.extract(Network.Command.RTM_NEWROUTE, network_flags, family):
             yield _
 
-    def delRoute(self):
+    def del_route(self):
         return self.extract(Network.Command.RTM_DELROUTE)
 
 

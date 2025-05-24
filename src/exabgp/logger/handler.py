@@ -24,7 +24,7 @@ levels = {
 _created = {}
 
 
-def getLogger(name=None, **kwargs):
+def get_logger(name=None, **kwargs):
     if name in _created:
         if len(kwargs) == 0:
             return _created[name]
@@ -87,20 +87,20 @@ if __name__ == '__main__':
 
     # syslog logger
     # syslog=True if no 'address' field is provided
-    syslog = getLogger(__name__ + '.1', syslog=True, format=formating)
+    syslog = get_logger(__name__ + '.1', syslog=True, format=formating)
     syslog.info('syslog test')
 
     # steam logger
-    stream = getLogger(__name__ + '.2', stream=sys.stdout, level='ERROR')
+    stream = get_logger(__name__ + '.2', stream=sys.stdout, level='ERROR')
     stream.info('steam test')
 
     # file logger
-    filelog = getLogger(__name__ + '.3', filename='/tmp/test')
+    filelog = get_logger(__name__ + '.3', filename='/tmp/test')
     filelog.info('file test')
 
     # create a combined logger
-    getLogger('ExaBGP', syslog=True, stream=sys.stdout, filename='/tmp/test')
+    get_logger('ExaBGP', syslog=True, stream=sys.stdout, filename='/tmp/test')
 
     # recover the created logger from name
-    combined = getLogger('ExaBGP')
+    combined = get_logger('ExaBGP')
     combined.info('combined test')

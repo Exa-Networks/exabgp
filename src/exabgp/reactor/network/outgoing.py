@@ -6,11 +6,11 @@ from exabgp.protocol.family import AFI
 from .connection import Connection
 from .tcp import create, bind
 from .tcp import connect
-from .tcp import MD5
+from .tcp import md5
 
 # from .tcp import nagle
-from .tcp import TTL
-from .tcp import TTLv6
+from .tcp import ttl
+from .tcp import ttlv6
 from .tcp import asynchronous
 from .tcp import ready
 # from .error import NetworkError
@@ -34,11 +34,11 @@ class Outgoing(Connection):
     def _setup(self):
         try:
             self.io = create(self.afi, self.interface)
-            MD5(self.io, self.peer, self.port, self.md5, self.md5_base64)
+            md5(self.io, self.peer, self.port, self.md5, self.md5_base64)
             if self.afi == AFI.ipv4:
-                TTL(self.io, self.peer, self.ttl)
+                ttl(self.io, self.peer, self.ttl)
             elif self.afi == AFI.ipv6:
-                TTLv6(self.io, self.peer, self.ttl)
+                ttlv6(self.io, self.peer, self.ttl)
             if self.local:
                 bind(self.io, self.local, self.afi)
             asynchronous(self.io, self.peer)

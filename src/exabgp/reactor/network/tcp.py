@@ -114,7 +114,7 @@ def connect(io, ip, port, afi, md5):
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
 
-def MD5(io, ip, port, md5, md5_base64):
+def md5(io, ip, port, md5, md5_base64):
     platform_os = platform.system()
     if platform_os == 'FreeBSD':
         if md5:
@@ -201,7 +201,7 @@ def nagle(io, ip):
         raise NagleError("Could not disable nagle's algorithm for %s" % ip)
 
 
-def TTL(io, ip, ttl):
+def ttl(io, ip, ttl):
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
         try:
@@ -210,7 +210,7 @@ def TTL(io, ip, ttl):
             raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip, errstr(exc)))
 
 
-def TTLv6(io, ip, ttl):
+def ttlv6(io, ip, ttl):
     if ttl:
         try:
             io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
@@ -218,7 +218,7 @@ def TTLv6(io, ip, ttl):
             raise TTLError('This OS does not support unicast_hops (ttl-security) for %s (%s)' % (ip, errstr(exc)))
 
 
-def MIN_TTL(io, ip, ttl):
+def min_ttl(io, ip, ttl):
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
         try:

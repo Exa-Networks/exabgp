@@ -316,7 +316,7 @@ def decoder(function, klass=int):
     return _inner
 
 
-def PacketLength(data):
+def packet_length(data):
     _str_bad_length = 'cloudflare already found that invalid max-packet length for for you ..'
     number = int(data)
     if number > 0xFFFF:
@@ -324,7 +324,7 @@ def PacketLength(data):
     return number
 
 
-def PortValue(data):
+def port_value(data):
     _str_bad_port = 'you tried to set an invalid port number ..'
     try:
         number = Port.named(data)
@@ -333,7 +333,7 @@ def PortValue(data):
     return number
 
 
-def DSCPValue(data):
+def dscp_value(data):
     _str_bad_dscp = 'you tried to filter a flow using an invalid dscp for a component ..'
     number = int(data)
     if number < 0 or number > 0x3F:  # 0b00111111
@@ -341,7 +341,7 @@ def DSCPValue(data):
     return number
 
 
-def ClassValue(data):
+def class_value(data):
     _str_bad_class = 'you tried to filter a flow using an invalid traffic class for a component ..'
     number = int(data)
     if number < 0 or number > 0xFFFF:
@@ -349,7 +349,7 @@ def ClassValue(data):
     return number
 
 
-def LabelValue(data):
+def label_value(data):
     _str_bad_label = 'you tried to filter a flow using an invalid traffic label for a component ..'
     number = int(data)
     if number < 0 or number > 0xFFFFF:  # 20 bits 5 bytes
@@ -407,21 +407,21 @@ class FlowNextHeader(IOperationByte, NumericString, IPv6):
 class FlowAnyPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID = 0x04
     NAME = 'port'
-    converter = staticmethod(converter(PortValue))
+    converter = staticmethod(converter(port_value))
     decoder = staticmethod(_number)
 
 
 class FlowDestinationPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID = 0x05
     NAME = 'destination-port'
-    converter = staticmethod(converter(PortValue))
+    converter = staticmethod(converter(port_value))
     decoder = staticmethod(_number)
 
 
 class FlowSourcePort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID = 0x06
     NAME = 'source-port'
-    converter = staticmethod(converter(PortValue))
+    converter = staticmethod(converter(port_value))
     decoder = staticmethod(_number)
 
 
@@ -450,7 +450,7 @@ class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
 class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
     ID = 0x0A
     NAME = 'packet-length'
-    converter = staticmethod(converter(PacketLength))
+    converter = staticmethod(converter(packet_length))
     decoder = staticmethod(_number)
 
 
@@ -458,7 +458,7 @@ class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
 class FlowDSCP(IOperationByte, NumericString, IPv4):
     ID = 0x0B
     NAME = 'dscp'
-    converter = staticmethod(converter(DSCPValue))
+    converter = staticmethod(converter(dscp_value))
     decoder = staticmethod(_number)
 
 
@@ -466,7 +466,7 @@ class FlowDSCP(IOperationByte, NumericString, IPv4):
 class FlowTrafficClass(IOperationByte, NumericString, IPv6):
     ID = 0x0B
     NAME = 'traffic-class'
-    converter = staticmethod(converter(ClassValue))
+    converter = staticmethod(converter(class_value))
     decoder = staticmethod(_number)
 
 
@@ -483,7 +483,7 @@ class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
 class FlowFlowLabel(IOperationByteShortLong, NumericString, IPv6):
     ID = 0x0D
     NAME = 'flow-label'
-    converter = staticmethod(converter(LabelValue))
+    converter = staticmethod(converter(label_value))
     decoder = staticmethod(_number)
 
 

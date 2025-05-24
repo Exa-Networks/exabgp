@@ -22,15 +22,15 @@ def usage():
 
 def addresses():
     links = {}
-    for ifi in Link.getLinks():
+    for ifi in Link.get_links():
         links[ifi.index] = ifi
 
     addrs = {}
-    for ifa in Address.getAddresses():
+    for ifa in Address.get_addresses():
         addrs.setdefault(ifa.index, []).append(ifa)
 
     neighbors = {}
-    for neighbor in Neighbor.getNeighbors():
+    for neighbor in Neighbor.get_neighbors():
         neighbors.setdefault(neighbor.index, []).append(neighbor)
 
     for index, ifi in links.items():
@@ -65,13 +65,13 @@ def addresses():
 
 def routes():
     links = {}
-    for ifi in Link.getLinks():
+    for ifi in Link.get_links():
         links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 
     print('Kernel IP routing table')
     print('%-18s %-18s %-18s %-7s %s' % ('Destination', 'Genmask', 'Gateway', 'Metric', 'Iface'))
 
-    for route in Network.getRoutes():
+    for route in Network.get_routes():
         if route.family != socket.AF_INET:
             continue
 
@@ -98,10 +98,10 @@ def routes():
 
 def new():
     links = {}
-    for ifi in Link.getLinks():
+    for ifi in Link.get_links():
         links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 
-    for route in Network.newRoute():
+    for route in Network.new_route():
         print(route)
 
         # if route.family != socket.AF_INET:

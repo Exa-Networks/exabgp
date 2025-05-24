@@ -86,5 +86,5 @@ class Address(Message):
             IFLA_PORT_SELF = 0x19
 
     @classmethod
-    def getAddresses(cls):
+    def get_addresses(cls):
         return cls.extract(Address.Command.RTM_GETADDR)
