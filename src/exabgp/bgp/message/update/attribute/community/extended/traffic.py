@@ -265,7 +265,7 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
     @staticmethod
     def unpack(data):
         ip, asn = unpack('!16sH', data[2:11])
-        return TrafficRedirectIPv6(socket.inet_ntoa(socket.AF_INET6, ip), asn, data[:11])
+        return TrafficRedirectIPv6(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:11])
 
 
 # ============================================================ TrafficRedirectIP
