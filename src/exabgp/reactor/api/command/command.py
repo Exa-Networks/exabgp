@@ -9,9 +9,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 
 class Command(object):
-    callback = {'text': {}, 'json': {}, 'neighbor': {}, 'options': {}}
+    callback: dict[str, dict] = {'text': {}, 'json': {}, 'neighbor': {}, 'options': {}}
 
-    functions = []
+    functions: list[str] = []
 
     @classmethod
     def register(cls, name, neighbor=True, options=None, json_support=False):
