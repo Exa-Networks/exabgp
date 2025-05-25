@@ -67,6 +67,8 @@ class PREFIXv4(BGPLS):
     @classmethod
     def unpack_nlri(cls, data, rd):
         ospf_type = None
+        local_node = []
+        prefix = None
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception('Protocol-ID {} is not valid'.format(proto_id))
@@ -79,7 +81,6 @@ class PREFIXv4(BGPLS):
             tlvs = tlvs[4 + tlv_length :]
 
             if tlv_type == 256:
-                local_node = []
                 while value:
                     # Unpack Local Node Descriptor Sub-TLVs
                     # We pass proto_id as TLV interpretation

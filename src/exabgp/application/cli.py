@@ -165,7 +165,7 @@ def cmdline(cmdarg):
             if exc.errno in error.block:
                 continue
             sys.stdout.write('could not clear named pipe from potential previous command data (%s)' % str(exc))
-            sys.stdout.write(exc)
+            sys.stdout.write(str(exc))
             sys.stdout.flush()
             sys.exit(1)
 
@@ -181,18 +181,18 @@ def cmdline(cmdarg):
         if rbuffer[-1] != ord('\n'):
             continue
 
-        if AnswerStream.done.endswith(rbuffer.decode()[-len(AnswerStream.text_done) :]):
+        if AnswerStream.text_done.endswith(rbuffer.decode()[-len(AnswerStream.text_done) :]):
             break
-        if AnswerStream.error.endswith(rbuffer.decode()[-len(AnswerStream.text_error) :]):
+        if AnswerStream.text_error.endswith(rbuffer.decode()[-len(AnswerStream.text_error) :]):
             break
-        if AnswerStream.shutdown.endswith(rbuffer.decode()[-len(AnswerStream.text_shutdown) :]):
+        if AnswerStream.text_shutdown.endswith(rbuffer.decode()[-len(AnswerStream.text_shutdown) :]):
             break
 
-        if AnswerStream.done.endswith(rbuffer.decode()[-len(AnswerStream.json_done) :]):
+        if AnswerStream.json_done.endswith(rbuffer.decode()[-len(AnswerStream.json_done) :]):
             break
-        if AnswerStream.error.endswith(rbuffer.decode()[-len(AnswerStream.json_error) :]):
+        if AnswerStream.json_error.endswith(rbuffer.decode()[-len(AnswerStream.json_error) :]):
             break
-        if AnswerStream.shutdown.endswith(rbuffer.decode()[-len(AnswerStream.json_shutdown) :]):
+        if AnswerStream.json_shutdown.endswith(rbuffer.decode()[-len(AnswerStream.json_shutdown) :]):
             break
 
     renamed = ['']
