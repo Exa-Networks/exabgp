@@ -202,7 +202,7 @@ def loopback_ips(label, label_only, label_exact_match):
         )
         cmd = subprocess.Popen('/sbin/ifconfig lo0'.split(), shell=False, stdout=subprocess.PIPE)
         labelre = re.compile(r'')
-    for line in cmd.stdout:
+    for line in (cmd.stdout or []):
         line = line.decode('ascii', 'ignore').strip()
         mo = ipre.match(line)
         if not mo:
