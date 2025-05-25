@@ -3,7 +3,7 @@ class msg(dict):
     help = '[help]'
     validation = '[validation]'
 
-    keys = [command, help, validation]
+    _keys = [command, help, validation]
 
     def __init__(self):
         self[self.help] = ''
@@ -11,4 +11,4 @@ class msg(dict):
         self[self.validation] = ''
 
     def __str__(self):
-        return ' '.join(f'{k}:{self[k]}' for k in self.keys if self[k])
+        return ' '.join(f'{k}:{self[k]}' for k in self._keys if self[k])
