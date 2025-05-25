@@ -7,8 +7,6 @@ __version__ = '0.26'
 
 _CMD_USAGE = 'python -m memory_profiler script_file.py'
 
-from __future__ import annotations
-
 import time  # noqa: E402
 import sys  # noqa: E402
 import os  # noqa: E402
