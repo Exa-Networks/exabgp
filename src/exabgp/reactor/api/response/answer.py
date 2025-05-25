@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 class Answer:
     text_error = 'error'
     json_error = '{ "answer": "error", "message": "this command does not support json output" }'
