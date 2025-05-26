@@ -7,12 +7,12 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from typing import Dict
+from typing import Dict, List
 
 class Command(object):
     callback: Dict[str, dict] = {'text': {}, 'json': {}, 'neighbor': {}, 'options': {}}
 
-    functions: list[str] = []
+    functions: List[str] = []
 
     @classmethod
     def register(cls, name, neighbor=True, options=None, json_support=False):
