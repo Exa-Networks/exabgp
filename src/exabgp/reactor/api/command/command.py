@@ -7,9 +7,10 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from typing import Dict
 
 class Command(object):
-    callback: dict[str, dict] = {'text': {}, 'json': {}, 'neighbor': {}, 'options': {}}
+    callback: Dict[str, dict] = {'text': {}, 'json': {}, 'neighbor': {}, 'options': {}}
 
     functions: list[str] = []
 
