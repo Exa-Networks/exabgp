@@ -245,6 +245,9 @@ class Protocol(object):
                 # XXX: is notify not already Notify class ?
                 raise Notify(notify.code, notify.subcode, str(notify))
 
+            if msg_id not in Message.CODE.MESSAGES:
+                raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
+
             if not length:
                 yield _NOP
                 continue

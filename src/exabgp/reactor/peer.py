@@ -661,6 +661,14 @@ class Peer(object):
                 self._reset('notification sent (%d,%d)' % (notify.code, notify.subcode), notify)
             else:
                 self._reset()
+
+            if self.once and not self._teardown:
+                log.debug(
+                    'only one attempt to connect is allowed, stopping the peer',
+                    self.id(),
+                )
+                self.stop()
+
             return
 
         # THE PEER NOTIFIED US OF AN ERROR
@@ -677,11 +685,6 @@ class Peer(object):
                 'notification received (%d,%d)' % (notification.code, notification.subcode),
                 notification,
             )
-            return
-
-        # RECEIVED a Message TYPE we did not expect
-        except Message as message:
-            self._reset('unexpected message received', message)
             return
 
         # PROBLEM WRITING TO OUR FORKED PROCESSES

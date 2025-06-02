@@ -88,7 +88,7 @@ class _MessageCode(int):
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-class Message(Exception):
+class Message:
     # we need to define TYPE inside __init__ of the subclasses
     # otherwise we can not dynamically create different UnknownMessage
     # TYPE = None
@@ -102,8 +102,6 @@ class Message(Exception):
     HEADER_LEN = 19
 
     registered_message = {}
-    # This is redefined by the Notify class, Exception is never used
-    klass_notify = Exception
     klass_unknown = Exception
 
     class CODE(object):
@@ -141,9 +139,6 @@ class Message(Exception):
         CODE.ROUTE_REFRESH: lambda _: _ == 23,  # noqa
     }
 
-    def __init__(self):
-        Exception.__init__(self)
-
     @staticmethod
     def string(code):
         return _MessageCode.long_names.get(code, 'unknown')
@@ -163,15 +158,12 @@ class Message(Exception):
         return klass
 
     @classmethod
-    def notify(cls, klass):
-        cls.klass_notify = klass
-        return klass
-
-    @classmethod
     def klass(cls, what):
         if what in cls.registered_message:
             return cls.registered_message[what]
-        raise cls.klass_notify(2, 4, 'can not handle message %s' % what)
+        from exabgp.bgp.message.notification import Notify
+
+        raise Notify(2, 4, f'can not handle message {what}')
 
     @classmethod
     def unpack(cls, message, data, direction, negotiated):

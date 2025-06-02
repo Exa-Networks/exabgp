@@ -256,6 +256,7 @@ class JSON(object):
                                 'code': message.code,
                                 'subcode': message.subcode,
                                 'data': hexstring(message.data),
+                                'message': message.data.decode(),
                             }
                         )
                     }

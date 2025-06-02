@@ -207,7 +207,7 @@ def check_message(neighbor, message):
     if kind == 3:
         return check_notification(raw)
 
-    print('unknown type %d', kind)
+    print(f'unknown type {kind}')
     return False
 
 
@@ -229,8 +229,9 @@ def display_message(neighbor, message):
         return display_open(neighbor, raw[19:])
     if kind == 2:
         return display_update(neighbor, raw)
-
-    print('unknown type %d', kind)
+    if kind == 3:
+        return display_notification(neighbor, raw)
+    print(f'unknown type {kind}')
     return False
 
 
@@ -367,6 +368,47 @@ def _make_update(neighbor, raw):
     return None
 
 
+def _make_notification(neighbor, raw):
+    option.enabled['parser'] = True
+    negotiated = _negotiated(neighbor)
+
+    if raw.startswith(b'\xff' * 16):
+        kind = raw[18]
+        size = (raw[16] << 16) + raw[17]
+
+        injected, raw = raw[19:size], raw[size:]
+
+        if kind != 3:
+            log.debug('the message is not an notification (%d) - aborting' % kind, 'parser')
+            return False
+        log.debug('the message is an notification', 'parser')
+    else:
+        log.debug('header missing, assuming this message is ONE notification', 'parser')
+        injected, raw = raw, ''
+
+    try:
+        # This does not take the BGP header - let's assume we will not break that :)
+        notification = Notification.unpack_message(injected, Direction.IN, negotiated)
+    except Notify:
+        import traceback
+
+        log.error('could not parse the message', 'parser')
+        log.error(traceback.format_exc(), 'parser')
+        if getenv().debug.pdb:
+            raise
+        return None
+    except Exception:
+        import traceback
+
+        log.error('could not parse the message', 'parser')
+        log.error(traceback.format_exc(), 'parser')
+        if getenv().debug.pdb:
+            raise
+        return None
+
+    return notification
+
+
 def check_update(neighbor, raw):
     update = _make_update(neighbor, raw)
     if not update:
@@ -387,6 +429,15 @@ def display_update(neighbor, raw):
         return False
 
     print(Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''))
+    return True
+
+
+def display_notification(neighbor, raw):
+    notification = _make_notification(neighbor, raw)
+    if not notification:
+        return False
+
+    print(Response.JSON(json_version).notification(neighbor, 'in', notification, None, '', ''))
     return True
 
 
