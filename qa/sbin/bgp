@@ -591,12 +591,18 @@ class BGPProtocol(asyncio.Protocol):
     async def read_message(self):
         try:
             header = await self.reader.read(19)
+        except BrokenPipeError:
+            if self.service.checker.completed():
+                self.service.exit(0)
+            return '', ''
         except ConnectionResetError:
             if self.service.checker.completed():
                 self.service.exit(0)
             return '', ''
+
         if not header:
             return '', ''
+
         length = unpack('!H', header[16:18])[0]
         body = await self.reader.read(length - 19)
         return header, body
@@ -632,11 +638,16 @@ class BGPProtocol(asyncio.Protocol):
         option_capa66 = self.service.options['send-unknown-capability']
         option_default = self.service.options['send-default-route']
         option_open = self.service.options['inspect-open-message']
+        option_unknown = self.service.options['send-unknown-message']
 
         open = msg.open(option_asn, option_capa66)
         print_payload('open sent', open[:19], open[19:])
         self.writer.write(open)
         self.writer.write(Message.keepalive())
+        if option_unknown:
+            # send an invalid/unknown BGP message type to exercise error handling
+            unknown = b'\xff' * 16 + pack('!H', 19) + bytes([255])
+            self.writer.write(unknown)
 
         if option_open:
             if not self.service.checker.expected(self.writer, msg):
@@ -733,12 +744,13 @@ def parse_cmdline():
     # fmt: off
     options = {
         'send-unknown-capability': False,  # add an unknown capability to the open message
-        'send-default-route': False,  # send a default route to the peer
-        'inspect-open-message': False, # check for received OPEN message
-        'asn': None,  # Don't modify the local AS per default.
-        'sink': False,  # just accept whatever is sent
-        'echo': False,  # just accept whatever is sent
-        'ipv6': False,  # bind to ipv4 by default
+        'send-default-route': False,       # send a default route to the peer
+        'inspect-open-message': False,     # check for received OPEN message
+        'send-unknown-message': False,     # send an unknown message type to the peer
+        'asn': None,                       # Don't modify the local AS per default.
+        'sink': False,                     # just accept whatever is sent
+        'echo': False,                     # just accept whatever is sent
+        'ipv6': False,                     # bind to ipv4 by default
         'expect': []
     }
 
@@ -772,6 +784,9 @@ def parse_cmdline():
             continue
         if message.strip().startswith('option:asn:'):
             options['asn'] = int(message.strip().split(':')[-1])
+            continue
+        if message.strip() == 'option:open:send-unknown-message':
+            options['send-unknown-message'] = True
             continue
         if message.strip().startswith('option:SIGUSR1:'):
             delay = int(message.split(':')[-1])

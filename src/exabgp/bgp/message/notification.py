@@ -29,7 +29,7 @@ from exabgp.bgp.message.message import Message
 
 
 @Message.register
-class Notification(Message):
+class Notification(Message, Exception):
     ID = Message.CODE.NOTIFICATION
     TYPE = bytes([Message.CODE.NOTIFICATION])
 
@@ -94,6 +94,7 @@ class Notification(Message):
     }
 
     def __init__(self, code, subcode, data=b'', parse_data=True):
+        Exception.__init__(self)
         self.code = code
         self.subcode = subcode
 
@@ -165,7 +166,6 @@ class Notification(Message):
 # A Notification we need to inform our peer of.
 
 
-@Message.notify
 class Notify(Notification):
     def __init__(self, code, subcode, data=None):
         if data is None:
