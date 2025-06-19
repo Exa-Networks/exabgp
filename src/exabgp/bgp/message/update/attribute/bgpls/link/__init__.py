@@ -69,3 +69,11 @@ from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
 #   draft-gredler-idr-bgp-ls-segment-routing-ext-03
 from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
 from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
+
+#  +================+===========================+===========+
+#  | TLV Code Point | Description               | Reference |
+#  +================+===========================+===========+
+#  | 1106           | SRv6 End.X SID            | RFC 9514  |
+#  +----------------+---------------------------+-----------+
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6sidstructure import Srv6SidStructure
