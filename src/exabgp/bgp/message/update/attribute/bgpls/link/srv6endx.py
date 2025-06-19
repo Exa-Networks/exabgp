@@ -77,10 +77,8 @@ class Srv6EndX(FlagLS):
         while data and len(data) >= 4: 
             code = unpack('!H', data[0:2])[0]
             length = unpack('!H', data[2:4])[0]
-            print(data)
 
             if code in cls.registered_subsubtlvs:
-                print(data[4:length + 4])
                 subsubtlv = cls.registered_subsubtlvs[code].unpack(data[4:length + 4])
             else:
                 subsubtlv = hexstring(data[4:length + 4])

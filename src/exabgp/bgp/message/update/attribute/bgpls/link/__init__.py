@@ -77,3 +77,5 @@ from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyL
 #  +----------------+---------------------------+-----------+
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6sidstructure import Srv6SidStructure
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6capabilities import Srv6Capabilities
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6locator import Srv6Locator
