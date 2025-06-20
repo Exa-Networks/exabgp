@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-srv6endx.py
+srv6sidstructure.py
 
 Created by Quentin De Muynck
 Copyright (c) 2025 Exa Networks. All rights reserved.
@@ -12,9 +12,9 @@ import json
 from struct import unpack
 from exabgp.util import hexstring
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 #     RFC 9514 : 8.  SRv6 SID Structure TLV
@@ -29,7 +29,8 @@ from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
 #                      Figure 10: SRv6 SID Structure TLV
 
 @Srv6EndX.register()
-class Srv6SidStructure:
+@LinkState.register()
+class Srv6SidStructure(BaseLS):
     TLV = 1252
 
     def __init__(self, loc_block_len, loc_node_len, func_len, arg_len):
@@ -60,13 +61,10 @@ class Srv6SidStructure:
             self.arg_len,
         )
     
-    def json(self):
-        return {'structure': 
-        {
+    def json(self, compact=None):
+        return '"srv6-sid-structure": ' + json.dumps({
                 'loc_block_len': self.loc_block_len,
                 'loc_node_len': self.loc_node_len,
                 'func_len': self.func_len,
                 'arg_len': self.arg_len,
-            }
-        }
-
+            }, indent=compact)

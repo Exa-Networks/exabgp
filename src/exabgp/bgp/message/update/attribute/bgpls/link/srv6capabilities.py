@@ -11,8 +11,8 @@ from __future__ import annotations
 import json
 from struct import unpack
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #    RFC 9514:  3.1.  SRv6 Capabilities TLV
 #     0                   1                   2                   3

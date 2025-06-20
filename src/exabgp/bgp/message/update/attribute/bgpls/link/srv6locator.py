@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-srv6endx.py
+srv6locator.py
 
 Created by Quentin De Muynck
 Copyright (c) 2025 Exa Networks. All rights reserved.
@@ -11,8 +11,8 @@ from __future__ import annotations
 import json
 from struct import unpack
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 #    RFC 9514:  5.1.  SRv6 Locator TLV
 #     0                   1                   2                   3
@@ -58,5 +58,4 @@ class Srv6Locator(FlagLS):
             'flags': self.flags,
             'algorithm': self.algorithm,
             'metric': self.metric,
-            'subtlvs': self.subtlvs,
         }, indent=compact)
