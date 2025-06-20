@@ -25,22 +25,28 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #
 #                     Figure 7: SRv6 Endpoint Behavior TLV
 
+
 @LinkState.register()
 class Srv6EndpointBehavior(BaseLS):
     TLV = 1250
 
-    def __init__(self, endpoint_behavior, flags, algorithm,):
+    def __init__(
+        self,
+        endpoint_behavior,
+        flags,
+        algorithm,
+    ):
         self.endpoint_behavior = endpoint_behavior
         self.flags = flags
         self.algorithm = algorithm
 
     @classmethod
     def unpack(cls, data):
-        flags = [] # No flags defined according to RFC 9514 and 9352
+        flags = []  # No flags defined according to RFC 9514 and 9352
         algorithm = data[3]
         endpoint_behavior = unpack('!H', data[0:2])[0]
 
-        return cls(endpoint_behavior=endpoint_behavior,flags=flags,algorithm=algorithm)
+        return cls(endpoint_behavior=endpoint_behavior, flags=flags, algorithm=algorithm)
 
     def __str__(self):
         return 'srv6-endpoint-behavior [0x%s, flags: %s, algorithm: %d]' % (
@@ -50,9 +56,11 @@ class Srv6EndpointBehavior(BaseLS):
         )
 
     def json(self, compact=None):
-        return '"srv6-endpoint-behavior": ' + json.dumps({
-            'endpoint-behavior': self.endpoint_behavior,
-            'flags': self.flags,
-            'algorithm': self.algorithm,
-        }, indent=compact)
-
+        return '"srv6-endpoint-behavior": ' + json.dumps(
+            {
+                'endpoint-behavior': self.endpoint_behavior,
+                'flags': self.flags,
+                'algorithm': self.algorithm,
+            },
+            indent=compact,
+        )

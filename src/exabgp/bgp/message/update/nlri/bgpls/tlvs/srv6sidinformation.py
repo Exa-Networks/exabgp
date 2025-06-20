@@ -8,6 +8,8 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+import json
+
 from exabgp.protocol.ip import IPv6
 
 #     RFC 9514 6.1.  SRv6 SID Information TLV
@@ -27,6 +29,7 @@ from exabgp.protocol.ip import IPv6
 #
 #                  Figure 6: SRv6 SID Information TLV Format
 
+
 class Srv6SIDInformation(object):
     def __init__(self, sid, packed=None):
         self.sid = sid
@@ -37,7 +40,7 @@ class Srv6SIDInformation(object):
         return cls(sid)
 
     def json(self, compact=None):
-        return json.dumps({'srv6-sid': str(self.sid) }, indent=compact)
+        return json.dumps({'srv6-sid': str(self.sid)}, indent=compact)
 
     def __eq__(self, other):
         return self.sid == other.sid
@@ -70,6 +73,4 @@ class Srv6SIDInformation(object):
         return hash(str(self))
 
     def pack(self):
-        if self._packed:
-            return self._packed
         raise RuntimeError('Not implemented')
