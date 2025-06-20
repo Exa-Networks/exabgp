@@ -40,7 +40,7 @@ class Srv6SIDInformation(object):
         return cls(sid)
 
     def json(self, compact=None):
-        return json.dumps({'srv6-sid': str(self.sid)}, indent=compact)
+        return '"srv6-sid": "%s"' % str(self.sid)
 
     def __eq__(self, other):
         return self.sid == other.sid
