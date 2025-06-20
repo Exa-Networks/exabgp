@@ -40,18 +40,14 @@ from exabgp.protocol.ip import IPv6
 class Srv6EndX(FlagLS):
     TLV = 1106
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    MERGE = True
     registered_subsubtlvs = dict()
 
-    def __init__(self, behavior, flags, algorithm, weight, sid, subtlvs):
-        self.behavior = behavior
-        self.flags = flags
-        self.algorithm = algorithm
-        self.weight = weight
-        self.sid = sid
-        self.subtlvs = subtlvs
+    def __init__(self, content):
+        self.content = [ content ]
 
     def __repr__(self):
-        return 'behavior: %s, flags: %s, algorithm: %s, sid: %s, undecoded_sid %s' % (self.behavior, self.flags, self.algorithm, self.sid, self.undecoded)
+        return '\n'.join(['behavior: %s, flags: %s, algorithm: %s, sid: %s' % (d.behavior, d.flags, d.algorithm, d.sid) for d in self.content])
 
     @classmethod
     def register(cls):
@@ -86,16 +82,9 @@ class Srv6EndX(FlagLS):
 
             subtlvs.append(subsubtlv.json())
 
-        return cls(behavior=behavior, flags=flags, algorithm=algorithm, weight=weight, sid=sid, subtlvs=subtlvs)
+        content = { "flags": flags, "behavior": behavior, "algorithm": algorithm, "weight": weight, "sid": sid } | json.loads('{'+ ', '.join(subtlvs) + '}')
+
+        return cls(content=content)
 
     def json(self, compact=None):
-        content = ', '.join(
-            [
-            '"behavior": %d' % self.behavior,
-            '"flags": %s' % self.flags,
-            '"algorithm": %d' % self.algorithm,
-            '"weight": %d' % self.weight,
-            '"sid": "%s"' % self.sid,
-            ] + self.subtlvs
-        )
-        return '"srv6-endx": { %s }' % content
+        return '"srv6-endx": [ %s ]' % ', '.join([json.dumps(d, indent=compact) for d in self.content])

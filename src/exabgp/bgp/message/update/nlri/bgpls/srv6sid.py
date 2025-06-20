@@ -8,7 +8,6 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 import json
 from struct import pack, unpack
-from exabgp.protocol.ip import IPv6
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -32,6 +31,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SID
 #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #
 #                        Figure 5: SRv6 SID NLRI Format
+
 
 @BGPLS.register
 class SRv6SID(BGPLS):
@@ -77,11 +77,11 @@ class SRv6SID(BGPLS):
                 raise RuntimeError('SRv6 SID Descriptors are too short')
             sid_type, sid_length = unpack('!HH', tlvs[:4])
             if sid_type == 263:
-                srv6_sid_descriptors['multitopology'] = str(MTID.unpack(tlvs[4:sid_length + 4]))
+                srv6_sid_descriptors['multitopology'] = str(MTID.unpack(tlvs[4 : sid_length + 4]))
             elif sid_type == 518:
-                srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(tlvs[4:sid_length + 4]))
+                srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(tlvs[4 : sid_length + 4]))
 
-            tlvs = tlvs[sid_length + 4:]
+            tlvs = tlvs[sid_length + 4 :]
         return cls(proto_id, domain, node_ids, srv6_sid_descriptors)
 
     def pack(self, packed=None):
@@ -95,9 +95,7 @@ class SRv6SID(BGPLS):
         return 1 + 8 + len(self.local_node_descriptors) + len(self.srv6_sid_descriptors)
 
     def __repr__(self):
-        return "%s(protocol_id=%s, domain=%s)" % (
-            self.NAME, self.proto_id, self.domain
-        )
+        return '%s(protocol_id=%s, domain=%s)' % (self.NAME, self.proto_id, self.domain)
 
     def json(self, compact=None):
         nodes = ', '.join(d.json() for d in self.local_node_descriptors)

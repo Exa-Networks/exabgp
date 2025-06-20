@@ -9,8 +9,6 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import unpack
-from exabgp.util import hexstring
 
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
