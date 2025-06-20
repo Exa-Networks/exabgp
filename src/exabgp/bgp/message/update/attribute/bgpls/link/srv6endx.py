@@ -12,8 +12,8 @@ import json
 from struct import unpack
 from exabgp.util import hexstring
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.protocol.ip import IPv6
 
 #    RFC 9514:  4.1. SRv6 End.X SID TLV
@@ -83,18 +83,19 @@ class Srv6EndX(FlagLS):
             else:
                 subsubtlv = hexstring(data[4:length + 4])
             data = data[length + 4:]
+
             subtlvs.append(subsubtlv.json())
 
         return cls(behavior=behavior, flags=flags, algorithm=algorithm, weight=weight, sid=sid, subtlvs=subtlvs)
 
     def json(self, compact=None):
-        return '"srv6-endx": ' + json.dumps(
-            {
-                'behavior': self.behavior,
-                'flags': self.flags,
-                'algorithm': self.algorithm,
-                'weight': self.weight,
-                'sid': self.sid,
-                'subtlvs': self.subtlvs,
-            }
+        content = ', '.join(
+            [
+            '"behavior": %d' % self.behavior,
+            '"flags": %s' % self.flags,
+            '"algorithm": %d' % self.algorithm,
+            '"weight": %d' % self.weight,
+            '"sid": "%s"' % self.sid,
+            ] + self.subtlvs
         )
+        return '"srv6-endx": { %s }' % content

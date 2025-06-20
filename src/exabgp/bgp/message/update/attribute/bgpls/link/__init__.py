@@ -70,12 +70,17 @@ from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
 from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
 from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
 
-#  +================+===========================+===========+
-#  | TLV Code Point | Description               | Reference |
-#  +================+===========================+===========+
-#  | 1106           | SRv6 End.X SID            | RFC 9514  |
-#  +----------------+---------------------------+-----------+
+#  +================+============================+===========+
+#  | TLV Code Point | Description                | Reference |
+#  +================+============================+===========+
+#  | 1038           | SRv6 Capabilities TLV      | RFC 9514  |
+#  | 1106           | SRv6 End.X SID             | RFC 9514  |
+#  | 1162           | SRv6 Locator TLV           | RFC 9514  |
+#  | 1250           | SRv6 Endpoint Behavior TLV | RFC 9514  |
+#  | 1252           | SRv6 SID Structure SID     | RFC 9514  |
+#  +----------------+----------------------------+-----------+
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6sidstructure import Srv6SidStructure
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6capabilities import Srv6Capabilities
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6locator import Srv6Locator
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6endpointbehavior import Srv6EndpointBehavior
