@@ -3,6 +3,9 @@ from exabgp.bgp.message.update.attribute.bgpls.prefix.igptags import IgpTags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import PrefixMetric
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
+from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6endpointbehavior import Srv6EndpointBehavior
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6sidstructure import Srv6SidStructure
 
 import unittest
 
@@ -40,6 +43,14 @@ class TestTlvs(unittest.TestCase):
         tlv = OspfRoute.unpack(data)
         self.assertEqual(tlv.json(), '"ospf-route-type": 4')
 
+    def test_srv6_sid_information(self):
+        data = b'\xfc0"\x01\x00\x0d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        tlv = Srv6SIDInformation.unpack(data)
+        self.assertEqual(
+            tlv.json(),
+            '"srv6-sid": "fc30:2201:d::"',
+        )
+
 
 class TestDescriptors(unittest.TestCase):
     def test_node_descriptor(self):
@@ -52,6 +63,23 @@ class TestDescriptors(unittest.TestCase):
         descriptor, remain = NodeDescriptor.unpack(remain, igp_type)
         self.assertEqual(descriptor.json(), '{ "router-id": "10.113.63.240" }')
 
+
+class TestSrv6LinkAttributes(unittest.TestCase):
+    def test_srv6_endpoint_behavior(self):
+        data = b'\x000\x00\x80'
+        tlv = Srv6EndpointBehavior.unpack(data)
+        self.assertEqual(
+            tlv.json(),
+            '"srv6-endpoint-behavior": {"endpoint-behavior": 48, "flags": [], "algorithm": 128}',
+        )
+
+    def test_srv6_sid_structure(self):
+        data = b' \x10\x00P'
+        tlv = Srv6SidStructure.unpack(data)
+        self.assertEqual(
+            tlv.json(),
+            '"srv6-sid-structure": {"loc_block_len": 32, "loc_node_len": 16, "func_len": 0, "arg_len": 80}',
+        )
 
 if __name__ == '__main__':
     unittest.main()
