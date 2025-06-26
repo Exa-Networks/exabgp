@@ -41,7 +41,7 @@ class Srv6Capabilities(BaseLS):
         def register_subsubtlv(klass):
             code = klass.TLV
             if code in cls.registered_subsubtlvs:
-                raise RuntimeError('only one class can be registered per SRv6 End.X Sub-TLV type')
+                raise RuntimeError('only one class can be registered per SRv6 Capabilities Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
             return klass
 

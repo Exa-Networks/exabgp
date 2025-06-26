@@ -14,6 +14,7 @@ from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
+from exabgp.util import hexstring
 
 #     RFC 9514: 6.  SRv6 SID NLRI
 #
@@ -71,15 +72,20 @@ class SRv6SID(BGPLS):
 
         tlvs = tlvs[node_length:]
         srv6_sid_descriptors = {}
+        srv6_sid_descriptors['multi-topology-ids'] = []
 
         while tlvs:
             if len(tlvs) < 2:
                 raise RuntimeError('SRv6 SID Descriptors are too short')
             sid_type, sid_length = unpack('!HH', tlvs[:4])
             if sid_type == 263:
-                srv6_sid_descriptors['multitopology'] = str(MTID.unpack(tlvs[4 : sid_length + 4]))
+                srv6_sid_descriptors['multi-topology-ids'].append(MTID.unpack(tlvs[4 : sid_length + 4]).json())
             elif sid_type == 518:
                 srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(tlvs[4 : sid_length + 4]))
+            else:
+                if 'generic-tlv-%d' % sid_type not in srv6_sid_descriptors:
+                    srv6_sid_descriptors['generic-tlv-%d' % sid_type] = []
+                srv6_sid_descriptors['generic-tlv-%d' % sid_type].append(hexstring(tlvs[4 : sid_length + 4]))
 
             tlvs = tlvs[sid_length + 4 :]
         return cls(proto_id, domain, node_ids, srv6_sid_descriptors)

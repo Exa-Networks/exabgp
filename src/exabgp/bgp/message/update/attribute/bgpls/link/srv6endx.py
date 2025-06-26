@@ -44,10 +44,16 @@ class Srv6EndX(FlagLS):
     registered_subsubtlvs = dict()
 
     def __init__(self, content):
-        self.content = [ content ]
+        self.content = [content]
 
     def __repr__(self):
-        return '\n'.join(['behavior: %s, flags: %s, algorithm: %s, sid: %s' % (d.behavior, d.flags, d.algorithm, d.sid) for d in self.content])
+        return '\n'.join(
+            [
+                'behavior: %s, flags: %s, algorithm: %s, weight: %s, sid: %s'
+                % (d.behavior, d.flags, d.algorithm, d.weight, d.sid)
+                for d in self.content
+            ]
+        )
 
     @classmethod
     def register(cls):
@@ -62,7 +68,7 @@ class Srv6EndX(FlagLS):
 
     @classmethod
     def unpack(cls, data):
-        behavior = unpack("!I", bytes([0,0])+data[:2])[0]
+        behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]
         weight = data[4]
@@ -70,19 +76,25 @@ class Srv6EndX(FlagLS):
         data = data[22:]
         subtlvs = []
 
-        while data and len(data) >= 4: 
+        while data and len(data) >= 4:
             code = unpack('!H', data[0:2])[0]
             length = unpack('!H', data[2:4])[0]
 
             if code in cls.registered_subsubtlvs:
-                subsubtlv = cls.registered_subsubtlvs[code].unpack(data[4:length + 4])
+                subsubtlv = cls.registered_subsubtlvs[code].unpack(data[4 : length + 4])
             else:
-                subsubtlv = hexstring(data[4:length + 4])
-            data = data[length + 4:]
+                subsubtlv = hexstring(data[4 : length + 4])
+            data = data[length + 4 :]
 
             subtlvs.append(subsubtlv.json())
 
-        content = { "flags": flags, "behavior": behavior, "algorithm": algorithm, "weight": weight, "sid": sid } | json.loads('{'+ ', '.join(subtlvs) + '}')
+        content = {**{
+            'flags': flags,
+            'behavior': behavior,
+            'algorithm': algorithm,
+            'weight': weight,
+            'sid': sid,
+        }, **json.loads('{' + ', '.join(subtlvs) + '}')}
 
         return cls(content=content)
 
