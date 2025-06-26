@@ -29,10 +29,11 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #
 #                      Figure 4: SRv6 Locator TLV Format
 
+
 @LinkState.register()
 class Srv6Locator(FlagLS):
     TLV = 1162
-    FLAGS = ['D'] + ['RSV' for _ in range(7)] 
+    FLAGS = ['D'] + ['RSV' for _ in range(7)]
     registered_subsubtlvs = dict()
 
     def __init__(self, flags, algorithm, metric, subtlvs):
@@ -49,13 +50,16 @@ class Srv6Locator(FlagLS):
         flags = cls.unpack_flags(bytes(data[0:1]))
         algorithm = data[1]
         metric = unpack('!I', data[4:8])[0]
-        subtlvs = [] # No sub-TLVs defined in RFC 9514
+        subtlvs = []  # No sub-TLVs defined in RFC 9514
 
         return cls(flags=flags, algorithm=algorithm, metric=metric, subtlvs=subtlvs)
 
     def json(self, compact=None):
-        return '"srv6-locator": ' + json.dumps({
-            'flags': self.flags,
-            'algorithm': self.algorithm,
-            'metric': self.metric,
-        }, indent=compact)
+        return '"srv6-locator": ' + json.dumps(
+            {
+                'flags': self.flags,
+                'algorithm': self.algorithm,
+                'metric': self.metric,
+            },
+            indent=compact,
+        )

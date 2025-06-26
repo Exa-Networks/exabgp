@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.attribute.bgpls.prefix.igptags import IgpTags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import PrefixMetric
@@ -80,6 +83,7 @@ class TestSrv6LinkAttributes(unittest.TestCase):
             tlv.json(),
             '"srv6-sid-structure": {"loc_block_len": 32, "loc_node_len": 16, "func_len": 0, "arg_len": 80}',
         )
+
 
 if __name__ == '__main__':
     unittest.main()

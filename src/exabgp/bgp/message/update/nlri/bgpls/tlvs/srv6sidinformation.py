@@ -8,7 +8,6 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-import json
 
 from exabgp.protocol.ip import IPv6
 
