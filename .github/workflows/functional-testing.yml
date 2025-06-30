@@ -1,4 +1,4 @@
-name: Functional Testing
+name: Testing (Python 3.8 to 3.12)
 
 on:
   push:
