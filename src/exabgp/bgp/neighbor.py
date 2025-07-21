@@ -135,6 +135,8 @@ class Neighbor(dict):
         self.messages = deque()
         self.refresh = deque()
 
+        self.entangled_peers = {}
+
         self.counter = Counter()
         # It is possible to :
         # - have multiple exabgp toward one peer on the same host ( use of pid )
