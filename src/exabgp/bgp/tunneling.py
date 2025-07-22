@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-quantum_tunneling.py
+tunneling.py
 
 Created by Thomas Mangin on 2024-07-21.
 Copyright (c) 2009-2024 Exa Networks. All rights reserved.
@@ -15,11 +15,11 @@ from exabgp.bgp.message.update.nlri.label import Label as MPLS
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 
-class QuantumTunneling:
+class Tunneling:
     def __init__(self, neighbor):
         self.neighbor = neighbor
 
-    def create_tunnel(self, destination, next_hop):
+    def create(self, destination, next_hop):
         """
         Creates a quantum tunnel to a destination.
         """

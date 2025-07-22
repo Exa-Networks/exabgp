@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
+import random
 
 from copy import deepcopy
 
@@ -28,6 +29,7 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import NextHop
+from exabgp.bgp.edge_intelligence_architecture import EdgeIntelligenceArchitecture
 
 from exabgp.rib import RIB
 
@@ -102,9 +104,11 @@ class Neighbor(dict):
 
     _GLOBAL = {'uid': 1}
 
-    def __init__(self):
+    def __init__(self, dynamic=False):
         # super init
         self.update(self.defaults)
+
+        self.dynamic = dynamic
 
         # Those are subconf
         self.api = None  # XXX: not scriptable - is replaced outside the class
@@ -136,6 +140,8 @@ class Neighbor(dict):
         self.refresh = deque()
 
         self.entangled_peers = {}
+
+        self.edge_intelligence_architecture = EdgeIntelligenceArchitecture(self)
 
         self.counter = Counter()
         # It is possible to :
@@ -323,6 +329,20 @@ class Neighbor(dict):
 
     def __str__(self):
         return NeighborTemplate.configuration(self, False)
+
+    def update_peer(self, context):
+        """
+        Updates the peer address based on the given context.
+        """
+        if not self.dynamic:
+            return
+
+        # This is a simplified implementation of dynamic peering. In a
+        # real-world scenario, this would involve a more complex mechanism to
+        # select a new peer.
+        new_peer_address = "192.168.1.{}".format(random.randint(1, 254))
+        self['peer-address'] = new_peer_address
+        print(f"Peer address updated to {new_peer_address}")
 
 
 def _en(value):
