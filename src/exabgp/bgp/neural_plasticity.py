@@ -50,6 +50,7 @@ class NeuralPlasticityEngine:
     def __init__(self, adaptive_weight_matrix: AdaptiveWeightMatrix):
         self.adaptive_weight_matrix = adaptive_weight_matrix
         self.event_listeners = []
+        self.denylist = []
 
     def subscribe(self, listener):
         """
@@ -88,6 +89,23 @@ class NeuralPlasticityEngine:
         """
         self.adaptive_weight_matrix.set_weight(pathway, 0.1)
         self._emit_event("new_connection_grown", pathway, "new connection")
+
+    def prune_inactive_pathways(self, pathway: tuple):
+        """
+        Prunes a pathway that has been identified as inactive or volatile.
+        """
+        current_weight = self.adaptive_weight_matrix.get_weight(pathway)
+        new_weight = current_weight - 0.5  # Penalize heavily
+        self.adaptive_weight_matrix.set_weight(pathway, new_weight)
+        self._emit_event("auto_prune_on_alert", pathway, "HIJACK_ALERT received")
+
+    def block_route(self, prefix: str):
+        """
+        Adds a prefix to the denylist.
+        """
+        if prefix not in self.denylist:
+            self.denylist.append(prefix)
+            self._emit_event("auto_block_on_alert", (prefix,), f"BOGUS_ROUTE_ALERT received for {prefix}")
 
 
 class AsyncTelemetryService:
@@ -192,3 +210,24 @@ class BogusRouteMonitor:
         except ValueError:
             # Not a valid IP address, so we can't check it.
             pass
+
+
+class AlertEventHandler:
+    """
+    Handles alerts from the monitoring services and triggers autonomous responses.
+    """
+
+    def __init__(self, engine: NeuralPlasticityEngine):
+        self.engine = engine
+
+    def on_event(self, event_type: str, pathway: tuple, reason: str):
+        """
+        Handles an alert event.
+        """
+        if event_type == "HIJACK_ALERT":
+            self.engine.prune_inactive_pathways(pathway)
+        elif event_type == "BOGUS_ROUTE_ALERT":
+            # pathway is a tuple like ('10.1.2.3', ('A', 'B'))
+            # we need to extract the prefix from the reason
+            prefix = reason.split(" ")[-1]
+            self.engine.block_route(prefix)

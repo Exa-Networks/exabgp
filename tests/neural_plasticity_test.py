@@ -12,12 +12,16 @@ from __future__ import annotations
 import unittest
 import os
 import json
-from src.exabgp.bgp.neural_plasticity import (
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from exabgp.bgp.neural_plasticity import (
     AdaptiveWeightMatrix,
     NeuralPlasticityEngine,
     AsyncTelemetryService,
     AsyncPathVolatilityMonitor,
     BogusRouteMonitor,
+    AlertEventHandler,
 )
 
 
@@ -86,6 +90,33 @@ class TestNeuralPlasticity(unittest.TestCase):
                 log_entry = json.loads(f.readline())
                 self.assertEqual(log_entry["event_type"], "BOGUS_ROUTE_ALERT")
                 self.assertEqual(log_entry["pathway"], ["A", "B"])
+        finally:
+            if os.path.exists(log_file):
+                os.remove(log_file)
+
+    def test_alert_event_handler(self):
+        log_file = "test_alert_handler.log"
+        try:
+            engine = NeuralPlasticityEngine(AdaptiveWeightMatrix())
+            telemetry_service = AsyncTelemetryService(log_file)
+            engine.subscribe(telemetry_service)
+
+            handler = AlertEventHandler(engine)
+
+            # Test HIJACK_ALERT
+            handler.on_event("HIJACK_ALERT", ("A", "B"), "test")
+            with open(log_file, "r") as f:
+                log_entry = json.loads(f.readline())
+                self.assertEqual(log_entry["event_type"], "auto_prune_on_alert")
+
+            # Test BOGUS_ROUTE_ALERT
+            handler.on_event("BOGUS_ROUTE_ALERT", ("C", "D"), "route announced from bogon prefix 10.0.0.0/8")
+            with open(log_file, "r") as f:
+                # Read the two lines in the log file
+                f.readline()
+                log_entry = json.loads(f.readline())
+                self.assertEqual(log_entry["event_type"], "auto_block_on_alert")
+                self.assertEqual(engine.denylist, ["10.0.0.0/8"])
         finally:
             if os.path.exists(log_file):
                 os.remove(log_file)
