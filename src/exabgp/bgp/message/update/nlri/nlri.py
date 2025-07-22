@@ -29,6 +29,9 @@ class NLRI(Family):
         Family.__init__(self, afi, safi)
         self.action = action
 
+    def extensive(self, afi=False, rib=None):
+        return str(self.family())
+
     def __hash__(self):
         return hash('%s:%s:%s' % (self.afi, self.safi, self.pack_nlri()))
 
@@ -37,6 +40,12 @@ class NLRI(Family):
 
     def __ne__(self, other):
         return self.index() != other.index()
+
+    def extensive(self, afi=False, rib=None):
+        return str(self.family())
+
+    def __str__(self):
+        return self.extensive()
 
     # does not really make sense but allows to get the NLRI in a
     # deterministic order when generating update (Good for testing)

@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-quantum_field_dynamics.py
+multipath.py
 
 Created by Thomas Mangin on 2024-07-21.
 Copyright (c) 2009-2024 Exa Networks. All rights reserved.
@@ -16,11 +16,11 @@ from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
 
-class QuantumFieldDynamics:
+class SuperpositionRouting:
     def __init__(self, neighbor):
         self.neighbor = neighbor
 
-    def superposition_routing(self, prefix, num_paths=3):
+    def generate_paths(self, prefix, num_paths=3):
         """
         Generates multiple potential paths for a given prefix.
         """

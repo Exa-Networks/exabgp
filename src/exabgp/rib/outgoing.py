@@ -31,6 +31,7 @@ class OutgoingRIB(Cache):
 
         self._watchdog = {}
         self.families = families
+        self.micro_route_tables = {}
 
         # using change-inde and not nlri-index as it is cached as same us memory
         # even if it is a few bytes longer
@@ -155,8 +156,13 @@ class OutgoingRIB(Cache):
                 self._watchdog[watchdog].setdefault('-', {})[change.index()] = change
                 self._watchdog[watchdog]['+'].pop(change.index())
 
-    def del_from_rib(self, change):
-        log.debug('remove %s' % change, 'rib')
+    def del_from_rib(self, change, device_id=None):
+        log.debug('remove %s from rib for device %s' % (change, device_id), 'rib')
+
+        if device_id:
+            if device_id in self.micro_route_tables:
+                self.micro_route_tables[device_id].del_from_rib(change)
+            return
 
         change_index = change.index()
         change_family = change.nlri.family().afi_safi()
@@ -180,8 +186,14 @@ class OutgoingRIB(Cache):
     def add_to_resend(self, change):
         self._refresh_changes.append(change)
 
-    def add_to_rib(self, change, force=False):
-        log.debug('insert %s' % change, 'rib')
+    def add_to_rib(self, change, force=False, device_id=None):
+        log.debug('insert %s into rib for device %s' % (change, device_id), 'rib')
+
+        if device_id:
+            if device_id not in self.micro_route_tables:
+                self.micro_route_tables[device_id] = OutgoingRIB(self.cache, self.families)
+            self.micro_route_tables[device_id].add_to_rib(change, force)
+            return
 
         if not force and self.in_cache(change):
             return
@@ -204,7 +216,13 @@ class OutgoingRIB(Cache):
         new_attr[change_attr_index] = change.attributes
         self.update_cache(change)
 
-    def updates(self, grouped):
+    def updates(self, grouped, device_id=None):
+        if device_id:
+            if device_id in self.micro_route_tables:
+                for update in self.micro_route_tables[device_id].updates(grouped):
+                    yield update
+            return
+
         attr_af_nlri = self._new_attr_af_nlri
         new_attr = self._new_attribute
 

@@ -10,26 +10,26 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import unittest
 
 from exabgp.bgp.neighbor import Neighbor
-from exabgp.bgp.quantum_field_dynamics import QuantumFieldDynamics
-from exabgp.bgp.quantum_field_dynamics import EntanglementProtocols
-from exabgp.bgp.quantum_tunneling import QuantumTunneling
+from exabgp.bgp.multipath import SuperpositionRouting
+from exabgp.bgp.multipath import EntanglementProtocols
+from exabgp.bgp.tunneling import Tunneling
 from exabgp.protocol.ip import IP
 
-class QuantumTest(unittest.TestCase):
+class MultipathTest(unittest.TestCase):
     def setUp(self):
         self.neighbor = Neighbor()
         self.neighbor['local-as'] = 65000
-        self.qfd = QuantumFieldDynamics(self.neighbor)
+        self.sr = SuperpositionRouting(self.neighbor)
         self.ep = EntanglementProtocols(self.neighbor)
-        self.qt = QuantumTunneling(self.neighbor)
+        self.t = Tunneling(self.neighbor)
 
     def test_superposition_routing(self):
-        paths = self.qfd.superposition_routing('192.168.0.0/24')
+        paths = self.sr.generate_paths('192.168.0.0/24')
         self.assertEqual(len(paths), 3)
 
     def test_collapse_route_state(self):
-        paths = self.qfd.superposition_routing('192.168.0.0/24')
-        best_path = self.qfd.collapse_route_state(paths)
+        paths = self.sr.generate_paths('192.168.0.0/24')
+        best_path = self.sr.collapse_route_state(paths)
         self.assertIsNotNone(best_path)
 
     def test_entanglement(self):
@@ -40,8 +40,8 @@ class QuantumTest(unittest.TestCase):
         self.ep.break_entanglement(peer)
         self.assertNotIn(peer.name(), self.neighbor.entangled_peers)
 
-    def test_quantum_tunneling(self):
-        nlri = self.qt.create_tunnel('10.0.0.1', '192.168.0.1')
+    def test_tunneling(self):
+        nlri = self.t.create('10.0.0.1', '192.168.0.1')
         self.assertIsNotNone(nlri)
 
 if __name__ == '__main__':
