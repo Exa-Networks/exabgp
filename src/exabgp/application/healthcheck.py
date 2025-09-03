@@ -133,7 +133,8 @@ def parse():
         """Parse ip interfaces and return a dict of ip:ifname"""
         keyval = {}
         for val in ip_ifnames or []:
-            if len(ip_ifname := val.split(r"%")) != 2:
+            ip_ifname = val.split(r"%")
+            if len(ip_ifname) != 2:
                 raise ValueError(f"Expected IP to IFNAME parameter: <ip_address>%<ifname>, got '{val}'")
             # Is the ip address valid?
             try:
@@ -261,7 +262,8 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
 
 
 def ip_ifname(ip, ip_ifnames):
-    if not (ifname := ip_ifnames.get(ip)):
+    ifname = ip_ifnames.get(ip)
+    if not ifname:
         ifname = "lo0"
         if sys.platform.startswith("linux"):
             ifname = "lo"
