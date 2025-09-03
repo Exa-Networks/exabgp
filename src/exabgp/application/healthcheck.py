@@ -138,10 +138,10 @@ def parse():
             # Is the ip address valid?
             try:
                 ip = ip_network(ip_ifname[0])
-            except:
-                raise ValueError(f"Expected IPv4 or IPv6, got invalid address for ip_ifname '{val}'")
+            except ValueError as e:
+                raise e
             # Is the ip address defined
-            if not ip in ips:
+            if ip not in ips:
                 raise ValueError(f"No 'ip' parameter has been defined for the ip_ifname pair '{val}'")
             # Is the interface name valid?
             if not re.match(r"^[a-zA-Z0-9._:-]{1,15}$", ip_ifname[1]):
