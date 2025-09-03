@@ -78,8 +78,8 @@ def setargs(parser):
     parser.add_argument("--name", "-n", metavar="NAME", help="name for this healthchecker")
     parser.add_argument("--config", "-F", metavar="FILE", type=open, help="read configuration from a file")
     parser.add_argument("--pid", "-p", metavar="FILE", type=argparse.FileType('w'), help="write PID to the provided file")
-    parser.add_argument("--user", metavar="USER", help="set user after setting loopback addresses")
-    parser.add_argument("--group", metavar="GROUP", help="set group after setting loopback addresses")
+    parser.add_argument("--user", metavar="USER", help="set user after setting ip addresses")
+    parser.add_argument("--group", metavar="GROUP", help="set group after setting ip addresses")
 
     g = parser.add_argument_group("checking healthiness")
     g.add_argument("--interval", "-i", metavar='N', default=5, type=float, help="wait N seconds between each healthcheck (zero to exit after first announcement)")
@@ -93,12 +93,13 @@ def setargs(parser):
     g = parser.add_argument_group("advertising options")
     g.add_argument("--next-hop", "-N", metavar='IP', type=ip_address, help="self IP address to use as next hop")
     g.add_argument("--ip", metavar='IP', type=ip_network, dest="ips", action="append", help="advertise this IP address or network (CIDR notation)")
+    g.add_argument("--ip-ifname", metavar='IP%IFNAME', dest="ip_ifnames", action="append", help="bind this IP address or network (CIDR) to the given physical or logical interface (i.e. 192.165.14.1%eth0")
     g.add_argument("--local-preference", metavar='P', type=int, default=-1, help="advertise with local preference P")
     g.add_argument("--deaggregate-networks", dest="deaggregate_networks", action="store_true", help="Deaggregate Networks specified in --ip")
     g.add_argument("--no-ip-setup", action="store_false", dest="ip_setup", help="don't setup missing IP addresses")
-    g.add_argument("--dynamic-ip-setup", default=False, action="store_true", dest="ip_dynamic", help="delete existing loopback ips on state down and " "disabled, then restore loopback when up")
-    g.add_argument("--label", default=None, help="use the provided label to match loopback addresses")
-    g.add_argument("--label-exact-match", default=False, action="store_true", help="use the provided label to exactly match loopback addresses, not a prefix match")
+    g.add_argument("--dynamic-ip-setup", default=False, action="store_true", dest="ip_dynamic", help="delete setup ips on state down and " "disabled, then restore them when up")
+    g.add_argument("--label", default=None, help="use the provided label to match setup ip addresses")
+    g.add_argument("--label-exact-match", default=False, action="store_true", help="use the provided label to exactly match setup ip addresses, not a prefix match")
     g.add_argument("--start-ip", metavar='N', type=int, default=0, help="index of the first IP in the list of IP addresses")
     g.add_argument("--up-metric", metavar='M', type=int, default=100, help="first IP get the metric M when the service is up")
     g.add_argument("--down-metric", metavar='M', type=int, default=1000, help="first IP get the metric M when the service is down")
@@ -127,6 +128,28 @@ def setargs(parser):
 
 def parse():
     """Parse arguments"""
+
+    def parse_ip_ifnames(ip_ifnames, ips):
+        """Parse ip interfaces and return a dict of ip:ifname"""
+        keyval = {}
+        for val in ip_ifnames or []:
+            ip_ifname = val.split(r"%")
+            if len(ip_ifname) != 2:
+                raise ValueError(f"Expected IP to IFNAME parameter: <ip_address>%<ifname>, got '{val}'")
+            # Is the ip address valid?
+            try:
+                ip = ip_network(ip_ifname[0])
+            except ValueError as e:
+                raise e
+            # Is the ip address defined
+            if ip not in ips:
+                raise ValueError(f"No 'ip' parameter has been defined for the ip_ifname pair '{val}'")
+            # Is the interface name valid?
+            if not re.match(r"^[a-zA-Z0-9._:-]{1,15}$", ip_ifname[1]):
+                raise ValueError(f"Expected NIC interface name but got '{ip_ifname[1]}'")
+            keyval[ip] = ip_ifname[1]
+        return keyval
+
     formatter = argparse.RawDescriptionHelpFormatter
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__, formatter_class=formatter)
     setargs(parser)
@@ -146,6 +169,7 @@ def parse():
         args = [x.strip() for x in args]
         args.extend(sys.argv[1:])
         options = parser.parse_args(args)
+        options.ip_ifnames = parse_ip_ifnames(options.ip_ifnames, options.ips)
     return options
 
 
@@ -182,17 +206,20 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
         ch.setFormatter(logging.Formatter('%(levelname)s[%(name)s] %(message)s'))
         logger.addHandler(ch)
 
-
-def loopback_ips(label, label_only, label_exact_match):
-    """Retrieve loopback IP addresses"""
-    logger.debug('Retrieve loopback IP addresses')
+def system_ips(ip_ifnames, label, label_only, label_exact_match):
+    """Retrieve IP addresses for loopback and ip-ifname given interfaces"""
+    logger.debug('Retrieve IP addresses for loopback and ip-ifname interfaces')
     addresses = []
+    ifnames = set(ip_ifnames.values()) | {'lo'} if ip_ifnames else {'lo'}
+    output = []
 
     if sys.platform.startswith('linux'):
         # Use "ip" (ifconfig is not able to see all addresses)
         ipre = re.compile(r'^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+' r'(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*')
-        labelre = re.compile(r'.*\s+lo:(?P<label>[^\\\s]+).*')
-        cmd = subprocess.Popen('/sbin/ip -o address show dev lo'.split(), shell=False, stdout=subprocess.PIPE)
+        labelre = re.compile(r'.*\s+(?:' + '|'.join(ifnames) + r'):(?P<label>[^\\\s]+).*')
+        for ifname in ifnames:
+            cmd = subprocess.Popen(f'/sbin/ip -o address show dev {ifname}'.split(), shell=False, stdout=subprocess.PIPE)
+            output += [ line for line in cmd.stdout ]
     else:
         # Try with ifconfig
         ipre = re.compile(
@@ -200,9 +227,11 @@ def loopback_ips(label, label_only, label_exact_match):
             r'(?:netmask 0x(?P<netmask>[0-9a-f]+)|'
             r'prefixlen (?P<mask>\d+)).*'
         )
-        cmd = subprocess.Popen('/sbin/ifconfig lo0'.split(), shell=False, stdout=subprocess.PIPE)
         labelre = re.compile(r'')
-    for line in cmd.stdout or []:
+        for ifname in ifnames:
+            cmd = subprocess.Popen(f'/sbin/ifconfig {ifname}'.split(), shell=False, stdout=subprocess.PIPE)
+            output += [ line for line in cmd.stdout]
+    for line in output or []:
         line = line.decode('ascii', 'ignore').strip()
         mo = ipre.match(line)
         if not mo:
@@ -228,30 +257,33 @@ def loopback_ips(label, label_only, label_exact_match):
             elif not label_only or label is None:
                 addresses.append(ip)
 
-    logger.debug('Loopback addresses: %s', addresses)
+    logger.debug('System addresses (%s) detected: %s', ifnames, addresses)
     return addresses
 
 
-def loopback():
-    lo = 'lo0'
-    if sys.platform.startswith('linux'):
-        lo = 'lo'
-    return lo
+def ip_ifname(ip, ip_ifnames):
+    ifname = ip_ifnames.get(ip)
+    if not ifname:
+        ifname = "lo0"
+        if sys.platform.startswith("linux"):
+            ifname = "lo"
+    return ifname
 
 
-def setup_ips(ips, label, label_exact_match, sudo=False):
-    """Setup missing IP on loopback interface"""
+def setup_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
+    """Setup missing IP on loopback or physical interface"""
 
-    existing = set(loopback_ips(label, False, label_exact_match))
+    existing = set(system_ips(ip_ifnames, label, False, label_exact_match))
     toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
-        logger.debug('Setup loopback IP address %s', ip)
+        ifname = ip_ifname(ip, ip_ifnames)
+        logger.debug('Setup %s IP address %s', ifname, ip)
         with open(os.devnull, 'w') as fnull:
-            cmd = ['ip', 'address', 'add', str(ip), 'dev', loopback()]
+            cmd = ['ip', 'address', 'add', str(ip), 'dev', ifname]
             if sudo:
                 cmd.insert(0, 'sudo')
             if label:
-                cmd += ['label', '{0}:{1}'.format(loopback(), label)]
+                cmd += ['label', '{0}:{1}'.format(ifname, label)]
             try:
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError as e:
@@ -261,27 +293,28 @@ def setup_ips(ips, label, label_exact_match, sudo=False):
                 raise e
 
 
-def remove_ips(ips, label, label_exact_match, sudo=False):
-    """Remove added IP on loopback interface"""
-    existing = set(loopback_ips(label, True, label_exact_match))
+def remove_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
+    """Remove added IP on loopback or physical interface"""
+    existing = set(system_ips(ip_ifnames, label, True, label_exact_match))
 
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
     toremove = set([ip_network(ip) for net in ips for ip in net]) & existing
     for ip in toremove:
-        logger.debug('Remove loopback IP address %s', ip)
+        ifname = ip_ifname(ip, ip_ifnames)
+        logger.debug('Remove %s IP address %s', ifname, ip)
         with open(os.devnull, 'w') as fnull:
-            cmd = ['ip', 'address', 'delete', str(ip), 'dev', loopback()]
+            cmd = ['ip', 'address', 'delete', str(ip), 'dev', ifname]
             if sudo:
                 cmd.insert(0, 'sudo')
             if label:
-                cmd += ['label', '{0}:{1}'.format(loopback(), label)]
+                cmd += ['label', '{0}:{1}'.format(ifname, label)]
             try:
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError:
                 logger.warn(
-                    'Unable to remove loopback IP address %s - is \
+                    'Unable to remove %s IP address %s - is \
                     healthcheck running as root?',
-                    str(ip),
+                    ifname, str(ip),
                 )
 
 
@@ -360,7 +393,7 @@ def loop(options):
         'UP',  # Service is considered as up.
         'DOWN',  # Service is considered as down.
         'EXIT',  # Exit state
-        'END',  # End state, exiting but without removing loopback and/or announced routes
+        'END',  # End state, exiting but without removing setup ips and/or announced routes
     )
 
     def exabgp(target):
@@ -371,8 +404,8 @@ def loop(options):
             return
         # if ips was deleted with dyn ip, re-setup them
         if target == states.UP and options.ip_dynamic:
-            logger.info('service up, restoring loopback ips')
-            setup_ips(options.ips, options.label, options.label_exact_match, options.sudo)
+            logger.info('service up, restoring loopback and ip-ifname ips')
+            setup_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
 
         logger.info('send announces for %s state to ExaBGP', target)
         metric = vars(options).get('{0}_metric'.format(str(target).lower()), 0)
@@ -430,14 +463,14 @@ def loop(options):
                 continue
             sys.stdin.readline()
 
-        # dynamic ip management. When the service fail, remove the loopback
+        # dynamic ip management. When the service fail, remove the setup ips
         if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
-            logger.info('exiting, deleting loopback ips')
-            remove_ips(options.ips, options.label, options.label_exact_match, options.sudo)
-        # dynamic ip management. When the service fail, remove the loopback
+            logger.info('exiting, deleting setup ips')
+            remove_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+        # dynamic ip management. When the service fail, remove the setup ips
         if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
-            logger.info('service down, deleting loopback ips')
-            remove_ips(options.ips, options.label, options.label_exact_match, options.sudo)
+            logger.info('service down, deleting setup ips')
+            remove_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
 
     def trigger(target):
         """Trigger a state change and execute the appropriate commands"""
@@ -557,12 +590,11 @@ def main():
         options.pid.close()
     try:
         # Setup IP to use
-        options.ips = options.ips or loopback_ips(options.label, False, options.label_exact_match)
         if not options.ips:
             logger.error('No IP found')
             sys.exit(1)
         if options.ip_setup:
-            setup_ips(options.ips, options.label, options.label_exact_match, options.sudo)
+            setup_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
         drop_privileges(options.user, options.group)
 
         # Parse defined networks into a list of IPs for advertisement
