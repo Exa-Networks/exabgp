@@ -590,6 +590,7 @@ def main():
         options.pid.close()
     try:
         # Setup IP to use
+        options.ips = options.ips or system_ips(None, options.label, False, options.label_exact_match)
         if not options.ips:
             logger.error('No IP found')
             sys.exit(1)
