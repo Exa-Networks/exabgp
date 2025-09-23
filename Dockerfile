@@ -11,15 +11,33 @@
 # debug the build
 # docker build --progress=plain --no-cache -t exabgp ./
 
-FROM python:3-slim
+FROM python:3.13-bookworm AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /build
+
+COPY . /build/
+
+# Build application wheel
+RUN uv build --wheel
+
+# Install the application into /app
+RUN pip install --target /opt/exabgp dist/*.whl
+
+
+FROM python:3.13-slim-bookworm
+#COPY --from=builder /env /env
+COPY --from=builder /opt/exabgp /opt/exabgp
+ENV PYTHONPATH=/opt/exabgp
+ENV PATH=/opt/exabgp/bin:$PATH
 
 # install deps
 RUN apt-get update \
-    && apt-get install -y iproute2 git dumb-init \
+    && apt-get install -y iproute2 dumb-init \
     && apt-get clean
 
 # Add ExaBGP
-ADD . /opt/exabgp
 RUN useradd -r exa \
     && mkdir /etc/exabgp \
     && mkfifo /run/exabgp.in \
@@ -32,10 +50,7 @@ RUN useradd -r exa \
 RUN echo "[exabgp.daemon]" > /opt/exabgp/etc/exabgp/exabgp.env \
     && echo "user = 'exa'" >> /opt/exabgp/etc/exabgp/exabgp.env
 
-ENV PYTHONPATH=/opt/exabgp/src
-ENV PATH=$PATH:/opt/exabgp/sbin/
-
 ENTRYPOINT [ \
-    "/usr/bin/dumb-init", "--", \ 
-    "/opt/exabgp/sbin/exabgp" \
+    "/usr/bin/dumb-init", "--", \
+    "exabgp" \
 ]
