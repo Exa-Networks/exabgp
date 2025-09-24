@@ -3,7 +3,7 @@ name: Build container
 on:
   workflow_run:
     workflows:
-      - "Tests"
+      - "Unit Testing"
     branches:
       - "main"
     types:
