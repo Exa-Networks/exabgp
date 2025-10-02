@@ -27,7 +27,6 @@ RUN pip install --target /opt/exabgp dist/*.whl
 
 
 FROM python:3.13-slim-bookworm
-#COPY --from=builder /env /env
 COPY --from=builder /opt/exabgp /opt/exabgp
 ENV PYTHONPATH=/opt/exabgp
 ENV PATH=/opt/exabgp/bin:$PATH

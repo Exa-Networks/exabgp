@@ -55,7 +55,14 @@ It is then possible to change git to use any release (here 4.2.22)
 
 ### docker
 
-You can also use the repository to create a docker image
+Official container images are built and published on [GitHub](https://github.com/Exa-Networks/exabgp/pkgs/container/exabgp). To install from the command line use:
+
+```sh
+> docker pull ghcr.io/exa-networks/exabgp:latest
+> docker run -it --rm ghcr.io/exa-networks/exabgp:latest version
+```
+
+You can also build your own container image from the repository:
 
 ```sh
 > git clone https://github.com/Exa-Networks/exabgp exabgp-git
