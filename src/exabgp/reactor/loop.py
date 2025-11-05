@@ -322,17 +322,39 @@ class Reactor(object):
         # Create API command processing task
         api_task = asyncio.create_task(self._api_loop())
 
+        # Create termination checker task (for tcp.once mode)
+        termination_task = asyncio.create_task(self._termination_loop())
+
         # Wait for shutdown
         try:
             await asyncio.gather(
                 listener_task,
                 signal_task,
                 api_task,
+                termination_task,
                 *self._peer_tasks.values(),
                 return_exceptions=True
             )
         except Exception as exc:
             log.debug(f'Exception in main loop: {exc}', 'reactor')
+
+    async def _termination_loop(self):
+        """Check for termination conditions (tcp.once, no peers, etc.)"""
+        while True:
+            await asyncio.sleep(0.5)
+
+            # Clean up completed peer tasks
+            for key in list(self._peer_tasks.keys()):
+                if self._peer_tasks[key].done():
+                    del self._peer_tasks[key]
+                    # If peer still exists and is stopped, remove it
+                    if key in self._peers and not self._peers[key]._restart:
+                        del self._peers[key]
+
+            # Check if we should exit due to tcp.once with no peers
+            if self._stopping and not self._peers.keys():
+                self._termination('exiting on peer termination', self.Exit.normal)
+                return
 
     async def _listen_loop(self):
         """Handle incoming connections"""
