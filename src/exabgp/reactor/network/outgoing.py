@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 
 from exabgp.protocol.family import AFI
@@ -61,15 +62,14 @@ class Outgoing(Connection):
             self.io = None
             return exc
 
-    def establish(self):
+    async def establish(self):
+        """Establish an outgoing connection to the peer"""
         last = time.time() - 2.0
 
         while True:
             notify = time.time() - last > 1.0
             if notify:
                 last = time.time()
-
-            if notify:
                 log.debug('attempting connection to %s:%d' % (self.peer, self.port), self.session())
 
             connect_issue = self._connect()
@@ -77,25 +77,24 @@ class Outgoing(Connection):
                 if notify:
                     log.debug('connection to %s:%d failed' % (self.peer, self.port), self.session())
                     log.debug(str(connect_issue), self.session())
-                yield False
+                await asyncio.sleep(0.1)  # Brief delay before retry
                 continue
 
-            connected = False
-            for r, message in ready(self.io):
-                if not r:
-                    yield False
-                    continue
-                connected = True
+            # Wait for socket to be ready
+            r, message = await ready(self.io)
+            if not r:
+                if notify:
+                    log.debug(f'connection not ready: {message}', self.session())
+                await asyncio.sleep(0.1)  # Brief delay before retry
+                self._setup()
+                continue
 
-            if connected:
-                self.success()
-                if not self.local:
-                    self.local = self.io.getsockname()[0]
-                yield True
-                return
-
-            self._setup()
+            # Connection established
+            self.success()
+            if not self.local:
+                self.local = self.io.getsockname()[0]
+            return True
 
         # nagle(self.io,self.peer)
         # # Not working after connect() at least on FreeBSD TTL(self.io,self.peer,self.ttl)
-        # yield True
+        # return True
