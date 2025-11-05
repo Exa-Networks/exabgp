@@ -13,10 +13,12 @@ import random
 import socket
 import select
 from struct import unpack
+from typing import Optional
 
 from exabgp.environment import getenv
 
 from exabgp.util.errstr import errstr
+from exabgp.util.ratelimit import MessageSizeTracker
 
 from exabgp.logger import log
 from exabgp.logger import logfunc
@@ -49,12 +51,20 @@ class Connection(object):
         self.peer = peer
         self.local = local
 
-        self.io = None
+        self.io: Optional[socket.socket] = None
         self.established = False
         self._rpoller = {}
         self._wpoller = {}
 
         self.id = self.identifier.get(self.direction, 1)
+
+        # Rate limiting for DoS protection
+        # Allow up to 1000 messages/second and 10MB/second per connection
+        self._rate_limiter = MessageSizeTracker(
+            max_messages_per_second=1000,
+            max_bytes_per_second=10_000_000,
+            window_seconds=1.0
+        )
 
     def success(self):
         identifier = self.identifier.get(self.direction, 1) + 1
@@ -243,6 +253,21 @@ class Connection(object):
         if length < Message.HEADER_LEN or length > self.msg_size:
             report = '%s has an invalid message length of %d' % (Message.CODE.name(msg), length)
             yield length, 0, header, b'', NotifyError(1, 2, report)
+            return
+
+        # Rate limiting check to prevent DoS attacks
+        if not self._rate_limiter.track(length):
+            stats = self._rate_limiter.get_stats()
+            log.warning(
+                '%s %s rate limit exceeded: %d msg/s, %d bytes/s' % (
+                    self.name(), self.peer,
+                    int(stats['messages_per_second']),
+                    int(stats['bytes_per_second'])
+                ),
+                self.session()
+            )
+            report = 'BGP message rate limit exceeded (DoS protection)'
+            yield length, 0, header, b'', NotifyError(6, 1, report)
             return
 
         validator = Message.Length.get(msg, lambda _: _ >= 19)
