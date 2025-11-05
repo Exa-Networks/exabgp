@@ -30,6 +30,37 @@ from exabgp.version import version
 from exabgp.logger import log
 
 
+class AsyncScheduler:
+    """Adapter to bridge old asynchronous scheduler API to asyncio.
+    The old API command handlers call reactor.asynchronous.schedule() to run
+    generators. These generators are simple and just do work then yield a few
+    times before completing. We can run them synchronously to completion."""
+
+    def __init__(self):
+        pass
+
+    def schedule(self, service, description, generator):
+        """Run a generator to completion synchronously.
+        The generators from API command handlers are simple - they do some work,
+        yield a few boolean values, then complete. They don't need to be async."""
+        try:
+            # Run the generator to completion
+            result = None
+            while True:
+                try:
+                    result = generator.send(result)
+                    # Continue to next yield
+                except StopIteration:
+                    # Generator completed normally
+                    break
+        except Exception as exc:
+            log.debug(f'Error in scheduled task {service}/{description}: {exc}', 'reactor')
+
+    def clear(self, service):
+        """Clear is a no-op since we run generators synchronously."""
+        pass
+
+
 class Reactor(object):
     class Exit(object):
         normal = 0
@@ -66,6 +97,7 @@ class Reactor(object):
         self.daemon = Daemon(self)
         self.listener = Listener(self)
         self.api = API(self)
+        self.asynchronous = AsyncScheduler()  # Adapter for old async scheduler API
 
         self._peers = {}
         self._peer_tasks = {}  # Track asyncio tasks for each peer
@@ -410,24 +442,31 @@ class Reactor(object):
     async def _api_loop(self):
         """Process API commands from helper processes"""
         loop = asyncio.get_running_loop()
+        log.debug('API loop started', 'reactor')
+        iteration = 0
         while not self.signal.received == Signal.SHUTDOWN:
             try:
-                # Run the blocking processes.received() in a thread executor
-                # to avoid blocking the async event loop
-                def process_api_commands():
-                    commands = []
-                    for service, command in self.processes.received():
-                        commands.append((service, command))
-                    return commands
+                iteration += 1
+                if iteration % 100 == 1:
+                    log.debug(f'API loop iteration {iteration}', 'reactor')
 
-                commands = await loop.run_in_executor(None, process_api_commands)
+                # Get commands from helper processes in an executor to avoid blocking
+                # Uses received_list() which collects all available commands
+                commands = await loop.run_in_executor(None, self.processes.received_list)
+
+                if commands:
+                    log.debug(f'API loop received {len(commands)} commands', 'reactor')
+
+                # Process all commands
                 for service, command in commands:
                     self.api.process(self, service, command)
 
-                await asyncio.sleep(0.1)  # Brief pause between checks
+                # Brief delay between polling cycles
+                await asyncio.sleep(0.01)
             except Exception as exc:
                 log.debug(f'Error in API loop: {exc}', 'reactor')
                 await asyncio.sleep(0.1)
+        log.debug('API loop exiting', 'reactor')
 
     def register_peer(self, name, peer):
         self._peers[name] = peer
