@@ -168,7 +168,7 @@ class Exec(object):
         self.collect()
 
     def __del__(self):
-        self.terminate
+        self.terminate()
 
 
 State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP')
@@ -518,6 +518,8 @@ class EncodingTests(Tests):
         for test in running:
             test.fail()
             test.terminate()
+            client[test.nick].terminate()
+            success = False
 
         self.display()
         return success
@@ -654,6 +656,7 @@ class DecodingTests(Tests):
         for test in running:
             test.fail()
             test.terminate()
+            success = False
 
         self.display()
         return success
@@ -728,6 +731,7 @@ class ParsingTests(Tests):
         for test in running:
             test.fail()
             test.terminate()
+            success = False
 
         self.display()
         return success
