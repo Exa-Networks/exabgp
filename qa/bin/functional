@@ -518,6 +518,7 @@ class EncodingTests(Tests):
         for test in running:
             test.fail()
             test.terminate()
+            success = False
 
         self.display()
         return success
@@ -654,6 +655,7 @@ class DecodingTests(Tests):
         for test in running:
             test.fail()
             test.terminate()
+            success = False
 
         self.display()
         return success
@@ -728,6 +730,7 @@ class ParsingTests(Tests):
         for test in running:
             test.fail()
             test.terminate()
+            success = False
 
         self.display()
         return success
