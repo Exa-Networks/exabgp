@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import asyncio
 import os
 
 import traceback
@@ -97,10 +98,11 @@ class Protocol(object):
         # very important - as we use this function on __init__
         return self
 
-    def connect(self):
+    async def connect(self):
+        """Establish connection to peer"""
         # allows to test the protocol code using modified StringIO with a extra 'pending' function
         if self.connection:
-            return
+            return True
 
         local = self.neighbor['md5-ip'].top() if not self.neighbor.auto_discovery else None
         peer = self.neighbor['peer-address'].top()
@@ -111,8 +113,7 @@ class Protocol(object):
         itf = self.neighbor['source-interface']
         self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
 
-        for connected in self.connection.establish():
-            yield False
+        await self.connection.establish()
 
         if self.peer.neighbor.api['neighbor-changes']:
             self.peer.reactor.processes.connected(self.peer.neighbor)
@@ -122,7 +123,7 @@ class Protocol(object):
             if self.neighbor['router-id'] is None and self.neighbor['local-address'].afi == AFI.ipv4:
                 self.neighbor['router-id'] = self.neighbor['local-address']
 
-        yield True
+        return True
 
     def close(self, reason='protocol closed, reason unspecified'):
         if self.connection:
@@ -180,7 +181,8 @@ class Protocol(object):
                     b'',
                 )
 
-    def write(self, message, negotiated=None):
+    async def write(self, message, negotiated=None):
+        """Write a BGP message to the connection"""
         raw = message.message(negotiated)
 
         code = 'send-%s' % Message.CODE.short(message.ID)
@@ -188,22 +190,22 @@ class Protocol(object):
         if self.neighbor.api.get(code, False):
             self._to_api('send', message, raw)
 
-        for boolean in self.connection.writer(raw):
-            yield boolean
+        return await self.connection.writer(raw)
 
-    def send(self, raw):
+    async def send(self, raw):
+        """Send raw BGP message data"""
         code = 'send-%s' % Message.CODE.short(raw[18])
         self.peer.stats[code] += 1
         if self.neighbor.api.get(code, False):
             message = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)
             self._to_api('send', message, raw)
 
-        for boolean in self.connection.writer(raw):
-            yield boolean
+        return await self.connection.writer(raw)
 
     # Read from network .......................................................
 
-    def read_message(self):
+    async def read_message(self):
+        """Read and parse a BGP message from the connection"""
         # This will always be defined by the loop but scope leaking upset scrutinizer/pylint
         msg_id = None
 
@@ -213,101 +215,100 @@ class Protocol(object):
 
         body, header = b'', b''  # just because pylint/pylama are getting more clever
 
-        for length, msg_id, header, body, notify in self.connection.reader():
-            # internal issue
-            if notify:
-                code = 'receive-%s' % Message.CODE.NOTIFICATION.SHORT
-                if self.neighbor.api.get(code, False):
-                    if consolidate:
-                        self.peer.reactor.processes.notification(
-                            self.peer.neighbor,
-                            'receive',
-                            notify.code,
-                            notify.subcode,
-                            str(notify),
-                            None,
-                            header,
-                            body,
-                        )
-                    elif parsed:
-                        self.peer.reactor.processes.notification(
-                            self.peer.neighbor,
-                            'receive',
-                            notify.code,
-                            notify.subcode,
-                            str(notify),
-                            None,
-                            b'',
-                            b'',
-                        )
-                    elif packets:
-                        self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)
-                # XXX: is notify not already Notify class ?
-                raise Notify(notify.code, notify.subcode, str(notify))
+        length, msg_id, header, body, notify = await self.connection.reader()
 
-            if msg_id not in Message.CODE.MESSAGES:
-                raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
-
-            if not length:
-                yield _NOP
-                continue
-
-            log.debug(
-                '<< message of type %s' % Message.CODE.name(msg_id),
-                self.connection.session(),
-            )
-
-            code = 'receive-%s' % Message.CODE.short(msg_id)
-            self.peer.stats[code] += 1
-            for_api = self.neighbor.api.get(code, False)
-
-            if for_api and packets and not consolidate:
-                negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None
-                self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, negotiated, header, body)
-
-            if msg_id == Message.CODE.UPDATE:
-                if not self.neighbor['adj-rib-in'] and not (for_api or self.log_routes) and not (parsed or consolidate):
-                    yield _UPDATE
-                    return
-
-            try:
-                message = Message.unpack(msg_id, body, Direction.IN, self.negotiated)
-            except (KeyboardInterrupt, SystemExit, Notify):
-                raise
-            except Exception as exc:
-                log.debug('could not decode message "%d"' % msg_id, self.connection.session())
-                log.debug('%s' % str(exc), self.connection.session())
-                log.debug(traceback.format_exc(), self.connection.session())
-                raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
-                # raise Notify(5,0,'unknown message received')
-
-            if message.TYPE == Update.TYPE:
-                if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in message.attributes:
-                    for nlri in message.nlris:
-                        nlri.action = Action.WITHDRAW
-
-            if for_api:
-                negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None
+        # internal issue
+        if notify:
+            code = 'receive-%s' % Message.CODE.NOTIFICATION.SHORT
+            if self.neighbor.api.get(code, False):
                 if consolidate:
-                    self.peer.reactor.processes.message(
-                        msg_id,
-                        self.neighbor,
+                    self.peer.reactor.processes.notification(
+                        self.peer.neighbor,
                         'receive',
-                        message,
-                        negotiated,
+                        notify.code,
+                        notify.subcode,
+                        str(notify),
+                        None,
                         header,
                         body,
                     )
                 elif parsed:
-                    self.peer.reactor.processes.message(msg_id, self.neighbor, 'receive', message, negotiated, b'', b'')
+                    self.peer.reactor.processes.notification(
+                        self.peer.neighbor,
+                        'receive',
+                        notify.code,
+                        notify.subcode,
+                        str(notify),
+                        None,
+                        b'',
+                        b'',
+                    )
+                elif packets:
+                    self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)
+            # XXX: is notify not already Notify class ?
+            raise Notify(notify.code, notify.subcode, str(notify))
 
-            if message.TYPE == Notification.TYPE:
-                raise message
+        if msg_id not in Message.CODE.MESSAGES:
+            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
 
-            if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in message.attributes:
-                yield _NOP
-            else:
-                yield message
+        if not length:
+            return _NOP
+
+        log.debug(
+            '<< message of type %s' % Message.CODE.name(msg_id),
+            self.connection.session(),
+        )
+
+        code = 'receive-%s' % Message.CODE.short(msg_id)
+        self.peer.stats[code] += 1
+        for_api = self.neighbor.api.get(code, False)
+
+        if for_api and packets and not consolidate:
+            negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None
+            self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, negotiated, header, body)
+
+        if msg_id == Message.CODE.UPDATE:
+            if not self.neighbor['adj-rib-in'] and not (for_api or self.log_routes) and not (parsed or consolidate):
+                return _UPDATE
+
+        try:
+            message = Message.unpack(msg_id, body, Direction.IN, self.negotiated)
+        except (KeyboardInterrupt, SystemExit, Notify):
+            raise
+        except Exception as exc:
+            log.debug('could not decode message "%d"' % msg_id, self.connection.session())
+            log.debug('%s' % str(exc), self.connection.session())
+            log.debug(traceback.format_exc(), self.connection.session())
+            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
+            # raise Notify(5,0,'unknown message received')
+
+        if message.TYPE == Update.TYPE:
+            if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in message.attributes:
+                for nlri in message.nlris:
+                    nlri.action = Action.WITHDRAW
+
+        if for_api:
+            negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None
+            if consolidate:
+                self.peer.reactor.processes.message(
+                    msg_id,
+                    self.neighbor,
+                    'receive',
+                    message,
+                    negotiated,
+                    header,
+                    body,
+                )
+            elif parsed:
+                self.peer.reactor.processes.message(msg_id, self.neighbor, 'receive', message, negotiated, b'', b'')
+
+        if message.TYPE == Notification.TYPE:
+            raise message
+
+        if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in message.attributes:
+            return _NOP
+        else:
+            return message
 
     def validate_open(self):
         error = self.negotiated.validate(self.neighbor)
@@ -340,12 +341,15 @@ class Protocol(object):
                 self.connection.session(),
             )
 
-    def read_open(self, ip):
-        for received_open in self.read_message():
-            if received_open.TYPE == NOP.TYPE:
-                yield received_open
-            else:
+    async def read_open(self, ip):
+        """Read and validate an OPEN message"""
+        # Keep reading until we get a non-NOP message
+        while True:
+            received_open = await self.read_message()
+            if received_open.TYPE != NOP.TYPE:
                 break
+            # NOP means we should try again
+            await asyncio.sleep(0)
 
         if received_open.TYPE != Open.TYPE:
             raise Notify(
@@ -355,25 +359,29 @@ class Protocol(object):
             )
 
         log.debug('<< %s' % received_open, self.connection.session())
-        yield received_open
+        return received_open
 
-    def read_keepalive(self):
-        for message in self.read_message():
-            if message.TYPE == NOP.TYPE:
-                yield message
-            else:
+    async def read_keepalive(self):
+        """Read and validate a KEEPALIVE message"""
+        # Keep reading until we get a non-NOP message
+        while True:
+            message = await self.read_message()
+            if message.TYPE != NOP.TYPE:
                 break
+            # NOP means we should try again
+            await asyncio.sleep(0)
 
         if message.TYPE != KeepAlive.TYPE:
             raise Notify(5, 2)
 
-        yield message
+        return message
 
     #
     # Sending message to peer
     #
 
-    def new_open(self):
+    async def new_open(self):
+        """Create and send an OPEN message"""
         if self.neighbor['local-as']:
             local_as = self.neighbor['local-as']
         elif self.negotiated.received_open:
@@ -390,28 +398,27 @@ class Protocol(object):
         )
 
         # we do not buffer open message in purpose
-        for _ in self.write(sent_open):
-            yield _NOP
+        await self.write(sent_open)
 
         log.debug('>> %s' % sent_open, self.connection.session())
-        yield sent_open
+        return sent_open
 
-    def new_keepalive(self, comment=''):
+    async def new_keepalive(self, comment=''):
+        """Create and send a KEEPALIVE message"""
         keepalive = KeepAlive()
 
-        for _ in self.write(keepalive):
-            yield _NOP
+        await self.write(keepalive)
 
         log.debug(
             '>> KEEPALIVE%s' % (' (%s)' % comment if comment else ''),
             self.connection.session(),
         )
 
-        yield keepalive
+        return keepalive
 
-    def new_notification(self, notification):
-        for _ in self.write(notification):
-            yield _NOP
+    async def new_notification(self, notification):
+        """Send a NOTIFICATION message"""
+        await self.write(notification)
         log.debug(
             '>> NOTIFICATION (%d,%d,"%s")'
             % (
@@ -421,29 +428,29 @@ class Protocol(object):
             ),
             self.connection.session(),
         )
-        yield notification
+        return notification
 
-    def new_update(self, include_withdraw):
+    async def new_update(self, include_withdraw):
+        """Send UPDATE messages from the RIB"""
         updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
         number = 0
         for update in updates:
             for message in update.messages(self.negotiated, include_withdraw):
                 number += 1
-                for boolean in self.send(message):
-                    # boolean is a transient network error we already announced
-                    yield _NOP
+                await self.send(message)
         if number:
             log.debug('>> %d UPDATE(s)' % number, self.connection.session())
-        yield _UPDATE
+        return _UPDATE
 
-    def new_eor(self, afi, safi):
+    async def new_eor(self, afi, safi):
+        """Send an End-of-RIB marker"""
         eor = EOR(afi, safi)
-        for _ in self.write(eor):
-            yield _NOP
+        await self.write(eor)
         log.debug('>> EOR %s %s' % (afi, safi), self.connection.session())
-        yield eor
+        return eor
 
-    def new_eors(self, afi=AFI.undefined, safi=SAFI.undefined):
+    async def new_eors(self, afi=AFI.undefined, safi=SAFI.undefined):
+        """Send End-of-RIB markers for all negotiated families"""
         # Send EOR to let our peer know he can perform a RIB update
         if self.negotiated.families:
             families = (
@@ -454,24 +461,22 @@ class Protocol(object):
                 ]
             )
             for eor_afi, eor_safi in families:
-                for _ in self.new_eor(eor_afi, eor_safi):
-                    yield _
+                await self.new_eor(eor_afi, eor_safi)
         else:
             # If we are not sending an EOR, send a keepalive as soon as when finished
             # So the other routers knows that we have no (more) routes to send ...
             # (is that behaviour documented somewhere ??)
-            for eor in self.new_keepalive('EOR'):
-                yield _NOP
-            yield _UPDATE
+            await self.new_keepalive('EOR')
+        return _UPDATE
 
-    def new_operational(self, operational, negotiated):
-        for _ in self.write(operational, negotiated):
-            yield _NOP
+    async def new_operational(self, operational, negotiated):
+        """Send an OPERATIONAL message"""
+        await self.write(operational, negotiated)
         log.debug('>> OPERATIONAL %s' % str(operational), self.connection.session())
-        yield operational
+        return operational
 
-    def new_refresh(self, refresh):
-        for _ in self.write(refresh, None):
-            yield _NOP
+    async def new_refresh(self, refresh):
+        """Send a ROUTE-REFRESH message"""
+        await self.write(refresh, None)
         log.debug('>> REFRESH %s' % str(refresh), self.connection.session())
-        yield refresh
+        return refresh
