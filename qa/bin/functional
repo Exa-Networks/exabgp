@@ -168,7 +168,7 @@ class Exec(object):
         self.collect()
 
     def __del__(self):
-        self.terminate
+        self.terminate()
 
 
 State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP')
