@@ -84,8 +84,9 @@ def run(tokeniser):
             fd = os.open(prg, flags)
         except OSError as e:
             if e.errno == 2:  # ENOENT
-                raise ValueError('can not locate the program "%s"' % prg)
-            raise ValueError('can not access program "%s": %s' % (prg, e))
+                raise ValueError('can not locate the program "%s"' % prg) from e
+            # Preserve exception chain for debugging while providing clear message
+            raise ValueError('can not access program "%s": %s' % (prg, e)) from e
 
         # Use fstat on file descriptor - this is safe from TOCTOU
         s = os.fstat(fd)

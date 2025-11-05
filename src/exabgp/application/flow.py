@@ -174,17 +174,20 @@ class ACL(object):
         try:
             acl = cls._build(flow, action)
         except ValueError as e:
-            sys.stderr.write(f'Error: Invalid flow specification: {e}\n')
+            # Validation error - log flow details for debugging
+            sys.stderr.write(f'Error: Invalid flow specification for "{key}": {e}\n')
             sys.stderr.flush()
             return
 
         cls._known[key] = (uid, acl)
         try:
-            with open(cls._file(uid), 'w') as f:
+            filename = cls._file(uid)
+            with open(filename, 'w') as f:
                 f.write(acl)
             cls._commit()
         except (OSError, IOError) as e:
-            sys.stderr.write(f'Error: Failed to write ACL rule: {e}\n')
+            # File I/O error - log filename for debugging
+            sys.stderr.write(f'Error: Failed to write ACL rule to {cls._file(uid)}: {e}\n')
             sys.stderr.flush()
             cls.end()
 
@@ -260,9 +263,19 @@ while True:
 
     except KeyboardInterrupt:
         ACL.end()
-    except (ValueError, KeyError, json.JSONDecodeError) as e:
-        sys.stderr.write(f'Error: Failed to process flow message: {e}\n')
+    except json.JSONDecodeError as e:
+        # JSON parsing failed - log with line context
+        sys.stderr.write(f'Error: Invalid JSON in BGP message (line {e.lineno}, col {e.colno}): {e.msg}\n')
+        sys.stderr.flush()
+    except KeyError as e:
+        # Missing required field in BGP message - log which field
+        sys.stderr.write(f'Error: Missing required field in BGP message: {e}\n')
+        sys.stderr.flush()
+    except ValueError as e:
+        # Validation error from ACL processing
+        sys.stderr.write(f'Error: Invalid flow specification: {e}\n')
         sys.stderr.flush()
     except Exception as e:
-        sys.stderr.write(f'Unexpected error: {e}\n')
+        # Unexpected error - log with type for debugging
+        sys.stderr.write(f'Unexpected error ({type(e).__name__}): {e}\n')
         sys.stderr.flush()
