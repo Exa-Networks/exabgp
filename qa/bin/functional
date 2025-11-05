@@ -146,6 +146,8 @@ class Exec(object):
             return
         if self.code != -1:
             return
+        if self._process is None:
+            return
 
         signal.signal(signal.SIGALRM, alarm_handler)
         try:
@@ -161,10 +163,11 @@ class Exec(object):
             pass
 
     def terminate(self):
-        try:
-            self._process.send_signal(signal.SIGTERM)
-        except OSError:  # No such process, Errno 3
-            pass
+        if self._process is not None:
+            try:
+                self._process.send_signal(signal.SIGTERM)
+            except OSError:  # No such process, Errno 3
+                pass
         self.collect()
 
     def __del__(self):
