@@ -518,6 +518,7 @@ class EncodingTests(Tests):
         for test in running:
             test.fail()
             test.terminate()
+            client[test.nick].terminate()
             success = False
 
         self.display()
