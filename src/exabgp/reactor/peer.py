@@ -15,11 +15,9 @@ from collections import defaultdict
 
 # import traceback
 from exabgp.bgp.timer import ReceiveTimer
-from exabgp.bgp.message import Message
 from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import REFRESH
-from exabgp.bgp.message import NOP
 from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Notification

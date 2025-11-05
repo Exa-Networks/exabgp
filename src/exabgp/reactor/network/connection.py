@@ -100,9 +100,7 @@ class Connection(object):
         """Wait for the socket to be writable using asyncio"""
         if not self.io:
             return False
-        loop = asyncio.get_event_loop()
-        # For writable, we can use sock_sendall with empty bytes
-        # Or better, just yield control and assume it's writable
+        # Just yield control and assume it's writable
         await asyncio.sleep(0)
         return True
 
@@ -183,7 +181,7 @@ class Connection(object):
                 await loop.sock_sendall(self.io, chunk)
                 data = data[chunk_size:]
 
-            except (BrokenPipeError, ConnectionResetError) as exc:
+            except (BrokenPipeError, ConnectionResetError):
                 self.close()
                 log.warning('%s %s lost TCP connection with peer' % (self.name(), self.peer), self.session())
                 raise LostConnection('lost the TCP connection')

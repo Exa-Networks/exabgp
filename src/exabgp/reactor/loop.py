@@ -12,8 +12,6 @@ from __future__ import annotations
 import asyncio
 import re
 import time
-import uuid
-import socket
 
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from exabgp.util.errstr import errstr
 
 from .connection import Connection

@@ -8,8 +8,6 @@ Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-import asyncio
-
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Notify
 
