@@ -8,6 +8,8 @@ Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+import asyncio
+
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Notify
 
@@ -20,42 +22,24 @@ from exabgp.reactor.network.error import NetworkError
 
 class KA(object):
     def __init__(self, session, proto):
-        self._generator = self._keepalive(proto)
+        self.proto = proto
         self.send_timer = SendTimer(session, proto.negotiated.holdtime)
+        self._sending = False
 
-    def _keepalive(self, proto):
-        need_ka = False
-        generator = None
+    async def __call__(self):
+        """Check if keepalive needs to be sent and send if needed
+        Returns True if sending/sent, False if not needed"""
+        # Check if we need to send a keepalive
+        need_ka = self.send_timer.need_ka()
 
-        while True:
-            # SEND KEEPALIVES
-            need_ka |= self.send_timer.need_ka()
-
-            if need_ka:
-                if not generator:
-                    generator = proto.new_keepalive()
-                    need_ka = False
-
-            if not generator:
-                yield False
-                continue
-
+        if need_ka and not self._sending:
+            self._sending = True
             try:
-                # try to close the generator and raise a StopIteration in one call
-                next(generator)
-                next(generator)
-                # still running
-                yield True
+                await self.proto.new_keepalive()
+                self._sending = False
+                return False  # Sent successfully
             except NetworkError:
+                self._sending = False
                 raise Notify(4, 0, 'problem with network while trying to send keepalive')
-            except StopIteration:
-                generator = None
-                yield False
 
-    def __call__(self):
-        #  True  if we need or are trying
-        #  False if we do not need to send one
-        try:
-            return next(self._generator)
-        except StopIteration:
-            raise Notify(4, 0, 'could not send keepalive')
+        return False  # No keepalive needed
