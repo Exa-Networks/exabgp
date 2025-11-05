@@ -409,12 +409,22 @@ class Reactor(object):
 
     async def _api_loop(self):
         """Process API commands from helper processes"""
+        loop = asyncio.get_running_loop()
         while not self.signal.received == Signal.SHUTDOWN:
             try:
-                # read at least one message per process if there is some and parse it
-                for service, command in self.processes.received():
+                # Run the blocking processes.received() in a thread executor
+                # to avoid blocking the async event loop
+                def process_api_commands():
+                    commands = []
+                    for service, command in self.processes.received():
+                        commands.append((service, command))
+                    return commands
+
+                commands = await loop.run_in_executor(None, process_api_commands)
+                for service, command in commands:
                     self.api.process(self, service, command)
-                await asyncio.sleep(0.01)  # Brief pause between checks
+
+                await asyncio.sleep(0.1)  # Brief pause between checks
             except Exception as exc:
                 log.debug(f'Error in API loop: {exc}', 'reactor')
                 await asyncio.sleep(0.1)
