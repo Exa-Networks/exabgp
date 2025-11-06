@@ -36,14 +36,14 @@ jobs:
           pip install --no-cache-dir -r requirements.txt
           pip install psutil
 
-      - name: Configuration
+      - name: Configuration (Sequential)
         run: |
-          ./qa/bin/functional parsing
+          ./qa/bin/functional-sequential parsing
 
-      - name: Functional
+      - name: Functional (Sequential)
         run: |
-          ./qa/bin/functional encoding
+          ./qa/bin/functional-sequential encoding
 
-      - name: Decoding
+      - name: Decoding (Sequential)
         run: |
-          ./qa/bin/functional decoding
+          ./qa/bin/functional-sequential decoding

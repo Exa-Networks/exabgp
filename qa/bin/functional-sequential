@@ -1,0 +1,92 @@
+#!/bin/bash
+# Sequential test runner for exabgp functional tests
+# This runs tests one by one instead of in parallel to reduce resource usage
+
+set -e
+
+# Check if test type is provided
+if [ -z "$1" ]; then
+    echo "Usage: $0 <test-type>"
+    echo "  test-type: parsing, encoding, or decoding"
+    exit 1
+fi
+
+TEST_TYPE="$1"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FUNCTIONAL="${SCRIPT_DIR}/functional"
+
+# Validate test type
+case "$TEST_TYPE" in
+    parsing|encoding|decoding)
+        ;;
+    *)
+        echo "Error: Invalid test type '$TEST_TYPE'"
+        echo "Valid options: parsing, encoding, decoding"
+        exit 1
+        ;;
+esac
+
+echo "Running $TEST_TYPE tests sequentially..."
+echo "=================================================="
+
+# Get list of test nicknames by parsing the --list output
+# The output format is like:
+#  0  test-name-1            1  test-name-2           2  test-name-3
+# We need to extract just the nicknames (first column of each group)
+
+# Run --list and extract test nicknames
+# We grep for lines with test entries, then use awk to extract the first field of each column group
+TEST_NICKS=$("$FUNCTIONAL" "$TEST_TYPE" --list 2>/dev/null | \
+    grep -E '^ [0-9A-Za-zα-ω]' | \
+    awk '{ for (i=1; i<=NF; i+=2) if ($i != "") print $i }')
+
+if [ -z "$TEST_NICKS" ]; then
+    echo "Error: No tests found for $TEST_TYPE"
+    exit 1
+fi
+
+# Count total tests
+TOTAL_TESTS=$(echo "$TEST_NICKS" | wc -l)
+echo "Found $TOTAL_TESTS tests to run"
+echo ""
+
+# Run each test sequentially
+FAILED_TESTS=()
+PASSED_COUNT=0
+FAILED_COUNT=0
+CURRENT=0
+
+for NICK in $TEST_NICKS; do
+    CURRENT=$((CURRENT + 1))
+    echo "[$CURRENT/$TOTAL_TESTS] Running test: $NICK"
+
+    if "$FUNCTIONAL" "$TEST_TYPE" "$NICK"; then
+        echo "  ✓ PASSED"
+        PASSED_COUNT=$((PASSED_COUNT + 1))
+    else
+        echo "  ✗ FAILED"
+        FAILED_TESTS+=("$NICK")
+        FAILED_COUNT=$((FAILED_COUNT + 1))
+    fi
+    echo ""
+done
+
+# Print summary
+echo "=================================================="
+echo "Test Summary for $TEST_TYPE:"
+echo "  Total:  $TOTAL_TESTS"
+echo "  Passed: $PASSED_COUNT"
+echo "  Failed: $FAILED_COUNT"
+
+if [ ${#FAILED_TESTS[@]} -gt 0 ]; then
+    echo ""
+    echo "Failed tests:"
+    for TEST in "${FAILED_TESTS[@]}"; do
+        echo "  - $TEST"
+    done
+    exit 1
+fi
+
+echo ""
+echo "All tests passed!"
+exit 0
