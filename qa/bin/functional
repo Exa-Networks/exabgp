@@ -301,6 +301,11 @@ class Tests:
         sys.stdout.write('\n')
         sys.stdout.flush()
 
+    def short_list(self):
+        sys.stdout.write(' '.join([test.nick for test in self.registered()]))
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
     def display(self):
         for test in self.registered():
             sys.stdout.write(' %s' % test.colored())
@@ -743,6 +748,8 @@ def add_test(subparser, name, tests, extra):
         sub.add_argument('--client', help='start the client for a test', action='store_true')
     if 'list' in extra:
         sub.add_argument('--list', help='list the files making a test', action='store_true')
+    if 'short_list' in extra:
+        sub.add_argument('--short-list', help='list test codes only (space separated)', action='store_true')
     if 'edit' in extra:
         sub.add_argument('--edit', help='edit the files making a test', action='store_true')
     if 'timeout' in extra:
@@ -767,6 +774,10 @@ def add_test(subparser, name, tests, extra):
 
         if 'list' in extra and parsed.list:
             tests.listing()
+            return
+
+        if 'short_list' in extra and parsed.short_list:
+            tests.short_list()
             return
 
         if 'client' in extra and parsed.client:
@@ -814,14 +825,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='The BGP swiss army knife of networking functional testing tool')
     subparser = parser.add_subparsers()
 
-    add_test(subparser, 'decoding', decoding, ['list', 'edit', 'dry', 'timeout', 'port'])
+    add_test(subparser, 'decoding', decoding, ['list', 'short_list', 'edit', 'dry', 'timeout', 'port'])
     add_test(
         subparser,
         'encoding',
         encoding,
-        ['list', 'edit', 'dry', 'timeout', 'port', 'server', 'client'],
+        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'server', 'client'],
     )
-    add_test(subparser, 'parsing', parsing, ['list', 'dry', 'edit'])
+    add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit'])
 
     parsed = parser.parse_args()
     if vars(parsed):
