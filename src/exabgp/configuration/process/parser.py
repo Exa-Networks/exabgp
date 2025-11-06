@@ -70,18 +70,16 @@ def run(tokeniser):
 
     # Validate program using file descriptor to mitigate TOCTOU attacks
     # Open file first to get a handle, then validate using fstat on the handle
+    #
+    # Security note: We allow following symlinks (no O_NOFOLLOW) because:
+    # 1. Symlinks are commonly used for executables (e.g., /usr/bin/python3)
+    # 2. TOCTOU protection comes from using fstat() on the file descriptor,
+    #    not from blocking symlinks
+    # 3. We validate the final target file that the descriptor points to
     fd = None
     try:
-        # Open with O_RDONLY and O_NOFOLLOW to prevent symlink attacks
-        # Note: O_NOFOLLOW not available on all platforms, fallback if needed
         try:
-            flags = os.O_RDONLY | os.O_NOFOLLOW
-        except AttributeError:
-            # O_NOFOLLOW not available on this platform
-            flags = os.O_RDONLY
-
-        try:
-            fd = os.open(prg, flags)
+            fd = os.open(prg, os.O_RDONLY)
         except OSError as e:
             if e.errno == 2:  # ENOENT
                 raise ValueError('can not locate the program "%s"' % prg) from e
@@ -89,6 +87,7 @@ def run(tokeniser):
             raise ValueError('can not access program "%s": %s' % (prg, e)) from e
 
         # Use fstat on file descriptor - this is safe from TOCTOU
+        # The file descriptor points to the final target, even if prg was a symlink
         s = os.fstat(fd)
 
         if stat.S_ISDIR(s.st_mode):
@@ -108,7 +107,7 @@ def run(tokeniser):
         if s.st_gid == os.getgid():
             check |= stat.S_IXGRP
 
-        if not check & s.st_mode:
+        if not (check & s.st_mode):
             raise ValueError('exabgp will not be able to run this program "%s"' % prg)
 
         # Additional security check: ensure it's a regular file
