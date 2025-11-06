@@ -42,7 +42,11 @@ jobs:
 
       - name: Functional
         run: |
-          ./qa/bin/functional encoding
+          # Get list of all test identifiers and run them sequentially
+          for test in $(./qa/bin/functional encoding --short-list); do
+            echo "Running test: $test"
+            ./qa/bin/functional encoding "$test"
+          done
 
       - name: Decoding
         run: |
