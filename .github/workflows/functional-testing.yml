@@ -43,7 +43,7 @@ jobs:
       - name: Functional
         run: |
           # Get list of all test identifiers and run them sequentially
-          for test in $(./qa/bin/functional encoding --list | awk 'NR>3 {for(i=1;i<=NF;i+=2) print $i}'); do
+          for test in $(./qa/bin/functional encoding --short-list); do
             echo "Running test: $test"
             ./qa/bin/functional encoding "$test"
           done
