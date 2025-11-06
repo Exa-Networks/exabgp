@@ -52,6 +52,7 @@ import argparse
 import signal
 import time
 import collections
+import shlex
 
 from ipaddress import ip_network
 from ipaddress import ip_address
@@ -218,7 +219,8 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
         ipre = re.compile(r'^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+' r'(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*')
         labelre = re.compile(r'.*\s+(?:' + '|'.join(ifnames) + r'):(?P<label>[^\\\s]+).*')
         for ifname in ifnames:
-            cmd = subprocess.Popen(f'/sbin/ip -o address show dev {ifname}'.split(), shell=False, stdout=subprocess.PIPE)
+            # Use command list for security (no shell interpretation)
+            cmd = subprocess.Popen(['/sbin/ip', '-o', 'address', 'show', 'dev', ifname], shell=False, stdout=subprocess.PIPE)
             output += [ line for line in cmd.stdout ]
     else:
         # Try with ifconfig
@@ -229,7 +231,8 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
         )
         labelre = re.compile(r'')
         for ifname in ifnames:
-            cmd = subprocess.Popen(f'/sbin/ifconfig {ifname}'.split(), shell=False, stdout=subprocess.PIPE)
+            # Use command list for security (no shell interpretation)
+            cmd = subprocess.Popen(['/sbin/ifconfig', ifname], shell=False, stdout=subprocess.PIPE)
             output += [ line for line in cmd.stdout]
     for line in output or []:
         line = line.decode('ascii', 'ignore').strip()
@@ -344,6 +347,7 @@ def check(cmd, timeout):
     """Check the return code of the given command.
 
     :param cmd: command to execute. If :keyword:`None`, no command is executed.
+                Can be a string (will be safely parsed) or a list of arguments.
     :param timeout: how much time we should wait for command completion.
     :return: :keyword:`True` if the command was successful or
              :keyword:`False` if not or if the timeout was triggered.
@@ -360,8 +364,19 @@ def check(cmd, timeout):
         """Handle SIGALRM signal."""
         raise Alarm()
 
-    logger.debug('Checking command %s', repr(cmd))
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
+    # Safely parse command string to avoid shell injection
+    if isinstance(cmd, str):
+        try:
+            cmd_list = shlex.split(cmd)
+        except ValueError as e:
+            logger.error('Invalid command syntax: %s - %s', cmd, e)
+            return False
+    else:
+        cmd_list = cmd
+
+    logger.debug('Checking command %s', repr(cmd_list))
+    # Use shell=False for security - no shell metacharacter interpretation
+    p = subprocess.Popen(cmd_list, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
     if timeout:
         signal.signal(signal.SIGALRM, alarm_handler)
         signal.alarm(timeout)
@@ -380,6 +395,9 @@ def check(cmd, timeout):
     except Alarm:
         logger.warn('Timeout (%s) while running check command %s', timeout, cmd)
         os.killpg(p.pid, signal.SIGKILL)
+        return False
+    except (OSError, ValueError) as e:
+        logger.error('Failed to execute command %s: %s', cmd, e)
         return False
 
 
@@ -487,10 +505,21 @@ def loop(options):
         cmds.extend(vars(options).get('execute', []) or [])
         for cmd in cmds:
             logger.debug('Transition to %s, execute `%s`', str(target), cmd)
+            # Safely parse command to avoid shell injection
+            try:
+                cmd_list = shlex.split(cmd) if isinstance(cmd, str) else cmd
+            except ValueError as e:
+                logger.error('Invalid command syntax for %s: %s - %s', target, cmd, e)
+                continue
+
             env = os.environ.copy()
             env.update({'STATE': str(target)})
             with open(os.devnull, 'w') as fnull:
-                subprocess.call(cmd, shell=True, stdout=fnull, stderr=fnull, env=env)
+                try:
+                    # Use shell=False for security
+                    subprocess.call(cmd_list, shell=False, stdout=fnull, stderr=fnull, env=env)
+                except (OSError, ValueError) as e:
+                    logger.error('Failed to execute command for %s: %s - %s', target, cmd, e)
 
         return target
 
