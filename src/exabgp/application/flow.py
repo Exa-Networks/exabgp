@@ -66,18 +66,88 @@ class ACL(object):
             pass
 
     @staticmethod
+    def _validate_port(value):
+        """Validate port/port-range value for iptables.
+
+        Args:
+            value: Port value as string (e.g., "80", "80:443", "=80")
+
+        Returns:
+            Sanitized port value safe for iptables
+
+        Raises:
+            ValueError: If value contains invalid characters
+        """
+        if not value:
+            raise ValueError('Empty port value')
+
+        # Remove BGP flowspec operators (=, !, <, >, &, |) - keep only valid iptables syntax
+        cleaned = re.sub('[!<>=&|]', '', value)
+
+        # Validate: only digits, colon (for ranges), and comma (for lists)
+        if not re.match(r'^[\d:,]+$', cleaned):
+            raise ValueError(f'Invalid port value: {value}')
+
+        return cleaned
+
+    @staticmethod
+    def _validate_protocol(value):
+        """Validate protocol value for iptables.
+
+        Args:
+            value: Protocol value as string (e.g., "tcp", "udp", "6")
+
+        Returns:
+            Sanitized protocol value safe for iptables
+
+        Raises:
+            ValueError: If value contains invalid characters
+        """
+        if not value:
+            raise ValueError('Empty protocol value')
+
+        # Remove BGP flowspec operators
+        cleaned = re.sub('[!<>=&|]', '', value).lower()
+
+        # Whitelist of valid protocols (names and numbers)
+        valid_protocols = {
+            'tcp', 'udp', 'icmp', 'icmpv6', 'esp', 'ah', 'sctp', 'all',
+            '0', '1', '2', '6', '17', '41', '43', '44', '47', '50', '51', '58', '132'
+        }
+
+        if cleaned not in valid_protocols and not re.match(r'^\d+$', cleaned):
+            raise ValueError(f'Invalid protocol: {value}')
+
+        return cleaned
+
+    @staticmethod
     def _build(flow, action):
+        """Build iptables ACL rule from flowspec.
+
+        Args:
+            flow: Flow specification dictionary
+            action: Action to take
+
+        Returns:
+            ACL rule string for iptables
+
+        Raises:
+            ValueError: If flow contains invalid values
+        """
         acl = '[iptables]\n-A FORWARD --in-interface swp+'
         if 'protocol' in flow:
-            acl += ' -p ' + re.sub('[!<>=]', '', flow['protocol'][0])
+            validated = ACL._validate_protocol(flow['protocol'][0])
+            acl += ' -p ' + validated
         if 'source-ipv4' in flow:
             acl += ' -s ' + flow['source-ipv4'][0]
         if 'destination-ipv4' in flow:
             acl += ' -d ' + flow['destination-ipv4'][0]
         if 'source-port' in flow:
-            acl += ' --sport ' + re.sub('[!<>=]', '', flow['source-port'][0])
+            validated = ACL._validate_port(flow['source-port'][0])
+            acl += ' --sport ' + validated
         if 'destination-port' in flow:
-            acl += ' --dport ' + re.sub('[!<>=]', '', flow['destination-port'][0])
+            validated = ACL._validate_port(flow['destination-port'][0])
+            acl += ' --dport ' + validated
         acl = acl + ' -j DROP\n'
         return acl
 
@@ -87,13 +157,22 @@ class ACL(object):
         if key in cls._known:
             return
         uid = cls._uid()
-        acl = cls._build(flow, action)
+        try:
+            acl = cls._build(flow, action)
+        except ValueError as e:
+            # Validation error - log and skip this flow
+            sys.stderr.write(f'Error: Invalid flow specification: {e}\n')
+            sys.stderr.flush()
+            return
+
         cls._known[key] = (uid, acl)
         try:
             with open(cls._file(uid), 'w') as f:
                 f.write(acl)
             cls._commit()
-        except Exception:
+        except (OSError, IOError) as e:
+            sys.stderr.write(f'Error: Failed to write ACL rule: {e}\n')
+            sys.stderr.flush()
             cls.end()
 
     @classmethod
@@ -168,5 +247,9 @@ while True:
 
     except KeyboardInterrupt:
         ACL.end()
-    except Exception:
-        pass
+    except (ValueError, KeyError, json.JSONDecodeError) as e:
+        sys.stderr.write(f'Error: Failed to process flow message: {e}\n')
+        sys.stderr.flush()
+    except Exception as e:
+        sys.stderr.write(f'Unexpected error: {e}\n')
+        sys.stderr.flush()
