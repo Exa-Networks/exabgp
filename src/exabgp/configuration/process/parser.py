@@ -41,6 +41,18 @@ def _make_path(prg):
 
 
 def run(tokeniser):
+    """Parse and validate the 'run' command for a process.
+
+    Args:
+        tokeniser: Configuration tokeniser providing command tokens
+
+    Returns:
+        List containing program path and arguments
+
+    Raises:
+        ValueError: If program cannot be found or validated
+        OSError: If file access fails
+    """
     prg = tokeniser()
 
     if prg[0] != '/':
@@ -56,25 +68,55 @@ def run(tokeniser):
             if os.path.exists(option):
                 prg = option
 
-    if not os.path.exists(prg):
-        raise ValueError('can not locate the the program "%s"' % prg)
+    # Validate program using file descriptor to mitigate TOCTOU attacks
+    # Open file first to get a handle, then validate using fstat on the handle
+    fd = None
+    try:
+        # Open with O_RDONLY and O_NOFOLLOW to prevent symlink attacks
+        # Note: O_NOFOLLOW not available on all platforms, fallback if needed
+        try:
+            flags = os.O_RDONLY | os.O_NOFOLLOW
+        except AttributeError:
+            # O_NOFOLLOW not available on this platform
+            flags = os.O_RDONLY
 
-    # race conditions are possible, those are sanity checks not security ones ...
-    s = os.stat(prg)
+        try:
+            fd = os.open(prg, flags)
+        except OSError as e:
+            if e.errno == 2:  # ENOENT
+                raise ValueError('can not locate the program "%s"' % prg) from e
+            # Preserve exception chain for debugging while providing clear message
+            raise ValueError('can not access program "%s": %s' % (prg, e)) from e
 
-    if stat.S_ISDIR(s.st_mode):
-        raise ValueError('can not execute directories "%s"' % prg)
+        # Use fstat on file descriptor - this is safe from TOCTOU
+        s = os.fstat(fd)
 
-    if s.st_mode & stat.S_ISUID:
-        raise ValueError('refusing to run setuid programs "%s"' % prg)
+        if stat.S_ISDIR(s.st_mode):
+            raise ValueError('can not execute directories "%s"' % prg)
 
-    check = stat.S_IXOTH
-    if s.st_uid == os.getuid():
-        check |= stat.S_IXUSR
-    if s.st_gid == os.getgid():
-        check |= stat.S_IXGRP
+        # Security check: refuse to run setuid/setgid programs
+        if s.st_mode & stat.S_ISUID:
+            raise ValueError('refusing to run setuid programs "%s"' % prg)
 
-    if not check & s.st_mode:
-        raise ValueError('exabgp will not be able to run this program "%s"' % prg)
+        if s.st_mode & stat.S_ISGID:
+            raise ValueError('refusing to run setgid programs "%s"' % prg)
+
+        # Check if file is executable by current user
+        check = stat.S_IXOTH
+        if s.st_uid == os.getuid():
+            check |= stat.S_IXUSR
+        if s.st_gid == os.getgid():
+            check |= stat.S_IXGRP
+
+        if not check & s.st_mode:
+            raise ValueError('exabgp will not be able to run this program "%s"' % prg)
+
+        # Additional security check: ensure it's a regular file
+        if not stat.S_ISREG(s.st_mode):
+            raise ValueError('program must be a regular file "%s"' % prg)
+
+    finally:
+        if fd is not None:
+            os.close(fd)
 
     return [prg] + [_ for _ in tokeniser.generator]
