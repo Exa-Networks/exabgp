@@ -1,0 +1,306 @@
+# ExaBGP CI Testing Guide
+
+## Overview
+This guide documents the complete CI testing requirements for ExaBGP. Before declaring code ready for merging, ALL tests described here must pass.
+
+## Test Categories
+
+### 1. Linting (Python 3.12)
+**Workflow:** `.github/workflows/linting.yml`
+
+#### Commands to run:
+```bash
+# Install dependencies
+python -m pip install --upgrade pip
+pip install -r qa/requirements.txt
+
+# Run flake8 (critical errors only)
+flake8 . --max-line-length 120 \
+  --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages \
+  --count --select=E9,F63,F7,F82 --show-source --statistics
+
+# Run ruff
+ruff check src
+```
+
+**What it checks:**
+- E9: Runtime errors (syntax errors, etc.)
+- F63: Invalid print statement
+- F7: Syntax errors in type comments
+- F82: Undefined names
+
+---
+
+### 2. Unit Testing (Python 3.8-3.12)
+**Workflow:** `.github/workflows/unit-testing.yml`
+
+#### Commands to run:
+```bash
+# Install dependencies
+python -m pip install --upgrade pip
+pip install -r qa/requirements.txt
+
+# Run unit tests with coverage
+env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
+```
+
+**Test files:**
+- `tests/bgpls_test.py`
+- `tests/cache_test.py`
+- `tests/control_test.py`
+- `tests/decode_test.py`
+- `tests/flow_test.py`
+- `tests/l2vpn_test.py`
+- `tests/nlri_tests.py`
+- `tests/notification_test.py`
+- `tests/open_test.py`
+- `tests/parsing_test.py`
+
+---
+
+### 3. Functional Testing (Python 3.8-3.12)
+**Workflow:** `.github/workflows/functional-testing.yml`
+
+#### Commands to run:
+```bash
+# Install dependencies
+python -m pip install --no-cache-dir --upgrade pip
+pip install --no-cache-dir -r requirements.txt
+pip install psutil
+
+# 1. Configuration/Parsing tests
+./qa/bin/functional parsing
+
+# 2. Encoding tests (run SEQUENTIALLY)
+for test in $(./qa/bin/functional encoding --short-list); do
+  echo "Running test: $test"
+  ./qa/bin/functional encoding "$test"
+done
+
+# 3. Decoding tests
+./qa/bin/functional decoding
+```
+
+**Important:** Encoding tests MUST be run sequentially, not in parallel!
+
+---
+
+### 4. Legacy Functional Testing
+
+#### Python 3.6 (ubuntu-20.04)
+**Workflow:** `.github/workflows/functional-3.6.yml`
+
+```bash
+# Install dependencies
+python -m pip install --no-cache-dir --upgrade pip
+pip install --no-cache-dir -r requirements.txt
+pip install psutil
+
+# Set user
+export EXABGP_DAEMON_USER=$(whoami)
+
+# Run all tests
+./qa/bin/functional-3.6 all
+```
+
+#### Python 3.7 (ubuntu-22.04)
+**Workflow:** `.github/workflows/functional-3.7.yml`
+
+```bash
+# Install dependencies
+python -m pip install --no-cache-dir --upgrade pip
+pip install --no-cache-dir -r requirements.txt
+pip install psutil
+
+# Configuration/Parsing tests
+./qa/bin/functional parsing
+
+# Encoding tests (sequential)
+for test in $(./qa/bin/functional encoding --short-list); do
+  echo "Running test: $test"
+  ./qa/bin/functional encoding "$test"
+done
+
+# Decoding tests
+./qa/bin/functional decoding
+```
+
+---
+
+## Test Infrastructure Details
+
+### Functional Test Script
+**Location:** `qa/bin/functional`
+
+#### Test Types:
+
+**1. Parsing Tests:**
+- Validates configuration files in `etc/exabgp/*.conf`
+- Uses: `exabgp validate -nrv <config_file>`
+- All config files must parse without errors
+
+**2. Encoding Tests:**
+- Located in: `qa/encoding/*.ci`
+- Tests BGP message encoding
+- Runs ExaBGP with specific configs and validates output
+- Tests communication between ExaBGP client and test BGP server
+- Expected output: `successful` in stdout/stderr
+
+**3. Decoding Tests:**
+- Located in: `qa/decoding/*`
+- Tests BGP message decoding
+- Validates JSON output matches expected format
+- Uses: `exabgp decode --<type> <packet>`
+
+### Available Test Commands
+
+```bash
+# List all encoding tests
+./qa/bin/functional encoding --list
+
+# Get test identifiers (for CI)
+./qa/bin/functional encoding --short-list
+
+# List all decoding tests
+./qa/bin/functional decoding --list
+
+# List all parsing tests
+./qa/bin/functional parsing --list
+
+# Run specific test
+./qa/bin/functional encoding <test_id>
+./qa/bin/functional decoding <test_id>
+./qa/bin/functional parsing <test_id>
+
+# Show what a test would run (dry run)
+./qa/bin/functional encoding --dry
+
+# Debug a specific test
+./qa/bin/functional encoding --client <test_id>
+./qa/bin/functional encoding --server <test_id>
+```
+
+---
+
+## Pre-Merge Checklist
+
+Before declaring code ready for merging, verify:
+
+- [ ] **Linting passes** on Python 3.12
+  - [ ] flake8 shows no critical errors
+  - [ ] ruff check passes
+
+- [ ] **Unit tests pass** on Python 3.8, 3.9, 3.10, 3.11, 3.12
+  - [ ] All pytest tests pass
+  - [ ] Coverage report generated
+
+- [ ] **Functional tests pass** on Python 3.8-3.12
+  - [ ] Parsing tests pass
+  - [ ] All encoding tests pass (run sequentially)
+  - [ ] All decoding tests pass
+
+- [ ] **Legacy tests pass**
+  - [ ] Python 3.6 functional tests pass
+  - [ ] Python 3.7 functional tests pass
+
+---
+
+## Common Issues and Debugging
+
+### Encoding Test Failures
+If encoding tests fail:
+1. Check the test configuration: `./qa/bin/functional encoding --list`
+2. View test details: Run with `DEBUG=1` environment variable
+3. Run server and client separately:
+   ```bash
+   # In terminal 1:
+   ./qa/bin/functional encoding --server <test_id>
+
+   # In terminal 2:
+   ./qa/bin/functional encoding --client <test_id>
+   ```
+
+### Decoding Test Failures
+If decoding tests fail:
+1. Compare expected JSON vs actual output
+2. Check the test file in `qa/decoding/` for expected format
+
+### Parsing Test Failures
+If parsing tests fail:
+1. Check configuration syntax in `etc/exabgp/*.conf`
+2. Run manually: `./sbin/exabgp validate -nrv etc/exabgp/<config>.conf`
+
+---
+
+## Dependencies
+
+### QA Requirements (`qa/requirements.txt`):
+- ruff
+- flake8
+- coveralls
+- nose
+- psutil
+- pytest
+- pytest-cov
+
+### Runtime Requirements:
+- Python 3.8+ (main support)
+- Python 3.6-3.7 (legacy support)
+- psutil (for functional tests)
+
+---
+
+## CI Triggers
+
+All workflows trigger on:
+- **Push** to branches: `main`, `4.2`, `3.4`
+- **Pull Request** to: `main`
+
+---
+
+## Quick Test Commands
+
+### Minimal local testing:
+```bash
+# Linting
+flake8 . --max-line-length 120 --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages --count --select=E9,F63,F7,F82 --show-source --statistics
+ruff check src
+
+# Unit tests
+env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
+
+# Functional tests
+./qa/bin/functional parsing
+for test in $(./qa/bin/functional encoding --short-list); do ./qa/bin/functional encoding "$test"; done
+./qa/bin/functional decoding
+```
+
+### Full CI simulation:
+```bash
+# Run all tests across all Python versions (requires pyenv or similar)
+for version in 3.8 3.9 3.10 3.11 3.12; do
+  echo "Testing Python $version"
+  python$version -m pytest --cov --cov-reset ./tests/*_test.py
+  python$version qa/bin/functional parsing
+  for test in $(python$version qa/bin/functional encoding --short-list); do
+    python$version qa/bin/functional encoding "$test"
+  done
+  python$version qa/bin/functional decoding
+done
+```
+
+---
+
+## Notes
+
+1. **Encoding tests must run sequentially** - They use network ports and can conflict if run in parallel
+2. **Functional tests are comprehensive** - They test actual BGP protocol behavior, not just unit functionality
+3. **Legacy support is important** - Python 3.6 and 3.7 tests ensure backward compatibility
+4. **Test timeout is 60 seconds by default** - Configurable with `--timeout` flag
+
+---
+
+## Recent Changes
+
+- **2024-11**: Added `--short-list` option to functional script for cleaner CI integration
+- **2024-11**: Changed encoding tests to run sequentially instead of in parallel to fix CI flakiness
