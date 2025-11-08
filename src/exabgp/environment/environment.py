@@ -138,6 +138,24 @@ class Env(object):
                 except TypeError:
                     raise ValueError('invalid value for %s.%s : %s' % (section, option, conf))
 
+        # Backward compatibility and alias handling
+        if 'tcp' in cls._env:
+            # Handle exabgp_tcp_connections as an alias for exabgp_tcp_attempts
+            connections_env = os.environ.get('exabgp.tcp.connections') or os.environ.get('exabgp_tcp_connections')
+            if connections_env:
+                cls._env['tcp']['attempts'] = int(connections_env)
+
+            # Backward compatibility: convert tcp.once to tcp.attempts if tcp.attempts not explicitly set
+            once_env = os.environ.get('exabgp.tcp.once') or os.environ.get('exabgp_tcp_once')
+            attempts_env = os.environ.get('exabgp.tcp.attempts') or os.environ.get('exabgp_tcp_attempts')
+
+            # Only apply backward compatibility if tcp.attempts wasn't explicitly set
+            if once_env and not attempts_env and not connections_env:
+                if cls._env['tcp']['once']:
+                    cls._env['tcp']['attempts'] = 1
+                else:
+                    cls._env['tcp']['attempts'] = 0
+
     @classmethod
     def settings(cls):
         return cls._env

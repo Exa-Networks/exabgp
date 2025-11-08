@@ -313,6 +313,21 @@ class Tests:
         sys.stdout.flush()
 
 
+def parse_msg_options(msg_file):
+    """Parse option directives from .msg file"""
+    tcp_connections = None
+    try:
+        with open(msg_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('option:tcp_connections:'):
+                    tcp_connections = int(line.split(':')[-1])
+                    break
+    except Exception:
+        pass
+    return tcp_connections
+
+
 class EncodingTests(Tests):
     class Test(Record, Exec):
         def __init__(self, nick, name):
@@ -400,11 +415,14 @@ class EncodingTests(Tests):
             sys.exit('no such test')
         test = self.get_by_nick(nick)
 
+        # Parse tcp_connections option from .msg file, default to 1 if not specified
+        tcp_connections = parse_msg_options(test.conf['msg']) or 1
+
         config = {
             'env': ' \\\n  '.join(
                 [
                     'exabgp_version=5.0.0-0+test',
-                    'exabgp_tcp_once=true',
+                    f'exabgp_tcp_connections={tcp_connections}',
                     'exabgp_api_cli=false',
                     'exabgp_debug_rotate=true',
                     'exabgp_debug_configuration=true',
