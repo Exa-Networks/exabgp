@@ -122,33 +122,32 @@ class Notification(Message, Exception):
             return
 
         if len(data) < shutdown_length:
-            self.data = b'invalid Shutdown Communication (buffer underrun) length : %i [%s]' % (
+            self.data = ('invalid Shutdown Communication (buffer underrun) length : %i [%s]' % (
                 shutdown_length,
                 hexstring(data),
-            )
+            )).encode('utf-8')
             return
 
         if shutdown_length > 128:
-            self.data = b'invalid Shutdown Communication (too large) length : %i [%s]' % (
+            self.data = ('invalid Shutdown Communication (too large) length : %i [%s]' % (
                 shutdown_length,
                 hexstring(data),
-            )
+            )).encode('utf-8')
             return
 
         try:
-            self.data = b'Shutdown Communication: "%s"' % data[:shutdown_length].decode('utf-8').replace(
-                '\r', ' '
-            ).replace('\n', ' ')
+            decoded_msg = data[:shutdown_length].decode('utf-8').replace('\r', ' ').replace('\n', ' ')
+            self.data = ('Shutdown Communication: "%s"' % decoded_msg).encode('utf-8')
         except UnicodeDecodeError:
-            self.data = b'invalid Shutdown Communication (invalid UTF-8) length : %i [%s]' % (
+            self.data = ('invalid Shutdown Communication (invalid UTF-8) length : %i [%s]' % (
                 shutdown_length,
                 hexstring(data),
-            )
+            )).encode('utf-8')
             return
 
         trailer = data[shutdown_length:]
         if trailer:
-            self.data += b', trailing data: ' + hexstring(trailer)
+            self.data += (', trailing data: ' + hexstring(trailer)).encode('utf-8')
 
     def __str__(self):
         return '%s / %s%s' % (
