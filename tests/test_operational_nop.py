@@ -486,21 +486,47 @@ def test_response_counter_encoding():
 def test_operational_unpack_adm():
     """
     Test unpacking Advisory Demand Message (ADM).
-
-    Note: ADM unpacking has a known issue where the constructor expects
-    strings but receives bytes. This test is disabled for now.
     """
-    pytest.skip("ADM/ASM unpacking has constructor type mismatch - bytes vs string")
+    advisory_text = b"Critical alert message"
+
+    data = (
+        struct.pack('!H', Operational.CODE.ADM) +  # Type
+        struct.pack('!H', 2 + 1 + len(advisory_text)) +  # Length: AFI(2)+SAFI(1)+message
+        struct.pack('!H', AFI.ipv4) +  # AFI
+        struct.pack('!B', SAFI.unicast) +  # SAFI
+        advisory_text  # Advisory message
+    )
+
+    op = Operational.unpack_message(data, Direction.IN, {})
+
+    assert isinstance(op, Advisory.ADM)
+    assert op.afi == AFI.ipv4
+    assert op.safi == SAFI.unicast
+    assert op.data == advisory_text
+    assert op.name == 'ADM'
 
 
 def test_operational_unpack_asm():
     """
     Test unpacking Advisory Static Message (ASM).
-
-    Note: ASM unpacking has a known issue where the constructor expects
-    strings but receives bytes. This test is disabled for now.
     """
-    pytest.skip("ADM/ASM unpacking has constructor type mismatch - bytes vs string")
+    advisory_text = b"Static configuration message"
+
+    data = (
+        struct.pack('!H', Operational.CODE.ASM) +  # Type
+        struct.pack('!H', 2 + 1 + len(advisory_text)) +  # Length: AFI(2)+SAFI(1)+message
+        struct.pack('!H', AFI.ipv6) +  # AFI
+        struct.pack('!B', SAFI.multicast) +  # SAFI
+        advisory_text  # Advisory message
+    )
+
+    op = Operational.unpack_message(data, Direction.IN, {})
+
+    assert isinstance(op, Advisory.ASM)
+    assert op.afi == AFI.ipv6
+    assert op.safi == SAFI.multicast
+    assert op.data == advisory_text
+    assert op.name == 'ASM'
 
 
 def test_operational_unpack_rpcq():

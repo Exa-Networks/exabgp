@@ -239,7 +239,11 @@ class Advisory(object):
         code = Operational.CODE.ADM
 
         def __init__(self, afi, safi, advisory, routerid=None):
-            utf8 = advisory.encode('utf-8')
+            # Handle both string and bytes input
+            if isinstance(advisory, bytes):
+                utf8 = advisory
+            else:
+                utf8 = advisory.encode('utf-8')
             if len(utf8) > MAX_ADVISORY:
                 utf8 = utf8[: MAX_ADVISORY - 3] + '...'.encode('utf-8')
             Advisory._Advisory.__init__(self, Operational.CODE.ADM, afi, safi, utf8)
@@ -250,7 +254,11 @@ class Advisory(object):
         code = Operational.CODE.ASM
 
         def __init__(self, afi, safi, advisory, routerid=None):
-            utf8 = advisory.encode('utf-8')
+            # Handle both string and bytes input
+            if isinstance(advisory, bytes):
+                utf8 = advisory
+            else:
+                utf8 = advisory.encode('utf-8')
             if len(utf8) > MAX_ADVISORY:
                 utf8 = utf8[: MAX_ADVISORY - 3] + '...'.encode('utf-8')
             Advisory._Advisory.__init__(self, Operational.CODE.ASM, afi, safi, utf8)
