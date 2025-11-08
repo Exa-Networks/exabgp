@@ -182,16 +182,15 @@ class TestSocketConnection:
     def test_connect_with_md5_error_message(self):
         """Test that MD5 password hint appears in error with MD5 enabled"""
         io = tcp.create(AFI.ipv4)
-        # Don't make it async - sync mode will raise immediately on connection refused
+        # Use localhost with unlikely port for immediate connection refused
+        # (avoids hanging on unreachable IPs which wait for timeout on OSX)
 
         # When MD5 is enabled and connection fails, error message should mention MD5
-        # Note: With async sockets, connect() might not raise immediately
-        try:
-            tcp.connect(io, '192.0.2.1', 179, AFI.ipv4, md5='test123')
-            # If it doesn't raise, that's OK for non-blocking case
-        except NotConnected as e:
-            # If it does raise, verify MD5 is mentioned
-            assert "check your MD5 password" in str(e)
+        with pytest.raises(NotConnected) as exc_info:
+            tcp.connect(io, '127.0.0.1', 1, AFI.ipv4, md5='test123')
+
+        # Verify MD5 hint is in error message
+        assert "check your MD5 password" in str(exc_info.value)
 
         io.close()
 
