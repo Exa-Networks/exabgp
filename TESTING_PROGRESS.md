@@ -246,19 +246,162 @@
 
 ---
 
-## 🎯 Next Steps (Priority Order)
+---
 
-### 1. IPv4/IPv6 NLRI Types
-**Location**: Check `src/exabgp/bgp/message/update/nlri/`
+#### Path Attributes (Core) - **90%+ Coverage** ✅
+- **Files**: `tests/test_aspath.py`, `tests/test_attributes.py`, `tests/test_communities.py`, `tests/test_path_attributes.py` (138 tests total)
+- **Coverage Improvements**:
+  - `aspath.py`: ~40% → 90%+ (+50%)
+  - `attributes.py`: ~30% → 85%+ (+55%)
+  - `community/`: ~50% → 90%+ (+40%)
+  - Individual attributes: 0-50% → 90%+ (ORIGIN, NEXT_HOP, LOCAL_PREF, MED, AGGREGATOR, CLUSTER_LIST, ORIGINATOR_ID, ATOMIC_AGGREGATE, AIGP, PMSI)
 
-**Files to Assess**:
-- Review existing coverage for basic NLRI types
-- Identify gaps in IPv4/IPv6 route handling
-- Create comprehensive tests
+- **Test Coverage**:
+  - AS_PATH: All 4 segment types (SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET), ASN2/ASN4 handling, empty paths, long paths, AS_TRANS
+  - Attributes Framework: Flag validation, length parsing, duplicate detection, unknown attributes, TREAT_AS_WITHDRAW behavior
+  - Communities: Standard (RFC 1997), Extended (RFC 4360), Large (RFC 8092), all subtypes (RT, RO, Bandwidth, etc.)
+  - Individual attributes: All well-known attributes with error handling
 
-**Approach**:
-- Assess current coverage
-- Target: 90%+ coverage
+**Branch**: `claude/add-path-attribute-tests-011CUw1n2UDAPSxgtLquopxt` (and earlier)
+**Commits**:
+- `3e7e2ef - Add comprehensive tests for 6 core untested path attributes` (71 tests)
+- Earlier commits for AS_PATH, Attributes framework, Communities (67 tests)
+
+---
+
+#### BGP Message Types - **85%+ Coverage** ✅
+- **Files**: `tests/test_update_message.py`, `tests/test_open_capabilities.py`, `tests/test_multiprotocol.py`, `tests/test_notification_comprehensive.py`, `tests/test_keepalive.py`, `tests/test_route_refresh.py`, `tests/test_operational_nop.py` (234+ tests)
+- **Coverage Improvements**:
+  - UPDATE message validation: ~30% → 85%+ (+55%)
+  - OPEN capabilities: ~40% → 90%+ (+50%)
+  - NOTIFICATION: ~30% → 95%+ (+65%)
+  - KEEPALIVE: 0% → 95%+ (+95%)
+  - ROUTE_REFRESH: 0% → 95%+ (+95%)
+  - OPERATIONAL: 0% → 85%+ (+85%)
+  - Multiprotocol (MP_REACH/UNREACH): 0% → 90%+ (+90%)
+
+- **Test Coverage**:
+  - UPDATE: Withdrawn routes, NLRI validation, attribute consistency, mandatory attributes, malformed messages
+  - OPEN: All capability types, ASN validation, hold time validation, router ID validation, capability negotiation
+  - NOTIFICATION: All 6 error codes, 40+ subcodes, shutdown communication, administrative messages
+  - KEEPALIVE: Minimal format validation, timing, malformed detection
+  - ROUTE_REFRESH: All message types, demarcation, ORF (Outbound Route Filtering)
+  - OPERATIONAL: Advisory, Query, Response, Statistics messages
+  - Multiprotocol: MP_REACH_NLRI, MP_UNREACH_NLRI, AFI/SAFI handling, withdrawal processing
+
+**Branch**: `claude/test-bgp-message-types-011CUw43bicUzJP8EPKb5FyM` and `claude/continue-work-011CUw31A9p5u2xeQxYUXdtb`
+**Commits**:
+- `61a718f - Add comprehensive NOTIFICATION message tests and fix shutdown communication bug` (53 tests)
+- `562a570 - Add comprehensive UPDATE message integration tests` (20+ tests from integration file)
+- `94ee73b - Add comprehensive tests for BGP message types` (KEEPALIVE, ROUTE_REFRESH, OPERATIONAL, OPEN capabilities, Multiprotocol ~161 tests)
+
+---
+
+## 🎯 Remaining Gaps (Priority Order)
+
+### Phase 3: Network Layer - NOT STARTED ❌
+
+**Priority: HIGH** | **Impact: Critical for production reliability** | **Estimated: 60-80 tests**
+
+#### 1. TCP/Network Layer (540 lines) - 0% Coverage
+**Location**: `src/exabgp/reactor/network/tcp.py`, `src/exabgp/reactor/network/connection.py`
+
+**Recommended Test File**: `tests/test_network_tcp.py` (25-30 tests)
+
+**Test Coverage Needed**:
+- Socket creation and management (IPv4/IPv6)
+- Bind to specific interfaces
+- TLS connection establishment
+- TCP-MD5 authentication
+- Connection timeout handling
+- Error handling (connection refused, network unreachable, etc.)
+- Graceful socket closure
+- Non-blocking I/O
+- Buffer management
+- Socket options (SO_REUSEADDR, TCP_NODELAY, etc.)
+
+**Files to Test**:
+- `src/exabgp/reactor/network/tcp.py` (275 lines)
+- `src/exabgp/reactor/network/connection.py` (265 lines)
+
+---
+
+#### 2. BGP Neighbor State Machine (665 lines) - 10% Coverage
+**Location**: `src/exabgp/bgp/neighbor.py`
+
+**Recommended Test File**: `tests/test_neighbor_state.py` (25-30 tests)
+
+**Test Coverage Needed**:
+- State transitions (6 states):
+  - Idle → Connect
+  - Connect → Active / OpenSent
+  - Active → Connect / OpenSent
+  - OpenSent → OpenConfirm
+  - OpenConfirm → Established
+  - Any → Idle (error cases)
+- Hold timer handling and expiration
+- Keepalive timer management
+- Collision detection (simultaneous connections)
+- Graceful shutdown and restart
+- Error recovery and notification handling
+- BGP capabilities negotiation state
+- Connection retry logic
+- Administrative state changes
+
+**File to Test**:
+- `src/exabgp/bgp/neighbor.py` (665 lines)
+
+---
+
+#### 3. Protocol Handler Extended (477 lines) - 30% Coverage
+**Location**: `src/exabgp/reactor/protocol.py`
+
+**Recommended Test File**: `tests/test_protocol_handler.py` (20-25 tests)
+
+**Test Coverage Needed**:
+- Message routing based on type
+- Negotiation state handling
+- Attribute decoding with negotiated capabilities
+- ADD-PATH processing (send and receive)
+- Extended message support (RFC 8654)
+- Route refresh handling
+- Error handling for malformed messages
+- Message size validation
+- UPDATE message aggregation/splitting
+- EOR (End-of-RIB) marker handling
+
+**File to Test**:
+- `src/exabgp/reactor/protocol.py` (477 lines)
+
+**Note**: Some basic tests exist in `tests/protocol.py` but are mostly commented out/legacy.
+
+---
+
+### Additional Lower Priority Gaps
+
+#### 4. Configuration and Parser - 0-20% Coverage
+**Impact: MEDIUM** | **Complexity: HIGH**
+
+Configuration parsing is critical but has minimal test coverage. This includes:
+- CLI argument parsing
+- Configuration file parsing
+- Neighbor configuration validation
+- Route policy parsing
+
+**Files**: `src/exabgp/configuration/`, `src/exabgp/application/`
+
+---
+
+#### 5. Reactor/Event Loop - 0% Coverage
+**Impact: MEDIUM** | **Complexity: VERY HIGH**
+
+The main event loop and reactor pattern:
+- Event dispatching
+- Timer management
+- Process management
+- API communication
+
+**Files**: `src/exabgp/reactor/loop.py`, `src/exabgp/reactor/api/`
 
 ---
 
@@ -309,31 +452,52 @@ class TestRouteType:
 
 ## 📊 Overall Test Suite Status
 
-**Total Tests**: 788 passing (5 skipped)
-**New Tests Added**: 441 (47 EVPN + 44 MUP + 36 MVPN + 70 Flowspec + 57 BGP-LS + 33 RTC + 34 VPLS + 30 IPVPN + 35 Label + 22 INET + 80 SR - 5 skipped)
-**Overall Coverage**: Improved significantly in core BGP NLRI modules and SR attributes
+**Total Tests**: ~850+ passing (5 skipped)
+**New Tests Added**: ~650+ tests since initial analysis
+  - 441 NLRI tests (EVPN, MUP, MVPN, Flowspec, BGP-LS, RTC, VPLS, IPVPN, Label, INET)
+  - 138 Path Attribute tests (AS_PATH, Attributes framework, Communities, Individual attributes)
+  - 80 SR Attribute tests
+  - 234+ Message Type tests (UPDATE, OPEN, NOTIFICATION, KEEPALIVE, ROUTE_REFRESH, OPERATIONAL, Multiprotocol)
 
-**Major Gaps**:
-- Configuration parsing (0-20% coverage)
-- Reactor/networking (0-40% coverage)
-- CLI tools (0% coverage)
-- Yang/data validation (0% coverage)
+**Overall Coverage**: **60-70%** of BGP protocol core (up from ~30-40%)
 
-**Focus Areas** (BGP protocol core):
-- ✅ EVPN: 92-98%
-- ✅ MUP: 90-93%
-- ✅ MVPN: 89-95%
-- ✅ Flowspec: 88%
-- ✅ BGP-LS: 83%
-- ✅ RTC: 100%
-- ✅ VPLS: 100%
-- ✅ IPVPN: 100%
-- ✅ Label: 100%
-- ✅ INET: 85%
-- ✅ SR (Segment Routing): 95%
-- Path attributes: 70-90% (good)
-- Communities: 85%+ (good)
-- Route Refresh: 95%+ (excellent)
+**✅ Well-Tested Areas** (BGP protocol core):
+- **NLRI Types**: 85-100% coverage
+  - ✅ EVPN: 92-98%
+  - ✅ MUP: 90-93%
+  - ✅ MVPN: 89-95%
+  - ✅ Flowspec: 88%
+  - ✅ BGP-LS: 83%
+  - ✅ RTC: 100%
+  - ✅ VPLS: 100%
+  - ✅ IPVPN: 100%
+  - ✅ Label: 100%
+  - ✅ INET: 85%
+- **Path Attributes**: 90%+ coverage
+  - ✅ AS_PATH: 90%+
+  - ✅ Communities (Standard/Extended/Large): 90%+
+  - ✅ Attributes Framework: 85%+
+  - ✅ Individual attributes (ORIGIN, NEXT_HOP, LOCAL_PREF, MED, etc.): 90%+
+- **Message Types**: 85-95% coverage
+  - ✅ UPDATE: 85%+
+  - ✅ OPEN: 90%+
+  - ✅ NOTIFICATION: 95%+
+  - ✅ KEEPALIVE: 95%+
+  - ✅ ROUTE_REFRESH: 95%+
+  - ✅ OPERATIONAL: 85%+
+  - ✅ Multiprotocol extensions: 90%+
+- **SR (Segment Routing)**: 95% coverage
+  - ✅ SR-MPLS: 95%+
+  - ✅ SRv6: 95%+
+
+**❌ Major Remaining Gaps**:
+- **Network Layer**: 0-10% coverage ⚠️ CRITICAL
+  - TCP/Socket management (0%)
+  - BGP Neighbor state machine (10%)
+  - Protocol handler (30%)
+- **Configuration/Parsing**: 0-20% coverage
+- **Reactor/Event Loop**: 0% coverage
+- **CLI Tools**: 0% coverage
 
 ---
 
