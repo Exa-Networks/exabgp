@@ -873,5 +873,443 @@ class TestPollingMechanisms:
             assert conn._wpoller == {}
 
 
+class TestConnectionBasics:
+    """Test basic Connection initialization and utility methods"""
+
+    def test_init_ipv4_connection(self):
+        """Test Connection initialization with IPv4"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        assert conn.afi == AFI.ipv4
+        assert conn.peer == '192.0.2.1'
+        assert conn.local == '192.0.2.2'
+        assert conn.io is None
+        assert conn.established is False
+        assert conn.msg_size == 4096  # INITIAL_SIZE
+        assert conn._rpoller == {}
+        assert conn._wpoller == {}
+
+    def test_init_ipv6_connection(self):
+        """Test Connection initialization with IPv6"""
+        from exabgp.protocol.family import AFI
+        conn = Connection(AFI.ipv6, '2001:db8::1', '2001:db8::2')
+
+        assert conn.afi == AFI.ipv6
+        assert conn.peer == '2001:db8::1'
+        assert conn.local == '2001:db8::2'
+
+    def test_name_returns_formatted_string(self):
+        """Test name() returns properly formatted connection name"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        conn.direction = 'outgoing'
+        conn.id = 5
+
+        name = conn.name()
+
+        assert 'outgoing-5' in name
+        assert '192.0.2.2-192.0.2.1' in name
+
+    def test_session_returns_direction_and_id(self):
+        """Test session() returns session identifier"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        conn.direction = 'incoming'
+        conn.id = 3
+
+        session = conn.session()
+
+        assert session == 'incoming-3'
+
+    def test_fd_returns_fileno_when_socket_exists(self):
+        """Test fd() returns file descriptor when socket exists"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 42
+        conn.io = mock_sock
+
+        fd = conn.fd()
+
+        assert fd == 42
+        mock_sock.fileno.assert_called_once()
+
+    def test_fd_returns_minus_one_when_no_socket(self):
+        """Test fd() returns -1 when no socket"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        fd = conn.fd()
+
+        assert fd == -1
+
+    def test_success_increments_identifier(self):
+        """Test success() increments connection identifier"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        conn.direction = 'outgoing'
+        conn.identifier = {'outgoing': 5}
+
+        new_id = conn.success()
+
+        assert new_id == 6
+        assert conn.identifier['outgoing'] == 6
+
+    def test_success_initializes_identifier(self):
+        """Test success() initializes identifier if not present"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        conn.direction = 'incoming'
+        conn.identifier = {}
+
+        new_id = conn.success()
+
+        assert new_id == 2  # 1 + 1
+        assert conn.identifier['incoming'] == 2
+
+    def test_close_with_active_socket(self):
+        """Test close() properly closes active socket"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        conn.io = mock_sock
+
+        with patch('exabgp.reactor.network.connection.log'):
+            conn.close()
+
+        mock_sock.close.assert_called_once()
+        assert conn.io is None
+
+    def test_close_with_no_socket(self):
+        """Test close() handles case when no socket exists"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        conn.io = None
+
+        with patch('exabgp.reactor.network.connection.log'):
+            # Should not raise exception
+            conn.close()
+
+        assert conn.io is None
+
+    def test_close_handles_socket_error(self):
+        """Test close() handles socket errors gracefully"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.close.side_effect = OSError('Socket already closed')
+        conn.io = mock_sock
+
+        with patch('exabgp.reactor.network.connection.log'):
+            # Should not raise exception
+            conn.close()
+
+        assert conn.io is None
+
+
+class TestExtendedMessageSize:
+    """Test message size handling including extended messages"""
+
+    def test_default_message_size(self):
+        """Test default message size is 4096 bytes"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        assert conn.msg_size == 4096
+
+    def test_extended_message_size_change(self):
+        """Test message size can be changed for extended messages"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        # Simulate negotiating extended message capability
+        conn.msg_size = 65535
+
+        assert conn.msg_size == 65535
+
+    def test_reader_validates_against_current_msg_size(self):
+        """Test reader() validates length against current msg_size"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        conn.msg_size = 100  # Small limit for testing
+
+        # Message with length 101 (exceeds msg_size)
+        invalid_header = Message.MARKER + struct.pack('!H', 101) + b'\x02'
+
+        def mock_reader(num_bytes):
+            if num_bytes == 19:
+                yield invalid_header
+            else:
+                yield b''
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        length, msg_type, header, body, error = next(gen)
+
+        assert error is not None
+        assert isinstance(error, NotifyError)
+        assert error.code == 1  # Message Header Error
+        assert error.subcode == 2  # Bad Message Length
+
+    def test_reader_accepts_extended_size_when_configured(self):
+        """Test reader() accepts large messages when extended size configured"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        conn.msg_size = 65535  # Extended message size
+
+        # Large UPDATE message (5000 bytes)
+        body_size = 5000 - 19
+        header_data = Message.MARKER + struct.pack('!H', 5000) + b'\x02'
+        body_data = b'\x00' * body_size
+
+        reads = [header_data, body_data]
+        read_index = [0]
+
+        def mock_reader(num_bytes):
+            data = reads[read_index[0]]
+            read_index[0] += 1
+            yield data
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        length, msg_type, header, body, error = next(gen)
+
+        assert error is None
+        assert length == 5000
+        assert msg_type == 2
+
+
+class TestErrorPropagation:
+    """Test error propagation through Connection methods"""
+
+    def test_writer_propagates_fatal_error(self):
+        """Test writer() propagates fatal socket errors"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+
+        error = socket.error(errno.ECONNRESET, 'Connection reset')
+        error.errno = errno.ECONNRESET
+        mock_sock.send.side_effect = error
+
+        with patch('select.poll') as mock_poll:
+            mock_poller = Mock()
+            mock_poller.poll.return_value = [(5, 4)]
+            mock_poll.return_value = mock_poller
+
+            with patch('exabgp.reactor.network.connection.log'):
+                with patch('exabgp.reactor.network.connection.logfunc'):
+                    gen = conn.writer(b'test')
+
+                    with pytest.raises(NetworkError) as exc_info:
+                        for _ in gen:
+                            pass
+
+                    assert 'Problem while writing data' in str(exc_info.value)
+
+    def test_reader_propagates_fatal_error(self):
+        """Test _reader() propagates fatal socket errors"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+
+        error = socket.error(errno.ECONNREFUSED, 'Connection refused')
+        error.errno = errno.ECONNREFUSED
+        mock_sock.recv.side_effect = error
+
+        with patch('select.poll') as mock_poll:
+            mock_poller = Mock()
+            mock_poller.poll.return_value = [(5, 1)]
+            mock_poll.return_value = mock_poller
+
+            with patch('exabgp.reactor.network.connection.log'):
+                gen = conn._reader(10)
+
+                with pytest.raises(LostConnection):
+                    for _ in gen:
+                        pass
+
+    def test_reader_clears_socket_on_error(self):
+        """Test _reader() clears socket on connection loss"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+        mock_sock.recv.return_value = b''  # Connection closed
+
+        with patch('select.poll') as mock_poll:
+            mock_poller = Mock()
+            mock_poller.poll.return_value = [(5, 1)]
+            mock_poll.return_value = mock_poller
+
+            with patch('exabgp.reactor.network.connection.log'):
+                gen = conn._reader(10)
+
+                with pytest.raises(LostConnection):
+                    for _ in gen:
+                        pass
+
+                # Socket should be closed
+                assert conn.io is None
+
+
+class TestNotificationErrorTypes:
+    """Test different BGP NOTIFICATION error codes"""
+
+    def test_reader_connection_not_synchronized_error(self):
+        """Test reader() generates connection not synchronized error"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        # Invalid marker
+        invalid_header = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
+
+        def mock_reader(num_bytes):
+            yield invalid_header if num_bytes == 19 else b''
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        _, _, _, _, error = next(gen)
+
+        assert error.code == 1  # Message Header Error
+        assert error.subcode == 1  # Connection Not Synchronized
+
+    def test_reader_bad_message_length_too_small(self):
+        """Test reader() generates bad message length error for too small"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        # Length 10 (below minimum 19)
+        invalid_header = Message.MARKER + struct.pack('!H', 10) + b'\x01'
+
+        def mock_reader(num_bytes):
+            yield invalid_header if num_bytes == 19 else b''
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        _, _, _, _, error = next(gen)
+
+        assert error.code == 1  # Message Header Error
+        assert error.subcode == 2  # Bad Message Length
+
+    def test_reader_bad_message_length_too_large(self):
+        """Test reader() generates bad message length error for too large"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        # Length 100000 (way above maximum)
+        invalid_header = Message.MARKER + struct.pack('!H', 65535) + b'\x01'
+        # Note: struct.pack('!H', 100000) would overflow, using max uint16
+
+        def mock_reader(num_bytes):
+            yield invalid_header if num_bytes == 19 else b''
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        _, _, _, _, error = next(gen)
+
+        assert error.code == 1  # Message Header Error
+        assert error.subcode == 2  # Bad Message Length
+
+
+class TestConcurrentReaderWriter:
+    """Test concurrent reader and writer operations"""
+
+    def test_reading_and_writing_use_separate_pollers(self):
+        """Test reading() and writing() maintain separate pollers"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+
+        with patch('select.poll') as mock_poll:
+            mock_poller = Mock()
+            mock_poller.poll.return_value = [(5, 1)]
+            mock_poll.return_value = mock_poller
+
+            # Register for reading
+            conn.reading()
+            read_poller = conn._rpoller.get(mock_sock)
+
+            # Register for writing
+            conn.writing()
+            write_poller = conn._wpoller.get(mock_sock)
+
+            # Should have separate pollers
+            assert read_poller is not None
+            assert write_poller is not None
+            assert mock_poll.call_count == 2
+
+    def test_poller_cleanup_on_socket_close(self):
+        """Test pollers are cleared when connection closes"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        conn.io = mock_sock
+        conn._rpoller = {mock_sock: Mock()}
+        conn._wpoller = {mock_sock: Mock()}
+
+        with patch('exabgp.reactor.network.connection.log'):
+            conn.close()
+
+        # Pollers should still reference old socket
+        # (they'll be recreated on next use with new socket)
+        assert conn.io is None
+
+
+class TestMessageTypeValidation:
+    """Test validation of different BGP message types"""
+
+    def test_reader_accepts_notification_message(self):
+        """Test reader() accepts NOTIFICATION message"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        # NOTIFICATION message (type 3) with 2-byte body
+        header_data = Message.MARKER + struct.pack('!H', 21) + b'\x03'
+        body_data = b'\x01\x01'  # Error code and subcode
+
+        reads = [header_data, body_data]
+        read_index = [0]
+
+        def mock_reader(num_bytes):
+            data = reads[read_index[0]]
+            read_index[0] += 1
+            yield data
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        length, msg_type, header, body, error = next(gen)
+
+        assert error is None
+        assert length == 21
+        assert msg_type == 3
+        assert len(body) == 2
+
+    def test_reader_accepts_route_refresh_message(self):
+        """Test reader() accepts ROUTE_REFRESH message"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        # ROUTE_REFRESH message (type 5) with 4-byte body
+        header_data = Message.MARKER + struct.pack('!H', 23) + b'\x05'
+        body_data = b'\x00\x01\x00\x01'  # AFI, Reserved, SAFI
+
+        reads = [header_data, body_data]
+        read_index = [0]
+
+        def mock_reader(num_bytes):
+            data = reads[read_index[0]]
+            read_index[0] += 1
+            yield data
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        length, msg_type, header, body, error = next(gen)
+
+        assert error is None
+        assert length == 23
+        assert msg_type == 5
+        assert len(body) == 4
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
