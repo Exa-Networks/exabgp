@@ -89,7 +89,7 @@ ExaBGP is a comprehensive BGP (Border Gateway Protocol) implementation in Python
 
 ### 2.1 Test Files Summary
 ```
-/home/user/exabgp/tests/
+/home/user/exabgp/tests/unit/
 ├── test_open.py              (2 tests)    - OPEN message
 ├── test_notification.py      (2 tests)    - NOTIFICATION message
 ├── test_decode.py            (2 tests)    - UPDATE message decoding

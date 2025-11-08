@@ -5,7 +5,7 @@
 ### ✅ Completed Work
 
 #### EVPN (Ethernet VPN) - **92-98% Coverage**
-- **Files**: `tests/test_evpn.py` (47 tests)
+- **Files**: `tests/unit/test_evpn.py` (47 tests)
 - **Coverage Improvements**:
   - `mac.py`: 27% → 92% (+65%)
   - `multicast.py`: 36% → 94% (+58%)
@@ -30,7 +30,7 @@
 **Commit**: `4f8fbc1 - Add comprehensive EVPN tests and fix bugs (92-98% coverage)`
 
 #### MUP (Mobile User Plane) - **90-93% Coverage** ✅
-- **Files**: `tests/test_mup.py` (44 tests)
+- **Files**: `tests/unit/test_mup.py` (44 tests)
 - **Coverage Improvements**:
   - `dsd.py`: 41% → 92% (+51%)
   - `isd.py`: 36% → 93% (+57%)
@@ -51,7 +51,7 @@
 **Commit**: `bab0f0c - Add comprehensive MUP tests (90-93% coverage improvement)`
 
 #### MVPN (Multicast VPN) - **89-95% Coverage** ✅
-- **Files**: `tests/test_mvpn.py` (36 tests)
+- **Files**: `tests/unit/test_mvpn.py` (36 tests)
 - **Coverage Improvements**:
   - `sharedjoin.py`: 30% → 95% (+65%)
   - `sourcead.py`: 31% → 95% (+64%)
@@ -72,7 +72,7 @@
 **Commit**: `abf0867 - Add comprehensive MVPN tests (89-95% coverage improvement)`
 
 #### Flowspec (Flow Specification) - **88% Coverage** ✅
-- **Files**: `tests/test_flowspec.py` (70 tests)
+- **Files**: `tests/unit/test_flowspec.py` (70 tests)
 - **Coverage Improvements**:
   - `flow.py`: 64% → 88% (+24%)
 
@@ -93,7 +93,7 @@
 **Commit**: `8a01359 - Add comprehensive Flowspec tests (64%→88% coverage improvement)`
 
 #### BGP-LS (Link-State) - **83% Coverage** ✅
-- **Files**: `tests/test_bgpls.py` (57 tests: 52 passed, 5 skipped)
+- **Files**: `tests/unit/test_bgpls.py` (57 tests: 52 passed, 5 skipped)
 - **Coverage Improvements**:
   - `link.py`: 23% → 97% (+74%)
   - `nlri.py`: 54% → 92% (+38%)
@@ -128,7 +128,7 @@
 **Commit**: `43bea61 - Add comprehensive BGP-LS tests (46%→83% coverage improvement)`
 
 #### RTC (Route Target Constraint) - **100% Coverage** ✅
-- **Files**: `tests/test_rtc.py` (33 tests, all passed)
+- **Files**: `tests/unit/test_rtc.py` (33 tests, all passed)
 - **Coverage Improvements**:
   - `rtc.py`: 47% → 100% (+53%)
 
@@ -146,7 +146,7 @@
 **Commit**: TBD
 
 #### VPLS (Virtual Private LAN Service) - **100% Coverage** ✅
-- **Files**: `tests/test_vpls.py` (34 tests, all passed)
+- **Files**: `tests/unit/test_vpls.py` (34 tests, all passed)
 - **Coverage Improvements**:
   - `vpls.py`: 54% → 100% (+46%)
 
@@ -163,7 +163,7 @@
 **Commit**: TBD
 
 #### IPVPN (IP VPN) - **100% Coverage** ✅
-- **Files**: `tests/test_ipvpn.py` (30 tests, all passed)
+- **Files**: `tests/unit/test_ipvpn.py` (30 tests, all passed)
 - **Coverage Improvements**:
   - `ipvpn.py`: 51% → 100% (+49%)
 
@@ -181,7 +181,7 @@
 **Commit**: TBD
 
 #### Label (MPLS-Labeled Routes) - **100% Coverage** ✅
-- **Files**: `tests/test_label.py` (35 tests, all passed)
+- **Files**: `tests/unit/test_label.py` (35 tests, all passed)
 - **Coverage Improvements**:
   - `label.py`: 53% → 100% (+47%)
 
@@ -200,7 +200,7 @@
 **Commit**: TBD
 
 #### INET (IPv4/IPv6 Unicast/Multicast) - **85% Coverage** ✅
-- **Files**: `tests/test_inet.py` (22 tests, all passed)
+- **Files**: `tests/unit/test_inet.py` (22 tests, all passed)
 - **Coverage Improvements**:
   - `inet.py`: 59% → 85% (+26%)
 
@@ -219,7 +219,7 @@
 ---
 
 #### Segment Routing (SR-MPLS & SRv6) - **95% Coverage** ✅
-- **Files**: `tests/test_sr_attributes.py` (80 tests, all passed)
+- **Files**: `tests/unit/test_sr_attributes.py` (80 tests, all passed)
 - **Coverage Improvements**:
   - `sr/labelindex.py`: 52% → 100% (+48%)
   - `sr/prefixsid.py`: 53% → 97% (+44%)
@@ -249,7 +249,7 @@
 ---
 
 #### Path Attributes (Core) - **90%+ Coverage** ✅
-- **Files**: `tests/test_aspath.py`, `tests/test_attributes.py`, `tests/test_communities.py`, `tests/test_path_attributes.py` (138 tests total)
+- **Files**: `tests/unit/test_aspath.py`, `tests/unit/test_attributes.py`, `tests/unit/test_communities.py`, `tests/unit/test_path_attributes.py` (138 tests total)
 - **Coverage Improvements**:
   - `aspath.py`: ~40% → 90%+ (+50%)
   - `attributes.py`: ~30% → 85%+ (+55%)
@@ -270,7 +270,7 @@
 ---
 
 #### BGP Message Types - **85%+ Coverage** ✅
-- **Files**: `tests/test_update_message.py`, `tests/test_open_capabilities.py`, `tests/test_multiprotocol.py`, `tests/test_notification_comprehensive.py`, `tests/test_keepalive.py`, `tests/test_route_refresh.py`, `tests/test_operational_nop.py` (234+ tests)
+- **Files**: `tests/unit/test_update_message.py`, `tests/unit/test_open_capabilities.py`, `tests/unit/test_multiprotocol.py`, `tests/unit/test_notification_comprehensive.py`, `tests/unit/test_keepalive.py`, `tests/unit/test_route_refresh.py`, `tests/unit/test_operational_nop.py` (234+ tests)
 - **Coverage Improvements**:
   - UPDATE message validation: ~30% → 85%+ (+55%)
   - OPEN capabilities: ~40% → 90%+ (+50%)
@@ -306,7 +306,7 @@
 #### 1. TCP/Network Layer (540 lines) - 0% Coverage
 **Location**: `src/exabgp/reactor/network/tcp.py`, `src/exabgp/reactor/network/connection.py`
 
-**Recommended Test File**: `tests/test_network_tcp.py` (25-30 tests)
+**Recommended Test File**: `tests/unit/test_network_tcp.py` (25-30 tests)
 
 **Test Coverage Needed**:
 - Socket creation and management (IPv4/IPv6)
@@ -329,7 +329,7 @@
 #### 2. BGP Neighbor State Machine (665 lines) - 10% Coverage
 **Location**: `src/exabgp/bgp/neighbor.py`
 
-**Recommended Test File**: `tests/test_neighbor_state.py` (25-30 tests)
+**Recommended Test File**: `tests/unit/test_neighbor_state.py` (25-30 tests)
 
 **Test Coverage Needed**:
 - State transitions (6 states):
@@ -356,7 +356,7 @@
 #### 3. Protocol Handler Extended (477 lines) - 30% Coverage
 **Location**: `src/exabgp/reactor/protocol.py`
 
-**Recommended Test File**: `tests/test_protocol_handler.py` (20-25 tests)
+**Recommended Test File**: `tests/unit/test_protocol_handler.py` (20-25 tests)
 
 **Test Coverage Needed**:
 - Message routing based on type
@@ -373,7 +373,7 @@
 **File to Test**:
 - `src/exabgp/reactor/protocol.py` (477 lines)
 
-**Note**: Some basic tests exist in `tests/protocol.py` but are mostly commented out/legacy.
+**Note**: Some basic tests exist in `tests/unit/protocol.py` but are mostly commented out/legacy.
 
 ---
 
@@ -530,7 +530,7 @@ class TestRouteType:
 4. **Start next module** (MUP recommended):
    ```bash
    # Create new test file
-   touch tests/test_mup.py
+   touch tests/unit/test_mup.py
 
    # Review MUP source files
    ls -la src/exabgp/bgp/message/update/nlri/mup/
@@ -540,7 +540,7 @@ class TestRouteType:
 
 5. **Commit pattern**:
    ```bash
-   git add tests/test_mup.py
+   git add tests/unit/test_mup.py
    git commit -m "Add comprehensive MUP tests (XX% coverage improvement)"
    git push -u origin claude/continue-test-011CUvmMDebRj7XRxN1TyctH
    ```
@@ -559,5 +559,5 @@ class TestRouteType:
 ## 🔗 References
 
 - Previous work: See commit history on `claude/continue-test-011CUvmMDebRj7XRxN1TyctH`
-- Test patterns: `tests/test_evpn.py` (comprehensive example)
-- Existing tests: Review `tests/nlri_tests.py` for older patterns
+- Test patterns: `tests/unit/test_evpn.py` (comprehensive example)
+- Existing tests: Review `tests/unit/nlri_tests.py` for older patterns

@@ -50,7 +50,7 @@ This is HIGH RISK as it processes untrusted route data.
 
 ## Task 2.2: Create UPDATE Test Helpers
 
-**File**: `/home/user/exabgp/tests/helpers.py`
+**File**: `/home/user/exabgp/tests/unit/helpers.py`
 
 **What to do**:
 Add UPDATE-specific helpers (if not already present from Task 0.5):
@@ -182,7 +182,7 @@ def create_next_hop_attribute(next_hop='192.0.2.1'):
 ```
 
 **Acceptance Criteria**:
-- [ ] Helper functions added to tests/helpers.py
+- [ ] Helper functions added to tests/unit/helpers.py
 - [ ] Functions documented
 - [ ] Functions tested manually
 - [ ] File saved
@@ -754,7 +754,7 @@ env PYTHONPATH=src HYPOTHESIS_PROFILE=extensive \
 Add module documentation and commit:
 
 ```bash
-git add tests/fuzz/fuzz_update_message.py tests/helpers.py
+git add tests/fuzz/fuzz_update_message.py tests/unit/helpers.py
 git commit -m "Add comprehensive fuzzing tests for UPDATE message parser
 
 - Test length field validation (withdrawn, attributes)
