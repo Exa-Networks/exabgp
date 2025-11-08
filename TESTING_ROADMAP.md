@@ -25,7 +25,7 @@ Tests by Category:
 - ✅ AS_TRANS handling
 
 **File:** `/src/exabgp/bgp/message/update/attribute/aspath.py`
-**Test File:** `tests/test_aspath.py` (21 tests)
+**Test File:** `tests/unit/test_aspath.py` (21 tests)
 
 ---
 
@@ -36,7 +36,7 @@ Tests by Category:
 - ✅ Large communities (RFC 8092)
 - ✅ All subtypes tested
 
-**Test File:** `tests/test_communities.py` (27 tests)
+**Test File:** `tests/unit/test_communities.py` (27 tests)
 
 ---
 
@@ -49,7 +49,7 @@ Tests by Category:
 - ✅ TREAT_AS_WITHDRAW behavior
 
 **File:** `/src/exabgp/bgp/message/update/attribute/attributes.py`
-**Test File:** `tests/test_attributes.py` (21 tests)
+**Test File:** `tests/unit/test_attributes.py` (21 tests)
 
 ---
 
@@ -61,7 +61,7 @@ Tests by Category:
 - ✅ Mandatory attributes verification
 
 **File:** `/src/exabgp/bgp/message/update/__init__.py`
-**Test Files:** `tests/test_update_message.py` (20 tests), `tests/fuzz/test_update_message_integration.py` (integration tests)
+**Test Files:** `tests/unit/test_update_message.py` (20 tests), `tests/fuzz/test_update_message_integration.py` (integration tests)
 
 ---
 
@@ -71,7 +71,7 @@ Tests by Category:
 - ✅ MP_UNREACH_NLRI parsing
 - ✅ AFI/SAFI handling
 
-**Test File:** `tests/test_multiprotocol.py` (17 tests)
+**Test File:** `tests/unit/test_multiprotocol.py` (17 tests)
 
 ---
 
@@ -83,7 +83,7 @@ Tests by Category:
 - ✅ Router ID validation
 - ✅ Capability negotiation
 
-**Test File:** `tests/test_open_capabilities.py` (33 tests)
+**Test File:** `tests/unit/test_open_capabilities.py` (33 tests)
 
 ---
 
@@ -100,7 +100,7 @@ Tests by Category:
 - ✅ AIGP
 - ✅ PMSI
 
-**Test File:** `tests/test_path_attributes.py` (71 tests)
+**Test File:** `tests/unit/test_path_attributes.py` (71 tests)
 
 ---
 
@@ -111,7 +111,7 @@ Tests by Category:
 - ✅ Node/Link/Prefix descriptors
 - ⚠️ 5 hash bugs discovered and documented
 
-**Test File:** `tests/test_bgpls.py` (57 tests, 5 skipped due to bugs)
+**Test File:** `tests/unit/test_bgpls.py` (57 tests, 5 skipped due to bugs)
 
 ---
 
@@ -121,7 +121,7 @@ Tests by Category:
 - ✅ SRv6 (L2 Service, L3 Service, SID Information, SID Structure)
 - ✅ Generic fallback for unknown TLVs
 
-**Test File:** `tests/test_sr_attributes.py` (80 tests)
+**Test File:** `tests/unit/test_sr_attributes.py` (80 tests)
 
 ---
 
@@ -132,7 +132,7 @@ Tests by Category:
 - ✅ Operator combinations (EQ, GT, LT, AND, OR)
 - ✅ Binary operators (MATCH, NOT, INCLUDE)
 
-**Test File:** `tests/test_flowspec.py` (70 tests)
+**Test File:** `tests/unit/test_flowspec.py` (70 tests)
 
 ---
 
@@ -144,10 +144,10 @@ Tests by Category:
 - ✅ OPERATIONAL (46 tests) - Advisory, Query, Response, Statistics
 
 **Test Files:**
-- `tests/test_notification_comprehensive.py` (53 tests)
-- `tests/test_keepalive.py` (21 tests)
-- `tests/test_route_refresh.py` (43 tests)
-- `tests/test_operational_nop.py` (46 tests)
+- `tests/unit/test_notification_comprehensive.py` (53 tests)
+- `tests/unit/test_keepalive.py` (21 tests)
+- `tests/unit/test_route_refresh.py` (43 tests)
+- `tests/unit/test_operational_nop.py` (46 tests)
 
 ---
 
@@ -179,7 +179,7 @@ Tests by Category:
 - `/src/exabgp/reactor/network/tcp.py` (275 lines)
 - `/src/exabgp/reactor/network/connection.py` (265 lines)
 
-**Recommended Test File:** `tests/test_network_tcp.py`
+**Recommended Test File:** `tests/unit/test_network_tcp.py`
 
 ---
 
@@ -195,7 +195,7 @@ Tests by Category:
 
 **File:** `/src/exabgp/bgp/neighbor.py` (665 lines)
 
-**Recommended Test File:** `tests/test_neighbor_state.py`
+**Recommended Test File:** `tests/unit/test_neighbor_state.py`
 
 ---
 
@@ -211,7 +211,7 @@ Tests by Category:
 
 **File:** `/src/exabgp/reactor/protocol.py` (477 lines)
 
-**Recommended Test File:** `tests/test_protocol_handler.py`
+**Recommended Test File:** `tests/unit/test_protocol_handler.py`
 
 ---
 

@@ -41,11 +41,11 @@ python -m pip install --upgrade pip
 pip install -r qa/requirements.txt
 
 # Run unit tests with coverage (now uses standard test_*.py naming)
-env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/test_*.py ./tests/fuzz/test_*.py
+env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
 ```
 
 **Test files (using standard pytest naming convention):**
-- All files matching `tests/test_*.py` pattern
+- All files matching `tests/unit/test_*.py` pattern
 - All files matching `tests/fuzz/test_*.py` pattern
 - Includes comprehensive test coverage for BGP messages, attributes, NLRI types, and fuzzing
 

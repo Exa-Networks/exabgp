@@ -10,8 +10,8 @@
 ## 📦 What's Included in This PR
 
 ### New Test Files (45 tests)
-1. **`tests/test_aspath.py`** - 21 tests for AS_PATH attribute parsing
-2. **`tests/test_attributes.py`** - 24 tests for attributes framework
+1. **`tests/unit/test_aspath.py`** - 21 tests for AS_PATH attribute parsing
+2. **`tests/unit/test_attributes.py`** - 24 tests for attributes framework
 
 ### Documentation Files
 1. **`TESTING_ANALYSIS.md`** - Comprehensive codebase analysis (437 lines)
@@ -91,7 +91,7 @@ cat PROGRESS.md
 ```
 
 ### What to Work On Next (Phase 1.2)
-**File to create:** `tests/test_update_message.py`
+**File to create:** `tests/unit/test_update_message.py`
 **Target:** `src/exabgp/bgp/message/update/__init__.py`
 **Goal:** +13 tests for UPDATE message integration
 **See:** Section "Phase 1.2" in `PROGRESS.md`
@@ -100,7 +100,7 @@ cat PROGRESS.md
 - `PROGRESS.md` - Current status, next tasks, resumption guide
 - `TESTING_ROADMAP.md` - Full testing strategy
 - `TESTING_ANALYSIS.md` - Detailed component analysis
-- `tests/test_attributes.py` - Example of mocking patterns
+- `tests/unit/test_attributes.py` - Example of mocking patterns
 
 ---
 

@@ -10,7 +10,7 @@ This PR adds **45 comprehensive tests** for critical BGP path attribute parsing 
 
 ### New Test Files
 
-#### 1. `tests/test_aspath.py` - 21 tests for AS_PATH attribute
+#### 1. `tests/unit/test_aspath.py` - 21 tests for AS_PATH attribute
 Tests the complete AS_PATH parsing implementation covering:
 - ✅ All 4 segment types: `AS_SET`, `AS_SEQUENCE`, `CONFED_SEQUENCE`, `CONFED_SET`
 - ✅ ASN2 (2-byte) and ASN4 (4-byte) format handling
@@ -24,7 +24,7 @@ Tests the complete AS_PATH parsing implementation covering:
 **Target:** `src/exabgp/bgp/message/update/attribute/aspath.py` (246 lines)
 **Coverage:** 0 → 21 tests (previously untested)
 
-#### 2. `tests/test_attributes.py` - 24 tests for attributes framework
+#### 2. `tests/unit/test_attributes.py` - 24 tests for attributes framework
 Tests the attribute parsing orchestrator covering:
 - ✅ Flag validation (`OPTIONAL`, `TRANSITIVE`, `PARTIAL`, `EXTENDED_LENGTH`)
 - ✅ Length parsing (1-byte standard, 2-byte extended)
@@ -157,8 +157,8 @@ See `TESTING_ROADMAP.md` for complete multi-phase plan (targeting 90-95% coverag
 ## Files Changed
 
 ```
-tests/test_aspath.py          +453 lines (NEW)
-tests/test_attributes.py      +472 lines (NEW)
+tests/unit/test_aspath.py          +453 lines (NEW)
+tests/unit/test_attributes.py      +472 lines (NEW)
 TESTING_ANALYSIS.md           +437 lines (NEW)
 TESTING_ROADMAP.md            +274 lines (NEW)
 PROGRESS.md                   +XXX lines (NEW)
@@ -187,7 +187,7 @@ pip install hypothesis pytest-cov pytest-xdist pytest-timeout pytest-benchmark
 PYTHONPATH=src python -m pytest tests/ -v
 
 # Run only new tests
-PYTHONPATH=src python -m pytest tests/test_aspath.py tests/test_attributes.py -v
+PYTHONPATH=src python -m pytest tests/unit/test_aspath.py tests/unit/test_attributes.py -v
 
 # Run with coverage
 PYTHONPATH=src python -m pytest tests/ --cov=src/exabgp/bgp/message/update/attribute --cov-report=term-missing

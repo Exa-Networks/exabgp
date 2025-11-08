@@ -100,7 +100,7 @@ Create a comprehensive list:
 
 ## Task 3.3: Create Attribute Helpers
 
-**File**: `/home/user/exabgp/tests/helpers.py`
+**File**: `/home/user/exabgp/tests/unit/helpers.py`
 
 **What to do**:
 Add comprehensive attribute helpers:
@@ -722,7 +722,7 @@ env PYTHONPATH=src HYPOTHESIS_PROFILE=extensive \
 
 **What to do**:
 ```bash
-git add tests/fuzz/fuzz_attributes.py tests/fuzz/ATTRIBUTES_STRUCTURE.md tests/helpers.py
+git add tests/fuzz/fuzz_attributes.py tests/fuzz/ATTRIBUTES_STRUCTURE.md tests/unit/helpers.py
 git commit -m "Add comprehensive fuzzing tests for BGP path attributes parser
 
 - Test all attribute flag combinations
