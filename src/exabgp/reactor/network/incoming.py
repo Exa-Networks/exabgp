@@ -29,11 +29,11 @@ class Incoming(Connection):
             self.close()
             raise NotConnected(errstr(exc))
 
-    def notification(self, code, subcode, message):
+    async def notification(self, code, subcode, message):
+        """Send a notification message and close the connection"""
         try:
             notification = Notify(code, subcode, message).message()
-            for boolean in self.writer(notification):
-                yield False
+            await self.writer(notification)
             self.close()
         except NetworkError:
             pass  # This is only be used when closing session due to unconfigured peers - so issues do not matter

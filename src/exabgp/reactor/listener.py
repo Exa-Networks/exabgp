@@ -9,8 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import asyncio
 import os
-import uuid
 import copy
 import socket
 
@@ -139,6 +139,8 @@ class Listener(object):
         return peer_connected
 
     def _connected(self):
+        """Get list of accepted connections"""
+        connections = []
         try:
             for sock, io in list(self._accepted.items()):
                 del self._accepted[sock]
@@ -151,14 +153,15 @@ class Listener(object):
                 else:
                     raise AcceptError('unexpected address family (%d)' % sock.family)
                 fam = self._family_AFI_map[sock.family]
-                yield Incoming(fam, remote_ip, local_ip, io)
+                connections.append(Incoming(fam, remote_ip, local_ip, io))
         except NetworkError as exc:
             log.critical(str(exc), 'network')
+        return connections
 
-    def new_connections(self):
+    async def new_connections(self):
+        """Handle new incoming connections"""
         if not self.serving:
             return
-        yield None
 
         reactor = self._reactor
         ranged_neighbor = []
@@ -190,32 +193,28 @@ class Listener(object):
                     ranged_neighbor.append(neighbor)
                     continue
 
-                denied = reactor.handle_connection(key, connection)
+                denied = await reactor.handle_connection(key, connection)
                 if denied:
                     log.debug('refused connection from %s due to the state machine' % connection.name(), 'network')
                     break
                 log.debug('accepted connection from %s' % connection.name(), 'network')
                 break
             else:
-                # we did not break (and nothign was found/done or we have group match)
+                # we did not break (and nothing was found/done or we have group match)
                 matched = len(ranged_neighbor)
                 if matched > 1:
                     log.debug(
                         'could not accept connection from %s (more than one neighbor match)' % connection.name(),
                         'network',
                     )
-                    reactor.asynchronous.schedule(
-                        str(uuid.uuid1()),
-                        'sending notification (6,5)',
-                        connection.notification(6, 5, 'could not accept the connection (more than one neighbor match)'),
+                    asyncio.create_task(
+                        connection.notification(6, 5, 'could not accept the connection (more than one neighbor match)')
                     )
                     return
                 if not matched:
                     log.debug('no session configured for %s' % connection.name(), 'network')
-                    reactor.asynchronous.schedule(
-                        str(uuid.uuid1()),
-                        'sending notification (6,3)',
-                        connection.notification(6, 3, 'no session configured for the peer'),
+                    asyncio.create_task(
+                        connection.notification(6, 3, 'no session configured for the peer')
                     )
                     return
 
@@ -228,7 +227,7 @@ class Listener(object):
                     new_neighbor['router-id'] = RouterID.create(connection.local)
 
                 new_peer = Peer(new_neighbor, reactor)
-                denied = new_peer.handle_connection(connection)
+                denied = await new_peer.handle_connection(connection)
                 if denied:
                     log.debug('refused connection from %s due to the state machine' % connection.name(), 'network')
                     return

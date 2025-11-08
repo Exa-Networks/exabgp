@@ -4,16 +4,18 @@
 test_connection_advanced.py
 
 Advanced tests for network connection layer functionality.
-Tests generator-based I/O, BGP message validation, multi-packet assembly, and buffer management.
+Tests async I/O, BGP message validation, multi-packet assembly, and buffer management.
 
 Created: 2025-11-08
+Updated: 2025-11-08 - Adapted for async/await architecture
 """
 
 import pytest
 import os
 import socket
 import struct
-from unittest.mock import Mock, MagicMock, patch, call
+import asyncio
+from unittest.mock import Mock, MagicMock, patch, call, AsyncMock
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
@@ -33,60 +35,51 @@ from exabgp.bgp.message import Message
 
 
 class TestGeneratorBasedReader:
-    """Test _reader() generator-based I/O method"""
+    """Test _reader() async I/O method"""
 
-    def test_reader_no_socket_raises_not_connected(self):
+    @pytest.mark.asyncio
+    async def test_reader_no_socket_raises_not_connected(self):
         """Test _reader() raises NotConnected when no socket"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        gen = conn._reader(10)
         with pytest.raises(NotConnected) as exc_info:
-            next(gen)
+            await conn._reader(10)
 
         assert 'closed TCP connection' in str(exc_info.value)
 
-    def test_reader_zero_bytes_yields_empty(self):
-        """Test _reader(0) yields empty bytes immediately"""
+    @pytest.mark.asyncio
+    async def test_reader_zero_bytes_yields_empty(self):
+        """Test _reader(0) returns empty bytes immediately"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
         conn.io = Mock()
 
-        gen = conn._reader(0)
-        result = next(gen)
+        result = await conn._reader(0)
 
         assert result == b''
         # Should not call recv for zero bytes
         conn.io.recv.assert_not_called()
 
-    def test_reader_waits_for_socket_ready(self):
-        """Test _reader() yields empty bytes while waiting for data"""
+    @pytest.mark.asyncio
+    async def test_reader_waits_for_socket_ready(self):
+        """Test _reader() awaits and reads data"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
-        # Create a mock poller that returns not ready first, then ready
-        poll_results = [[], [(5, 1)]]  # First not ready, then POLLIN
+        # Mock the asyncio event loop
+        mock_loop = AsyncMock()
+        mock_loop.sock_recv = AsyncMock(return_value=b'test')
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.side_effect = poll_results
-            mock_poll.return_value = mock_poller
-
-            mock_sock.recv.return_value = b'test'
-
+        with patch('asyncio.get_event_loop', return_value=mock_loop):
             with patch('exabgp.reactor.network.connection.logfunc'):
-                gen = conn._reader(4)
-
-                # First yield should be empty (waiting)
-                result = next(gen)
-                assert result == b''
-
-                # Second yield should return data
-                result = next(gen)
+                result = await conn._reader(4)
                 assert result == b'test'
+                mock_loop.sock_recv.assert_called_once_with(mock_sock, 4)
 
-    def test_reader_assembles_partial_reads(self):
+    @pytest.mark.asyncio
+    async def test_reader_assembles_partial_reads(self):
         """Test _reader() assembles data from multiple recv() calls"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
@@ -95,28 +88,18 @@ class TestGeneratorBasedReader:
         conn.io = mock_sock
 
         # Simulate partial reads: request 10 bytes, get 4, then 6
-        recv_results = [b'test', b'data12']
-        mock_sock.recv.side_effect = recv_results
+        mock_loop = AsyncMock()
+        mock_loop.sock_recv = AsyncMock(side_effect=[b'test', b'data12'])
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]  # Always ready
-            mock_poll.return_value = mock_poller
-
+        with patch('asyncio.get_event_loop', return_value=mock_loop):
             with patch('exabgp.reactor.network.connection.logfunc'):
-                gen = conn._reader(10)
-
-                # Skip waiting yields
-                result = b''
-                for data in gen:
-                    if data:
-                        result = data
-                        break
+                result = await conn._reader(10)
 
                 assert result == b'testdata12'
-                assert mock_sock.recv.call_count == 2
+                assert mock_loop.sock_recv.call_count == 2
 
-    def test_reader_handles_blocking_error(self):
+    @pytest.mark.asyncio
+    async def test_reader_handles_blocking_error(self):
         """Test _reader() handles EAGAIN/EWOULDBLOCK errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
@@ -125,97 +108,73 @@ class TestGeneratorBasedReader:
         conn.io = mock_sock
 
         # First call raises EAGAIN, second succeeds
-        mock_sock.recv.side_effect = [
+        mock_loop = AsyncMock()
+        mock_loop.sock_recv = AsyncMock(side_effect=[
             socket.error(errno.EAGAIN, 'Would block'),
             b'data'
-        ]
+        ])
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]  # Always ready
-            mock_poll.return_value = mock_poller
+        with patch('asyncio.get_event_loop', return_value=mock_loop):
+            with patch('asyncio.sleep', new_callable=AsyncMock):  # Mock asyncio.sleep
+                with patch('exabgp.reactor.network.connection.log'):
+                    with patch('exabgp.reactor.network.connection.logfunc'):
+                        result = await conn._reader(4)
+                        assert result == b'data'
 
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
-                    gen = conn._reader(4)
-
-                    # Should yield empty on EAGAIN
-                    result = next(gen)
-                    if result == b'':
-                        result = next(gen)
-
-                    # Eventually should get data
-                    while result == b'':
-                        result = next(gen)
-
-                    assert result == b'data'
-
-    def test_reader_raises_lost_connection_on_empty_recv(self):
+    @pytest.mark.asyncio
+    async def test_reader_raises_lost_connection_on_empty_recv(self):
         """Test _reader() raises LostConnection when recv returns empty"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
-        mock_sock.recv.return_value = b''  # Connection closed
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
+        mock_loop = AsyncMock()
+        mock_loop.sock_recv = AsyncMock(return_value=b'')  # Connection closed
 
+        with patch('asyncio.get_event_loop', return_value=mock_loop):
             with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
                 with pytest.raises(LostConnection) as exc_info:
-                    for _ in gen:
-                        pass
+                    await conn._reader(10)
 
                 assert 'closed by the remote end' in str(exc_info.value)
 
-    def test_reader_raises_too_slow_on_timeout(self):
+    @pytest.mark.asyncio
+    async def test_reader_raises_too_slow_on_timeout(self):
         """Test _reader() raises TooSlowError on socket timeout"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
-        mock_sock.recv.side_effect = socket.timeout('timed out')
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
+        mock_loop = AsyncMock()
+        mock_loop.sock_recv = AsyncMock(side_effect=socket.timeout('timed out'))
 
+        with patch('asyncio.get_event_loop', return_value=mock_loop):
             with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
                 with pytest.raises(TooSlowError) as exc_info:
-                    for _ in gen:
-                        pass
+                    await conn._reader(10)
 
                 assert 'Timeout' in str(exc_info.value)
 
-    def test_reader_raises_lost_connection_on_fatal_error(self):
+    @pytest.mark.asyncio
+    async def test_reader_raises_lost_connection_on_fatal_error(self):
         """Test _reader() raises LostConnection on fatal socket errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
-        mock_sock.recv.side_effect = socket.error(errno.ECONNRESET, 'Connection reset')
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
+        mock_loop = AsyncMock()
+        mock_loop.sock_recv = AsyncMock(side_effect=socket.error(errno.ECONNRESET, 'Connection reset'))
 
+        with patch('asyncio.get_event_loop', return_value=mock_loop):
             with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
                 with pytest.raises(LostConnection):
-                    for _ in gen:
-                        pass
+                    await conn._reader(10)
 
 
 class TestGeneratorBasedWriter:
