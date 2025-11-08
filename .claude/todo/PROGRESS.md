@@ -2,7 +2,7 @@
 
 **Last Updated**: 2025-11-08
 **Current Phase**: Phase 1.2 In Progress 🟨
-**Overall Completion**: ~12% (Phase 1.1 complete + Phase 1.2 ~40% complete)
+**Overall Completion**: ~13% (Phase 1.1 complete + Phase 1.2 50% complete)
 
 ---
 
@@ -12,7 +12,7 @@
 |-------|--------|-------|----------|------------|----------------|
 | 0 - Foundation | ✅ Partial | 8 | 4/8 | 1h | 1-2h |
 | 1.1 - Header Fuzzing | ✅ Complete | 13 | 12/13 | 3h | 0h |
-| 1.2 - UPDATE Fuzzing | 🟨 In Progress | 12 | 5/12 | 2h | 4-6h |
+| 1.2 - UPDATE Fuzzing | 🟨 In Progress | 12 | 6/12 | 2.5h | 3.5-5.5h |
 | 2 - NLRI Fuzzing | ⬜ Not Started | TBD | 0/? | 0h | 20-24h |
 | 3 - Config & State | ⬜ Not Started | TBD | 0/? | 0h | 15-18h |
 | 4 - Integration | ⬜ Not Started | TBD | 0/? | 0h | 12-15h |
@@ -119,13 +119,13 @@ Legend: ⬜ Not Started | 🟨 In Progress | ✅ Complete | ⚠️ Blocked
 
 ## Phase 1.2: Fuzz UPDATE Message (6-8 hours)
 
-**Status**: 🟨 In Progress (Tasks 2.1-2.5 Complete)
+**Status**: 🟨 In Progress (Tasks 2.1-2.5, 2.9 Complete)
 **File**: `02-FUZZ-UPDATE-MESSAGE.md`
 **Started**: 2025-11-08
 **Completed**: [In Progress]
-**Time Spent**: 2h
-**Target Coverage**: 85%+ (split method)
-**Actual Coverage**: 100% (split method - 22/22 lines)
+**Time Spent**: 2.5h
+**Target Coverage**: 85%+ (split + EOR detection)
+**Actual Coverage**: 100% (split method - 22/22 lines), EOR detection tested
 
 ### Tasks
 - [x] 2.1 - Analyze UPDATE message structure ✓
@@ -136,12 +136,12 @@ Legend: ⬜ Not Started | 🟨 In Progress | ✅ Complete | ⚠️ Blocked
 - [ ] 2.6 - Test unpack_message() for full UPDATE parsing
 - [ ] 2.7 - Add attribute validation tests
 - [ ] 2.8 - Add NLRI parsing tests
-- [ ] 2.9 - Add EOR detection tests
+- [x] 2.9 - Add EOR detection tests ✓
 - [ ] 2.10 - Add edge cases for unpack_message()
 - [ ] 2.11 - Run extensive fuzzing (optional)
 - [ ] 2.12 - Final documentation and commit
 
-**Completion**: 5/12 (42%)
+**Completion**: 6/12 (50%)
 
 ### Coverage Details
 - Target split(): 85%+
@@ -151,8 +151,10 @@ Legend: ⬜ Not Started | 🟨 In Progress | ✅ Complete | ⚠️ Blocked
 - Method Remaining: `unpack_message()` (lines 253-330)
 
 ### Test Statistics
-- **Total Tests**: 11
-- **Test File**: `tests/fuzz/test_update_split.py` (321 lines)
+- **Total Tests**: 16 (11 split() + 5 EOR)
+- **Test Files**:
+  - `tests/fuzz/test_update_split.py` (321 lines, 11 tests)
+  - `tests/fuzz/test_update_eor.py` (154 lines, 5 tests)
 - **Helper File**: `tests/fuzz/update_helpers.py` (352 lines, 15 functions)
 - **Test Cases Generated**: 291 (via Hypothesis)
   - 50 random binary inputs
@@ -165,6 +167,7 @@ Legend: ⬜ Not Started | 🟨 In Progress | ✅ Complete | ⚠️ Blocked
 ### Files Created
 - `tests/fuzz/update_helpers.py` (352 lines, 15 helper functions)
 - `tests/fuzz/test_update_split.py` (321 lines, 11 tests)
+- `tests/fuzz/test_update_eor.py` (154 lines, 5 tests)
 - `.claude/todo/task-2.1-findings.md` (302 lines - UPDATE structure analysis)
 - `.claude/todo/task-2.3-coverage-results.md` (127 lines - coverage analysis)
 
@@ -175,6 +178,8 @@ Legend: ⬜ Not Started | 🟨 In Progress | ✅ Complete | ⚠️ Blocked
 - Created comprehensive helper library for UPDATE message construction
 - 15 helper functions including: message builders, prefix encoders, path attribute creators
 - Property-based fuzzing with Hypothesis testing all 16-bit length values
+- EOR detection tests cover IPv4 unicast marker and boundary conditions
+- Implemented logger mocking for unpack_message() integration tests
 - Zero bugs found - implementation is robust against fuzzing
 
 ### Commits
@@ -182,6 +187,7 @@ Legend: ⬜ Not Started | 🟨 In Progress | ✅ Complete | ⚠️ Blocked
 2. `e5d3346` - Task 2.2: Create UPDATE test helpers
 3. `4140d4c` - Task 2.3: Create fuzzing tests for UPDATE split() method
 4. `80dd0fe` - Tasks 2.3-2.5: UPDATE split() fuzzing with 100% coverage
+5. `132e10d` - Task 2.9: Add EOR (End-of-RIB) detection tests
 
 ---
 
