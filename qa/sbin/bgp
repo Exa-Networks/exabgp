@@ -788,6 +788,9 @@ def parse_cmdline():
         if message.strip() == 'option:open:send-unknown-message':
             options['send-unknown-message'] = True
             continue
+        if message.strip().startswith('option:tcp_connections:'):
+            options['tcp_connections'] = int(message.strip().split(':')[-1])
+            continue
         if message.strip().startswith('option:SIGUSR1:'):
             delay = int(message.split(':')[-1])
             myself = os.getpid()

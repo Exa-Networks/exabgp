@@ -191,7 +191,13 @@ CONFIGURATION = {
             'read': parsing.boolean,
             'write': parsing.lower,
             'value': 'false',
-            'help': 'only one tcp connection attempt per peer (for debuging scripts)',
+            'help': 'only one tcp connection attempt per peer (for debuging scripts) - deprecated, use tcp.attempts',
+        },
+        'attempts': {
+            'read': parsing.integer,
+            'write': parsing.nop,
+            'value': '0',
+            'help': 'maximum tcp connection attempts per peer (0 for unlimited)',
         },
         'delay': {
             'read': parsing.integer,

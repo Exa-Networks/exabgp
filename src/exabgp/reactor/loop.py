@@ -55,7 +55,7 @@ class Reactor(object):
     def __init__(self, configuration):
         self._ips = getenv().tcp.bind
         self._port = getenv().tcp.port
-        self._stopping = getenv().tcp.once
+        self._stopping = getenv().tcp.attempts > 0
         self.exit_code = self.Exit.unknown
 
         self.max_loop_time = getenv().reactor.speed

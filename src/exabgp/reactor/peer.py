@@ -88,8 +88,9 @@ class Stats(dict):
 
 class Peer(object):
     def __init__(self, neighbor, reactor):
-        # We only to try to connect via TCP once
-        self.once = getenv().tcp.once
+        # Maximum connection attempts (0 = unlimited)
+        self.max_connection_attempts = getenv().tcp.attempts
+        self.connection_attempts = 0
         self.bind = True if getenv().tcp.bind else False
 
         now = time.time()
@@ -210,6 +211,12 @@ class Peer(object):
         )
 
     # control
+
+    def can_reconnect(self):
+        """Check if peer can attempt another connection"""
+        if self.max_connection_attempts == 0:  # unlimited
+            return True
+        return self.connection_attempts < self.max_connection_attempts
 
     def stop(self):
         self._teardown = 3
@@ -336,6 +343,9 @@ class Peer(object):
         return ''
 
     def _connect(self):
+        # Increment connection attempt counter
+        self.connection_attempts += 1
+
         proto = Protocol(self)
         connected = False
         try:
@@ -634,10 +644,10 @@ class Peer(object):
 
         # CONNECTION FAILURE
         except NetworkError as network:
-            # we tried to connect once, it failed and it was not a manual request, we stop
-            if self.once and not self._teardown:
+            # Check if maximum connection attempts reached
+            if not self.can_reconnect():
                 log.debug(
-                    'only one attempt to connect is allowed, stopping the peer',
+                    'maximum connection attempts reached, stopping the peer',
                     self.id(),
                 )
                 self.stop()
@@ -662,9 +672,9 @@ class Peer(object):
             else:
                 self._reset()
 
-            if self.once and not self._teardown:
+            if not self.can_reconnect():
                 log.debug(
-                    'only one attempt to connect is allowed, stopping the peer',
+                    'maximum connection attempts reached, stopping the peer',
                     self.id(),
                 )
                 self.stop()
@@ -673,10 +683,10 @@ class Peer(object):
 
         # THE PEER NOTIFIED US OF AN ERROR
         except Notification as notification:
-            # we tried to connect once, it failed and it was not a manual request, we stop
-            if self.once and not self._teardown:
+            # Check if maximum connection attempts reached
+            if not self.can_reconnect():
                 log.debug(
-                    'only one attempt to connect is allowed, stopping the peer',
+                    'maximum connection attempts reached, stopping the peer',
                     self.id(),
                 )
                 self.stop()
