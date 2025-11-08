@@ -51,8 +51,9 @@ class TestSocketCreation:
         """Test that SO_REUSEADDR is set"""
         io = tcp.create(AFI.ipv4)
         # Get the socket option to verify it's set
+        # Note: On macOS, getsockopt may return 4 instead of 1, so check for truthy value
         reuse = io.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
-        assert reuse == 1
+        assert reuse != 0
         io.close()
 
     def test_create_socket_with_interface(self):
@@ -308,8 +309,9 @@ class TestNagleAlgorithm:
         tcp.nagle(io, '127.0.0.1')
 
         # Verify TCP_NODELAY is set
+        # Note: On macOS, getsockopt may return 4 instead of 1, so check for truthy value
         nodelay = io.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
-        assert nodelay == 1
+        assert nodelay != 0
 
         io.close()
 
@@ -542,7 +544,8 @@ class TestIntegration:
         tcp.asynchronous(io, '127.0.0.1')
 
         # Verify all settings
-        assert io.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY) == 1
+        # Note: On macOS, getsockopt may return 4 instead of 1, so check for truthy value
+        assert io.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY) != 0
         assert io.getblocking() is False
 
         io.close()
@@ -563,7 +566,8 @@ class TestIntegration:
             tcp.asynchronous(io, '::1')
 
             # Verify all settings
-            assert io.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY) == 1
+            # Note: On macOS, getsockopt may return 4 instead of 1, so check for truthy value
+            assert io.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY) != 0
             assert io.getblocking() is False
 
             io.close()
