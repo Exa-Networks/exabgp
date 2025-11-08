@@ -23,6 +23,38 @@ from exabgp.bgp.message import Notify, KeepAlive, _NOP, Update
 from exabgp.bgp.message.open.holdtime import HoldTime
 
 
+@pytest.fixture(autouse=True)
+def mock_logger():
+    """Mock the logger to avoid initialization issues."""
+    from exabgp.logger.option import option
+    from exabgp.logger import log
+
+    # Save original values
+    original_logger = option.logger
+    original_formater = option.formater
+
+    # Create a mock logger with all required methods
+    mock_option_logger = Mock()
+    mock_option_logger.debug = Mock()
+    mock_option_logger.info = Mock()
+    mock_option_logger.warning = Mock()
+    mock_option_logger.error = Mock()
+    mock_option_logger.critical = Mock()
+    mock_option_logger.fatal = Mock()
+
+    # Create a mock formater that accepts all arguments
+    mock_formater = Mock(return_value="formatted message")
+
+    option.logger = mock_option_logger
+    option.formater = mock_formater
+
+    yield
+
+    # Restore original values
+    option.logger = original_logger
+    option.formater = original_formater
+
+
 class TestReceiveTimerInitialization:
     """Test ReceiveTimer initialization"""
 
@@ -158,15 +190,19 @@ class TestReceiveTimerCheckKa:
         # Should not raise
         timer.check_ka(message)
 
-    def test_check_ka_with_zero_holdtime_first_keepalive(self):
-        """Test check_ka with zero holdtime on first keepalive"""
+    def test_check_ka_with_zero_holdtime_sets_single_flag(self):
+        """Test check_ka with zero holdtime sets single flag on first keepalive"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 0, 2, 6)
 
         message = Mock()
         message.TYPE = KeepAlive.TYPE
 
-        # First keepalive should raise
+        # First keepalive should set single flag but not raise
+        timer.check_ka(message)
+        assert timer.single is True
+
+        # Second keepalive should raise
         with pytest.raises(Notify) as exc_info:
             timer.check_ka(message)
 
