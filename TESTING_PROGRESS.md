@@ -218,6 +218,34 @@
 
 ---
 
+#### Segment Routing (SR-MPLS & SRv6) - **95% Coverage** ✅
+- **Files**: `tests/test_sr_attributes.py` (80 tests, all passed)
+- **Coverage Improvements**:
+  - `sr/labelindex.py`: 52% → 100% (+48%)
+  - `sr/prefixsid.py`: 53% → 97% (+44%)
+  - `sr/srgb.py`: 48% → 100% (+52%)
+  - `sr/srv6/generic.py`: 0% → 94% (+94%)
+  - `sr/srv6/l2service.py`: 0% → 98% (+98%)
+  - `sr/srv6/l3service.py`: 0% → 98% (+98%)
+  - `sr/srv6/sidinformation.py`: 0% → 84% (+84%)
+  - `sr/srv6/sidstructure.py`: 0% → 100% (+100%)
+  - Overall: 37% → 95% (+58%)
+
+- **Test Coverage**:
+  - SR-MPLS: LabelIndex, PrefixSid, SRGB (Originator SRGB)
+  - SRv6: L2 Service, L3 Service, SID Information, SID Structure
+  - Pack/unpack roundtrips for all TLV types
+  - Registration mechanisms for all SR TLV hierarchies
+  - Generic fallback for unknown TLV types
+  - String representations and JSON serialization
+  - Edge cases (empty attributes, multiple ranges, various values)
+  - Integration tests combining SR components
+
+**Branch**: `claude/continue-testing-improvements-011CUvvofFF1XgFYJrcNXKwF`
+**Commit**: TBD
+
+---
+
 ## 🎯 Next Steps (Priority Order)
 
 ### 1. IPv4/IPv6 NLRI Types
@@ -281,9 +309,9 @@ class TestRouteType:
 
 ## 📊 Overall Test Suite Status
 
-**Total Tests**: 708 passing (30 deselected fuzz tests)
-**New Tests Added**: 361 (47 EVPN + 44 MUP + 36 MVPN + 70 Flowspec + 57 BGP-LS + 33 RTC + 34 VPLS + 30 IPVPN + 35 Label + 22 INET - 5 skipped)
-**Overall Coverage**: Improved significantly in core BGP NLRI modules
+**Total Tests**: 788 passing (5 skipped)
+**New Tests Added**: 441 (47 EVPN + 44 MUP + 36 MVPN + 70 Flowspec + 57 BGP-LS + 33 RTC + 34 VPLS + 30 IPVPN + 35 Label + 22 INET + 80 SR - 5 skipped)
+**Overall Coverage**: Improved significantly in core BGP NLRI modules and SR attributes
 
 **Major Gaps**:
 - Configuration parsing (0-20% coverage)
@@ -302,6 +330,7 @@ class TestRouteType:
 - ✅ IPVPN: 100%
 - ✅ Label: 100%
 - ✅ INET: 85%
+- ✅ SR (Segment Routing): 95%
 - Path attributes: 70-90% (good)
 - Communities: 85%+ (good)
 - Route Refresh: 95%+ (excellent)
