@@ -29,44 +29,53 @@
 **Branch**: `claude/continue-test-011CUvmMDebRj7XRxN1TyctH`
 **Commit**: `4f8fbc1 - Add comprehensive EVPN tests and fix bugs (92-98% coverage)`
 
+#### MUP (Mobile User Plane) - **90-93% Coverage** ✅
+- **Files**: `tests/test_mup.py` (44 tests)
+- **Coverage Improvements**:
+  - `dsd.py`: 41% → 92% (+51%)
+  - `isd.py`: 36% → 93% (+57%)
+  - `t1st.py`: 22% → 93% (+71%)
+  - `t2st.py`: 29% → 91% (+62%)
+  - `nlri.py`: 52% → 90% (+38%)
+
+- **Test Coverage**:
+  - All 4 MUP route types (ISD, DSD, T1ST, T2ST)
+  - IPv4 and IPv6 support
+  - Pack/unpack roundtrips
+  - Equality, hashing, JSON serialization
+  - Error handling for invalid inputs
+  - Variable prefix/TEID sizes
+  - Route registration and SAFI verification
+
+**Branch**: `claude/continue-work-011CUvnbMJj26wSSQihM1VuA`
+**Commit**: `bab0f0c - Add comprehensive MUP tests (90-93% coverage improvement)`
+
+#### MVPN (Multicast VPN) - **89-95% Coverage** ✅
+- **Files**: `tests/test_mvpn.py` (36 tests)
+- **Coverage Improvements**:
+  - `sharedjoin.py`: 30% → 95% (+65%)
+  - `sourcead.py`: 31% → 95% (+64%)
+  - `sourcejoin.py`: 30% → 95% (+65%)
+  - `nlri.py`: 54% → 89% (+35%)
+
+- **Test Coverage**:
+  - All 3 MVPN route types (SourceAD, SharedJoin, SourceJoin)
+  - IPv4 and IPv6 support
+  - Pack/unpack roundtrips
+  - Equality, hashing, JSON serialization
+  - Error handling for invalid inputs
+  - Multicast group handling
+  - Various AS numbers (2-byte and 4-byte)
+  - SSM (Source-Specific Multicast) support
+
+**Branch**: `claude/continue-work-011CUvnbMJj26wSSQihM1VuA`
+**Status**: Ready to commit
+
 ---
 
 ## 🎯 Next Steps (Priority Order)
 
-### 1. MUP (Mobile User Plane) - Current: 22-48% Coverage
-**Location**: `src/exabgp/bgp/message/update/nlri/mup/`
-
-**Files to Test**:
-- `dsd.py` - Direct Segment Discovery (41% coverage)
-- `isd.py` - Indirect Segment Discovery (36% coverage)
-- `t1st.py` - Type 1 Session Transformed (22% coverage) ⚠️ PRIORITY
-- `t2st.py` - Type 2 Session Transformed (29% coverage)
-- `nlri.py` - MUP NLRI base (52% coverage)
-
-**Approach**:
-- Create `tests/test_mup.py`
-- Test all MUP route types with pack/unpack
-- IPv4/IPv6 support
-- Error handling for invalid formats
-- Target: 90%+ coverage
-
-### 2. MVPN (Multicast VPN) - Current: 30-54% Coverage
-**Location**: `src/exabgp/bgp/message/update/nlri/mvpn/`
-
-**Files to Test**:
-- `sharedjoin.py` - Shared Tree Join (30% coverage) ⚠️ PRIORITY
-- `sourcead.py` - Source Active Discovery (31% coverage) ⚠️ PRIORITY
-- `sourcejoin.py` - Source Tree Join (30% coverage) ⚠️ PRIORITY
-- `nlri.py` - MVPN NLRI base (54% coverage)
-
-**Approach**:
-- Create `tests/test_mvpn.py`
-- Test all MVPN route types
-- Multicast group handling
-- Source/shared tree scenarios
-- Target: 90%+ coverage
-
-### 3. BGP-LS (Link-State)
+### 1. Flowspec - Current: 64% Coverage
 **Location**: Check `src/exabgp/bgp/message/update/nlri/bgpls/`
 
 **Files to Assess**:
@@ -80,7 +89,21 @@
 - Focus on TLV encoding/decoding
 - Target: 90%+ coverage
 
-### 4. Flowspec - Current: 64% Coverage
+### 2. BGP-LS (Link-State)
+**Location**: Check `src/exabgp/bgp/message/update/nlri/bgpls/`
+
+**Files to Assess**:
+- Review existing coverage
+- Identify gaps
+- Create comprehensive tests
+
+**Approach**:
+- First assess current coverage
+- Create `tests/test_bgpls.py` if needed
+- Focus on TLV encoding/decoding
+- Target: 90%+ coverage
+
+### 3. Flowspec - Current: 64% Coverage
 **Location**: `src/exabgp/bgp/message/update/nlri/flow.py`
 
 **Current State**: 64% coverage (421 statements, 151 missed)
@@ -151,8 +174,8 @@ class TestRouteType:
 
 **Focus Areas** (BGP protocol core):
 - ✅ EVPN: 92-98%
-- 🔄 MUP: 22-48% → Target 90%+
-- 🔄 MVPN: 30-54% → Target 90%+
+- ✅ MUP: 90-93%
+- ✅ MVPN: 89-95%
 - 🔄 BGP-LS: TBD
 - 🔄 Flowspec: 64% → Target 85%+
 - Path attributes: 70-90% (good)
