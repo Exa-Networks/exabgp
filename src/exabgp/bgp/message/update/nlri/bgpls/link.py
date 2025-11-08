@@ -185,10 +185,10 @@ class LINK(BGPLS):
         return self.json()
 
     def __hash__(self):
-        return hash((self))
+        return hash((self.CODE, self.domain, self.proto_id, tuple(self.topology_ids), self.route_d))
 
     def pack(self, negotiated=None):
-        if self.packed:
+        if self._packed:
             return self._packed
         raise RuntimeError('Not implemented')
 
