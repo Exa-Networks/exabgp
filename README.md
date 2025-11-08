@@ -211,7 +211,7 @@ A test suite is also present to complement the functional testing.
 (`pip3 install pytest pytest-cov`)
 
 ```sh
-# env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
+# env exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/*_test.py ./tests/fuzz/*_test.py
 ```
 
 You can decode UPDATE messages using ExaBGP `decode` option.
