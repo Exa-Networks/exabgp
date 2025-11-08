@@ -1199,7 +1199,7 @@ class TestBGPLSLinkAttributes:
         assert attr.content[0]['behavior'] == 48
 
     def test_srv6_endpoint_behavior(self):
-        """Test Srv6EndpointBehavior attribute (TLV 1250) - already in bgpls_test.py"""
+        """Test Srv6EndpointBehavior attribute (TLV 1250)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.srv6endpointbehavior import Srv6EndpointBehavior
 
         # Endpoint Behavior: 48 (End.X), Flags: [], Algorithm: 128
@@ -1212,7 +1212,7 @@ class TestBGPLSLinkAttributes:
         assert '"algorithm": 128' in json_output
 
     def test_srv6_sid_structure(self):
-        """Test Srv6SidStructure attribute (TLV 1252) - already in bgpls_test.py"""
+        """Test Srv6SidStructure attribute (TLV 1252)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.srv6sidstructure import Srv6SidStructure
 
         # LB: 32, LN: 16, Fun: 0, Arg: 80
@@ -1346,7 +1346,7 @@ class TestBGPLSPrefixAttributes:
         assert attr.flags['L'] == 1
 
     def test_igp_tags(self):
-        """Test IgpTags attribute (TLV 1153) - already in bgpls_test.py"""
+        """Test IgpTags attribute (TLV 1153)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.igptags import IgpTags
 
         # Single tag: 65534
@@ -1372,7 +1372,7 @@ class TestBGPLSPrefixAttributes:
         assert 65535 in attr.content
 
     def test_prefix_metric(self):
-        """Test PrefixMetric attribute (TLV 1155) - already in bgpls_test.py"""
+        """Test PrefixMetric attribute (TLV 1155)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import PrefixMetric
 
         # Metric: 20
