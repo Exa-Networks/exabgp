@@ -109,7 +109,7 @@ class MAC(EVPN):
             + bytes([self.maclen])
             + self.mac.pack()
             + bytes([len(self.ip) * 8 if self.ip else 0])
-            + self.ip.pack() if self.ip else self.label.pack()
+            + (self.ip.pack() + self.label.pack() if self.ip else self.label.pack())
         )
         # fmt: on
         return self._packed

@@ -40,21 +40,14 @@ ruff check src
 python -m pip install --upgrade pip
 pip install -r qa/requirements.txt
 
-# Run unit tests with coverage
-env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
+# Run unit tests with coverage (now uses standard test_*.py naming)
+env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
 ```
 
-**Test files:**
-- `tests/bgpls_test.py`
-- `tests/cache_test.py`
-- `tests/control_test.py`
-- `tests/decode_test.py`
-- `tests/flow_test.py`
-- `tests/l2vpn_test.py`
-- `tests/nlri_tests.py`
-- `tests/notification_test.py`
-- `tests/open_test.py`
-- `tests/parsing_test.py`
+**Test files (using standard pytest naming convention):**
+- All files matching `tests/unit/test_*.py` pattern
+- All files matching `tests/fuzz/test_*.py` pattern
+- Includes comprehensive test coverage for BGP messages, attributes, NLRI types, and fuzzing
 
 ---
 

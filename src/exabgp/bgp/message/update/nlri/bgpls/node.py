@@ -106,7 +106,7 @@ class NODE(BGPLS):
         return self.json()
 
     def __hash__(self):
-        return hash((self.proto_id, self.node_ids))
+        return hash((self.proto_id, tuple(self.node_ids)))
 
     def pack(self, negotiated=None):
         return self._pack

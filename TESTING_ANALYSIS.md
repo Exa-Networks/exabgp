@@ -89,21 +89,21 @@ ExaBGP is a comprehensive BGP (Border Gateway Protocol) implementation in Python
 
 ### 2.1 Test Files Summary
 ```
-/home/user/exabgp/tests/
-├── open_test.py              (2 tests)    - OPEN message
-├── notification_test.py       (2 tests)    - NOTIFICATION message
-├── decode_test.py             (2 tests)    - UPDATE message decoding
-├── nlri_tests.py              (17 tests)   - Various NLRI types
-├── flow_test.py               (4 tests)    - Flow specification
-├── l2vpn_test.py              (4 tests)    - L2VPN NLRI
-├── bgpls_test.py              (9 tests)    - BGP-LS attributes & NLRI
-├── protocol.py                (7 tests)    - Protocol handler
-├── datatype.py                (8 tests)    - Data type utilities
-├── cache_test.py              (1 test)     - Caching mechanism
-├── control_test.py            (5 tests)    - Control interface
-├── parsing_test.py            (1 test)     - Configuration parsing
-├── fuzz/                       (5+ tests)   - Fuzzing tests
-└── connection.py              (2 tests)    - Connection handling
+/home/user/exabgp/tests/unit/
+├── test_open.py              (2 tests)    - OPEN message
+├── test_notification.py      (2 tests)    - NOTIFICATION message
+├── test_decode.py            (2 tests)    - UPDATE message decoding
+├── nlri_tests.py             (17 tests)   - Various NLRI types
+├── test_flow.py              (4 tests)    - Flow specification
+├── test_l2vpn.py             (4 tests)    - L2VPN NLRI
+├── test_bgpls.py             (1508 tests) - BGP-LS attributes & NLRI (comprehensive)
+├── protocol.py               (7 tests)    - Protocol handler
+├── datatype.py               (8 tests)    - Data type utilities
+├── test_cache.py             (1 test)     - Caching mechanism
+├── test_control.py           (5 tests)    - Control interface
+├── test_parsing.py           (1 test)     - Configuration parsing
+├── fuzz/                     (5+ tests)   - Fuzzing tests
+└── connection.py             (2 tests)    - Connection handling
 ```
 
 ### 2.2 What IS Well Tested (30-40% coverage)
@@ -383,16 +383,16 @@ BGP-LS has 9 tests but 12+ complex files:
 ### Phase 1: Foundation (Attribute Parsing)
 **Estimated effort: 30-40 test cases across 5 files**
 
-1. Create `test_aspath.py` - Complete AS_PATH test suite
-2. Create `test_attributes.py` - Framework tests
-3. Create `test_communities.py` - All community types
-4. Extend existing tests in `decode_test.py` for UPDATE validation
+1. Create `test_aspath.py` - Complete AS_PATH test suite (✅ DONE)
+2. Create `test_attributes.py` - Framework tests (✅ DONE)
+3. Create `test_communities.py` - All community types (✅ DONE)
+4. Extend existing tests in `test_decode.py` for UPDATE validation
 
 ### Phase 2: Message Handling
 **Estimated effort: 30-40 test cases across 3 files**
 
-1. Extend `open_test.py` - Capability negotiation
-2. Extend `notification_test.py` - All error codes
+1. Extend `test_open.py` - Capability negotiation (✅ test_open_capabilities.py created)
+2. Extend `test_notification.py` - All error codes (✅ test_notification_comprehensive.py created)
 3. Create `test_update_validation.py` - UPDATE message validation
 
 ### Phase 3: Network & State Management

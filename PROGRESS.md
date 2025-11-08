@@ -36,7 +36,7 @@ Network Layer                0       0        27       📋 Phase 3
 ### Accomplishments
 
 #### 1. AS_PATH Attribute Testing (21 tests)
-**File:** `tests/test_aspath.py`
+**File:** `tests/unit/test_aspath.py`
 **Target:** `src/exabgp/bgp/message/update/attribute/aspath.py` (246 lines)
 
 **Coverage:**
@@ -56,7 +56,7 @@ Network Layer                0       0        27       📋 Phase 3
 **Test Results:** ✅ 21/21 passing
 
 #### 2. Attributes Framework Testing (24 tests)
-**File:** `tests/test_attributes.py`
+**File:** `tests/unit/test_attributes.py`
 **Target:** `src/exabgp/bgp/message/update/attribute/attributes.py` (514 lines)
 
 **Coverage:**
@@ -108,7 +108,7 @@ Network Layer                0       0        27       📋 Phase 3
 
 **Recommended Test Coverage:**
 ```python
-# tests/test_update_message.py (13 tests)
+# tests/unit/test_update_message.py (13 tests)
 - test_update_with_mandatory_attributes()
 - test_update_missing_mandatory_origin()
 - test_update_missing_mandatory_as_path()
@@ -148,8 +148,8 @@ Network Layer                0       0        27       📋 Phase 3
 
 ### Modified Files
 ```
-tests/test_aspath.py          NEW   21 tests   453 lines
-tests/test_attributes.py      NEW   24 tests   472 lines
+tests/unit/test_aspath.py          NEW   21 tests   453 lines
+tests/unit/test_attributes.py      NEW   24 tests   472 lines
 TESTING_ANALYSIS.md           NEW              437 lines
 TESTING_ROADMAP.md            NEW              274 lines
 PROGRESS.md                   NEW              (this file)
@@ -161,15 +161,15 @@ tests/fuzz/test_update_split.py         11 tests  ✅ passing
 tests/fuzz/test_update_integration.py    7 tests  ✅ passing
 tests/fuzz/test_update_eor.py            5 tests  ✅ passing
 tests/fuzz/test_connection_reader.py     7 tests  ✅ passing
-tests/parsing_test.py                    3 tests  ✅ passing
-tests/l2vpn_test.py                      8 tests  ✅ passing
-tests/notification_test.py               2 tests  ✅ passing
-tests/bgpls_test.py                      7 tests  ✅ passing
-tests/flow_test.py                      10 tests  ✅ passing
-tests/decode_test.py                     4 tests  ✅ passing
-tests/cache_test.py                      5 tests  ✅ passing
-tests/open_test.py                       2 tests  ✅ passing
-tests/control_test.py                    7 tests  ✅ passing
+tests/unit/test_parsing.py                    3 tests  ✅ passing
+tests/unit/test_l2vpn.py                      8 tests  ✅ passing
+tests/unit/test_notification.py               2 tests  ✅ passing
+tests/unit/test_bgpls.py                   1508 tests  ✅ passing (comprehensive)
+tests/unit/test_flow.py                      10 tests  ✅ passing
+tests/unit/test_decode.py                     4 tests  ✅ passing
+tests/unit/test_cache.py                      5 tests  ✅ passing
+tests/unit/test_open.py                       2 tests  ✅ passing
+tests/unit/test_control.py                    7 tests  ✅ passing
 ```
 
 ### Test Execution
@@ -178,7 +178,7 @@ tests/control_test.py                    7 tests  ✅ passing
 PYTHONPATH=src python -m pytest tests/ -v
 
 # Run only new tests
-PYTHONPATH=src python -m pytest tests/test_aspath.py tests/test_attributes.py -v
+PYTHONPATH=src python -m pytest tests/unit/test_aspath.py tests/unit/test_attributes.py -v
 
 # Run fuzz tests
 PYTHONPATH=src python -m pytest tests/fuzz/ -v -m fuzz
@@ -249,15 +249,15 @@ cat TESTING_ROADMAP.md
 
 **Next Task:**
 - Phase 1.2: UPDATE message integration tests
-- File: Create `tests/test_update_message.py`
+- File: Create `tests/unit/test_update_message.py`
 - Target: `src/exabgp/bgp/message/update/__init__.py`
 - Goal: +13 tests for attribute validation in UPDATE context
 
 **Key Files to Reference:**
 1. `TESTING_ROADMAP.md` - Complete testing plan
 2. `TESTING_ANALYSIS.md` - Detailed component analysis
-3. `tests/test_aspath.py` - Example test structure
-4. `tests/test_attributes.py` - Example mocking patterns
+3. `tests/unit/test_aspath.py` - Example test structure
+4. `tests/unit/test_attributes.py` - Example mocking patterns
 
 **Important Notes:**
 - Logger mocking pattern established (see test_attributes.py fixture)
