@@ -19,7 +19,8 @@ class MAC(object):
         self._packed = packed if packed else b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))
 
     def __eq__(self, other):
-        return self.mac == other.mac
+        # Compare packed representation to handle case-insensitive MAC addresses
+        return self._packed == other._packed
 
     def __neq__(self, other):
         return self.mac != other.mac
