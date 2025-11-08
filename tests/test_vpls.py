@@ -137,7 +137,7 @@ class TestVPLSPackUnpack:
         assert unpacked.action == Action.WITHDRAW
 
     def test_unpack_known_juniper_data(self):
-        """Test unpacking known data from Juniper (from l2vpn_test.py)"""
+        """Test unpacking known data from Juniper (from test_l2vpn.py)"""
         # l2vpn:endpoint:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.4:13
         encoded = bytearray.fromhex('0011 0001 AC1E 0504 000D 0003 0001 0008 4000 11')
 

@@ -36,4 +36,4 @@ jobs:
 
       - name: pytest
         run: |
-          env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
+          env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/test_*.py ./tests/fuzz/test_*.py
