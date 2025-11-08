@@ -84,10 +84,14 @@ def test_origin_igp():
     assert origin.origin == Origin.IGP
     assert str(origin) == "igp"
 
-    # Verify pack/unpack
+    # Verify pack (flag + type + length + value)
+    # Format: flag(1) + type(1) + length(1) + value(1) = 4 bytes
     packed = origin.pack()
-    assert len(packed) == 1
-    assert packed[0] == 0
+    assert len(packed) == 4
+    assert packed[0] == 0x40  # Transitive flag
+    assert packed[1] == 1     # ORIGIN type code
+    assert packed[2] == 1     # Length
+    assert packed[3] == 0     # IGP value
 
 
 def test_origin_egp():
@@ -105,10 +109,10 @@ def test_origin_egp():
     assert origin.origin == Origin.EGP
     assert str(origin) == "egp"
 
-    # Verify pack
+    # Verify pack (flag + type + length + value)
     packed = origin.pack()
-    assert len(packed) == 1
-    assert packed[0] == 1
+    assert len(packed) == 4
+    assert packed[3] == 1  # EGP value
 
 
 def test_origin_incomplete():
@@ -126,10 +130,10 @@ def test_origin_incomplete():
     assert origin.origin == Origin.INCOMPLETE
     assert str(origin) == "incomplete"
 
-    # Verify pack
+    # Verify pack (flag + type + length + value)
     packed = origin.pack()
-    assert len(packed) == 1
-    assert packed[0] == 2
+    assert len(packed) == 4
+    assert packed[3] == 2  # INCOMPLETE value
 
 
 # ==============================================================================
@@ -150,13 +154,17 @@ def test_nexthop_valid_ipv4():
     nexthop = NextHop(nh_ip)
 
     # Verify value
-    assert str(nexthop) == "next-hop 192.0.2.1"
+    assert str(nexthop) == "192.0.2.1"  # __repr__ returns just the IP
 
-    # Verify pack
+    # Verify pack (flag + type + length + value)
+    # Format: flag(1) + type(1) + length(1) + IPv4(4) = 7 bytes
     packed = nexthop.pack()
-    assert len(packed) == 4
-    # Should be 192.0.2.1 in network byte order
-    assert packed == IPv4.pton(nh_ip)
+    assert len(packed) == 7
+    assert packed[0] == 0x40  # Transitive flag
+    assert packed[1] == 3     # NEXT_HOP type code
+    assert packed[2] == 4     # Length (IPv4 = 4 bytes)
+    # Last 4 bytes should be 192.0.2.1 in network byte order
+    assert packed[3:] == IPv4.pton(nh_ip)
 
 
 def test_nexthop_zero_address():
@@ -171,11 +179,12 @@ def test_nexthop_zero_address():
     nexthop = NextHop("0.0.0.0")
 
     # Should create successfully
-    assert str(nexthop) == "next-hop 0.0.0.0"
+    assert str(nexthop) == "0.0.0.0"  # __repr__ returns just the IP
 
+    # Verify pack (flag + type + length + value)
     packed = nexthop.pack()
-    assert len(packed) == 4
-    assert packed == b'\x00\x00\x00\x00'
+    assert len(packed) == 7
+    assert packed[3:] == b'\x00\x00\x00\x00'  # Value part is 0.0.0.0
 
 
 def test_nexthop_self():
@@ -189,10 +198,11 @@ def test_nexthop_self():
     # Create NEXT_HOP pointing to self
     nexthop = NextHop("10.0.0.1")
 
-    assert str(nexthop) == "next-hop 10.0.0.1"
+    assert str(nexthop) == "10.0.0.1"  # __repr__ returns just the IP
 
+    # Verify pack (flag + type + length + value)
     packed = nexthop.pack()
-    assert len(packed) == 4
+    assert len(packed) == 7
 
 
 def test_nexthop_third_party():
@@ -207,8 +217,9 @@ def test_nexthop_third_party():
 
     assert "10.0.0.254" in str(nexthop)
 
+    # Verify pack (flag + type + length + value)
     packed = nexthop.pack()
-    assert len(packed) == 4
+    assert len(packed) == 7
 
 
 # ==============================================================================
@@ -229,12 +240,13 @@ def test_localpref_basic():
 
     # Verify value
     assert localpref.localpref == 100
-    assert str(localpref) == "local-preference 100"
+    assert str(localpref) == "100"  # __repr__ returns just the value
 
-    # Verify pack
+    # Verify pack (flag + type + length + value)
+    # Format: flag(1) + type(1) + length(1) + value(4) = 7 bytes
     packed = localpref.pack()
-    assert len(packed) == 4
-    assert struct.unpack('!L', packed)[0] == 100
+    assert len(packed) == 7
+    assert struct.unpack('!L', packed[3:])[0] == 100  # Value part
 
 
 def test_localpref_high_preference():
@@ -250,8 +262,10 @@ def test_localpref_high_preference():
 
     assert localpref.localpref == 200
 
+    # Verify pack (flag + type + length + value)
     packed = localpref.pack()
-    assert struct.unpack('!L', packed)[0] == 200
+    assert len(packed) == 7
+    assert struct.unpack('!L', packed[3:])[0] == 200  # Value part
 
 
 def test_localpref_ibgp_only():
@@ -283,12 +297,14 @@ def test_atomic_aggregate_zero_length():
     # Create ATOMIC_AGGREGATE
     atomic = AtomicAggregate()
 
-    # Verify representation
-    assert str(atomic) == "atomic-aggregate"
+    # Verify representation (__repr__ returns empty string)
+    assert str(atomic) == ""
 
-    # Verify pack (should be zero length)
+    # Verify pack (flag + type + length, but zero-length value)
+    # Format: flag(1) + type(1) + length(1) = 3 bytes
     packed = atomic.pack()
-    assert len(packed) == 0
+    assert len(packed) == 3
+    assert packed[2] == 0  # Length is 0
 
 
 def test_atomic_aggregate_presence():
@@ -320,19 +336,25 @@ def test_aggregator_2byte_asn():
     """
     from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.protocol.ip import IPv4
+
+    # Create mock negotiated WITHOUT 4-byte ASN support
+    negotiated = Mock()
+    negotiated.asn4 = False
 
     # Create AGGREGATOR with 2-byte ASN
     asn = ASN(65000)
-    ip = "192.0.2.1"
-    aggregator = Aggregator(asn, ip)
+    speaker = IPv4.create("192.0.2.1")
+    aggregator = Aggregator(asn, speaker)
 
     # Verify representation
     assert "65000" in str(aggregator)
     assert "192.0.2.1" in str(aggregator)
 
-    # Verify pack (2-byte ASN + 4-byte IP = 6 bytes)
-    packed = aggregator.pack()
-    assert len(packed) == 6
+    # Verify pack (flag + type + length + 2-byte ASN + 4-byte IP)
+    # Format: flag(1) + type(1) + length(1) + ASN(2) + IP(4) = 9 bytes
+    packed = aggregator.pack(negotiated)
+    assert len(packed) == 9
 
 
 def test_aggregator_4byte_asn():
@@ -343,6 +365,7 @@ def test_aggregator_4byte_asn():
     """
     from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.protocol.ip import IPv4
 
     # Create mock negotiated with 4-byte ASN support
     negotiated = Mock()
@@ -350,12 +373,13 @@ def test_aggregator_4byte_asn():
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
-    ip = "192.0.2.1"
-    aggregator = Aggregator(asn, ip)
+    speaker = IPv4.create("192.0.2.1")
+    aggregator = Aggregator(asn, speaker)
 
-    # Verify pack with 4-byte ASN (4 + 4 = 8 bytes)
+    # Verify pack (flag + type + length + 4-byte ASN + 4-byte IP)
+    # Format: flag(1) + type(1) + length(1) + ASN(4) + IP(4) = 11 bytes
     packed = aggregator.pack(negotiated)
-    assert len(packed) == 8
+    assert len(packed) == 11
 
 
 def test_aggregator_as_trans():
@@ -366,6 +390,7 @@ def test_aggregator_as_trans():
     """
     from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.protocol.ip import IPv4
 
     # Create mock negotiated WITHOUT 4-byte ASN support
     negotiated = Mock()
@@ -373,16 +398,20 @@ def test_aggregator_as_trans():
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
-    ip = "192.0.2.1"
-    aggregator = Aggregator(asn, ip)
+    speaker = IPv4.create("192.0.2.1")
+    aggregator = Aggregator(asn, speaker)
 
-    # Pack for old speaker (should use AS_TRANS)
+    # Pack for old speaker (should use AS_TRANS + AS4_AGGREGATOR)
+    # Returns both AGGREGATOR (with AS_TRANS) and AS4_AGGREGATOR
     packed = aggregator.pack(negotiated)
-    # Should be 6 bytes (2-byte AS_TRANS + 4-byte IP)
-    assert len(packed) == 6
+    # Should include: AGGREGATOR (flag + type + len + 2-byte AS + 4-byte IP = 9 bytes)
+    #                + AS4_AGGREGATOR (flag + type + len + 4-byte AS + 4-byte IP = 11 bytes)
+    # Total = 20 bytes
+    assert len(packed) == 20
 
-    # First 2 bytes should be AS_TRANS (23456 = 0x5BA0)
-    as_trans_value = struct.unpack('!H', packed[:2])[0]
+    # First attribute should have AS_TRANS (23456 = 0x5BA0) after the header
+    # Bytes 0-2 are flag, type, length; bytes 3-4 are the ASN
+    as_trans_value = struct.unpack('!H', packed[3:5])[0]
     assert as_trans_value == 23456
 
 
@@ -405,12 +434,13 @@ def test_med_basic():
 
     # Verify value
     assert med.med == med_value
-    assert str(med) == "med 100"
+    assert str(med) == "100"  # __repr__ returns just the value
 
-    # Verify pack
+    # Verify pack (flag + type + length + value)
+    # Format: flag(1) + type(1) + length(1) + value(4) = 7 bytes
     packed = med.pack()
-    assert len(packed) == 4
-    assert struct.unpack('!L', packed)[0] == med_value
+    assert len(packed) == 7
+    assert struct.unpack('!L', packed[3:])[0] == med_value  # Value part
 
 
 def test_med_optional_nature():
@@ -464,9 +494,10 @@ def test_originator_id_basic():
     # Verify representation
     assert "192.0.2.1" in str(originator_id)
 
-    # Verify pack (4-byte IP)
+    # Verify pack (flag + type + length + value)
+    # Format: flag(1) + type(1) + length(1) + IPv4(4) = 7 bytes
     packed = originator_id.pack()
-    assert len(packed) == 4
+    assert len(packed) == 7
 
 
 def test_originator_id_loop_prevention():
@@ -500,12 +531,13 @@ def test_cluster_list_single():
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Create single cluster
-    cluster_id = ClusterID.unpack(b'\xC0\x00\x02\x01')  # 192.0.2.1
+    cluster_id = ClusterID("192.0.2.1")
     cluster_list = ClusterList([cluster_id])
 
-    # Verify pack
+    # Verify pack (flag + type + length + value)
+    # Format: flag(1) + type(1) + length(1) + ClusterID(4) = 7 bytes
     packed = cluster_list.pack()
-    assert len(packed) == 4  # One 4-byte cluster ID
+    assert len(packed) == 7
 
 
 def test_cluster_list_multiple():
@@ -517,13 +549,14 @@ def test_cluster_list_multiple():
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Create multiple clusters
-    cluster1 = ClusterID.unpack(b'\xC0\x00\x02\x01')
-    cluster2 = ClusterID.unpack(b'\xC0\x00\x02\x02')
+    cluster1 = ClusterID("192.0.2.1")
+    cluster2 = ClusterID("192.0.2.2")
     cluster_list = ClusterList([cluster1, cluster2])
 
-    # Verify pack (2 x 4 bytes = 8 bytes)
+    # Verify pack (flag + type + length + 2 ClusterIDs)
+    # Format: flag(1) + type(1) + length(1) + ClusterID(4) + ClusterID(4) = 11 bytes
     packed = cluster_list.pack()
-    assert len(packed) == 8
+    assert len(packed) == 11
 
 
 def test_cluster_list_loop_detection():
@@ -552,18 +585,27 @@ def test_aigp_basic():
     Contains one or more TLVs; AIGP TLV (type 1) is most common.
     """
     from exabgp.bgp.message.update.attribute.aigp import AIGP
+    from struct import pack as struct_pack
 
     # Create AIGP with metric value
+    # AIGP TLV format: Type(1) + Length(2) + Metric(8)
     metric = 1000
-    aigp = AIGP(metric)
+    aigp_tlv = b'\x01\x00\x0b' + struct_pack('!Q', metric)
+    aigp = AIGP(aigp_tlv)
 
     # Verify basic properties
-    assert aigp.aigp == metric
+    assert aigp.aigp == aigp_tlv
 
-    # Verify pack
-    packed = aigp.pack()
-    # AIGP TLV: Type (1 byte) + Length (2 bytes) + Metric (8 bytes) = 11 bytes
-    assert len(packed) >= 8  # At minimum contains the 8-byte metric
+    # Create mock negotiated with AIGP support
+    negotiated = Mock()
+    negotiated.aigp = True
+    negotiated.local_as = 65000
+    negotiated.peer_as = 65000
+
+    # Verify pack (flag + type + length + TLV)
+    # Format: flag(1) + type(1) + length(1) + TLV(11) = 14 bytes
+    packed = aigp.pack(negotiated)
+    assert len(packed) == 14
 
 
 def test_aigp_accumulation():
@@ -573,13 +615,23 @@ def test_aigp_accumulation():
     Each router adds its IGP cost to reach the next hop.
     """
     from exabgp.bgp.message.update.attribute.aigp import AIGP
+    from struct import pack as struct_pack, unpack
 
     # Create AIGPs with different metrics
-    aigp1 = AIGP(1000)
-    aigp2 = AIGP(2000)
+    metric1 = 1000
+    metric2 = 2000
+    aigp_tlv1 = b'\x01\x00\x0b' + struct_pack('!Q', metric1)
+    aigp_tlv2 = b'\x01\x00\x0b' + struct_pack('!Q', metric2)
+    aigp1 = AIGP(aigp_tlv1)
+    aigp2 = AIGP(aigp_tlv2)
+
+    # Extract metric values from TLVs for comparison
+    # Skip first 3 bytes (type + length), get 8-byte metric
+    metric1_extracted = unpack('!Q', aigp1.aigp[3:11])[0]
+    metric2_extracted = unpack('!Q', aigp2.aigp[3:11])[0]
 
     # Higher metric = longer path
-    assert aigp2.aigp > aigp1.aigp
+    assert metric2_extracted > metric1_extracted
 
 
 def test_aigp_optional_attribute():
