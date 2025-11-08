@@ -125,6 +125,95 @@
   5. `node.py:109` - `hash((self.proto_id, self.node_ids))` fails (list is unhashable, should be tuple)
 
 **Branch**: `claude/continue-authoring-test-011CUvr85DKBQPLjiiLiAyN9`
+**Commit**: `43bea61 - Add comprehensive BGP-LS tests (46%→83% coverage improvement)`
+
+#### RTC (Route Target Constraint) - **100% Coverage** ✅
+- **Files**: `tests/test_rtc.py` (33 tests, all passed)
+- **Coverage Improvements**:
+  - `rtc.py`: 47% → 100% (+53%)
+
+- **Test Coverage**:
+  - Route creation with route targets and wildcards
+  - Pack/unpack roundtrips for RTC routes
+  - Various ASN values (2-byte and 4-byte)
+  - String representations (__str__, __repr__)
+  - Length calculations
+  - Feedback validation for nexthop requirements
+  - Flag resetting for extended communities
+  - Edge cases (zero origin, 4-byte ASNs, invalid lengths)
+  - Multiple routes handling
+
+**Commit**: TBD
+
+#### VPLS (Virtual Private LAN Service) - **100% Coverage** ✅
+- **Files**: `tests/test_vpls.py` (34 tests, all passed)
+- **Coverage Improvements**:
+  - `vpls.py`: 54% → 100% (+46%)
+
+- **Test Coverage**:
+  - VPLS route creation with various parameters
+  - Pack/unpack roundtrips with Juniper test data validation
+  - String representations and JSON serialization
+  - Feedback validation for all required fields
+  - Assign method for dynamic attribute setting
+  - Edge cases (minimum/maximum values, length mismatches)
+  - Bottom-of-stack bit validation
+  - Multiple routes handling
+
+**Commit**: TBD
+
+#### IPVPN (IP VPN) - **100% Coverage** ✅
+- **Files**: `tests/test_ipvpn.py` (30 tests, all passed)
+- **Coverage Improvements**:
+  - `ipvpn.py`: 51% → 100% (+49%)
+
+- **Test Coverage**:
+  - IPv4 and IPv6 VPN route creation
+  - Pack/unpack roundtrips with route distinguishers
+  - Multiple MPLS labels support
+  - Various prefix lengths (0-32 for IPv4, 0-128 for IPv6)
+  - String representations, JSON serialization
+  - Equality and hashing
+  - Feedback validation
+  - Index generation with family information
+  - Edge cases (host routes, default routes)
+
+**Commit**: TBD
+
+#### Label (MPLS-Labeled Routes) - **100% Coverage** ✅
+- **Files**: `tests/test_label.py` (35 tests, all passed)
+- **Coverage Improvements**:
+  - `label.py`: 53% → 100% (+47%)
+
+- **Test Coverage**:
+  - IPv4 and IPv6 labeled route creation
+  - String representations and prefix generation
+  - Length calculations with multiple labels
+  - Equality and hashing
+  - Feedback validation for nexthop
+  - Pack operations with various prefix lengths
+  - Index generation with path info
+  - JSON serialization
+  - Edge cases (zero prefix, host routes, maximum label values)
+  - Inheritance from INET verification
+
+**Commit**: TBD
+
+#### INET (IPv4/IPv6 Unicast/Multicast) - **85% Coverage** ✅
+- **Files**: `tests/test_inet.py` (22 tests, all passed)
+- **Coverage Improvements**:
+  - `inet.py`: 59% → 85% (+26%)
+
+- **Test Coverage**:
+  - Feedback validation for nexthop requirements
+  - Index generation with and without path info
+  - JSON serialization (compact and non-compact modes)
+  - Error handling in unpacking (insufficient data, invalid masks)
+  - Path info extraction (_pathinfo method)
+  - Label unpacking (withdraw labels, null labels, bottom-of-stack)
+  - IPv4 and IPv6 multicast routes
+  - All AFI/SAFI combinations (unicast/multicast)
+
 **Commit**: TBD
 
 ---
@@ -192,9 +281,9 @@ class TestRouteType:
 
 ## 📊 Overall Test Suite Status
 
-**Total Tests**: 558 passing (30 deselected fuzz tests)
-**New Tests Added**: 207 (47 EVPN + 44 MUP + 36 MVPN + 70 Flowspec + 57 BGP-LS - 5 skipped)
-**Overall Coverage**: 32% → Target: 50%+
+**Total Tests**: 708 passing (30 deselected fuzz tests)
+**New Tests Added**: 361 (47 EVPN + 44 MUP + 36 MVPN + 70 Flowspec + 57 BGP-LS + 33 RTC + 34 VPLS + 30 IPVPN + 35 Label + 22 INET - 5 skipped)
+**Overall Coverage**: Improved significantly in core BGP NLRI modules
 
 **Major Gaps**:
 - Configuration parsing (0-20% coverage)
@@ -208,6 +297,11 @@ class TestRouteType:
 - ✅ MVPN: 89-95%
 - ✅ Flowspec: 88%
 - ✅ BGP-LS: 83%
+- ✅ RTC: 100%
+- ✅ VPLS: 100%
+- ✅ IPVPN: 100%
+- ✅ Label: 100%
+- ✅ INET: 85%
 - Path attributes: 70-90% (good)
 - Communities: 85%+ (good)
 - Route Refresh: 95%+ (excellent)
