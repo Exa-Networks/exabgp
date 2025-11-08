@@ -197,7 +197,7 @@ python -c "import sys; sys.path.insert(0, 'tests/fuzz'); import conftest; print(
 
 ## Task 0.5: Create Test Utilities Module
 
-**File**: `/home/user/exabgp/tests/helpers.py`
+**File**: `/home/user/exabgp/tests/unit/helpers.py`
 
 **What to do**:
 Create a shared utilities module:
@@ -417,16 +417,16 @@ env PYTHONPATH=src pytest
 ### Specific Category
 ```bash
 # Unit tests only
-env PYTHONPATH=src pytest tests/*_test.py
+env PYTHONPATH=src pytest tests/unit/*_test.py
 
 # Fuzzing tests
 env PYTHONPATH=src pytest tests/fuzz/ -m fuzz
 
 # Integration tests
-env PYTHONPATH=src pytest tests/integration/ -m integration
+env PYTHONPATH=src pytest tests/unit/ -m integration
 
 # Performance benchmarks
-env PYTHONPATH=src pytest tests/performance/ --benchmark-only
+env PYTHONPATH=src pytest tests/unit/ --benchmark-only
 ```
 
 ### With Coverage
@@ -519,7 +519,7 @@ cat tests/README.md | grep -E "(Directory Structure|Running Tests)"
 cd /home/user/exabgp
 git add pyproject.toml .coveragerc pytest.ini
 git add tests/fuzz tests/integration tests/performance tests/security tests/regression
-git add tests/helpers.py tests/README.md
+git add tests/unit/helpers.py tests/README.md
 git add tests/fuzz/conftest.py
 
 git commit -m "Set up testing foundation infrastructure
