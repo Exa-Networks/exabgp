@@ -7,6 +7,8 @@ __pycache__/
 /cover/
 /htmlcov/
 /lib/
+.hypothesis/
+.pytest_cache/
 
 *.sln
 
