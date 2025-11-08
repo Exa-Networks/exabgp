@@ -161,15 +161,15 @@ tests/fuzz/test_update_split.py         11 tests  ✅ passing
 tests/fuzz/test_update_integration.py    7 tests  ✅ passing
 tests/fuzz/test_update_eor.py            5 tests  ✅ passing
 tests/fuzz/test_connection_reader.py     7 tests  ✅ passing
-tests/parsing_test.py                    3 tests  ✅ passing
-tests/l2vpn_test.py                      8 tests  ✅ passing
-tests/notification_test.py               2 tests  ✅ passing
-tests/bgpls_test.py                      7 tests  ✅ passing
-tests/flow_test.py                      10 tests  ✅ passing
-tests/decode_test.py                     4 tests  ✅ passing
-tests/cache_test.py                      5 tests  ✅ passing
-tests/open_test.py                       2 tests  ✅ passing
-tests/control_test.py                    7 tests  ✅ passing
+tests/test_parsing.py                    3 tests  ✅ passing
+tests/test_l2vpn.py                      8 tests  ✅ passing
+tests/test_notification.py               2 tests  ✅ passing
+tests/test_bgpls.py                   1508 tests  ✅ passing (comprehensive)
+tests/test_flow.py                      10 tests  ✅ passing
+tests/test_decode.py                     4 tests  ✅ passing
+tests/test_cache.py                      5 tests  ✅ passing
+tests/test_open.py                       2 tests  ✅ passing
+tests/test_control.py                    7 tests  ✅ passing
 ```
 
 ### Test Execution

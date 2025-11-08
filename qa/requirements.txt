@@ -6,3 +6,4 @@ nose
 psutil
 pytest
 pytest-cov
+hypothesis
