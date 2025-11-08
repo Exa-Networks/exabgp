@@ -69,13 +69,34 @@
   - SSM (Source-Specific Multicast) support
 
 **Branch**: `claude/continue-work-011CUvnbMJj26wSSQihM1VuA`
-**Status**: Ready to commit
+**Commit**: `abf0867 - Add comprehensive MVPN tests (89-95% coverage improvement)`
+
+#### Flowspec (Flow Specification) - **88% Coverage** ✅
+- **Files**: `tests/test_flowspec.py` (70 tests)
+- **Coverage Improvements**:
+  - `flow.py`: 64% → 88% (+24%)
+
+- **Test Coverage**:
+  - All flow component types (Destination, Source, Port, DestinationPort, SourcePort)
+  - Protocol, ICMP type/code, TCP flags, Packet length, DSCP, Fragment
+  - IPv4 and IPv6 flow support (Flow4/Flow6)
+  - Numeric operators (EQ, GT, LT, GTE, LTE, AND, OR combinations)
+  - Binary operators (MATCH, NOT, INCLUDE for TCP flags and fragments)
+  - Pack/unpack roundtrips
+  - Equality, hashing, JSON serialization
+  - Error handling for invalid inputs
+  - String representations for all components
+  - Flow feedback and nexthop validation
+  - Large flows with multiple components
+
+**Branch**: `claude/continue-work-011CUvnbMJj26wSSQihM1VuA`
+**Commit**: `8a01359 - Add comprehensive Flowspec tests (64%→88% coverage improvement)`
 
 ---
 
 ## 🎯 Next Steps (Priority Order)
 
-### 1. Flowspec - Current: 64% Coverage
+### 1. BGP-LS (Link-State)
 **Location**: Check `src/exabgp/bgp/message/update/nlri/bgpls/`
 
 **Files to Assess**:
@@ -89,30 +110,17 @@
 - Focus on TLV encoding/decoding
 - Target: 90%+ coverage
 
-### 2. BGP-LS (Link-State)
-**Location**: Check `src/exabgp/bgp/message/update/nlri/bgpls/`
+### 2. IPv4/IPv6 NLRI Types
+**Location**: Check `src/exabgp/bgp/message/update/nlri/`
 
 **Files to Assess**:
-- Review existing coverage
-- Identify gaps
+- Review existing coverage for basic NLRI types
+- Identify gaps in IPv4/IPv6 route handling
 - Create comprehensive tests
 
 **Approach**:
-- First assess current coverage
-- Create `tests/test_bgpls.py` if needed
-- Focus on TLV encoding/decoding
+- Assess current coverage
 - Target: 90%+ coverage
-
-### 3. Flowspec - Current: 64% Coverage
-**Location**: `src/exabgp/bgp/message/update/nlri/flow.py`
-
-**Current State**: 64% coverage (421 statements, 151 missed)
-
-**Approach**:
-- Review existing `tests/flow_test.py`
-- Identify uncovered branches
-- Add tests for edge cases
-- Target: 85%+ coverage
 
 ---
 
@@ -163,7 +171,8 @@ class TestRouteType:
 
 ## 📊 Overall Test Suite Status
 
-**Total Tests**: 356 passing (30 deselected fuzz tests)
+**Total Tests**: 506 passing (30 deselected fuzz tests)
+**New Tests Added**: 150 (44 MUP + 36 MVPN + 70 Flowspec)
 **Overall Coverage**: 32% → Target: 50%+
 
 **Major Gaps**:
@@ -176,8 +185,8 @@ class TestRouteType:
 - ✅ EVPN: 92-98%
 - ✅ MUP: 90-93%
 - ✅ MVPN: 89-95%
+- ✅ Flowspec: 88%
 - 🔄 BGP-LS: TBD
-- 🔄 Flowspec: 64% → Target 85%+
 - Path attributes: 70-90% (good)
 - Communities: 85%+ (good)
 - Route Refresh: 95%+ (excellent)
