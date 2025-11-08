@@ -9,10 +9,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import asyncio
 import re
 import base64
 import socket
+import select
 import platform
 
 from struct import pack, calcsize
@@ -243,23 +243,33 @@ def asynchronous(io, ip):
         raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip, errstr(exc)))
 
 
-async def ready(io):
-    """Wait for socket to be ready for writing (connection established)"""
-    loop = asyncio.get_event_loop()
+def ready(io):
+    poller = select.poll()
+    poller.register(io, select.POLLOUT | select.POLLNVAL | select.POLLERR)
 
-    try:
-        # Wait for the socket to be writable, which indicates connection is established
-        await loop.sock_sendall(io, b'')  # Empty write to check if writable
+    found = False
 
-        # Check for socket errors
-        err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-        if not err:
-            return True, 'connection established'
-        elif err in error.block:
-            return False, 'connect attempt failed, retrying, reason %s' % errno.errorcode[err]
-        else:
-            return False, f'connect attempt failed with error {err}'
-    except (BrokenPipeError, ConnectionRefusedError, ConnectionResetError):
-        return False, 'could not connect, retrying'
-    except Exception as exc:
-        return False, f'error during connection check: {str(exc)}'
+    while True:
+        try:
+            for _, event in poller.poll(0):
+                if event & select.POLLOUT or event & select.POLLIN:
+                    found = True
+                elif event & select.POLLHUP:
+                    yield False, 'could not connect, retrying'
+                    return
+                elif event & select.POLLERR or event & select.POLLNVAL:
+                    yield False, 'connect attempt failed, issue with reading on the network, retrying'
+                    return
+
+            if found:
+                err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+                if not err:
+                    yield True, 'connection established'
+                    return
+                elif err in error.block:
+                    yield False, 'connect attempt failed, retrying, reason %s' % errno.errorcode[err]
+                    return
+            yield False, 'waiting for socket to become ready'
+        except select.error as err:
+            yield False, 'error, retrying %s' % str(err)
+            return

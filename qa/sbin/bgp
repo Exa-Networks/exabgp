@@ -571,14 +571,10 @@ class BGPService(object):
         self.checker = checker
         self.loop = loop
         self.queue = queue
-        self.server = None
-        self.shutdown_event = asyncio.Event()
 
     def exit(self, code):
         self.queue.put(code)
-        self.shutdown_event.set()
-        if self.server:
-            self.server.close()
+        self.loop.stop()
 
 
 class BGPProtocol(asyncio.Protocol):
@@ -844,11 +840,9 @@ async def main(options, checker, queue):
         sock=sock,
     )
     # perhaps set backlog to 1 ..
-    service.server = server
 
     async with server:
-        # Wait for shutdown signal instead of serve_forever
-        await service.shutdown_event.wait()
+        await server.serve_forever()
 
 
 if __name__ == '__main__':

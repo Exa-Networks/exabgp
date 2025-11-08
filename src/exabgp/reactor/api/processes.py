@@ -214,15 +214,6 @@ class Processes(object):
     def _update_fds(self):
         self.fds = [self._process[process].stdout.fileno() for process in self._process]
 
-    def received_list(self):
-        """Return a list of all currently available commands from processes.
-        This is a non-yielding version suitable for use with asyncio executors."""
-        commands = []
-        for service, command in self.received():
-            commands.append((service, command))
-            log.debug(f'API command received from {service}: {command}', 'process')
-        return commands
-
     def received(self):
         consumed_data = False
 
