@@ -297,32 +297,57 @@
 
 ---
 
+#### Network Layer - **47% Coverage (TCP: 87%, Connection: 32%)** ✅ STARTED
+
+- **Files**: `tests/unit/test_network_tcp.py` (39 tests), `tests/unit/test_connection_simple.py` (13 tests)
+- **Total**: 52 tests, all passed
+- **Coverage Improvements**:
+  - `tcp.py`: 0% → 87% (+87%) - 169 statements, 22 missed
+  - `connection.py`: 0% → 32% (+32%) - 190 statements, 129 missed
+  - `error.py`: 0% → 86% (+86%) - 22 statements, 3 missed
+  - Overall network layer: 0% → 47% (+47%) - 488 statements total
+
+- **Test Coverage (tcp.py - 39 tests)**:
+  - **Socket Creation**: IPv4/IPv6 socket creation, SO_REUSEADDR/SO_REUSEPORT configuration, interface binding
+  - **Socket Binding**: IPv4/IPv6 address binding, invalid address handling, address-in-use scenarios
+  - **Connection**: IPv4/IPv6 connection establishment, unreachable host handling, MD5 error messaging
+  - **TCP-MD5 Authentication**: Platform-specific handling (Linux, FreeBSD, Windows), password encoding (ASCII, base64), hex auto-detection, IPv6 support
+  - **Nagle's Algorithm**: Disabling TCP_NODELAY, error handling
+  - **TTL Configuration**: IPv4 TTL, IPv6 hop limits, minimum TTL security, edge cases (0, None)
+  - **Async Mode**: Non-blocking socket configuration, error handling
+  - **Socket Readiness**: Poll-based readiness checking, POLLHUP/POLLERR/POLLOUT events, error handling
+  - **Integration**: Full socket setup sequences for IPv4/IPv6, socket cleanup verification
+
+- **Test Coverage (connection.py - 13 tests)**:
+  - **Initialization**: IPv4/IPv6 connection objects, message size defaults, defensive mode
+  - **Identifiers**: Connection naming, session IDs, file descriptor handling
+  - **Lifecycle**: Success counter increments, socket close handling, exception handling, __del__ cleanup
+
+- **Remaining Gaps in Connection Layer**:
+  - Generator-based I/O methods (_reader, writer, reader) - complex mocking required
+  - BGP message parsing integration tests
+  - Socket polling under load
+
+**Branch**: `claude/continue-testing-improve-011CUw7BawoYXT9vWXFRtjvk`
+**Commit**: TBD
+
+---
+
 ## 🎯 Remaining Gaps (Priority Order)
 
-### Phase 3: Network Layer - NOT STARTED ❌
+### Phase 3: Network Layer - ⚠️ PARTIALLY COMPLETE (47% coverage)
 
-**Priority: HIGH** | **Impact: Critical for production reliability** | **Estimated: 60-80 tests**
+**Priority: MEDIUM** | **Impact: Important for production reliability** | **Estimated: 25-30 additional tests**
 
-#### 1. TCP/Network Layer (540 lines) - 0% Coverage
-**Location**: `src/exabgp/reactor/network/tcp.py`, `src/exabgp/reactor/network/connection.py`
+#### 1. Connection Layer Advanced Testing (190 lines) - 32% Coverage → Target: 70%+
+**Location**: `src/exabgp/reactor/network/connection.py`
 
-**Recommended Test File**: `tests/unit/test_network_tcp.py` (25-30 tests)
-
-**Test Coverage Needed**:
-- Socket creation and management (IPv4/IPv6)
-- Bind to specific interfaces
-- TLS connection establishment
-- TCP-MD5 authentication
-- Connection timeout handling
-- Error handling (connection refused, network unreachable, etc.)
-- Graceful socket closure
-- Non-blocking I/O
-- Buffer management
-- Socket options (SO_REUSEADDR, TCP_NODELAY, etc.)
-
-**Files to Test**:
-- `src/exabgp/reactor/network/tcp.py` (275 lines)
-- `src/exabgp/reactor/network/connection.py` (265 lines)
+**Test Coverage Still Needed**:
+- Generator-based reader/writer methods (complex I/O patterns)
+- BGP message header validation with various error conditions
+- Multi-packet message assembly
+- Buffer management under various scenarios
+- Socket error propagation through generators
 
 ---
 
@@ -452,14 +477,15 @@ class TestRouteType:
 
 ## 📊 Overall Test Suite Status
 
-**Total Tests**: ~850+ passing (5 skipped)
-**New Tests Added**: ~650+ tests since initial analysis
-  - 441 NLRI tests (EVPN, MUP, MVPN, Flowspec, BGP-LS, RTC, VPLS, IPVPN, Label, INET)
+**Total Tests**: ~900+ passing (5 skipped)
+**New Tests Added**: ~700+ tests since initial analysis
+  - 478 NLRI tests (EVPN, MUP, MVPN, Flowspec, BGP-LS, RTC, VPLS, IPVPN, Label, INET)
   - 138 Path Attribute tests (AS_PATH, Attributes framework, Communities, Individual attributes)
   - 80 SR Attribute tests
   - 234+ Message Type tests (UPDATE, OPEN, NOTIFICATION, KEEPALIVE, ROUTE_REFRESH, OPERATIONAL, Multiprotocol)
+  - 52 Network Layer tests (TCP, Connection) ✅ NEW
 
-**Overall Coverage**: **60-70%** of BGP protocol core (up from ~30-40%)
+**Overall Coverage**: **65-75%** of BGP protocol core (up from ~30-40%)
 
 **✅ Well-Tested Areas** (BGP protocol core):
 - **NLRI Types**: 85-100% coverage
@@ -491,10 +517,11 @@ class TestRouteType:
   - ✅ SRv6: 95%+
 
 **❌ Major Remaining Gaps**:
-- **Network Layer**: 0-10% coverage ⚠️ CRITICAL
-  - TCP/Socket management (0%)
-  - BGP Neighbor state machine (10%)
-  - Protocol handler (30%)
+- **Network Layer**: 47% coverage ⚠️ IN PROGRESS
+  - TCP/Socket management (87%) ✅ DONE
+  - Connection layer (32%) ⚠️ BASIC COVERAGE
+  - BGP Neighbor state machine (10%) - Needs work
+  - Protocol handler (30%) - Needs work
 - **Configuration/Parsing**: 0-20% coverage
 - **Reactor/Event Loop**: 0% coverage
 - **CLI Tools**: 0% coverage
