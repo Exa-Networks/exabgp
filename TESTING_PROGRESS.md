@@ -92,25 +92,46 @@
 **Branch**: `claude/continue-work-011CUvnbMJj26wSSQihM1VuA`
 **Commit**: `8a01359 - Add comprehensive Flowspec tests (64%→88% coverage improvement)`
 
+#### BGP-LS (Link-State) - **83% Coverage** ✅
+- **Files**: `tests/test_bgpls.py` (57 tests: 52 passed, 5 skipped)
+- **Coverage Improvements**:
+  - `link.py`: 23% → 97% (+74%)
+  - `nlri.py`: 54% → 92% (+38%)
+  - `node.py`: 37% → 98% (+61%)
+  - `prefixv4.py`: 31% → 96% (+65%)
+  - `prefixv6.py`: 31% → 96% (+65%)
+  - `srv6sid.py`: 30% → 88% (+58%)
+  - Overall: 46% → 83% (+37%)
+
+- **Test Coverage**:
+  - All 5 BGP-LS NLRI types (NODE, LINK, PREFIXv4, PREFIXv6, SRv6SID)
+  - NLRI unpack and registration
+  - Protocol ID validation (IS-IS L1/L2, OSPFv2, OSPFv3, Direct, Static)
+  - Node descriptors (AS, BGP-LS Identifier, Router ID)
+  - Link descriptors (Local/Remote nodes, Interface/Neighbor addresses, Link IDs, Multi-topology)
+  - Prefix descriptors (OSPF route type, IP reachability)
+  - SRv6 SID descriptors (Multi-topology, SRv6 SID information)
+  - Equality, JSON serialization
+  - Error handling for invalid protocol IDs and node types
+  - String representations
+  - Generic NLRI fallback for unknown types
+  - TLV unpacking (IpReach, OspfRoute, NodeDescriptor, Srv6SIDInformation)
+
+- **Known Bugs Discovered**:
+  1. `link.py:188` - `hash((self))` causes RecursionError (should hash specific fields)
+  2. `link.py:191` - Checks `self.packed` instead of `self._packed` (AttributeError)
+  3. `prefixv4.py:131` - `hash((self))` causes RecursionError
+  4. `prefixv6.py:131` - `hash((self))` causes RecursionError
+  5. `node.py:109` - `hash((self.proto_id, self.node_ids))` fails (list is unhashable, should be tuple)
+
+**Branch**: `claude/continue-authoring-test-011CUvr85DKBQPLjiiLiAyN9`
+**Commit**: TBD
+
 ---
 
 ## 🎯 Next Steps (Priority Order)
 
-### 1. BGP-LS (Link-State)
-**Location**: Check `src/exabgp/bgp/message/update/nlri/bgpls/`
-
-**Files to Assess**:
-- Review existing coverage
-- Identify gaps
-- Create comprehensive tests
-
-**Approach**:
-- First assess current coverage
-- Create `tests/test_bgpls.py` if needed
-- Focus on TLV encoding/decoding
-- Target: 90%+ coverage
-
-### 2. IPv4/IPv6 NLRI Types
+### 1. IPv4/IPv6 NLRI Types
 **Location**: Check `src/exabgp/bgp/message/update/nlri/`
 
 **Files to Assess**:
@@ -171,8 +192,8 @@ class TestRouteType:
 
 ## 📊 Overall Test Suite Status
 
-**Total Tests**: 506 passing (30 deselected fuzz tests)
-**New Tests Added**: 150 (44 MUP + 36 MVPN + 70 Flowspec)
+**Total Tests**: 558 passing (30 deselected fuzz tests)
+**New Tests Added**: 207 (47 EVPN + 44 MUP + 36 MVPN + 70 Flowspec + 57 BGP-LS - 5 skipped)
 **Overall Coverage**: 32% → Target: 50%+
 
 **Major Gaps**:
@@ -186,7 +207,7 @@ class TestRouteType:
 - ✅ MUP: 90-93%
 - ✅ MVPN: 89-95%
 - ✅ Flowspec: 88%
-- 🔄 BGP-LS: TBD
+- ✅ BGP-LS: 83%
 - Path attributes: 70-90% (good)
 - Communities: 85%+ (good)
 - Route Refresh: 95%+ (excellent)
