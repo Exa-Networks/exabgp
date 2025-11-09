@@ -85,7 +85,7 @@ class Tree:
     def unexpected(self, string):
         pprint.pprint(f'unexpected data: {string}')
         for t in self.tokens[:15]:
-            print(t)
+            sys.stdout.write(f'{t}\n')
         breakpoint()
         pass  # noqa: PIE790
 

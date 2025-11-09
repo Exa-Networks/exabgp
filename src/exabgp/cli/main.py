@@ -63,17 +63,15 @@ def main():
     if arg.load:
         if not os.path.exists(arg.load):
             sys.exit(f'no configuration file: {arg.load}')
-        print(f'loading: {arg.load}')
+        sys.stdout.write(f'loading: {arg.load}\n')
         config.load_config(arg.load, verbose=arg.no_cli)
 
     if arg.show:
-        print(config.show())
-
+        sys.stdout.write(f'{config.show()}\n')
     if arg.load and arg.commit:
-        print('commiting')
+        sys.stdout.write('commiting\n')
         config.commit()
-        print('done.')
-
+        sys.stdout.write('done.\n')
     if arg.no_cli:
         sys.exit(0)
 
@@ -124,21 +122,21 @@ def main():
     while running:
         level = ['edit'] + config.get_level()
         edit = ' '.join(level)
-        print(f'Python-cli [{edit}]')
+        sys.stdout.write(f'Python-cli [{edit}]\n')
         cmd = prompt_session.prompt(f'Python-cli {user}@{host}# ', default=message[msg.command])
         # '?' was pressed and we exited
         if not cmd:
-            print(message[msg.help])
+            sys.stdout.write(f'{message[msg.help]}\n')
             continue
 
         if cmd.startswith('set '):
             yang.traverse(cmd[4:])
             if not yang.final:  # and xml.is_leaf(cmd[4:].split()):
-                print('command incomplete')
+                sys.stdout.write('command incomplete\n')
                 message[msg.command] = cmd
                 continue
             if yang.extra:
-                print('invalid extra data')
+                sys.stdout.write('invalid extra data\n')
                 continue
 
             # do not go any further if the last argument does not pass validation
@@ -150,9 +148,7 @@ def main():
 
         run(config, cmd)
         message[msg.command] = ''
-    print('exit')
-
-
+    sys.stdout.write('exit\n')
 if __name__ == '__main__':
     try:
         main()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import pdb  # noqa: T100
 
 from exabgp.environment import getenv
@@ -14,7 +15,7 @@ class Error(Exception):
         self.message = message
         if self.debug:
             error = False
-            print('\n{}\n'.format(self.message))
+            sys.stdout.write('\n{}\n'.format(self.message))
             pdb.set_trace()  # noqa: T100
             return error
         return False
@@ -22,7 +23,7 @@ class Error(Exception):
     def throw(self, message):
         self.message = message
         if self.debug:
-            print('\n{}\n'.format(message))
+            sys.stdout.write('\n{}\n'.format(message))
             pdb.set_trace()  # noqa: T100
         else:
             raise self

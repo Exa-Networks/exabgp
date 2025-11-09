@@ -321,31 +321,25 @@ def create_truncated_update(valid_update, truncate_at):
 
 if __name__ == "__main__":
     # Quick self-test
-    print("Testing UPDATE helper functions...")
-
+    sys.stdout.write("Testing UPDATE helper functions...\n")
     # Test EOR
     eor = create_eor_message()
     assert eor == b'\x00\x00\x00\x00', "EOR should be 4 zeros"
-    print(f"✓ EOR: {eor.hex()}")
-
+    sys.stdout.write(f'✓ EOR: {eor.hex()}\n')
     # Test minimal update
     minimal = create_minimal_update()
     assert len(minimal) == 4, "Minimal UPDATE (no NLRI) should be EOR"
-    print(f"✓ Minimal UPDATE: {minimal.hex()}")
-
+    sys.stdout.write(f'✓ Minimal UPDATE: {minimal.hex()}\n')
     # Test prefix creation
     prefix = create_ipv4_prefix("192.0.2.0", 24)
     assert prefix == b'\x18\xc0\x00\x02', "Prefix should be correct"
-    print(f"✓ Prefix 192.0.2.0/24: {prefix.hex()}")
-
+    sys.stdout.write(f'✓ Prefix 192.0.2.0/24: {prefix.hex()}\n')
     # Test UPDATE with announcement
     update_with_nlri = create_minimal_update(("10.0.0.0", 8))
     assert len(update_with_nlri) > 4, "UPDATE with NLRI should be larger than EOR"
-    print(f"✓ UPDATE with NLRI: {len(update_with_nlri)} bytes")
-
+    sys.stdout.write(f'✓ UPDATE with NLRI: {len(update_with_nlri)} bytes\n')
     # Test withdrawal
     withdrawal = create_withdrawal_update([("192.0.2.0", 24), ("10.0.0.0", 8)])
     assert len(withdrawal) > 4, "Withdrawal should have data"
-    print(f"✓ Withdrawal UPDATE: {len(withdrawal)} bytes")
-
-    print("\nAll helper tests passed! ✓")
+    sys.stdout.write(f'✓ Withdrawal UPDATE: {len(withdrawal)} bytes\n')
+    sys.stdout.write("\nAll helper tests passed! ✓\n")

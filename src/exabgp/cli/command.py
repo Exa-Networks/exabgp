@@ -17,9 +17,7 @@ if sys.version_info[:3] < (3, 7):
 
 def _nop(config, path):
     order = path[0]
-    print(f'command {order} not implemented ({path})')
-
-
+    sys.stdout.write(f'command {order} not implemented ({path})\n')
 def _run(config, path):
     order, more = path.split(' ', 1) if ' ' in path else (path, '')
 
@@ -32,7 +30,7 @@ def _run(config, path):
     command = f'/bin/vbash -c "source /opt/vyatta/etc/functions/script-template; _vyatta_op_run {path}"'
     ret = call(command)
     if ret != 0:
-        print('failed')
+        sys.stdout.write('failed\n')
         return False
     return True
 
@@ -44,17 +42,15 @@ def _debug(config, path):
 
 def xml(config, path):
     config.xml.traverse(path)
-    print()
-    print(f'path  : {path}')
-    print(f'inside: {config.xml.inside}')
-    print()
+    sys.stdout.write('\n')
+    sys.stdout.write(f'path  : {path}\n')
+    sys.stdout.write(f'inside: {config.xml.inside}\n')
+    sys.stdout.write('\n')
     for key, value in config.xml.tree.items():
         if isinstance(value, dict) and not kw.found(key):
-            print(f'{key}: ' + '{...}')
+            sys.stdout.write(f'{key}: ' + '{...}\n')
         else:
-            print(f'{key}: {value}')
-
-
+            sys.stdout.write(f'{key}: {value}\n')
 public = {
     'confirm': 'Confirm prior commit-confirm',
     'comment': 'Add comment to this configuration element',
@@ -105,12 +101,12 @@ _dispatch = {
     'run': _run,
     'save': lambda config, path: config.save_config('/config/vyos.conf'),
     'set': lambda config, path: config.set(path.split()),
-    'show': lambda config, path: print(config.show(path.split())),
+    'show': lambda config, path: sys.stdout.write(f'{config.show(path.split())}\n'),
     'debug': _debug,
     # private
     'q': lambda config, path: sys.exit(),
     'xml': lambda config, path: xml(config, path),
-    'commands': lambda config, path: print(config.commands([])),
+    'commands': lambda config, path: sys.stdout.write(f'{config.commands([])}\n'),
 }
 
 
@@ -119,6 +115,6 @@ def run(config, cmd):
         cmd = cmd.replace('  ', ' ')
     order, more = cmd.split(' ', 1) if ' ' in cmd else (cmd, '')
     if order not in _dispatch:
-        print(f'unimplemented command: {cmd}')
+        sys.stdout.write(f'unimplemented command: {cmd}\n')
         return False
     return _dispatch[order](config, more)

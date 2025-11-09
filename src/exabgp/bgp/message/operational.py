@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import sys
 from struct import pack
 from struct import unpack
 
@@ -122,7 +123,7 @@ class Operational(Message):
             sequence = unpack('!L', data[11:15])[0]
             counter = unpack('!L', data[15:19])[0]
             return klass(afi, safi, routerid, sequence, counter)
-        print('ignoring ATM this kind of message')
+        sys.stdout.write('ignoring ATM this kind of message\n')
 
 
 # ============================================================ OperationalFamily

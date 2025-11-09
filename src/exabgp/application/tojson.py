@@ -45,7 +45,7 @@ class Application:
     def process(self):
         run = sys.argv[1:]
         if not run:
-            print(sys.stderr, 'no consummer program provided')
+            sys.stderr.write('no consummer program provided\n')
             sys.exit(1)
 
         # Prevent some weird termcap data to be created at the start of the PIPE
@@ -62,7 +62,7 @@ class Application:
                 # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
             )
         except (subprocess.CalledProcessError, OSError, ValueError):
-            print('could not start subprocess', file=sys.stderr)
+            sys.stderr.write('could not start subprocess\n')
             sys.exit(1)
 
         return sub
@@ -110,7 +110,7 @@ class Application:
                 time.sleep(0.1)
             except OSError:
                 # subprocess died
-                print('subprocess died', file=sys.stderr)
+                sys.stderr.write('subprocess died\n')
                 sys.exit(1)
 
 

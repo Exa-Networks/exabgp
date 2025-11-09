@@ -44,13 +44,11 @@ class Model:
 
     # @classmethod
     # def fetch_models(self, folder):
-    #     print('downloading models')
-
+    #     sys.stdout.write('downloading models\n')
     #     for module in self.models:
     #         self.fetch_model(folder, module)
 
-    #     print('done.\n')
-
+    #     sys.stdout.write('done.\n\n')
     def load(self, module, infolder=False):
         fname = f'{module}.yang'
         if infolder:
@@ -121,8 +119,8 @@ class Model:
         return True
 
     def clean_models(self):
-        print(f'cleaning {self.folder}')
+        sys.stdout.write(f'cleaning {self.folder}\n')
         for file in glob.glob(f'{self.folder}/*.yang'):
-            print(f'cleanup: {file}')
+            sys.stdout.write(f'cleanup: {file}\n')
             os.remove(file)
-        print('done.\n')
+        sys.stdout.write('done.\n\n')
