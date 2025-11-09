@@ -19,7 +19,7 @@ class Resource(int):
     cache = {}
 
     def __new__(cls, *args):
-        key = '//'.join((str(_) for _ in args))
+        key = '//'.join(str(_) for _ in args)
         if key in Resource.cache.setdefault(cls, {}):
             return Resource.cache[cls][key]
         instance = int.__new__(cls, *args)
