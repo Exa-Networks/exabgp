@@ -81,14 +81,14 @@ class Connection(object):
         if not self.io:
             return
         message = f'{self.name()}, closing connection'
-        log.warning(message, source=self.session())
+        log.warning(lambda: message, source=self.session())
         try:
             self.io.close()
             message = f'connection to {self.peer} closed'
         except Exception as exc:
             message = f'error while closing connection: {exc}'
         self.io = None
-        log.warning(message, source=self.session())
+        log.warning(lambda: message, source=self.session())
 
     def reading(self):
         poller = self._rpoller.get(self.io, None)
@@ -164,7 +164,7 @@ class Connection(object):
                     message = f'{self.name()} {self.peer} blocking io problem mid-way through reading a message {errstr(exc)}, trying to complete'
                     if message != reported:
                         reported = message
-                        log.debug(message, self.session())
+                        log.debug(lambda: message, self.session())
                     yield b''
                 elif exc.args[0] in error.fatal:
                     self.close()

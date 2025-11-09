@@ -122,7 +122,7 @@ class Protocol(object):
 
     def close(self, reason='protocol closed, reason unspecified'):
         if self.connection:
-            log.debug(reason, self.connection.session())
+            log.debug(lambda: reason, self.connection.session())
             self.peer.stats['down'] += 1
 
             self.connection.close()
@@ -273,7 +273,7 @@ class Protocol(object):
             except Exception as exc:
                 log.debug('could not decode message "%d"' % msg_id, self.connection.session())
                 log.debug('%s' % str(exc), self.connection.session())
-                log.debug(traceback.format_exc(), self.connection.session())
+                log.debug(lambda: traceback.format_exc(), self.connection.session())
                 raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
                 # raise Notify(5,0,'unknown message received')
 
