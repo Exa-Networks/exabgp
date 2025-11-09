@@ -103,7 +103,7 @@ def open_writer(send):
 
 def setargs(sub):
     # fmt:off
-    sub.add_argument("--pipename", dest="pipename", help="Name of the pipe", required=False)
+    sub.add_argument('--pipename', dest='pipename', help='Name of the pipe', required=False)
     sub.add_argument('command', nargs='*', help='command to run on the router')
     # fmt:on
 
