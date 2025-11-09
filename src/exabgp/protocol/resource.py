@@ -27,6 +27,8 @@ class Resource(int):
         Resource.cache[cls][key] = instance
         return instance
 
+    # NOTE: Do not convert to f-strings! Using f-strings in __str__() methods
+    # that call str() on self causes infinite recursion.
     def short(self):
         return self.names.get(self, '%ld' % self)
 

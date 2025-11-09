@@ -173,6 +173,8 @@ class JSON(object):
                 'refresh': REFRESH.json(negotiated.refresh),
                 'families': f'[ {" ,".join([f"{family[0]} {family[1]}" for family in negotiated.families])} ]',
                 'nexthop': f'[ {" ,".join([f"{family[0]} {family[1]} {family[2]}" for family in negotiated.nexthop])} ]',
+                # NOTE: Do not convert to f-string! The nested % formatting with complex
+                # comprehensions and conditional logic is more readable with % formatting.
                 'add_path': '{ "send": %s, "receive": %s }'
                 % (
                     '[ %s ]'
