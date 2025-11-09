@@ -15,8 +15,8 @@ import errno
 def errstr(exc):
     try:
         code = exc.args[0] if exc.args else exc.errno
-        return '[Errno %s] %s' % (errno.errorcode.get(code, str(code)), str(exc))
+        return f'[Errno {errno.errorcode.get(code, str(code))}] {str(exc)}'
     except KeyError:
-        return '[Errno unknown (key)] %s' % str(exc)
+        return f'[Errno unknown (key)] {str(exc)}'
     except AttributeError:
-        return '[Errno unknown (attr)] %s' % str(exc)
+        return f'[Errno unknown (attr)] {str(exc)}'

@@ -39,12 +39,12 @@ errno_block = set(
 
 
 class AnswerStream:
-    text_done = '\n%s\n' % Answer.text_done
-    text_error = '\n%s\n' % Answer.text_error
-    text_shutdown = '\n%s\n' % Answer.text_error
-    json_done = '\n%s\n' % Answer.json_done
-    json_error = '\n%s\n' % Answer.json_error
-    json_shutdown = '\n%s\n' % Answer.json_error
+    text_done = f'\n{Answer.text_done}\n'
+    text_error = f'\n{Answer.text_error}\n'
+    text_shutdown = f'\n{Answer.text_error}\n'
+    json_done = f'\n{Answer.json_done}\n'
+    json_error = f'\n{Answer.json_error}\n'
+    json_shutdown = f'\n{Answer.json_error}\n'
     buffer_size = Answer.buffer_size + 2
 
 
@@ -127,7 +127,7 @@ def cmdline(cmdarg):
 
     pipes = named_pipe(ROOT, pipename)
     if len(pipes) != 1:
-        sys.stdout.write("could not find ExaBGP's named pipes (%s.in and %s.out) for the cli\n" % (pipename, pipename))
+        sys.stdout.write(f"could not find ExaBGP's named pipes ({pipename}.in and {pipename}.out) for the cli\n")
         sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
         sys.stdout.write('\n - '.join(pipes))
         sys.stdout.flush()
@@ -158,13 +158,13 @@ def cmdline(cmdarg):
         except IOError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write('could not clear named pipe from potential previous command data (%s)' % str(exc))
+            sys.stdout.write(f'could not clear named pipe from potential previous command data ({str(exc)})')
             sys.stdout.flush()
             sys.exit(1)
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write('could not clear named pipe from potential previous command data (%s)' % str(exc))
+            sys.stdout.write(f'could not clear named pipe from potential previous command data ({str(exc)})')
             sys.stdout.write(str(exc))
             sys.stdout.flush()
             sys.exit(1)
@@ -234,18 +234,18 @@ def cmdline(cmdarg):
 
     # This does not change the behaviour for well formed command
     if sending != command:
-        print('command: %s' % sending)
+        print(f'command: {sending}')
 
     writer = open_writer(send)
     try:
         os.write(writer, sending.encode('utf-8') + b'\n')
         os.close(writer)
     except IOError as exc:
-        sys.stdout.write('could not send command to ExaBGP (%s)' % str(exc))
+        sys.stdout.write(f'could not send command to ExaBGP ({str(exc)})')
         sys.stdout.flush()
         sys.exit(1)
     except OSError as exc:
-        sys.stdout.write('could not send command to ExaBGP (%s)' % str(exc))
+        sys.stdout.write(f'could not send command to ExaBGP ({str(exc)})')
         sys.stdout.flush()
         sys.exit(1)
 
@@ -262,13 +262,13 @@ def cmdline(cmdarg):
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write('could not get answer from ExaBGP (%s)' % str(exc))
+            sys.stdout.write(f'could not get answer from ExaBGP ({str(exc)})')
             sys.stdout.flush()
             sys.exit(1)
         except IOError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write('could not get answer from ExaBGP (%s)' % str(exc))
+            sys.stdout.write(f'could not get answer from ExaBGP ({str(exc)})')
             sys.stdout.flush()
             sys.exit(1)
 
@@ -291,13 +291,13 @@ def cmdline(cmdarg):
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write('could not read answer from ExaBGP (%s)' % str(exc))
+            sys.stdout.write(f'could not read answer from ExaBGP ({str(exc)})')
             sys.stdout.flush()
             sys.exit(1)
         except IOError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write('could not read answer from ExaBGP (%s)' % str(exc))
+            sys.stdout.write(f'could not read answer from ExaBGP ({str(exc)})')
             sys.stdout.flush()
             sys.exit(1)
 
@@ -319,7 +319,7 @@ def cmdline(cmdarg):
                 sys.stderr.write('use help for a list of available commands\n')
                 sys.stderr.flush()
                 break
-            sys.stdout.write('%s\n' % string)
+            sys.stdout.write(f'{string}\n')
             sys.stdout.flush()
 
         if not getenv().api.ack and not raw.decode():

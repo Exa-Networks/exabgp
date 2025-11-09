@@ -80,15 +80,15 @@ class Processes(object):
         if process not in self._process:
             return
         if self.respawn_number and self._restart[process]:
-            log.debug('process %s ended, restarting it' % process, 'process')
+            log.debug(f'process {process} ended, restarting it', 'process')
             self._terminate(process)
             self._start(process)
         else:
-            log.debug('process %s ended' % process, 'process')
+            log.debug(f'process {process} ended', 'process')
             self._terminate(process)
 
     def _terminate(self, process_name):
-        log.debug('terminating process %s' % process_name, 'process')
+        log.debug(f'terminating process {process_name}', 'process')
         process = self._process[process_name]
         del self._process[process_name]
         self._update_fds()
@@ -102,7 +102,7 @@ class Processes(object):
             try:
                 process.wait(timeout=2)
             except subprocess.TimeoutExpired:
-                log.debug('force kill unresponsive %s' % process_name, 'process')
+                log.debug(f'force kill unresponsive {process_name}', 'process')
                 process.kill()
                 process.wait(timeout=1)
         except (OSError, KeyError, subprocess.TimeoutExpired):
@@ -126,7 +126,7 @@ class Processes(object):
                 t.join()
             except OSError:
                 # we most likely received a SIGTERM signal and our child is already dead
-                log.debug('child process %s was already dead' % process, 'process')
+                log.debug(f'child process {process} was already dead', 'process')
         self.clean()
 
     def _start(self, process):
@@ -175,7 +175,7 @@ class Processes(object):
                         # we are respawning too fast
                         if self._respawning[process][around_now] > self.respawn_number:
                             log.critical(
-                                'Too many death for %s (%d) terminating program' % (process, self.respawn_number),
+                                f'Too many death for {process} ({self.respawn_number}) terminating program',
                                 'process',
                             )
                             raise ProcessError()
@@ -257,9 +257,9 @@ class Processes(object):
                         line = line.rstrip()
                         consumed_data = True
                         if line.startswith('debug '):
-                            log.warning('debug info from %s : %s ' % (process, line[6:]), 'api')
+                            log.warning(f'debug info from {process} : {line[6:]} ', 'api')
                         else:
-                            log.debug('command from process %s : %s ' % (process, line), 'process')
+                            log.debug(f'command from process {process} : {line} ', 'process')
                             yield (process, formated(line))
 
                     self._buffer[process] = raw
@@ -273,7 +273,7 @@ class Processes(object):
                         # we most likely have data, we will try to read them a the next loop iteration
                         pass
                     else:
-                        log.debug('unexpected errno received from forked process (%s)' % errstr(exc), 'process')
+                        log.debug(f'unexpected errno received from forked process ({errstr(exc)})', 'process')
                     continue
                 except StopIteration:
                     if not consumed_data:
@@ -298,7 +298,7 @@ class Processes(object):
         # XXX: FIXME: This is potentially blocking
         while True:
             try:
-                self._process[process].stdin.write(bytes('%s\n' % string, 'ascii'))
+                self._process[process].stdin.write(bytes(f'{string}\n', 'ascii'))
             except IOError as exc:
                 self._broken.append(process)
                 if exc.errno == errno.EPIPE:
@@ -308,7 +308,7 @@ class Processes(object):
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
-                        'error received while sending data to helper program, retrying (%s)' % errstr(exc), 'process'
+                        f'error received while sending data to helper program, retrying ({errstr(exc)})', 'process'
                     )
                     continue
             break
@@ -317,13 +317,13 @@ class Processes(object):
             self._process[process].stdin.flush()
         except IOError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
-            log.debug('error received while FLUSHING data to helper program, retrying (%s)' % errstr(exc), 'process')
+            log.debug(f'error received while FLUSHING data to helper program, retrying ({errstr(exc)})', 'process')
 
         return True
 
     def _answer(self, service, string, force=False):
         if force or self.ack:
-            log.debug('responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
+            log.debug(f"responding to {service} : {string.replace('\n', '\\n')}", 'process')
             self.write(service, string)
 
     def answer_done(self, service):
@@ -423,17 +423,17 @@ class Processes(object):
 
     @register_process(Message.CODE.OPEN)
     def _open(self, peer, direction, message, negotiated, header, body):
-        for process in self._notify(peer, '%s-%s' % (direction, Message.CODE.OPEN.SHORT)):
+        for process in self._notify(peer, f'{direction}-{Message.CODE.OPEN.SHORT}'):
             self.write(process, self._encoder[process].open(peer, direction, message, negotiated, header, body), peer)
 
     @register_process(Message.CODE.UPDATE)
     def _update(self, peer, direction, update, negotiated, header, body):
-        for process in self._notify(peer, '%s-%s' % (direction, Message.CODE.UPDATE.SHORT)):
+        for process in self._notify(peer, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
             self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)
 
     @register_process(Message.CODE.NOTIFICATION)
     def _notification(self, peer, direction, message, negotiated, header, body):
-        for process in self._notify(peer, '%s-%s' % (direction, Message.CODE.NOTIFICATION.SHORT)):
+        for process in self._notify(peer, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
             self.write(
                 process, self._encoder[process].notification(peer, direction, message, negotiated, header, body), peer
             )
@@ -441,19 +441,19 @@ class Processes(object):
     # unused-argument, must keep the API
     @register_process(Message.CODE.KEEPALIVE)
     def _keepalive(self, peer, direction, keepalive, negotiated, header, body):
-        for process in self._notify(peer, '%s-%s' % (direction, Message.CODE.KEEPALIVE.SHORT)):
+        for process in self._notify(peer, f'{direction}-{Message.CODE.KEEPALIVE.SHORT}'):
             self.write(process, self._encoder[process].keepalive(peer, direction, negotiated, header, body), peer)
 
     @register_process(Message.CODE.ROUTE_REFRESH)
     def _refresh(self, peer, direction, refresh, negotiated, header, body):
-        for process in self._notify(peer, '%s-%s' % (direction, Message.CODE.ROUTE_REFRESH.SHORT)):
+        for process in self._notify(peer, f'{direction}-{Message.CODE.ROUTE_REFRESH.SHORT}'):
             self.write(
                 process, self._encoder[process].refresh(peer, direction, refresh, negotiated, header, body), peer
             )
 
     @register_process(Message.CODE.OPERATIONAL)
     def _operational(self, peer, direction, operational, negotiated, header, body):
-        for process in self._notify(peer, '%s-%s' % (direction, Message.CODE.OPERATIONAL.SHORT)):
+        for process in self._notify(peer, f'{direction}-{Message.CODE.OPERATIONAL.SHORT}'):
             self.write(
                 process,
                 self._encoder[process].operational(

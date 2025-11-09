@@ -160,7 +160,7 @@ def parse():
         # build an equivalent command line.
         args = sum(
             [
-                '--{0}'.format(line.strip()).split('=', 1)
+                f'--{line.strip()}'.split('=', 1)
                 for line in options.config.readlines()
                 if not line.strip().startswith('#') and line.strip()
             ],
@@ -192,13 +192,13 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
     enable_syslog = syslog and not debug
     # To syslog
     if enable_syslog:
-        facility = getattr(logging.handlers.SysLogHandler, 'LOG_{0}'.format(syslog_facility.upper()))
+        facility = getattr(logging.handlers.SysLogHandler, f'LOG_{syslog_facility.upper()}')
         sh = logging.handlers.SysLogHandler(address=str(syslog_address()), facility=facility)
         if name:
-            healthcheck_name = 'healthcheck-{0}'.format(name)
+            healthcheck_name = f'healthcheck-{name}'
         else:
             healthcheck_name = 'healthcheck'
-        sh.setFormatter(logging.Formatter('{0}[{1}]: %(message)s'.format(healthcheck_name, os.getpid())))
+        sh.setFormatter(logging.Formatter(f'{healthcheck_name}[{os.getpid()}]: %(message)s'))
         logger.addHandler(sh)
     # To console
     if not silent:
@@ -241,7 +241,7 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
         else:
             mask = bin(int(mo.group('netmask'), 16)).count('1')
         try:
-            ip = ip_network('{0}/{1}'.format(mo.group('ip'), mask))
+            ip = ip_network(f"{mo.group('ip')}/{mask}")
         except ValueError:
             continue
         if not ip.is_loopback:
@@ -257,7 +257,7 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
             elif not label_only or label is None:
                 addresses.append(ip)
 
-    logger.debug('System addresses (%s) detected: %s', ifnames, addresses)
+    logger.debug(f'System addresses ({ifnames}) detected: {addresses}')
     return addresses
 
 
@@ -283,7 +283,7 @@ def setup_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
             if sudo:
                 cmd.insert(0, 'sudo')
             if label:
-                cmd += ['label', '{0}:{1}'.format(ifname, label)]
+                cmd += ['label', f'{ifname}:{label}']
             try:
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError as e:
@@ -307,7 +307,7 @@ def remove_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
             if sudo:
                 cmd.insert(0, 'sudo')
             if label:
-                cmd += ['label', '{0}:{1}'.format(ifname, label)]
+                cmd += ['label', f'{ifname}:{label}']
             try:
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError:
@@ -324,7 +324,7 @@ def drop_privileges(user, group):
         import grp
 
         gid = grp.getgrnam(group).gr_gid
-        logger.debug('Dropping privileges to group {0}/{1}'.format(group, gid))
+        logger.debug(f'Dropping privileges to group {group}/{gid}')
         try:
             os.setresgid(gid, gid, gid)
         except AttributeError:
@@ -333,7 +333,7 @@ def drop_privileges(user, group):
         import pwd
 
         uid = pwd.getpwnam(user).pw_uid
-        logger.debug('Dropping privileges to user {0}/{1}'.format(user, uid))
+        logger.debug(f'Dropping privileges to user {user}/{uid}')
         try:
             os.setresuid(uid, uid, uid)
         except AttributeError:
@@ -407,9 +407,9 @@ def loop(options):
             logger.info('service up, restoring loopback and ip-ifname ips')
             setup_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
 
-        logger.info('send announces for %s state to ExaBGP', target)
-        metric = vars(options).get('{0}_metric'.format(str(target).lower()), 0)
-        as_path = vars(options).get('{0}_as_path'.format(str(target).lower()), None)
+        logger.info(f'send announces for {target} state to ExaBGP')
+        metric = vars(options).get(f'{str(target).lower()}_metric', 0)
+        as_path = vars(options).get(f'{str(target).lower()}_as_path', None)
         if as_path is None:
             as_path = options.as_path
         for ip in options.ips:
@@ -417,42 +417,42 @@ def loop(options):
                 command = 'neighbor * announce' if target is states.UP else 'neighbor * withdraw'
             else:
                 command = 'neighbor * announce'
-            announce = 'route {0} next-hop {1}'.format(str(ip), options.next_hop or 'self')
+            announce = f"route {ip} next-hop {options.next_hop or 'self'}"
 
             if command == 'neighbor * announce':
-                announce = '{0} med {1}'.format(announce, metric)
+                announce = f'{announce} med {metric}'
                 if options.local_preference >= 0:
-                    announce = '{0} local-preference {1}'.format(announce, options.local_preference)
+                    announce = f'{announce} local-preference {options.local_preference}'
                 if options.community or options.disabled_community:
                     community = options.community
                     if target in (states.DOWN, states.DISABLED):
                         if options.disabled_community:
                             community = options.disabled_community
                     if community:
-                        announce = '{0} community [ {1} ]'.format(announce, community)
+                        announce = f'{announce} community [ {community} ]'
                 if options.extended_community:
-                    announce = '{0} extended-community [ {1} ]'.format(announce, options.extended_community)
+                    announce = f'{announce} extended-community [ {options.extended_community} ]'
                 if options.large_community:
-                    announce = '{0} large-community [ {1} ]'.format(announce, options.large_community)
+                    announce = f'{announce} large-community [ {options.large_community} ]'
                 if as_path:
-                    announce = '{0} as-path [ {1} ]'.format(announce, options.as_path)
+                    announce = f'{announce} as-path [ {options.as_path} ]'
 
             # append path ID if required
             if options.path_id:
-                announce = '{0} path-information {1}'.format(announce, options.path_id)
+                announce = f'{announce} path-information {options.path_id}'
 
             # allow filtering neighbors that the route should be advertised to
             if options.neighbors:
                 # routes are filtered to specific neighbors; format them and put into a list
-                neighbors = ['neighbor {0}'.format(neighbor) for neighbor in options.neighbors]
+                neighbors = [f'neighbor {neighbor}' for neighbor in options.neighbors]
                 # comma seperate the neighbor list and prepend to announcement command
-                command = '{0} {1}'.format(', '.join(neighbors), command)
+                command = f"{', '.join(neighbors)} {command}"
 
             metric += options.increase
 
             # Send and flush command
-            logger.debug('exabgp: {0} {1}'.format(command, announce))
-            print('{0} {1}'.format(command, announce))
+            logger.debug(f'exabgp: {command} {announce}')
+            print(f'{command} {announce}')
             sys.stdout.flush()
 
             # Wait for confirmation from ExaBGP if expected
@@ -481,12 +481,12 @@ def loop(options):
             target = states.DOWN
 
         # Log and execute commands
-        logger.debug('Transition to %s', str(target))
+        logger.debug(f'Transition to {target}')
         cmds = []
-        cmds.extend(vars(options).get('{0}_execute'.format(str(target).lower()), []) or [])
+        cmds.extend(vars(options).get(f'{str(target).lower()}_execute', []) or [])
         cmds.extend(vars(options).get('execute', []) or [])
         for cmd in cmds:
-            logger.debug('Transition to %s, execute `%s`', str(target), cmd)
+            logger.debug(f'Transition to {target}, execute `{cmd}`')
             env = os.environ.copy()
             env.update({'STATE': str(target)})
             with open(os.devnull, 'w') as fnull:
@@ -539,7 +539,7 @@ def loop(options):
                 state = trigger(states.RISING)
                 checks = 1
         else:
-            raise ValueError('Unhandled state: {0}'.format(str(state)))
+            raise ValueError(f'Unhandled state: {state}')
 
         # Send announces. We announce them on a regular basis (unless --debounce flag is set),
         # in case we lose connection with a peer and the adj-rib-out is disabled.
@@ -586,7 +586,7 @@ def main():
     options = parse()
     setup_logging(options.debug, options.silent, options.name, options.syslog_facility, not options.no_syslog)
     if options.pid:
-        options.pid.write('{0}\n'.format(os.getpid()))
+        options.pid.write(f'{os.getpid()}\n')
         options.pid.close()
     try:
         # Setup IP to use
@@ -608,7 +608,7 @@ def main():
         # Main loop
         loop(options)
     except Exception as e:  # pylint: disable=W0703
-        logger.exception('Uncaught exception: %s', e)
+        logger.exception(f'Uncaught exception: {e}')
         sys.exit(1)
 
 
