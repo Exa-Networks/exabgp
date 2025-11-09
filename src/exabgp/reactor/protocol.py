@@ -272,7 +272,7 @@ class Protocol(object):
                 raise
             except Exception as exc:
                 log.debug(lambda: 'could not decode message "%d"' % msg_id, self.connection.session())
-                log.debug(lambda: '%s' % str(exc), self.connection.session())
+                log.debug(lambda exc=exc: '%s' % str(exc), self.connection.session())
                 log.debug(lambda: traceback.format_exc(), self.connection.session())
                 raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
                 # raise Notify(5,0,'unknown message received')

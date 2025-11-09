@@ -148,7 +148,7 @@ def cmdline(cmdarg):
         for pid in pids:
             os.waitpid(pid, 0)
     except OSError as exc:
-        log.critical(lambda: f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')
+        log.critical(lambda exc=exc: f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')
         sys.exit(1)
 
 
@@ -242,7 +242,7 @@ def run(comment, configurations, pid=0):
             exit_code = Reactor(configuration).run()
         except Exception as e:
             exit_code = Reactor.Exit.unknown
-            log.critical(lambda: str(e))
+            log.critical(lambda e=e: str(e))
 
         try:
             profiler.dump_stats(destination)

@@ -204,7 +204,7 @@ class Connection(object):
             except socket.error as exc:
                 if exc.args[0] in error.block:
                     log.debug(
-                        lambda: f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(exc)}, trying to complete',
+                        lambda exc=exc: f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(exc)}, trying to complete',
                         self.session(),
                     )
                     yield False
@@ -215,7 +215,7 @@ class Connection(object):
                 elif exc.args[0] in error.fatal:
                     self.close()
                     log.critical(
-                        lambda: f'{self.name()} {self.peer} problem sending message ({errstr(exc)})', self.session()
+                        lambda exc=exc: f'{self.name()} {self.peer} problem sending message ({errstr(exc)})', self.session()
                     )
                     raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})')
                 # what error could it be !
