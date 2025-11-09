@@ -32,6 +32,7 @@ from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
 
 from exabgp.logger import log
+from exabgp.logger import logfunc
 from exabgp.logger import option
 
 # check_neighbor
@@ -104,8 +105,8 @@ def check_generation(neighbors):
             log.debug('parsed route requires %d updates' % len(packed), 'parser')
             log.debug('update size is %d' % len(pack1), 'parser')
 
-            log.debug('parsed route %s' % str1, 'parser')
-            log.debug('parsed hex   %s' % od(pack1), 'parser')
+            logfunc.debug(lambda: 'parsed route %s' % str1, 'parser')
+            logfunc.debug(lambda: 'parsed hex   %s' % od(pack1), 'parser')
 
             # This does not take the BGP header - let's assume we will not break that :)
             try:
@@ -118,8 +119,8 @@ def check_generation(neighbors):
                 str2 = change2.extensive()
                 pack2 = list(Update([update.nlris[0]], update.attributes).messages(negotiated))[0]
 
-                log.debug('recoded route %s' % str2, 'parser')
-                log.debug('recoded hex   %s' % od(pack2), 'parser')
+                logfunc.debug(lambda: 'recoded route %s' % str2, 'parser')
+                logfunc.debug(lambda: 'recoded hex   %s' % od(pack2), 'parser')
 
                 str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]', 'med 100')
                 str1r = (
@@ -166,15 +167,15 @@ def check_generation(neighbors):
                     log.debug('skipping encoding for update with non-transitive attribute(s)', 'parser')
                 elif pack1 != pack2:
                     log.debug('encoding are different', 'parser')
-                    log.debug('[%s]' % (od(pack1)), 'parser')
-                    log.debug('[%s]' % (od(pack2)), 'parser')
+                    logfunc.debug(lambda: '[%s]' % (od(pack1)), 'parser')
+                    logfunc.debug(lambda: '[%s]' % (od(pack2)), 'parser')
                     return False
                 else:
                     log.debug('encoding is fine', 'parser')
                     log.debug('----------------------------------------', 'parser')
 
-                log.debug('JSON nlri %s' % change1.nlri.json(), 'parser')
-                log.debug('JSON attr %s' % change1.attributes.json(), 'parser')
+                logfunc.debug(lambda: 'JSON nlri %s' % change1.nlri.json(), 'parser')
+                logfunc.debug(lambda: 'JSON attr %s' % change1.attributes.json(), 'parser')
 
             except Notify as exc:
                 log.debug('----------------------------------------', 'parser')
@@ -253,7 +254,7 @@ def _make_nlri(neighbor, routes):
     nlris = []
     try:
         while announced:
-            log.debug('parsing NLRI %s' % announced, 'parser')
+            logfunc.debug(lambda announced=announced: 'parsing NLRI %s' % announced, 'parser')
             nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath)
             nlris.append(nlri)
     except Exception as exc:
@@ -275,7 +276,7 @@ def check_nlri(neighbor, routes):
 
     log.debug('', 'parser')  # new line
     for nlri in nlris:
-        log.info('nlri json %s' % nlri.json(), 'parser')
+        logfunc.info(lambda nlri=nlri: 'nlri json %s' % nlri.json(), 'parser')
     return True
 
 
@@ -417,8 +418,8 @@ def check_update(neighbor, raw):
     log.debug('', 'parser')  # new line
     for number in range(len(update.nlris)):
         change = Change(update.nlris[number], update.attributes)
-        log.info('decoded %s %s %s' % ('update', change.nlri.action, change.extensive()), 'parser')
-    log.info('update json %s' % Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''), 'parser')
+        logfunc.info(lambda change=change: 'decoded %s %s %s' % ('update', change.nlri.action, change.extensive()), 'parser')
+    logfunc.info(lambda: 'update json %s' % Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''), 'parser')
 
     return True
 

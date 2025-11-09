@@ -44,6 +44,7 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.protocol.ip import IP
 
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
@@ -467,11 +468,11 @@ class Protocol(object):
     def new_operational(self, operational, negotiated):
         for _ in self.write(operational, negotiated):
             yield _NOP
-        log.debug('>> OPERATIONAL %s' % str(operational), self.connection.session())
+        logfunc.debug(lambda: '>> OPERATIONAL %s' % str(operational), self.connection.session())
         yield operational
 
     def new_refresh(self, refresh):
         for _ in self.write(refresh, None):
             yield _NOP
-        log.debug('>> REFRESH %s' % str(refresh), self.connection.session())
+        logfunc.debug(lambda: '>> REFRESH %s' % str(refresh), self.connection.session())
         yield refresh
