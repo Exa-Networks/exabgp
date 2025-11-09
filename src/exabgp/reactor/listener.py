@@ -93,7 +93,7 @@ class Listener(object):
                 raise BindingError(f'could not listen on {local_ip}:{local_port}, this is an invalid address')
             raise NetworkError(str(exc))
         except NetworkError as exc:
-            log.critical(lambda: str(exc), 'network')
+            log.critical(lambda exc=exc: str(exc), 'network')
             raise exc
 
     def listen_on(self, local_addr, remote_addr, port, md5_password, md5_base64, ttl_in):
@@ -113,7 +113,7 @@ class Listener(object):
                     f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root', 'network'
                 )
             else:
-                log.critical(lambda: f'can not bind to {local_addr}:{port} ({exc})', 'network')
+                log.critical(lambda exc=exc: f'can not bind to {local_addr}:{port} ({exc})', 'network')
             log.critical(lambda: 'unset exabgp.tcp.bind if you do not want listen for incoming connections', 'network')
             log.critical(lambda: f'and check that no other daemon is already binding to port {port}', 'network')
             return False
@@ -134,7 +134,7 @@ class Listener(object):
             except socket.error as exc:
                 if exc.errno in error.block:
                     continue
-                log.critical(lambda: str(exc), 'network')
+                log.critical(lambda exc=exc: str(exc), 'network')
 
         return peer_connected
 
@@ -153,7 +153,7 @@ class Listener(object):
                 fam = self._family_AFI_map[sock.family]
                 yield Incoming(fam, remote_ip, local_ip, io)
         except NetworkError as exc:
-            log.critical(lambda: str(exc), 'network')
+            log.critical(lambda exc=exc: str(exc), 'network')
 
     def new_connections(self):
         if not self.serving:

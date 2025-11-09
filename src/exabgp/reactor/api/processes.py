@@ -189,7 +189,7 @@ class Processes(object):
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)
             log.debug(lambda: 'could not start process %s' % process, 'process')
-            log.debug(lambda: 'reason: %s' % str(exc), 'process')
+            log.debug(lambda exc=exc: 'reason: %s' % str(exc), 'process')
 
     def start(self, configuration, restart=False):
         for process in list(self._process):
@@ -273,7 +273,7 @@ class Processes(object):
                         # we most likely have data, we will try to read them a the next loop iteration
                         pass
                     else:
-                        log.debug(lambda: f'unexpected errno received from forked process ({errstr(exc)})', 'process')
+                        log.debug(lambda exc=exc: f'unexpected errno received from forked process ({errstr(exc)})', 'process')
                     continue
                 except StopIteration:
                     if not consumed_data:
@@ -308,7 +308,7 @@ class Processes(object):
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
-                        lambda: f'error received while sending data to helper program, retrying ({errstr(exc)})', 'process'
+                        lambda exc=exc: f'error received while sending data to helper program, retrying ({errstr(exc)})', 'process'
                     )
                     continue
             break
@@ -317,7 +317,7 @@ class Processes(object):
             self._process[process].stdin.flush()
         except IOError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
-            log.debug(lambda: f'error received while FLUSHING data to helper program, retrying ({errstr(exc)})', 'process')
+            log.debug(lambda exc=exc: f'error received while FLUSHING data to helper program, retrying ({errstr(exc)})', 'process')
 
         return True
 

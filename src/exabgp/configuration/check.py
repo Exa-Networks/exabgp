@@ -178,7 +178,7 @@ def check_generation(neighbors):
 
             except Notify as exc:
                 log.debug(lambda: '----------------------------------------', 'parser')
-                log.debug(lambda: str(exc), 'parser')
+                log.debug(lambda exc=exc: str(exc), 'parser')
                 log.debug(lambda: '----------------------------------------', 'parser')
                 return False
         neighbor.rib.clear()
@@ -260,7 +260,7 @@ def _make_nlri(neighbor, routes):
         log.error(lambda: f'could not parse the nlri for afi={afi}, safi={safi}', 'parser')
         from exabgp.debug import string_exception
 
-        log.error(lambda: string_exception(exc), 'parser')
+        log.error(lambda exc=exc: string_exception(exc), 'parser')
         if getenv().debug.pdb:
             raise
         return []

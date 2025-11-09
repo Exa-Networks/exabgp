@@ -183,7 +183,7 @@ class Daemon(object):
                 if pid > 0:
                     os._exit(0)
             except OSError as exc:
-                log.critical(lambda: f'can not fork, errno {exc.errno} : {exc.strerror}', 'daemon')
+                log.critical(lambda exc=exc: f'can not fork, errno {exc.errno} : {exc.strerror}', 'daemon')
 
         # do not detach if we are already supervised or run by init like process
         if self._is_socket(sys.__stdin__.fileno()) or os.getppid() == 1:
