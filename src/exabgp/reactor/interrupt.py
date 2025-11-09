@@ -57,46 +57,46 @@ class Signal(object):
         signal.signal(signal.SIGUSR2, self.sigusr2)
 
     def sigterm(self, signum, frame):
-        log.critical('SIGTERM received', 'reactor')
+        log.critical(lambda: 'SIGTERM received', 'reactor')
         if self.received:
-            log.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
             return
-        log.critical('scheduling shutdown', 'reactor')
+        log.critical(lambda: 'scheduling shutdown', 'reactor')
         self.received = self.SHUTDOWN
         self.number = signum
 
     def sighup(self, signum, frame):
-        log.critical('SIGHUP received', 'reactor')
+        log.critical(lambda: 'SIGHUP received', 'reactor')
         if self.received:
-            log.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
             return
-        log.critical('scheduling shutdown', 'reactor')
+        log.critical(lambda: 'scheduling shutdown', 'reactor')
         self.received = self.SHUTDOWN
         self.number = signum
 
     def sigalrm(self, signum, frame):
-        log.critical('SIGALRM received', 'reactor')
+        log.critical(lambda: 'SIGALRM received', 'reactor')
         if self.received:
-            log.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
             return
-        log.critical('scheduling restart', 'reactor')
+        log.critical(lambda: 'scheduling restart', 'reactor')
         self.received = self.RESTART
         self.number = signum
 
     def sigusr1(self, signum, frame):
-        log.critical('SIGUSR1 received', 'reactor')
+        log.critical(lambda: 'SIGUSR1 received', 'reactor')
         if self.received:
-            log.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
             return
-        log.critical('scheduling reload of configuration', 'reactor')
+        log.critical(lambda: 'scheduling reload of configuration', 'reactor')
         self.received = self.RELOAD
         self.number = signum
 
     def sigusr2(self, signum, frame):
-        log.critical('SIGUSR2 received', 'reactor')
+        log.critical(lambda: 'SIGUSR2 received', 'reactor')
         if self.received:
-            log.critical('ignoring - still handling previous signal', 'reactor')
+            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
             return
-        log.critical('scheduling reload of configuration and processes', 'reactor')
+        log.critical(lambda: 'scheduling reload of configuration and processes', 'reactor')
         self.received = self.FULL_RELOAD
         self.number = signum

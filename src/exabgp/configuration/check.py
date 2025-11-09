@@ -101,15 +101,15 @@ def check_generation(neighbors):
             packed = list(Update([change1.nlri], change1.attributes).messages(negotiated))
             pack1 = packed[0]
 
-            log.debug('parsed route requires %d updates' % len(packed), 'parser')
-            log.debug('update size is %d' % len(pack1), 'parser')
+            log.debug(lambda: 'parsed route requires %d updates' % len(packed), 'parser')
+            log.debug(lambda: 'update size is %d' % len(pack1), 'parser')
 
-            log.debug('parsed route %s' % str1, 'parser')
-            log.debug('parsed hex   %s' % od(pack1), 'parser')
+            log.debug(lambda: 'parsed route %s' % str1, 'parser')
+            log.debug(lambda: 'parsed hex   %s' % od(pack1), 'parser')
 
             # This does not take the BGP header - let's assume we will not break that :)
             try:
-                log.debug('')  # new line
+                log.debug(lambda: '')  # new line
 
                 pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
                 update = Update.unpack_message(pack1s, Direction.IN, negotiated)
@@ -118,8 +118,8 @@ def check_generation(neighbors):
                 str2 = change2.extensive()
                 pack2 = list(Update([update.nlris[0]], update.attributes).messages(negotiated))[0]
 
-                log.debug('recoded route %s' % str2, 'parser')
-                log.debug('recoded hex   %s' % od(pack2), 'parser')
+                log.debug(lambda: 'recoded route %s' % str2, 'parser')
+                log.debug(lambda: 'recoded hex   %s' % od(pack2), 'parser')
 
                 str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]', 'med 100')
                 str1r = (
@@ -149,37 +149,37 @@ def check_generation(neighbors):
                 if str1r != str2r:
                     if 'attribute [' in str1r and ' 0x00 ' in str1r:
                         # we do not decode non-transitive attributes
-                        log.debug('skipping string check on update with non-transitive attribute(s)', 'parser')
+                        log.debug(lambda: 'skipping string check on update with non-transitive attribute(s)', 'parser')
                         skip = True
                     elif '=http' in str1r or '=ndl-aas' in str1r:
-                        log.debug('skipping string check on update with named flow attribute(s)', 'parser')
+                        log.debug(lambda: 'skipping string check on update with named flow attribute(s)', 'parser')
                         skip = True
                     else:
-                        log.debug('strings are different:', 'parser')
-                        log.debug(f'[{str1r}]', 'parser')
-                        log.debug(f'[{str2r}]', 'parser')
+                        log.debug(lambda: 'strings are different:', 'parser')
+                        log.debug(lambda: f'[{str1r}]', 'parser')
+                        log.debug(lambda: f'[{str2r}]', 'parser')
                         return False
                 else:
-                    log.debug('strings are fine', 'parser')
+                    log.debug(lambda: 'strings are fine', 'parser')
 
                 if skip:
-                    log.debug('skipping encoding for update with non-transitive attribute(s)', 'parser')
+                    log.debug(lambda: 'skipping encoding for update with non-transitive attribute(s)', 'parser')
                 elif pack1 != pack2:
-                    log.debug('encoding are different', 'parser')
-                    log.debug(f'[{od(pack1)}]', 'parser')
-                    log.debug(f'[{od(pack2)}]', 'parser')
+                    log.debug(lambda: 'encoding are different', 'parser')
+                    log.debug(lambda: f'[{od(pack1)}]', 'parser')
+                    log.debug(lambda: f'[{od(pack2)}]', 'parser')
                     return False
                 else:
-                    log.debug('encoding is fine', 'parser')
-                    log.debug('----------------------------------------', 'parser')
+                    log.debug(lambda: 'encoding is fine', 'parser')
+                    log.debug(lambda: '----------------------------------------', 'parser')
 
-                log.debug('JSON nlri %s' % change1.nlri.json(), 'parser')
-                log.debug('JSON attr %s' % change1.attributes.json(), 'parser')
+                log.debug(lambda: 'JSON nlri %s' % change1.nlri.json(), 'parser')
+                log.debug(lambda: 'JSON attr %s' % change1.attributes.json(), 'parser')
 
             except Notify as exc:
-                log.debug('----------------------------------------', 'parser')
-                log.debug(str(exc), 'parser')
-                log.debug('----------------------------------------', 'parser')
+                log.debug(lambda: '----------------------------------------', 'parser')
+                log.debug(lambda: str(exc), 'parser')
+                log.debug(lambda: '----------------------------------------', 'parser')
                 return False
         neighbor.rib.clear()
 
@@ -253,14 +253,14 @@ def _make_nlri(neighbor, routes):
     nlris = []
     try:
         while announced:
-            log.debug('parsing NLRI %s' % announced, 'parser')
+            log.debug(lambda: 'parsing NLRI %s' % announced, 'parser')
             nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath)
             nlris.append(nlri)
     except Exception as exc:
-        log.error(f'could not parse the nlri for afi={afi}, safi={safi}', 'parser')
+        log.error(lambda: f'could not parse the nlri for afi={afi}, safi={safi}', 'parser')
         from exabgp.debug import string_exception
 
-        log.error(string_exception(exc), 'parser')
+        log.error(lambda: string_exception(exc), 'parser')
         if getenv().debug.pdb:
             raise
         return []
@@ -273,9 +273,9 @@ def check_nlri(neighbor, routes):
     if not nlris:
         return False
 
-    log.debug('', 'parser')  # new line
+    log.debug(lambda: '', 'parser')  # new line
     for nlri in nlris:
-        log.info('nlri json %s' % nlri.json(), 'parser')
+        log.info(lambda: 'nlri json %s' % nlri.json(), 'parser')
     return True
 
 
@@ -335,12 +335,12 @@ def _make_update(neighbor, raw):
             injected, raw = raw[19:size], raw[size:]
 
             if kind == 2:
-                log.debug('the message is an update', 'parser')
+                log.debug(lambda: 'the message is an update', 'parser')
             else:
-                log.debug('the message is not an update (%d) - aborting' % kind, 'parser')
+                log.debug(lambda: 'the message is not an update (%d) - aborting' % kind, 'parser')
                 return False
         else:
-            log.debug('header missing, assuming this message is ONE update', 'parser')
+            log.debug(lambda: 'header missing, assuming this message is ONE update', 'parser')
             injected, raw = raw, ''
 
         try:
@@ -349,16 +349,16 @@ def _make_update(neighbor, raw):
         except Notify:
             import traceback
 
-            log.error('could not parse the message', 'parser')
-            log.error(traceback.format_exc(), 'parser')
+            log.error(lambda: 'could not parse the message', 'parser')
+            log.error(lambda: traceback.format_exc(), 'parser')
             if getenv().debug.pdb:
                 raise
             return None
         except Exception:
             import traceback
 
-            log.error('could not parse the message', 'parser')
-            log.error(traceback.format_exc(), 'parser')
+            log.error(lambda: 'could not parse the message', 'parser')
+            log.error(lambda: traceback.format_exc(), 'parser')
             if getenv().debug.pdb:
                 raise
             return None
@@ -379,11 +379,11 @@ def _make_notification(neighbor, raw):
         injected, raw = raw[19:size], raw[size:]
 
         if kind != 3:
-            log.debug('the message is not an notification (%d) - aborting' % kind, 'parser')
+            log.debug(lambda: 'the message is not an notification (%d) - aborting' % kind, 'parser')
             return False
-        log.debug('the message is an notification', 'parser')
+        log.debug(lambda: 'the message is an notification', 'parser')
     else:
-        log.debug('header missing, assuming this message is ONE notification', 'parser')
+        log.debug(lambda: 'header missing, assuming this message is ONE notification', 'parser')
         injected, raw = raw, ''
 
     try:
@@ -392,16 +392,16 @@ def _make_notification(neighbor, raw):
     except Notify:
         import traceback
 
-        log.error('could not parse the message', 'parser')
-        log.error(traceback.format_exc(), 'parser')
+        log.error(lambda: 'could not parse the message', 'parser')
+        log.error(lambda: traceback.format_exc(), 'parser')
         if getenv().debug.pdb:
             raise
         return None
     except Exception:
         import traceback
 
-        log.error('could not parse the message', 'parser')
-        log.error(traceback.format_exc(), 'parser')
+        log.error(lambda: 'could not parse the message', 'parser')
+        log.error(lambda: traceback.format_exc(), 'parser')
         if getenv().debug.pdb:
             raise
         return None
@@ -414,12 +414,12 @@ def check_update(neighbor, raw):
     if not update:
         return False
 
-    log.debug('', 'parser')  # new line
+    log.debug(lambda: '', 'parser')  # new line
     for number in range(len(update.nlris)):
         change = Change(update.nlris[number], update.attributes)
-        log.info(f'decoded update {change.nlri.action} {change.extensive()}', 'parser')
+        log.info(lambda: f'decoded update {change.nlri.action} {change.extensive()}', 'parser')
     json_update = Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')
-    log.info(f"update json {json_update}", 'parser')
+    log.info(lambda: f"update json {json_update}", 'parser')
 
     return True
 

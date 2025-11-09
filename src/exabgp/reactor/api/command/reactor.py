@@ -82,7 +82,7 @@ def version(self, reactor, service, line, use_json):
 
 @Command.register('#', False)
 def comment(self, reactor, service, line, use_json):
-    log.debug(line.lstrip().lstrip('#').strip(), 'process')
+    log.debug(lambda: line.lstrip().lstrip('#').strip(), 'process')
     reactor.processes.answer_done(service)
     return True
 

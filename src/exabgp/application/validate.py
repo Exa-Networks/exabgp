@@ -47,32 +47,32 @@ def cmdline(cmdarg):
         env.log.parser = True
 
     for configuration in cmdarg.configuration:
-        log.info(f'loading {configuration}', 'configuration')
+        log.info(lambda: f'loading {configuration}', 'configuration')
         location = getconf(configuration)
         if not location:
-            log.critical(f'{configuration} is not an exabgp config file', 'configuration')
+            log.critical(lambda: f'{configuration} is not an exabgp config file', 'configuration')
             sys.exit(1)
 
         config = Configuration([location])
 
         if not config.reload():
-            log.critical(f'{configuration} is not a valid config file', 'configuration')
+            log.critical(lambda: f'{configuration} is not a valid config file', 'configuration')
             sys.exit(1)
-        log.info('\u2713 loading', 'configuration')
+        log.info(lambda: '\u2713 loading', 'configuration')
 
         if cmdarg.neighbor:
-            log.warning('checking neighbors', 'configuration')
+            log.warning(lambda: 'checking neighbors', 'configuration')
             for name, neighbor in config.neighbors.items():
                 reparsed = NeighborTemplate.configuration(neighbor)
-                log.debug(reparsed, configuration)
-                log.info(f'\u2713 neighbor  {name.split()[1]}', 'configuration')
+                log.debug(lambda: reparsed, configuration)
+                log.info(lambda: f'\u2713 neighbor  {name.split()[1]}', 'configuration')
 
         if cmdarg.route:
-            log.warning('checking routes', 'configuration')
+            log.warning(lambda: 'checking routes', 'configuration')
             if not check_generation(config.neighbors):
-                log.critical(f'{configuration} has an invalid route', 'configuration')
+                log.critical(lambda: f'{configuration} has an invalid route', 'configuration')
                 sys.exit(1)
-            log.info('\u2713 routes', 'configuration')
+            log.info(lambda: '\u2713 routes', 'configuration')
 
 
 def main():

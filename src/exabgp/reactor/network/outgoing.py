@@ -70,13 +70,13 @@ class Outgoing(Connection):
                 last = time.time()
 
             if notify:
-                log.debug('attempting connection to %s:%d' % (self.peer, self.port), self.session())
+                log.debug(lambda: 'attempting connection to %s:%d' % (self.peer, self.port), self.session())
 
             connect_issue = self._connect()
             if connect_issue:
                 if notify:
-                    log.debug('connection to %s:%d failed' % (self.peer, self.port), self.session())
-                    log.debug(str(connect_issue), self.session())
+                    log.debug(lambda: 'connection to %s:%d failed' % (self.peer, self.port), self.session())
+                    log.debug(lambda: str(connect_issue), self.session())
                 yield False
                 continue
 

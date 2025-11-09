@@ -78,5 +78,5 @@ class ParseFlowRoute(Section):
         return True
 
     def _check(self, change):
-        log.debug('warning: no check on flows are implemented', 'configuration')
+        log.debug(lambda: 'warning: no check on flows are implemented', 'configuration')
         return True

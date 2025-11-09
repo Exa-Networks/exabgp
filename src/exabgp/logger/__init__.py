@@ -70,14 +70,15 @@ class _log(object):
 
 class log(_log):
     def logger(logger, message, source, level):
+        # Early exit if logging is disabled
+        if not option.log_enabled(source, level):
+            return
+
+        # If message is callable, call it now
+        if callable(message):
+            message = message()
+
         timestamp = time.localtime()
         for line in message.split('\n'):
             logger(option.formater(line, source, level, timestamp))
             record(line, source, level, timestamp)
-
-
-class logfunc(_log):
-    def logger(logger, message, source, level):
-        if not option.log_enabled(source, level):
-            return
-        log.logger(logger, message(), source, level)

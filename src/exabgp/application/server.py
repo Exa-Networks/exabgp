@@ -117,7 +117,7 @@ def cmdline(cmdarg):
     for configuration in cmdarg.configuration:
         location = getconf(configuration)
         if not location:
-            log.critical(f'{configuration} is not an exabgp config file', 'configuration')
+            log.critical(lambda: f'{configuration} is not an exabgp config file', 'configuration')
             sys.exit(1)
         configurations.append(location)
 
@@ -128,7 +128,7 @@ def cmdline(cmdarg):
         run(comment, configurations)
 
     if not (env.log.destination in ('syslog', 'stdout', 'stderr') or env.log.destination.startswith('host:')):
-        log.error('can not log to files when running multiple configuration (as we fork)', 'configuration')
+        log.error(lambda: 'can not log to files when running multiple configuration (as we fork)', 'configuration')
         sys.exit(1)
 
     try:
@@ -148,27 +148,27 @@ def cmdline(cmdarg):
         for pid in pids:
             os.waitpid(pid, 0)
     except OSError as exc:
-        log.critical(f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')
+        log.critical(lambda: f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')
         sys.exit(1)
 
 
 def run(comment, configurations, pid=0):
     env = getenv()
 
-    log.info('Thank you for using ExaBGP', 'welcome')
-    log.debug(version, 'version')
-    log.debug(ROOT, 'location')
+    log.info(lambda: 'Thank you for using ExaBGP', 'welcome')
+    log.debug(lambda: version, 'version')
+    log.debug(lambda: ROOT, 'location')
     python_version = sys.version.replace('\n', ' ')
-    log.debug(python_version, 'python')
+    log.debug(lambda: python_version, 'python')
     platform_info = ' '.join(platform.uname()[:5])
-    log.debug(platform_info, 'platform')
+    log.debug(lambda: platform_info, 'platform')
 
     if comment:
-        log.error(comment, 'advice')
+        log.error(lambda: comment, 'advice')
 
     warning = warn()
     if warning:
-        log.warning(warning, 'advice')
+        log.warning(lambda: warning, 'advice')
 
     if env.api.cli:
         pipename = 'exabgp' if env.api.pipename is None else env.api.pipename
@@ -178,15 +178,15 @@ def run(comment, configurations, pid=0):
             log.error(
                 f'could not find the named pipes ({pipename}.in and {pipename}.out) required for the cli', 'cli'
             )
-            log.error('we scanned the following folders (the number is your PID):', 'cli')
+            log.error(lambda: 'we scanned the following folders (the number is your PID):', 'cli')
             for location in pipes:
-                log.error(f' - {location}', 'cli control')
-            log.error('please make them in one of the folder with the following commands:', 'cli control')
+                log.error(lambda: f' - {location}', 'cli control')
+            log.error(lambda: 'please make them in one of the folder with the following commands:', 'cli control')
 
             # NOTE: Logging full paths (os.getcwd()) is intentional for user guidance
             # Security review: Accepted as necessary for troubleshooting
-            log.error(f'> mkfifo {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
-            log.error(f'> chmod 600 {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
+            log.error(lambda: f'> mkfifo {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
+            log.error(lambda: f'> chmod 600 {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
 
             if os.getuid() != 0:
                 log.error(
@@ -198,9 +198,9 @@ def run(comment, configurations, pid=0):
             os.environ['exabgp_cli_pipe'] = pipe
             os.environ['exabgp_api_pipename'] = pipename
 
-            log.info('named pipes for the cli are:', 'cli control')
-            log.info(f'to send commands  {pipe}{pipename}.in', 'cli control')
-            log.info(f'to read responses {pipe}{pipename}.out', 'cli control')
+            log.info(lambda: 'named pipes for the cli are:', 'cli control')
+            log.info(lambda: f'to send commands  {pipe}{pipename}.in', 'cli control')
+            log.info(lambda: f'to read responses {pipe}{pipename}.out', 'cli control')
 
     configuration = Configuration(configurations)
 
@@ -227,12 +227,12 @@ def run(comment, configurations, pid=0):
         notice = f'profile can not use this filename as output, it already exists ({profile_name})'
 
     if notice:
-        log.debug('-' * len(notice), 'reactor')
-        log.debug(notice, 'reactor')
-        log.debug('-' * len(notice), 'reactor')
+        log.debug(lambda: '-' * len(notice), 'reactor')
+        log.debug(lambda: notice, 'reactor')
+        log.debug(lambda: '-' * len(notice), 'reactor')
 
     cwd = os.getcwd()
-    log.debug('profiling ....', 'reactor')
+    log.debug(lambda: 'profiling ....', 'reactor')
 
     destination = profile_name if profile_name.startswith('/') else os.path.join(cwd, profile_name)
 
@@ -242,15 +242,15 @@ def run(comment, configurations, pid=0):
             exit_code = Reactor(configuration).run()
         except Exception as e:
             exit_code = Reactor.Exit.unknown
-            log.critical(str(e))
+            log.critical(lambda: str(e))
 
         try:
             profiler.dump_stats(destination)
         except Exception:
             notice = 'could not save profiling in formation at: ' + destination
-            log.debug('-' * len(notice), 'reactor')
-            log.debug(notice, 'reactor')
-            log.debug('-' * len(notice), 'reactor')
+            log.debug(lambda: '-' * len(notice), 'reactor')
+            log.debug(lambda: notice, 'reactor')
+            log.debug(lambda: '-' * len(notice), 'reactor')
 
         __exit(env.debug.memory, exit_code)
 
