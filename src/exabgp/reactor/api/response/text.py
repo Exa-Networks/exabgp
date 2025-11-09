@@ -105,11 +105,10 @@ class Text:
     def operational(self, neighbor, direction, what, operational, negotiated, header, body):
         if what == 'advisory':
             return self._operational_advisory(neighbor, direction, operational, header, body)
-        elif what == 'query':
+        if what == 'query':
             return self._operational_query(neighbor, direction, operational, header, body)
-        elif what == 'counter':
+        if what == 'counter':
             return self._operational_counter(neighbor, direction, operational, header, body)
         # elif what == 'interface':
         # 	return self._operational_interface(peer,operational)
-        else:
-            raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
+        raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')

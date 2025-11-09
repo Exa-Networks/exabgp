@@ -53,8 +53,7 @@ class EOR(Message):
             if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
                 # May not have been the size read on the wire if MP was used for IPv4 unicast
                 return 4
-            else:
-                return self.MP_LENGTH
+            return self.MP_LENGTH
 
     def __init__(self, afi, safi, action=None):
         Message.__init__(self)

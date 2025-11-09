@@ -1,53 +1,53 @@
 from __future__ import annotations
 
-from exabgp.protocol.ip import IP, NoNextHop
-from exabgp.protocol.family import (
-    AFI,
-)
 from exabgp.bgp.message.open.asn import (
     ASN,
+)
+from exabgp.bgp.message.update.attribute import Attributes, NextHop, NextHopSelf
+from exabgp.bgp.message.update.attribute.community.extended import (
+    ExtendedCommunities,
+    ExtendedCommunitiesIPv6,
+    InterfaceSet,
+    TrafficAction,
+    TrafficMark,
+    TrafficNextHopIPv4IETF,
+    TrafficNextHopIPv6IETF,
+    TrafficNextHopSimpson,
+    TrafficRate,
+    TrafficRedirect,
+    TrafficRedirectASN4,
+    TrafficRedirectIPv6,
 )
 from exabgp.bgp.message.update.nlri import (
     Flow,
 )
 from exabgp.bgp.message.update.nlri.flow import (
     BinaryOperator,
-    NumericOperator,
-    Flow4Source,
     Flow4Destination,
-    Flow6Source,
+    Flow4Source,
     Flow6Destination,
-    FlowSourcePort,
-    FlowDestinationPort,
+    Flow6Source,
     FlowAnyPort,
+    FlowDestinationPort,
+    FlowDSCP,
+    FlowFlowLabel,
+    FlowFragment,
+    FlowICMPCode,
+    FlowICMPType,
     FlowIPProtocol,
     FlowNextHeader,
-    FlowTCPFlag,
-    FlowFragment,
     FlowPacketLength,
-    FlowICMPType,
-    FlowICMPCode,
-    FlowDSCP,
+    FlowSourcePort,
+    FlowTCPFlag,
     FlowTrafficClass,
-    FlowFlowLabel,
+    NumericOperator,
 )
-from exabgp.bgp.message.update.attribute import NextHop, NextHopSelf, Attributes
-from exabgp.bgp.message.update.attribute.community.extended import (
-    TrafficRate,
-    TrafficAction,
-    TrafficRedirect,
-    TrafficRedirectASN4,
-    TrafficMark,
-    TrafficRedirectIPv6,
-    TrafficNextHopIPv4IETF,
-    TrafficNextHopIPv6IETF,
-    TrafficNextHopSimpson,
-    InterfaceSet,
-    ExtendedCommunities,
-    ExtendedCommunitiesIPv6,
-)
-from exabgp.rib.change import Change
 from exabgp.logger import log
+from exabgp.protocol.family import (
+    AFI,
+)
+from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.rib.change import Change
 
 
 def flow(tokeniser):
@@ -55,8 +55,7 @@ def flow(tokeniser):
 
 
 def source(tokeniser):
-    """Update source to handle both IPv4 and IPv6 flows.
-    """
+    """Update source to handle both IPv4 and IPv6 flows."""
     data = tokeniser()
     # Check if it's IPv4
     if data.count('.') == 3 and data.count(':') == 0:
@@ -74,8 +73,7 @@ def source(tokeniser):
 
 
 def destination(tokeniser):
-    """Update destination to handle both IPv4 and IPv6 flows.
-    """
+    """Update destination to handle both IPv4 and IPv6 flows."""
     data = tokeniser()
     # Check if it's IPv4
     if data.count('.') == 3 and data.count(':') == 0:
@@ -100,7 +98,7 @@ def _operator_numeric(string):
         char = string[0].lower()
         if char == '=':
             return NumericOperator.EQ, string[1:]
-        elif char == '>':
+        if char == '>':
             operator = NumericOperator.GT
         elif char == '<':
             operator = NumericOperator.LT
@@ -117,8 +115,7 @@ def _operator_numeric(string):
         if string[1] == '=':
             operator += NumericOperator.EQ
             return operator, string[2:]
-        else:
-            return operator, string[1:]
+        return operator, string[1:]
     except IndexError:
         raise ValueError('Invalid expression (too short) %s' % string) from None
 
@@ -127,12 +124,11 @@ def _operator_binary(string):
     try:
         if string[0] == '=':
             return BinaryOperator.MATCH, string[1:]
-        elif string[0] == '!':
+        if string[0] == '!':
             if string.startswith('!='):
                 return BinaryOperator.DIFF, string[2:]
             return BinaryOperator.NOT, string[1:]
-        else:
-            return BinaryOperator.INCLUDE, string
+        return BinaryOperator.INCLUDE, string
     except IndexError:
         raise ValueError('Invalid expression (too short) %s' % string) from None
 
@@ -256,9 +252,8 @@ def next_hop(tokeniser):
 
     if value.lower() == 'self':
         return NextHopSelf(AFI.ipv4)
-    else:
-        ip = IP.create(value)
-        return NextHop(ip.top(), ip.pack())
+    ip = IP.create(value)
+    return NextHop(ip.top(), ip.pack())
 
 
 def accept(tokeniser):
@@ -328,10 +323,11 @@ def redirect(tokeniser):
             if nn >= pow(2, 16):
                 raise ValueError('asn is a 32 bits number, local administrator field can only be 16 bit %s' % nn)
             return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, nn))
-        else:
-            if nn >= pow(2, 32):
-                raise ValueError('Local administrator field is a 32 bits number, value too large %s' % nn)
-            return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn))
+
+        if nn >= pow(2, 32):
+            raise ValueError('Local administrator field is a 32 bits number, value too large %s' % nn)
+
+        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn))
 
     raise ValueError('redirect format incorrect')
 
@@ -344,8 +340,7 @@ def redirect_next_hop_ietf(tokeniser):
     ip = IP.create(tokeniser())
     if ip.ipv4():
         return ExtendedCommunities().add(TrafficNextHopIPv4IETF(ip, False))
-    else:
-        return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(ip, False))
+    return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(ip, False))
 
 
 def copy(tokeniser):

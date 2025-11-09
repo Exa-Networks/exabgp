@@ -78,8 +78,7 @@ class ASYNC:
                     # This shouldn't happen in normal operation
                     log.warning(lambda: 'async | Cannot run coroutines: event loop already running', 'reactor')
                     return False
-                else:
-                    return loop.run_until_complete(self._run_async())
+                return loop.run_until_complete(self._run_async())
             except RuntimeError:
                 # No event loop exists, create a new one
                 return asyncio.run(self._run_async())

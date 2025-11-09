@@ -110,7 +110,7 @@ class IP:
             # XXX: FIXME: I assume that ::FFFF:<ip> must be treated unicast
             # if int(ip.split(':')[-1].split('.')[0]) in IP._multicast_range:
             return SAFI.unicast
-        elif '.' in ip:
+        if '.' in ip:
             if int(ip.split('.')[0]) in IP._multicast_range:
                 return SAFI.multicast
             return SAFI.unicast
@@ -215,8 +215,7 @@ class IPRange(IP):
     def __repr__(self):
         if (self.ipv4() and self.mask == 32) or (self.ipv6() and self.mask == 128):
             return super(IPRange, self).__repr__()
-        else:
-            return f'{self.top()}/{int(self.mask)}'
+        return f'{self.top()}/{int(self.mask)}'
 
 
 # ==================================================================== NoNextHop

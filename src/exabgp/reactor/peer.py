@@ -332,7 +332,7 @@ class Peer:
         if len(families) > 1:
             joined = ' '.join(families)
             return f'[ {joined} ]'
-        elif len(families) == 1:
+        if len(families) == 1:
             return families[0]
 
         return ''
