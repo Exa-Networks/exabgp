@@ -430,7 +430,8 @@ def display_update(neighbor, raw):
     if not update:
         return False
 
-    sys.stdout.write(f'{Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')}\n')
+    sys.stdout.write(Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''))
+    sys.stdout.write('\n')
     return True
 
 
@@ -439,7 +440,8 @@ def display_notification(neighbor, raw):
     if not notification:
         return False
 
-    sys.stdout.write(f'{Response.JSON(json_version).notification(neighbor, 'in', notification, None, '', '')}\n')
+    sys.stdout.write(Response.JSON(json_version).notification(neighbor, 'in', notification, None, '', ''))
+    sys.stdout.write('\n')
     return True
 
 
