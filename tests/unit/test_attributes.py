@@ -254,7 +254,7 @@ def test_attributes_zero_length_as_path_valid() -> None:
     # AS_PATH: flag=0x40, type=2, length=0 (empty path)
     data = bytes([0x40, 0x02, 0x00])
 
-    attributes = Attributes.unpack(data, Direction.IN, negotiated)
+    Attributes.unpack(data, Direction.IN, negotiated)
 
     # Empty AS_PATH returns None, so attribute should not be added
     # or should be added as empty

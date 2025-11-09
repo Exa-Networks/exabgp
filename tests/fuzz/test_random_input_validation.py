@@ -342,7 +342,7 @@ def test_empty_configuration() -> None:
         tokeniser.set_text("")
 
         # Should not crash
-        line = tokeniser()
+        tokeniser()
         # Empty config should return empty line or no data
     except Exception as e:
         # May fail due to iterator setup

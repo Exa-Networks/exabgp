@@ -292,7 +292,7 @@ class TestMD5Authentication:
 
         try:
             tcp.md5(io, '::1', 179, 'password123', False)
-        except (MD5Error, OSError) as e:
+        except (MD5Error, OSError):
             # Expected - either MD5 not supported or IPv6 not available
             pass
 

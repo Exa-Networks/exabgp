@@ -585,7 +585,7 @@ class TestTimerConcurrentBehavior:
 
         # Rapid fire checks
         for _ in range(10):
-            result = timer.need_ka()
+            timer.need_ka()
             # Only first should return True if time has passed
 
 

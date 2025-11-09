@@ -30,9 +30,9 @@ class TestUpdateMessageParsingPerformance:
         def parse_update():
             reader = BytesIO(msg_bytes)
             # Read header
-            marker = reader.read(16)
+            reader.read(16)
             length = int.from_bytes(reader.read(2), 'big')
-            msg_type = int.from_bytes(reader.read(1), 'big')
+            int.from_bytes(reader.read(1), 'big')
             # Parse body
             body = reader.read(length - 19)
             msg = Update.unpack_message(body, Direction.IN, negotiated)
@@ -48,9 +48,9 @@ class TestUpdateMessageParsingPerformance:
 
         def parse_update():
             reader = BytesIO(msg_bytes)
-            marker = reader.read(16)
+            reader.read(16)
             length = int.from_bytes(reader.read(2), 'big')
-            msg_type = int.from_bytes(reader.read(1), 'big')
+            int.from_bytes(reader.read(1), 'big')
             body = reader.read(length - 19)
             msg = Update.unpack_message(body, Direction.IN, negotiated)
             return msg
@@ -65,9 +65,9 @@ class TestUpdateMessageParsingPerformance:
 
         def parse_update():
             reader = BytesIO(msg_bytes)
-            marker = reader.read(16)
+            reader.read(16)
             length = int.from_bytes(reader.read(2), 'big')
-            msg_type = int.from_bytes(reader.read(1), 'big')
+            int.from_bytes(reader.read(1), 'big')
             body = reader.read(length - 19)
             msg = Update.unpack_message(body, Direction.IN, negotiated)
             return msg
@@ -84,11 +84,11 @@ class TestUpdateMessageParsingPerformance:
             for _ in range(100):
                 msg_bytes = create_simple_update_bytes(num_routes=1)
                 reader = BytesIO(msg_bytes)
-                marker = reader.read(16)
+                reader.read(16)
                 length = int.from_bytes(reader.read(2), 'big')
-                msg_type = int.from_bytes(reader.read(1), 'big')
+                int.from_bytes(reader.read(1), 'big')
                 body = reader.read(length - 19)
-                msg = Update.unpack_message(body, Direction.IN, negotiated)
+                Update.unpack_message(body, Direction.IN, negotiated)
                 count += 1
             return count
 
@@ -104,11 +104,11 @@ class TestUpdateMessageParsingPerformance:
             for _ in range(1000):
                 msg_bytes = create_simple_update_bytes(num_routes=1)
                 reader = BytesIO(msg_bytes)
-                marker = reader.read(16)
+                reader.read(16)
                 length = int.from_bytes(reader.read(2), 'big')
-                msg_type = int.from_bytes(reader.read(1), 'big')
+                int.from_bytes(reader.read(1), 'big')
                 body = reader.read(length - 19)
-                msg = Update.unpack_message(body, Direction.IN, negotiated)
+                Update.unpack_message(body, Direction.IN, negotiated)
                 count += 1
             return count
 
@@ -122,13 +122,13 @@ class TestKeepAliveParsingPerformance:
     def test_parse_single_keepalive(self, benchmark: Any) -> None:
         """Benchmark parsing a single KEEPALIVE message."""
         msg_bytes = create_keepalive_bytes()
-        negotiated = create_mock_negotiated()
+        create_mock_negotiated()
 
         def parse_keepalive():
             reader = BytesIO(msg_bytes)
-            marker = reader.read(16)
-            length = int.from_bytes(reader.read(2), 'big')
-            msg_type = int.from_bytes(reader.read(1), 'big')
+            reader.read(16)
+            int.from_bytes(reader.read(2), 'big')
+            int.from_bytes(reader.read(1), 'big')
             # KEEPALIVE has no body
             msg = KeepAlive()
             return msg
@@ -144,10 +144,10 @@ class TestKeepAliveParsingPerformance:
             count = 0
             for _ in range(1000):
                 reader = BytesIO(msg_bytes)
-                marker = reader.read(16)
-                length = int.from_bytes(reader.read(2), 'big')
-                msg_type = int.from_bytes(reader.read(1), 'big')
-                msg = KeepAlive()
+                reader.read(16)
+                int.from_bytes(reader.read(2), 'big')
+                int.from_bytes(reader.read(1), 'big')
+                KeepAlive()
                 count += 1
             return count
 
@@ -170,8 +170,8 @@ class TestRawMessageReading:
                 if len(marker) < 16:
                     break
                 length = int.from_bytes(stream.read(2), 'big')
-                msg_type = int.from_bytes(stream.read(1), 'big')
-                body = stream.read(length - 19)
+                int.from_bytes(stream.read(1), 'big')
+                stream.read(length - 19)
                 count += 1
             return count
 
@@ -192,10 +192,10 @@ class TestRawMessageReading:
                 # Validate marker
                 assert marker == b'\xff' * 16
                 length = int.from_bytes(stream.read(2), 'big')
-                msg_type = int.from_bytes(stream.read(1), 'big')
+                int.from_bytes(stream.read(1), 'big')
                 # Validate length
                 assert 19 <= length <= 4096
-                body = stream.read(length - 19)
+                stream.read(length - 19)
                 count += 1
             return count
 
@@ -214,10 +214,10 @@ class TestHighVolumeParsingStress:
             count = 0
             for _ in range(10000):
                 reader = BytesIO(msg_bytes)
-                marker = reader.read(16)
-                length = int.from_bytes(reader.read(2), 'big')
-                msg_type = int.from_bytes(reader.read(1), 'big')
-                msg = KeepAlive()
+                reader.read(16)
+                int.from_bytes(reader.read(2), 'big')
+                int.from_bytes(reader.read(1), 'big')
+                KeepAlive()
                 count += 1
             return count
 
@@ -233,11 +233,11 @@ class TestHighVolumeParsingStress:
             for _ in range(5000):
                 msg_bytes = create_simple_update_bytes(num_routes=1)
                 reader = BytesIO(msg_bytes)
-                marker = reader.read(16)
+                reader.read(16)
                 length = int.from_bytes(reader.read(2), 'big')
-                msg_type = int.from_bytes(reader.read(1), 'big')
+                int.from_bytes(reader.read(1), 'big')
                 body = reader.read(length - 19)
-                msg = Update.unpack_message(body, Direction.IN, negotiated)
+                Update.unpack_message(body, Direction.IN, negotiated)
                 count += 1
             return count
 
@@ -264,8 +264,8 @@ class TestHighVolumeParsingStress:
                 if len(length_bytes) < 2:
                     break
                 length = int.from_bytes(length_bytes, 'big')
-                msg_type = int.from_bytes(stream.read(1), 'big')
-                body = stream.read(length - 19)
+                int.from_bytes(stream.read(1), 'big')
+                stream.read(length - 19)
                 count += 1
 
             return count

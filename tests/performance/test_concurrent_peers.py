@@ -46,8 +46,8 @@ class TestMultiplePeerProcessing:
                         continue
 
                     length = int.from_bytes(reader.read(2), 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
-                    body = reader.read(length - 19)
+                    int.from_bytes(reader.read(1), 'big')
+                    reader.read(length - 19)
 
                     message_counts[peer_id] += 1
                     total += 1
@@ -85,8 +85,8 @@ class TestMultiplePeerProcessing:
                         continue
 
                     length = int.from_bytes(reader.read(2), 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
-                    body = reader.read(length - 19)
+                    int.from_bytes(reader.read(1), 'big')
+                    reader.read(length - 19)
                     total += 1
 
                     if total >= num_peers * messages_per_peer:
@@ -130,8 +130,8 @@ class TestMultiplePeerProcessing:
                         continue
 
                     length = int.from_bytes(length_bytes, 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
-                    body = reader.read(length - 19)
+                    int.from_bytes(reader.read(1), 'big')
+                    reader.read(length - 19)
                     total += 1
 
                     if total >= num_peers * messages_per_peer:
@@ -260,8 +260,8 @@ class TestPeerLoadBalancing:
                         continue
 
                     length = int.from_bytes(reader.read(2), 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
-                    body = reader.read(length - 19)
+                    int.from_bytes(reader.read(1), 'big')
+                    reader.read(length - 19)
 
                     processed_per_peer[peer_id] += 1
                     total += 1
@@ -307,8 +307,8 @@ class TestPeerLoadBalancing:
                             break
 
                         length = int.from_bytes(reader.read(2), 'big')
-                        msg_type = int.from_bytes(reader.read(1), 'big')
-                        body = reader.read(length - 19)
+                        int.from_bytes(reader.read(1), 'big')
+                        reader.read(length - 19)
                         total += 1
 
             return total
@@ -345,8 +345,8 @@ class TestHighPeerCountStress:
                         continue
 
                     length = int.from_bytes(reader.read(2), 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
-                    body = reader.read(length - 19)
+                    int.from_bytes(reader.read(1), 'big')
+                    reader.read(length - 19)
                     total += 1
 
             return total
@@ -374,8 +374,8 @@ class TestHighPeerCountStress:
                     marker = reader.read(16)
                     if len(marker) < 16:
                         break
-                    length = int.from_bytes(reader.read(2), 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
+                    int.from_bytes(reader.read(2), 'big')
+                    int.from_bytes(reader.read(1), 'big')
                     total += 1
 
             return total
@@ -410,8 +410,8 @@ class TestHighPeerCountStress:
                         continue
 
                     length = int.from_bytes(reader.read(2), 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
-                    body = reader.read(length - 19)
+                    int.from_bytes(reader.read(1), 'big')
+                    reader.read(length - 19)
                     total += 1
 
             return total

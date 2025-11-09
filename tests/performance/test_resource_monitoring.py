@@ -37,11 +37,11 @@ class TestMemoryUsage:
             # Parse 1000 messages
             for _ in range(1000):
                 reader = BytesIO(msg_bytes)
-                marker = reader.read(16)
+                reader.read(16)
                 length = int.from_bytes(reader.read(2), 'big')
-                msg_type = int.from_bytes(reader.read(1), 'big')
+                int.from_bytes(reader.read(1), 'big')
                 body = reader.read(length - 19)
-                msg = Update.unpack_message(body, Direction.IN, negotiated)
+                Update.unpack_message(body, Direction.IN, negotiated)
 
             # Get memory after parsing
             final_memory = process.memory_info().rss / 1024 / 1024
@@ -50,7 +50,7 @@ class TestMemoryUsage:
             return memory_delta
 
         # Note: This returns memory delta, actual benchmark is on the function
-        result = benchmark(parse_with_memory_tracking)
+        benchmark(parse_with_memory_tracking)
 
     def test_memory_growth_with_backlog(self, benchmark: Any) -> None:
         """Monitor memory growth as backlog increases."""
@@ -106,7 +106,7 @@ class TestMemoryUsage:
                 'final_delta': final_memory - initial_memory,
             }
 
-        result = benchmark(handle_large_messages)
+        benchmark(handle_large_messages)
 
     def test_memory_recovery_after_load(self, benchmark: Any) -> None:
         """Test memory recovery after processing high load."""
@@ -132,7 +132,7 @@ class TestMemoryUsage:
 
             return memory_delta
 
-        result = benchmark(load_and_recover)
+        benchmark(load_and_recover)
 
 
 class TestResourceUtilization:
@@ -141,7 +141,7 @@ class TestResourceUtilization:
     def test_cpu_usage_during_parsing(self, benchmark: Any) -> None:
         """Monitor CPU usage during message parsing."""
         batch_bytes = create_batch_messages('update', count=5000)
-        negotiated = create_mock_negotiated()
+        create_mock_negotiated()
         process = psutil.Process(os.getpid())
 
         def parse_with_cpu_tracking():
@@ -157,8 +157,8 @@ class TestResourceUtilization:
                 if len(marker) < 16:
                     break
                 length = int.from_bytes(stream.read(2), 'big')
-                msg_type = int.from_bytes(stream.read(1), 'big')
-                body = stream.read(length - 19)
+                int.from_bytes(stream.read(1), 'big')
+                stream.read(length - 19)
                 count += 1
 
             # Get final CPU times
@@ -168,7 +168,7 @@ class TestResourceUtilization:
 
             return cpu_delta
 
-        result = benchmark(parse_with_cpu_tracking)
+        benchmark(parse_with_cpu_tracking)
 
     def test_resource_usage_multi_peer(self, benchmark: Any) -> None:
         """Monitor resource usage with multiple peers."""
@@ -196,8 +196,8 @@ class TestResourceUtilization:
                     if len(marker) < 16:
                         break
                     length = int.from_bytes(reader.read(2), 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
-                    body = reader.read(length - 19)
+                    int.from_bytes(reader.read(1), 'big')
+                    reader.read(length - 19)
                     total += 1
 
             final_memory = process.memory_info().rss / 1024 / 1024
@@ -205,7 +205,7 @@ class TestResourceUtilization:
 
             return {'processed': total, 'memory_delta_mb': memory_delta}
 
-        result = benchmark(multi_peer_resources)
+        benchmark(multi_peer_resources)
 
 
 class TestMemoryLeakDetection:
@@ -235,7 +235,7 @@ class TestMemoryLeakDetection:
             # Check if memory consistently grows (potential leak)
             return memory_samples
 
-        result = benchmark(cycle_allocations)
+        benchmark(cycle_allocations)
 
     def test_backlog_growth_shrink_cycles(self, benchmark: Any) -> None:
         """Test for leaks in backlog growth/shrink cycles."""
@@ -261,7 +261,7 @@ class TestMemoryLeakDetection:
 
             return memory_samples
 
-        result = benchmark(cycle_backlog)
+        benchmark(cycle_backlog)
 
 
 class TestScalabilityLimits:
@@ -269,7 +269,7 @@ class TestScalabilityLimits:
 
     def test_max_sustainable_message_rate(self, benchmark: Any) -> None:
         """Determine maximum sustainable message processing rate."""
-        process = psutil.Process(os.getpid())
+        psutil.Process(os.getpid())
 
         def measure_max_rate():
             # Process increasing message counts
@@ -288,8 +288,8 @@ class TestScalabilityLimits:
                     if len(marker) < 16:
                         break
                     length = int.from_bytes(stream.read(2), 'big')
-                    msg_type = int.from_bytes(stream.read(1), 'big')
-                    body = stream.read(length - 19)
+                    int.from_bytes(stream.read(1), 'big')
+                    stream.read(length - 19)
                     processed += 1
 
                 elapsed = time.time() - start_time
@@ -298,7 +298,7 @@ class TestScalabilityLimits:
 
             return rates
 
-        result = benchmark(measure_max_rate)
+        benchmark(measure_max_rate)
 
     def test_backlog_size_limits(self, benchmark: Any) -> None:
         """Test behavior at different backlog size limits."""
@@ -324,7 +324,7 @@ class TestScalabilityLimits:
 
             return results
 
-        result = benchmark(test_limits)
+        benchmark(test_limits)
 
 
 class TestStressWithMonitoring:
@@ -371,7 +371,7 @@ class TestStressWithMonitoring:
 
             return metrics
 
-        result = benchmark(extreme_load)
+        benchmark(extreme_load)
 
     def test_sustained_high_throughput(self, benchmark: Any) -> None:
         """Test sustained high throughput with monitoring."""
@@ -397,8 +397,8 @@ class TestStressWithMonitoring:
                     if len(marker) < 16:
                         break
                     length = int.from_bytes(stream.read(2), 'big')
-                    msg_type = int.from_bytes(stream.read(1), 'big')
-                    body = stream.read(length - 19)
+                    int.from_bytes(stream.read(1), 'big')
+                    stream.read(length - 19)
                     count += 1
 
                 elapsed = time.time() - start_time
@@ -414,4 +414,4 @@ class TestStressWithMonitoring:
 
             return metrics
 
-        result = benchmark(sustained_throughput)
+        benchmark(sustained_throughput)

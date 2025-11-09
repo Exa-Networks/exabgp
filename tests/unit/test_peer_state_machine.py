@@ -301,7 +301,7 @@ class TestPeerCollisionDetection:
         connection.name = Mock(return_value='test-connection')
 
         with patch.object(Protocol, '__init__', return_value=None):
-            with patch.object(Protocol, 'accept', return_value=Mock()) as mock_accept:
+            with patch.object(Protocol, 'accept', return_value=Mock()):
                 result = peer.handle_connection(connection)
 
         # Should accept connection and replace proto
@@ -764,7 +764,7 @@ class TestPeerRun:
 
         peer = Peer(neighbor, reactor)
 
-        result = peer.run()
+        peer.run()
 
         # Should stop peer when process is broken
         assert peer._restart is False

@@ -319,7 +319,7 @@ def test_atomic_aggregate_presence() -> None:
     from exabgp.bgp.message.update.attribute import Attribute
 
     # Create ATOMIC_AGGREGATE
-    atomic = AtomicAggregate()
+    AtomicAggregate()
 
     # Verify it's well-known discretionary
     assert AtomicAggregate.ID == Attribute.CODE.ATOMIC_AGGREGATE
@@ -512,7 +512,7 @@ def test_originator_id_loop_prevention() -> None:
     from exabgp.bgp.message.update.attribute import Attribute
 
     # Create ORIGINATOR_ID
-    originator_id = OriginatorID("192.0.2.1")
+    OriginatorID("192.0.2.1")
 
     # Verify it's optional non-transitive
     assert OriginatorID.ID == Attribute.CODE.ORIGINATOR_ID

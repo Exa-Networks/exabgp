@@ -84,7 +84,7 @@ class TestSimultaneousBidirectionalConnections:
             mock_poller.poll.return_value = []
 
             # Trigger poller registration by checking reading status
-            is_reading = conn.reading()
+            conn.reading()
 
             # Close first socket
             with patch('exabgp.reactor.network.connection.log'):
