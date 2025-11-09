@@ -162,8 +162,8 @@ class JSON(object):
         )
 
     def _negotiated(self, negotiated):
-        families_str = " ,".join([f"{family[0]} {family[1]}" for family in negotiated.families])
-        nexthop_str = " ,".join([f"{family[0]} {family[1]} {family[2]}" for family in negotiated.nexthop])
+        families_str = ' ,'.join([f'{family[0]} {family[1]}' for family in negotiated.families])
+        nexthop_str = ' ,'.join([f'{family[0]} {family[1]} {family[2]}' for family in negotiated.nexthop])
         kv_content = self._kv(
             {
                 'message_size': negotiated.msg_size,
@@ -339,12 +339,12 @@ class JSON(object):
             if update.nlris:  # an EOR
                 return {'message': f'{{ {update.nlris[0].json()} }}'}
         if add:
-            add_str = ", ".join(add)
+            add_str = ', '.join(add)
             nlri += f'"announce": {{ {add_str} }}'
         if add and remove:
             nlri += ', '
         if remove:
-            remove_str = ", ".join(remove)
+            remove_str = ', '.join(remove)
             nlri += f'"withdraw": {{ {remove_str} }}'
 
         attributes = '' if not update.attributes else f'"attribute": {{ {update.attributes.json()} }}'

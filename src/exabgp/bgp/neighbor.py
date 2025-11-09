@@ -495,7 +495,7 @@ Neighbor {peer-address}
             f"\tadj-rib-in {'true' if neighbor['adj-rib-in'] else 'false'};\n"
             f"\tadj-rib-out {'true' if neighbor['adj-rib-out'] else 'false'};\n" +
             (f'\tmd5-password "{neighbor["md5-password"]}";\n' if neighbor['md5-password'] else '') +
-            f"\tmd5-base64 {md5_base64_str};\n" +
+            f'\tmd5-base64 {md5_base64_str};\n' +
             (f'\tmd5-ip "{neighbor["md5-ip"]}";\n' if not neighbor.auto_discovery else '') +
             (f'\toutgoing-ttl {neighbor["outgoing-ttl"]};\n' if neighbor['outgoing-ttl'] else '') +
             (f'\tincoming-ttl {neighbor["incoming-ttl"]};\n' if neighbor['incoming-ttl'] else '') +
@@ -627,4 +627,4 @@ Neighbor {peer-address}
         state_str = answer['state'].lower()
         update_in = answer['messages']['update'][0]
         update_out = answer['messages']['update'][1]
-        return f"{peer_addr:<15} {peer_as_str:<7} {duration_str:>9} {state_str:<12} {update_in:>10} {update_out:>10}"
+        return f'{peer_addr:<15} {peer_as_str:<7} {duration_str:>9} {state_str:<12} {update_in:>10} {update_out:>10}'

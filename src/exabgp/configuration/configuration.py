@@ -435,7 +435,7 @@ class Configuration(_Configuration):
 
         if self.parse_section('root') is not True:
             self._rollback_reload()
-            line_str = " ".join(self.tokeniser.line)
+            line_str = ' '.join(self.tokeniser.line)
             return self.error.set(
                 f'\nsyntax error in section {self.scope.location()}\nline {self.tokeniser.number}: {line_str}\n\n{str(self.error)}'
             )
@@ -512,7 +512,7 @@ class Configuration(_Configuration):
 
         if self.parse_section(section) is not True:
             self._rollback_reload()
-            line_str = " ".join(self.tokeniser.line)
+            line_str = ' '.join(self.tokeniser.line)
             error_msg = (
                 f'\n'
                 f'syntax error in api command {self.scope.location()}\n'

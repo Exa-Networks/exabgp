@@ -68,61 +68,61 @@ def enum(*sequential):
 def setargs(parser):
     # fmt: off
     g = parser.add_mutually_exclusive_group()
-    g.add_argument("--silent", "-s", action="store_true", default=False, help="don't log to console")
-    g.add_argument("--syslog-facility", "-sF", metavar="FACILITY", nargs='?', const="daemon", default="daemon", help="log to syslog using FACILITY, default FACILITY is daemon")
-    g.add_argument("--no-syslog", action="store_true", help="disable syslog logging")
+    g.add_argument('--silent', '-s', action='store_true', default=False, help="don't log to console")
+    g.add_argument('--syslog-facility', '-sF', metavar='FACILITY', nargs='?', const='daemon', default='daemon', help='log to syslog using FACILITY, default FACILITY is daemon')
+    g.add_argument('--no-syslog', action='store_true', help='disable syslog logging')
 
-    parser.add_argument("--debug", "-d", action="store_true", default=False, help="enable debugging")
-    parser.add_argument("--no-ack", "-a", action="store_true", default=False, help="set for exabgp 3.4 or 4.x when exabgp.api.ack=false")
-    parser.add_argument("--sudo", action="store_true", default=False, help="use sudo to setup ip addresses")
-    parser.add_argument("--name", "-n", metavar="NAME", help="name for this healthchecker")
-    parser.add_argument("--config", "-F", metavar="FILE", type=open, help="read configuration from a file")
-    parser.add_argument("--pid", "-p", metavar="FILE", type=argparse.FileType('w'), help="write PID to the provided file")
-    parser.add_argument("--user", metavar="USER", help="set user after setting ip addresses")
-    parser.add_argument("--group", metavar="GROUP", help="set group after setting ip addresses")
+    parser.add_argument('--debug', '-d', action='store_true', default=False, help='enable debugging')
+    parser.add_argument('--no-ack', '-a', action='store_true', default=False, help='set for exabgp 3.4 or 4.x when exabgp.api.ack=false')
+    parser.add_argument('--sudo', action='store_true', default=False, help='use sudo to setup ip addresses')
+    parser.add_argument('--name', '-n', metavar='NAME', help='name for this healthchecker')
+    parser.add_argument('--config', '-F', metavar='FILE', type=open, help='read configuration from a file')
+    parser.add_argument('--pid', '-p', metavar='FILE', type=argparse.FileType('w'), help='write PID to the provided file')
+    parser.add_argument('--user', metavar='USER', help='set user after setting ip addresses')
+    parser.add_argument('--group', metavar='GROUP', help='set group after setting ip addresses')
 
-    g = parser.add_argument_group("checking healthiness")
-    g.add_argument("--interval", "-i", metavar='N', default=5, type=float, help="wait N seconds between each healthcheck (zero to exit after first announcement)")
-    g.add_argument("--fast-interval", "-f", metavar='N', default=1, type=float, dest="fast", help="when a state change is about to occur, wait N seconds between each healthcheck")
-    g.add_argument("--timeout", "-t", metavar='N', default=5, type=int, help="wait N seconds for the check command to execute")
-    g.add_argument("--rise", metavar='N', default=3, type=int, help="check N times before considering the service up")
-    g.add_argument("--fall", metavar='N', default=3, type=int, help="check N times before considering the service down")
-    g.add_argument("--disable", metavar='FILE', type=str, help="if FILE exists, the service is considered disabled")
-    g.add_argument("--command", "--cmd", "-c", metavar='CMD', type=str, help="command to use for healthcheck")
+    g = parser.add_argument_group('checking healthiness')
+    g.add_argument('--interval', '-i', metavar='N', default=5, type=float, help='wait N seconds between each healthcheck (zero to exit after first announcement)')
+    g.add_argument('--fast-interval', '-f', metavar='N', default=1, type=float, dest='fast', help='when a state change is about to occur, wait N seconds between each healthcheck')
+    g.add_argument('--timeout', '-t', metavar='N', default=5, type=int, help='wait N seconds for the check command to execute')
+    g.add_argument('--rise', metavar='N', default=3, type=int, help='check N times before considering the service up')
+    g.add_argument('--fall', metavar='N', default=3, type=int, help='check N times before considering the service down')
+    g.add_argument('--disable', metavar='FILE', type=str, help='if FILE exists, the service is considered disabled')
+    g.add_argument('--command', '--cmd', '-c', metavar='CMD', type=str, help='command to use for healthcheck')
 
-    g = parser.add_argument_group("advertising options")
-    g.add_argument("--next-hop", "-N", metavar='IP', type=ip_address, help="self IP address to use as next hop")
-    g.add_argument("--ip", metavar='IP', type=ip_network, dest="ips", action="append", help="advertise this IP address or network (CIDR notation)")
-    g.add_argument("--ip-ifname", metavar='IP%IFNAME', dest="ip_ifnames", action="append", help="bind this IP address or network (CIDR) to the given physical or logical interface (i.e. 192.165.14.1%eth0")
-    g.add_argument("--local-preference", metavar='P', type=int, default=-1, help="advertise with local preference P")
-    g.add_argument("--deaggregate-networks", dest="deaggregate_networks", action="store_true", help="Deaggregate Networks specified in --ip")
-    g.add_argument("--no-ip-setup", action="store_false", dest="ip_setup", help="don't setup missing IP addresses")
-    g.add_argument("--dynamic-ip-setup", default=False, action="store_true", dest="ip_dynamic", help="delete setup ips on state down and " "disabled, then restore them when up")
-    g.add_argument("--label", default=None, help="use the provided label to match setup ip addresses")
-    g.add_argument("--label-exact-match", default=False, action="store_true", help="use the provided label to exactly match setup ip addresses, not a prefix match")
-    g.add_argument("--start-ip", metavar='N', type=int, default=0, help="index of the first IP in the list of IP addresses")
-    g.add_argument("--up-metric", metavar='M', type=int, default=100, help="first IP get the metric M when the service is up")
-    g.add_argument("--down-metric", metavar='M', type=int, default=1000, help="first IP get the metric M when the service is down")
-    g.add_argument("--disabled-metric", metavar='M', type=int, default=500, help="first IP get the metric M when the service is disabled")
-    g.add_argument("--increase", metavar='M', type=int, default=1, help="for each additional IP address, increase metric value by M")
-    g.add_argument("--community", metavar="COMMUNITY", type=str, default=None, help="announce IPs with the supplied community")
-    g.add_argument("--extended-community", metavar="EXTENDEDCOMMUNITY", type=str, default=None, help="announce IPs with the supplied extended community")
-    g.add_argument("--large-community", metavar="LARGECOMMUNITY", type=str, default=None, help="announce IPs with the supplied large community")
-    g.add_argument("--disabled-community", metavar="DISABLEDCOMMUNITY", type=str, default=None, help="announce IPs with the supplied community when disabled")
-    g.add_argument("--as-path", metavar="ASPATH", type=str, default=None, help="announce IPs with the supplied as-path")
-    g.add_argument("--up-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is up")
-    g.add_argument("--down-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is down")
-    g.add_argument("--disabled-as-path", metavar='ASPATH', type=str, default=None, help="announce IPs with the supplied as-path when the service is disabled")
-    g.add_argument("--withdraw-on-down", action="store_true", help="Instead of increasing the metric on health failure, withdraw the route")
-    g.add_argument("--path-id", metavar='PATHID', type=int, default=None, help="path ID to advertise for the route")
-    g.add_argument("--neighbor", metavar='NEIGHBOR', type=ip_address, dest="neighbors", action="append", help="advertise the route to the selected neigbors")
-    g.add_argument("--debounce", action="store_true", dest="debounce", help="announce only on state changes, instead of every iteration")
+    g = parser.add_argument_group('advertising options')
+    g.add_argument('--next-hop', '-N', metavar='IP', type=ip_address, help='self IP address to use as next hop')
+    g.add_argument('--ip', metavar='IP', type=ip_network, dest='ips', action='append', help='advertise this IP address or network (CIDR notation)')
+    g.add_argument('--ip-ifname', metavar='IP%IFNAME', dest='ip_ifnames', action='append', help='bind this IP address or network (CIDR) to the given physical or logical interface (i.e. 192.165.14.1%eth0')
+    g.add_argument('--local-preference', metavar='P', type=int, default=-1, help='advertise with local preference P')
+    g.add_argument('--deaggregate-networks', dest='deaggregate_networks', action='store_true', help='Deaggregate Networks specified in --ip')
+    g.add_argument('--no-ip-setup', action='store_false', dest='ip_setup', help="don't setup missing IP addresses")
+    g.add_argument('--dynamic-ip-setup', default=False, action='store_true', dest='ip_dynamic', help='delete setup ips on state down and ' 'disabled, then restore them when up')
+    g.add_argument('--label', default=None, help='use the provided label to match setup ip addresses')
+    g.add_argument('--label-exact-match', default=False, action='store_true', help='use the provided label to exactly match setup ip addresses, not a prefix match')
+    g.add_argument('--start-ip', metavar='N', type=int, default=0, help='index of the first IP in the list of IP addresses')
+    g.add_argument('--up-metric', metavar='M', type=int, default=100, help='first IP get the metric M when the service is up')
+    g.add_argument('--down-metric', metavar='M', type=int, default=1000, help='first IP get the metric M when the service is down')
+    g.add_argument('--disabled-metric', metavar='M', type=int, default=500, help='first IP get the metric M when the service is disabled')
+    g.add_argument('--increase', metavar='M', type=int, default=1, help='for each additional IP address, increase metric value by M')
+    g.add_argument('--community', metavar='COMMUNITY', type=str, default=None, help='announce IPs with the supplied community')
+    g.add_argument('--extended-community', metavar='EXTENDEDCOMMUNITY', type=str, default=None, help='announce IPs with the supplied extended community')
+    g.add_argument('--large-community', metavar='LARGECOMMUNITY', type=str, default=None, help='announce IPs with the supplied large community')
+    g.add_argument('--disabled-community', metavar='DISABLEDCOMMUNITY', type=str, default=None, help='announce IPs with the supplied community when disabled')
+    g.add_argument('--as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path')
+    g.add_argument('--up-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is up')
+    g.add_argument('--down-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is down')
+    g.add_argument('--disabled-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is disabled')
+    g.add_argument('--withdraw-on-down', action='store_true', help='Instead of increasing the metric on health failure, withdraw the route')
+    g.add_argument('--path-id', metavar='PATHID', type=int, default=None, help='path ID to advertise for the route')
+    g.add_argument('--neighbor', metavar='NEIGHBOR', type=ip_address, dest='neighbors', action='append', help='advertise the route to the selected neigbors')
+    g.add_argument('--debounce', action='store_true', dest='debounce', help='announce only on state changes, instead of every iteration')
 
-    g = parser.add_argument_group("reporting")
-    g.add_argument("--execute", metavar='CMD', type=str, action="append", help="execute CMD on state change")
-    g.add_argument("--up-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service becomes available")
-    g.add_argument("--down-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service becomes unavailable")
-    g.add_argument("--disabled-execute", metavar='CMD', type=str, action="append", help="execute CMD when the service is disabled")
+    g = parser.add_argument_group('reporting')
+    g.add_argument('--execute', metavar='CMD', type=str, action='append', help='execute CMD on state change')
+    g.add_argument('--up-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service becomes available')
+    g.add_argument('--down-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service becomes unavailable')
+    g.add_argument('--disabled-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service is disabled')
     # fmt: on
 
 
@@ -133,7 +133,7 @@ def parse():
         """Parse ip interfaces and return a dict of ip:ifname"""
         keyval = {}
         for val in ip_ifnames or []:
-            ip_ifname = val.split(r"%")
+            ip_ifname = val.split(r'%')
             if len(ip_ifname) != 2:
                 raise ValueError(f"Expected IP to IFNAME parameter: <ip_address>%<ifname>, got '{val}'")
             # Is the ip address valid?
@@ -145,7 +145,7 @@ def parse():
             if ip not in ips:
                 raise ValueError(f"No 'ip' parameter has been defined for the ip_ifname pair '{val}'")
             # Is the interface name valid?
-            if not re.match(r"^[a-zA-Z0-9._:-]{1,15}$", ip_ifname[1]):
+            if not re.match(r'^[a-zA-Z0-9._:-]{1,15}$', ip_ifname[1]):
                 raise ValueError(f"Expected NIC interface name but got '{ip_ifname[1]}'")
             keyval[ip] = ip_ifname[1]
         return keyval
@@ -264,9 +264,9 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
 def ip_ifname(ip, ip_ifnames):
     ifname = ip_ifnames.get(ip)
     if not ifname:
-        ifname = "lo0"
-        if sys.platform.startswith("linux"):
-            ifname = "lo"
+        ifname = 'lo0'
+        if sys.platform.startswith('linux'):
+            ifname = 'lo'
     return ifname
 
 
@@ -447,7 +447,7 @@ def loop(options):
                 neighbors = [f'neighbor {neighbor}' for neighbor in options.neighbors]
                 # comma seperate the neighbor list and prepend to announcement command
                 neighbors_str = ', '.join(neighbors)
-                command = f"{neighbors_str} {command}"
+                command = f'{neighbors_str} {command}'
 
             metric += options.increase
 

@@ -103,7 +103,7 @@ class Listener(object):
             self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
             md5_suffix = ' with MD5' if md5_password else ''
             log.debug(
-                f"listening for BGP session(s) on {local_addr}:{port}{md5_suffix}",
+                f'listening for BGP session(s) on {local_addr}:{port}{md5_suffix}',
                 'network',
             )
             return True

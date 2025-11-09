@@ -15,7 +15,7 @@ from exabgp.configuration.flow.parser import interface_set
 class ParseFlowScope(Section):
     definition = ['interface-set transitive:input:1234:1234']
 
-    joined = ";\\n  ".join(definition)
+    joined = ';\\n  '.join(definition)
     syntax = f'scope {{\n  {joined};\n}}'
 
     known = {

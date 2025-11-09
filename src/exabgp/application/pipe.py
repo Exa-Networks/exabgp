@@ -295,7 +295,7 @@ def main(location=''):
         location = os.environ.get('exabgp_cli_pipe', '')
     if not location:
         argv_str = ' '.join(sys.argv)
-        sys.stderr.write(f"usage {sys.executable} {argv_str}\n")
+        sys.stderr.write(f'usage {sys.executable} {argv_str}\n')
         sys.stderr.write("run with 'env exabgp_cli_pipe=<location>' if you are trying to mess with ExaBGP's internals")
         sys.stderr.flush()
         sys.exit(1)
