@@ -8,23 +8,24 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import unittest
-
+import sys
 import time
+from typing import Any
 from exabgp.util.cache import Cache
 
 
 class TestCache(unittest.TestCase):
-    def test_speed(self):
+    def test_speed(self) -> None:
         class klass1:
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 pass
 
         class klass2:
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 pass
 
         class klass3:
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 self.a = data[0]
                 self.b = data[1]
                 self.c = data[2]
@@ -32,7 +33,7 @@ class TestCache(unittest.TestCase):
                 self.e = data[4]
 
         class klass4:
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 self.a = data[0]
                 self.b = data[1]
                 self.c = data[2]
@@ -40,24 +41,24 @@ class TestCache(unittest.TestCase):
                 self.e = data[4]
 
         class _kparent1:
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 self.a = data[0]
                 self.b = data[1]
 
         class _kparent2:
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 self.a = data[0]
                 self.b = data[1]
 
         class klass5(_kparent1):
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 _kparent1.__init__(self, data)
                 self.c = data[2]
                 self.d = data[3]
                 self.e = data[4]
 
         class klass6(_kparent2):
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 _kparent2.__init__(self, data)
                 self.c = data[2]
                 self.d = data[3]
@@ -67,12 +68,12 @@ class TestCache(unittest.TestCase):
             pass
 
         class klass8(klass6):
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 klass6.__init__(self, data)
                 self.s = self.a + self.b + self.c + self.d + self.e
 
         class klass9(klass6):
-            def __init__(self, data):
+            def __init__(self, data: Any):
                 klass6.__init__(self, data)
                 self.s1 = self.a + self.b + self.c + self.d + self.e
                 self.s2 = self.b + self.c + self.d + self.e

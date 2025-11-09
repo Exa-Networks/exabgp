@@ -6,6 +6,7 @@ and maintain throughput under sustained load.
 
 import pytest
 from io import BytesIO
+from typing import Any
 from unittest.mock import Mock, MagicMock, patch
 from collections import deque
 
@@ -28,7 +29,7 @@ from .perf_helpers import (
 class TestMessageStreamProcessing:
     """Performance tests for processing message streams."""
 
-    def test_parse_message_stream_100(self, benchmark):
+    def test_parse_message_stream_100(self, benchmark: Any) -> None:
         """Benchmark parsing 100 messages from a stream."""
         batch_bytes = create_batch_messages('update', count=100)
         from exabgp.bgp.message import Update
@@ -58,7 +59,7 @@ class TestMessageStreamProcessing:
         result = benchmark(process_stream)
         assert result == 100
 
-    def test_parse_mixed_stream_1000(self, benchmark):
+    def test_parse_mixed_stream_1000(self, benchmark: Any) -> None:
         """Benchmark parsing 1000 mixed messages."""
         batch_bytes = create_mixed_message_batch(
             update_count=600,
@@ -101,7 +102,7 @@ class TestMessageStreamProcessing:
 class TestMessageQueuePerformance:
     """Performance tests for message queuing and buffering."""
 
-    def test_queue_append_performance(self, benchmark):
+    def test_queue_append_performance(self, benchmark: Any) -> None:
         """Benchmark message queue append operations."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(1000)]
 
@@ -114,7 +115,7 @@ class TestMessageQueuePerformance:
         result = benchmark(queue_messages)
         assert result == 1000
 
-    def test_queue_append_popleft_performance(self, benchmark):
+    def test_queue_append_popleft_performance(self, benchmark: Any) -> None:
         """Benchmark queue operations under load."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(1000)]
 
@@ -141,7 +142,7 @@ class TestMessageQueuePerformance:
         result = benchmark(queue_operations)
         assert result == 1000
 
-    def test_large_queue_performance(self, benchmark):
+    def test_large_queue_performance(self, benchmark: Any) -> None:
         """Benchmark operations on large message queue."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(10000)]
 
@@ -175,7 +176,7 @@ class TestMessageQueuePerformance:
 class TestConcurrentMessageProcessing:
     """Performance tests for processing messages from multiple sources."""
 
-    def test_interleaved_message_streams(self, benchmark):
+    def test_interleaved_message_streams(self, benchmark: Any) -> None:
         """Benchmark processing interleaved messages from multiple peers."""
         # Create messages from 5 different "peers"
         peer_messages = {
@@ -213,7 +214,7 @@ class TestConcurrentMessageProcessing:
         result = benchmark(process_interleaved)
         assert result == 1000
 
-    def test_burst_message_handling(self, benchmark):
+    def test_burst_message_handling(self, benchmark: Any) -> None:
         """Benchmark handling message bursts."""
         # Simulate burst pattern: 100 messages, pause, 100 messages, etc.
         bursts = [create_batch_messages('update', count=100) for _ in range(10)]
@@ -244,7 +245,7 @@ class TestConcurrentMessageProcessing:
 class TestHighLoadStress:
     """Stress tests for extreme high load scenarios."""
 
-    def test_process_10000_messages(self, benchmark):
+    def test_process_10000_messages(self, benchmark: Any) -> None:
         """Stress test: Process 10,000 messages continuously."""
         batch_bytes = create_batch_messages('update', count=10000)
 
@@ -266,7 +267,7 @@ class TestHighLoadStress:
         result = benchmark(process_all)
         assert result == 10000
 
-    def test_mixed_load_10000(self, benchmark):
+    def test_mixed_load_10000(self, benchmark: Any) -> None:
         """Stress test: Process 10,000 mixed messages."""
         batch_bytes = create_mixed_message_batch(
             update_count=6000,
@@ -298,7 +299,7 @@ class TestHighLoadStress:
         result = benchmark(process_mixed)
         assert result == 10000
 
-    def test_large_message_throughput(self, benchmark):
+    def test_large_message_throughput(self, benchmark: Any) -> None:
         """Stress test: Process large UPDATE messages."""
         messages = [create_large_update_bytes(num_routes=200) for _ in range(1000)]
         batch_bytes = b''.join(messages)

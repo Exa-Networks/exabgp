@@ -14,6 +14,7 @@ Test Coverage:
 - Non-EOR messages (should not be detected as EOR)
 """
 import pytest
+from typing import Any, Generator
 from unittest.mock import Mock, patch
 
 pytestmark = pytest.mark.fuzz
@@ -21,7 +22,7 @@ pytestmark = pytest.mark.fuzz
 
 # Mock logger to avoid initialization issues in tests
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Generator[None, None, None]:
     """Mock the logger to avoid initialization issues."""
     with patch('exabgp.bgp.message.update.log') as mock_log, \
          patch('exabgp.bgp.message.update.log') as mock_log:
@@ -31,7 +32,7 @@ def mock_logger():
 
 
 @pytest.mark.fuzz
-def test_eor_ipv4_unicast_4_byte():
+def test_eor_ipv4_unicast_4_byte() -> None:
     """Test detection of IPv4 unicast EOR marker (4 bytes of zeros)."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.eor import EOR
@@ -56,7 +57,7 @@ def test_eor_ipv4_unicast_4_byte():
 
 
 @pytest.mark.fuzz  
-def test_eor_not_triggered_by_similar_data():
+def test_eor_not_triggered_by_similar_data() -> None:
     """Test that 4 zeros elsewhere don't trigger false EOR detection."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.eor import EOR
@@ -82,7 +83,7 @@ def test_eor_not_triggered_by_similar_data():
 
 
 @pytest.mark.fuzz
-def test_non_eor_empty_update():
+def test_non_eor_empty_update() -> None:
     """Test that UPDATE with just length fields is not confused with EOR."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.eor import EOR
@@ -100,7 +101,7 @@ def test_non_eor_empty_update():
 
 
 @pytest.mark.fuzz
-def test_eor_detection_with_no_attributes_no_nlris():
+def test_eor_detection_with_no_attributes_no_nlris() -> None:
     """Test EOR detection when UPDATE has no attributes and no NLRIs after parsing."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.eor import EOR
@@ -124,7 +125,7 @@ def test_eor_detection_with_no_attributes_no_nlris():
 
 
 @pytest.mark.fuzz
-def test_normal_update_not_detected_as_eor():
+def test_normal_update_not_detected_as_eor() -> None:
     """Test that normal UPDATE messages are not detected as EOR."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.eor import EOR

@@ -1,3 +1,4 @@
+from typing import Generator, Any
 """Integration tests for UPDATE message unpack_message() method.
 
 These tests verify the complete UPDATE parsing pipeline from raw bytes
@@ -20,7 +21,7 @@ pytestmark = pytest.mark.fuzz
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Generator[None, None, None]:
     """Mock the logger to avoid initialization issues."""
     with patch('exabgp.bgp.message.update.log') as mock_log, \
          patch('exabgp.bgp.message.update.log') as mock_log, \
@@ -33,7 +34,7 @@ def mock_logger():
         yield
 
 
-def create_negotiated_mock():
+def create_negotiated_mock() -> Any:
     """Create a minimal mock negotiated object."""
     negotiated = Mock()
     negotiated.addpath.receive = Mock(return_value=False)
@@ -43,7 +44,7 @@ def create_negotiated_mock():
 
 
 @pytest.mark.fuzz
-def test_unpack_simple_withdrawal():
+def test_unpack_simple_withdrawal() -> None:
     """Test unpacking UPDATE with only withdrawals."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
@@ -65,7 +66,7 @@ def test_unpack_simple_withdrawal():
 
 
 @pytest.mark.fuzz  
-def test_unpack_empty_update_is_eor():
+def test_unpack_empty_update_is_eor() -> None:
     """Test that empty UPDATE is detected as EOR."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.eor import EOR
@@ -82,7 +83,7 @@ def test_unpack_empty_update_is_eor():
 
 
 @pytest.mark.fuzz
-def test_unpack_with_minimal_attributes():
+def test_unpack_with_minimal_attributes() -> None:
     """Test UPDATE with minimal valid attributes (ORIGIN only)."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
@@ -109,7 +110,7 @@ def test_unpack_with_minimal_attributes():
 
 
 @pytest.mark.fuzz
-def test_split_integration_with_unpack():
+def test_split_integration_with_unpack() -> None:
     """Test that split() output integrates correctly with unpack_message()."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
@@ -140,7 +141,7 @@ def test_split_integration_with_unpack():
 
 
 @pytest.mark.fuzz
-def test_unpack_with_multiple_withdrawals():
+def test_unpack_with_multiple_withdrawals() -> None:
     """Test UPDATE with multiple withdrawn routes."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
@@ -165,7 +166,7 @@ def test_unpack_with_multiple_withdrawals():
 
 
 @pytest.mark.fuzz
-def test_unpack_handles_split_validation():
+def test_unpack_handles_split_validation() -> None:
     """Test that unpack_message() properly handles split() validation errors."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
@@ -185,7 +186,7 @@ def test_unpack_handles_split_validation():
 
 
 @pytest.mark.fuzz
-def test_unpack_preserves_data_integrity():
+def test_unpack_preserves_data_integrity() -> None:
     """Test that data flows correctly through split() to unpack_message()."""  
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction

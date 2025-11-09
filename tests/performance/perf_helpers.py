@@ -1,3 +1,4 @@
+from typing import Any
 """Helper utilities for performance testing.
 
 Provides functions to create high volumes of test data and mock objects
@@ -18,7 +19,7 @@ from exabgp.bgp.neighbor import Neighbor
 from exabgp.reactor.protocol import Protocol
 
 
-def create_mock_logger():
+def create_mock_logger() -> Any:
     """Create a mock logger for testing."""
     logger = Mock()
     logger.debug = Mock()
@@ -31,7 +32,7 @@ def create_mock_logger():
     return logger
 
 
-def create_mock_negotiated(add_path=False, extended_message=False):
+def create_mock_negotiated(add_path: Any =False, extended_message: Any =False) -> Any:
     """Create a mock negotiated capabilities object."""
     negotiated = Mock()
     negotiated.families = {(1, 1)}  # IPv4 Unicast
@@ -42,7 +43,7 @@ def create_mock_negotiated(add_path=False, extended_message=False):
     return negotiated
 
 
-def create_mock_neighbor(asn=65000, router_id='1.2.3.4'):
+def create_mock_neighbor(asn: Any =65000, router_id: Any ='1.2.3.4') -> Any:
     """Create a mock neighbor configuration."""
     neighbor = Mock(spec=Neighbor)
     neighbor.peer_address = IPv4.create('192.0.2.1')
@@ -54,7 +55,7 @@ def create_mock_neighbor(asn=65000, router_id='1.2.3.4'):
     return neighbor
 
 
-def create_simple_update_bytes(num_routes=1, base_prefix='10.0.0.0/24'):
+def create_simple_update_bytes(num_routes: Any =1, base_prefix: Any ='10.0.0.0/24') -> Any:
     """Create raw bytes for a simple UPDATE message with specified number of routes.
 
     Args:
@@ -116,7 +117,7 @@ def create_simple_update_bytes(num_routes=1, base_prefix='10.0.0.0/24'):
     return message
 
 
-def create_keepalive_bytes():
+def create_keepalive_bytes() -> Any:
     """Create raw bytes for a KEEPALIVE message."""
     marker = b'\xff' * 16
     length = 19
@@ -124,7 +125,7 @@ def create_keepalive_bytes():
     return marker + struct.pack('!HB', length, msg_type)
 
 
-def create_notification_bytes(error_code=6, error_subcode=0):
+def create_notification_bytes(error_code: Any =6, error_subcode: Any =0) -> Any:
     """Create raw bytes for a NOTIFICATION message."""
     marker = b'\xff' * 16
     body = struct.pack('!BB', error_code, error_subcode)
@@ -133,7 +134,7 @@ def create_notification_bytes(error_code=6, error_subcode=0):
     return marker + struct.pack('!HB', length, msg_type) + body
 
 
-def create_large_update_bytes(num_attributes=10, num_routes=100):
+def create_large_update_bytes(num_attributes: Any =10, num_routes: Any =100) -> Any:
     """Create a large UPDATE message with many attributes and routes.
 
     Args:
@@ -189,7 +190,7 @@ def create_large_update_bytes(num_attributes=10, num_routes=100):
     return marker + struct.pack('!HB', length, msg_type) + update_body
 
 
-def create_mock_connection_with_data(data_bytes):
+def create_mock_connection_with_data(data_bytes: Any) -> Any:
     """Create a mock connection object that will return specified data.
 
     Args:
@@ -207,7 +208,7 @@ def create_mock_connection_with_data(data_bytes):
     # Mock socket operations
     original_read = connection.io.read
 
-    def mock_read(size):
+    def mock_read(size: Any) -> Any:
         return original_read(size)
 
     connection.io.read = mock_read
@@ -215,7 +216,7 @@ def create_mock_connection_with_data(data_bytes):
     return connection
 
 
-def create_batch_messages(message_type='update', count=1000):
+def create_batch_messages(message_type: Any ='update', count: Any =1000) -> Any:
     """Create a batch of BGP messages for load testing.
 
     Args:
@@ -237,7 +238,7 @@ def create_batch_messages(message_type='update', count=1000):
     return single_msg * count
 
 
-def create_mixed_message_batch(update_count=500, keepalive_count=300, notification_count=200):
+def create_mixed_message_batch(update_count: Any =500, keepalive_count: Any =300, notification_count: Any =200) -> Any:
     """Create a batch of mixed message types.
 
     Args:

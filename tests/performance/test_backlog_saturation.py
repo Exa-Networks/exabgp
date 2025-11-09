@@ -7,6 +7,7 @@ the MAX_BACKLOG limit of 15,000 messages defined in Protocol.
 import pytest
 from io import BytesIO
 from collections import deque
+from typing import Any
 from unittest.mock import Mock, MagicMock
 
 from exabgp.reactor.protocol import Protocol, MAX_BACKLOG
@@ -25,7 +26,7 @@ from .perf_helpers import (
 class TestBacklogNearCapacity:
     """Tests for backlog behavior near MAX_BACKLOG capacity."""
 
-    def test_backlog_at_1000_messages(self, benchmark):
+    def test_backlog_at_1000_messages(self, benchmark: Any) -> None:
         """Benchmark backlog performance with 1,000 messages."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(1000)]
 
@@ -47,7 +48,7 @@ class TestBacklogNearCapacity:
         result = benchmark(manage_backlog)
         assert result == 500
 
-    def test_backlog_at_5000_messages(self, benchmark):
+    def test_backlog_at_5000_messages(self, benchmark: Any) -> None:
         """Benchmark backlog performance with 5,000 messages."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(5000)]
 
@@ -69,7 +70,7 @@ class TestBacklogNearCapacity:
         result = benchmark(manage_backlog)
         assert result == 5000
 
-    def test_backlog_at_10000_messages(self, benchmark):
+    def test_backlog_at_10000_messages(self, benchmark: Any) -> None:
         """Benchmark backlog performance with 10,000 messages."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(10000)]
 
@@ -94,7 +95,7 @@ class TestBacklogNearCapacity:
         result = benchmark(manage_backlog)
         assert result == 10000
 
-    def test_backlog_at_max_capacity(self, benchmark):
+    def test_backlog_at_max_capacity(self, benchmark: Any) -> None:
         """Benchmark backlog performance at MAX_BACKLOG (15,000) messages."""
         # Create exactly MAX_BACKLOG messages
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(MAX_BACKLOG)]
@@ -124,7 +125,7 @@ class TestBacklogNearCapacity:
 class TestBacklogSaturationBehavior:
     """Tests for backlog saturation and overflow scenarios."""
 
-    def test_backlog_cycling_at_capacity(self, benchmark):
+    def test_backlog_cycling_at_capacity(self, benchmark: Any) -> None:
         """Benchmark backlog with continuous add/remove at capacity."""
         # Pre-fill to 90% capacity
         initial_size = int(MAX_BACKLOG * 0.9)
@@ -150,7 +151,7 @@ class TestBacklogSaturationBehavior:
         result = benchmark(cycle_backlog)
         assert result > 0
 
-    def test_burst_handling_with_backlog(self, benchmark):
+    def test_burst_handling_with_backlog(self, benchmark: Any) -> None:
         """Benchmark handling message bursts with existing backlog."""
         # Start with half-full backlog
         existing = [create_simple_update_bytes(num_routes=1) for _ in range(7500)]
@@ -175,7 +176,7 @@ class TestBacklogSaturationBehavior:
         result = benchmark(handle_burst)
         assert result > 0
 
-    def test_large_message_backlog(self, benchmark):
+    def test_large_message_backlog(self, benchmark: Any) -> None:
         """Benchmark backlog with large UPDATE messages."""
         # Large messages consume more memory
         messages = [create_large_update_bytes(num_routes=100) for _ in range(5000)]
@@ -204,7 +205,7 @@ class TestBacklogSaturationBehavior:
 class TestBacklogMemoryPressure:
     """Tests for memory usage under backlog pressure."""
 
-    def test_memory_with_increasing_backlog(self, benchmark):
+    def test_memory_with_increasing_backlog(self, benchmark: Any) -> None:
         """Benchmark memory behavior as backlog grows."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(10000)]
 
@@ -225,7 +226,7 @@ class TestBacklogMemoryPressure:
         result = benchmark(grow_backlog)
         assert result > 0
 
-    def test_backlog_with_mixed_message_sizes(self, benchmark):
+    def test_backlog_with_mixed_message_sizes(self, benchmark: Any) -> None:
         """Benchmark backlog with mixed small and large messages."""
         messages = []
         for i in range(5000):
@@ -256,7 +257,7 @@ class TestBacklogMemoryPressure:
 class TestBacklogRecovery:
     """Tests for backlog recovery scenarios."""
 
-    def test_recovery_from_saturation(self, benchmark):
+    def test_recovery_from_saturation(self, benchmark: Any) -> None:
         """Benchmark recovery from backlog saturation."""
         # Fill to MAX_BACKLOG
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(MAX_BACKLOG)]
@@ -279,7 +280,7 @@ class TestBacklogRecovery:
         expected = MAX_BACKLOG - int(MAX_BACKLOG * 0.1)
         assert result == expected
 
-    def test_sustained_processing_rate(self, benchmark):
+    def test_sustained_processing_rate(self, benchmark: Any) -> None:
         """Benchmark sustained message processing rate."""
         # Create continuous stream
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(20000)]
@@ -316,7 +317,7 @@ class TestBacklogRecovery:
 class TestBacklogStressScenarios:
     """Stress tests for extreme backlog scenarios."""
 
-    def test_rapid_backlog_growth(self, benchmark):
+    def test_rapid_backlog_growth(self, benchmark: Any) -> None:
         """Stress test: Rapid backlog growth to capacity."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(MAX_BACKLOG)]
 
@@ -332,7 +333,7 @@ class TestBacklogStressScenarios:
         result = benchmark(rapid_growth)
         assert result == MAX_BACKLOG
 
-    def test_oscillating_backlog_size(self, benchmark):
+    def test_oscillating_backlog_size(self, benchmark: Any) -> None:
         """Stress test: Backlog size oscillating between full and empty."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(MAX_BACKLOG)]
 
@@ -357,7 +358,7 @@ class TestBacklogStressScenarios:
         result = benchmark(oscillate_backlog)
         assert result == 5
 
-    def test_concurrent_backlog_operations(self, benchmark):
+    def test_concurrent_backlog_operations(self, benchmark: Any) -> None:
         """Stress test: Concurrent add/remove operations."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(50000)]
 

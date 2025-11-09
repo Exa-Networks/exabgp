@@ -1,3 +1,4 @@
+from typing import Any
 """Comprehensive integration tests for UPDATE message packing and unpacking.
 
 These tests focus on critical gaps in UPDATE message testing:
@@ -22,7 +23,7 @@ from unittest.mock import Mock, patch
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
     from exabgp.logger import log
@@ -60,7 +61,7 @@ def mock_logger():
     option.formater = original_formater
 
 
-def create_negotiated_mock(families=None, asn4=False, msg_size=4096):
+def create_negotiated_mock(families: Any =None, asn4: Any =False, msg_size: Any =4096) -> Any:
     """Create a mock negotiated object with configurable parameters."""
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.bgp.message.open.asn import ASN
@@ -90,7 +91,7 @@ def create_negotiated_mock(families=None, asn4=False, msg_size=4096):
 # ==============================================================================
 
 @pytest.mark.fuzz
-def test_messages_packs_simple_ipv4_announcement():
+def test_messages_packs_simple_ipv4_announcement() -> None:
     """Test that messages() generates valid UPDATE for IPv4 announcement.
 
     This tests the critical messages() method that was previously UNTESTED.
@@ -136,7 +137,7 @@ def test_messages_packs_simple_ipv4_announcement():
 
 
 @pytest.mark.fuzz
-def test_messages_packs_ipv4_withdrawal():
+def test_messages_packs_ipv4_withdrawal() -> None:
     """Test that messages() generates valid UPDATE for IPv4 withdrawal."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -167,7 +168,7 @@ def test_messages_packs_ipv4_withdrawal():
 
 
 @pytest.mark.fuzz
-def test_messages_handles_no_nlris():
+def test_messages_handles_no_nlris() -> None:
     """Test that messages() handles UPDATE with no valid NLRIs."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.attribute import Attributes
@@ -187,7 +188,7 @@ def test_messages_handles_no_nlris():
 
 
 @pytest.mark.fuzz
-def test_messages_include_withdraw_flag():
+def test_messages_include_withdraw_flag() -> None:
     """Test that include_withdraw flag controls withdrawal inclusion."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -214,7 +215,7 @@ def test_messages_include_withdraw_flag():
 
 
 @pytest.mark.fuzz
-def test_messages_filters_by_negotiated_families():
+def test_messages_filters_by_negotiated_families() -> None:
     """Test that messages() filters NLRIs by negotiated families.
 
     Only routes for negotiated families should be included.
@@ -258,7 +259,7 @@ def test_messages_filters_by_negotiated_families():
 # ==============================================================================
 
 @pytest.mark.fuzz
-def test_roundtrip_simple_ipv4_announcement():
+def test_roundtrip_simple_ipv4_announcement() -> None:
     """Test pack then unpack preserves IPv4 announcement data.
 
     This validates data integrity through the full UPDATE cycle.
@@ -310,7 +311,7 @@ def test_roundtrip_simple_ipv4_announcement():
 
 
 @pytest.mark.fuzz
-def test_roundtrip_ipv4_withdrawal():
+def test_roundtrip_ipv4_withdrawal() -> None:
     """Test pack then unpack preserves IPv4 withdrawal data."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -345,7 +346,7 @@ def test_roundtrip_ipv4_withdrawal():
 
 
 @pytest.mark.fuzz
-def test_roundtrip_multiple_nlris():
+def test_roundtrip_multiple_nlris() -> None:
     """Test pack then unpack preserves multiple NLRIs."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -391,7 +392,7 @@ def test_roundtrip_multiple_nlris():
 
 
 @pytest.mark.fuzz
-def test_roundtrip_with_multiple_attributes():
+def test_roundtrip_with_multiple_attributes() -> None:
     """Test pack then unpack preserves multiple path attributes."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -443,7 +444,7 @@ def test_roundtrip_with_multiple_attributes():
 
 
 @pytest.mark.fuzz
-def test_roundtrip_mixed_announce_withdraw():
+def test_roundtrip_mixed_announce_withdraw() -> None:
     """Test pack then unpack preserves mixed announcements and withdrawals."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -502,7 +503,7 @@ def test_roundtrip_mixed_announce_withdraw():
 # ==============================================================================
 
 @pytest.mark.fuzz
-def test_messages_packs_ipv6_as_mp_reach():
+def test_messages_packs_ipv6_as_mp_reach() -> None:
     """Test that messages() packs IPv6 routes as MP_REACH_NLRI.
 
     IPv6 routes should be packed using multiprotocol extensions.
@@ -541,7 +542,7 @@ def test_messages_packs_ipv6_as_mp_reach():
 
 
 @pytest.mark.fuzz
-def test_roundtrip_ipv6_announcement():
+def test_roundtrip_ipv6_announcement() -> None:
     """Test pack then unpack preserves IPv6 announcement via MP_REACH."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -584,7 +585,7 @@ def test_roundtrip_ipv6_announcement():
 
 
 @pytest.mark.fuzz
-def test_messages_handles_mixed_ipv4_ipv6():
+def test_messages_handles_mixed_ipv4_ipv6() -> None:
     """Test messages() with both IPv4 and IPv6 routes.
 
     Should generate messages with both standard NLRI and MP extensions.
@@ -636,7 +637,7 @@ def test_messages_handles_mixed_ipv4_ipv6():
 # ==============================================================================
 
 @pytest.mark.fuzz
-def test_messages_splits_large_nlri_set():
+def test_messages_splits_large_nlri_set() -> None:
     """Test that messages() splits large NLRI sets into multiple UPDATEs.
 
     When NLRIs exceed message size limit, should generate multiple messages.
@@ -679,7 +680,7 @@ def test_messages_splits_large_nlri_set():
 
 
 @pytest.mark.fuzz
-def test_messages_respects_negotiated_msg_size():
+def test_messages_respects_negotiated_msg_size() -> None:
     """Test that messages() respects negotiated message size limit."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -720,7 +721,7 @@ def test_messages_respects_negotiated_msg_size():
 
 
 @pytest.mark.fuzz
-def test_messages_handles_large_attributes():
+def test_messages_handles_large_attributes() -> None:
     """Test messages() with large attributes approaching size limits."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -764,7 +765,7 @@ def test_messages_handles_large_attributes():
 # ==============================================================================
 
 @pytest.mark.fuzz
-def test_integration_full_update_cycle():
+def test_integration_full_update_cycle() -> None:
     """Integration test: Full UPDATE cycle with various route types.
 
     Tests complete flow: create -> pack -> unpack -> verify
@@ -832,7 +833,7 @@ def test_integration_full_update_cycle():
 
 
 @pytest.mark.fuzz
-def test_integration_empty_attributes_for_withdrawal_only():
+def test_integration_empty_attributes_for_withdrawal_only() -> None:
     """Test that withdrawal-only UPDATEs can have empty attributes."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -871,7 +872,7 @@ def test_integration_empty_attributes_for_withdrawal_only():
 
 
 @pytest.mark.fuzz
-def test_integration_sorting_and_grouping():
+def test_integration_sorting_and_grouping() -> None:
     """Test that messages() properly sorts and groups NLRIs."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.nlri.inet import INET

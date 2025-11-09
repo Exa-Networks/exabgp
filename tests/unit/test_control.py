@@ -10,9 +10,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import time
 import socket
 import unittest
+from typing import Any
 
 
-def speak(name, data):
+def speak(name: Any, data: Any) -> None:
     time.sleep(0.005)
     try:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -23,10 +24,10 @@ def speak(name, data):
 
 
 class TestControl(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def test_failed_creation(self):
+    def test_failed_creation(self) -> None:
         pass
         # control = Control()
         # try:
@@ -38,7 +39,7 @@ class TestControl(unittest.TestCase):
         # finally:
         # 	control.cleanup()
 
-    def validate(self, message, check):
+    def validate(self, message: Any, check: Any) -> None:
         pass
         # name = tempfile.mktemp()
         # control = Control(name,False)
@@ -56,16 +57,16 @@ class TestControl(unittest.TestCase):
         # 	control.cleanup()
         # 	del control
 
-    def test_no_newline(self):
+    def test_no_newline(self) -> None:
         self.validate('x', '')
 
-    def test_one_newline(self):
+    def test_one_newline(self) -> None:
         self.validate('x\n', 'x')
 
-    def test_two_newline(self):
+    def test_two_newline(self) -> None:
         self.validate('-\nx\n', 'x')
 
-    def test_leftover(self):
+    def test_leftover(self) -> None:
         self.validate('-\nx\n-', 'x')
 
 

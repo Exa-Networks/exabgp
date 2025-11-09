@@ -1,3 +1,4 @@
+from typing import Any
 """Comprehensive tests for BGP Multiprotocol extensions (MP_REACH_NLRI and MP_UNREACH_NLRI).
 
 These tests cover RFC 4760 - Multiprotocol Extensions for BGP-4:
@@ -29,7 +30,7 @@ from unittest.mock import Mock
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
 
@@ -62,7 +63,7 @@ def mock_logger():
 # Phase 1: MP_REACH_NLRI (Type 14) - Basic IPv4/IPv6
 # ==============================================================================
 
-def test_mpreach_ipv4_unicast():
+def test_mpreach_ipv4_unicast() -> None:
     """Test MP_REACH_NLRI for IPv4 unicast.
 
     MP_REACH_NLRI allows BGP to carry reachability information for
@@ -95,7 +96,7 @@ def test_mpreach_ipv4_unicast():
     assert "unicast" in str(mpreach).lower()
 
 
-def test_mpreach_ipv6_unicast():
+def test_mpreach_ipv6_unicast() -> None:
     """Test MP_REACH_NLRI for IPv6 unicast.
 
     IPv6 routing requires MP_REACH_NLRI as standard BGP UPDATE
@@ -126,7 +127,7 @@ def test_mpreach_ipv6_unicast():
     assert "ipv6" in str(mpreach).lower()
 
 
-def test_mpreach_multiple_prefixes():
+def test_mpreach_multiple_prefixes() -> None:
     """Test MP_REACH_NLRI with multiple prefixes.
 
     A single MP_REACH_NLRI attribute can announce multiple prefixes
@@ -162,7 +163,7 @@ def test_mpreach_multiple_prefixes():
     assert "3 NLRI" in str(mpreach)
 
 
-def test_mpreach_pack_ipv4():
+def test_mpreach_pack_ipv4() -> None:
     """Test MP_REACH_NLRI pack() for IPv4.
 
     Verifies the wire format of MP_REACH_NLRI attribute.
@@ -203,7 +204,7 @@ def test_mpreach_pack_ipv4():
     # - NLRI data
 
 
-def test_mpreach_nexthop_ipv6_global():
+def test_mpreach_nexthop_ipv6_global() -> None:
     """Test MP_REACH_NLRI with IPv6 global next-hop.
 
     IPv6 next-hops can be 16 bytes (global) or 32 bytes (global + link-local).
@@ -233,7 +234,7 @@ def test_mpreach_nexthop_ipv6_global():
 # Phase 2: MP_UNREACH_NLRI (Type 15) - Withdrawals
 # ==============================================================================
 
-def test_mpunreach_ipv4_unicast():
+def test_mpunreach_ipv4_unicast() -> None:
     """Test MP_UNREACH_NLRI for IPv4 unicast.
 
     MP_UNREACH_NLRI is used to withdraw previously announced prefixes.
@@ -263,7 +264,7 @@ def test_mpunreach_ipv4_unicast():
     assert "ipv4" in str(mpunreach).lower()
 
 
-def test_mpunreach_ipv6_unicast():
+def test_mpunreach_ipv6_unicast() -> None:
     """Test MP_UNREACH_NLRI for IPv6 unicast.
 
     IPv6 prefix withdrawals use MP_UNREACH_NLRI.
@@ -288,7 +289,7 @@ def test_mpunreach_ipv6_unicast():
     assert len(mpunreach.nlris) == 1
 
 
-def test_mpunreach_multiple_prefixes():
+def test_mpunreach_multiple_prefixes() -> None:
     """Test MP_UNREACH_NLRI with multiple prefix withdrawals.
 
     A single MP_UNREACH_NLRI can withdraw multiple prefixes
@@ -322,7 +323,7 @@ def test_mpunreach_multiple_prefixes():
     assert "3 NLRI" in str(mpunreach)
 
 
-def test_mpunreach_pack_ipv4():
+def test_mpunreach_pack_ipv4() -> None:
     """Test MP_UNREACH_NLRI pack() for IPv4.
 
     Verifies the wire format of MP_UNREACH_NLRI attribute.
@@ -366,7 +367,7 @@ def test_mpunreach_pack_ipv4():
 # Phase 3: Address Family Support
 # ==============================================================================
 
-def test_mpreach_afi_safi_combinations():
+def test_mpreach_afi_safi_combinations() -> None:
     """Test MP_REACH_NLRI supports various AFI/SAFI combinations.
 
     BGP multiprotocol extensions support many address family combinations:
@@ -395,7 +396,7 @@ def test_mpreach_afi_safi_combinations():
         assert mpreach.safi == safi, f"SAFI mismatch for {description}"
 
 
-def test_mpunreach_afi_safi_combinations():
+def test_mpunreach_afi_safi_combinations() -> None:
     """Test MP_UNREACH_NLRI supports various AFI/SAFI combinations."""
     from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
     from exabgp.protocol.family import AFI, SAFI
@@ -421,7 +422,7 @@ def test_mpunreach_afi_safi_combinations():
 # Phase 4: Advanced Features
 # ==============================================================================
 
-def test_mpreach_empty_nlri_eor():
+def test_mpreach_empty_nlri_eor() -> None:
     """Test MP_REACH_NLRI with empty NLRI list (End-of-RIB marker).
 
     EOR (End-of-RIB) is signaled by an MP_UNREACH_NLRI with no withdrawn routes.
@@ -438,7 +439,7 @@ def test_mpreach_empty_nlri_eor():
     assert "0 NLRI" in str(mpreach)
 
 
-def test_mpunreach_empty_nlri():
+def test_mpunreach_empty_nlri() -> None:
     """Test MP_UNREACH_NLRI with empty NLRI list.
 
     An empty MP_UNREACH_NLRI can be used as an EOR marker.
@@ -454,7 +455,7 @@ def test_mpunreach_empty_nlri():
     assert "0 NLRI" in str(mpunreach)
 
 
-def test_mpreach_attribute_flags():
+def test_mpreach_attribute_flags() -> None:
     """Test MP_REACH_NLRI has correct attribute flags.
 
     MP_REACH_NLRI is an optional non-transitive attribute (type 14).
@@ -468,7 +469,7 @@ def test_mpreach_attribute_flags():
     assert MPRNLRI.FLAG & Attribute.Flag.OPTIONAL
 
 
-def test_mpunreach_attribute_flags():
+def test_mpunreach_attribute_flags() -> None:
     """Test MP_UNREACH_NLRI has correct attribute flags.
 
     MP_UNREACH_NLRI is an optional non-transitive attribute (type 15).
@@ -482,7 +483,7 @@ def test_mpunreach_attribute_flags():
     assert MPURNLRI.FLAG & Attribute.Flag.OPTIONAL
 
 
-def test_mpreach_equality():
+def test_mpreach_equality() -> None:
     """Test MP_REACH_NLRI equality comparison.
 
     Two MP_REACH_NLRI attributes are equal if they have the same
@@ -512,7 +513,7 @@ def test_mpreach_equality():
     assert mpreach1.safi == mpreach2.safi
 
 
-def test_mpunreach_equality():
+def test_mpunreach_equality() -> None:
     """Test MP_UNREACH_NLRI equality comparison."""
     from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
     from exabgp.protocol.family import AFI, SAFI

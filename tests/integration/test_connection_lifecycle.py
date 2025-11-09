@@ -1,3 +1,4 @@
+from typing import Generator, Any
 #!/usr/bin/env python3
 # encoding: utf-8
 """test_connection_lifecycle.py
@@ -23,7 +24,7 @@ os.environ['exabgp_log_level'] = 'CRITICAL'
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Generator[None, None, None]:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
 
@@ -62,7 +63,7 @@ class MockBGPServer:
     Creates a real TCP server socket that can accept connections and exchange BGP messages.
     """
 
-    def __init__(self, host='127.0.0.1', port=0, afi=AFI.ipv4):
+    def __init__(self, host: Any ='127.0.0.1', port: Any =0, afi: Any =AFI.ipv4):
         self.host = host
         self.port = port
         self.afi = afi
@@ -75,7 +76,7 @@ class MockBGPServer:
         self.messages_received = []
         self.connection_established = False
 
-    def start(self):
+    def start(self) -> None:
         """Start the mock BGP server in a background thread"""
         family = socket.AF_INET if self.afi == AFI.ipv4 else socket.AF_INET6
         self.server_socket = socket.socket(family, socket.SOCK_STREAM)
@@ -147,11 +148,11 @@ class MockBGPServer:
                 except Exception:
                     pass
 
-    def queue_message(self, message):
+    def queue_message(self, message: Any) -> None:
         """Queue a message to be sent to the client"""
         self.messages_to_send.append(message)
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the server and clean up"""
         self.running = False
         if self.server_thread:
@@ -168,7 +169,7 @@ class MockBGPServer:
                 pass
 
 
-def create_bgp_message(msg_type, body=b''):
+def create_bgp_message(msg_type: Any, body: Any =b'') -> Any:
     """Create a valid BGP message.
 
     Args:
@@ -184,7 +185,7 @@ def create_bgp_message(msg_type, body=b''):
     return header + body
 
 
-def create_open_message(asn=64512, router_id='192.0.2.1', hold_time=180):
+def create_open_message(asn: Any =64512, router_id: Any ='192.0.2.1', hold_time: Any =180) -> Any:
     """Create a BGP OPEN message.
 
     Args:
@@ -204,12 +205,12 @@ def create_open_message(asn=64512, router_id='192.0.2.1', hold_time=180):
     return create_bgp_message(1, body)
 
 
-def create_keepalive_message():
+def create_keepalive_message() -> Any:
     """Create a BGP KEEPALIVE message"""
     return create_bgp_message(4, b'')
 
 
-def create_notification_message(error_code=1, error_subcode=1, data=b''):
+def create_notification_message(error_code: Any =1, error_subcode: Any =1, data: Any =b'') -> Any:
     """Create a BGP NOTIFICATION message"""
     body = struct.pack('!BB', error_code, error_subcode) + data
     return create_bgp_message(3, body)
@@ -218,7 +219,7 @@ def create_notification_message(error_code=1, error_subcode=1, data=b''):
 class TestConnectionLifecycleBasics:
     """Test basic connection lifecycle operations with real sockets"""
 
-    def test_socket_pair_communication(self):
+    def test_socket_pair_communication(self) -> None:
         """Test basic socket pair communication (sanity check)"""
         # Create a socket pair
         if hasattr(socket, 'socketpair'):
@@ -241,7 +242,7 @@ class TestConnectionLifecycleBasics:
             client.close()
             server.close()
 
-    def test_connection_with_real_server_socket(self):
+    def test_connection_with_real_server_socket(self) -> None:
         """Test Connection can work with a real server socket"""
         server = MockBGPServer()
         server.start()
@@ -273,7 +274,7 @@ class TestOutgoingConnectionLifecycle:
     """Test Outgoing connection lifecycle with real sockets"""
 
     @pytest.mark.timeout(10)
-    def test_outgoing_connection_establishment(self):
+    def test_outgoing_connection_establishment(self) -> None:
         """Test Outgoing connection can establish with a real server"""
         server = MockBGPServer()
         server.start()
@@ -303,7 +304,7 @@ class TestOutgoingConnectionLifecycle:
             server.stop()
 
     @pytest.mark.timeout(10)
-    def test_outgoing_send_keepalive(self):
+    def test_outgoing_send_keepalive(self) -> None:
         """Test Outgoing can send KEEPALIVE message"""
         server = MockBGPServer()
         server.start()
@@ -338,7 +339,7 @@ class TestOutgoingConnectionLifecycle:
             server.stop()
 
     @pytest.mark.timeout(10)
-    def test_outgoing_receive_keepalive(self):
+    def test_outgoing_receive_keepalive(self) -> None:
         """Test Outgoing can receive KEEPALIVE message"""
         server = MockBGPServer()
         server.start()
@@ -380,7 +381,7 @@ class TestOutgoingConnectionLifecycle:
             server.stop()
 
     @pytest.mark.timeout(10)
-    def test_outgoing_full_message_exchange(self):
+    def test_outgoing_full_message_exchange(self) -> None:
         """Test full bidirectional message exchange"""
         server = MockBGPServer()
         server.start()
@@ -450,7 +451,7 @@ class TestOutgoingConnectionLifecycle:
 class TestIncomingConnectionLifecycle:
     """Test Incoming connection lifecycle with real sockets"""
 
-    def test_incoming_connection_from_real_socket(self):
+    def test_incoming_connection_from_real_socket(self) -> None:
         """Test Incoming can be created from a real connected socket"""
         # Create a socket pair to simulate an accepted connection
         if not hasattr(socket, 'socketpair'):
@@ -476,7 +477,7 @@ class TestIncomingConnectionLifecycle:
             except Exception:
                 pass
 
-    def test_incoming_receive_message(self):
+    def test_incoming_receive_message(self) -> None:
         """Test Incoming can receive messages from connected socket"""
         if not hasattr(socket, 'socketpair'):
             pytest.skip("socketpair not available")
@@ -515,7 +516,7 @@ class TestIncomingConnectionLifecycle:
             except Exception:
                 pass
 
-    def test_incoming_send_message(self):
+    def test_incoming_send_message(self) -> None:
         """Test Incoming can send messages to connected socket"""
         if not hasattr(socket, 'socketpair'):
             pytest.skip("socketpair not available")
@@ -552,7 +553,7 @@ class TestIncomingConnectionLifecycle:
 class TestConnectionErrorScenarios:
     """Test connection error and edge case scenarios"""
 
-    def test_connection_to_unreachable_host(self):
+    def test_connection_to_unreachable_host(self) -> None:
         """Test connection attempt to unreachable host"""
         # Use TEST-NET-1 (192.0.2.0/24) which should be unreachable
         outgoing = Outgoing(AFI.ipv4, '192.0.2.254', '127.0.0.1', port=179)
@@ -571,7 +572,7 @@ class TestConnectionErrorScenarios:
         # Should not establish to unreachable host
         assert not established
 
-    def test_connection_close_during_read(self):
+    def test_connection_close_during_read(self) -> None:
         """Test handling of connection close during read operation"""
         if not hasattr(socket, 'socketpair'):
             pytest.skip("socketpair not available")
@@ -601,7 +602,7 @@ class TestConnectionErrorScenarios:
             if incoming:
                 incoming.close()
 
-    def test_invalid_bgp_marker(self):
+    def test_invalid_bgp_marker(self) -> None:
         """Test detection of invalid BGP marker"""
         if not hasattr(socket, 'socketpair'):
             pytest.skip("socketpair not available")
@@ -647,7 +648,7 @@ class TestConnectionConcurrency:
     """Test concurrent read/write operations"""
 
     @pytest.mark.timeout(10)
-    def test_concurrent_read_write(self):
+    def test_concurrent_read_write(self) -> None:
         """Test simultaneous read and write operations"""
         server = MockBGPServer()
         server.start()
@@ -704,7 +705,7 @@ class TestConnectionConcurrency:
 class TestConnectionStateManagement:
     """Test connection state management and cleanup"""
 
-    def test_connection_cleanup_on_close(self):
+    def test_connection_cleanup_on_close(self) -> None:
         """Test proper cleanup when connection is closed"""
         server = MockBGPServer()
         server.start()
@@ -732,7 +733,7 @@ class TestConnectionStateManagement:
         finally:
             server.stop()
 
-    def test_multiple_close_calls(self):
+    def test_multiple_close_calls(self) -> None:
         """Test that multiple close() calls don't cause errors"""
         server = MockBGPServer()
         server.start()
@@ -760,7 +761,7 @@ class TestConnectionStateManagement:
         finally:
             server.stop()
 
-    def test_file_descriptor_tracking(self):
+    def test_file_descriptor_tracking(self) -> None:
         """Test file descriptor is properly tracked"""
         server = MockBGPServer()
         server.start()

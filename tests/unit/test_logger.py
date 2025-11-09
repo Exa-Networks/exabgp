@@ -8,6 +8,7 @@ import time
 from unittest.mock import patch, Mock
 
 import pytest
+from typing import Any
 
 from exabgp.logger import color
 from exabgp.logger.format import (
@@ -26,7 +27,7 @@ from exabgp.logger.tty import istty, _istty
 class TestColor:
     """Test color module functions"""
 
-    def test_source_with_color(self):
+    def test_source_with_color(self) -> None:
         """Test source() with color levels"""
         # Test each color level
         result = color.source('ERROR', 'test')
@@ -40,19 +41,19 @@ class TestColor:
         result = color.source('INFO', 'test')
         assert '\033[' in result
 
-    def test_source_without_color(self):
+    def test_source_without_color(self) -> None:
         """Test source() without color (DEBUG)"""
         result = color.source('DEBUG', 'test')
         assert result == 'test'
         assert '\033[' not in result
 
-    def test_source_unknown_level(self):
+    def test_source_unknown_level(self) -> None:
         """Test source() with unknown level"""
         result = color.source('UNKNOWN', 'test')
         assert result == 'test'
         assert '\033[' not in result
 
-    def test_message_with_color(self):
+    def test_message_with_color(self) -> None:
         """Test message() with color levels"""
         result = color.message('ERROR', 'test')
         assert '\033[' in result
@@ -65,18 +66,18 @@ class TestColor:
         result = color.message('FATAL', 'test')
         assert '\033[' in result
 
-    def test_message_without_color(self):
+    def test_message_without_color(self) -> None:
         """Test message() without color (DEBUG)"""
         result = color.message('DEBUG', 'test')
         assert result == 'test'
         assert '\033[' not in result
 
-    def test_message_unknown_level(self):
+    def test_message_unknown_level(self) -> None:
         """Test message() with unknown level"""
         result = color.message('UNKNOWN', 'test')
         assert result == 'test'
 
-    def test_color_levels(self):
+    def test_color_levels(self) -> None:
         """Test all defined color levels"""
         levels = ['FATAL', 'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']
         for level in levels:
@@ -90,23 +91,23 @@ class TestColor:
 class TestTTY:
     """Test TTY detection functions"""
 
-    def test_istty_stderr(self):
+    def test_istty_stderr(self) -> None:
         """Test istty() with stderr"""
         # Just test it doesn't crash
         result = istty('stderr')
         assert isinstance(result, bool)
 
-    def test_istty_stdout(self):
+    def test_istty_stdout(self) -> None:
         """Test istty() with stdout"""
         result = istty('stdout')
         assert isinstance(result, bool)
 
-    def test_istty_out(self):
+    def test_istty_out(self) -> None:
         """Test istty() with 'out' alias"""
         result = istty('out')
         assert isinstance(result, bool)
 
-    def test_istty_true(self):
+    def test_istty_true(self) -> None:
         """Test istty() returns a boolean"""
         # istty checks if stdout/stderr is a tty
         # Just verify it returns a boolean
@@ -114,20 +115,20 @@ class TestTTY:
         assert isinstance(result, bool)
 
     @patch('sys.stdout')
-    def test_istty_false(self, mock_stdout):
+    def test_istty_false(self, mock_stdout: Any) -> None:
         """Test istty() when output is not a tty"""
         mock_stdout.isatty.return_value = False
         result = istty('stdout')
         assert result is False
 
     @patch('sys.stderr')
-    def test_istty_exception(self, mock_stderr):
+    def test_istty_exception(self, mock_stderr: Any) -> None:
         """Test istty() when isatty() raises exception"""
         mock_stderr.isatty.side_effect = Exception('Test error')
         result = istty('stderr')
         assert result is False
 
-    def test_istty_internal(self):
+    def test_istty_internal(self) -> None:
         """Test _istty() helper function"""
         # Mock file object
         mock_file = Mock()
@@ -144,7 +145,7 @@ class TestTTY:
 class TestFormat:
     """Test format module functions"""
 
-    def test_short_formater(self):
+    def test_short_formater(self) -> None:
         """Test _short_formater()"""
         timestamp = time.localtime()
         result = _short_formater('test message', 'source', 'INFO', timestamp)
@@ -153,7 +154,7 @@ class TestFormat:
         # Short format doesn't include timestamp or PID
         assert ':' not in result or 'test message' in result
 
-    def test_long_formater(self):
+    def test_long_formater(self) -> None:
         """Test _long_formater()"""
         timestamp = time.localtime()
         result = _long_formater('test message', 'source', 'INFO', timestamp)
@@ -163,14 +164,14 @@ class TestFormat:
         assert ':' in result
 
     @patch('os.getpid')
-    def test_long_formater_with_pid(self, mock_getpid):
+    def test_long_formater_with_pid(self, mock_getpid: Any) -> None:
         """Test _long_formater() includes PID"""
         mock_getpid.return_value = 12345
         timestamp = time.localtime()
         result = _long_formater('test message', 'source', 'INFO', timestamp)
         assert '12345' in result
 
-    def test_short_color_formater(self):
+    def test_short_color_formater(self) -> None:
         """Test _short_color_formater()"""
         timestamp = time.localtime()
         result = _short_color_formater('test message', 'source', 'ERROR', timestamp)
@@ -178,39 +179,39 @@ class TestFormat:
         # May contain ANSI codes depending on level
         assert 'test message' in result or '\033[' in result
 
-    def test_long_color_formater(self):
+    def test_long_color_formater(self) -> None:
         """Test _long_color_formater()"""
         timestamp = time.localtime()
         result = _long_color_formater('test message', 'source', 'WARNING', timestamp)
         assert '\r' in result
         assert ':' in result  # Timestamp
 
-    def test_formater_stdout_short(self):
+    def test_formater_stdout_short(self) -> None:
         """Test formater() for stdout, short"""
         func = formater(short=True, destination='stdout')
         # Should return one of the short formatters
         assert func in (_short_formater, _short_color_formater)
 
-    def test_formater_stdout_long(self):
+    def test_formater_stdout_long(self) -> None:
         """Test formater() for stdout, long"""
         func = formater(short=False, destination='stdout')
         # Should return one of the long formatters
         assert func in (_long_formater, _long_color_formater)
 
-    def test_formater_stderr(self):
+    def test_formater_stderr(self) -> None:
         """Test formater() for stderr"""
         func = formater(short=True, destination='stderr')
         # Should return one of the short formatters
         assert func in (_short_formater, _short_color_formater)
 
-    def test_formater_returns_callable(self):
+    def test_formater_returns_callable(self) -> None:
         """Test formater() returns a callable"""
         for dest in ('stdout', 'stderr'):
             for short in (True, False):
                 func = formater(short=short, destination=dest)
                 assert callable(func) or func is None
 
-    def test_lazyformat(self):
+    def test_lazyformat(self) -> None:
         """Test lazyformat() creates lazy formatter"""
         data = b'\x01\x02\x03\x04'
         lazy = lazyformat('PREFIX', data)
@@ -225,10 +226,10 @@ class TestFormat:
         # Should contain hex representation
         assert '01' in result or '02' in result
 
-    def test_lazyformat_custom_formater(self):
+    def test_lazyformat_custom_formater(self) -> None:
         """Test lazyformat() with custom formater"""
 
-        def custom_formater(data):
+        def custom_formater(data: Any):
             return 'CUSTOM'
 
         lazy = lazyformat('PREFIX', b'test', formater=custom_formater)
@@ -236,7 +237,7 @@ class TestFormat:
         assert 'PREFIX' in result
         assert 'CUSTOM' in result
 
-    def test_lazyattribute(self):
+    def test_lazyattribute(self) -> None:
         """Test lazyattribute() creates lazy formatter"""
         # aid should be an integer (attribute ID code)
         lazy = lazyattribute(flag=0x40, aid=0x02, length=10, data=b'\x01\x02')
@@ -248,7 +249,7 @@ class TestFormat:
         assert '0x02' in result
         assert 'payload' in result
 
-    def test_lazyattribute_no_data(self):
+    def test_lazyattribute_no_data(self) -> None:
         """Test lazyattribute() without data"""
         # ORIGIN attribute ID is 0x01
         lazy = lazyattribute(flag=0x40, aid=0x01, length=1, data=b'')
@@ -258,7 +259,7 @@ class TestFormat:
         assert '0x01' in result
         assert 'payload' not in result
 
-    def test_lazynlri(self):
+    def test_lazynlri(self) -> None:
         """Test lazynlri() creates lazy formatter"""
         from exabgp.protocol.family import AFI, SAFI
 
@@ -269,7 +270,7 @@ class TestFormat:
         assert 'NLRI' in result
         assert 'payload' in result
 
-    def test_lazynlri_with_addpath(self):
+    def test_lazynlri_with_addpath(self) -> None:
         """Test lazynlri() with addpath enabled"""
         from exabgp.protocol.family import AFI, SAFI
 
@@ -279,7 +280,7 @@ class TestFormat:
         assert 'NLRI' in result
         assert 'with path-information' in result
 
-    def test_lazynlri_without_addpath(self):
+    def test_lazynlri_without_addpath(self) -> None:
         """Test lazynlri() without addpath"""
         from exabgp.protocol.family import AFI, SAFI
 
@@ -289,7 +290,7 @@ class TestFormat:
         assert 'NLRI' in result
         assert 'without path-information' in result
 
-    def test_lazynlri_no_data(self):
+    def test_lazynlri_no_data(self) -> None:
         """Test lazynlri() without data"""
         from exabgp.protocol.family import AFI, SAFI
 

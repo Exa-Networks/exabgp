@@ -22,10 +22,10 @@ from exabgp.protocol.ip import IPv4
 
 
 class TestFlow(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def test_rule(self):
+    def test_rule(self) -> None:
         components = {
             'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
             'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
@@ -45,7 +45,7 @@ class TestFlow(unittest.TestCase):
             # if component != message:
             # 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % _ for _ in component],['0x%02X' % _ for _ in message]))
 
-    def test_rule_and(self):
+    def test_rule_and(self) -> None:
         components = {
             'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
             'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
@@ -69,7 +69,7 @@ class TestFlow(unittest.TestCase):
         flow.pack()
         # print [hex(_) for _ in flow]
 
-    def test_nlri(self):
+    def test_nlri(self) -> None:
         components = {
             'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
             'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
@@ -98,7 +98,7 @@ class TestFlow(unittest.TestCase):
         # if message[1:] != flow[1:]:
         # 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % _ for _ in flow],['0x%02X' % _ for _ in message]))
 
-    def test_compare(self):
+    def test_compare(self) -> None:
         components = {
             'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
             'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),

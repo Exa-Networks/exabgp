@@ -4,6 +4,7 @@ These tests exercise the actual reader() implementation by mocking
 the underlying _reader() generator to provide test data.
 """
 import pytest
+from typing import Any
 from unittest.mock import Mock, MagicMock
 from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
@@ -11,7 +12,7 @@ import struct
 pytestmark = pytest.mark.fuzz
 
 
-def create_mock_connection_with_data(data):
+def create_mock_connection_with_data(data: bytes) -> Any:
     """Create a mock Connection object that will yield the given data.
 
     Args:
@@ -27,7 +28,7 @@ def create_mock_connection_with_data(data):
     connection.io = MagicMock()  # Mock the socket
 
     # Mock _reader to return our test data in chunks
-    def mock_reader(num_bytes):
+    def mock_reader(num_bytes: int) -> Any:
         """Generator that yields data in chunks.
 
         Mimics the behavior of the real _reader() which yields empty bytes
@@ -47,7 +48,7 @@ def create_mock_connection_with_data(data):
 @pytest.mark.fuzz
 @given(data=st.binary(min_size=0, max_size=100))
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=50)
-def test_reader_with_random_data(data):
+def test_reader_with_random_data(data: bytes) -> None:
     """Test reader() with random binary data using actual implementation."""
     from exabgp.reactor.network.error import NotifyError
 
@@ -79,7 +80,7 @@ def test_reader_with_random_data(data):
 
 
 @pytest.mark.fuzz
-def test_reader_with_valid_keepalive():
+def test_reader_with_valid_keepalive() -> None:
     """Test reader() with a valid KEEPALIVE message."""
     # Valid KEEPALIVE: marker + length(19) + type(4)
     data = b'\xFF' * 16 + struct.pack('!H', 19) + b'\x04'
@@ -97,7 +98,7 @@ def test_reader_with_valid_keepalive():
 
 
 @pytest.mark.fuzz
-def test_reader_with_invalid_marker():
+def test_reader_with_invalid_marker() -> None:
     """Test reader() rejects invalid marker."""
     from exabgp.reactor.network.error import NotifyError
 
@@ -116,7 +117,7 @@ def test_reader_with_invalid_marker():
 
 
 @pytest.mark.fuzz
-def test_reader_with_invalid_length_too_small():
+def test_reader_with_invalid_length_too_small() -> None:
     """Test reader() rejects length < 19."""
     from exabgp.reactor.network.error import NotifyError
 
@@ -135,7 +136,7 @@ def test_reader_with_invalid_length_too_small():
 
 
 @pytest.mark.fuzz
-def test_reader_with_invalid_length_too_large():
+def test_reader_with_invalid_length_too_large() -> None:
     """Test reader() rejects length > 4096 (default max)."""
     from exabgp.reactor.network.error import NotifyError
 
@@ -154,7 +155,7 @@ def test_reader_with_invalid_length_too_large():
 
 
 @pytest.mark.fuzz
-def test_reader_with_valid_open_message():
+def test_reader_with_valid_open_message() -> None:
     """Test reader() with a valid OPEN message header."""
     # OPEN message with length 29
     header_data = b'\xFF' * 16 + struct.pack('!H', 29) + b'\x01'
@@ -176,7 +177,7 @@ def test_reader_with_valid_open_message():
 @pytest.mark.fuzz
 @given(length=st.integers(min_value=19, max_value=4096))
 @settings(deadline=None, max_examples=50)
-def test_reader_with_all_valid_lengths(length):
+def test_reader_with_all_valid_lengths(length: int) -> None:
     """Fuzz reader() with all valid length values using KEEPALIVE (most permissive)."""
     from exabgp.reactor.network.error import NotifyError
 

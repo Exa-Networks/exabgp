@@ -19,7 +19,7 @@ from exabgp.bgp.message.direction import Direction
 # Phase 1: Basic KEEPALIVE Message Creation and Encoding
 # ==============================================================================
 
-def test_keepalive_creation():
+def test_keepalive_creation() -> None:
     """Test basic KEEPALIVE message creation.
 
     RFC 4271 Section 4.4:
@@ -31,7 +31,7 @@ def test_keepalive_creation():
     assert keepalive.ID == Message.CODE.KEEPALIVE
 
 
-def test_keepalive_message_encoding():
+def test_keepalive_message_encoding() -> None:
     """Test KEEPALIVE message encoding to wire format.
 
     RFC 4271 Section 4.1:
@@ -56,7 +56,7 @@ def test_keepalive_message_encoding():
     assert msg[18] == 0x04
 
 
-def test_keepalive_message_encoding_with_negotiated():
+def test_keepalive_message_encoding_with_negotiated() -> None:
     """Test KEEPALIVE message encoding with negotiated parameters.
 
     KEEPALIVE messages don't use negotiated parameters, but the method
@@ -75,7 +75,7 @@ def test_keepalive_message_encoding_with_negotiated():
 # Phase 2: KEEPALIVE Message Decoding and Parsing
 # ==============================================================================
 
-def test_keepalive_unpack_valid_message():
+def test_keepalive_unpack_valid_message() -> None:
     """Test unpacking a valid KEEPALIVE message.
 
     KEEPALIVE messages should have no payload (empty data).
@@ -89,7 +89,7 @@ def test_keepalive_unpack_valid_message():
     assert str(keepalive) == 'KEEPALIVE'
 
 
-def test_keepalive_unpack_through_message_class():
+def test_keepalive_unpack_through_message_class() -> None:
     """Test unpacking KEEPALIVE through the Message base class.
 
     This tests the message dispatch mechanism.
@@ -103,7 +103,7 @@ def test_keepalive_unpack_through_message_class():
     assert isinstance(keepalive, KeepAlive)
 
 
-def test_keepalive_unpack_with_direction():
+def test_keepalive_unpack_with_direction() -> None:
     """Test KEEPALIVE unpacking with different directions.
 
     Direction shouldn't affect KEEPALIVE processing.
@@ -124,7 +124,7 @@ def test_keepalive_unpack_with_direction():
 # Phase 3: KEEPALIVE Message Validation and Error Handling
 # ==============================================================================
 
-def test_keepalive_with_payload_raises_error():
+def test_keepalive_with_payload_raises_error() -> None:
     """Test that KEEPALIVE with payload raises an error.
 
     RFC 4271 Section 4.4:
@@ -139,7 +139,7 @@ def test_keepalive_with_payload_raises_error():
         KeepAlive.unpack_message(data, Direction.IN, negotiated)
 
 
-def test_keepalive_with_multi_byte_payload_raises_error():
+def test_keepalive_with_multi_byte_payload_raises_error() -> None:
     """Test that KEEPALIVE with multi-byte payload raises an error.
     """
     data = b'\x01\x02\x03\x04'
@@ -149,7 +149,7 @@ def test_keepalive_with_multi_byte_payload_raises_error():
         KeepAlive.unpack_message(data, Direction.IN, negotiated)
 
 
-def test_keepalive_with_various_invalid_payloads():
+def test_keepalive_with_various_invalid_payloads() -> None:
     """Test various invalid payloads to ensure robust error handling.
     """
     invalid_payloads = [
@@ -169,7 +169,7 @@ def test_keepalive_with_various_invalid_payloads():
 # Phase 4: KEEPALIVE Message Round-Trip Tests
 # ==============================================================================
 
-def test_keepalive_encode_decode_roundtrip():
+def test_keepalive_encode_decode_roundtrip() -> None:
     """Test that KEEPALIVE can be encoded and decoded back successfully.
     """
     # Create and encode
@@ -187,7 +187,7 @@ def test_keepalive_encode_decode_roundtrip():
     assert str(keepalive_decoded) == str(keepalive_original)
 
 
-def test_keepalive_multiple_encode_decode_cycles():
+def test_keepalive_multiple_encode_decode_cycles() -> None:
     """Test multiple encode/decode cycles produce consistent results.
     """
     keepalive = KeepAlive()
@@ -211,7 +211,7 @@ def test_keepalive_multiple_encode_decode_cycles():
 # Phase 5: KEEPALIVE Message ID and Type Verification
 # ==============================================================================
 
-def test_keepalive_message_id():
+def test_keepalive_message_id() -> None:
     """Test that KEEPALIVE has correct message ID.
 
     RFC 4271: KEEPALIVE message type code is 4.
@@ -220,13 +220,13 @@ def test_keepalive_message_id():
     assert KeepAlive.ID == Message.CODE.KEEPALIVE
 
 
-def test_keepalive_message_type_bytes():
+def test_keepalive_message_type_bytes() -> None:
     """Test that KEEPALIVE TYPE is correct byte representation.
     """
     assert KeepAlive.TYPE == b'\x04'
 
 
-def test_keepalive_message_registration():
+def test_keepalive_message_registration() -> None:
     """Test that KEEPALIVE is properly registered with Message class.
     """
     # Verify KEEPALIVE is in registered messages
@@ -241,7 +241,7 @@ def test_keepalive_message_registration():
 # Phase 6: KEEPALIVE Message Comparison and Equality
 # ==============================================================================
 
-def test_keepalive_instances_are_equal():
+def test_keepalive_instances_are_equal() -> None:
     """Test that KEEPALIVE instances are considered equal.
 
     Since KEEPALIVE has no parameters, all instances should be equivalent.
@@ -253,7 +253,7 @@ def test_keepalive_instances_are_equal():
     assert keepalive1.message() == keepalive2.message()
 
 
-def test_keepalive_string_representation():
+def test_keepalive_string_representation() -> None:
     """Test KEEPALIVE string representation.
     """
     keepalive = KeepAlive()
@@ -267,7 +267,7 @@ def test_keepalive_string_representation():
 # Phase 7: KEEPALIVE Message with Edge Cases
 # ==============================================================================
 
-def test_keepalive_with_none_negotiated():
+def test_keepalive_with_none_negotiated() -> None:
     """Test KEEPALIVE encoding/decoding with None negotiated parameters.
     """
     keepalive = KeepAlive()
@@ -281,7 +281,7 @@ def test_keepalive_with_none_negotiated():
     assert isinstance(decoded, KeepAlive)
 
 
-def test_keepalive_marker_field():
+def test_keepalive_marker_field() -> None:
     """Test that KEEPALIVE uses correct marker field.
 
     RFC 4271 Section 4.1:
@@ -295,7 +295,7 @@ def test_keepalive_marker_field():
     assert msg[0:16] == expected_marker
 
 
-def test_keepalive_header_length_field():
+def test_keepalive_header_length_field() -> None:
     """Test that KEEPALIVE length field is correct.
 
     Length field is 2 bytes in network byte order (big-endian).
@@ -320,7 +320,7 @@ def test_keepalive_header_length_field():
 # Phase 8: KEEPALIVE Message Constants Verification
 # ==============================================================================
 
-def test_keepalive_message_constants():
+def test_keepalive_message_constants() -> None:
     """Test KEEPALIVE message constants against RFC specifications.
     """
     # Message header length is always 19 bytes
@@ -337,7 +337,7 @@ def test_keepalive_message_constants():
     assert Message.MARKER == b'\xff' * 16
 
 
-def test_keepalive_length_validation_rule():
+def test_keepalive_length_validation_rule() -> None:
     """Test KEEPALIVE length validation rule.
 
     RFC 4271: KEEPALIVE messages must be exactly 19 octets.

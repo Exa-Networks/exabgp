@@ -23,7 +23,7 @@ pytestmark = pytest.mark.fuzz
 @pytest.mark.fuzz
 @given(text=st.text(alphabet=st.characters(blacklist_categories=('Cs',)), max_size=500))
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
-def test_tokeniser_robustness(text):
+def test_tokeniser_robustness(text: str) -> None:
     """Test configuration tokeniser doesn't crash on random text."""
     from exabgp.configuration.core.tokeniser import Tokeniser
     from exabgp.configuration.core.error import Error
@@ -55,7 +55,7 @@ def test_tokeniser_robustness(text):
     octet4=st.integers(min_value=0, max_value=255),
 )
 @settings(deadline=None, max_examples=100)
-def test_ipv4_creation(prefix_len, octet1, octet2, octet3, octet4):
+def test_ipv4_creation(prefix_len: int, octet1: int, octet2: int, octet3: int, octet4: int) -> None:
     """Test IPv4 address creation with valid boundary values."""
     from exabgp.protocol.ip import IPv4
 
@@ -76,7 +76,7 @@ def test_ipv4_creation(prefix_len, octet1, octet2, octet3, octet4):
     port=st.integers(min_value=1, max_value=65535),
 )
 @settings(deadline=None, max_examples=50)
-def test_port_number_range(port):
+def test_port_number_range(port: int) -> None:
     """Test port number range validation."""
     # Just verify the range is valid - actual parsing may require more context
     assert 1 <= port <= 65535
@@ -87,7 +87,7 @@ def test_port_number_range(port):
     asn=st.integers(min_value=0, max_value=4294967295),
 )
 @settings(deadline=None, max_examples=50)
-def test_asn_number_range(asn):
+def test_asn_number_range(asn: int) -> None:
     """Test ASN number range validation."""
     from exabgp.bgp.message.open.asn import ASN
 
@@ -104,7 +104,7 @@ def test_asn_number_range(asn):
     nesting_level=st.integers(min_value=1, max_value=5),
 )
 @settings(deadline=None, max_examples=20)
-def test_nested_config_blocks(nesting_level):
+def test_nested_config_blocks(nesting_level: int) -> None:
     """Test configuration parser handles nested blocks."""
     from exabgp.configuration.core.tokeniser import Tokeniser
     from exabgp.configuration.core.error import Error
@@ -152,7 +152,7 @@ def test_nested_config_blocks(nesting_level):
 @pytest.mark.fuzz
 @given(data=st.binary(min_size=0, max_size=100))
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
-def test_connection_reader_robustness(data):
+def test_connection_reader_robustness(data: bytes) -> None:
     """Test BGP connection reader doesn't crash on random binary data."""
     from exabgp.reactor.network.connection import Connection
     from unittest.mock import MagicMock
@@ -160,7 +160,7 @@ def test_connection_reader_robustness(data):
     connection = Connection(1, '127.0.0.1', '127.0.0.1')
     connection.io = MagicMock()
 
-    def mock_reader(num_bytes):
+    def mock_reader(num_bytes: int):
         if len(data) < num_bytes:
             yield b''
             return
@@ -200,7 +200,7 @@ def test_connection_reader_robustness(data):
     msg_type=st.integers(min_value=1, max_value=5),
 )
 @settings(deadline=None, max_examples=100)
-def test_bgp_header_validation(valid_marker, length, msg_type):
+def test_bgp_header_validation(valid_marker: bool, length: int, msg_type: int) -> None:
     """Test BGP message header validation."""
     from exabgp.reactor.network.connection import Connection
     from unittest.mock import MagicMock
@@ -217,7 +217,7 @@ def test_bgp_header_validation(valid_marker, length, msg_type):
     connection = Connection(1, '127.0.0.1', '127.0.0.1')
     connection.io = MagicMock()
 
-    def mock_reader(num_bytes):
+    def mock_reader(num_bytes: int):
         if len(data) < num_bytes:
             yield b''
             return
@@ -252,7 +252,7 @@ def test_bgp_header_validation(valid_marker, length, msg_type):
     ttl=st.integers(min_value=0, max_value=255),
 )
 @settings(deadline=None, max_examples=50)
-def test_mpls_label_values(label_value, exp, ttl):
+def test_mpls_label_values(label_value: int, exp: int, ttl: int) -> None:
     """Test MPLS label creation with valid values."""
     from exabgp.bgp.message.update.nlri.qualifier import Labels
 
@@ -275,7 +275,7 @@ def test_mpls_label_values(label_value, exp, ttl):
     hold_time=st.one_of(st.just(0), st.integers(min_value=3, max_value=65535)),
 )
 @settings(deadline=None, max_examples=50)
-def test_open_message_basic_structure(version, my_as, hold_time):
+def test_open_message_basic_structure(version: int, my_as: int, hold_time: int) -> None:
     """Test OPEN message with valid basic parameters."""
     from exabgp.bgp.message.open import Open
 
@@ -306,7 +306,7 @@ def test_open_message_basic_structure(version, my_as, hold_time):
 @pytest.mark.fuzz
 @given(data=st.binary(min_size=0, max_size=200))
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
-def test_update_message_robustness(data):
+def test_update_message_robustness(data: bytes) -> None:
     """Test UPDATE message parsing doesn't crash on random data."""
     from exabgp.bgp.message.update import Update
 
@@ -330,7 +330,7 @@ def test_update_message_robustness(data):
 # =============================================================================
 
 @pytest.mark.fuzz
-def test_empty_configuration():
+def test_empty_configuration() -> None:
     """Test parser handles empty configuration."""
     from exabgp.configuration.core.tokeniser import Tokeniser
     from exabgp.configuration.core.error import Error
@@ -354,7 +354,7 @@ def test_empty_configuration():
 @pytest.mark.fuzz
 @given(whitespace=st.text(alphabet=' \t\n\r', min_size=0, max_size=100))
 @settings(deadline=None, max_examples=30)
-def test_whitespace_only_config(whitespace):
+def test_whitespace_only_config(whitespace: str) -> None:
     """Test parser handles whitespace-only configuration."""
     from exabgp.configuration.core.tokeniser import Tokeniser
     from exabgp.configuration.core.error import Error
@@ -382,7 +382,7 @@ def test_whitespace_only_config(whitespace):
     truncate_at=st.integers(min_value=0, max_value=19),
 )
 @settings(deadline=None, max_examples=20)
-def test_truncated_bgp_header(truncate_at):
+def test_truncated_bgp_header(truncate_at: int) -> None:
     """Test handling of truncated BGP message headers."""
     from exabgp.reactor.network.connection import Connection
     from unittest.mock import MagicMock
@@ -396,7 +396,7 @@ def test_truncated_bgp_header(truncate_at):
     connection = Connection(1, '127.0.0.1', '127.0.0.1')
     connection.io = MagicMock()
 
-    def mock_reader(num_bytes):
+    def mock_reader(num_bytes: int):
         if len(truncated) < num_bytes:
             yield b''
             return
@@ -427,7 +427,7 @@ def test_truncated_bgp_header(truncate_at):
     value=st.integers(min_value=0, max_value=65535),
 )
 @settings(deadline=None, max_examples=50)
-def test_community_values(as_num, value):
+def test_community_values(as_num: int, value: int) -> None:
     """Test BGP community values are in valid range."""
     # Standard community: 2-byte AS + 2-byte value
     # Both parts must fit in 16 bits

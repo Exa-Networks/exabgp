@@ -9,6 +9,7 @@ Created: 2025-11-08
 """
 
 import pytest
+from typing import Any
 import socket
 import select
 import platform
@@ -30,7 +31,7 @@ from exabgp.reactor.network.error import (
 class TestSocketCreation:
     """Test socket creation for IPv4 and IPv6"""
 
-    def test_create_ipv4_socket(self):
+    def test_create_ipv4_socket(self) -> None:
         """Test creating an IPv4 socket"""
         io = tcp.create(AFI.ipv4)
         assert io is not None
@@ -38,7 +39,7 @@ class TestSocketCreation:
         assert io.type == socket.SOCK_STREAM
         io.close()
 
-    def test_create_ipv6_socket(self):
+    def test_create_ipv6_socket(self) -> None:
         """Test creating an IPv6 socket"""
         io = tcp.create(AFI.ipv6)
         assert io is not None
@@ -46,7 +47,7 @@ class TestSocketCreation:
         assert io.type == socket.SOCK_STREAM
         io.close()
 
-    def test_create_socket_sets_reuse_addr(self):
+    def test_create_socket_sets_reuse_addr(self) -> None:
         """Test that SO_REUSEADDR is set"""
         io = tcp.create(AFI.ipv4)
         # Get the socket option to verify it's set
@@ -55,7 +56,7 @@ class TestSocketCreation:
         assert reuse != 0
         io.close()
 
-    def test_create_socket_with_interface(self):
+    def test_create_socket_with_interface(self) -> None:
         """Test creating socket with interface binding (may require root)"""
         # This test may fail without root privileges or on some platforms
         # We'll just verify it doesn't crash with invalid interface
@@ -63,7 +64,7 @@ class TestSocketCreation:
             tcp.create(AFI.ipv4, interface="nonexistent_interface_12345")
 
     @patch('socket.socket')
-    def test_create_socket_failure(self, mock_socket):
+    def test_create_socket_failure(self, mock_socket: Any) -> None:
         """Test socket creation failure"""
         mock_socket.side_effect = OSError("Socket creation failed")
 
@@ -74,7 +75,7 @@ class TestSocketCreation:
 class TestSocketBinding:
     """Test socket binding to local addresses"""
 
-    def test_bind_ipv4(self):
+    def test_bind_ipv4(self) -> None:
         """Test binding to IPv4 localhost"""
         io = tcp.create(AFI.ipv4)
         tcp.bind(io, '127.0.0.1', AFI.ipv4)
@@ -85,7 +86,7 @@ class TestSocketBinding:
         assert addr[1] != 0  # Port should be assigned
         io.close()
 
-    def test_bind_ipv6(self):
+    def test_bind_ipv6(self) -> None:
         """Test binding to IPv6 localhost"""
         io = tcp.create(AFI.ipv6)
         try:
@@ -101,7 +102,7 @@ class TestSocketBinding:
             io.close()
             pytest.skip("IPv6 not available on this system")
 
-    def test_bind_invalid_address(self):
+    def test_bind_invalid_address(self) -> None:
         """Test binding to invalid IP address"""
         io = tcp.create(AFI.ipv4)
 
@@ -110,7 +111,7 @@ class TestSocketBinding:
 
         io.close()
 
-    def test_bind_address_in_use(self):
+    def test_bind_address_in_use(self) -> None:
         """Test binding to address already in use"""
         # Create first socket and bind it
         io1 = tcp.create(AFI.ipv4)
@@ -132,7 +133,7 @@ class TestSocketBinding:
 class TestSocketConnection:
     """Test socket connection establishment"""
 
-    def test_connect_to_unreachable_host(self):
+    def test_connect_to_unreachable_host(self) -> None:
         """Test connection to unreachable host"""
         io = tcp.create(AFI.ipv4)
         tcp.asynchronous(io, '192.0.2.1')  # Make it non-blocking
@@ -146,7 +147,7 @@ class TestSocketConnection:
 
         io.close()
 
-    def test_connect_ipv4_format(self):
+    def test_connect_ipv4_format(self) -> None:
         """Test IPv4 connection format (address, port)"""
         io = tcp.create(AFI.ipv4)
         tcp.asynchronous(io, '127.0.0.1')
@@ -161,7 +162,7 @@ class TestSocketConnection:
 
         io.close()
 
-    def test_connect_ipv6_format(self):
+    def test_connect_ipv6_format(self) -> None:
         """Test IPv6 connection format (address, port, flowinfo, scopeid)"""
         try:
             io = tcp.create(AFI.ipv6)
@@ -179,7 +180,7 @@ class TestSocketConnection:
         except OSError:
             pytest.skip("IPv6 not available on this system")
 
-    def test_connect_with_md5_error_message(self):
+    def test_connect_with_md5_error_message(self) -> None:
         """Test that MD5 password hint appears in error with MD5 enabled"""
         io = tcp.create(AFI.ipv4)
         # Use localhost with unlikely port for immediate connection refused
@@ -198,7 +199,7 @@ class TestSocketConnection:
 class TestMD5Authentication:
     """Test TCP-MD5 authentication setup"""
 
-    def test_md5_on_unsupported_platform(self):
+    def test_md5_on_unsupported_platform(self) -> None:
         """Test MD5 setup on unsupported platform"""
         with patch('platform.system', return_value='Windows'):
             io = tcp.create(AFI.ipv4)
@@ -209,7 +210,7 @@ class TestMD5Authentication:
             io.close()
 
     @patch('platform.system', return_value='FreeBSD')
-    def test_md5_freebsd_requires_kernel_config(self, mock_platform):
+    def test_md5_freebsd_requires_kernel_config(self, mock_platform: Any) -> None:
         """Test FreeBSD MD5 requires kernel configuration"""
         io = tcp.create(AFI.ipv4)
 
@@ -221,7 +222,7 @@ class TestMD5Authentication:
 
     @patch('platform.system', return_value='FreeBSD')
     @patch('socket.socket.setsockopt')
-    def test_md5_freebsd_with_kernel(self, mock_setsockopt, mock_platform):
+    def test_md5_freebsd_with_kernel(self, mock_setsockopt: Any, mock_platform: Any) -> None:
         """Test FreeBSD MD5 with 'kernel' value"""
         mock_setsockopt.side_effect = OSError("Not enabled")
         io = tcp.create(AFI.ipv4)
@@ -232,7 +233,7 @@ class TestMD5Authentication:
         io.close()
 
     @patch('platform.system', return_value='Linux')
-    def test_md5_linux_with_password(self, mock_platform):
+    def test_md5_linux_with_password(self, mock_platform: Any) -> None:
         """Test Linux MD5 setup with ASCII password"""
         io = tcp.create(AFI.ipv4)
 
@@ -247,7 +248,7 @@ class TestMD5Authentication:
         io.close()
 
     @patch('platform.system', return_value='Linux')
-    def test_md5_linux_with_base64(self, mock_platform):
+    def test_md5_linux_with_base64(self, mock_platform: Any) -> None:
         """Test Linux MD5 setup with base64-encoded password"""
         io = tcp.create(AFI.ipv4)
 
@@ -261,7 +262,7 @@ class TestMD5Authentication:
         io.close()
 
     @patch('platform.system', return_value='Linux')
-    def test_md5_linux_invalid_base64(self, mock_platform):
+    def test_md5_linux_invalid_base64(self, mock_platform: Any) -> None:
         """Test Linux MD5 with invalid base64"""
         io = tcp.create(AFI.ipv4)
 
@@ -272,7 +273,7 @@ class TestMD5Authentication:
         io.close()
 
     @patch('platform.system', return_value='Linux')
-    def test_md5_linux_auto_detect_hex(self, mock_platform):
+    def test_md5_linux_auto_detect_hex(self, mock_platform: Any) -> None:
         """Test Linux MD5 auto-detection of hex vs base64"""
         io = tcp.create(AFI.ipv4)
 
@@ -286,7 +287,7 @@ class TestMD5Authentication:
         io.close()
 
     @patch('platform.system', return_value='Linux')
-    def test_md5_ipv6_address(self, mock_platform):
+    def test_md5_ipv6_address(self, mock_platform: Any) -> None:
         """Test MD5 with IPv6 address"""
         io = tcp.create(AFI.ipv6)
 
@@ -302,7 +303,7 @@ class TestMD5Authentication:
 class TestNagleAlgorithm:
     """Test Nagle's algorithm configuration"""
 
-    def test_nagle_disable_success(self):
+    def test_nagle_disable_success(self) -> None:
         """Test successfully disabling Nagle's algorithm"""
         io = tcp.create(AFI.ipv4)
         tcp.nagle(io, '127.0.0.1')
@@ -315,7 +316,7 @@ class TestNagleAlgorithm:
         io.close()
 
     @patch('socket.socket.setsockopt')
-    def test_nagle_disable_failure(self, mock_setsockopt):
+    def test_nagle_disable_failure(self, mock_setsockopt: Any) -> None:
         """Test Nagle disable failure handling"""
         mock_setsockopt.side_effect = OSError("Not supported")
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -329,7 +330,7 @@ class TestNagleAlgorithm:
 class TestTTLConfiguration:
     """Test TTL/hop limit configuration"""
 
-    def test_ttl_ipv4(self):
+    def test_ttl_ipv4(self) -> None:
         """Test IPv4 TTL setting"""
         io = tcp.create(AFI.ipv4)
 
@@ -345,7 +346,7 @@ class TestTTLConfiguration:
 
         io.close()
 
-    def test_ttl_ipv4_zero_is_noop(self):
+    def test_ttl_ipv4_zero_is_noop(self) -> None:
         """Test that TTL=0 does nothing"""
         io = tcp.create(AFI.ipv4)
 
@@ -354,7 +355,7 @@ class TestTTLConfiguration:
 
         io.close()
 
-    def test_ttl_ipv4_none_is_noop(self):
+    def test_ttl_ipv4_none_is_noop(self) -> None:
         """Test that TTL=None does nothing"""
         io = tcp.create(AFI.ipv4)
 
@@ -363,7 +364,7 @@ class TestTTLConfiguration:
 
         io.close()
 
-    def test_ttlv6(self):
+    def test_ttlv6(self) -> None:
         """Test IPv6 hop limit setting"""
         try:
             io = tcp.create(AFI.ipv6)
@@ -381,7 +382,7 @@ class TestTTLConfiguration:
             pytest.skip("IPv6 not available on this system")
 
     @patch('socket.socket.setsockopt')
-    def test_ttl_not_supported(self, mock_setsockopt):
+    def test_ttl_not_supported(self, mock_setsockopt: Any) -> None:
         """Test TTL error when not supported"""
         mock_setsockopt.side_effect = OSError("Not supported")
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -391,7 +392,7 @@ class TestTTLConfiguration:
 
         io.close()
 
-    def test_min_ttl(self):
+    def test_min_ttl(self) -> None:
         """Test minimum TTL setting"""
         io = tcp.create(AFI.ipv4)
 
@@ -404,7 +405,7 @@ class TestTTLConfiguration:
 
         io.close()
 
-    def test_min_ttl_zero_is_noop(self):
+    def test_min_ttl_zero_is_noop(self) -> None:
         """Test that min_ttl=0 does nothing"""
         io = tcp.create(AFI.ipv4)
 
@@ -417,7 +418,7 @@ class TestTTLConfiguration:
 class TestAsynchronousMode:
     """Test non-blocking socket configuration"""
 
-    def test_asynchronous_success(self):
+    def test_asynchronous_success(self) -> None:
         """Test setting socket to non-blocking mode"""
         io = tcp.create(AFI.ipv4)
         tcp.asynchronous(io, '127.0.0.1')
@@ -428,7 +429,7 @@ class TestAsynchronousMode:
         io.close()
 
     @patch('socket.socket.setblocking')
-    def test_asynchronous_failure(self, mock_setblocking):
+    def test_asynchronous_failure(self, mock_setblocking: Any) -> None:
         """Test async mode failure handling"""
         mock_setblocking.side_effect = OSError("Not supported")
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -442,7 +443,7 @@ class TestAsynchronousMode:
 class TestSocketReadiness:
     """Test socket readiness polling"""
 
-    def test_ready_with_unconnected_socket(self):
+    def test_ready_with_unconnected_socket(self) -> None:
         """Test ready() with unconnected socket"""
         io = tcp.create(AFI.ipv4)
         tcp.asynchronous(io, '127.0.0.1')
@@ -466,7 +467,7 @@ class TestSocketReadiness:
         io.close()
 
     @patch('select.poll')
-    def test_ready_poll_error(self, mock_poll_class):
+    def test_ready_poll_error(self, mock_poll_class: Any) -> None:
         """Test ready() handling poll errors"""
         import select as select_module
 
@@ -487,7 +488,7 @@ class TestSocketReadiness:
         io.close()
 
     @patch('select.poll')
-    def test_ready_pollhup(self, mock_poll_class):
+    def test_ready_pollhup(self, mock_poll_class: Any) -> None:
         """Test ready() with POLLHUP event"""
         mock_poller = MagicMock()
         mock_poller.poll.return_value = [(0, select.POLLHUP)]
@@ -506,7 +507,7 @@ class TestSocketReadiness:
         io.close()
 
     @patch('select.poll')
-    def test_ready_pollerr(self, mock_poll_class):
+    def test_ready_pollerr(self, mock_poll_class: Any) -> None:
         """Test ready() with POLLERR event"""
         mock_poller = MagicMock()
         mock_poller.poll.return_value = [(0, select.POLLERR)]
@@ -528,7 +529,7 @@ class TestSocketReadiness:
 class TestIntegration:
     """Integration tests combining multiple operations"""
 
-    def test_full_socket_setup_ipv4(self):
+    def test_full_socket_setup_ipv4(self) -> None:
         """Test complete IPv4 socket setup sequence"""
         # Create socket
         io = tcp.create(AFI.ipv4)
@@ -549,7 +550,7 @@ class TestIntegration:
 
         io.close()
 
-    def test_full_socket_setup_ipv6(self):
+    def test_full_socket_setup_ipv6(self) -> None:
         """Test complete IPv6 socket setup sequence"""
         try:
             # Create socket
@@ -573,7 +574,7 @@ class TestIntegration:
         except OSError:
             pytest.skip("IPv6 not available on this system")
 
-    def test_socket_cleanup(self):
+    def test_socket_cleanup(self) -> None:
         """Test that sockets are properly cleaned up"""
         io = tcp.create(AFI.ipv4)
         fd = io.fileno()

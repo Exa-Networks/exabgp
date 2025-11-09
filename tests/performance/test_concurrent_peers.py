@@ -7,6 +7,7 @@ simultaneously under high load.
 import pytest
 from io import BytesIO
 from collections import deque, defaultdict
+from typing import Any
 from unittest.mock import Mock
 
 from exabgp.reactor.protocol import Protocol
@@ -27,7 +28,7 @@ from .perf_helpers import (
 class TestMultiplePeerProcessing:
     """Tests for processing messages from multiple peers."""
 
-    def test_process_10_peers_100_messages_each(self, benchmark):
+    def test_process_10_peers_100_messages_each(self, benchmark: Any) -> None:
         """Benchmark processing 100 messages from 10 peers."""
         num_peers = 10
         messages_per_peer = 100
@@ -68,7 +69,7 @@ class TestMultiplePeerProcessing:
         result = benchmark(process_multi_peer)
         assert result == num_peers * messages_per_peer
 
-    def test_process_50_peers_concurrent(self, benchmark):
+    def test_process_50_peers_concurrent(self, benchmark: Any) -> None:
         """Benchmark processing from 50 concurrent peers."""
         num_peers = 50
         messages_per_peer = 50
@@ -105,7 +106,7 @@ class TestMultiplePeerProcessing:
         result = benchmark(process_many_peers)
         assert result == num_peers * messages_per_peer
 
-    def test_process_100_peers_mixed_messages(self, benchmark):
+    def test_process_100_peers_mixed_messages(self, benchmark: Any) -> None:
         """Benchmark processing mixed messages from 100 peers."""
         num_peers = 100
         messages_per_peer = 20
@@ -154,7 +155,7 @@ class TestMultiplePeerProcessing:
 class TestPeerBacklogManagement:
     """Tests for managing backlogs across multiple peers."""
 
-    def test_per_peer_backlog_10_peers(self, benchmark):
+    def test_per_peer_backlog_10_peers(self, benchmark: Any) -> None:
         """Benchmark per-peer backlog management for 10 peers."""
         num_peers = 10
         messages_per_peer = 500
@@ -181,7 +182,7 @@ class TestPeerBacklogManagement:
         result = benchmark(manage_peer_backlogs)
         assert result == num_peers * messages_per_peer
 
-    def test_shared_backlog_multiple_peers(self, benchmark):
+    def test_shared_backlog_multiple_peers(self, benchmark: Any) -> None:
         """Benchmark shared backlog with messages from multiple peers."""
         num_peers = 20
         messages_per_peer = 250
@@ -207,7 +208,7 @@ class TestPeerBacklogManagement:
         result = benchmark(manage_shared_backlog)
         assert result == num_peers * messages_per_peer
 
-    def test_priority_based_peer_processing(self, benchmark):
+    def test_priority_based_peer_processing(self, benchmark: Any) -> None:
         """Benchmark priority-based processing across peers."""
         num_peers = 15
         messages_per_peer = 200
@@ -242,7 +243,7 @@ class TestPeerBacklogManagement:
 class TestPeerLoadBalancing:
     """Tests for load balancing across multiple peers."""
 
-    def test_fair_scheduling_10_peers(self, benchmark):
+    def test_fair_scheduling_10_peers(self, benchmark: Any) -> None:
         """Benchmark fair scheduling across 10 peers."""
         num_peers = 10
         messages_per_peer = 300
@@ -279,7 +280,7 @@ class TestPeerLoadBalancing:
         result = benchmark(fair_schedule)
         assert result == num_peers * messages_per_peer
 
-    def test_weighted_scheduling_peers(self, benchmark):
+    def test_weighted_scheduling_peers(self, benchmark: Any) -> None:
         """Benchmark weighted scheduling (some peers get more CPU time)."""
         num_peers = 10
         base_messages = 100
@@ -328,7 +329,7 @@ class TestPeerLoadBalancing:
 class TestHighPeerCountStress:
     """Stress tests for very high peer counts."""
 
-    def test_process_500_peers(self, benchmark):
+    def test_process_500_peers(self, benchmark: Any) -> None:
         """Stress test: Process messages from 500 concurrent peers."""
         num_peers = 500
         messages_per_peer = 10
@@ -362,7 +363,7 @@ class TestHighPeerCountStress:
         result = benchmark(process_many)
         assert result == num_peers * messages_per_peer
 
-    def test_1000_peers_light_load(self, benchmark):
+    def test_1000_peers_light_load(self, benchmark: Any) -> None:
         """Stress test: 1000 peers with light message load."""
         num_peers = 1000
         messages_per_peer = 5
@@ -391,7 +392,7 @@ class TestHighPeerCountStress:
         result = benchmark(process_light_load)
         assert result == num_peers * messages_per_peer
 
-    def test_variable_load_across_peers(self, benchmark):
+    def test_variable_load_across_peers(self, benchmark: Any) -> None:
         """Stress test: Variable load across many peers."""
         num_peers = 200
         peer_data = {}

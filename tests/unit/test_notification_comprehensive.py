@@ -17,13 +17,14 @@ import struct
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.notification import Notify, Notification
 from exabgp.bgp.message.direction import Direction
+from typing import NoReturn
 
 
 # ==============================================================================
 # Part 1: NOTIFICATION Message Constants and Registration
 # ==============================================================================
 
-def test_notification_message_id():
+def test_notification_message_id() -> None:
     """Test NOTIFICATION message ID.
 
     RFC 4271: NOTIFICATION uses message type 0x03 (3).
@@ -32,13 +33,13 @@ def test_notification_message_id():
     assert Notification.ID == Message.CODE.NOTIFICATION
 
 
-def test_notification_message_type_bytes():
+def test_notification_message_type_bytes() -> None:
     """Test NOTIFICATION TYPE byte representation.
     """
     assert Notification.TYPE == b'\x03'
 
 
-def test_notification_message_registration():
+def test_notification_message_registration() -> None:
     """Test that NOTIFICATION is properly registered with Message class.
     """
     assert Message.CODE.NOTIFICATION in Message.registered_message
@@ -51,7 +52,7 @@ def test_notification_message_registration():
 # Part 2: Error Code and Subcode String Representations
 # ==============================================================================
 
-def test_notification_error_code_strings():
+def test_notification_error_code_strings() -> None:
     """Test error code string representations.
 
     RFC 4271 defines 6 main error codes.
@@ -64,7 +65,7 @@ def test_notification_error_code_strings():
     assert Notification._str_code[6] == 'Cease'
 
 
-def test_notification_message_header_error_subcodes():
+def test_notification_message_header_error_subcodes() -> None:
     """Test Message Header Error (code 1) subcodes.
     """
     assert Notification._str_subcode[(1, 0)] == 'Unspecific'
@@ -73,7 +74,7 @@ def test_notification_message_header_error_subcodes():
     assert Notification._str_subcode[(1, 3)] == 'Bad Message Type'
 
 
-def test_notification_open_message_error_subcodes():
+def test_notification_open_message_error_subcodes() -> None:
     """Test OPEN Message Error (code 2) subcodes.
     """
     assert Notification._str_subcode[(2, 0)] == 'Unspecific'
@@ -86,7 +87,7 @@ def test_notification_open_message_error_subcodes():
     assert Notification._str_subcode[(2, 7)] == 'Unsupported Capability'
 
 
-def test_notification_update_message_error_subcodes():
+def test_notification_update_message_error_subcodes() -> None:
     """Test UPDATE Message Error (code 3) subcodes.
     """
     assert Notification._str_subcode[(3, 0)] == 'Unspecific'
@@ -103,7 +104,7 @@ def test_notification_update_message_error_subcodes():
     assert Notification._str_subcode[(3, 11)] == 'Malformed AS_PATH'
 
 
-def test_notification_state_machine_error_subcodes():
+def test_notification_state_machine_error_subcodes() -> None:
     """Test State Machine Error (code 5) subcodes.
 
     RFC 6608: Additional subcodes for state machine errors.
@@ -114,7 +115,7 @@ def test_notification_state_machine_error_subcodes():
     assert Notification._str_subcode[(5, 3)] == 'Receive Unexpected Message in Established State'
 
 
-def test_notification_cease_subcodes():
+def test_notification_cease_subcodes() -> None:
     """Test Cease (code 6) subcodes.
 
     RFC 4486: Subcodes for Cease notification.
@@ -130,7 +131,7 @@ def test_notification_cease_subcodes():
     assert Notification._str_subcode[(6, 8)] == 'Out of Resources'
 
 
-def test_notification_enhanced_route_refresh_subcodes():
+def test_notification_enhanced_route_refresh_subcodes() -> None:
     """Test Enhanced Route Refresh (code 7) subcodes.
     """
     assert Notification._str_subcode[(7, 1)] == 'Invalid Message Length'
@@ -141,7 +142,7 @@ def test_notification_enhanced_route_refresh_subcodes():
 # Part 3: Incoming NOTIFICATION Message Creation (from peer)
 # ==============================================================================
 
-def test_notification_incoming_creation_basic():
+def test_notification_incoming_creation_basic() -> None:
     """Test creating incoming NOTIFICATION with basic error.
     """
     notif = Notification(2, 1, b'Extra data')
@@ -151,7 +152,7 @@ def test_notification_incoming_creation_basic():
     assert notif.data == b'Extra data'
 
 
-def test_notification_incoming_creation_no_data():
+def test_notification_incoming_creation_no_data() -> None:
     """Test creating NOTIFICATION without additional data.
     """
     notif = Notification(4, 0)
@@ -161,7 +162,7 @@ def test_notification_incoming_creation_no_data():
     assert notif.data == b''
 
 
-def test_notification_incoming_creation_binary_data():
+def test_notification_incoming_creation_binary_data() -> None:
     """Test creating NOTIFICATION with non-printable binary data.
 
     Non-printable data should be converted to hex representation.
@@ -175,7 +176,7 @@ def test_notification_incoming_creation_binary_data():
     assert isinstance(notif.data, (bytes, str))
 
 
-def test_notification_incoming_printable_data():
+def test_notification_incoming_printable_data() -> None:
     """Test NOTIFICATION with printable ASCII data.
     """
     printable_data = b'Error message text'
@@ -190,7 +191,7 @@ def test_notification_incoming_printable_data():
 # Part 4: Outgoing NOTIFICATION (Notify) Creation (to send to peer)
 # ==============================================================================
 
-def test_notify_outgoing_creation_basic():
+def test_notify_outgoing_creation_basic() -> None:
     """Test creating outgoing Notify message.
 
     Notify is used to send notifications to the peer.
@@ -202,7 +203,7 @@ def test_notify_outgoing_creation_basic():
     assert b'Custom error data' in notify.data
 
 
-def test_notify_outgoing_creation_default_data():
+def test_notify_outgoing_creation_default_data() -> None:
     """Test Notify with default data (uses subcode description).
     """
     notify = Notify(2, 2)
@@ -213,7 +214,7 @@ def test_notify_outgoing_creation_default_data():
     assert b'Bad Peer AS' in notify.data
 
 
-def test_notify_outgoing_creation_various_errors():
+def test_notify_outgoing_creation_various_errors() -> None:
     """Test creating Notify messages for various error types.
     """
     test_cases = [
@@ -235,7 +236,7 @@ def test_notify_outgoing_creation_various_errors():
 # Part 5: Administrative Shutdown Communication (RFC 8203)
 # ==============================================================================
 
-def test_notification_shutdown_no_data():
+def test_notification_shutdown_no_data() -> None:
     """Test administrative shutdown without shutdown communication.
 
     Old-style shutdown without message.
@@ -247,7 +248,7 @@ def test_notification_shutdown_no_data():
     assert notif.data == b''
 
 
-def test_notification_shutdown_empty_communication():
+def test_notification_shutdown_empty_communication() -> None:
     """Test shutdown with zero-length communication (RFC 8203).
 
     Data format: [length=0]
@@ -260,7 +261,7 @@ def test_notification_shutdown_empty_communication():
     assert b'empty Shutdown Communication' in notif.data
 
 
-def test_notification_shutdown_valid_communication():
+def test_notification_shutdown_valid_communication() -> None:
     """Test shutdown with valid UTF-8 communication message.
 
     Data format: [length][UTF-8 message]
@@ -277,7 +278,7 @@ def test_notification_shutdown_valid_communication():
     assert b'Maintenance scheduled' in notif.data
 
 
-def test_notification_shutdown_max_length_communication():
+def test_notification_shutdown_max_length_communication() -> None:
     """Test shutdown with maximum allowed communication (128 bytes).
     """
     message = "A" * 128
@@ -288,7 +289,7 @@ def test_notification_shutdown_max_length_communication():
     assert b'Shutdown Communication:' in notif.data
 
 
-def test_notification_shutdown_too_large_communication():
+def test_notification_shutdown_too_large_communication() -> None:
     """Test shutdown with oversized communication (> 128 bytes).
 
     Should produce error message.
@@ -302,7 +303,7 @@ def test_notification_shutdown_too_large_communication():
     assert b'invalid Shutdown Communication (too large)' in notif.data
 
 
-def test_notification_shutdown_buffer_underrun():
+def test_notification_shutdown_buffer_underrun() -> None:
     """Test shutdown with buffer underrun (length > actual data).
 
     Should produce error message.
@@ -314,7 +315,7 @@ def test_notification_shutdown_buffer_underrun():
     assert b'invalid Shutdown Communication (buffer underrun)' in notif.data
 
 
-def test_notification_shutdown_invalid_utf8():
+def test_notification_shutdown_invalid_utf8() -> None:
     """Test shutdown with invalid UTF-8 sequence.
 
     Should produce error message.
@@ -328,7 +329,7 @@ def test_notification_shutdown_invalid_utf8():
     assert b'invalid Shutdown Communication (invalid UTF-8)' in notif.data
 
 
-def test_notification_shutdown_trailing_data():
+def test_notification_shutdown_trailing_data() -> None:
     """Test shutdown communication with trailing data.
 
     Should include trailing data in output.
@@ -344,7 +345,7 @@ def test_notification_shutdown_trailing_data():
     assert b'trailing data:' in notif.data
 
 
-def test_notification_shutdown_newline_carriage_return():
+def test_notification_shutdown_newline_carriage_return() -> None:
     """Test that shutdown communication replaces newlines and carriage returns.
 
     Newlines and carriage returns should be replaced with spaces.
@@ -359,7 +360,7 @@ def test_notification_shutdown_newline_carriage_return():
     assert b'\n' not in notif.data or b'Line1 Line2 Line3' in notif.data
 
 
-def test_notification_admin_reset_communication():
+def test_notification_admin_reset_communication() -> None:
     """Test administrative reset (6, 4) with communication.
 
     Should work same as shutdown (6, 2).
@@ -376,7 +377,7 @@ def test_notification_admin_reset_communication():
     assert b'Reset required' in notif.data
 
 
-def test_notify_shutdown_with_message():
+def test_notify_shutdown_with_message() -> None:
     """Test creating outgoing Notify for shutdown with message.
     """
     message = "Scheduled maintenance"
@@ -392,7 +393,7 @@ def test_notify_shutdown_with_message():
 # Part 6: NOTIFICATION Message Encoding (Wire Format)
 # ==============================================================================
 
-def test_notify_wire_format_basic():
+def test_notify_wire_format_basic() -> None:
     """Test Notify wire format encoding.
 
     Wire format:
@@ -427,7 +428,7 @@ def test_notify_wire_format_basic():
     assert packet[21:] == b'AB'
 
 
-def test_notify_wire_format_no_data():
+def test_notify_wire_format_no_data() -> None:
     """Test Notify encoding with no additional data.
     """
     notify = Notify(4, 0)
@@ -437,7 +438,7 @@ def test_notify_wire_format_no_data():
     assert len(packet) >= Message.HEADER_LEN + 2
 
 
-def test_notify_wire_format_various_sizes():
+def test_notify_wire_format_various_sizes() -> None:
     """Test Notify encoding with various data sizes.
     """
     test_sizes = [0, 1, 10, 50, 100, 200]
@@ -458,7 +459,7 @@ def test_notify_wire_format_various_sizes():
 # Part 7: NOTIFICATION Message Decoding (Unpacking)
 # ==============================================================================
 
-def test_notification_unpack_basic():
+def test_notification_unpack_basic() -> None:
     """Test unpacking NOTIFICATION from wire format.
 
     Data format: [code][subcode][data...]
@@ -472,7 +473,7 @@ def test_notification_unpack_basic():
     assert notif.data == b'Extra'
 
 
-def test_notification_unpack_no_data():
+def test_notification_unpack_no_data() -> None:
     """Test unpacking NOTIFICATION without additional data.
     """
     data = b'\x04\x00'
@@ -484,7 +485,7 @@ def test_notification_unpack_no_data():
     assert notif.data == b''
 
 
-def test_notification_unpack_through_message_class():
+def test_notification_unpack_through_message_class() -> None:
     """Test unpacking NOTIFICATION through Message base class.
     """
     message_type = Message.CODE.NOTIFICATION
@@ -497,7 +498,7 @@ def test_notification_unpack_through_message_class():
     assert notif.subcode == 6
 
 
-def test_notification_unpack_shutdown_with_message():
+def test_notification_unpack_shutdown_with_message() -> None:
     """Test unpacking shutdown notification with communication.
     """
     message = "Shutdown now"
@@ -511,7 +512,7 @@ def test_notification_unpack_shutdown_with_message():
     assert b'Shutdown Communication:' in notif.data
 
 
-def test_notification_unpack_various_errors():
+def test_notification_unpack_various_errors() -> None:
     """Test unpacking various error types.
     """
     test_cases = [
@@ -532,7 +533,7 @@ def test_notification_unpack_various_errors():
 # Part 8: NOTIFICATION String Representations
 # ==============================================================================
 
-def test_notification_str_representation_basic():
+def test_notification_str_representation_basic() -> None:
     """Test string representation of NOTIFICATION.
 
     Format: "Error code / Error subcode / data"
@@ -545,7 +546,7 @@ def test_notification_str_representation_basic():
     assert 'Test' in str_repr
 
 
-def test_notification_str_representation_no_data():
+def test_notification_str_representation_no_data() -> None:
     """Test string representation without data.
     """
     notif = Notification(4, 0)
@@ -555,7 +556,7 @@ def test_notification_str_representation_no_data():
     assert 'Unspecific' in str_repr
 
 
-def test_notification_str_representation_unknown_code():
+def test_notification_str_representation_unknown_code() -> None:
     """Test string representation with unknown error code.
     """
     notif = Notification(99, 99, b'Unknown')
@@ -564,7 +565,7 @@ def test_notification_str_representation_unknown_code():
     assert 'unknown' in str_repr.lower()
 
 
-def test_notification_str_representation_various_errors():
+def test_notification_str_representation_various_errors() -> None:
     """Test string representations for various error types.
     """
     test_cases = [
@@ -586,7 +587,7 @@ def test_notification_str_representation_various_errors():
 # Part 9: NOTIFICATION as Exception
 # ==============================================================================
 
-def test_notification_is_exception():
+def test_notification_is_exception() -> None:
     """Test that Notification is an Exception subclass.
 
     NOTIFICATION can be raised as an exception.
@@ -596,7 +597,7 @@ def test_notification_is_exception():
     assert isinstance(notif, Exception)
 
 
-def test_notification_can_be_raised():
+def test_notification_can_be_raised() -> NoReturn:
     """Test that NOTIFICATION can be raised and caught.
     """
     with pytest.raises(Notification) as exc_info:
@@ -607,7 +608,7 @@ def test_notification_can_be_raised():
     assert caught.subcode == 1
 
 
-def test_notification_raise_and_catch_specific():
+def test_notification_raise_and_catch_specific() -> None:
     """Test raising NOTIFICATION and accessing attributes.
     """
     try:
@@ -622,7 +623,7 @@ def test_notification_raise_and_catch_specific():
 # Part 10: Notify vs Notification Differences
 # ==============================================================================
 
-def test_notify_vs_notification_data_handling():
+def test_notify_vs_notification_data_handling() -> None:
     """Test difference in data handling between Notify and Notification.
 
     Notify: Converts string to ASCII bytes, adds length for shutdown
@@ -637,7 +638,7 @@ def test_notify_vs_notification_data_handling():
     assert isinstance(notif.data, bytes)
 
 
-def test_notify_shutdown_adds_length_prefix():
+def test_notify_shutdown_adds_length_prefix() -> None:
     """Test that Notify adds length prefix for shutdown messages.
     """
     message = "Shutdown"
@@ -647,7 +648,7 @@ def test_notify_shutdown_adds_length_prefix():
     assert notify.data[0] == len(message)
 
 
-def test_notification_shutdown_parses_length_prefix():
+def test_notification_shutdown_parses_length_prefix() -> None:
     """Test that Notification parses length prefix from shutdown messages.
     """
     message = "Shutdown"
@@ -664,7 +665,7 @@ def test_notification_shutdown_parses_length_prefix():
 # Part 11: Round-Trip Tests
 # ==============================================================================
 
-def test_notification_encode_decode_roundtrip():
+def test_notification_encode_decode_roundtrip() -> None:
     """Test NOTIFICATION encode/decode round-trip.
     """
     # Create and encode
@@ -682,7 +683,7 @@ def test_notification_encode_decode_roundtrip():
     assert decoded.subcode == original.subcode
 
 
-def test_notification_roundtrip_various_errors():
+def test_notification_roundtrip_various_errors() -> None:
     """Test round-trip for various error types.
     """
     test_cases = [
@@ -707,7 +708,7 @@ def test_notification_roundtrip_various_errors():
 # Part 12: Edge Cases and Special Scenarios
 # ==============================================================================
 
-def test_notification_empty_data_field():
+def test_notification_empty_data_field() -> None:
     """Test NOTIFICATION with explicitly empty data field.
     """
     notif = Notification(1, 1, b'')
@@ -717,7 +718,7 @@ def test_notification_empty_data_field():
     assert notif.data == b''
 
 
-def test_notification_large_data_field():
+def test_notification_large_data_field() -> None:
     """Test NOTIFICATION with large data field.
     """
     large_data = b'A' * 1000
@@ -727,7 +728,7 @@ def test_notification_large_data_field():
     assert notif.subcode == 1
 
 
-def test_notification_parse_data_flag():
+def test_notification_parse_data_flag() -> None:
     """Test NOTIFICATION with parse_data=False.
 
     When parse_data=False, data is stored as-is without processing.
@@ -738,7 +739,7 @@ def test_notification_parse_data_flag():
     assert notif.data == raw_data
 
 
-def test_notification_all_subcodes_for_cease():
+def test_notification_all_subcodes_for_cease() -> None:
     """Test all subcodes for Cease (code 6).
     """
     for subcode in range(9):  # 0-8
@@ -747,7 +748,7 @@ def test_notification_all_subcodes_for_cease():
         assert notif.subcode == subcode
 
 
-def test_notification_hold_timer_expired():
+def test_notification_hold_timer_expired() -> None:
     """Test Hold Timer Expired notification (code 4).
 
     RFC 4271: No subcode defined, should be 0.

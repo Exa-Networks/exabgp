@@ -38,7 +38,7 @@ from exabgp.protocol.family import AFI, SAFI
 class TestBGPLSBase:
     """Test base BGPLS class and registration"""
 
-    def test_bgpls_registration(self):
+    def test_bgpls_registration(self) -> None:
         """Test that all NLRI types are registered"""
         assert 1 in BGPLS.registered_bgpls  # NODE
         assert 2 in BGPLS.registered_bgpls  # LINK
@@ -46,7 +46,7 @@ class TestBGPLSBase:
         assert 4 in BGPLS.registered_bgpls  # PREFIXv6
         assert 6 in BGPLS.registered_bgpls  # SRv6SID
 
-    def test_bgpls_protocol_codes(self):
+    def test_bgpls_protocol_codes(self) -> None:
         """Test protocol ID codes are defined"""
         assert PROTO_CODES[1] == 'isis_l1'
         assert PROTO_CODES[2] == 'isis_l2'
@@ -55,7 +55,7 @@ class TestBGPLSBase:
         assert PROTO_CODES[5] == 'static'
         assert PROTO_CODES[6] == 'ospfv3'
 
-    def test_generic_bgpls(self):
+    def test_generic_bgpls(self) -> None:
         """Test GenericBGPLS for unknown codes"""
         code = 99
         packed_data = b'\x01\x02\x03\x04'
@@ -69,7 +69,7 @@ class TestBGPLSBase:
         assert '"code": 99' in json_output
         assert '"parsed": false' in json_output
 
-    def test_bgpls_hash(self):
+    def test_bgpls_hash(self) -> None:
         """Test BGPLS hash computation"""
         code = 1
         packed = b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -88,7 +88,7 @@ class TestBGPLSBase:
 class TestNodeNLRI:
     """Test NODE NLRI (Code 1)"""
 
-    def test_node_unpack_basic(self):
+    def test_node_unpack_basic(self) -> None:
         """Test unpacking basic Node NLRI"""
         # Protocol: OSPFv2 (3), Domain: 1, Local Node Descriptor
         # Type=256 (Local Node), Length=16, AS=65533, BGP-LS-ID=0, Router-ID=10.113.63.240
@@ -112,7 +112,7 @@ class TestNodeNLRI:
         assert node.NAME == 'bgpls-node'
         assert node.SHORT_NAME == 'Node'
 
-    def test_node_json(self):
+    def test_node_json(self) -> None:
         """Test Node NLRI JSON serialization"""
         data = (
             b'\x03'
@@ -133,7 +133,7 @@ class TestNodeNLRI:
         assert '"node-descriptors"' in json_output
         assert '"nexthop": "192.0.2.1"' in json_output
 
-    def test_node_equality(self):
+    def test_node_equality(self) -> None:
         """Test Node NLRI equality"""
         # Use simpler data with just one AS descriptor
         data = (
@@ -150,7 +150,7 @@ class TestNodeNLRI:
         assert node1 == node2
         assert not (node1 != node2)
 
-    def test_node_hash(self):
+    def test_node_hash(self) -> None:
         """Test Node NLRI hashing"""
         data = (
             b'\x03'
@@ -172,7 +172,7 @@ class TestNodeNLRI:
         except TypeError:
             pytest.skip("Known bug in NODE.__hash__() - node_ids list is unhashable")
 
-    def test_node_string_representation(self):
+    def test_node_string_representation(self) -> None:
         """Test Node NLRI string representation"""
         data = (
             b'\x03'
@@ -189,7 +189,7 @@ class TestNodeNLRI:
         assert 'bgpls-node' in str_repr
         assert 'protocol-id' in str_repr
 
-    def test_node_invalid_protocol(self):
+    def test_node_invalid_protocol(self) -> None:
         """Test Node NLRI with invalid protocol ID"""
         data = (
             b'\xff'  # Invalid protocol
@@ -200,7 +200,7 @@ class TestNodeNLRI:
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
             NODE.unpack_nlri(data, rd=None)
 
-    def test_node_invalid_node_type(self):
+    def test_node_invalid_node_type(self) -> None:
         """Test Node NLRI with invalid node descriptor type"""
         data = (
             b'\x03'
@@ -212,7 +212,7 @@ class TestNodeNLRI:
         with pytest.raises(Exception, match='Unknown type.*Only Local Node descriptors'):
             NODE.unpack_nlri(data, rd=None)
 
-    def test_node_pack(self):
+    def test_node_pack(self) -> None:
         """Test Node NLRI packing"""
         data = (
             b'\x03'
@@ -232,7 +232,7 @@ class TestNodeNLRI:
 class TestLinkNLRI:
     """Test LINK NLRI (Code 2)"""
 
-    def test_link_unpack_basic(self):
+    def test_link_unpack_basic(self) -> None:
         """Test unpacking basic Link NLRI"""
         # Protocol: OSPFv2 (3), Domain: 1
         # Local Node: AS=65533
@@ -258,7 +258,7 @@ class TestLinkNLRI:
         assert link.NAME == 'bgpls-link'
         assert link.SHORT_NAME == 'Link'
 
-    def test_link_with_link_identifiers(self):
+    def test_link_with_link_identifiers(self) -> None:
         """Test Link NLRI with link identifiers"""
         data = (
             b'\x03'
@@ -278,7 +278,7 @@ class TestLinkNLRI:
         # Link IDs are returned as a single LinkIdentifier object, not a list
         assert link.link_ids is not None
 
-    def test_link_with_interface_addresses(self):
+    def test_link_with_interface_addresses(self) -> None:
         """Test Link NLRI with interface addresses (IPv4 and IPv6)"""
         data = (
             b'\x03'
@@ -296,7 +296,7 @@ class TestLinkNLRI:
 
         assert len(link.iface_addrs) == 1
 
-    def test_link_with_neighbor_addresses(self):
+    def test_link_with_neighbor_addresses(self) -> None:
         """Test Link NLRI with neighbor addresses"""
         data = (
             b'\x03'
@@ -314,7 +314,7 @@ class TestLinkNLRI:
 
         assert len(link.neigh_addrs) == 1
 
-    def test_link_with_multi_topology(self):
+    def test_link_with_multi_topology(self) -> None:
         """Test Link NLRI with multi-topology identifiers"""
         data = (
             b'\x03'
@@ -332,7 +332,7 @@ class TestLinkNLRI:
 
         assert len(link.topology_ids) == 1
 
-    def test_link_json(self):
+    def test_link_json(self) -> None:
         """Test Link NLRI JSON serialization"""
         data = (
             b'\x03'
@@ -352,7 +352,7 @@ class TestLinkNLRI:
         assert '"local-node-descriptors"' in json_output
         assert '"remote-node-descriptors"' in json_output
 
-    def test_link_equality(self):
+    def test_link_equality(self) -> None:
         """Test Link NLRI equality"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -368,7 +368,7 @@ class TestLinkNLRI:
         assert link1 == link2
         assert not (link1 != link2)
 
-    def test_link_hash(self):
+    def test_link_hash(self) -> None:
         """Test Link NLRI hashing"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -390,7 +390,7 @@ class TestLinkNLRI:
         except RecursionError:
             pytest.skip("Known bug in LINK.__hash__() causing RecursionError")
 
-    def test_link_string_representation(self):
+    def test_link_string_representation(self) -> None:
         """Test Link NLRI string representation"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -405,7 +405,7 @@ class TestLinkNLRI:
 
         assert 'bgpls-link' in str_repr
 
-    def test_link_invalid_protocol(self):
+    def test_link_invalid_protocol(self) -> None:
         """Test Link NLRI with invalid protocol ID"""
         data = (
             b'\xff'  # Invalid protocol
@@ -416,7 +416,7 @@ class TestLinkNLRI:
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
             LINK.unpack_nlri(data, rd=None)
 
-    def test_link_pack(self):
+    def test_link_pack(self) -> None:
         """Test Link NLRI packing"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -440,7 +440,7 @@ class TestLinkNLRI:
 class TestPrefixV4NLRI:
     """Test PREFIXv4 NLRI (Code 3)"""
 
-    def test_prefix_v4_unpack_basic(self):
+    def test_prefix_v4_unpack_basic(self) -> None:
         """Test unpacking basic IPv4 Prefix NLRI"""
         data = (
             b'\x03'  # Protocol-ID: OSPFv2
@@ -463,7 +463,7 @@ class TestPrefixV4NLRI:
         assert prefix.NAME == 'bgpls-prefix-v4'
         assert prefix.SHORT_NAME == 'PREFIX_V4'
 
-    def test_prefix_v4_with_ospf_route_type(self):
+    def test_prefix_v4_with_ospf_route_type(self) -> None:
         """Test IPv4 Prefix NLRI with OSPF route type"""
         data = (
             b'\x03'
@@ -482,7 +482,7 @@ class TestPrefixV4NLRI:
 
         assert prefix.ospf_type is not None
 
-    def test_prefix_v4_json(self):
+    def test_prefix_v4_json(self) -> None:
         """Test IPv4 Prefix NLRI JSON serialization"""
         data = (
             b'\x03'
@@ -502,7 +502,7 @@ class TestPrefixV4NLRI:
         assert '"node-descriptors"' in json_output
         assert '"nexthop": "192.0.2.1"' in json_output
 
-    def test_prefix_v4_equality(self):
+    def test_prefix_v4_equality(self) -> None:
         """Test IPv4 Prefix NLRI equality"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -517,7 +517,7 @@ class TestPrefixV4NLRI:
         assert prefix1 == prefix2
         assert not (prefix1 != prefix2)
 
-    def test_prefix_v4_hash(self):
+    def test_prefix_v4_hash(self) -> None:
         """Test IPv4 Prefix NLRI hashing"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -537,7 +537,7 @@ class TestPrefixV4NLRI:
         except RecursionError:
             pytest.skip("Known bug in PREFIXv4.__hash__() causing RecursionError")
 
-    def test_prefix_v4_string_representation(self):
+    def test_prefix_v4_string_representation(self) -> None:
         """Test IPv4 Prefix NLRI string representation"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -552,7 +552,7 @@ class TestPrefixV4NLRI:
 
         assert 'bgpls-prefix-v4' in str_repr
 
-    def test_prefix_v4_invalid_protocol(self):
+    def test_prefix_v4_invalid_protocol(self) -> None:
         """Test IPv4 Prefix NLRI with invalid protocol ID"""
         data = (
             b'\xff'  # Invalid protocol
@@ -563,7 +563,7 @@ class TestPrefixV4NLRI:
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
             PREFIXv4.unpack_nlri(data, rd=None)
 
-    def test_prefix_v4_pack(self):
+    def test_prefix_v4_pack(self) -> None:
         """Test IPv4 Prefix NLRI packing"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -581,7 +581,7 @@ class TestPrefixV4NLRI:
 class TestPrefixV6NLRI:
     """Test PREFIXv6 NLRI (Code 4)"""
 
-    def test_prefix_v6_unpack_basic(self):
+    def test_prefix_v6_unpack_basic(self) -> None:
         """Test unpacking basic IPv6 Prefix NLRI"""
         data = (
             b'\x03'  # Protocol-ID: OSPFv2
@@ -604,7 +604,7 @@ class TestPrefixV6NLRI:
         assert prefix.NAME == 'bgpls-prefix-v6'
         assert prefix.SHORT_NAME == 'PREFIX_V6'
 
-    def test_prefix_v6_with_ospf_route_type(self):
+    def test_prefix_v6_with_ospf_route_type(self) -> None:
         """Test IPv6 Prefix NLRI with OSPF route type"""
         data = (
             b'\x03'
@@ -623,7 +623,7 @@ class TestPrefixV6NLRI:
 
         assert prefix.ospf_type is not None
 
-    def test_prefix_v6_json(self):
+    def test_prefix_v6_json(self) -> None:
         """Test IPv6 Prefix NLRI JSON serialization"""
         data = (
             b'\x03'
@@ -643,7 +643,7 @@ class TestPrefixV6NLRI:
         assert '"node-descriptors"' in json_output
         assert '"nexthop": "2001:db8::1"' in json_output
 
-    def test_prefix_v6_equality(self):
+    def test_prefix_v6_equality(self) -> None:
         """Test IPv6 Prefix NLRI equality"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -658,7 +658,7 @@ class TestPrefixV6NLRI:
         assert prefix1 == prefix2
         assert not (prefix1 != prefix2)
 
-    def test_prefix_v6_hash(self):
+    def test_prefix_v6_hash(self) -> None:
         """Test IPv6 Prefix NLRI hashing"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -678,7 +678,7 @@ class TestPrefixV6NLRI:
         except RecursionError:
             pytest.skip("Known bug in PREFIXv6.__hash__() causing RecursionError")
 
-    def test_prefix_v6_string_representation(self):
+    def test_prefix_v6_string_representation(self) -> None:
         """Test IPv6 Prefix NLRI string representation"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -693,7 +693,7 @@ class TestPrefixV6NLRI:
 
         assert 'bgpls-prefix-v6' in str_repr
 
-    def test_prefix_v6_invalid_protocol(self):
+    def test_prefix_v6_invalid_protocol(self) -> None:
         """Test IPv6 Prefix NLRI with invalid protocol ID"""
         data = (
             b'\xff'  # Invalid protocol
@@ -704,7 +704,7 @@ class TestPrefixV6NLRI:
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
             PREFIXv6.unpack_nlri(data, rd=None)
 
-    def test_prefix_v6_pack(self):
+    def test_prefix_v6_pack(self) -> None:
         """Test IPv6 Prefix NLRI packing"""
         data = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -722,7 +722,7 @@ class TestPrefixV6NLRI:
 class TestSRv6SIDNLRI:
     """Test SRv6SID NLRI (Code 6) - RFC 9514"""
 
-    def test_srv6sid_unpack_basic(self):
+    def test_srv6sid_unpack_basic(self) -> None:
         """Test unpacking basic SRv6 SID NLRI"""
         data = (
             b'\x03'  # Protocol-ID: OSPFv2
@@ -746,7 +746,7 @@ class TestSRv6SIDNLRI:
         assert srv6sid.NAME == 'bgpls-srv6sid'
         assert srv6sid.SHORT_NAME == 'SRv6_SID'
 
-    def test_srv6sid_with_multi_topology(self):
+    def test_srv6sid_with_multi_topology(self) -> None:
         """Test SRv6 SID NLRI with multi-topology ID"""
         data = (
             b'\x03'
@@ -766,7 +766,7 @@ class TestSRv6SIDNLRI:
 
         assert len(srv6sid.srv6_sid_descriptors['multi-topology-ids']) == 1
 
-    def test_srv6sid_json(self):
+    def test_srv6sid_json(self) -> None:
         """Test SRv6 SID NLRI JSON serialization"""
         data = (
             b'\x03'
@@ -787,7 +787,7 @@ class TestSRv6SIDNLRI:
         assert '"node-descriptors"' in json_output
         assert '"srv6-sid-descriptors"' in json_output
 
-    def test_srv6sid_repr(self):
+    def test_srv6sid_repr(self) -> None:
         """Test SRv6 SID NLRI representation"""
         data = (
             b'\x03'
@@ -806,7 +806,7 @@ class TestSRv6SIDNLRI:
         assert 'protocol_id=3' in repr_str
         assert 'domain=1' in repr_str
 
-    def test_srv6sid_invalid_protocol(self):
+    def test_srv6sid_invalid_protocol(self) -> None:
         """Test SRv6 SID NLRI with invalid protocol ID"""
         data = (
             b'\xff'  # Invalid protocol
@@ -817,7 +817,7 @@ class TestSRv6SIDNLRI:
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
             SRv6SID.unpack_nlri(data, len(data))
 
-    def test_srv6sid_invalid_node_type(self):
+    def test_srv6sid_invalid_node_type(self) -> None:
         """Test SRv6 SID NLRI with invalid node descriptor type"""
         data = (
             b'\x03'
@@ -829,7 +829,7 @@ class TestSRv6SIDNLRI:
         with pytest.raises(Exception, match='Unknown type.*Only Local Node descriptors'):
             SRv6SID.unpack_nlri(data, len(data))
 
-    def test_srv6sid_len(self):
+    def test_srv6sid_len(self) -> None:
         """Test SRv6 SID NLRI length computation"""
         data = (
             b'\x03'
@@ -851,7 +851,7 @@ class TestSRv6SIDNLRI:
 class TestBGPLSUnpack:
     """Test BGPLS.unpack_nlri() main dispatcher"""
 
-    def test_unpack_node_nlri(self):
+    def test_unpack_node_nlri(self) -> None:
         """Test unpacking Node NLRI via BGPLS.unpack_nlri()"""
         # Type=1 (Node), Length=21
         bgp_data = (
@@ -870,7 +870,7 @@ class TestBGPLSUnpack:
         assert nlri.CODE == 1
         assert len(leftover) == 0
 
-    def test_unpack_link_nlri(self):
+    def test_unpack_link_nlri(self) -> None:
         """Test unpacking Link NLRI via BGPLS.unpack_nlri()"""
         bgp_data = (
             b'\x00\x02'  # NLRI Type: 2 (Link)
@@ -889,7 +889,7 @@ class TestBGPLSUnpack:
         assert nlri.CODE == 2
         assert len(leftover) == 0
 
-    def test_unpack_prefix_v4_nlri(self):
+    def test_unpack_prefix_v4_nlri(self) -> None:
         """Test unpacking IPv4 Prefix NLRI via BGPLS.unpack_nlri()"""
         bgp_data = (
             b'\x00\x03'  # NLRI Type: 3 (IPv4 Prefix)
@@ -907,7 +907,7 @@ class TestBGPLSUnpack:
         assert nlri.CODE == 3
         assert len(leftover) == 0
 
-    def test_unpack_prefix_v6_nlri(self):
+    def test_unpack_prefix_v6_nlri(self) -> None:
         """Test unpacking IPv6 Prefix NLRI via BGPLS.unpack_nlri()"""
         bgp_data = (
             b'\x00\x04'  # NLRI Type: 4 (IPv6 Prefix)
@@ -925,7 +925,7 @@ class TestBGPLSUnpack:
         assert nlri.CODE == 4
         assert len(leftover) == 0
 
-    def test_unpack_unknown_nlri(self):
+    def test_unpack_unknown_nlri(self) -> None:
         """Test unpacking unknown NLRI type falls back to GenericBGPLS"""
         bgp_data = (
             b'\x00\x99'  # NLRI Type: 153 (unknown)
@@ -939,7 +939,7 @@ class TestBGPLSUnpack:
         assert nlri.CODE == 153
         assert len(leftover) == 0
 
-    def test_unpack_with_leftover(self):
+    def test_unpack_with_leftover(self) -> None:
         """Test unpacking NLRI with leftover data"""
         bgp_data = (
             b'\x00\x01'  # NLRI Type: 1
@@ -961,7 +961,7 @@ class TestBGPLSUnpack:
 class TestBGPLSTLVs:
     """Test BGP-LS TLV components"""
 
-    def test_ip_reach_ipv4(self):
+    def test_ip_reach_ipv4(self) -> None:
         """Test IpReach TLV for IPv4"""
         data = b'\x0a\x0a\x00'
         tlv = IpReach.unpack(data, 3)
@@ -970,7 +970,7 @@ class TestBGPLSTLVs:
         assert 'ip-reachability-tlv' in json_output
         assert '10.0.0.0' in json_output
 
-    def test_ip_reach_ipv6(self):
+    def test_ip_reach_ipv6(self) -> None:
         """Test IpReach TLV for IPv6"""
         data = b'\x7f\x20\x01\x07\x00\x00\x00\x80'
         tlv = IpReach.unpack(data, 4)
@@ -979,7 +979,7 @@ class TestBGPLSTLVs:
         assert 'ip-reachability-tlv' in json_output
         assert '2001:700:0:8000::' in json_output
 
-    def test_ospf_route_type(self):
+    def test_ospf_route_type(self) -> None:
         """Test OspfRoute TLV"""
         data = b'\x04'
         tlv = OspfRoute.unpack(data)
@@ -987,7 +987,7 @@ class TestBGPLSTLVs:
         json_output = tlv.json()
         assert '"ospf-route-type": 4' in json_output
 
-    def test_srv6_sid_information(self):
+    def test_srv6_sid_information(self) -> None:
         """Test Srv6SIDInformation TLV"""
         data = b'\xfc\x30\x22\x01\x00\x0d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
         tlv = Srv6SIDInformation.unpack(data)
@@ -995,7 +995,7 @@ class TestBGPLSTLVs:
         json_output = tlv.json()
         assert '"srv6-sid": "fc30:2201:d::"' in json_output
 
-    def test_node_descriptor(self):
+    def test_node_descriptor(self) -> None:
         """Test NodeDescriptor TLV"""
         data = b'\x02\x00\x00\x04\x00\x00\xff\xfd\x02\x01\x00\x04\x00\x00\x00\x00\x02\x03\x00\x04\x0a\x71\x3f\xf0'
         igp_type = 3  # OSPFv2
@@ -1016,7 +1016,7 @@ class TestBGPLSTLVs:
 class TestBGPLSLinkAttributes:
     """Test BGP-LS Link Attributes (RFC 7752)"""
 
-    def test_admin_group(self):
+    def test_admin_group(self) -> None:
         """Test AdminGroup attribute (TLV 1088)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.admingroup import AdminGroup
 
@@ -1029,7 +1029,7 @@ class TestBGPLSLinkAttributes:
         json_output = attr.json()
         assert '"admin-group-mask": 255' in json_output
 
-    def test_max_bandwidth(self):
+    def test_max_bandwidth(self) -> None:
         """Test MaxBw attribute (TLV 1089)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
         from struct import pack
@@ -1042,7 +1042,7 @@ class TestBGPLSLinkAttributes:
         assert attr.TLV == 1089
         assert abs(attr.content - bandwidth) < 1.0
 
-    def test_rsvp_bandwidth(self):
+    def test_rsvp_bandwidth(self) -> None:
         """Test RsvpBw attribute (TLV 1090)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.rsvpbw import RsvpBw
         from struct import pack
@@ -1054,7 +1054,7 @@ class TestBGPLSLinkAttributes:
         assert attr.TLV == 1090
         assert abs(attr.content - bandwidth) < 1.0
 
-    def test_unreserved_bandwidth(self):
+    def test_unreserved_bandwidth(self) -> None:
         """Test UnRsvpBw attribute (TLV 1091)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.unrsvpbw import UnRsvpBw
         from struct import pack
@@ -1067,7 +1067,7 @@ class TestBGPLSLinkAttributes:
         assert attr.TLV == 1091
         assert len(attr.content) == 8
 
-    def test_te_metric(self):
+    def test_te_metric(self) -> None:
         """Test TeMetric attribute (TLV 1092)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
         from struct import pack
@@ -1079,7 +1079,7 @@ class TestBGPLSLinkAttributes:
         assert attr.TLV == 1092
         assert attr.content == metric
 
-    def test_link_protection_type(self):
+    def test_link_protection_type(self) -> None:
         """Test LinkProtectionType attribute (TLV 1093)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
 
@@ -1092,7 +1092,7 @@ class TestBGPLSLinkAttributes:
         # Check for ExtraTrafic flag (note the typo in the implementation)
         assert attr.flags.get('ExtraTrafic') == 1
 
-    def test_mpls_mask(self):
+    def test_mpls_mask(self) -> None:
         """Test MplsMask attribute (TLV 1094)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.mplsmask import MplsMask
 
@@ -1104,7 +1104,7 @@ class TestBGPLSLinkAttributes:
         json_output = attr.json()
         assert 'mpls-mask' in json_output
 
-    def test_igp_metric(self):
+    def test_igp_metric(self) -> None:
         """Test IgpMetric attribute (TLV 1095)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.igpmetric import IgpMetric
 
@@ -1116,7 +1116,7 @@ class TestBGPLSLinkAttributes:
         assert attr.TLV == 1095
         assert attr.content == 100
 
-    def test_srlg(self):
+    def test_srlg(self) -> None:
         """Test Srlg attribute (TLV 1096)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.srlg import Srlg
 
@@ -1129,7 +1129,7 @@ class TestBGPLSLinkAttributes:
         assert 1 in attr.content
         assert 2 in attr.content
 
-    def test_link_name(self):
+    def test_link_name(self) -> None:
         """Test LinkName attribute (TLV 1098)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
 
@@ -1140,7 +1140,7 @@ class TestBGPLSLinkAttributes:
         # LinkName stores raw bytes, not decoded string
         assert attr.content == b'link-to-router-2'
 
-    def test_sr_adjacency(self):
+    def test_sr_adjacency(self) -> None:
         """Test SrAdjacency attribute (TLV 1099)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
 
@@ -1155,7 +1155,7 @@ class TestBGPLSLinkAttributes:
         assert attr.weight == 10
         assert 100 in attr.sids
 
-    def test_sr_adjacency_lan(self):
+    def test_sr_adjacency_lan(self) -> None:
         """Test SrAdjacencyLan attribute (TLV 1100)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
 
@@ -1171,7 +1171,7 @@ class TestBGPLSLinkAttributes:
         json_output = attr.json()
         assert 'sr-adj-lan-sids' in json_output
 
-    def test_srv6_endx(self):
+    def test_srv6_endx(self) -> None:
         """Test Srv6EndX attribute (TLV 1106)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
 
@@ -1197,7 +1197,7 @@ class TestBGPLSLinkAttributes:
         assert attr.content[0]['weight'] == 10
         assert attr.content[0]['behavior'] == 48
 
-    def test_srv6_endpoint_behavior(self):
+    def test_srv6_endpoint_behavior(self) -> None:
         """Test Srv6EndpointBehavior attribute (TLV 1250)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.srv6endpointbehavior import Srv6EndpointBehavior
 
@@ -1210,7 +1210,7 @@ class TestBGPLSLinkAttributes:
         assert '"endpoint-behavior": 48' in json_output
         assert '"algorithm": 128' in json_output
 
-    def test_srv6_sid_structure(self):
+    def test_srv6_sid_structure(self) -> None:
         """Test Srv6SidStructure attribute (TLV 1252)"""
         from exabgp.bgp.message.update.attribute.bgpls.link.srv6sidstructure import Srv6SidStructure
 
@@ -1226,7 +1226,7 @@ class TestBGPLSLinkAttributes:
 class TestBGPLSNodeAttributes:
     """Test BGP-LS Node Attributes (RFC 7752)"""
 
-    def test_node_flags(self):
+    def test_node_flags(self) -> None:
         """Test NodeFlags attribute (TLV 1024)"""
         from exabgp.bgp.message.update.attribute.bgpls.node.nodeflags import NodeFlags
 
@@ -1241,7 +1241,7 @@ class TestBGPLSNodeAttributes:
         assert attr.flags['O'] == 1  # Overload
         assert attr.flags['E'] == 1  # External
 
-    def test_node_opaque(self):
+    def test_node_opaque(self) -> None:
         """Test NodeOpaque attribute (TLV 1025)"""
         from exabgp.bgp.message.update.attribute.bgpls.node.opaque import NodeOpaque
 
@@ -1252,7 +1252,7 @@ class TestBGPLSNodeAttributes:
         assert attr.TLV == 1025
         assert attr.content == data
 
-    def test_node_name(self):
+    def test_node_name(self) -> None:
         """Test NodeName attribute (TLV 1026)"""
         from exabgp.bgp.message.update.attribute.bgpls.node.nodename import NodeName
 
@@ -1264,7 +1264,7 @@ class TestBGPLSNodeAttributes:
         json_output = attr.json()
         assert '"node-name": "router-1.example.com"' in json_output
 
-    def test_isis_area(self):
+    def test_isis_area(self) -> None:
         """Test IsisArea attribute (TLV 1027)"""
         from exabgp.bgp.message.update.attribute.bgpls.node.isisarea import IsisArea
 
@@ -1276,7 +1276,7 @@ class TestBGPLSNodeAttributes:
         json_output = attr.json()
         assert 'area-id' in json_output
 
-    def test_local_te_rid(self):
+    def test_local_te_rid(self) -> None:
         """Test LocalTeRid attribute (TLV 1028/1029)"""
         from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
 
@@ -1289,7 +1289,7 @@ class TestBGPLSNodeAttributes:
         json_output = attr.json()
         assert '192.0.2.1' in json_output
 
-    def test_sr_capabilities(self):
+    def test_sr_capabilities(self) -> None:
         """Test SrCapabilities attribute (TLV 1034)"""
         from exabgp.bgp.message.update.attribute.bgpls.node.srcap import SrCapabilities
 
@@ -1313,7 +1313,7 @@ class TestBGPLSNodeAttributes:
         json_output = attr.json()
         assert 'sr-capability-flags' in json_output
 
-    def test_sr_algorithm(self):
+    def test_sr_algorithm(self) -> None:
         """Test SrAlgorithm attribute (TLV 1035)"""
         from exabgp.bgp.message.update.attribute.bgpls.node.sralgo import SrAlgorithm
 
@@ -1330,7 +1330,7 @@ class TestBGPLSNodeAttributes:
 class TestBGPLSPrefixAttributes:
     """Test BGP-LS Prefix Attributes (RFC 7752)"""
 
-    def test_igp_flags(self):
+    def test_igp_flags(self) -> None:
         """Test IgpFlags attribute (TLV 1152)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.igpflags import IgpFlags
 
@@ -1344,7 +1344,7 @@ class TestBGPLSPrefixAttributes:
         assert attr.flags['D'] == 1
         assert attr.flags['L'] == 1
 
-    def test_igp_tags(self):
+    def test_igp_tags(self) -> None:
         """Test IgpTags attribute (TLV 1153)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.igptags import IgpTags
 
@@ -1357,7 +1357,7 @@ class TestBGPLSPrefixAttributes:
         json_output = attr.json()
         assert '"igp-route-tags": [65534]' in json_output
 
-    def test_igp_extended_tags(self):
+    def test_igp_extended_tags(self) -> None:
         """Test IgpExTags attribute (TLV 1154)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.igpextags import IgpExTags
 
@@ -1370,7 +1370,7 @@ class TestBGPLSPrefixAttributes:
         assert 65534 in attr.content
         assert 65535 in attr.content
 
-    def test_prefix_metric(self):
+    def test_prefix_metric(self) -> None:
         """Test PrefixMetric attribute (TLV 1155)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import PrefixMetric
 
@@ -1383,7 +1383,7 @@ class TestBGPLSPrefixAttributes:
         json_output = attr.json()
         assert '"prefix-metric": 20' in json_output
 
-    def test_ospf_forwarding_address(self):
+    def test_ospf_forwarding_address(self) -> None:
         """Test OspfForwardingAddress attribute (TLV 1156)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.ospfaddr import OspfForwardingAddress
 
@@ -1395,7 +1395,7 @@ class TestBGPLSPrefixAttributes:
         json_output = attr.json()
         assert '192.0.2.1' in json_output
 
-    def test_prefix_opaque(self):
+    def test_prefix_opaque(self) -> None:
         """Test PrefixOpaque attribute (TLV 1157)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.opaque import PrefixOpaque
 
@@ -1406,7 +1406,7 @@ class TestBGPLSPrefixAttributes:
         assert attr.TLV == 1157
         assert attr.content == data
 
-    def test_sr_prefix(self):
+    def test_sr_prefix(self) -> None:
         """Test SrPrefix attribute (TLV 1158)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
 
@@ -1421,7 +1421,7 @@ class TestBGPLSPrefixAttributes:
         json_output = attr.json()
         assert 'sr-prefix' in json_output
 
-    def test_sr_igp_prefix_attr(self):
+    def test_sr_igp_prefix_attr(self) -> None:
         """Test SrIgpPrefixAttr attribute (TLV 1170)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
 
@@ -1433,7 +1433,7 @@ class TestBGPLSPrefixAttributes:
         json_output = attr.json()
         assert 'sr-prefix-attribute-flags' in json_output
 
-    def test_sr_source_router_id(self):
+    def test_sr_source_router_id(self) -> None:
         """Test SrSourceRouterID attribute (TLV 1171)"""
         from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID
 
@@ -1449,7 +1449,7 @@ class TestBGPLSPrefixAttributes:
 class TestBGPLSLinkStateAttribute:
     """Test BGP-LS LinkState path attribute (main container)"""
 
-    def test_linkstate_unpack_single_attribute(self):
+    def test_linkstate_unpack_single_attribute(self) -> None:
         """Test unpacking single BGP-LS attribute"""
         from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
@@ -1461,7 +1461,7 @@ class TestBGPLSLinkStateAttribute:
         assert attr.ls_attrs[0].TLV == 1155
         assert attr.ls_attrs[0].content == 20
 
-    def test_linkstate_unpack_multiple_attributes(self):
+    def test_linkstate_unpack_multiple_attributes(self) -> None:
         """Test unpacking multiple BGP-LS attributes"""
         from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
@@ -1478,7 +1478,7 @@ class TestBGPLSLinkStateAttribute:
         assert attr.ls_attrs[0].TLV == 1155
         assert attr.ls_attrs[1].TLV == 1153
 
-    def test_linkstate_json(self):
+    def test_linkstate_json(self) -> None:
         """Test LinkState JSON serialization"""
         from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
@@ -1489,7 +1489,7 @@ class TestBGPLSLinkStateAttribute:
         json_output = attr.json()
         assert '"prefix-metric": 20' in json_output
 
-    def test_linkstate_unknown_attribute(self):
+    def test_linkstate_unknown_attribute(self) -> None:
         """Test LinkState with unknown attribute code"""
         from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 

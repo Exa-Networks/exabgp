@@ -35,7 +35,7 @@ from exabgp.protocol.family import AFI, SAFI
 # Phase 1: Basic OPEN Message Creation and Validation
 # ==============================================================================
 
-def test_open_creation_basic():
+def test_open_creation_basic() -> None:
     """Test basic OPEN message creation.
 
     RFC 4271 Section 4.2:
@@ -51,7 +51,7 @@ def test_open_creation_basic():
     assert open_msg.capabilities == {}
 
 
-def test_open_creation_with_2byte_asn():
+def test_open_creation_with_2byte_asn() -> None:
     """Test OPEN message with 2-byte ASN.
 
     ASNs 1-65535 are 2-byte ASNs.
@@ -62,7 +62,7 @@ def test_open_creation_with_2byte_asn():
     assert open_msg.asn == 64512
 
 
-def test_open_message_id():
+def test_open_message_id() -> None:
     """Test OPEN message ID.
 
     RFC 4271: OPEN message type code is 1.
@@ -71,7 +71,7 @@ def test_open_message_id():
     assert Open.ID == Message.CODE.OPEN
 
 
-def test_open_message_type_bytes():
+def test_open_message_type_bytes() -> None:
     """Test OPEN TYPE byte representation.
     """
     assert Open.TYPE == b'\x01'
@@ -81,7 +81,7 @@ def test_open_message_type_bytes():
 # Phase 2: Multiprotocol Capability (RFC 4760)
 # ==============================================================================
 
-def test_open_with_multiprotocol_ipv4_unicast():
+def test_open_with_multiprotocol_ipv4_unicast() -> None:
     """Test OPEN message with Multiprotocol capability for IPv4 Unicast.
 
     RFC 4760: Multiprotocol Extensions for BGP-4
@@ -95,7 +95,7 @@ def test_open_with_multiprotocol_ipv4_unicast():
     assert (AFI.ipv4, SAFI.unicast) in open_msg.capabilities[Capability.CODE.MULTIPROTOCOL]
 
 
-def test_open_with_multiprotocol_ipv6_unicast():
+def test_open_with_multiprotocol_ipv6_unicast() -> None:
     """Test OPEN with IPv6 Unicast capability.
     """
     capabilities = Capabilities()
@@ -106,7 +106,7 @@ def test_open_with_multiprotocol_ipv6_unicast():
     assert (AFI.ipv6, SAFI.unicast) in open_msg.capabilities[Capability.CODE.MULTIPROTOCOL]
 
 
-def test_open_with_multiple_multiprotocol_families():
+def test_open_with_multiple_multiprotocol_families() -> None:
     """Test OPEN with multiple address families.
 
     Common scenario: IPv4 Unicast + IPv6 Unicast
@@ -124,7 +124,7 @@ def test_open_with_multiple_multiprotocol_families():
     assert (AFI.ipv6, SAFI.unicast) in mp_caps
 
 
-def test_open_with_vpnv4_capability():
+def test_open_with_vpnv4_capability() -> None:
     """Test OPEN with VPNv4 capability (MPLS VPN).
 
     RFC 4364: BGP/MPLS IP VPNs
@@ -137,7 +137,7 @@ def test_open_with_vpnv4_capability():
     assert (AFI.ipv4, SAFI.mpls_vpn) in open_msg.capabilities[Capability.CODE.MULTIPROTOCOL]
 
 
-def test_open_with_multicast_capability():
+def test_open_with_multicast_capability() -> None:
     """Test OPEN with multicast capabilities.
     """
     capabilities = Capabilities()
@@ -157,7 +157,7 @@ def test_open_with_multicast_capability():
 # Phase 3: Route Refresh Capability (RFC 2918)
 # ==============================================================================
 
-def test_open_with_route_refresh_capability():
+def test_open_with_route_refresh_capability() -> None:
     """Test OPEN with Route Refresh capability.
 
     RFC 2918: Route Refresh Capability for BGP-4
@@ -170,7 +170,7 @@ def test_open_with_route_refresh_capability():
     assert Capability.CODE.ROUTE_REFRESH in open_msg.capabilities
 
 
-def test_open_with_enhanced_route_refresh():
+def test_open_with_enhanced_route_refresh() -> None:
     """Test OPEN with Enhanced Route Refresh capability.
 
     RFC 7313: Enhanced Route Refresh Capability for BGP-4
@@ -187,7 +187,7 @@ def test_open_with_enhanced_route_refresh():
 # Phase 4: 4-Byte ASN Capability (RFC 6793)
 # ==============================================================================
 
-def test_open_with_4byte_asn_capability():
+def test_open_with_4byte_asn_capability() -> None:
     """Test OPEN with 4-byte ASN capability.
 
     RFC 6793: BGP Support for Four-Octet Autonomous System (AS) Number Space
@@ -204,7 +204,7 @@ def test_open_with_4byte_asn_capability():
     assert open_msg.capabilities[Capability.CODE.FOUR_BYTES_ASN] == asn4_value
 
 
-def test_open_with_various_4byte_asns():
+def test_open_with_various_4byte_asns() -> None:
     """Test OPEN with various 4-byte ASN values.
     """
     test_asns = [
@@ -227,7 +227,7 @@ def test_open_with_various_4byte_asns():
 # Phase 5: Graceful Restart Capability (RFC 4724)
 # ==============================================================================
 
-def test_open_with_graceful_restart_basic():
+def test_open_with_graceful_restart_basic() -> None:
     """Test OPEN with basic Graceful Restart capability.
 
     RFC 4724: Graceful Restart Mechanism for BGP
@@ -251,7 +251,7 @@ def test_open_with_graceful_restart_basic():
     assert Capability.CODE.GRACEFUL_RESTART in open_msg.capabilities
 
 
-def test_open_with_graceful_restart_multiple_families():
+def test_open_with_graceful_restart_multiple_families() -> None:
     """Test Graceful Restart with multiple address families.
     """
     capabilities = Capabilities()
@@ -277,7 +277,7 @@ def test_open_with_graceful_restart_multiple_families():
     assert (AFI.ipv4, SAFI.mpls_vpn) in gr_cap
 
 
-def test_open_with_graceful_restart_flags():
+def test_open_with_graceful_restart_flags() -> None:
     """Test Graceful Restart with restart flags.
     """
     capabilities = Capabilities()
@@ -303,7 +303,7 @@ def test_open_with_graceful_restart_flags():
 # Phase 6: ADD-PATH Capability (RFC 7911)
 # ==============================================================================
 
-def test_open_with_addpath_receive():
+def test_open_with_addpath_receive() -> None:
     """Test OPEN with ADD-PATH capability (receive mode).
 
     RFC 7911: Advertisement of Multiple Paths in BGP
@@ -320,7 +320,7 @@ def test_open_with_addpath_receive():
     assert Capability.CODE.ADD_PATH in open_msg.capabilities
 
 
-def test_open_with_addpath_send():
+def test_open_with_addpath_send() -> None:
     """Test OPEN with ADD-PATH capability (send mode).
     """
     capabilities = Capabilities()
@@ -336,7 +336,7 @@ def test_open_with_addpath_send():
     assert (AFI.ipv4, SAFI.unicast) in ap_cap
 
 
-def test_open_with_addpath_send_receive():
+def test_open_with_addpath_send_receive() -> None:
     """Test OPEN with ADD-PATH capability (send/receive mode).
     """
     capabilities = Capabilities()
@@ -358,7 +358,7 @@ def test_open_with_addpath_send_receive():
 # Phase 7: Extended Message Capability (RFC 8654)
 # ==============================================================================
 
-def test_open_with_extended_message_capability():
+def test_open_with_extended_message_capability() -> None:
     """Test OPEN with Extended Message capability.
 
     RFC 8654: Extended Message Support for BGP
@@ -376,7 +376,7 @@ def test_open_with_extended_message_capability():
 # Phase 8: Multiple Capabilities Combined
 # ==============================================================================
 
-def test_open_with_multiple_capabilities():
+def test_open_with_multiple_capabilities() -> None:
     """Test OPEN with multiple capabilities combined.
 
     Realistic scenario: Modern BGP router with multiple features.
@@ -402,7 +402,7 @@ def test_open_with_multiple_capabilities():
     assert Capability.CODE.FOUR_BYTES_ASN in open_msg.capabilities
 
 
-def test_open_with_full_capability_set():
+def test_open_with_full_capability_set() -> None:
     """Test OPEN with comprehensive set of capabilities.
     """
     capabilities = Capabilities()
@@ -443,7 +443,7 @@ def test_open_with_full_capability_set():
 # Phase 9: OPEN Message Encoding
 # ==============================================================================
 
-def test_open_message_encoding_basic():
+def test_open_message_encoding_basic() -> None:
     """Test basic OPEN message encoding.
 
     Wire format:
@@ -472,7 +472,7 @@ def test_open_message_encoding_basic():
     assert len(msg) >= 29
 
 
-def test_open_message_encoding_with_capabilities():
+def test_open_message_encoding_with_capabilities() -> None:
     """Test OPEN message encoding with capabilities.
     """
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
@@ -498,7 +498,7 @@ def test_open_message_encoding_with_capabilities():
 # Phase 10: OPEN Message Validation
 # ==============================================================================
 
-def test_open_with_various_hold_times():
+def test_open_with_various_hold_times() -> None:
     """Test OPEN with various Hold Time values.
 
     RFC 4271: Hold Time must be either 0 or >= 3 seconds.
@@ -512,7 +512,7 @@ def test_open_with_various_hold_times():
         assert open_msg.hold_time == ht
 
 
-def test_open_with_various_router_ids():
+def test_open_with_various_router_ids() -> None:
     """Test OPEN with various Router ID values.
     """
     router_ids = [
@@ -530,7 +530,7 @@ def test_open_with_various_router_ids():
         assert open_msg.router_id == RouterID(rid)
 
 
-def test_open_version_field():
+def test_open_version_field() -> None:
     """Test OPEN message version field.
 
     RFC 4271: BGP version is 4.
@@ -545,7 +545,7 @@ def test_open_version_field():
 # Phase 11: Capability Code Constants
 # ==============================================================================
 
-def test_capability_code_constants():
+def test_capability_code_constants() -> None:
     """Test that capability code constants are defined correctly.
     """
     assert hasattr(Capability.CODE, 'MULTIPROTOCOL')
@@ -556,7 +556,7 @@ def test_capability_code_constants():
     assert hasattr(Capability.CODE, 'EXTENDED_MESSAGE')
 
 
-def test_multiprotocol_capability_code():
+def test_multiprotocol_capability_code() -> None:
     """Test Multiprotocol capability code.
 
     RFC 4760: Multiprotocol capability code is 1.
@@ -564,7 +564,7 @@ def test_multiprotocol_capability_code():
     assert Capability.CODE.MULTIPROTOCOL == 1
 
 
-def test_route_refresh_capability_code():
+def test_route_refresh_capability_code() -> None:
     """Test Route Refresh capability code.
 
     RFC 2918: Route Refresh capability code is 2.
@@ -572,7 +572,7 @@ def test_route_refresh_capability_code():
     assert Capability.CODE.ROUTE_REFRESH == 2
 
 
-def test_four_byte_asn_capability_code():
+def test_four_byte_asn_capability_code() -> None:
     """Test 4-Byte ASN capability code.
 
     RFC 6793: 4-Byte ASN capability code is 65.
@@ -580,7 +580,7 @@ def test_four_byte_asn_capability_code():
     assert Capability.CODE.FOUR_BYTES_ASN == 65
 
 
-def test_graceful_restart_capability_code():
+def test_graceful_restart_capability_code() -> None:
     """Test Graceful Restart capability code.
 
     RFC 4724: Graceful Restart capability code is 64.
@@ -588,7 +588,7 @@ def test_graceful_restart_capability_code():
     assert Capability.CODE.GRACEFUL_RESTART == 64
 
 
-def test_add_path_capability_code():
+def test_add_path_capability_code() -> None:
     """Test ADD-PATH capability code.
 
     RFC 7911: ADD-PATH capability code is 69.

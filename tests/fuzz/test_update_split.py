@@ -31,7 +31,7 @@ pytestmark = pytest.mark.fuzz
 @pytest.mark.fuzz
 @given(data=st.binary(min_size=0, max_size=200))
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=50)
-def test_update_split_with_random_data(data):
+def test_update_split_with_random_data(data: bytes) -> None:
     """Fuzz UPDATE split() with completely random binary data.
 
     The split() method should either parse successfully or raise Notify(3, 1).
@@ -65,7 +65,7 @@ def test_update_split_with_random_data(data):
 @pytest.mark.fuzz
 @given(withdrawn_len=st.integers(min_value=0, max_value=65535))
 @settings(deadline=None, max_examples=100)
-def test_update_split_withdrawn_length_fuzzing(withdrawn_len):
+def test_update_split_withdrawn_length_fuzzing(withdrawn_len: int) -> None:
     """Fuzz withdrawn routes length field with all possible 16-bit values.
 
     Tests validation of withdrawn routes length against actual data.
@@ -101,7 +101,7 @@ def test_update_split_withdrawn_length_fuzzing(withdrawn_len):
 @pytest.mark.fuzz
 @given(attr_len=st.integers(min_value=0, max_value=65535))
 @settings(deadline=None, max_examples=100)
-def test_update_split_attr_length_fuzzing(attr_len):
+def test_update_split_attr_length_fuzzing(attr_len: int) -> None:
     """Fuzz path attributes length field with all possible 16-bit values.
 
     Tests validation of path attributes length against actual data.
@@ -140,7 +140,7 @@ def test_update_split_attr_length_fuzzing(attr_len):
 
 
 @pytest.mark.fuzz
-def test_update_split_valid_empty_update():
+def test_update_split_valid_empty_update() -> None:
     """Test minimal valid UPDATE (EOR marker)."""
     from exabgp.bgp.message.update import Update
 
@@ -155,7 +155,7 @@ def test_update_split_valid_empty_update():
 
 
 @pytest.mark.fuzz
-def test_update_split_with_withdrawals_only():
+def test_update_split_with_withdrawals_only() -> None:
     """Test UPDATE with only withdrawals."""
     from exabgp.bgp.message.update import Update
 
@@ -176,7 +176,7 @@ def test_update_split_with_withdrawals_only():
 
 
 @pytest.mark.fuzz
-def test_update_split_with_attributes_and_nlri():
+def test_update_split_with_attributes_and_nlri() -> None:
     """Test UPDATE with attributes and NLRI."""
     from exabgp.bgp.message.update import Update
 
@@ -202,7 +202,7 @@ def test_update_split_with_attributes_and_nlri():
 @pytest.mark.fuzz
 @given(truncate_at=st.integers(min_value=0, max_value=30))
 @settings(deadline=None)
-def test_update_split_truncation(truncate_at):
+def test_update_split_truncation(truncate_at: int) -> None:
     """Test UPDATE truncated at various positions."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.notification import Notify
@@ -243,7 +243,7 @@ def test_update_split_truncation(truncate_at):
 
 
 @pytest.mark.fuzz
-def test_update_split_length_one_byte_too_short():
+def test_update_split_length_one_byte_too_short() -> None:
     """Test withdrawn length claiming 1 byte too few."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.notification import Notify
@@ -265,7 +265,7 @@ def test_update_split_length_one_byte_too_short():
 
 
 @pytest.mark.fuzz
-def test_update_split_length_one_byte_too_long():
+def test_update_split_length_one_byte_too_long() -> None:
     """Test withdrawn length claiming 1 byte too many."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.notification import Notify
@@ -286,7 +286,7 @@ def test_update_split_length_one_byte_too_long():
 
 
 @pytest.mark.fuzz
-def test_update_split_total_length_mismatch():
+def test_update_split_total_length_mismatch() -> None:
     """Test when component lengths don't match total length."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.notification import Notify
@@ -303,7 +303,7 @@ def test_update_split_total_length_mismatch():
 
 
 @pytest.mark.fuzz
-def test_update_split_max_valid_lengths():
+def test_update_split_max_valid_lengths() -> None:
     """Test with maximum valid length fields."""
     from exabgp.bgp.message.update import Update
 

@@ -16,7 +16,7 @@ from exabgp.protocol.ip import IP, NoNextHop
 class TestIPVPNCreation:
     """Test basic IPVPN route creation"""
 
-    def test_create_ipvpn_ipv4(self):
+    def test_create_ipvpn_ipv4(self) -> None:
         """Test creating basic IPv4 IPVPN route"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -34,7 +34,7 @@ class TestIPVPNCreation:
         assert nlri.labels.labels[0] == 42
         assert nlri.rd._str() == '10.0.0.1:100'
 
-    def test_create_ipvpn_ipv6(self):
+    def test_create_ipvpn_ipv6(self) -> None:
         """Test creating basic IPv6 IPVPN route"""
         nlri = IPVPN.new(
             AFI.ipv6,
@@ -51,7 +51,7 @@ class TestIPVPNCreation:
         assert nlri.labels.labels[0] == 100
         assert nlri.rd._str() == '10.0.0.1:200'
 
-    def test_create_ipvpn_with_nexthop(self):
+    def test_create_ipvpn_with_nexthop(self) -> None:
         """Test creating IPVPN with nexthop"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -65,7 +65,7 @@ class TestIPVPNCreation:
 
         assert nlri.nexthop == IP.create('10.0.0.254')
 
-    def test_create_ipvpn_with_action(self):
+    def test_create_ipvpn_with_action(self) -> None:
         """Test creating IPVPN with specific action"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -79,7 +79,7 @@ class TestIPVPNCreation:
 
         assert nlri.action == Action.WITHDRAW
 
-    def test_create_ipvpn_direct_init(self):
+    def test_create_ipvpn_direct_init(self) -> None:
         """Test creating IPVPN via direct initialization"""
         nlri = IPVPN(AFI.ipv4, SAFI.mpls_vpn, Action.ANNOUNCE)
 
@@ -92,7 +92,7 @@ class TestIPVPNCreation:
 class TestIPVPNPackUnpack:
     """Test packing and unpacking IPVPN routes"""
 
-    def test_pack_unpack_ipv4_basic(self):
+    def test_pack_unpack_ipv4_basic(self) -> None:
         """Test basic pack/unpack roundtrip for IPv4"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -113,7 +113,7 @@ class TestIPVPNPackUnpack:
         assert unpacked.labels.labels[0] == 42
         assert unpacked.rd._str() == '10.0.0.1:100'
 
-    def test_pack_unpack_ipv6_basic(self):
+    def test_pack_unpack_ipv6_basic(self) -> None:
         """Test basic pack/unpack roundtrip for IPv6"""
         nlri = IPVPN.new(
             AFI.ipv6,
@@ -132,7 +132,7 @@ class TestIPVPNPackUnpack:
         assert '2001:db8::' in unpacked.cidr.prefix()
         assert unpacked.labels.labels[0] == 100
 
-    def test_pack_unpack_multiple_labels(self):
+    def test_pack_unpack_multiple_labels(self) -> None:
         """Test pack/unpack with multiple MPLS labels"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -149,7 +149,7 @@ class TestIPVPNPackUnpack:
         assert len(unpacked.labels.labels) == 3
         assert unpacked.labels.labels == [100, 200, 300]
 
-    def test_pack_unpack_various_prefixes(self):
+    def test_pack_unpack_various_prefixes(self) -> None:
         """Test pack/unpack with various prefix lengths"""
         test_cases = [
             ('10.0.0.0', 8),
@@ -175,7 +175,7 @@ class TestIPVPNPackUnpack:
 
             assert unpacked.cidr.mask == mask
 
-    def test_pack_unpack_with_leftover(self):
+    def test_pack_unpack_with_leftover(self) -> None:
         """Test unpacking IPVPN with extra data after route"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -196,7 +196,7 @@ class TestIPVPNPackUnpack:
 class TestIPVPNStringRepresentation:
     """Test string representations of IPVPN routes"""
 
-    def test_str_ipvpn(self):
+    def test_str_ipvpn(self) -> None:
         """Test string representation"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -212,7 +212,7 @@ class TestIPVPNStringRepresentation:
         assert '10.0.0.1:100' in result
         assert 'label' in result.lower() or '42' in result
 
-    def test_repr_ipvpn(self):
+    def test_repr_ipvpn(self) -> None:
         """Test repr matches str"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -225,7 +225,7 @@ class TestIPVPNStringRepresentation:
 
         assert repr(nlri) == str(nlri)
 
-    def test_extensive_with_nexthop(self):
+    def test_extensive_with_nexthop(self) -> None:
         """Test extensive representation with nexthop"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -245,7 +245,7 @@ class TestIPVPNStringRepresentation:
 class TestIPVPNLength:
     """Test length calculations for IPVPN routes"""
 
-    def test_len_ipvpn(self):
+    def test_len_ipvpn(self) -> None:
         """Test length includes labels and RD"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -265,7 +265,7 @@ class TestIPVPNLength:
 
         assert len(nlri) == expected_len
 
-    def test_len_with_multiple_labels(self):
+    def test_len_with_multiple_labels(self) -> None:
         """Test length with multiple labels"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -283,7 +283,7 @@ class TestIPVPNLength:
 class TestIPVPNEquality:
     """Test equality and hashing for IPVPN routes"""
 
-    def test_equal_routes(self):
+    def test_equal_routes(self) -> None:
         """Test that identical routes are equal"""
         nlri1 = IPVPN.new(
             AFI.ipv4,
@@ -305,7 +305,7 @@ class TestIPVPNEquality:
 
         assert nlri1 == nlri2
 
-    def test_not_equal_different_rd(self):
+    def test_not_equal_different_rd(self) -> None:
         """Test that routes with different RDs are not equal"""
         nlri1 = IPVPN.new(
             AFI.ipv4,
@@ -327,7 +327,7 @@ class TestIPVPNEquality:
 
         assert nlri1 != nlri2
 
-    def test_hash_consistency(self):
+    def test_hash_consistency(self) -> None:
         """Test that hash is consistent"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -347,7 +347,7 @@ class TestIPVPNEquality:
 class TestIPVPNFeedback:
     """Test feedback validation for IPVPN routes"""
 
-    def test_feedback_with_nexthop(self):
+    def test_feedback_with_nexthop(self) -> None:
         """Test feedback when nexthop is set"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -362,7 +362,7 @@ class TestIPVPNFeedback:
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert feedback == ''
 
-    def test_feedback_without_nexthop(self):
+    def test_feedback_without_nexthop(self) -> None:
         """Test feedback when nexthop is missing"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -377,7 +377,7 @@ class TestIPVPNFeedback:
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert 'ip-vpn nlri next-hop missing' in feedback
 
-    def test_feedback_withdraw_no_nexthop_required(self):
+    def test_feedback_withdraw_no_nexthop_required(self) -> None:
         """Test feedback for WITHDRAW doesn't require nexthop"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -397,7 +397,7 @@ class TestIPVPNFeedback:
 class TestIPVPNIndex:
     """Test index generation for IPVPN routes"""
 
-    def test_index_basic(self):
+    def test_index_basic(self) -> None:
         """Test basic index generation"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -413,7 +413,7 @@ class TestIPVPNIndex:
         assert isinstance(index, bytes)
         assert len(index) > 0
 
-    def test_index_contains_family(self):
+    def test_index_contains_family(self) -> None:
         """Test index contains family information"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -434,7 +434,7 @@ class TestIPVPNIndex:
 class TestIPVPNJSON:
     """Test JSON serialization of IPVPN routes"""
 
-    def test_json_announced(self):
+    def test_json_announced(self) -> None:
         """Test JSON serialization for announced route"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -450,7 +450,7 @@ class TestIPVPNJSON:
         assert isinstance(json_str, str)
         assert 'route-distinguisher' in json_str or '10.0.0.1' in json_str
 
-    def test_json_withdrawn(self):
+    def test_json_withdrawn(self) -> None:
         """Test JSON serialization for withdrawn route"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -469,7 +469,7 @@ class TestIPVPNJSON:
 class TestIPVPNHasRD:
     """Test the has_rd class method"""
 
-    def test_has_rd_returns_true(self):
+    def test_has_rd_returns_true(self) -> None:
         """Test that IPVPN.has_rd() returns True"""
         assert IPVPN.has_rd() is True
 
@@ -477,7 +477,7 @@ class TestIPVPNHasRD:
 class TestIPVPNEdgeCases:
     """Test edge cases for IPVPN routes"""
 
-    def test_ipvpn_zero_prefix_length(self):
+    def test_ipvpn_zero_prefix_length(self) -> None:
         """Test IPVPN with /0 prefix"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -495,7 +495,7 @@ class TestIPVPNEdgeCases:
 
         assert unpacked.cidr.mask == 0
 
-    def test_ipvpn_host_route_ipv4(self):
+    def test_ipvpn_host_route_ipv4(self) -> None:
         """Test IPVPN with /32 host route"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -508,7 +508,7 @@ class TestIPVPNEdgeCases:
 
         assert nlri.cidr.mask == 32
 
-    def test_ipvpn_host_route_ipv6(self):
+    def test_ipvpn_host_route_ipv6(self) -> None:
         """Test IPVPN with /128 host route"""
         nlri = IPVPN.new(
             AFI.ipv6,
@@ -525,7 +525,7 @@ class TestIPVPNEdgeCases:
 class TestIPVPNMultipleRoutes:
     """Test handling multiple IPVPN routes"""
 
-    def test_pack_unpack_multiple_routes(self):
+    def test_pack_unpack_multiple_routes(self) -> None:
         """Test packing/unpacking multiple IPVPN routes"""
         routes = [
             IPVPN.new(AFI.ipv4, SAFI.mpls_vpn, IP.pton('10.1.0.0'), 16, Labels([100], True), RouteDistinguisher.fromElements('10.0.0.1', 1)),

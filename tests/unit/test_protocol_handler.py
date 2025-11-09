@@ -13,11 +13,12 @@ Test Coverage:
 - API callback integration
 """
 import pytest
+from typing import Any, Generator
 from unittest.mock import Mock, MagicMock, patch
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Generator[None, None, None]:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
 
@@ -43,7 +44,7 @@ def mock_logger():
 
 
 @pytest.fixture
-def mock_neighbor():
+def mock_neighbor() -> Any:
     """Create a mock neighbor configuration."""
     neighbor = MagicMock()
     neighbor.__getitem__ = Mock(side_effect=lambda x: {
@@ -97,11 +98,11 @@ def mock_neighbor():
 
 
 @pytest.fixture
-def mock_peer(mock_neighbor):
+def mock_peer(mock_neighbor: Any) -> Any:
     """Create a mock peer."""
     # Create a custom stats class that behaves like defaultdict
     class Stats(dict):
-        def __getitem__(self, key):
+        def __getitem__(self, key: Any):
             if key not in self:
                 self[key] = 0
             return super().__getitem__(key)
@@ -124,7 +125,7 @@ def mock_peer(mock_neighbor):
 # Phase 1: Protocol Initialization and Basic Operations
 # ==============================================================================
 
-def test_protocol_initialization(mock_peer):
+def test_protocol_initialization(mock_peer: Any) -> None:
     """Test Protocol initialization with neighbor configuration."""
     from exabgp.reactor.protocol import Protocol
 
@@ -137,7 +138,7 @@ def test_protocol_initialization(mock_peer):
     assert protocol.negotiated is not None
 
 
-def test_protocol_environment_port(mock_peer, monkeypatch):
+def test_protocol_environment_port(mock_peer: Any, monkeypatch: Any) -> None:
     """Test Protocol initialization with port from environment variable."""
     from exabgp.reactor.protocol import Protocol
 
@@ -147,7 +148,7 @@ def test_protocol_environment_port(mock_peer, monkeypatch):
     assert protocol.port == 2179
 
 
-def test_protocol_fd_no_connection(mock_peer):
+def test_protocol_fd_no_connection(mock_peer: Any) -> None:
     """Test file descriptor access without active connection."""
     from exabgp.reactor.protocol import Protocol
 
@@ -155,7 +156,7 @@ def test_protocol_fd_no_connection(mock_peer):
     assert protocol.fd() == -1
 
 
-def test_protocol_fd_with_connection(mock_peer):
+def test_protocol_fd_with_connection(mock_peer: Any) -> None:
     """Test file descriptor access with active connection."""
     from exabgp.reactor.protocol import Protocol
 
@@ -167,7 +168,7 @@ def test_protocol_fd_with_connection(mock_peer):
     assert protocol.fd() == 42
 
 
-def test_protocol_me_message(mock_peer):
+def test_protocol_me_message(mock_peer: Any) -> None:
     """Test session identification string generation."""
     from exabgp.reactor.protocol import Protocol
 
@@ -178,7 +179,7 @@ def test_protocol_me_message(mock_peer):
     assert 'test message' in message
 
 
-def test_protocol_accept(mock_peer):
+def test_protocol_accept(mock_peer: Any) -> None:
     """Test accepting an incoming connection."""
     from exabgp.reactor.protocol import Protocol
 
@@ -192,7 +193,7 @@ def test_protocol_accept(mock_peer):
     assert result == protocol
 
 
-def test_protocol_accept_with_api_notification(mock_peer):
+def test_protocol_accept_with_api_notification(mock_peer: Any) -> None:
     """Test accepting connection with API notification enabled."""
     from exabgp.reactor.protocol import Protocol
 
@@ -205,7 +206,7 @@ def test_protocol_accept_with_api_notification(mock_peer):
     mock_peer.reactor.processes.connected.assert_called_once()
 
 
-def test_protocol_close_no_connection(mock_peer):
+def test_protocol_close_no_connection(mock_peer: Any) -> None:
     """Test closing when no connection exists."""
     from exabgp.reactor.protocol import Protocol
 
@@ -215,7 +216,7 @@ def test_protocol_close_no_connection(mock_peer):
     assert protocol.connection is None
 
 
-def test_protocol_close_with_connection(mock_peer):
+def test_protocol_close_with_connection(mock_peer: Any) -> None:
     """Test closing an active connection."""
     from exabgp.reactor.protocol import Protocol
 
@@ -237,7 +238,7 @@ def test_protocol_close_with_connection(mock_peer):
 # Phase 2: Message Writing and Statistics
 # ==============================================================================
 
-def test_protocol_write_keepalive(mock_peer):
+def test_protocol_write_keepalive(mock_peer: Any) -> None:
     """Test writing a KEEPALIVE message updates statistics."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -257,7 +258,7 @@ def test_protocol_write_keepalive(mock_peer):
     assert result == [True]
 
 
-def test_protocol_write_with_api_callback(mock_peer):
+def test_protocol_write_with_api_callback(mock_peer: Any) -> None:
     """Test writing a message with API callback enabled."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -282,7 +283,7 @@ def test_protocol_write_with_api_callback(mock_peer):
 # Phase 3: Message Reading - Basic
 # ==============================================================================
 
-def test_protocol_read_message_keepalive(mock_peer):
+def test_protocol_read_message_keepalive(mock_peer: Any) -> None:
     """Test reading a KEEPALIVE message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -305,7 +306,7 @@ def test_protocol_read_message_keepalive(mock_peer):
     assert mock_peer.stats['receive-keepalive'] == 1
 
 
-def test_protocol_read_message_nop(mock_peer):
+def test_protocol_read_message_nop(mock_peer: Any) -> None:
     """Test reading when no data is available (NOP)."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, NOP
@@ -325,7 +326,7 @@ def test_protocol_read_message_nop(mock_peer):
     assert messages[0].TYPE == NOP.TYPE
 
 
-def test_protocol_read_message_invalid_type(mock_peer):
+def test_protocol_read_message_invalid_type(mock_peer: Any) -> None:
     """Test reading a message with invalid type."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Notify
@@ -349,7 +350,7 @@ def test_protocol_read_message_invalid_type(mock_peer):
 # Phase 4: EOR (End-of-RIB) Support
 # ==============================================================================
 
-def test_protocol_new_eor_single_family(mock_peer):
+def test_protocol_new_eor_single_family(mock_peer: Any) -> None:
     """Test creating and sending EOR for a single address family."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.protocol.family import AFI, SAFI
@@ -368,7 +369,7 @@ def test_protocol_new_eor_single_family(mock_peer):
     assert any(hasattr(msg, 'TYPE') and msg.TYPE == EOR.TYPE for msg in messages if hasattr(msg, 'TYPE'))
 
 
-def test_protocol_new_eors_all_families(mock_peer):
+def test_protocol_new_eors_all_families(mock_peer: Any) -> None:
     """Test creating and sending EOR markers for all negotiated families."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.protocol.family import AFI, SAFI
@@ -390,7 +391,7 @@ def test_protocol_new_eors_all_families(mock_peer):
     assert mock_connection.writer.call_count >= 2
 
 
-def test_protocol_new_eors_no_families(mock_peer):
+def test_protocol_new_eors_no_families(mock_peer: Any) -> None:
     """Test new_eors() when no families are negotiated sends KEEPALIVE."""
     from exabgp.reactor.protocol import Protocol
 
@@ -411,7 +412,7 @@ def test_protocol_new_eors_no_families(mock_peer):
 # Phase 5: Advanced Features
 # ==============================================================================
 
-def test_protocol_read_update_basic(mock_peer):
+def test_protocol_read_update_basic(mock_peer: Any) -> None:
     """Test reading a basic UPDATE message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -435,7 +436,7 @@ def test_protocol_read_update_basic(mock_peer):
     assert len(messages) > 0
 
 
-def test_protocol_api_callbacks_with_packets(mock_peer):
+def test_protocol_api_callbacks_with_packets(mock_peer: Any) -> None:
     """Test API callbacks with packet data enabled."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -457,7 +458,7 @@ def test_protocol_api_callbacks_with_packets(mock_peer):
     mock_peer.reactor.processes.packets.assert_called()
 
 
-def test_protocol_negotiated_initialization(mock_peer):
+def test_protocol_negotiated_initialization(mock_peer: Any) -> None:
     """Test that negotiated state is properly initialized."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -469,7 +470,7 @@ def test_protocol_negotiated_initialization(mock_peer):
     assert protocol.negotiated.neighbor == mock_peer.neighbor
 
 
-def test_protocol_port_from_environment_legacy(mock_peer, monkeypatch):
+def test_protocol_port_from_environment_legacy(mock_peer: Any, monkeypatch: Any) -> None:
     """Test protocol port configuration from legacy environment variable."""
     from exabgp.reactor.protocol import Protocol
 
@@ -479,7 +480,7 @@ def test_protocol_port_from_environment_legacy(mock_peer, monkeypatch):
     assert protocol.port == 3179
 
 
-def test_protocol_new_keepalive(mock_peer):
+def test_protocol_new_keepalive(mock_peer: Any) -> None:
     """Test creating and sending a KEEPALIVE message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -496,7 +497,7 @@ def test_protocol_new_keepalive(mock_peer):
     assert any(hasattr(msg, 'TYPE') and msg.TYPE == KeepAlive.TYPE for msg in messages if hasattr(msg, 'TYPE'))
 
 
-def test_protocol_new_keepalive_with_comment(mock_peer):
+def test_protocol_new_keepalive_with_comment(mock_peer: Any) -> None:
     """Test creating KEEPALIVE with comment for logging."""
     from exabgp.reactor.protocol import Protocol
 
@@ -512,7 +513,7 @@ def test_protocol_new_keepalive_with_comment(mock_peer):
     assert mock_connection.writer.called
 
 
-def test_protocol_read_open_wrong_message(mock_peer):
+def test_protocol_read_open_wrong_message(mock_peer: Any) -> None:
     """Test read_open() when first message is not OPEN."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -533,7 +534,7 @@ def test_protocol_read_open_wrong_message(mock_peer):
     assert exc_info.value.subcode == 1
 
 
-def test_protocol_read_keepalive_wrong_message(mock_peer):
+def test_protocol_read_keepalive_wrong_message(mock_peer: Any) -> None:
     """Test read_keepalive() when message is not KEEPALIVE."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -560,7 +561,7 @@ def test_protocol_read_keepalive_wrong_message(mock_peer):
 # Phase 6: UPDATE Message Routing and Special Attributes
 # ==============================================================================
 
-def test_protocol_read_update_with_internal_treat_as_withdraw(mock_peer):
+def test_protocol_read_update_with_internal_treat_as_withdraw(mock_peer: Any) -> None:
     """Test UPDATE message with INTERNAL_TREAT_AS_WITHDRAW attribute."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -584,7 +585,7 @@ def test_protocol_read_update_with_internal_treat_as_withdraw(mock_peer):
     assert len(messages) > 0
 
 
-def test_protocol_read_update_with_internal_discard(mock_peer):
+def test_protocol_read_update_with_internal_discard(mock_peer: Any) -> None:
     """Test UPDATE message can be read without errors."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -607,7 +608,7 @@ def test_protocol_read_update_with_internal_discard(mock_peer):
     assert len(messages) >= 1
 
 
-def test_protocol_read_update_decode_error(mock_peer):
+def test_protocol_read_update_decode_error(mock_peer: Any) -> None:
     """Test UPDATE message decode error handling."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -638,7 +639,7 @@ def test_protocol_read_update_decode_error(mock_peer):
 # Phase 7: NOTIFICATION Handling During Read
 # ==============================================================================
 
-def test_protocol_read_notification_from_peer(mock_peer):
+def test_protocol_read_notification_from_peer(mock_peer: Any) -> None:
     """Test reading a NOTIFICATION message from peer raises it."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notification
@@ -666,7 +667,7 @@ def test_protocol_read_notification_from_peer(mock_peer):
         pass
 
 
-def test_protocol_read_internal_notification(mock_peer):
+def test_protocol_read_internal_notification(mock_peer: Any) -> None:
     """Test reading when connection reader detects internal error."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -693,7 +694,7 @@ def test_protocol_read_internal_notification(mock_peer):
     assert exc_info.value.subcode == 3
 
 
-def test_protocol_read_notification_with_api_consolidated(mock_peer):
+def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) -> None:
     """Test NOTIFICATION with API consolidate mode calls processes.notification."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -732,7 +733,7 @@ def test_protocol_read_notification_with_api_consolidated(mock_peer):
 # Phase 8: OPERATIONAL and REFRESH Messages
 # ==============================================================================
 
-def test_protocol_new_operational(mock_peer):
+def test_protocol_new_operational(mock_peer: Any) -> None:
     """Test creating and sending an OPERATIONAL message."""
     from exabgp.reactor.protocol import Protocol
 
@@ -754,7 +755,7 @@ def test_protocol_new_operational(mock_peer):
     assert mock_connection.writer.called
 
 
-def test_protocol_new_refresh(mock_peer):
+def test_protocol_new_refresh(mock_peer: Any) -> None:
     """Test creating and sending a ROUTE-REFRESH message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.protocol.family import AFI, SAFI
@@ -780,7 +781,7 @@ def test_protocol_new_refresh(mock_peer):
 # Phase 9: validate_open and Connection Negotiation
 # ==============================================================================
 
-def test_protocol_validate_open_success(mock_peer):
+def test_protocol_validate_open_success(mock_peer: Any) -> None:
     """Test validate_open with valid configuration."""
     from exabgp.reactor.protocol import Protocol
 
@@ -794,7 +795,7 @@ def test_protocol_validate_open_success(mock_peer):
     protocol.validate_open()
 
 
-def test_protocol_validate_open_asn_mismatch(mock_peer):
+def test_protocol_validate_open_asn_mismatch(mock_peer: Any) -> None:
     """Test validate_open with ASN mismatch raises Notify."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Notify
@@ -811,7 +812,7 @@ def test_protocol_validate_open_asn_mismatch(mock_peer):
     assert exc_info.value.subcode == 2
 
 
-def test_protocol_validate_open_with_api_negotiated(mock_peer):
+def test_protocol_validate_open_with_api_negotiated(mock_peer: Any) -> None:
     """Test validate_open with API negotiated callback."""
     from exabgp.reactor.protocol import Protocol
 
@@ -826,7 +827,7 @@ def test_protocol_validate_open_with_api_negotiated(mock_peer):
     mock_peer.reactor.processes.negotiated.assert_called_once()
 
 
-def test_protocol_validate_open_with_family_mismatch(mock_peer):
+def test_protocol_validate_open_with_family_mismatch(mock_peer: Any) -> None:
     """Test validate_open logs warning for family mismatches."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.protocol.family import AFI, SAFI
@@ -852,7 +853,7 @@ def test_protocol_validate_open_with_family_mismatch(mock_peer):
 # Phase 10: send() Method for Raw BGP Messages
 # ==============================================================================
 
-def test_protocol_send_raw_update(mock_peer):
+def test_protocol_send_raw_update(mock_peer: Any) -> None:
     """Test send() method with raw UPDATE message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -879,7 +880,7 @@ def test_protocol_send_raw_update(mock_peer):
     assert mock_peer.stats['send-update'] == 1
 
 
-def test_protocol_send_with_api_callback(mock_peer):
+def test_protocol_send_with_api_callback(mock_peer: Any) -> None:
     """Test send() with API callback enabled."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -916,7 +917,7 @@ def test_protocol_send_with_api_callback(mock_peer):
 # Phase 11: new_update() Method for Outgoing Updates
 # ==============================================================================
 
-def test_protocol_new_update(mock_peer):
+def test_protocol_new_update(mock_peer: Any) -> None:
     """Test new_update() method sends updates from RIB."""
     from exabgp.reactor.protocol import Protocol
 
@@ -941,7 +942,7 @@ def test_protocol_new_update(mock_peer):
     assert mock_connection.writer.called
 
 
-def test_protocol_new_update_no_updates(mock_peer):
+def test_protocol_new_update_no_updates(mock_peer: Any) -> None:
     """Test new_update() with empty RIB."""
     from exabgp.reactor.protocol import Protocol
 
@@ -967,7 +968,7 @@ def test_protocol_new_update_no_updates(mock_peer):
 # Phase 12: API Callback Variations
 # ==============================================================================
 
-def test_protocol_api_send_packets_mode(mock_peer):
+def test_protocol_api_send_packets_mode(mock_peer: Any) -> None:
     """Test API callback with send-packets mode."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -990,7 +991,7 @@ def test_protocol_api_send_packets_mode(mock_peer):
     mock_peer.reactor.processes.message.assert_called()
 
 
-def test_protocol_api_receive_parsed_mode(mock_peer):
+def test_protocol_api_receive_parsed_mode(mock_peer: Any) -> None:
     """Test API callback with receive-parsed mode."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -1017,7 +1018,7 @@ def test_protocol_api_receive_parsed_mode(mock_peer):
     assert args[6] == b''  # empty body
 
 
-def test_protocol_api_receive_consolidate_mode(mock_peer):
+def test_protocol_api_receive_consolidate_mode(mock_peer: Any) -> None:
     """Test API callback with receive-consolidate mode."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -1049,7 +1050,7 @@ def test_protocol_api_receive_consolidate_mode(mock_peer):
 # Phase 13: connect() Method and Connection Establishment
 # ==============================================================================
 
-def test_protocol_connect_establishes_outgoing(mock_peer):
+def test_protocol_connect_establishes_outgoing(mock_peer: Any) -> None:
     """Test connect() establishes outgoing connection."""
     from exabgp.reactor.protocol import Protocol
 
@@ -1069,7 +1070,7 @@ def test_protocol_connect_establishes_outgoing(mock_peer):
         assert protocol.connection == mock_outgoing
 
 
-def test_protocol_connect_sets_local_address(mock_peer):
+def test_protocol_connect_sets_local_address(mock_peer: Any) -> None:
     """Test connect() basic flow with Outgoing."""
     from exabgp.reactor.protocol import Protocol
 
@@ -1088,7 +1089,7 @@ def test_protocol_connect_sets_local_address(mock_peer):
         MockOutgoing.assert_called_once()
 
 
-def test_protocol_connect_with_api_notification(mock_peer):
+def test_protocol_connect_with_api_notification(mock_peer: Any) -> None:
     """Test connect() triggers API notification."""
     from exabgp.reactor.protocol import Protocol
 
@@ -1106,7 +1107,7 @@ def test_protocol_connect_with_api_notification(mock_peer):
         mock_peer.reactor.processes.connected.assert_called()
 
 
-def test_protocol_connect_already_connected(mock_peer):
+def test_protocol_connect_already_connected(mock_peer: Any) -> None:
     """Test connect() when already connected does nothing."""
     from exabgp.reactor.protocol import Protocol
 
@@ -1122,7 +1123,7 @@ def test_protocol_connect_already_connected(mock_peer):
 # Phase 14: ADD-PATH Support
 # ==============================================================================
 
-def test_protocol_with_addpath_negotiated(mock_peer):
+def test_protocol_with_addpath_negotiated(mock_peer: Any) -> None:
     """Test protocol with ADD-PATH capability negotiated."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.protocol.family import AFI, SAFI
@@ -1138,7 +1139,7 @@ def test_protocol_with_addpath_negotiated(mock_peer):
     assert protocol.negotiated.addpath is not None
 
 
-def test_protocol_read_update_with_addpath(mock_peer):
+def test_protocol_read_update_with_addpath(mock_peer: Any) -> None:
     """Test reading UPDATE message when ADD-PATH is enabled."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -1170,7 +1171,7 @@ def test_protocol_read_update_with_addpath(mock_peer):
 # Phase 15: EOR (End-of-RIB) Extended Coverage
 # ==============================================================================
 
-def test_protocol_new_eor_specific_family(mock_peer):
+def test_protocol_new_eor_specific_family(mock_peer: Any) -> None:
     """Test new_eors() for a specific address family."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.protocol.family import AFI, SAFI
@@ -1195,7 +1196,7 @@ def test_protocol_new_eor_specific_family(mock_peer):
     assert eor_count == 1
 
 
-def test_protocol_new_notification_message(mock_peer):
+def test_protocol_new_notification_message(mock_peer: Any) -> None:
     """Test new_notification() method."""
     from exabgp.reactor.protocol import Protocol
 
@@ -1223,7 +1224,7 @@ def test_protocol_new_notification_message(mock_peer):
 # Phase 16: new_open() Method
 # ==============================================================================
 
-def test_protocol_new_open_flow(mock_peer):
+def test_protocol_new_open_flow(mock_peer: Any) -> None:
     """Test new_open() basic flow (simplified)."""
     from exabgp.reactor.protocol import Protocol
 
@@ -1250,7 +1251,7 @@ def test_protocol_new_open_flow(mock_peer):
 # Phase 17: read_open() Method
 # ==============================================================================
 
-def test_protocol_read_open_success(mock_peer):
+def test_protocol_read_open_success(mock_peer: Any) -> None:
     """Test read_open() successfully reads OPEN message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Open
@@ -1275,7 +1276,7 @@ def test_protocol_read_open_success(mock_peer):
         assert messages[-1].TYPE == Open.TYPE
 
 
-def test_protocol_read_open_with_nop(mock_peer):
+def test_protocol_read_open_with_nop(mock_peer: Any) -> None:
     """Test read_open() skips NOP messages."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Open, NOP
@@ -1306,7 +1307,7 @@ def test_protocol_read_open_with_nop(mock_peer):
 # Phase 18: read_keepalive() Method
 # ==============================================================================
 
-def test_protocol_read_keepalive_success(mock_peer):
+def test_protocol_read_keepalive_success(mock_peer: Any) -> None:
     """Test read_keepalive() successfully reads KEEPALIVE."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -1327,7 +1328,7 @@ def test_protocol_read_keepalive_success(mock_peer):
         assert messages[-1].TYPE == KeepAlive.TYPE
 
 
-def test_protocol_read_keepalive_with_nop(mock_peer):
+def test_protocol_read_keepalive_with_nop(mock_peer: Any) -> None:
     """Test read_keepalive() skips NOP messages."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import NOP
