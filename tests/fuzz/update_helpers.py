@@ -4,6 +4,7 @@ This module provides utilities to create well-formed and malformed UPDATE
 messages for fuzzing and testing the UPDATE message parser.
 """
 import struct
+import sys
 from typing import Any
 
 
