@@ -452,7 +452,7 @@ def loop(options):
 
             # Send and flush command
             logger.debug(f'exabgp: {command} {announce}')
-            print(f'{command} {announce}')
+            sys.stdout.write(f'{command} {announce}\n')
             sys.stdout.flush()
 
             # Wait for confirmation from ExaBGP if expected

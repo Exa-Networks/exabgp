@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import sys
 import copy
 import struct
 
@@ -206,7 +207,7 @@ def check_message(neighbor, message):
     if kind == 3:
         return check_notification(raw)
 
-    print(f'unknown type {kind}')
+    sys.stdout.write(f'unknown type {kind}\n')
     return False
 
 
@@ -230,7 +231,7 @@ def display_message(neighbor, message):
         return display_update(neighbor, raw)
     if kind == 3:
         return display_notification(neighbor, raw)
-    print(f'unknown type {kind}')
+    sys.stdout.write(f'unknown type {kind}\n')
     return False
 
 
@@ -284,7 +285,7 @@ def display_nlri(neighbor, routes):
         return False
 
     for nlri in nlris:
-        print(nlri.json())
+        sys.stdout.write(f'{nlri.json()}\n')
     return True
 
 
@@ -300,19 +301,19 @@ def check_open(neighbor, raw):
 
     try:
         o = Open.unpack_message(raw, Direction.IN, _negotiated(neighbor))
-        print(o)
+        sys.stdout.write(f'{o}\n')
     except Exception:
-        print()
-        print('we could not decode this open message')
-        print('here is the traceback to help to figure out why')
-        print()
+        sys.stdout.write('\n')
+        sys.stdout.write('we could not decode this open message\n')
+        sys.stdout.write('here is the traceback to help to figure out why\n')
+        sys.stdout.write('\n')
         raise
 
 
 def display_open(neighbor, raw):
     try:
         o = Open.unpack_message(raw)
-        print(Response.JSON(json_version).open(neighbor, 'in', o, None, '', ''))
+        sys.stdout.write(f'{Response.JSON(json_version).open(neighbor, 'in', o, None, '', '')}\n')
         return True
     except Exception:
         return False
@@ -428,7 +429,7 @@ def display_update(neighbor, raw):
     if not update:
         return False
 
-    print(Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''))
+    sys.stdout.write(f'{Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')}\n')
     return True
 
 
@@ -437,7 +438,7 @@ def display_notification(neighbor, raw):
     if not notification:
         return False
 
-    print(Response.JSON(json_version).notification(neighbor, 'in', notification, None, '', ''))
+    sys.stdout.write(f'{Response.JSON(json_version).notification(neighbor, 'in', notification, None, '', '')}\n')
     return True
 
 
@@ -448,5 +449,5 @@ def display_notification(neighbor, raw):
 def check_notification(raw):
     notification = Notification.unpack_message(raw[18:], None, None)
     # XXX: FIXME: should be using logger here
-    print(notification)
+    sys.stdout.write(f'{notification}\n')
     return True

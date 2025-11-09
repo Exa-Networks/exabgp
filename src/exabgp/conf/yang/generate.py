@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import astunparse
 
 import pprint
@@ -39,7 +40,7 @@ class Generate:
         return returned
 
     def save(self):
-        print(f'generating {self.fname}')
+        sys.stdout.write(f'generating {self.fname}\n')
         with open(self.fname, 'w') as w:
             w.write(self._generate())
 
@@ -48,9 +49,7 @@ class Generate:
             pprint.pprint(name)
             pprint.pprint(data)
         for section in self.codes:
-            print(section)
-
-
+            sys.stdout.write(f'{section}\n')
 def main():
     folder = os.path.abspath(os.path.dirname(__file__))
     data = os.path.join(folder, '..', '..', '..', '..', 'data')

@@ -14,9 +14,9 @@ from exabgp.netlink.route.network import Network
 
 
 def usage():
-    print('{}'.format(sys.argv[0]))
-    print('  addr  : show the ip address on the interface')
-    print('  route : show the ip routing')
+    sys.stdout.write('{}\n'.format(sys.argv[0]))
+    sys.stdout.write('  addr  : show the ip address on the interface\n')
+    sys.stdout.write('  route : show the ip routing\n')
 
 
 def addresses():
@@ -36,7 +36,7 @@ def addresses():
         hwaddr = '<no addr>'
         if Address.Type.Attribute.IFLA_ADDRESS in ifi.attributes:
             hwaddr = ':'.join(x.encode('hex') for x in ifi.attributes[Address.Type.Attribute.IFLA_ADDRESS])
-        print('%d: %s %s' % (ifi.index, ifi.attributes[Address.Type.Attribute.IFLA_IFNAME][:-1], hwaddr))
+        sys.stdout.write('%d: %s %s\n' % (ifi.index, ifi.attributes[Address.Type.Attribute.IFLA_IFNAME][:-1], hwaddr))
 
         for ifa in addrs.get(ifi.index, {}):
             address = ifa.attributes.get(Attributes.Type.IFA_ADDRESS)
@@ -44,20 +44,20 @@ def addresses():
                 continue
 
             if ifa.family == socket.AF_INET:
-                print('  {} {}'.format('inet ', socket.inet_ntop(ifa.family, address)))
+                sys.stdout.write('  {} {}\n'.format('inet ', socket.inet_ntop(ifa.family, address)))
             elif ifa.family == socket.AF_INET6:
-                print('  {} {}'.format('inet6', socket.inet_ntop(ifa.family, address)))
+                sys.stdout.write('  {} {}\n'.format('inet6', socket.inet_ntop(ifa.family, address)))
             else:
-                print('  %d %s' % (ifa.family, address.encode('hex')))
+                sys.stdout.write('  %d %s\n' % (ifa.family, address.encode('hex')))
 
         for neighbor in neighbors.get(ifi.index, {}):
             if neighbor.state == Neighbor.Type.State.NUD_REACHABLE:
                 address = neighbor.attributes.get(Neighbor.Type.Flag.NTF_USE, '\0\0\0\0')
                 if ifa.family == socket.AF_INET or ifa.family == socket.AF_INET6:
-                    print('  {} {}'.format('inet ', socket.inet_ntop(neighbor.family, address)), end=' ')
+                    sys.stdout.write('  {} {} '.format('inet ', socket.inet_ntop(neighbor.family, address)))
                 else:
-                    print('  %d %s' % (ifa.family, address.encode('hex')))
-                print('mac', ':'.join(_.encode('hex') for _ in neighbor.attributes[Neighbor.Type.State.NUD_REACHABLE]))
+                    sys.stdout.write('  %d %s\n' % (ifa.family, address.encode('hex')))
+                sys.stdout.write('mac {}\n'.format(':'.join(_.encode('hex') for _ in neighbor.attributes[Neighbor.Type.State.NUD_REACHABLE])))
 
 
 def routes():
@@ -65,8 +65,8 @@ def routes():
     for ifi in Link.get_links():
         links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 
-    print('Kernel IP routing table')
-    print('%-18s %-18s %-18s %-7s %s' % ('Destination', 'Genmask', 'Gateway', 'Metric', 'Iface'))
+    sys.stdout.write('Kernel IP routing table\n')
+    sys.stdout.write('%-18s %-18s %-18s %-7s %s\n' % ('Destination', 'Genmask', 'Gateway', 'Metric', 'Iface'))
 
     for route in Network.get_routes():
         if route.family != socket.AF_INET:
@@ -89,8 +89,8 @@ def routes():
         mask = NetMask.CIDR[route.src_len]
         iface = links[oif]
 
-        print('%-18s %-18s %-18s %-7d %-s' % (dst or '0.0.0.0', mask, gw, metric, iface))
-        # if gateway: print route
+        sys.stdout.write('%-18s %-18s %-18s %-7d %-s\n' % (dst or '0.0.0.0', mask, gw, metric, iface))
+        # if gateway: sys.stdout.write route
 
 
 def new():
@@ -99,7 +99,7 @@ def new():
         links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 
     for route in Network.new_route():
-        print(route)
+        sys.stdout.write(f'{route}\n')
 
         # if route.family != socket.AF_INET:
         # 	continue
@@ -146,7 +146,7 @@ def main():
             new()
             sys.exit(0)
         if 'delete'.startswith(sys.argv[2]):
-            print('adding')
+            sys.stdout.write('adding\n')
 
     usage()
     sys.exit(0)

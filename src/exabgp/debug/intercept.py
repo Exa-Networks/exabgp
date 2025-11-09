@@ -18,7 +18,7 @@ from exabgp.debug.report import format_panic
 def bug_report(dtype, value, trace):
     sys.stdout.flush()
     sys.stderr.flush()
-    print(format_panic(dtype, value, trace))
+    sys.stdout.write(f'{format_panic(dtype, value, trace)}\n')
     sys.stdout.flush()
 
 

@@ -117,7 +117,7 @@ def cmdline(cmdarg):
     valid_nlri = Reactor(configuration).display(sanitized, cmdarg.nlri)
     if valid_nlri:
         return 0
-    print('invalid payload')
+    sys.stdout.write('invalid payload\n')
     return 1
 
 

@@ -233,7 +233,7 @@ def cmdline(cmdarg):
 
     # This does not change the behaviour for well formed command
     if sending != command:
-        print(f'command: {sending}')
+        sys.stdout.write(f'command: {sending}\n')
 
     writer = open_writer(send)
     try:

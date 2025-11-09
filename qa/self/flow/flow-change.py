@@ -16,10 +16,10 @@ while True:
     try:
         time.sleep(1)
         if counter % 2:
-            print('announce', flow)
+            sys.stdout.write(f'announce {flow}\n')
             sys.stdout.flush()
         else:
-            print('withdraw', flow)
+            sys.stdout.write(f'withdraw {flow}\n')
             sys.stdout.flush()
 
         counter += 1

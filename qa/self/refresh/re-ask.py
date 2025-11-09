@@ -23,7 +23,7 @@ while True:
         sys.stderr.write('received {}\n'.format(line.strip()))
         sys.stderr.flush()
     except TimeError:
-        print('announce route-refresh ipv4 unicast')
+        sys.stdout.write('announce route-refresh ipv4 unicast\n')
         sys.stdout.flush()
-        print('announce route-refresh ipv4 unicast', file=sys.stderr)
+        sys.stderr.write('announce route-refresh ipv4 unicast\n')
         sys.stderr.flush()

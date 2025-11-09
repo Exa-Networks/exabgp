@@ -37,7 +37,7 @@ def test():
 
     for size, msg, header, body, notification in reader:
         if size:
-            print(od(header + body))
+            sys.stdout.write(f'{od(header + body)}\n')
         else:
             sys.stdout.write('-')
 
@@ -45,7 +45,7 @@ def test():
 
     for size, msg, header, body, notification in reader:
         if size:
-            print(od(header + body))
+            sys.stdout.write(f'{od(header + body)}\n')
         else:
             sys.stdout.write('+')
 

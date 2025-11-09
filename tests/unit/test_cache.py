@@ -105,9 +105,8 @@ class TestCache(unittest.TestCase):
             end = time.time()
             time1 = end - start
 
-            print(COUNT, 'iterations of', klass.__name__, 'with', UNIQUE, 'uniques classes')
-            print('time instance %d' % time1)
-
+            sys.stdout.write(f'{COUNT, 'iterations of', klass.__name__, 'with', UNIQUE, 'uniques classes'}\n')
+            sys.stdout.write('time instance %d' % time1 + '\n')
             cache = Cache()
             start = time.time()
             for val in range(COUNT):
@@ -121,6 +120,6 @@ class TestCache(unittest.TestCase):
             end = time.time()
             time2 = end - start
 
-            print(f'time cached  {time2}')
-            print(f'speedup {time1 / time2:.3f}')
-            print()
+            sys.stdout.write(f'time cached  {time2}\n')
+            sys.stdout.write(f'speedup {time1 / time2:.3f}\n')
+            sys.stdout.write('\n')
