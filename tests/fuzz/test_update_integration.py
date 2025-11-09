@@ -1,4 +1,3 @@
-from typing import Generator, Any
 """Integration tests for UPDATE message unpack_message() method.
 
 These tests verify the complete UPDATE parsing pipeline from raw bytes
@@ -14,8 +13,10 @@ Test Coverage:
 - Integration between split() and attribute parsing
 - Integration between split() and NLRI parsing
 """
-import pytest
+from typing import Any, Generator
 from unittest.mock import Mock, patch
+
+import pytest
 
 pytestmark = pytest.mark.fuzz
 

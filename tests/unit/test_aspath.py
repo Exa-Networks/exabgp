@@ -1,4 +1,3 @@
-from typing import Any
 """Comprehensive tests for BGP AS_PATH attribute parsing.
 
 AS_PATH is a well-known mandatory transitive attribute that identifies the
@@ -22,9 +21,11 @@ Test Coverage:
 8. AS4_PATH attribute handling
 9. Mixed ASN2/ASN4 scenarios with AS_TRANS
 """
-import pytest
 import struct
+from typing import Any
 from unittest.mock import Mock
+
+import pytest
 
 
 def create_negotiated_mock(asn4: Any =False) -> Any:

@@ -1,4 +1,3 @@
-from typing import Generator, Any
 """Comprehensive tests for BGP path attributes framework.
 
 The Attributes class orchestrates parsing of all path attributes in UPDATE messages.
@@ -23,9 +22,11 @@ Test Coverage:
 8. TREAT_AS_WITHDRAW behavior
 9. DISCARD behavior
 """
-import pytest
 import struct
+from typing import Any, Generator
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 # Mock logger at module level to avoid initialization issues

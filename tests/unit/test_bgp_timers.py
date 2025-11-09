@@ -1,4 +1,3 @@
-from typing import Any
 #!/usr/bin/env python3
 # encoding: utf-8
 """test_bgp_timers.py
@@ -9,18 +8,20 @@ Tests ReceiveTimer and SendTimer for keepalive and hold timer functionality.
 Created: 2025-11-08
 """
 
-import pytest
-import time
 import os
+import time
+from typing import Any
 from unittest.mock import Mock
+
+import pytest
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp.timer import ReceiveTimer, SendTimer
-from exabgp.bgp.message import Notify, KeepAlive, _NOP, Update
-from exabgp.bgp.message.open.holdtime import HoldTime
+from exabgp.bgp.message import KeepAlive, Notify, Update, _NOP  # noqa: E402
+from exabgp.bgp.message.open.holdtime import HoldTime  # noqa: E402
+from exabgp.bgp.timer import ReceiveTimer, SendTimer  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

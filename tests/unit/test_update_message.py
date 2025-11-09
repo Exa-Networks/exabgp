@@ -1,4 +1,3 @@
-from typing import Any
 """Comprehensive tests for UPDATE message validation and integration.
 
 These tests focus on UPDATE message-level validation beyond basic parsing:
@@ -19,9 +18,11 @@ Phase 2: Attribute combinations (tests 6-10)
 Phase 3: MP extensions (tests 11-15)
 Phase 4: Edge cases and limits (tests 16-20)
 """
-import pytest
 import struct
+from typing import Any
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 @pytest.fixture(autouse=True)

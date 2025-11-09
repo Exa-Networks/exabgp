@@ -1,4 +1,3 @@
-from typing import Any
 """Comprehensive tests for BGP Community attributes.
 
 These tests cover all three types of BGP communities:
@@ -41,9 +40,11 @@ Phase 5: Mixed Community Types (tests 27-30)
   - Community filtering
   - Set operations
 """
-import pytest
 import struct
+from typing import Any
 from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.fixture(autouse=True)

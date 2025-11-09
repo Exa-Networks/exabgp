@@ -1,4 +1,3 @@
-from typing import Any
 """Helper utilities for performance testing.
 
 Provides functions to create high volumes of test data and mock objects
@@ -7,9 +6,11 @@ for performance benchmarking.
 
 import struct
 from io import BytesIO
+from typing import Any
 from unittest.mock import Mock
-from exabgp.protocol.ip import IPv4
+
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.protocol.ip import IPv4
 
 
 def create_mock_logger() -> Any:
