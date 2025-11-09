@@ -57,7 +57,7 @@ class SRv6SID(BGPLS):
         node_type, node_length = unpack('!HH', tlvs[0:4])
         if node_type != 256:
             raise Exception(
-                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg'
+                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
             )
         tlvs = tlvs[4:]
         local_node_descriptors = tlvs[:node_length]
@@ -111,7 +111,7 @@ class SRv6SID(BGPLS):
                 f'"protocol-id": {int(self.proto_id)}',
                 f'"node-descriptors": [ {nodes} ]',
                 f'"srv6-sid-descriptors": {json.dumps(self.srv6_sid_descriptors)}',
-            ]
+            ],
         )
 
         return f'{{ {content} }}'

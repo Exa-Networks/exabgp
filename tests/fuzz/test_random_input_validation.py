@@ -73,7 +73,7 @@ def test_ipv4_creation(prefix_len, octet1, octet2, octet3, octet4):
 
 @pytest.mark.fuzz
 @given(
-    port=st.integers(min_value=1, max_value=65535)
+    port=st.integers(min_value=1, max_value=65535),
 )
 @settings(deadline=None, max_examples=50)
 def test_port_number_range(port):
@@ -84,7 +84,7 @@ def test_port_number_range(port):
 
 @pytest.mark.fuzz
 @given(
-    asn=st.integers(min_value=0, max_value=4294967295)
+    asn=st.integers(min_value=0, max_value=4294967295),
 )
 @settings(deadline=None, max_examples=50)
 def test_asn_number_range(asn):
@@ -101,7 +101,7 @@ def test_asn_number_range(asn):
 
 @pytest.mark.fuzz
 @given(
-    nesting_level=st.integers(min_value=1, max_value=5)
+    nesting_level=st.integers(min_value=1, max_value=5),
 )
 @settings(deadline=None, max_examples=20)
 def test_nested_config_blocks(nesting_level):
@@ -197,7 +197,7 @@ def test_connection_reader_robustness(data):
 @given(
     valid_marker=st.booleans(),
     length=st.integers(min_value=19, max_value=4096),
-    msg_type=st.integers(min_value=1, max_value=5)
+    msg_type=st.integers(min_value=1, max_value=5),
 )
 @settings(deadline=None, max_examples=100)
 def test_bgp_header_validation(valid_marker, length, msg_type):
@@ -249,7 +249,7 @@ def test_bgp_header_validation(valid_marker, length, msg_type):
 @given(
     label_value=st.integers(min_value=0, max_value=1048575),  # 20-bit label
     exp=st.integers(min_value=0, max_value=7),  # 3-bit
-    ttl=st.integers(min_value=0, max_value=255)
+    ttl=st.integers(min_value=0, max_value=255),
 )
 @settings(deadline=None, max_examples=50)
 def test_mpls_label_values(label_value, exp, ttl):
@@ -272,7 +272,7 @@ def test_mpls_label_values(label_value, exp, ttl):
 @given(
     version=st.just(4),  # BGP version must be 4
     my_as=st.integers(min_value=1, max_value=65535),
-    hold_time=st.one_of(st.just(0), st.integers(min_value=3, max_value=65535))
+    hold_time=st.one_of(st.just(0), st.integers(min_value=3, max_value=65535)),
 )
 @settings(deadline=None, max_examples=50)
 def test_open_message_basic_structure(version, my_as, hold_time):
@@ -379,7 +379,7 @@ def test_whitespace_only_config(whitespace):
 
 @pytest.mark.fuzz
 @given(
-    truncate_at=st.integers(min_value=0, max_value=19)
+    truncate_at=st.integers(min_value=0, max_value=19),
 )
 @settings(deadline=None, max_examples=20)
 def test_truncated_bgp_header(truncate_at):
@@ -424,7 +424,7 @@ def test_truncated_bgp_header(truncate_at):
 @pytest.mark.fuzz
 @given(
     as_num=st.integers(min_value=0, max_value=65535),
-    value=st.integers(min_value=0, max_value=65535)
+    value=st.integers(min_value=0, max_value=65535),
 )
 @settings(deadline=None, max_examples=50)
 def test_community_values(as_num, value):

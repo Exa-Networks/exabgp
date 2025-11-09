@@ -139,7 +139,7 @@ class PREFIXv4(BGPLS):
                 f'"node-descriptors": [ {nodes} ]',
                 self.prefix.json(),
                 f'"nexthop": "{self.nexthop}"',
-            ]
+            ],
         )
         if self.ospf_type:
             content += f', {self.ospf_type.json()}'

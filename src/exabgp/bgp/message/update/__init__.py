@@ -229,11 +229,11 @@ class Update(Message):
 
             if include_withdraw:
                 for mpurnlri in mp_withdraw.packed_attributes(
-                    negotiated, msg_size - len(withdraws + announced + mp_reach)
+                    negotiated, msg_size - len(withdraws + announced + mp_reach),
                 ):
                     if mp_unreach:
                         yield self._message(
-                            Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced
+                            Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced,
                         )
                         mp_reach = b''
                         announced = b''
@@ -241,7 +241,7 @@ class Update(Message):
                     mp_unreach = mpurnlri
 
             yield self._message(
-                Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced
+                Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced,
             )  # yield mpr/mpur per family
             withdraws = b''
             announced = b''

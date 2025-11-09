@@ -140,7 +140,7 @@ class Transcoder:
                 # NOTE: Do not convert to f-string! The chained method calls with multiline
                 # formatting is more readable with % formatting.
                 message.data = 'Shutdown Communication: "%s"' % data[:shutdown_length].decode('utf-8').replace(
-                    '\r', ' '
+                    '\r', ' ',
                 ).replace('\n', ' ')
             except UnicodeDecodeError:
                 message.data = f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(data)}]'

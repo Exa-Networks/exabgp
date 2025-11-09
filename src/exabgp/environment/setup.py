@@ -44,7 +44,7 @@ CONFIGURATION = {
             'write': parsing.lower,
             'value': 'false',
             'help': 'on program fault, start pdb the python interactive debugger',
-        }
+        },
     },
     'daemon': {
         'pid': {

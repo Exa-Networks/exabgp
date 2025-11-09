@@ -33,7 +33,7 @@ errno_block = set(
         errno.EBUSY,
         errno.ENOBUFS,
         errno.ENOMEM,
-    )
+    ),
 )
 
 
@@ -275,7 +275,7 @@ def cmdline(cmdarg):
             sys.stderr.write('\n')
             sys.stderr.write('warning: no end of command message received\n')
             sys.stderr.write(
-                'warning: normal if exabgp.api.ack is set to false otherwise some data may get stuck on the pipe\n'
+                'warning: normal if exabgp.api.ack is set to false otherwise some data may get stuck on the pipe\n',
             )
             sys.stderr.write('warning: otherwise it may cause exabgp reactor to block\n')
             sys.exit(0)

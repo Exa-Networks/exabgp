@@ -73,7 +73,7 @@ def check_fifo(name):
 
         if not os.access(name, os.R_OK):
             sys.stdout.write(
-                f'error: a named pipe exists and we can not read/write to it ({os.path.abspath(name)})\n'
+                f'error: a named pipe exists and we can not read/write to it ({os.path.abspath(name)})\n',
             )
             return False
         return True

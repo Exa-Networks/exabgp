@@ -177,7 +177,7 @@ def prefix_sid_srv6(tokeniser):
                     arg_len=values[3],
                     tpose_len=values[4],
                     tpose_offset=values[5],
-                )
+                ),
             )
 
     subtlvs.append(
@@ -185,7 +185,7 @@ def prefix_sid_srv6(tokeniser):
             sid=sid,
             behavior=behavior,
             subsubtlvs=subsubtlvs,
-        )
+        ),
     )
 
     if value != ')':

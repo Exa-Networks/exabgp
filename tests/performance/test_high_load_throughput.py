@@ -63,7 +63,7 @@ class TestMessageStreamProcessing:
         batch_bytes = create_mixed_message_batch(
             update_count=600,
             keepalive_count=300,
-            notification_count=100
+            notification_count=100,
         )
         from exabgp.bgp.message import Update, KeepAlive
         from exabgp.bgp.message.direction import Direction
@@ -271,7 +271,7 @@ class TestHighLoadStress:
         batch_bytes = create_mixed_message_batch(
             update_count=6000,
             keepalive_count=3000,
-            notification_count=1000
+            notification_count=1000,
         )
 
         def process_mixed():

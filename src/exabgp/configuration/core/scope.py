@@ -155,7 +155,7 @@ class Scope(Error):
                 destination[key] = value
             else:
                 self.throw(
-                    f'can not copy "{key}" (as it is of type {type(source[key])}) and it exists in both the source and destination'
+                    f'can not copy "{key}" (as it is of type {type(source[key])}) and it exists in both the source and destination',
                 )
 
     def get(self, name='', default=None):

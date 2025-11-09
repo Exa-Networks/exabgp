@@ -235,7 +235,7 @@ class Attributes(dict):
                         SEQUENCE(
                             [
                                 local_asn,
-                            ]
+                            ],
                         ),
                     ],
                 )

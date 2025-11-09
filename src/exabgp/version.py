@@ -47,8 +47,8 @@ def latest_github():
             urllib.request.Request(
                 'https://api.github.com/repos/exa-networks/exabgp/releases',
                 headers={'Accept': 'application/vnd.github.v3+json'},
-            )
-        ).read()
+            ),
+        ).read(),
     )
     return latest[0]['tag_name']
 

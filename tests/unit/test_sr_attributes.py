@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidIn
 from exabgp.bgp.message.update.attribute.sr.srv6.sidstructure import Srv6SidStructure
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import (
     GenericSrv6ServiceSubTlv,
-    GenericSrv6ServiceDataSubSubTlv
+    GenericSrv6ServiceDataSubSubTlv,
 )
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
@@ -543,7 +543,7 @@ class TestSrv6SidStructure:
             func_len=16,
             arg_len=0,
             tpose_len=0,
-            tpose_offset=0
+            tpose_offset=0,
         )
         assert sid_struct.loc_block_len == 40
         assert sid_struct.loc_node_len == 24
@@ -558,7 +558,7 @@ class TestSrv6SidStructure:
             func_len=16,
             arg_len=0,
             tpose_len=0,
-            tpose_offset=0
+            tpose_offset=0,
         )
         packed = sid_struct.pack()
 
@@ -587,7 +587,7 @@ class TestSrv6SidStructure:
             func_len=16,
             arg_len=48,
             tpose_len=0,
-            tpose_offset=64
+            tpose_offset=64,
         )
         packed = original.pack()
         data = packed[3:]  # Skip Type and Length
@@ -626,7 +626,7 @@ class TestSrv6SidInformation:
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
-            subsubtlvs=[]
+            subsubtlvs=[],
         )
         assert sid_info.sid == sid
         assert sid_info.behavior == 0x0001
@@ -639,7 +639,7 @@ class TestSrv6SidInformation:
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
-            subsubtlvs=[sid_struct]
+            subsubtlvs=[sid_struct],
         )
         assert len(sid_info.subsubtlvs) == 1
         assert isinstance(sid_info.subsubtlvs[0], Srv6SidStructure)
@@ -650,7 +650,7 @@ class TestSrv6SidInformation:
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
-            subsubtlvs=[]
+            subsubtlvs=[],
         )
         packed = sid_info.pack()
 
@@ -676,7 +676,7 @@ class TestSrv6SidInformation:
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
-            subsubtlvs=[]
+            subsubtlvs=[],
         )
         str_repr = str(sid_info)
         assert 'sid-information' in str_repr
@@ -687,7 +687,7 @@ class TestSrv6SidInformation:
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
-            subsubtlvs=[]
+            subsubtlvs=[],
         )
         json_str = sid_info.json()
         # Note: There's a bug in the json() method - it doesn't return a complete string
@@ -703,7 +703,7 @@ class TestSrv6L3Service:
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
-            subsubtlvs=[]
+            subsubtlvs=[],
         )
         l3_service = Srv6L3Service(subtlvs=[sid_info])
         assert len(l3_service.subtlvs) == 1
@@ -715,7 +715,7 @@ class TestSrv6L3Service:
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
-            subsubtlvs=[]
+            subsubtlvs=[],
         )
         l3_service = Srv6L3Service(subtlvs=[sid_info])
         packed = l3_service.pack()
@@ -769,7 +769,7 @@ class TestSrv6L2Service:
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0002,
-            subsubtlvs=[]
+            subsubtlvs=[],
         )
         l2_service = Srv6L2Service(subtlvs=[sid_info])
         assert len(l2_service.subtlvs) == 1
@@ -781,7 +781,7 @@ class TestSrv6L2Service:
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0002,
-            subsubtlvs=[]
+            subsubtlvs=[],
         )
         l2_service = Srv6L2Service(subtlvs=[sid_info])
         packed = l2_service.pack()

@@ -80,7 +80,7 @@ def connect(io, ip, port, afi, md5):
             return
         if md5:
             raise NotConnected(
-                f'Could not connect to peer {ip}:{port}, check your MD5 password ({errstr(exc)})'
+                f'Could not connect to peer {ip}:{port}, check your MD5 password ({errstr(exc)})',
             ) from None
         raise NotConnected(f'Could not connect to peer {ip}:{port} ({errstr(exc)})') from None
 
@@ -122,7 +122,7 @@ def md5(io, ip, port, md5, md5_base64):
                     'FreeBSD requires that you set your MD5 key via ipsec.conf.\n'
                     'Something like:\n'
                     'flush;\n'
-                    'add <local ip> <peer ip> tcp 0x1000 -A tcp-md5 "password";'
+                    'add <local ip> <peer ip> tcp 0x1000 -A tcp-md5 "password";',
                 )
             try:
                 TCP_MD5SIG = 0x10
@@ -132,7 +132,7 @@ def md5(io, ip, port, md5, md5_base64):
                     'FreeBSD requires that you rebuild your kernel to enable TCP MD5 Signatures:\n'
                     'options         IPSEC\n'
                     'options         TCP_SIGNATURE\n'
-                    'device          crypto\n'
+                    'device          crypto\n',
                 ) from None
     elif platform_os == 'Linux':
         try:
@@ -231,7 +231,7 @@ def min_ttl(io, ip, ttl):
             io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
         except socket.error as exc:
             raise TTLError(
-                'This OS does not support IP_MINTTL or IP_TTL (ttl-security) for %s (%s)' % (ip, errstr(exc))
+                'This OS does not support IP_MINTTL or IP_TTL (ttl-security) for %s (%s)' % (ip, errstr(exc)),
             ) from None
 
 

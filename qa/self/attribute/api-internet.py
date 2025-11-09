@@ -17,7 +17,7 @@ def main():
     time.sleep(2)
 
     write(
-        'withdraw attribute next-hop 1.2.3.4 med 100 as-path [ 100 101 102 103 104 105 106 107 108 109 110 ] nlri 0.0.0.0/8 1.0.0.0/8'
+        'withdraw attribute next-hop 1.2.3.4 med 100 as-path [ 100 101 102 103 104 105 106 107 108 109 110 ] nlri 0.0.0.0/8 1.0.0.0/8',
     )
 
     time.sleep(10000)

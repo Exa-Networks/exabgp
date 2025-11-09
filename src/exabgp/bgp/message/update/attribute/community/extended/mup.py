@@ -33,7 +33,7 @@ class MUPExtendedCommunity(ExtendedCommunity):
         self.sgid2 = sgid2
         self.sgid4 = sgid4
         ExtendedCommunity.__init__(
-            self, community if community else pack('!2sHL', self._subtype(transitive), sgid2, sgid4)
+            self, community if community else pack('!2sHL', self._subtype(transitive), sgid2, sgid4),
         )
 
     def __eq__(self, other):

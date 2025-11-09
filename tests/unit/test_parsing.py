@@ -44,7 +44,7 @@ class TestControl(unittest.TestCase):
             configuration = Configuration(
                 [
                     filename,
-                ]
+                ],
             )
             configuration.reload()
             del configuration

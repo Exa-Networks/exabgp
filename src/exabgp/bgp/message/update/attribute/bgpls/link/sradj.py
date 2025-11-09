@@ -84,5 +84,5 @@ class SrAdjacency(FlagLS):
                 'sids': self.sids,
                 'weight': self.weight,
                 'undecoded-sids': self.undecoded,
-            }
+            },
         )

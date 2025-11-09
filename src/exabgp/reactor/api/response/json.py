@@ -98,7 +98,7 @@ class JSON:
                 self._kv(
                     {
                         'state': 'up',
-                    }
+                    },
                 ),
             ),
             '',
@@ -115,7 +115,7 @@ class JSON:
                 self._kv(
                     {
                         'state': 'connected',
-                    }
+                    },
                 ),
             ),
             '',
@@ -138,7 +138,7 @@ class JSON:
                     {
                         'state': 'down',
                         'reason': escape_quote(reason),
-                    }
+                    },
                 ),
             ),
             '',
@@ -152,7 +152,7 @@ class JSON:
             self._kv(
                 {
                     'notification': 'shutdown',
-                }
+                },
             ),
             '',
             '',
@@ -181,10 +181,10 @@ class JSON:
                     % ', '.join(['"%s %s"' % family for family in negotiated.families if negotiated.addpath.send(*family)]),
                     '[ %s ]'
                     % ', '.join(
-                        ['"%s %s"' % family for family in negotiated.families if negotiated.addpath.receive(*family)]
+                        ['"%s %s"' % family for family in negotiated.families if negotiated.addpath.receive(*family)],
                     ),
                 ),
-            }
+            },
         )
         return {'negotiated': f'{{ {kv_content} }} '}
 
@@ -199,7 +199,7 @@ class JSON:
 
     def fsm(self, neighbor, fsm):
         return self._header(
-            self._neighbor(neighbor, None, self._kv({'state': fsm.name()})), '', '', neighbor, message_type='fsm'
+            self._neighbor(neighbor, None, self._kv({'state': fsm.name()})), '', '', neighbor, message_type='fsm',
         )
 
     def signal(self, neighbor, signal):
@@ -211,7 +211,7 @@ class JSON:
                     {
                         'code': str(signal),
                         'name': Signal.name(signal),
-                    }
+                    },
                 ),
             ),
             '',
@@ -227,7 +227,7 @@ class JSON:
                 'subcode': message.subcode,
                 'data': hexstring(message.data),
                 'message': message.data.decode(),
-            }
+            },
         )
         return self._header(
             self._neighbor(
@@ -235,8 +235,8 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'notification': f'{{ {kv_content} }} '
-                    }
+                        'notification': f'{{ {kv_content} }} ',
+                    },
                 ),
             ),
             header,
@@ -251,10 +251,10 @@ class JSON:
                 'category': category,
                 'header': hexstring(header),
                 'body': hexstring(body),
-            }
+            },
         )
         message = {
-            'message': f'{{ {kv_content} }} '
+            'message': f'{{ {kv_content} }} ',
         }
         if negotiated:
             message.update(self._negotiated(negotiated))
@@ -278,7 +278,7 @@ class JSON:
                 'hold_time': message.hold_time,
                 'router_id': message.router_id,
                 'capabilities': f'{{ {capabilities_content} }}',
-            }
+            },
         )
         return self._header(
             self._neighbor(
@@ -286,8 +286,8 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'open': f'{{ {kv_content} }}'
-                    }
+                        'open': f'{{ {kv_content} }}',
+                    },
                 ),
             ),
             header,
@@ -359,7 +359,7 @@ class JSON:
         if negotiated:
             message.update(self._negotiated(negotiated))
         return self._header(
-            self._neighbor(neighbor, direction, self._kv(message)), header, body, neighbor, message_type='update'
+            self._neighbor(neighbor, direction, self._kv(message)), header, body, neighbor, message_type='update',
         )
 
     def refresh(self, neighbor, direction, refresh, negotiated, header, body):
@@ -368,7 +368,7 @@ class JSON:
                 'afi': f'"{refresh.afi}"',
                 'safi': f'"{refresh.safi}"',
                 'subtype': f'"{refresh.reserved}"',
-            }
+            },
         )
         return self._header(
             self._neighbor(
@@ -376,8 +376,8 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'route-refresh': f'{{ {kv_content} }}'
-                    }
+                        'route-refresh': f'{{ {kv_content} }}',
+                    },
                 ),
             ),
             header,
@@ -392,7 +392,7 @@ class JSON:
                 'name': f'"{operational.name}"',
                 'afi': f'"{operational.afi}"',
                 'safi': f'"{operational.safi}"',
-            }
+            },
         )
         return self._header(
             self._neighbor(
@@ -400,8 +400,8 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'operational': f'{{ {kv_content} }}'
-                    }
+                        'operational': f'{{ {kv_content} }}',
+                    },
                 ),
             ),
             header,
@@ -417,7 +417,7 @@ class JSON:
                 'afi': f'"{operational.afi}"',
                 'safi': f'"{operational.safi}"',
                 'advisory': f'"{operational.data}"',
-            }
+            },
         )
         return self._header(
             self._neighbor(
@@ -425,8 +425,8 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'operational': f'{{ {kv_content} }}'
-                    }
+                        'operational': f'{{ {kv_content} }}',
+                    },
                 ),
             ),
             header,
@@ -444,7 +444,7 @@ class JSON:
                 'router-id': operational.routerid,
                 'sequence': operational.sequence,
                 'counter': operational.counter,
-            }
+            },
         )
         return self._header(
             self._neighbor(
@@ -452,8 +452,8 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'operational': f'{{ {kv_content} }}'
-                    }
+                        'operational': f'{{ {kv_content} }}',
+                    },
                 ),
             ),
             header,

@@ -57,7 +57,7 @@ class NODE(BGPLS):
                 f'"protocol-id": {int(self.proto_id)}',
                 f'"node-descriptors": [ {nodes} ]',
                 f'"nexthop": "{self.nexthop}"',
-            ]
+            ],
         )
         if self.route_d:
             content += f', {self.route_d.json()}'
@@ -74,7 +74,7 @@ class NODE(BGPLS):
         node_type, node_length = unpack('!HH', data[9:13])
         if node_type != 256:
             raise Exception(
-                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg'
+                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
             )
         values = data[13 : 13 + node_length]
 

@@ -42,7 +42,7 @@ class SrAlgorithm(BaseLS):
             [_ for _ in data]
             or [
                 0,
-            ]
+            ],
         )
 
     def json(self, compact=None):

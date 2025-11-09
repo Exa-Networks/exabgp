@@ -67,7 +67,7 @@ class Code:
         return [
             Return(
                 value=Constant(value=value, kind=None),
-            )
+            ),
         ]
 
     def _python_name(self, name):
@@ -177,7 +177,7 @@ class Code:
                     ),
                 ],
                 orelse=[],
-            )
+            ),
         ]
 
     @staticmethod
@@ -210,7 +210,7 @@ class Code:
                     ),
                 ],
                 orelse=[],
-            )
+            ),
         ]
 
     @staticmethod
@@ -241,7 +241,7 @@ class Code:
                     ),
                 ],
                 orelse=[],
-            )
+            ),
         ]
 
     def _if_range(self, minimum, maximum):
@@ -339,7 +339,7 @@ class Code:
                 decorator_list=[],
                 returns=None,
                 type_comment=None,
-            )
+            ),
         ]
 
     def _typedef(self, module, only):

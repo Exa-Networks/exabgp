@@ -97,7 +97,7 @@ def test_unpack_with_minimal_attributes():
     data = create_update_message(
         withdrawn_routes=b'',
         path_attributes=origin_attr,
-        nlri=b''
+        nlri=b'',
     )
     
     result = Update.unpack_message(data, Direction.IN, negotiated)
@@ -123,7 +123,7 @@ def test_split_integration_with_unpack():
     data = create_update_message(
         withdrawn_routes=withdrawn,
         path_attributes=b'',
-        nlri=b''
+        nlri=b'',
     )
     
     # First verify split() works
@@ -199,7 +199,7 @@ def test_unpack_preserves_data_integrity():
     data = create_update_message(
         withdrawn_routes=test_prefix,
         path_attributes=b'',
-        nlri=b''
+        nlri=b'',
     )
     
     # Verify split extracts the data correctly

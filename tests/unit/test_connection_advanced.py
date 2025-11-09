@@ -126,7 +126,7 @@ class TestGeneratorBasedReader:
         # First call raises EAGAIN, second succeeds
         mock_sock.recv.side_effect = [
             socket.error(errno.EAGAIN, 'Would block'),
-            b'data'
+            b'data',
         ]
 
         with patch('select.poll') as mock_poll:
@@ -298,7 +298,7 @@ class TestGeneratorBasedWriter:
         # First call raises EAGAIN, second succeeds
         mock_sock.send.side_effect = [
             socket.error(errno.EAGAIN, 'Would block'),
-            4
+            4,
         ]
 
         with patch('select.poll') as mock_poll:
@@ -679,7 +679,7 @@ class TestBufferManagement:
             b'678',
             b'abcdefg',
             b'hijk',
-            b'l'
+            b'l',
         ]
         mock_sock.recv.side_effect = recv_results
 

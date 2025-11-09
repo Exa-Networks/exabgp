@@ -600,7 +600,7 @@ def test_messages_handles_mixed_ipv4_ipv6():
     # Negotiate both families
     negotiated = create_negotiated_mock(families=[
         (AFI.ipv4, SAFI.unicast),
-        (AFI.ipv6, SAFI.unicast)
+        (AFI.ipv6, SAFI.unicast),
     ])
 
     # Create IPv4 route

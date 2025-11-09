@@ -24,7 +24,7 @@ class error:
             errno.ENOBUFS,
             errno.ENOMEM,
             errno.ENOTCONN,
-        )
+        ),
     )
 
     fatal = set(
@@ -38,14 +38,14 @@ class error:
             errno.ECONNRESET,
             errno.ETIMEDOUT,
             errno.EINVAL,
-        )
+        ),
     )
 
     unavailable = set(
         (
             errno.ECONNREFUSED,
             errno.EHOSTUNREACH,
-        )
+        ),
     )
 
 

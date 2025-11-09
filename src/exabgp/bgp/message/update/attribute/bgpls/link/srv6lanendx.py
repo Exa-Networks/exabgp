@@ -97,7 +97,7 @@ class Srv6LanEndXISIS(FlagLS):
                 'behavior: %s, neighbor-id: %s, flags: %s, algorithm: %s, weight: %s, sid: %s'
                 % (d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid)
                 for d in self.content
-            ]
+            ],
         )
 
     @classmethod
@@ -135,7 +135,7 @@ class Srv6LanEndXOSPF(FlagLS):
                 'behavior: %s, neighbor-id: %s, flags: %s, algorithm: %s, weight: %s, sid: %s'
                 % (d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid)
                 for d in self.content
-            ]
+            ],
         )
 
     @classmethod

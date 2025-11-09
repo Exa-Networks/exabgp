@@ -17,7 +17,7 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.operational import (
     Operational, Advisory, Query, Response, NS,
-    OperationalFamily, SequencedOperationalFamily
+    OperationalFamily, SequencedOperationalFamily,
 )
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.routerid import RouterID

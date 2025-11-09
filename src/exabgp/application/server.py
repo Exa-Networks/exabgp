@@ -176,7 +176,7 @@ def run(comment, configurations, pid=0):
         if len(pipes) != 1:
             env.api.cli = False
             log.error(
-                f'could not find the named pipes ({pipename}.in and {pipename}.out) required for the cli', 'cli'
+                f'could not find the named pipes ({pipename}.in and {pipename}.out) required for the cli', 'cli',
             )
             log.error(lambda: 'we scanned the following folders (the number is your PID):', 'cli')
             for location in pipes:

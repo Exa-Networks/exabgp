@@ -30,7 +30,7 @@ def string_exception(exception):
 
 def format_exception(exception):
     return '\n'.join(
-        [_NO_PANIC + _INFO, '', '', str(type(exception)), str(exception), string_exception(exception), _FOOTER]
+        [_NO_PANIC + _INFO, '', '', str(type(exception)), str(exception), string_exception(exception), _FOOTER],
     )
 
 

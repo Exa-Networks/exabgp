@@ -78,7 +78,7 @@ class Type2SessionTransformedRoute(MUP):
                 self.teid,
                 self.endpoint_len,
                 self.endpoint_ip,
-            )
+            ),
         )
 
     def _pack(self, packed=None):

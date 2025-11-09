@@ -223,7 +223,7 @@ class Processes:
 
                 poller = select.poll()
                 poller.register(
-                    proc.stdout, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR
+                    proc.stdout, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
                 )
 
                 ready = False
@@ -307,7 +307,7 @@ class Processes:
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
-                        lambda exc=exc: f'error received while sending data to helper program, retrying ({errstr(exc)})', 'process'
+                        lambda exc=exc: f'error received while sending data to helper program, retrying ({errstr(exc)})', 'process',
                     )
                     continue
             break
@@ -437,7 +437,7 @@ class Processes:
     def _notification(self, peer, direction, message, negotiated, header, body):
         for process in self._notify(peer, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
             self.write(
-                process, self._encoder[process].notification(peer, direction, message, negotiated, header, body), peer
+                process, self._encoder[process].notification(peer, direction, message, negotiated, header, body), peer,
             )
 
     # unused-argument, must keep the API
@@ -450,7 +450,7 @@ class Processes:
     def _refresh(self, peer, direction, refresh, negotiated, header, body):
         for process in self._notify(peer, f'{direction}-{Message.CODE.ROUTE_REFRESH.SHORT}'):
             self.write(
-                process, self._encoder[process].refresh(peer, direction, refresh, negotiated, header, body), peer
+                process, self._encoder[process].refresh(peer, direction, refresh, negotiated, header, body), peer,
             )
 
     @register_process(Message.CODE.OPERATIONAL)
@@ -459,7 +459,7 @@ class Processes:
             self.write(
                 process,
                 self._encoder[process].operational(
-                    peer, direction, operational.category, operational, negotiated, header, body
+                    peer, direction, operational.category, operational, negotiated, header, body,
                 ),
                 peer,
             )

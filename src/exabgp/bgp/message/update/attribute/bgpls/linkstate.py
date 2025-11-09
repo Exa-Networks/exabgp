@@ -183,7 +183,7 @@ class FlagLS(BaseLS):
                         0,
                     ]
                     * len(cls.FLAGS),
-                )
+                ),
             )
             flags.update(dict((k, int(v)) for k, v in zip(cls.FLAGS, bits)))
         else:

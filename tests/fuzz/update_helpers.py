@@ -112,7 +112,7 @@ def create_origin_attribute(origin_type):
         type_code=1,
         value=bytes([origin_type]),
         optional=False,
-        transitive=True
+        transitive=True,
     )
 
 
@@ -146,7 +146,7 @@ def create_as_path_attribute(as_sequence):
         type_code=2,
         value=value,
         optional=False,
-        transitive=True
+        transitive=True,
     )
 
 
@@ -169,7 +169,7 @@ def create_next_hop_attribute(ip_address):
         type_code=3,
         value=ip_bytes,
         optional=False,
-        transitive=True
+        transitive=True,
     )
 
 
@@ -189,7 +189,7 @@ def create_med_attribute(med_value):
         type_code=4,
         value=struct.pack('!I', med_value),
         optional=True,
-        transitive=False
+        transitive=False,
     )
 
 
@@ -209,7 +209,7 @@ def create_local_pref_attribute(local_pref):
         type_code=5,
         value=struct.pack('!I', local_pref),
         optional=False,
-        transitive=True
+        transitive=True,
     )
 
 
@@ -245,7 +245,7 @@ def create_minimal_update(nlri_prefix=None):
         return create_update_message(
             withdrawn_routes=b'',
             path_attributes=attributes,
-            nlri=nlri
+            nlri=nlri,
         )
     else:
         # Empty UPDATE (EOR)
@@ -266,7 +266,7 @@ def create_withdrawal_update(prefixes):
     return create_update_message(
         withdrawn_routes=withdrawn,
         path_attributes=b'',
-        nlri=b''
+        nlri=b'',
     )
 
 

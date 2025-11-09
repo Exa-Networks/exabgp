@@ -315,7 +315,7 @@ def redirect(tokeniser):
 
         if prefix.count('.'):
             raise ValueError(
-                'this format has been deprecated as it does not make sense and it is not supported by other vendors'
+                'this format has been deprecated as it does not make sense and it is not supported by other vendors',
             )
 
         asn = int(prefix)
