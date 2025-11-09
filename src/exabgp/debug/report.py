@@ -50,6 +50,8 @@ def format_panic(dtype, value, trace):
     return result
 
 
+# NOTE: Do not convert to f-string! F-strings cannot contain backslashes in expression
+# parts (like \n in .replace('\n', ' ')). This must use % formatting.
 _INFO = """
 ExaBGP version : %s
 Python version : %s

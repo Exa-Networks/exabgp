@@ -30,6 +30,8 @@ class Generate(object):
     def _generate(self):
         returned = self.intro
         for name, data in self.dicts:
+            # NOTE: Do not convert to f-string! This uses a template pattern from self.variable
+            # which is defined as a class attribute and allows customization.
             returned += self.variable.format(name=name, data=data)
             returned += '\n'
         for section in self.codes:

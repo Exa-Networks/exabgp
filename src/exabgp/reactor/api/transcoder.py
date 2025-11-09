@@ -137,6 +137,8 @@ class Transcoder(object):
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             try:
+                # NOTE: Do not convert to f-string! The chained method calls with multiline
+                # formatting is more readable with % formatting.
                 message.data = 'Shutdown Communication: "%s"' % data[:shutdown_length].decode('utf-8').replace(
                     '\r', ' '
                 ).replace('\n', ' ')
