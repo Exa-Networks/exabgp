@@ -323,6 +323,9 @@ class Processes(object):
 
     def _answer(self, service, string, force=False):
         if force or self.ack:
+            # NOTE: Do not convert to f-string! F-strings with backslash escapes in
+            # expressions (like \n in .replace()) require Python 3.12+.
+            # This project supports Python 3.8+, so we must use % formatting.
             log.debug('responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
