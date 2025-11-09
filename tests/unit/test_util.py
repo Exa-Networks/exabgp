@@ -25,7 +25,7 @@ class TestDictionary:
         """Test Dictionary initialization"""
         d = Dictionary()
         assert isinstance(d, dict)
-        assert d.default_factory == dict
+        assert d.default_factory is dict
 
     def test_dictionary_default_behavior(self) -> None:
         """Test Dictionary creates dict for missing keys"""

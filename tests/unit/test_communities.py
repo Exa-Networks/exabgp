@@ -330,7 +330,7 @@ def test_extended_community_base_parsing() -> None:
     assert ec.pack() == unknown_data
 
     # Verify transitive check
-    assert ec.transitive() == True  # bit 6 is 0
+    assert ec.transitive()  # bit 6 is 0
 
 
 # ==============================================================================
