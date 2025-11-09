@@ -15,7 +15,7 @@ from exabgp.protocol.family import Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.logger import logfunc
+from exabgp.logger import log
 from exabgp.logger import lazynlri
 
 
@@ -96,7 +96,7 @@ class NLRI(Family):
     @classmethod
     def unpack_nlri(cls, afi, safi, data, action, addpath):
         a, s = AFI.create(afi), SAFI.create(safi)
-        logfunc.debug(lazynlri(a, s, addpath, data), 'parser')
+        log.debug(lazynlri(a, s, addpath, data), 'parser')
 
         key = '%s/%s' % (a, s)
         if key in cls.registered_nlri:

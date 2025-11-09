@@ -75,7 +75,7 @@ class TestGeneratorBasedReader:
 
             mock_sock.recv.return_value = b'test'
 
-            with patch('exabgp.reactor.network.connection.logfunc'):
+            with patch('exabgp.reactor.network.connection.log'):
                 gen = conn._reader(4)
 
                 # First yield should be empty (waiting)
@@ -103,7 +103,7 @@ class TestGeneratorBasedReader:
             mock_poller.poll.return_value = [(5, 1)]  # Always ready
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.logfunc'):
+            with patch('exabgp.reactor.network.connection.log'):
                 gen = conn._reader(10)
 
                 # Skip waiting yields
@@ -136,7 +136,7 @@ class TestGeneratorBasedReader:
             mock_poll.return_value = mock_poller
 
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     gen = conn._reader(4)
 
                     # Should yield empty on EAGAIN
@@ -248,7 +248,7 @@ class TestGeneratorBasedWriter:
 
             mock_sock.send.return_value = 4
 
-            with patch('exabgp.reactor.network.connection.logfunc'):
+            with patch('exabgp.reactor.network.connection.log'):
                 gen = conn.writer(b'test')
 
                 # First yield should be False (waiting)
@@ -276,7 +276,7 @@ class TestGeneratorBasedWriter:
             mock_poller.poll.return_value = [(5, 4)]  # Always ready
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.logfunc'):
+            with patch('exabgp.reactor.network.connection.log'):
                 gen = conn.writer(b'testdata12')
 
                 results = []
@@ -308,7 +308,7 @@ class TestGeneratorBasedWriter:
             mock_poll.return_value = mock_poller
 
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     gen = conn.writer(b'test')
 
                     results = []
@@ -336,7 +336,7 @@ class TestGeneratorBasedWriter:
             mock_poller.poll.return_value = [(5, 4)]
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.logfunc'):
+            with patch('exabgp.reactor.network.connection.log'):
                 gen = conn.writer(b'test')
 
                 with pytest.raises(NetworkError) as exc_info:
@@ -360,7 +360,7 @@ class TestGeneratorBasedWriter:
             mock_poll.return_value = mock_poller
 
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     gen = conn.writer(b'test')
 
                     with pytest.raises(LostConnection):
@@ -654,7 +654,7 @@ class TestBufferManagement:
             mock_poller.poll.return_value = [(5, 1)]  # Always ready
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.logfunc'):
+            with patch('exabgp.reactor.network.connection.log'):
                 gen = conn._reader(19)
 
                 result = b''
@@ -689,7 +689,7 @@ class TestBufferManagement:
             mock_poller.poll.return_value = [(5, 1)]  # Always ready
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.logfunc'):
+            with patch('exabgp.reactor.network.connection.log'):
                 gen = conn._reader(20)
 
                 result = b''
@@ -719,7 +719,7 @@ class TestBufferManagement:
             mock_poller.poll.return_value = [(5, 4)]  # Always ready
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.logfunc'):
+            with patch('exabgp.reactor.network.connection.log'):
                 gen = conn.writer(data)
 
                 results = []
@@ -747,7 +747,7 @@ class TestBufferManagement:
             mock_poller.poll.return_value = [(5, 1)]
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.logfunc'):
+            with patch('exabgp.reactor.network.connection.log'):
                 gen = conn._reader(100)
 
                 result = b''
@@ -1092,7 +1092,7 @@ class TestErrorPropagation:
             mock_poll.return_value = mock_poller
 
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     gen = conn.writer(b'test')
 
                     with pytest.raises(NetworkError) as exc_info:
@@ -1360,7 +1360,7 @@ class TestEdgeCasesAndDefensiveMode:
             mock_poll.return_value = mock_poller
 
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     gen = conn.writer(b'test')
 
                     # Should yield False and continue (not raise)

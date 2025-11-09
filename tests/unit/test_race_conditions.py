@@ -166,7 +166,7 @@ class TestConnectionResetDuringIO:
         # First iteration - partial send
         with patch('select.poll') as mock_poll:
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     mock_poller = MagicMock()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = [(7, 4)]  # POLLOUT
@@ -317,7 +317,7 @@ class TestRapidConnectDisconnectCycles:
 
         with patch('select.poll') as mock_poll:
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     mock_poller = MagicMock()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = [(20, 4)]
@@ -442,7 +442,7 @@ class TestMessageQueueOrderingRaces:
 
         with patch('select.poll') as mock_poll:
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     mock_poller = MagicMock()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = [(25, 4)]  # POLLOUT
@@ -488,7 +488,7 @@ class TestMessageQueueOrderingRaces:
 
         with patch('select.poll') as mock_poll:
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     mock_poller = MagicMock()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = [(26, 1)]  # POLLIN
@@ -528,7 +528,7 @@ class TestMessageQueueOrderingRaces:
 
         with patch('select.poll') as mock_poll:
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.logfunc'):
+                with patch('exabgp.reactor.network.connection.log'):
                     mock_poller = MagicMock()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = [(27, 1)]

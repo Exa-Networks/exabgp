@@ -45,13 +45,13 @@ def mock_logger():
     option.logger = mock_option_logger
     option.formater = mock_formater
 
-    # Also mock logfunc to avoid other issues
-    with patch('exabgp.bgp.message.update.logfunc') as mock_logfunc, \
-         patch('exabgp.bgp.message.update.nlri.nlri.logfunc') as mock_nlri_logfunc, \
-         patch('exabgp.bgp.message.update.attribute.attributes.logfunc') as mock_attr_logfunc:
-        mock_logfunc.debug = Mock()
-        mock_nlri_logfunc.debug = Mock()
-        mock_attr_logfunc.debug = Mock()
+    # Also mock log to avoid other issues
+    with patch('exabgp.bgp.message.update.log') as mock_log, \
+         patch('exabgp.bgp.message.update.nlri.nlri.log') as mock_nlri_log, \
+         patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_attr_log:
+        mock_log.debug = Mock()
+        mock_nlri_log.debug = Mock()
+        mock_attr_log.debug = Mock()
 
         yield
 

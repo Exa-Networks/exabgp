@@ -249,7 +249,7 @@ class Protocol(object):
                 continue
 
             log.debug(
-                '<< message of type %s' % Message.CODE.name(msg_id),
+                lambda: '<< message of type %s' % Message.CODE.name(msg_id),
                 self.connection.session(),
             )
 
@@ -271,8 +271,8 @@ class Protocol(object):
             except (KeyboardInterrupt, SystemExit, Notify):
                 raise
             except Exception as exc:
-                log.debug('could not decode message "%d"' % msg_id, self.connection.session())
-                log.debug('%s' % str(exc), self.connection.session())
+                log.debug(lambda: 'could not decode message "%d"' % msg_id, self.connection.session())
+                log.debug(lambda: '%s' % str(exc), self.connection.session())
                 log.debug(lambda: traceback.format_exc(), self.connection.session())
                 raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
                 # raise Notify(5,0,'unknown message received')
@@ -315,24 +315,24 @@ class Protocol(object):
 
         if self.negotiated.mismatch:
             log.warning(
-                '--------------------------------------------------------------------',
+                lambda: '--------------------------------------------------------------------',
                 self.connection.session(),
             )
             log.warning(
-                'the connection can not carry the following family/families',
+                lambda: 'the connection can not carry the following family/families',
                 self.connection.session(),
             )
             for reason, (afi, safi) in self.negotiated.mismatch:
                 log.warning(
-                    f' - {reason} is not configured for {afi}/{safi}',
+                    lambda: f' - {reason} is not configured for {afi}/{safi}',
                     self.connection.session(),
                 )
             log.warning(
-                'therefore no routes of this kind can be announced on the connection',
+                lambda: 'therefore no routes of this kind can be announced on the connection',
                 self.connection.session(),
             )
             log.warning(
-                '--------------------------------------------------------------------',
+                lambda: '--------------------------------------------------------------------',
                 self.connection.session(),
             )
 
@@ -350,7 +350,7 @@ class Protocol(object):
                 'The first packet received is not an open message (%s)' % received_open,
             )
 
-        log.debug('<< %s' % received_open, self.connection.session())
+        log.debug(lambda: '<< %s' % received_open, self.connection.session())
         yield received_open
 
     def read_keepalive(self):
@@ -389,7 +389,7 @@ class Protocol(object):
         for _ in self.write(sent_open):
             yield _NOP
 
-        log.debug('>> %s' % sent_open, self.connection.session())
+        log.debug(lambda: '>> %s' % sent_open, self.connection.session())
         yield sent_open
 
     def new_keepalive(self, comment=''):
@@ -399,7 +399,7 @@ class Protocol(object):
             yield _NOP
 
         log.debug(
-            f'>> KEEPALIVE{f" ({comment})" if comment else ""}',
+            lambda: f'>> KEEPALIVE{f" ({comment})" if comment else ""}',
             self.connection.session(),
         )
 
@@ -409,7 +409,7 @@ class Protocol(object):
         for _ in self.write(notification):
             yield _NOP
         log.debug(
-            f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
+            lambda: f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
             self.connection.session(),
         )
         yield notification
@@ -424,14 +424,14 @@ class Protocol(object):
                     # boolean is a transient network error we already announced
                     yield _NOP
         if number:
-            log.debug('>> %d UPDATE(s)' % number, self.connection.session())
+            log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())
         yield _UPDATE
 
     def new_eor(self, afi, safi):
         eor = EOR(afi, safi)
         for _ in self.write(eor):
             yield _NOP
-        log.debug('>> EOR %s %s' % (afi, safi), self.connection.session())
+        log.debug(lambda: '>> EOR %s %s' % (afi, safi), self.connection.session())
         yield eor
 
     def new_eors(self, afi=AFI.undefined, safi=SAFI.undefined):
@@ -458,11 +458,11 @@ class Protocol(object):
     def new_operational(self, operational, negotiated):
         for _ in self.write(operational, negotiated):
             yield _NOP
-        log.debug('>> OPERATIONAL %s' % str(operational), self.connection.session())
+        log.debug(lambda: '>> OPERATIONAL %s' % str(operational), self.connection.session())
         yield operational
 
     def new_refresh(self, refresh):
         for _ in self.write(refresh, None):
             yield _NOP
-        log.debug('>> REFRESH %s' % str(refresh), self.connection.session())
+        log.debug(lambda: '>> REFRESH %s' % str(refresh), self.connection.session())
         yield refresh
