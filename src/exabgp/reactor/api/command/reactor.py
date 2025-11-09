@@ -25,10 +25,11 @@ def manual(self, reactor, service, line, use_json):
     encoding = 'json' if use_json else 'text'
     for command in sorted(self.callback[encoding]):
         if self.callback['options'][command]:
-            extended = '%s [ %s ]' % (command, ' | '.join(self.callback['options'][command]))
+            options = ' | '.join(self.callback['options'][command])
+            extended = f'{command} [ {options} ]'
         else:
             extended = command
-        lines.append('[neighbor <ip> [filters]] ' + command if self.callback['neighbor'][command] else '%s ' % extended)
+        lines.append('[neighbor <ip> [filters]] ' + command if self.callback['neighbor'][command] else f'{extended} ')
 
     reactor.processes.write(service, '', True)
     reactor.processes.write(service, 'available API commands are listed here:', True)
@@ -74,7 +75,7 @@ def restart(self, reactor, service, line, use_json):
 
 @Command.register('version', False)
 def version(self, reactor, service, line, use_json):
-    reactor.processes.write(service, 'exabgp %s' % _version)
+    reactor.processes.write(service, f'exabgp {_version}')
     reactor.processes.answer_done(service)
     return True
 

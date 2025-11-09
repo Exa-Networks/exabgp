@@ -33,7 +33,7 @@ def extract_neighbors(command):
     if len(ipcmd) == 1:
         return [], remaining
     ip, command = ipcmd
-    definition = ['neighbor %s' % (ip)]
+    definition = [f'neighbor {ip}']
 
     if ' ' not in command:
         return definition, command
@@ -57,7 +57,7 @@ def extract_neighbors(command):
             if definition:
                 returned.append(definition)
             break
-        definition.append('%s %s' % (key, value))
+        definition.append(f'{key} {value}')
         command = remaining
 
     return returned, command
@@ -67,7 +67,8 @@ def match_neighbor(description, name):
     for string in description:
         if string.strip() == 'neighbor *':
             return True
-        if re.search(r'(^|\s)%s($|\s|,)' % re.escape(string), name) is None:
+        pattern = rf'(^|\s){re.escape(string)}($|\s|,)'
+        if re.search(pattern, name) is None:
             return False
     return True
 
