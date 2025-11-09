@@ -49,6 +49,7 @@ environments = ["sys_platform == 'darwin'", "sys_platform == 'linux'"]
 dev-dependencies = [
 	"ruff",
 	"pytest",
+	"pytest-asyncio",
 	"pytest-cov",
 	"coveralls",
 	"psutil",
@@ -67,7 +68,9 @@ requires = ["setuptools", "wheel"]
 [tool.pytest.ini_options]
 markers = [
 	"fuzz: Fuzzing tests using Hypothesis (deselect with '-m \"not fuzz\"')",
+	"asyncio: Async tests using pytest-asyncio",
 ]
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 120
