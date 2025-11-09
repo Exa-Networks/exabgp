@@ -35,7 +35,7 @@ class SrPrefix(FlagLS):
     TLV = 1158
     FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
 
-    def __init__(self, flags, sids, sr_algo, undecoded=[]):
+    def __init__(self, flags, sids, sr_algo, undecoded=()):
         self.flags = flags
         self.sids = sids
         self.sr_algo = sr_algo

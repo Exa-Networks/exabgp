@@ -78,7 +78,7 @@ class ASPath(Attribute):
         CONFED_SET.ID: CONFED_SET,
     }
 
-    def __init__(self, as_path=[], data=None):
+    def __init__(self, as_path=(), data=None):
         self.aspath = as_path
         self.segments = b''
         self.index = data  # the original packed data, use for indexing

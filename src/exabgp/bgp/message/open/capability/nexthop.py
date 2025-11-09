@@ -23,7 +23,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 class NextHop(Capability, list):
     ID = Capability.CODE.NEXTHOP
 
-    def __init__(self, data=[]):
+    def __init__(self, data=()):
         for afi, safi, nhafi in data:
             self.add_nexthop(afi, safi, nhafi)
 

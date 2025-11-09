@@ -30,7 +30,7 @@ class Cache(object):
             if family not in families:
                 del self._seen[family]
 
-    def cached_changes(self, families=None, actions=[Action.ANNOUNCE]):
+    def cached_changes(self, families=None, actions=(Action.ANNOUNCE,)):
         # families can be None or []
         requested_families = self.families if families is None else set(families).intersection(self.families)
 

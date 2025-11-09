@@ -33,7 +33,7 @@ class SrAdjacency(FlagLS):
     TLV = 1099
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
 
-    def __init__(self, flags, sids, weight, undecoded=[]):
+    def __init__(self, flags, sids, weight, undecoded=()):
         self.flags = flags
         self.sids = sids
         self.weight = weight
