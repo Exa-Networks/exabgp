@@ -357,7 +357,7 @@ def check(cmd, timeout):
 
     def alarm_handler(number, frame):  # pylint: disable=W0613
         """Handle SIGALRM signal."""
-        raise Alarm()
+        raise Alarm
 
     logger.debug('Checking command %s', repr(cmd))
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)

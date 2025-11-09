@@ -348,7 +348,7 @@ class Peer:
                 if connected:
                     break
                 if self._teardown:
-                    raise Stop()
+                    raise Stop
                 # we want to come back as soon as possible
                 yield ACTION.LATER
             self.proto = proto

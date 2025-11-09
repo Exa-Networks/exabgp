@@ -177,7 +177,7 @@ class Processes:
                                 lambda: f'Too many death for {process} ({self.respawn_number}) terminating program',
                                 'process',
                             )
-                            raise ProcessError()
+                            raise ProcessError
                     else:
                         # reset long time since last respawn
                         self._respawning[process] = {around_now: 1}
@@ -303,7 +303,7 @@ class Processes:
                 if exc.errno == errno.EPIPE:
                     self._broken.append(process)
                     log.debug(lambda: 'issue while sending data to our helper program', 'process')
-                    raise ProcessError() from None
+                    raise ProcessError from None
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(

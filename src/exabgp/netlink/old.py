@@ -150,7 +150,7 @@ class NetLinkRoute:
                         continue
                     raise NetLinkError('netlink seq mismatch')
                 if mtype == NetLinkRoute.Command.NLMSG_DONE:
-                    raise StopIteration()
+                    raise StopIteration
                 elif dtype in cls.errors:
                     raise NetLinkError(cls.errors[mtype])
                 else:

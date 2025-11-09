@@ -10,7 +10,7 @@ class TimeError(Exception):
 
 
 def handler(signum, frame):
-    raise TimeError()
+    raise TimeError
 
 
 count = 0
