@@ -52,7 +52,7 @@ class Listener(object):
             return socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         if ip.afi == AFI.ipv4:
             return socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-        raise NetworkError('Can not create socket for listening, family of IP %s is unknown' % ip)
+        raise NetworkError(f'Can not create socket for listening, family of IP {ip} is unknown')
 
     def _listen(self, local_ip, peer_ip, local_port, use_md5, md5_base64, ttl_in):
         self.serving = True
@@ -87,11 +87,10 @@ class Listener(object):
         except socket.error as exc:
             if exc.args[0] == errno.EADDRINUSE:
                 raise BindingError(
-                    'could not listen on %s:%d, the port may already be in use by another application'
-                    % (local_ip, local_port)
+                    f'could not listen on {local_ip}:{local_port}, the port may already be in use by another application'
                 )
             elif exc.args[0] == errno.EADDRNOTAVAIL:
-                raise BindingError('could not listen on %s:%d, this is an invalid address' % (local_ip, local_port))
+                raise BindingError(f'could not listen on {local_ip}:{local_port}, this is an invalid address')
             raise NetworkError(str(exc))
         except NetworkError as exc:
             log.critical(str(exc), 'network')
@@ -103,19 +102,19 @@ class Listener(object):
                 remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
             self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
             log.debug(
-                'listening for BGP session(s) on %s:%d%s' % (local_addr, port, ' with MD5' if md5_password else ''),
+                f"listening for BGP session(s) on {local_addr}:{port}{' with MD5' if md5_password else ''}",
                 'network',
             )
             return True
         except NetworkError as exc:
             if os.geteuid() != 0 and port <= 1024:
                 log.critical(
-                    'can not bind to %s:%d, you may need to run ExaBGP as root' % (local_addr, port), 'network'
+                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root', 'network'
                 )
             else:
-                log.critical('can not bind to %s:%d (%s)' % (local_addr, port, str(exc)), 'network')
+                log.critical(f'can not bind to {local_addr}:{port} ({exc})', 'network')
             log.critical('unset exabgp.tcp.bind if you do not want listen for incoming connections', 'network')
-            log.critical('and check that no other daemon is already binding to port %d' % port, 'network')
+            log.critical(f'and check that no other daemon is already binding to port {port}', 'network')
             return False
 
     def incoming(self):
@@ -149,7 +148,7 @@ class Listener(object):
                     local_ip = io.getpeername()[0]  # local_ip,local_port,local_flow,local_scope
                     remote_ip = io.getsockname()[0]  # remote_ip,remote_port,remote_flow,remote_scope
                 else:
-                    raise AcceptError('unexpected address family (%d)' % sock.family)
+                    raise AcceptError(f'unexpected address family ({sock.family})')
                 fam = self._family_AFI_map[sock.family]
                 yield Incoming(fam, remote_ip, local_ip, io)
         except NetworkError as exc:
@@ -164,7 +163,7 @@ class Listener(object):
         ranged_neighbor = []
 
         for connection in self._connected():
-            log.debug('new connection received %s' % connection.name(), 'network')
+            log.debug(f'new connection received {connection.name()}', 'network')
             for key in reactor.peers():
                 neighbor = reactor.neighbor(key)
 
@@ -192,16 +191,16 @@ class Listener(object):
 
                 denied = reactor.handle_connection(key, connection)
                 if denied:
-                    log.debug('refused connection from %s due to the state machine' % connection.name(), 'network')
+                    log.debug(f'refused connection from {connection.name()} due to the state machine', 'network')
                     break
-                log.debug('accepted connection from %s' % connection.name(), 'network')
+                log.debug(f'accepted connection from {connection.name()}', 'network')
                 break
             else:
                 # we did not break (and nothign was found/done or we have group match)
                 matched = len(ranged_neighbor)
                 if matched > 1:
                     log.debug(
-                        'could not accept connection from %s (more than one neighbor match)' % connection.name(),
+                        f'could not accept connection from {connection.name()} (more than one neighbor match)',
                         'network',
                     )
                     reactor.asynchronous.schedule(
@@ -211,7 +210,7 @@ class Listener(object):
                     )
                     return
                 if not matched:
-                    log.debug('no session configured for %s' % connection.name(), 'network')
+                    log.debug(f'no session configured for {connection.name()}', 'network')
                     reactor.asynchronous.schedule(
                         str(uuid.uuid1()),
                         'sending notification (6,3)',
@@ -230,7 +229,7 @@ class Listener(object):
                 new_peer = Peer(new_neighbor, reactor)
                 denied = new_peer.handle_connection(connection)
                 if denied:
-                    log.debug('refused connection from %s due to the state machine' % connection.name(), 'network')
+                    log.debug(f'refused connection from {connection.name()} due to the state machine', 'network')
                     return
 
                 reactor.register_peer(new_neighbor.name(), new_peer)
@@ -242,7 +241,7 @@ class Listener(object):
 
         for sock, (ip, port, _, _) in self._sockets.items():
             sock.close()
-            log.info('stopped listening on %s:%d' % (ip, port), 'network')
+            log.info(f'stopped listening on {ip}:{port}', 'network')
 
         self._sockets = {}
         self.serving = False

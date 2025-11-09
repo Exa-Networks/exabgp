@@ -39,11 +39,11 @@ class FSM(object):
 
         def __init__(self, code):
             if code not in self.valid:
-                raise RuntimeError('invalid FSM code %s' % code)
+                raise RuntimeError(f'invalid FSM code {code}')
             int.__init__(code)
 
         def __repr__(self):
-            return self.names.get(self, 'INVALID 0x%s' % hex(self))
+            return self.names.get(self, f'INVALID 0x{hex(self)}')
 
         def __str__(self):
             return repr(self)

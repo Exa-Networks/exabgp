@@ -118,9 +118,9 @@ class ACL(object):
     @classmethod
     def show(cls):
         for key, (uid, _) in cls._known.items():
-            sys.stderr.write('%d %s\n' % (uid, key))
+            sys.stderr.write(f'{uid} {key}\n')
         for _, acl in cls._known.values():
-            sys.stderr.write('%s' % acl)
+            sys.stderr.write(f'{acl}')
         sys.stderr.flush()
 
 
