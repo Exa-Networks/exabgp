@@ -257,7 +257,7 @@ def _make_nlri(neighbor, routes):
             nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath)
             nlris.append(nlri)
     except Exception as exc:
-        log.error('could not parse the nlri', 'parser')
+        log.error(f'could not parse the nlri for afi={afi}, safi={safi}', 'parser')
         from exabgp.debug import string_exception
 
         log.error(string_exception(exc), 'parser')
