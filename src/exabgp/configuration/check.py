@@ -418,7 +418,8 @@ def check_update(neighbor, raw):
     for number in range(len(update.nlris)):
         change = Change(update.nlris[number], update.attributes)
         log.info(f'decoded update {change.nlri.action} {change.extensive()}', 'parser')
-    log.info(f"update json {Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')}", 'parser')
+    json_update = Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')
+    log.info(f"update json {json_update}", 'parser')
 
     return True
 

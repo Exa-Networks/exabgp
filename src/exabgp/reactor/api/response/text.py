@@ -53,7 +53,9 @@ class Text(object):
         return None
 
     def notification(self, neighbor, direction, message, negotiated, header, body):
-        return f"neighbor {neighbor['peer-address']} {direction} notification code {message.code} subcode {message.subcode} data {hexstring(message.data)}{self._header_body(header, body)}\n"
+        data_hex = hexstring(message.data)
+        header_body = self._header_body(header, body)
+        return f"neighbor {neighbor['peer-address']} {direction} notification code {message.code} subcode {message.subcode} data {data_hex}{header_body}\n"
 
     def packets(self, neighbor, direction, category, negotiated, header, body):
         return f"neighbor {neighbor['peer-address']} {direction} {category}{self._header_body(header, body)}\n"
@@ -62,7 +64,9 @@ class Text(object):
         return f"neighbor {neighbor['peer-address']} {direction} keepalive{self._header_body(header, body)}\n"
 
     def open(self, neighbor, direction, sent_open, negotiated, header, body):
-        return f"neighbor {neighbor['peer-address']} {direction} open version {sent_open.version} asn {sent_open.asn} hold_time {sent_open.hold_time} router_id {sent_open.router_id} capabilities [{str(sent_open.capabilities).lower()}]{self._header_body(header, body)}\n"
+        capabilities_str = str(sent_open.capabilities).lower()
+        header_body = self._header_body(header, body)
+        return f"neighbor {neighbor['peer-address']} {direction} open version {sent_open.version} asn {sent_open.asn} hold_time {sent_open.hold_time} router_id {sent_open.router_id} capabilities [{capabilities_str}]{header_body}\n"
 
     def update(self, neighbor, direction, update, negotiated, header, body):
         prefix = f"neighbor {neighbor['peer-address']} {direction} update"
