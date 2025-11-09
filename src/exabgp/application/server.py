@@ -182,8 +182,12 @@ def run(comment, configurations, pid=0):
             for location in pipes:
                 log.error(f' - {location}', 'cli control')
             log.error('please make them in one of the folder with the following commands:', 'cli control')
+
+            # NOTE: Logging full paths (os.getcwd()) is intentional for user guidance
+            # Security review: Accepted as necessary for troubleshooting
             log.error(f'> mkfifo {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
             log.error(f'> chmod 600 {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
+
             if os.getuid() != 0:
                 log.error(
                     f'> chown {os.getuid()}:{os.getgid()} {os.getcwd()}/run/{pipename}.{{in,out}}',

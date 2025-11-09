@@ -23,6 +23,8 @@ MAXFD = 2048
 
 
 class Daemon(object):
+    # NOTE: This class logs full PID file paths (self.pid) for operational clarity
+    # Security review: Accepted as necessary for troubleshooting and debugging
     def __init__(self, reactor):
         self.pid = getenv().daemon.pid
         self.user = getenv().daemon.user
