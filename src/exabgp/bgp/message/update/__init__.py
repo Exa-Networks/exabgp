@@ -285,14 +285,14 @@ class Update(Message):
         nlris = []
         while withdrawn:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath)
-            log.debug(lambda: 'withdrawn NLRI %s' % nlri, 'routes')
+            log.debug(lambda nlri=nlri: 'withdrawn NLRI %s' % nlri, 'routes')
             withdrawn = left
             nlris.append(nlri)
 
         while announced:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath)
             nlri.nexthop = nexthop
-            log.debug(lambda: 'announced NLRI %s' % nlri, 'routes')
+            log.debug(lambda nlri=nlri: 'announced NLRI %s' % nlri, 'routes')
             announced = left
             nlris.append(nlri)
 

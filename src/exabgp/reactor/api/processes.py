@@ -126,7 +126,7 @@ class Processes(object):
                 t.join()
             except OSError:
                 # we most likely received a SIGTERM signal and our child is already dead
-                log.debug(lambda: f'child process {process} was already dead', 'process')
+                log.debug(lambda process=process: f'child process {process} was already dead', 'process')
         self.clean()
 
     def _start(self, process):
@@ -257,9 +257,9 @@ class Processes(object):
                         line = line.rstrip()
                         consumed_data = True
                         if line.startswith('debug '):
-                            log.warning(lambda: f'debug info from {process} : {line[6:]} ', 'api')
+                            log.warning(lambda line=line, process=process: f'debug info from {process} : {line[6:]} ', 'api')
                         else:
-                            log.debug(lambda: f'command from process {process} : {line} ', 'process')
+                            log.debug(lambda line=line, process=process: f'command from process {process} : {line} ', 'process')
                             yield (process, formated(line))
 
                     self._buffer[process] = raw

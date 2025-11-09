@@ -153,7 +153,7 @@ class LINK(BGPLS):
                 topology_ids.append(MTID.unpack(value))
                 continue
 
-            log.critical(lambda: f'unknown link TLV {tlv_type}')
+            log.critical(lambda tlv_type=tlv_type: f'unknown link TLV {tlv_type}')
 
         return cls(
             domain=domain,

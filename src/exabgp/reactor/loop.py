@@ -495,23 +495,23 @@ class Reactor(object):
 
         for key, peer in self._peers.items():
             if key not in self.configuration.neighbors:
-                log.debug(lambda: f'removing peer: {peer.neighbor.name()}', 'reactor')
+                log.debug(lambda peer=peer: f'removing peer: {peer.neighbor.name()}', 'reactor')
                 peer.remove()
 
         for key, neighbor in self.configuration.neighbors.items():
             # new peer
             if key not in self._peers:
-                log.debug(lambda: f'new peer: {neighbor.name()}', 'reactor')
+                log.debug(lambda neighbor=neighbor: f'new peer: {neighbor.name()}', 'reactor')
                 peer = Peer(neighbor, self)
                 self._peers[key] = peer
             # modified peer
             elif self._peers[key].neighbor != neighbor:
-                log.debug(lambda: f'peer definition change, establishing a new connection for {key}', 'reactor')
+                log.debug(lambda key=key: f'peer definition change, establishing a new connection for {key}', 'reactor')
                 self._peers[key].reestablish(neighbor)
             # same peer but perhaps not the routes
             else:
                 # finding what route changed and sending the delta is not obvious
-                log.debug(lambda: f'peer definition identical, updating peer routes if required for {key}', 'reactor')
+                log.debug(lambda key=key: f'peer definition identical, updating peer routes if required for {key}', 'reactor')
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
                 if ip.afi == neighbor['peer-address'].afi:
@@ -535,7 +535,7 @@ class Reactor(object):
         for key in self._peers.keys():
             if key not in self.configuration.neighbors.keys():
                 peer = self._peers[key]
-                log.debug(lambda: f'removing peer {peer.neighbor.name()}', 'reactor')
+                log.debug(lambda peer=peer: f'removing peer {peer.neighbor.name()}', 'reactor')
                 self._peers[key].remove()
             else:
                 self._peers[key].reestablish()

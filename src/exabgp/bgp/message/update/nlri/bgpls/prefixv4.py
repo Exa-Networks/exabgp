@@ -100,7 +100,7 @@ class PREFIXv4(BGPLS):
                 prefix = IpReach.unpack(value, 3)
                 continue
 
-            log.critical(lambda: f'unknown prefix v4 TLV {tlv_type}')
+            log.critical(lambda tlv_type=tlv_type: f'unknown prefix v4 TLV {tlv_type}')
 
         return cls(
             domain=domain,
