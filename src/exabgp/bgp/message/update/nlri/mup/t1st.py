@@ -177,7 +177,7 @@ class Type1SessionTransformedRoute(MUP):
         ip = data[9 : 9 + ip_offset]
         ip_size = 4 if afi != AFI.ipv6 else 16
         ip_padding = ip_size - ip_offset
-        if ip_padding != 0 and 0 < ip_padding:
+        if ip_padding != 0 and ip_padding > 0:
             ip += bytes(ip_padding)
 
         size = ip_offset

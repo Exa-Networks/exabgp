@@ -61,7 +61,7 @@ class TestBGPLSBase:
         packed_data = b'\x01\x02\x03\x04'
         generic = GenericBGPLS(code, packed_data)
 
-        assert generic.CODE == code
+        assert code == generic.CODE
         assert generic._packed == packed_data
 
         # Test JSON output
