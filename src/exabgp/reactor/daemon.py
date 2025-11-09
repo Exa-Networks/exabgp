@@ -174,7 +174,7 @@ class Daemon(object):
 
         logging = getenv().log
         if logging.enable and logging.destination.lower() in ('stdout', 'stderr'):
-            log.critical(f'ExaBGP can not fork when logs are going to {log.destination.lower()}', 'daemon')
+            log.critical(f'ExaBGP can not fork when logs are going to {logging.destination.lower()}', 'daemon')
             return
 
         def fork_exit():
