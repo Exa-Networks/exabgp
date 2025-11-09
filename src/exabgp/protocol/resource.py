@@ -46,7 +46,7 @@ class Resource(int):
             value = int(string[2:], 16)
             if 0 <= value <= 0xFFFF:
                 return value
-        raise ValueError('unknown %s %s' % (cls.NAME, name))
+        raise ValueError(f'unknown {cls.NAME} {name}')
 
     @classmethod
     def named(cls, string):
@@ -64,7 +64,7 @@ class BitResource(Resource):
                 yield self.names[bit]
                 value -= bit
         if value:
-            yield self.names.get(self, 'unknown %s type %ld' % (self.NAME, int(self)))
+            yield self.names.get(self, f'unknown {self.NAME} type {int(self)}')
 
     def bits(self):
         value = int(self)
@@ -73,7 +73,7 @@ class BitResource(Resource):
                 yield self.names[bit]
                 value -= bit
         if value:
-            yield self.names.get(self, '%s' % hex(self))
+            yield self.names.get(self, f'{hex(self)}')
 
     def short(self):
         return '+'.join(self.bits())

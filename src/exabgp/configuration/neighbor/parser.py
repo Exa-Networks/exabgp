@@ -84,7 +84,7 @@ def ttl(tokeniser):
     except ValueError:
         if value in ('false', 'disable', 'disabled'):
             return None
-        raise ValueError('invalid ttl-security "%s"' % value)
+        raise ValueError(f'invalid ttl-security "{value}"')
     if attl < 0:
         raise ValueError('ttl-security can not be negative')
     if attl > 255:
@@ -102,7 +102,7 @@ def local_address(tokeniser):
     try:
         return IP.create(value)
     except (IndexError, ValueError, socket.error):
-        raise ValueError('"%s" is an invalid IP address' % value)
+        raise ValueError(f'"{value}" is an invalid IP address')
 
 
 def source_interface(tokeniser):
@@ -117,7 +117,7 @@ def router_id(tokeniser):
     try:
         return RouterID(value)
     except ValueError:
-        raise ValueError('"%s" is an invalid router-id' % value)
+        raise ValueError(f'"{value}" is an invalid router-id')
 
 
 def hold_time(tokeniser):
@@ -125,11 +125,11 @@ def hold_time(tokeniser):
     try:
         holdtime = HoldTime(int(value))
     except ValueError:
-        raise ValueError('"%s" is an invalid hold-time' % value)
+        raise ValueError(f'"{value}" is an invalid hold-time')
     if holdtime < 3 and holdtime != 0:
         raise ValueError('holdtime must be zero or at least three seconds')
     if holdtime > HoldTime.MAX:
-        raise ValueError('holdtime must be smaller or equal to %d' % HoldTime.MAX)
+        raise ValueError(f'holdtime must be smaller or equal to {HoldTime.MAX}')
     return holdtime
 
 
@@ -169,7 +169,7 @@ def processes_match(tokeniser):
         try:
             re.compile(token)
         except re.error:
-            raise ValueError('"%s" is not a valid regex, "re" lib returns error %s.' % (token, re.error))
+            raise ValueError(f'"{token}" is not a valid regex, "re" lib returns error {re.error}.')
         result.append(token)
 
     return result
@@ -182,7 +182,7 @@ def rate_limit(tokeniser):
     try:
         rate = int(value)
     except ValueError:
-        raise ValueError('"%s" is an invalid rate-limit' % value)
+        raise ValueError(f'"{value}" is an invalid rate-limit')
     if rate <= 0:
         raise ValueError('rate must be zero or at 1 (per second)')
     return rate

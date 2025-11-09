@@ -156,8 +156,8 @@ def check_generation(neighbors):
                         skip = True
                     else:
                         log.debug('strings are different:', 'parser')
-                        log.debug('[%s]' % (str1r), 'parser')
-                        log.debug('[%s]' % (str2r), 'parser')
+                        log.debug(f'[{str1r}]', 'parser')
+                        log.debug(f'[{str2r}]', 'parser')
                         return False
                 else:
                     log.debug('strings are fine', 'parser')
@@ -166,8 +166,8 @@ def check_generation(neighbors):
                     log.debug('skipping encoding for update with non-transitive attribute(s)', 'parser')
                 elif pack1 != pack2:
                     log.debug('encoding are different', 'parser')
-                    log.debug('[%s]' % (od(pack1)), 'parser')
-                    log.debug('[%s]' % (od(pack2)), 'parser')
+                    log.debug(f'[{od(pack1)}]', 'parser')
+                    log.debug(f'[{od(pack2)}]', 'parser')
                     return False
                 else:
                     log.debug('encoding is fine', 'parser')
@@ -417,8 +417,8 @@ def check_update(neighbor, raw):
     log.debug('', 'parser')  # new line
     for number in range(len(update.nlris)):
         change = Change(update.nlris[number], update.attributes)
-        log.info('decoded %s %s %s' % ('update', change.nlri.action, change.extensive()), 'parser')
-    log.info('update json %s' % Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''), 'parser')
+        log.info(f'decoded update {change.nlri.action} {change.extensive()}', 'parser')
+    log.info(f"update json {Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')}", 'parser')
 
     return True
 

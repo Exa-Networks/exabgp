@@ -93,7 +93,7 @@ class TestFlow(unittest.TestCase):
         # policy.add(to_FlowAction(65000,False,False))
         flow = flow.pack()
         if message[0] != flow[0]:
-            self.fail('size mismatch %s %s\n' % (flow[0], message[0]))
+            self.fail(f'size mismatch {flow[0]} {message[0]}\n')
         if len(flow) != flow[0] + 1:
             self.fail('invalid size for message')
         # if message[1:] != flow[1:]:

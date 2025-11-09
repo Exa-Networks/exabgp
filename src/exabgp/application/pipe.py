@@ -29,16 +29,16 @@ mb = kb * 1024
 def named_pipe(root, pipename='exabgp'):
     locations = [
         '/run/exabgp/',
-        '/run/%d/' % os.getuid(),
+        f'/run/{os.getuid()}/',
         '/run/',
         '/var/run/exabgp/',
-        '/var/run/%d/' % os.getuid(),
+        f'/var/run/{os.getuid()}/',
         '/var/run/',
         root + '/run/exabgp/',
-        root + '/run/%d/' % os.getuid(),
+        root + f'/run/{os.getuid()}/',
         root + '/run/',
         root + '/var/run/exabgp/',
-        root + '/var/run/%d/' % os.getuid(),
+        root + f'/var/run/{os.getuid()}/',
         root + '/var/run/',
     ]
     for location in locations:
@@ -58,9 +58,9 @@ def named_pipe(root, pipename='exabgp'):
 
 
 def env(app, section, name, default):
-    r = os.environ.get('%s.%s.%s' % (app, section, name), None)
+    r = os.environ.get(f'{app}.{section}.{name}', None)
     if r is None:
-        r = os.environ.get('%s_%s_%s' % (app, section, name), None)
+        r = os.environ.get(f'{app}_{section}_{name}', None)
     if r is None:
         return default
     return r
@@ -69,23 +69,23 @@ def env(app, section, name, default):
 def check_fifo(name):
     try:
         if not stat.S_ISFIFO(os.stat(name).st_mode):
-            sys.stdout.write('error: a file exist which is not a named pipe (%s)\n' % os.path.abspath(name))
+            sys.stdout.write(f'error: a file exist which is not a named pipe ({os.path.abspath(name)})\n')
             return False
 
         if not os.access(name, os.R_OK):
             sys.stdout.write(
-                'error: a named pipe exists and we can not read/write to it (%s)\n' % os.path.abspath(name)
+                f'error: a named pipe exists and we can not read/write to it ({os.path.abspath(name)})\n'
             )
             return False
         return True
     except OSError:
-        sys.stdout.write('error: could not create the named pipe %s\n' % os.path.abspath(name))
+        sys.stdout.write(f'error: could not create the named pipe {os.path.abspath(name)}\n')
         return False
     except IOError:
-        sys.stdout.write('error: could not access/delete the named pipe %s\n' % os.path.abspath(name))
+        sys.stdout.write(f'error: could not access/delete the named pipe {os.path.abspath(name)}\n')
         sys.stdout.flush()
     except socket.error:
-        sys.stdout.write('error: could not write on the named pipe %s\n' % os.path.abspath(name))
+        sys.stdout.write(f'error: could not write on the named pipe {os.path.abspath(name)}\n')
         sys.stdout.flush()
 
 
@@ -294,7 +294,7 @@ def main(location=''):
     if not location:
         location = os.environ.get('exabgp_cli_pipe', '')
     if not location:
-        sys.stderr.write('usage %s %s\n' % (sys.executable, ' '.join(sys.argv)))
+        sys.stderr.write(f"usage {sys.executable} {' '.join(sys.argv)}\n")
         sys.stderr.write("run with 'env exabgp_cli_pipe=<location>' if you are trying to mess with ExaBGP's internals")
         sys.stderr.flush()
         sys.exit(1)
