@@ -203,9 +203,9 @@ class ASPath(Attribute):
                 aspath.append(asns)
 
         except IndexError:
-            raise Notify(3, 11, 'not enough data to decode AS_PATH or AS4_PATH')
+            raise Notify(3, 11, 'not enough data to decode AS_PATH or AS4_PATH') from None
         except error:  # struct
-            raise Notify(3, 11, 'not enough data to decode AS_PATH or AS4_PATH')
+            raise Notify(3, 11, 'not enough data to decode AS_PATH or AS4_PATH') from None
 
         if klass:
             return klass(aspath, backup)

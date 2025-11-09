@@ -54,9 +54,9 @@ def create(afi, interface=None):
 
                 io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, str(interface + '\0').encode('utf-8'))
             except socket.error:
-                raise NotConnected(f'Could not bind to device {interface}')
+                raise NotConnected(f'Could not bind to device {interface}') from None
     except socket.error:
-        raise NotConnected('Could not create socket')
+        raise NotConnected('Could not create socket') from None
     return io
 
 
@@ -67,7 +67,7 @@ def bind(io, ip, afi):
         if afi == AFI.ipv6:
             io.bind((ip, 0, 0, 0))
     except socket.error as exc:
-        raise BindingError(f'Could not bind to local ip {ip} - {str(exc)}')
+        raise BindingError(f'Could not bind to local ip {ip} - {str(exc)}') from None
 
 
 def connect(io, ip, port, afi, md5):
@@ -82,8 +82,8 @@ def connect(io, ip, port, afi, md5):
         if md5:
             raise NotConnected(
                 f'Could not connect to peer {ip}:{port}, check your MD5 password ({errstr(exc)})'
-            )
-        raise NotConnected(f'Could not connect to peer {ip}:{port} ({errstr(exc)})')
+            ) from None
+        raise NotConnected(f'Could not connect to peer {ip}:{port} ({errstr(exc)})') from None
 
 
 # http://lxr.free-electrons.com/source/include/uapi/linux/tcp.h#L197
@@ -134,7 +134,7 @@ def md5(io, ip, port, md5, md5_base64):
                     'options         IPSEC\n'
                     'options         TCP_SIGNATURE\n'
                     'device          crypto\n'
-                )
+                ) from None
     elif platform_os == 'Linux':
         try:
             md5_bytes = None
@@ -143,7 +143,7 @@ def md5(io, ip, port, md5, md5_base64):
                     try:
                         md5_bytes = base64.b64decode(md5)
                     except TypeError:
-                        raise MD5Error('Failed to decode base 64 encoded PSK')
+                        raise MD5Error('Failed to decode base 64 encoded PSK') from None
                 elif md5_base64 is None and not re.match('.*[^a-f0-9].*', md5):  # auto
                     options = [md5 + '==', md5 + '=', md5]
                     for md5 in options:
@@ -188,7 +188,7 @@ def md5(io, ip, port, md5, md5_base64):
 
         except socket.error as exc:
             if exc.errno != errno.ENOENT:
-                raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc))
+                raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc)) from None
     elif md5:
         raise MD5Error('ExaBGP has no MD5 support for %s' % platform_os)
 
@@ -198,7 +198,7 @@ def nagle(io, ip):
         # diable Nagle's algorithm (no grouping of packets)
         io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     except (socket.error, AttributeError):
-        raise NagleError("Could not disable nagle's algorithm for %s" % ip)
+        raise NagleError("Could not disable nagle's algorithm for %s" % ip) from None
 
 
 def ttl(io, ip, ttl):
@@ -207,7 +207,7 @@ def ttl(io, ip, ttl):
         try:
             io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
         except socket.error as exc:
-            raise TTLError(f'This OS does not support IP_TTL (ttl-security) for {ip} ({errstr(exc)})')
+            raise TTLError(f'This OS does not support IP_TTL (ttl-security) for {ip} ({errstr(exc)})') from None
 
 
 def ttlv6(io, ip, ttl):
@@ -215,7 +215,7 @@ def ttlv6(io, ip, ttl):
         try:
             io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
         except socket.error as exc:
-            raise TTLError('This OS does not support unicast_hops (ttl-security) for %s (%s)' % (ip, errstr(exc)))
+            raise TTLError('This OS does not support unicast_hops (ttl-security) for %s (%s)' % (ip, errstr(exc))) from None
 
 
 def min_ttl(io, ip, ttl):
@@ -224,7 +224,7 @@ def min_ttl(io, ip, ttl):
         try:
             io.setsockopt(socket.IPPROTO_IP, socket.IP_MINTTL, ttl)
         except socket.error as exc:
-            raise TTLError('This OS does not support IP_MINTTL (ttl-security) for %s (%s)' % (ip, errstr(exc)))
+            raise TTLError('This OS does not support IP_MINTTL (ttl-security) for %s (%s)' % (ip, errstr(exc))) from None
         except AttributeError:
             pass
 
@@ -233,14 +233,14 @@ def min_ttl(io, ip, ttl):
         except socket.error as exc:
             raise TTLError(
                 'This OS does not support IP_MINTTL or IP_TTL (ttl-security) for %s (%s)' % (ip, errstr(exc))
-            )
+            ) from None
 
 
 def asynchronous(io, ip):
     try:
         io.setblocking(0)
     except socket.error as exc:
-        raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip, errstr(exc)))
+        raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip, errstr(exc))) from None
 
 
 def ready(io):

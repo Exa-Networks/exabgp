@@ -65,7 +65,7 @@ def description(tokeniser):
     try:
         return string(tokeniser)
     except Exception:
-        raise ValueError('bad neighbor description')
+        raise ValueError('bad neighbor description') from None
 
 
 def md5(tokeniser):
@@ -84,7 +84,7 @@ def ttl(tokeniser):
     except ValueError:
         if value in ('false', 'disable', 'disabled'):
             return None
-        raise ValueError(f'invalid ttl-security "{value}"')
+        raise ValueError(f'invalid ttl-security "{value}"') from None
     if attl < 0:
         raise ValueError('ttl-security can not be negative')
     if attl > 255:
@@ -102,14 +102,14 @@ def local_address(tokeniser):
     try:
         return IP.create(value)
     except (IndexError, ValueError, socket.error):
-        raise ValueError(f'"{value}" is an invalid IP address')
+        raise ValueError(f'"{value}" is an invalid IP address') from None
 
 
 def source_interface(tokeniser):
     try:
         return string(tokeniser)
     except Exception:
-        raise ValueError('bad source interface')
+        raise ValueError('bad source interface') from None
 
 
 def router_id(tokeniser):
@@ -117,7 +117,7 @@ def router_id(tokeniser):
     try:
         return RouterID(value)
     except ValueError:
-        raise ValueError(f'"{value}" is an invalid router-id')
+        raise ValueError(f'"{value}" is an invalid router-id') from None
 
 
 def hold_time(tokeniser):
@@ -125,7 +125,7 @@ def hold_time(tokeniser):
     try:
         holdtime = HoldTime(int(value))
     except ValueError:
-        raise ValueError(f'"{value}" is an invalid hold-time')
+        raise ValueError(f'"{value}" is an invalid hold-time') from None
     if holdtime < 3 and holdtime != 0:
         raise ValueError('holdtime must be zero or at least three seconds')
     if holdtime > HoldTime.MAX:
@@ -169,7 +169,7 @@ def processes_match(tokeniser):
         try:
             re.compile(token)
         except re.error:
-            raise ValueError(f'"{token}" is not a valid regex, "re" lib returns error {re.error}.')
+            raise ValueError(f'"{token}" is not a valid regex, "re" lib returns error {re.error}.') from None
         result.append(token)
 
     return result
@@ -182,7 +182,7 @@ def rate_limit(tokeniser):
     try:
         rate = int(value)
     except ValueError:
-        raise ValueError(f'"{value}" is an invalid rate-limit')
+        raise ValueError(f'"{value}" is an invalid rate-limit') from None
     if rate <= 0:
         raise ValueError('rate must be zero or at 1 (per second)')
     return rate

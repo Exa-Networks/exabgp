@@ -47,7 +47,7 @@ class KA(object):
                 # still running
                 yield True
             except NetworkError:
-                raise Notify(4, 0, 'problem with network while trying to send keepalive')
+                raise Notify(4, 0, 'problem with network while trying to send keepalive') from None
             except StopIteration:
                 generator = None
                 yield False
@@ -58,4 +58,4 @@ class KA(object):
         try:
             return next(self._generator)
         except StopIteration:
-            raise Notify(4, 0, 'could not send keepalive')
+            raise Notify(4, 0, 'could not send keepalive') from None

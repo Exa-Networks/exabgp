@@ -97,7 +97,7 @@ def user(_):
         pwd.getpwnam(_)
         # uid = answer[2]
     except KeyError:
-        raise TypeError(f'user {_} is not found on this system')
+        raise TypeError(f'user {_} is not found on this system') from None
     return _
 
 

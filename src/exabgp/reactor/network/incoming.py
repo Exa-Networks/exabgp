@@ -27,7 +27,7 @@ class Incoming(Connection):
             self.success()
         except NetworkError as exc:
             self.close()
-            raise NotConnected(errstr(exc))
+            raise NotConnected(errstr(exc)) from None
 
     def notification(self, code, subcode, message):
         try:

@@ -68,7 +68,7 @@ class RouteRefresh(Message):
         try:
             afi, reserved, safi = unpack('!HBB', data)
         except error:
-            raise Notify(7, 1, 'invalid route-refresh message')
+            raise Notify(7, 1, 'invalid route-refresh message') from None
         if reserved not in (0, 1, 2):
             raise Notify(7, 2, 'invalid route-refresh message subtype')
         return RouteRefresh(afi, safi, reserved)

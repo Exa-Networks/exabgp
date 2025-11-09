@@ -124,7 +124,7 @@ class Env(object):
                 try:
                     cls._env.setdefault(section, HashTable())[option] = convert(conf)
                 except TypeError:
-                    raise ValueError(f'invalid value for {section}.{option} : {conf}')
+                    raise ValueError(f'invalid value for {section}.{option} : {conf}') from None
 
         # Backward compatibility and alias handling
         if 'tcp' in cls._env:

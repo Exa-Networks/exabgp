@@ -115,7 +115,7 @@ def prefix_sid(tokeniser):  # noqa: C901
         if consume_extra:
             tokeniser()
     except Exception as e:
-        raise ValueError(f'could not parse BGP PrefixSid attribute: {e}')
+        raise ValueError(f'could not parse BGP PrefixSid attribute: {e}') from None
 
     if int(label_sid) < pow(2, 32):
         sr_attrs.append(SrLabelIndex(int(label_sid)))

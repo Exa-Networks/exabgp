@@ -304,7 +304,7 @@ class Processes(object):
                 if exc.errno == errno.EPIPE:
                     self._broken.append(process)
                     log.debug(lambda: 'issue while sending data to our helper program', 'process')
-                    raise ProcessError()
+                    raise ProcessError() from None
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
