@@ -87,13 +87,13 @@ class Srv6EndX(FlagLS):
 
             subtlvs.append(subsubtlv.json())
 
-        content = {**{
+        content = {
             'flags': flags,
             'behavior': behavior,
             'algorithm': algorithm,
             'weight': weight,
-            'sid': sid,
-        }, **json.loads('{' + ', '.join(subtlvs) + '}')}
+            'sid': sid
+        , **json.loads('{' + ', '.join(subtlvs) + '}')}
 
         return cls(content=content)
 
