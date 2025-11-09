@@ -9,8 +9,8 @@ import pytest
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher, Labels, PathInfo
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher, Labels
+from exabgp.protocol.ip import IP
 
 
 class TestIPVPNCreation:

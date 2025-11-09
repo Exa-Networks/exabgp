@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import socket
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IP

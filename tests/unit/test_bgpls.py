@@ -15,7 +15,6 @@ RFC 9514: Border Gateway Protocol - Link State (BGP-LS) Extensions for Segment R
 """
 
 import pytest
-from struct import pack
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, GenericBGPLS, PROTO_CODES
@@ -27,10 +26,6 @@ from exabgp.bgp.message.update.nlri.bgpls.srv6sid import SRv6SID
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
-from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
-from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
-from exabgp.bgp.message.update.nlri.bgpls.tlvs.neighaddr import NeighAddr
-from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
 from exabgp.protocol.family import AFI, SAFI
 

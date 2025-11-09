@@ -12,9 +12,8 @@ import pytest
 from typing import Any
 import socket
 import select
-import platform
 import binascii
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network import tcp
@@ -469,7 +468,6 @@ class TestSocketReadiness:
     @patch('select.poll')
     def test_ready_poll_error(self, mock_poll_class: Any) -> None:
         """Test ready() handling poll errors"""
-        import select as select_module
 
         mock_poller = MagicMock()
         mock_poller.poll.side_effect = OSError("Poll failed")

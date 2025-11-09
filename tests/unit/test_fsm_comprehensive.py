@@ -11,7 +11,7 @@ Created: 2025-11-08
 import pytest
 import os
 from typing import Any
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'

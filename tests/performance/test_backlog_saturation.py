@@ -4,22 +4,14 @@ Tests the system's behavior when the message backlog approaches and reaches
 the MAX_BACKLOG limit of 15,000 messages defined in Protocol.
 """
 
-import pytest
-from io import BytesIO
 from collections import deque
 from typing import Any
-from unittest.mock import Mock, MagicMock
 
-from exabgp.reactor.protocol import Protocol, MAX_BACKLOG
-from exabgp.reactor.network.connection import Connection
+from exabgp.reactor.protocol import MAX_BACKLOG
 
 from .perf_helpers import (
     create_simple_update_bytes,
-    create_keepalive_bytes,
-    create_batch_messages,
     create_large_update_bytes,
-    create_mock_logger,
-    create_mock_negotiated,
 )
 
 

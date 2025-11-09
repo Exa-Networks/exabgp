@@ -33,7 +33,7 @@ Note: Multiprotocol extensions (MP_REACH/MP_UNREACH) will be in test_multiprotoc
 """
 import pytest
 import struct
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 
 @pytest.fixture(autouse=True)
@@ -733,7 +733,6 @@ def test_attribute_length_encoding() -> None:
 def test_nexthop_pack_unpack_roundtrip() -> None:
     """Test NEXT_HOP pack/unpack roundtrip preserves data."""
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
-    from exabgp.protocol.ip import IPv4
 
     # Create NEXT_HOP
     original_ip = "192.0.2.1"
@@ -949,7 +948,6 @@ def test_originator_id_different_ips() -> None:
 def test_originator_id_inherits_ipv4() -> None:
     """Test ORIGINATOR_ID inherits IPv4 functionality."""
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
-    from exabgp.protocol.ip import IPv4
 
     oid = OriginatorID("192.0.2.1")
 

@@ -11,7 +11,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import IP
 
 
 class TestVPLSCreation:

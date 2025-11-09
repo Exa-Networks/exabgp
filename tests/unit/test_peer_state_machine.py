@@ -10,10 +10,8 @@ Created: 2025-11-08
 """
 
 import pytest
-import time
 import os
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
-from collections import deque
+from unittest.mock import Mock, patch
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
@@ -21,18 +19,14 @@ os.environ['exabgp_log_level'] = 'CRITICAL'
 os.environ['exabgp_tcp_bind'] = '127.0.0.1'
 os.environ['exabgp_tcp_attempts'] = '0'
 
-from exabgp.reactor.peer import Peer, ACTION, Stats, Interrupted, Stop
+from exabgp.reactor.peer import Peer, ACTION, Stats
 from exabgp.bgp.fsm import FSM
-from exabgp.bgp.message import Notification, Notify, KeepAlive, Update, NOP
-from exabgp.reactor.network.error import NetworkError
-from exabgp.reactor.api.processes import ProcessError
 
 
 @pytest.fixture(autouse=True)
 def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
-    from exabgp.logger import log
 
     # Save original values
     original_logger = option.logger

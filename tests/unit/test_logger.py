@@ -7,7 +7,6 @@ Unit tests for exabgp.logger modules
 import time
 from unittest.mock import patch, Mock
 
-import pytest
 from typing import Any
 
 from exabgp.logger import color

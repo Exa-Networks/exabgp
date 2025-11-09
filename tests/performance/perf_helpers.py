@@ -7,16 +7,9 @@ for performance benchmarking.
 
 import struct
 from io import BytesIO
-from unittest.mock import Mock, MagicMock
-from exabgp.bgp.message import Message, Update, KeepAlive, Notification, Open
-from exabgp.bgp.message.update.nlri import NLRI
-from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.bgp.message.update.attribute.origin import Origin
-from exabgp.bgp.message.update.attribute.aspath import ASPath
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
-from exabgp.protocol.ip import IPv4, NoNextHop
+from unittest.mock import Mock
+from exabgp.protocol.ip import IPv4
 from exabgp.bgp.neighbor import Neighbor
-from exabgp.reactor.protocol import Protocol
 
 
 def create_mock_logger() -> Any:

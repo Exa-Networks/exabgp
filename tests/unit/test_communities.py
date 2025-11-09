@@ -43,14 +43,13 @@ Phase 5: Mixed Community Types (tests 27-30)
 """
 import pytest
 import struct
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 
 @pytest.fixture(autouse=True)
 def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
-    from exabgp.logger import log
 
     # Save original values
     original_logger = option.logger

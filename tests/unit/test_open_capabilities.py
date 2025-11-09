@@ -16,18 +16,15 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-import pytest
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open import Version, ASN, RouterID, HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import RouteRefresh
-from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
-from exabgp.bgp.message.direction import Direction
 from exabgp.protocol.family import AFI, SAFI
 
 

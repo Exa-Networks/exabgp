@@ -25,7 +25,6 @@ Phase 4: Advanced Features
   - EOR (End-of-RIB) markers
 """
 import pytest
-import struct
 from unittest.mock import Mock
 
 

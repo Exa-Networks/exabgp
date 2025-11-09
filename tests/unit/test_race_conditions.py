@@ -13,10 +13,7 @@ import pytest
 import os
 import socket
 import struct
-import threading
-import time
-from unittest.mock import Mock, MagicMock, patch, call
-from collections import deque
+from unittest.mock import MagicMock, patch
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
@@ -27,12 +24,9 @@ from exabgp.reactor.network.connection import Connection
 from exabgp.reactor.network.error import (
     NotConnected,
     LostConnection,
-    TooSlowError,
     NetworkError,
-    NotifyError,
     errno,
 )
-from exabgp.bgp.message import Message
 
 
 class TestSimultaneousBidirectionalConnections:
