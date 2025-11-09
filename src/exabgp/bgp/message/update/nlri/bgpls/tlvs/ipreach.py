@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from __future__ import division
 
 from struct import unpack
 from ipaddress import ip_address
