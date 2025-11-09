@@ -26,7 +26,7 @@ from exabgp.protocol.iso import ISO
 # ================================================================== NODE-DESC-SUB-TLVs
 
 
-class NodeDescriptor(object):
+class NodeDescriptor:
     _known_tlvs = {
         512: 'autonomous-system',
         513: 'bgp-ls-identifier',

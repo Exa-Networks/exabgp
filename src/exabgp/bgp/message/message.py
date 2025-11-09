@@ -104,7 +104,7 @@ class Message:
     registered_message = {}
     klass_unknown = Exception
 
-    class CODE(object):
+    class CODE:
         NOP = _MessageCode(_MessageCode.NOP)
         OPEN = _MessageCode(_MessageCode.OPEN)
         UPDATE = _MessageCode(_MessageCode.UPDATE)

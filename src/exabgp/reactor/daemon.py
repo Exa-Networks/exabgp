@@ -22,7 +22,7 @@ from exabgp.logger import log
 MAXFD = 2048
 
 
-class Daemon(object):
+class Daemon:
     # NOTE: This class logs full PID file paths (self.pid) for operational clarity
     # Security review: Accepted as necessary for troubleshooting and debugging
     def __init__(self, reactor):

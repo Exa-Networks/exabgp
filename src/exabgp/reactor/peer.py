@@ -38,7 +38,7 @@ from exabgp.logger import lazyformat
 from exabgp.debug.report import format_exception
 
 
-class ACTION(object):
+class ACTION:
     CLOSE = 0x01  # finished, no need to restart the peer
     LATER = 0x02  # re-run at the next reactor round
     NOW = 0x03  # re-run immediatlely
@@ -85,7 +85,7 @@ class Stats(dict):
 # Present a File like interface to socket.socket
 
 
-class Peer(object):
+class Peer:
     def __init__(self, neighbor, reactor):
         # Maximum connection attempts (0 = unlimited)
         self.max_connection_attempts = getenv().tcp.attempts

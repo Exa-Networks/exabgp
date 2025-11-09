@@ -17,14 +17,14 @@ from exabgp.netlink.attributes import Attributes
 from exabgp.netlink.netlink import NetLink
 
 
-class Message(object):
+class Message:
     # to be defined by the subclasses
     format = namedtuple('Parent', 'to be subclassed')
 
     DEFAULT_FLAGS = NetLink.Flags.NLM_F_REQUEST | NetLink.Flags.NLM_F_DUMP
 
     # to be defined by the subclasses
-    class Header(object):
+    class Header:
         PACK = ''
         LEN = 0
 

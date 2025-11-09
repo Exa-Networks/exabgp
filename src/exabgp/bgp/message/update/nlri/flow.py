@@ -32,13 +32,13 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 # =================================================================== Flow Components
 
 
-class IComponent(object):
+class IComponent:
     # all have ID
     # should have an interface for serialisation and put it here
     FLAG = False
 
 
-class CommonOperator(object):
+class CommonOperator:
     # power (2,x) is the same as 1 << x which is what the RFC say the len is
     power = {
         0: 1,
@@ -110,15 +110,15 @@ def _number(string):
 # Interface ..................
 
 
-class IPv4(object):
+class IPv4:
     afi = AFI.ipv4
 
 
-class IPv6(object):
+class IPv6:
     afi = AFI.ipv6
 
 
-class IPrefix(object):
+class IPrefix:
     pass
 
 
@@ -234,7 +234,7 @@ class IOperationByteShortLong(IOperation):
 # String representation for Numeric and Binary Tests
 
 
-class NumericString(object):
+class NumericString:
     OPERATION = 'numeric'
     operations = None
     value = None
@@ -270,7 +270,7 @@ class NumericString(object):
         return self.short()
 
 
-class BinaryString(object):
+class BinaryString:
     OPERATION = 'binary'
     operations = None
     value = None
@@ -360,12 +360,12 @@ def label_value(data):
 # Protocol Shared
 
 
-class FlowDestination(object):
+class FlowDestination:
     ID = 0x01
     NAME = 'destination'
 
 
-class FlowSource(object):
+class FlowSource:
     ID = 0x02
     NAME = 'source'
 

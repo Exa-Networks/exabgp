@@ -17,7 +17,7 @@ from struct import pack
 from struct import unpack
 
 
-class EthernetTag(object):
+class EthernetTag:
     MAX = pow(2, 32) - 1
 
     def __init__(self, tag=0):

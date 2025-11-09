@@ -52,7 +52,7 @@ _UPDATE = Update([], b'')
 _OPERATIONAL = Operational(0x00)
 
 
-class Protocol(object):
+class Protocol:
     decode = True
 
     def __init__(self, peer):

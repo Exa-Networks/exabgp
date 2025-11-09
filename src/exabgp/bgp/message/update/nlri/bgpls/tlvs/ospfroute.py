@@ -36,7 +36,7 @@ from struct import unpack
 OSPF_ROUTE = {1: 'intra-area', 2: 'inter-area', 3: 'external-1', 4: 'external-2', 5: 'nssa-1', 6: 'nssa-2'}
 
 
-class OspfRoute(object):
+class OspfRoute:
     def __init__(self, ospf_type, packed=None):
         self.ospf_type = ospf_type
         self._packed = packed

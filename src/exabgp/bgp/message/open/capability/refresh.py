@@ -15,7 +15,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 #
 
 
-class REFRESH(object):
+class REFRESH:
     ABSENT = 0x01
     NORMAL = 0x02
     ENHANCED = 0x04

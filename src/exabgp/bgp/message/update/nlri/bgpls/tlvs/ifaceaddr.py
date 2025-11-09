@@ -24,7 +24,7 @@ from exabgp.protocol.ip import IP
 # ================================================================== InterfaceAddress
 
 
-class IfaceAddr(object):
+class IfaceAddr:
     def __init__(self, iface_addr, packed=None):
         self.iface_address = iface_addr
         self._packed = packed

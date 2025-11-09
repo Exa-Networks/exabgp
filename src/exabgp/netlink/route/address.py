@@ -26,23 +26,23 @@ from exabgp.netlink.message import Message
 
 
 class Address(Message):
-    class Header(object):
+    class Header:
         PACK = '4Bi'
         LEN = calcsize(PACK)
 
     format = namedtuple('Address', 'family prefixlen flags scope index attributes')
 
-    class Command(object):
+    class Command:
         RTM_NEWADDR = 0x14
         RTM_DELADDR = 0x15
         RTM_GETADDR = 0x16
 
-    class Type(object):
-        class Family(object):
+    class Type:
+        class Family:
             AF_INET = socket.AF_INET
             AF_INET6 = socket.AF_INET6
 
-        class Flag(object):
+        class Flag:
             IFA_F_SECONDARY = 0x00  # For secondary address (alias interface)
             IFA_F_PERMANENT = 0x00  # For a permanent address set by the user.  When this is not set, it means the address was dynamically created (e.g., by stateless autoconfiguration).
             IFA_F_DEPRECATED = 0x00  # Defines deprecated (IPV4) address
@@ -50,14 +50,14 @@ class Address(Message):
                 0x00  # Defines tentative (IPV4) address (duplicate address detection is still in progress)
             )
 
-        class Scope(object):
+        class Scope:
             RT_SCOPE_UNIVERSE = 0x00  # Global route
             RT_SCOPE_SITE = 0x00  # Interior route in the local autonomous system
             RT_SCOPE_LINK = 0x00  # Route on this link
             RT_SCOPE_HOST = 0x00  # Route on the local host
             RT_SCOPE_NOWHERE = 0x00  # Destination does not exist
 
-        class Attribute(object):
+        class Attribute:
             IFLA_UNSPEC = 0x00
             IFLA_ADDRESS = 0x01
             IFLA_BROADCAST = 0x02

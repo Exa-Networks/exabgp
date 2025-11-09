@@ -89,7 +89,7 @@ class _CapabilityCode(int):
 #
 
 
-class Capability(object):
+class Capability:
     class CODE(int):
         # fmt: off
         RESERVED =                 _CapabilityCode(_CapabilityCode.RESERVED)

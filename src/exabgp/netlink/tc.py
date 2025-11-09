@@ -30,17 +30,17 @@ from exabgp.netlink.message import Message
 
 
 class TC(Message):
-    class Header(object):
+    class Header:
         PACK = 'BxxxiIII'
         LEN = calcsize(PACK)
 
-    class Command(object):
+    class Command:
         RTM_NEWQDISC = 36
         RTM_DELQDISC = 37
         RTM_GETQDISC = 38
 
-    class Type(object):
-        class Attribute(object):
+    class Type:
+        class Attribute:
             TCA_UNSPEC = 0x00
             TCA_KIND = 0x01
             TCA_OPTIONS = 0x02

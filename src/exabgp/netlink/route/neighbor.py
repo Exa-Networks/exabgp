@@ -28,24 +28,24 @@ from exabgp.netlink.message import Message
 
 
 class Neighbor(Message):
-    class Header(object):
+    class Header:
         # linux/if_addr.h
         PACK = 'BxxxiHBB'
         LEN = calcsize(PACK)
 
     format = namedtuple('Neighbor', 'family index state flags type attributes')
 
-    class Command(object):
+    class Command:
         RTM_NEWNEIGH = 0x1C
         RTM_DELNEIGH = 0x1D
         RTM_GETNEIGH = 0x1E
 
-    class Type(object):
-        class Family(object):
+    class Type:
+        class Family:
             AF_INET = socket.AF_INET
             AF_INET6 = socket.AF_INET6
 
-        class State(object):
+        class State:
             NUD_INCOMPLETE = 0x01  # Still attempting to resolve
             NUD_REACHABLE = 0x02  # A confirmed working cache entry
             NUD_STALE = 0x04  # an expired cache entry
@@ -57,12 +57,12 @@ class Neighbor(Message):
             NUD_PERMANENT = 0x80  # A static entry
             NUD_NONE = 0x00
 
-        class Flag(object):
+        class Flag:
             NTF_USE = 0x01
             NTF_PROXY = 0x08  # A proxy ARP entry
             NTF_ROUTER = 0x80  # An IPv6 router
 
-        class Attribute(object):
+        class Attribute:
             # XXX : Not sure - starts at zero or one ... ??
             NDA_UNSPEC = 0x00  # Unknown type
             NDA_DST = 0x01  # A neighbour cache network. layer destination address

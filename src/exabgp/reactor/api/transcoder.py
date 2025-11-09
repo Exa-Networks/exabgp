@@ -31,7 +31,7 @@ class _FakeNeighbor(dict):
         }
 
 
-class Transcoder(object):
+class Transcoder:
     seen_open = {
         'send': None,
         'receive': None,

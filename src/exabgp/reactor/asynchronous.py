@@ -16,7 +16,7 @@ from collections import deque
 from exabgp.logger import log
 
 
-class ASYNC(object):
+class ASYNC:
     LIMIT = 50
 
     def __init__(self):

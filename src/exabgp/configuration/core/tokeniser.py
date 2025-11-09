@@ -15,7 +15,7 @@ from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
 
 
-class Iterator(object):
+class Iterator:
     def __init__(self):
         self.next = deque()
         self.tokens = []
@@ -63,7 +63,7 @@ class Iterator(object):
         return False
 
 
-class Tokeniser(object):
+class Tokeniser:
     @staticmethod
     def _off():
         return iter([])

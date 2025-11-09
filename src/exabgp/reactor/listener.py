@@ -33,7 +33,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.logger import log
 
 
-class Listener(object):
+class Listener:
     _family_AFI_map = {
         socket.AF_INET: AFI.ipv4,
         socket.AF_INET6: AFI.ipv6,

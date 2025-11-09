@@ -30,26 +30,26 @@ from exabgp.netlink.message import Message
 
 
 class Link(Message):
-    class Header(object):
+    class Header:
         PACK = 'BxHiII'
         LEN = calcsize(PACK)
 
     # linux/if_link.h
     format = namedtuple('Info', 'family type index flags change attributes')
 
-    class Command(object):
+    class Command:
         # linux/rtnetlink.h
         RTM_NEWLINK = 0x10  # Create a new network interface
         RTM_DELLINK = 0x11  # Destroy a network interface
         RTM_GETLINK = 0x12  # Retrieve information about a network interface (ifinfomsg)
         RTM_SETLINK = 0x13  # -
 
-    class Type(object):
-        class Family(object):
+    class Type:
+        class Family:
             AF_INET = socket.AF_INET
             AF_INET6 = socket.AF_INET6
 
-        class Device(object):
+        class Device:
             IFF_UP = 0x0001  # Interface is administratively up.
             IFF_BROADCAST = 0x0002  # Valid broadcast address set.
             IFF_DEBUG = 0x0004  # Internal debugging flag.
@@ -72,7 +72,7 @@ class Link(Message):
             IFF_DORMANT = 0x20000  # driver signals dormant
             IFF_ECHO = 0x40000  # echo sent packet
 
-        class Attribute(object):
+        class Attribute:
             IFLA_UNSPEC = 0x00
             IFLA_ADDRESS = 0x01
             IFLA_BROADCAST = 0x02

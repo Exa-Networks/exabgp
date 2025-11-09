@@ -17,7 +17,7 @@ import urllib
 import urllib.request
 
 
-class Model(object):
+class Model:
     namespaces = {
         'ietf': 'https://raw.githubusercontent.com/YangModels/yang/master/standard/ietf/RFC',
     }

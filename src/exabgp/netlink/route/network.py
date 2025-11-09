@@ -31,26 +31,26 @@ from exabgp.netlink.message import Message
 
 
 class Network(Message):
-    class Header(object):
+    class Header:
         # linux/if_addr.h
         PACK = '8BI'  # or is it 8Bi ?
         LEN = calcsize(PACK)
 
     format = namedtuple('Neighbor', 'family src_len dst_len tos table proto scope type flags attributes')
 
-    class Command(object):
+    class Command:
         RTM_NEWROUTE = 0x18
         RTM_DELROUTE = 0x19
         RTM_GETROUTE = 0x1A
 
-    class Type(object):
-        class Table(object):
+    class Type:
+        class Table:
             RT_TABLE_UNSPEC = 0x00  # An unspecified routing table
             RT_TABLE_DEFAULT = 0xFD  # The default table
             RT_TABLE_MAIN = 0xFE  # The main table
             RT_TABLE_LOCAL = 0xFF  # The local table
 
-        class Protocol(object):
+        class Protocol:
             RTPROT_UNSPEC = 0x00  # Identifies what/who added the route
             RTPROT_REDIRECT = 0x01  # By an ICMP redirect
             RTPROT_KERNEL = 0x02  # By the kernel
@@ -70,14 +70,14 @@ class Network(Message):
             # YES WE CAN !
             RTPROT_EXABGP = 0x11  # Exa Networks ExaBGP
 
-        class Scope(object):
+        class Scope:
             RT_SCOPE_UNIVERSE = 0x00  # Global route
             RT_SCOPE_SITE = 0xC8  # Interior route in the local autonomous system
             RT_SCOPE_LINK = 0xFD  # Route on this link
             RT_SCOPE_HOST = 0xFE  # Route on the local host
             RT_SCOPE_NOWHERE = 0xFF  # Destination does not exist
 
-        class Type(object):
+        class Type:
             RTN_UNSPEC = 0x00  # Unknown route.
             RTN_UNICAST = 0x01  # A gateway or direct route.
             RTN_LOCAL = 0x02  # A local interface route.
@@ -91,7 +91,7 @@ class Network(Message):
             RTN_NAT = 0x0A  # A network address translation rule.
             RTN_XRESOLVE = 0x0B  # Refer to an external resolver (not implemented).
 
-        class Flag(object):
+        class Flag:
             RTM_F_NOTIFY = 0x100  # If the route changes, notify the user
             RTM_F_CLONED = 0x200  # Route is cloned from another route
             RTM_F_EQUALIZE = (
@@ -99,7 +99,7 @@ class Network(Message):
             )
             RTM_F_PREFIX = 0x800  # Prefix Address
 
-        class Attribute(object):
+        class Attribute:
             RTA_UNSPEC = 0x00  # Ignored.
             RTA_DST = 0x01  # Protocol address for route destination address.
             RTA_SRC = 0x02  # Protocol address for route source address.

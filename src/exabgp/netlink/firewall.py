@@ -53,11 +53,11 @@ from exabgp.netlink.message import Message
 
 
 class Firewall(Message):
-    class Header(object):
+    class Header:
         PACK = 'BxxxI'
         LEN = calcsize(PACK)
 
-    class Packet(object):
-        class Header(object):
+    class Packet:
+        class Header:
             PACK = 'IIIIIIIHHHHII'
             LEN = calcsize(PACK)

@@ -21,7 +21,7 @@ class NetLinkError(Exception):
         Exception.__init__(self, reported)
 
 
-class NetMask(object):
+class NetMask:
     CIDR = {
         32: '255.255.255.255',
         31: '255.255.255.254',

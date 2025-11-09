@@ -19,7 +19,7 @@ from exabgp.util.cache import Cache
 #
 
 
-class TreatAsWithdraw(object):
+class TreatAsWithdraw:
     ID = 0xFFFF
     GENERIC = False
 
@@ -32,7 +32,7 @@ class TreatAsWithdraw(object):
         return 'treat-as-withdraw due to %s' % Attribute.CODE(self.aid)
 
 
-class Discard(object):
+class Discard:
     ID = 0xFFFE
     GENERIC = False
 
@@ -49,7 +49,7 @@ class Discard(object):
 #
 
 
-class Attribute(object):
+class Attribute:
     # we need to define ID and FLAG inside of the subclasses
     ID = 0x00
     FLAG = 0x00

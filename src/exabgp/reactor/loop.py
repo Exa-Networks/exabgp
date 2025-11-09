@@ -34,8 +34,8 @@ from exabgp.version import version
 from exabgp.logger import log
 
 
-class Reactor(object):
-    class Exit(object):
+class Reactor:
+    class Exit:
         normal = 0
         validate = 0
         listening = 1

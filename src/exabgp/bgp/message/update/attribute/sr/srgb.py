@@ -37,7 +37,7 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
 
 @PrefixSid.register()
-class SrGb(object):
+class SrGb:
     TLV = 3
     # Length is the total length of the value portion of the TLV: 2 +
     # multiple of 6.

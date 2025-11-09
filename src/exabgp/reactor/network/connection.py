@@ -36,7 +36,7 @@ from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 # from .error import *
 
 
-class Connection(object):
+class Connection:
     direction = 'undefined'
     identifier = {}
 

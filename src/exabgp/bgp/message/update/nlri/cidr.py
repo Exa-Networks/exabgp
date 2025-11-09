@@ -16,7 +16,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 
 
-class CIDR(object):
+class CIDR:
     EOR = False
 
     _mask_to_bytes = {}

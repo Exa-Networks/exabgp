@@ -18,7 +18,7 @@ from exabgp.reactor.network.error import NetworkError
 #
 
 
-class KA(object):
+class KA:
     def __init__(self, session, proto):
         self._generator = self._keepalive(proto)
         self.send_timer = SendTimer(session, proto.negotiated.holdtime)
