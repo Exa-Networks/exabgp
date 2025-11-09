@@ -243,7 +243,7 @@ class Advisory:
             else:
                 utf8 = advisory.encode('utf-8')
             if len(utf8) > MAX_ADVISORY:
-                utf8 = utf8[: MAX_ADVISORY - 3] + '...'.encode('utf-8')
+                utf8 = utf8[: MAX_ADVISORY - 3] + b'...'
             Advisory._Advisory.__init__(self, Operational.CODE.ADM, afi, safi, utf8)
 
     @Operational.register
@@ -258,7 +258,7 @@ class Advisory:
             else:
                 utf8 = advisory.encode('utf-8')
             if len(utf8) > MAX_ADVISORY:
-                utf8 = utf8[: MAX_ADVISORY - 3] + '...'.encode('utf-8')
+                utf8 = utf8[: MAX_ADVISORY - 3] + b'...'
             Advisory._Advisory.__init__(self, Operational.CODE.ASM, afi, safi, utf8)
 
 

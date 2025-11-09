@@ -121,18 +121,18 @@ class Notification(Message, Exception):
             return
 
         if len(data) < shutdown_length:
-            self.data = f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(data)}]'.encode('utf-8')
+            self.data = f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(data)}]'.encode()
             return
 
         if shutdown_length > 128:
-            self.data = f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'.encode('utf-8')
+            self.data = f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'.encode()
             return
 
         try:
             decoded_msg = data[:shutdown_length].decode('utf-8').replace('\r', ' ').replace('\n', ' ')
-            self.data = f'Shutdown Communication: "{decoded_msg}"'.encode('utf-8')
+            self.data = f'Shutdown Communication: "{decoded_msg}"'.encode()
         except UnicodeDecodeError:
-            self.data = f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(data)}]'.encode('utf-8')
+            self.data = f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(data)}]'.encode()
             return
 
         trailer = data[shutdown_length:]
