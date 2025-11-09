@@ -710,7 +710,7 @@ class Peer(object):
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            log.debug(format_exception(exc), 'reactor')
+            log.error(format_exception(exc), 'reactor')
             self._reset()
             return
 
