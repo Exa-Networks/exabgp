@@ -57,7 +57,7 @@ class Code(object):
         breakpoint()
 
     @staticmethod
-    def _unique(name, counter={}):
+    def _unique(name, counter={}):  # noqa: B006 - intentional accumulator pattern
         unique = counter.get(name, 0)
         unique += 1
         counter[name] = unique
