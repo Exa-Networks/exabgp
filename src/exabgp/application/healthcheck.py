@@ -311,7 +311,7 @@ def remove_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
             try:
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError:
-                logger.warn(
+                logger.warning(
                     'Unable to remove %s IP address %s - is \
                     healthcheck running as root?',
                     ifname, str(ip),
@@ -370,14 +370,14 @@ def check(cmd, timeout):
         if timeout:
             signal.alarm(0)
         if p.returncode != 0:
-            logger.warn('Check command was unsuccessful: %s', p.returncode)
+            logger.warning('Check command was unsuccessful: %s', p.returncode)
             if stdout.strip():
                 logger.info('Output of check command: %s', stdout)
             return False
         logger.debug('Command was executed successfully %s %s', p.returncode, stdout)
         return True
     except Alarm:
-        logger.warn('Timeout (%s) while running check command %s', timeout, cmd)
+        logger.warning('Timeout (%s) while running check command %s', timeout, cmd)
         os.killpg(p.pid, signal.SIGKILL)
         return False
 
