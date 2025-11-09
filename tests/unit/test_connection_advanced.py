@@ -1311,5 +1311,209 @@ class TestMessageTypeValidation:
         assert len(body) == 4
 
 
+class TestEdgeCasesAndDefensiveMode:
+    """Test edge cases and defensive mode error injection"""
+
+    def test_reader_handles_undefined_socket_error(self):
+        """Test _reader() handles undefined socket errors"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+
+        # Create an undefined socket error (not in block or fatal lists)
+        error = socket.error(999, 'Undefined error')
+        error.errno = 999
+        mock_sock.recv.side_effect = error
+
+        with patch('select.poll') as mock_poll:
+            mock_poller = Mock()
+            mock_poller.poll.return_value = [(5, 1)]
+            mock_poll.return_value = mock_poller
+
+            with patch('exabgp.reactor.network.connection.log'):
+                gen = conn._reader(10)
+
+                with pytest.raises(NetworkError) as exc_info:
+                    for _ in gen:
+                        pass
+
+                assert 'Problem while reading data' in str(exc_info.value)
+
+    def test_writer_handles_undefined_socket_error(self):
+        """Test writer() handles undefined socket errors"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+
+        # Create an undefined socket error (not in block, fatal, or EPIPE)
+        error = socket.error(999, 'Undefined error')
+        error.errno = 999
+        mock_sock.send.side_effect = error
+
+        with patch('select.poll') as mock_poll:
+            mock_poller = Mock()
+            mock_poller.poll.return_value = [(5, 4)]
+            mock_poll.return_value = mock_poller
+
+            with patch('exabgp.reactor.network.connection.log'):
+                with patch('exabgp.reactor.network.connection.logfunc'):
+                    gen = conn.writer(b'test')
+
+                    # Should yield False and continue (not raise)
+                    results = []
+                    for result in gen:
+                        results.append(result)
+                        # Break after a few iterations to avoid infinite loop
+                        if len(results) > 10:
+                            break
+
+                    # Should have yielded at least one False
+                    assert False in results
+
+    def test_reader_stops_iteration_after_notify_error(self):
+        """Test reader() stops iteration after yielding NotifyError"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        # Invalid marker to trigger NotifyError
+        invalid_header = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
+
+        def mock_reader(num_bytes):
+            yield invalid_header
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        length, msg_type, header, body, error = next(gen)
+
+        assert error is not None
+        assert isinstance(error, NotifyError)
+
+        # Generator should stop after yielding error
+        with pytest.raises(StopIteration):
+            next(gen)
+
+    def test_reader_stops_after_invalid_length(self):
+        """Test reader() stops after detecting invalid length"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        # Length too small
+        invalid_header = Message.MARKER + struct.pack('!H', 18) + b'\x01'
+
+        def mock_reader(num_bytes):
+            yield invalid_header
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        length, msg_type, header, body, error = next(gen)
+
+        assert error is not None
+        assert isinstance(error, NotifyError)
+
+        # Generator should stop
+        with pytest.raises(StopIteration):
+            next(gen)
+
+    def test_reader_stops_after_validator_failure(self):
+        """Test reader() stops after message type validator fails"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        # UPDATE with invalid length (too small)
+        invalid_header = Message.MARKER + struct.pack('!H', 22) + b'\x02'
+
+        def mock_reader(num_bytes):
+            yield invalid_header
+
+        conn._reader = mock_reader
+
+        gen = conn.reader()
+        length, msg_type, header, body, error = next(gen)
+
+        assert error is not None
+        assert isinstance(error, NotifyError)
+
+        # Generator should stop
+        with pytest.raises(StopIteration):
+            next(gen)
+
+    def test_reading_returns_false_when_not_ready(self):
+        """Test reading() returns False when no data available"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+
+        with patch('select.poll') as mock_poll:
+            mock_poller = Mock()
+            # Return empty list - no events
+            mock_poller.poll.return_value = []
+            mock_poll.return_value = mock_poller
+
+            result = conn.reading()
+
+            assert result is False
+
+    def test_writing_returns_false_when_not_ready(self):
+        """Test writing() returns False when socket not writable"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+
+        with patch('select.poll') as mock_poll:
+            mock_poller = Mock()
+            # Return empty list - no events
+            mock_poller.poll.return_value = []
+            mock_poll.return_value = mock_poller
+
+            result = conn.writing()
+
+            assert result is False
+
+    def test_reading_detects_pollnval(self):
+        """Test reading() detects POLLNVAL event and clears poller"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+
+        with patch('select.poll') as mock_poll:
+            import select
+            mock_poller = Mock()
+            mock_poller.poll.return_value = [(5, select.POLLNVAL)]
+            mock_poll.return_value = mock_poller
+
+            result = conn.reading()
+
+            assert result is True
+            assert conn._rpoller == {}
+
+    def test_writing_detects_pollnval(self):
+        """Test writing() detects POLLNVAL event and clears poller"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+
+        mock_sock = Mock()
+        mock_sock.fileno.return_value = 5
+        conn.io = mock_sock
+
+        with patch('select.poll') as mock_poll:
+            import select
+            mock_poller = Mock()
+            mock_poller.poll.return_value = [(5, select.POLLNVAL)]
+            mock_poll.return_value = mock_poller
+
+            result = conn.writing()
+
+            assert result is True
+            assert conn._wpoller == {}
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
