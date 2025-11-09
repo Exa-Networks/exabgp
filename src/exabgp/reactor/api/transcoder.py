@@ -137,7 +137,9 @@ class Transcoder(object):
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             try:
-                message.data = f'Shutdown Communication: "{data[:shutdown_length].decode("utf-8").replace("\r", " ").replace("\n", " ")}"'
+                message.data = 'Shutdown Communication: "%s"' % data[:shutdown_length].decode('utf-8').replace(
+                    '\r', ' '
+                ).replace('\n', ' ')
             except UnicodeDecodeError:
                 message.data = f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(data)}]'
                 return self.encoder.notification(neighbor, direction, message, None, header, body)

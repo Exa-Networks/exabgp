@@ -323,7 +323,7 @@ class Processes(object):
 
     def _answer(self, service, string, force=False):
         if force or self.ack:
-            log.debug(f"responding to {service} : {string.replace('\n', '\\n')}", 'process')
+            log.debug('responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
     def answer_done(self, service):

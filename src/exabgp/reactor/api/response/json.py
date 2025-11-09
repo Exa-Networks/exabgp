@@ -173,7 +173,15 @@ class JSON(object):
                 'refresh': REFRESH.json(negotiated.refresh),
                 'families': f'[ {" ,".join([f"{family[0]} {family[1]}" for family in negotiated.families])} ]',
                 'nexthop': f'[ {" ,".join([f"{family[0]} {family[1]} {family[2]}" for family in negotiated.nexthop])} ]',
-                'add_path': f'{{ "send": [ {", ".join([family for family in negotiated.families if negotiated.addpath.send(*family)])} ], "receive": [ {", ".join([f"{family[0]} {family[1]}" for family in negotiated.families if negotiated.addpath.receive(*family)])} ] }}',
+                'add_path': '{ "send": %s, "receive": %s }'
+                % (
+                    '[ %s ]'
+                    % ', '.join(['"%s %s"' % family for family in negotiated.families if negotiated.addpath.send(*family)]),
+                    '[ %s ]'
+                    % ', '.join(
+                        ['"%s %s"' % family for family in negotiated.families if negotiated.addpath.receive(*family)]
+                    ),
+                ),
             }
         )
         return {'negotiated': f'{{ {kv_content} }} '}

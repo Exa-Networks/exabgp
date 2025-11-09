@@ -61,23 +61,29 @@ def formater(short, destination):
 def lazyformat(prefix, message, formater=od):
     def _lazy():
         formated = formater(message)
-        return f'{prefix} ({len(message):4d}) {formated}'
+        return '%s (%4d) %s' % (prefix, len(message), formated)
 
     return _lazy
 
 
 def lazyattribute(flag, aid, length, data):
     def _lazy():
-        return f"attribute {str(aid):<18} flag 0x{flag:02x} type 0x{int(aid):02x} len 0x{length:02x}{f' payload {od(data)}' if data else ''}"
+        return 'attribute %-18s flag 0x%02x type 0x%02x len 0x%02x%s' % (
+            str(aid),
+            flag,
+            int(aid),
+            length,
+            ' payload %s' % od(data) if data else '',
+        )
 
     return _lazy
 
 
 def lazynlri(afi, safi, addpath, data):
     def _lazy():
-        family = f'{afi} {safi}'
+        family = '%s %s' % (afi, safi)
         path = 'with path-information' if addpath else 'without path-information'
         payload = od(data) if data else 'none'
-        return f'NLRI      {family:<18} {path:<28} payload {payload}'
+        return 'NLRI      %-18s %-28s payload %s' % (family, path, payload)
 
     return _lazy

@@ -50,16 +50,23 @@ def format_panic(dtype, value, trace):
     return result
 
 
-_INFO = f"""
-ExaBGP version : {version}
-Python version : {sys.version.replace('\n', ' ')}
-System Uname   : {platform.version()}
-System MaxInt  : {str(sys.maxsize)}
-Root           : {ROOT}
+_INFO = """
+ExaBGP version : %s
+Python version : %s
+System Uname   : %s
+System MaxInt  : %s
+Root           : %s
 
 Environment:
-{'\n'.join(Env.iter_env(diff=True))}
-"""
+%s
+""" % (
+    version,
+    sys.version.replace('\n', ' '),
+    platform.version(),
+    str(sys.maxsize),
+    ROOT,
+    '\n'.join(Env.iter_env(diff=True)),
+)
 
 
 _PANIC = """
