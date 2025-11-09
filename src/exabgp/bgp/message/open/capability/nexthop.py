@@ -31,12 +31,12 @@ class NextHop(Capability, list):
             self.append((afi, safi, nhafi))
 
     def __str__(self):
-        families = ','.join([f'{str(afi)} {str(safi)} {str(nhafi)}' for (afi, safi, nhafi) in self])
+        families = ','.join([f'{afi!s} {safi!s} {nhafi!s}' for (afi, safi, nhafi) in self])
         return f'NextHop({families})'
 
     def json(self):
         conversions = ','.join(
-            [f' "{str(afi)}/{str(safi)}/{str(nhafi)}"' for (afi, safi, nhafi) in self],
+            [f' "{afi!s}/{safi!s}/{nhafi!s}"' for (afi, safi, nhafi) in self],
         )
         return f'{{ "name": "nexthop", "conversion": [{conversions} ] }}'
 

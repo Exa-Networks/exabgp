@@ -338,4 +338,4 @@ class Family:
         return f'{self.afi:02x}{self.safi:02x}'.encode()
 
     def __repr__(self):
-        return f'{str(self.afi)} {str(self.safi)}'
+        return f'{self.afi!s} {self.safi!s}'

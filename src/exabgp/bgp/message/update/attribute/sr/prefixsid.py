@@ -71,9 +71,9 @@ class PrefixSid(Attribute):
         if label_index is not None:
             srgb = next((i for i in self.sr_attrs if i.TLV == 3), None)
             if srgb is not None:
-                return f'[ {str(label_index)}, {str(srgb)} ]'
+                return f'[ {label_index!s}, {srgb!s} ]'
             else:
-                return f'[ {str(label_index)} ]'
+                return f'[ {label_index!s} ]'
 
         # if not, we try to decode path attribute for SRv6
         return '[ ' + ', '.join([str(attr) for attr in self.sr_attrs]) + ' ]'
