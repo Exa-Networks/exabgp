@@ -26,7 +26,7 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
 
 @PrefixSid.register()
-class SrLabelIndex(object):
+class SrLabelIndex:
     TLV = 1
     LENGTH = 7
 

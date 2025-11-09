@@ -13,7 +13,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 #
 
 
-class MAC(object):
+class MAC:
     def __init__(self, mac=None, packed=None):
         self.mac = mac
         self._packed = packed if packed else b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))

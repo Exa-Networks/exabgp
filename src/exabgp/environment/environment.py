@@ -28,7 +28,7 @@ class NoneDict(dict):
 nonedict = NoneDict()
 
 
-class Env(object):
+class Env:
     _setup = False
 
     # the configuration to be set by the program

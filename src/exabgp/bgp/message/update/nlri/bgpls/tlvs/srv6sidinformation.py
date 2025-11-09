@@ -29,7 +29,7 @@ from exabgp.protocol.ip import IPv6
 #                  Figure 6: SRv6 SID Information TLV Format
 
 
-class Srv6SIDInformation(object):
+class Srv6SIDInformation:
     def __init__(self, sid, packed=None):
         self.sid = sid
 

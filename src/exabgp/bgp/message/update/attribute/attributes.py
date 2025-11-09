@@ -31,7 +31,7 @@ from exabgp.logger import log
 from exabgp.logger import lazyattribute
 
 
-class _NOTHING(object):
+class _NOTHING:
     def pack(self, _=None):
         return b''
 

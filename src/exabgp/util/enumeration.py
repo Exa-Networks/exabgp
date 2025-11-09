@@ -16,7 +16,7 @@ class _integer(int):
         return self._str
 
 
-class Enumeration(object):
+class Enumeration:
     def __init__(self, *names):
         for number, name in enumerate(names):
             # doing the .parent thing here instead

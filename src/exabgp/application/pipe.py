@@ -89,7 +89,7 @@ def check_fifo(name):
         sys.stdout.flush()
 
 
-class Control(object):
+class Control:
     terminating = False
 
     def __init__(self, location):

@@ -19,7 +19,7 @@ import subprocess
 import signal
 
 
-class ACL(object):
+class ACL:
     dry = os.environ.get('CUMULUS_FLOW_RIB', False)
 
     path = '/etc/cumulus/acl/policy.d/'

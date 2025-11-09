@@ -11,7 +11,7 @@ from exabgp.conf.yang import Parser
 from exabgp.conf.yang import Code
 
 
-class Generate(object):
+class Generate:
     intro = '# yang model structure and validation\n# autogenerate by exabgp\n\n'
     variable = '{name} = {data}\n'
 

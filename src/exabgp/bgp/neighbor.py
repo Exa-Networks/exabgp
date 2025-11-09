@@ -340,7 +340,7 @@ def _addpath(send, receive):
     return 'disabled'
 
 
-class NeighborTemplate(object):
+class NeighborTemplate:
     extensive_kv = '   %-20s %15s %15s %15s'
     extensive_template = """\
 Neighbor {peer-address}

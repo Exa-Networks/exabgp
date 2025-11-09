@@ -31,7 +31,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # including the type and length fields.
 
 
-class TLV(object):
+class TLV:
     def __init__(self, what, value):
         self.type = what
         self.value = value

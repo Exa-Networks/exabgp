@@ -32,7 +32,7 @@ if sys.version_info[:3] < (3, 7):
 DEBUG = True
 
 
-class Tree(object):
+class Tree:
     ignore = (Token.Text, Token.Comment.Singleline)
 
     @staticmethod

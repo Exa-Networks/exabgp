@@ -28,7 +28,7 @@ def nop(_):
     return _
 
 
-class JSON(object):
+class JSON:
     _count = {}
 
     def __init__(self, version):

@@ -18,7 +18,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 
 
-class Negotiated(object):
+class Negotiated:
     FREE_SIZE = ExtendedMessage.INITIAL_SIZE - 19 - 2 - 2
 
     def __init__(self, neighbor):
@@ -179,7 +179,7 @@ class Negotiated(object):
 # =================================================================== RequirePath
 
 
-class RequirePath(object):
+class RequirePath:
     CANT = 0b00
     RECEIVE = 0b01
     SEND = 0b10

@@ -15,7 +15,7 @@ from exabgp.util import hexstring
 from exabgp.bgp.message import Action
 
 
-class Text(object):
+class Text:
     def __init__(self, version):
         self.version = version
 

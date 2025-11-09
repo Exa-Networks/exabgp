@@ -83,7 +83,7 @@ class PrefixSid(Attribute):
         return self._packed
 
 
-class GenericSRId(object):
+class GenericSRId:
     TLV = 99998
 
     def __init__(self, code, rep):

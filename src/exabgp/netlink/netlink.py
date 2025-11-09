@@ -58,7 +58,7 @@ except AttributeError:
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-class NetLink(object):
+class NetLink:
     _IGNORE_SEQ_FAULTS = True
 
     NETLINK_ROUTE = 0
@@ -66,18 +66,18 @@ class NetLink(object):
     format = namedtuple('Message', 'format_type control_flags sequence pid data')
     netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)
 
-    class Header(object):
+    class Header:
         # linux/netlink.h
         PACK = 'IHHII'
         LEN = calcsize(PACK)
 
-    class Command(object):
+    class Command:
         NLMSG_NOOP = 0x01
         NLMSG_ERROR = 0x02
         NLMSG_DONE = 0x03
         NLMSG_OVERRUN = 0x04
 
-    class Flags(object):
+    class Flags:
         NLM_F_REQUEST = 0x01  # It is query message.
         NLM_F_MULTI = 0x02  # Multipart message, terminated by NLMSG_DONE
         NLM_F_ACK = 0x04  # Reply with ack, with zero or error code

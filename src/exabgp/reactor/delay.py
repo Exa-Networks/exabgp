@@ -15,7 +15,7 @@ import time
 # Exponential backup for outgoing connection
 
 
-class Delay(object):
+class Delay:
     def __init__(self):
         self._time = time.time()
         self._next = 0

@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from typing import Dict, List
 
-class Command(object):
+class Command:
     callback: Dict[str, dict] = {'text': {}, 'json': {}, 'neighbor': {}, 'options': {}}
 
     functions: List[str] = []

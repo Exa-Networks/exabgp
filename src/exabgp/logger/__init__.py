@@ -14,7 +14,7 @@ from exabgp.logger.history import history  # noqa: F401,E261,E501
 from exabgp.logger.history import record  # noqa: F401,E261,E501
 
 
-class _log(object):
+class _log:
     logger = None
 
     @staticmethod

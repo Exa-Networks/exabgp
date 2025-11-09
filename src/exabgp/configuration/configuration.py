@@ -58,7 +58,7 @@ from exabgp.configuration.announce.vpls import AnnounceVPLS  # noqa: F401,E261,E
 from exabgp.configuration.announce.mup import AnnounceMup  # noqa: F401,E261,E501
 
 
-class _Configuration(object):
+class _Configuration:
     def __init__(self):
         self.processes = {}
         self.neighbors = {}

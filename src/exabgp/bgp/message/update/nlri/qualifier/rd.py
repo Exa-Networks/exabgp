@@ -19,7 +19,7 @@ from exabgp.util import hexstring
 # RFC 4364
 
 
-class RouteDistinguisher(object):
+class RouteDistinguisher:
     NORD: 'RouteDistinguisher | None' = None
 
     def __init__(self, rd):

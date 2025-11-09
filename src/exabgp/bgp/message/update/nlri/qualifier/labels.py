@@ -21,7 +21,7 @@ def opt_raw_label(label, format=' (%d)'):
     return format % label if label else ''
 
 
-class Labels(object):
+class Labels:
     MAX = pow(2, 20) - 1
 
     NOLABEL: 'Labels | None' = None

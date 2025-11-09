@@ -15,7 +15,7 @@ from __future__ import annotations
 #
 
 
-class FSM(object):
+class FSM:
     class STATE(int):
         IDLE = 0x01
         ACTIVE = 0x02

@@ -24,7 +24,7 @@ from exabgp.protocol.ip.netmask import NetMask
 #
 
 
-class IPSelf(object):
+class IPSelf:
     SELF = True
 
     def __init__(self, afi):
@@ -46,7 +46,7 @@ class IPSelf(object):
         return 'self-' + AFI.names[self.afi]
 
 
-class IP(object):
+class IP:
     SELF = False
 
     afi = None  # here for the API, changed in init which does not change this
@@ -224,7 +224,7 @@ class IPRange(IP):
 #
 
 
-class _NoNextHop(object):
+class _NoNextHop:
     SELF = False
 
     packed = ''

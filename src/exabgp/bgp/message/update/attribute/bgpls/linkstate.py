@@ -99,7 +99,7 @@ class LinkState(Attribute):
         return ', '.join(str(d) for d in self.ls_attrs)
 
 
-class BaseLS(object):
+class BaseLS:
     TLV = -1
     JSON = 'json-name-unset'
     REPR = 'repr name unset'

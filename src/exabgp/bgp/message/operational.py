@@ -53,7 +53,7 @@ class Operational(Message):
     is_fault = False
 
     # really this should be called ID if not for the naming conflict
-    class CODE(object):
+    class CODE:
         NOP = 0x00  # Not defined by the RFC
         # ADVISE
         ADM = 0x01  # 01: Advisory Demand Message
@@ -180,7 +180,7 @@ class SequencedOperationalFamily(OperationalFamily):
 #
 
 
-class NS(object):
+class NS:
     MALFORMED = 0x01  # Request TLV Malformed
     UNSUPPORTED = 0x02  # TLV Unsupported for this neighbor
     MAXIMUM = 0x03  # Max query frequency exceeded
@@ -226,7 +226,7 @@ class NS(object):
 #
 
 
-class Advisory(object):
+class Advisory:
     class _Advisory(OperationalFamily):
         category = 'advisory'
 
@@ -268,7 +268,7 @@ class Advisory(object):
 #
 
 
-class Query(object):
+class Query:
     class _Query(SequencedOperationalFamily):
         category = 'query'
 
@@ -300,7 +300,7 @@ class Query(object):
 #
 
 
-class Response(object):
+class Response:
     class _Counter(SequencedOperationalFamily):
         category = 'counter'
 
@@ -333,5 +333,5 @@ class Response(object):
 #
 
 
-class Dump(object):
+class Dump:
     pass

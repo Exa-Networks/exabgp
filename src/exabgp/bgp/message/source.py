@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 
-class Source(object):
+class Source:
     UNSET = 0x00
     CONFIGURATION = 0x01
     API = 0x02

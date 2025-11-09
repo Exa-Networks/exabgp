@@ -268,7 +268,7 @@ class SAFI(Resource):
 # ===================================================================== FAMILY
 
 
-class Family(object):
+class Family:
     size = {
         # family                   next-hop   RD
         (AFI.ipv4, SAFI.unicast): ((4,), 0),

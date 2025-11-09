@@ -27,7 +27,7 @@ from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6Servi
 
 
 @PrefixSid.register()
-class Srv6L3Service(object):
+class Srv6L3Service:
     TLV = 5
 
     registered_subtlvs = dict()

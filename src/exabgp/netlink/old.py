@@ -22,7 +22,7 @@ except AttributeError:
     raise ImportError('This module only works on unix version with netlink support') from None
 
 
-class NetMask(object):
+class NetMask:
     CIDR = {
         32: '255.255.255.255',
         31: '255.255.255.254',
@@ -76,7 +76,7 @@ class Sequence(int):
         return cls._instance['next']
 
 
-class NetLinkRoute(object):
+class NetLinkRoute:
     _IGNORE_SEQ_FAULTS = True
 
     NETLINK_ROUTE = 0
@@ -85,18 +85,18 @@ class NetLinkRoute(object):
     pid = os.getpid()
     netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)
 
-    class Header(object):
+    class Header:
         # linux/netlink.h
         PACK = 'IHHII'
         LEN = calcsize(PACK)
 
-    class Command(object):
+    class Command:
         NLMSG_NOOP = 0x01
         NLMSG_ERROR = 0x02
         NLMSG_DONE = 0x03
         NLMSG_OVERRUN = 0x04
 
-    class Flags(object):
+    class Flags:
         NLM_F_REQUEST = 0x01  # It is query message.
         NLM_F_MULTI = 0x02  # Multipart message, terminated by NLMSG_DONE
         NLM_F_ACK = 0x04  # Reply with ack, with zero or error code
@@ -165,12 +165,12 @@ class AttributesError(GlobalError):
     pass
 
 
-class Attributes(object):
-    class Header(object):
+class Attributes:
+    class Header:
         PACK = 'HH'
         LEN = calcsize(PACK)
 
-    class Type(object):
+    class Type:
         IFA_UNSPEC = 0x00
         IFA_ADDRESS = 0x01
         IFA_LOCAL = 0x02
@@ -209,12 +209,12 @@ class Attributes(object):
         return b''.join(_encode(k, v) for (k, v) in attributes.items())
 
 
-class _Message(object):
+class _Message:
     # to be defined by the subclasses
     format = namedtuple('Parent', 'to be subclassed')
 
     # to be defined by the subclasses
-    class Header(object):
+    class Header:
         PACK = ''
         LEN = 0
 
@@ -248,26 +248,26 @@ class _Message(object):
 
 
 class Link(_Message):
-    class Header(object):
+    class Header:
         PACK = 'BxHiII'
         LEN = calcsize(PACK)
 
     # linux/if_link.h
     format = namedtuple('Info', 'family type index flags change attributes')
 
-    class Command(object):
+    class Command:
         # linux/rtnetlink.h
         RTM_NEWLINK = 0x10  # Create a new network interface
         RTM_DELLINK = 0x11  # Destroy a network interface
         RTM_GETLINK = 0x12  # Retrieve information about a network interface (ifinfomsg)
         RTM_SETLINK = 0x13  # -
 
-    class Type(object):
-        class Family(object):
+    class Type:
+        class Family:
             AF_INET = socket.AF_INET
             AF_INET6 = socket.AF_INET6
 
-        class Device(object):
+        class Device:
             IFF_UP = 0x0001  # Interface is administratively up.
             IFF_BROADCAST = 0x0002  # Valid broadcast address set.
             IFF_DEBUG = 0x0004  # Internal debugging flag.
@@ -290,7 +290,7 @@ class Link(_Message):
             IFF_DORMANT = 0x20000  # driver signals dormant
             IFF_ECHO = 0x40000  # echo sent packet
 
-        class Attribute(object):
+        class Attribute:
             IFLA_UNSPEC = 0x00
             IFLA_ADDRESS = 0x01
             IFLA_BROADCAST = 0x02
@@ -314,23 +314,23 @@ class Link(_Message):
 
 
 class Address(_Message):
-    class Header(object):
+    class Header:
         PACK = '4Bi'
         LEN = calcsize(PACK)
 
     format = namedtuple('Address', 'family prefixlen flags scope index attributes')
 
-    class Command(object):
+    class Command:
         RTM_NEWADDR = 0x14
         RTM_DELADDR = 0x15
         RTM_GETADDR = 0x16
 
-    class Type(object):
-        class Family(object):
+    class Type:
+        class Family:
             AF_INET = socket.AF_INET
             AF_INET6 = socket.AF_INET6
 
-        class Flag(object):
+        class Flag:
             IFA_F_SECONDARY = 0x00  # For secondary address (alias interface)
             IFA_F_PERMANENT = 0x00  # For a permanent address set by the user.  When this is not set, it means the address was dynamically created (e.g., by stateless autoconfiguration).
             IFA_F_DEPRECATED = 0x00  # Defines deprecated (IPV4) address
@@ -338,14 +338,14 @@ class Address(_Message):
                 0x00  # Defines tentative (IPV4) address (duplicate address detection is still in progress)
             )
 
-        class Scope(object):
+        class Scope:
             RT_SCOPE_UNIVERSE = 0x00  # Global route
             RT_SCOPE_SITE = 0x00  # Interior route in the local autonomous system
             RT_SCOPE_LINK = 0x00  # Route on this link
             RT_SCOPE_HOST = 0x00  # Route on the local host
             RT_SCOPE_NOWHERE = 0x00  # Destination does not exist
 
-        class Attribute(object):
+        class Attribute:
             IFLA_UNSPEC = 0x00
             IFLA_ADDRESS = 0x01
             IFLA_BROADCAST = 0x02
@@ -389,24 +389,24 @@ class Address(_Message):
 
 
 class Neighbor(_Message):
-    class Header(object):
+    class Header:
         # linux/if_addr.h
         PACK = 'BxxxiHBB'
         LEN = calcsize(PACK)
 
     format = namedtuple('Neighbor', 'family index state flags type attributes')
 
-    class Command(object):
+    class Command:
         RTM_NEWNEIGH = 0x1C
         RTM_DELNEIGH = 0x1D
         RTM_GETNEIGH = 0x1E
 
-    class Type(object):
-        class Family(object):
+    class Type:
+        class Family:
             AF_INET = socket.AF_INET
             AF_INET6 = socket.AF_INET6
 
-        class State(object):
+        class State:
             NUD_INCOMPLETE = 0x01  # Still attempting to resolve
             NUD_REACHABLE = 0x02  # A confirmed working cache entry
             NUD_STALE = 0x04  # an expired cache entry
@@ -418,12 +418,12 @@ class Neighbor(_Message):
             NUD_PERMANENT = 0x80  # A static entry
             NUD_NONE = 0x00
 
-        class Flag(object):
+        class Flag:
             NTF_USE = 0x01
             NTF_PROXY = 0x08  # A proxy ARP entry
             NTF_ROUTER = 0x80  # An IPv6 router
 
-        class Attribute(object):
+        class Attribute:
             # XXX : Not sure - starts at zero or one ... ??
             NDA_UNSPEC = 0x00  # Unknown type
             NDA_DST = 0x01  # A neighbour cache network. layer destination address
@@ -447,26 +447,26 @@ class Neighbor(_Message):
 
 
 class Network(_Message):
-    class Header(object):
+    class Header:
         # linux/if_addr.h
         PACK = '8BI'  # or is it 8Bi ?
         LEN = calcsize(PACK)
 
     format = namedtuple('Neighbor', 'family src_len dst_len tos table proto scope type flags attributes')
 
-    class Command(object):
+    class Command:
         RTM_NEWROUTE = 0x18
         RTM_DELROUTE = 0x19
         RTM_GETROUTE = 0x1A
 
-    class Type(object):
-        class Table(object):
+    class Type:
+        class Table:
             RT_TABLE_UNSPEC = 0x00  # An unspecified routing table
             RT_TABLE_DEFAULT = 0xFD  # The default table
             RT_TABLE_MAIN = 0xFE  # The main table
             RT_TABLE_LOCAL = 0xFF  # The local table
 
-        class Protocol(object):
+        class Protocol:
             RTPROT_UNSPEC = 0x00  # Identifies what/who added the route
             RTPROT_REDIRECT = 0x01  # By an ICMP redirect
             RTPROT_KERNEL = 0x02  # By the kernel
@@ -486,14 +486,14 @@ class Network(_Message):
             # YES WE CAN !
             RTPROT_EXABGP = 0x11  # Exa Networks ExaBGP
 
-        class Scope(object):
+        class Scope:
             RT_SCOPE_UNIVERSE = 0x00  # Global route
             RT_SCOPE_SITE = 0xC8  # Interior route in the local autonomous system
             RT_SCOPE_LINK = 0xFD  # Route on this link
             RT_SCOPE_HOST = 0xFE  # Route on the local host
             RT_SCOPE_NOWHERE = 0xFF  # Destination does not exist
 
-        class Type(object):
+        class Type:
             RTN_UNSPEC = 0x00  # Unknown route.
             RTN_UNICAST = 0x01  # A gateway or direct route.
             RTN_LOCAL = 0x02  # A local interface route.
@@ -507,7 +507,7 @@ class Network(_Message):
             RTN_NAT = 0x0A  # A network address translation rule.
             RTN_XRESOLVE = 0x0B  # Refer to an external resolver (not implemented).
 
-        class Flag(object):
+        class Flag:
             RTM_F_NOTIFY = 0x100  # If the route changes, notify the user
             RTM_F_CLONED = 0x200  # Route is cloned from another route
             RTM_F_EQUALIZE = (
@@ -515,7 +515,7 @@ class Network(_Message):
             )
             RTM_F_PREFIX = 0x800  # Prefix Address
 
-        class Attribute(object):
+        class Attribute:
             RTA_UNSPEC = 0x00  # Ignored.
             RTA_DST = 0x01  # Protocol address for route destination address.
             RTA_SRC = 0x02  # Protocol address for route source address.
@@ -591,17 +591,17 @@ class Network(_Message):
 
 
 class TC(_Message):
-    class Header(object):
+    class Header:
         PACK = 'BxxxiIII'
         LEN = calcsize(PACK)
 
-    class Command(object):
+    class Command:
         RTM_NEWQDISC = 36
         RTM_DELQDISC = 37
         RTM_GETQDISC = 38
 
-    class Type(object):
-        class Attribute(object):
+    class Type:
+        class Attribute:
             TCA_UNSPEC = 0x00
             TCA_KIND = 0x01
             TCA_OPTIONS = 0x02
@@ -651,11 +651,11 @@ class TC(_Message):
 
 
 class Firewall(_Message):
-    class Header(object):
+    class Header:
         PACK = 'BxxxI'
         LEN = calcsize(PACK)
 
-    class Packet(object):
-        class Header(object):
+    class Packet:
+        class Header:
             PACK = 'IIIIIIIHHHHII'
             LEN = calcsize(PACK)

@@ -35,7 +35,7 @@ if sys.version_info[:3] < (3, 7):
         pass
 
 
-class Code(object):
+class Code:
     def __init__(self, tree):
         # the modules (import) required within the generated function
         self.imported = set()

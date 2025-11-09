@@ -13,7 +13,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 
 # Ethernet Segment Identifier
-class ESI(object):
+class ESI:
     DEFAULT = b''.join(bytes([0]) for _ in range(0, 10))
     MAX = b''.join(bytes([0xFF]) for _ in range(0, 10))
 

@@ -26,7 +26,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register()
-class LinkOpaque(object):
+class LinkOpaque:
     TLV = 1097
     REPR = 'Opaque Link attribute'
     REPR = 'opaque-link'

@@ -12,7 +12,7 @@ from __future__ import annotations
 from exabgp.bgp.message import Action
 
 
-class Cache(object):
+class Cache:
     def __init__(self, cache, families):
         self.cache = cache
         self._seen = {}

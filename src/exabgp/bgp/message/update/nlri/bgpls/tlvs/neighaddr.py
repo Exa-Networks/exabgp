@@ -22,7 +22,7 @@ from exabgp.protocol.ip import IP
 # ================================================================== NeighborAddress
 
 
-class NeighAddr(object):
+class NeighAddr:
     def __init__(self, addr, packed=None):
         self.addr = addr
         self._packed = packed

@@ -36,7 +36,7 @@ from exabgp.reactor.api.processes import preexec_helper
 # XXX: We do not accept input from the forked application
 
 
-class Application(object):
+class Application:
     Q = deque()
     running = True
 

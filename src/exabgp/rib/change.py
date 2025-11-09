@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 
-class Change(object):
+class Change:
     @staticmethod
     def family_prefix(family):
         return b'%02x%02x' % family

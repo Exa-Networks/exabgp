@@ -13,7 +13,7 @@ from __future__ import annotations
 #
 
 
-class ISO(object):
+class ISO:
     def __init__(self, sysid, selector=None, area_id=None, afi=49):
         self.sysid = sysid
         self.area_id = area_id

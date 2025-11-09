@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 
-class TYPE(object):
+class TYPE:
     NULL = 0x01
     BOOLEAN = 0x02
     INTEGER = 0x04
@@ -17,7 +17,7 @@ class TYPE(object):
     HASH = 0x20
 
 
-class PRESENCE(object):
+class PRESENCE:
     OPTIONAL = 0x01
     MANDATORY = 0x02
 

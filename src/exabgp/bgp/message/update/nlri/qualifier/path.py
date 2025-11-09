@@ -12,7 +12,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # RFC draft-ietf-idr-add-paths-09
 
 
-class PathInfo(object):
+class PathInfo:
     NOPATH: 'PathInfo | None' = None
 
     def __init__(self, packed=None, integer=None, ip=None):

@@ -23,7 +23,7 @@ from struct import unpack
 # ================================================================== Link Local/Remote Identifiers
 
 
-class LinkIdentifier(object):
+class LinkIdentifier:
     def __init__(self, local_id, remote_id, packed=None):
         self.local_id = local_id
         self.remote_id = remote_id

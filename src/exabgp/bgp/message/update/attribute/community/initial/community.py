@@ -17,7 +17,7 @@ from struct import unpack
 #
 
 
-class Community(object):
+class Community:
     MAX = 0xFFFFFFFF
 
     NO_EXPORT = pack('!L', 0xFFFFFF01)

@@ -20,12 +20,12 @@ class AttributesError(NetLinkError):
     pass
 
 
-class Attributes(object):
-    class Header(object):
+class Attributes:
+    class Header:
         PACK = 'HH'
         LEN = calcsize(PACK)
 
-    class Type(object):
+    class Type:
         IFA_UNSPEC = 0x00
         IFA_ADDRESS = 0x01
         IFA_LOCAL = 0x02

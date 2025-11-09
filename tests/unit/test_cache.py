@@ -20,7 +20,7 @@ class TestCache(unittest.TestCase):
             def __init__(self, data):
                 pass
 
-        class klass2(object):
+        class klass2:
             def __init__(self, data):
                 pass
 
@@ -45,7 +45,7 @@ class TestCache(unittest.TestCase):
                 self.a = data[0]
                 self.b = data[1]
 
-        class _kparent2(object):
+        class _kparent2:
             def __init__(self, data):
                 self.a = data[0]
                 self.b = data[1]

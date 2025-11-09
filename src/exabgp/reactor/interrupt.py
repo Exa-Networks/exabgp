@@ -14,7 +14,7 @@ import signal
 from exabgp.logger import log
 
 
-class Signal(object):
+class Signal:
     NONE = 0
     SHUTDOWN = -1
     RESTART = -2

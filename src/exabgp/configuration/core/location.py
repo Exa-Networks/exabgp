@@ -11,7 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # file location
 
 
-class Location(object):
+class Location:
     def __init__(self, index_line=0, index_column=0, line=''):
         self.line = line
         self.index_line = index_line

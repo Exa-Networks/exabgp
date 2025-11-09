@@ -12,7 +12,7 @@ def echo(_):
     return _
 
 
-class option(object):
+class option:
     logger = None
     formater = echo
 

@@ -604,7 +604,7 @@ def watchdog(tokeniser):
 
 
 def withdraw(tokeniser=None):
-    class Withdrawn(object):
+    class Withdrawn:
         ID = Attribute.CODE.INTERNAL_WITHDRAW
 
     return Withdrawn()

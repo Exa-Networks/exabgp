@@ -32,7 +32,7 @@ from ipaddress import ip_address
 # ================================================================== IP REACHABILITY INFORMATION
 
 
-class IpReach(object):
+class IpReach:
     def __init__(self, prefix, plength=None, packed=None):
         self.prefix = prefix
         self._packed = packed

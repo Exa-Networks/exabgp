@@ -47,7 +47,7 @@ def preexec_helper():
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-class Processes(object):
+class Processes:
     # how many time can a process can respawn in the time interval
     respawn_timemask = 0xFFFFFF - 0b111111
     # '0b111111111111111111000000' (around a minute, 63 seconds)

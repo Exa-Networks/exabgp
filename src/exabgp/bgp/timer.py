@@ -20,7 +20,7 @@ from exabgp.bgp.message import Notify
 # Track the time for keepalive updates
 
 
-class ReceiveTimer(object):
+class ReceiveTimer:
     def __init__(self, session, holdtime, code, subcode, message=''):
         self.session = session
 
@@ -56,7 +56,7 @@ class ReceiveTimer(object):
         self.single = True
 
 
-class SendTimer(object):
+class SendTimer:
     def __init__(self, session, holdtime):
         self.session = session
 

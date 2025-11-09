@@ -51,7 +51,7 @@ from __future__ import annotations
 import struct
 
 
-class MTID(object):
+class MTID:
     def __init__(self, topologies, packed=None):
         self.topologies = topologies
         self._packed = packed
