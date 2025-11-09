@@ -147,11 +147,7 @@ class Scope(Error):
                     destination[key] = source[key]
                 else:
                     self.transfer(source[key], destination[key])
-            elif isinstance(source[key], int):
-                destination[key] = value
-            elif isinstance(source[key], IP):
-                destination[key] = value
-            elif isinstance(source[key], str):
+            elif isinstance(source[key], int) or isinstance(source[key], IP) or isinstance(source[key], str):
                 destination[key] = value
             else:
                 self.throw(
