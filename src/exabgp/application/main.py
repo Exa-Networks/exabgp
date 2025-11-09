@@ -81,10 +81,9 @@ def main():
 
     if 'func' in options:
         return cmdarg.func(cmdarg)
-    else:
-        parser.print_help()
-        environ.default()
-        return 1
+    parser.print_help()
+    environ.default()
+    return 1
 
 
 if __name__ == '__main__':

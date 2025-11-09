@@ -316,9 +316,8 @@ class Attributes(dict):
         if flag & Attribute.Flag.EXTENDED_LENGTH:
             length = unpack('!H', data[2:4])[0]
             return flag, attr, data[4 : length + 4]
-        else:
-            length = data[2]
-            return flag, attr, data[3 : length + 3]
+        length = data[2]
+        return flag, attr, data[3 : length + 3]
 
     def parse(self, data, direction, negotiated):
         if not data:

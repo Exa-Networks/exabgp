@@ -79,19 +79,17 @@ def path_information(tokeniser):
     pi = tokeniser()
     if pi.isdigit():
         return PathInfo(integer=int(pi))
-    else:
-        return PathInfo(ip=pi)
+    return PathInfo(ip=pi)
 
 
 def next_hop(tokeniser, afi=None):
     value = tokeniser()
     if value.lower() == 'self':
         return IPSelf(tokeniser.afi), NextHopSelf(tokeniser.afi)
-    else:
-        ip = IP.create(value)
-        if ip.afi == AFI.ipv4 and afi == AFI.ipv6:
-            ip = IP.create('::ffff:%s' % ip)
-        return ip, NextHop(ip.top())
+    ip = IP.create(value)
+    if ip.afi == AFI.ipv4 and afi == AFI.ipv6:
+        ip = IP.create('::ffff:%s' % ip)
+    return ip, NextHop(ip.top())
 
 
 # XXX: using Action.UNSET should we use the following ?
@@ -340,32 +338,30 @@ def _community(value):
 
         return Community(pack('!L', (prefix << 16) + suffix))
 
-    elif value[:2].lower() == '0x':
+    if value[:2].lower() == '0x':
         number = int(value, 16)
         if number > Community.MAX:
             raise ValueError('invalid community %s (too large)' % value)
         return Community(pack('!L', number))
 
-    else:
-        low = value.lower()
-        if low == 'no-export' or low == 'no_export':
-            return Community(Community.NO_EXPORT)
-        elif low == 'no-advertise' or low == 'no_advertise':
-            return Community(Community.NO_ADVERTISE)
-        elif low == 'no-export-subconfed':
-            return Community(Community.NO_EXPORT_SUBCONFED)
-        # no-peer is not a correct syntax but I am sure someone will make the mistake :)
-        elif low == 'nopeer' or low == 'no-peer':
-            return Community(Community.NO_PEER)
-        elif low == 'blackhole':
-            return Community(Community.BLACKHOLE)
-        elif value.isdigit():
-            number = int(value)
-            if number > Community.MAX:
-                raise ValueError('invalid community %s (too large)' % value)
-            return Community(pack('!L', number))
-        else:
-            raise ValueError('invalid community name %s' % value)
+    low = value.lower()
+    if low == 'no-export' or low == 'no_export':
+        return Community(Community.NO_EXPORT)
+    if low == 'no-advertise' or low == 'no_advertise':
+        return Community(Community.NO_ADVERTISE)
+    if low == 'no-export-subconfed':
+        return Community(Community.NO_EXPORT_SUBCONFED)
+    # no-peer is not a correct syntax but I am sure someone will make the mistake :)
+    if low == 'nopeer' or low == 'no-peer':
+        return Community(Community.NO_PEER)
+    if low == 'blackhole':
+        return Community(Community.BLACKHOLE)
+    if value.isdigit():
+        number = int(value)
+        if number > Community.MAX:
+            raise ValueError('invalid community %s (too large)' % value)
+        return Community(pack('!L', number))
+    raise ValueError('invalid community name %s' % value)
 
 
 def community(tokeniser):
@@ -400,21 +396,19 @@ def _large_community(value):
 
         return LargeCommunity(pack('!LLL', prefix, affix, suffix))
 
-    elif value[:2].lower() == '0x':
+    if value[:2].lower() == '0x':
         number = int(value)
         if number > LargeCommunity.MAX:
             raise ValueError('invalid large community %s (too large)' % value)
         return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
 
-    else:
-        value = value.lower()
-        if value.isdigit():
-            number = int(value)
-            if number > LargeCommunity.MAX:
-                raise ValueError('invalid large community %s (too large)' % value)
-            return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
-        else:
-            raise ValueError('invalid large community name %s' % value)
+    value = value.lower()
+    if value.isdigit():
+        number = int(value)
+        if number > LargeCommunity.MAX:
+            raise ValueError('invalid large community %s (too large)' % value)
+        return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
+    raise ValueError('invalid large community name %s' % value)
 
 
 def large_community(tokeniser):

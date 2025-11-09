@@ -247,9 +247,8 @@ def create_minimal_update(nlri_prefix=None):
             path_attributes=attributes,
             nlri=nlri,
         )
-    else:
-        # Empty UPDATE (EOR)
-        return create_eor_message()
+    # Empty UPDATE (EOR)
+    return create_eor_message()
 
 
 def create_withdrawal_update(prefixes):

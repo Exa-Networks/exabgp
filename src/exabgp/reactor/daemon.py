@@ -70,9 +70,8 @@ class Daemon:
                 if self.check_pid(int(pid)):
                     log.debug(lambda: f'PIDfile already exists and program still running {self.pid}', 'daemon')
                     return False
-                else:
-                    # If pid is not running, reopen file without O_EXCL
-                    fd = os.open(self.pid, flags ^ os.O_EXCL, mode)
+                # If pid is not running, reopen file without O_EXCL
+                fd = os.open(self.pid, flags ^ os.O_EXCL, mode)
             except (OSError, ValueError):
                 log.debug(lambda: f'issue accessing PID file {self.pid} (most likely permission or ownership)', 'daemon')
                 return False
