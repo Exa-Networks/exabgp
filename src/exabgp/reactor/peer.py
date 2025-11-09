@@ -526,7 +526,7 @@ class Peer(object):
                     while send_ka() is None:
                         yield ACTION.NOW
                 for counter_line in self.stats.changed_statistics():
-                    log.info(counter_line, 'statistics')
+                    log.info(lambda: counter_line, 'statistics')
 
                 # Received update
                 if message.TYPE == Update.TYPE:
@@ -707,7 +707,7 @@ class Peer(object):
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            log.error(format_exception(exc), 'reactor')
+            log.error(lambda: format_exception(exc), 'reactor')
             self._reset()
             return
 
