@@ -70,7 +70,6 @@ markers = [
 	"fuzz: Fuzzing tests using Hypothesis (deselect with '-m \"not fuzz\"')",
 	"asyncio: Async tests using pytest-asyncio",
 ]
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 120
