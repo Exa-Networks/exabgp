@@ -18,7 +18,7 @@ def speak(name, data):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.connect(name)
         sock.sendall(data)
-    except socket.error:
+    except OSError:
         pass
 
 

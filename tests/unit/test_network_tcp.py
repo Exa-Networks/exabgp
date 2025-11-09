@@ -65,7 +65,7 @@ class TestSocketCreation:
     @patch('socket.socket')
     def test_create_socket_failure(self, mock_socket):
         """Test socket creation failure"""
-        mock_socket.side_effect = socket.error("Socket creation failed")
+        mock_socket.side_effect = OSError("Socket creation failed")
 
         with pytest.raises(NotConnected, match="Could not create socket"):
             tcp.create(AFI.ipv4)
@@ -223,7 +223,7 @@ class TestMD5Authentication:
     @patch('socket.socket.setsockopt')
     def test_md5_freebsd_with_kernel(self, mock_setsockopt, mock_platform):
         """Test FreeBSD MD5 with 'kernel' value"""
-        mock_setsockopt.side_effect = socket.error("Not enabled")
+        mock_setsockopt.side_effect = OSError("Not enabled")
         io = tcp.create(AFI.ipv4)
 
         with pytest.raises(MD5Error, match="rebuild your kernel"):
@@ -317,7 +317,7 @@ class TestNagleAlgorithm:
     @patch('socket.socket.setsockopt')
     def test_nagle_disable_failure(self, mock_setsockopt):
         """Test Nagle disable failure handling"""
-        mock_setsockopt.side_effect = socket.error("Not supported")
+        mock_setsockopt.side_effect = OSError("Not supported")
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         with pytest.raises(NagleError, match="Could not disable nagle"):
@@ -383,7 +383,7 @@ class TestTTLConfiguration:
     @patch('socket.socket.setsockopt')
     def test_ttl_not_supported(self, mock_setsockopt):
         """Test TTL error when not supported"""
-        mock_setsockopt.side_effect = socket.error("Not supported")
+        mock_setsockopt.side_effect = OSError("Not supported")
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         with pytest.raises(TTLError, match="does not support IP_TTL"):
@@ -430,7 +430,7 @@ class TestAsynchronousMode:
     @patch('socket.socket.setblocking')
     def test_asynchronous_failure(self, mock_setblocking):
         """Test async mode failure handling"""
-        mock_setblocking.side_effect = socket.error("Not supported")
+        mock_setblocking.side_effect = OSError("Not supported")
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         with pytest.raises(AsyncError, match="could not set socket non-blocking"):
@@ -471,7 +471,7 @@ class TestSocketReadiness:
         import select as select_module
 
         mock_poller = MagicMock()
-        mock_poller.poll.side_effect = select_module.error("Poll failed")
+        mock_poller.poll.side_effect = OSError("Poll failed")
         mock_poll_class.return_value = mock_poller
 
         io = tcp.create(AFI.ipv4)

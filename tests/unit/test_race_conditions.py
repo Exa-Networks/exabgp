@@ -153,7 +153,7 @@ class TestConnectionResetDuringIO:
         test_data = b'test message data'
 
         # Mock send to return partial write, then connection reset
-        mock_sock.send.side_effect = [5, socket.error(errno.ECONNRESET, "Connection reset")]
+        mock_sock.send.side_effect = [5, OSError(errno.ECONNRESET, "Connection reset")]
 
         # Start writer generator
         writer_gen = conn.writer(test_data)
@@ -363,7 +363,7 @@ class TestPollingStateRaces:
         conn.io = mock_sock
 
         # Mock recv to raise socket error
-        mock_sock.recv.side_effect = socket.error(errno.ECONNRESET, "Connection reset")
+        mock_sock.recv.side_effect = OSError(errno.ECONNRESET, "Connection reset")
 
         reader_gen = conn._reader(10)
 

@@ -118,7 +118,7 @@ class Tokeniser:
         try:
             self._tokens = function
             self._next = next(self._tokens)
-        except IOError as exc:
+        except OSError as exc:
             error = str(exc)
             if error.count(']'):
                 self.error.set(error.split(']')[1].strip())

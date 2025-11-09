@@ -29,6 +29,6 @@ while os.getppid() != 1:
         sys.stderr.write(_prefixed(sys.argv[1] if len(sys.argv) >= 2 else 'EXABGP PROCESS', line))
     except KeyboardInterrupt:
         pass
-    except IOError:
+    except OSError:
         # most likely a signal during readline
         pass

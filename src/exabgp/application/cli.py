@@ -61,7 +61,7 @@ def open_reader(recv):
         try:
             reader = os.open(recv, os.O_RDONLY | os.O_NONBLOCK)
             done = True
-        except IOError as exc:
+        except OSError as exc:
             if exc.args[0] in errno_block:
                 signal.signal(signal.SIGALRM, open_timeout)
                 signal.alarm(5)
@@ -92,7 +92,7 @@ def open_writer(send):
         sys.stdout.write('could not communicate with ExaBGP')
         sys.stdout.flush()
         sys.exit(1)
-    except IOError as exc:
+    except OSError as exc:
         sys.stdout.write(f'could not communicate with ExaBGP ({exc})')
         sys.stdout.flush()
         sys.exit(1)
@@ -154,7 +154,7 @@ def cmdline(cmdarg):
             while select.select([reader], [], [], 0) != ([], [], []):
                 rbuffer += os.read(reader, 4096)
                 rbuffer = rbuffer[-AnswerStream.buffer_size :]
-        except IOError as exc:
+        except OSError as exc:
             if exc.errno in error.block:
                 continue
             sys.stdout.write(f'could not clear named pipe from potential previous command data ({str(exc)})')
@@ -239,10 +239,6 @@ def cmdline(cmdarg):
     try:
         os.write(writer, sending.encode('utf-8') + b'\n')
         os.close(writer)
-    except IOError as exc:
-        sys.stdout.write(f'could not send command to ExaBGP ({str(exc)})')
-        sys.stdout.flush()
-        sys.exit(1)
     except OSError as exc:
         sys.stdout.write(f'could not send command to ExaBGP ({str(exc)})')
         sys.stdout.flush()
@@ -264,7 +260,7 @@ def cmdline(cmdarg):
             sys.stdout.write(f'could not get answer from ExaBGP ({str(exc)})')
             sys.stdout.flush()
             sys.exit(1)
-        except IOError as exc:
+        except OSError as exc:
             if exc.errno in error.block:
                 continue
             sys.stdout.write(f'could not get answer from ExaBGP ({str(exc)})')
@@ -293,7 +289,7 @@ def cmdline(cmdarg):
             sys.stdout.write(f'could not read answer from ExaBGP ({str(exc)})')
             sys.stdout.flush()
             sys.exit(1)
-        except IOError as exc:
+        except OSError as exc:
             if exc.errno in error.block:
                 continue
             sys.stdout.write(f'could not read answer from ExaBGP ({str(exc)})')

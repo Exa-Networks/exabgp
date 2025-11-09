@@ -101,7 +101,7 @@ def peer_ip(tokeniser):
 
     try:
         return IPRange.create(value, mask)
-    except (IndexError, ValueError, socket.error):
+    except (OSError, IndexError, ValueError):
         raise ValueError('"%s" is an invalid IP address' % value) from None
 
 
@@ -112,5 +112,5 @@ def ip(tokeniser):
     value = tokeniser()
     try:
         return IP.create(value)
-    except (IndexError, ValueError, socket.error):
+    except (OSError, IndexError, ValueError):
         raise ValueError('"%s" is an invalid IP address' % value) from None

@@ -109,7 +109,7 @@ class Application:
             except IndexError:
                 # no data on the Q to read
                 time.sleep(0.1)
-            except IOError:
+            except OSError:
                 # subprocess died
                 print('subprocess died', file=sys.stderr)
                 sys.exit(1)

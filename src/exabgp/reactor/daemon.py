@@ -73,7 +73,7 @@ class Daemon:
                 else:
                     # If pid is not running, reopen file without O_EXCL
                     fd = os.open(self.pid, flags ^ os.O_EXCL, mode)
-            except (OSError, IOError, ValueError):
+            except (OSError, ValueError):
                 log.debug(lambda: f'issue accessing PID file {self.pid} (most likely permission or ownership)', 'daemon')
                 return False
 
@@ -83,7 +83,7 @@ class Daemon:
             f.write(line)
             f.close()
             self._saved_pid = True
-        except IOError:
+        except OSError:
             log.warning(lambda: f'Can not create PIDfile {self.pid}', 'daemon')
             return False
         log.warning(lambda: f'Created PIDfile {self.pid} with value {ownid}', 'daemon')
@@ -161,7 +161,7 @@ class Daemon:
             return False
         try:
             s.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
-        except socket.error as exc:
+        except OSError as exc:
             # It is look like one but it is not a socket ...
             if exc.args[0] == errno.ENOTSOCK:
                 return False

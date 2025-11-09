@@ -100,7 +100,7 @@ def local_address(tokeniser):
         return None
     try:
         return IP.create(value)
-    except (IndexError, ValueError, socket.error):
+    except (OSError, IndexError, ValueError):
         raise ValueError(f'"{value}" is an invalid IP address') from None
 
 
