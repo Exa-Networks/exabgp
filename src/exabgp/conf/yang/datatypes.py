@@ -104,7 +104,7 @@ class Boolean(int):
 
 class Decimal64(decimal.Decimal):
     def __init__(cls, value, frac=0):
-        raise RuntimeError()
+        raise RuntimeError
         # look at https://github.com/CZ-NIC/yangson/blob/master/yangson/datatype.py#L682
         # return super().__init__(decimal.Decimal(value))
 

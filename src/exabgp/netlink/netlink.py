@@ -144,5 +144,5 @@ class NetLink:
                     raise NetLinkError(cls.errors[response_type], message, response)
 
                 if response_type == NetLink.Command.NLMSG_DONE:
-                    raise StopIteration()
+                    raise StopIteration
                 yield response_data
