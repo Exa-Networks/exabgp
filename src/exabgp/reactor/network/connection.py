@@ -85,6 +85,7 @@ class Connection(object):
                 self.io = None
             log.warning('connection to %s closed' % self.peer, self.session())
         except Exception:
+            # Exception intentionally not logged to avoid verbose logging during connection cleanup
             self.io = None
 
     def reading(self):
