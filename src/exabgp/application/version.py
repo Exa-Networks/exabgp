@@ -24,10 +24,10 @@ def main():
 
 
 def cmdline(cmdarg):
-    sys.stdout.write('ExaBGP : %s\n' % version)
-    sys.stdout.write('Python : %s\n' % sys.version.replace('\n', ' '))
-    sys.stdout.write('Uname  : %s\n' % ' '.join(platform.uname()[:5]))
-    sys.stdout.write('From   : %s\n' % get_root())
+    sys.stdout.write(f'ExaBGP : {version}\n')
+    sys.stdout.write(f'Python : {sys.version.replace("\n", " ")}\n')
+    sys.stdout.write(f'Uname  : {" ".join(platform.uname()[:5])}\n')
+    sys.stdout.write(f'From   : {get_root()}\n')
     sys.stdout.flush()
 
 

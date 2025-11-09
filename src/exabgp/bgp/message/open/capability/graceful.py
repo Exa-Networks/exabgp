@@ -46,24 +46,22 @@ class Graceful(Capability, dict):
 
     def __str__(self):
         families = [(str(afi), str(safi), hex(self[(afi, safi)])) for (afi, safi) in self.keys()]
-        sfamilies = ' '.join(['%s/%s=%s' % (afi, safi, family) for (afi, safi, family) in families])
-        return 'Graceful Restart Flags %s Time %d %s' % (hex(self.restart_flag), self.restart_time, sfamilies)
+        sfamilies = ' '.join([f'{afi}/{safi}={family}' for (afi, safi, family) in families])
+        return f'Graceful Restart Flags {hex(self.restart_flag)} Time {self.restart_time} {sfamilies}'
 
     def json(self):
+        families_json = ', '.join(
+            f'"{afi}/{safi}": [{" \"restart\"" if family & 0x80 else ""} ] '
+            for afi, safi, family in [(str(a), str(s), self[(a, s)]) for (a, s) in self.keys()]
+        )
         d = {
             'name': '"graceful restart"',
             'time': self.restart_time,
-            'address-family-flags': '{ %s}'
-            % (
-                ', '.join(
-                    '"%s/%s": [%s ] ' % ('%s' % afi, safi, ' "restart"' if family & 0x80 else '')
-                    for afi, safi, family in [(str(a), str(s), self[(a, s)]) for (a, s) in self.keys()]
-                )
-            ),
-            'restart-flags': '[%s] ' % (' "forwarding" ' if self.restart_flag & 0x8 else ' '),
+            'address-family-flags': f'{{ {families_json}}}',
+            'restart-flags': f'[{" \"forwarding\" " if self.restart_flag & 0x8 else " "}] ',
         }
 
-        return '{ %s}' % ', '.join('"%s": %s' % (k, v) for k, v in d.items())
+        return f'{{ {", ".join(f"\"{k}\": {v}" for k, v in d.items())}}}'
 
     def families(self):
         return self.keys()

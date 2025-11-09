@@ -46,7 +46,7 @@ class ParseFlowMatch(Section):
         '(ipv6 only) icmp-code 55  # to check',
     ]
 
-    syntax = 'match {\n  %s;\n}' % ';\n  '.join(definition)
+    syntax = f'match {{\n  {";\\n  ".join(definition)};\n}}'
 
     known = {
         'source': source,

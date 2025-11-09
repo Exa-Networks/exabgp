@@ -25,7 +25,7 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 class ParseFlow(Section):
-    syntax = 'flow {\n  %s}' % ';\n  '.join(ParseFlowRoute.syntax.split('\n'))
+    syntax = f'flow {{\n  {";\\n  ".join(ParseFlowRoute.syntax.split("\\n"))}}}'
 
     name = 'flow'
 
@@ -78,7 +78,7 @@ def route(tokeniser):
         elif action == 'nop':
             pass  # yes nothing to do !
         else:
-            raise ValueError('flow: unknown command "%s"' % command)
+            raise ValueError(f'flow: unknown command "{command}"')
 
     if change.nlri.rd is not RouteDistinguisher.NORD:
         change.nlri.safi = SAFI.flow_vpn
