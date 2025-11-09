@@ -42,7 +42,7 @@ class TestMessageStreamProcessing:
 
                 # Parse the message
                 if msg_type == 2:  # UPDATE
-                    msg = Update.unpack_message(body, Direction.IN, negotiated)
+                    Update.unpack_message(body, Direction.IN, negotiated)
 
                 count += 1
 
@@ -79,9 +79,9 @@ class TestMessageStreamProcessing:
 
                 # Parse based on type
                 if msg_type == 2:  # UPDATE
-                    msg = Update.unpack_message(body, Direction.IN, negotiated)
+                    Update.unpack_message(body, Direction.IN, negotiated)
                 elif msg_type == 4:  # KEEPALIVE
-                    msg = KeepAlive()
+                    KeepAlive()
 
                 count += 1
 
@@ -192,8 +192,8 @@ class TestConcurrentMessageProcessing:
                     if len(marker) < 16:
                         continue
                     length = int.from_bytes(reader.read(2), 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
-                    body = reader.read(length - 19)
+                    int.from_bytes(reader.read(1), 'big')
+                    reader.read(length - 19)
 
                     processed[peer_id] += 1
                     total += 1
@@ -223,8 +223,8 @@ class TestConcurrentMessageProcessing:
                     if len(marker) < 16:
                         break
                     length = int.from_bytes(reader.read(2), 'big')
-                    msg_type = int.from_bytes(reader.read(1), 'big')
-                    body = reader.read(length - 19)
+                    int.from_bytes(reader.read(1), 'big')
+                    reader.read(length - 19)
                     count += 1
                     total += 1
 
@@ -250,8 +250,8 @@ class TestHighLoadStress:
                 if len(marker) < 16:
                     break
                 length = int.from_bytes(stream.read(2), 'big')
-                msg_type = int.from_bytes(stream.read(1), 'big')
-                body = stream.read(length - 19)
+                int.from_bytes(stream.read(1), 'big')
+                stream.read(length - 19)
                 count += 1
 
             return count
@@ -279,8 +279,8 @@ class TestHighLoadStress:
                 if len(length_bytes) < 2:
                     break
                 length = int.from_bytes(length_bytes, 'big')
-                msg_type = int.from_bytes(stream.read(1), 'big')
-                body = stream.read(length - 19)
+                int.from_bytes(stream.read(1), 'big')
+                stream.read(length - 19)
                 count += 1
 
                 if count >= 10000:
@@ -306,8 +306,8 @@ class TestHighLoadStress:
                 if len(marker) < 16:
                     break
                 length = int.from_bytes(stream.read(2), 'big')
-                msg_type = int.from_bytes(stream.read(1), 'big')
-                body = stream.read(length - 19)
+                int.from_bytes(stream.read(1), 'big')
+                stream.read(length - 19)
 
                 count += 1
                 total_bytes += length

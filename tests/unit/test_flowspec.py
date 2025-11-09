@@ -154,7 +154,7 @@ class TestFlowPorts:
         port = FlowAnyPort(NumericOperator.EQ, 80)
 
         assert port.value == 80
-        packed = port.pack()
+        port.pack()
         # AnyPort component
 
     def test_flowdestinationport_https(self) -> None:
@@ -162,7 +162,7 @@ class TestFlowPorts:
         dport = FlowDestinationPort(NumericOperator.EQ, 443)
 
         assert dport.value == 443
-        packed = dport.pack()
+        dport.pack()
         # DestPort component
 
     def test_flowsourceport_range(self) -> None:
@@ -200,7 +200,7 @@ class TestFlowICMP:
         icmp_type = FlowICMPType(NumericOperator.EQ, 8)  # Echo request
 
         assert icmp_type.value == 8
-        packed = icmp_type.pack()
+        icmp_type.pack()
         # ICMPType component
 
     def test_flowicmpcode_basic(self) -> None:
@@ -208,7 +208,7 @@ class TestFlowICMP:
         icmp_code = FlowICMPCode(NumericOperator.EQ, 0)
 
         assert icmp_code.value == 0
-        packed = icmp_code.pack()
+        icmp_code.pack()
         # ICMPCode component
 
 
@@ -224,7 +224,7 @@ class TestFlowTCPFlags:
         tcp_flag = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.SYN)
 
         assert tcp_flag.value == TCPFlag.SYN
-        packed = tcp_flag.pack()
+        tcp_flag.pack()
         # TCPFlag component
 
     def test_flowtcpflag_not_match(self) -> None:
@@ -260,7 +260,7 @@ class TestFlowPacketAttributes:
         pkt_len = FlowPacketLength(NumericOperator.LT, 100)
 
         assert pkt_len.value == 100
-        packed = pkt_len.pack()
+        pkt_len.pack()
         # PacketLength component
 
     def test_flowpacketlength_large(self) -> None:
@@ -277,7 +277,7 @@ class TestFlowPacketAttributes:
         dscp = FlowDSCP(NumericOperator.EQ, 46)  # EF PHB
 
         assert dscp.value == 46
-        packed = dscp.pack()
+        dscp.pack()
         # DSCP component
 
     def test_flowtrafficclass_ipv6(self) -> None:
@@ -285,7 +285,7 @@ class TestFlowPacketAttributes:
         tc = FlowTrafficClass(NumericOperator.EQ, 0xE0)  # CS7
 
         assert tc.value == 0xE0
-        packed = tc.pack()
+        tc.pack()
         # TrafficClass component
 
 
@@ -301,7 +301,7 @@ class TestFlowFragment:
         frag = FlowFragment(BinaryOperator.MATCH, Fragment.DONT)
 
         assert frag.value == Fragment.DONT
-        packed = frag.pack()
+        frag.pack()
         # Fragment component
 
     def test_flowfragment_is_fragment(self) -> None:
@@ -330,7 +330,7 @@ class TestFlowLabel:
         label = FlowFlowLabel(NumericOperator.EQ, 100)
 
         assert label.value == 100
-        packed = label.pack()
+        label.pack()
         # FlowLabel component (ID is 0x0D)
 
     def test_flowflowlabel_medium(self) -> None:
@@ -895,7 +895,7 @@ class TestFlowEdgeCases:
         flow1.add(dest)
         flow1.add(proto)
 
-        str1 = str(flow1)
+        str(flow1)
 
         # Create flow with multiple same-type rules
         flow2 = Flow()

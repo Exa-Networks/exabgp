@@ -74,7 +74,7 @@ class TestBacklogNearCapacity:
                 backlog.append(msg)
 
             # Verify size
-            size = len(backlog)
+            len(backlog)
 
             # Process all
             processed = 0
@@ -151,7 +151,7 @@ class TestBacklogSaturationBehavior:
 
         def handle_burst():
             backlog = deque(existing)
-            initial_size = len(backlog)
+            len(backlog)
 
             # Receive burst
             for msg in burst:

@@ -749,7 +749,7 @@ def test_protocol_new_operational(mock_peer: Any) -> None:
     mock_operational.ID = 4  # OPERATIONAL
     mock_operational.__str__ = Mock(return_value='OPERATIONAL')
 
-    messages = list(protocol.new_operational(mock_operational, protocol.negotiated))
+    list(protocol.new_operational(mock_operational, protocol.negotiated))
 
     assert mock_connection.writer.called
 
@@ -770,7 +770,7 @@ def test_protocol_new_refresh(mock_peer: Any) -> None:
     mock_refresh.message = Mock(return_value=b'\xff' * 16 + b'\x00\x17\x05' + b'\x00\x01\x00\x01')
     mock_refresh.ID = 5  # ROUTE_REFRESH
 
-    messages = list(protocol.new_refresh(mock_refresh))
+    list(protocol.new_refresh(mock_refresh))
 
     assert mock_connection.writer.called
 
@@ -1080,7 +1080,7 @@ def test_protocol_connect_sets_local_address(mock_peer: Any) -> None:
         mock_outgoing.local = '192.0.2.100'
         MockOutgoing.return_value = mock_outgoing
 
-        result = list(protocol.connect())
+        list(protocol.connect())
 
         # Verify connection was established
         assert protocol.connection == mock_outgoing
@@ -1213,7 +1213,7 @@ def test_protocol_new_notification_message(mock_peer: Any) -> None:
     mock_notification.data = b'test error'
     mock_notification.ID = 3  # NOTIFICATION
 
-    messages = list(protocol.new_notification(mock_notification))
+    list(protocol.new_notification(mock_notification))
 
     assert mock_connection.writer.called
 
@@ -1236,7 +1236,7 @@ def test_protocol_new_open_flow(mock_peer: Any) -> None:
     # Test the basic flow - may encounter errors due to complex mocking requirements
     # This verifies the code path exists
     try:
-        messages = list(protocol.new_open())
+        list(protocol.new_open())
         # If it succeeds, check that writer was called
         assert mock_connection.writer.called
     except (KeyError, AttributeError, RuntimeError):

@@ -367,7 +367,7 @@ class TestPrefixSid:
         srgb = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
         original = PrefixSid(sr_attrs=[label_index, srgb])
 
-        packed = original.pack()
+        original.pack()
 
         # Unpack (need to extract attribute value from full attribute encoding)
         # The pack() method adds attribute header, so we need to skip it
@@ -413,7 +413,7 @@ class TestPrefixSid:
     def test_prefix_sid_attribute_properties(self) -> None:
         """Test PrefixSid attribute properties."""
         label_index = SrLabelIndex(labelindex=100)
-        prefix_sid = PrefixSid(sr_attrs=[label_index])
+        PrefixSid(sr_attrs=[label_index])
 
         # Check attribute ID and flags
         assert PrefixSid.ID == PrefixSid.CODE.BGP_PREFIX_SID
