@@ -21,6 +21,12 @@ from exabgp.util import hexstring
 class RouteDistinguisher:
     NORD: RouteDistinguisher | None = None
 
+    # RFC 4364 - Route Distinguisher Type Field
+    TYPE_AS2_ADMIN = 0  # Type 0: 2-byte AS administrator + 4-byte assigned number
+    TYPE_IPV4_ADMIN = 1  # Type 1: IPv4 address administrator + 2-byte assigned number
+    TYPE_AS4_ADMIN = 2  # Type 2: 4-byte AS administrator + 2-byte assigned number
+    LENGTH = 8  # Route Distinguisher is always 8 bytes
+
     def __init__(self, rd):
         self.rd = rd
         self._len = len(self.rd)
@@ -51,11 +57,11 @@ class RouteDistinguisher:
 
     def _str(self):
         t, c1, c2, c3 = unpack('!HHHH', self.rd)
-        if t == 0:
+        if t == self.TYPE_AS2_ADMIN:
             rd = '%d:%d' % (c1, (c2 << 16) + c3)
-        elif t == 1:
+        elif t == self.TYPE_IPV4_ADMIN:
             rd = '%d.%d.%d.%d:%d' % (c1 >> 8, c1 & 0xFF, c2 >> 8, c2 & 0xFF, c3)
-        elif t == 2:
+        elif t == self.TYPE_AS4_ADMIN:
             rd = '%d:%d' % ((c1 << 16) + c2, c3)
         else:
             rd = hexstring(self.rd)

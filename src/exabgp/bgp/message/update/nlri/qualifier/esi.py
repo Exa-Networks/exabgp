@@ -13,13 +13,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # Ethernet Segment Identifier
 class ESI:
-    DEFAULT = b''.join(bytes([0]) for _ in range(10))
-    MAX = b''.join(bytes([0xFF]) for _ in range(10))
+    LENGTH = 10  # RFC 7432 - Ethernet Segment Identifier is always 10 bytes
+
+    DEFAULT = bytes([0x00] * LENGTH)  # All zeros
+    MAX = bytes([0xFF] * LENGTH)  # All ones
 
     def __init__(self, esi=None):
         self.esi = self.DEFAULT if esi is None else esi
-        if len(self.esi) != 10:
-            raise Exception('incorrect ESI, len %d instead of 10' % len(esi))
+        if len(self.esi) != self.LENGTH:
+            raise Exception(f'incorrect ESI, len {len(esi)} instead of {self.LENGTH}')
 
     def __eq__(self, other):
         return self.esi == other.esi
@@ -51,14 +53,14 @@ class ESI:
         return self.esi
 
     def __len__(self):
-        return 10
+        return self.LENGTH
 
     def __hash__(self):
         return hash(self.esi)
 
     @classmethod
     def unpack(cls, data):
-        return cls(data[:10])
+        return cls(data[:cls.LENGTH])
 
     def json(self, compact=None):
         return '"esi": "{}"'.format(str(self))

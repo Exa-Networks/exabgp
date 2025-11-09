@@ -38,9 +38,9 @@ class Parameter(int):
     CAPABILITIES = 0x02
 
     def __str__(self):
-        if self == 0x01:
+        if self == self.AUTHENTIFICATION_INFORMATION:
             return 'AUTHENTIFICATION INFORMATION'
-        if self == 0x02:
+        if self == self.CAPABILITIES:
             return 'OPTIONAL'
         return 'UNKNOWN'
 
@@ -58,6 +58,9 @@ class Parameter(int):
 
 
 class Capabilities(dict):
+    # RFC 9072 - Extended Optional Parameters Length
+    EXTENDED_LENGTH = 0xFF  # IANA Extended Length type code - indicates extended format in use
+
     _ADD_PATH = [
         (AFI.ipv4, SAFI.unicast),
         (AFI.ipv6, SAFI.unicast),
@@ -236,7 +239,7 @@ class Capabilities(dict):
         option_len = data[0]
         option_type = data[1]
 
-        if option_len == 255 and option_type == 255:
+        if option_len == Capabilities.EXTENDED_LENGTH and option_type == Capabilities.EXTENDED_LENGTH:
             option_len = unpack('!H', data[2:4])[0]
             data = data[4 : option_len + 4]
             decoder = _extended_type_length

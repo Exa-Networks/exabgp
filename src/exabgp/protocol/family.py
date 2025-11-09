@@ -38,6 +38,11 @@ class _AFI(int):
         IPv6: 128,
     }
 
+    _address_lengths = {
+        IPv4: 4,   # 4 bytes = 32 bits
+        IPv6: 16,  # 16 bytes = 128 bits
+    }
+
     def pack(self):
         return pack('!H', self)
 
@@ -46,6 +51,16 @@ class _AFI(int):
 
     def mask(self):
         return self._masks.get(self, 'invalid request for this family')
+
+    def address_length(self):
+        """Return address length in bytes.
+
+        Raises:
+            ValueError: If address length is not defined for this AFI
+        """
+        if self not in self._address_lengths:
+            raise ValueError(f'Address length not defined for AFI {self.name()}')
+        return self._address_lengths[self]
 
     def __repr__(self):
         return self.name()
