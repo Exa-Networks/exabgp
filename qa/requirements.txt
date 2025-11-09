@@ -4,5 +4,6 @@ coveralls
 nose
 psutil
 pytest
+pytest-asyncio
 pytest-cov
 hypothesis
