@@ -122,7 +122,7 @@ def _operator_numeric(string):
         else:
             return operator, string[1:]
     except IndexError:
-        raise ValueError('Invalid expression (too short) %s' % string)
+        raise ValueError('Invalid expression (too short) %s' % string) from None
 
 
 def _operator_binary(string):
@@ -136,7 +136,7 @@ def _operator_binary(string):
         else:
             return BinaryOperator.INCLUDE, string
     except IndexError:
-        raise ValueError('Invalid expression (too short) %s' % string)
+        raise ValueError('Invalid expression (too short) %s' % string) from None
 
 
 def _value(string):
@@ -302,7 +302,7 @@ def redirect(tokeniser):
                 ip = IP.create(data)
                 return ip, ExtendedCommunities().add(TrafficNextHopSimpson(False))
             except Exception:
-                raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []')
+                raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
 
         ip, nn = data.split(']:')
         ip = ip.replace('[', '', 1)

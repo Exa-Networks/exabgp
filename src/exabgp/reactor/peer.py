@@ -361,7 +361,7 @@ class Peer(object):
             # A connection arrived before we could establish !
             if not connected or self.proto:
                 yield ACTION.NOW
-                raise Interrupted('connection failed')
+                raise Interrupted('connection failed') from None
 
     def _send_open(self):
         message = Message.CODE.NOP
@@ -479,7 +479,7 @@ class Peer(object):
                 # Can not find any better error code than 6,0 !
                 # XXX: We can not restart the program so this will come back again and again - FIX
                 # XXX: In the main loop we do exit on this kind of error
-                raise Notify(6, 0, 'ExaBGP Internal error, sorry.')
+                raise Notify(6, 0, 'ExaBGP Internal error, sorry.') from None
 
         routes_per_iteration = 1 if self.neighbor['rate-limit'] > 0 else 25
         send_eor = not self.neighbor['manual-eor']

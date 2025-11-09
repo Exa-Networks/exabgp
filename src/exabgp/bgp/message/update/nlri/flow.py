@@ -329,7 +329,7 @@ def port_value(data):
     try:
         number = Port.named(data)
     except ValueError:
-        raise ValueError(_str_bad_port)
+        raise ValueError(_str_bad_port) from None
     return number
 
 

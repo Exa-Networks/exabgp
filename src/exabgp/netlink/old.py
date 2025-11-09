@@ -19,7 +19,7 @@ from collections import namedtuple
 try:
     getattr(socket, 'AF_NETLINK')
 except AttributeError:
-    raise ImportError('This module only works on unix version with netlink support')
+    raise ImportError('This module only works on unix version with netlink support') from None
 
 
 class NetMask(object):

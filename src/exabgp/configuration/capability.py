@@ -51,7 +51,7 @@ def gracefulrestart(tokeniser, default):
     try:
         grace = int(state)
     except ValueError:
-        raise ValueError('"%s" is an invalid graceful-restart time' % state)
+        raise ValueError('"%s" is an invalid graceful-restart time' % state) from None
 
     if grace < 0:
         raise ValueError('graceful-restart can not be negative')

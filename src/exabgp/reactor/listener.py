@@ -88,10 +88,10 @@ class Listener(object):
             if exc.args[0] == errno.EADDRINUSE:
                 raise BindingError(
                     f'could not listen on {local_ip}:{local_port}, the port may already be in use by another application'
-                )
+                ) from None
             elif exc.args[0] == errno.EADDRNOTAVAIL:
-                raise BindingError(f'could not listen on {local_ip}:{local_port}, this is an invalid address')
-            raise NetworkError(str(exc))
+                raise BindingError(f'could not listen on {local_ip}:{local_port}, this is an invalid address') from None
+            raise NetworkError(str(exc)) from None
         except NetworkError as exc:
             log.critical(lambda exc=exc: str(exc), 'network')
             raise exc

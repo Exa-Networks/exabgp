@@ -130,7 +130,7 @@ def attribute(tokeniser):
     try:
         code = int(code, 16)
     except ValueError:
-        raise ValueError('invalid attribute, code is not 0x hexadecimal')
+        raise ValueError('invalid attribute, code is not 0x hexadecimal') from None
 
     flag = tokeniser().lower()
     if not flag.startswith('0x'):
@@ -138,7 +138,7 @@ def attribute(tokeniser):
     try:
         flag = int(flag, 16)
     except ValueError:
-        raise ValueError('invalid attribute, flag is not 0x hexadecimal')
+        raise ValueError('invalid attribute, flag is not 0x hexadecimal') from None
 
     data = tokeniser().lower()
     if not data.startswith('0x'):
@@ -171,7 +171,7 @@ def aigp(tokeniser):
     try:
         number = int(value, base)
     except ValueError:
-        raise ValueError('aigp requires number (decimal or hexadecimal 0x prefixed)')
+        raise ValueError('aigp requires number (decimal or hexadecimal 0x prefixed)') from None
 
     return AIGP(b'\x01\x00\x0b' + pack('!Q', number))
 
@@ -221,7 +221,7 @@ def as_path(tokeniser):
             try:
                 return ASPath(ASN.from_string(value))
             except ValueError:
-                raise ValueError('could not parse as-path')
+                raise ValueError('could not parse as-path') from None
         else:
             raise ValueError('could not parse as-path')
 
@@ -246,7 +246,7 @@ def as_path(tokeniser):
                 insert.append(ASN.from_string(value))
                 continue
             except ValueError:
-                raise ValueError('could not parse as-path')
+                raise ValueError('could not parse as-path') from None
 
 
 def local_preference(tokeniser):
@@ -282,7 +282,7 @@ def aggregator(tokeniser):
         local_as = ASN.from_string(as_number)
         local_address = RouterID(address)
     except (ValueError, IndexError):
-        raise ValueError('invalid aggregator')
+        raise ValueError('invalid aggregator') from None
 
     if eat:
         if tokeniser() != ')':
@@ -316,7 +316,7 @@ def cluster_list(tokeniser):
             raise ValueError('no cluster-id in the cluster list')
         return ClusterList(clusterids)
     except ValueError:
-        raise ValueError('invalud cluster list')
+        raise ValueError('invalud cluster list') from None
 
 
 # XXX: Community does does not cache anymore .. we SHOULD really do it !

@@ -52,7 +52,7 @@ def port(tokeniser):
     try:
         return int(value)
     except ValueError:
-        raise ValueError('"%s" is an invalid port' % value)
+        raise ValueError('"%s" is an invalid port' % value) from None
     if value < 0:
         raise ValueError('the port must be positive')
     if value >= pow(2, 16):
@@ -86,7 +86,7 @@ def asn(tokeniser, value=None):
             as_number = int(value)
         return ASN(as_number)
     except ValueError:
-        raise ValueError('"%s" is an invalid ASN' % value)
+        raise ValueError('"%s" is an invalid ASN' % value) from None
 
 
 def peer_ip(tokeniser):
@@ -103,7 +103,7 @@ def peer_ip(tokeniser):
     try:
         return IPRange.create(value, mask)
     except (IndexError, ValueError, socket.error):
-        raise ValueError('"%s" is an invalid IP address' % value)
+        raise ValueError('"%s" is an invalid IP address' % value) from None
 
 
 def ip(tokeniser):
@@ -114,4 +114,4 @@ def ip(tokeniser):
     try:
         return IP.create(value)
     except (IndexError, ValueError, socket.error):
-        raise ValueError('"%s" is an invalid IP address' % value)
+        raise ValueError('"%s" is an invalid IP address' % value) from None

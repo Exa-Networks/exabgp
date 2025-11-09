@@ -81,6 +81,10 @@ exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages", "src/exabgp/
 # F82: Undefined names in __all__
 select = ["E9", "F63", "F7", "F82"]
 
+# Ignore specific rules:
+# ERA001: Commented-out code (intentional in this codebase)
+ignore = ["ERA001"]
+
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"
 docstring-quotes = "double"

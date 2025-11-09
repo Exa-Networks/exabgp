@@ -100,7 +100,7 @@ class RouteDistinguisher(object):
 
             return cls(distinguisher)
         except ValueError:
-            raise ValueError('invalid route-distinguisher %s:%s' % (prefix, suffix))
+            raise ValueError('invalid route-distinguisher %s:%s' % (prefix, suffix)) from None
 
 
 RouteDistinguisher.NORD = RouteDistinguisher(b'')
