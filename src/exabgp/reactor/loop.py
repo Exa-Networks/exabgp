@@ -32,6 +32,7 @@ from exabgp.bgp.fsm import FSM
 
 from exabgp.version import version
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 
 class Reactor(object):
@@ -163,42 +164,42 @@ class Reactor(object):
     def handle_connection(self, peer_name, connection):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            log.critical(f'could not find referenced peer {peer_name}', 'reactor')
+            logfunc.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.handle_connection(connection)
 
     def neighbor(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            log.critical(f'could not find referenced peer {peer_name}', 'reactor')
+            logfunc.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         return peer.neighbor
 
     def neighbor_name(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            log.critical(f'could not find referenced peer {peer_name}', 'reactor')
+            logfunc.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return ''
         return peer.neighbor.name()
 
     def neighbor_ip(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            log.critical(f'could not find referenced peer {peer_name}', 'reactor')
+            logfunc.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return ''
         return str(peer.neighbor['peer-address'])
 
     def neighbor_cli_data(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            log.critical(f'could not find referenced peer {peer_name}', 'reactor')
+            logfunc.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return ''
         return peer.cli_data()
 
     def neighor_rib(self, peer_name, rib_name, advertised=False):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            log.critical(f'could not find referenced peer {peer_name}', 'reactor')
+            logfunc.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return []
         families = None
         if advertised:
@@ -209,21 +210,21 @@ class Reactor(object):
     def neighbor_rib_resend(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            log.critical(f'could not find referenced peer {peer_name}', 'reactor')
+            logfunc.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.resend(peer.neighbor['capability']['route-refresh'])
 
     def neighbor_rib_out_withdraw(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            log.critical(f'could not find referenced peer {peer_name}', 'reactor')
+            logfunc.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.neighbor.rib.outgoing.withdraw()
 
     def neighbor_rib_in_clear(self, peer_name):
         peer = self._peers.get(peer_name, None)
         if not peer:
-            log.critical(f'could not find referenced peer {peer_name}', 'reactor')
+            logfunc.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.neighbor.rib.incoming.clear()
 
@@ -305,7 +306,7 @@ class Reactor(object):
             self.processes.start(self.configuration.processes)
 
         if not self.daemon.drop_privileges():
-            log.critical("could not drop privileges to '%s' refusing to run as root" % self.daemon.user, 'reactor')
+            logfunc.critical(lambda: "could not drop privileges to '%s' refusing to run as root" % self.daemon.user, 'reactor')
             log.critical('set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor')
             return self.Exit.privileges
 
@@ -321,7 +322,7 @@ class Reactor(object):
         wait = getenv().tcp.delay
         if wait:
             sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
-            log.debug(f'waiting for {sleeptime} seconds before connecting', 'reactor')
+            logfunc.debug(lambda: f'waiting for {sleeptime} seconds before connecting', 'reactor')
             time.sleep(float(sleeptime))
 
         workers = {}
@@ -484,7 +485,7 @@ class Reactor(object):
 
     def reload(self):
         """Reload the configuration and send to the peer the route which changed"""
-        log.info(f'performing reload of exabgp {version}', 'configuration')
+        logfunc.info(lambda: f'performing reload of exabgp {version}', 'configuration')
 
         reloaded = self.configuration.reload()
 
@@ -495,23 +496,23 @@ class Reactor(object):
 
         for key, peer in self._peers.items():
             if key not in self.configuration.neighbors:
-                log.debug('removing peer: %s' % peer.neighbor.name(), 'reactor')
+                logfunc.debug(lambda: 'removing peer: %s' % peer.neighbor.name(), 'reactor')
                 peer.remove()
 
         for key, neighbor in self.configuration.neighbors.items():
             # new peer
             if key not in self._peers:
-                log.debug('new peer: %s' % neighbor.name(), 'reactor')
+                logfunc.debug(lambda: 'new peer: %s' % neighbor.name(), 'reactor')
                 peer = Peer(neighbor, self)
                 self._peers[key] = peer
             # modified peer
             elif self._peers[key].neighbor != neighbor:
-                log.debug('peer definition change, establishing a new connection for %s' % str(key), 'reactor')
+                logfunc.debug(lambda: 'peer definition change, establishing a new connection for %s' % str(key), 'reactor')
                 self._peers[key].reestablish(neighbor)
             # same peer but perhaps not the routes
             else:
                 # finding what route changed and sending the delta is not obvious
-                log.debug('peer definition identical, updating peer routes if required for %s' % str(key), 'reactor')
+                logfunc.debug(lambda: 'peer definition identical, updating peer routes if required for %s' % str(key), 'reactor')
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
                 if ip.afi == neighbor['peer-address'].afi:
@@ -524,7 +525,7 @@ class Reactor(object):
 
     def restart(self):
         """Kill the BGP session and restart it"""
-        log.info(f'performing restart of exabgp {version}', 'reactor')
+        logfunc.info(lambda: f'performing restart of exabgp {version}', 'reactor')
 
         reloaded = self.configuration.reload()
 
@@ -535,7 +536,7 @@ class Reactor(object):
         for key in self._peers.keys():
             if key not in self.configuration.neighbors.keys():
                 peer = self._peers[key]
-                log.debug('removing peer %s' % peer.neighbor.name(), 'reactor')
+                logfunc.debug(lambda: 'removing peer %s' % peer.neighbor.name(), 'reactor')
                 self._peers[key].remove()
             else:
                 self._peers[key].reestablish()

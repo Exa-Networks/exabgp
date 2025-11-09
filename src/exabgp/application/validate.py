@@ -15,6 +15,7 @@ from exabgp.bgp.neighbor import NeighborTemplate
 
 from exabgp.debug.intercept import trace_interceptor
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 from exabgp.configuration.check import check_generation
 
@@ -47,16 +48,16 @@ def cmdline(cmdarg):
         env.log.parser = True
 
     for configuration in cmdarg.configuration:
-        log.info(f'loading {configuration}', 'configuration')
+        logfunc.info(lambda: f'loading {configuration}', 'configuration')
         location = getconf(configuration)
         if not location:
-            log.critical(f'{configuration} is not an exabgp config file', 'configuration')
+            logfunc.critical(lambda: f'{configuration} is not an exabgp config file', 'configuration')
             sys.exit(1)
 
         config = Configuration([location])
 
         if not config.reload():
-            log.critical(f'{configuration} is not a valid config file', 'configuration')
+            logfunc.critical(lambda: f'{configuration} is not a valid config file', 'configuration')
             sys.exit(1)
         log.info('\u2713 loading', 'configuration')
 
@@ -65,12 +66,12 @@ def cmdline(cmdarg):
             for name, neighbor in config.neighbors.items():
                 reparsed = NeighborTemplate.configuration(neighbor)
                 log.debug(reparsed, configuration)
-                log.info(f'\u2713 neighbor  {name.split()[1]}', 'configuration')
+                logfunc.info(lambda: f'\u2713 neighbor  {name.split()[1]}', 'configuration')
 
         if cmdarg.route:
             log.warning('checking routes', 'configuration')
             if not check_generation(config.neighbors):
-                log.critical(f'{configuration} has an invalid route', 'configuration')
+                logfunc.critical(lambda: f'{configuration} has an invalid route', 'configuration')
                 sys.exit(1)
             log.info('\u2713 routes', 'configuration')
 

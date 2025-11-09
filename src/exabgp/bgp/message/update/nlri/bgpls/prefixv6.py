@@ -17,6 +17,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 
 
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 #   The IPv4 and IPv6 Prefix NLRIs (NLRI Type = 3 and Type = 4) use the
 #   same format, as shown in the following figure.

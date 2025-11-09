@@ -418,7 +418,7 @@ class Attributes(dict):
 
         # it is an unknown transitive attribute we need to pass on
         if flag & Attribute.Flag.TRANSITIVE:
-            log.debug('unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
+            logfunc.debug(lambda: 'unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
             try:
                 decoded = GenericAttribute(aid, flag | Attribute.Flag.PARTIAL, attribute)
             except IndexError:
@@ -427,7 +427,7 @@ class Attributes(dict):
             return self.parse(left, direction, negotiated)
 
         # it is an unknown non-transitive attribute we can ignore.
-        log.debug('ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
+        logfunc.debug(lambda: 'ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
         return self.parse(left, direction, negotiated)
 
     def merge_attributes(self):

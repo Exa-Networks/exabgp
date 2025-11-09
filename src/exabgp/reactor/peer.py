@@ -274,12 +274,12 @@ class Peer(object):
         return -1
 
     def handle_connection(self, connection):
-        log.debug('state machine for the peer is %s' % self.fsm.name(), self.id())
+        logfunc.debug(lambda: 'state machine for the peer is %s' % self.fsm.name(), self.id())
 
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:
-            log.debug(
-                'we already have a peer in state established for %s' % connection.name(),
+            logfunc.debug(
+                lambda: 'we already have a peer in state established for %s' % connection.name(),
                 self.id(),
             )
             return connection.notification(6, 7, 'could not accept the connection, already established')
@@ -530,7 +530,7 @@ class Peer(object):
                 # Received update
                 if message.TYPE == Update.TYPE:
                     number += 1
-                    log.debug('<< UPDATE #%d' % number, self.id())
+                    logfunc.debug(lambda: '<< UPDATE #%d' % number, self.id())
 
                     for nlri in message.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
@@ -742,7 +742,7 @@ class Peer(object):
             if self._delay.backoff():
                 return ACTION.LATER
             if self._restart:
-                log.debug('initialising connection to %s' % self.id(), 'reactor')
+                logfunc.debug(lambda: 'initialising connection to %s' % self.id(), 'reactor')
                 self.generator = self._run()
                 return ACTION.LATER  # make sure we go through a clean loop
             return ACTION.CLOSE

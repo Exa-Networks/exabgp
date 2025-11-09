@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -156,7 +157,7 @@ class OutgoingRIB(Cache):
                 self._watchdog[watchdog]['+'].pop(change.index())
 
     def del_from_rib(self, change):
-        log.debug('remove %s' % change, 'rib')
+        logfunc.debug(lambda: 'remove %s' % change, 'rib')
 
         change_index = change.index()
         change_family = change.nlri.family().afi_safi()
@@ -181,7 +182,7 @@ class OutgoingRIB(Cache):
         self._refresh_changes.append(change)
 
     def add_to_rib(self, change, force=False):
-        log.debug('insert %s' % change, 'rib')
+        logfunc.debug(lambda: 'insert %s' % change, 'rib')
 
         if not force and self.in_cache(change):
             return

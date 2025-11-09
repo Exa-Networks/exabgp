@@ -19,6 +19,7 @@ from exabgp.protocol.family import Family
 from exabgp.bgp.message.refresh import RouteRefresh
 
 from exabgp.logger import log
+from exabgp.logger import logfunc
 from exabgp.reactor.api.command import Command
 from exabgp.configuration.configuration import Configuration
 
@@ -54,7 +55,7 @@ class API(Command):
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
                 return self.callback[api][registered](self, reactor, service, command, use_json)
         reactor.processes.answer_error(service)
-        log.warning('command from process not understood : %s' % command, 'api')
+        logfunc.warning(lambda: 'command from process not understood : %s' % command, 'api')
         return False
 
     def api_route(self, command):

@@ -13,6 +13,7 @@ import os
 import re
 
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 from exabgp.configuration.core import Error
 from exabgp.configuration.core import Scope
@@ -96,7 +97,7 @@ class _Configuration(object):
                         self.neighbors[neighbor].asm[operational.family().afi_safi()] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:
-                    log.error(f'the route family {operational.family().afi_safi()} is not configured on neighbor {neighbor}', 'configuration')
+                    logfunc.error(lambda: f'the route family {operational.family().afi_safi()} is not configured on neighbor {neighbor}', 'configuration')
                     result = False
         return result
 
@@ -109,7 +110,7 @@ class _Configuration(object):
                     if family in self.neighbors[neighbor].families():
                         self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi, refresh.safi))
                     else:
-                        log.error(f'the route family {family} is not configured on neighbor {neighbor}', 'configuration')
+                        logfunc.error(lambda: f'the route family {family} is not configured on neighbor {neighbor}', 'configuration')
                         result = False
         return result
 
@@ -525,7 +526,7 @@ class Configuration(_Configuration):
 
     def _enter(self, name):
         location = self.tokeniser.iterate()
-        log.debug('> %-16s | %s' % (location, self.tokeniser.params()), 'configuration')
+        logfunc.debug(lambda: '> %-16s | %s' % (location, self.tokeniser.params()), 'configuration')
 
         if location not in self._structure[name]['sections']:
             return self.error.set('section %s is invalid in %s, %s' % (location, name, self.scope.location()))
@@ -552,12 +553,12 @@ class Configuration(_Configuration):
             return self.error.set('closing too many parenthesis')
         self.scope.to_context()
 
-        log.debug('< %-16s | %s' % (left, self.tokeniser.params()), 'configuration')
+        logfunc.debug(lambda: '< %-16s | %s' % (left, self.tokeniser.params()), 'configuration')
         return True
 
     def _run(self, name):
         command = self.tokeniser.iterate()
-        log.debug('. %-16s | %s' % (command, self.tokeniser.params()), 'configuration')
+        logfunc.debug(lambda: '. %-16s | %s' % (command, self.tokeniser.params()), 'configuration')
 
         if not self.run(name, command):
             return False

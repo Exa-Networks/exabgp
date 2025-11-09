@@ -19,6 +19,7 @@ from exabgp.configuration.configuration import Configuration
 
 from exabgp.util.dns import warn
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 # this is imported from configuration.setup to make sure it was initialised
 from exabgp.environment import getenv
@@ -117,7 +118,7 @@ def cmdline(cmdarg):
     for configuration in cmdarg.configuration:
         location = getconf(configuration)
         if not location:
-            log.critical(f'{configuration} is not an exabgp config file', 'configuration')
+            logfunc.critical(lambda: f'{configuration} is not an exabgp config file', 'configuration')
             sys.exit(1)
         configurations.append(location)
 
@@ -148,7 +149,7 @@ def cmdline(cmdarg):
         for pid in pids:
             os.waitpid(pid, 0)
     except OSError as exc:
-        log.critical(f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')
+        logfunc.critical(lambda: f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')
         sys.exit(1)
 
 
@@ -156,12 +157,12 @@ def run(comment, configurations, pid=0):
     env = getenv()
 
     log.info('Thank you for using ExaBGP', 'welcome')
-    log.debug(f'{version}', 'version')
-    log.debug(f'{ROOT}', 'location')
+    logfunc.debug(lambda: f'{version}', 'version')
+    logfunc.debug(lambda: f'{ROOT}', 'location')
     python_version = sys.version.replace('\n', ' ')
-    log.debug(f'{python_version}', 'python')
+    logfunc.debug(lambda: f'{python_version}', 'python')
     platform_info = ' '.join(platform.uname()[:5])
-    log.debug(f'{platform_info}', 'platform')
+    logfunc.debug(lambda: f'{platform_info}', 'platform')
 
     if comment:
         log.error(comment, 'advice')
@@ -180,13 +181,13 @@ def run(comment, configurations, pid=0):
             )
             log.error('we scanned the following folders (the number is your PID):', 'cli')
             for location in pipes:
-                log.error(f' - {location}', 'cli control')
+                logfunc.error(lambda: f' - {location}', 'cli control')
             log.error('please make them in one of the folder with the following commands:', 'cli control')
 
             # NOTE: Logging full paths (os.getcwd()) is intentional for user guidance
             # Security review: Accepted as necessary for troubleshooting
-            log.error(f'> mkfifo {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
-            log.error(f'> chmod 600 {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
+            logfunc.error(lambda: f'> mkfifo {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
+            logfunc.error(lambda: f'> chmod 600 {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
 
             if os.getuid() != 0:
                 log.error(
@@ -199,8 +200,8 @@ def run(comment, configurations, pid=0):
             os.environ['exabgp_api_pipename'] = pipename
 
             log.info('named pipes for the cli are:', 'cli control')
-            log.info(f'to send commands  {pipe}{pipename}.in', 'cli control')
-            log.info(f'to read responses {pipe}{pipename}.out', 'cli control')
+            logfunc.info(lambda: f'to send commands  {pipe}{pipename}.in', 'cli control')
+            logfunc.info(lambda: f'to read responses {pipe}{pipename}.out', 'cli control')
 
     configuration = Configuration(configurations)
 

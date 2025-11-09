@@ -16,6 +16,7 @@ from .tcp import ready
 # from .error import NetworkError
 
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 
 class Outgoing(Connection):
@@ -70,12 +71,12 @@ class Outgoing(Connection):
                 last = time.time()
 
             if notify:
-                log.debug('attempting connection to %s:%d' % (self.peer, self.port), self.session())
+                logfunc.debug(lambda: 'attempting connection to %s:%d' % (self.peer, self.port), self.session())
 
             connect_issue = self._connect()
             if connect_issue:
                 if notify:
-                    log.debug('connection to %s:%d failed' % (self.peer, self.port), self.session())
+                    logfunc.debug(lambda: 'connection to %s:%d failed' % (self.peer, self.port), self.session())
                     log.debug(str(connect_issue), self.session())
                 yield False
                 continue

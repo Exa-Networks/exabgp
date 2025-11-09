@@ -10,6 +10,7 @@ from .error import NotConnected
 
 from exabgp.bgp.message import Notify
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 
 class Incoming(Connection):
@@ -18,7 +19,7 @@ class Incoming(Connection):
     def __init__(self, afi, peer, local, io):
         Connection.__init__(self, afi, peer, local)
 
-        log.debug('connection from %s' % self.peer, 'network')
+        logfunc.debug(lambda: 'connection from %s' % self.peer, 'network')
 
         try:
             self.io = io

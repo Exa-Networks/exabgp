@@ -31,6 +31,7 @@ from exabgp.reactor.network.incoming import Incoming
 from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 
 class Listener(object):
@@ -112,9 +113,9 @@ class Listener(object):
                     f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root', 'network'
                 )
             else:
-                log.critical(f'can not bind to {local_addr}:{port} ({exc})', 'network')
+                logfunc.critical(lambda: f'can not bind to {local_addr}:{port} ({exc})', 'network')
             log.critical('unset exabgp.tcp.bind if you do not want listen for incoming connections', 'network')
-            log.critical(f'and check that no other daemon is already binding to port {port}', 'network')
+            logfunc.critical(lambda: f'and check that no other daemon is already binding to port {port}', 'network')
             return False
 
     def incoming(self):
@@ -163,7 +164,7 @@ class Listener(object):
         ranged_neighbor = []
 
         for connection in self._connected():
-            log.debug(f'new connection received {connection.name()}', 'network')
+            logfunc.debug(lambda: f'new connection received {connection.name()}', 'network')
             for key in reactor.peers():
                 neighbor = reactor.neighbor(key)
 
@@ -191,9 +192,9 @@ class Listener(object):
 
                 denied = reactor.handle_connection(key, connection)
                 if denied:
-                    log.debug(f'refused connection from {connection.name()} due to the state machine', 'network')
+                    logfunc.debug(lambda: f'refused connection from {connection.name()} due to the state machine', 'network')
                     break
-                log.debug(f'accepted connection from {connection.name()}', 'network')
+                logfunc.debug(lambda: f'accepted connection from {connection.name()}', 'network')
                 break
             else:
                 # we did not break (and nothign was found/done or we have group match)
@@ -210,7 +211,7 @@ class Listener(object):
                     )
                     return
                 if not matched:
-                    log.debug(f'no session configured for {connection.name()}', 'network')
+                    logfunc.debug(lambda: f'no session configured for {connection.name()}', 'network')
                     reactor.asynchronous.schedule(
                         str(uuid.uuid1()),
                         'sending notification (6,3)',
@@ -229,7 +230,7 @@ class Listener(object):
                 new_peer = Peer(new_neighbor, reactor)
                 denied = new_peer.handle_connection(connection)
                 if denied:
-                    log.debug(f'refused connection from {connection.name()} due to the state machine', 'network')
+                    logfunc.debug(lambda: f'refused connection from {connection.name()} due to the state machine', 'network')
                     return
 
                 reactor.register_peer(new_neighbor.name(), new_peer)
@@ -241,7 +242,7 @@ class Listener(object):
 
         for sock, (ip, port, _, _) in self._sockets.items():
             sock.close()
-            log.info(f'stopped listening on {ip}:{port}', 'network')
+            logfunc.info(lambda: f'stopped listening on {ip}:{port}', 'network')
 
         self._sockets = {}
         self.serving = False

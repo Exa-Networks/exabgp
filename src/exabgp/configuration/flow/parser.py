@@ -48,6 +48,7 @@ from exabgp.bgp.message.update.attribute.community.extended import (
 )
 from exabgp.rib.change import Change
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 
 def flow(tokeniser):
@@ -279,7 +280,7 @@ def rate_limit(tokeniser):
         log.warning('rate-limiting flow under 9600 bytes per seconds may not work', 'configuration')
     if speed > 1000000000000:
         speed = 1000000000000
-        log.warning('rate-limiting changed for 1 000 000 000 000 bytes from %s' % speed, 'configuration')
+        logfunc.warning(lambda: 'rate-limiting changed for 1 000 000 000 000 bytes from %s' % speed, 'configuration')
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 

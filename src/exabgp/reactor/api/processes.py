@@ -24,6 +24,7 @@ from exabgp.reactor.api.response.answer import Answer
 
 from exabgp.bgp.message import Message
 from exabgp.logger import log
+from exabgp.logger import logfunc
 
 from exabgp.version import json as json_version
 from exabgp.version import text as text_version
@@ -80,15 +81,15 @@ class Processes(object):
         if process not in self._process:
             return
         if self.respawn_number and self._restart[process]:
-            log.debug(f'process {process} ended, restarting it', 'process')
+            logfunc.debug(lambda: f'process {process} ended, restarting it', 'process')
             self._terminate(process)
             self._start(process)
         else:
-            log.debug(f'process {process} ended', 'process')
+            logfunc.debug(lambda: f'process {process} ended', 'process')
             self._terminate(process)
 
     def _terminate(self, process_name):
-        log.debug(f'terminating process {process_name}', 'process')
+        logfunc.debug(lambda: f'terminating process {process_name}', 'process')
         process = self._process[process_name]
         del self._process[process_name]
         self._update_fds()
@@ -102,7 +103,7 @@ class Processes(object):
             try:
                 process.wait(timeout=2)
             except subprocess.TimeoutExpired:
-                log.debug(f'force kill unresponsive {process_name}', 'process')
+                logfunc.debug(lambda: f'force kill unresponsive {process_name}', 'process')
                 process.kill()
                 process.wait(timeout=1)
         except (OSError, KeyError, subprocess.TimeoutExpired):
@@ -126,7 +127,7 @@ class Processes(object):
                 t.join()
             except OSError:
                 # we most likely received a SIGTERM signal and our child is already dead
-                log.debug(f'child process {process} was already dead', 'process')
+                logfunc.debug(lambda: f'child process {process} was already dead', 'process')
         self.clean()
 
     def _start(self, process):
@@ -165,7 +166,7 @@ class Processes(object):
                 self._update_fds()
                 fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
-                log.debug('forked process %s' % process, 'process')
+                logfunc.debug(lambda: 'forked process %s' % process, 'process')
 
                 self._restart[process] = self._configuration[process]['respawn']
                 around_now = int(time.time()) & self.respawn_timemask
@@ -188,8 +189,8 @@ class Processes(object):
 
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)
-            log.debug('could not start process %s' % process, 'process')
-            log.debug('reason: %s' % str(exc), 'process')
+            logfunc.debug(lambda: 'could not start process %s' % process, 'process')
+            logfunc.debug(lambda: 'reason: %s' % str(exc), 'process')
 
     def start(self, configuration, restart=False):
         for process in list(self._process):
@@ -257,9 +258,9 @@ class Processes(object):
                         line = line.rstrip()
                         consumed_data = True
                         if line.startswith('debug '):
-                            log.warning(f'debug info from {process} : {line[6:]} ', 'api')
+                            logfunc.warning(lambda: f'debug info from {process} : {line[6:]} ', 'api')
                         else:
-                            log.debug(f'command from process {process} : {line} ', 'process')
+                            logfunc.debug(lambda: f'command from process {process} : {line} ', 'process')
                             yield (process, formated(line))
 
                     self._buffer[process] = raw
@@ -273,7 +274,7 @@ class Processes(object):
                         # we most likely have data, we will try to read them a the next loop iteration
                         pass
                     else:
-                        log.debug(f'unexpected errno received from forked process ({errstr(exc)})', 'process')
+                        logfunc.debug(lambda: f'unexpected errno received from forked process ({errstr(exc)})', 'process')
                     continue
                 except StopIteration:
                     if not consumed_data:
@@ -317,13 +318,13 @@ class Processes(object):
             self._process[process].stdin.flush()
         except IOError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
-            log.debug(f'error received while FLUSHING data to helper program, retrying ({errstr(exc)})', 'process')
+            logfunc.debug(lambda: f'error received while FLUSHING data to helper program, retrying ({errstr(exc)})', 'process')
 
         return True
 
     def _answer(self, service, string, force=False):
         if force or self.ack:
-            log.debug('responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
+            logfunc.debug(lambda: 'responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
     def answer_done(self, service):
