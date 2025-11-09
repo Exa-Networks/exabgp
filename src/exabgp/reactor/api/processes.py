@@ -350,7 +350,7 @@ class Processes:
     def silenced(function):
         def closure(self, *args):
             if self.silence:
-                return
+                return None
             return function(self, *args)
 
         return closure

@@ -171,7 +171,7 @@ class Reactor:
         peer = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
-            return
+            return None
         return peer.neighbor
 
     def neighbor_name(self, peer_name):
