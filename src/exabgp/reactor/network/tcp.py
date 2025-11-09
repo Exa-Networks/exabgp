@@ -67,7 +67,7 @@ def bind(io, ip, afi):
         if afi == AFI.ipv6:
             io.bind((ip, 0, 0, 0))
     except socket.error as exc:
-        raise BindingError('Could not bind to local ip %s - %s' % (ip, str(exc)))
+        raise BindingError(f'Could not bind to local ip {ip} - {str(exc)}')
 
 
 def connect(io, ip, port, afi, md5):
@@ -81,9 +81,9 @@ def connect(io, ip, port, afi, md5):
             return
         if md5:
             raise NotConnected(
-                'Could not connect to peer %s:%d, check your MD5 password (%s)' % (ip, port, errstr(exc))
+                f'Could not connect to peer {ip}:{port}, check your MD5 password ({errstr(exc)})'
             )
-        raise NotConnected('Could not connect to peer %s:%d (%s)' % (ip, port, errstr(exc)))
+        raise NotConnected(f'Could not connect to peer {ip}:{port} ({errstr(exc)})')
 
 
 # http://lxr.free-electrons.com/source/include/uapi/linux/tcp.h#L197
@@ -207,7 +207,7 @@ def ttl(io, ip, ttl):
         try:
             io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
         except socket.error as exc:
-            raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip, errstr(exc)))
+            raise TTLError(f'This OS does not support IP_TTL (ttl-security) for {ip} ({errstr(exc)})')
 
 
 def ttlv6(io, ip, ttl):

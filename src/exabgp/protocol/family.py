@@ -43,7 +43,7 @@ class _AFI(int):
         return pack('!H', self)
 
     def name(self):
-        return self._names.get(self, 'unknown-afi-0x%s' % hex(self))
+        return self._names.get(self, f'unknown-afi-{hex(self)}')
 
     def mask(self):
         return self._masks.get(self, 'invalid request for this family')
@@ -172,7 +172,7 @@ class _SAFI(int):
         return bytes([self])
 
     def name(self):
-        return self._names.get(self, 'unknown safi %d' % int(self))
+        return self._names.get(self, f'unknown safi {int(self)}')
 
     def has_label(self):
         return self in (SAFI.nlri_mpls, SAFI.mpls_vpn, SAFI.mcast_vpn)
@@ -330,13 +330,13 @@ class Family(object):
         return Family(self.afi, self.safi)
 
     def short(self):
-        return '%s/%s' % (self.afi, self.safi)
+        return f'{self.afi}/{self.safi}'
 
     def extensive(self):
-        return 'afi %s safi %s' % (self.afi, self.safi)
+        return f'afi {self.afi} safi {self.safi}'
 
     def index(self):
-        return b'%02x%02x' % (self.afi, self.safi)
+        return f'{self.afi:02x}{self.safi:02x}'.encode()
 
     def __repr__(self):
-        return '%s %s' % (str(self.afi), str(self.safi))
+        return f'{str(self.afi)} {str(self.safi)}'

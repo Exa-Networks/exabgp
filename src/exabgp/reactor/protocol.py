@@ -82,11 +82,7 @@ class Protocol(object):
     # XXX: we use self.peer.neighbor['peer-address'] when we could use self.neighbor['peer-address']
 
     def me(self, message):
-        return '%s/%s %s' % (
-            self.peer.neighbor['peer-address'],
-            self.peer.neighbor['peer-as'],
-            message,
-        )
+        return f"{self.peer.neighbor['peer-address']}/{self.peer.neighbor['peer-as']} {message}"
 
     def accept(self, incoming):
         self.connection = incoming
@@ -328,7 +324,7 @@ class Protocol(object):
             )
             for reason, (afi, safi) in self.negotiated.mismatch:
                 log.warning(
-                    ' - %s is not configured for %s/%s' % (reason, afi, safi),
+                    f' - {reason} is not configured for {afi}/{safi}',
                     self.connection.session(),
                 )
             log.warning(
@@ -403,7 +399,7 @@ class Protocol(object):
             yield _NOP
 
         log.debug(
-            '>> KEEPALIVE%s' % (' (%s)' % comment if comment else ''),
+            f'>> KEEPALIVE{f" ({comment})" if comment else ""}',
             self.connection.session(),
         )
 
@@ -413,12 +409,7 @@ class Protocol(object):
         for _ in self.write(notification):
             yield _NOP
         log.debug(
-            '>> NOTIFICATION (%d,%d,"%s")'
-            % (
-                notification.code,
-                notification.subcode,
-                notification.data.decode('utf-8'),
-            ),
+            f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
             self.connection.session(),
         )
         yield notification

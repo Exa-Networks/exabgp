@@ -321,7 +321,7 @@ class Reactor(object):
         wait = getenv().tcp.delay
         if wait:
             sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
-            log.debug('waiting for %d seconds before connecting' % sleeptime, 'reactor')
+            log.debug(f'waiting for {sleeptime} seconds before connecting', 'reactor')
             time.sleep(float(sleeptime))
 
         workers = {}
@@ -484,7 +484,7 @@ class Reactor(object):
 
     def reload(self):
         """Reload the configuration and send to the peer the route which changed"""
-        log.info('performing reload of exabgp %s' % version, 'configuration')
+        log.info(f'performing reload of exabgp {version}', 'configuration')
 
         reloaded = self.configuration.reload()
 
@@ -524,7 +524,7 @@ class Reactor(object):
 
     def restart(self):
         """Kill the BGP session and restart it"""
-        log.info('performing restart of exabgp %s' % version, 'reactor')
+        log.info(f'performing restart of exabgp {version}', 'reactor')
 
         reloaded = self.configuration.reload()
 

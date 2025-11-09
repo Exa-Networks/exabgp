@@ -13,18 +13,15 @@ from exabgp.environment import parsing
 from exabgp.environment.environment import Env
 
 
-_SPACE = {'space': ' ' * 33}
+_SPACE = ' ' * 33
 
-LOGGING_HELP_STDOUT = (
-    """\
+LOGGING_HELP_STDOUT = f"""\
 where logging should log
-%(space)s syslog (or no setting) sends the data to the local syslog syslog
-%(space)s host:<location> sends the data to a remote syslog server
-%(space)s stdout sends the data to stdout
-%(space)s stderr sends the data to stderr
-%(space)s <filename> send the data to a file"""
-    % _SPACE
-)
+{_SPACE} syslog (or no setting) sends the data to the local syslog syslog
+{_SPACE} host:<location> sends the data to a remote syslog server
+{_SPACE} stdout sends the data to stdout
+{_SPACE} stderr sends the data to stderr
+{_SPACE} <filename> send the data to a file"""
 
 
 CONFIGURATION = {
@@ -307,7 +304,7 @@ CONFIGURATION = {
             'read': parsing.real,
             'write': parsing.nop,
             'value': '1.0',
-            'help': 'reactor loop time\n%(space)s use only if you understand the code.' % _SPACE,
+            'help': f'reactor loop time\n{_SPACE} use only if you understand the code.',
         },
     },
     # Here for internal use

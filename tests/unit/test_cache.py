@@ -122,6 +122,6 @@ class TestCache(unittest.TestCase):
             end = time.time()
             time2 = end - start
 
-            print('time cached  %d' % time2)
-            print('speedup %.3f' % (time1 / time2))
+            print(f'time cached  {time2}')
+            print(f'speedup {time1 / time2:.3f}')
             print()

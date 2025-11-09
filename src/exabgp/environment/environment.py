@@ -49,21 +49,14 @@ class Env(object):
                     if values['write'] in (parsing.list, parsing.path, parsing.quote, parsing.syslog_name)
                     else values['value']
                 )
-                yield '%s.%s.%s %s %s. default (%s)' % (
-                    base.APPLICATION,
-                    section,
-                    option,
-                    ' ' * (18 - len(section) - len(option)),
-                    values['help'],
-                    default,
-                )
+                yield f"{base.APPLICATION}.{section}.{option} {' ' * (18 - len(section) - len(option))} {values['help']}. default ({default})"
 
     @classmethod
     def iter_ini(cls, diff=False):
         for section in sorted(cls._env):
             if section in ('internal', 'debug'):
                 continue
-            header = '\n[%s.%s]' % (base.APPLICATION, section)
+            header = f'\n[{base.APPLICATION}.{section}]'
             for k in sorted(cls._env[section]):
                 v = cls._env[section][k]
                 func = cls.definition[section][k]['read']
@@ -73,7 +66,7 @@ class Env(object):
                 if header:
                     yield header
                     header = ''
-                yield '%s = %s' % (k, cls.definition[section][k]['write'](v))
+                yield f"{k} = {cls.definition[section][k]['write'](v)}"
 
     @classmethod
     def iter_env(cls, diff=False):
@@ -86,14 +79,9 @@ class Env(object):
                 if diff and func(value) == v:
                     continue
                 if cls.definition[section][k]['write'] == parsing.quote:
-                    yield "%s.%s.%s='%s'" % (base.APPLICATION, section, k, v)
+                    yield f"{base.APPLICATION}.{section}.{k}='{v}'"
                     continue
-                yield '%s.%s.%s=%s' % (
-                    base.APPLICATION,
-                    section,
-                    k,
-                    cls.definition[section][k]['write'](v),
-                )
+                yield f"{base.APPLICATION}.{section}.{k}={cls.definition[section][k]['write'](v)}"
 
     @classmethod
     def setup(cls, configuration):
@@ -118,8 +106,8 @@ class Env(object):
             for option in default:
                 convert = default[option]['read']
                 try:
-                    proxy_section = '%s.%s' % (base.APPLICATION, section)
-                    env_name = '%s.%s' % (proxy_section, option)
+                    proxy_section = f'{base.APPLICATION}.{section}'
+                    env_name = f'{proxy_section}.{option}'
                     rep_name = env_name.replace('.', '_')
 
                     if env_name in os.environ:
@@ -136,7 +124,7 @@ class Env(object):
                 try:
                     cls._env.setdefault(section, HashTable())[option] = convert(conf)
                 except TypeError:
-                    raise ValueError('invalid value for %s.%s : %s' % (section, option, conf))
+                    raise ValueError(f'invalid value for {section}.{option} : {conf}')
 
         # Backward compatibility and alias handling
         if 'tcp' in cls._env:

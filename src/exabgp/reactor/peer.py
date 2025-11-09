@@ -77,8 +77,8 @@ class Stats(dict):
 
     def changed_statistics(self):
         for name in self.__changed:
-            formater = self.__format.get(name, lambda v: 'counter %s' % v)
-            yield 'statistics for %s %s' % (name, formater(self[name]))
+            formater = self.__format.get(name, lambda v: f'counter {v}')
+            yield f'statistics for {name} {formater(self[name])}'
         self.__changed = set()
 
 
@@ -172,9 +172,9 @@ class Peer(object):
 
         if self.proto:
             try:
-                message = 'peer reset, message [{0}] error[{1}]'.format(message, error)
+                message = f'peer reset, message [{message}] error[{error}]'
             except UnicodeDecodeError as msg_err:
-                message = 'peer reset, message [{0}] error[{1}]'.format(message, msg_err)
+                message = f'peer reset, message [{message}] error[{msg_err}]'
             self.proto.close(message)
         self._delay.increase()
 
@@ -199,16 +199,12 @@ class Peer(object):
     def _stop(self, message):
         self.generator = None
         if self.proto:
-            self._close('stop, message [%s]' % message)
+            self._close(f'stop, message [{message}]')
 
     # logging
 
     def me(self, message):
-        return 'peer %s ASN %-7s %s' % (
-            self.neighbor['peer-address'],
-            self.neighbor['peer-as'],
-            message,
-        )
+        return f"peer {self.neighbor['peer-address']} ASN {self.neighbor['peer-as']:<7} {message}"
 
     # control
 
@@ -331,12 +327,12 @@ class Peer(object):
 
     def negotiated_families(self):
         if self.proto:
-            families = ['%s/%s' % (x[0], x[1]) for x in self.proto.negotiated.families]
+            families = [f'{x[0]}/{x[1]}' for x in self.proto.negotiated.families]
         else:
-            families = ['%s/%s' % (x[0], x[1]) for x in self.neighbor.families()]
+            families = [f'{x[0]}/{x[1]}' for x in self.neighbor.families()]
 
         if len(families) > 1:
-            return '[ %s ]' % ' '.join(families)
+            return f'[ {" ".join(families)} ]'
         elif len(families) == 1:
             return families[0]
 
@@ -360,7 +356,7 @@ class Peer(object):
         except Stop:
             # Connection failed
             if not connected and self.proto:
-                self._close('connection to %s:%d failed' % (self.neighbor['peer-address'], self.neighbor['connect']))
+                self._close(f"connection to {self.neighbor['peer-address']}:{self.neighbor['connect']} failed")
 
             # A connection arrived before we could establish !
             if not connected or self.proto:
@@ -472,7 +468,7 @@ class Peer(object):
 
         # Announce to the process BGP is up
         log.info(
-            'connected to %s with %s' % (self.id(), self.proto.connection.name()),
+            f'connected to {self.id()} with {self.proto.connection.name()}',
             'reactor',
         )
         self.stats['up'] += 1
@@ -668,7 +664,7 @@ class Peer(object):
                         pass
                 except (NetworkError, ProcessError):
                     log.error('Notification not sent', self.id())
-                self._reset('notification sent (%d,%d)' % (notify.code, notify.subcode), notify)
+                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
             else:
                 self._reset()
 
@@ -692,7 +688,7 @@ class Peer(object):
                 self.stop()
 
             self._reset(
-                'notification received (%d,%d)' % (notification.code, notification.subcode),
+                f'notification received ({notification.code},{notification.subcode})',
                 notification,
             )
             return
