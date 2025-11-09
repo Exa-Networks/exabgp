@@ -1,4 +1,3 @@
-from typing import Any
 """Comprehensive tests for basic BGP path attributes.
 
 These tests cover individual well-known mandatory and optional path attributes:
@@ -31,9 +30,11 @@ Note: AS_PATH is extensively tested in test_aspath.py (21 tests)
 Note: COMMUNITIES are extensively tested in test_communities.py (27 tests)
 Note: Multiprotocol extensions (MP_REACH/MP_UNREACH) will be in test_multiprotocol.py
 """
-import pytest
 import struct
+from typing import Any
 from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.fixture(autouse=True)

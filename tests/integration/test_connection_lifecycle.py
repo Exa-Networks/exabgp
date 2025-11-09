@@ -1,4 +1,3 @@
-from typing import Generator, Any
 #!/usr/bin/env python3
 # encoding: utf-8
 """test_connection_lifecycle.py
@@ -10,13 +9,15 @@ establishment, message exchange, and teardown using real socket pairs.
 Created: 2025-11-08
 """
 
-import pytest
 import os
 import socket
+import struct
 import threading
 import time
-import struct
+from typing import Any, Generator
 from unittest.mock import Mock, patch
+
+import pytest
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
@@ -49,12 +50,12 @@ def mock_logger() -> Generator[None, None, None]:
     option.formater = original_formater
 
 
-from exabgp.protocol.family import AFI
-from exabgp.reactor.network.incoming import Incoming
-from exabgp.reactor.network.outgoing import Outgoing
-from exabgp.reactor.network import tcp
-from exabgp.reactor.network.error import NotConnected, LostConnection
-from exabgp.bgp.message import Message
+from exabgp.bgp.message import Message  # noqa: E402
+from exabgp.protocol.family import AFI  # noqa: E402
+from exabgp.reactor.network import tcp  # noqa: E402
+from exabgp.reactor.network.error import LostConnection, NotConnected  # noqa: E402
+from exabgp.reactor.network.incoming import Incoming  # noqa: E402
+from exabgp.reactor.network.outgoing import Outgoing  # noqa: E402
 
 
 class MockBGPServer:

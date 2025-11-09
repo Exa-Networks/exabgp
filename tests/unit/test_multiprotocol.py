@@ -1,4 +1,3 @@
-from typing import Any
 """Comprehensive tests for BGP Multiprotocol extensions (MP_REACH_NLRI and MP_UNREACH_NLRI).
 
 These tests cover RFC 4760 - Multiprotocol Extensions for BGP-4:
@@ -24,8 +23,10 @@ Phase 4: Advanced Features
   - Extended next-hop capability
   - EOR (End-of-RIB) markers
 """
-import pytest
+from typing import Any
 from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.fixture(autouse=True)

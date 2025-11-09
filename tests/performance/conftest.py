@@ -1,11 +1,12 @@
-from typing import Any
 """pytest configuration for performance tests.
 
 Provides fixtures and configuration for performance testing.
 """
 
-import pytest
+from typing import Any
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 @pytest.fixture(autouse=True)

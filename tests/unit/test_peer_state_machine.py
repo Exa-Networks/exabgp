@@ -1,4 +1,3 @@
-from typing import Any
 #!/usr/bin/env python3
 # encoding: utf-8
 """test_peer_state_machine.py
@@ -9,9 +8,11 @@ Tests state transitions, timers, collision detection, and error recovery.
 Created: 2025-11-08
 """
 
-import pytest
 import os
+from typing import Any
 from unittest.mock import Mock, patch
+
+import pytest
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
@@ -19,8 +20,8 @@ os.environ['exabgp_log_level'] = 'CRITICAL'
 os.environ['exabgp_tcp_bind'] = '127.0.0.1'
 os.environ['exabgp_tcp_attempts'] = '0'
 
-from exabgp.reactor.peer import Peer, ACTION, Stats
-from exabgp.bgp.fsm import FSM
+from exabgp.bgp.fsm import FSM  # noqa: E402
+from exabgp.reactor.peer import ACTION, Peer, Stats  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

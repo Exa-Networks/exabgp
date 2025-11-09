@@ -1,4 +1,3 @@
-from typing import Any
 """Comprehensive integration tests for UPDATE message packing and unpacking.
 
 These tests focus on critical gaps in UPDATE message testing:
@@ -17,8 +16,10 @@ Phase 3: Multiprotocol packing (tests 11-13)
 Phase 4: Message size and splitting (tests 14-16)
 Phase 5: Complex integration scenarios (tests 17-20)
 """
-import pytest
+from typing import Any
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 @pytest.fixture(autouse=True)
