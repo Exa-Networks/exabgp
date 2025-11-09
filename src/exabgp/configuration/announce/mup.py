@@ -77,13 +77,13 @@ class AnnounceMup(ParseAnnounce):
 
 def mup(tokeniser, afi, safi):
     muptype = tokeniser()
-    if 'mup-isd' == muptype:
+    if muptype == 'mup-isd':
         mup_nlri = srv6_mup_isd(tokeniser, afi)
-    elif 'mup-dsd' == muptype:
+    elif muptype == 'mup-dsd':
         mup_nlri = srv6_mup_dsd(tokeniser, afi)
-    elif 'mup-t1st' == muptype:
+    elif muptype == 'mup-t1st':
         mup_nlri = srv6_mup_t1st(tokeniser, afi)
-    elif 'mup-t2st' == muptype:
+    elif muptype == 'mup-t2st':
         mup_nlri = srv6_mup_t2st(tokeniser, afi)
     else:
         raise ValueError('mup: unknown mup type: %s' % muptype)

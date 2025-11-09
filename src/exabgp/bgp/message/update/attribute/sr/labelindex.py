@@ -49,7 +49,7 @@ class SrLabelIndex:
     @classmethod
     def unpack(cls, data, length):
         labelindex = -1
-        if cls.LENGTH != length:
+        if length != cls.LENGTH:
             raise Notify(3, 5, f'Invalid TLV size. Should be 7 but {length} received')
         # Shift reserved bits
         data = data[1:]

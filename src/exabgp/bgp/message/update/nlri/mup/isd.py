@@ -88,7 +88,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         size = 4 if afi != AFI.ipv6 else 16
         ip = data[9:]
         padding = size - len(ip)
-        if padding != 0 and 0 < padding:
+        if padding != 0 and padding > 0:
             ip += bytes(padding)
         prefix_ip = IP.unpack(ip)
 
