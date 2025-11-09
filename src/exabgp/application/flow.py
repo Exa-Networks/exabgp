@@ -56,7 +56,7 @@ class ACL:
     def _commit(cls):
         if cls.dry:
             cls.show()
-            return
+            return None
         try:
             return subprocess.Popen(
                 ['cl-acltool', '-i'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,

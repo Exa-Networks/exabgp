@@ -183,7 +183,7 @@ class OutgoingRIB(Cache):
         log.debug(lambda: 'insert %s' % change, 'rib')
 
         if not force and self.in_cache(change):
-            return
+            return None
 
         return self._update_rib(change)
 
