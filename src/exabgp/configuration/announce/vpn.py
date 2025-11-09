@@ -37,23 +37,17 @@ class AnnounceVPN(ParseAnnounce):
 
     known = dict(
         AnnounceLabel.known,
-        **{
-            'rd': route_distinguisher,
-        },
+        rd=route_distinguisher,
     )
 
     action = dict(
         AnnounceLabel.action,
-        **{
-            'rd': 'nlri-set',
-        },
+        rd='nlri-set',
     )
 
     assign = dict(
         AnnounceLabel.assign,
-        **{
-            'rd': 'rd',
-        },
+        rd='rd',
     )
 
     name = 'vpn'
