@@ -1,10 +1,10 @@
-ExaBGP has been used to:
+ExaBGP is been used to:
 
-- provide cross-datacenters failover solutions migrating /32 service IP.
-- mitigate network attacks, centrally deploying network-level filters (blackhole and/or flowspec)
-- gather network information ( using BGP-LS, or BGP with Add-Path)
+- for service resilience, providing cross-datacenters failover solutions, migrating /32 service IP.
+- to mitigate network attacks, centrally deploying network-level filters (blackhole and/or flowspec)
+- to gather network information ( using BGP-LS, or BGP with Add-Path)
 
-More information is available on the [wiki](https://github.com/Exa-Networks/exabgp/wiki).
+Should you believe it could be the right tool for you, more information is available on the [wiki](https://github.com/Exa-Networks/exabgp/wiki).
 
 ## Installation
 
