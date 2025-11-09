@@ -31,10 +31,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r qa/requirements.txt
 
-      - name: flake8
-        run: |
-          flake8 . --max-line-length 120 --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages --count --select=E9,F63,F7,F82 --show-source --statistics
-
       - name: ruff
         run: |
-          ruff check src
+          ruff check . --output-format=full --statistics
