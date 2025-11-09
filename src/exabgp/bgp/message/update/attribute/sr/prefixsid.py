@@ -18,6 +18,9 @@ from exabgp.util import hexstring
 # This Attribute may contain up to 3 TLVs
 # Label-Index TLV ( type = 1 ) is mandatory for this attribute.
 
+# SR TLV type codes
+SR_TLV_SRGB = 3  # Segment Routing Global Block TLV type
+
 
 @Attribute.register()
 class PrefixSid(Attribute):
@@ -69,7 +72,7 @@ class PrefixSid(Attribute):
         # First, we try to decode path attribute for SR-MPLS
         label_index = next((i for i in self.sr_attrs if i.TLV == 1), None)
         if label_index is not None:
-            srgb = next((i for i in self.sr_attrs if i.TLV == 3), None)
+            srgb = next((i for i in self.sr_attrs if i.TLV == SR_TLV_SRGB), None)
             if srgb is not None:
                 return f'[ {label_index!s}, {srgb!s} ]'
             return f'[ {label_index!s} ]'

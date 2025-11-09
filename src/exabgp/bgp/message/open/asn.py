@@ -1,4 +1,3 @@
-
 """asn.py
 
 Created by Thomas Mangin on 2010-01-15.
@@ -8,8 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 
 from exabgp.protocol.resource import Resource
 
@@ -18,6 +16,10 @@ from exabgp.protocol.resource import Resource
 
 class ASN(Resource):
     MAX = pow(2, 16) - 1
+
+    # ASN encoding size constants
+    SIZE_4BYTE = 4  # 4-byte ASN encoding size
+    SIZE_2BYTE = 2  # 2-byte ASN encoding size
 
     def asn4(self):
         return self > self.MAX
@@ -29,11 +31,11 @@ class ASN(Resource):
     @classmethod
     def unpack(cls, data, klass=None):
         kls = cls if klass is None else klass
-        value = unpack('!L' if len(data) == 4 else '!H', data)[0]
+        value = unpack('!L' if len(data) == cls.SIZE_4BYTE else '!H', data)[0]
         return kls(value)
 
     def __len__(self):
-        return 4 if self.asn4() else 2
+        return self.SIZE_4BYTE if self.asn4() else self.SIZE_2BYTE
 
     def extract(self):
         return [pack('!L', self)]

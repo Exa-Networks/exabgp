@@ -1,0 +1,439 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index abcdefg..1234567 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -37,6 +37,7 @@ dependencies = [
+     "setuptools",
+     "pytest>=7.0.0",
+     "pytest-cov>=4.0.0",
++    "pydantic>=2.0.0",
+ ]
+ 
+ [project.urls]
+diff --git a/src/exabgp/configuration/schema.py b/src/exabgp/configuration/schema.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/src/exabgp/configuration/schema.py
+@@ -0,0 +1,185 @@
++"""Pydantic schemas for ExaBGP configuration validation."""
++from __future__ import annotations
++
++from pydantic import BaseModel, Field, validator, root_validator
++from typing import Dict, List, Optional, Union, Any
++from ipaddress import IPv4Address, IPv6Address
++from enum import Enum
++
++
++class AddressFamilyType(str, Enum):
++    """Supported BGP address families."""
++    IPV4_UNICAST = "ipv4 unicast"
++    IPV6_UNICAST = "ipv6 unicast"
++    IPV4_MULTICAST = "ipv4 multicast"
++    IPV6_MULTICAST = "ipv6 multicast"
++    IPV4_MPLS_VPN = "ipv4 mpls-vpn"
++    IPV6_MPLS_VPN = "ipv6 mpls-vpn"
++    IPV4_FLOW_SPEC = "ipv4 flow-spec"
++    IPV6_FLOW_SPEC = "ipv6 flow-spec"
++
++
++class BGPOrigin(str, Enum):
++    """BGP origin attribute values."""
++    IGP = "igp"
++    EGP = "egp" 
++    INCOMPLETE = "incomplete"
++
++
++class RouteConfig(BaseModel):
++    """Configuration schema for static route announcements."""
++    
++    prefix: str = Field(..., description="Route prefix (e.g., '192.168.1.0/24')")
++    next_hop: Union[IPv4Address, IPv6Address] = Field(..., description="Next hop IP address")
++    origin: BGPOrigin = Field(BGPOrigin.IGP, description="BGP origin attribute")
++    med: Optional[int] = Field(None, ge=0, le=4294967295, description="Multi-exit discriminator")
++    local_preference: Optional[int] = Field(None, ge=0, le=4294967295, description="Local preference")
++    communities: List[str] = Field(default_factory=list, description="BGP communities")
++    
++    @validator('prefix')
++    def validate_prefix(cls, v):
++        """Validate network prefix format."""
++        import ipaddress
++        try:
++            ipaddress.ip_network(v, strict=False)
++            return v
++        except ValueError as e:
++            raise ValueError(f"Invalid network prefix '{v}': {e}")
++    
++    @validator('communities', each_item=True)
++    def validate_community(cls, v):
++        """Validate BGP community format."""
++        if ':' in v:
++            try:
++                asn, value = v.split(':', 1)
++                int(asn)
++                int(value)
++                return v
++            except ValueError:
++                raise ValueError(f"Invalid community format '{v}', expected 'ASN:VALUE'")
++        return v
++
++
++class FamilyConfig(BaseModel):
++    """Configuration schema for BGP address families."""
++    
++    enabled_families: List[AddressFamilyType] = Field(
++        default=[AddressFamilyType.IPV4_UNICAST],
++        description="Enabled BGP address families"
++    )
++    
++    @validator('enabled_families')
++    def validate_families(cls, v):
++        """Ensure at least one address family is enabled."""
++        if not v:
++            raise ValueError("At least one address family must be enabled")
++        return v
++
++
++class TimerConfig(BaseModel):
++    """Configuration schema for BGP timers."""
++    
++    hold_time: int = Field(180, ge=3, le=65535, description="BGP hold time in seconds")
++    keepalive_time: Optional[int] = Field(None, ge=1, le=21845, description="Keepalive interval")
++    connect_retry: int = Field(120, ge=1, le=65535, description="Connect retry timer")
++    
++    @root_validator
++    def validate_timer_relationship(cls, values):
++        """Validate timer relationships."""
++        hold_time = values.get('hold_time', 180)
++        keepalive_time = values.get('keepalive_time')
++        
++        if keepalive_time is None:
++            # Auto-calculate keepalive as 1/3 of hold time
++            values['keepalive_time'] = hold_time // 3
++        elif keepalive_time >= hold_time:
++            raise ValueError("Keepalive time must be less than hold time")
++            
++        return values
++
++
++class NeighborConfig(BaseModel):
++    """Configuration schema for BGP neighbor."""
++    
++    router_id: IPv4Address = Field(..., description="BGP router ID")
++    local_address: Union[IPv4Address, IPv6Address] = Field(..., description="Local IP address")
++    peer_address: Union[IPv4Address, IPv6Address] = Field(..., description="Peer IP address") 
++    local_as: int = Field(..., ge=1, le=4294967295, description="Local AS number")
++    peer_as: int = Field(..., ge=1, le=4294967295, description="Peer AS number")
++    
++    # Optional configurations
++    description: Optional[str] = Field(None, max_length=255, description="Neighbor description")
++    timers: TimerConfig = Field(default_factory=TimerConfig, description="BGP timers")
++    family: FamilyConfig = Field(default_factory=FamilyConfig, description="Address families")
++    
++    # Route configurations
++    static_routes: List[RouteConfig] = Field(
++        default_factory=list, 
++        description="Static routes to announce"
++    )
++    
++    # Advanced options
++    passive: bool = Field(False, description="Passive peer (don't initiate connections)")
++    multihop: Optional[int] = Field(None, ge=1, le=255, description="EBGP multihop TTL")
++    md5_password: Optional[str] = Field(None, min_length=1, max_length=80, description="MD5 password")
++    
++    @validator('router_id')
++    def validate_router_id(cls, v):
++        """Ensure router ID is a valid IPv4 address."""
++        if not isinstance(v, IPv4Address):
++            raise ValueError("Router ID must be a valid IPv4 address")
++        return v
++    
++    @root_validator
++    def validate_addresses(cls, values):
++        """Validate address consistency."""
++        local_addr = values.get('local_address')
++        peer_addr = values.get('peer_address')
++        
++        if local_addr and peer_addr:
++            # Check that both addresses are same IP version
++            local_v4 = isinstance(local_addr, IPv4Address)
++            peer_v4 = isinstance(peer_addr, IPv4Address)
++            
++            if local_v4 != peer_v4:
++                raise ValueError("Local and peer addresses must be same IP version")
++                
++        return values
++
++
++class ProcessConfig(BaseModel):
++    """Configuration schema for ExaBGP processes."""
++    
++    name: str = Field(..., min_length=1, description="Process name")
++    command: str = Field(..., min_length=1, description="Command to execute")
++    respawn: bool = Field(True, description="Respawn process on exit")
++    
++
++class GroupConfig(BaseModel):
++    """Configuration schema for BGP group."""
++    
++    name: str = Field(..., min_length=1, description="Group name")
++    neighbors: Dict[str, NeighborConfig] = Field(
++        default_factory=dict, 
++        description="Neighbor configurations indexed by peer address"
++    )
++    processes: Dict[str, ProcessConfig] = Field(
++        default_factory=dict,
++        description="Process configurations"
++    )
++
++
++class ExaBGPConfig(BaseModel):
++    """Root configuration schema for ExaBGP."""
++    
++    groups: Dict[str, GroupConfig] = Field(
++        default_factory=dict,
++        description="BGP group configurations" 
++    )
++    
++    # Global settings
++    version: str = Field("5.0.0", description="ExaBGP version")
++    
++    class Config:
++        validate_assignment = True
++        extra = "forbid"  # Prevent unknown configuration keys
++        use_enum_values = True
++    
++    @validator('groups')
++    def validate_groups(cls, v):
++        """Ensure at least one group is configured."""
++        if not v:
++            raise ValueError("At least one group must be configured")
++        return v
+diff --git a/src/exabgp/configuration/configuration.py b/src/exabgp/configuration/configuration.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/configuration/configuration.py
++++ b/src/exabgp/configuration/configuration.py
+@@ -12,6 +12,8 @@ from typing import List, Dict, Any, Optional
+ from pathlib import Path
+ from exabgp.types import ConfigDict
+ from exabgp.exceptions import ConfigurationError
++from .schema import ExaBGPConfig
++import json
+ 
+ from exabgp.configuration.core.error import Error
+ from exabgp.configuration.core.format import formated
+@@ -43,6 +45,8 @@ class Configuration:
+         """
+         self.configurations: List[str] = configurations
+         self.config_data: ConfigDict = {}
++        self.validated_config: Optional[ExaBGPConfig] = None
++        self.raw_config: Dict[str, Any] = {}
+
+         # Validate configuration files exist
+         self._validate_config_files()
+@@ -61,6 +65,44 @@ class Configuration:
+             if not os.access(config_path, os.R_OK):
+                 raise ConfigurationError(f"Configuration file not readable: {config_file}")
+
++    def _parse_file(self, config_file: str) -> Dict[str, Any]:
++        """Parse a single configuration file.
++        
++        Args:
++            config_file: Path to configuration file
++            
++        Returns:
++            Parsed configuration data
++            
++        Raises:
++            ConfigurationError: If file parsing fails
++        """
++        try:
++            # This would integrate with existing ExaBGP parser
++            # For now, return empty dict as placeholder
++            return {}
++        except Exception as e:
++            raise ConfigurationError(f"Failed to parse {config_file}: {e}") from e
++    
++    def validate_configuration(self) -> None:
++        """Validate configuration using Pydantic schema.
++        
++        Raises:
++            ConfigurationError: If configuration validation fails
++        """
++        try:
++            # Parse all configuration files
++            merged_config = {}
++            for config_file in self.configurations:
++                file_config = self._parse_file(config_file)
++                merged_config.update(file_config)
++            
++            # Validate with Pydantic
++            self.validated_config = ExaBGPConfig(**merged_config)
++            self.config_data = self.validated_config.dict()
++            
++        except Exception as e:
++            raise ConfigurationError(f"Configuration validation failed: {e}") from e
++
+     def reload(self):
+         """Reload configuration from all configured files.
+         
+@@ -71,6 +113,21 @@ class Configuration:
+             ConfigurationError: If configuration reload fails
+         """
+         try:
+-            # Existing reload logic
+-            pass
++            # Clear existing configuration
++            self.config_data.clear()
++            self.validated_config = None
++            
++            # Re-validate configuration files
++            self._validate_config_files()
++            
++            # Re-parse and validate configuration
++            self.validate_configuration()
++            
+         except Exception as e:
+             raise ConfigurationError(f"Failed to reload configuration: {e}") from e
++    
++    def get_neighbor_config(self, peer_address: str) -> Optional[Dict[str, Any]]:
++        """Get configuration for a specific neighbor."""
++        if not self.validated_config:
++            return None
++            
++        for group in self.validated_config.groups.values():
++            if peer_address in group.neighbors:
++                return group.neighbors[peer_address].dict()
++        return None
+diff --git a/tests/unit/test_config_validation.py b/tests/unit/test_config_validation.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/tests/unit/test_config_validation.py
+@@ -0,0 +1,124 @@
++"""Unit tests for configuration validation."""
++from __future__ import annotations
++
++import pytest
++from pydantic import ValidationError
++from ipaddress import IPv4Address, IPv6Address
++
++from exabgp.configuration.schema import (
++    NeighborConfig, GroupConfig, ExaBGPConfig, RouteConfig,
++    TimerConfig, FamilyConfig, AddressFamilyType
++)
++
++
++class TestNeighborConfig:
++    """Test neighbor configuration validation."""
++    
++    def test_valid_neighbor_config(self):
++        """Test valid neighbor configuration."""
++        config_data = {
++            'router_id': '192.168.1.1',
++            'local_address': '192.168.1.1',
++            'peer_address': '192.168.1.2',
++            'local_as': 65001,
++            'peer_as': 65002,
++        }
++        
++        config = NeighborConfig(**config_data)
++        
++        assert config.router_id == IPv4Address('192.168.1.1')
++        assert config.local_address == IPv4Address('192.168.1.1')
++        assert config.peer_address == IPv4Address('192.168.1.2')
++        assert config.local_as == 65001
++        assert config.peer_as == 65002
++        
++    def test_invalid_as_numbers(self):
++        """Test validation of AS numbers."""
++        config_data = {
++            'router_id': '192.168.1.1',
++            'local_address': '192.168.1.1', 
++            'peer_address': '192.168.1.2',
++            'local_as': 0,  # Invalid
++            'peer_as': 65002,
++        }
++        
++        with pytest.raises(ValidationError) as exc_info:
++            NeighborConfig(**config_data)
++        
++        assert "local_as" in str(exc_info.value)
++        
++    def test_mixed_ip_versions(self):
++        """Test validation of mixed IPv4/IPv6 addresses."""
++        config_data = {
++            'router_id': '192.168.1.1',
++            'local_address': '192.168.1.1',  # IPv4
++            'peer_address': '2001:db8::1',   # IPv6
++            'local_as': 65001,
++            'peer_as': 65002,
++        }
++        
++        with pytest.raises(ValidationError) as exc_info:
++            NeighborConfig(**config_data)
++            
++        assert "same IP version" in str(exc_info.value)
++
++
++class TestRouteConfig:
++    """Test route configuration validation."""
++    
++    def test_valid_route_config(self):
++        """Test valid route configuration."""
++        config_data = {
++            'prefix': '192.168.0.0/24',
++            'next_hop': '192.168.1.1',
++            'communities': ['65001:100', '65001:200']
++        }
++        
++        config = RouteConfig(**config_data)
++        
++        assert config.prefix == '192.168.0.0/24'
++        assert config.next_hop == IPv4Address('192.168.1.1')
++        assert len(config.communities) == 2
++        
++    def test_invalid_prefix(self):
++        """Test validation of invalid network prefix."""
++        config_data = {
++            'prefix': '192.168.0.0/33',  # Invalid subnet mask
++            'next_hop': '192.168.1.1',
++        }
++        
++        with pytest.raises(ValidationError) as exc_info:
++            RouteConfig(**config_data)
++            
++        assert "Invalid network prefix" in str(exc_info.value)
++
++
++class TestTimerConfig:
++    """Test timer configuration validation."""
++    
++    def test_auto_calculated_keepalive(self):
++        """Test automatic keepalive calculation."""
++        config = TimerConfig(hold_time=180)
++        
++        # Keepalive should be calculated as hold_time // 3
++        assert config.keepalive_time == 60
++        
++    def test_invalid_timer_relationship(self):
++        """Test validation of timer relationships."""
++        with pytest.raises(ValidationError) as exc_info:
++            TimerConfig(hold_time=60, keepalive_time=70)
++            
++        assert "less than hold time" in str(exc_info.value)
+
+
++class TestExaBGPConfig:
++    """Test complete ExaBGP configuration validation."""
++    
++    def test_empty_groups_validation(self):
++        """Test that empty groups are rejected."""
++        config_data = {
++            'groups': {}
++        }
++        
++        with pytest.raises(ValidationError) as exc_info:
++            ExaBGPConfig(**config_data)
++            
++        assert "At least one group must be configured" in str(exc_info.value)

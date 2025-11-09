@@ -46,8 +46,33 @@ from exabgp.logger import log
 from exabgp.protocol.family import (
     AFI,
 )
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import IP, IPv4, IPv6, NoNextHop
 from exabgp.rib.change import Change
+
+SINGLE_SLASH = 1  # Format with single slash (IP/prefix)
+DOUBLE_SLASH = 2  # IPv6 format with offset (IP/prefix/offset)
+
+# Bit width constants for validation
+ASN16_MAX_BITS = 16  # 16-bit ASN field size
+ASN32_MAX_BITS = 32  # 32-bit ASN field size
+LOCAL_ADMIN_16_BITS = 16  # 16-bit local administrator field
+LOCAL_ADMIN_32_BITS = 32  # 32-bit local administrator field
+GROUP_ID_BITS = 14  # 14-bit group ID field
+
+# Interface set direction values
+DIRECTION_INPUT = 1
+DIRECTION_OUTPUT = 2
+DIRECTION_INPUT_OUTPUT = 3
+
+# Colon count for interface set format validation
+INTERFACE_SET_COLON_COUNT = 3  # Format: transitive:direction:asn:route_target
+
+# Traffic rate limiting constants
+MIN_RATE_LIMIT_BPS = 9600  # Minimum rate limit in bytes per second
+MAX_RATE_LIMIT_BPS = 1000000000000  # Maximum rate limit (1 terabyte/s)
+
+# DSCP (Differentiated Services Code Point) value range
+DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
 
 
 def flow(tokeniser):
@@ -58,16 +83,16 @@ def source(tokeniser):
     """Update source to handle both IPv4 and IPv6 flows."""
     data = tokeniser()
     # Check if it's IPv4
-    if data.count('.') == 3 and data.count(':') == 0:
+    if data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0:
         ip, netmask = data.split('/')
         raw = b''.join(bytes([int(_)]) for _ in ip.split('.'))
         yield Flow4Source(raw, int(netmask))
     # Check if it's IPv6 without an offset
-    elif data.count(':') > 1 and data.count('/') == 1:
+    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
         ip, netmask = data.split('/')
         yield Flow6Source(IP.pton(ip), int(netmask), 0)
     # Check if it's IPv6 with an offset
-    elif data.count(':') > 1 and data.count('/') == 2:
+    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
         ip, netmask, offset = data.split('/')
         yield Flow6Source(IP.pton(ip), int(netmask), int(offset))
 
@@ -76,16 +101,16 @@ def destination(tokeniser):
     """Update destination to handle both IPv4 and IPv6 flows."""
     data = tokeniser()
     # Check if it's IPv4
-    if data.count('.') == 3 and data.count(':') == 0:
+    if data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0:
         ip, netmask = data.split('/')
         raw = b''.join(bytes([int(_)]) for _ in ip.split('.'))
         yield Flow4Destination(raw, int(netmask))
     # Check if it's IPv6 without an offset
-    elif data.count(':') > 1 and data.count('/') == 1:
+    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
         ip, netmask = data.split('/')
         yield Flow6Destination(IP.pton(ip), int(netmask), 0)
     # Check if it's IPv6 with an offset
-    elif data.count(':') > 1 and data.count('/') == 2:
+    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
         ip, netmask, offset = data.split('/')
         yield Flow6Destination(IP.pton(ip), int(netmask), int(offset))
 
@@ -268,11 +293,13 @@ def discard(tokeniser):
 def rate_limit(tokeniser):
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
     speed = int(tokeniser())
-    if speed < 9600 and speed != 0:
-        log.warning(lambda: 'rate-limiting flow under 9600 bytes per seconds may not work', 'configuration')
-    if speed > 1000000000000:
-        speed = 1000000000000
-        log.warning(lambda: 'rate-limiting changed for 1 000 000 000 000 bytes from {}'.format(speed), 'configuration')
+    if speed < MIN_RATE_LIMIT_BPS and speed != 0:
+        log.warning(
+            lambda: f'rate-limiting flow under {MIN_RATE_LIMIT_BPS} bytes per seconds may not work', 'configuration'
+        )
+    if speed > MAX_RATE_LIMIT_BPS:
+        speed = MAX_RATE_LIMIT_BPS
+        log.warning(lambda: f'rate-limiting changed for {MAX_RATE_LIMIT_BPS} bytes from {speed}', 'configuration')
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 
@@ -300,7 +327,7 @@ def redirect(tokeniser):
         ip, nn = data.split(']:')
         ip = ip.replace('[', '', 1)
 
-        if nn >= pow(2, 16):
+        if nn >= pow(2, LOCAL_ADMIN_16_BITS):
             raise ValueError('Local administrator field is a 16 bits number, value too large {}'.format(nn))
         return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, nn))
 
@@ -316,15 +343,15 @@ def redirect(tokeniser):
         asn = int(prefix)
         nn = int(suffix)
 
-        if asn >= pow(2, 32):
+        if asn >= pow(2, ASN32_MAX_BITS):
             raise ValueError('asn is a 32 bits number, value too large {}'.format(asn))
 
-        if asn >= pow(2, 16):
-            if nn >= pow(2, 16):
+        if asn >= pow(2, ASN16_MAX_BITS):
+            if nn >= pow(2, LOCAL_ADMIN_16_BITS):
                 raise ValueError('asn is a 32 bits number, local administrator field can only be 16 bit {}'.format(nn))
             return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, nn))
 
-        if nn >= pow(2, 32):
+        if nn >= pow(2, LOCAL_ADMIN_32_BITS):
             raise ValueError('Local administrator field is a 32 bits number, value too large {}'.format(nn))
 
         return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn))
@@ -355,7 +382,7 @@ def mark(tokeniser):
 
     dscp_value = int(value)
 
-    if dscp_value < 0 or dscp_value > 0b111111:
+    if dscp_value < 0 or dscp_value > DSCP_MAX_VALUE:
         raise ValueError('dscp is not a valid number')
 
     return ExtendedCommunities().add(TrafficMark(dscp_value))
@@ -374,10 +401,10 @@ def action(tokeniser):
 
 
 def _interface_set(data):
-    if data.count(':') != 3:
+    if data.count(':') != INTERFACE_SET_COLON_COUNT:
         raise ValueError('not a valid format {}'.format(data))
 
-    trans, direction, prefix, suffix = data.split(':', 3)
+    trans, direction, prefix, suffix = data.split(':', INTERFACE_SET_COLON_COUNT)
 
     if trans == 'transitive':
         trans = True
@@ -388,18 +415,18 @@ def _interface_set(data):
     if prefix.count('.'):
         raise ValueError('a 32 bits number must be used, invalid value {}'.format(prefix))
     if direction == 'input':
-        int_direction = 1
+        int_direction = DIRECTION_INPUT
     elif direction == 'output':
-        int_direction = 2
+        int_direction = DIRECTION_OUTPUT
     elif direction == 'input-output':
-        int_direction = 3
+        int_direction = DIRECTION_INPUT_OUTPUT
     else:
         raise ValueError('Bad direction {}, should be input, output or input-output'.format(direction))
     asn = int(prefix)
     route_target = int(suffix)
-    if asn >= pow(2, 32):
+    if asn >= pow(2, ASN32_MAX_BITS):
         raise ValueError('asn can only be 32 bits, value too large {}'.format(asn))
-    if route_target >= pow(2, 14):
+    if route_target >= pow(2, GROUP_ID_BITS):
         raise ValueError('group-id is a 14 bits number, value too large {}'.format(route_target))
     return InterfaceSet(trans, asn, route_target, int_direction)
 

@@ -18,6 +18,11 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
 from exabgp.bgp.message.notification import Notify
 
+# EVPN MAC address and IP address length constants (in bits)
+MAC_ADDRESS_LEN_BITS = 48  # Standard MAC address length in bits
+IPV4_ADDRESS_LEN_BITS = 32  # IPv4 address length in bits
+IPV6_ADDRESS_LEN_BITS = 128  # IPv6 address length in bits
+
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
 # +---------------------------------------+
@@ -82,7 +87,7 @@ class MAC(EVPN):
             self.esi,
             self.etag,
             self.mac,
-            '' if len(self.mac) == 48 else '/%d' % self.maclen,
+            '' if len(self.mac) == MAC_ADDRESS_LEN_BITS else '/%d' % self.maclen,
             self.ip if self.ip else '',
             self.label,
         )
@@ -121,7 +126,7 @@ class MAC(EVPN):
         etag = EthernetTag.unpack(data[18:22])
         maclength = data[22]
 
-        if maclength > 48 or maclength < 0:
+        if maclength > MAC_ADDRESS_LEN_BITS or maclength < 0:
             raise Notify(3, 5, 'invalid MAC Address length in {}'.format(cls.NAME))
         end = 23 + 6  # MAC length MUST be 6
 
@@ -136,7 +141,7 @@ class MAC(EVPN):
                 raise Notify(3, 5, 'IP length is given as %d, but current MAC route has no IP information' % iplen)
         elif datalen in [37, 40]:  # Using IPv4 addresses (1 or 2 labels)
             iplenUnpack = 4
-            if iplen > 32 or iplen < 0:
+            if iplen > IPV4_ADDRESS_LEN_BITS or iplen < 0:
                 raise Notify(
                     3,
                     5,
@@ -144,7 +149,7 @@ class MAC(EVPN):
                 )
         elif datalen in [49, 52]:  # Using IPv6 addresses (1 or 2 labels)
             iplenUnpack = 16
-            if iplen > 128 or iplen < 0:
+            if iplen > IPV6_ADDRESS_LEN_BITS or iplen < 0:
                 raise Notify(
                     3,
                     5,

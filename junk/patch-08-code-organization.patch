@@ -1,0 +1,557 @@
+diff --git a/.isort.cfg b/.isort.cfg
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/.isort.cfg
+@@ -0,0 +1,11 @@
++[settings]
++multi_line_output=3
++include_trailing_comma=True
++force_grid_wrap=0
++use_parentheses=True
++ensure_newline_before_comments=True
++line_length=88
++known_first_party=exabgp
++sections=FUTURE,STDLIB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER
++skip=src/exabgp/vendoring,src/exabgp/conf/yang
++profile=black
+diff --git a/pyproject.toml b/pyproject.toml
+index abcdefg..1234567 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -23,6 +23,19 @@ markers = [
+     "functional: marks tests as functional (using QA infrastructure)",
+ ]
+ 
++[tool.isort]
++profile = "black" 
++known_first_party = ["exabgp"]
++skip = ["src/exabgp/vendoring", "src/exabgp/conf/yang"]
++line_length = 88
++multi_line_output = 3
++include_trailing_comma = true
++force_grid_wrap = 0
++use_parentheses = true
++
++[tool.black]
++line-length = 88
++target-version = ['py38']
++extend-exclude = '''
++/(
++    src/exabgp/vendoring
++  | src/exabgp/conf/yang
++)/
++'''
++
++[tool.flake8]
++max-line-length = 88
++extend-ignore = ["E203", "W503"]
++exclude = [
++    "src/exabgp/vendoring",
++    "src/exabgp/conf/yang",
++    ".git",
++    "__pycache__",
++    "build",
++    "dist",
++]
++
+ [project]
+ name = "exabgp"
+ dynamic = ["version"]
+@@ -38,6 +51,11 @@ dependencies = [
+     "pytest>=7.0.0",
+     "pytest-cov>=4.0.0",
+     "pydantic>=2.0.0",
++]
++
++[project.optional-dependencies]
++dev = [
++    "black>=23.0.0",
++    "isort>=5.12.0",
++    "flake8>=6.0.0",
++    "mypy>=1.0.0",
++    "pre-commit>=3.0.0",
+ ]
+ 
+ [project.urls]
+diff --git a/.pre-commit-config.yaml b/.pre-commit-config.yaml
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/.pre-commit-config.yaml
+@@ -0,0 +1,49 @@
++# Pre-commit hooks configuration for ExaBGP
++repos:
++-   repo: https://github.com/pre-commit/pre-commit-hooks
++    rev: v4.4.0
++    hooks:
++    -   id: trailing-whitespace
++        exclude: ^(src/exabgp/vendoring/|src/exabgp/conf/yang/)
++    -   id: end-of-file-fixer
++        exclude: ^(src/exabgp/vendoring/|src/exabgp/conf/yang/)
++    -   id: check-yaml
++    -   id: check-json
++    -   id: check-toml
++    -   id: check-added-large-files
++        args: ['--maxkb=500']
++    -   id: check-merge-conflict
++    -   id: debug-statements
++        exclude: ^(src/exabgp/vendoring/|src/exabgp/conf/yang/)
++    -   id: check-docstring-first
++        exclude: ^(src/exabgp/vendoring/|src/exabgp/conf/yang/)
++        
++-   repo: https://github.com/psf/black
++    rev: 23.1.0
++    hooks:
++    -   id: black
++        language_version: python3
++        exclude: ^(src/exabgp/vendoring/|src/exabgp/conf/yang/)
++        
++-   repo: https://github.com/pycqa/isort
++    rev: 5.12.0
++    hooks:
++    -   id: isort
++        exclude: ^(src/exabgp/vendoring/|src/exabgp/conf/yang/)
++        
++-   repo: https://github.com/pycqa/flake8
++    rev: 6.0.0
++    hooks:
++    -   id: flake8
++        exclude: ^(src/exabgp/vendoring/|src/exabgp/conf/yang/)
++        additional_dependencies: [flake8-docstrings]
++        
++-   repo: https://github.com/pre-commit/mirrors-mypy
++    rev: v1.0.1
++    hooks:
++    -   id: mypy
++        exclude: ^(src/exabgp/vendoring/|src/exabgp/conf/yang/|tests/)
++        additional_dependencies: [pydantic, types-setuptools]
++        
++-   repo: local
++    hooks:
++    -   id: pytest-unit
++        name: pytest unit tests
++        entry: pytest tests/unit/ -v
++        language: system
++        pass_filenames: false
++        always_run: false
++        stages: [commit]
+diff --git a/src/exabgp/bgp/message/message.py b/src/exabgp/bgp/message/message.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/bgp/message/message.py
++++ b/src/exabgp/bgp/message/message.py
+@@ -5,21 +5,22 @@
+ Created by Thomas Mangin on 2009-11-05.
+ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+ License: 3-clause BSD. (See the COPYRIGHT file)
+ """
++from __future__ import annotations
+ 
++import logging
+ from struct import pack, unpack
+-from typing import Optional, Union, Dict, Any, ClassVar
+-from exabgp.types import BGPMessage
+-from exabgp.exceptions import MessageError, ProtocolError, ValidationError
+-from exabgp.security.validation import InputValidator
++from typing import Any, ClassVar, Dict, Optional, Union
+ 
+-from __future__ import annotations
+-import logging
+-from exabgp.logging import get_logger, log_bgp_message
+-logger = get_logger(__name__)
++from exabgp.bgp.message.action import Action
++from exabgp.bgp.message.direction import Direction
++from exabgp.exceptions import MessageError, ProtocolError, ValidationError
++from exabgp.logging import get_logger, log_bgp_message
++from exabgp.security.rate_limiter import RateLimiter
++from exabgp.security.validation import InputValidator
++from exabgp.types import BGPMessage
++from exabgp.util.od import od
+ 
+-from exabgp.bgp.message.direction import Direction
+-from exabgp.bgp.message.action import Action
+-from exabgp.util.od import od
++logger = get_logger(__name__)
+ 
+ # Global rate limiter for BGP messages
+-from exabgp.security.rate_limiter import RateLimiter
+ message_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)
+diff --git a/src/exabgp/bgp/neighbor.py b/src/exabgp/bgp/neighbor.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/bgp/neighbor.py
++++ b/src/exabgp/bgp/neighbor.py
+@@ -5,19 +5,20 @@
+ Created by Thomas Mangin on 2009-11-05.
+ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+ License: 3-clause BSD. (See the COPYRIGHT file)
+ """
++from __future__ import annotations
+ 
++import logging
+ import time
+-from typing import Optional, Dict, Any, List
++from typing import Any, Dict, List, Optional
++
+ from ipaddress import IPv4Address, IPv6Address
+-from exabgp.types import IPAddress
++
+ from exabgp.exceptions import ConnectionError, ValidationError
++from exabgp.logging import get_logger, log_bgp_message
++from exabgp.types import IPAddress
+ 
+-# Use new logging system
+-from exabgp.logging import get_logger, log_bgp_message
+ logger = get_logger(__name__)
+ 
++
+ class Neighbor:
+     """BGP neighbor configuration and state management.
+diff --git a/src/exabgp/util/ip.py b/src/exabgp/util/ip.py
+index abcdefg..1234567 100644
+--- a/src/exabgp/util/ip.py
++++ b/src/exabgp/util/ip.py
+@@ -7,13 +7,15 @@
+ License: 3-clause BSD. (See the COPYRIGHT file)
+ """
++from __future__ import annotations
+ 
++import socket
++from ipaddress import AddressValueError, IPv4Address, IPv6Address
++from typing import Optional, Union
++
+ """IP address utility functions.
+ 
+ This module provides utility functions for validating and working with
+ IP addresses in ExaBGP. It supports both IPv4 and IPv6 addresses and
+ uses the standard library ipaddress module for robust validation.
+ """
+-
+-import socket
+-from ipaddress import IPv4Address, IPv6Address, AddressValueError
+-from typing import Union, Optional
+diff --git a/src/exabgp/configuration/configuration.py b/src/exabgp/configuration/configuration.py
+index abcdefg..1234567 100644
+--- a/src/exabgp/configuration/configuration.py
++++ b/src/exabgp/configuration/configuration.py
+@@ -5,18 +5,21 @@
+ Created by Thomas Mangin on 2009-08-25.
+ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+ License: 3-clause BSD. (See the COPYRIGHT file)
+ """
++from __future__ import annotations
+ 
++import json
+ import os
+-from typing import List, Dict, Any, Optional
++from typing import Any, Dict, List, Optional
+ from pathlib import Path
+-from exabgp.types import ConfigDict
++
++from exabgp.configuration.core.error import Error
++from exabgp.configuration.core.format import formated
++from exabgp.configuration.schema import ExaBGPConfig
+ from exabgp.exceptions import ConfigurationError
+-from .schema import ExaBGPConfig
+-import json
++from exabgp.types import ConfigDict
+ 
+-from exabgp.configuration.core.error import Error
+-from exabgp.configuration.core.format import formated
+ 
+ class Configuration:
+diff --git a/Makefile b/Makefile
+index abcdefg..1234567 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,6 +1,7 @@
+ # ExaBGP Development Makefile
+ 
+ .PHONY: test test-unit test-integration test-functional test-all
+-.PHONY: lint type-check format clean install-dev
++.PHONY: lint type-check format format-check clean install-dev
++.PHONY: pre-commit setup-dev help
+ 
+ # Test targets
+ test-unit:
+@@ -18,18 +19,44 @@ test-all: test-unit test-integration test-functional
+ 
+ # Development targets  
+ install-dev:
+-	pip install -e ".[dev]"
+-	pip install pytest pytest-cov mypy black isort
++	pip install -e ".[dev]"
++	pre-commit install
+ 
+-lint:
++setup-dev: install-dev
++	@echo "Development environment setup complete!"
++	@echo "Pre-commit hooks installed."
++	@echo "Run 'make help' to see available commands."
++
++lint: format-check type-check
++	flake8 src/ tests/
++
++format-check:
+ 	isort --check-only src/ tests/
+ 	black --check src/ tests/
+ 
+ format:
+ 	isort src/ tests/
+ 	black src/ tests/
+ 
+ type-check:
+ 	mypy src/exabgp/
+ 
++pre-commit:
++	pre-commit run --all-files
++
+ clean:
+ 	find . -type d -name __pycache__ -delete
+ 	find . -name "*.pyc" -delete
+ 	rm -rf .pytest_cache/
+ 	rm -rf .mypy_cache/
++	rm -rf build/
++	rm -rf dist/
++	rm -rf *.egg-info/
++
++help:
++	@echo "ExaBGP Development Commands:"
++	@echo "  make setup-dev      - Setup development environment"
++	@echo "  make test-all       - Run all tests"
++	@echo "  make test-unit      - Run unit tests only"
++	@echo "  make lint           - Run all linting checks"
++	@echo "  make format         - Format code with black and isort"
++	@echo "  make type-check     - Run mypy type checking"
++	@echo "  make pre-commit     - Run pre-commit hooks"
++	@echo "  make clean          - Clean build artifacts"
+diff --git a/tox.ini b/tox.ini
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/tox.ini
+@@ -0,0 +1,43 @@
++[tox]
++envlist = py38,py39,py310,py311,lint,type
++skip_missing_interpreters = true
++
++[testenv]
++deps = 
++    pytest>=7.0.0
++    pytest-cov>=4.0.0
++    pydantic>=2.0.0
++commands = 
++    pytest tests/unit/ -v --cov=src/exabgp --cov-report=term-missing
++
++[testenv:integration]
++deps = 
++    {[testenv]deps}
++commands = 
++    pytest tests/test_integration.py -v -m "not slow"
++
++[testenv:functional]
++deps = 
++    {[testenv]deps}
++commands = 
++    python qa/bin/functional parsing --timeout 30
++    python qa/bin/functional decoding --timeout 30
++    python qa/bin/functional encoding --timeout 30
++
++[testenv:lint]
++deps =
++    black>=23.0.0
++    isort>=5.12.0
++    flake8>=6.0.0
++commands =
++    black --check src/ tests/
++    isort --check-only src/ tests/
++    flake8 src/ tests/
++
++[testenv:type]
++deps =
++    mypy>=1.0.0
++    pydantic>=2.0.0
++    types-setuptools
++commands =
++    mypy src/exabgp/
+diff --git a/README-Development.md b/README-Development.md
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/README-Development.md
+@@ -0,0 +1,87 @@
++# ExaBGP Development Guide
++
++This guide covers the development workflow and best practices for contributing to ExaBGP.
++
++## Quick Setup
++
++```bash
++# Clone the repository
++git clone https://github.com/exa-networks/exabgp.git
++cd exabgp
++
++# Setup development environment
++make setup-dev
++
++# Run tests to verify setup
++make test-unit
++```
++
++## Development Environment
++
++### Requirements
++
++- Python 3.8+
++- pip
++- git
++
++### Setup
++
++The development environment includes:
++- Pre-commit hooks for code quality
++- Automated testing with pytest
++- Type checking with mypy
++- Code formatting with black and isort
++- Linting with flake8
++
++### Available Commands
++
++```bash
++make help                # Show all available commands
++make setup-dev          # Setup development environment
++make test-all           # Run all tests
++make test-unit          # Run unit tests
++make test-integration   # Run integration tests
++make test-functional    # Run functional tests (QA suite)
++make lint               # Run all linting checks
++make format             # Format code
++make type-check         # Run type checking
++make pre-commit         # Run pre-commit hooks
++make clean              # Clean build artifacts
++```
++
++## Code Quality Standards
++
++### Type Hints
++
++All new code must include comprehensive type hints:
++
++```python
++from typing import Optional, List, Dict
++
++def process_bgp_message(data: bytes, peer_address: str) -> Optional[Dict[str, Any]]:
++    """Process BGP message with proper type annotations."""
++    pass
++```
++
++### Documentation
++
++Use Google-style docstrings for all public functions and classes:
++
++```python
++def validate_asn(asn: Union[str, int]) -> int:
++    """Validate AS number.
++    
++    Args:
++        asn: AS number to validate
++        
++    Returns:
++        Validated AS number
++        
++    Raises:
++        ValidationError: If ASN is invalid
++    """
++```
++
++### Error Handling
++
++Use the structured exception hierarchy:
++
++```python
++from exabgp.exceptions import ValidationError, MessageError
++
++try:
++    result = validate_input(data)
++except ValueError as e:
++    raise ValidationError(f"Invalid input: {e}") from e
++```
++
++### Testing
++
++- Write unit tests for all new functionality
++- Use pytest fixtures for test setup
++- Aim for >90% test coverage
++- Include both positive and negative test cases
++
++### Security
++
++- Validate all inputs using `InputValidator`
++- Apply rate limiting for network operations
++- Use structured logging for security events
++- Never log sensitive information
++
++## Testing
++
++### Test Structure
++
++```
++tests/
++├── unit/              # Unit tests
++├── integration/       # Integration tests  
++├── conftest.py       # Pytest configuration
++└── test_integration.py # QA integration
++```
++
++### Running Tests
++
++```bash
++# Run specific test types
++pytest tests/unit/test_bgp_message.py -v
++pytest tests/ -k "test_validation" -v
++pytest tests/ -m "not slow" -v
++
++# Run with coverage
++pytest tests/unit/ --cov=src/exabgp --cov-report=html
++```
++
++### QA Integration
++
++The existing QA infrastructure is preserved and integrated:
++
++```bash
++# Run traditional QA tests
++python qa/bin/functional encoding
++python qa/bin/functional decoding  
++python qa/bin/functional parsing
++
++# Run via pytest
++pytest tests/test_integration.py -v
++```
++
++## Contributing
++
++1. Create a feature branch
++2. Make changes following code standards
++3. Run tests and linting: `make lint && make test-all`
++4. Commit with descriptive messages
++5. Submit pull request
++
++The pre-commit hooks will automatically:
++- Format code with black and isort
++- Run linting checks
++- Validate type hints
++- Run unit tests
++
++## Continuous Integration
++
++The project uses tox for testing across multiple Python versions:
++
++```bash
++# Test all environments
++tox
++
++# Test specific environment
++tox -e py39
++tox -e lint
++tox -e type
++```

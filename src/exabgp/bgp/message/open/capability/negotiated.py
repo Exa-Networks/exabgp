@@ -1,4 +1,3 @@
-
 """negotiated.py
 
 Created by Thomas Mangin on 2012-07-19.
@@ -8,13 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.asn import AS_TRANS
-from exabgp.bgp.message.open.holdtime import HoldTime
+from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.refresh import REFRESH
-from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
+from exabgp.bgp.message.open.capability.refresh import REFRESH
+from exabgp.bgp.message.open.holdtime import HoldTime
+from exabgp.bgp.message.open.routerid import RouterID
 
 
 class Negotiated:
@@ -119,7 +117,11 @@ class Negotiated:
                 # no need to check that the capability exists, we generated it
                 # checked it is what we sent and only send MULTIPROTOCOL
                 if sent_capa[capa] != recv_capa[capa]:
-                    self.multisession = (2, 8, 'when checking session id, capability {} did not match'.format(str(capa)))
+                    self.multisession = (
+                        2,
+                        8,
+                        'when checking session id, capability {} did not match'.format(str(capa)),
+                    )
                     break
 
         elif sent_capa.announced(Capability.CODE.MULTISESSION):
@@ -150,10 +152,12 @@ class Negotiated:
                 return (
                     2,
                     3,
-                    'BGP Identifier collision, same router-id ({}) on both sides of this IBGP session'.format(self.received_open.router_id),
+                    'BGP Identifier collision, same router-id ({}) on both sides of this IBGP session'.format(
+                        self.received_open.router_id
+                    ),
                 )
 
-        if self.received_open.hold_time and self.received_open.hold_time < 3:
+        if self.received_open.hold_time and self.received_open.hold_time < HoldTime.MIN:
             return (2, 6, 'Hold Time is invalid (%d)' % self.received_open.hold_time)
 
         if self.multisession not in (True, False):

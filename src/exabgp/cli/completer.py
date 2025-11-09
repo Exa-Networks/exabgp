@@ -16,6 +16,10 @@ DEBUG = False
 
 TAB = '     '
 
+# Completion heuristic constants
+COMPLETION_WORD_INDEX_INTERFACES = 3  # Word index for interface section detection
+COMPLETION_WORD_COUNT_CHECK = 3  # Number of words to check for interface completion
+
 # TODO ..
 paths = {'vyos_completion_dir': os.environ.get('vyos_completion_dir', './src/conf_mode')}
 
@@ -146,8 +150,8 @@ class VyOSCompleter(Completer):
         # using split(' ') intead of split() to not eats the final ' '
         words = cmd.split(' ')
         # hardcoded search for words
-        if len(words) == 3 and words[0] == 'interfaces' and words[1] in Section.sections():
-            word = words[2] if len(words) == 3 else ''
+        if len(words) == COMPLETION_WORD_COUNT_CHECK and words[0] == 'interfaces' and words[1] in Section.sections():
+            word = words[2] if len(words) == COMPLETION_WORD_COUNT_CHECK else ''
 
             options = []
             prefixes = Section.interface_prefixes(words[1])

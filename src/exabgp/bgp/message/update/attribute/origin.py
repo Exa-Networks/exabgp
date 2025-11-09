@@ -41,11 +41,11 @@ class Origin(Attribute):
         return len(self._packed)
 
     def __repr__(self):
-        if self.origin == 0x00:
+        if self.origin == Origin.IGP:
             return 'igp'
-        if self.origin == 0x01:
+        if self.origin == Origin.EGP:
             return 'egp'
-        if self.origin == 0x02:
+        if self.origin == Origin.INCOMPLETE:
             return 'incomplete'
         return 'invalid'
 

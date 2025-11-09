@@ -30,6 +30,12 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 # =================================================================== Flow Components
 
+# Flow validation constants
+MAX_PACKET_LENGTH = 0xFFFF  # Maximum packet length (16-bit value)
+MAX_DSCP_VALUE = 0x3F  # Maximum DSCP value (6 bits, 0b00111111)
+MAX_TRAFFIC_CLASS = 0xFFFF  # Maximum traffic class value (16-bit)
+MAX_FLOW_LABEL = 0xFFFFF  # Maximum flow label value (20 bits)
+
 
 class IComponent:
     # all have ID
@@ -318,7 +324,7 @@ def decoder(function, klass=int):
 def packet_length(data):
     _str_bad_length = 'cloudflare already found that invalid max-packet length for for you ..'
     number = int(data)
-    if number > 0xFFFF:
+    if number > MAX_PACKET_LENGTH:
         raise ValueError(_str_bad_length)
     return number
 
@@ -335,7 +341,7 @@ def port_value(data):
 def dscp_value(data):
     _str_bad_dscp = 'you tried to filter a flow using an invalid dscp for a component ..'
     number = int(data)
-    if number < 0 or number > 0x3F:  # 0b00111111
+    if number < 0 or number > MAX_DSCP_VALUE:  # 0b00111111
         raise ValueError(_str_bad_dscp)
     return number
 
@@ -343,7 +349,7 @@ def dscp_value(data):
 def class_value(data):
     _str_bad_class = 'you tried to filter a flow using an invalid traffic class for a component ..'
     number = int(data)
-    if number < 0 or number > 0xFFFF:
+    if number < 0 or number > MAX_TRAFFIC_CLASS:
         raise ValueError(_str_bad_class)
     return number
 
@@ -351,7 +357,7 @@ def class_value(data):
 def label_value(data):
     _str_bad_label = 'you tried to filter a flow using an invalid traffic label for a component ..'
     number = int(data)
-    if number < 0 or number > 0xFFFFF:  # 20 bits 5 bytes
+    if number < 0 or number > MAX_FLOW_LABEL:  # 20 bits 5 bytes
         raise ValueError(_str_bad_label)
     return number
 
@@ -488,6 +494,14 @@ class FlowFlowLabel(IOperationByteShortLong, NumericString, IPv6):
 
 # ..........................................................
 
+# Flow NLRI encoding constants
+FLOW_LENGTH_EXTENDED_MASK = 0xF0  # Mask for extended length (upper 4 bits)
+FLOW_LENGTH_EXTENDED_VALUE = 0xF0  # Value indicating extended length (240)
+FLOW_LENGTH_LOWER_MASK = 0x0F  # Mask for lower 4 bits in extended length
+FLOW_LENGTH_EXTENDED_SHIFT = 16  # Shift for extended length calculation
+FLOW_LENGTH_COMPACT_MAX = 0xF0  # Maximum length for compact encoding (240)
+FLOW_LENGTH_EXTENDED_MAX = 0x0FFF  # Maximum length for extended encoding (4095)
+
 decode = {AFI.ipv4: {}, AFI.ipv6: {}}
 factory = {AFI.ipv4: {}, AFI.ipv6: {}}
 
@@ -585,10 +599,10 @@ class Flow(NLRI):
         components = self.rd.pack() + b''.join(ordered_rules)
 
         lc = len(components)
-        if lc < 0xF0:
+        if lc < FLOW_LENGTH_COMPACT_MAX:
             return bytes([lc]) + components
-        if lc < 0x0FFF:
-            return pack('!H', lc | 0xF000) + components
+        if lc < FLOW_LENGTH_EXTENDED_MAX:
+            return pack('!H', lc | (FLOW_LENGTH_EXTENDED_VALUE << 8)) + components
         raise Notify(
             3,
             0,
@@ -640,9 +654,9 @@ class Flow(NLRI):
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
         length, bgp = bgp[0], bgp[1:]
 
-        if length & 0xF0 == 0xF0:  # bigger than 240
+        if length & FLOW_LENGTH_EXTENDED_MASK == FLOW_LENGTH_EXTENDED_VALUE:  # bigger than 240
             extra, bgp = bgp[0], bgp[1:]
-            length = ((length & 0x0F) << 16) + extra
+            length = ((length & FLOW_LENGTH_LOWER_MASK) << FLOW_LENGTH_EXTENDED_SHIFT) + extra
 
         if length > len(bgp):
             raise Notify(3, 10, 'invalid length at the start of the the flow')

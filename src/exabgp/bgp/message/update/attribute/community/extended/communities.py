@@ -15,6 +15,10 @@ from exabgp.bgp.message.update.attribute.community.initial.communities import Co
 
 from exabgp.bgp.message.notification import Notify
 
+# Extended Community size constants (RFC 4360, RFC 5701)
+EXTENDED_COMMUNITY_SIZE = 8  # Standard extended community size
+EXTENDED_COMMUNITY_IPV6_SIZE = 20  # IPv6 extended community size
+
 
 # ===================================================== ExtendedCommunities (16)
 # https://www.iana.org/assignments/bgp-extended-communities
@@ -28,10 +32,10 @@ class ExtendedCommunities(Communities):
     def unpack(data, direction, negotiated):
         communities = ExtendedCommunities()
         while data:
-            if data and len(data) < 8:
+            if data and len(data) < EXTENDED_COMMUNITY_SIZE:
                 raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data])))
-            communities.add(ExtendedCommunity.unpack(data[:8], direction, negotiated))
-            data = data[8:]
+            communities.add(ExtendedCommunity.unpack(data[:EXTENDED_COMMUNITY_SIZE], direction, negotiated))
+            data = data[EXTENDED_COMMUNITY_SIZE:]
         return communities
 
 
@@ -47,8 +51,8 @@ class ExtendedCommunitiesIPv6(Communities):
     def unpack(data, direction, negotiated):
         communities = ExtendedCommunitiesIPv6()
         while data:
-            if data and len(data) < 20:
+            if data and len(data) < EXTENDED_COMMUNITY_IPV6_SIZE:
                 raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
-            communities.add(ExtendedCommunityIPv6.unpack(data[:20], direction, negotiated))
-            data = data[20:]
+            communities.add(ExtendedCommunityIPv6.unpack(data[:EXTENDED_COMMUNITY_IPV6_SIZE], direction, negotiated))
+            data = data[EXTENDED_COMMUNITY_IPV6_SIZE:]
         return communities

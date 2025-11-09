@@ -18,6 +18,9 @@ from exabgp.reactor.api.response import Response
 
 from exabgp.protocol.ip import IPv4
 
+# BGP NOTIFICATION Shutdown Communication constants (RFC 8203)
+MAX_SHUTDOWN_COMM_LENGTH = 128  # Maximum length of shutdown communication message
+
 
 class _FakeNeighbor(dict):
     def __init__(self, local, remote, asn, peer):
@@ -131,7 +134,7 @@ class Transcoder:
                 message.data = f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(data)}]'
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 
-            if shutdown_length > 128:
+            if shutdown_length > MAX_SHUTDOWN_COMM_LENGTH:
                 message.data = f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 

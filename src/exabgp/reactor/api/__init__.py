@@ -21,6 +21,10 @@ from exabgp.logger import log
 from exabgp.reactor.api.command import Command
 from exabgp.configuration.configuration import Configuration
 
+# API command parsing constants
+API_REFRESH_TOKEN_COUNT = 2  # Refresh command requires 2 tokens (AFI and SAFI)
+API_EOR_TOKEN_COUNT = 2  # EOR command requires 2 tokens (AFI and SAFI)
+
 # ======================================================================= Parser
 #
 
@@ -141,7 +145,7 @@ class API(Command):
 
     def api_refresh(self, command):
         tokens = formated(command).split(' ')[2:]
-        if len(tokens) != 2:
+        if len(tokens) != API_REFRESH_TOKEN_COUNT:
             return False
         afi = AFI.value(tokens.pop(0))
         safi = SAFI.value(tokens.pop(0))
@@ -156,7 +160,7 @@ class API(Command):
         if not number:
             return Family(1, 1)
 
-        if number != 2:
+        if number != API_EOR_TOKEN_COUNT:
             return False
 
         afi = AFI.fromString(tokens[0])

@@ -24,6 +24,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     https://tools.ietf.org/html/rfc7752 Sec 3.3.1.3.  Node Name TLV
 
+# Node name length constraint
+MAX_NODE_NAME_LENGTH = 255  # Maximum length for node name TLV
+
 
 @LinkState.register()
 class NodeName(BaseLS):
@@ -37,7 +40,7 @@ class NodeName(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        if len(data) > 255:
+        if len(data) > MAX_NODE_NAME_LENGTH:
             raise Notify(3, 5, 'Node Name TLV length too large')
 
         return cls(data.decode('ascii'))

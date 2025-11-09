@@ -17,6 +17,11 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 
 from exabgp.logger import log
 
+# BGP-LS Prefix TLV type codes (RFC 7752)
+TLV_LOCAL_NODE_DESC = 256  # Local Node Descriptors TLV
+TLV_OSPF_ROUTE_TYPE = 264  # OSPF Route Type TLV
+TLV_IP_REACHABILITY = 265  # IP Reachability Information TLV
+
 #   The IPv4 and IPv6 Prefix NLRIs (NLRI Type = 3 and Type = 4) use the
 #   same format, as shown in the following figure.
 #
@@ -79,7 +84,7 @@ class PREFIXv4(BGPLS):
             value = tlvs[4 : 4 + tlv_length]
             tlvs = tlvs[4 + tlv_length :]
 
-            if tlv_type == 256:
+            if tlv_type == TLV_LOCAL_NODE_DESC:
                 while value:
                     # Unpack Local Node Descriptor Sub-TLVs
                     # We pass proto_id as TLV interpretation
@@ -91,11 +96,11 @@ class PREFIXv4(BGPLS):
                     value = left
                 continue
 
-            if tlv_type == 264:
+            if tlv_type == TLV_OSPF_ROUTE_TYPE:
                 ospf_type = OspfRoute.unpack(value)
                 continue
 
-            if tlv_type == 265:
+            if tlv_type == TLV_IP_REACHABILITY:
                 prefix = IpReach.unpack(value, 3)
                 continue
 

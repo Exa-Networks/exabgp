@@ -34,6 +34,9 @@ from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 
 # from .error import *
 
+# BGP message minimum length (RFC 4271)
+MIN_BGP_MESSAGE_LENGTH = 19  # Minimum valid BGP message length (header size)
+
 
 class Connection:
     direction = 'undefined'
@@ -241,7 +244,7 @@ class Connection:
             yield length, 0, header, b'', NotifyError(1, 2, report)
             return
 
-        validator = Message.Length.get(msg, lambda _: _ >= 19)
+        validator = Message.Length.get(msg, lambda _: _ >= MIN_BGP_MESSAGE_LENGTH)
         if not validator(length):
             # MUST send the faulty length back
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'

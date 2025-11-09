@@ -1,4 +1,3 @@
-
 """linkname.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -8,10 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 from exabgp.bgp.message.notification import Notify
-
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
-
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -29,8 +25,11 @@ class LinkName(BaseLS):
     REPR = 'Link Name'
     JSON = 'link-name'
 
+    # BGP-LS TLV length constants
+    BGPLS_TLV_MAX_LENGTH = 255  # Maximum TLV data length
+
     @classmethod
     def unpack(cls, data):
-        if len(data) > 255:
+        if len(data) > cls.BGPLS_TLV_MAX_LENGTH:
             raise Notify(3, 5, 'Link Name TLV length too large')
         return cls(data)

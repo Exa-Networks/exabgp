@@ -15,6 +15,9 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # ============================================================= GenericAttribute
 #
 
+# Attribute length threshold for extended length encoding
+MAX_SINGLE_OCTET_LENGTH = 0xFF  # Maximum value that fits in a single byte (255)
+
 
 class GenericAttribute(Attribute):
     GENERIC = True
@@ -34,7 +37,7 @@ class GenericAttribute(Attribute):
     def pack(self, negotiated=None):
         flag = self.FLAG
         length = len(self.data)
-        if length > 0xFF:
+        if length > MAX_SINGLE_OCTET_LENGTH:
             flag |= Attribute.Flag.EXTENDED_LENGTH
         if flag & Attribute.Flag.EXTENDED_LENGTH:
             len_value = pack('!H', length)

@@ -1,0 +1,89 @@
+⏺ Comprehensive Bug Analysis Report
+
+  Based on my thorough analysis of the unstaged changes affecting exception handling in ExaBGP, I have identified several critical bugs and potential issues:
+
+  CRITICAL BUGS FOUND AND FIXED:
+
+  1. FIXED: TreatAsWithdraw Parameter Inconsistency
+
+  - Location: src/exabgp/bgp/message/update/attribute/attributes.py:387
+  - Issue: Missing aid parameter in TreatAsWithdraw() constructor call
+  - Impact: BGP attribute parsing failures would create invalid TreatAsWithdraw objects
+  - Status: ✅ FIXED - Added missing aid parameter
+
+  2. FIXED: Exception Control Flow Logic Error
+
+  - Location: src/exabgp/bgp/message/update/attribute/attributes.py:392-393
+  - Issue: Incorrect indentation caused ALL MessageExceptions to be treated as unexpected
+  - Impact: Valid BGP notification exceptions were incorrectly rejected
+  - Status: ✅ FIXED - Corrected control flow logic
+
+  REMAINING HIGH-RISK ISSUES:
+
+  3. Notify Exception Reconstruction Bug in peer.py
+
+  - Location: src/exabgp/reactor/peer.py:653
+  - Issue: Converting MessageException back to Notify using Notify(code, subcode, data) but MessageException.data might not match expected format
+  - Code:
+  notify = Notify(message_exception.code, message_exception.subcode, message_exception.data)
+  - Risk: BGP notifications sent to peers may have incorrect format
+  - Impact: Could cause BGP session failures or protocol violations
+
+  4. Notification Message Exception Handling in protocol.py
+
+  - Location: src/exabgp/reactor/protocol.py:305-312
+  - Issue: Using Notification.exception() method that doesn't exist
+  - Code:
+  raise Notification.exception(
+      code=message.code,
+      subcode=message.subcode,
+      message=f"Notification received: {message}",
+      data=message.data
+  )
+  - Risk: Runtime AttributeError when receiving BGP Notification messages
+  - Impact: BGP peer connections will crash when receiving error notifications
+
+  5. Exception Type Confusion in peer.py
+
+  - Location: src/exabgp/reactor/peer.py:670-677
+  - Issue: Checking message_exception.message_class == Notification but notifications should be instances, not classes
+  - Risk: Notification messages from peers won't be handled correctly
+  - Impact: BGP error recovery mechanisms will fail
+
+  MEDIUM-RISK ISSUES:
+
+  6. Data Parameter Semantic Changes
+
+  - Locations: Multiple files throughout BGP message handling
+  - Issue: Original Notify(code, subcode, data) vs new exception(code, subcode, message=..., data=...)
+  - Risk: BGP notification data encoding may be incorrect
+  - Impact: Peers may receive malformed notification messages
+
+  7. BGP Timer Exception Handling
+
+  - Location: src/exabgp/bgp/timer.py
+  - Issue: Timer-related exception handling patterns changed
+  - Risk: BGP keepalive and hold timer failures may not be handled correctly
+  - Impact: BGP session stability issues
+
+  RECOMMENDATIONS:
+
+  Immediate Actions Required:
+
+  1. Fix Notification.exception() method - This method doesn't exist and will cause runtime errors
+  2. Review peer.py exception reconstruction logic - Ensure proper conversion between MessageException and Notify
+  3. Test BGP session establishment and error handling - Run functional tests to verify protocol compliance
+
+  Testing Strategy:
+
+  1. Run functional tests: ./qa/bin/functional encoding (after checking ulimit ≥64000)
+  2. Test BGP error scenarios: Simulate malformed messages to verify error handling
+  3. Test BGP session lifecycle: Verify connection establishment, maintenance, and teardown work correctly
+
+  Code Quality Issues:
+
+  - The exception hierarchy refactoring is incomplete and inconsistent
+  - Some modules still expect Notify exceptions while others use MessageException
+  - Error message formatting may not preserve BGP protocol semantics
+
+  The most critical remaining issue is the Notification.exception() call which will cause runtime crashes when BGP peers send notification messages.

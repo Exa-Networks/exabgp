@@ -28,6 +28,9 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 #             | Identifier | Routing Universe                 |
 #             +------------+----------------------------------+
 #             |     0      | Default Layer 3 Routing topology |
+
+# BGP-LS Node Descriptor TLV type
+NODE_DESCRIPTOR_TYPE = 256  # Local Node Descriptors TLV type
 #             +------------+----------------------------------+
 #   The Protocol-ID field can contain one of the following values:
 # ===================================================================== DOMAIN
@@ -72,7 +75,7 @@ class NODE(BGPLS):
 
         # unpack list of node descriptors
         node_type, node_length = unpack('!HH', data[9:13])
-        if node_type != 256:
+        if node_type != NODE_DESCRIPTOR_TYPE:
             raise Exception(
                 f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
             )

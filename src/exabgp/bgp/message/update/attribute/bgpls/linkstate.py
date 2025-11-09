@@ -1,4 +1,3 @@
-
 """Copyright (c) 2016 Evelio Vila <eveliovila@gmail.com>
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
@@ -6,9 +5,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import json
 import binascii
 import itertools
+import json
 from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
@@ -104,6 +103,8 @@ class BaseLS:
     REPR = 'repr name unset'
     LEN = 0
     MERGE = False
+
+    BGPLS_SUBTLV_HEADER_SIZE = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
 
     def __init__(self, content):
         self.content = content

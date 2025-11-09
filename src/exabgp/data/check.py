@@ -6,6 +6,34 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from exabgp.protocol.ip import IPv4
+from exabgp.protocol.ip import IPv6
+
+# MD5 password maximum length (RFC 2385)
+MD5_PASSWORD_MAX_LENGTH = 18  # Maximum length for MD5 authentication password
+
+# Extended community format
+EXTENDED_COMMUNITY_COLON_COUNT = 2  # Number of colons in extended community format (type:value:value)
+
+# Route distinguisher format
+ROUTE_DISTINGUISHER_PARTS = 2  # Number of parts in route distinguisher (asn:value or ip:value)
+
+# Array size for aggregate data
+AGGREGATOR_PARTS = 2  # Number of parts in aggregator (asn, ip)
+
+# Array size for community data
+COMMUNITY_PARTS = 2  # Number of parts in standard community (high:low)
+LARGE_COMMUNITY_PARTS = 3  # Number of parts in large community (global:local1:local2)
+
+# Flow numeric operator array size
+FLOW_NUMERIC_PARTS = 2  # Number of parts in flow numeric operator (operator, value)
+
+# Route distinguisher separator count
+RD_SEPARATOR_COUNT = 1  # Number of colons in route distinguisher
+
+# IPv4 range separator count
+IPV4_RANGE_SEPARATOR_COUNT = 1  # Number of slashes in IPv4 range
+
 
 class TYPE:
     NULL = 0x01
@@ -100,7 +128,7 @@ def ip(data):
 
 
 def ipv4(data):  # XXX: improve
-    return string(data) and data.count('.') == 3
+    return string(data) and data.count('.') == IPv4.DOT_COUNT
 
 
 def ipv6(data):  # XXX: improve
@@ -108,15 +136,15 @@ def ipv6(data):  # XXX: improve
 
 
 def range4(data):
-    return 0 < data <= 32
+    return 0 < data <= IPv4.BITS
 
 
 def range6(data):
-    return 0 < data <= 128
+    return 0 < data <= IPv6.BITS
 
 
 def ipv4_range(data):
-    if not data.count('/') == 1:
+    if not data.count('/') == IPV4_RANGE_SEPARATOR_COUNT:
         return False
     ip, r = data.split('/')
     if not ipv4(ip):
@@ -144,7 +172,7 @@ asn = asn32
 
 
 def md5(data):
-    return len(data) <= 18
+    return len(data) <= MD5_PASSWORD_MAX_LENGTH
 
 
 def localpreference(data):
@@ -165,7 +193,7 @@ def originator(data):
 
 def distinguisher(data):
     parts = data.split(':')
-    if len(parts) != 2:
+    if len(parts) != ROUTE_DISTINGUISHER_PARTS:
         return False
     _, __ = parts
     return (_.isdigit() and asn16(int(_)) and ipv4(__)) or (ipv4(_) and __.isdigit() and asn16(int(__)))
@@ -212,7 +240,7 @@ def community(data):
     ):
         return True
     return (
-        array(data) and len(data) == 2 and integer(data[0]) and integer(data[1]) and asn16(data[0]) and uint16(data[1])
+        array(data) and len(data) == COMMUNITY_PARTS and integer(data[0]) and integer(data[1]) and asn16(data[0]) and uint16(data[1])
     )
 
 
@@ -221,7 +249,7 @@ def largecommunity(data):
         return uint96(data)
     return (
         array(data)
-        and len(data) == 3
+        and len(data) == LARGE_COMMUNITY_PARTS
         and integer(data[0])
         and integer(data[1])
         and integer(data[2])
@@ -234,7 +262,7 @@ def largecommunity(data):
 def extendedcommunity(data):  # TODO: improve, incomplete see https://tools.ietf.org/rfc/rfc4360.txt
     if integer(data):
         return True
-    if string(data) and data.count(':') == 2:
+    if string(data) and data.count(':') == EXTENDED_COMMUNITY_COLON_COUNT:
         _, __, ___ = data.split(':')
         if _.lower() not in ('origin', 'target'):
             return False
@@ -255,7 +283,7 @@ def aggregator(data):
         return False
     if len(data) == 0:
         return True
-    if len(data) == 2:
+    if len(data) == AGGREGATOR_PARTS:
         return integer(data[0]) and string(data[1]) and asn(data[0]) and ipv4(data[1])
     return False
 
@@ -283,7 +311,7 @@ def _flow_numeric(data, check):
         return False
     for et in data:
         if not (
-            array(et) and len(et) == 2 and et[0] in ('>', '<', '=', '>=', '<=') and integer(et[1]) and check(et[1])
+            array(et) and len(et) == FLOW_NUMERIC_PARTS and et[0] in ('>', '<', '=', '>=', '<=') and integer(et[1]) and check(et[1])
         ):
             return False
     return True
@@ -303,7 +331,7 @@ def flow_length(data):
 
 def redirect(data):  # TODO: check that we are not too restrictive with our asn() calls
     parts = data.split(':')
-    if len(parts) != 2:
+    if len(parts) != ROUTE_DISTINGUISHER_PARTS:
         return False
     _, __ = parts
     if not __.isdigit() and asn16(int(__)):

@@ -17,11 +17,19 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.configuration.parser import string
 from exabgp.protocol.ip import IP
 
+# Configuration parsing constants
+INHERIT_SINGLE_TOKEN_COUNT = 2  # Number of tokens for single inheritance
+INHERIT_MIN_LIST_TOKEN_COUNT = 4  # Minimum tokens for inherit list ([...])
+HOSTNAME_MAX_LENGTH = 255  # Maximum hostname length (RFC 1123)
+
+# Hold time constraint (RFC 4271)
+MIN_NONZERO_HOLDTIME = 3  # Minimum hold time in seconds (must be 0 or >= 3)
+
 
 def inherit(tokeniser):
-    if len(tokeniser.tokens) == 2:
+    if len(tokeniser.tokens) == INHERIT_SINGLE_TOKEN_COUNT:
         return [tokeniser()]
-    if len(tokeniser.tokens) < 4 or tokeniser.tokens[1] != '[' or tokeniser.tokens[-1] != ']':
+    if len(tokeniser.tokens) < INHERIT_MIN_LIST_TOKEN_COUNT or tokeniser.tokens[1] != '[' or tokeniser.tokens[-1] != ']':
         raise ValueError('invalid inherit list')
     return tokeniser.tokens[2:-1]
 
@@ -36,7 +44,7 @@ def hostname(tokeniser):
         raise ValueError('bad host-name (double period)')
     if not all(c in ascii_letters + digits + '.-' for c in value):
         raise ValueError('bad host-name (charset)')
-    if len(value) > 255:
+    if len(value) > HOSTNAME_MAX_LENGTH:
         raise ValueError('bad host-name (length)')
 
     return value
@@ -54,7 +62,7 @@ def domainname(tokeniser):
         raise ValueError('bad domain-name')
     if not all(c in ascii_letters + digits + '.-' for c in value):
         raise ValueError('bad domain-name')
-    if len(value) > 255:
+    if len(value) > HOSTNAME_MAX_LENGTH:
         raise ValueError('bad domain-name (length)')
     return value
 
@@ -85,8 +93,8 @@ def ttl(tokeniser):
         raise ValueError(f'invalid ttl-security "{value}"') from None
     if attl < 0:
         raise ValueError('ttl-security can not be negative')
-    if attl > 255:
-        raise ValueError('ttl must be smaller than 256')
+    if attl > HOSTNAME_MAX_LENGTH:
+        raise ValueError(f'ttl must be smaller than {HOSTNAME_MAX_LENGTH + 1}')
     return attl
 
 
@@ -124,8 +132,8 @@ def hold_time(tokeniser):
         holdtime = HoldTime(int(value))
     except ValueError:
         raise ValueError(f'"{value}" is an invalid hold-time') from None
-    if holdtime < 3 and holdtime != 0:
-        raise ValueError('holdtime must be zero or at least three seconds')
+    if holdtime < MIN_NONZERO_HOLDTIME and holdtime != 0:
+        raise ValueError(f'holdtime must be zero or at least {MIN_NONZERO_HOLDTIME} seconds')
     if holdtime > HoldTime.MAX:
         raise ValueError(f'holdtime must be smaller or equal to {HoldTime.MAX}')
     return holdtime

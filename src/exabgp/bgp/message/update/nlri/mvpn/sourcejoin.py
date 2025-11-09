@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
-from exabgp.bgp.message.notification import Notify
-from exabgp.protocol.ip import IP
 from struct import pack
+
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.protocol.ip import IP, IPv4, IPv6
 
 # +-----------------------------------+
 # |      RD   (8 octets)              |
@@ -19,6 +20,10 @@ from struct import pack
 # +-----------------------------------+
 # |  Multicast Group   (variable)     |
 # +-----------------------------------+
+
+# MVPN Source Join Route length constants (RFC 6514)
+MVPN_SOURCEJOIN_IPV4_LENGTH = 22  # 8 (RD) + 4 (Source AS) + 1 (source len) + 4 (IPv4) + 1 (group len) + 4 (IPv4)
+MVPN_SOURCEJOIN_IPV6_LENGTH = 46  # 8 (RD) + 4 (Source AS) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
 @MVPN.register
@@ -73,7 +78,7 @@ class SourceJoin(MVPN):
     @classmethod
     def unpack(cls, data, afi):
         datalen = len(data)
-        if datalen not in (22, 46):  # IPv4 or IPv6
+        if datalen not in (MVPN_SOURCEJOIN_IPV4_LENGTH, MVPN_SOURCEJOIN_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Invalid C-Multicast Route length ({datalen} bytes).')
         cursor = 0
         rd = RouteDistinguisher.unpack(data[cursor:8])
@@ -82,7 +87,7 @@ class SourceJoin(MVPN):
         cursor += 4
         sourceiplen = int(data[cursor] / 8)
         cursor += 1
-        if sourceiplen != 4 and sourceiplen != 16:
+        if sourceiplen != IPv4.BYTES and sourceiplen != IPv6.BYTES:
             raise Notify(
                 3,
                 5,
@@ -92,7 +97,7 @@ class SourceJoin(MVPN):
         cursor += sourceiplen
         groupiplen = int(data[cursor] / 8)
         cursor += 1
-        if groupiplen != 4 and groupiplen != 16:
+        if groupiplen != IPv4.BYTES and groupiplen != IPv6.BYTES:
             raise Notify(
                 3,
                 5,

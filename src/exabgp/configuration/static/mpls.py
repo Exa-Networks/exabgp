@@ -33,6 +33,11 @@ from exabgp.bgp.message.update.nlri.mvpn import SourceAD
 from exabgp.bgp.message.update.nlri.mvpn import SourceJoin
 from exabgp.bgp.message.update.nlri.mvpn import SharedJoin
 
+# MPLS/SR configuration constants
+SRGB_TUPLE_SIZE = 2  # SRGB tuple consists of (start, range)
+ASN_MAX_VALUE = 4294967295  # Maximum value for 32-bit ASN
+TEID_MAX_BITS = 32  # Maximum TEID length in bits
+
 
 def label(tokeniser):
     labels = []
@@ -120,7 +125,7 @@ def prefix_sid(tokeniser):  # noqa: C901
         sr_attrs.append(SrLabelIndex(int(label_sid)))
 
     for srgb in srgb_data:
-        if len(srgb) == 2 and int(srgb[0]) < pow(2, 24) and int(srgb[1]) < pow(2, 24):
+        if len(srgb) == SRGB_TUPLE_SIZE and int(srgb[0]) < pow(2, 24) and int(srgb[1]) < pow(2, 24):
             srgbs.append((int(srgb[0]), int(srgb[1])))
         else:
             raise ValueError('could not parse SRGB tupple')
@@ -237,10 +242,10 @@ def mvpn_sharedjoin(tokeniser, afi, action):
     tokeniser.consume('source-as')
     value = tokeniser()
     if not value.isdigit():
-        raise Exception(f"expect source-as to be a integer in the range 0-4294967295, but received '{value}'")
+        raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
     asnum = int(value)
-    if asnum > 4294967295:
-        raise Exception(f"expect source-as to be a integer in the range 0-4294967295, but received '{value}'")
+    if asnum > ASN_MAX_VALUE:
+        raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
 
     return SharedJoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
 
@@ -266,10 +271,10 @@ def mvpn_sourcejoin(tokeniser, afi, action):
     tokeniser.consume('source-as')
     value = tokeniser()
     if not value.isdigit():
-        raise Exception(f"expect source-as to be a integer in the range 0-4294967295, but received '{value}'")
+        raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
     asnum = int(value)
-    if asnum > 4294967295:
-        raise Exception(f"expect source-as to be a integer in the range 0-4294967295, but received '{value}'")
+    if asnum > ASN_MAX_VALUE:
+        raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
 
     return SourceJoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
 
@@ -407,14 +412,14 @@ def srv6_mup_t2st(tokeniser, afi):
         raise Exception(f"expect teid, but received '{value}'")
 
     teids = tokeniser().split('/')
-    if len(teids) != 2:
-        raise Exception('unexpect teid format, this expect format <teid>/<length, expect 0 ~ 32')
+    if len(teids) != SRGB_TUPLE_SIZE:
+        raise Exception(f'unexpect teid format, this expect format <teid>/<length, expect 0 ~ {TEID_MAX_BITS}')
 
     teid = int(teids[0])
     teid_len = int(teids[1])
 
-    if not (0 <= teid_len <= 32):
-        raise Exception('unexpect teid format, this expect format <teid>/<length, expect 0 ~ 32>')
+    if not (0 <= teid_len <= TEID_MAX_BITS):
+        raise Exception(f'unexpect teid format, this expect format <teid>/<length, expect 0 ~ {TEID_MAX_BITS}>')
 
     if teid >= pow(2, teid_len):
         raise Exception(f'unexpect teid format, we can not store {teid} using {teid_len} bits')

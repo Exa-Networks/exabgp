@@ -17,6 +17,9 @@ from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.rib.change import Change
 
+# VPLS parameter maximum value (16-bit field)
+VPLS_PARAM_MAX = 0xFFFF  # Maximum value for VPLS endpoint, size, offset, and label base
+
 
 def vpls(tokeniser):
     return Change(VPLS(None, None, None, None, None), Attributes())
@@ -24,7 +27,7 @@ def vpls(tokeniser):
 
 def vpls_endpoint(tokeniser):
     number = int(tokeniser())
-    if number < 0 or number > 0xFFFF:
+    if number < 0 or number > VPLS_PARAM_MAX:
         raise ValueError('invalid l2vpn vpls endpoint')
     return number
     # vpls.endpoint = number
@@ -32,7 +35,7 @@ def vpls_endpoint(tokeniser):
 
 def vpls_size(tokeniser):
     number = int(tokeniser())
-    if number < 0 or number > 0xFFFF:
+    if number < 0 or number > VPLS_PARAM_MAX:
         raise ValueError('invalid l2vpn vpls block-size')
     return number
     # vpls.size = number
@@ -40,7 +43,7 @@ def vpls_size(tokeniser):
 
 def vpls_offset(tokeniser):
     number = int(tokeniser())
-    if number < 0 or number > 0xFFFF:
+    if number < 0 or number > VPLS_PARAM_MAX:
         raise ValueError('invalid l2vpn vpls block-offset')
     return number
     # vpls.offset = number
@@ -48,7 +51,7 @@ def vpls_offset(tokeniser):
 
 def vpls_base(tokeniser):
     number = int(tokeniser())
-    if number < 0 or number > 0xFFFF:
+    if number < 0 or number > VPLS_PARAM_MAX:
         raise ValueError('invalid l2vpn vpls label')
     return number
     # vpls.base = number
