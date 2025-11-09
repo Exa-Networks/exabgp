@@ -84,7 +84,7 @@ class FSM(object):
         return not self.__eq__(other)
 
     def __repr__(self):
-        return 'FSM state %s' % self.state
+        return f'FSM state {self.state}'
 
     def name(self):
         return self.STATE.names.get(self.state, 'INVALID')

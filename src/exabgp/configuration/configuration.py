@@ -470,8 +470,7 @@ class Configuration(_Configuration):
                     elif notification == 'processes-match':
                         if not any(v.get('run', False) for k, v in self.processes.items() if re.match(api, k)):
                             errors.append(
-                                "\n\nAny process match regex '%s' for neighbor '%s'.\n\n"
-                                % (api, neighbor['peer-address']),
+                                f"\n\nAny process match regex '{api}' for neighbor '{neighbor['peer-address']}'.\n\n",
                             )
 
                 # matching mode is an "or", we test all rules and check
@@ -497,11 +496,11 @@ class Configuration(_Configuration):
                 self.processes.setdefault(process, {})['signal'] = api['signal']
                 for way in ('send', 'receive'):
                     for name in ('parsed', 'packets', 'consolidate'):
-                        key = '%s-%s' % (way, name)
+                        key = f'{way}-{name}'
                         if api[key]:
                             self.processes[process].setdefault(key, []).append(neighbor['router-id'])
                     for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-                        key = '%s-%s' % (way, name)
+                        key = f'{way}-{name}'
                         if api[key]:
                             self.processes[process].setdefault(key, []).append(neighbor['router-id'])
 
@@ -513,22 +512,22 @@ class Configuration(_Configuration):
 
         if self.parse_section(section) is not True:
             self._rollback_reload()
-            log.debug(
-                '\n'
-                'syntax error in api command %s\n'
-                'line %d: %s\n'
-                '\n%s' % (self.scope.location(), self.tokeniser.number, ' '.join(self.tokeniser.line), str(self.error)),
-                'configuration',
+            error_msg = (
+                f'\n'
+                f'syntax error in api command {self.scope.location()}\n'
+                f'line {self.tokeniser.number}: {" ".join(self.tokeniser.line)}\n'
+                f'\n{self.error}'
             )
+            log.debug(error_msg, 'configuration')
             return False
         return True
 
     def _enter(self, name):
         location = self.tokeniser.iterate()
-        log.debug('> %-16s | %s' % (location, self.tokeniser.params()), 'configuration')
+        log.debug(f'> {location:<16} | {self.tokeniser.params()}', 'configuration')
 
         if location not in self._structure[name]['sections']:
-            return self.error.set('section %s is invalid in %s, %s' % (location, name, self.scope.location()))
+            return self.error.set(f'section {location} is invalid in {name}, {self.scope.location()}')
 
         self.scope.enter(location)
         self.scope.to_context()
@@ -552,12 +551,12 @@ class Configuration(_Configuration):
             return self.error.set('closing too many parenthesis')
         self.scope.to_context()
 
-        log.debug('< %-16s | %s' % (left, self.tokeniser.params()), 'configuration')
+        log.debug(f'< {left:<16} | {self.tokeniser.params()}', 'configuration')
         return True
 
     def _run(self, name):
         command = self.tokeniser.iterate()
-        log.debug('. %-16s | %s' % (command, self.tokeniser.params()), 'configuration')
+        log.debug(f'. {command:<16} | {self.tokeniser.params()}', 'configuration')
 
         if not self.run(name, command):
             return False
