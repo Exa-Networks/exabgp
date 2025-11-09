@@ -71,14 +71,14 @@ def unpack_data(cls, data, type):
             subtlvs.append(f'"{code}-undecoded": "{subsubtlv}"')
         data = data[length + 4 :]
 
-    return {**{
+    return {
         'flags': flags,
         'neighbor-id': neighbor_id,
         'behavior': behavior,
         'algorithm': algorithm,
         'weight': weight,
-        'sid': sid,
-    }, **json.loads('{' + ', '.join(subtlvs) + '}')}
+        'sid': sid
+    , **json.loads('{' + ', '.join(subtlvs) + '}')}
 
 
 @LinkState.register()

@@ -26,14 +26,14 @@ class Signal:
             for v, k in reversed(sorted(signal.__dict__.items()))
             if v.startswith('SIG') and not v.startswith('SIG_')
         ),
-        **{
+        
             NONE: 'none',
             SHUTDOWN: 'shutdown',
             RESTART: 'restart',
             RELOAD: 'reload',
-            FULL_RELOAD: 'full reload',
+            FULL_RELOAD: 'full reload'
             # some padding to make black format this as we like :-)
-        },
+        ,
     }
 
     @classmethod
