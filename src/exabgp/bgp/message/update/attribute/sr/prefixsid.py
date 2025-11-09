@@ -64,7 +64,7 @@ class PrefixSid(Attribute):
 
     def json(self, compact=None):
         content = ', '.join(d.json() for d in self.sr_attrs)
-        return '{ %s }' % (content)
+        return f'{{ {content} }}'
 
     def __str__(self):
         # First, we try to decode path attribute for SR-MPLS
@@ -72,9 +72,9 @@ class PrefixSid(Attribute):
         if label_index is not None:
             srgb = next((i for i in self.sr_attrs if i.TLV == 3), None)
             if srgb is not None:
-                return '[ {}, {} ]'.format(str(label_index), str(srgb))
+                return f'[ {str(label_index)}, {str(srgb)} ]'
             else:
-                return '[ {} ]'.format(str(label_index))
+                return f'[ {str(label_index)} ]'
 
         # if not, we try to decode path attribute for SRv6
         return '[ ' + ', '.join([str(attr) for attr in self.sr_attrs]) + ' ]'

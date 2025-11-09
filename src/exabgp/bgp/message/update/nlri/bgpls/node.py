@@ -53,29 +53,29 @@ class NODE(BGPLS):
         nodes = ', '.join(d.json() for d in self.node_ids)
         content = ', '.join(
             [
-                '"ls-nlri-type": "%s"' % self.NAME,
-                '"l3-routing-topology": %d' % int(self.domain),
-                '"protocol-id": %d' % int(self.proto_id),
-                '"node-descriptors": [ %s ]' % nodes,
-                '"nexthop": "%s"' % self.nexthop,
+                f'"ls-nlri-type": "{self.NAME}"',
+                f'"l3-routing-topology": {int(self.domain)}',
+                f'"protocol-id": {int(self.proto_id)}',
+                f'"node-descriptors": [ {nodes} ]',
+                f'"nexthop": "{self.nexthop}"',
             ]
         )
         if self.route_d:
-            content += ', %s' % self.route_d.json()
-        return '{ %s }' % (content)
+            content += f', {self.route_d.json()}'
+        return f'{{ {content} }}'
 
     @classmethod
     def unpack_nlri(cls, data, rd):
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
-            raise Exception('Protocol-ID {} is not valid'.format(proto_id))
+            raise Exception(f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
 
         # unpack list of node descriptors
         node_type, node_length = unpack('!HH', data[9:13])
         if node_type != 256:
             raise Exception(
-                'Unknown type: {}. Only Local Node descriptors are allowed inNode type msg'.format(node_type)
+                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg'
             )
         values = data[13 : 13 + node_length]
 

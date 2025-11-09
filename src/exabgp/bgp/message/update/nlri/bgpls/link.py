@@ -101,7 +101,7 @@ class LINK(BGPLS):
         remote_node = []
         local_node = []
         if proto_id not in PROTO_CODES.keys():
-            raise Exception('Protocol-ID {} is not valid'.format(proto_id))
+            raise Exception(f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
         tlvs = data[9:]
 
@@ -153,7 +153,7 @@ class LINK(BGPLS):
                 topology_ids.append(MTID.unpack(value))
                 continue
 
-            log.critical('unknown link TLV %d' % tlv_type)
+            log.critical(f'unknown link TLV {tlv_type}')
 
         return cls(
             domain=domain,
@@ -193,30 +193,30 @@ class LINK(BGPLS):
         raise RuntimeError('Not implemented')
 
     def json(self, compact=None):
-        content = '"ls-nlri-type": "%s", ' % self.NAME
-        content += '"l3-routing-topology": %d, ' % int(self.domain)
-        content += '"protocol-id": %d, ' % int(self.proto_id)
+        content = f'"ls-nlri-type": "{self.NAME}", '
+        content += f'"l3-routing-topology": {int(self.domain)}, '
+        content += f'"protocol-id": {int(self.proto_id)}, '
 
         local = ', '.join(_.json() for _ in self.local_node)
-        content += '"local-node-descriptors": [ %s ], ' % local
+        content += f'"local-node-descriptors": [ {local} ], '
 
         remote = ', '.join(_.json() for _ in self.remote_node)
-        content += '"remote-node-descriptors": [ %s ], ' % remote
+        content += f'"remote-node-descriptors": [ {remote} ], '
 
         interface_addrs = ', '.join(_.json() for _ in self.iface_addrs)
-        content += '"interface-addresses": [ %s ], ' % interface_addrs
+        content += f'"interface-addresses": [ {interface_addrs} ], '
 
         neighbor_addrs = ', '.join(_.json() for _ in self.neigh_addrs)
-        content += '"neighbor-addresses": [ %s ], ' % neighbor_addrs
+        content += f'"neighbor-addresses": [ {neighbor_addrs} ], '
 
         topology_ids = ', '.join(_.json() for _ in self.topology_ids)
-        content += '"multi-topology-ids": [ %s ], ' % topology_ids
+        content += f'"multi-topology-ids": [ {topology_ids} ], '
 
         links = ', '.join(_.json() for _ in self.link_ids)
-        content += '"link-identifiers": [ %s ]' % links
+        content += f'"link-identifiers": [ {links} ]'
         # # content is ending without a , here in purpose
 
         if self.route_d:
-            content += ', { %s }' % self.route_d.json()
+            content += f', {{ {self.route_d.json()} }}'
 
-        return '{ %s }' % content
+        return f'{{ {content} }}'

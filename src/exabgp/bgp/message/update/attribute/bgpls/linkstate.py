@@ -93,7 +93,7 @@ class LinkState(Attribute):
 
     def json(self, compact=None):
         content = ', '.join(d.json() for d in self.ls_attrs)
-        return '{ %s }' % (content)
+        return f'{{ {content} }}'
 
     def __str__(self):
         return ', '.join(str(d) for d in self.ls_attrs)
@@ -111,10 +111,10 @@ class BaseLS(object):
 
     def json(self, compact=None):
         try:
-            return '"{}": {}'.format(self.JSON, json.dumps(self.content))
+            return f'"{self.JSON}": {json.dumps(self.content)}'
         except TypeError:
             # not a basic type
-            return '"{}": "{}"'.format(self.JSON, self.content.decode('utf-8'))
+            return f'"{self.JSON}": "{self.content.decode("utf-8")}"'
 
     def __repr__(self):
         return '%s: %s' % (self.REPR, self.content)
@@ -150,8 +150,8 @@ class GenericLSID(BaseLS):
         return 'Attribute with code [ %s ] not implemented' % (self.TLV)
 
     def json(self):
-        merged = ', '.join(['"{}"'.format(hexstring(_)) for _ in self.content])
-        return '"generic-lsid-{}": [{}]'.format(self.TLV, merged)
+        merged = ', '.join([f'"{hexstring(_)}"' for _ in self.content])
+        return f'"generic-lsid-{self.TLV}": [{merged}]'
 
     @classmethod
     def unpack(cls, data):
@@ -166,7 +166,7 @@ class FlagLS(BaseLS):
         return '%s: %s' % (self.REPR, self.flags)
 
     def json(self, compact=None):
-        return '"{}": {}'.format(self.JSON, json.dumps(self.flags))
+        return f'"{self.JSON}": {json.dumps(self.flags)}'
 
     @classmethod
     def unpack_flags(cls, data):

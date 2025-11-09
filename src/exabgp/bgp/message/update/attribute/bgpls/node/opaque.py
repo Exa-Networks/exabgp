@@ -42,4 +42,4 @@ class NodeOpaque(BaseLS):
         return cls(unpack('!%ds' % len(data), data)[0])
 
     def json(self, compact=None):
-        return '"{}": {}'.format(self.JSON, json.dumps(self.content))
+        return f'"{self.JSON}": {json.dumps(self.content)}'
