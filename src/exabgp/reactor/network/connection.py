@@ -87,7 +87,6 @@ class Connection(object):
             message = 'connection to %s closed' % self.peer
         except Exception as exc:
             message = 'error while closing connection: %s' % exc
-            return
         self.io = None
         log.warning(message, source=self.session())
 
