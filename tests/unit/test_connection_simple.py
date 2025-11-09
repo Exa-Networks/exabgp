@@ -117,6 +117,7 @@ class TestConnectionBasics:
 
     def test_close_handles_exception(self):
         """Test close() handles exceptions gracefully"""
+        from unittest.mock import patch
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -124,7 +125,8 @@ class TestConnectionBasics:
         conn.io = mock_sock
 
         # Should not raise, just set io to None
-        conn.close()
+        with patch('exabgp.reactor.network.connection.log'):
+            conn.close()
         assert conn.io is None
 
     def test_del_calls_close(self):
