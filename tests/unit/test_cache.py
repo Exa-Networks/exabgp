@@ -106,7 +106,8 @@ class TestCache(unittest.TestCase):
             end = time.time()
             time1 = end - start
 
-            sys.stdout.write(f'{COUNT, 'iterations of', klass.__name__, 'with', UNIQUE, 'uniques classes'}\n')
+            sys.stdout.write(str((COUNT, 'iterations of', klass.__name__, 'with', UNIQUE, 'uniques classes')))
+            sys.stdout.write('\n')
             sys.stdout.write('time instance %d' % time1 + '\n')
             cache = Cache()
             start = time.time()
