@@ -141,11 +141,10 @@ class Notification(Message, Exception):
             self.data += (', trailing data: ' + hexstring(trailer)).encode('utf-8')
 
     def __str__(self):
-        return '%s / %s%s' % (
-            self._str_code.get(self.code, 'unknown error'),
-            self._str_subcode.get((self.code, self.subcode), 'unknow reason'),
-            ' / %s' % self.data.decode('ascii') if self.data else '',
-        )
+        code_str = self._str_code.get(self.code, 'unknown error')
+        subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')
+        data_str = f' / {self.data.decode("ascii")}' if self.data else ''
+        return f'{code_str} / {subcode_str}{data_str}'
 
     @classmethod
     def unpack_message(cls, data, direction=None, negotiated=None):
