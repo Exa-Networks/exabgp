@@ -60,8 +60,8 @@ class Graceful(Capability, dict):
             'address-family-flags': f'{{ {families_json}}}',
             'restart-flags': f'[{" \"forwarding\" " if self.restart_flag & 0x8 else " "}] ',
         }
-
-        return f'{{ {", ".join(f"\"{k}\": {v}" for k, v in d.items())}}}'
+        items = ", ".join(f'"{k}": {v}' for k, v in d.items())
+        return f'{{ {items} }}'
 
     def families(self):
         return self.keys()

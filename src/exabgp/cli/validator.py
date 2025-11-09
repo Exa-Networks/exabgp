@@ -94,4 +94,5 @@ class VyOSValidator(Validator):
 
             if reports:
                 # we do not break, data is invalid
-                self.invalid(cmd, f'"{data}" ' + ', '.join(reports), data)
+                reports_str = ', '.join(reports)
+                self.invalid(cmd, f'"{data}" ' + reports_str, data)

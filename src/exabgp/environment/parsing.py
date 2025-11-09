@@ -41,7 +41,8 @@ def quote(_):
 
 
 def quote_list(_):
-    return f"'{' '.join([str(x) for x in _])}'"
+    joined = ' '.join([str(x) for x in _])
+    return f"'{joined}'"
 
 
 def nop(_):
@@ -64,7 +65,8 @@ def methods(_):
 
 
 def list(_):
-    return f"'{' '.join(_)}'"
+    joined = ' '.join(_)
+    return f"'{joined}'"
 
 
 def lower(_):
