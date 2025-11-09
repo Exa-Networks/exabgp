@@ -46,9 +46,9 @@ class Section(Error):
 
     def check_name(self, name):
         if any(False if c in ascii_letters + digits + '.-_' else True for c in name):
-            self.throw('invalid character in name for %s ' % self.name)
+            self.throw(f'invalid character in name for {self.name} ')
         if name in self._names:
-            self.throw('the name "%s" already exists in %s' % (name, self.name))
+            self.throw(f'the name "{name}" already exists in {self.name}')
         self._names.append(name)
 
     def pre(self):
@@ -60,8 +60,9 @@ class Section(Error):
     def parse(self, name, command):  # noqa: C901
         identifier = command if command in self.known else (self.name, command)
         if identifier not in self.known:
+            options = ', '.join([str(_) for _ in self.known])
             return self.error.set(
-                'unknown command %s options are %s' % (command, ', '.join([str(_) for _ in self.known]))
+                f'unknown command {command} options are {options}'
             )
 
         try:
@@ -102,7 +103,7 @@ class Section(Error):
             elif action == 'nop':
                 pass
             else:
-                raise RuntimeError('name %s command %s has no action set' % (name, command))
+                raise RuntimeError(f'name {name} command {command} has no action set')
             return True
         except ValueError as exc:
             return self.error.set(str(exc))

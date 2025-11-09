@@ -102,8 +102,10 @@ class Tokeniser(object):
         if len(self.line) <= 2:
             return ''
         if self.end in ('{', '}', ';'):
-            return "'%s'" % "' '".join(self.line[1:-1])
-        return "'%s'" % "' '".join(self.line[1:])
+            joined = "' '".join(self.line[1:-1])
+            return f"'{joined}'"
+        joined = "' '".join(self.line[1:])
+        return f"'{joined}'"
 
     def _tokenise(self, iterator):
         for parsed in tokens(iterator):

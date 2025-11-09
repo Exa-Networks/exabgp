@@ -36,10 +36,9 @@ class Error(Exception):
 
         self.message = '\n\n'.join(
             (
-                'problem parsing configuration file line %d position %d'
-                % (location.index_line, location.index_column + 1),
-                'error message: %s' % message.replace('\t', ' ' * self.tabsize),
-                '%s%s' % (self.line, '-' * self.index_column + '^'),
+                f'problem parsing configuration file line {location.index_line} position {location.index_column + 1}',
+                f'error message: {message.replace("\t", " " * self.tabsize)}',
+                f'{self.line}{"-" * self.index_column + "^"}',
             )
         )
         # allow to give the right syntax in using Raised

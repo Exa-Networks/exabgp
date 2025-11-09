@@ -139,7 +139,7 @@ def tokens(stream):  # noqa: C901
                 nb_chars += 1
 
         if word:
-            raise ValueError('invalid syntax line %d: "%s"' % (nb_lines, word))
+            raise ValueError(f'invalid syntax line {nb_lines}: "{word}"')
 
         if parsed:
-            raise ValueError('invalid syntax line %d: "%s"' % (nb_lines, parsed))
+            raise ValueError(f'invalid syntax line {nb_lines}: "{parsed}"')
