@@ -305,7 +305,7 @@ class Reactor(object):
             self.processes.start(self.configuration.processes)
 
         if not self.daemon.drop_privileges():
-            log.critical("could not drop privileges to '%s' refusing to run as root" % self.daemon.user, 'reactor')
+            log.critical(f"could not drop privileges to '{self.daemon.user}' refusing to run as root", 'reactor')
             log.critical('set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor')
             return self.Exit.privileges
 
@@ -495,23 +495,23 @@ class Reactor(object):
 
         for key, peer in self._peers.items():
             if key not in self.configuration.neighbors:
-                log.debug('removing peer: %s' % peer.neighbor.name(), 'reactor')
+                log.debug(f'removing peer: {peer.neighbor.name()}', 'reactor')
                 peer.remove()
 
         for key, neighbor in self.configuration.neighbors.items():
             # new peer
             if key not in self._peers:
-                log.debug('new peer: %s' % neighbor.name(), 'reactor')
+                log.debug(f'new peer: {neighbor.name()}', 'reactor')
                 peer = Peer(neighbor, self)
                 self._peers[key] = peer
             # modified peer
             elif self._peers[key].neighbor != neighbor:
-                log.debug('peer definition change, establishing a new connection for %s' % str(key), 'reactor')
+                log.debug(f'peer definition change, establishing a new connection for {key}', 'reactor')
                 self._peers[key].reestablish(neighbor)
             # same peer but perhaps not the routes
             else:
                 # finding what route changed and sending the delta is not obvious
-                log.debug('peer definition identical, updating peer routes if required for %s' % str(key), 'reactor')
+                log.debug(f'peer definition identical, updating peer routes if required for {key}', 'reactor')
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
                 if ip.afi == neighbor['peer-address'].afi:
@@ -535,7 +535,7 @@ class Reactor(object):
         for key in self._peers.keys():
             if key not in self.configuration.neighbors.keys():
                 peer = self._peers[key]
-                log.debug('removing peer %s' % peer.neighbor.name(), 'reactor')
+                log.debug(f'removing peer {peer.neighbor.name()}', 'reactor')
                 self._peers[key].remove()
             else:
                 self._peers[key].reestablish()

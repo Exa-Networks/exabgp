@@ -37,11 +37,10 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
                 # log something about this drop?
                 continue
 
-            msg = '%s %s %s' % (
-                reactor.neighbor_name(key) if extensive else reactor.neighbor_ip(key),
-                '%s %s' % change.nlri.family().afi_safi(),
-                change.extensive() if extensive else str(change.nlri),
-            )
+            neighbor = reactor.neighbor_name(key) if extensive else reactor.neighbor_ip(key)
+            family = f'{change.nlri.family().afi_safi()[0]} {change.nlri.family().afi_safi()[1]}'
+            details = change.extensive() if extensive else str(change.nlri)
+            msg = f'{neighbor} {family} {details}'
             reactor.processes.write(service, msg)
 
     def to_json(key, changes):
@@ -73,7 +72,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
         if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
             peers = reactor.peers()
         else:
-            peers = [n for n in reactor.peers() if 'neighbor %s' % last in n]
+            peers = [n for n in reactor.peers() if f'neighbor {last}' in n]
         for key in peers:
             routes = reactor.neighor_rib(key, rib_name, advertised)
             while routes:
@@ -150,9 +149,8 @@ def show_adj_rib(self, reactor, service, line, use_json):
 @Command.register('flush adj-rib out')
 def flush_adj_rib_out(self, reactor, service, line, use_json):
     def callback(self, peers):
-        self.log_message(
-            'flushing adjb-rib out for %s' % ', '.join(peers if peers else []) if peers is not None else 'all peers'
-        )
+        peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
+        self.log_message(f'flushing adjb-rib out for {peer_list}')
         for peer_name in peers:
             reactor.neighbor_rib_resend(peer_name)
             yield False
@@ -163,7 +161,7 @@ def flush_adj_rib_out(self, reactor, service, line, use_json):
         descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.established_peers(), descriptions)
         if not peers:
-            self.log_failure('no neighbor matching the command : %s' % command, 'warning')
+            self.log_failure(f'no neighbor matching the command : {command}', 'warning')
             reactor.processes.answer_error(service)
             return False
         reactor.asynchronous.schedule(service, command, callback(self, peers))
@@ -181,10 +179,8 @@ def flush_adj_rib_out(self, reactor, service, line, use_json):
 @Command.register('clear adj-rib')
 def clear_adj_rib(self, reactor, service, line, use_json):
     def callback(self, peers, direction):
-        self.log_message(
-            'clearing adjb-rib-%s for %s'
-            % (direction, ', '.join(peers if peers else []) if peers is not None else 'all peers')
-        )
+        peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
+        self.log_message(f'clearing adjb-rib-{direction} for {peer_list}')
         for peer_name in peers:
             if direction == 'out':
                 reactor.neighbor_rib_out_withdraw(peer_name)
@@ -198,7 +194,7 @@ def clear_adj_rib(self, reactor, service, line, use_json):
         descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.peers(), descriptions)
         if not peers:
-            self.log_failure('no neighbor matching the command : %s' % command, 'warning')
+            self.log_failure(f'no neighbor matching the command : {command}', 'warning')
             reactor.processes.answer_error(service)
             return False
         words = command.split()
