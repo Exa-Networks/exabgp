@@ -96,7 +96,7 @@ class _Configuration(object):
                         self.neighbors[neighbor].asm[operational.family().afi_safi()] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:
-                    log.error(f'the route family {operational.family().afi_safi()} is not configured on neighbor {neighbor}', 'configuration')
+                    log.error(lambda: f'the route family {operational.family().afi_safi()} is not configured on neighbor {neighbor}', 'configuration')
                     result = False
         return result
 
@@ -109,7 +109,7 @@ class _Configuration(object):
                     if family in self.neighbors[neighbor].families():
                         self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi, refresh.safi))
                     else:
-                        log.error(f'the route family {family} is not configured on neighbor {neighbor}', 'configuration')
+                        log.error(lambda: f'the route family {family} is not configured on neighbor {neighbor}', 'configuration')
                         result = False
         return result
 
@@ -519,13 +519,13 @@ class Configuration(_Configuration):
                 f'line {self.tokeniser.number}: {line_str}\n'
                 f'\n{self.error}'
             )
-            log.debug(error_msg, 'configuration')
+            log.debug(lambda: error_msg, 'configuration')
             return False
         return True
 
     def _enter(self, name):
         location = self.tokeniser.iterate()
-        log.debug(f'> {location:<16} | {self.tokeniser.params()}', 'configuration')
+        log.debug(lambda: f'> {location:<16} | {self.tokeniser.params()}', 'configuration')
 
         if location not in self._structure[name]['sections']:
             return self.error.set(f'section {location} is invalid in {name}, {self.scope.location()}')
@@ -552,12 +552,12 @@ class Configuration(_Configuration):
             return self.error.set('closing too many parenthesis')
         self.scope.to_context()
 
-        log.debug(f'< {left:<16} | {self.tokeniser.params()}', 'configuration')
+        log.debug(lambda: f'< {left:<16} | {self.tokeniser.params()}', 'configuration')
         return True
 
     def _run(self, name):
         command = self.tokeniser.iterate()
-        log.debug(f'. {command:<16} | {self.tokeniser.params()}', 'configuration')
+        log.debug(lambda: f'. {command:<16} | {self.tokeniser.params()}', 'configuration')
 
         if not self.run(name, command):
             return False

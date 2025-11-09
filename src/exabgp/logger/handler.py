@@ -88,7 +88,7 @@ if __name__ == '__main__':
     # syslog logger
     # syslog=True if no 'address' field is provided
     syslog = get_logger(__name__ + '.1', syslog=True, format=formating)
-    syslog.info('syslog test')
+    syslog.info(lambda: 'syslog test')
 
     # steam logger
     stream = get_logger(__name__ + '.2', stream=sys.stdout, level='ERROR')
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     # file logger
     filelog = get_logger(__name__ + '.3', filename='/tmp/test')
-    filelog.info('file test')
+    filelog.info(lambda: 'file test')
 
     # create a combined logger
     get_logger('ExaBGP', syslog=True, stream=sys.stdout, filename='/tmp/test')

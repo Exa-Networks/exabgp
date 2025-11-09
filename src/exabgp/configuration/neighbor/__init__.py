@@ -194,7 +194,7 @@ class ParseNeighbor(Section):
         for family in ParseAddPath.convert:
             for pair in add_path.get(family, []):
                 if pair not in families:
-                    log.debug('skipping add-path family ' + str(pair) + ' as it is not negotiated', 'configuration')
+                    log.debug(lambda: 'skipping add-path family ' + str(pair) + ' as it is not negotiated', 'configuration')
                     continue
                 neighbor.add_addpath(pair)
 
@@ -233,7 +233,7 @@ class ParseNeighbor(Section):
     def _post_capa_rr(self, neighbor):
         if neighbor['capability']['route-refresh']:
             if neighbor['adj-rib-out']:
-                log.debug('route-refresh requested, enabling adj-rib-out', 'configuration')
+                log.debug(lambda: 'route-refresh requested, enabling adj-rib-out', 'configuration')
 
     def _post_routes(self, neighbor, local):
         # NOTE: this may modify change but does not matter as want to modified

@@ -69,13 +69,13 @@ class Daemon(object):
             try:
                 pid = open(self.pid, 'r').readline().strip()
                 if self.check_pid(int(pid)):
-                    log.debug(f'PIDfile already exists and program still running {self.pid}', 'daemon')
+                    log.debug(lambda: f'PIDfile already exists and program still running {self.pid}', 'daemon')
                     return False
                 else:
                     # If pid is not running, reopen file without O_EXCL
                     fd = os.open(self.pid, flags ^ os.O_EXCL, mode)
             except (OSError, IOError, ValueError):
-                log.debug(f'issue accessing PID file {self.pid} (most likely permission or ownership)', 'daemon')
+                log.debug(lambda: f'issue accessing PID file {self.pid} (most likely permission or ownership)', 'daemon')
                 return False
 
         try:
@@ -85,9 +85,9 @@ class Daemon(object):
             f.close()
             self._saved_pid = True
         except IOError:
-            log.warning(f'Can not create PIDfile {self.pid}', 'daemon')
+            log.warning(lambda: f'Can not create PIDfile {self.pid}', 'daemon')
             return False
-        log.warning(f'Created PIDfile {self.pid} with value {ownid}', 'daemon')
+        log.warning(lambda: f'Created PIDfile {self.pid} with value {ownid}', 'daemon')
         return True
 
     def removepid(self):
@@ -99,9 +99,9 @@ class Daemon(object):
             if exc.errno == errno.ENOENT:
                 pass
             else:
-                log.error(f'Can not remove PIDfile {self.pid}', 'daemon')
+                log.error(lambda: f'Can not remove PIDfile {self.pid}', 'daemon')
                 return
-        log.debug(f'Removed PIDfile {self.pid}', 'daemon')
+        log.debug(lambda: f'Removed PIDfile {self.pid}', 'daemon')
 
     def drop_privileges(self):
         """return true if we are left with insecure privileges"""
@@ -174,7 +174,7 @@ class Daemon(object):
 
         logging = getenv().log
         if logging.enable and logging.destination.lower() in ('stdout', 'stderr'):
-            log.critical(f'ExaBGP can not fork when logs are going to {logging.destination.lower()}', 'daemon')
+            log.critical(lambda: f'ExaBGP can not fork when logs are going to {logging.destination.lower()}', 'daemon')
             return
 
         def fork_exit():
@@ -183,7 +183,7 @@ class Daemon(object):
                 if pid > 0:
                     os._exit(0)
             except OSError as exc:
-                log.critical(f'can not fork, errno {exc.errno} : {exc.strerror}', 'daemon')
+                log.critical(lambda: f'can not fork, errno {exc.errno} : {exc.strerror}', 'daemon')
 
         # do not detach if we are already supervised or run by init like process
         if self._is_socket(sys.__stdin__.fileno()) or os.getppid() == 1:

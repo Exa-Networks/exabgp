@@ -18,7 +18,7 @@ class Incoming(Connection):
     def __init__(self, afi, peer, local, io):
         Connection.__init__(self, afi, peer, local)
 
-        log.debug('connection from %s' % self.peer, 'network')
+        log.debug(lambda: 'connection from %s' % self.peer, 'network')
 
         try:
             self.io = io

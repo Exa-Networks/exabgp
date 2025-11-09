@@ -24,7 +24,7 @@ class ASYNC(object):
         return not self._async
 
     def schedule(self, uid, command, callback):
-        log.debug(f'async | {uid} | {command}', 'reactor')
+        log.debug(lambda: f'async | {uid} | {command}', 'reactor')
         self._async.append((uid, callback))
 
     def clear(self, deluid=None):
@@ -56,9 +56,9 @@ class ASYNC(object):
                     return False
                 uid, generator = self._async.popleft()
             except Exception as exc:
-                log.error(f'async | {uid} | problem with function', 'reactor')
+                log.error(lambda: f'async | {uid} | problem with function', 'reactor')
                 for line in str(exc).split('\n'):
-                    log.error(f'async | {uid} | {line}', 'reactor')
+                    log.error(lambda: f'async | {uid} | {line}', 'reactor')
 
         self._async.appendleft((uid, generator))
         return True
