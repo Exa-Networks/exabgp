@@ -39,4 +39,4 @@ init
 artifacts
 requirements.txt
 
-.codegpt
+.codegptbaseline_tests.log
