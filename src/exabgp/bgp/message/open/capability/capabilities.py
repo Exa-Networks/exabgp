@@ -211,7 +211,7 @@ class Capabilities(dict):
             boundary = ld + 3
             if len(data) < boundary:
                 raise Notify(
-                    2, 0, 'Bad length for OPEN (extended) %s (buffer underrun) %s' % (name, Capability.hex(data))
+                    2, 0, 'Bad length for OPEN (extended) %s (buffer underrun) %s' % (name, Capability.hex(data)),
                 )
             key = data[0]
             value = data[3:boundary]

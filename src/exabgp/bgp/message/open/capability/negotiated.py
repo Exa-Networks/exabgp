@@ -58,10 +58,10 @@ class Negotiated:
 
         self.addpath.setup(self.received_open, self.sent_open)
         self.asn4 = sent_capa.announced(Capability.CODE.FOUR_BYTES_ASN) and recv_capa.announced(
-            Capability.CODE.FOUR_BYTES_ASN
+            Capability.CODE.FOUR_BYTES_ASN,
         )
         self.operational = sent_capa.announced(Capability.CODE.OPERATIONAL) and recv_capa.announced(
-            Capability.CODE.OPERATIONAL
+            Capability.CODE.OPERATIONAL,
         )
 
         self.local_as = self.sent_open.asn
@@ -82,22 +82,22 @@ class Negotiated:
                     self.nexthop.append(family)
 
         if recv_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(
-            Capability.CODE.ENHANCED_ROUTE_REFRESH
+            Capability.CODE.ENHANCED_ROUTE_REFRESH,
         ):
             self.refresh = REFRESH.ENHANCED  # pylint: disable=E1101
         elif recv_capa.announced(Capability.CODE.ROUTE_REFRESH) and sent_capa.announced(Capability.CODE.ROUTE_REFRESH):
             self.refresh = REFRESH.NORMAL  # pylint: disable=E1101
 
         if recv_capa.announced(Capability.CODE.EXTENDED_MESSAGE) and sent_capa.announced(
-            Capability.CODE.EXTENDED_MESSAGE
+            Capability.CODE.EXTENDED_MESSAGE,
         ):
             self.msg_size = ExtendedMessage.EXTENDED_SIZE
 
         self.multisession = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(
-            Capability.CODE.MULTISESSION
+            Capability.CODE.MULTISESSION,
         )
         self.multisession |= sent_capa.announced(Capability.CODE.MULTISESSION_CISCO) and recv_capa.announced(
-            Capability.CODE.MULTISESSION_CISCO
+            Capability.CODE.MULTISESSION_CISCO,
         )
 
         if self.multisession:

@@ -36,7 +36,7 @@ class NextHop(Capability, list):
 
     def json(self):
         conversions = ','.join(
-            [f' "{str(afi)}/{str(safi)}/{str(nhafi)}"' for (afi, safi, nhafi) in self]
+            [f' "{str(afi)}/{str(safi)}/{str(nhafi)}"' for (afi, safi, nhafi) in self],
         )
         return f'{{ "name": "nexthop", "conversion": [{conversions} ] }}'
 

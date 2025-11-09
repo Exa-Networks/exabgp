@@ -119,7 +119,7 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
-            }
+            },
         )
 
         self.generator = None
@@ -165,7 +165,7 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
-            }
+            },
         )
 
         if self.proto:
@@ -233,7 +233,7 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
-            }
+            },
         )
         self.neighbor.rib.uncache()
 
@@ -619,7 +619,7 @@ class Peer:
 
         # If graceful restart, silent shutdown
         if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
-            Capability.CODE.GRACEFUL_RESTART
+            Capability.CODE.GRACEFUL_RESTART,
         ):
             log.error(lambda: 'closing the session without notification', self.id())
             self._close('graceful restarted negotiated, closing without sending any notification')
@@ -762,7 +762,7 @@ class Peer:
                 {
                     'multi-session': self.proto.negotiated.multisession,
                     'operational': self.proto.negotiated.operational,
-                }
+                },
             )
 
         if have_open:
@@ -779,7 +779,7 @@ class Peer:
                     'add-path': capa.announced(Capability.CODE.ADD_PATH),
                     'extended-message': capa.announced(Capability.CODE.EXTENDED_MESSAGE),
                     'graceful-restart': capa.announced(Capability.CODE.GRACEFUL_RESTART),
-                }
+                },
             )
 
         capabilities = {

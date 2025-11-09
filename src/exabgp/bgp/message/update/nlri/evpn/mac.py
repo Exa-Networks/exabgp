@@ -152,7 +152,7 @@ class MAC(EVPN):
                 )
         else:
             raise Notify(
-                3, 5, 'Data field length is given as %d, but does not match one of the expected lengths' % datalen
+                3, 5, 'Data field length is given as %d, but does not match one of the expected lengths' % datalen,
             )
 
         payload = data[end + 1 : end + 1 + iplenUnpack]

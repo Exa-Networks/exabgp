@@ -86,7 +86,7 @@ class Listener:
         except socket.error as exc:
             if exc.args[0] == errno.EADDRINUSE:
                 raise BindingError(
-                    f'could not listen on {local_ip}:{local_port}, the port may already be in use by another application'
+                    f'could not listen on {local_ip}:{local_port}, the port may already be in use by another application',
                 ) from None
             elif exc.args[0] == errno.EADDRNOTAVAIL:
                 raise BindingError(f'could not listen on {local_ip}:{local_port}, this is an invalid address') from None
@@ -109,7 +109,7 @@ class Listener:
         except NetworkError as exc:
             if os.geteuid() != 0 and port <= 1024:
                 log.critical(
-                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root', 'network'
+                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root', 'network',
                 )
             else:
                 log.critical(lambda exc=exc: f'can not bind to {local_addr}:{port} ({exc})', 'network')

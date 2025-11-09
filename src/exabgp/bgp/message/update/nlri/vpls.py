@@ -81,7 +81,7 @@ class VPLS(NLRI):
                 '"base": %s' % self.base,
                 '"offset": %s' % self.offset,
                 '"size": %s' % self.size,
-            ]
+            ],
         )
         return '{ %s }' % (content)
 

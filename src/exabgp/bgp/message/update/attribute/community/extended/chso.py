@@ -25,7 +25,7 @@ class ConsistentHashSortOrder(ExtendedCommunity):
         self.reserved = reserved
 
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2sIH', self._subtype(), order, reserved)
+            self, community if community is not None else pack('!2sIH', self._subtype(), order, reserved),
         )
 
     def __repr__(self):

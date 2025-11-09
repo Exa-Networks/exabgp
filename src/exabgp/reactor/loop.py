@@ -369,7 +369,7 @@ class Reactor:
                 if self.listener.incoming():
                     # check all incoming connection
                     self.asynchronous.schedule(
-                        str(uuid.uuid1()), 'checking for new connection(s)', self.listener.new_connections()
+                        str(uuid.uuid1()), 'checking for new connection(s)', self.listener.new_connections(),
                     )
 
                 sleep = ms_sleep
@@ -406,7 +406,7 @@ class Reactor:
                         io = peer.socket()
                         if io != -1:
                             self._poller.register(
-                                io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR
+                                io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
                             )
                             workers[io] = key
                         # no need to come back to it before a a full cycle
@@ -435,7 +435,7 @@ class Reactor:
                             continue
                         if fd not in api_fds:
                             self._poller.register(
-                                fd, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR
+                                fd, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
                             )
                     api_fds = self.processes.fds
 
@@ -515,7 +515,7 @@ class Reactor:
             for ip in self._ips:
                 if ip.afi == neighbor['peer-address'].afi:
                     self.listener.listen_on(
-                        ip, neighbor['peer-address'], self._port, neighbor['md5-password'], neighbor['md5-base64'], None
+                        ip, neighbor['peer-address'], self._port, neighbor['md5-password'], neighbor['md5-base64'], None,
                     )
         log.info(lambda: 'loaded new configuration successfully', 'reactor')
 

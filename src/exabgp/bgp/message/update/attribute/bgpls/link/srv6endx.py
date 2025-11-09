@@ -51,7 +51,7 @@ class Srv6EndX(FlagLS):
                 'behavior: %s, flags: %s, algorithm: %s, weight: %s, sid: %s'
                 % (d.behavior, d.flags, d.algorithm, d.weight, d.sid)
                 for d in self.content
-            ]
+            ],
         )
 
     @classmethod

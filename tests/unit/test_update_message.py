@@ -91,7 +91,7 @@ def test_update_with_mandatory_attributes():
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
         create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_as_path_attribute, create_next_hop_attribute
+        create_origin_attribute, create_as_path_attribute, create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -108,7 +108,7 @@ def test_update_with_mandatory_attributes():
     data = create_update_message(
         withdrawn_routes=b'',
         path_attributes=attributes,
-        nlri=nlri
+        nlri=nlri,
     )
 
     result = Update.unpack_message(data, Direction.IN, negotiated)
@@ -134,7 +134,7 @@ def test_update_missing_mandatory_origin():
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
         create_update_message, create_ipv4_prefix,
-        create_as_path_attribute, create_next_hop_attribute
+        create_as_path_attribute, create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -151,7 +151,7 @@ def test_update_missing_mandatory_origin():
     data = create_update_message(
         withdrawn_routes=b'',
         path_attributes=attributes,
-        nlri=nlri
+        nlri=nlri,
     )
 
     # Should parse successfully (permissive parsing)
@@ -169,7 +169,7 @@ def test_update_missing_mandatory_as_path():
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
         create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_next_hop_attribute
+        create_origin_attribute, create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -186,7 +186,7 @@ def test_update_missing_mandatory_as_path():
     data = create_update_message(
         withdrawn_routes=b'',
         path_attributes=attributes,
-        nlri=nlri
+        nlri=nlri,
     )
 
     result = Update.unpack_message(data, Direction.IN, negotiated)
@@ -203,7 +203,7 @@ def test_update_missing_mandatory_next_hop():
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
         create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_as_path_attribute
+        create_origin_attribute, create_as_path_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -220,7 +220,7 @@ def test_update_missing_mandatory_next_hop():
     data = create_update_message(
         withdrawn_routes=b'',
         path_attributes=attributes,
-        nlri=nlri
+        nlri=nlri,
     )
 
     result = Update.unpack_message(data, Direction.IN, negotiated)
@@ -245,7 +245,7 @@ def test_update_with_all_wellknown_attributes():
         create_update_message, create_ipv4_prefix,
         create_origin_attribute, create_as_path_attribute,
         create_next_hop_attribute, create_med_attribute,
-        create_local_pref_attribute
+        create_local_pref_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -264,7 +264,7 @@ def test_update_with_all_wellknown_attributes():
     data = create_update_message(
         withdrawn_routes=b'',
         path_attributes=attributes,
-        nlri=nlri
+        nlri=nlri,
     )
 
     result = Update.unpack_message(data, Direction.IN, negotiated)
@@ -294,7 +294,7 @@ def test_update_attribute_order_independence():
     from tests.fuzz.update_helpers import (
         create_update_message, create_ipv4_prefix,
         create_origin_attribute, create_as_path_attribute,
-        create_next_hop_attribute, create_med_attribute
+        create_next_hop_attribute, create_med_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -347,7 +347,7 @@ def test_update_with_withdrawn_and_announced():
     from tests.fuzz.update_helpers import (
         create_update_message, create_ipv4_prefix,
         create_origin_attribute, create_as_path_attribute,
-        create_next_hop_attribute
+        create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -410,7 +410,7 @@ def test_update_with_multiple_nlri_prefixes():
     from tests.fuzz.update_helpers import (
         create_update_message, create_ipv4_prefix,
         create_origin_attribute, create_as_path_attribute,
-        create_next_hop_attribute
+        create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -650,7 +650,7 @@ def test_update_maximum_attributes_size():
     from tests.fuzz.update_helpers import (
         create_update_message, create_origin_attribute,
         create_as_path_attribute, create_next_hop_attribute,
-        create_path_attribute
+        create_path_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -698,7 +698,7 @@ def test_update_with_extended_length_attributes():
         value=large_value,
         optional=True,
         transitive=False,
-        extended=True  # Extended length flag
+        extended=True,  # Extended length flag
     )
 
     data = create_update_message(b'', extended_attr, b'')
@@ -719,7 +719,7 @@ def test_update_empty_as_path_allowed():
     from tests.fuzz.update_helpers import (
         create_update_message, create_ipv4_prefix,
         create_origin_attribute, create_as_path_attribute,
-        create_next_hop_attribute
+        create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
@@ -776,7 +776,7 @@ def test_update_zero_length_nlri_section():
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
         create_update_message, create_origin_attribute,
-        create_as_path_attribute, create_next_hop_attribute
+        create_as_path_attribute, create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()

@@ -298,7 +298,7 @@ class TestType1SessionTransformedRoute:
             endpoint_ip=endpoint_ip,
             source_ip_len=32,
             source_ip=source_ip,
-            afi=AFI.ipv4
+            afi=AFI.ipv4,
         )
 
         assert route.ARCHTYPE == 1
@@ -326,7 +326,7 @@ class TestType1SessionTransformedRoute:
             endpoint_ip=endpoint_ip,
             source_ip_len=32,
             source_ip=source_ip,
-            afi=AFI.ipv4
+            afi=AFI.ipv4,
         )
         packed = route.pack_nlri()
 
@@ -356,7 +356,7 @@ class TestType1SessionTransformedRoute:
             endpoint_ip=endpoint_ip,
             source_ip_len=0,
             source_ip=b'',
-            afi=AFI.ipv4
+            afi=AFI.ipv4,
         )
         packed = route.pack_nlri()
 
@@ -384,7 +384,7 @@ class TestType1SessionTransformedRoute:
             endpoint_ip=endpoint_ip,
             source_ip_len=128,
             source_ip=source_ip,
-            afi=AFI.ipv6
+            afi=AFI.ipv6,
         )
         packed = route.pack_nlri()
 
@@ -403,10 +403,10 @@ class TestType1SessionTransformedRoute:
         source_ip = IP.create('192.168.2.1')
 
         route1 = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 12345, 5, 32, endpoint_ip, 32, source_ip, AFI.ipv4
+            rd, 24, prefix_ip, 12345, 5, 32, endpoint_ip, 32, source_ip, AFI.ipv4,
         )
         route2 = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 12345, 5, 32, endpoint_ip, 32, source_ip, AFI.ipv4
+            rd, 24, prefix_ip, 12345, 5, 32, endpoint_ip, 32, source_ip, AFI.ipv4,
         )
 
         assert route1 == route2
@@ -419,10 +419,10 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('192.168.1.1')
 
         route1 = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 11111, 1, 32, endpoint_ip, 0, b'', AFI.ipv4
+            rd, 24, prefix_ip, 11111, 1, 32, endpoint_ip, 0, b'', AFI.ipv4,
         )
         route2 = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 11111, 1, 32, endpoint_ip, 0, b'', AFI.ipv4
+            rd, 24, prefix_ip, 11111, 1, 32, endpoint_ip, 0, b'', AFI.ipv4,
         )
 
         assert hash(route1) == hash(route2)
@@ -434,7 +434,7 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('10.1.1.1')
 
         route = Type1SessionTransformedRoute(
-            rd, 12, prefix_ip, 12345, 5, 32, endpoint_ip, 0, b'', AFI.ipv4
+            rd, 12, prefix_ip, 12345, 5, 32, endpoint_ip, 0, b'', AFI.ipv4,
         )
         route_str = str(route)
 
@@ -448,7 +448,7 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('10.1.1.1')
 
         route = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 88888, 8, 32, endpoint_ip, 0, b'', AFI.ipv4
+            rd, 24, prefix_ip, 88888, 8, 32, endpoint_ip, 0, b'', AFI.ipv4,
         )
         json_str = route.json()
 
@@ -483,7 +483,7 @@ class TestType1SessionTransformedRoute:
         for prefix_len in [8, 16, 24, 32]:
             prefix_ip = IP.create('10.0.0.0')
             route = Type1SessionTransformedRoute(
-                rd, prefix_len, prefix_ip, 1000, 1, 32, endpoint_ip, 0, b'', AFI.ipv4
+                rd, prefix_len, prefix_ip, 1000, 1, 32, endpoint_ip, 0, b'', AFI.ipv4,
             )
             packed = route.pack_nlri()
             unpacked, _ = MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, None)
@@ -508,7 +508,7 @@ class TestType2SessionTransformedRoute:
             endpoint_len=32,
             endpoint_ip=endpoint_ip,
             teid=0,
-            afi=AFI.ipv4
+            afi=AFI.ipv4,
         )
 
         assert route.ARCHTYPE == 1

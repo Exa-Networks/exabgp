@@ -60,7 +60,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
                 {
                     'prefix': str(change.nlri.cidr.prefix()),
                     'family': str(change.nlri.family()).strip('()').replace(',', ''),
-                }
+                },
             )
 
             for line in json.dumps(jason).split('\n'):

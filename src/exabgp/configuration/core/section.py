@@ -61,7 +61,7 @@ class Section(Error):
         if identifier not in self.known:
             options = ', '.join([str(_) for _ in self.known])
             return self.error.set(
-                f'unknown command {command} options are {options}'
+                f'unknown command {command} options are {options}',
             )
 
         try:

@@ -300,7 +300,7 @@ class Neighbor(dict):
             return self['router-id']
 
         raise TypeError(
-            f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({self["local-address"].afi})'
+            f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({self["local-address"].afi})',
         )
 
     def remove_self(self, changes):
@@ -434,7 +434,7 @@ Neighbor {peer-address}
                         f'\t\t{name};\n',
                     ]
                     if process in neighbor.api[api]
-                    else []
+                    else [],
                 )
 
             for api, name in _extension_receive.items():
@@ -443,7 +443,7 @@ Neighbor {peer-address}
                         f'\t\t\t{name};\n',
                     ]
                     if process in neighbor.api[api]
-                    else []
+                    else [],
                 )
 
             for api, name in _extension_send.items():
@@ -452,7 +452,7 @@ Neighbor {peer-address}
                         f'\t\t\t{name};\n',
                     ]
                     if process in neighbor.api[api]
-                    else []
+                    else [],
                 )
 
             _api = '\tapi {\n'

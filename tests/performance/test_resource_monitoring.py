@@ -107,7 +107,7 @@ class TestMemoryUsage:
 
             return {
                 'peak_delta': peak_memory - initial_memory,
-                'final_delta': final_memory - initial_memory
+                'final_delta': final_memory - initial_memory,
             }
 
         result = benchmark(handle_large_messages)
@@ -413,7 +413,7 @@ class TestStressWithMonitoring:
                     'messages': count,
                     'time': elapsed,
                     'rate': count / elapsed if elapsed > 0 else 0,
-                    'memory_delta': mem_after - mem_before
+                    'memory_delta': mem_after - mem_before,
                 })
 
             return metrics

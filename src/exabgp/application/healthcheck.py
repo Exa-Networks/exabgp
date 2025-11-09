@@ -225,7 +225,7 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
         ipre = re.compile(
             r'^inet6?\s+(alias\s+)?(?P<ip>[\da-f.:]+)\s+'
             r'(?:netmask 0x(?P<netmask>[0-9a-f]+)|'
-            r'prefixlen (?P<mask>\d+)).*'
+            r'prefixlen (?P<mask>\d+)).*',
         )
         labelre = re.compile(r'')
         for ifname in ifnames:

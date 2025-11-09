@@ -293,7 +293,7 @@ def test_protocol_read_message_keepalive(mock_peer):
     # Mock connection reader that yields KEEPALIVE
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None)
+        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -314,7 +314,7 @@ def test_protocol_read_message_nop(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (0, Message.CODE.KEEPALIVE, b'', b'', None)
+        (0, Message.CODE.KEEPALIVE, b'', b'', None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -334,7 +334,7 @@ def test_protocol_read_message_invalid_type(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (19, 99, b'\xff' * 19, b'', None)
+        (19, 99, b'\xff' * 19, b'', None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -425,7 +425,7 @@ def test_protocol_read_update_basic(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None)
+        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -447,7 +447,7 @@ def test_protocol_api_callbacks_with_packets(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None)
+        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -521,7 +521,7 @@ def test_protocol_read_open_wrong_message(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None)
+        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -544,7 +544,7 @@ def test_protocol_read_keepalive_wrong_message(mock_peer):
     # Mock connection that returns UPDATE instead of KEEPALIVE
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, struct.pack('!HH', 0, 0), None)
+        (23, Message.CODE.UPDATE, b'\xff' * 19, struct.pack('!HH', 0, 0), None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -574,7 +574,7 @@ def test_protocol_read_update_with_internal_treat_as_withdraw(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None)
+        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -597,7 +597,7 @@ def test_protocol_read_update_with_internal_discard(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None)
+        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -620,7 +620,7 @@ def test_protocol_read_update_decode_error(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (21, Message.CODE.UPDATE, b'\xff' * 19, update_body, None)
+        (21, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -651,7 +651,7 @@ def test_protocol_read_notification_from_peer(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.NOTIFICATION, b'\xff' * 19, notify_body, None)
+        (23, Message.CODE.NOTIFICATION, b'\xff' * 19, notify_body, None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -681,7 +681,7 @@ def test_protocol_read_internal_notification(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (0, Message.CODE.KEEPALIVE, b'', b'', mock_notify)
+        (0, Message.CODE.KEEPALIVE, b'', b'', mock_notify),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -712,7 +712,7 @@ def test_protocol_read_notification_with_api_consolidated(mock_peer):
     header = b'\xff' * 19
     body = b'\x02\x01test'
     mock_connection.reader = Mock(return_value=[
-        (len(body), Message.CODE.NOTIFICATION, header, body, mock_notify)
+        (len(body), Message.CODE.NOTIFICATION, header, body, mock_notify),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -1003,7 +1003,7 @@ def test_protocol_api_receive_parsed_mode(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None)
+        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -1031,7 +1031,7 @@ def test_protocol_api_receive_consolidate_mode(mock_peer):
     header = b'\xff' * 19
     body = b''
     mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, header, body, None)
+        (19, Message.CODE.KEEPALIVE, header, body, None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
@@ -1157,7 +1157,7 @@ def test_protocol_read_update_with_addpath(mock_peer):
 
     mock_connection = Mock()
     mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None)
+        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
     ])
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection

@@ -81,7 +81,7 @@ class ParseProcess(Section):
                 'run': [sys.executable, prog],
                 'encoder': 'text',
                 'respawn': True,
-            }
+            },
         }
         self._processes.append(name)
         self.processes.update(api)

@@ -165,7 +165,7 @@ def test_update_split_with_withdrawals_only():
     data = create_update_message(
         withdrawn_routes=prefix,
         path_attributes=b'',
-        nlri=b''
+        nlri=b'',
     )
 
     withdrawn, attributes, announced = Update.split(data)
@@ -189,7 +189,7 @@ def test_update_split_with_attributes_and_nlri():
     data = create_update_message(
         withdrawn_routes=b'',
         path_attributes=attrs,
-        nlri=nlri
+        nlri=nlri,
     )
 
     withdrawn, attributes, announced = Update.split(data)
@@ -215,7 +215,7 @@ def test_update_split_truncation(truncate_at):
     valid_update = create_update_message(
         withdrawn_routes=prefix,
         path_attributes=attrs,
-        nlri=nlri
+        nlri=nlri,
     )
 
     # Truncate it

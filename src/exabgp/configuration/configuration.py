@@ -401,13 +401,13 @@ class Configuration(_Configuration):
             if getenv().debug.configuration:
                 raise
             return self.error.set(
-                f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}'
+                f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}',
             )
         except Exception as exc:
             if getenv().debug.configuration:
                 raise
             return self.error.set(
-                f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}'
+                f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}',
             )
 
     def _reload(self):
@@ -436,7 +436,7 @@ class Configuration(_Configuration):
             self._rollback_reload()
             line_str = ' '.join(self.tokeniser.line)
             return self.error.set(
-                f'\nsyntax error in section {self.scope.location()}\nline {self.tokeniser.number}: {line_str}\n\n{str(self.error)}'
+                f'\nsyntax error in section {self.scope.location()}\nline {self.tokeniser.number}: {line_str}\n\n{str(self.error)}',
             )
 
         self._commit_reload()

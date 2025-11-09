@@ -241,7 +241,7 @@ def test_open_with_graceful_restart_basic():
         restart_time=120,
         protos=[
             (AFI.ipv4, SAFI.unicast, 0x80),  # IPv4 unicast with forwarding state
-        ]
+        ],
     )
 
     capabilities[Capability.CODE.GRACEFUL_RESTART] = graceful
@@ -264,7 +264,7 @@ def test_open_with_graceful_restart_multiple_families():
             (AFI.ipv4, SAFI.unicast, 0x80),
             (AFI.ipv6, SAFI.unicast, 0x80),
             (AFI.ipv4, SAFI.mpls_vpn, 0x80),
-        ]
+        ],
     )
 
     capabilities[Capability.CODE.GRACEFUL_RESTART] = graceful
@@ -288,7 +288,7 @@ def test_open_with_graceful_restart_flags():
         restart_time=240,
         protos=[
             (AFI.ipv4, SAFI.unicast, Graceful.FORWARDING_STATE),
-        ]
+        ],
     )
 
     capabilities[Capability.CODE.GRACEFUL_RESTART] = graceful

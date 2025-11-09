@@ -115,7 +115,7 @@ class TestMultiplePeerProcessing:
             peer_data[peer_id] = create_mixed_message_batch(
                 update_count=10,
                 keepalive_count=7,
-                notification_count=3
+                notification_count=3,
             )
 
         def process_mixed_peers():

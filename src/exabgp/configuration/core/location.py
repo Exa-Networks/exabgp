@@ -30,7 +30,7 @@ class Error(Exception):
         self.line = location.line.replace('\t', ' ' * self.tabsize)
         self.index_line = location.index_line
         self.index_column = location.index_column + (self.tabsize - 1) * location.line[: location.index_column].count(
-            '\t'
+            '\t',
         )
 
         cleaned_message = message.replace('\t', ' ' * self.tabsize)
@@ -39,7 +39,7 @@ class Error(Exception):
                 f'problem parsing configuration file line {location.index_line} position {location.index_column + 1}',
                 f'error message: {cleaned_message}',
                 f'{self.line}{"-" * self.index_column + "^"}',
-            )
+            ),
         )
         # allow to give the right syntax in using Raised
         if syntax:

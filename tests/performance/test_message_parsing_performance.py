@@ -254,7 +254,7 @@ class TestHighVolumeParsingStress:
         batch_bytes = create_mixed_message_batch(
             update_count=600,
             keepalive_count=300,
-            notification_count=100
+            notification_count=100,
         )
 
         def read_stream():

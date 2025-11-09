@@ -83,7 +83,7 @@ class IpReach:
             [
                 '"ip-reachability-tlv": "%s"' % str(self.prefix),
                 '"ip-reach-prefix": "%s/%s"' % (str(self.prefix), str(self.plength)),
-            ]
+            ],
         )
 
     def __eq__(self, other):

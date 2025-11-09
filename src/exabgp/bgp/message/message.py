@@ -96,7 +96,7 @@ class Message:
         [
             0xFF,
         ]
-        * 16
+        * 16,
     )
     HEADER_LEN = 19
 

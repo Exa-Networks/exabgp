@@ -50,7 +50,7 @@ class Encapsulation(ExtendedCommunity):
     def __init__(self, tunnel_type, community=None):
         self.tunnel_type = tunnel_type
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2sLH', self._subtype(), 0, self.tunnel_type)
+            self, community if community is not None else pack('!2sLH', self._subtype(), 0, self.tunnel_type),
         )
 
     def __repr__(self):

@@ -59,7 +59,7 @@ def main():
         count += 1
         write(
             'announce route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'
-            % (k, v, len(k))
+            % (k, v, len(k)),
         )
         if count % 10000 == 0:
             sys.stderr.write('initial : announced %d\n' % count)
@@ -80,12 +80,12 @@ def main():
             count += 2
             write(
                 'withdraw route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'
-                % (k, v, len(k))
+                % (k, v, len(k)),
             )
             ip[k] = random.choice(nexthop)
             write(
                 'announce route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'
-                % (k, ip[k], len(k))
+                % (k, ip[k], len(k)),
             )
             if count % 100 == 0:
                 sys.stderr.write('updates : announced %d\n' % count)

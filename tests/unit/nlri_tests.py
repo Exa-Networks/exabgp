@@ -370,8 +370,8 @@ class TestNLRIs(unittest.TestCase):
                     [
                         1,
                     ]
-                    * 10
-                )
+                    * 10,
+                ),
             ),
             EthernetTag(111),
             MAC('01:02:03:04:05:06'),

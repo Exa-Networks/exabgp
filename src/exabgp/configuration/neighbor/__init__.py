@@ -316,7 +316,7 @@ class ParseNeighbor(Section):
             if family not in families and family != (AFI.ipv4, SAFI.unicast):
                 return self.error.set(
                     'Trying to announce a route of type %s,%s when we are not announcing the family to our peer'
-                    % change.nlri.family().afi_safi()
+                    % change.nlri.family().afi_safi(),
                 )
 
         # create one neighbor object per family for multisession

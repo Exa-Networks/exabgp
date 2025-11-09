@@ -71,7 +71,7 @@ def md5(tokeniser):
     value = tokeniser()
     if not value:
         raise ValueError(
-            'value requires the value password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.'
+            'value requires the value password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.',
         )
     return value
 

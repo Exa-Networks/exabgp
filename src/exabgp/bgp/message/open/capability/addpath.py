@@ -42,7 +42,7 @@ class AddPath(Capability, dict):
                 [
                     '%s %s %s' % (self.string[self[aafi]], xafi, xsafi)
                     for (aafi, xafi, xsafi) in [((afi, safi), str(afi), str(safi)) for (afi, safi) in self]
-                ]
+                ],
             )
             + ')'
         )
