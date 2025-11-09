@@ -40,7 +40,7 @@ class Model(object):
         if not string.startswith('\n'):
             fill = ' ' * shutil.get_terminal_size().columns
             sys.stdout.write(f'\r{fill}\r')
-        sys.stdout.write(f'{string}')
+        sys.stdout.write(string)
         sys.stdout.flush()
 
     # @classmethod

@@ -327,7 +327,7 @@ def _en(value):
 def _pr(value):
     if value is None:
         return 'n/a'
-    return f'{value}'
+    return str(value)
 
 
 def _addpath(send, receive):
@@ -516,8 +516,7 @@ Neighbor {peer-address}
             f'\t}}\n'
             f'\tadd-path {{{addpaths}\n'
             f'\t}}\n'
-            f'{apis}'
-            f'{changes}'
+            f'{apis}{changes}'
             f'}}'
         )
 

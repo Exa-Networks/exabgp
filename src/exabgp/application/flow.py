@@ -120,7 +120,7 @@ class ACL(object):
         for key, (uid, _) in cls._known.items():
             sys.stderr.write(f'{uid} {key}\n')
         for _, acl in cls._known.values():
-            sys.stderr.write(f'{acl}')
+            sys.stderr.write(acl)
         sys.stderr.flush()
 
 

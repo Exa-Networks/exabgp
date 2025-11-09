@@ -50,8 +50,8 @@ class JSON(object):
         if issubclass(object.__class__, bool):
             return 'true' if object else 'false'
         if issubclass(object.__class__, int):
-            return f'{object}'
-        string = f'{object}'
+            return str(object)
+        string = str(object)
         if '{' in string:
             return string
         if '[' in string:
@@ -87,7 +87,7 @@ class JSON(object):
         return ', '.join(f'"{k}": {v.json()}' for (k, v) in extra.items())
 
     def _json_list(self, extra):
-        return ', '.join(f'{v.json()}' for v in extra.items())
+        return ', '.join(v.json() for v in extra.items())
 
     def _minimalkv(self, extra):
         return ', '.join(f'"{k}": {self._string(v)}' for (k, v) in extra.items() if v)
@@ -211,7 +211,7 @@ class JSON(object):
                 None,
                 self._kv(
                     {
-                        'code': f'{signal}',
+                        'code': str(signal),
                         'name': Signal.name(signal),
                     }
                 ),
@@ -321,7 +321,7 @@ class JSON(object):
             for nexthop in plus[family]:
                 nlris = plus[family][nexthop]
                 m += f'"{nexthop}": [ '
-                m += ', '.join(f'{nlri.json(compact=self.compact)}' for nlri in nlris)
+                m += ', '.join(nlri.json(compact=self.compact) for nlri in nlris)
                 m += ' ], '
             s += m[:-2]
             s += ' }'
@@ -331,7 +331,7 @@ class JSON(object):
         for family in minus:
             nlris = minus[family]
             s = f'"{family[0]} {family[1]}": [ '
-            s += ', '.join(f'{nlri.json(compact=self.compact)}' for nlri in nlris)
+            s += ', '.join(nlri.json(compact=self.compact) for nlri in nlris)
             s += ' ]'
             remove.append(s)
 
