@@ -78,15 +78,18 @@ class Connection(object):
         return -1
 
     def close(self):
+        if not self.io:
+            return
+        message = '%s, closing connection' % self.name()
+        log.warning(message, source=self.session())
         try:
-            log.warning('%s, closing connection' % self.name(), source=self.session())
-            if self.io:
-                self.io.close()
-                self.io = None
-            log.warning('connection to %s closed' % self.peer, self.session())
-        except Exception:
-            # Exception intentionally not logged to avoid verbose logging during connection cleanup
-            self.io = None
+            self.io.close()
+            message = 'connection to %s closed' % self.peer
+        except Exception as exc:
+            message = 'error while closing connection: %s' % exc
+            return
+        self.io = None
+        log.warning(message, source=self.session())
 
     def reading(self):
         poller = self._rpoller.get(self.io, None)
