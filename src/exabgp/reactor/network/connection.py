@@ -66,10 +66,10 @@ class Connection(object):
         self.close()
 
     def name(self):
-        return '%s-%d %s-%s' % (self.direction, self.id, self.local, self.peer)
+        return f'{self.direction}-{self.id} {self.local}-{self.peer}'
 
     def session(self):
-        return '%s-%d' % (self.direction, self.id)
+        return f'{self.direction}-{self.id}'
 
     def fd(self):
         if self.io:
@@ -80,14 +80,13 @@ class Connection(object):
     def close(self):
         if not self.io:
             return
-        message = '%s, closing connection' % self.name()
+        message = f'{self.name()}, closing connection'
         log.warning(message, source=self.session())
         try:
             self.io.close()
-            message = 'connection to %s closed' % self.peer
+            message = f'connection to {self.peer} closed'
         except Exception as exc:
-            message = 'error while closing connection: %s' % exc
-            return
+            message = f'error while closing connection: {exc}'
         self.io = None
         log.warning(message, source=self.session())
 
@@ -145,7 +144,7 @@ class Connection(object):
                     read = self.io.recv(number)
                     if not read:
                         self.close()
-                        log.warning('%s %s lost TCP session with peer' % (self.name(), self.peer), self.session())
+                        log.warning(f'{self.name()} {self.peer} lost TCP session with peer', self.session())
                         raise LostConnection('the TCP connection was closed by the remote end')
                     data += read
 
@@ -158,26 +157,22 @@ class Connection(object):
                     yield b''
             except socket.timeout as exc:
                 self.close()
-                log.warning('%s %s peer is too slow' % (self.name(), self.peer), self.session())
-                raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(exc))
+                log.warning(f'{self.name()} {self.peer} peer is too slow', self.session())
+                raise TooSlowError(f'Timeout while reading data from the network ({errstr(exc)})')
             except socket.error as exc:
                 if exc.args[0] in error.block:
-                    message = '%s %s blocking io problem mid-way through reading a message %s, trying to complete' % (
-                        self.name(),
-                        self.peer,
-                        errstr(exc),
-                    )
+                    message = f'{self.name()} {self.peer} blocking io problem mid-way through reading a message {errstr(exc)}, trying to complete'
                     if message != reported:
                         reported = message
                         log.debug(message, self.session())
                     yield b''
                 elif exc.args[0] in error.fatal:
                     self.close()
-                    raise LostConnection('issue reading on the socket: %s' % errstr(exc))
+                    raise LostConnection(f'issue reading on the socket: {errstr(exc)}')
                 # what error could it be !
                 else:
-                    log.critical('%s %s undefined error reading on socket' % (self.name(), self.peer), self.session())
-                    raise NetworkError('Problem while reading data from the network (%s)' % errstr(exc))
+                    log.critical(f'{self.name()} {self.peer} undefined error reading on socket', self.session())
+                    raise NetworkError(f'Problem while reading data from the network ({errstr(exc)})')
 
     def writer(self, data):
         if not self.io:
@@ -199,7 +194,7 @@ class Connection(object):
                     number = self.io.send(data)
                     if not number:
                         self.close()
-                        log.warning('%s %s lost TCP connection with peer' % (self.name(), self.peer), self.session())
+                        log.warning(f'{self.name()} {self.peer} lost TCP connection with peer', self.session())
                         raise LostConnection('lost the TCP connection')
 
                     data = data[number:]
@@ -210,8 +205,7 @@ class Connection(object):
             except socket.error as exc:
                 if exc.args[0] in error.block:
                     log.debug(
-                        '%s %s blocking io problem mid-way through writing a message %s, trying to complete'
-                        % (self.name(), self.peer, errstr(exc)),
+                        f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(exc)}, trying to complete',
                         self.session(),
                     )
                     yield False
@@ -222,12 +216,12 @@ class Connection(object):
                 elif exc.args[0] in error.fatal:
                     self.close()
                     log.critical(
-                        '%s %s problem sending message (%s)' % (self.name(), self.peer, errstr(exc)), self.session()
+                        f'{self.name()} {self.peer} problem sending message ({errstr(exc)})', self.session()
                     )
-                    raise NetworkError('Problem while writing data to the network (%s)' % errstr(exc))
+                    raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})')
                 # what error could it be !
                 else:
-                    log.critical('%s %s undefined error writing on socket' % (self.name(), self.peer), self.session())
+                    log.critical(f'{self.name()} {self.peer} undefined error writing on socket', self.session())
                     yield False
 
     def reader(self):
@@ -245,14 +239,14 @@ class Connection(object):
         length = unpack('!H', header[16:18])[0]
 
         if length < Message.HEADER_LEN or length > self.msg_size:
-            report = '%s has an invalid message length of %d' % (Message.CODE.name(msg), length)
+            report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
             yield length, 0, header, b'', NotifyError(1, 2, report)
             return
 
         validator = Message.Length.get(msg, lambda _: _ >= 19)
         if not validator(length):
             # MUST send the faulty length back
-            report = '%s has an invalid message length of %d' % (Message.CODE.name(msg), length)
+            report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
             yield length, 0, header, b'', NotifyError(1, 2, report)
             return
 

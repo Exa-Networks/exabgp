@@ -37,11 +37,11 @@ def unquote(_):
 
 
 def quote(_):
-    return "'%s'" % str(_)
+    return f"'{str(_)}'"
 
 
 def quote_list(_):
-    return "'%s'" % ' '.join([str(x) for x in _])
+    return f"'{' '.join([str(x) for x in _])}'"
 
 
 def nop(_):
@@ -64,7 +64,7 @@ def methods(_):
 
 
 def list(_):
-    return "'%s'" % ' '.join(_)
+    return f"'{' '.join(_)}'"
 
 
 def lower(_):
@@ -74,7 +74,7 @@ def lower(_):
 def ip(_):
     if isip(_):
         return _
-    raise TypeError('ip %s is invalid' % _)
+    raise TypeError(f'ip {_} is invalid')
 
 
 def ip_list(_):
@@ -85,7 +85,7 @@ def ip_list(_):
         elif isip(ip):
             ips.append(IP.create(ip))
         else:
-            raise TypeError('ip %s is invalid' % ip)
+            raise TypeError(f'ip {ip} is invalid')
     return ips
 
 
@@ -95,7 +95,7 @@ def user(_):
         pwd.getpwnam(_)
         # uid = answer[2]
     except KeyError:
-        raise TypeError('user %s is not found on this system' % _)
+        raise TypeError(f'user {_} is not found on this system')
     return _
 
 
@@ -103,10 +103,10 @@ def folder(path):
     paths = root(path)
     options = [p for p in paths if os.path.exists(path)]
     if not options:
-        raise TypeError('%s does not exists' % path)
+        raise TypeError(f'{path} does not exists')
     first = options[0]
     if not first:
-        raise TypeError('%s does not exists' % first)
+        raise TypeError(f'{first} does not exists')
     return first
 
 
@@ -118,21 +118,21 @@ def path(path):
             path = path[len(prefix) :]
     home = os.path.expanduser('~')
     if path.startswith(home):
-        return "'~%s'" % path[len(home) :]
-    return "'%s'" % path
+        return f"'~{path[len(home) :]}'"
+    return f"'{path}'"
 
 
 def conf(path):
     first = folder(path)
     if not os.path.isfile(first):
-        raise TypeError('%s is not a file' % path)
+        raise TypeError(f'{path} is not a file')
     return first
 
 
 def exe(path):
     first = conf(path)
     if not os.access(first, os.X_OK):
-        raise TypeError('%s is not an executable' % first)
+        raise TypeError(f'{first} is not an executable')
     return first
 
 
@@ -150,20 +150,20 @@ def umask_read(_):
 
 
 def umask_write(_):
-    return "'%s'" % (oct(_))
+    return f"'{oct(_)}'"
 
 
 def syslog_value(log):
     log = log.upper()
     if log not in levels:
-        raise TypeError('invalid log level %s' % log)
+        raise TypeError(f'invalid log level {log}')
     return log
 
 
 def syslog_name(log):
     log = log.upper()
     if log not in levels:
-        raise TypeError('invalid log level %s' % log)
+        raise TypeError(f'invalid log level {log}')
     return log
 
 

@@ -74,7 +74,7 @@ class _Configuration(object):
                     result = True
                 else:
                     log.error(
-                        'the route family (%s) is not configured on neighbor %s' % (change.nlri.short(), neighbor_name),
+                        f'the route family ({change.nlri.short()}) is not configured on neighbor {neighbor_name}',
                         'configuration',
                     )
         return result
@@ -401,13 +401,13 @@ class Configuration(_Configuration):
             if getenv().debug.configuration:
                 raise
             return self.error.set(
-                'problem parsing configuration file line %d\nerror message: %s' % (self.tokeniser.index_line, exc)
+                f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}'
             )
         except Exception as exc:
             if getenv().debug.configuration:
                 raise
             return self.error.set(
-                'problem parsing configuration file line %d\nerror message: %s' % (self.tokeniser.index_line, exc)
+                f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}'
             )
 
     def _reload(self):
@@ -436,10 +436,7 @@ class Configuration(_Configuration):
             self._rollback_reload()
 
             return self.error.set(
-                '\n'
-                'syntax error in section %s\n'
-                'line %d: %s\n'
-                '\n%s' % (self.scope.location(), self.tokeniser.number, ' '.join(self.tokeniser.line), str(self.error))
+                f'\nsyntax error in section {self.scope.location()}\nline {self.tokeniser.number}: {" ".join(self.tokeniser.line)}\n\n{str(self.error)}'
             )
 
         self._commit_reload()
@@ -467,8 +464,7 @@ class Configuration(_Configuration):
                     if notification == 'processes':
                         if not self.processes[api].get('run', False):
                             return self.error.set(
-                                "\n\nan api called '%s' is used by neighbor '%s' but not defined\n\n"
-                                % (api, neighbor['peer-address']),
+                                f"\n\nan api called '{api}' is used by neighbor '{neighbor['peer-address']}' but not defined\n\n",
                             )
                     elif notification == 'processes-match':
                         if not any(v.get('run', False) for k, v in self.processes.items() if re.match(api, k)):

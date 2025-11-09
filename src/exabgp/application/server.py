@@ -80,7 +80,7 @@ def setargs(sub):
 
 def cmdline(cmdarg):
     if not os.path.isfile(ENVFILE):
-        comment = 'environment file missing\ngenerate it using "exabgp env > %s"' % ENVFILE
+        comment = f'environment file missing\ngenerate it using "exabgp env > {ENVFILE}"'
     else:
         comment = ''
 
@@ -148,7 +148,7 @@ def cmdline(cmdarg):
         for pid in pids:
             os.waitpid(pid, 0)
     except OSError as exc:
-        log.critical('can not fork, errno %d : %s' % (exc.errno, exc.strerror), 'reactor')
+        log.critical(f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')
         sys.exit(1)
 
 
@@ -156,10 +156,12 @@ def run(comment, configurations, pid=0):
     env = getenv()
 
     log.info('Thank you for using ExaBGP', 'welcome')
-    log.debug('%s' % version, 'version')
-    log.debug('%s' % ROOT, 'location')
-    log.debug('%s' % sys.version.replace('\n', ' '), 'python')
-    log.debug('%s' % ' '.join(platform.uname()[:5]), 'platform')
+    log.debug(f'{version}', 'version')
+    log.debug(f'{ROOT}', 'location')
+    python_version = sys.version.replace('\n', ' ')
+    log.debug(f'{python_version}', 'python')
+    platform_info = ' '.join(platform.uname()[:5])
+    log.debug(f'{platform_info}', 'platform')
 
     if comment:
         log.error(comment, 'advice')
@@ -174,19 +176,21 @@ def run(comment, configurations, pid=0):
         if len(pipes) != 1:
             env.api.cli = False
             log.error(
-                'could not find the named pipes (%s.in and %s.out) required for the cli' % (pipename, pipename), 'cli'
+                f'could not find the named pipes ({pipename}.in and {pipename}.out) required for the cli', 'cli'
             )
             log.error('we scanned the following folders (the number is your PID):', 'cli')
             for location in pipes:
-                log.error(' - %s' % location, 'cli control')
+                log.error(f' - {location}', 'cli control')
             log.error('please make them in one of the folder with the following commands:', 'cli control')
+
             # NOTE: Logging full paths (os.getcwd()) is intentional for user guidance
             # Security review: Accepted as necessary for troubleshooting
-            log.error('> mkfifo %s/run/%s.{in,out}' % (os.getcwd(), pipename), 'cli control')
-            log.error('> chmod 600 %s/run/%s.{in,out}' % (os.getcwd(), pipename), 'cli control')
+            log.error(f'> mkfifo {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
+            log.error(f'> chmod 600 {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
+
             if os.getuid() != 0:
                 log.error(
-                    '> chown %d:%d %s/run/%s.{in,out}' % (os.getuid(), os.getgid(), os.getcwd(), pipename),
+                    f'> chown {os.getuid()}:{os.getgid()} {os.getcwd()}/run/{pipename}.{{in,out}}',
                     'cli control',
                 )
         else:
@@ -195,8 +199,8 @@ def run(comment, configurations, pid=0):
             os.environ['exabgp_api_pipename'] = pipename
 
             log.info('named pipes for the cli are:', 'cli control')
-            log.info('to send commands  %s%s.in' % (pipe, pipename), 'cli control')
-            log.info('to read responses %s%s.out' % (pipe, pipename), 'cli control')
+            log.info(f'to send commands  {pipe}{pipename}.in', 'cli control')
+            log.info(f'to read responses {pipe}{pipename}.out', 'cli control')
 
     configuration = Configuration(configurations)
 
@@ -212,15 +216,15 @@ def run(comment, configurations, pid=0):
         __exit(env.debug.memory, exit_code)
 
     if pid:
-        profile_name = '%s-pid-%d' % (env.profile.file, pid)
+        profile_name = f'{env.profile.file}-pid-{pid}'
     else:
         profile_name = env.profile.file
 
     notice = ''
     if os.path.isdir(profile_name):
-        notice = 'profile can not use this filename as output, it is not a directory (%s)' % profile_name
+        notice = f'profile can not use this filename as output, it is not a directory ({profile_name})'
     if os.path.exists(profile_name):
-        notice = 'profile can not use this filename as output, it already exists (%s)' % profile_name
+        notice = f'profile can not use this filename as output, it already exists ({profile_name})'
 
     if notice:
         log.debug('-' * len(notice), 'reactor')

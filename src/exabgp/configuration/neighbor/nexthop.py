@@ -62,7 +62,7 @@ class ParseNextHop(Section):
     def _family(self, tokeniser, afi, safis, nhafis):
         safi = tokeniser().lower()
         if safi not in safis:
-            raise ValueError('invalid afi/safi pair %s/%s' % (afi, safi))
+            raise ValueError(f'invalid afi/safi pair {afi}/{safi}')
 
         nhafi = tokeniser().lower()
         if nhafi not in nhafis:
