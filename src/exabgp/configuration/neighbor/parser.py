@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import re
-import socket
 from string import ascii_letters
 from string import digits
 

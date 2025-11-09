@@ -12,7 +12,7 @@ Created: 2025-11-08
 import pytest
 import time
 import os
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
@@ -27,7 +27,6 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
-    from exabgp.logger import log
 
     # Save original values
     original_logger = option.logger

@@ -5,7 +5,7 @@ the underlying _reader() generator to provide test data.
 """
 import pytest
 from typing import Any
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock
 from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
 

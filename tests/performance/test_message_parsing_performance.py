@@ -4,23 +4,17 @@ Tests the throughput and efficiency of parsing various BGP message types
 at high message rates.
 """
 
-import pytest
 from io import BytesIO
 from typing import Any
-from unittest.mock import Mock
 
-from exabgp.reactor.network.connection import Connection
 from exabgp.bgp.message import Update, KeepAlive
 from exabgp.bgp.message.direction import Direction
 
 from .perf_helpers import (
     create_simple_update_bytes,
     create_keepalive_bytes,
-    create_notification_bytes,
-    create_large_update_bytes,
     create_batch_messages,
     create_mixed_message_batch,
-    create_mock_logger,
     create_mock_negotiated,
 )
 

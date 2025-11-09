@@ -29,7 +29,6 @@ def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     # Mock the option.logger attribute to avoid AttributeError
     from exabgp.logger.option import option
-    from exabgp.logger import log
 
     # Save original values
     original_logger = option.logger
@@ -581,7 +580,6 @@ def test_update_mp_reach_and_mp_unreach_together() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
-    from exabgp.bgp.message.notification import Notify
     from exabgp.protocol.family import AFI, SAFI
     from tests.fuzz.update_helpers import create_update_message, create_path_attribute
 

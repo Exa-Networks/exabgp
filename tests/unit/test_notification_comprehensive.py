@@ -13,7 +13,6 @@ License: 3-clause BSD
 """
 
 import pytest
-import struct
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.notification import Notify, Notification
 from exabgp.bgp.message.direction import Direction

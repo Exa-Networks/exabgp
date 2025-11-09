@@ -15,7 +15,6 @@ import stat
 import time
 import signal
 import select
-import socket
 import traceback
 from collections import deque
 

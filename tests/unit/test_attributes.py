@@ -266,7 +266,6 @@ def test_attributes_zero_length_as_path_valid() -> None:
 def test_attributes_zero_length_invalid_treat_as_withdraw(attr_type: Any) -> None:
     """Test that zero-length for certain attributes triggers TREAT_AS_WITHDRAW."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
-    from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
     from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock()
@@ -289,7 +288,6 @@ def test_attributes_zero_length_invalid_treat_as_withdraw(attr_type: Any) -> Non
 def test_attributes_truncated_header() -> None:
     """Test truncated attribute header (only flag byte)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
-    from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
     from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock()
@@ -390,7 +388,6 @@ def test_attributes_unknown_non_transitive() -> None:
 def test_attributes_invalid_flag_for_known_attribute_treat_as_withdraw() -> None:
     """Test that invalid flags for TREAT_AS_WITHDRAW attributes trigger withdrawal."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
-    from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
     from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock()

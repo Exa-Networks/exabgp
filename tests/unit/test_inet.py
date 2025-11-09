@@ -10,9 +10,9 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.qualifier import PathInfo, Labels, RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.notification import Notify
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import IP
 
 
 class TestINETFeedback:

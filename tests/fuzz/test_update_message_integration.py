@@ -18,7 +18,6 @@ Phase 4: Message size and splitting (tests 14-16)
 Phase 5: Complex integration scenarios (tests 17-20)
 """
 import pytest
-import struct
 from unittest.mock import Mock, patch
 
 
@@ -26,7 +25,6 @@ from unittest.mock import Mock, patch
 def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
-    from exabgp.logger import log
 
     # Save original values
     original_logger = option.logger
@@ -513,7 +511,7 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP, IPv6
+    from exabgp.protocol.ip import IPv6
     from exabgp.protocol.family import AFI, SAFI
 
     # Negotiate IPv6 unicast

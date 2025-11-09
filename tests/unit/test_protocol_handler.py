@@ -612,7 +612,6 @@ def test_protocol_read_update_decode_error(mock_peer: Any) -> None:
     """Test UPDATE message decode error handling."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
-    import struct
 
     protocol = Protocol(mock_peer)
 
@@ -758,7 +757,6 @@ def test_protocol_new_operational(mock_peer: Any) -> None:
 def test_protocol_new_refresh(mock_peer: Any) -> None:
     """Test creating and sending a ROUTE-REFRESH message."""
     from exabgp.reactor.protocol import Protocol
-    from exabgp.protocol.family import AFI, SAFI
 
     protocol = Protocol(mock_peer)
 

@@ -5,10 +5,8 @@ Unit tests for exabgp.util modules
 """
 
 import errno
-import socket
 from unittest.mock import patch, Mock
 
-import pytest
 from typing import Any
 
 from exabgp.util.dictionary import Dictionary

@@ -4,25 +4,17 @@ Tests the system's ability to handle high volumes of BGP messages
 and maintain throughput under sustained load.
 """
 
-import pytest
 from io import BytesIO
 from typing import Any
-from unittest.mock import Mock, MagicMock, patch
 from collections import deque
 
-from exabgp.reactor.protocol import Protocol
-from exabgp.reactor.network.connection import Connection
-from exabgp.bgp.message import Message
 
 from .perf_helpers import (
     create_simple_update_bytes,
-    create_keepalive_bytes,
     create_batch_messages,
     create_mixed_message_batch,
     create_large_update_bytes,
-    create_mock_logger,
     create_mock_negotiated,
-    create_mock_neighbor,
 )
 
 

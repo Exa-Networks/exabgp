@@ -13,7 +13,6 @@ import re
 import time
 import uuid
 import select
-import socket
 
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener

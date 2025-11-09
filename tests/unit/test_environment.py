@@ -4,11 +4,8 @@
 Unit tests for exabgp.environment modules
 """
 
-import os
-import sys
 from unittest.mock import patch
 
-import pytest
 from typing import Any
 
 from exabgp.environment.hashtable import HashTable, GlobalHashTable

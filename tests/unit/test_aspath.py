@@ -98,7 +98,7 @@ def test_aspath_simple_sequence_asn4() -> None:
 
 def test_aspath_single_asn() -> None:
     """Test AS_PATH with single ASN."""
-    from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
+    from exabgp.bgp.message.update.attribute.aspath import ASPath
     from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)
@@ -381,7 +381,7 @@ def test_aspath_pack_asn4() -> None:
 def test_aspath_pack_with_as_trans() -> None:
     """Test packing AS_PATH with ASN4 when peer doesn't support ASN4."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
-    from exabgp.bgp.message.open.asn import ASN, AS_TRANS
+    from exabgp.bgp.message.open.asn import ASN
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -403,7 +403,7 @@ def test_aspath_pack_with_as_trans() -> None:
 
 def test_aspath_string_representation() -> None:
     """Test AS_PATH string formatting."""
-    from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE, SET
+    from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
 
     # AS_SEQUENCE [65001, 65002]

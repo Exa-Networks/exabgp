@@ -11,7 +11,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import IP
 
 
 class TestLabelCreation:

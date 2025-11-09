@@ -50,7 +50,6 @@ def mock_logger() -> Generator[None, None, None]:
 
 
 from exabgp.protocol.family import AFI
-from exabgp.reactor.network.connection import Connection
 from exabgp.reactor.network.incoming import Incoming
 from exabgp.reactor.network.outgoing import Outgoing
 from exabgp.reactor.network import tcp

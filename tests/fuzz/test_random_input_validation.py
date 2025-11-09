@@ -8,10 +8,8 @@ This module provides property-based fuzz tests for critical parsing components:
 - Binary protocol data handling
 """
 import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck, assume, example
+from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
-import tempfile
-import os
 
 pytestmark = pytest.mark.fuzz
 

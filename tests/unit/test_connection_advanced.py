@@ -13,7 +13,7 @@ import os
 import socket
 import struct
 from typing import Any
-from unittest.mock import Mock, MagicMock, patch, call
+from unittest.mock import Mock, patch
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
