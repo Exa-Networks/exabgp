@@ -1,6 +1,5 @@
 
-"""
-qualifier/__init__.py
+"""qualifier/__init__.py
 
 Created by Thomas Mangin on 2015-06-01.
 Copyright (c) 2015-2017 Exa Networks. All rights reserved.

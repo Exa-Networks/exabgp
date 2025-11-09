@@ -1,6 +1,5 @@
 
-"""
-bandwidth.py
+"""bandwidth.py
 
 Created by Thomas Mangin on 2017-07-02.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.

@@ -1,6 +1,5 @@
 
-"""
-command/limit.py
+"""command/limit.py
 
 Created by Thomas Mangin on 2017-07-01.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

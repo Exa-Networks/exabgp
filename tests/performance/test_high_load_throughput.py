@@ -1,5 +1,4 @@
-"""
-Performance tests for high message load throughput.
+"""Performance tests for high message load throughput.
 
 Tests the system's ability to handle high volumes of BGP messages
 and maintain throughput under sustained load.

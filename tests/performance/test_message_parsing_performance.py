@@ -1,5 +1,4 @@
-"""
-Performance tests for BGP message parsing under high load.
+"""Performance tests for BGP message parsing under high load.
 
 Tests the throughput and efficiency of parsing various BGP message types
 at high message rates.

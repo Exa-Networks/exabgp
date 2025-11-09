@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-connection.py
+"""connection.py
 
 Created by Thomas Mangin on 2013-07-13.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

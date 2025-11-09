@@ -1,6 +1,5 @@
 
-"""
-software_version.py
+"""software_version.py
 
 Copyright (c) 2024 Donatas Abraitis. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)

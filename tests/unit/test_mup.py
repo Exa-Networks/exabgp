@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for MUP (Mobile User Plane) NLRI types.
+"""Comprehensive tests for MUP (Mobile User Plane) NLRI types.
 
 Tests cover all MUP route types defined in draft-mpmz-bess-mup-safi:
 - Route Type 1: Interwork Segment Discovery (ISD)

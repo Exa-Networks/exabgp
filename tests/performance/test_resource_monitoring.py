@@ -1,5 +1,4 @@
-"""
-Performance tests with memory and resource monitoring.
+"""Performance tests with memory and resource monitoring.
 
 Tests that monitor system resource usage (memory, CPU) under high load
 to identify potential resource leaks or inefficiencies.

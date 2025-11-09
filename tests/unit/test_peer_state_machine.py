@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-test_peer_state_machine.py
+"""test_peer_state_machine.py
 
 Comprehensive tests for BGP Peer State Machine implementation.
 Tests state transitions, timers, collision detection, and error recovery.

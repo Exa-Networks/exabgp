@@ -1,6 +1,5 @@
 
-"""
-daemon.py
+"""daemon.py
 
 Created by Thomas Mangin on 2011-05-02.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

@@ -55,8 +55,7 @@ def flow(tokeniser):
 
 
 def source(tokeniser):
-    """
-    Update source to handle both IPv4 and IPv6 flows.
+    """Update source to handle both IPv4 and IPv6 flows.
     """
     data = tokeniser()
     # Check if it's IPv4
@@ -75,8 +74,7 @@ def source(tokeniser):
 
 
 def destination(tokeniser):
-    """
-    Update destination to handle both IPv4 and IPv6 flows.
+    """Update destination to handle both IPv4 and IPv6 flows.
     """
     data = tokeniser()
     # Check if it's IPv4

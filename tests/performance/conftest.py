@@ -1,5 +1,4 @@
-"""
-pytest configuration for performance tests.
+"""pytest configuration for performance tests.
 
 Provides fixtures and configuration for performance testing.
 """

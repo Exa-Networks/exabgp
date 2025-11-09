@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-protocol.py
+"""protocol.py
 
 Created by Thomas Mangin on 2009-08-27.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

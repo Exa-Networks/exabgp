@@ -1,6 +1,5 @@
 
-"""
-family.py
+"""family.py
 
 Created by Thomas Mangin on 2010-01-19.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

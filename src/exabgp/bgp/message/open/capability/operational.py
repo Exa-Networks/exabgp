@@ -1,6 +1,5 @@
 
-"""
-operational.py
+"""operational.py
 
 Created by Thomas Mangin on 2013-09-01.
 Copyright (c) 2013-2017 Exa Networks. All rights reserved.

@@ -1,6 +1,5 @@
 
-"""
-delay.py
+"""delay.py
 
 Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2017-2017 Exa Networks. All rights reserved.

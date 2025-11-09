@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-notification_test.py
+"""notification_test.py
 
 Unit tests for the Notify exception and BGP NOTIFICATION packet generation.
 AI Generated

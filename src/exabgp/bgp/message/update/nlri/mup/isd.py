@@ -1,5 +1,4 @@
-"""
-isd.py
+"""isd.py
 
 Created by Takeru Hayasaka on 2023-01-21.
 Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.

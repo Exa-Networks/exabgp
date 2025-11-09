@@ -1,6 +1,5 @@
 
-"""
-srv6lanendx.py
+"""srv6lanendx.py
 
 Created by Quentin De Muynck
 Copyright (c) 2025 Exa Networks. All rights reserved.

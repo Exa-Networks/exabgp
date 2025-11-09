@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-flow.py
+"""flow.py
 
 Created by Thomas Mangin on 2010-01-14.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

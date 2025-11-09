@@ -1,6 +1,5 @@
 
-"""
-errstr.py
+"""errstr.py
 
 Created by Thomas Mangin on 2011-03-29.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

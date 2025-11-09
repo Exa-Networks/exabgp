@@ -1,6 +1,5 @@
 
-"""
-labelled.py
+"""labelled.py
 
 Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

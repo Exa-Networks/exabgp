@@ -1,5 +1,4 @@
-"""
-environment.py
+"""environment.py
 
 Created by Thomas Mangin on 2020-05-14.
 Copyright (c) 2011-2017 Exa Networks. All rights reserved.

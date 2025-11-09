@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-test_connection_lifecycle.py
+"""test_connection_lifecycle.py
 
 Integration tests for full connection lifecycle with real socket mocks.
 Tests complete BGP connection scenarios including socket creation, connection
@@ -59,8 +58,7 @@ from exabgp.bgp.message import Message
 
 
 class MockBGPServer:
-    """
-    Mock BGP server for integration testing.
+    """Mock BGP server for integration testing.
     Creates a real TCP server socket that can accept connections and exchange BGP messages.
     """
 
@@ -171,8 +169,7 @@ class MockBGPServer:
 
 
 def create_bgp_message(msg_type, body=b''):
-    """
-    Create a valid BGP message.
+    """Create a valid BGP message.
 
     Args:
         msg_type: BGP message type (1=OPEN, 2=UPDATE, 3=NOTIFICATION, 4=KEEPALIVE, 5=ROUTE-REFRESH)
@@ -188,8 +185,7 @@ def create_bgp_message(msg_type, body=b''):
 
 
 def create_open_message(asn=64512, router_id='192.0.2.1', hold_time=180):
-    """
-    Create a BGP OPEN message.
+    """Create a BGP OPEN message.
 
     Args:
         asn: Autonomous System Number

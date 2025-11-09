@@ -1,6 +1,5 @@
 
-"""
-vpls.py
+"""vpls.py
 
 Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

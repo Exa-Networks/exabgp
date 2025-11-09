@@ -1,6 +1,5 @@
 
-"""
-reactor/loop.py
+"""reactor/loop.py
 
 Created by Thomas Mangin on 2012-06-10.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

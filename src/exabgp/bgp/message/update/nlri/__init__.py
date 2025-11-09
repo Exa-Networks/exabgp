@@ -1,6 +1,5 @@
 
-"""
-nlri/__init__.py
+"""nlri/__init__.py
 
 Created by Thomas Mangin on 2013-08-07.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

@@ -1,6 +1,5 @@
 
-"""
-error.py
+"""error.py
 
 Created by Thomas Mangin on 2013-07-11.
 Copyright (c) 2013-2017 Exa Networks. All rights reserved.

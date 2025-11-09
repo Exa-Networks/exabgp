@@ -1,6 +1,5 @@
 
-"""
-srv6locator.py
+"""srv6locator.py
 
 Created by Quentin De Muynck
 Copyright (c) 2025 Exa Networks. All rights reserved.

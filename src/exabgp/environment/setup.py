@@ -1,6 +1,5 @@
 
-"""
-setup.py
+"""setup.py
 
 Created by Thomas Mangin on 2014-12-23.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.

@@ -1,6 +1,5 @@
 
-"""
-tcpflags.py
+"""tcpflags.py
 
 Created by Thomas Mangin on 2010-02-04.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

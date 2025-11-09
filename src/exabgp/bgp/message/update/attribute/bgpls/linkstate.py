@@ -1,6 +1,5 @@
 
-"""
-Copyright (c) 2016 Evelio Vila <eveliovila@gmail.com>
+"""Copyright (c) 2016 Evelio Vila <eveliovila@gmail.com>
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """

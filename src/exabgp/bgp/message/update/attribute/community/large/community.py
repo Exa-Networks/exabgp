@@ -1,7 +1,5 @@
 
-"""
-
-Support for RFC 8092
+"""Support for RFC 8092
 
 Copyright (c) 2016 Job Snijders <job@ntt.net>
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

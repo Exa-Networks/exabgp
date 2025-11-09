@@ -1,6 +1,5 @@
 
-"""
-pipe.py
+"""pipe.py
 
 Created by Thomas Mangin on <unset>.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

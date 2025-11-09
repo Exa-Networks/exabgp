@@ -1,6 +1,5 @@
 
-"""
-srrid.py
+"""srrid.py
 
 Created by Evelio Vila
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.

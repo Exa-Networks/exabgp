@@ -1,6 +1,5 @@
 
-"""
-message.py
+"""message.py
 
 Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

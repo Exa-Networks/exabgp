@@ -1,5 +1,4 @@
-"""
-Performance tests for ExaBGP under high message load.
+"""Performance tests for ExaBGP under high message load.
 
 This module contains benchmarks and stress tests for:
 - Message parsing throughput

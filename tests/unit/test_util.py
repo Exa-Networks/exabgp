@@ -1,6 +1,5 @@
 # encoding: utf-8
-"""
-test_util.py
+"""test_util.py
 
 Unit tests for exabgp.util modules
 """

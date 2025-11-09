@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-test_race_conditions.py
+"""test_race_conditions.py
 
 Race condition tests for concurrent connection scenarios in ExaBGP.
 Tests timing-sensitive scenarios including simultaneous connections,
@@ -40,8 +39,7 @@ class TestSimultaneousBidirectionalConnections:
     """Test race conditions when both peers connect simultaneously"""
 
     def test_simultaneous_connection_establishment(self):
-        """
-        Test simultaneous bi-directional connection establishment.
+        """Test simultaneous bi-directional connection establishment.
 
         Scenario: Both peers initiate connections at same time
         Expected: One connection succeeds, duplicate is detected and closed
@@ -73,8 +71,7 @@ class TestSimultaneousBidirectionalConnections:
         mock_sock2.close.assert_called_once()
 
     def test_connection_race_with_fd_reuse(self):
-        """
-        Test file descriptor reuse race condition.
+        """Test file descriptor reuse race condition.
 
         Scenario: Socket closes and fd is immediately reused by new connection
         Expected: Poller correctly tracks new socket, old poller state cleared
@@ -108,8 +105,7 @@ class TestSimultaneousBidirectionalConnections:
             assert conn.io is not None
 
     def test_concurrent_accept_and_connect(self):
-        """
-        Test concurrent incoming accept and outgoing connect.
+        """Test concurrent incoming accept and outgoing connect.
 
         Scenario: Accept incoming connection while establishing outgoing
         Expected: Both operations succeed without interfering
@@ -143,8 +139,7 @@ class TestConnectionResetDuringIO:
     """Test race conditions when connection resets during I/O operations"""
 
     def test_reset_during_message_send(self):
-        """
-        Test connection reset during message transmission.
+        """Test connection reset during message transmission.
 
         Scenario: Connection closes while writer() generator is active
         Expected: Graceful error handling, no corruption
@@ -180,8 +175,7 @@ class TestConnectionResetDuringIO:
                         next(writer_gen)
 
     def test_reset_during_message_read(self):
-        """
-        Test connection reset during message reception.
+        """Test connection reset during message reception.
 
         Scenario: Connection closes while _reader() generator is active
         Expected: Proper error propagation, buffer cleanup
@@ -210,8 +204,7 @@ class TestConnectionResetDuringIO:
                 assert 'TCP connection was closed' in str(exc_info.value)
 
     def test_close_during_active_reader(self):
-        """
-        Test explicit close() while reader generator is active.
+        """Test explicit close() while reader generator is active.
 
         Scenario: close() called while waiting for data in _reader()
         Expected: Reader detects closed socket and raises NotConnected
@@ -244,8 +237,7 @@ class TestRapidConnectDisconnectCycles:
     """Test rapid connection/disconnection cycles for resource leaks"""
 
     def test_rapid_connect_disconnect_no_fd_leak(self):
-        """
-        Test rapid open/close cycles don't leak file descriptors.
+        """Test rapid open/close cycles don't leak file descriptors.
 
         Scenario: Create and close many connections in quick succession
         Expected: All sockets properly closed, no fd leaks
@@ -273,8 +265,7 @@ class TestRapidConnectDisconnectCycles:
             mock_sock.close.assert_called_once()
 
     def test_rapid_connect_disconnect_poller_cleanup(self):
-        """
-        Test rapid cycles properly clean up polling state.
+        """Test rapid cycles properly clean up polling state.
 
         Scenario: Open/close connections and verify poller dictionaries cleared
         Expected: No stale poller entries remain
@@ -298,8 +289,7 @@ class TestRapidConnectDisconnectCycles:
                 assert conn.io is None
 
     def test_connection_churn_with_partial_io(self):
-        """
-        Test connection churn with partial I/O operations.
+        """Test connection churn with partial I/O operations.
 
         Scenario: Start I/O operations then close before completion
         Expected: Graceful handling, no stuck generators
@@ -337,8 +327,7 @@ class TestPollingStateRaces:
     """Test race conditions in polling state management"""
 
     def test_concurrent_reading_writing_calls(self):
-        """
-        Test concurrent calls to reading() and writing().
+        """Test concurrent calls to reading() and writing().
 
         Scenario: Multiple checks of reading/writing status
         Expected: Consistent poller state, no corruption
@@ -363,8 +352,7 @@ class TestPollingStateRaces:
             assert 15 in conn._wpoller or not is_writing
 
     def test_poller_state_after_socket_error(self):
-        """
-        Test poller cleanup after socket errors.
+        """Test poller cleanup after socket errors.
 
         Scenario: Socket error during poll operation
         Expected: Poller state cleared for that fd
@@ -392,8 +380,7 @@ class TestPollingStateRaces:
         assert 16 not in conn._rpoller
 
     def test_poll_timeout_handling(self):
-        """
-        Test timeout handling in polling operations.
+        """Test timeout handling in polling operations.
 
         Scenario: Poll times out waiting for I/O readiness
         Expected: Proper timeout detection, generator yields correctly
@@ -420,8 +407,7 @@ class TestMessageQueueOrderingRaces:
     """Test message ordering under concurrent operations"""
 
     def test_concurrent_reader_writer_ordering(self):
-        """
-        Test message ordering when reading and writing concurrently.
+        """Test message ordering when reading and writing concurrently.
 
         Scenario: Read messages while writing messages
         Expected: Proper ordering maintained, no message loss
@@ -460,8 +446,7 @@ class TestMessageQueueOrderingRaces:
         mock_sock.send.assert_called()
 
     def test_bgp_message_assembly_ordering(self):
-        """
-        Test BGP message assembly maintains correct order.
+        """Test BGP message assembly maintains correct order.
 
         Scenario: Multiple BGP messages arrive in fragments
         Expected: Messages assembled in correct order
@@ -505,8 +490,7 @@ class TestMessageQueueOrderingRaces:
                     assert result[1] == 4   # KEEPALIVE type
 
     def test_buffer_state_consistency(self):
-        """
-        Test buffer state remains consistent during concurrent operations.
+        """Test buffer state remains consistent during concurrent operations.
 
         Scenario: Multiple read operations with partial data
         Expected: Buffer accumulates correctly, no data loss
@@ -550,8 +534,7 @@ class TestConnectionStateTransitionRaces:
     """Test race conditions during connection state transitions"""
 
     def test_close_during_establishment(self):
-        """
-        Test close() called during connection establishment.
+        """Test close() called during connection establishment.
 
         Scenario: Connection being established when close() is called
         Expected: Clean abort, no half-open connections
@@ -573,8 +556,7 @@ class TestConnectionStateTransitionRaces:
         mock_sock.close.assert_called_once()
 
     def test_multiple_close_calls(self):
-        """
-        Test multiple close() calls are idempotent.
+        """Test multiple close() calls are idempotent.
 
         Scenario: close() called multiple times
         Expected: No errors, socket closed only once
@@ -595,8 +577,7 @@ class TestConnectionStateTransitionRaces:
         assert conn.io is None
 
     def test_io_operation_after_close(self):
-        """
-        Test I/O operations after close() are properly rejected.
+        """Test I/O operations after close() are properly rejected.
 
         Scenario: Attempt read/write after connection closed
         Expected: NotConnected raised immediately for read, True yielded for write

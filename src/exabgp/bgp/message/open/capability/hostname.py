@@ -1,6 +1,5 @@
 
-"""
-hostname.py
+"""hostname.py
 
 Created by Thomas Mangin on 2015-05-16.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

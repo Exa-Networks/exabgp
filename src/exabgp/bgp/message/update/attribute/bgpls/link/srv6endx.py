@@ -1,6 +1,5 @@
 
-"""
-srv6endx.py
+"""srv6endx.py
 
 Created by Vincent Bernat
 Copyright (c) 2025 Exa Networks. All rights reserved.

@@ -1,5 +1,4 @@
-"""
-Performance tests for message backlog saturation.
+"""Performance tests for message backlog saturation.
 
 Tests the system's behavior when the message backlog approaches and reaches
 the MAX_BACKLOG limit of 15,000 messages defined in Protocol.

@@ -1,6 +1,5 @@
 
-"""
-bgpls/__init__.py
+"""bgpls/__init__.py
 
 Created by Evelio Vila 2016-12-01
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

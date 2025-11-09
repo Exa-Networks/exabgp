@@ -1,6 +1,5 @@
 
-"""
-srv6/generic.py
+"""srv6/generic.py
 
 Created by Ryoga Saito 2022-02-24
 Copyright (c) 2022 Ryoga Saito. All rights reserved.

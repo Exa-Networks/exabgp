@@ -1,6 +1,5 @@
 
-"""
-srv6endpointbehavior.py
+"""srv6endpointbehavior.py
 
 Created by Quentin De Muynck
 Copyright (c) 2025 Exa Networks. All rights reserved.
