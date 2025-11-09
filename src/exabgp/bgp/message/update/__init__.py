@@ -31,7 +31,6 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.logger import log
-from exabgp.logger import logfunc
 from exabgp.logger import lazyformat
 
 # ======================================================================= Update
@@ -170,12 +169,12 @@ class Update(Message):
 
         if msg_size < 0:
             # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-            log.critical('attributes size is so large we can not even pack one NLRI', 'parser')
+            log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
             return
 
         if msg_size == 0 and (nlris or mp_nlris):
             # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-            log.critical('attributes size is so large we can not even pack one NLRI', 'parser')
+            log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
             return
 
         withdraws = b''
@@ -191,7 +190,7 @@ class Update(Message):
 
             if not withdraws and not announced:
                 # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-                log.critical('attributes size is so large we can not even pack one NLRI', 'parser')
+                log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
                 return
 
             if announced:
@@ -251,7 +250,7 @@ class Update(Message):
     # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
     @classmethod
     def unpack_message(cls, data, direction, negotiated):
-        logfunc.debug(lazyformat('parsing UPDATE', data), 'parser')
+        log.debug(lazyformat('parsing UPDATE', data), 'parser')
 
         length = len(data)
 
@@ -264,12 +263,12 @@ class Update(Message):
         withdrawn, _attributes, announced = cls.split(data)
 
         if not withdrawn:
-            log.debug('withdrawn NLRI none', 'routes')
+            log.debug(lambda: 'withdrawn NLRI none', 'routes')
 
         attributes = Attributes.unpack(_attributes, direction, negotiated)
 
         if not announced:
-            log.debug('announced NLRI none', 'routes')
+            log.debug(lambda: 'announced NLRI none', 'routes')
 
         # Is the peer going to send us some Path Information with the route (AddPath)
         if direction == Direction.IN:
@@ -286,14 +285,14 @@ class Update(Message):
         nlris = []
         while withdrawn:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath)
-            log.debug('withdrawn NLRI %s' % nlri, 'routes')
+            log.debug(lambda: 'withdrawn NLRI %s' % nlri, 'routes')
             withdrawn = left
             nlris.append(nlri)
 
         while announced:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath)
             nlri.nexthop = nexthop
-            log.debug('announced NLRI %s' % nlri, 'routes')
+            log.debug(lambda: 'announced NLRI %s' % nlri, 'routes')
             announced = left
             nlris.append(nlri)
 
@@ -326,6 +325,6 @@ class Update(Message):
 
             return 'json %s' % Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, None, '', '')
 
-        logfunc.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
+        log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
 
         return update

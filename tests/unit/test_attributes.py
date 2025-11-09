@@ -31,9 +31,7 @@ from unittest.mock import Mock, patch
 @pytest.fixture(autouse=True)
 def mock_logger():
     """Mock the logger to avoid initialization issues."""
-    with patch('exabgp.bgp.message.update.attribute.attributes.logfunc') as mock_logfunc, \
-         patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_log:
-        mock_logfunc.debug = Mock()
+    with patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_log:
         mock_log.debug = Mock()
         yield
 

@@ -28,7 +28,6 @@ from exabgp.bgp.message.update.attribute.community import Communities
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import log
-from exabgp.logger import logfunc
 from exabgp.logger import lazyattribute
 
 
@@ -349,7 +348,7 @@ class Attributes(dict):
         left = data[length:]
         attribute = data[:length]
 
-        logfunc.debug(lazyattribute(flag, aid, length, data[:length]), 'parser')
+        log.debug(lazyattribute(flag, aid, length, data[:length]), 'parser')
 
         # remove the PARTIAL bit before comparaison if the attribute is optional
         if aid in Attribute.attributes_optional:
@@ -361,7 +360,7 @@ class Attributes(dict):
                 raise Notify(3, 1, 'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
 
             log.debug(
-                'duplicate attribute %s (flag 0x%02X, aid 0x%02X) skipping'
+                lambda: 'duplicate attribute %s (flag 0x%02X, aid 0x%02X) skipping'
                 % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                 'parser',
             )
@@ -396,21 +395,21 @@ class Attributes(dict):
         if aid in Attribute.attributes_known:
             if aid in self.TREAT_AS_WITHDRAW:
                 log.debug(
-                    'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) treat as withdraw'
+                    lambda: 'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) treat as withdraw'
                     % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                     'parser',
                 )
                 self.add(TreatAsWithdraw())
             if aid in self.DISCARD:
                 log.debug(
-                    'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) discard'
+                    lambda: 'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) discard'
                     % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                     'parser',
                 )
                 return self.parse(left, direction, negotiated)
             # XXX: Check if we are missing any
             log.debug(
-                'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) unspecified (should not happen)'
+                lambda: 'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) unspecified (should not happen)'
                 % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                 'parser',
             )
@@ -418,7 +417,7 @@ class Attributes(dict):
 
         # it is an unknown transitive attribute we need to pass on
         if flag & Attribute.Flag.TRANSITIVE:
-            log.debug('unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
+            log.debug(lambda: 'unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
             try:
                 decoded = GenericAttribute(aid, flag | Attribute.Flag.PARTIAL, attribute)
             except IndexError:
@@ -427,7 +426,7 @@ class Attributes(dict):
             return self.parse(left, direction, negotiated)
 
         # it is an unknown non-transitive attribute we can ignore.
-        log.debug('ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
+        log.debug(lambda: 'ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
         return self.parse(left, direction, negotiated)
 
     def merge_attributes(self):
