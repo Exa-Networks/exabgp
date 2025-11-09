@@ -156,12 +156,12 @@ def run(comment, configurations, pid=0):
     env = getenv()
 
     log.info('Thank you for using ExaBGP', 'welcome')
-    log.debug(f'{version}', 'version')
-    log.debug(f'{ROOT}', 'location')
+    log.debug(version, 'version')
+    log.debug(ROOT, 'location')
     python_version = sys.version.replace('\n', ' ')
-    log.debug(f'{python_version}', 'python')
+    log.debug(python_version, 'python')
     platform_info = ' '.join(platform.uname()[:5])
-    log.debug(f'{platform_info}', 'platform')
+    log.debug(platform_info, 'platform')
 
     if comment:
         log.error(comment, 'advice')

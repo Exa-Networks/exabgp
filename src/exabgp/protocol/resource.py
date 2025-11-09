@@ -75,7 +75,7 @@ class BitResource(Resource):
                 yield self.names[bit]
                 value -= bit
         if value:
-            yield self.names.get(self, f'{hex(self)}')
+            yield self.names.get(self, hex(self))
 
     def short(self):
         return '+'.join(self.bits())
