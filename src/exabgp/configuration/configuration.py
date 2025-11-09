@@ -96,7 +96,10 @@ class _Configuration(object):
                         self.neighbors[neighbor].asm[operational.family().afi_safi()] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:
-                    log.error('the route family is not configured on neighbor', 'configuration')
+                    log.error(
+                        'the route family (%s) is not configured on neighbor %s' % (operational.family().afi_safi(), neighbor),
+                        'configuration',
+                    )
                     result = False
         return result
 
