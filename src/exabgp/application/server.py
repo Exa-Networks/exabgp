@@ -117,7 +117,7 @@ def cmdline(cmdarg):
     for configuration in cmdarg.configuration:
         location = getconf(configuration)
         if not location:
-            log.critical(lambda: f'{configuration} is not an exabgp config file', 'configuration')
+            log.critical(lambda configuration=configuration: f'{configuration} is not an exabgp config file', 'configuration')
             sys.exit(1)
         configurations.append(location)
 
@@ -180,7 +180,7 @@ def run(comment, configurations, pid=0):
             )
             log.error(lambda: 'we scanned the following folders (the number is your PID):', 'cli')
             for location in pipes:
-                log.error(lambda: f' - {location}', 'cli control')
+                log.error(lambda location=location: f' - {location}', 'cli control')
             log.error(lambda: 'please make them in one of the folder with the following commands:', 'cli control')
 
             # NOTE: Logging full paths (os.getcwd()) is intentional for user guidance

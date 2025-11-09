@@ -76,7 +76,7 @@ class Outgoing(Connection):
             if connect_issue:
                 if notify:
                     log.debug(lambda: 'connection to %s:%d failed' % (self.peer, self.port), self.session())
-                    log.debug(lambda: str(connect_issue), self.session())
+                    log.debug(lambda connect_issue=connect_issue: str(connect_issue), self.session())
                 yield False
                 continue
 

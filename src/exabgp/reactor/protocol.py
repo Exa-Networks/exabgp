@@ -249,7 +249,7 @@ class Protocol(object):
                 continue
 
             log.debug(
-                lambda: '<< message of type %s' % Message.CODE.name(msg_id),
+                lambda msg_id=msg_id: '<< message of type %s' % Message.CODE.name(msg_id),
                 self.connection.session(),
             )
 
@@ -271,7 +271,7 @@ class Protocol(object):
             except (KeyboardInterrupt, SystemExit, Notify):
                 raise
             except Exception as exc:
-                log.debug(lambda: 'could not decode message "%d"' % msg_id, self.connection.session())
+                log.debug(lambda msg_id=msg_id: 'could not decode message "%d"' % msg_id, self.connection.session())
                 log.debug(lambda exc=exc: '%s' % str(exc), self.connection.session())
                 log.debug(lambda: traceback.format_exc(), self.connection.session())
                 raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
@@ -324,7 +324,7 @@ class Protocol(object):
             )
             for reason, (afi, safi) in self.negotiated.mismatch:
                 log.warning(
-                    lambda: f' - {reason} is not configured for {afi}/{safi}',
+                    lambda afi=afi, reason=reason, safi=safi: f' - {reason} is not configured for {afi}/{safi}',
                     self.connection.session(),
                 )
             log.warning(

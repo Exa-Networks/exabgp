@@ -164,7 +164,7 @@ class Listener(object):
         ranged_neighbor = []
 
         for connection in self._connected():
-            log.debug(lambda: f'new connection received {connection.name()}', 'network')
+            log.debug(lambda connection=connection: f'new connection received {connection.name()}', 'network')
             for key in reactor.peers():
                 neighbor = reactor.neighbor(key)
 
@@ -192,9 +192,9 @@ class Listener(object):
 
                 denied = reactor.handle_connection(key, connection)
                 if denied:
-                    log.debug(lambda: f'refused connection from {connection.name()} due to the state machine', 'network')
+                    log.debug(lambda connection=connection: f'refused connection from {connection.name()} due to the state machine', 'network')
                     break
-                log.debug(lambda: f'accepted connection from {connection.name()}', 'network')
+                log.debug(lambda connection=connection: f'accepted connection from {connection.name()}', 'network')
                 break
             else:
                 # we did not break (and nothign was found/done or we have group match)
@@ -211,7 +211,7 @@ class Listener(object):
                     )
                     return
                 if not matched:
-                    log.debug(lambda: f'no session configured for {connection.name()}', 'network')
+                    log.debug(lambda connection=connection: f'no session configured for {connection.name()}', 'network')
                     reactor.asynchronous.schedule(
                         str(uuid.uuid1()),
                         'sending notification (6,3)',
@@ -230,7 +230,7 @@ class Listener(object):
                 new_peer = Peer(new_neighbor, reactor)
                 denied = new_peer.handle_connection(connection)
                 if denied:
-                    log.debug(lambda: f'refused connection from {connection.name()} due to the state machine', 'network')
+                    log.debug(lambda connection=connection: f'refused connection from {connection.name()} due to the state machine', 'network')
                     return
 
                 reactor.register_peer(new_neighbor.name(), new_peer)
@@ -242,7 +242,7 @@ class Listener(object):
 
         for sock, (ip, port, _, _) in self._sockets.items():
             sock.close()
-            log.info(lambda: f'stopped listening on {ip}:{port}', 'network')
+            log.info(lambda ip=ip, port=port: f'stopped listening on {ip}:{port}', 'network')
 
         self._sockets = {}
         self.serving = False

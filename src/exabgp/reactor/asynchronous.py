@@ -119,9 +119,9 @@ class ASYNC(object):
                     return False
                 uid, callback = self._async.popleft()
             except Exception as exc:
-                log.error(lambda: f'async | {uid} | problem with function', 'reactor')
+                log.error(lambda uid=uid: f'async | {uid} | problem with function', 'reactor')
                 for line in str(exc).split('\n'):
-                    log.error(lambda: f'async | {uid} | {line}', 'reactor')
+                    log.error(lambda line=line, uid=uid: f'async | {uid} | {line}', 'reactor')
                 if not self._async:
                     return False
                 uid, callback = self._async.popleft()

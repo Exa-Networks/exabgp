@@ -96,7 +96,7 @@ class _Configuration(object):
                         self.neighbors[neighbor].asm[operational.family().afi_safi()] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:
-                    log.error(lambda: f'the route family {operational.family().afi_safi()} is not configured on neighbor {neighbor}', 'configuration')
+                    log.error(lambda neighbor=neighbor: f'the route family {operational.family().afi_safi()} is not configured on neighbor {neighbor}', 'configuration')
                     result = False
         return result
 
@@ -109,7 +109,7 @@ class _Configuration(object):
                     if family in self.neighbors[neighbor].families():
                         self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi, refresh.safi))
                     else:
-                        log.error(lambda: f'the route family {family} is not configured on neighbor {neighbor}', 'configuration')
+                        log.error(lambda family=family, neighbor=neighbor: f'the route family {family} is not configured on neighbor {neighbor}', 'configuration')
                         result = False
         return result
 

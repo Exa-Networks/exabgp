@@ -525,12 +525,12 @@ class Peer(object):
                     while send_ka() is None:
                         yield ACTION.NOW
                 for counter_line in self.stats.changed_statistics():
-                    log.info(lambda: counter_line, 'statistics')
+                    log.info(lambda counter_line=counter_line: counter_line, 'statistics')
 
                 # Received update
                 if message.TYPE == Update.TYPE:
                     number += 1
-                    log.debug(lambda: '<< UPDATE #%d' % number, self.id())
+                    log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())
 
                     for nlri in message.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
