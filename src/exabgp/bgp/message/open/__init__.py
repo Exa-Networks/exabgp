@@ -84,7 +84,7 @@ class Open(Message):
     @classmethod
     def unpack_message(cls, data, direction=None, negotiated=None):
         version = data[0]
-        if version != 4:
+        if version != Version.BGP_4:
             # Only version 4 is supported nowdays ..
             raise Notify(2, 1, 'version number: %d' % data[0])
 

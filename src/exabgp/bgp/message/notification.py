@@ -32,6 +32,10 @@ class Notification(Message, Exception):
     ID = Message.CODE.NOTIFICATION
     TYPE = bytes([Message.CODE.NOTIFICATION])
 
+    # RFC 8203 / RFC 9003 - Shutdown Communication
+    SHUTDOWN_COMM_MAX_LEGACY = 128  # RFC 8203 - legacy max length
+    SHUTDOWN_COMM_MAX_EXTENDED = 255  # RFC 9003 - extended max length
+
     _str_code = {
         1: 'Message header error',
         2: 'OPEN message error',
@@ -124,7 +128,7 @@ class Notification(Message, Exception):
             self.data = f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(data)}]'.encode()
             return
 
-        if shutdown_length > 128:
+        if shutdown_length > self.SHUTDOWN_COMM_MAX_LEGACY:
             self.data = f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'.encode()
             return
 
