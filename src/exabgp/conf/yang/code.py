@@ -31,7 +31,7 @@ if sys.version_info[:3] < (3, 7):
         import pdb  # noqa: T100
 
         pdb.set_trace()  # noqa: T100
-        pass
+        pass  # noqa: PIE790
 
 
 class Code:

@@ -354,7 +354,6 @@ def check(cmd, timeout):
     class Alarm(Exception):
         """Exception to signal an alarm condition."""
 
-        pass
 
     def alarm_handler(number, frame):  # pylint: disable=W0613
         """Handle SIGALRM signal."""

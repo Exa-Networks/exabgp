@@ -25,7 +25,7 @@ if sys.version_info[:3] < (3, 7):
         import pdb  # noqa: T100
 
         pdb.set_trace()  # noqa: T100
-        pass
+        pass  # noqa: PIE790
 
 
 DEBUG = True
@@ -87,7 +87,7 @@ class Tree:
         for t in self.tokens[:15]:
             print(t)
         breakpoint()
-        pass
+        pass  # noqa: PIE790
 
     def pop(self, what=None, expected=None):
         token, string = self.tokens[0]
@@ -371,4 +371,4 @@ class Tree:
             pprint.pprint(t)
         breakpoint()
         # good luck!
-        pass
+        pass  # noqa: PIE790
