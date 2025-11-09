@@ -34,10 +34,11 @@ class Error(Exception):
             '\t'
         )
 
+        cleaned_message = message.replace('\t', ' ' * self.tabsize)
         self.message = '\n\n'.join(
             (
                 f'problem parsing configuration file line {location.index_line} position {location.index_column + 1}',
-                f'error message: {message.replace("\t", " " * self.tabsize)}',
+                f'error message: {cleaned_message}',
                 f'{self.line}{"-" * self.index_column + "^"}',
             )
         )
