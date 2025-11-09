@@ -26,7 +26,8 @@ def main():
 def cmdline(cmdarg):
     sys.stdout.write(f'ExaBGP : {version}\n')
     sys.stdout.write(f'Python : {sys.version.replace("\n", " ")}\n')
-    sys.stdout.write(f'Uname  : {" ".join(platform.uname()[:5])}\n')
+    uname_str = " ".join(platform.uname()[:5])
+    sys.stdout.write(f'Uname  : {uname_str}\n')
     sys.stdout.write(f'From   : {get_root()}\n')
     sys.stdout.flush()
 

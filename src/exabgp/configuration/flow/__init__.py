@@ -25,7 +25,8 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 class ParseFlow(Section):
-    syntax = f'flow {{\n  {";\\n  ".join(ParseFlowRoute.syntax.split("\\n"))}}}'
+    parts = ";\\n  ".join(ParseFlowRoute.syntax.split("\\n"))
+    syntax = f'flow {{\n  {parts}}}'
 
     name = 'flow'
 

@@ -163,6 +163,8 @@ class JSON(object):
         )
 
     def _negotiated(self, negotiated):
+        families_str = " ,".join([f"{family[0]} {family[1]}" for family in negotiated.families])
+        nexthop_str = " ,".join([f"{family[0]} {family[1]} {family[2]}" for family in negotiated.nexthop])
         kv_content = self._kv(
             {
                 'message_size': negotiated.msg_size,
@@ -171,8 +173,8 @@ class JSON(object):
                 'multisession': negotiated.multisession,
                 'operational': negotiated.operational,
                 'refresh': REFRESH.json(negotiated.refresh),
-                'families': f'[ {" ,".join([f"{family[0]} {family[1]}" for family in negotiated.families])} ]',
-                'nexthop': f'[ {" ,".join([f"{family[0]} {family[1]} {family[2]}" for family in negotiated.nexthop])} ]',
+                'families': f'[ {families_str} ]',
+                'nexthop': f'[ {nexthop_str} ]',
                 # NOTE: Do not convert to f-string! The nested % formatting with complex
                 # comprehensions and conditional logic is more readable with % formatting.
                 'add_path': '{ "send": %s, "receive": %s }'
@@ -338,11 +340,13 @@ class JSON(object):
             if update.nlris:  # an EOR
                 return {'message': f'{{ {update.nlris[0].json()} }}'}
         if add:
-            nlri += f'"announce": {{ {", ".join(add)} }}'
+            add_str = ", ".join(add)
+            nlri += f'"announce": {{ {add_str} }}'
         if add and remove:
             nlri += ', '
         if remove:
-            nlri += f'"withdraw": {{ {", ".join(remove)} }}'
+            remove_str = ", ".join(remove)
+            nlri += f'"withdraw": {{ {remove_str} }}'
 
         attributes = '' if not update.attributes else f'"attribute": {{ {update.attributes.json()} }}'
         if not attributes or not nlri:

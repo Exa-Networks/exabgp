@@ -38,7 +38,8 @@ def teardown(self, reactor, service, line, use_json):
             for description in descriptions:
                 if match_neighbor(description, key):
                     reactor.teardown_peer(key, int(code))
-                    self.log_message(f'teardown scheduled for {" ".join(description)}')
+                    desc_str = " ".join(description)
+                    self.log_message(f'teardown scheduled for {desc_str}')
         reactor.processes.answer_done(service)
         return True
     except ValueError:

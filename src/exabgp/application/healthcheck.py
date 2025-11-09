@@ -446,7 +446,8 @@ def loop(options):
                 # routes are filtered to specific neighbors; format them and put into a list
                 neighbors = [f'neighbor {neighbor}' for neighbor in options.neighbors]
                 # comma seperate the neighbor list and prepend to announcement command
-                command = f"{', '.join(neighbors)} {command}"
+                neighbors_str = ', '.join(neighbors)
+                command = f"{neighbors_str} {command}"
 
             metric += options.increase
 

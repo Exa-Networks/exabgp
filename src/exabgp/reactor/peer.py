@@ -332,7 +332,8 @@ class Peer(object):
             families = [f'{x[0]}/{x[1]}' for x in self.neighbor.families()]
 
         if len(families) > 1:
-            return f'[ {" ".join(families)} ]'
+            joined = " ".join(families)
+            return f'[ {joined} ]'
         elif len(families) == 1:
             return families[0]
 
