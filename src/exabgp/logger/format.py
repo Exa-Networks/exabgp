@@ -58,6 +58,10 @@ def formater(short, destination):
     return _formater.get((destination, short, istty(destination)), None)
 
 
+# NOTE: Do not convert these functions to use f-strings!
+# These lazy formatting functions are called during logging and using f-strings
+# causes infinite recursion when the logger tries to format the log message.
+# The % formatting is intentionally used here to avoid this issue.
 def lazyformat(prefix, message, formater=od):
     def _lazy():
         formated = formater(message)
