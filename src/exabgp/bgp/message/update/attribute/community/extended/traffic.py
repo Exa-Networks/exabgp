@@ -79,7 +79,7 @@ class TrafficAction(ExtendedCommunity):
             s.append('sample')
         if self.terminal:
             s.append('terminal')
-        return 'action %s' % '-'.join(s)
+        return 'action {}'.format('-'.join(s))
 
     @staticmethod
     def unpack(data):
@@ -106,7 +106,7 @@ class TrafficRedirect(ExtendedCommunity):
         )
 
     def __repr__(self):
-        return 'redirect:%s:%s' % (self.asn, self.target)
+        return 'redirect:{}:{}'.format(self.asn, self.target)
 
     @staticmethod
     def unpack(data):
@@ -127,7 +127,7 @@ class TrafficRedirectASN4(ExtendedCommunity):
         )
 
     def __str__(self):
-        return 'redirect:%s:%s' % (self.asn, self.target)
+        return 'redirect:{}:{}'.format(self.asn, self.target)
 
     @staticmethod
     def unpack(data):
@@ -177,7 +177,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
         )
 
     def __repr__(self):
-        return 'copy-to-nexthop-ietf %s (with copy)' % self.ip if self.copy else 'redirect-to-nexthop-ietf %s' % self.ip
+        return 'copy-to-nexthop-ietf {} (with copy)'.format(self.ip) if self.copy else 'redirect-to-nexthop-ietf {}'.format(self.ip)
 
     @staticmethod
     def unpack(data):
@@ -203,7 +203,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
         )
 
     def __repr__(self):
-        return 'copy-to-nexthop-ietf %s (with copy)' % self.ip if self.copy else 'redirect-to-nexthop-ietf %s' % self.ip
+        return 'copy-to-nexthop-ietf {} (with copy)'.format(self.ip) if self.copy else 'redirect-to-nexthop-ietf {}'.format(self.ip)
 
     @staticmethod
     def unpack(data):

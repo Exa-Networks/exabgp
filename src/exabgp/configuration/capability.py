@@ -35,7 +35,7 @@ def addpath(tokeniser):
     if ap == 'receive/send':  # was allowed with the previous parser
         raise ValueError('the option is send/receive')
 
-    raise ValueError('"%s" is an invalid add-path, options are: send, receive, send/receive' % ap)
+    raise ValueError('"{}" is an invalid add-path, options are: send, receive, send/receive'.format(ap))
 
 
 def gracefulrestart(tokeniser, default):
@@ -50,7 +50,7 @@ def gracefulrestart(tokeniser, default):
     try:
         grace = int(state)
     except ValueError:
-        raise ValueError('"%s" is an invalid graceful-restart time' % state) from None
+        raise ValueError('"{}" is an invalid graceful-restart time'.format(state)) from None
 
     if grace < 0:
         raise ValueError('graceful-restart can not be negative')

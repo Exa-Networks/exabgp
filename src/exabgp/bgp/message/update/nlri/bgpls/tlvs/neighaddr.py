@@ -37,7 +37,7 @@ class NeighAddr:
         return cls(addr=addr)
 
     def json(self):
-        return '"%s"' % self.addr
+        return '"{}"'.format(self.addr)
 
     def __eq__(self, other):
         return self.addr == other.addr
@@ -58,7 +58,7 @@ class NeighAddr:
         raise RuntimeError('Not implemented')
 
     def __str__(self):
-        return ':'.join('%02X' % _ for _ in self._packed)
+        return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
     def __repr__(self):
         return self.__str__()

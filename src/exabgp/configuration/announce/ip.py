@@ -169,7 +169,7 @@ def ip(tokeniser, afi, safi):
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
-            raise ValueError('unknown command "%s"' % command)
+            raise ValueError('unknown command "{}"'.format(command))
 
     if not AnnounceIP.check(change, afi):
         raise ValueError('invalid announcement (missing next-hop ?)')
@@ -203,7 +203,7 @@ def ip_multicast(tokeniser, afi, safi):
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
-            raise ValueError('unknown command "%s"' % command)
+            raise ValueError('unknown command "{}"'.format(command))
 
     return [change]
 

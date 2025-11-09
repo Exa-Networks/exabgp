@@ -47,11 +47,11 @@ class ClusterList(Attribute):
 
     def __repr__(self):
         if self._len != 1:
-            return '[ %s ]' % ' '.join([str(_) for _ in self.clusters])
-        return '%s' % self.clusters[0]
+            return '[ {} ]'.format(' '.join([str(_) for _ in self.clusters]))
+        return '{}'.format(self.clusters[0])
 
     def json(self):
-        return '[ %s ]' % ', '.join(['"%s"' % str(_) for _ in self.clusters])
+        return '[ {} ]'.format(', '.join(['"{}"'.format(str(_)) for _ in self.clusters]))
 
     @classmethod
     def unpack(cls, data, direction, negotiated):

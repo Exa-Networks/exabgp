@@ -60,20 +60,20 @@ def _operational(klass, parameters, tokeniser):
             if isipv4(value):
                 data['routerid'] = RouterID(value)
             else:
-                raise ValueError('invalid operational value for %s' % command)
+                raise ValueError('invalid operational value for {}'.format(command))
             continue
 
         expected = parameters.pop(0)
 
         if command != expected:
-            raise ValueError('invalid operational syntax, unknown argument %s' % command)
+            raise ValueError('invalid operational syntax, unknown argument {}'.format(command))
         if not validate.get(command, valid)(value):
-            raise ValueError('invalid operational value for %s' % command)
+            raise ValueError('invalid operational value for {}'.format(command))
 
         data[command] = convert[command](value)
 
     if tokens or parameters:
-        raise ValueError('invalid advisory syntax, missing argument(s) %s' % ', '.join(parameters))
+        raise ValueError('invalid advisory syntax, missing argument(s) {}'.format(', '.join(parameters)))
 
     if 'routerid' not in data:
         data['routerid'] = None

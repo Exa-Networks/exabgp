@@ -42,7 +42,7 @@ class Srv6Locator(FlagLS):
         self.subtlvs = subtlvs
 
     def __repr__(self):
-        return 'flags: %s, algorithm: %s, metric: %s' % (self.flags, self.algorithm, self.metric)
+        return 'flags: {}, algorithm: {}, metric: {}'.format(self.flags, self.algorithm, self.metric)
 
     @classmethod
     def unpack(cls, data):

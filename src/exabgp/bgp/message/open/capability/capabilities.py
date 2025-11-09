@@ -205,13 +205,13 @@ class Capabilities(dict):
     def unpack(data):
         def _extended_type_length(name, data):
             if len(data) < 3:
-                raise Notify(2, 0, 'Bad length for OPEN (extended) %s (<3) %s' % (name, Capability.hex(data)))
+                raise Notify(2, 0, 'Bad length for OPEN (extended) {} (<3) {}'.format(name, Capability.hex(data)))
             # Optional parameters length
             ld = unpack('!H', data[1:3])[0]
             boundary = ld + 3
             if len(data) < boundary:
                 raise Notify(
-                    2, 0, 'Bad length for OPEN (extended) %s (buffer underrun) %s' % (name, Capability.hex(data)),
+                    2, 0, 'Bad length for OPEN (extended) {} (buffer underrun) {}'.format(name, Capability.hex(data)),
                 )
             key = data[0]
             value = data[3:boundary]
@@ -220,11 +220,11 @@ class Capabilities(dict):
 
         def _key_values(name, data):
             if len(data) < 2:
-                raise Notify(2, 0, 'Bad length for OPEN %s (<2) %s' % (name, Capability.hex(data)))
+                raise Notify(2, 0, 'Bad length for OPEN {} (<2) {}'.format(name, Capability.hex(data)))
             ld = data[1]
             boundary = ld + 2
             if len(data) < boundary:
-                raise Notify(2, 0, 'Bad length for OPEN %s (buffer underrun) %s' % (name, Capability.hex(data)))
+                raise Notify(2, 0, 'Bad length for OPEN {} (buffer underrun) {}'.format(name, Capability.hex(data)))
             key = data[0]
             value = data[2:boundary]
             rest = data[boundary:]
@@ -259,5 +259,5 @@ class Capabilities(dict):
                     capability, capv, value = _key_values('capability', value)
                     capabilities[capability] = Capability.unpack(capability, capabilities, capv)
             else:
-                raise Notify(2, 0, 'Unknow OPEN parameter %s' % hex(key))
+                raise Notify(2, 0, 'Unknow OPEN parameter {}'.format(hex(key)))
         return capabilities

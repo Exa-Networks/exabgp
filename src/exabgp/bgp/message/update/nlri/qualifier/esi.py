@@ -42,7 +42,7 @@ class ESI:
     def __str__(self):
         if self.esi == self.DEFAULT:
             return '-'
-        return ':'.join('%02x' % _ for _ in self.esi)
+        return ':'.join('{:02x}'.format(_) for _ in self.esi)
 
     def __repr__(self):
         return self.__str__()
@@ -61,4 +61,4 @@ class ESI:
         return cls(data[:10])
 
     def json(self, compact=None):
-        return '"esi": "%s"' % str(self)
+        return '"esi": "{}"'.format(str(self))

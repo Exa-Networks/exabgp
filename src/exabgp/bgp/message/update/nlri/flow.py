@@ -169,10 +169,10 @@ class IPrefix6(IPrefix, IComponent, IPv6):
         return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()  # pylint: disable=E1101
 
     def short(self):
-        return '%s/%s' % (self.cidr, self.offset)
+        return '{}/{}'.format(self.cidr, self.offset)
 
     def __str__(self):
-        return '%s/%s' % (self.cidr, self.offset)
+        return '{}/{}'.format(self.cidr, self.offset)
 
     @classmethod
     def make(cls, bgp):
@@ -263,7 +263,7 @@ class NumericString:
             return self._string[op]
         # ugly hack as dynamic languages are what they are and use used __str__ in the past
         value = self.value.short() if hasattr(self.value, 'short') else str(self.value)
-        return '%s%s' % (self._string.get(op, '%02X' % op), value)
+        return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), value)
 
     def __str__(self):
         return self.short()
@@ -287,7 +287,7 @@ class BinaryString:
 
     def short(self):
         op = self.operations & (CommonOperator.EOL ^ 0xFF)
-        return '%s%s' % (self._string.get(op, '%02X' % op), self.value)
+        return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), self.value)
 
     def __str__(self):
         return self.short()
@@ -608,12 +608,12 @@ class Flow(NLRI):
                 r_str.append(rule.short() if hasattr(rule, 'short') else str(rule))
             line = ''.join(r_str)
             if len(r_str) > 1:
-                line = '[ %s ]' % line
-            string.append(' %s %s' % (rules[0].NAME, line))
+                line = '[ {} ]'.format(line)
+            string.append(' {} {}'.format(rules[0].NAME, line))
         return ''.join(string)
 
     def extensive(self):
-        nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoNextHop else ''
+        nexthop = ' next-hop {}'.format(self.nexthop) if self.nexthop is not NoNextHop else ''
         rd = '' if self.rd is RouteDistinguisher.NORD else str(self.rd)
         return 'flow' + self._rules() + rd + nexthop
 
@@ -629,11 +629,11 @@ class Flow(NLRI):
                 # only add ' ' after the first element
                 if idx and not rule.operations & NumericOperator.AND:
                     s.append(', ')
-                s.append('"%s"' % rule)
-            string.append(' "%s": [ %s ]' % (rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
-        nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
-        rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
-        compatibility = ', "string": "%s"' % self.extensive()
+                s.append('"{}"'.format(rule))
+            string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
+        nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not NoNextHop else ''
+        rd = '' if self.rd is RouteDistinguisher.NORD else ', {}'.format(self.rd.json())
+        compatibility = ', "string": "{}"'.format(self.extensive())
         return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
 
     @classmethod
@@ -667,7 +667,7 @@ class Flow(NLRI):
 
                 seen.append(what)
                 if sorted(seen) != seen:
-                    raise Notify(3, 10, 'components are not sent in the right order %s' % seen)
+                    raise Notify(3, 10, 'components are not sent in the right order {}'.format(seen))
 
                 decoded = decode[afi][what]
                 klass = factory[afi][what]
@@ -678,7 +678,7 @@ class Flow(NLRI):
                         raise Notify(
                             3,
                             10,
-                            'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen,
+                            'components are incompatible (two sources, two destinations, mix ipv4/ipv6) {}'.format(seen),
                         )
                 else:
                     end = False

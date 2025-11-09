@@ -42,7 +42,7 @@ class MUP(NLRI):
         self._packed = b''
 
     def __hash__(self):
-        return hash('%s:%s:%s:%s:%s' % (self.afi, self.safi, self.ARCHTYPE, self.CODE, self._packed))
+        return hash('{}:{}:{}:{}:{}'.format(self.afi, self.safi, self.ARCHTYPE, self.CODE, self._packed))
 
     def __len__(self):
         return len(self._packed) + 2
@@ -51,9 +51,9 @@ class MUP(NLRI):
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self):
-        return 'mup:%s:%s' % (
+        return 'mup:{}:{}'.format(
             self.registered.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('%02x' % _ for _ in self._packed),
+            '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
     def __repr__(self):
@@ -63,14 +63,14 @@ class MUP(NLRI):
         return ''
 
     def _prefix(self):
-        return 'mup:%s:' % (self.registered.get(self.CODE, self).SHORT_NAME.lower())
+        return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())
 
     def pack_nlri(self, negotiated=None):
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
     @classmethod
     def register(cls, klass):
-        key = '%s:%s' % (klass.ARCHTYPE, klass.CODE)
+        key = '{}:{}'.format(klass.ARCHTYPE, klass.CODE)
         if key in cls.registered:
             raise RuntimeError('only one Mup registration allowed')
         cls.registered[key] = klass
@@ -84,7 +84,7 @@ class MUP(NLRI):
 
         # arch and code byte size is 4 byte
         end = length + 4
-        key = '%s:%s' % (arch, code)
+        key = '{}:{}'.format(arch, code)
         if key in cls.registered:
             klass = cls.registered[key].unpack(bgp[4:end], afi)
         else:
@@ -96,7 +96,7 @@ class MUP(NLRI):
         return klass, bgp[end:]
 
     def _raw(self):
-        return ''.join('%02X' % _ for _ in self.pack_nlri())
+        return ''.join('{:02X}'.format(_) for _ in self.pack_nlri())
 
 
 class GenericMUP(MUP):

@@ -287,7 +287,7 @@ class ParseNeighbor(Section):
 
         missing = neighbor.missing()
         if missing:
-            return self.error.set('incomplete neighbor, missing %s' % missing)
+            return self.error.set('incomplete neighbor, missing {}'.format(missing))
         neighbor.infer()
 
         if not neighbor.auto_discovery and neighbor['local-address'].afi != neighbor['peer-address'].afi:
@@ -298,7 +298,7 @@ class ParseNeighbor(Section):
             return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
         if neighbor.index() in self._neighbors:
-            return self.error.set('duplicate peer definition %s' % neighbor['peer-address'].top())
+            return self.error.set('duplicate peer definition {}'.format(neighbor['peer-address'].top()))
         self._neighbors.append(neighbor.index())
 
         if neighbor['md5-password']:
@@ -315,8 +315,7 @@ class ParseNeighbor(Section):
             family = change.nlri.family().afi_safi()
             if family not in families and family != (AFI.ipv4, SAFI.unicast):
                 return self.error.set(
-                    'Trying to announce a route of type %s,%s when we are not announcing the family to our peer'
-                    % change.nlri.family().afi_safi(),
+                    'Trying to announce a route of type {},{} when we are not announcing the family to our peer'.format(*change.nlri.family().afi_safi()),
                 )
 
         # create one neighbor object per family for multisession

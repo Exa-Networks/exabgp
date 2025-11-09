@@ -55,7 +55,7 @@ class ParseProcess(Section):
     def pre(self):
         self.named = self.tokeniser.line[1]
         if self.named in self._processes:
-            return self.error.set('a process section called "%s" already exists' % self.named)
+            return self.error.set('a process section called "{}" already exists'.format(self.named))
         self._processes.append(self.named)
         return True
 
@@ -67,14 +67,14 @@ class ParseProcess(Section):
                 self.scope.set(default, self.default[default])
         difference = set(known).difference(configured)
         if difference:
-            return self.error.set('unset process sections: %s' % ', '.join(difference))
+            return self.error.set('unset process sections: {}'.format(', '.join(difference)))
         self.processes.update({self.named: self.scope.pop()})
         return True
 
     def add_api(self):
         if not os.environ.get('exabgp_cli_pipe', ''):
             return
-        name = '%s-%x' % (API_PREFIX, uuid.uuid1().fields[0])
+        name = '{}-{:x}'.format(API_PREFIX, uuid.uuid1().fields[0])
         prog = os.path.join(os.environ.get('PWD', ''), sys.argv[0])
         api = {
             name: {

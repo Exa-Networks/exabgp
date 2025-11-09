@@ -54,7 +54,7 @@ class RTC(NLRI):
         return (4 + len(self.rt)) * 8 if self.rt else 1
 
     def __str__(self):
-        return 'rtc %s:%s' % (self.origin, self.rt) if self.rt else 'rtc wildcard'
+        return 'rtc {}:{}'.format(self.origin, self.rt) if self.rt else 'rtc wildcard'
 
     def __repr__(self):
         return str(self)

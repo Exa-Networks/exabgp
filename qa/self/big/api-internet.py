@@ -27,7 +27,7 @@ def main():
     # initial table dump
     for k, v in ip.iteritems():
         count += 1
-        write('announce route %s next-hop %s med 100 as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]' % (k, v))
+        write('announce route {} next-hop {} med 100 as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'.format(k, v))
         if count % 100 == 0:
             sys.stderr.write('initial : announced %d\n' % count)
 

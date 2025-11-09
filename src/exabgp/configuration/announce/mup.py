@@ -38,7 +38,7 @@ class AnnounceMup(ParseAnnounce):
         'bgp-prefix-sid-srv6 ( l3-service <ipv6> <behavior> [<LBL>,<LNL>,<FL>,<AL>,<Tpose-Len>,<Tpose-Offset>])',
     ]
 
-    syntax = 'mup {\n  <safi> %s;\n}' % ';\n  '.join(definition)
+    syntax = 'mup {{\n  <safi> {};\n}}'.format(';\n  '.join(definition))
 
     known = {
         'label': label,
@@ -86,7 +86,7 @@ def mup(tokeniser, afi, safi):
     elif muptype == 'mup-t2st':
         mup_nlri = srv6_mup_t2st(tokeniser, afi)
     else:
-        raise ValueError('mup: unknown mup type: %s' % muptype)
+        raise ValueError('mup: unknown mup type: {}'.format(muptype))
 
     change = Change(mup_nlri, Attributes())
     while True:
@@ -108,7 +108,7 @@ def mup(tokeniser, afi, safi):
         elif action == 'nop':
             pass  # yes nothing to do !
         else:
-            raise ValueError('mup: unknown command "%s"' % command)
+            raise ValueError('mup: unknown command "{}"'.format(command))
 
     return [change]
 

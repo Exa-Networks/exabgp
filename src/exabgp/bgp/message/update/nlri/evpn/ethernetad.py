@@ -55,7 +55,7 @@ class EthernetAD(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return '%s:%s:%s:%s:%s' % (self._prefix(), self.rd._str(), self.esi, self.etag, self.label)
+        return '{}:{}:{}:{}:{}'.format(self._prefix(), self.rd._str(), self.esi, self.etag, self.label)
 
     def __hash__(self):
         # esi and label MUST *NOT* be part of the hash
@@ -84,10 +84,10 @@ class EthernetAD(EVPN):
     def json(self, compact=None):
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
-        content += '"raw": "%s", ' % self._raw()
-        content += '"name": "%s", ' % self.NAME
-        content += '%s, ' % self.rd.json()
-        content += '%s, ' % self.esi.json()
-        content += '%s, ' % self.etag.json()
-        content += '%s ' % self.label.json()
-        return '{%s}' % content
+        content += '"raw": "{}", '.format(self._raw())
+        content += '"name": "{}", '.format(self.NAME)
+        content += '{}, '.format(self.rd.json())
+        content += '{}, '.format(self.esi.json())
+        content += '{}, '.format(self.etag.json())
+        content += '{} '.format(self.label.json())
+        return '{{{}}}'.format(content)

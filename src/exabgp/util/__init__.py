@@ -14,7 +14,7 @@ import string
 def hexstring(value):
     def spaced(value):
         for v in value:
-            yield '%02X' % v
+            yield '{:02X}'.format(v)
 
     return '0x' + ''.join(spaced(value))
 

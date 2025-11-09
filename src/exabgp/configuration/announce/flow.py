@@ -81,7 +81,7 @@ class AnnounceFlow(ParseAnnounce):
         'action sample|terminal|sample-terminal',
     ]
 
-    syntax = 'flow {\n  <safi> %s;\n}' % ';\n  '.join(definition)
+    syntax = 'flow {{\n  <safi> {};\n}}'.format(';\n  '.join(definition))
 
     known = {
         'source': source,
@@ -203,7 +203,7 @@ def flow(tokeniser, afi, safi):
         elif action == 'nop':
             pass  # yes nothing to do !
         else:
-            raise ValueError('flow: unknown command "%s"' % command)
+            raise ValueError('flow: unknown command "{}"'.format(command))
 
     return [change]
 

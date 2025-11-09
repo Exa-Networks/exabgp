@@ -34,7 +34,7 @@ class SrLabelIndex:
         self.packed = self.pack()
 
     def __repr__(self):
-        return '%s' % (self.labelindex)
+        return '{}'.format(self.labelindex)
 
     def pack(self):
         reserved, flags = 0, 0

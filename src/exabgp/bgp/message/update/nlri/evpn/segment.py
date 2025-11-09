@@ -58,7 +58,7 @@ class EthernetSegment(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return '%s:%s:%s:%s' % (self._prefix(), self.rd._str(), self.esi, self.ip if self.ip else '')
+        return '{}:{}:{}:{}'.format(self._prefix(), self.rd._str(), self.esi, self.ip if self.ip else '')
 
     def __hash__(self):
         # esi and label MUST *NOT* be part of the hash
@@ -102,9 +102,9 @@ class EthernetSegment(EVPN):
     def json(self, compact=None):
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
-        content += '"raw": "%s", ' % self._raw()
-        content += '"name": "%s", ' % self.NAME
-        content += '%s, ' % self.rd.json()
+        content += '"raw": "{}", '.format(self._raw())
+        content += '"name": "{}", '.format(self.NAME)
+        content += '{}, '.format(self.rd.json())
         content += self.esi.json()
-        content += ', "ip": "%s"' % str(self.ip)
-        return '{%s }' % content
+        content += ', "ip": "{}"'.format(str(self.ip))
+        return '{{{} }}'.format(content)

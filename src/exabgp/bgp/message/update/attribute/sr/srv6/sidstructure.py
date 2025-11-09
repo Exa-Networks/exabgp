@@ -96,4 +96,4 @@ class Srv6SidStructure:
             'transposition-offset': self.tpose_offset,
         }
 
-        return '"structure": %s' % json.dumps(pairs)
+        return '"structure": {}'.format(json.dumps(pairs))

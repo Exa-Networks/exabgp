@@ -60,7 +60,7 @@ class ParseVPLS(Section):
         'withdraw',
     ]
 
-    syntax = 'vpls {\n  %s\n}' % ' ;\n  '.join(definition)
+    syntax = 'vpls {{\n  {}\n}}'.format(' ;\n  '.join(definition))
 
     known = {
         'rd': route_distinguisher,

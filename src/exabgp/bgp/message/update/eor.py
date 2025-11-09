@@ -47,7 +47,7 @@ class EOR(Message):
             return 'eor %ld/%ld (%s %s)' % (int(self.afi), int(self.safi), self.afi, self.safi)
 
         def json(self, announced=True, compact=None):
-            return '"eor": { "afi" : "%s", "safi" : "%s" }' % (self.afi, self.safi)
+            return '"eor": {{ "afi" : "{}", "safi" : "{}" }}'.format(self.afi, self.safi)
 
         def __len__(self):
             if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:

@@ -65,7 +65,7 @@ def cmdline(cmdarg):
 
     if not is_bgp(route):
         # parser.print_usage()
-        sys.stdout.write('Environment values are:\n%s\n\n' % '\n'.join(' - %s' % _ for _ in Env.default()))
+        sys.stdout.write('Environment values are:\n{}\n\n'.format('\n'.join(' - {}'.format(_) for _ in Env.default())))
         sys.stdout.write('The BGP message must be an hexadecimal string.\n\n')
         sys.stdout.write('All colons or spaces are ignored, for example:\n\n')
         sys.stdout.write('  001E0200000007900F0003000101\n')

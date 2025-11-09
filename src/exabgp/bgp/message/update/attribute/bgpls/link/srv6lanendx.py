@@ -94,8 +94,7 @@ class Srv6LanEndXISIS(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
-                'behavior: %s, neighbor-id: %s, flags: %s, algorithm: %s, weight: %s, sid: %s'
-                % (d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid)
+                'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid)
                 for d in self.content
             ],
         )
@@ -116,7 +115,7 @@ class Srv6LanEndXISIS(FlagLS):
         return cls(unpack_data(cls, data, ISIS))
 
     def json(self, compact=None):
-        return '"srv6-lan-endx-isis": [ %s ]' % ', '.join([json.dumps(d, indent=compact) for d in self.content])
+        return '"srv6-lan-endx-isis": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
 
 
 @LinkState.register()
@@ -132,8 +131,7 @@ class Srv6LanEndXOSPF(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
-                'behavior: %s, neighbor-id: %s, flags: %s, algorithm: %s, weight: %s, sid: %s'
-                % (d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid)
+                'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid)
                 for d in self.content
             ],
         )
@@ -154,4 +152,4 @@ class Srv6LanEndXOSPF(FlagLS):
         return cls(unpack_data(cls, data, OSPF))
 
     def json(self, compact=None):
-        return '"srv6-lan-endx-ospf": [ %s ]' % ', '.join([json.dumps(d, indent=compact) for d in self.content])
+        return '"srv6-lan-endx-ospf": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))

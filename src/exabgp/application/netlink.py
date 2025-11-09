@@ -14,7 +14,7 @@ from exabgp.netlink.route.network import Network
 
 
 def usage():
-    print('%s' % sys.argv[0])
+    print('{}'.format(sys.argv[0]))
     print('  addr  : show the ip address on the interface')
     print('  route : show the ip routing')
 
@@ -44,9 +44,9 @@ def addresses():
                 continue
 
             if ifa.family == socket.AF_INET:
-                print('  %s %s' % ('inet ', socket.inet_ntop(ifa.family, address)))
+                print('  {} {}'.format('inet ', socket.inet_ntop(ifa.family, address)))
             elif ifa.family == socket.AF_INET6:
-                print('  %s %s' % ('inet6', socket.inet_ntop(ifa.family, address)))
+                print('  {} {}'.format('inet6', socket.inet_ntop(ifa.family, address)))
             else:
                 print('  %d %s' % (ifa.family, address.encode('hex')))
 
@@ -54,7 +54,7 @@ def addresses():
             if neighbor.state == Neighbor.Type.State.NUD_REACHABLE:
                 address = neighbor.attributes.get(Neighbor.Type.Flag.NTF_USE, '\0\0\0\0')
                 if ifa.family == socket.AF_INET or ifa.family == socket.AF_INET6:
-                    print('  %s %s' % ('inet ', socket.inet_ntop(neighbor.family, address)), end=' ')
+                    print('  {} {}'.format('inet ', socket.inet_ntop(neighbor.family, address)), end=' ')
                 else:
                     print('  %d %s' % (ifa.family, address.encode('hex')))
                 print('mac', ':'.join(_.encode('hex') for _ in neighbor.attributes[Neighbor.Type.State.NUD_REACHABLE]))
@@ -84,8 +84,8 @@ def routes():
         oif = route.attributes.get(Network.Type.Attribute.RTA_OIF)[0]
         metric = route.attributes.get(Network.Type.Attribute.RTA_PRIORITY, '\0')[0]
 
-        dst = '%s' % socket.inet_ntop(route.family, destination) if destination else ''
-        gw = '%s' % socket.inet_ntop(route.family, gateway) if gateway else '0.0.0.0'
+        dst = '{}'.format(socket.inet_ntop(route.family, destination)) if destination else ''
+        gw = '{}'.format(socket.inet_ntop(route.family, gateway)) if gateway else '0.0.0.0'
         mask = NetMask.CIDR[route.src_len]
         iface = links[oif]
 

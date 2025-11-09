@@ -92,7 +92,7 @@ class Prefix(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return '%s:%s:%s:%s:%s%s:%s:%s' % (
+        return '{}:{}:{}:{}:{}{}:{}:{}'.format(
             self._prefix(),
             self.rd._str(),
             self.esi,
@@ -105,7 +105,7 @@ class Prefix(EVPN):
 
     def __hash__(self):
         # esi, and label, gwip must *not* be part of the hash
-        return hash('%s:%s:%s:%s' % (self.rd, self.etag, self.ip, self.iplen))
+        return hash('{}:{}:{}:{}'.format(self.rd, self.etag, self.ip, self.iplen))
 
     def _pack(self, packed=None):
         if self._packed:
@@ -170,13 +170,13 @@ class Prefix(EVPN):
     def json(self, compact=None):
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
-        content += '"raw": "%s", ' % self._raw()
-        content += '"name": "%s", ' % self.NAME
-        content += '%s, ' % self.rd.json()
-        content += '%s, ' % self.esi.json()
-        content += '%s, ' % self.etag.json()
-        content += '%s, ' % self.label.json()
-        content += '"ip": "%s", ' % str(self.ip)
+        content += '"raw": "{}", '.format(self._raw())
+        content += '"name": "{}", '.format(self.NAME)
+        content += '{}, '.format(self.rd.json())
+        content += '{}, '.format(self.esi.json())
+        content += '{}, '.format(self.etag.json())
+        content += '{}, '.format(self.label.json())
+        content += '"ip": "{}", '.format(str(self.ip))
         content += '"iplen": %d, ' % self.iplen
-        content += '"gateway": "%s" ' % str(self.gwip)
-        return '{%s}' % content
+        content += '"gateway": "{}" '.format(str(self.gwip))
+        return '{{{}}}'.format(content)

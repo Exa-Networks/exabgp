@@ -94,7 +94,7 @@ class Srv6SidInformation:
         )
 
     def __str__(self):
-        s = 'sid-information [ sid:%s flags:0 endpoint_behavior:0x%x ' % (str(self.sid), self.behavior)
+        s = 'sid-information [ sid:{} flags:0 endpoint_behavior:0x{:x} '.format(str(self.sid), self.behavior)
         if len(self.subsubtlvs) != 0:
             s += ' [ ' + ', '.join([str(subsubtlv) for subsubtlv in self.subsubtlvs]) + ' ]'
         s + ' ]'
@@ -104,6 +104,6 @@ class Srv6SidInformation:
         s = '{ "sid": "%s", "flags": 0, "endpoint_behavior": %d'
         content = ', '.join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
         if content:
-            s += ', %s' % content
+            s += ', {}'.format(content)
         s += ' }'
         return s

@@ -127,22 +127,22 @@ class Attributes(dict):
             attribute = self[code]
 
             if code not in self.representation:
-                yield ' attribute [ 0x%02X 0x%02X %s ]' % (code, attribute.FLAG, str(attribute))
+                yield ' attribute [ 0x{:02X} 0x{:02X} {} ]'.format(code, attribute.FLAG, str(attribute))
                 continue
 
             if attribute.GENERIC:
-                yield ' attribute [ 0x%02X 0x%02X %s ]' % (code, attribute.FLAG, str(attribute))
+                yield ' attribute [ 0x{:02X} 0x{:02X} {} ]'.format(code, attribute.FLAG, str(attribute))
                 continue
 
             how, _, name, presentation, _ = self.representation[code]
             if how == 'boolean':
-                yield ' %s' % name
+                yield ' {}'.format(name)
             elif how == 'list':
-                yield ' %s %s' % (name, presentation % str(attribute))
+                yield ' {} {}'.format(name, presentation % str(attribute))
             elif how == 'multiple':
-                yield ' %s %s' % (name[0], presentation % str(attribute))
+                yield ' {} {}'.format(name[0], presentation % str(attribute))
             else:
-                yield ' %s %s' % (name, presentation % str(attribute))
+                yield ' {} {}'.format(name, presentation % str(attribute))
 
     def _generate_json(self):
         for code in sorted(self.keys()):
@@ -153,26 +153,26 @@ class Attributes(dict):
             attribute = self[code]
 
             if code not in self.representation:
-                yield '"attribute-0x%02X-0x%02X": "%s"' % (code, attribute.FLAG, str(attribute))
+                yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, str(attribute))
                 continue
 
             how, _, name, _, presentation = self.representation[code]
             if how == 'boolean':
-                yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
+                yield '"{}": {}'.format(name, 'true' if self.has(code) else 'false')
             elif how == 'string':
-                yield '"%s": "%s"' % (name, presentation % str(attribute))
+                yield '"{}": "{}"'.format(name, presentation % str(attribute))
             elif how == 'list':
-                yield '"%s": %s' % (name, presentation % attribute.json())
+                yield '"{}": {}'.format(name, presentation % attribute.json())
             elif how == 'multiple':
                 for n in name:
                     value = attribute.json(n)
                     if value:
-                        yield '"%s": %s' % (n, presentation % value)
+                        yield '"{}": {}'.format(n, presentation % value)
             elif how == 'inet':
-                yield '"%s": "%s"' % (name, presentation % str(attribute))
+                yield '"{}": "{}"'.format(name, presentation % str(attribute))
             # Should never be ran
             else:
-                yield '"%s": %s' % (name, presentation % str(attribute))
+                yield '"{}": {}'.format(name, presentation % str(attribute))
 
     def __init__(self):
         dict.__init__(self)
@@ -283,7 +283,7 @@ class Attributes(dict):
         if not self._idx:
             idx = ''.join(self._generate_text())
             nexthop = str(self.get(Attribute.CODE.NEXT_HOP, 'missing'))
-            self._idx = '%s next-hop %s' % (idx, nexthop) if nexthop else idx
+            self._idx = '{} next-hop {}'.format(idx, nexthop) if nexthop else idx
         return self._idx
 
     @classmethod
@@ -355,11 +355,10 @@ class Attributes(dict):
 
         if aid in self:
             if aid in self.NO_DUPLICATE:
-                raise Notify(3, 1, 'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
+                raise Notify(3, 1, 'multiple attribute for {}'.format(str(Attribute.CODE(attribute.ID))))
 
             log.debug(
-                lambda: 'duplicate attribute %s (flag 0x%02X, aid 0x%02X) skipping'
-                % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
+                lambda: 'duplicate attribute {} (flag 0x{:02X}, aid 0x{:02X}) skipping'.format(Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                 'parser',
             )
             return self.parse(left, direction, negotiated)
@@ -393,29 +392,26 @@ class Attributes(dict):
         if aid in Attribute.attributes_known:
             if aid in self.TREAT_AS_WITHDRAW:
                 log.debug(
-                    lambda: 'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) treat as withdraw'
-                    % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
+                    lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) treat as withdraw'.format(Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                     'parser',
                 )
                 self.add(TreatAsWithdraw())
             if aid in self.DISCARD:
                 log.debug(
-                    lambda: 'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) discard'
-                    % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
+                    lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) discard'.format(Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                     'parser',
                 )
                 return self.parse(left, direction, negotiated)
             # XXX: Check if we are missing any
             log.debug(
-                lambda: 'invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) unspecified (should not happen)'
-                % (Attribute.CODE.names.get(aid, 'unset'), flag, aid),
+                lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) unspecified (should not happen)'.format(Attribute.CODE.names.get(aid, 'unset'), flag, aid),
                 'parser',
             )
             return self.parse(left, direction, negotiated)
 
         # it is an unknown transitive attribute we need to pass on
         if flag & Attribute.Flag.TRANSITIVE:
-            log.debug(lambda: 'unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
+            log.debug(lambda: 'unknown transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid), 'parser')
             try:
                 decoded = GenericAttribute(aid, flag | Attribute.Flag.PARTIAL, attribute)
             except IndexError:
@@ -424,7 +420,7 @@ class Attributes(dict):
             return self.parse(left, direction, negotiated)
 
         # it is an unknown non-transitive attribute we can ignore.
-        log.debug(lambda: 'ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag, aid), 'parser')
+        log.debug(lambda: 'ignoring unknown non-transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid), 'parser')
         return self.parse(left, direction, negotiated)
 
     def merge_attributes(self):
@@ -435,7 +431,7 @@ class Attributes(dict):
 
         # this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
         # so adding the: make the length odd and unique
-        key = '%s:%s' % (as2path.index, as4path.index)
+        key = '{}:{}'.format(as2path.index, as4path.index)
 
         # found a cache copy
         cached = Attribute.cache.get(Attribute.CODE.AS_PATH, {}).get(key, None)

@@ -13,7 +13,7 @@ def od(value):
         for v in value:
             if even is False:
                 yield ' '
-            yield '%02X' % v
+            yield '{:02X}'.format(v)
             even = not even
 
     return ''.join(spaced(value))

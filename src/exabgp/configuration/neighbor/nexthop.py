@@ -65,7 +65,7 @@ class ParseNextHop(Section):
 
         nhafi = tokeniser().lower()
         if nhafi not in nhafis:
-            raise ValueError('invalid nexthop afi %s' % nhafi)
+            raise ValueError('invalid nexthop afi {}'.format(nhafi))
 
         seen = (AFI.fromString(afi), SAFI.fromString(safi), AFI.fromString(nhafi))
         self._seen.append(seen)

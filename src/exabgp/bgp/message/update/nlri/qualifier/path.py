@@ -48,12 +48,12 @@ class PathInfo:
 
     def json(self):
         if self.path_info:
-            return '"path-information": "%s"' % '.'.join([str(_) for _ in self.path_info])
+            return '"path-information": "{}"'.format('.'.join([str(_) for _ in self.path_info]))
         return ''
 
     def __repr__(self):
         if self.path_info:
-            return ' path-information %s' % '.'.join([str(_) for _ in self.path_info])
+            return ' path-information {}'.format('.'.join([str(_) for _ in self.path_info]))
         return ''
 
     def pack(self):

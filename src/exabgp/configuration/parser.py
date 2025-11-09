@@ -27,7 +27,7 @@ def boolean(tokeniser, default):
         return True
     if status in ('false', 'disable', 'disabled'):
         return False
-    raise ValueError('invalid value (%s) for a boolean' % status)
+    raise ValueError('invalid value ({}) for a boolean'.format(status))
 
 
 def auto_boolean(tokeniser, default):
@@ -40,7 +40,7 @@ def auto_boolean(tokeniser, default):
         return False
     if status in ('auto',):
         return None
-    raise ValueError('invalid value (%s) for a boolean' % status)
+    raise ValueError('invalid value ({}) for a boolean'.format(status))
 
 
 def port(tokeniser):
@@ -51,7 +51,7 @@ def port(tokeniser):
     try:
         return int(value)
     except ValueError:
-        raise ValueError('"%s" is an invalid port' % value) from None
+        raise ValueError('"{}" is an invalid port'.format(value)) from None
     if value < 0:
         raise ValueError('the port must be positive')
     if value >= pow(2, 16):
@@ -85,7 +85,7 @@ def asn(tokeniser, value=None):
             as_number = int(value)
         return ASN(as_number)
     except ValueError:
-        raise ValueError('"%s" is an invalid ASN' % value) from None
+        raise ValueError('"{}" is an invalid ASN'.format(value)) from None
 
 
 def peer_ip(tokeniser):
@@ -102,7 +102,7 @@ def peer_ip(tokeniser):
     try:
         return IPRange.create(value, mask)
     except (OSError, IndexError, ValueError):
-        raise ValueError('"%s" is an invalid IP address' % value) from None
+        raise ValueError('"{}" is an invalid IP address'.format(value)) from None
 
 
 def ip(tokeniser):
@@ -113,4 +113,4 @@ def ip(tokeniser):
     try:
         return IP.create(value)
     except (OSError, IndexError, ValueError):
-        raise ValueError('"%s" is an invalid IP address' % value) from None
+        raise ValueError('"{}" is an invalid IP address'.format(value)) from None

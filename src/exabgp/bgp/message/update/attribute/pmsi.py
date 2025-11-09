@@ -87,14 +87,14 @@ class PMSI(Attribute):
         return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
 
     def prettytunnel(self):
-        return '0x' + ''.join('%02X' % _ for _ in self.tunnel) if self.tunnel else ''
+        return '0x' + ''.join('{:02X}'.format(_) for _ in self.tunnel) if self.tunnel else ''
 
     def __repr__(self):
         if self.raw_label:
             label_repr = '%d(%d)' % (self.label, self.raw_label)
         else:
             label_repr = str(self.label) if self.label else '0'
-        return 'pmsi:%s:%s:%s:%s' % (
+        return 'pmsi:{}:{}:{}:{}'.format(
             self.name(self.TUNNEL_TYPE).replace(' ', '').lower(),
             str(self.flags),
             label_repr,

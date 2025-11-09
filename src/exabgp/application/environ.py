@@ -19,7 +19,7 @@ def setargs(sub):
 
 def default():
     sys.stdout.write('\nEnvironment values are:\n')
-    sys.stdout.write('\n'.join('    %s' % _ for _ in Env.default()))
+    sys.stdout.write('\n'.join('    {}'.format(_) for _ in Env.default()))
     sys.stdout.flush()
 
 
@@ -30,7 +30,7 @@ def cmdline(cmdarg):
     }
 
     for line in dispatch[cmdarg.env](cmdarg.diff):
-        sys.stdout.write('%s\n' % line)
+        sys.stdout.write('{}\n'.format(line))
         sys.stdout.flush()
 
 

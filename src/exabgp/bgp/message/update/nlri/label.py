@@ -36,7 +36,7 @@ class Label(INET):
         return ''
 
     def extensive(self):
-        return '%s%s' % (self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)
+        return '{}{}'.format(self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop {}'.format(self.nexthop))
 
     def __str__(self):
         return self.extensive()
@@ -54,7 +54,7 @@ class Label(INET):
         return hash(self.pack())
 
     def prefix(self):
-        return '%s%s' % (INET.prefix(self), self.labels)
+        return '{}{}'.format(INET.prefix(self), self.labels)
 
     def pack(self, negotiated=None):
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''

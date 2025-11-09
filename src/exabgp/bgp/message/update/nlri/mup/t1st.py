@@ -94,7 +94,7 @@ class Type1SessionTransformedRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        s = '%s:%s:%s%s:%s:%s:%s%s' % (
+        s = '{}:{}:{}{}:{}:{}:{}{}'.format(
             self._prefix(),
             self.rd._str(),
             self.prefix_ip,
@@ -214,17 +214,17 @@ class Type1SessionTransformedRoute(MUP):
         return cls(rd, prefix_ip_len, prefix_ip, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)
 
     def json(self, compact=None):
-        content = '"name": "%s", ' % self.NAME
+        content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
-        content += '"prefix_ip": "%s", ' % str(self.prefix_ip)
-        content += '"teid": "%s", ' % str(self.teid)
-        content += '"qfi": "%s", ' % str(self.qfi)
+        content += '"prefix_ip": "{}", '.format(str(self.prefix_ip))
+        content += '"teid": "{}", '.format(str(self.teid))
+        content += '"qfi": "{}", '.format(str(self.qfi))
         content += self.rd.json() + ', '
         content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
-        content += '"endpoint_ip": "%s"' % str(self.endpoint_ip)
+        content += '"endpoint_ip": "{}"'.format(str(self.endpoint_ip))
         content += '"source_ip_len": %d, ' % self.source_ip_len
-        content += '"source_ip": "%s", ' % str(self.source_ip)
-        content += '"raw": "%s"' % self._raw()
-        return '{ %s }' % content
+        content += '"source_ip": "{}", '.format(str(self.source_ip))
+        content += '"raw": "{}"'.format(self._raw())
+        return '{{ {} }}'.format(content)

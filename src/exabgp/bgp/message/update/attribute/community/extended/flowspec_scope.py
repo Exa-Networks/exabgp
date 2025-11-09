@@ -40,7 +40,7 @@ class InterfaceSet(ExtendedCommunity):
 
     def __repr__(self):
         str_direction = self.names.get(self.direction, str(self.direction))
-        return 'interface-set:%s:%s:%s' % (str_direction, str(self.asn), str(self.target))
+        return 'interface-set:{}:{}:{}'.format(str_direction, str(self.asn), str(self.target))
 
     @staticmethod
     def unpack(data):

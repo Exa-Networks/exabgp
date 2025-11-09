@@ -29,7 +29,7 @@ class ExtendedCommunities(Communities):
         communities = ExtendedCommunities()
         while data:
             if data and len(data) < 8:
-                raise Notify(3, 1, 'could not decode extended community %s' % str([hex(_) for _ in data]))
+                raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data])))
             communities.add(ExtendedCommunity.unpack(data[:8], direction, negotiated))
             data = data[8:]
         return communities
@@ -48,7 +48,7 @@ class ExtendedCommunitiesIPv6(Communities):
         communities = ExtendedCommunitiesIPv6()
         while data:
             if data and len(data) < 20:
-                raise Notify(3, 1, 'could not decode ipv6 extended community %s' % str([hex(_) for _ in data]))
+                raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
             communities.add(ExtendedCommunityIPv6.unpack(data[:20], direction, negotiated))
             data = data[20:]
         return communities

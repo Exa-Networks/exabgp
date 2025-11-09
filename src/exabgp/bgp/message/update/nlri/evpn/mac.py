@@ -76,7 +76,7 @@ class MAC(EVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return '%s:%s:%s:%s:%s%s:%s:%s' % (
+        return '{}:{}:{}:{}:{}{}:{}:{}'.format(
             self._prefix(),
             self.rd._str(),
             self.esi,
@@ -122,7 +122,7 @@ class MAC(EVPN):
         maclength = data[22]
 
         if maclength > 48 or maclength < 0:
-            raise Notify(3, 5, 'invalid MAC Address length in %s' % cls.NAME)
+            raise Notify(3, 5, 'invalid MAC Address length in {}'.format(cls.NAME))
         end = 23 + 6  # MAC length MUST be 6
 
         mac = MACQUAL.unpack(data[23:end])
@@ -167,13 +167,13 @@ class MAC(EVPN):
     def json(self, compact=None):
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
-        content += '"raw": "%s", ' % self._raw()
-        content += '"name": "%s", ' % self.NAME
-        content += '%s, ' % self.rd.json()
-        content += '%s, ' % self.esi.json()
-        content += '%s, ' % self.etag.json()
-        content += '%s, ' % self.mac.json()
+        content += '"raw": "{}", '.format(self._raw())
+        content += '"name": "{}", '.format(self.NAME)
+        content += '{}, '.format(self.rd.json())
+        content += '{}, '.format(self.esi.json())
+        content += '{}, '.format(self.etag.json())
+        content += '{}, '.format(self.mac.json())
         content += self.label.json()
         if self.ip:
-            content += ', "ip": "%s"' % str(self.ip)
-        return '{%s }' % content
+            content += ', "ip": "{}"'.format(str(self.ip))
+        return '{{{} }}'.format(content)

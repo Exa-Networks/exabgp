@@ -39,7 +39,7 @@ class IfaceAddr:
         return cls(iface_addr=addr)
 
     def json(self, compact=None):
-        return '"%s"' % self.iface_address
+        return '"{}"'.format(self.iface_address)
 
     def __eq__(self, other):
         return self.iface_address == other.iface_address
@@ -60,7 +60,7 @@ class IfaceAddr:
         raise RuntimeError('Not implemented')
 
     def __str__(self):
-        return ':'.join('%02X' % _ for _ in self._packed)
+        return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
     def __repr__(self):
         return self.__str__()

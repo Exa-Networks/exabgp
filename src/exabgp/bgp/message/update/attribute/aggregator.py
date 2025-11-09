@@ -50,7 +50,7 @@ class Aggregator(Attribute):
 
     def __repr__(self):
         if not self._str:
-            self._str = '%s:%s' % (self.asn, self.speaker)
+            self._str = '{}:{}'.format(self.asn, self.speaker)
         return self._str
 
     def json(self):

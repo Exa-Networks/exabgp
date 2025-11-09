@@ -38,7 +38,7 @@ def _check_true(change, afi):
 
 
 class ParseStatic(ParseStaticRoute):
-    syntax = 'route <ip>/<netmask> %s;' % ' '.join(ParseStaticRoute.definition)
+    syntax = 'route <ip>/<netmask> {};'.format(' '.join(ParseStaticRoute.definition))
 
     action = dict(ParseStaticRoute.action)
 
@@ -106,7 +106,7 @@ def route(tokeniser):
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
-            raise ValueError('unknown command "%s"' % command)
+            raise ValueError('unknown command "{}"'.format(command))
 
     if not check(change, nlri.afi):
         raise ValueError('invalid route (missing next-hop, label or rd ?)')
@@ -168,7 +168,7 @@ def attributes(tokeniser):
             nlri.nexthop = nexthop
             attr.add(attribute)
         else:
-            raise ValueError('unknown command "%s"' % command)
+            raise ValueError('unknown command "{}"'.format(command))
 
     changes = []
 

@@ -27,14 +27,13 @@ from exabgp.logger import log
 
 class ParseFlowRoute(Section):
     syntax = (
-        'route give-me-a-name {\n'
+        'route give-me-a-name {{\n'
         '  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n'
         '  next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n'
-        '  %s\n'
-        '  %s\n'
-        '  %s\n'
-        '}\n'
-        % (
+        '  {}\n'
+        '  {}\n'
+        '  {}\n'
+        '}}\n'.format(
             '\n  '.join(ParseFlowMatch.syntax.split('\n')),
             '\n  '.join(ParseFlowScope.syntax.split('\n')),
             '\n  '.join(ParseFlowThen.syntax.split('\n')),

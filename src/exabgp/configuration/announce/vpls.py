@@ -68,7 +68,7 @@ class AnnounceVPLS(ParseAnnounce):
         'withdraw',
     ]
 
-    syntax = 'vpls %s\n' % '  '.join(definition)
+    syntax = 'vpls {}\n'.format('  '.join(definition))
 
     known = {
         'rd': route_distinguisher,
@@ -167,7 +167,7 @@ def l2vpn_vpls(tokeniser, afi, safi):
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
-            raise ValueError('vpls: unknown command "%s"' % command)
+            raise ValueError('vpls: unknown command "{}"'.format(command))
 
     return [
         change,

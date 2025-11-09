@@ -52,15 +52,15 @@ def format_panic(dtype, value, trace):
 # NOTE: Do not convert to f-string! F-strings cannot contain backslashes in expression
 # parts (like \n in .replace('\n', ' ')). This must use % formatting.
 _INFO = """
-ExaBGP version : %s
-Python version : %s
-System Uname   : %s
-System MaxInt  : %s
-Root           : %s
+ExaBGP version : {}
+Python version : {}
+System Uname   : {}
+System MaxInt  : {}
+Root           : {}
 
 Environment:
-%s
-""" % (
+{}
+""".format(
     version,
     sys.version.replace('\n', ' '),
     platform.version(),

@@ -400,7 +400,7 @@ def announce_eor(self, reactor, service, line, use_json):
         descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.established_peers(), descriptions)
         if not peers:
-            self.log_failure('no neighbor matching the command : %s' % command)
+            self.log_failure('no neighbor matching the command : {}'.format(command))
             reactor.processes.answer_error(service)
             return False
         reactor.asynchronous.schedule(service, command, callback(self, command, peers))
@@ -437,7 +437,7 @@ def announce_refresh(self, reactor, service, line, use_json):
         descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.established_peers(), descriptions)
         if not peers:
-            self.log_failure('no neighbor matching the command : %s' % command)
+            self.log_failure('no neighbor matching the command : {}'.format(command))
             reactor.processes.answer_error(service)
             return False
         reactor.asynchronous.schedule(service, command, callback(self, command, peers))
@@ -485,7 +485,7 @@ def announce_operational(self, reactor, service, line, use_json):
         descriptions, command = extract_neighbors(line)
         peers = match_neighbors(reactor.peers(service), descriptions)
         if not peers:
-            self.log_failure('no neighbor matching the command : %s' % command)
+            self.log_failure('no neighbor matching the command : {}'.format(command))
             reactor.processes.answer_error(service)
             return False
         reactor.asynchronous.schedule(service, command, callback(self, command, peers))

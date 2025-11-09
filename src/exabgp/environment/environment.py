@@ -44,7 +44,7 @@ class Env:
             for option in sorted(cls.definition[section]):
                 values = cls.definition[section][option]
                 default = (
-                    "'%s'" % values['value']
+                    "'{}'".format(values['value'])
                     if values['write'] in (parsing.list, parsing.path, parsing.quote, parsing.syslog_name)
                     else values['value']
                 )

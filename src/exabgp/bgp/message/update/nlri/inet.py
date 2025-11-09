@@ -58,10 +58,10 @@ class INET(NLRI):
         return Family.index(self) + addpath + self.cidr.pack_nlri()
 
     def prefix(self):
-        return '%s%s' % (self.cidr.prefix(), str(self.path_info))
+        return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
 
     def extensive(self):
-        return '%s%s' % (self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)
+        return '{}{}'.format(self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop {}'.format(self.nexthop))
 
     def _internal(self, announced=True):
         return [self.path_info.json()]
@@ -71,10 +71,10 @@ class INET(NLRI):
     def json(self, announced=True, compact=False):
         internal = ', '.join([_ for _ in self._internal(announced) if _])
         if internal:
-            return '{ "nlri": "%s", %s }' % (self.cidr.prefix(), internal)
+            return '{{ "nlri": "{}", {} }}'.format(self.cidr.prefix(), internal)
         if compact:
-            return '"%s"' % self.cidr.prefix()
-        return '{ "nlri": "%s" }' % (self.cidr.prefix())
+            return '"{}"'.format(self.cidr.prefix())
+        return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
 
     @classmethod
     def _pathinfo(cls, data, addpath):

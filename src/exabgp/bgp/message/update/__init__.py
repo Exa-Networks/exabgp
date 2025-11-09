@@ -68,7 +68,7 @@ class Update(Message):
     # message not implemented we should use messages below.
 
     def __str__(self):
-        return '\n'.join(['%s%s' % (str(self.nlris[n]), str(self.attributes)) for n in range(len(self.nlris))])
+        return '\n'.join(['{}{}'.format(str(self.nlris[n]), str(self.attributes)) for n in range(len(self.nlris))])
 
     @staticmethod
     def prefix(data):
@@ -137,7 +137,7 @@ class Update(Message):
                 mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
 
-            raise ValueError('unexpected nlri definition (%s)' % nlri)
+            raise ValueError('unexpected nlri definition ({})'.format(nlri))
 
         if not nlris and not mp_nlris:
             return
@@ -284,14 +284,14 @@ class Update(Message):
         nlris = []
         while withdrawn:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath)
-            log.debug(lambda nlri=nlri: 'withdrawn NLRI %s' % nlri, 'routes')
+            log.debug(lambda nlri=nlri: 'withdrawn NLRI {}'.format(nlri), 'routes')
             withdrawn = left
             nlris.append(nlri)
 
         while announced:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath)
             nlri.nexthop = nexthop
-            log.debug(lambda nlri=nlri: 'announced NLRI %s' % nlri, 'routes')
+            log.debug(lambda nlri=nlri: 'announced NLRI {}'.format(nlri), 'routes')
             announced = left
             nlris.append(nlri)
 
@@ -322,7 +322,7 @@ class Update(Message):
             from exabgp.reactor.api.response import Response
             from exabgp.version import json as json_version
 
-            return 'json %s' % Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, None, '', '')
+            return 'json {}'.format(Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, None, '', ''))
 
         log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
 

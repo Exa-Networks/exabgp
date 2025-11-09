@@ -164,7 +164,7 @@ class Processes:
                 self._update_fds()
                 fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
-                log.debug(lambda: 'forked process %s' % process, 'process')
+                log.debug(lambda: 'forked process {}'.format(process), 'process')
 
                 self._restart[process] = self._configuration[process]['respawn']
                 around_now = int(time.time()) & self.respawn_timemask
@@ -187,8 +187,8 @@ class Processes:
 
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)
-            log.debug(lambda: 'could not start process %s' % process, 'process')
-            log.debug(lambda exc=exc: 'reason: %s' % str(exc), 'process')
+            log.debug(lambda: 'could not start process {}'.format(process), 'process')
+            log.debug(lambda exc=exc: 'reason: {}'.format(str(exc)), 'process')
 
     def start(self, configuration, restart=False):
         for process in list(self._process):
@@ -325,7 +325,7 @@ class Processes:
             # NOTE: Do not convert to f-string! F-strings with backslash escapes in
             # expressions (like \n in .replace()) require Python 3.12+.
             # This project supports Python 3.8+, so we must use % formatting.
-            log.debug(lambda: 'responding to %s : %s' % (service, string.replace('\n', '\\n')), 'process')
+            log.debug(lambda: 'responding to {} : {}'.format(service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
     def answer_done(self, service):
@@ -388,7 +388,7 @@ class Processes:
 
     @silenced
     def packets(self, neighbor, direction, category, negotiated, header, body):
-        for process in self._notify(neighbor, '%s-packets' % direction):
+        for process in self._notify(neighbor, '{}-packets'.format(direction)):
             self.write(
                 process,
                 self._encoder[process].packets(neighbor, direction, category, negotiated, header, body),
