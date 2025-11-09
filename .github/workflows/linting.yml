@@ -33,4 +33,6 @@ jobs:
 
       - name: ruff
         run: |
+          python --version
+          ruff --version
           ruff check . --output-format=full --statistics
