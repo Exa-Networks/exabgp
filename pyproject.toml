@@ -71,7 +71,15 @@ markers = [
 
 [tool.ruff]
 line-length = 120
-exclude = ["dev", "lib/exabgp/vendoring"]
+exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages", "src/exabgp/vendoring"]
+
+[tool.ruff.lint]
+# Select same critical error codes as flake8 configuration:
+# E9: Runtime/syntax errors
+# F63: Invalid print statements
+# F7: Syntax errors in docstrings and type comments
+# F82: Undefined names in __all__
+select = ["E9", "F63", "F7", "F82"]
 
 [tool.ruff.format]
 quote-style = "single"
