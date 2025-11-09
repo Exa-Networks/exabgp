@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 
 Support for RFC 8092

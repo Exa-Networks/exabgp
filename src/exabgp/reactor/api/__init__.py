@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 decoder/__init__.py
 

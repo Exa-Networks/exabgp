@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 flowspec_scope.py
 

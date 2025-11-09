@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 parse_process.py
 
