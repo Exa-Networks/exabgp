@@ -80,10 +80,10 @@ def check_fifo(name):
     except OSError:
         sys.stdout.write(f'error: could not create the named pipe {os.path.abspath(name)}\n')
         return False
-    except IOError:
+    except OSError:
         sys.stdout.write(f'error: could not access/delete the named pipe {os.path.abspath(name)}\n')
         sys.stdout.flush()
-    except socket.error:
+    except OSError:
         sys.stdout.write(f'error: could not write on the named pipe {os.path.abspath(name)}\n')
         sys.stdout.flush()
 
@@ -116,7 +116,7 @@ class Control:
             if pipe:
                 try:
                     os.close(pipe)
-                except (OSError, IOError, TypeError):
+                except (OSError, TypeError):
                     pass
 
         _close(self.r_pipe)

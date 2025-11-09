@@ -137,7 +137,7 @@ class Connection:
             try:
                 while True:
                     if self.defensive and random.randint(0, 2):
-                        raise socket.error(errno.EAGAIN, 'raising network error on purpose')
+                        raise OSError(errno.EAGAIN, 'raising network error on purpose')
 
                     read = self.io.recv(number)
                     if not read:
@@ -157,7 +157,7 @@ class Connection:
                 self.close()
                 log.warning(lambda: f'{self.name()} {self.peer} peer is too slow', self.session())
                 raise TooSlowError(f'Timeout while reading data from the network ({errstr(exc)})') from None
-            except socket.error as exc:
+            except OSError as exc:
                 if exc.args[0] in error.block:
                     message = f'{self.name()} {self.peer} blocking io problem mid-way through reading a message {errstr(exc)}, trying to complete'
                     if message != reported:
@@ -185,7 +185,7 @@ class Connection:
             try:
                 while True:
                     if self.defensive and random.randint(0, 2):
-                        raise socket.error(errno.EAGAIN, 'raising network error on purpose')
+                        raise OSError(errno.EAGAIN, 'raising network error on purpose')
 
                     # we can not use sendall as in case of network buffer filling
                     # it does raise and does not let you know how much was sent
@@ -200,7 +200,7 @@ class Connection:
                         yield True
                         return
                     yield False
-            except socket.error as exc:
+            except OSError as exc:
                 if exc.args[0] in error.block:
                     log.debug(
                         lambda exc=exc: f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(exc)}, trying to complete',

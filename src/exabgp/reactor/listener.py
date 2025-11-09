@@ -76,14 +76,14 @@ class Listener:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 if local_ip.ipv6():
                     sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
-            except (socket.error, AttributeError):
+            except (OSError, AttributeError):
                 pass
             sock.setblocking(0)
             # s.settimeout(0.0)
             sock.bind((local_ip.top(), local_port))
             sock.listen(self._backlog)
             self._sockets[sock] = (local_ip.top(), local_port, peer_ip.top(), md5)
-        except socket.error as exc:
+        except OSError as exc:
             if exc.args[0] == errno.EADDRINUSE:
                 raise BindingError(
                     f'could not listen on {local_ip}:{local_port}, the port may already be in use by another application',
@@ -130,7 +130,7 @@ class Listener:
                 io, _ = sock.accept()
                 self._accepted[sock] = io
                 peer_connected = True
-            except socket.error as exc:
+            except OSError as exc:
                 if exc.errno in error.block:
                     continue
                 log.critical(lambda exc=exc: str(exc), 'network')

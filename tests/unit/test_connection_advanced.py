@@ -125,7 +125,7 @@ class TestGeneratorBasedReader:
 
         # First call raises EAGAIN, second succeeds
         mock_sock.recv.side_effect = [
-            socket.error(errno.EAGAIN, 'Would block'),
+            OSError(errno.EAGAIN, 'Would block'),
             b'data',
         ]
 
@@ -202,7 +202,7 @@ class TestGeneratorBasedReader:
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
-        mock_sock.recv.side_effect = socket.error(errno.ECONNRESET, 'Connection reset')
+        mock_sock.recv.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -297,7 +297,7 @@ class TestGeneratorBasedWriter:
 
         # First call raises EAGAIN, second succeeds
         mock_sock.send.side_effect = [
-            socket.error(errno.EAGAIN, 'Would block'),
+            OSError(errno.EAGAIN, 'Would block'),
             4,
         ]
 
@@ -326,7 +326,7 @@ class TestGeneratorBasedWriter:
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
-        error = socket.error(errno.EPIPE, 'Broken pipe')
+        error = OSError(errno.EPIPE, 'Broken pipe')
         error.errno = errno.EPIPE
         mock_sock.send.side_effect = error
 
@@ -1081,7 +1081,7 @@ class TestErrorPropagation:
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
-        error = socket.error(errno.ECONNRESET, 'Connection reset')
+        error = OSError(errno.ECONNRESET, 'Connection reset')
         error.errno = errno.ECONNRESET
         mock_sock.send.side_effect = error
 
@@ -1108,7 +1108,7 @@ class TestErrorPropagation:
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
-        error = socket.error(errno.ECONNREFUSED, 'Connection refused')
+        error = OSError(errno.ECONNREFUSED, 'Connection refused')
         error.errno = errno.ECONNREFUSED
         mock_sock.recv.side_effect = error
 
@@ -1322,7 +1322,7 @@ class TestEdgeCasesAndDefensiveMode:
         conn.io = mock_sock
 
         # Create an undefined socket error (not in block or fatal lists)
-        error = socket.error(999, 'Undefined error')
+        error = OSError(999, 'Undefined error')
         error.errno = 999
         mock_sock.recv.side_effect = error
 
@@ -1349,7 +1349,7 @@ class TestEdgeCasesAndDefensiveMode:
         conn.io = mock_sock
 
         # Create an undefined socket error (not in block, fatal, or EPIPE)
-        error = socket.error(999, 'Undefined error')
+        error = OSError(999, 'Undefined error')
         error.errno = 999
         mock_sock.send.side_effect = error
 

@@ -263,7 +263,7 @@ class Processes:
 
                     self._buffer[process] = raw
 
-                except IOError as exc:
+                except OSError as exc:
                     if not exc.errno or exc.errno in error.fatal:
                         # if the program exits we can get an IOError with errno code zero !
                         self._handle_problem(process)
@@ -298,7 +298,7 @@ class Processes:
         while True:
             try:
                 self._process[process].stdin.write(bytes(f'{string}\n', 'ascii'))
-            except IOError as exc:
+            except OSError as exc:
                 self._broken.append(process)
                 if exc.errno == errno.EPIPE:
                     self._broken.append(process)
@@ -314,7 +314,7 @@ class Processes:
 
         try:
             self._process[process].stdin.flush()
-        except IOError as exc:
+        except OSError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
             log.debug(lambda exc=exc: f'error received while FLUSHING data to helper program, retrying ({errstr(exc)})', 'process')
 

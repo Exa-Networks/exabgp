@@ -21,6 +21,6 @@ while True:
         sys.stderr.flush()
     except KeyboardInterrupt:
         pass
-    except IOError:
+    except OSError:
         # most likely a signal during readline
         pass

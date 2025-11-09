@@ -15,7 +15,7 @@ def isipv4(address):
     try:
         socket.inet_pton(socket.AF_INET, address)
         return True
-    except socket.error:
+    except OSError:
         return False
 
 
@@ -23,7 +23,7 @@ def isipv6(address):
     try:
         socket.inet_pton(socket.AF_INET6, address)
         return True
-    except socket.error:
+    except OSError:
         return False
 
 

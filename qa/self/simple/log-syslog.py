@@ -30,6 +30,6 @@ while True:
         syslog.syslog(syslog.LOG_ALERT, _prefixed('INFO', line))
     except KeyboardInterrupt:
         pass
-    except IOError:
+    except OSError:
         # most likely a signal during readline
         pass

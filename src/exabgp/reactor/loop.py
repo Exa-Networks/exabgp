@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import errno
 import re
 import time
 import uuid
@@ -450,15 +451,19 @@ class Reactor:
                 self._termination('^C received', self.Exit.normal)
             except SystemExit:
                 self._termination('exiting', self.Exit.normal)
-            # socket.error is a subclass of IOError (so catch it first)
-            except socket.error:
-                self._termination('socket error received', self.Exit.socket)
-            except IOError:
-                self._termination('I/O Error received, most likely ^C during IO', self.Exit.io_error)
+            except OSError as exc:
+                # Differentiate between different OS error types using errno
+                if exc.errno == errno.EINTR:
+                    # Interrupted system call, most likely ^C during I/O
+                    self._termination('I/O Error received, most likely ^C during IO', self.Exit.io_error)
+                elif exc.errno in (errno.EBADF, errno.EINVAL):
+                    # Bad file descriptor or invalid argument - select() errors
+                    self._termination('problem using select, stopping', self.Exit.select)
+                else:
+                    # Socket/network errors (ECONNRESET, EPIPE, ECONNREFUSED, etc.)
+                    self._termination('socket error received', self.Exit.socket)
             except ProcessError:
                 self._termination('Problem when sending message(s) to helper program, stopping', self.Exit.process)
-            except select.error:
-                self._termination('problem using select, stopping', self.Exit.select)
 
         return self.exit_code
 

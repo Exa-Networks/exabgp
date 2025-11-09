@@ -30,5 +30,5 @@ while True:
         counter += 1
     except KeyboardInterrupt:
         pass
-    except IOError:
+    except OSError:
         break
