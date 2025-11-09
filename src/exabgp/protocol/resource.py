@@ -1,6 +1,5 @@
 
-"""
-resource.py
+"""resource.py
 
 Created by Thomas Mangin on 2015-05-15.
 Copyright (c) 2015-2017 Exa Networks. All rights reserved.

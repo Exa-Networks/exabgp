@@ -1,6 +1,5 @@
 # encoding: utf-8
-"""
-test_environment.py
+"""test_environment.py
 
 Unit tests for exabgp.environment modules
 """

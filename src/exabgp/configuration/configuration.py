@@ -1,6 +1,5 @@
 
-"""
-configuration.py
+"""configuration.py
 
 Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

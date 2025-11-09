@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-tojson.py
+"""tojson.py
 
 Created by Thomas Mangin on 2014-12-22.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

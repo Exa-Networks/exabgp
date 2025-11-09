@@ -1,5 +1,4 @@
-"""
-Helper utilities for performance testing.
+"""Helper utilities for performance testing.
 
 Provides functions to create high volumes of test data and mock objects
 for performance benchmarking.
@@ -56,8 +55,7 @@ def create_mock_neighbor(asn=65000, router_id='1.2.3.4'):
 
 
 def create_simple_update_bytes(num_routes=1, base_prefix='10.0.0.0/24'):
-    """
-    Create raw bytes for a simple UPDATE message with specified number of routes.
+    """Create raw bytes for a simple UPDATE message with specified number of routes.
 
     Args:
         num_routes: Number of NLRI prefixes to include
@@ -136,8 +134,7 @@ def create_notification_bytes(error_code=6, error_subcode=0):
 
 
 def create_large_update_bytes(num_attributes=10, num_routes=100):
-    """
-    Create a large UPDATE message with many attributes and routes.
+    """Create a large UPDATE message with many attributes and routes.
 
     Args:
         num_attributes: Number of path attributes (will add communities)
@@ -193,8 +190,7 @@ def create_large_update_bytes(num_attributes=10, num_routes=100):
 
 
 def create_mock_connection_with_data(data_bytes):
-    """
-    Create a mock connection object that will return specified data.
+    """Create a mock connection object that will return specified data.
 
     Args:
         data_bytes: bytes to return from the connection
@@ -220,8 +216,7 @@ def create_mock_connection_with_data(data_bytes):
 
 
 def create_batch_messages(message_type='update', count=1000):
-    """
-    Create a batch of BGP messages for load testing.
+    """Create a batch of BGP messages for load testing.
 
     Args:
         message_type: Type of message ('update', 'keepalive', 'notification')
@@ -243,8 +238,7 @@ def create_batch_messages(message_type='update', count=1000):
 
 
 def create_mixed_message_batch(update_count=500, keepalive_count=300, notification_count=200):
-    """
-    Create a batch of mixed message types.
+    """Create a batch of mixed message types.
 
     Args:
         update_count: Number of UPDATE messages

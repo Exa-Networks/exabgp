@@ -1,6 +1,5 @@
 
-"""
-traffic.py
+"""traffic.py
 
 Created by Thomas Mangin on 2014-06-21.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.

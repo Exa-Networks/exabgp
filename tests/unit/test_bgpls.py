@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-"""
-Comprehensive BGP-LS (Link-State) NLRI tests
+"""Comprehensive BGP-LS (Link-State) NLRI tests
 
 Tests all BGP-LS NLRI types:
 - NODE (Code 1): Node NLRI

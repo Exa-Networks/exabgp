@@ -1,6 +1,5 @@
 
-"""
-dictionary.py
+"""dictionary.py
 
 Created by Thomas Mangin on 2015-01-17.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.

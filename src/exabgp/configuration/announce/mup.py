@@ -1,6 +1,5 @@
 
-"""
-announce/mup.py
+"""announce/mup.py
 
 Created by Thomas Mangin on 2017-07-06.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

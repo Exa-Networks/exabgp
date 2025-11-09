@@ -1,6 +1,5 @@
 
-"""
-firewall.py
+"""firewall.py
 
 Created by Thomas Mangin on 2015-03-31.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

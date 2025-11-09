@@ -1,5 +1,4 @@
-"""
-rtc.py
+"""rtc.py
 
 Created by Thomas Morin on 2014-06-10.
 Copyright (c) 2014-2017 Orange. All rights reserved.

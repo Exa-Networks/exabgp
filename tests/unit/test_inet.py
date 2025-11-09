@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-Comprehensive tests for INET NLRI (IPv4/IPv6 Unicast and Multicast)
+"""Comprehensive tests for INET NLRI (IPv4/IPv6 Unicast and Multicast)
 
 Created for comprehensive test coverage improvement
 """

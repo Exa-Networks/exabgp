@@ -1,6 +1,5 @@
 
-"""
-l2info.py
+"""l2info.py
 
 Created by Thomas Mangin on 2014-06-20.
 Copyright (c) 2014-2017 Orange. All rights reserved.

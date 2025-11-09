@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-test_connection_advanced.py
+"""test_connection_advanced.py
 
 Advanced tests for network connection layer functionality.
 Tests generator-based I/O, BGP message validation, multi-packet assembly, and buffer management.

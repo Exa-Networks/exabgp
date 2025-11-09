@@ -1,6 +1,5 @@
 
-"""
-etag.py
+"""etag.py
 
 Created by Thomas Mangin on 2014-06-26.
 Copyright (c) 2014-2017 Orange. All rights reserved.

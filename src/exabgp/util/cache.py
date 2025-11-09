@@ -1,6 +1,5 @@
 
-"""
-cache.py
+"""cache.py
 
 Created by David Farrar on 2012-12-27.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-open.py
+"""open.py
 
 Created by Thomas Morin, Orange on 2015-07-10.
 Copyright (c) 2009-2015 Orange. All rights reserved.
@@ -320,8 +319,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(42, unpacked.label.labels[0])
 
     def test100_EVPNMACHashEqual(self):
-        """
-        Two indistinct EVPN NLRI should
+        """Two indistinct EVPN NLRI should
         hash to the same value, and be equal
         """
 
@@ -349,8 +347,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(nlri1, nlri2)
 
     def test101_EVPNHashEqual_somefieldsvary(self):
-        """
-        Two EVPN MAC NLRIs differing by their ESI or label or RD,
+        """Two EVPN MAC NLRIs differing by their ESI or label or RD,
         or nexthop, but otherwise identical should hash to the same value,
         and be equal
         """

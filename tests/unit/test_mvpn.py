@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for MVPN (Multicast VPN) NLRI types.
+"""Comprehensive tests for MVPN (Multicast VPN) NLRI types.
 
 Tests cover all MVPN route types defined in RFC 6514:
 - Route Type 5: Source Active A-D Route (SourceAD)

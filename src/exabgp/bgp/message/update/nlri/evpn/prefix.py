@@ -1,5 +1,4 @@
-"""
-prefix.py
+"""prefix.py
 
 Created by Diego Garcia del Rio on 2015-03-12.
 Copyright (c) 2015 Alcatel-Lucent. All rights reserved.
@@ -57,8 +56,7 @@ class Prefix(EVPN):
     SHORT_NAME = 'PrfxAdv'
 
     def __init__(self, rd, esi, etag, label, ip, iplen, gwip, packed=None, nexthop=None, action=None, addpath=None):
-        """
-        rd: a RouteDistinguisher
+        """rd: a RouteDistinguisher
         esi: an EthernetSegmentIdentifier
         etag: an EthernetTag
         mac: a MAC

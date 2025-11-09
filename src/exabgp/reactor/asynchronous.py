@@ -1,6 +1,5 @@
 
-"""
-reactor/async.py
+"""reactor/async.py
 
 Created by Thomas Mangin on 2017-07-01.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -30,8 +29,7 @@ class ASYNC:
         return inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback)
 
     def schedule(self, uid, command, callback):
-        """
-        Schedule a callback (generator or coroutine) for execution
+        """Schedule a callback (generator or coroutine) for execution
 
         Args:
             uid: Unique identifier
@@ -55,8 +53,7 @@ class ASYNC:
         self._async = running
 
     def run(self):
-        """
-        Execute scheduled callbacks (synchronous wrapper for backward compatibility)
+        """Execute scheduled callbacks (synchronous wrapper for backward compatibility)
 
         This method provides backward compatibility by calling the async version.
         For generators-only workload, this works synchronously.

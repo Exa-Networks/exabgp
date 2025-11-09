@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-Comprehensive tests for Label (MPLS-labeled routes) NLRI (RFC 3107)
+"""Comprehensive tests for Label (MPLS-labeled routes) NLRI (RFC 3107)
 
 Created for comprehensive test coverage improvement
 """

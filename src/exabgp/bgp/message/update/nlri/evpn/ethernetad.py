@@ -1,5 +1,4 @@
-"""
-ethernetad.py
+"""ethernetad.py
 
 Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.

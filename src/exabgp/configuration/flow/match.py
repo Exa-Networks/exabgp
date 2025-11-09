@@ -1,6 +1,5 @@
 
-"""
-match.py
+"""match.py
 
 Created by Thomas Mangin on 2015-06-22.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

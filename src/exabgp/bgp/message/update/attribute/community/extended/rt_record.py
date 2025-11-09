@@ -1,6 +1,5 @@
 
-"""
-rt_record.py
+"""rt_record.py
 
 Created by Thomas Mangin on <unset>
 Copyright (c) 2009-2022 Exa Networks. All rights reserved.

@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for Flowspec (Flow Specification) NLRI.
+"""Comprehensive tests for Flowspec (Flow Specification) NLRI.
 
 Tests cover RFC 5575 (Dissemination of Flow Specification Rules) components:
 - IPv4 and IPv6 flow components

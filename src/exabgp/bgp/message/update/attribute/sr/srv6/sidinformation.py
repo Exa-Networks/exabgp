@@ -1,6 +1,5 @@
 
-"""
-srv6/sidinformation.py
+"""srv6/sidinformation.py
 
 Created by Ryoga Saito 2022-02-24
 Copyright (c) 2022 Ryoga Saito. All rights reserved.

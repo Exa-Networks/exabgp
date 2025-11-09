@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-response/text.py
+"""response/text.py
 
 Created by Thomas Mangin on 2012-12-30.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

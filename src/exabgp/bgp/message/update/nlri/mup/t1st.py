@@ -1,5 +1,4 @@
-"""
-t1st.py
+"""t1st.py
 
 Created by Takeru Hayasaka on 2023-01-21.
 Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.

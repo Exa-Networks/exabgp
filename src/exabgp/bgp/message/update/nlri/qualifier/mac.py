@@ -1,6 +1,5 @@
 
-"""
-mac.py
+"""mac.py
 
 Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2014-2017 Orange. All rights reserved.

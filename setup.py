@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-setup.py
+"""setup.py
 
 Created by Thomas Mangin on 2011-01-24.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

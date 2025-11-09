@@ -1,6 +1,5 @@
 
-"""
-generic.py
+"""generic.py
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-l2vpn.py
+"""l2vpn.py
 
 Created by Thomas Mangin on 2010-01-14.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -28,8 +27,7 @@ class TestL2VPN(unittest.TestCase):
         return RouteDistinguisher(bin_rd)
 
     def setUp(self):
-        """
-        setUp unittesting
+        """setUp unittesting
 
         l2vpn:endpoint:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.4:13
         l2vpn:endpoint:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.3:11
@@ -45,8 +43,7 @@ class TestL2VPN(unittest.TestCase):
         self.encoded_ext_community = bytearray.fromhex('0002 D53F 0000 0006 800A 1300 0000 0064')
 
     def test_l2vpn_decode(self):
-        """
-        decode and test against known data
+        """decode and test against known data
 
         we do know what routes Juniper sends us and we testing decoded values against it
         """
@@ -64,8 +61,7 @@ class TestL2VPN(unittest.TestCase):
         # self.assertEqual(l2vpn_route2.size,8)
 
     def test_l2vpn_encode(self):
-        """
-        encode and test against known data
+        """encode and test against known data
 
         we are encoding routes and testing em against what we have recvd from Juniper
         """

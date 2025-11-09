@@ -1,5 +1,4 @@
-"""
-Performance tests for concurrent peer handling.
+"""Performance tests for concurrent peer handling.
 
 Tests the system's ability to handle messages from multiple BGP peers
 simultaneously under high load.

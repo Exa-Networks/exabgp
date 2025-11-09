@@ -1,6 +1,5 @@
 
-"""
-sr/prefixsid.py
+"""sr/prefixsid.py
 
 Created by Evelio Vila 2017-02-16
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

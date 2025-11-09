@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for EVPN (Ethernet VPN) NLRI types.
+"""Comprehensive tests for EVPN (Ethernet VPN) NLRI types.
 
 Tests cover all EVPN route types defined in RFC 7432:
 - Route Type 1: Ethernet Auto-Discovery (EthernetAD)

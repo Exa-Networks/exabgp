@@ -1,6 +1,5 @@
 
-"""
-cidr.py
+"""cidr.py
 
 Created by Thomas Mangin on 2013-08-07.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

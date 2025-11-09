@@ -1,6 +1,5 @@
 
-"""
-action.py
+"""action.py
 
 Created by Thomas Mangin on 2022-05-19.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

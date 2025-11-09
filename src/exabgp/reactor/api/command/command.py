@@ -1,6 +1,5 @@
 
-"""
-command.py
+"""command.py
 
 Created by Thomas Mangin on 2015-12-15.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

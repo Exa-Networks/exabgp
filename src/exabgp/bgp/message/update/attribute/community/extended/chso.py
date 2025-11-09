@@ -1,6 +1,5 @@
 
-"""
-chso.py
+"""chso.py
 
 License: 3-clause BSD. (See the COPYRIGHT file)
 """

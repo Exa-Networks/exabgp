@@ -1,6 +1,5 @@
 
-"""
-vpls.py
+"""vpls.py
 
 Created by Nikita Shirokov on 2014-06-16.
 Copyright (c) 2014-2017 Nikita Shirokov. All rights reserved.

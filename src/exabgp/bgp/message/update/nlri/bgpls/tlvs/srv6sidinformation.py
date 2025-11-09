@@ -1,6 +1,5 @@
 
-"""
-srv6sidinformation.py
+"""srv6sidinformation.py
 
 Created by Quentin De Muynck
 Copyright (c) 2025 Exa Networks. All rights reserved.

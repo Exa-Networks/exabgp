@@ -1,6 +1,5 @@
 
-"""
-mup.py
+"""mup.py
 
 Created by Takeru Hayasaka on 2023-03-13.
 Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.

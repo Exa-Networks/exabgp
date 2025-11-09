@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-test_network_tcp.py
+"""test_network_tcp.py
 
 Comprehensive tests for TCP network layer functionality.
 Tests socket creation, binding, connection, and configuration.

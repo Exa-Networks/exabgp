@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""
-Comprehensive tests for RTC (Route Target Constraint) NLRI (RFC 4684)
+"""Comprehensive tests for RTC (Route Target Constraint) NLRI (RFC 4684)
 
 Created for comprehensive test coverage improvement
 """
