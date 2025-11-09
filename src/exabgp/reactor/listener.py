@@ -101,8 +101,9 @@ class Listener(object):
             if not remote_addr:
                 remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
             self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
+            md5_suffix = ' with MD5' if md5_password else ''
             log.debug(
-                f"listening for BGP session(s) on {local_addr}:{port}{' with MD5' if md5_password else ''}",
+                f"listening for BGP session(s) on {local_addr}:{port}{md5_suffix}",
                 'network',
             )
             return True

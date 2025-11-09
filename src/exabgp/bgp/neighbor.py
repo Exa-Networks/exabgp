@@ -184,7 +184,10 @@ class Neighbor(dict):
             session = '/'.join(f'{afi.name()}-{safi.name()}' for (afi, safi) in self.families())
         else:
             session = 'in-open'
-        return f"neighbor {self['peer-address']} local-ip {self['local-address'] if self['peer-address'] is not None else 'auto'} local-as {self['local-as'] if self['local-as'] is not None else 'auto'} peer-as {self['peer-as'] if self['peer-as'] is not None else 'auto'} router-id {self['router-id']} family-allowed {session}"
+        local_addr = self['local-address'] if self['peer-address'] is not None else 'auto'
+        local_as = self['local-as'] if self['local-as'] is not None else 'auto'
+        peer_as = self['peer-as'] if self['peer-as'] is not None else 'auto'
+        return f"neighbor {self['peer-address']} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self['router-id']} family-allowed {session}"
 
     def families(self):
         # this list() is important .. as we use the function to modify self._families
@@ -468,6 +471,9 @@ Neighbor {peer-address}
 
             apis += _api
 
+        md5_base64_str = 'true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'
+        add_path_str = AddPath.string[neighbor['capability']['add-path']] if neighbor['capability']['add-path'] else 'disable'
+
         returned = (
             f'neighbor {neighbor["peer-address"]} {{\n'
             f'\tdescription "{neighbor["description"]}";\n'
@@ -489,7 +495,7 @@ Neighbor {peer-address}
             f"\tadj-rib-in {'true' if neighbor['adj-rib-in'] else 'false'};\n"
             f"\tadj-rib-out {'true' if neighbor['adj-rib-out'] else 'false'};\n" +
             (f'\tmd5-password "{neighbor["md5-password"]}";\n' if neighbor['md5-password'] else '') +
-            f"\tmd5-base64 {'true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'};\n" +
+            f"\tmd5-base64 {md5_base64_str};\n" +
             (f'\tmd5-ip "{neighbor["md5-ip"]}";\n' if not neighbor.auto_discovery else '') +
             (f'\toutgoing-ttl {neighbor["outgoing-ttl"]};\n' if neighbor['outgoing-ttl'] else '') +
             (f'\tincoming-ttl {neighbor["incoming-ttl"]};\n' if neighbor['incoming-ttl'] else '') +
@@ -499,7 +505,7 @@ Neighbor {peer-address}
             f"\t\tgraceful-restart {neighbor['capability']['graceful-restart'] if neighbor['capability']['graceful-restart'] else 'disable'};\n"
             f"\t\tsoftware-version {'enable' if neighbor['capability']['software-version'] else 'disable'};\n"
             f"\t\tnexthop {'enable' if neighbor['capability']['nexthop'] else 'disable'};\n"
-            f"\t\tadd-path {AddPath.string[neighbor['capability']['add-path']] if neighbor['capability']['add-path'] else 'disable'};\n"
+            f"\t\tadd-path {add_path_str};\n"
             f"\t\tmulti-session {'enable' if neighbor['capability']['multi-session'] else 'disable'};\n"
             f"\t\toperational {'enable' if neighbor['capability']['operational'] else 'disable'};\n"
             f"\t\taigp {'enable' if neighbor['capability']['aigp'] else 'disable'};\n"
@@ -578,9 +584,11 @@ Neighbor {peer-address}
     @classmethod
     def formated_dict(cls, answer):
         if answer['duration']:
-            duration = f"   {'up for':<20} {timedelta(seconds=answer['duration']):>15} {'':<15} {'':<15}"
+            duration_value = timedelta(seconds=answer['duration'])
+            duration = f"   {'up for':<20} {duration_value:>15} {'':<15} {'':<15}"
         else:
-            duration = f"   {'down for':<20} {timedelta(seconds=answer['down']):>15} {'':<15} {'':<15}"
+            down_value = timedelta(seconds=answer['down'])
+            duration = f"   {'down for':<20} {down_value:>15} {'':<15} {'':<15}"
 
         formated = {
             'peer-address': answer['peer-address'],
@@ -614,4 +622,10 @@ Neighbor {peer-address}
 
     @classmethod
     def summary(cls, answer):
-        return f"{str(answer['peer-address']):<15} {_pr(answer['peer-as']):<7} {str(timedelta(seconds=answer['duration']) if answer['duration'] else 'down'):>9} {answer['state'].lower():<12} {answer['messages']['update'][0]:>10} {answer['messages']['update'][1]:>10}"
+        peer_addr = str(answer['peer-address'])
+        peer_as_str = _pr(answer['peer-as'])
+        duration_str = str(timedelta(seconds=answer['duration']) if answer['duration'] else 'down')
+        state_str = answer['state'].lower()
+        update_in = answer['messages']['update'][0]
+        update_out = answer['messages']['update'][1]
+        return f"{peer_addr:<15} {peer_as_str:<7} {duration_str:>9} {state_str:<12} {update_in:>10} {update_out:>10}"
