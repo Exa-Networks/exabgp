@@ -15,12 +15,12 @@ def main():
     ip = {}
     nexthop = '1.2.3.4'
 
-    for ip1 in range(0, 223):
+    for ip1 in range(223):
         generated = '%d.0.0.0/8' % (ip1)
         ip[generated] = nexthop
 
-    for ip1 in range(0, 223):
-        for ip2 in range(0, 256):
+    for ip1 in range(223):
+        for ip2 in range(256):
             generated = '%d.%d.0.0/16' % (ip1, ip2)
             ip[generated] = nexthop
 

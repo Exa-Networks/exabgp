@@ -11,8 +11,8 @@ def write(data):
 
 def main():
     msg = 'announce attribute next-hop 1.2.3.4 med 100 as-path [ 100 101 102 103 104 105 106 107 108 109 110 ] nlri %s'
-    write(msg % ' '.join('%d.0.0.0/8' % ip for ip in range(0, 224)))
-    write(msg % ' '.join('10.%d.0.0/16' % ip for ip in range(0, 256)))
+    write(msg % ' '.join('%d.0.0.0/8' % ip for ip in range(224)))
+    write(msg % ' '.join('10.%d.0.0/16' % ip for ip in range(256)))
 
     time.sleep(2)
 

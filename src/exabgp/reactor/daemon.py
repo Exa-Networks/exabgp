@@ -197,7 +197,7 @@ class Daemon:
         # closing more would close the log file too if open
         maxfd = 3
 
-        for fd in range(0, maxfd):
+        for fd in range(maxfd):
             try:
                 os.close(fd)
             except OSError:

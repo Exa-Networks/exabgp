@@ -37,18 +37,18 @@ def main():
         for _ in range(200)
     ]
 
-    for ip1 in range(0, range1):
-        for ip2 in range(0, 256):
-            for ip3 in range(0, 256):
+    for ip1 in range(range1):
+        for ip2 in range(256):
+            for ip3 in range(256):
                 generated = '%d.%d.%d.%d' % (random.randint(1, 200), ip1, ip2, ip3)
                 ip[generated] = random.choice(nexthop)
 
-    for ip2 in range(0, range2):
-        for ip3 in range(0, 256):
+    for ip2 in range(range2):
+        for ip3 in range(256):
             generated = '%d.%d.%d.%d' % (random.randint(1, 200), range1, ip2, ip3)
             ip[generated] = random.choice(nexthop)
 
-    for ip3 in range(0, range3):
+    for ip3 in range(range3):
         generated = '%d.%d.%d.%d' % (random.randint(1, 200), range1, range2, ip3)
         ip[generated] = random.choice(nexthop)
 

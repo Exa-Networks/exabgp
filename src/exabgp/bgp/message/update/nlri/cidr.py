@@ -102,7 +102,7 @@ class CIDR:
         return hash(bytes([self.mask]) + self._packed)
 
 
-for netmask in range(0, 129):
+for netmask in range(129):
     CIDR._mask_to_bytes[netmask] = int(math.ceil(float(netmask) / 8))
 
 CIDR.NOCIDR = CIDR('', 0)
