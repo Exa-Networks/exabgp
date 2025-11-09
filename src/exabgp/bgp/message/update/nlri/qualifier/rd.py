@@ -19,7 +19,7 @@ from exabgp.util import hexstring
 
 
 class RouteDistinguisher:
-    NORD: 'RouteDistinguisher | None' = None
+    NORD: RouteDistinguisher | None = None
 
     def __init__(self, rd):
         self.rd = rd

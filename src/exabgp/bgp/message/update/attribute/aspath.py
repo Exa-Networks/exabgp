@@ -68,7 +68,7 @@ class ASPath(Attribute):
     ID = Attribute.CODE.AS_PATH
     FLAG = Attribute.Flag.TRANSITIVE
 
-    Empty: 'ASPath | None' = None
+    Empty: ASPath | None = None
 
     _DISPATCH = {
         SET.ID: SET,
@@ -230,7 +230,7 @@ class AS4Path(ASPath):
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     ASN4 = True
 
-    Empty: 'AS4Path | None' = None
+    Empty: AS4Path | None = None
 
     def pack(self, negotiated=None):
         ASPath.pack(self, True)

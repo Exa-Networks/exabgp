@@ -20,7 +20,7 @@ class CIDR:
 
     _mask_to_bytes = {}
 
-    NOCIDR: 'CIDR | None' = None
+    NOCIDR: CIDR | None = None
 
     def __init__(self, packed, mask):
         self._packed = packed
