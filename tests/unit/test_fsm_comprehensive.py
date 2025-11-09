@@ -709,10 +709,10 @@ class TestFSMStateValidation:
 
     def test_state_invalid_code_raises_error(self):
         """Test STATE.__init__ raises error for invalid state code"""
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             FSM.STATE(0xFF)  # Invalid state code
 
-        assert 'invalid FSM code' in str(exc_info.value)
+        assert 'not a valid STATE' in str(exc_info.value)
 
     def test_state_valid_repr(self):
         """Test STATE __repr__ returns proper representation for valid states"""
@@ -736,17 +736,17 @@ class TestFSMStateValidation:
 
     def test_state_validation_zero(self):
         """Test STATE validation rejects zero"""
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             FSM.STATE(0)
 
     def test_state_validation_negative(self):
         """Test STATE validation rejects negative values"""
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             FSM.STATE(-1)
 
     def test_state_validation_large_value(self):
         """Test STATE validation rejects large invalid values"""
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             FSM.STATE(0x100)
 
 

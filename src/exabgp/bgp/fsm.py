@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+from enum import IntEnum
 
 # https://en.wikipedia.org/wiki/Border_Gateway_Protocol#Finite-state_machines
 
@@ -15,45 +16,41 @@ from __future__ import annotations
 #
 
 
+class STATE(IntEnum):
+    """BGP Finite State Machine states"""
+    IDLE = 0x01
+    ACTIVE = 0x02
+    CONNECT = 0x04
+    OPENSENT = 0x08
+    OPENCONFIRM = 0x10
+    ESTABLISHED = 0x20
+
+    def __repr__(self):
+        """Return just the state name for backward compatibility"""
+        return self.name
+
+    def __str__(self):
+        """Return just the state name for backward compatibility"""
+        return self.name
+
+
+# Add backward compatibility attributes for tests and legacy code
+STATE.names = {state.value: state.name for state in STATE}
+STATE.codes = {state.name: state.value for state in STATE}
+STATE.valid = [state.value for state in STATE]
+
+
 class FSM(object):
-    class STATE(int):
-        IDLE = 0x01
-        ACTIVE = 0x02
-        CONNECT = 0x04
-        OPENSENT = 0x08
-        OPENCONFIRM = 0x10
-        ESTABLISHED = 0x20
+    # Expose STATE enum members at class level for backward compatibility
+    IDLE = STATE.IDLE
+    ACTIVE = STATE.ACTIVE
+    CONNECT = STATE.CONNECT
+    OPENSENT = STATE.OPENSENT
+    OPENCONFIRM = STATE.OPENCONFIRM
+    ESTABLISHED = STATE.ESTABLISHED
 
-        names = {
-            IDLE: 'IDLE',
-            ACTIVE: 'ACTIVE',
-            CONNECT: 'CONNECT',
-            OPENSENT: 'OPENSENT',
-            OPENCONFIRM: 'OPENCONFIRM',
-            ESTABLISHED: 'ESTABLISHED',
-        }
-
-        codes = dict((name, code) for (code, name) in names.items())
-
-        valid = list(names)
-
-        def __init__(self, code):
-            if code not in self.valid:
-                raise RuntimeError(f'invalid FSM code {code}')
-            int.__init__(code)
-
-        def __repr__(self):
-            return self.names.get(self, f'INVALID 0x{hex(self)}')
-
-        def __str__(self):
-            return repr(self)
-
-    IDLE = STATE(0x01)
-    ACTIVE = STATE(0x02)
-    CONNECT = STATE(0x04)
-    OPENSENT = STATE(0x08)
-    OPENCONFIRM = STATE(0x10)
-    ESTABLISHED = STATE(0x20)
+    # Keep STATE reference for tests that access FSM.STATE
+    STATE = STATE
 
     # to: from
     transition = {
@@ -87,4 +84,11 @@ class FSM(object):
         return f'FSM state {self.state}'
 
     def name(self):
-        return self.STATE.names.get(self.state, 'INVALID')
+        """Return the name of the current state"""
+        if isinstance(self.state, STATE):
+            return self.state.name
+        # Fallback for invalid states
+        try:
+            return STATE(self.state).name
+        except ValueError:
+            return 'INVALID'
