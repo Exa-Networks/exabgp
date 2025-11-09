@@ -37,23 +37,17 @@ class AnnounceLabel(AnnouncePath):
 
     known = dict(
         AnnouncePath.known,
-        **{
-            'label': label,
-        },
+        label=label,
     )
 
     action = dict(
         AnnouncePath.action,
-        **{
-            'label': 'nlri-set',
-        },
+        label='nlri-set',
     )
 
     assign = dict(
         AnnouncePath.assign,
-        **{
-            'label': 'labels',
-        },
+        label='labels',
     )
 
     name = 'vpn'
