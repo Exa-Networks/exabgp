@@ -94,7 +94,7 @@ class IP(object):
             return socket.AF_INET6
         if '.' in ip:
             return socket.AF_INET
-        raise ValueError('unrecognised ip address %s' % ip)
+        raise ValueError(f'unrecognised ip address {ip}')
 
     @staticmethod
     def toafi(ip):
@@ -103,7 +103,7 @@ class IP(object):
             return AFI.ipv6
         if '.' in ip:
             return AFI.ipv4
-        raise ValueError('unrecognised ip address %s' % ip)
+        raise ValueError(f'unrecognised ip address {ip}')
 
     @staticmethod
     def tosafi(ip):
@@ -115,7 +115,7 @@ class IP(object):
             if int(ip.split('.')[0]) in IP._multicast_range:
                 return SAFI.multicast
             return SAFI.unicast
-        raise ValueError('unrecognised ip address %s' % ip)
+        raise ValueError(f'unrecognised ip address {ip}')
 
     def ipv4(self):
         return len(self._packed) == 4
@@ -181,7 +181,7 @@ class IP(object):
         elif '.' in ip:
             afi = IPv4.afi
         else:
-            raise ValueError('can not decode this ip address : %s' % ip)
+            raise ValueError(f'can not decode this ip address : {ip}')
         if afi in cls._known:
             return cls._known[afi]
 
@@ -217,7 +217,7 @@ class IPRange(IP):
         if (self.ipv4() and self.mask == 32) or (self.ipv6() and self.mask == 128):
             return super(IPRange, self).__repr__()
         else:
-            return '%s/%d' % (self.top(), int(self.mask))
+            return f'{self.top()}/{int(self.mask)}'
 
 
 # ==================================================================== NoNextHop

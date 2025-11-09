@@ -91,7 +91,7 @@ class Operational(Message):
         return self.extensive()
 
     def extensive(self):
-        return 'operational %s' % self.name
+        return f'operational {self.name}'
 
     @staticmethod
     def register(klass):
@@ -195,7 +195,7 @@ class NS(object):
             OperationalFamily.__init__(self, Operational.CODE.NS, afi, safi, sequence + self.ERROR_SUBCODE)
 
         def extensive(self):
-            return 'operational NS %s %s/%s' % (self.name, self.afi, self.safi)
+            return f'operational NS {self.name} {self.afi}/{self.safi}'
 
     class Malformed(_NS):
         name = 'NS malformed'
@@ -231,7 +231,7 @@ class Advisory(object):
         category = 'advisory'
 
         def extensive(self):
-            return 'operational %s afi %s safi %s "%s"' % (self.name, self.afi, self.safi, self.data)
+            return f'operational {self.name} afi {self.afi} safi {self.safi} "{self.data}"'
 
     @Operational.register
     class ADM(_Advisory):
@@ -277,14 +277,8 @@ class Query(object):
 
         def extensive(self):
             if self._routerid and self._sequence:
-                return 'operational %s afi %s safi %s router-id %s sequence %d' % (
-                    self.name,
-                    self.afi,
-                    self.safi,
-                    self._routerid,
-                    self._sequence,
-                )
-            return 'operational %s afi %s safi %s' % (self.name, self.afi, self.safi)
+                return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence}'
+            return f'operational {self.name} afi {self.afi} safi {self.safi}'
 
     @Operational.register
     class RPCQ(_Query):
@@ -316,15 +310,8 @@ class Response(object):
 
         def extensive(self):
             if self._routerid and self._sequence:
-                return 'operational %s afi %s safi %s router-id %s sequence %d counter %d' % (
-                    self.name,
-                    self.afi,
-                    self.safi,
-                    self._routerid,
-                    self._sequence,
-                    self.counter,
-                )
-            return 'operational %s afi %s safi %s counter %d' % (self.name, self.afi, self.safi, self.counter)
+                return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence} counter {self.counter}'
+            return f'operational {self.name} afi {self.afi} safi {self.safi} counter {self.counter}'
 
     @Operational.register
     class RPCP(_Counter):

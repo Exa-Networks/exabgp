@@ -140,7 +140,7 @@ class Neighbor(dict):
         # - have multiple exabgp toward one peer on the same host ( use of pid )
         # - have more than once connection toward a peer
         # - each connection has it own neihgbor (hence why identificator is not in Protocol)
-        self.uid = '%d' % self._GLOBAL['uid']
+        self.uid = f"{self._GLOBAL['uid']}"
         self._GLOBAL['uid'] += 1
 
     def infer(self):
@@ -156,12 +156,12 @@ class Neighbor(dict):
         self['capability']['graceful-restart'] = int(self['hold-time'])
 
     def id(self):
-        return 'neighbor-%s' % self.uid
+        return f'neighbor-{self.uid}'
 
     # This set must be unique between peer, not full draft-ietf-idr-bgp-multisession-07
     def index(self):
         if self['listen'] != 0:
-            return 'peer-ip %s listen %d' % (self['peer-address'], self['listen'])
+            return f"peer-ip {self['peer-address']} listen {self['listen']}"
         return self.name()
 
     def make_rib(self):
@@ -181,17 +181,10 @@ class Neighbor(dict):
 
     def name(self):
         if self['capability']['multi-session']:
-            session = '/'.join('%s-%s' % (afi.name(), safi.name()) for (afi, safi) in self.families())
+            session = '/'.join(f'{afi.name()}-{safi.name()}' for (afi, safi) in self.families())
         else:
             session = 'in-open'
-        return 'neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s' % (
-            self['peer-address'],
-            self['local-address'] if self['peer-address'] is not None else 'auto',
-            self['local-as'] if self['local-as'] is not None else 'auto',
-            self['peer-as'] if self['peer-as'] is not None else 'auto',
-            self['router-id'],
-            session,
-        )
+        return f"neighbor {self['peer-address']} local-ip {self['local-address'] if self['peer-address'] is not None else 'auto'} local-as {self['local-as'] if self['local-as'] is not None else 'auto'} peer-as {self['peer-as'] if self['peer-as'] is not None else 'auto'} router-id {self['router-id']} family-allowed {session}"
 
     def families(self):
         # this list() is important .. as we use the function to modify self._families
@@ -305,8 +298,7 @@ class Neighbor(dict):
             return self['router-id']
 
         raise TypeError(
-            'use of "next-hop self": the route (%s) does not have the same family as the BGP tcp session (%s)'
-            % (afi, self['local-address'].afi)
+            f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({self["local-address"].afi})'
         )
 
     def remove_self(self, changes):
@@ -332,7 +324,7 @@ def _en(value):
 def _pr(value):
     if value is None:
         return 'n/a'
-    return '%s' % value
+    return f'{value}'
 
 
 def _addpath(send, receive):
@@ -348,26 +340,26 @@ def _addpath(send, receive):
 class NeighborTemplate(object):
     extensive_kv = '   %-20s %15s %15s %15s'
     extensive_template = """\
-Neighbor %(peer-address)s
+Neighbor {peer-address}
 
     Session                         Local
-%(local-address)s
-%(state)s
-%(duration)s
+{local-address}
+{state}
+{duration}
 
     Setup                           Local          Remote
-%(as)s
-%(id)s
-%(hold)s
+{as}
+{id}
+{hold}
 
     Capability                      Local          Remote
-%(capabilities)s
+{capabilities}
 
     Families                        Local          Remote        Add-Path
-%(families)s
+{families}
 
     Message Statistic                Sent        Received
-%(messages)s
+{messages}
 """.replace('\t', '  ')
 
     summary_header = 'Peer            AS        up/down state       |     #sent     #recvd'
@@ -379,20 +371,20 @@ Neighbor %(peer-address)s
         if with_changes:
             changes += '\nstatic { '
             for change in neighbor.rib.outgoing.queued_changes():
-                changes += '\n\t\t%s' % change.extensive()
+                changes += f'\n\t\t{change.extensive()}'
             changes += '\n}'
 
         families = ''
         for afi, safi in neighbor.families():
-            families += '\n\t\t%s %s;' % (afi.name(), safi.name())
+            families += f'\n\t\t{afi.name()} {safi.name()};'
 
         nexthops = ''
         for afi, safi, nexthop in neighbor.nexthops():
-            nexthops += '\n\t\t%s %s %s;' % (afi.name(), safi.name(), nexthop.name())
+            nexthops += f'\n\t\t{afi.name()} {safi.name()} {nexthop.name()};'
 
         addpaths = ''
         for afi, safi in neighbor.addpaths():
-            addpaths += '\n\t\t%s %s;' % (afi.name(), safi.name())
+            addpaths += f'\n\t\t{afi.name()} {safi.name()};'
 
         codes = Message.CODE
 
@@ -407,24 +399,24 @@ Neighbor %(peer-address)s
             'receive-packets': 'packets',
             'receive-parsed': 'parsed',
             'receive-consolidate': 'consolidate',
-            'receive-%s' % codes.NOTIFICATION.SHORT: 'notification',
-            'receive-%s' % codes.OPEN.SHORT: 'open',
-            'receive-%s' % codes.KEEPALIVE.SHORT: 'keepalive',
-            'receive-%s' % codes.UPDATE.SHORT: 'update',
-            'receive-%s' % codes.ROUTE_REFRESH.SHORT: 'refresh',
-            'receive-%s' % codes.OPERATIONAL.SHORT: 'operational',
+            f'receive-{codes.NOTIFICATION.SHORT}': 'notification',
+            f'receive-{codes.OPEN.SHORT}': 'open',
+            f'receive-{codes.KEEPALIVE.SHORT}': 'keepalive',
+            f'receive-{codes.UPDATE.SHORT}': 'update',
+            f'receive-{codes.ROUTE_REFRESH.SHORT}': 'refresh',
+            f'receive-{codes.OPERATIONAL.SHORT}': 'operational',
         }
 
         _extension_send = {
             'send-packets': 'packets',
             'send-parsed': 'parsed',
             'send-consolidate': 'consolidate',
-            'send-%s' % codes.NOTIFICATION.SHORT: 'notification',
-            'send-%s' % codes.OPEN.SHORT: 'open',
-            'send-%s' % codes.KEEPALIVE.SHORT: 'keepalive',
-            'send-%s' % codes.UPDATE.SHORT: 'update',
-            'send-%s' % codes.ROUTE_REFRESH.SHORT: 'refresh',
-            'send-%s' % codes.OPERATIONAL.SHORT: 'operational',
+            f'send-{codes.NOTIFICATION.SHORT}': 'notification',
+            f'send-{codes.OPEN.SHORT}': 'open',
+            f'send-{codes.KEEPALIVE.SHORT}': 'keepalive',
+            f'send-{codes.UPDATE.SHORT}': 'update',
+            f'send-{codes.ROUTE_REFRESH.SHORT}': 'refresh',
+            f'send-{codes.OPERATIONAL.SHORT}': 'operational',
         }
 
         apis = ''
@@ -437,7 +429,7 @@ Neighbor %(peer-address)s
             for api, name in _extension_global.items():
                 _global.extend(
                     [
-                        '\t\t%s;\n' % name,
+                        f'\t\t{name};\n',
                     ]
                     if process in neighbor.api[api]
                     else []
@@ -446,7 +438,7 @@ Neighbor %(peer-address)s
             for api, name in _extension_receive.items():
                 _receive.extend(
                     [
-                        '\t\t\t%s;\n' % name,
+                        f'\t\t\t{name};\n',
                     ]
                     if process in neighbor.api[api]
                     else []
@@ -455,14 +447,14 @@ Neighbor %(peer-address)s
             for api, name in _extension_send.items():
                 _send.extend(
                     [
-                        '\t\t\t%s;\n' % name,
+                        f'\t\t\t{name};\n',
                     ]
                     if process in neighbor.api[api]
                     else []
                 )
 
             _api = '\tapi {\n'
-            _api += '\t\tprocesses [ %s ];\n' % process
+            _api += f'\t\tprocesses [ {process} ];\n'
             _api += ''.join(_global)
             if _receive:
                 _api += '\t\treceive {\n'
@@ -477,83 +469,50 @@ Neighbor %(peer-address)s
             apis += _api
 
         returned = (
-            'neighbor %s {\n'
-            '\tdescription "%s";\n'
-            '\trouter-id %s;\n'
-            '\thost-name %s;\n'
-            '\tdomain-name %s;\n'
-            '\tlocal-address %s;\n'
-            '\tsource-interface %s;\n'
-            '\tlocal-as %s;\n'
-            '\tpeer-as %s;\n'
-            '\thold-time %s;\n'
-            '\trate-limit %s;\n'
-            '\tmanual-eor %s;\n'
-            '%s%s%s%s%s%s%s%s%s%s%s\n'
-            '\tcapability {\n'
-            '%s%s%s%s%s%s%s%s%s%s\t}\n'
-            '\tfamily {%s\n'
-            '\t}\n'
-            '\tnexthop {%s\n'
-            '\t}\n'
-            '\tadd-path {%s\n'
-            '\t}\n'
-            '%s'
-            '%s'
-            '}'
-            % (
-                neighbor['peer-address'],
-                neighbor['description'],
-                neighbor['router-id'],
-                neighbor['host-name'],
-                neighbor['domain-name'],
-                neighbor['local-address'] if not neighbor.auto_discovery else 'auto',
-                neighbor['source-interface'],
-                neighbor['local-as'],
-                neighbor['peer-as'],
-                neighbor['hold-time'],
-                'disable' if neighbor['rate-limit'] == 0 else neighbor['rate-limit'],
-                'true' if neighbor['manual-eor'] else 'false',
-                '\n\tpassive %s;\n' % ('true' if neighbor['passive'] else 'false'),
-                '\n\tlisten %d;\n' % neighbor['listen'] if neighbor['listen'] else '',
-                '\n\tconnect %d;\n' % neighbor['connect'] if neighbor['connect'] else '',
-                '\tgroup-updates %s;\n' % ('true' if neighbor['group-updates'] else 'false'),
-                '\tauto-flush %s;\n' % ('true' if neighbor['auto-flush'] else 'false'),
-                '\tadj-rib-in %s;\n' % ('true' if neighbor['adj-rib-in'] else 'false'),
-                '\tadj-rib-out %s;\n' % ('true' if neighbor['adj-rib-out'] else 'false'),
-                '\tmd5-password "%s";\n' % neighbor['md5-password'] if neighbor['md5-password'] else '',
-                '\tmd5-base64 %s;\n'
-                % (
-                    'true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'
-                ),
-                '\tmd5-ip "%s";\n' % neighbor['md5-ip'] if not neighbor.auto_discovery else '',
-                '\toutgoing-ttl %s;\n' % neighbor['outgoing-ttl'] if neighbor['outgoing-ttl'] else '',
-                '\tincoming-ttl %s;\n' % neighbor['incoming-ttl'] if neighbor['incoming-ttl'] else '',
-                '\t\tasn4 %s;\n' % ('enable' if neighbor['capability']['asn4'] else 'disable'),
-                '\t\troute-refresh %s;\n' % ('enable' if neighbor['capability']['route-refresh'] else 'disable'),
-                '\t\tgraceful-restart %s;\n'
-                % (
-                    neighbor['capability']['graceful-restart']
-                    if neighbor['capability']['graceful-restart']
-                    else 'disable'
-                ),
-                '\t\tsoftware-version %s;\n' % ('enable' if neighbor['capability']['software-version'] else 'disable'),
-                '\t\tnexthop %s;\n' % ('enable' if neighbor['capability']['nexthop'] else 'disable'),
-                '\t\tadd-path %s;\n'
-                % (
-                    AddPath.string[neighbor['capability']['add-path']]
-                    if neighbor['capability']['add-path']
-                    else 'disable'
-                ),
-                '\t\tmulti-session %s;\n' % ('enable' if neighbor['capability']['multi-session'] else 'disable'),
-                '\t\toperational %s;\n' % ('enable' if neighbor['capability']['operational'] else 'disable'),
-                '\t\taigp %s;\n' % ('enable' if neighbor['capability']['aigp'] else 'disable'),
-                families,
-                nexthops,
-                addpaths,
-                apis,
-                changes,
-            )
+            f'neighbor {neighbor["peer-address"]} {{\n'
+            f'\tdescription "{neighbor["description"]}";\n'
+            f'\trouter-id {neighbor["router-id"]};\n'
+            f'\thost-name {neighbor["host-name"]};\n'
+            f'\tdomain-name {neighbor["domain-name"]};\n'
+            f'\tlocal-address {neighbor["local-address"] if not neighbor.auto_discovery else "auto"};\n'
+            f'\tsource-interface {neighbor["source-interface"]};\n'
+            f'\tlocal-as {neighbor["local-as"]};\n'
+            f'\tpeer-as {neighbor["peer-as"]};\n'
+            f'\thold-time {neighbor["hold-time"]};\n'
+            f'\trate-limit {"disable" if neighbor["rate-limit"] == 0 else neighbor["rate-limit"]};\n'
+            f'\tmanual-eor {"true" if neighbor["manual-eor"] else "false"};\n'
+            f'\n\tpassive {"true" if neighbor["passive"] else "false"};\n' +
+            (f'\n\tlisten {neighbor["listen"]};\n' if neighbor['listen'] else '') +
+            (f'\n\tconnect {neighbor["connect"]};\n' if neighbor['connect'] else '') +
+            f"\tgroup-updates {'true' if neighbor['group-updates'] else 'false'};\n"
+            f"\tauto-flush {'true' if neighbor['auto-flush'] else 'false'};\n"
+            f"\tadj-rib-in {'true' if neighbor['adj-rib-in'] else 'false'};\n"
+            f"\tadj-rib-out {'true' if neighbor['adj-rib-out'] else 'false'};\n" +
+            (f'\tmd5-password "{neighbor["md5-password"]}";\n' if neighbor['md5-password'] else '') +
+            f"\tmd5-base64 {'true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'};\n" +
+            (f'\tmd5-ip "{neighbor["md5-ip"]}";\n' if not neighbor.auto_discovery else '') +
+            (f'\toutgoing-ttl {neighbor["outgoing-ttl"]};\n' if neighbor['outgoing-ttl'] else '') +
+            (f'\tincoming-ttl {neighbor["incoming-ttl"]};\n' if neighbor['incoming-ttl'] else '') +
+            f'\tcapability {{\n'
+            f"\t\tasn4 {'enable' if neighbor['capability']['asn4'] else 'disable'};\n"
+            f"\t\troute-refresh {'enable' if neighbor['capability']['route-refresh'] else 'disable'};\n"
+            f"\t\tgraceful-restart {neighbor['capability']['graceful-restart'] if neighbor['capability']['graceful-restart'] else 'disable'};\n"
+            f"\t\tsoftware-version {'enable' if neighbor['capability']['software-version'] else 'disable'};\n"
+            f"\t\tnexthop {'enable' if neighbor['capability']['nexthop'] else 'disable'};\n"
+            f"\t\tadd-path {AddPath.string[neighbor['capability']['add-path']] if neighbor['capability']['add-path'] else 'disable'};\n"
+            f"\t\tmulti-session {'enable' if neighbor['capability']['multi-session'] else 'disable'};\n"
+            f"\t\toperational {'enable' if neighbor['capability']['operational'] else 'disable'};\n"
+            f"\t\taigp {'enable' if neighbor['capability']['aigp'] else 'disable'};\n"
+            f'\t}}\n'
+            f'\tfamily {{{families}\n'
+            f'\t}}\n'
+            f'\tnexthop {{{nexthops}\n'
+            f'\t}}\n'
+            f'\tadd-path {{{addpaths}\n'
+            f'\t}}\n'
+            f'{apis}'
+            f'{changes}'
+            f'}}'
         )
 
         # '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
@@ -585,7 +544,7 @@ Neighbor %(peer-address)s
         }
 
         for (a, s), (lf, pf, aps, apr) in answer['families'].items():
-            k = '%s %s' % (a, s)
+            k = f'{a} {s}'
             formated['local']['families'][k] = lf
             formated['peer']['families'][k] = pf
             formated['local']['add-path'][k] = aps
@@ -619,27 +578,27 @@ Neighbor %(peer-address)s
     @classmethod
     def formated_dict(cls, answer):
         if answer['duration']:
-            duration = cls.extensive_kv % ('up for', timedelta(seconds=answer['duration']), '', '')
+            duration = f"   {'up for':<20} {timedelta(seconds=answer['duration']):>15} {'':<15} {'':<15}"
         else:
-            duration = cls.extensive_kv % ('down for', timedelta(seconds=answer['down']), '', '')
+            duration = f"   {'down for':<20} {timedelta(seconds=answer['down']):>15} {'':<15} {'':<15}"
 
         formated = {
             'peer-address': answer['peer-address'],
-            'local-address': cls.extensive_kv % ('local', answer['local-address'], '', ''),
-            'state': cls.extensive_kv % ('state', answer['state'], '', ''),
+            'local-address': f"   {'local':<20} {answer['local-address']:>15} {'':<15} {'':<15}",
+            'state': f"   {'state':<20} {answer['state']:>15} {'':<15} {'':<15}",
             'duration': duration,
-            'as': cls.extensive_kv % ('AS', answer['local-as'], _pr(answer['peer-as']), ''),
-            'id': cls.extensive_kv % ('ID', answer['local-id'], _pr(answer['peer-id']), ''),
-            'hold': cls.extensive_kv % ('hold-time', answer['local-hold'], _pr(answer['peer-hold']), ''),
+            'as': f"   {'AS':<20} {answer['local-as']:>15} {_pr(answer['peer-as']):>15} {'':<15}",
+            'id': f"   {'ID':<20} {answer['local-id']:>15} {_pr(answer['peer-id']):>15} {'':<15}",
+            'hold': f"   {'hold-time':<20} {answer['local-hold']:>15} {_pr(answer['peer-hold']):>15} {'':<15}",
             'capabilities': '\n'.join(
-                cls.extensive_kv % ('%s:' % k, _en(lc), _en(pc), '') for k, (lc, pc) in answer['capabilities'].items()
+                f"   {f'{k}:':<20} {_en(lc):>15} {_en(pc):>15} {'':<15}" for k, (lc, pc) in answer['capabilities'].items()
             ),
             'families': '\n'.join(
-                cls.extensive_kv % ('%s %s:' % (a, s), _en(lf), _en(rf), _addpath(aps, apr))
+                f"   {f'{a} {s}:':<20} {_en(lf):>15} {_en(rf):>15} {_addpath(aps, apr):<15}"
                 for (a, s), (lf, rf, apr, aps) in answer['families'].items()
             ),
             'messages': '\n'.join(
-                cls.extensive_kv % ('%s:' % k, str(ms), str(mr), '') for k, (ms, mr) in answer['messages'].items()
+                f"   {f'{k}:':<20} {str(ms):>15} {str(mr):>15} {'':<15}" for k, (ms, mr) in answer['messages'].items()
             ),
         }
 
@@ -651,15 +610,8 @@ Neighbor %(peer-address)s
 
     @classmethod
     def extensive(cls, answer):
-        return cls.extensive_template % cls.formated_dict(answer)
+        return cls.extensive_template.format(**cls.formated_dict(answer))
 
     @classmethod
     def summary(cls, answer):
-        return cls.summary_template % (
-            answer['peer-address'],
-            _pr(answer['peer-as']),
-            timedelta(seconds=answer['duration']) if answer['duration'] else 'down',
-            answer['state'].lower(),
-            answer['messages']['update'][0],
-            answer['messages']['update'][1],
-        )
+        return f"{str(answer['peer-address']):<15} {_pr(answer['peer-as']):<7} {str(timedelta(seconds=answer['duration']) if answer['duration'] else 'down'):>9} {answer['state'].lower():<12} {answer['messages']['update'][0]:>10} {answer['messages']['update'][1]:>10}"

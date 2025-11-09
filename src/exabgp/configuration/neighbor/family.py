@@ -110,9 +110,9 @@ class ParseFamily(Section):
 
         pair = self.convert[afi].get(safi, None)
         if not pair:
-            raise ValueError('invalid afi/safi pair %s/%s' % (afi, safi))
+            raise ValueError(f'invalid afi/safi pair {afi}/{safi}')
         if pair in self._seen:
-            raise ValueError('duplicate afi/safi pair %s/%s' % (afi, safi))
+            raise ValueError(f'duplicate afi/safi pair {afi}/{safi}')
         self._seen.append(pair)
         return pair
 

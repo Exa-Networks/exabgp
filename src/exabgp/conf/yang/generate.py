@@ -30,7 +30,7 @@ class Generate(object):
     def _generate(self):
         returned = self.intro
         for name, data in self.dicts:
-            returned += self.variable.format(name=name, data=data)
+            returned += f'{name} = {data}\n'
             returned += '\n'
         for section in self.codes:
             returned += section

@@ -23,9 +23,4 @@ else:
 
 def usage(label='usage'):
     rusage = resource.getrusage(resource.RUSAGE_SELF)
-    return '%s: usertime=%s systime=%s mem=%s mb' % (
-        label,
-        rusage.ru_utime,
-        rusage.ru_stime,
-        (rusage.ru_maxrss / DIVISOR),
-    )
+    return f'{label}: usertime={rusage.ru_utime} systime={rusage.ru_stime} mem={rusage.ru_maxrss / DIVISOR} mb'
