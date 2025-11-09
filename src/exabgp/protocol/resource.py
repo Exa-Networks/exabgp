@@ -28,10 +28,10 @@ class Resource(int):
         return instance
 
     def short(self):
-        return self.names.get(self, f'{self}')
+        return self.names.get(self, '%ld' % self)
 
     def __str__(self):
-        return self.names.get(self, f'unknown {self.NAME} type {self}')
+        return self.names.get(self, 'unknown %s type %ld' % (self.NAME, self))
 
     @classmethod
     def _value(cls, string):
