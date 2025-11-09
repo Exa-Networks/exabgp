@@ -107,7 +107,7 @@ class option(object):
             cls.formater = formater(env.log.short, 'stdout')
             return
 
-        if cls.destination == 'stdout':
+        if cls.destination == 'stderr':
             cls.logger = get_logger(
                 f'ExaBGP stderr {now}',
                 format='%(message)s',
