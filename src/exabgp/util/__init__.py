@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import string
 
+# Hexadecimal string prefix length
+HEX_PREFIX_LENGTH = 2  # Length of '0x' prefix
+
 
 def hexstring(value):
     def spaced(value):
@@ -24,11 +27,11 @@ def hexbytes(value):
 
 
 def string_is_hex(s):
-    if s[:2].lower() != '0x':
+    if s[:HEX_PREFIX_LENGTH].lower() != '0x':
         return False
-    if len(s) <= 2:
+    if len(s) <= HEX_PREFIX_LENGTH:
         return False
-    return all(c in string.hexdigits for c in s[2:])
+    return all(c in string.hexdigits for c in s[HEX_PREFIX_LENGTH:])
 
 
 def split(data, step):

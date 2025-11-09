@@ -1,0 +1,47 @@
+diff --git a/qa/bin/functional b/qa/bin/functional
+index 81a095a4..4b63f12b 100755
+--- a/qa/bin/functional
++++ b/qa/bin/functional
+@@ -161,6 +161,8 @@ class Exec(object):
+             pass
+ 
+     def terminate(self):
++        if self._process is None:
++            return
+         try:
+             self._process.send_signal(signal.SIGTERM)
+         except OSError:  # No such process, Errno 3
+@@ -168,7 +170,7 @@ class Exec(object):
+         self.collect()
+ 
+     def __del__(self):
+-        self.terminate
++        self.terminate()
+ 
+ 
+ State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP')
+@@ -518,6 +520,8 @@ class EncodingTests(Tests):
+         for test in running:
+             test.fail()
+             test.terminate()
++            client[test.nick].terminate()
++            success = False
+ 
+         self.display()
+         return success
+@@ -654,6 +658,7 @@ class DecodingTests(Tests):
+         for test in running:
+             test.fail()
+             test.terminate()
++            success = False
+ 
+         self.display()
+         return success
+@@ -728,6 +733,7 @@ class ParsingTests(Tests):
+         for test in running:
+             test.fail()
+             test.terminate()
++            success = False
+ 
+         self.display()
+         return success

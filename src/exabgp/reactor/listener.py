@@ -31,6 +31,9 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.logger import log
 
+# Network port constants
+MAX_PRIVILEGED_PORT = 1024  # Highest privileged port number (requires root on Unix)
+
 
 class Listener:
     _family_AFI_map = {
@@ -107,7 +110,7 @@ class Listener:
             )
             return True
         except NetworkError as exc:
-            if os.geteuid() != 0 and port <= 1024:
+            if os.geteuid() != 0 and port <= MAX_PRIVILEGED_PORT:
                 log.critical(
                     f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root', 'network',
                 )

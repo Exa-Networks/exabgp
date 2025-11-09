@@ -14,6 +14,10 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 
+# CIDR netmask constants
+CIDR_IPV4_MAX_MASK = 24  # Maximum IPv4 mask for heuristic detection
+CIDR_IPV6_LENGTH_BYTES = 4  # IPv6 address length in bytes (for detection)
+
 
 class CIDR:
     EOR = False
@@ -91,7 +95,7 @@ class CIDR:
 
     @classmethod
     def unpack(cls, data):
-        afi = AFI.ipv6 if len(data) > 4 or data[0] > 24 else AFI.ipv4
+        afi = AFI.ipv6 if len(data) > CIDR_IPV6_LENGTH_BYTES or data[0] > CIDR_IPV4_MAX_MASK else AFI.ipv4
         prefix, mask = cls.decode(afi, data)
         return cls(prefix, mask)
 

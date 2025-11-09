@@ -1,4 +1,3 @@
-
 """srv6endx.py
 
 Created by Vincent Bernat
@@ -9,11 +8,10 @@ from __future__ import annotations
 
 import json
 from struct import unpack
-from exabgp.util import hexstring
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
 from exabgp.protocol.ip import IPv6
+from exabgp.util import hexstring
 
 #    RFC 9514:  4.1. SRv6 End.X SID TLV
 #  0                   1                   2                   3
@@ -48,7 +46,9 @@ class Srv6EndX(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
-                'behavior: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(d.behavior, d.flags, d.algorithm, d.weight, d.sid)
+                'behavior: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
+                    d.behavior, d.flags, d.algorithm, d.weight, d.sid
+                )
                 for d in self.content
             ],
         )
@@ -74,25 +74,29 @@ class Srv6EndX(FlagLS):
         data = data[22:]
         subtlvs = []
 
-        while data and len(data) >= 4:
+        while data and len(data) >= cls.BGPLS_SUBTLV_HEADER_SIZE:
             code = unpack('!H', data[0:2])[0]
             length = unpack('!H', data[2:4])[0]
 
             if code in cls.registered_subsubtlvs:
-                subsubtlv = cls.registered_subsubtlvs[code].unpack(data[4 : length + 4])
+                subsubtlv = cls.registered_subsubtlvs[code].unpack(
+                    data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE]
+                )
+                subtlvs.append(subsubtlv.json())
             else:
-                subsubtlv = hexstring(data[4 : length + 4])
-            data = data[length + 4 :]
-
-            subtlvs.append(subsubtlv.json())
+                subsubtlv = hexstring(data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE])
+                # BUG: To be fixed
+                subtlvs.append(subsubtlv.json())
+            data = data[length + cls.BGPLS_SUBTLV_HEADER_SIZE :]
 
         content = {
             'flags': flags,
             'behavior': behavior,
             'algorithm': algorithm,
             'weight': weight,
-            'sid': sid
-        , **json.loads('{' + ', '.join(subtlvs) + '}')}
+            'sid': sid,
+            **json.loads('{' + ', '.join(subtlvs) + '}'),
+        }
 
         return cls(content=content)
 

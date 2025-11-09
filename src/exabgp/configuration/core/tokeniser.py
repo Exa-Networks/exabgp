@@ -13,6 +13,9 @@ from collections import deque
 from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
 
+# Minimum line length for parameters extraction
+MIN_LINE_LENGTH_FOR_PARAMS = 2  # Minimum line tokens needed to have parameters
+
 
 class Iterator:
     def __init__(self):
@@ -98,7 +101,7 @@ class Tokeniser:
             self._set(self._data)
 
     def params(self):
-        if len(self.line) <= 2:
+        if len(self.line) <= MIN_LINE_LENGTH_FOR_PARAMS:
             return ''
         if self.end in ('{', '}', ';'):
             joined = "' '".join(self.line[1:-1])

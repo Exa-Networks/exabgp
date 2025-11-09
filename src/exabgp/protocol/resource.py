@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from exabgp.util import string_is_hex
 
+# Resource value range constants
+RESOURCE_VALUE_MAX = 0xFFFF  # Maximum 16-bit unsigned integer value
+
 
 class Resource(int):
     NAME = ''
@@ -41,11 +44,11 @@ class Resource(int):
             return cls.codes[name]
         if string.isdigit():
             value = int(string)
-            if 0 <= value <= 0xFFFF:
+            if 0 <= value <= RESOURCE_VALUE_MAX:
                 return value
         if string_is_hex(string):
             value = int(string[2:], 16)
-            if 0 <= value <= 0xFFFF:
+            if 0 <= value <= RESOURCE_VALUE_MAX:
                 return value
         raise ValueError(f'unknown {cls.NAME} {name}')
 

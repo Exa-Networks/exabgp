@@ -32,6 +32,14 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.logger import log
 from exabgp.logger import lazyformat
 
+# Update message header offsets and constants
+UPDATE_WITHDRAWN_LENGTH_OFFSET = 2  # Offset to start of withdrawn routes
+UPDATE_ATTR_LENGTH_HEADER_SIZE = 4  # Size of withdrawn length (2) + attr length (2)
+
+# EOR (End-of-RIB) message length constants
+EOR_IPV4_UNICAST_LENGTH = 4  # Length of IPv4 unicast EOR marker
+EOR_WITH_PREFIX_LENGTH = 11  # Length of EOR with NLRI prefix
+
 # ======================================================================= Update
 
 # +-----------------------------------------------------+
@@ -79,22 +87,22 @@ class Update(Message):
     def split(data):
         length = len(data)
 
-        len_withdrawn = unpack('!H', data[0:2])[0]
-        withdrawn = data[2 : len_withdrawn + 2]
+        len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
+        withdrawn = data[UPDATE_WITHDRAWN_LENGTH_OFFSET : len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET]
 
         if len(withdrawn) != len_withdrawn:
             raise Notify(3, 1, 'invalid withdrawn routes length, not enough data available')
 
-        start_attributes = len_withdrawn + 4
-        len_attributes = unpack('!H', data[len_withdrawn + 2 : start_attributes])[0]
-        start_announced = len_withdrawn + len_attributes + 4
+        start_attributes = len_withdrawn + UPDATE_ATTR_LENGTH_HEADER_SIZE
+        len_attributes = unpack('!H', data[len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET : start_attributes])[0]
+        start_announced = len_withdrawn + len_attributes + UPDATE_ATTR_LENGTH_HEADER_SIZE
         attributes = data[start_attributes:start_announced]
         announced = data[start_announced:]
 
         if len(attributes) != len_attributes:
             raise Notify(3, 1, 'invalid total path attribute length, not enough data available')
 
-        if 2 + len_withdrawn + 2 + len_attributes + len(announced) != length:
+        if UPDATE_WITHDRAWN_LENGTH_OFFSET + len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET + len_attributes + len(announced) != length:
             raise Notify(3, 1, 'error in BGP message length, not enough data for the size announced')
 
         return withdrawn, attributes, announced
@@ -254,9 +262,9 @@ class Update(Message):
         length = len(data)
 
         # This could be speed up massively by changing the order of the IF
-        if length == 4 and data == b'\x00\x00\x00\x00':
+        if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
             return EOR(AFI.ipv4, SAFI.unicast)  # pylint: disable=E1101
-        if length == 11 and data.startswith(EOR.NLRI.PREFIX):
+        if length == EOR_WITH_PREFIX_LENGTH and data.startswith(EOR.NLRI.PREFIX):
             return EOR.unpack_message(data, direction, negotiated)
 
         withdrawn, _attributes, announced = cls.split(data)

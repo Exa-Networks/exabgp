@@ -31,6 +31,13 @@ from struct import pack
 # |          TEID (0-4 octets)        |
 # +-----------------------------------+
 
+# MUP Type 2 Session Transformed Route constants
+MUP_T2ST_IPV4_SIZE_BITS = 32  # IPv4 address size in bits
+MUP_T2ST_IPV6_SIZE_BITS = 128  # IPv6 address size in bits
+MUP_T2ST_TEID_MAX_SIZE = 32  # Maximum TEID size in bits
+MUP_T2ST_IPV4_MAX_ENDPOINT = 64  # Max endpoint length for IPv4 (32 IP + 32 TEID)
+MUP_T2ST_IPV6_MAX_ENDPOINT = 160  # Max endpoint length for IPv6 (128 IP + 32 TEID)
+
 
 @MUP.register
 class Type2SessionTransformedRoute(MUP):
@@ -97,10 +104,10 @@ class Type2SessionTransformedRoute(MUP):
         )
         # fmt: on
 
-        endpoint_size = 32 if self.endpoint_ip.afi == AFI.ipv4 else 128
+        endpoint_size = MUP_T2ST_IPV4_SIZE_BITS if self.endpoint_ip.afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
         teid_size = self.endpoint_len - endpoint_size
 
-        if teid_size < 0 or teid_size > 32:
+        if teid_size < 0 or teid_size > MUP_T2ST_TEID_MAX_SIZE:
             raise Exception('teid is too large %d (range 0~32)' % teid_size)
 
         teid_packed = pack('!I', self.teid)
@@ -119,7 +126,7 @@ class Type2SessionTransformedRoute(MUP):
 
     @classmethod
     def unpack(cls, data, afi):
-        afi_bit_size = 32 if afi == AFI.ipv4 else 128
+        afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
         afi_bytes_size = 4 if afi == AFI.ipv4 else 16
         rd = RouteDistinguisher.unpack(data[:8])
         endpoint_len = data[8]
@@ -129,10 +136,10 @@ class Type2SessionTransformedRoute(MUP):
         teid = 0
         if endpoint_len > afi_bit_size:
             teid_len = endpoint_len - afi_bit_size
-            if afi == AFI.ipv4 and teid_len > 32:
-                raise Exception('endpoint length is too large %d (max 64 for Ipv4)' % endpoint_len)
-            if afi == AFI.ipv6 and teid_len > 32:
-                raise Exception('endpoint length is too large %d (max 160 for Ipv6)' % endpoint_len)
+            if afi == AFI.ipv4 and teid_len > MUP_T2ST_TEID_MAX_SIZE:
+                raise Exception('endpoint length is too large %d (max %d for Ipv4)' % (endpoint_len, MUP_T2ST_IPV4_MAX_ENDPOINT))
+            if afi == AFI.ipv6 and teid_len > MUP_T2ST_TEID_MAX_SIZE:
+                raise Exception('endpoint length is too large %d (max %d for Ipv6)' % (endpoint_len, MUP_T2ST_IPV6_MAX_ENDPOINT))
 
             teid = int.from_bytes(data[end:], 'big')
 

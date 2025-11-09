@@ -32,9 +32,13 @@ version = os.environ.get('exabgp_version', release)
 
 # Do not change the first line as it is parsed by scripts
 
-if sys.version_info.major < 3:
+# Python version requirements
+REQUIRED_PYTHON_MAJOR = 3  # Minimum Python major version
+REQUIRED_PYTHON_MINOR = 6  # Minimum Python minor version for Python 3.x
+
+if sys.version_info.major < REQUIRED_PYTHON_MAJOR:
     sys.exit('exabgp requires python3.6 or later')
-if sys.version_info.major == 3 and sys.version_info.minor < 6:
+if sys.version_info.major == REQUIRED_PYTHON_MAJOR and sys.version_info.minor < REQUIRED_PYTHON_MINOR:
     sys.exit('exabgp requires python3.6 or later')
 
 

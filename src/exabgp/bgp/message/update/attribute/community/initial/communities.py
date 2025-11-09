@@ -16,6 +16,9 @@ from exabgp.bgp.message.update.attribute.community.initial.community import Comm
 
 from exabgp.bgp.message.notification import Notify
 
+# Community size constant
+COMMUNITY_SIZE = 4  # Each standard community is 4 bytes (2 bytes ASN + 2 bytes value)
+
 
 @Attribute.register()
 class Communities(Attribute):
@@ -57,8 +60,8 @@ class Communities(Attribute):
     def unpack(data, direction, negotiated):
         communities = Communities()
         while data:
-            if data and len(data) < 4:
+            if data and len(data) < COMMUNITY_SIZE:
                 raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data])))
-            communities.add(Community.unpack(data[:4], direction, negotiated))
-            data = data[4:]
+            communities.add(Community.unpack(data[:COMMUNITY_SIZE], direction, negotiated))
+            data = data[COMMUNITY_SIZE:]
         return communities

@@ -29,6 +29,9 @@ from ipaddress import ip_address
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 # ================================================================== IP REACHABILITY INFORMATION
 
+# Protocol ID for IPv6
+PROTOCOL_ID_IPV6 = 4  # IPv6 protocol identifier
+
 
 class IpReach:
     def __init__(self, prefix, plength=None, packed=None):
@@ -53,7 +56,7 @@ class IpReach:
         # octet = int(math.ceil(plength / 8))
         octet = len(data[1:])
 
-        if code == 4:
+        if code == PROTOCOL_ID_IPV6:
             # IPv6
             if len(data[1 : octet + 1]) % 2 == 1:
                 # Not an even number.

@@ -29,6 +29,11 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #     //      IGP Link Metric (variable length)      //
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+# IGP Metric TLV size constants
+IGP_METRIC_SIZE_OSPF = 2  # OSPF link metrics are 2 octets
+IGP_METRIC_SIZE_ISIS_SMALL = 1  # IS-IS small metrics are 1 octet
+IGP_METRIC_SIZE_ISIS_WIDE = 3  # IS-IS wide metrics are 3 octets
+
 
 @LinkState.register()
 class IgpMetric(BaseLS):
@@ -38,15 +43,15 @@ class IgpMetric(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        if len(data) == 2:
+        if len(data) == IGP_METRIC_SIZE_OSPF:
             # OSPF
             return cls(unpack('!H', data)[0])
 
-        if len(data) == 1:
+        if len(data) == IGP_METRIC_SIZE_ISIS_SMALL:
             # ISIS small metrics
             return cls(data[0])
 
-        if len(data) == 3:
+        if len(data) == IGP_METRIC_SIZE_ISIS_WIDE:
             # ISIS wide metrics
             return cls(unpack('!L', bytes([0]) + data)[0])
 

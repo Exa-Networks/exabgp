@@ -28,6 +28,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 # 	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
 
+# SID/Label data length when flags are not set
+SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both false
+
 
 @LinkState.register()
 class SrPrefix(FlagLS):
@@ -69,12 +72,12 @@ class SrPrefix(FlagLS):
                 data = data[3:]
                 sids.append(sid)
             elif (not flags['V']) and (not flags['L']):
-                if len(data) != 4:
+                if len(data) != SID_LABEL_LENGTH_NO_FLAGS:
                     # Cisco IOS XR Software, Version 6.1.1.19I is not
                     # correctly setting the flags
                     raise Notify(3, 5, "SID/Label size doesn't match V and L flag state")
-                sid = unpack('!I', data[:4])[0]
-                data = data[4:]
+                sid = unpack('!I', data[:SID_LABEL_LENGTH_NO_FLAGS])[0]
+                data = data[SID_LABEL_LENGTH_NO_FLAGS:]
                 sids.append(sid)
             else:
                 raw.append(hexstring(data))

@@ -19,6 +19,9 @@ from exabgp.bgp.message.operational import Advisory
 from exabgp.bgp.message.operational import Query
 from exabgp.bgp.message.operational import Response
 
+# Operational message advisory overhead (including quotes)
+ADVISORY_QUOTE_OVERHEAD = 2  # Two quote characters surrounding advisory
+
 
 def _operational(klass, parameters, tokeniser):
     def utf8(string):
@@ -27,14 +30,18 @@ def _operational(klass, parameters, tokeniser):
     def valid(_):
         return True
 
+    # Maximum values for unsigned integer types
+    MAX_U32 = 0xFFFFFFFF  # Maximum 32-bit unsigned integer
+    MAX_U64 = 0xFFFFFFFFFFFFFFFF  # Maximum 64-bit unsigned integer
+
     def u32(_):
-        return int(_) <= 0xFFFFFFFF
+        return int(_) <= MAX_U32
 
     def u64(_):
-        return int(_) <= 0xFFFFFFFFFFFFFFFF
+        return int(_) <= MAX_U64
 
     def advisory(_):
-        return len(_.encode('utf-8')) <= MAX_ADVISORY + 2  # the two quotes
+        return len(_.encode('utf-8')) <= MAX_ADVISORY + ADVISORY_QUOTE_OVERHEAD  # the two quotes
 
     convert = {'afi': AFI.value, 'safi': SAFI.value, 'sequence': int, 'counter': int, 'advisory': utf8}
 

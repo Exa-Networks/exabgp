@@ -50,6 +50,9 @@ from exabgp.environment import getenv
 
 from exabgp.logger import log
 
+# MD5 password length constraint (RFC 2385)
+MAX_MD5_PASSWORD_LENGTH = 80  # Maximum length for TCP MD5 signature password
+
 
 class ParseNeighbor(Section):
     TTL_SECURITY = 255
@@ -307,8 +310,8 @@ class ParseNeighbor(Section):
             except TypeError as e:
                 return self.error.set(f'Invalid base64 encoding of MD5 password ({e})')
             else:
-                if len(md5) > 80:
-                    return self.error.set('MD5 password must be no larger than 80 characters')
+                if len(md5) > MAX_MD5_PASSWORD_LENGTH:
+                    return self.error.set(f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters')
 
         # check we are not trying to announce routes without the right MP announcement
         for change in neighbor.changes:

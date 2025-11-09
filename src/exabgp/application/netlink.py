@@ -1,16 +1,21 @@
 #!/usr/bin/python
 
 
-import sys
 import socket
+import sys
 
 from exabgp.netlink import NetMask
 from exabgp.netlink.attributes import Attributes
-
+from exabgp.netlink.route.address import Address
 from exabgp.netlink.route.link import Link
 from exabgp.netlink.route.neighbor import Neighbor
-from exabgp.netlink.route.address import Address
 from exabgp.netlink.route.network import Network
+from exabgp.protocol.ip import IPv4
+
+# Command-line argument position constants
+MIN_ARGS = 2  # Minimum number of command-line arguments expected
+COMMAND_ARG_POS = 1  # Position of the command argument
+SUBCOMMAND_ARG_POS = 2  # Position of the subcommand argument
 
 
 def usage():
@@ -57,7 +62,11 @@ def addresses():
                     sys.stdout.write('  {} {} '.format('inet ', socket.inet_ntop(neighbor.family, address)))
                 else:
                     sys.stdout.write('  %d %s\n' % (ifa.family, address.encode('hex')))
-                sys.stdout.write('mac {}\n'.format(':'.join(_.encode('hex') for _ in neighbor.attributes[Neighbor.Type.State.NUD_REACHABLE])))
+                sys.stdout.write(
+                    'mac {}\n'.format(
+                        ':'.join(_.encode('hex') for _ in neighbor.attributes[Neighbor.Type.State.NUD_REACHABLE])
+                    )
+                )
 
 
 def routes():
@@ -75,7 +84,7 @@ def routes():
         if route.type not in (Network.Type.Type.RTN_LOCAL, Network.Type.Type.RTN_UNICAST):
             continue
 
-        if route.src_len == 32:
+        if route.src_len == IPv4.HOST_MASK:
             continue
 
         destination = route.attributes.get(Network.Type.Attribute.RTA_DST)
@@ -125,27 +134,27 @@ def new():
 
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) < MIN_ARGS:
         usage()
         sys.exit(1)
-    if 'addr'.startswith(sys.argv[1]):
-        if len(sys.argv) == 2:
+    if 'addr'.startswith(sys.argv[COMMAND_ARG_POS]):
+        if len(sys.argv) == MIN_ARGS:
             addresses()
             sys.exit(0)
-        if sys.argv[2] in 'show':
+        if sys.argv[SUBCOMMAND_ARG_POS] in 'show':
             addresses()
             sys.exit(0)
-    if 'route'.startswith(sys.argv[1]):
-        if len(sys.argv) == 2:
+    if 'route'.startswith(sys.argv[COMMAND_ARG_POS]):
+        if len(sys.argv) == MIN_ARGS:
             routes()
             sys.exit(0)
-        if 'show'.startswith(sys.argv[2]):
+        if 'show'.startswith(sys.argv[SUBCOMMAND_ARG_POS]):
             routes()
             sys.exit(0)
-        if 'add'.startswith(sys.argv[2]):
+        if 'add'.startswith(sys.argv[SUBCOMMAND_ARG_POS]):
             new()
             sys.exit(0)
-        if 'delete'.startswith(sys.argv[2]):
+        if 'delete'.startswith(sys.argv[SUBCOMMAND_ARG_POS]):
             sys.stdout.write('adding\n')
 
     usage()

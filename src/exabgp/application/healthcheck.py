@@ -56,6 +56,10 @@ import collections
 from ipaddress import ip_network
 from ipaddress import ip_address
 
+# Interface name validation constants
+IFNAME_MAX_LENGTH = 15  # Maximum interface name length (Linux kernel limit)
+IP_CMD_ADD_ERROR_CODE = 2  # Error code when 'ip address add' fails (address already exists)
+IP_IFNAME_PARTS = 2  # Expected format: ip%ifname
 
 logger = logging.getLogger('healthcheck')
 
@@ -134,7 +138,7 @@ def parse():
         keyval = {}
         for val in ip_ifnames or []:
             ip_ifname = val.split(r'%')
-            if len(ip_ifname) != 2:
+            if len(ip_ifname) != IP_IFNAME_PARTS:
                 raise ValueError(f"Expected IP to IFNAME parameter: <ip_address>%<ifname>, got '{val}'")
             # Is the ip address valid?
             try:
@@ -145,7 +149,7 @@ def parse():
             if ip not in ips:
                 raise ValueError(f"No 'ip' parameter has been defined for the ip_ifname pair '{val}'")
             # Is the interface name valid?
-            if not re.match(r'^[a-zA-Z0-9._:-]{1,15}$', ip_ifname[1]):
+            if not re.match(rf'^[a-zA-Z0-9._:-]{{1,{IFNAME_MAX_LENGTH}}}$', ip_ifname[1]):
                 raise ValueError(f"Expected NIC interface name but got '{ip_ifname[1]}'")
             keyval[ip] = ip_ifname[1]
         return keyval
@@ -288,7 +292,7 @@ def setup_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError as e:
                 # the IP address is already setup, ignoring
-                if cmd[0] == 'ip' and cmd[2] == 'add' and e.returncode == 2:
+                if cmd[0] == 'ip' and cmd[2] == 'add' and e.returncode == IP_CMD_ADD_ERROR_CODE:
                     continue
                 raise e
 

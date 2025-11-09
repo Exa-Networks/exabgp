@@ -29,6 +29,12 @@ from exabgp.bgp.message.notification import Notify
 
 from struct import pack, unpack
 
+# BGP OPEN message parameter size constants (RFC 4271, RFC 9072)
+OPEN_PARAM_LEN_MAX = 255  # Maximum parameter length for standard OPEN (8-bit field)
+OPEN_EXTENDED_MARKER = 255  # Marker value indicating extended optional parameters format
+MIN_EXTENDED_PARAM_LEN = 3  # Minimum length for extended parameter (type + 2-byte length)
+MIN_PARAM_LEN = 2  # Minimum length for standard parameter (type + length)
+
 # =================================================================== Parameter
 #
 
@@ -188,7 +194,7 @@ class Capabilities(dict):
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += bytes([2, len(encoded)]) + encoded
 
-        if len(parameters) < 255:
+        if len(parameters) < OPEN_PARAM_LEN_MAX:
             return bytes([len(parameters)]) + parameters
 
         # If this is an extended optional parameters version, re-encode
@@ -202,13 +208,13 @@ class Capabilities(dict):
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += pack('!BH', 2, len(encoded)) + encoded
 
-        return pack('!BBH', 255, 255, len(parameters)) + parameters
+        return pack('!BBH', OPEN_EXTENDED_MARKER, OPEN_EXTENDED_MARKER, len(parameters)) + parameters
 
     @staticmethod
     def unpack(data):
         def _extended_type_length(name, data):
-            if len(data) < 3:
-                raise Notify(2, 0, 'Bad length for OPEN (extended) {} (<3) {}'.format(name, Capability.hex(data)))
+            if len(data) < MIN_EXTENDED_PARAM_LEN:
+                raise Notify(2, 0, 'Bad length for OPEN (extended) {} (<{}) {}'.format(name, MIN_EXTENDED_PARAM_LEN, Capability.hex(data)))
             # Optional parameters length
             ld = unpack('!H', data[1:3])[0]
             boundary = ld + 3
@@ -222,8 +228,8 @@ class Capabilities(dict):
             return key, value, rest
 
         def _key_values(name, data):
-            if len(data) < 2:
-                raise Notify(2, 0, 'Bad length for OPEN {} (<2) {}'.format(name, Capability.hex(data)))
+            if len(data) < MIN_PARAM_LEN:
+                raise Notify(2, 0, 'Bad length for OPEN {} (<{}) {}'.format(name, MIN_PARAM_LEN, Capability.hex(data)))
             ld = data[1]
             boundary = ld + 2
             if len(data) < boundary:

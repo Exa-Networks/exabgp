@@ -4,23 +4,28 @@
 
 from __future__ import annotations
 
-import os
-import sys
-import time
+import argparse
 import errno
+import os
 import select
 import signal
-import argparse
+import sys
+import time
 
-from exabgp.application.pipe import named_pipe
-from exabgp.application.pipe import check_fifo
-
-from exabgp.reactor.network.error import error
+from exabgp.application.pipe import check_fifo, named_pipe
+from exabgp.environment import ROOT, getenv
+from exabgp.protocol.ip import IPv4
 from exabgp.reactor.api.response.answer import Answer
+from exabgp.reactor.network.error import error
 
-from exabgp.environment import getenv
-from exabgp.environment import ROOT
-
+# Timeout and buffer size constants
+PIPE_OPEN_TIMEOUT = 5  # Seconds to wait for pipe open
+COMMAND_TIMEOUT = 5  # Seconds to wait for command send
+PIPE_CLEAR_TIMEOUT = 1.5  # Seconds to clear pipe before command
+COMMAND_RESPONSE_TIMEOUT = 5.0  # Seconds to wait for command response
+DONE_TIME_DIFF = 0.5  # Time difference for done detection
+SELECT_TIMEOUT = 0.01  # Select timeout in seconds
+SELECT_WAIT_INCREMENT = 0.01  # Wait increment per select iteration
 
 errno_block = set(
     (
@@ -54,7 +59,7 @@ def open_reader(recv):
         sys.exit(1)
 
     signal.signal(signal.SIGALRM, open_timeout)
-    signal.alarm(5)
+    signal.alarm(PIPE_OPEN_TIMEOUT)
 
     done = False
     while not done:
@@ -64,7 +69,7 @@ def open_reader(recv):
         except OSError as exc:
             if exc.args[0] in errno_block:
                 signal.signal(signal.SIGALRM, open_timeout)
-                signal.alarm(5)
+                signal.alarm(PIPE_OPEN_TIMEOUT)
                 continue
             sys.stdout.write('could not read answer from ExaBGP')
             sys.stdout.flush()
@@ -80,7 +85,7 @@ def open_writer(send):
         sys.exit(1)
 
     signal.signal(signal.SIGALRM, write_timeout)
-    signal.alarm(5)
+    signal.alarm(COMMAND_TIMEOUT)
 
     try:
         writer = os.open(send, os.O_WRONLY)
@@ -169,7 +174,7 @@ def cmdline(cmdarg):
             sys.exit(1)
 
         # we are not ack'ing the command and probably have read all there is
-        if time.time() > start + 1.5:
+        if time.time() > start + PIPE_CLEAR_TIMEOUT:
             break
 
         # we read nothing, nothing to do
@@ -198,26 +203,26 @@ def cmdline(cmdarg):
 
     for pos, token in enumerate(command):
         for nickname, name, match in (
-            ('a', 'announce', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+            ('a', 'announce', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
             ('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
             ('c', 'configuration', lambda pos, pre: True),
             ('e', 'eor', lambda pos, pre: pre[-1] == 'announce'),
             ('e', 'extensive', lambda _, pre: 'show' in pre),
             ('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-            ('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+            ('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
             ('h', 'help', lambda pos, pre: pos == 0),
             ('i', 'in', lambda pos, pre: pre[-1] == 'adj-rib'),
             ('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
             ('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
             ('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
             ('s', 'show', lambda pos, pre: pos == 0),
-            ('t', 'teardown', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+            ('t', 'teardown', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
             ('s', 'summary', lambda pos, pre: pos != 0),
             ('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
             ('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
             ('o', 'out', lambda pos, pre: pre[-1] == 'adj-rib'),
             ('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear', 'flush', 'show']),
-            ('w', 'withdraw', lambda pos, pre: pos == 0 or pre.count('.') == 3 or pre.count(':') != 0),
+            ('w', 'withdraw', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
             ('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
             ('neighbour', 'neighbor', lambda pos, pre: True),
             ('neigbour', 'neighbor', lambda pos, pre: True),
@@ -250,10 +255,10 @@ def cmdline(cmdarg):
     waited = 0.0
     buf = b''
     done = False
-    done_time_diff = 0.5
+    done_time_diff = DONE_TIME_DIFF
     while not done:
         try:
-            r, _, _ = select.select([reader], [], [], 0.01)
+            r, _, _ = select.select([reader], [], [], SELECT_TIMEOUT)
         except OSError as exc:
             if exc.errno in error.block:
                 continue
@@ -267,7 +272,7 @@ def cmdline(cmdarg):
             sys.stdout.flush()
             sys.exit(1)
 
-        if waited > 5.0:
+        if waited > COMMAND_RESPONSE_TIMEOUT:
             sys.stderr.write('\n')
             sys.stderr.write('warning: no end of command message received\n')
             sys.stderr.write(
@@ -276,7 +281,7 @@ def cmdline(cmdarg):
             sys.stderr.write('warning: otherwise it may cause exabgp reactor to block\n')
             sys.exit(0)
         elif not r:
-            waited += 0.01
+            waited += SELECT_WAIT_INCREMENT
             continue
         else:
             waited = 0.0

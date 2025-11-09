@@ -15,6 +15,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPSelf
 from exabgp.protocol.ip import IPRange
+from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri import CIDR
@@ -54,6 +55,9 @@ from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
 from exabgp.rib.change import Change
+
+# IP address validation constants
+EXTENDED_COMMUNITY_TARGET_PARTS = 2  # Target extended community has 2 parts (ASN:value)
 
 
 def prefix(tokeniser):
@@ -290,7 +294,7 @@ def aggregator(tokeniser):
 
 def originator_id(tokeniser):
     value = tokeniser()
-    if value.count('.') != 3:
+    if value.count('.') != IPv4.DOT_COUNT:
         raise ValueError('invalid Originator ID {}'.format(value))
     if not all(_.isdigit() for _ in value.split('.')):
         raise ValueError('invalid Originator ID {}'.format(value))
@@ -533,7 +537,7 @@ def _extended_community(value):
         raise ValueError('invalid extended community {} - lc+gc'.format(value))
 
     parts = value.split(':')
-    command = 'target' if len(parts) == 2 else parts.pop(0)
+    command = 'target' if len(parts) == EXTENDED_COMMUNITY_TARGET_PARTS else parts.pop(0)
     components = [_integer(_) if _digit(_) else _ip(_, value) for _ in parts]
     header, packed = _encode(command, components, parts)
 

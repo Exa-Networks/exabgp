@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.notification import Notify
-from exabgp.protocol.ip import IP
+from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.protocol.ip import IP, IPv4, IPv6
 
 # +-----------------------------------+
 # |      RD   (8 octets)              |
@@ -16,6 +16,10 @@ from exabgp.protocol.ip import IP
 # +-----------------------------------+
 # |  Multicast Group (variable)       |
 # +-----------------------------------+
+
+# MVPN Source Active A-D Route length constants (RFC 6514)
+MVPN_SOURCEAD_IPV4_LENGTH = 18  # 8 (RD) + 1 (source len) + 4 (IPv4) + 1 (group len) + 4 (IPv4)
+MVPN_SOURCEAD_IPV6_LENGTH = 42  # 8 (RD) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
 @MVPN.register
@@ -68,14 +72,14 @@ class SourceAD(MVPN):
     @classmethod
     def unpack(cls, data, afi):
         datalen = len(data)
-        if datalen not in (18, 42):  # IPv4 or IPv6
+        if datalen not in (MVPN_SOURCEAD_IPV4_LENGTH, MVPN_SOURCEAD_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')
         cursor = 0
         rd = RouteDistinguisher.unpack(data[cursor:8])
         cursor += 8
         sourceiplen = int(data[cursor] / 8)
         cursor += 1
-        if sourceiplen != 4 and sourceiplen != 16:
+        if sourceiplen != IPv4.BYTES and sourceiplen != IPv6.BYTES:
             raise Notify(
                 3,
                 5,
@@ -85,7 +89,7 @@ class SourceAD(MVPN):
         cursor += sourceiplen
         groupiplen = int(data[cursor] / 8)
         cursor += 1
-        if groupiplen != 4 and groupiplen != 16:
+        if groupiplen != IPv4.BYTES and groupiplen != IPv6.BYTES:
             raise Notify(
                 3,
                 5,

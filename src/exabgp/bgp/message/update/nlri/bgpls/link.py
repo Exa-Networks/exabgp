@@ -19,6 +19,16 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 
 from exabgp.logger import log
 
+# BGP-LS Link TLV type codes (RFC 7752)
+TLV_LOCAL_NODE_DESC = 256  # Local Node Descriptors TLV
+TLV_REMOTE_NODE_DESC = 257  # Remote Node Descriptors TLV
+TLV_LINK_ID = 258  # Link Local/Remote Identifiers TLV
+TLV_IPV4_IFACE_ADDR = 259  # IPv4 Interface Address TLV
+TLV_IPV4_NEIGH_ADDR = 260  # IPv4 Neighbor Address TLV
+TLV_IPV6_IFACE_ADDR = 261  # IPv6 Interface Address TLV
+TLV_IPV6_NEIGH_ADDR = 262  # IPv6 Neighbor Address TLV
+TLV_MULTI_TOPO_ID = 263  # Multi-Topology Identifier TLV
+
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #     +-+-+-+-+-+-+-+-+
@@ -109,7 +119,7 @@ class LINK(BGPLS):
             value = tlvs[4 : 4 + tlv_length]
             tlvs = tlvs[4 + tlv_length :]
 
-            if tlv_type == 256:
+            if tlv_type == TLV_LOCAL_NODE_DESC:
                 local_node = []
                 while value:
                     # Unpack Local Node Descriptor Sub-TLVs
@@ -122,7 +132,7 @@ class LINK(BGPLS):
                     value = left
                 continue
 
-            if tlv_type == 257:
+            if tlv_type == TLV_REMOTE_NODE_DESC:
                 # Remote Node Descriptor
                 remote_node = []
                 while value:
@@ -133,22 +143,22 @@ class LINK(BGPLS):
                     value = left
                 continue
 
-            if tlv_type == 258:
+            if tlv_type == TLV_LINK_ID:
                 # Link Local/Remote identifiers
                 link_identifiers = LinkIdentifier.unpack(value)
                 continue
 
-            if tlv_type in [259, 261]:
+            if tlv_type in [TLV_IPV4_IFACE_ADDR, TLV_IPV6_IFACE_ADDR]:
                 # IPv{4,6} Interface Address
                 iface_addrs.append(IfaceAddr.unpack(value))
                 continue
 
-            if tlv_type in [260, 262]:
+            if tlv_type in [TLV_IPV4_NEIGH_ADDR, TLV_IPV6_NEIGH_ADDR]:
                 # IPv{4,6} Neighbor Address
                 neigh_addrs.append(NeighAddr.unpack(value))
                 continue
 
-            if tlv_type == 263:
+            if tlv_type == TLV_MULTI_TOPO_ID:
                 topology_ids.append(MTID.unpack(value))
                 continue
 

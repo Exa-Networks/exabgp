@@ -23,6 +23,15 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
 
+# INET NLRI label constants (RFC 3107)
+LABEL_SIZE_BITS = 24  # Each MPLS label is 24 bits (3 bytes)
+LABEL_WITHDRAW_VALUE = 0x800000  # Special label value for route withdrawal
+LABEL_NEXTHOP_VALUE = 0x000000  # Special label value indicating next-hop
+LABEL_BOTTOM_OF_STACK_BIT = 1  # Bottom of stack bit in label
+
+# AddPath path-info size
+PATH_INFO_SIZE = 4  # Path Identifier is 4 bytes (RFC 7911)
+
 
 @NLRI.register(AFI.ipv4, SAFI.unicast)
 @NLRI.register(AFI.ipv6, SAFI.unicast)
@@ -94,10 +103,10 @@ class INET(NLRI):
         nlri = cls(afi, safi, action)
 
         if addpath:
-            if len(bgp) <= 4:
+            if len(bgp) <= PATH_INFO_SIZE:
                 raise ValueError('Trying to extract path-information but we do not have enough data')
-            nlri.path_info = PathInfo(bgp[:4])
-            bgp = bgp[4:]
+            nlri.path_info = PathInfo(bgp[:PATH_INFO_SIZE])
+            bgp = bgp[PATH_INFO_SIZE:]
 
         mask = bgp[0]
         bgp = bgp[1:]
@@ -107,20 +116,20 @@ class INET(NLRI):
 
         if safi.has_label():
             labels = []
-            while mask - rd_mask >= 24:
+            while mask - rd_mask >= LABEL_SIZE_BITS:
                 label = int(unpack('!L', bytes([0]) + bgp[:3])[0])
                 bgp = bgp[3:]
-                mask -= 24  # 3 bytes
+                mask -= LABEL_SIZE_BITS  # 3 bytes
                 # The last 4 bits are the bottom of Stack
                 # The last bit is set for the last label
                 labels.append(label >> 4)
                 # This is a route withdrawal
-                if label == 0x800000 and action == Action.WITHDRAW:
+                if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
                     break
                 # This is a next-hop
-                if label == 0x000000:
+                if label == LABEL_NEXTHOP_VALUE:
                     break
-                if label & 1:
+                if label & LABEL_BOTTOM_OF_STACK_BIT:
                     break
             nlri.labels = Labels(labels)
 

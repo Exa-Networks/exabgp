@@ -14,6 +14,9 @@ from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
 
+# Attribute length encoding constants
+ATTR_LENGTH_EXTENDED_MAX = 0xFF  # Maximum length for non-extended encoding (255)
+
 # ============================================================== TreatAsWithdraw
 #
 
@@ -205,7 +208,7 @@ class Attribute:
         if flag & Attribute.Flag.OPTIONAL and not value:
             return b''
         length = len(value)
-        if length > 0xFF:
+        if length > ATTR_LENGTH_EXTENDED_MAX:
             flag |= Attribute.Flag.EXTENDED_LENGTH
         if flag & Attribute.Flag.EXTENDED_LENGTH:
             len_value = pack('!H', length)
@@ -215,7 +218,7 @@ class Attribute:
 
     def _len(self, value):
         length = len(value)
-        return length + 3 if length <= 0xFF else length + 4
+        return length + 3 if length <= ATTR_LENGTH_EXTENDED_MAX else length + 4
 
     def __eq__(self, other):
         return self.ID == other.ID and self.FLAG == other.FLAG

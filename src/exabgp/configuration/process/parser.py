@@ -11,6 +11,9 @@ from __future__ import annotations
 import os
 import stat
 
+# OS error codes
+ENOENT = 2  # Error code for "No such file or directory" (errno.ENOENT)
+
 
 def encoder(tokeniser):
     value = tokeniser()
@@ -80,7 +83,7 @@ def run(tokeniser):
         try:
             fd = os.open(prg, os.O_RDONLY)
         except OSError as e:
-            if e.errno == 2:  # ENOENT
+            if e.errno == ENOENT:
                 raise ValueError('can not locate the program "{}"'.format(prg)) from e
             # Preserve exception chain for debugging while providing clear message
             raise ValueError('can not access program "{}": {}'.format(prg, e)) from e

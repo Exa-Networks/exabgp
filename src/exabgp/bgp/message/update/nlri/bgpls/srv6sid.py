@@ -15,6 +15,14 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
 from exabgp.util import hexstring
 
+# BGP-LS SRv6 SID TLV type codes (RFC 9514)
+TLV_LOCAL_NODE_DESC = 256  # Local Node Descriptors TLV
+TLV_MULTI_TOPO_ID = 263  # Multi-Topology Identifier TLV
+TLV_SRV6_SID_INFO = 518  # SRv6 SID Information TLV
+
+# Minimum TLV header size for validation
+MIN_TLV_HEADER_SIZE = 2  # Type (2 bytes) + Length (2 bytes) = 4 bytes, checking for at least 2
+
 #     RFC 9514: 6.  SRv6 SID NLRI
 #
 #     0                   1                   2                   3
@@ -55,7 +63,7 @@ class SRv6SID(BGPLS):
 
         tlvs = data[9:length]
         node_type, node_length = unpack('!HH', tlvs[0:4])
-        if node_type != 256:
+        if node_type != TLV_LOCAL_NODE_DESC:
             raise Exception(
                 f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
             )
@@ -74,12 +82,12 @@ class SRv6SID(BGPLS):
         srv6_sid_descriptors['multi-topology-ids'] = []
 
         while tlvs:
-            if len(tlvs) < 2:
+            if len(tlvs) < MIN_TLV_HEADER_SIZE:
                 raise RuntimeError('SRv6 SID Descriptors are too short')
             sid_type, sid_length = unpack('!HH', tlvs[:4])
-            if sid_type == 263:
+            if sid_type == TLV_MULTI_TOPO_ID:
                 srv6_sid_descriptors['multi-topology-ids'].append(MTID.unpack(tlvs[4 : sid_length + 4]).json())
-            elif sid_type == 518:
+            elif sid_type == TLV_SRV6_SID_INFO:
                 srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(tlvs[4 : sid_length + 4]))
             else:
                 if f'generic-tlv-{sid_type}' not in srv6_sid_descriptors:

@@ -16,6 +16,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.protocol.ip import IP, IPv6
 
+# BGP-LS Sub-TLV header constants
+BGPLS_SUBTLV_HEADER_SIZE = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
+
 #    RFC 9514:   4.2. SRv6 LAN End.X SID TLV
 #  0                   1                   2                   3
 #  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -59,17 +62,17 @@ def unpack_data(cls, data, type):
     data = data[start_offset + 16 :]
     subtlvs = []
 
-    while data and len(data) >= 4:
+    while data and len(data) >= BGPLS_SUBTLV_HEADER_SIZE:
         code = unpack('!H', data[0:2])[0]
         length = unpack('!H', data[2:4])[0]
 
         if code in cls.registered_subsubtlvs:
-            subsubtlv = cls.registered_subsubtlvs[code].unpack(data[4 : length + 4])
+            subsubtlv = cls.registered_subsubtlvs[code].unpack(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
             subtlvs.append(subsubtlv.json())
         else:
-            subsubtlv = hexstring(data[4 : length + 4])
+            subsubtlv = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
             subtlvs.append(f'"{code}-undecoded": "{subsubtlv}"')
-        data = data[length + 4 :]
+        data = data[length + BGPLS_SUBTLV_HEADER_SIZE :]
 
     return {
         'flags': flags,

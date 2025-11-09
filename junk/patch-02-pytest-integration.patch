@@ -1,0 +1,408 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 1234567..abcdefg 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -10,6 +10,19 @@ exclude = [
+     "src/exabgp/conf/yang/"
+ ]
+ 
++[tool.pytest.ini_options]
++testpaths = ["tests"]
++python_files = ["test_*.py"]
++python_classes = ["Test*"]
++python_functions = ["test_*"]
++addopts = "--strict-markers --strict-config -v"
++markers = [
++    "integration: marks tests as integration tests",
++    "unit: marks tests as unit tests", 
++    "slow: marks tests as slow running",
++    "functional: marks tests as functional (using QA infrastructure)",
++]
++
+ [project]
+ name = "exabgp"
+ dynamic = ["version"]
+@@ -22,6 +35,8 @@ dependencies = [
+     "setuptools",
++    "pytest>=7.0.0",
++    "pytest-cov>=4.0.0",
+ ]
+ 
+ [project.urls]
+diff --git a/tests/conftest.py b/tests/conftest.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/tests/conftest.py
+@@ -0,0 +1,85 @@
++"""Pytest configuration and shared fixtures for ExaBGP tests."""
++from __future__ import annotations
++
++import pytest
++import tempfile
++import subprocess
++import sys
++import os
++from pathlib import Path
++from typing import Generator, Dict, Any
++
++# Add src to Python path for testing
++PROJECT_ROOT = Path(__file__).parent.parent
++SRC_PATH = PROJECT_ROOT / "src"
++sys.path.insert(0, str(SRC_PATH))
++
++@pytest.fixture
++def temp_config() -> Generator[Path, None, None]:
++    """Create temporary ExaBGP configuration for testing."""
++    config_content = """
++group test {
++    neighbor 127.0.0.1 {
++        router-id 192.168.1.1;
++        local-address 127.0.0.1;
++        local-as 65001;
++        peer-as 65002;
++        hold-time 180;
++        
++        family {
++            ipv4 unicast;
++            ipv6 unicast;
++        }
++        
++        static {
++            route 192.168.0.0/24 next-hop 127.0.0.1;
++        }
++    }
++}
++"""
++    with tempfile.NamedTemporaryFile(mode='w', suffix='.conf', delete=False) as f:
++        f.write(config_content.strip())
++        temp_path = Path(f.name)
++    
++    yield temp_path
++    
++    # Cleanup
++    if temp_path.exists():
++        temp_path.unlink()
++
++@pytest.fixture
++def sample_bgp_message() -> bytes:
++    """Sample BGP KEEPALIVE message for testing."""
++    # BGP KEEPALIVE: 16-byte marker + 2-byte length + 1-byte type
++    marker = b'\xff' * 16
++    length = b'\x00\x13'  # 19 bytes
++    msg_type = b'\x04'    # KEEPALIVE
++    return marker + length + msg_type
++
++@pytest.fixture
++def mock_neighbor_config() -> Dict[str, Any]:
++    """Mock neighbor configuration for testing."""
++    return {
++        'peer_address': '192.168.1.2',
++        'local_address': '192.168.1.1', 
++        'local_as': 65001,
++        'peer_as': 65002,
++        'router_id': '192.168.1.1',
++        'hold_time': 180,
++    }
++
++@pytest.fixture(scope="session")
++def qa_paths() -> Dict[str, Path]:
++    """Paths to QA infrastructure for integration tests."""
++    return {
++        'qa_root': PROJECT_ROOT / 'qa',
++        'encoding': PROJECT_ROOT / 'qa' / 'encoding',
++        'decoding': PROJECT_ROOT / 'qa' / 'decoding',
++        'bin': PROJECT_ROOT / 'qa' / 'bin',
++        'functional': PROJECT_ROOT / 'qa' / 'bin' / 'functional',
++    }
++
++@pytest.fixture
++def exabgp_env() -> Dict[str, str]:
++    """Environment variables for ExaBGP testing."""
++    return {
++        'exabgp_debug_configuration': 'true',
++        'exabgp_debug_rotate': 'true',
++        'exabgp_tcp_once': 'true',
++        'exabgp_api_cli': 'false',
++    }
+diff --git a/tests/test_integration.py b/tests/test_integration.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/tests/test_integration.py
+@@ -0,0 +1,85 @@
++"""Integration tests that preserve existing QA functionality."""
++from __future__ import annotations
++
++import pytest
++import sys
++import os
++from pathlib import Path
++from typing import Dict, Any
++
++# Import QA test infrastructure
++QA_BIN = Path(__file__).parent.parent / 'qa' / 'bin'
++sys.path.insert(0, str(QA_BIN))
++
++try:
++    from functional import EncodingTests, DecodingTests, ParsingTests
++except ImportError:
++    pytest.skip("QA functional tests not available", allow_module_level=True)
++
++
++class TestExaBGPIntegration:
++    """Integration tests that preserve existing QA functionality."""
++    
++    @pytest.mark.integration
++    @pytest.mark.functional
++    def test_encoding_suite_sample(self, qa_paths: Dict[str, Path]):
++        """Run sample encoding tests via pytest."""
++        tests = EncodingTests()
++        
++        # Enable only a few tests for faster execution
++        sample_tests = ['0', '1', '2']  # First few tests
++        enabled_count = 0
++        
++        for nick in sample_tests:
++            if tests.enable_by_nick(nick):
++                enabled_count += 1
++        
++        if enabled_count == 0:
++            pytest.skip("No encoding tests available")
++        
++        # Run with shorter timeout for pytest
++        success = tests.run_selected(timeout=15)
++        assert success, "Sample encoding tests failed"
++    
++    @pytest.mark.integration  
++    @pytest.mark.functional
++    def test_decoding_suite_sample(self, qa_paths: Dict[str, Path]):
++        """Run sample decoding tests via pytest."""
++        tests = DecodingTests()
++        
++        # Enable only a few tests for faster execution
++        sample_tests = ['0', '1', '2']
++        enabled_count = 0
++        
++        for nick in sample_tests:
++            if tests.enable_by_nick(nick):
++                enabled_count += 1
++                
++        if enabled_count == 0:
++            pytest.skip("No decoding tests available")
++        
++        success = tests.run_selected(timeout=15)
++        assert success, "Sample decoding tests failed"
++        
++    @pytest.mark.integration
++    @pytest.mark.functional
++    def test_parsing_suite_sample(self, qa_paths: Dict[str, Path]):
++        """Run sample parsing tests via pytest."""
++        tests = ParsingTests()
++        
++        # Enable only a few tests for faster execution
++        sample_tests = ['0', '1', '2']
++        enabled_count = 0
++        
++        for nick in sample_tests:
++            if tests.enable_by_nick(nick):
++                enabled_count += 1
++                
++        if enabled_count == 0:
++            pytest.skip("No parsing tests available")
++        
++        success = tests.run_selected(timeout=15)
++        assert success, "Sample parsing tests failed"
++
++    @pytest.mark.slow
++    @pytest.mark.functional
++    def test_full_qa_suite(self):
++        """Run complete QA suite - marked as slow."""
++        # This test runs the complete suite like the original functional script
++        encoding_tests = EncodingTests()
++        encoding_tests.enable_all()
++        
++        decoding_tests = DecodingTests() 
++        decoding_tests.enable_all()
++        
++        parsing_tests = ParsingTests()
++        parsing_tests.enable_all()
++        
++        # Run all tests with full timeout
++        encoding_success = encoding_tests.run_selected(timeout=60)
++        decoding_success = decoding_tests.run_selected(timeout=60)
++        parsing_success = parsing_tests.run_selected(timeout=60)
++        
++        assert encoding_success, "Full encoding test suite failed"
++        assert decoding_success, "Full decoding test suite failed" 
++        assert parsing_success, "Full parsing test suite failed"
+diff --git a/tests/unit/test_bgp_message.py b/tests/unit/test_bgp_message.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/tests/unit/test_bgp_message.py
+@@ -0,0 +1,67 @@
++"""Unit tests for BGP message handling."""
++from __future__ import annotations
++
++import pytest
++from exabgp.bgp.message.message import Message
++from exabgp.bgp.message.keepalive import KeepAlive
++
++
++class TestBGPMessage:
++    """Unit tests for BGP message base class."""
++    
++    def test_message_creation(self):
++        """Test basic message creation."""
++        msg = Message(msgid=4)  # KEEPALIVE
++        assert msg.ID == 4
++        
++    def test_message_packing(self):
++        """Test message packing to wire format."""
++        msg = Message(msgid=4)
++        packed = msg.pack()
++        
++        # BGP header is 19 bytes: 16-byte marker + 2-byte length + 1-byte type
++        assert len(packed) == 19
++        assert packed.startswith(b'\xff' * 16)  # BGP marker
++        assert packed[18:19] == b'\x04'  # Message type (KEEPALIVE)
++        
++    def test_message_unpacking(self, sample_bgp_message: bytes):
++        """Test message unpacking from wire format."""
++        msg = Message.unpack(sample_bgp_message)
++        assert msg is not None
++        
++    def test_invalid_message_unpacking(self):
++        """Test unpacking of invalid messages."""
++        # Too short message
++        invalid_msg = b'\xff' * 10
++        result = Message.unpack(invalid_msg)
++        assert result is None
++        
++        # Invalid marker
++        invalid_marker = b'\x00' * 16 + b'\x00\x13\x04'
++        result = Message.unpack(invalid_marker)
++        assert result is None
+
+
++class TestKeepAlive:
++    """Unit tests for BGP KEEPALIVE messages."""
++    
++    def test_keepalive_creation(self):
++        """Test KEEPALIVE message creation."""
++        ka = KeepAlive()
++        assert ka.ID == 4  # KEEPALIVE message type
++        
++    def test_keepalive_packing(self):
++        """Test KEEPALIVE message packing."""
++        ka = KeepAlive()
++        packed = ka.pack()
++        
++        # KEEPALIVE should be exactly 19 bytes (header only)
++        assert len(packed) == 19
++        assert packed.startswith(b'\xff' * 16)
++        assert packed[16:18] == b'\x00\x13'  # Length = 19
++        assert packed[18:19] == b'\x04'      # Type = KEEPALIVE
++        
++    def test_keepalive_string_representation(self):
++        """Test KEEPALIVE string representation."""
++        ka = KeepAlive()
++        str_repr = str(ka)
++        assert 'keepalive' in str_repr.lower()
+diff --git a/tests/unit/test_util_ip.py b/tests/unit/test_util_ip.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/tests/unit/test_util_ip.py
+@@ -0,0 +1,45 @@
++"""Unit tests for IP utility functions."""
++from __future__ import annotations
++
++import pytest
++from exabgp.util.ip import isipv4, isipv6
++
++
++class TestIPValidation:
++    """Unit tests for IP address validation functions."""
++    
++    @pytest.mark.parametrize("valid_ipv4", [
++        "192.168.1.1",
++        "10.0.0.1", 
++        "127.0.0.1",
++        "255.255.255.255",
++        "0.0.0.0",
++    ])
++    def test_valid_ipv4_addresses(self, valid_ipv4: str):
++        """Test validation of valid IPv4 addresses."""
++        assert isipv4(valid_ipv4) is True
++        assert isipv6(valid_ipv4) is False
++        
++    @pytest.mark.parametrize("invalid_ipv4", [
++        "256.1.1.1",
++        "192.168.1",
++        "192.168.1.1.1", 
++        "not.an.ip.address",
++        "192.168.1.-1",
++        "",
++    ])
++    def test_invalid_ipv4_addresses(self, invalid_ipv4: str):
++        """Test validation of invalid IPv4 addresses."""
++        assert isipv4(invalid_ipv4) is False
++        
++    @pytest.mark.parametrize("valid_ipv6", [
++        "2001:db8::1",
++        "::1",
++        "::ffff:192.168.1.1",
++        "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
++    ])
++    def test_valid_ipv6_addresses(self, valid_ipv6: str):
++        """Test validation of valid IPv6 addresses."""
++        assert isipv6(valid_ipv6) is True
++        assert isipv4(valid_ipv6) is False
+diff --git a/Makefile b/Makefile
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/Makefile
+@@ -0,0 +1,35 @@
++# ExaBGP Development Makefile
++
++.PHONY: test test-unit test-integration test-functional test-all
++.PHONY: lint type-check format clean install-dev
++
++# Test targets
++test-unit:
++	pytest tests/unit/ -v
++
++test-integration:
++	pytest tests/test_integration.py -v -m "not slow"
++
++test-functional:
++	python qa/bin/functional parsing
++	python qa/bin/functional decoding
++	python qa/bin/functional encoding
++
++test-all: test-unit test-integration test-functional
++
++# Development targets  
++install-dev:
++	pip install -e ".[dev]"
++	pip install pytest pytest-cov mypy black isort
++
++lint:
++	isort --check-only src/ tests/
++	black --check src/ tests/
++
++format:
++	isort src/ tests/
++	black src/ tests/
++
++type-check:
++	mypy src/exabgp/
++
++clean:
++	find . -type d -name __pycache__ -delete
++	find . -name "*.pyc" -delete
++	rm -rf .pytest_cache/
++	rm -rf .mypy_cache/

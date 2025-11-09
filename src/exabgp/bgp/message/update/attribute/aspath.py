@@ -1,4 +1,3 @@
-
 """aspath.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -8,16 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import unpack
-from struct import error
-
 import json
+from struct import error, unpack
 
-from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.asn import AS_TRANS
-from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.notification import Notify
-
+from exabgp.bgp.message.open.asn import AS_TRANS, ASN
+from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # =================================================================== ASPath (2)
 # only 2-4% of duplicated data therefore it is not worth to cache
@@ -65,6 +60,9 @@ class ASPath(Attribute):
     AS_CONFED_SET = CONFED_SET.ID
     ASN4 = False
 
+    # AS_PATH segment constants (RFC 4271)
+    SEGMENT_MAX_LENGTH = 255  # Maximum number of ASNs in single segment
+
     ID = Attribute.CODE.AS_PATH
     FLAG = Attribute.Flag.TRANSITIVE
 
@@ -97,8 +95,10 @@ class ASPath(Attribute):
         length = len(values)
         if length == 0:
             return b''
-        if length > 255:
-            return cls._segment(seg_type, values[:255], asn4) + cls._segment(seg_type, values[255:], asn4)
+        if length > cls.SEGMENT_MAX_LENGTH:
+            return cls._segment(seg_type, values[: cls.SEGMENT_MAX_LENGTH], asn4) + cls._segment(
+                seg_type, values[cls.SEGMENT_MAX_LENGTH :], asn4
+            )
         return bytes([seg_type, length]) + b''.join(v.pack(asn4) for v in values)
 
     @classmethod

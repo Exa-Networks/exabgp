@@ -1,4 +1,3 @@
-
 """prefix.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
@@ -8,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import IP, IPv4, IPv6
 
 #   https://tools.ietf.org/html/rfc5305#section-3.2
 # 	This sub-TLV contains a 4-octet IPv4 address for the interface
@@ -30,12 +29,12 @@ class Prefix:
 
     @classmethod
     def unpack(cls, data):
-        if len(data) == 4:
+        if len(data) == IPv4.BYTES:
             # IPv4 address
-            addr = IP.unpack(data[:4])
-        elif len(data) == 16:
+            addr = IP.unpack(data[: IPv4.BYTES])
+        elif len(data) == IPv6.BYTES:
             # IPv6
-            addr = IP.unpack(data[:16])
+            addr = IP.unpack(data[: IPv6.BYTES])
         return cls(iface_addr=addr)
 
     def json(self):

@@ -1,4 +1,3 @@
-
 """refresh.py
 
 Created by Thomas Mangin on 2012-07-19.
@@ -8,13 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import unpack
-from struct import error
+from struct import error, unpack
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
+from exabgp.protocol.family import AFI, SAFI
 
 # =================================================================== Notification
 # A Notification received from our peer.
@@ -22,12 +19,17 @@ from exabgp.bgp.message.notification import Notify
 
 
 class Reserved(int):
+    # Route Refresh reserved field values (RFC 2918, RFC 7313)
+    ROUTE_REFRESH_QUERY = 0  # Normal route refresh request
+    ROUTE_REFRESH_BEGIN = 1  # Beginning of Route Refresh (BoRR)
+    ROUTE_REFRESH_END = 2  # End of Route Refresh (EoRR)
+
     def __str__(self):
-        if self == 0:
+        if self == self.ROUTE_REFRESH_QUERY:
             return 'query'
-        if self == 1:
+        if self == self.ROUTE_REFRESH_BEGIN:
             return 'begin'
-        if self == 2:
+        if self == self.ROUTE_REFRESH_END:
             return 'end'
         return 'invalid'
 

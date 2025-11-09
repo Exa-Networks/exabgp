@@ -1,4 +1,3 @@
-
 """ip/__init__.py
 
 Created by Thomas Mangin on 2010-01-15.
@@ -10,9 +9,7 @@ from __future__ import annotations
 
 import socket
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
 
 # XXX: The IP,Range and CIDR class API are totally broken, fix it.
@@ -49,8 +46,8 @@ class IP:
     SELF = False
 
     afi = None  # here for the API, changed in init which does not change this
-    bits = None
-    bytes = None
+    BITS = None
+    BYTES = None
 
     _known = dict()
 
@@ -81,7 +78,7 @@ class IP:
 
     @staticmethod
     def ntop(data):
-        return socket.inet_ntop(socket.AF_INET if len(data) == 4 else socket.AF_INET6, data)
+        return socket.inet_ntop(socket.AF_INET if len(data) == IPv4.BYTES else socket.AF_INET6, data)
 
     def top(self, negotiated=None, afi=AFI.undefined):
         return self._string
@@ -117,10 +114,10 @@ class IP:
         raise ValueError(f'unrecognised ip address {ip}')
 
     def ipv4(self):
-        return len(self._packed) == 4
+        return len(self._packed) == IPv4.BYTES
 
     def ipv6(self):
-        return len(self._packed) != 4
+        return len(self._packed) != IPv4.BYTES
 
     def address(self):
         value = 0
@@ -213,7 +210,7 @@ class IPRange(IP):
         return klass(ip, mask)
 
     def __repr__(self):
-        if (self.ipv4() and self.mask == 32) or (self.ipv6() and self.mask == 128):
+        if (self.ipv4() and self.mask == IPv4.HOST_MASK) or (self.ipv6() and self.mask == IPv6.HOST_MASK):
             return super(IPRange, self).__repr__()
         return f'{self.top()}/{int(self.mask)}'
 
@@ -262,6 +259,12 @@ class IPv4(IP):
     bits = 32
     bytes = 4
 
+    # IPv4-specific constants
+    BITS = 32  # IPv4 address bit length
+    BYTES = 4  # IPv4 address byte length
+    DOT_COUNT = 3  # Number of dots in IPv4 address format (e.g., 192.168.1.1)
+    HOST_MASK = 32  # IPv4 host prefix length (/32)
+
     def __init__(self, string, packed=None):
         self.init(string, packed if packed else IP.pton(string))
 
@@ -309,6 +312,12 @@ class IPv6(IP):
     afi = AFI.ipv6
     bits = 128
     bytes = 16
+
+    # IPv6-specific constants
+    BITS = 128  # IPv6 address bit length
+    BYTES = 16  # IPv6 address byte length
+    COLON_MIN = 2  # Minimum number of colons in IPv6 address format
+    HOST_MASK = 128  # IPv6 host prefix length (/128)
 
     def __init__(self, string, packed=None):
         self.init(string, packed if packed else socket.inet_pton(socket.AF_INET6, string))

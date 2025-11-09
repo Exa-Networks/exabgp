@@ -51,6 +51,11 @@ from exabgp.bgp.message import Notification
 
 from exabgp.version import json as json_version
 
+# BGP message type constants (RFC 4271)
+BGP_MSG_OPEN = 1  # BGP OPEN message type
+BGP_MSG_UPDATE = 2  # BGP UPDATE message type
+BGP_MSG_NOTIFICATION = 3  # BGP NOTIFICATION message type
+
 
 def _hexa(data):
     full = data.replace(':', '')
@@ -200,11 +205,11 @@ def check_message(neighbor, message):
     # XXX: FIXME: check size
     # size = (raw[16] << 16) + raw[17]
 
-    if kind == 1:
+    if kind == BGP_MSG_OPEN:
         return check_open(neighbor, raw[19:])
-    if kind == 2:
+    if kind == BGP_MSG_UPDATE:
         return check_update(neighbor, raw)
-    if kind == 3:
+    if kind == BGP_MSG_NOTIFICATION:
         return check_notification(raw)
 
     sys.stdout.write(f'unknown type {kind}\n')
@@ -225,11 +230,11 @@ def display_message(neighbor, message):
     # XXX: FIXME: check size
     # size = (raw[16] << 16) + raw[17]
 
-    if kind == 1:
+    if kind == BGP_MSG_OPEN:
         return display_open(neighbor, raw[19:])
-    if kind == 2:
+    if kind == BGP_MSG_UPDATE:
         return display_update(neighbor, raw)
-    if kind == 3:
+    if kind == BGP_MSG_NOTIFICATION:
         return display_notification(neighbor, raw)
     sys.stdout.write(f'unknown type {kind}\n')
     return False
@@ -335,7 +340,7 @@ def _make_update(neighbor, raw):
 
             injected, raw = raw[19:size], raw[size:]
 
-            if kind == 2:
+            if kind == BGP_MSG_UPDATE:
                 log.debug(lambda: 'the message is an update', 'parser')
             else:
                 log.debug(lambda kind=kind: 'the message is not an update (%d) - aborting' % kind, 'parser')
@@ -379,7 +384,7 @@ def _make_notification(neighbor, raw):
 
         injected, raw = raw[19:size], raw[size:]
 
-        if kind != 3:
+        if kind != BGP_MSG_NOTIFICATION:
             log.debug(lambda: 'the message is not an notification (%d) - aborting' % kind, 'parser')
             return False
         log.debug(lambda: 'the message is an notification', 'parser')
