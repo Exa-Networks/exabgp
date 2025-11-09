@@ -50,7 +50,8 @@ class Code:
 
     @staticmethod
     def _missing(**kargs):
-        sys.stdout.write(f'{' '.join(f'{k}={v}' for k, v in kargs.items())}\n')
+        sys.stdout.write(' '.join(f'{k}={v}' for k, v in kargs.items()))
+        sys.stdout.write('\n')
         # this code path was not handled
         breakpoint()
 
