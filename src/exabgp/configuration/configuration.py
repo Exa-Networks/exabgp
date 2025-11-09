@@ -436,7 +436,7 @@ class Configuration(_Configuration):
             self._rollback_reload()
             line_str = ' '.join(self.tokeniser.line)
             return self.error.set(
-                f'\nsyntax error in section {self.scope.location()}\nline {self.tokeniser.number}: {line_str}\n\n{str(self.error)}',
+                f'\nsyntax error in section {self.scope.location()}\nline {self.tokeniser.number}: {line_str}\n\n{self.error!s}',
             )
 
         self._commit_reload()

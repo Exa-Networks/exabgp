@@ -44,7 +44,7 @@ class SourceAD(MVPN):
         return not self.__eq__(other)
 
     def __str__(self):
-        return f'{self._prefix()}:{self.rd._str()}:{str(self.source)}:{str(self.group)}'
+        return f'{self._prefix()}:{self.rd._str()}:{self.source!s}:{self.group!s}'
 
     def __hash__(self):
         return hash((self.rd, self.source, self.group))

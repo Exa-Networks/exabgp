@@ -157,13 +157,13 @@ def cmdline(cmdarg):
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write(f'could not clear named pipe from potential previous command data ({str(exc)})')
+            sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
             sys.stdout.flush()
             sys.exit(1)
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write(f'could not clear named pipe from potential previous command data ({str(exc)})')
+            sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
             sys.stdout.write(str(exc))
             sys.stdout.flush()
             sys.exit(1)
@@ -240,7 +240,7 @@ def cmdline(cmdarg):
         os.write(writer, sending.encode('utf-8') + b'\n')
         os.close(writer)
     except OSError as exc:
-        sys.stdout.write(f'could not send command to ExaBGP ({str(exc)})')
+        sys.stdout.write(f'could not send command to ExaBGP ({exc!s})')
         sys.stdout.flush()
         sys.exit(1)
 
@@ -257,13 +257,13 @@ def cmdline(cmdarg):
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write(f'could not get answer from ExaBGP ({str(exc)})')
+            sys.stdout.write(f'could not get answer from ExaBGP ({exc!s})')
             sys.stdout.flush()
             sys.exit(1)
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write(f'could not get answer from ExaBGP ({str(exc)})')
+            sys.stdout.write(f'could not get answer from ExaBGP ({exc!s})')
             sys.stdout.flush()
             sys.exit(1)
 
@@ -286,13 +286,13 @@ def cmdline(cmdarg):
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write(f'could not read answer from ExaBGP ({str(exc)})')
+            sys.stdout.write(f'could not read answer from ExaBGP ({exc!s})')
             sys.stdout.flush()
             sys.exit(1)
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write(f'could not read answer from ExaBGP ({str(exc)})')
+            sys.stdout.write(f'could not read answer from ExaBGP ({exc!s})')
             sys.stdout.flush()
             sys.exit(1)
 

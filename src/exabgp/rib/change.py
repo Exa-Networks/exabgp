@@ -45,7 +45,7 @@ class Change:
 
     def extensive(self):
         # If you change this you must change as well extensive in Update
-        return f'{str(self.nlri)}{str(self.attributes)}'
+        return f'{self.nlri!s}{self.attributes!s}'
 
     def __repr__(self):
         return self.extensive()

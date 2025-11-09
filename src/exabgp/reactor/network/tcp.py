@@ -66,7 +66,7 @@ def bind(io, ip, afi):
         if afi == AFI.ipv6:
             io.bind((ip, 0, 0, 0))
     except OSError as exc:
-        raise BindingError(f'Could not bind to local ip {ip} - {str(exc)}') from None
+        raise BindingError(f'Could not bind to local ip {ip} - {exc!s}') from None
 
 
 def connect(io, ip, port, afi, md5):

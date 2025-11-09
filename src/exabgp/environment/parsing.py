@@ -36,7 +36,7 @@ def unquote(_):
 
 
 def quote(_):
-    return f"'{str(_)}'"
+    return f"'{_!s}'"
 
 
 def quote_list(_):

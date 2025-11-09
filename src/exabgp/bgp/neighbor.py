@@ -604,7 +604,7 @@ Neighbor {peer-address}
                 for (a, s), (lf, rf, apr, aps) in answer['families'].items()
             ),
             'messages': '\n'.join(
-                f"   {f'{k}:':<20} {str(ms):>15} {str(mr):>15} {'':<15}" for k, (ms, mr) in answer['messages'].items()
+                f"   {f'{k}:':<20} {ms!s:>15} {mr!s:>15} {'':<15}" for k, (ms, mr) in answer['messages'].items()
             ),
         }
 

@@ -22,11 +22,11 @@ class MultiProtocol(Capability, list):
     ID = Capability.CODE.MULTIPROTOCOL
 
     def __str__(self):
-        families = ','.join([f'{str(afi)} {str(safi)}' for (afi, safi) in self])
+        families = ','.join([f'{afi!s} {safi!s}' for (afi, safi) in self])
         return f'Multiprotocol({families})'
 
     def json(self):
-        families = ','.join([f' "{str(afi)}/{str(safi)}"' for (afi, safi) in self])
+        families = ','.join([f' "{afi!s}/{safi!s}"' for (afi, safi) in self])
         return f'{{ "name": "multiprotocol", "families": [{families} ] }}'
 
     def extract(self):
