@@ -79,7 +79,7 @@ exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages", "src/exabgp/
 # F63: Invalid print statements
 # F7: Syntax errors in docstrings and type comments
 # F82: Undefined names in __all__
-select = ["E9", "F63", "F7", "F82"]
+# select = ["E9", "F63", "F7", "F82"]
 
 # Ignore specific rules:
 # ERA001: Commented-out code (intentional in this codebase)
