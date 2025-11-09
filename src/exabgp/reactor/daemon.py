@@ -102,7 +102,7 @@ class Daemon:
         log.debug(lambda: f'Removed PIDfile {self.pid}', 'daemon')
 
     def drop_privileges(self):
-        """return true if we are left with insecure privileges"""
+        """Return true if we are left with insecure privileges"""
         # os.name can be ['posix', 'nt', 'os2', 'ce', 'java', 'riscos']
         if os.name not in [
             'posix',

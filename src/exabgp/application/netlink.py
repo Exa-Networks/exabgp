@@ -54,9 +54,7 @@ def addresses():
         for neighbor in neighbors.get(ifi.index, {}):
             if neighbor.state == Neighbor.Type.State.NUD_REACHABLE:
                 address = neighbor.attributes.get(Neighbor.Type.Flag.NTF_USE, '\0\0\0\0')
-                if ifa.family == socket.AF_INET:
-                    print('  %s %s' % ('inet ', socket.inet_ntop(neighbor.family, address)), end=' ')
-                elif ifa.family == socket.AF_INET6:
+                if ifa.family == socket.AF_INET or ifa.family == socket.AF_INET6:
                     print('  %s %s' % ('inet ', socket.inet_ntop(neighbor.family, address)), end=' ')
                 else:
                     print('  %d %s' % (ifa.family, address.encode('hex')))

@@ -457,7 +457,7 @@ class Peer:
         yield ACTION.NOW
 
     def _main(self):
-        """yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
+        """Yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
         if self._teardown:
             raise Notify(6, 3)
 
@@ -604,11 +604,7 @@ class Peer:
                     except StopIteration:
                         command_eor = None
 
-                if new_routes or message.TYPE != NOP.TYPE:
-                    yield ACTION.NOW
-                elif self.neighbor.messages or operational:
-                    yield ACTION.NOW
-                elif self.neighbor.eor or command_eor:
+                if new_routes or message.TYPE != NOP.TYPE or self.neighbor.messages or operational or self.neighbor.eor or command_eor:
                     yield ACTION.NOW
                 else:
                     yield ACTION.LATER
@@ -629,7 +625,7 @@ class Peer:
         raise Notify(6, self._teardown)
 
     def _run(self):
-        """yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"""
+        """Yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"""
         try:
             for action in self._establish():
                 yield action

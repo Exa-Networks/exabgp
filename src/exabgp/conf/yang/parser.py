@@ -119,7 +119,7 @@ class Tree:
                 break
 
     def set_subtrees(self):
-        """to make the core more redeable the tree[module] structure
+        """To make the core more redeable the tree[module] structure
         is presented as subtrees, this reset all the subtree
         for the current module
         """
@@ -141,7 +141,7 @@ class Tree:
         self.set_subtrees()
 
     def load(self, module, ismodel=False):
-        """add a new yang module/namespace to the tree
+        """Add a new yang module/namespace to the tree
         this _function is used when initialising the
         root module, as it does not perform backups
         """
