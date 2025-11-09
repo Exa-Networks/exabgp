@@ -43,4 +43,5 @@ class LocalTeRid(BaseLS):
         return cls([str(IP.unpack(data))])
 
     def json(self, compact=None):
-        return '"{}": ["{}"]'.format(self.JSON, '", "'.join(self.content))
+        joined = '", "'.join(self.content)
+        return f'"{self.JSON}": ["{joined}"]'

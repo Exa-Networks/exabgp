@@ -50,8 +50,9 @@ class SrGb(object):
     def __repr__(self):
         items = []
         for base, srange in self.srgbs:
-            items.append('( {},{} )'.format(base, srange))
-        return '[ {} ]'.format(', '.join(items))
+            items.append(f'( {base},{srange} )')
+        joined = ', '.join(items)
+        return f'[ {joined} ]'
 
     def pack(self):
         payload = pack('!H', 0)  # flags
@@ -77,4 +78,4 @@ class SrGb(object):
         return cls(srgbs=srgbs)
 
     def json(self, compact=None):
-        return '"sr-srgbs": {}'.format((json.dumps(self.srgbs)))
+        return f'"sr-srgbs": {json.dumps(self.srgbs)}'

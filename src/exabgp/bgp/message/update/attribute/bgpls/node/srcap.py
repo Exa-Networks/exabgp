@@ -73,7 +73,7 @@ class SrCapabilities(FlagLS):
             # represents a 32 bit SID.
             sub_type, length = unpack('!HH', data[3:7])
             if sub_type != 1161:
-                raise Notify(3, 5, 'Invalid sub-TLV type: {}'.format(sub_type))
+                raise Notify(3, 5, f'Invalid sub-TLV type: {sub_type}')
             if length == 3:
                 sids.append([range_size, unpack('!I', bytes([0]) + data[7 : length + 7])[0] & 0xFFFFF])
             elif length == 4:
@@ -84,4 +84,4 @@ class SrCapabilities(FlagLS):
         return cls(flags, sids)
 
     def json(self, compact=None):
-        return '{}, "sids": {}'.format(FlagLS.json(self), self.sids)
+        return f'{FlagLS.json(self)}, "sids": {self.sids}'

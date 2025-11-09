@@ -51,14 +51,14 @@ class SRv6SID(BGPLS):
     def unpack_nlri(cls, data, length):
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
-            raise Exception('Protocol-ID {} is not valid'.format(proto_id))
+            raise Exception(f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
 
         tlvs = data[9:length]
         node_type, node_length = unpack('!HH', tlvs[0:4])
         if node_type != 256:
             raise Exception(
-                'Unknown type: {}. Only Local Node descriptors are allowed inNode type msg'.format(node_type)
+                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg'
             )
         tlvs = tlvs[4:]
         local_node_descriptors = tlvs[:node_length]
@@ -83,9 +83,9 @@ class SRv6SID(BGPLS):
             elif sid_type == 518:
                 srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(tlvs[4 : sid_length + 4]))
             else:
-                if 'generic-tlv-%d' % sid_type not in srv6_sid_descriptors:
-                    srv6_sid_descriptors['generic-tlv-%d' % sid_type] = []
-                srv6_sid_descriptors['generic-tlv-%d' % sid_type].append(hexstring(tlvs[4 : sid_length + 4]))
+                if f'generic-tlv-{sid_type}' not in srv6_sid_descriptors:
+                    srv6_sid_descriptors[f'generic-tlv-{sid_type}'] = []
+                srv6_sid_descriptors[f'generic-tlv-{sid_type}'].append(hexstring(tlvs[4 : sid_length + 4]))
 
             tlvs = tlvs[sid_length + 4 :]
         return cls(proto_id, domain, node_ids, srv6_sid_descriptors)
@@ -101,18 +101,18 @@ class SRv6SID(BGPLS):
         return 1 + 8 + len(self.local_node_descriptors) + len(self.srv6_sid_descriptors)
 
     def __repr__(self):
-        return '%s(protocol_id=%s, domain=%s)' % (self.NAME, self.proto_id, self.domain)
+        return f'{self.NAME}(protocol_id={self.proto_id}, domain={self.domain})'
 
     def json(self, compact=None):
         nodes = ', '.join(d.json() for d in self.local_node_descriptors)
         content = ', '.join(
             [
-                '"ls-nlri-type": "%s"' % self.NAME,
-                '"l3-routing-topology": %d' % int(self.domain),
-                '"protocol-id": %d' % int(self.proto_id),
-                '"node-descriptors": [ %s ]' % nodes,
-                '"srv6-sid-descriptors": %s' % json.dumps(self.srv6_sid_descriptors),
+                f'"ls-nlri-type": "{self.NAME}"',
+                f'"l3-routing-topology": {int(self.domain)}',
+                f'"protocol-id": {int(self.proto_id)}',
+                f'"node-descriptors": [ {nodes} ]',
+                f'"srv6-sid-descriptors": {json.dumps(self.srv6_sid_descriptors)}',
             ]
         )
 
-        return '{ %s }' % (content)
+        return f'{{ {content} }}'

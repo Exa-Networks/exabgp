@@ -102,31 +102,26 @@ class NodeDescriptor(object):
                     dr_id = IP.unpack(payload[4:8])
                 return cls(node_id, node_type, psn, dr_id, packed), remaining
 
-        raise Exception(
-            'unknown node descriptor sub-tlv ({}, {})'.format(
-                f'node-type: {node_type}',
-                f'igp: {igp}',
-            )
-        )
+        raise Exception(f'unknown node descriptor sub-tlv (node-type: {node_type}, igp: {igp})')
 
     def json(self, compact=None):
         node = None
         if self.node_type == 512:
-            node = '"autonomous-system": %d' % self.node_id
+            node = f'"autonomous-system": {self.node_id}'
         if self.node_type == 513:
-            node = '"bgp-ls-identifier": "%d"' % self.node_id
+            node = f'"bgp-ls-identifier": "{self.node_id}"'
         if self.node_type == 514:
-            node = '"ospf-area-id": "%s"' % self.node_id
+            node = f'"ospf-area-id": "{self.node_id}"'
         if self.node_type == 515:
-            node = '"router-id": "%s"' % self.node_id
+            node = f'"router-id": "{self.node_id}"'
         designated = None
         if self.dr_id:
-            designated = '"designated-router-id": "%s"' % self.dr_id
+            designated = f'"designated-router-id": "{self.dr_id}"'
         psn = None
         if self.psn:
-            psn = '"psn": "%s"' % self.psn
+            psn = f'"psn": "{self.psn}"'
         content = ', '.join(_ for _ in [node, designated, psn] if _)
-        return '{ %s }' % content
+        return f'{{ {content} }}'
 
     def __eq__(self, other):
         return isinstance(other, NodeDescriptor) and self.node_id == other.node_id

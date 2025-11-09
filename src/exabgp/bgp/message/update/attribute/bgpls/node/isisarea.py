@@ -35,4 +35,4 @@ class IsisArea(BaseLS):
         return cls(int(data.hex(), 16))
 
     def json(self, compact=None):
-        return '"{}": "{}"'.format(self.JSON, self.content)
+        return f'"{self.JSON}": "{self.content}"'

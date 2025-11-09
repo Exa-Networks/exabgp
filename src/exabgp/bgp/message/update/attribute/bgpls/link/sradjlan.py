@@ -49,7 +49,7 @@ class SrAdjacencyLan(FlagLS):
         self.sr_adj_lan_sids = []
 
     def __repr__(self):
-        return 'sr-adj-lan-sids: {}'.format(self.sr_adj_lan_sids)
+        return f'sr-adj-lan-sids: {self.sr_adj_lan_sids}'
 
     @classmethod
     def unpack(cls, data):
@@ -89,7 +89,7 @@ class SrAdjacencyLan(FlagLS):
         return cls([{'flags': flags, 'weight': weight, 'system-id': system_id, 'sid': sid, 'undecoded': raw}])
 
     def json(self, compact=None):
-        return '"sr-adj-lan-sids": {}'.format(json.dumps(self.sr_adj_lan_sids))
+        return f'"sr-adj-lan-sids": {json.dumps(self.sr_adj_lan_sids)}'
 
     def merge(self, klass):
         self.sr_adj_lan_sids.extend(klass.sr_adj_lan_sids)
