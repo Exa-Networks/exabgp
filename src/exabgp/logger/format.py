@@ -77,7 +77,7 @@ def lazyattribute(flag, aid, length, data):
             flag,
             int(aid),
             length,
-            ' payload %s' % od(data) if data else '',
+            ' payload {}'.format(od(data)) if data else '',
         )
 
     return _lazy
@@ -85,7 +85,7 @@ def lazyattribute(flag, aid, length, data):
 
 def lazynlri(afi, safi, addpath, data):
     def _lazy():
-        family = '%s %s' % (afi, safi)
+        family = '{} {}'.format(afi, safi)
         path = 'with path-information' if addpath else 'without path-information'
         payload = od(data) if data else 'none'
         return 'NLRI      %-18s %-28s payload %s' % (family, path, payload)

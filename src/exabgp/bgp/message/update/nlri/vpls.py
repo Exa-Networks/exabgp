@@ -77,22 +77,22 @@ class VPLS(NLRI):
         content = ', '.join(
             [
                 self.rd.json(),
-                '"endpoint": %s' % self.endpoint,
-                '"base": %s' % self.base,
-                '"offset": %s' % self.offset,
-                '"size": %s' % self.size,
+                '"endpoint": {}'.format(self.endpoint),
+                '"base": {}'.format(self.base),
+                '"offset": {}'.format(self.offset),
+                '"size": {}'.format(self.size),
             ],
         )
-        return '{ %s }' % (content)
+        return '{{ {} }}'.format(content)
 
     def extensive(self):
-        return 'vpls%s endpoint %s base %s offset %s size %s %s' % (
+        return 'vpls{} endpoint {} base {} offset {} size {} {}'.format(
             self.rd,
             self.endpoint,
             self.base,
             self.offset,
             self.size,
-            '' if self.nexthop is None else 'next-hop %s' % self.nexthop,
+            '' if self.nexthop is None else 'next-hop {}'.format(self.nexthop),
         )
 
     def __str__(self):

@@ -54,7 +54,7 @@ class _ParseDirection(Section):
         'operational': True,
     }
 
-    syntax = '{\n  %s;\n}' % ';\n  '.join(default.keys())
+    syntax = '{{\n  {};\n}}'.format(';\n  '.join(default.keys()))
 
     def __init__(self, tokeniser, scope, error):
         Section.__init__(self, tokeniser, scope, error)
@@ -70,26 +70,26 @@ class _ParseDirection(Section):
 
 
 class ParseSend(_ParseDirection):
-    syntax = 'send %s' % _ParseDirection.syntax
+    syntax = 'send {}'.format(_ParseDirection.syntax)
 
     name = 'api/send'
 
 
 class ParseReceive(_ParseDirection):
-    syntax = 'receive %s' % _ParseDirection.syntax
+    syntax = 'receive {}'.format(_ParseDirection.syntax)
 
     name = 'api/receive'
 
 
 class ParseAPI(Section):
     syntax = (
-        'process {\n'
+        'process {{\n'
         '  processes [ name-of-processes ];\n'
         '  processes-match [ regex-of-processes ];\n'
         '  neighbor-changes;\n'
-        '  %s\n'
-        '  %s\n'
-        '}' % ('\n  '.join(ParseSend.syntax.split('\n')), '\n  '.join(ParseReceive.syntax.split('\n')))
+        '  {}\n'
+        '  {}\n'
+        '}}'.format('\n  '.join(ParseSend.syntax.split('\n')), '\n  '.join(ParseReceive.syntax.split('\n')))
     )
 
     known = {
@@ -182,7 +182,7 @@ class ParseAPI(Section):
                     'refresh',
                     'operational',
                 ):
-                    built.setdefault('%s-%s' % (direction, action), []).extend(procs if data.get(action, False) else [])
+                    built.setdefault('{}-{}'.format(direction, action), []).extend(procs if data.get(action, False) else [])
 
         return built
 
@@ -199,4 +199,4 @@ for way in ('send', 'receive'):
         'refresh',
         'operational',
     ):
-        ParseAPI.DEFAULT_API['%s-%s' % (way, name)] = []
+        ParseAPI.DEFAULT_API['{}-{}'.format(way, name)] = []

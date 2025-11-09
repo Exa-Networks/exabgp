@@ -89,11 +89,11 @@ class GenericSRId:
         self.code = code
 
     def __repr__(self):
-        return 'Attribute with code [ %s ] not implemented' % (self.code)
+        return 'Attribute with code [ {} ] not implemented'.format(self.code)
 
     @classmethod
     def unpack(cls, scode, data):
         return cls(code=scode, rep=data)
 
     def json(self, compact=None):
-        return '"attribute-not-implemented-%s": "%s"' % (self.code, hexstring(self.rep))
+        return '"attribute-not-implemented-{}": "{}"'.format(self.code, hexstring(self.rep))

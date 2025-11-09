@@ -37,7 +37,7 @@ class MVPN(NLRI):
         self._packed = b''
 
     def __hash__(self):
-        return hash('%s:%s:%s:%s' % (self.afi, self.safi, self.CODE, self._packed))
+        return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed))
 
     def __len__(self):
         return len(self._packed) + 2
@@ -46,9 +46,9 @@ class MVPN(NLRI):
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self):
-        return 'mvpn:%s:%s' % (
+        return 'mvpn:{}:{}'.format(
             self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('%02x' % _ for _ in self._packed),
+            '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
     def __repr__(self):
@@ -60,7 +60,7 @@ class MVPN(NLRI):
         return ''
 
     def _prefix(self):
-        return 'mvpn:%s:' % (self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower())
+        return 'mvpn:{}:'.format(self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower())
 
     def pack_nlri(self, negotiated=None):
         # XXX: addpath not supported yet
@@ -89,7 +89,7 @@ class MVPN(NLRI):
         return klass, bgp[length + 2 :]
 
     def _raw(self):
-        return ''.join('%02X' % _ for _ in self.pack_nlri())
+        return ''.join('{:02X}'.format(_) for _ in self.pack_nlri())
 
 
 class GenericMVPN(MVPN):

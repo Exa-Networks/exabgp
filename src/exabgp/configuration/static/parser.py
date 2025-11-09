@@ -70,7 +70,7 @@ def prefix(tokeniser):
     iprange = IPRange.create(ip, mask)
 
     if iprange.address() & iprange.mask.hostmask() != 0:
-        raise ValueError('invalid network %s for netmask %s' % (ip, mask))
+        raise ValueError('invalid network {} for netmask {}'.format(ip, mask))
 
     return iprange
 
@@ -88,7 +88,7 @@ def next_hop(tokeniser, afi=None):
         return IPSelf(tokeniser.afi), NextHopSelf(tokeniser.afi)
     ip = IP.create(value)
     if ip.afi == AFI.ipv4 and afi == AFI.ipv6:
-        ip = IP.create('::ffff:%s' % ip)
+        ip = IP.create('::ffff:{}'.format(ip))
     return ip, NextHop(ip.top())
 
 
@@ -181,13 +181,13 @@ def origin(tokeniser):
         return Origin(Origin.EGP)
     if value == 'incomplete':
         return Origin(Origin.INCOMPLETE)
-    raise ValueError('unknown origin %s' % value)
+    raise ValueError('unknown origin {}'.format(value))
 
 
 def med(tokeniser):
     value = tokeniser()
     if not value.isdigit():
-        raise ValueError('invalid MED %s' % value)
+        raise ValueError('invalid MED {}'.format(value))
     return MED(int(value))
 
 
@@ -249,7 +249,7 @@ def as_path(tokeniser):
 def local_preference(tokeniser):
     value = tokeniser()
     if not value.isdigit():
-        raise ValueError('invalid local preference %s' % value)
+        raise ValueError('invalid local preference {}'.format(value))
     return LocalPreference(int(value))
 
 
@@ -291,9 +291,9 @@ def aggregator(tokeniser):
 def originator_id(tokeniser):
     value = tokeniser()
     if value.count('.') != 3:
-        raise ValueError('invalid Originator ID %s' % value)
+        raise ValueError('invalid Originator ID {}'.format(value))
     if not all(_.isdigit() for _ in value.split('.')):
-        raise ValueError('invalid Originator ID %s' % value)
+        raise ValueError('invalid Originator ID {}'.format(value))
     return OriginatorID(value)
 
 
@@ -326,22 +326,22 @@ def _community(value):
         suffix = value[separator + 1 :]
 
         if not prefix.isdigit() or not suffix.isdigit():
-            raise ValueError('invalid community %s' % value)
+            raise ValueError('invalid community {}'.format(value))
 
         prefix, suffix = int(prefix), int(suffix)
 
         if prefix > Community.MAX:
-            raise ValueError('invalid community %s (prefix too large)' % value)
+            raise ValueError('invalid community {} (prefix too large)'.format(value))
 
         if suffix > Community.MAX:
-            raise ValueError('invalid community %s (suffix too large)' % value)
+            raise ValueError('invalid community {} (suffix too large)'.format(value))
 
         return Community(pack('!L', (prefix << 16) + suffix))
 
     if value[:2].lower() == '0x':
         number = int(value, 16)
         if number > Community.MAX:
-            raise ValueError('invalid community %s (too large)' % value)
+            raise ValueError('invalid community {} (too large)'.format(value))
         return Community(pack('!L', number))
 
     low = value.lower()
@@ -359,9 +359,9 @@ def _community(value):
     if value.isdigit():
         number = int(value)
         if number > Community.MAX:
-            raise ValueError('invalid community %s (too large)' % value)
+            raise ValueError('invalid community {} (too large)'.format(value))
         return Community(pack('!L', number))
-    raise ValueError('invalid community name %s' % value)
+    raise ValueError('invalid community name {}'.format(value))
 
 
 def community(tokeniser):
@@ -386,7 +386,7 @@ def _large_community(value):
         prefix, affix, suffix = value.split(':')
 
         if not any(map(lambda c: c.isdigit(), [prefix, affix, suffix])):
-            raise ValueError('invalid community %s' % value)
+            raise ValueError('invalid community {}'.format(value))
 
         prefix, affix, suffix = map(int, [prefix, affix, suffix])
 
@@ -399,16 +399,16 @@ def _large_community(value):
     if value[:2].lower() == '0x':
         number = int(value)
         if number > LargeCommunity.MAX:
-            raise ValueError('invalid large community %s (too large)' % value)
+            raise ValueError('invalid large community {} (too large)'.format(value))
         return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
 
     value = value.lower()
     if value.isdigit():
         number = int(value)
         if number > LargeCommunity.MAX:
-            raise ValueError('invalid large community %s (too large)' % value)
+            raise ValueError('invalid large community {} (too large)'.format(value))
         return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
-    raise ValueError('invalid large community name %s' % value)
+    raise ValueError('invalid large community name {}'.format(value))
 
 
 def large_community(tokeniser):
@@ -483,7 +483,7 @@ def _integer(string):
 
 def _ip(string, error):
     if '.' not in string:
-        raise ValueError('invalid extended community: %s' % error)
+        raise ValueError('invalid extended community: {}'.format(error))
     v = [int(_) for _ in string.split('.')]
     # could use b''.join() - for speed?
     return (v[0] << 24) + (v[1] << 16) + (v[2] << 8) + v[3]
@@ -491,7 +491,7 @@ def _ip(string, error):
 
 def _encode(command, components, parts):
     if command not in _HEADER:
-        raise ValueError('invalid extended community type %s' % command)
+        raise ValueError('invalid extended community type {}'.format(command))
 
     if command in ('origin', 'target'):
         if components[0] > _SIZE_H or '.' in parts[0] or parts[0][-1] == 'L':
@@ -516,7 +516,7 @@ def _encode(command, components, parts):
 def _extended_community_hex(value):
     # we could raise if the length is not 8 bytes (16 chars)
     if len(value) % 2:
-        raise ValueError('invalid extended community %s' % value)
+        raise ValueError('invalid extended community {}'.format(value))
     raw = b''.join(bytes([int(value[_ : _ + 2], 16)]) for _ in range(2, len(value), 2))
     return ExtendedCommunity.unpack(raw)
 
@@ -530,7 +530,7 @@ def _extended_community(value):
             header = _HEADER[value]
             return ExtendedCommunity.unpack(header + pack('!HL', 0, 0), None)
 
-        raise ValueError('invalid extended community %s - lc+gc' % value)
+        raise ValueError('invalid extended community {} - lc+gc'.format(value))
 
     parts = value.split(':')
     command = 'target' if len(parts) == 2 else parts.pop(0)
@@ -592,7 +592,7 @@ def watchdog(tokeniser):
 
     command = tokeniser()
     if command.lower() in ['announce', 'withdraw']:
-        raise ValueError('invalid watchdog name %s' % command)
+        raise ValueError('invalid watchdog name {}'.format(command))
     return Watchdog(command)
 
 

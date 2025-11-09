@@ -33,7 +33,7 @@ class Srv6Capabilities(BaseLS):
         self.flags = flags
 
     def __repr__(self):
-        return 'flags: %s' % (self.flags)
+        return 'flags: {}'.format(self.flags)
 
     @classmethod
     def register(cls):

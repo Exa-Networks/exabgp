@@ -175,14 +175,11 @@ class JSON:
                 'nexthop': f'[ {nexthop_str} ]',
                 # NOTE: Do not convert to f-string! The nested % formatting with complex
                 # comprehensions and conditional logic is more readable with % formatting.
-                'add_path': '{ "send": %s, "receive": %s }'
-                % (
-                    '[ %s ]'
-                    % ', '.join(['"%s %s"' % family for family in negotiated.families if negotiated.addpath.send(*family)]),
-                    '[ %s ]'
-                    % ', '.join(
-                        ['"%s %s"' % family for family in negotiated.families if negotiated.addpath.receive(*family)],
-                    ),
+                'add_path': '{{ "send": {}, "receive": {} }}'.format(
+                    '[ {} ]'.format(', '.join(['"{} {}"'.format(*family) for family in negotiated.families if negotiated.addpath.send(*family)])),
+                    '[ {} ]'.format(', '.join(
+                        ['"{} {}"'.format(*family) for family in negotiated.families if negotiated.addpath.receive(*family)],
+                    )),
                 ),
             },
         )

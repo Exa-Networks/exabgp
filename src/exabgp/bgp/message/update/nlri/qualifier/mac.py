@@ -37,7 +37,7 @@ class MAC:
         raise RuntimeError('comparing MAC for ordering does not make sense')
 
     def __str__(self):
-        return ':'.join('%02X' % _ for _ in self._packed)
+        return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
     def __repr__(self):
         return self.__str__()
@@ -55,7 +55,7 @@ class MAC:
 
     @classmethod
     def unpack(cls, data):
-        return cls(':'.join('%02X' % _ for _ in data[:6]), data[:6])
+        return cls(':'.join('{:02X}'.format(_) for _ in data[:6]), data[:6])
 
     def json(self, compact=None):
-        return '"mac": "%s"' % str(self)
+        return '"mac": "{}"'.format(str(self))

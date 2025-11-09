@@ -35,7 +35,7 @@ class L2Info(ExtendedCommunity):
         )
 
     def __repr__(self):
-        return 'l2info:%s:%s:%s:%s' % (self.encaps, self.control, self.mtu, self.reserved)
+        return 'l2info:{}:{}:{}:{}'.format(self.encaps, self.control, self.mtu, self.reserved)
 
     @staticmethod
     def unpack(data):

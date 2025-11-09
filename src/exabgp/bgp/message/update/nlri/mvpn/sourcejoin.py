@@ -104,10 +104,10 @@ class SourceJoin(MVPN):
     def json(self, compact=None):
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
-        content += '"raw": "%s", ' % self._raw()
-        content += '"name": "%s", ' % self.NAME
-        content += '%s, ' % self.rd.json()
-        content += '"source-as": "%s", ' % str(self.source_as)
-        content += '"source": "%s", ' % str(self.source)
-        content += '"group": "%s"' % str(self.group)
-        return '{%s}' % content
+        content += '"raw": "{}", '.format(self._raw())
+        content += '"name": "{}", '.format(self.NAME)
+        content += '{}, '.format(self.rd.json())
+        content += '"source-as": "{}", '.format(str(self.source_as))
+        content += '"source": "{}", '.format(str(self.source))
+        content += '"group": "{}"'.format(str(self.group))
+        return '{{{}}}'.format(content)

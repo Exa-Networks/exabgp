@@ -28,7 +28,7 @@ class TreatAsWithdraw:
     def __str__(self):
         if self.aid is None:
             return 'treat-as-withdraw'
-        return 'treat-as-withdraw due to %s' % Attribute.CODE(self.aid)
+        return 'treat-as-withdraw due to {}'.format(Attribute.CODE(self.aid))
 
 
 class Discard:
@@ -41,7 +41,7 @@ class Discard:
     def __str__(self):
         if self.aid is None:
             return 'discard'
-        return 'discard due to %s' % Attribute.CODE(self.aid)
+        return 'discard due to {}'.format(Attribute.CODE(self.aid))
 
 
 # ==================================================================== Attribute
@@ -153,14 +153,14 @@ class Attribute:
         }
 
         def __repr__(self):
-            return self.names.get(self, 'unknown-attribute-%s' % hex(self))
+            return self.names.get(self, 'unknown-attribute-{}'.format(hex(self)))
 
         def __str__(self):
             return repr(self)
 
         @classmethod
         def name(cls, self):
-            return cls.names.get(self, 'unknown-attribute-%s' % hex(self))
+            return cls.names.get(self, 'unknown-attribute-{}'.format(hex(self)))
 
     # ---------------------------------------------------------------------------
 
@@ -191,7 +191,7 @@ class Attribute:
                 r.append('OPTIONAL')
                 v -= 0x80
             if v:
-                r.append('UNKNOWN %s' % hex(v))
+                r.append('UNKNOWN {}'.format(hex(v)))
             return ' '.join(r)
 
         def matches(self, value):
@@ -264,7 +264,7 @@ class Attribute:
             kls.ID = attribute_id
             return kls
 
-        raise Notify(2, 4, 'can not handle attribute id %s' % attribute_id)
+        raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
 
     @classmethod
     def unpack(cls, attribute_id, flag, data, direction, negotiated):
@@ -281,7 +281,7 @@ class Attribute:
                 cls.cache[cls.ID].cache(data, instance)
             return instance
 
-        raise Notify(2, 4, 'can not handle attribute id %s' % attribute_id)
+        raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
 
     @classmethod
     def setCache(cls):

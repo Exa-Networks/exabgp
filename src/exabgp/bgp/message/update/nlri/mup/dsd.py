@@ -44,7 +44,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        return '%s:%s:%s' % (
+        return '{}:{}:{}'.format(
             self._prefix(),
             self.rd._str(),
             self.ip,
@@ -81,10 +81,10 @@ class DirectSegmentDiscoveryRoute(MUP):
         return cls(rd, ip, afi)
 
     def json(self, compact=None):
-        content = '"name": "%s", ' % self.NAME
+        content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += '"ip": "%s", ' % str(self.ip)
+        content += '"ip": "{}", '.format(str(self.ip))
         content += self.rd.json()
-        content += ', "raw": "%s"' % self._raw()
-        return '{ %s }' % content
+        content += ', "raw": "{}"'.format(self._raw())
+        return '{{ {} }}'.format(content)

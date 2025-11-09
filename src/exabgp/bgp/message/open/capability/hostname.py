@@ -24,10 +24,10 @@ class HostName(Capability):
         self.domain_name = domain_name
 
     def __str__(self):
-        return 'Hostname(%s %s)' % (self.host_name, self.domain_name)
+        return 'Hostname({} {})'.format(self.host_name, self.domain_name)
 
     def json(self):
-        return '{ "host-name": "%s", "domain-name": "%s" }' % (self.host_name, self.domain_name)
+        return '{{ "host-name": "{}", "domain-name": "{}" }}'.format(self.host_name, self.domain_name)
 
     def extract(self):
         ret = b''

@@ -16,7 +16,7 @@ while True:
 
         counter = 0
 
-        send = '\n%s %s %s\n' % ('-' * 10, line, '-' * 10)
+        send = '\n{} {} {}\n'.format('-' * 10, line, '-' * 10)
         sys.stderr.write(f'{send}\n')
         sys.stderr.flush()
     except KeyboardInterrupt:

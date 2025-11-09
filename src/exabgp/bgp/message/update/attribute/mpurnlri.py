@@ -86,7 +86,7 @@ class MPURNLRI(Attribute, Family):
         data = data[offset:]
 
         if negotiated and (afi, safi) not in negotiated.families:
-            raise Notify(3, 0, 'presented a non-negotiated family %s %s' % (AFI.create(afi), SAFI.create(safi)))
+            raise Notify(3, 0, 'presented a non-negotiated family {} {}'.format(AFI.create(afi), SAFI.create(safi)))
 
         # Do we need to handle Path Information with the route (AddPath)
         if direction == Direction.IN:

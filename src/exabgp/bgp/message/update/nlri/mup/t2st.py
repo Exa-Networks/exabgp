@@ -63,7 +63,7 @@ class Type2SessionTransformedRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        return '%s:%s:%s:%s:%s:' % (
+        return '{}:{}:{}:{}:{}:'.format(
             self._prefix(),
             self.rd._str(),
             self.endpoint_len,
@@ -139,12 +139,12 @@ class Type2SessionTransformedRoute(MUP):
         return cls(rd, endpoint_len, endpoint_ip, teid, afi)
 
     def json(self, compact=None):
-        content = '"name": "%s", ' % self.NAME
+        content = '"name": "{}", '.format(self.NAME)
         content += ' "arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"endpoint_len": %d, ' % self.endpoint_len
-        content += '"endpoint_ip": "%s", ' % str(self.endpoint_ip)
+        content += '"endpoint_ip": "{}", '.format(str(self.endpoint_ip))
         content += self.rd.json() + ', '
-        content += '"teid": "%s", ' % str(self.teid)
-        content += '"raw": "%s"' % self._raw()
-        return '{ %s }' % content
+        content += '"teid": "{}", '.format(str(self.teid))
+        content += '"raw": "{}"'.format(self._raw())
+        return '{{ {} }}'.format(content)

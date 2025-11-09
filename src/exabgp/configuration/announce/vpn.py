@@ -96,7 +96,7 @@ def ip_vpn(tokeniser, afi, safi):
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
-            raise ValueError('unknown command "%s"' % command)
+            raise ValueError('unknown command "{}"'.format(command))
 
     if not AnnounceVPN.check(change, afi):
         raise ValueError('invalid announcement (missing next-hop, label or rd ?)')

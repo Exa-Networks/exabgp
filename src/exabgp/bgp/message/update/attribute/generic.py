@@ -46,7 +46,7 @@ class GenericAttribute(Attribute):
         return len(self.data)
 
     def __repr__(self):
-        return '0x' + ''.join('%02x' % _ for _ in self.data)
+        return '0x' + ''.join('{:02x}'.format(_) for _ in self.data)
 
     @classmethod
     def unpack(cls, code, flag, data):

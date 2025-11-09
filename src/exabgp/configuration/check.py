@@ -103,8 +103,8 @@ def check_generation(neighbors):
             log.debug(lambda packed=packed: 'parsed route requires %d updates' % len(packed), 'parser')
             log.debug(lambda pack1=pack1: 'update size is %d' % len(pack1), 'parser')
 
-            log.debug(lambda str1=str1: 'parsed route %s' % str1, 'parser')
-            log.debug(lambda pack1=pack1: 'parsed hex   %s' % od(pack1), 'parser')
+            log.debug(lambda str1=str1: 'parsed route {}'.format(str1), 'parser')
+            log.debug(lambda pack1=pack1: 'parsed hex   {}'.format(od(pack1)), 'parser')
 
             # This does not take the BGP header - let's assume we will not break that :)
             try:
@@ -117,8 +117,8 @@ def check_generation(neighbors):
                 str2 = change2.extensive()
                 pack2 = list(Update([update.nlris[0]], update.attributes).messages(negotiated))[0]
 
-                log.debug(lambda str2=str2: 'recoded route %s' % str2, 'parser')
-                log.debug(lambda pack2=pack2: 'recoded hex   %s' % od(pack2), 'parser')
+                log.debug(lambda str2=str2: 'recoded route {}'.format(str2), 'parser')
+                log.debug(lambda pack2=pack2: 'recoded hex   {}'.format(od(pack2)), 'parser')
 
                 str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]', 'med 100')
                 str1r = (
@@ -136,7 +136,7 @@ def check_generation(neighbors):
                     if ':' in str1r:
                         str1r = str1r.replace('next-hop self', 'next-hop ::1')
                     else:
-                        str1r = str1r.replace('next-hop self', 'next-hop %s' % neighbor['local-address'])
+                        str1r = str1r.replace('next-hop self', 'next-hop {}'.format(neighbor['local-address']))
 
                 if ' name ' in str1r:
                     parts = str1r.split(' ')
@@ -172,8 +172,8 @@ def check_generation(neighbors):
                     log.debug(lambda: 'encoding is fine', 'parser')
                     log.debug(lambda: '----------------------------------------', 'parser')
 
-                log.debug(lambda change1=change1: 'JSON nlri %s' % change1.nlri.json(), 'parser')
-                log.debug(lambda change1=change1: 'JSON attr %s' % change1.attributes.json(), 'parser')
+                log.debug(lambda change1=change1: 'JSON nlri {}'.format(change1.nlri.json()), 'parser')
+                log.debug(lambda change1=change1: 'JSON attr {}'.format(change1.attributes.json()), 'parser')
 
             except Notify as exc:
                 log.debug(lambda: '----------------------------------------', 'parser')
@@ -252,7 +252,7 @@ def _make_nlri(neighbor, routes):
     nlris = []
     try:
         while announced:
-            log.debug(lambda announced=announced: 'parsing NLRI %s' % announced, 'parser')
+            log.debug(lambda announced=announced: 'parsing NLRI {}'.format(announced), 'parser')
             nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath)
             nlris.append(nlri)
     except Exception as exc:
@@ -274,7 +274,7 @@ def check_nlri(neighbor, routes):
 
     log.debug(lambda: '', 'parser')  # new line
     for nlri in nlris:
-        log.info(lambda nlri=nlri: 'nlri json %s' % nlri.json(), 'parser')
+        log.info(lambda nlri=nlri: 'nlri json {}'.format(nlri.json()), 'parser')
     return True
 
 

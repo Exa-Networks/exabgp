@@ -14,7 +14,7 @@ class Error(Exception):
         self.message = message
         if self.debug:
             error = False
-            print('\n%s\n' % self.message)
+            print('\n{}\n'.format(self.message))
             pdb.set_trace()  # noqa: T100
             return error
         return False
@@ -22,7 +22,7 @@ class Error(Exception):
     def throw(self, message):
         self.message = message
         if self.debug:
-            print('\n%s\n' % message)
+            print('\n{}\n'.format(message))
             pdb.set_trace()  # noqa: T100
         else:
             raise self

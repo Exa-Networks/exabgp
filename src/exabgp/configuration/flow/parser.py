@@ -105,7 +105,7 @@ def _operator_numeric(string):
         elif char == '!':
             if string.startswith('!='):
                 return NumericOperator.NEQ, string[2:]
-            raise ValueError('invalid operator syntax %s' % string)
+            raise ValueError('invalid operator syntax {}'.format(string))
         elif char == 't' and string.lower().startswith('true'):
             return NumericOperator.TRUE, string[4:]
         elif char == 'f' and string.lower().startswith('false'):
@@ -117,7 +117,7 @@ def _operator_numeric(string):
             return operator, string[2:]
         return operator, string[1:]
     except IndexError:
-        raise ValueError('Invalid expression (too short) %s' % string) from None
+        raise ValueError('Invalid expression (too short) {}'.format(string)) from None
 
 
 def _operator_binary(string):
@@ -130,7 +130,7 @@ def _operator_binary(string):
             return BinaryOperator.NOT, string[1:]
         return BinaryOperator.INCLUDE, string
     except IndexError:
-        raise ValueError('Invalid expression (too short) %s' % string) from None
+        raise ValueError('Invalid expression (too short) {}'.format(string)) from None
 
 
 def _value(string):
@@ -162,7 +162,7 @@ def _generic_condition(tokeniser, klass):
             yield klass(AND | operator, klass.converter(value))
             if data:
                 if data[0] != '&':
-                    raise ValueError('Unknown binary operator %s' % data[0])
+                    raise ValueError('Unknown binary operator {}'.format(data[0]))
                 AND = BinaryOperator.AND
                 data = data[1:]
                 if not data:
@@ -177,7 +177,7 @@ def _generic_condition(tokeniser, klass):
             yield klass(operator | AND, klass.converter(value))
             if data:
                 if data[0] != '&':
-                    raise ValueError('Unknown binary operator %s' % data[0])
+                    raise ValueError('Unknown binary operator {}'.format(data[0]))
                 AND = BinaryOperator.AND
                 data = data[1:]
 
@@ -272,7 +272,7 @@ def rate_limit(tokeniser):
         log.warning(lambda: 'rate-limiting flow under 9600 bytes per seconds may not work', 'configuration')
     if speed > 1000000000000:
         speed = 1000000000000
-        log.warning(lambda: 'rate-limiting changed for 1 000 000 000 000 bytes from %s' % speed, 'configuration')
+        log.warning(lambda: 'rate-limiting changed for 1 000 000 000 000 bytes from {}'.format(speed), 'configuration')
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 
@@ -301,7 +301,7 @@ def redirect(tokeniser):
         ip = ip.replace('[', '', 1)
 
         if nn >= pow(2, 16):
-            raise ValueError('Local administrator field is a 16 bits number, value too large %s' % nn)
+            raise ValueError('Local administrator field is a 16 bits number, value too large {}'.format(nn))
         return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, nn))
 
     # the redirect is an ASN:NN route-target
@@ -317,15 +317,15 @@ def redirect(tokeniser):
         nn = int(suffix)
 
         if asn >= pow(2, 32):
-            raise ValueError('asn is a 32 bits number, value too large %s' % asn)
+            raise ValueError('asn is a 32 bits number, value too large {}'.format(asn))
 
         if asn >= pow(2, 16):
             if nn >= pow(2, 16):
-                raise ValueError('asn is a 32 bits number, local administrator field can only be 16 bit %s' % nn)
+                raise ValueError('asn is a 32 bits number, local administrator field can only be 16 bit {}'.format(nn))
             return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, nn))
 
         if nn >= pow(2, 32):
-            raise ValueError('Local administrator field is a 32 bits number, value too large %s' % nn)
+            raise ValueError('Local administrator field is a 32 bits number, value too large {}'.format(nn))
 
         return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn))
 
@@ -375,7 +375,7 @@ def action(tokeniser):
 
 def _interface_set(data):
     if data.count(':') != 3:
-        raise ValueError('not a valid format %s' % data)
+        raise ValueError('not a valid format {}'.format(data))
 
     trans, direction, prefix, suffix = data.split(':', 3)
 
@@ -384,9 +384,9 @@ def _interface_set(data):
     elif trans == 'non-transitive':
         trans = False
     else:
-        raise ValueError('Bad transitivity type %s, should be transitive or non-transitive' % trans)
+        raise ValueError('Bad transitivity type {}, should be transitive or non-transitive'.format(trans))
     if prefix.count('.'):
-        raise ValueError('a 32 bits number must be used, invalid value %s' % prefix)
+        raise ValueError('a 32 bits number must be used, invalid value {}'.format(prefix))
     if direction == 'input':
         int_direction = 1
     elif direction == 'output':
@@ -394,13 +394,13 @@ def _interface_set(data):
     elif direction == 'input-output':
         int_direction = 3
     else:
-        raise ValueError('Bad direction %s, should be input, output or input-output' % direction)
+        raise ValueError('Bad direction {}, should be input, output or input-output'.format(direction))
     asn = int(prefix)
     route_target = int(suffix)
     if asn >= pow(2, 32):
-        raise ValueError('asn can only be 32 bits, value too large %s' % asn)
+        raise ValueError('asn can only be 32 bits, value too large {}'.format(asn))
     if route_target >= pow(2, 14):
-        raise ValueError('group-id is a 14 bits number, value too large %s' % route_target)
+        raise ValueError('group-id is a 14 bits number, value too large {}'.format(route_target))
     return InterfaceSet(trans, asn, route_target, int_direction)
 
 

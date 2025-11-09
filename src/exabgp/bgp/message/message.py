@@ -60,13 +60,13 @@ class _MessageCode(int):
         self.NAME = str(self)
 
     def __str__(self):
-        return self.names.get(self, 'unknown message %s' % hex(self))
+        return self.names.get(self, 'unknown message {}'.format(hex(self)))
 
     def __repr__(self):
         return str(self)
 
     def short(self):
-        return self.short_names.get(self, '%s' % self)
+        return self.short_names.get(self, '{}'.format(self))
 
 
 # ================================================================== BGP Message
@@ -116,11 +116,11 @@ class Message:
 
         @staticmethod
         def name(message_id):
-            return _MessageCode.names.get(message_id, 'unknown message %s' % hex(message_id))
+            return _MessageCode.names.get(message_id, 'unknown message {}'.format(hex(message_id)))
 
         @staticmethod
         def short(message_id):
-            return _MessageCode.short_names.get(message_id, 'unknown message %s' % hex(message_id))
+            return _MessageCode.short_names.get(message_id, 'unknown message {}'.format(hex(message_id)))
 
         # # Can raise KeyError
         # @staticmethod

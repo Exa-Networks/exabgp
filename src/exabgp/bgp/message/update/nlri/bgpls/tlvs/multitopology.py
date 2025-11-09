@@ -88,7 +88,7 @@ class MTID:
         raise RuntimeError('Not implemented')
 
     def __str__(self):
-        return ':'.join('%02X' % _ for _ in self.pack())
+        return ':'.join('{:02X}'.format(_) for _ in self.pack())
 
     def __repr__(self):
         return self.__str__()

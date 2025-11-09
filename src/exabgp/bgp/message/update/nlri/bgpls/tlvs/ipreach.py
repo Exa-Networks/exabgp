@@ -80,8 +80,8 @@ class IpReach:
     def json(self, compact=None):
         return ', '.join(
             [
-                '"ip-reachability-tlv": "%s"' % str(self.prefix),
-                '"ip-reach-prefix": "%s/%s"' % (str(self.prefix), str(self.plength)),
+                '"ip-reachability-tlv": "{}"'.format(str(self.prefix)),
+                '"ip-reach-prefix": "{}/{}"'.format(str(self.prefix), str(self.plength)),
             ],
         )
 
@@ -104,7 +104,7 @@ class IpReach:
         raise RuntimeError('Not implemented')
 
     def __str__(self):
-        return ':'.join('%02X' % _ for _ in self._packed)
+        return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
     def __repr__(self):
         return self.__str__()

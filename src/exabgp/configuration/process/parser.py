@@ -16,7 +16,7 @@ def encoder(tokeniser):
     value = tokeniser()
 
     if value not in ('text', 'json'):
-        raise ValueError('"%s" is an invalid option' % value)
+        raise ValueError('"{}" is an invalid option'.format(value))
     return value
 
 
@@ -81,23 +81,23 @@ def run(tokeniser):
             fd = os.open(prg, os.O_RDONLY)
         except OSError as e:
             if e.errno == 2:  # ENOENT
-                raise ValueError('can not locate the program "%s"' % prg) from e
+                raise ValueError('can not locate the program "{}"'.format(prg)) from e
             # Preserve exception chain for debugging while providing clear message
-            raise ValueError('can not access program "%s": %s' % (prg, e)) from e
+            raise ValueError('can not access program "{}": {}'.format(prg, e)) from e
 
         # Use fstat on file descriptor - this is safe from TOCTOU
         # The file descriptor points to the final target, even if prg was a symlink
         s = os.fstat(fd)
 
         if stat.S_ISDIR(s.st_mode):
-            raise ValueError('can not execute directories "%s"' % prg)
+            raise ValueError('can not execute directories "{}"'.format(prg))
 
         # Security check: refuse to run setuid/setgid programs
         if s.st_mode & stat.S_ISUID:
-            raise ValueError('refusing to run setuid programs "%s"' % prg)
+            raise ValueError('refusing to run setuid programs "{}"'.format(prg))
 
         if s.st_mode & stat.S_ISGID:
-            raise ValueError('refusing to run setgid programs "%s"' % prg)
+            raise ValueError('refusing to run setgid programs "{}"'.format(prg))
 
         # Check if file is executable by current user
         check = stat.S_IXOTH
@@ -107,11 +107,11 @@ def run(tokeniser):
             check |= stat.S_IXGRP
 
         if not (check & s.st_mode):
-            raise ValueError('exabgp will not be able to run this program "%s"' % prg)
+            raise ValueError('exabgp will not be able to run this program "{}"'.format(prg))
 
         # Additional security check: ensure it's a regular file
         if not stat.S_ISREG(s.st_mode):
-            raise ValueError('program must be a regular file "%s"' % prg)
+            raise ValueError('program must be a regular file "{}"'.format(prg))
 
     finally:
         if fd is not None:

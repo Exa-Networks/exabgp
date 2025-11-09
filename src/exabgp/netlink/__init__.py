@@ -11,13 +11,13 @@ class NetLinkError(Exception):
     def __init__(self, error, message='', response=''):
         reported = error.strip() + '\n'
         if message:
-            reported += '\nMessage: %s' % ' '.join('%02X' % _ for _ in message)
+            reported += '\nMessage: {}'.format(' '.join('{:02X}'.format(_) for _ in message))
         if message:
-            reported += '\n        : %s' % ''.join(_ for _ in message if _.isalnum() or _.isspace())
+            reported += '\n        : {}'.format(''.join(_ for _ in message if _.isalnum() or _.isspace()))
         if response:
-            reported += '\nResponse: %s' % ' '.join('%02X' % _ for _ in response)
+            reported += '\nResponse: {}'.format(' '.join('{:02X}'.format(_) for _ in response))
         if response:
-            reported += '\n        : %s' % ''.join(_ for _ in response if _.isalnum() or _.isspace())
+            reported += '\n        : {}'.format(''.join(_ for _ in response if _.isalnum() or _.isspace()))
         Exception.__init__(self, reported)
 
 

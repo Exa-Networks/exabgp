@@ -73,7 +73,7 @@ def mvpn_route(tokeniser, afi):
     elif route_type == 'shared-join':
         mvpn_nlri = mvpn_sharedjoin(tokeniser, afi, action)
     else:
-        raise ValueError('mup: unknown/unsupported mvpn route type: %s' % route_type)
+        raise ValueError('mup: unknown/unsupported mvpn route type: {}'.format(route_type))
 
     change = Change(mvpn_nlri, Attributes())
 
@@ -94,7 +94,7 @@ def mvpn_route(tokeniser, afi):
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
-            raise ValueError('unknown command "%s"' % command)
+            raise ValueError('unknown command "{}"'.format(command))
 
     if not AnnounceMVPN.check(change, afi):
         raise ValueError('invalid announcement (missing next-hop, label or rd ?)')

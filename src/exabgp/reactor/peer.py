@@ -63,7 +63,7 @@ class Stop(Exception):
 
 
 class Stats(dict):
-    __format = {'complete': lambda t: 'time %s' % time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t))}
+    __format = {'complete': lambda t: 'time {}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t)))}
 
     def __init__(self, *args):
         dict.__init__(self, args)
@@ -136,7 +136,7 @@ class Peer:
         self.recv_timer = None
 
     def id(self):
-        return 'peer-%s' % self.neighbor.uid
+        return 'peer-{}'.format(self.neighbor.uid)
 
     def _close(self, message='', error=''):
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
@@ -272,12 +272,12 @@ class Peer:
         return -1
 
     def handle_connection(self, connection):
-        log.debug(lambda: 'state machine for the peer is %s' % self.fsm.name(), self.id())
+        log.debug(lambda: 'state machine for the peer is {}'.format(self.fsm.name()), self.id())
 
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:
             log.debug(
-                lambda: 'we already have a peer in state established for %s' % connection.name(),
+                lambda: 'we already have a peer in state established for {}'.format(connection.name()),
                 self.id(),
             )
             return connection.notification(6, 7, 'could not accept the connection, already established')
@@ -295,8 +295,7 @@ class Peer:
 
             if remote_id < local_id:
                 log.debug(
-                    lambda: 'closing incoming connection as we have an outgoing connection with higher router-id for %s'
-                    % connection.name(),
+                    lambda: 'closing incoming connection as we have an outgoing connection with higher router-id for {}'.format(connection.name()),
                     self.id(),
                 )
                 return connection.notification(
@@ -308,8 +307,7 @@ class Peer:
         # accept the connection
         if self.proto:
             log.debug(
-                lambda: 'closing outgoing connection as we have another incoming on with higher router-id for %s'
-                % connection.name(),
+                lambda: 'closing outgoing connection as we have another incoming on with higher router-id for {}'.format(connection.name()),
                 self.id(),
             )
             self._close('closing outgoing connection as we have another incoming on with higher router-id')
@@ -737,7 +735,7 @@ class Peer:
             if self._delay.backoff():
                 return ACTION.LATER
             if self._restart:
-                log.debug(lambda: 'initialising connection to %s' % self.id(), 'reactor')
+                log.debug(lambda: 'initialising connection to {}'.format(self.id()), 'reactor')
                 self.generator = self._run()
                 return ACTION.LATER  # make sure we go through a clean loop
             return ACTION.CLOSE
@@ -822,8 +820,8 @@ class Peer:
         total_sent = 0
         total_rcvd = 0
         for message in ('open', 'notification', 'keepalive', 'update', 'refresh'):
-            sent = self.stats['send-%s' % message]
-            rcvd = self.stats['receive-%s' % message]
+            sent = self.stats['send-{}'.format(message)]
+            rcvd = self.stats['receive-{}'.format(message)]
             total_sent += sent
             total_rcvd += rcvd
             messages[message] = (sent, rcvd)

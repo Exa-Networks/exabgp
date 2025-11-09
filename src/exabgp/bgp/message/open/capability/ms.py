@@ -26,13 +26,13 @@ class MultiSession(Capability, list):
     # XXX: FIXME: Looks like we could do with something in this Caoability
     def __str__(self):
         info = ' (RFC)' if self.ID == Capability.CODE.MULTISESSION else ''
-        return 'Multisession%s %s' % (info, ' '.join([str(capa) for capa in self]))
+        return 'Multisession{} {}'.format(info, ' '.join([str(capa) for capa in self]))
 
     def json(self):
         variant = 'RFC' if self.ID == Capability.CODE.MULTISESSION else 'Cisco'
-        return '{ "name": "multisession", "variant": "%s", "capabilities": [%s ] }' % (
+        return '{{ "name": "multisession", "variant": "{}", "capabilities": [{} ] }}'.format(
             variant,
-            ','.join(' "%s"' % str(capa) for capa in self),
+            ','.join(' "{}"'.format(str(capa)) for capa in self),
         )
 
     def extract(self):

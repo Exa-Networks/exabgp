@@ -128,9 +128,9 @@ class Protocol:
             self.connection = None
 
     def _to_api(self, direction, message, raw):
-        packets = self.neighbor.api['%s-packets' % direction]
-        parsed = self.neighbor.api['%s-parsed' % direction]
-        consolidate = self.neighbor.api['%s-consolidate' % direction]
+        packets = self.neighbor.api['{}-packets'.format(direction)]
+        parsed = self.neighbor.api['{}-parsed'.format(direction)]
+        consolidate = self.neighbor.api['{}-consolidate'.format(direction)]
         negotiated = self.negotiated if self.neighbor.api['negotiated'] else None
 
         if consolidate:
@@ -178,7 +178,7 @@ class Protocol:
     def write(self, message, negotiated=None):
         raw = message.message(negotiated)
 
-        code = 'send-%s' % Message.CODE.short(message.ID)
+        code = 'send-{}'.format(Message.CODE.short(message.ID))
         self.peer.stats[code] += 1
         if self.neighbor.api.get(code, False):
             self._to_api('send', message, raw)
@@ -187,7 +187,7 @@ class Protocol:
             yield boolean
 
     def send(self, raw):
-        code = 'send-%s' % Message.CODE.short(raw[18])
+        code = 'send-{}'.format(Message.CODE.short(raw[18]))
         self.peer.stats[code] += 1
         if self.neighbor.api.get(code, False):
             message = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)
@@ -211,7 +211,7 @@ class Protocol:
         for length, msg_id, header, body, notify in self.connection.reader():
             # internal issue
             if notify:
-                code = 'receive-%s' % Message.CODE.NOTIFICATION.SHORT
+                code = 'receive-{}'.format(Message.CODE.NOTIFICATION.SHORT)
                 if self.neighbor.api.get(code, False):
                     if consolidate:
                         self.peer.reactor.processes.notification(
@@ -248,11 +248,11 @@ class Protocol:
                 continue
 
             log.debug(
-                lambda msg_id=msg_id: '<< message of type %s' % Message.CODE.name(msg_id),
+                lambda msg_id=msg_id: '<< message of type {}'.format(Message.CODE.name(msg_id)),
                 self.connection.session(),
             )
 
-            code = 'receive-%s' % Message.CODE.short(msg_id)
+            code = 'receive-{}'.format(Message.CODE.short(msg_id))
             self.peer.stats[code] += 1
             for_api = self.neighbor.api.get(code, False)
 
@@ -271,7 +271,7 @@ class Protocol:
                 raise
             except Exception as exc:
                 log.debug(lambda msg_id=msg_id: 'could not decode message "%d"' % msg_id, self.connection.session())
-                log.debug(lambda exc=exc: '%s' % str(exc), self.connection.session())
+                log.debug(lambda exc=exc: '{}'.format(str(exc)), self.connection.session())
                 log.debug(lambda: traceback.format_exc(), self.connection.session())
                 raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
                 # raise Notify(5,0,'unknown message received')
@@ -346,10 +346,10 @@ class Protocol:
             raise Notify(
                 5,
                 1,
-                'The first packet received is not an open message (%s)' % received_open,
+                'The first packet received is not an open message ({})'.format(received_open),
             )
 
-        log.debug(lambda: '<< %s' % received_open, self.connection.session())
+        log.debug(lambda: '<< {}'.format(received_open), self.connection.session())
         yield received_open
 
     def read_keepalive(self):
@@ -388,7 +388,7 @@ class Protocol:
         for _ in self.write(sent_open):
             yield _NOP
 
-        log.debug(lambda: '>> %s' % sent_open, self.connection.session())
+        log.debug(lambda: '>> {}'.format(sent_open), self.connection.session())
         yield sent_open
 
     def new_keepalive(self, comment=''):
@@ -430,7 +430,7 @@ class Protocol:
         eor = EOR(afi, safi)
         for _ in self.write(eor):
             yield _NOP
-        log.debug(lambda: '>> EOR %s %s' % (afi, safi), self.connection.session())
+        log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self.connection.session())
         yield eor
 
     def new_eors(self, afi=AFI.undefined, safi=SAFI.undefined):
@@ -457,11 +457,11 @@ class Protocol:
     def new_operational(self, operational, negotiated):
         for _ in self.write(operational, negotiated):
             yield _NOP
-        log.debug(lambda: '>> OPERATIONAL %s' % str(operational), self.connection.session())
+        log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self.connection.session())
         yield operational
 
     def new_refresh(self, refresh):
         for _ in self.write(refresh, None):
             yield _NOP
-        log.debug(lambda: '>> REFRESH %s' % str(refresh), self.connection.session())
+        log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self.connection.session())
         yield refresh

@@ -29,7 +29,7 @@ class NLRI(Family):
         self.action = action
 
     def __hash__(self):
-        return hash('%s:%s:%s' % (self.afi, self.safi, self.pack_nlri()))
+        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri()))
 
     def __eq__(self, other):
         return self.index() == other.index()
@@ -75,12 +75,12 @@ class NLRI(Family):
             if new in cls.registered_nlri:
                 if force:
                     # python has a bug and does not allow %ld/%ld (pypy does)
-                    cls.registered_nlri['%s/%s' % new] = klass
+                    cls.registered_nlri['{}/{}'.format(*new)] = klass
                 else:
-                    raise RuntimeError('Tried to register %s/%s twice' % new)
+                    raise RuntimeError('Tried to register {}/{} twice'.format(*new))
             else:
                 # python has a bug and does not allow %ld/%ld (pypy does)
-                cls.registered_nlri['%s/%s' % new] = klass
+                cls.registered_nlri['{}/{}'.format(*new)] = klass
                 cls.registered_families.append(new)
             return klass
 
@@ -97,7 +97,7 @@ class NLRI(Family):
         a, s = AFI.create(afi), SAFI.create(safi)
         log.debug(lazynlri(a, s, addpath, data), 'parser')
 
-        key = '%s/%s' % (a, s)
+        key = '{}/{}'.format(a, s)
         if key in cls.registered_nlri:
             return cls.registered_nlri[key].unpack_nlri(a, s, data, action, addpath)
-        raise Notify(3, 0, 'trying to decode unknown family %s/%s' % (a, s))
+        raise Notify(3, 0, 'trying to decode unknown family {}/{}'.format(a, s))

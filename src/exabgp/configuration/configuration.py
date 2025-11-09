@@ -454,8 +454,7 @@ class Configuration(_Configuration):
             has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']
             if has_procs and has_match:
                 return self.error.set(
-                    "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '%s' configuration.\n\n"
-                    % neighbor['peer-address'],
+                    "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '{}' configuration.\n\n".format(neighbor['peer-address']),
                 )
 
             for notification in neighbor.api:
@@ -587,7 +586,7 @@ class Configuration(_Configuration):
 
     def parse_section(self, name):
         if name not in self._structure:
-            return self.error.set('option %s is not allowed here' % name)
+            return self.error.set('option {} is not allowed here'.format(name))
 
         if not self.dispatch(name):
             return False
@@ -601,6 +600,6 @@ class Configuration(_Configuration):
         if name == 'static' and command == 'attribute':
             command = 'attributes'
         if command not in self._structure[name]['commands']:
-            return self.error.set('invalid keyword "%s"' % command)
+            return self.error.set('invalid keyword "{}"'.format(command))
 
         return self._structure[name]['class'].parse(name, command)

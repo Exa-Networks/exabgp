@@ -25,7 +25,7 @@ except NotADirectoryError:
 date = datetime.fromtimestamp(modification_time)
 
 commit = 'unset'
-release = '5.0.0-%s+uncontrolled' % date.strftime('%Y%m%d')
+release = '5.0.0-{}+uncontrolled'.format(date.strftime('%Y%m%d'))
 json = '5.0.0'
 text = '5.0.0'
 version = os.environ.get('exabgp_version', release)

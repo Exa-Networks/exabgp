@@ -97,12 +97,12 @@ class BGPLS(NLRI):
         return len(self._packed) + 2
 
     def __hash__(self):
-        return hash('%s:%s:%s:%s' % (self.afi, self.safi, self.CODE, self._packed))
+        return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed))
 
     def __str__(self):
-        return 'bgp-ls:%s:%s' % (
+        return 'bgp-ls:{}:{}'.format(
             self.registered_bgpls.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('%02x' % _ for _ in self._packed),
+            '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
     @classmethod
@@ -132,7 +132,7 @@ class BGPLS(NLRI):
         return klass, bgp[length + 4 :]
 
     def _raw(self):
-        return ''.join('%02X' % _ for _ in self.pack())
+        return ''.join('{:02X}'.format(_) for _ in self.pack())
 
 
 class GenericBGPLS(BGPLS):

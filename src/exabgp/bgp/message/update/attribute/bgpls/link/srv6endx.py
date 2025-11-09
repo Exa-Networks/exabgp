@@ -48,8 +48,7 @@ class Srv6EndX(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
-                'behavior: %s, flags: %s, algorithm: %s, weight: %s, sid: %s'
-                % (d.behavior, d.flags, d.algorithm, d.weight, d.sid)
+                'behavior: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(d.behavior, d.flags, d.algorithm, d.weight, d.sid)
                 for d in self.content
             ],
         )
@@ -98,4 +97,4 @@ class Srv6EndX(FlagLS):
         return cls(content=content)
 
     def json(self, compact=None):
-        return '"srv6-endx": [ %s ]' % ', '.join([json.dumps(d, indent=compact) for d in self.content])
+        return '"srv6-endx": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))

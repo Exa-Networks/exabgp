@@ -16,7 +16,7 @@ from exabgp.rib.change import Change
 
 
 class ParseL2VPN(ParseVPLS):
-    syntax = 'vpls %s;\n' % ' '.join(ParseVPLS.definition)
+    syntax = 'vpls {};\n'.format(' '.join(ParseVPLS.definition))
 
     action = dict(ParseVPLS.action)
 
@@ -59,7 +59,7 @@ def vpls(tokeniser):
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
-            raise ValueError('vpls: unknown command "%s"' % command)
+            raise ValueError('vpls: unknown command "{}"'.format(command))
 
     return [
         change,

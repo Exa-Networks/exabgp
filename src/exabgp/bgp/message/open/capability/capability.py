@@ -70,18 +70,18 @@ class _CapabilityCode(int):
         if value in cls._cache:
             return cls._cache[value]
         obj = super(_CapabilityCode, cls).__new__(cls, value)
-        obj.NAME = cls.names.get(value, 'unknown capability %s' % hex(value))
+        obj.NAME = cls.names.get(value, 'unknown capability {}'.format(hex(value)))
         cls._cache[value] = obj
         return obj
 
     def __str__(self):
-        return self.names.get(self, 'unknown capability %s' % hex(self))
+        return self.names.get(self, 'unknown capability {}'.format(hex(self)))
 
     def __repr__(self):
         return str(self)
 
     def name(self):
-        return self.names.get(self, 'unknown capability %s' % hex(self))
+        return self.names.get(self, 'unknown capability {}'.format(hex(self)))
 
 
 # =================================================================== Capability
@@ -120,10 +120,10 @@ class Capability:
             name = _CapabilityCode.names.get(self, None)
             if name is None:
                 if self in Capability.CODE.unassigned:
-                    return 'unassigned-%s' % hex(self)
+                    return 'unassigned-{}'.format(hex(self))
                 if self in Capability.CODE.reserved:
-                    return 'reserved-%s' % hex(self)
-                return 'capability-%s' % hex(self)
+                    return 'reserved-{}'.format(hex(self))
+                return 'capability-{}'.format(hex(self))
             return name
 
         def __repr__(self):
@@ -135,9 +135,9 @@ class Capability:
             name = _CapabilityCode.names.get(self, None)
             if name is None:
                 if self in Capability.CODE.unassigned:
-                    return 'unassigned-%s' % hex(self)
+                    return 'unassigned-{}'.format(hex(self))
                 if self in Capability.CODE.reserved:
-                    return 'reserved-%s' % hex(self)
+                    return 'reserved-{}'.format(hex(self))
             return name
 
     registered_capability = dict()
@@ -145,7 +145,7 @@ class Capability:
 
     @staticmethod
     def hex(data):
-        return '0x' + ''.join('%02x' % _ for _ in data)
+        return '0x' + ''.join('{:02x}'.format(_) for _ in data)
 
     @classmethod
     def unknown(cls, klass):
@@ -173,7 +173,7 @@ class Capability:
             return kls
         if cls.unknown_capability:
             return cls.unknown_capability
-        raise Notify(2, 4, 'can not handle capability %s' % what)
+        raise Notify(2, 4, 'can not handle capability {}'.format(what))
 
     @classmethod
     def unpack(cls, capability, capabilities, data):

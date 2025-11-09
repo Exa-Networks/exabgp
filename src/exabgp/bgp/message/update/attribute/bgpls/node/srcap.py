@@ -52,7 +52,7 @@ class SrCapabilities(FlagLS):
         self.sids = sids
 
     def __repr__(self):
-        return '%s: %s, sids: %s' % (self.REPR, self.flags, self.sids)
+        return '{}: {}, sids: {}'.format(self.REPR, self.flags, self.sids)
 
     @classmethod
     def unpack(cls, data):

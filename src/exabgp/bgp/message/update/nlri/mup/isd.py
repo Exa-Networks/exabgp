@@ -53,7 +53,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return not self.__eq__(other)
 
     def __str__(self):
-        return '%s:%s:%s%s' % (self._prefix(), self.rd._str(), self.prefix_ip, '/%d' % self.prefix_ip_len)
+        return '{}:{}:{}{}'.format(self._prefix(), self.rd._str(), self.prefix_ip, '/%d' % self.prefix_ip_len)
 
     def __hash__(self):
         return hash((self.rd, self.prefix_ip_len, self.prefix_ip))
@@ -95,11 +95,11 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return cls(rd, prefix_ip_len, prefix_ip, afi)
 
     def json(self, compact=None):
-        content = '"name": "%s", ' % self.NAME
+        content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
-        content += '"prefix_ip": "%s", ' % str(self.prefix_ip)
+        content += '"prefix_ip": "{}", '.format(str(self.prefix_ip))
         content += self.rd.json()
-        content += ', "raw": "%s"' % self._raw()
-        return '{ %s }' % content
+        content += ', "raw": "{}"'.format(self._raw())
+        return '{{ {} }}'.format(content)

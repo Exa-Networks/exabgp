@@ -119,7 +119,7 @@ class Negotiated:
                 # no need to check that the capability exists, we generated it
                 # checked it is what we sent and only send MULTIPROTOCOL
                 if sent_capa[capa] != recv_capa[capa]:
-                    self.multisession = (2, 8, 'when checking session id, capability %s did not match' % str(capa))
+                    self.multisession = (2, 8, 'when checking session id, capability {} did not match'.format(str(capa)))
                     break
 
         elif sent_capa.announced(Capability.CODE.MULTISESSION):
@@ -150,8 +150,7 @@ class Negotiated:
                 return (
                     2,
                     3,
-                    'BGP Identifier collision, same router-id (%s) on both sides of this IBGP session'
-                    % self.received_open.router_id,
+                    'BGP Identifier collision, same router-id ({}) on both sides of this IBGP session'.format(self.received_open.router_id),
                 )
 
         if self.received_open.hold_time and self.received_open.hold_time < 3:

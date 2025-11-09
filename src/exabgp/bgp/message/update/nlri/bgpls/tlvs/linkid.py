@@ -35,7 +35,7 @@ class LinkIdentifier:
         return cls(local_id=local_id, remote_id=remote_id)
 
     def json(self):
-        content = '"link-local-id": %s, ' % self.local_id + '"link-remote-id": %s' % self.remote_id
+        content = '"link-local-id": {}, '.format(self.local_id) + '"link-remote-id": {}'.format(self.remote_id)
         return content
 
     def __eq__(self, other):
@@ -57,7 +57,7 @@ class LinkIdentifier:
         raise RuntimeError('Not implemented')
 
     def __str__(self):
-        return ':'.join('%02X' % _ for _ in self._packed)
+        return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
     def __repr__(self):
         return self.__str__()

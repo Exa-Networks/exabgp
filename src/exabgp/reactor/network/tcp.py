@@ -187,9 +187,9 @@ def md5(io, ip, port, md5, md5_base64):
 
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc)) from None
+                raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 ({})'.format(errstr(exc))) from None
     elif md5:
-        raise MD5Error('ExaBGP has no MD5 support for %s' % platform_os)
+        raise MD5Error('ExaBGP has no MD5 support for {}'.format(platform_os))
 
 
 def nagle(io, ip):
@@ -197,7 +197,7 @@ def nagle(io, ip):
         # diable Nagle's algorithm (no grouping of packets)
         io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     except (OSError, AttributeError):
-        raise NagleError("Could not disable nagle's algorithm for %s" % ip) from None
+        raise NagleError("Could not disable nagle's algorithm for {}".format(ip)) from None
 
 
 def ttl(io, ip, ttl):
@@ -214,7 +214,7 @@ def ttlv6(io, ip, ttl):
         try:
             io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
         except OSError as exc:
-            raise TTLError('This OS does not support unicast_hops (ttl-security) for %s (%s)' % (ip, errstr(exc))) from None
+            raise TTLError('This OS does not support unicast_hops (ttl-security) for {} ({})'.format(ip, errstr(exc))) from None
 
 
 def min_ttl(io, ip, ttl):
@@ -223,7 +223,7 @@ def min_ttl(io, ip, ttl):
         try:
             io.setsockopt(socket.IPPROTO_IP, socket.IP_MINTTL, ttl)
         except OSError as exc:
-            raise TTLError('This OS does not support IP_MINTTL (ttl-security) for %s (%s)' % (ip, errstr(exc))) from None
+            raise TTLError('This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))) from None
         except AttributeError:
             pass
 
@@ -231,7 +231,7 @@ def min_ttl(io, ip, ttl):
             io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
         except OSError as exc:
             raise TTLError(
-                'This OS does not support IP_MINTTL or IP_TTL (ttl-security) for %s (%s)' % (ip, errstr(exc)),
+                'This OS does not support IP_MINTTL or IP_TTL (ttl-security) for {} ({})'.format(ip, errstr(exc)),
             ) from None
 
 
@@ -239,7 +239,7 @@ def asynchronous(io, ip):
     try:
         io.setblocking(0)
     except OSError as exc:
-        raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip, errstr(exc))) from None
+        raise AsyncError('could not set socket non-blocking for {} ({})'.format(ip, errstr(exc))) from None
 
 
 def ready(io):
@@ -266,9 +266,9 @@ def ready(io):
                     yield True, 'connection established'
                     return
                 elif err in error.block:
-                    yield False, 'connect attempt failed, retrying, reason %s' % errno.errorcode[err]
+                    yield False, 'connect attempt failed, retrying, reason {}'.format(errno.errorcode[err])
                     return
             yield False, 'waiting for socket to become ready'
         except OSError as err:
-            yield False, 'error, retrying %s' % str(err)
+            yield False, 'error, retrying {}'.format(str(err))
             return

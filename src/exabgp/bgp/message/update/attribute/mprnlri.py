@@ -121,14 +121,14 @@ class MPRNLRI(Attribute, Family):
 
         # we do not want to accept unknown families
         if negotiated and (afi, safi) not in negotiated.families:
-            raise Notify(3, 0, 'presented a non-negotiated family %s/%s' % (afi, safi))
+            raise Notify(3, 0, 'presented a non-negotiated family {}/{}'.format(afi, safi))
 
         # -- Reading length of next-hop
         len_nh = data[offset]
         offset += 1
 
         if (afi, safi) not in Family.size:
-            raise Notify(3, 0, 'unsupported %s %s' % (afi, safi))
+            raise Notify(3, 0, 'unsupported {} {}'.format(afi, safi))
 
         length, rd = Family.size[(afi, safi)]
 
@@ -145,7 +145,7 @@ class MPRNLRI(Attribute, Family):
             elif len_nh in (4, 12):
                 nh_afi = AFI.ipv4
             else:
-                raise Notify(3, 0, 'unsupported family %s %s with extended next-hop capability enabled' % (afi, safi))
+                raise Notify(3, 0, 'unsupported family {} {} with extended next-hop capability enabled'.format(afi, safi))
             length, _ = Family.size[(nh_afi, safi)]
 
         if len_nh not in length:

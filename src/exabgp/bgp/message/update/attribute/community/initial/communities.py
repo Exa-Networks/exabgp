@@ -45,20 +45,20 @@ class Communities(Attribute):
     def __repr__(self):
         lc = len(self.communities)
         if lc > 1:
-            return '[ %s ]' % ' '.join(repr(community) for community in sorted(self.communities))
+            return '[ {} ]'.format(' '.join(repr(community) for community in sorted(self.communities)))
         if lc == 1:
             return repr(self.communities[0])
         return ''
 
     def json(self):
-        return '[ %s ]' % ', '.join(community.json() for community in self.communities)
+        return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @staticmethod
     def unpack(data, direction, negotiated):
         communities = Communities()
         while data:
             if data and len(data) < 4:
-                raise Notify(3, 1, 'could not decode community %s' % str([hex(_) for _ in data]))
+                raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data])))
             communities.add(Community.unpack(data[:4], direction, negotiated))
             data = data[4:]
         return communities

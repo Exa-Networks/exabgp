@@ -25,10 +25,10 @@ class Software(Capability):
         self.software_version = software_version
 
     def __str__(self):
-        return 'Software(%s)' % self.software_version
+        return 'Software({})'.format(self.software_version)
 
     def json(self):
-        return '{ "software": "%s" }' % self.software_version
+        return '{{ "software": "{}" }}'.format(self.software_version)
 
     def extract(self):
         return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]

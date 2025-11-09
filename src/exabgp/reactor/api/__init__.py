@@ -35,7 +35,7 @@ class API(Command):
 
     def log_failure(self, message, level='ERR'):
         error = str(self.configuration.tokeniser.error)
-        report = '%s\nreason: %s' % (message, error) if error else message
+        report = '{}\nreason: {}'.format(message, error) if error else message
         log.error(lambda: report, 'processes', level)
 
     def process(self, reactor, service, command):
@@ -53,7 +53,7 @@ class API(Command):
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
                 return self.callback[api][registered](self, reactor, service, command, use_json)
         reactor.processes.answer_error(service)
-        log.warning(lambda: 'command from process not understood : %s' % command, 'api')
+        log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')
         return False
 
     def api_route(self, command):

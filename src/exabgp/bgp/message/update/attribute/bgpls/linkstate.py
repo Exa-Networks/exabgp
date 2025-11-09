@@ -116,7 +116,7 @@ class BaseLS:
             return f'"{self.JSON}": "{self.content.decode("utf-8")}"'
 
     def __repr__(self):
-        return '%s: %s' % (self.REPR, self.content)
+        return '{}: {}'.format(self.REPR, self.content)
 
     @classmethod
     def check_length(cls, data, length):
@@ -146,7 +146,7 @@ class GenericLSID(BaseLS):
         )
 
     def __repr__(self):
-        return 'Attribute with code [ %s ] not implemented' % (self.TLV)
+        return 'Attribute with code [ {} ] not implemented'.format(self.TLV)
 
     def json(self):
         merged = ', '.join([f'"{hexstring(_)}"' for _ in self.content])
@@ -162,7 +162,7 @@ class FlagLS(BaseLS):
         self.flags = flags
 
     def __repr__(self):
-        return '%s: %s' % (self.REPR, self.flags)
+        return '{}: {}'.format(self.REPR, self.flags)
 
     def json(self, compact=None):
         return f'"{self.JSON}": {json.dumps(self.flags)}'

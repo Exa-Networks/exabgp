@@ -147,7 +147,7 @@ class ASPath(Attribute):
     def string(self):
         parts = []
         for content in self.aspath:
-            part = '%s %s %s' % (content.HEAD, ' '.join(str(_) for _ in content), content.TAIL)
+            part = '{} {} {}'.format(content.HEAD, ' '.join(str(_) for _ in content), content.TAIL)
             parts.append(part)
         return ' '.join(parts)
 

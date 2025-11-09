@@ -64,7 +64,7 @@ class RouteDistinguisher:
     def json(self):
         if not self.rd:
             return ''
-        return '"rd": "%s"' % self._str()
+        return '"rd": "{}"'.format(self._str())
 
     def __hash__(self):
         return hash(self.rd)
@@ -72,7 +72,7 @@ class RouteDistinguisher:
     def __repr__(self):
         if not self.rd:
             return ''
-        return ' rd %s' % self._str()
+        return ' rd {}'.format(self._str())
 
     @classmethod
     def unpack(cls, data):
@@ -95,11 +95,11 @@ class RouteDistinguisher:
                 elif number < pow(2, 32) and suffix < pow(2, 16):
                     distinguisher = bytes([0, 2]) + pack('!L', number) + pack('!H', suffix)
                 else:
-                    raise ValueError('invalid route-distinguisher %s' % number)
+                    raise ValueError('invalid route-distinguisher {}'.format(number))
 
             return cls(distinguisher)
         except ValueError:
-            raise ValueError('invalid route-distinguisher %s:%s' % (prefix, suffix)) from None
+            raise ValueError('invalid route-distinguisher {}:{}'.format(prefix, suffix)) from None
 
 
 RouteDistinguisher.NORD = RouteDistinguisher(b'')

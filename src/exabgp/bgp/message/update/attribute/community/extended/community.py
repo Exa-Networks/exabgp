@@ -84,7 +84,7 @@ class ExtendedCommunityBase(Attribute):
             h <<= 8
             h += byte
         s = self.klass.__repr__(self) if self.klass else ''
-        return '{ "value": %s, "string": "%s" }' % (h, s)
+        return '{{ "value": {}, "string": "{}" }}'.format(h, s)
 
     def __repr__(self):
         if self.klass:
@@ -93,7 +93,7 @@ class ExtendedCommunityBase(Attribute):
         for byte in self.community:
             h <<= 8
             h += byte
-        return '0x%016X' % h
+        return '0x{:016X}'.format(h)
 
     def __hash__(self):
         return hash(self.community)
