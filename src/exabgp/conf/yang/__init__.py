@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 yang/__init__.py
 

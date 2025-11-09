@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 srv6/l3service.py
 

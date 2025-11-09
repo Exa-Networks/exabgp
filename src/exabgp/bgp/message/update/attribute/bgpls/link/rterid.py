@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 rterid.py
 

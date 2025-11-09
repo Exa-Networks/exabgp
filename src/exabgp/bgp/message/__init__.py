@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 update/__init__.py
 

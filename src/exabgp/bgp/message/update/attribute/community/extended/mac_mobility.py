@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 mac_mobility.py
 

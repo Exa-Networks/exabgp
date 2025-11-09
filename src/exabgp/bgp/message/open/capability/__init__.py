@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 capability/__init__.py
 

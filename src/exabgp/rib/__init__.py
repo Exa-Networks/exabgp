@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 rib/__init__.py
 

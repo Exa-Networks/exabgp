@@ -1,4 +1,4 @@
-# encoding: utf-8
+
 """
 bgpls/__init__.py
 
