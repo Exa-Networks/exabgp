@@ -313,7 +313,8 @@ def check_open(neighbor, raw):
 def display_open(neighbor, raw):
     try:
         o = Open.unpack_message(raw)
-        sys.stdout.write(f'{Response.JSON(json_version).open(neighbor, 'in', o, None, '', '')}\n')
+        sys.stdout.write(Response.JSON(json_version).open(neighbor, 'in', o, None, '', ''))
+        sys.stdout.write('\n')
         return True
     except Exception:
         return False
