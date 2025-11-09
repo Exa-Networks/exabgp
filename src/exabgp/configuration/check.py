@@ -257,7 +257,7 @@ def _make_nlri(neighbor, routes):
             nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath)
             nlris.append(nlri)
     except Exception as exc:
-        log.error('could not parse the nlri', 'parser')
+        log.error(f'could not parse the nlri for afi={afi}, safi={safi}', 'parser')
         from exabgp.debug import string_exception
 
         log.error(string_exception(exc), 'parser')
@@ -349,7 +349,7 @@ def _make_update(neighbor, raw):
         except Notify:
             import traceback
 
-            log.error('could not parse the message', 'parser')
+            log.error('could not parse the update message', 'parser')
             log.error(traceback.format_exc(), 'parser')
             if getenv().debug.pdb:
                 raise
@@ -357,7 +357,7 @@ def _make_update(neighbor, raw):
         except Exception:
             import traceback
 
-            log.error('could not parse the message', 'parser')
+            log.error('could not parse the update message', 'parser')
             log.error(traceback.format_exc(), 'parser')
             if getenv().debug.pdb:
                 raise
@@ -392,7 +392,7 @@ def _make_notification(neighbor, raw):
     except Notify:
         import traceback
 
-        log.error('could not parse the message', 'parser')
+        log.error('could not parse the notification message', 'parser')
         log.error(traceback.format_exc(), 'parser')
         if getenv().debug.pdb:
             raise
@@ -400,7 +400,7 @@ def _make_notification(neighbor, raw):
     except Exception:
         import traceback
 
-        log.error('could not parse the message', 'parser')
+        log.error('could not parse the notification message', 'parser')
         log.error(traceback.format_exc(), 'parser')
         if getenv().debug.pdb:
             raise
