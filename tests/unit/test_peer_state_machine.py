@@ -1,3 +1,4 @@
+from typing import Any
 #!/usr/bin/env python3
 # encoding: utf-8
 """test_peer_state_machine.py
@@ -28,7 +29,7 @@ from exabgp.reactor.api.processes import ProcessError
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
     from exabgp.logger import log
@@ -62,7 +63,7 @@ def mock_logger():
 class TestPeerInitialization:
     """Test Peer object initialization"""
 
-    def test_peer_init_basic(self):
+    def test_peer_init_basic(self) -> None:
         """Test basic Peer initialization"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -79,7 +80,7 @@ class TestPeerInitialization:
         assert peer._restart is True
         assert peer._restarted is True
 
-    def test_peer_init_stats(self):
+    def test_peer_init_stats(self) -> None:
         """Test Peer initialization creates stats"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -95,7 +96,7 @@ class TestPeerInitialization:
         assert 'up' in peer.stats
         assert 'down' in peer.stats
 
-    def test_peer_init_message_counters(self):
+    def test_peer_init_message_counters(self) -> None:
         """Test Peer initialization creates message counters"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -113,7 +114,7 @@ class TestPeerInitialization:
         assert peer.stats['receive-notification'] == 0
         assert peer.stats['send-notification'] == 0
 
-    def test_peer_id_generation(self):
+    def test_peer_id_generation(self) -> None:
         """Test Peer generates unique ID"""
         neighbor = Mock()
         neighbor.uid = '123'
@@ -128,7 +129,7 @@ class TestPeerInitialization:
 class TestPeerStateTransitions:
     """Test Peer state transitions through FSM"""
 
-    def test_peer_starts_in_idle(self):
+    def test_peer_starts_in_idle(self) -> None:
         """Test Peer starts in IDLE state"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -139,7 +140,7 @@ class TestPeerStateTransitions:
 
         assert peer.fsm == FSM.IDLE
 
-    def test_peer_close_transitions_to_idle(self):
+    def test_peer_close_transitions_to_idle(self) -> None:
         """Test _close transitions Peer to IDLE"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -155,7 +156,7 @@ class TestPeerStateTransitions:
         assert peer.fsm == FSM.IDLE
         assert peer.proto is None
 
-    def test_peer_reset_clears_state(self):
+    def test_peer_reset_clears_state(self) -> None:
         """Test _reset clears peer state"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -174,7 +175,7 @@ class TestPeerStateTransitions:
         assert peer._teardown is None
         neighbor.reset_rib.assert_called_once()
 
-    def test_peer_stop_sets_flags(self):
+    def test_peer_stop_sets_flags(self) -> None:
         """Test stop() sets correct flags"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -192,7 +193,7 @@ class TestPeerStateTransitions:
         assert peer.fsm == FSM.IDLE
         neighbor.rib.uncache.assert_called_once()
 
-    def test_peer_reestablish_sets_teardown(self):
+    def test_peer_reestablish_sets_teardown(self) -> None:
         """Test reestablish() sets teardown flag"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -211,7 +212,7 @@ class TestPeerStateTransitions:
 class TestPeerCollisionDetection:
     """Test Peer collision detection logic"""
 
-    def test_collision_reject_when_established(self):
+    def test_collision_reject_when_established(self) -> None:
         """Test collision detection rejects connection when established"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -230,7 +231,7 @@ class TestPeerCollisionDetection:
         assert result is not None
         connection.notification.assert_called_once_with(6, 7, 'could not accept the connection, already established')
 
-    def test_collision_detection_openconfirm_higher_router_id(self):
+    def test_collision_detection_openconfirm_higher_router_id(self) -> None:
         """Test collision detection in OPENCONFIRM with higher local router-id"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -257,7 +258,7 @@ class TestPeerCollisionDetection:
         assert result is not None
         connection.notification.assert_called_once()
 
-    def test_collision_detection_openconfirm_lower_router_id(self):
+    def test_collision_detection_openconfirm_lower_router_id(self) -> None:
         """Test collision detection in OPENCONFIRM with lower local router-id"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -287,7 +288,7 @@ class TestPeerCollisionDetection:
         assert result is None
         assert peer.proto is not None
 
-    def test_collision_accept_replaces_proto(self):
+    def test_collision_accept_replaces_proto(self) -> None:
         """Test accepting collision replaces existing protocol"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -316,7 +317,7 @@ class TestPeerCollisionDetection:
 class TestPeerTimers:
     """Test Peer timer functionality"""
 
-    def test_receive_timer_initialized(self):
+    def test_receive_timer_initialized(self) -> None:
         """Test receive timer is initialized after OPENCONFIRM"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -327,7 +328,7 @@ class TestPeerTimers:
 
         assert peer.recv_timer is None
 
-    def test_peer_delay_increase_on_close(self):
+    def test_peer_delay_increase_on_close(self) -> None:
         """Test delay increases on connection close"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -343,7 +344,7 @@ class TestPeerTimers:
         # Delay should increase after close (tracked by _next value)
         assert peer._delay._next > initial_next
 
-    def test_peer_delay_reset_on_reestablish(self):
+    def test_peer_delay_reset_on_reestablish(self) -> None:
         """Test delay resets on reestablish"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -359,7 +360,7 @@ class TestPeerTimers:
         # Delay should be reset (_next should be 0)
         assert peer._delay._next == 0
 
-    def test_peer_delay_reset_on_teardown(self):
+    def test_peer_delay_reset_on_teardown(self) -> None:
         """Test delay resets on teardown"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -378,7 +379,7 @@ class TestPeerTimers:
 class TestPeerErrorRecovery:
     """Test Peer error recovery mechanisms"""
 
-    def test_peer_close_on_error_transitions_to_idle(self):
+    def test_peer_close_on_error_transitions_to_idle(self) -> None:
         """Test _close transitions peer to IDLE on error"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -394,7 +395,7 @@ class TestPeerErrorRecovery:
         # Should transition to IDLE after error
         assert peer.fsm == FSM.IDLE
 
-    def test_peer_reset_on_error_clears_state(self):
+    def test_peer_reset_on_error_clears_state(self) -> None:
         """Test _reset clears peer state on error"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -414,7 +415,7 @@ class TestPeerErrorRecovery:
         assert peer._teardown is None
         neighbor.reset_rib.assert_called_once()
 
-    def test_peer_handles_network_error_state(self):
+    def test_peer_handles_network_error_state(self) -> None:
         """Test Peer error handling transitions to IDLE"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -431,7 +432,7 @@ class TestPeerErrorRecovery:
 
         assert peer.fsm == FSM.IDLE
 
-    def test_peer_error_increases_delay(self):
+    def test_peer_error_increases_delay(self) -> None:
         """Test error increases backoff delay"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -448,7 +449,7 @@ class TestPeerErrorRecovery:
         # Delay should increase
         assert peer._delay._next > initial_next
 
-    def test_peer_clears_proto_on_error(self):
+    def test_peer_clears_proto_on_error(self) -> None:
         """Test Peer clears protocol on error"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -469,7 +470,7 @@ class TestPeerErrorRecovery:
 class TestPeerConnectionAttempts:
     """Test Peer connection attempt limiting"""
 
-    def test_can_reconnect_unlimited(self):
+    def test_can_reconnect_unlimited(self) -> None:
         """Test can_reconnect with unlimited attempts"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -484,7 +485,7 @@ class TestPeerConnectionAttempts:
         peer.connection_attempts = 1000
         assert peer.can_reconnect() is True
 
-    def test_can_reconnect_limited(self):
+    def test_can_reconnect_limited(self) -> None:
         """Test can_reconnect with limited attempts"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -503,7 +504,7 @@ class TestPeerConnectionAttempts:
         peer.connection_attempts = 4
         assert peer.can_reconnect() is False
 
-    def test_connection_attempt_counting(self):
+    def test_connection_attempt_counting(self) -> None:
         """Test connection attempts are tracked"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -528,7 +529,7 @@ class TestPeerConnectionAttempts:
 class TestPeerEstablished:
     """Test Peer established() method"""
 
-    def test_established_returns_true_when_established(self):
+    def test_established_returns_true_when_established(self) -> None:
         """Test established() returns True in ESTABLISHED state"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -540,7 +541,7 @@ class TestPeerEstablished:
 
         assert peer.established() is True
 
-    def test_established_returns_false_when_not_established(self):
+    def test_established_returns_false_when_not_established(self) -> None:
         """Test established() returns False in other states"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -561,7 +562,7 @@ class TestPeerEstablished:
 class TestPeerSocket:
     """Test Peer socket() method"""
 
-    def test_socket_returns_fd_when_proto_exists(self):
+    def test_socket_returns_fd_when_proto_exists(self) -> None:
         """Test socket() returns fd when protocol exists"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -574,7 +575,7 @@ class TestPeerSocket:
 
         assert peer.socket() == 42
 
-    def test_socket_returns_negative_when_no_proto(self):
+    def test_socket_returns_negative_when_no_proto(self) -> None:
         """Test socket() returns -1 when no protocol"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -590,7 +591,7 @@ class TestPeerSocket:
 class TestPeerReconfigure:
     """Test Peer reconfigure functionality"""
 
-    def test_reconfigure_updates_neighbor(self):
+    def test_reconfigure_updates_neighbor(self) -> None:
         """Test reconfigure() updates neighbor reference"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -605,7 +606,7 @@ class TestPeerReconfigure:
 
         assert peer._neighbor is new_neighbor
 
-    def test_teardown_sets_code_and_restart(self):
+    def test_teardown_sets_code_and_restart(self) -> None:
         """Test teardown() sets correct code and restart flag"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -622,12 +623,12 @@ class TestPeerReconfigure:
 class TestStats:
     """Test Stats class functionality"""
 
-    def test_stats_initialization(self):
+    def test_stats_initialization(self) -> None:
         """Test Stats initializes as dict"""
         stats = Stats()
         assert isinstance(stats, dict)
 
-    def test_stats_tracks_changes(self):
+    def test_stats_tracks_changes(self) -> None:
         """Test Stats tracks changed items"""
         stats = Stats()
         stats['test'] = 1
@@ -635,7 +636,7 @@ class TestStats:
         changes = list(stats.changed_statistics())
         assert len(changes) > 0
 
-    def test_stats_changed_statistics_clears(self):
+    def test_stats_changed_statistics_clears(self) -> None:
         """Test changed_statistics() clears changed set"""
         stats = Stats()
         stats['test'] = 1
@@ -646,7 +647,7 @@ class TestStats:
         # Should be empty after first call
         assert len(changes) == 0
 
-    def test_stats_multiple_changes(self):
+    def test_stats_multiple_changes(self) -> None:
         """Test Stats tracks multiple changes"""
         stats = Stats()
         stats['test1'] = 1
@@ -660,7 +661,7 @@ class TestStats:
 class TestPeerNegotiatedFamilies:
     """Test Peer negotiated_families() method"""
 
-    def test_negotiated_families_with_proto(self):
+    def test_negotiated_families_with_proto(self) -> None:
         """Test negotiated_families() when protocol exists"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -676,7 +677,7 @@ class TestPeerNegotiatedFamilies:
         assert '1/1' in result
         assert '2/1' in result
 
-    def test_negotiated_families_without_proto(self):
+    def test_negotiated_families_without_proto(self) -> None:
         """Test negotiated_families() when no protocol"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -690,7 +691,7 @@ class TestPeerNegotiatedFamilies:
         result = peer.negotiated_families()
         assert '1/1' in result
 
-    def test_negotiated_families_single_family(self):
+    def test_negotiated_families_single_family(self) -> None:
         """Test negotiated_families() with single family"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -704,7 +705,7 @@ class TestPeerNegotiatedFamilies:
         result = peer.negotiated_families()
         assert result == '1/1'
 
-    def test_negotiated_families_multiple_families(self):
+    def test_negotiated_families_multiple_families(self) -> None:
         """Test negotiated_families() with multiple families"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -723,13 +724,13 @@ class TestPeerNegotiatedFamilies:
 class TestACTIONConstants:
     """Test ACTION constants"""
 
-    def test_action_constants_defined(self):
+    def test_action_constants_defined(self) -> None:
         """Test ACTION constants are defined"""
         assert ACTION.CLOSE == 0x01
         assert ACTION.LATER == 0x02
         assert ACTION.NOW == 0x03
 
-    def test_action_all_list(self):
+    def test_action_all_list(self) -> None:
         """Test ACTION.ALL contains all actions"""
         assert ACTION.CLOSE in ACTION.ALL
         assert ACTION.LATER in ACTION.ALL
@@ -740,7 +741,7 @@ class TestACTIONConstants:
 class TestPeerRun:
     """Test Peer run() method"""
 
-    def test_run_with_generator_false(self):
+    def test_run_with_generator_false(self) -> None:
         """Test run() when generator is False (stopped)"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -754,7 +755,7 @@ class TestPeerRun:
         # This indicates the peer is stopped
         assert peer.generator is False
 
-    def test_run_checks_broken_process(self):
+    def test_run_checks_broken_process(self) -> None:
         """Test run() checks for broken process"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -774,7 +775,7 @@ class TestPeerRun:
         assert peer._restart is False
         reactor.processes.broken.assert_called_once_with(neighbor)
 
-    def test_run_generator_none_backoff(self):
+    def test_run_generator_none_backoff(self) -> None:
         """Test run() with None generator respects backoff"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -798,7 +799,7 @@ class TestPeerRun:
 class TestPeerRemoveShutdown:
     """Test Peer remove() and shutdown() methods"""
 
-    def test_remove_stops_peer(self):
+    def test_remove_stops_peer(self) -> None:
         """Test remove() stops peer"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -813,7 +814,7 @@ class TestPeerRemoveShutdown:
         assert peer._restart is False
         assert peer.fsm == FSM.IDLE
 
-    def test_shutdown_stops_peer(self):
+    def test_shutdown_stops_peer(self) -> None:
         """Test shutdown() stops peer"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -832,7 +833,7 @@ class TestPeerRemoveShutdown:
 class TestPeerResend:
     """Test Peer resend() method"""
 
-    def test_resend_calls_rib_resend(self):
+    def test_resend_calls_rib_resend(self) -> None:
         """Test resend() calls RIB resend"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -847,7 +848,7 @@ class TestPeerResend:
 
         neighbor.rib.outgoing.resend.assert_called_once_with(True, (1, 1))
 
-    def test_resend_resets_delay(self):
+    def test_resend_resets_delay(self) -> None:
         """Test resend() resets delay"""
         neighbor = Mock()
         neighbor.uid = '1'

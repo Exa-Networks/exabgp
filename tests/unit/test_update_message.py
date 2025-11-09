@@ -1,3 +1,4 @@
+from typing import Any
 """Comprehensive tests for UPDATE message validation and integration.
 
 These tests focus on UPDATE message-level validation beyond basic parsing:
@@ -24,7 +25,7 @@ from unittest.mock import Mock, patch
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     # Mock the option.logger attribute to avoid AttributeError
     from exabgp.logger.option import option
@@ -63,7 +64,7 @@ def mock_logger():
     option.formater = original_formater
 
 
-def create_negotiated_mock(families=None, asn4=False):
+def create_negotiated_mock(families: Any =None, asn4: Any =False) -> Any:
     """Create a mock negotiated object with optional family support."""
     negotiated = Mock()
     negotiated.asn4 = asn4
@@ -79,7 +80,7 @@ def create_negotiated_mock(families=None, asn4=False):
 # Phase 1: Mandatory Attribute Validation
 # ==============================================================================
 
-def test_update_with_mandatory_attributes():
+def test_update_with_mandatory_attributes() -> None:
     """Test UPDATE with all mandatory attributes for IPv4 announcement.
 
     For IPv4 unicast announcements, mandatory attributes are:
@@ -122,7 +123,7 @@ def test_update_with_mandatory_attributes():
     assert Attribute.CODE.NEXT_HOP in result.attributes
 
 
-def test_update_missing_mandatory_origin():
+def test_update_missing_mandatory_origin() -> None:
     """Test that UPDATE with announcement but missing ORIGIN is handled.
 
     Note: ExaBGP's attribute parsing is permissive during parsing.
@@ -163,7 +164,7 @@ def test_update_missing_mandatory_origin():
     assert Attribute.CODE.ORIGIN not in result.attributes
 
 
-def test_update_missing_mandatory_as_path():
+def test_update_missing_mandatory_as_path() -> None:
     """Test UPDATE with announcement but missing AS_PATH."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
@@ -197,7 +198,7 @@ def test_update_missing_mandatory_as_path():
     assert Attribute.CODE.AS_PATH not in result.attributes
 
 
-def test_update_missing_mandatory_next_hop():
+def test_update_missing_mandatory_next_hop() -> None:
     """Test UPDATE with IPv4 announcement but missing NEXT_HOP."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
@@ -230,7 +231,7 @@ def test_update_missing_mandatory_next_hop():
     assert len(result.nlris) >= 1
 
 
-def test_update_with_all_wellknown_attributes():
+def test_update_with_all_wellknown_attributes() -> None:
     """Test UPDATE with all well-known path attributes.
 
     Well-known attributes include:
@@ -283,7 +284,7 @@ def test_update_with_all_wellknown_attributes():
 # Phase 2: Attribute Combinations and NLRI
 # ==============================================================================
 
-def test_update_attribute_order_independence():
+def test_update_attribute_order_independence() -> None:
     """Test that attribute order doesn't affect parsing.
 
     BGP attributes can appear in any order, though ORIGIN, AS_PATH, NEXT_HOP
@@ -335,7 +336,7 @@ def test_update_attribute_order_independence():
     assert Attribute.CODE.MED in result2.attributes
 
 
-def test_update_with_withdrawn_and_announced():
+def test_update_with_withdrawn_and_announced() -> None:
     """Test UPDATE containing both withdrawn routes and announcements.
 
     This is a valid BGP UPDATE that withdraws some prefixes while
@@ -384,7 +385,7 @@ def test_update_with_withdrawn_and_announced():
     assert Action.ANNOUNCE in actions
 
 
-def test_update_attribute_length_validation():
+def test_update_attribute_length_validation() -> None:
     """Test UPDATE with various attribute lengths including edge cases."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
@@ -403,7 +404,7 @@ def test_update_attribute_length_validation():
     assert isinstance(result, Update) or result.__class__.__name__ == 'EOR'
 
 
-def test_update_with_multiple_nlri_prefixes():
+def test_update_with_multiple_nlri_prefixes() -> None:
     """Test UPDATE announcing multiple prefixes at once."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
@@ -439,7 +440,7 @@ def test_update_with_multiple_nlri_prefixes():
     assert len(result.nlris) == 5
 
 
-def test_update_only_withdrawals_no_attributes():
+def test_update_only_withdrawals_no_attributes() -> None:
     """Test UPDATE with only withdrawals and no attributes.
 
     When withdrawing routes, no path attributes are required.
@@ -471,7 +472,7 @@ def test_update_only_withdrawals_no_attributes():
 # Phase 3: MP Extensions (MP_REACH_NLRI / MP_UNREACH_NLRI)
 # ==============================================================================
 
-def test_update_with_mp_reach_nlri():
+def test_update_with_mp_reach_nlri() -> None:
     """Test UPDATE with MP_REACH_NLRI attribute (RFC 4760).
 
     MP_REACH_NLRI (Type 14) is used for multiprotocol BGP extensions.
@@ -511,7 +512,7 @@ def test_update_with_mp_reach_nlri():
         assert "EOR" in str(type(e)) or "Notify" in str(type(e)) or "UPDATE" in str(type(result))
 
 
-def test_update_with_mp_unreach_nlri():
+def test_update_with_mp_unreach_nlri() -> None:
     """Test UPDATE with MP_UNREACH_NLRI attribute (RFC 4760).
 
     MP_UNREACH_NLRI (Type 15) is used to withdraw multiprotocol routes.
@@ -544,7 +545,7 @@ def test_update_with_mp_unreach_nlri():
     assert isinstance(result, (Update, EOR))
 
 
-def test_update_eor_marker_validation():
+def test_update_eor_marker_validation() -> None:
     """Test End-of-RIB (EOR) marker detection.
 
     EOR can be signaled in two ways:
@@ -571,7 +572,7 @@ def test_update_eor_marker_validation():
     assert result.nlris[0].safi == SAFI.unicast
 
 
-def test_update_mp_reach_and_mp_unreach_together():
+def test_update_mp_reach_and_mp_unreach_together() -> None:
     """Test UPDATE with both MP_REACH_NLRI and MP_UNREACH_NLRI.
 
     A single UPDATE can contain both MP_REACH and MP_UNREACH.
@@ -605,7 +606,7 @@ def test_update_mp_reach_and_mp_unreach_together():
     # without causing crashes
 
 
-def test_update_mp_unreach_only_is_valid():
+def test_update_mp_unreach_only_is_valid() -> None:
     """Test that UPDATE with only MP_UNREACH_NLRI doesn't require other attributes.
 
     RFC 4760: An UPDATE message that contains MP_UNREACH_NLRI is not required
@@ -640,7 +641,7 @@ def test_update_mp_unreach_only_is_valid():
 # Phase 4: Edge Cases and Limits
 # ==============================================================================
 
-def test_update_maximum_attributes_size():
+def test_update_maximum_attributes_size() -> None:
     """Test UPDATE with large number of attributes approaching max size.
 
     BGP messages are limited to 4096 bytes (or larger with extended message support).
@@ -677,7 +678,7 @@ def test_update_maximum_attributes_size():
     assert result is not None
 
 
-def test_update_with_extended_length_attributes():
+def test_update_with_extended_length_attributes() -> None:
     """Test UPDATE with extended length attributes (length > 255).
 
     When attribute length exceeds 255 bytes, the Extended Length flag
@@ -709,7 +710,7 @@ def test_update_with_extended_length_attributes():
     assert result is not None
 
 
-def test_update_empty_as_path_allowed():
+def test_update_empty_as_path_allowed() -> None:
     """Test UPDATE with empty AS_PATH (valid for iBGP).
 
     Empty AS_PATH is valid for iBGP sessions where routes are originated locally.
@@ -743,7 +744,7 @@ def test_update_empty_as_path_allowed():
     assert Attribute.CODE.AS_PATH in result.attributes
 
 
-def test_update_with_duplicate_attributes_detected():
+def test_update_with_duplicate_attributes_detected() -> None:
     """Test that duplicate attributes in UPDATE are detected.
 
     RFC 4271: Duplicate attributes should result in TREAT_AS_WITHDRAW or error.
@@ -770,7 +771,7 @@ def test_update_with_duplicate_attributes_detected():
     assert result is not None
 
 
-def test_update_zero_length_nlri_section():
+def test_update_zero_length_nlri_section() -> None:
     """Test UPDATE with zero-length NLRI section (only attributes)."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction

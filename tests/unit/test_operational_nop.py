@@ -28,7 +28,7 @@ from exabgp.protocol.family import AFI, SAFI
 # Part 1: NOP Message Tests
 # ==============================================================================
 
-def test_nop_creation():
+def test_nop_creation() -> None:
     """Test NOP message creation.
 
     NOP is an internal message type used for control flow.
@@ -38,20 +38,20 @@ def test_nop_creation():
     assert nop.ID == Message.CODE.NOP
 
 
-def test_nop_message_id():
+def test_nop_message_id() -> None:
     """Test NOP message ID is correct (0x00).
     """
     assert NOP.ID == 0
     assert NOP.ID == Message.CODE.NOP
 
 
-def test_nop_message_type_bytes():
+def test_nop_message_type_bytes() -> None:
     """Test NOP TYPE byte representation.
     """
     assert NOP.TYPE == b'\x00'
 
 
-def test_nop_cannot_be_encoded():
+def test_nop_cannot_be_encoded() -> None:
     """Test that NOP messages cannot be encoded for transmission.
 
     NOP is an internal message only and should raise RuntimeError
@@ -65,7 +65,7 @@ def test_nop_cannot_be_encoded():
     assert 'NOP messages can not be sent on the wire' in str(exc_info.value)
 
 
-def test_nop_cannot_be_encoded_with_negotiated():
+def test_nop_cannot_be_encoded_with_negotiated() -> None:
     """Test that NOP encoding fails even with negotiated parameters.
     """
     nop = NOP()
@@ -75,7 +75,7 @@ def test_nop_cannot_be_encoded_with_negotiated():
         nop.message(negotiated)
 
 
-def test_nop_unpack():
+def test_nop_unpack() -> None:
     """Test unpacking NOP message.
 
     Since NOP is internal, unpacking just returns a NOP instance.
@@ -86,7 +86,7 @@ def test_nop_unpack():
     assert isinstance(nop, NOP)
 
 
-def test_nop_unpack_with_data():
+def test_nop_unpack_with_data() -> None:
     """Test unpacking NOP message with arbitrary data.
 
     NOP unpacking ignores any data provided.
@@ -97,7 +97,7 @@ def test_nop_unpack_with_data():
     assert isinstance(nop, NOP)
 
 
-def test_nop_singleton_instance():
+def test_nop_singleton_instance() -> None:
     """Test that NOP module provides a singleton instance.
     """
     from exabgp.bgp.message.nop import _NOP
@@ -105,7 +105,7 @@ def test_nop_singleton_instance():
     assert isinstance(_NOP, NOP)
 
 
-def test_nop_string_representation():
+def test_nop_string_representation() -> None:
     """Test NOP string representation.
     """
     nop = NOP()
@@ -116,7 +116,7 @@ def test_nop_string_representation():
 # Part 2: OPERATIONAL Message Constants and Registration
 # ==============================================================================
 
-def test_operational_message_id():
+def test_operational_message_id() -> None:
     """Test OPERATIONAL message ID.
 
     OPERATIONAL uses message type 0x06 (6).
@@ -126,13 +126,13 @@ def test_operational_message_id():
     assert Operational.ID == Message.CODE.OPERATIONAL
 
 
-def test_operational_message_type_bytes():
+def test_operational_message_type_bytes() -> None:
     """Test OPERATIONAL TYPE byte representation.
     """
     assert Operational.TYPE == b'\x06'
 
 
-def test_operational_message_registration():
+def test_operational_message_registration() -> None:
     """Test that OPERATIONAL is properly registered.
     """
     assert Message.CODE.OPERATIONAL in Message.registered_message
@@ -141,7 +141,7 @@ def test_operational_message_registration():
     assert klass == Operational
 
 
-def test_operational_code_constants():
+def test_operational_code_constants() -> None:
     """Test OPERATIONAL code constants for various message types.
     """
     # Advisory messages
@@ -163,7 +163,7 @@ def test_operational_code_constants():
     assert Operational.CODE.NS == 0xFFFF
 
 
-def test_operational_registered_operational():
+def test_operational_registered_operational() -> None:
     """Test that operational message types are registered.
     """
     # Check that various message types are registered
@@ -188,7 +188,7 @@ def test_operational_registered_operational():
 # Part 3: Advisory Messages (ADM, ASM)
 # ==============================================================================
 
-def test_advisory_adm_creation():
+def test_advisory_adm_creation() -> None:
     """Test Advisory Demand Message (ADM) creation.
 
     ADM: Advisory messages for real-time notifications.
@@ -202,7 +202,7 @@ def test_advisory_adm_creation():
     assert adm.code == Operational.CODE.ADM
 
 
-def test_advisory_asm_creation():
+def test_advisory_asm_creation() -> None:
     """Test Advisory Static Message (ASM) creation.
 
     ASM: Advisory messages for static/persistent notifications.
@@ -216,7 +216,7 @@ def test_advisory_asm_creation():
     assert asm.code == Operational.CODE.ASM
 
 
-def test_advisory_message_truncation():
+def test_advisory_message_truncation() -> None:
     """Test that long advisory messages are truncated.
 
     MAX_ADVISORY is 2048 bytes; longer messages should be truncated.
@@ -235,7 +235,7 @@ def test_advisory_message_truncation():
     assert adm.data.endswith(b'...')
 
 
-def test_advisory_adm_encoding():
+def test_advisory_adm_encoding() -> None:
     """Test ADM message encoding.
     """
     adm = Advisory.ADM(AFI.ipv4, SAFI.unicast, "Test")
@@ -252,7 +252,7 @@ def test_advisory_adm_encoding():
     assert msg[18] == 0x06
 
 
-def test_advisory_asm_encoding():
+def test_advisory_asm_encoding() -> None:
     """Test ASM message encoding.
     """
     asm = Advisory.ASM(AFI.ipv6, SAFI.unicast, "Message")
@@ -265,7 +265,7 @@ def test_advisory_asm_encoding():
     assert msg[18] == 0x06  # OPERATIONAL type
 
 
-def test_advisory_extensive_representation():
+def test_advisory_extensive_representation() -> None:
     """Test advisory message extensive representation.
     """
     adm = Advisory.ADM(AFI.ipv4, SAFI.unicast, "Test advisory")
@@ -277,7 +277,7 @@ def test_advisory_extensive_representation():
     assert 'safi' in extensive.lower()
 
 
-def test_advisory_utf8_encoding():
+def test_advisory_utf8_encoding() -> None:
     """Test that advisory messages properly encode UTF-8.
     """
     # Test with non-ASCII characters
@@ -294,7 +294,7 @@ def test_advisory_utf8_encoding():
 # Part 4: Query Messages (RPCQ, APCQ, LPCQ)
 # ==============================================================================
 
-def test_query_rpcq_creation():
+def test_query_rpcq_creation() -> None:
     """Test Reachable Prefix Count Query (RPCQ) creation.
 
     RPCQ: Request for count of reachable prefixes.
@@ -312,7 +312,7 @@ def test_query_rpcq_creation():
     assert rpcq.code == Operational.CODE.RPCQ
 
 
-def test_query_apcq_creation():
+def test_query_apcq_creation() -> None:
     """Test Adj-Rib-Out Prefix Count Query (APCQ) creation.
     """
     router_id = RouterID('10.0.0.1')
@@ -325,7 +325,7 @@ def test_query_apcq_creation():
     assert apcq.name == 'APCQ'
 
 
-def test_query_lpcq_creation():
+def test_query_lpcq_creation() -> None:
     """Test BGP Loc-Rib Prefix Count Query (LPCQ) creation.
     """
     router_id = RouterID('172.16.0.1')
@@ -338,7 +338,7 @@ def test_query_lpcq_creation():
     assert lpcq.name == 'LPCQ'
 
 
-def test_query_extensive_with_params():
+def test_query_extensive_with_params() -> None:
     """Test query extensive representation with router ID and sequence.
     """
     router_id = RouterID('192.0.2.1')
@@ -354,7 +354,7 @@ def test_query_extensive_with_params():
     assert '12345' in extensive
 
 
-def test_query_extensive_without_params():
+def test_query_extensive_without_params() -> None:
     """Test query extensive representation without router ID/sequence.
     """
     rpcq = Query.RPCQ(AFI.ipv4, SAFI.unicast, None, None)
@@ -371,7 +371,7 @@ def test_query_extensive_without_params():
 # Part 5: Response/Counter Messages (RPCP, APCP, LPCP)
 # ==============================================================================
 
-def test_response_rpcp_creation():
+def test_response_rpcp_creation() -> None:
     """Test Reachable Prefix Count Reply (RPCP) creation.
     """
     router_id = RouterID('192.0.2.1')
@@ -388,7 +388,7 @@ def test_response_rpcp_creation():
     assert rpcp.name == 'RPCP'
 
 
-def test_response_apcp_creation():
+def test_response_apcp_creation() -> None:
     """Test Adj-Rib-Out Prefix Count Reply (APCP) creation.
     """
     router_id = RouterID('10.0.0.1')
@@ -401,7 +401,7 @@ def test_response_apcp_creation():
     assert apcp.name == 'APCP'
 
 
-def test_response_lpcp_creation():
+def test_response_lpcp_creation() -> None:
     """Test Loc-Rib Prefix Count Reply (LPCP) creation.
     """
     router_id = RouterID('172.16.0.1')
@@ -414,7 +414,7 @@ def test_response_lpcp_creation():
     assert lpcp.name == 'LPCP'
 
 
-def test_response_extensive_with_params():
+def test_response_extensive_with_params() -> None:
     """Test response extensive representation with all parameters.
     """
     router_id = RouterID('192.0.2.1')
@@ -431,7 +431,7 @@ def test_response_extensive_with_params():
     assert '10000' in extensive
 
 
-def test_response_counter_encoding():
+def test_response_counter_encoding() -> None:
     """Test that response messages properly encode counter value.
 
     Counter is packed as 4-byte unsigned integer (network byte order).
@@ -451,7 +451,7 @@ def test_response_counter_encoding():
 # Part 6: OPERATIONAL Message Decoding
 # ==============================================================================
 
-def test_operational_unpack_adm():
+def test_operational_unpack_adm() -> None:
     """Test unpacking Advisory Demand Message (ADM).
     """
     advisory_text = b"Critical alert message"
@@ -473,7 +473,7 @@ def test_operational_unpack_adm():
     assert op.name == 'ADM'
 
 
-def test_operational_unpack_asm():
+def test_operational_unpack_asm() -> None:
     """Test unpacking Advisory Static Message (ASM).
     """
     advisory_text = b"Static configuration message"
@@ -495,7 +495,7 @@ def test_operational_unpack_asm():
     assert op.name == 'ASM'
 
 
-def test_operational_unpack_rpcq():
+def test_operational_unpack_rpcq() -> None:
     """Test unpacking Reachable Prefix Count Query (RPCQ).
     """
     router_id = RouterID('192.0.2.1')
@@ -519,7 +519,7 @@ def test_operational_unpack_rpcq():
     assert op.sequence == sequence
 
 
-def test_operational_unpack_rpcp():
+def test_operational_unpack_rpcp() -> None:
     """Test unpacking Reachable Prefix Count Reply (RPCP).
     """
     router_id = RouterID('10.0.0.1')
@@ -546,13 +546,13 @@ def test_operational_unpack_rpcp():
 # Part 7: OPERATIONAL Family Classes
 # ==============================================================================
 
-def test_operational_family_has_family():
+def test_operational_family_has_family() -> None:
     """Test OperationalFamily has_family flag.
     """
     assert OperationalFamily.has_family is True
 
 
-def test_operational_family_family_method():
+def test_operational_family_family_method() -> None:
     """Test OperationalFamily family() method returns (AFI, SAFI) tuple.
     """
     adm = Advisory.ADM(AFI.ipv4, SAFI.unicast, "Test")
@@ -561,13 +561,13 @@ def test_operational_family_family_method():
     assert family == (AFI.ipv4, SAFI.unicast)
 
 
-def test_sequenced_operational_family_has_routerid():
+def test_sequenced_operational_family_has_routerid() -> None:
     """Test SequencedOperationalFamily has_routerid flag.
     """
     assert SequencedOperationalFamily.has_routerid is True
 
 
-def test_sequenced_operational_family_attributes():
+def test_sequenced_operational_family_attributes() -> None:
     """Test SequencedOperationalFamily stores router ID and sequence.
     """
     router_id = RouterID('192.0.2.1')
@@ -585,7 +585,7 @@ def test_sequenced_operational_family_attributes():
 # Part 8: NS (Not Satisfied) Error Messages
 # ==============================================================================
 
-def test_ns_malformed_creation():
+def test_ns_malformed_creation() -> None:
     """Test NS Malformed error message creation.
     """
     sequence = struct.pack('!L', 100)
@@ -596,7 +596,7 @@ def test_ns_malformed_creation():
     assert NS.Malformed.ERROR_SUBCODE == b'\x00\x01'
 
 
-def test_ns_unsupported_creation():
+def test_ns_unsupported_creation() -> None:
     """Test NS Unsupported error message creation.
     """
     sequence = struct.pack('!L', 200)
@@ -606,7 +606,7 @@ def test_ns_unsupported_creation():
     assert ns.name == 'NS unsupported'
 
 
-def test_ns_maximum_creation():
+def test_ns_maximum_creation() -> None:
     """Test NS Maximum (query frequency exceeded) error.
     """
     sequence = struct.pack('!L', 300)
@@ -615,7 +615,7 @@ def test_ns_maximum_creation():
     assert ns.name == 'NS maximum'
 
 
-def test_ns_prohibited_creation():
+def test_ns_prohibited_creation() -> None:
     """Test NS Prohibited (administratively prohibited) error.
     """
     sequence = struct.pack('!L', 400)
@@ -624,7 +624,7 @@ def test_ns_prohibited_creation():
     assert ns.name == 'NS prohibited'
 
 
-def test_ns_busy_creation():
+def test_ns_busy_creation() -> None:
     """Test NS Busy error message creation.
     """
     sequence = struct.pack('!L', 500)
@@ -633,7 +633,7 @@ def test_ns_busy_creation():
     assert ns.name == 'NS busy'
 
 
-def test_ns_notfound_creation():
+def test_ns_notfound_creation() -> None:
     """Test NS NotFound error message creation.
     """
     sequence = struct.pack('!L', 600)
@@ -642,7 +642,7 @@ def test_ns_notfound_creation():
     assert ns.name == 'NS notfound'
 
 
-def test_ns_error_subcodes():
+def test_ns_error_subcodes() -> None:
     """Test NS error subcode constants.
     """
     assert NS.MALFORMED == 0x01

@@ -54,7 +54,7 @@ import struct
 pytestmark = pytest.mark.fuzz
 
 
-def parse_header_from_bytes(data):
+def parse_header_from_bytes(data: bytes) -> tuple[bytes, int, int]:
     """Helper to parse BGP header from raw bytes.
 
     This function replicates the header validation logic from
@@ -108,7 +108,7 @@ def parse_header_from_bytes(data):
 
 @given(data=st.binary(min_size=0, max_size=100))
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
-def test_header_parsing_with_random_data(data):
+def test_header_parsing_with_random_data(data: bytes) -> None:
     """Fuzz header parser with completely random binary data.
 
     The parser should handle any binary data gracefully without crashing.
@@ -131,7 +131,7 @@ def test_header_parsing_with_random_data(data):
 @pytest.mark.fuzz
 @given(marker=st.binary(min_size=16, max_size=16))
 @settings(deadline=None)
-def test_marker_validation(marker):
+def test_marker_validation(marker: bytes) -> None:
     """Fuzz marker validation with all possible 16-byte values.
 
     Only b'\\xFF' * 16 should be valid.
@@ -156,7 +156,7 @@ def test_marker_validation(marker):
 @pytest.mark.fuzz
 @given(length=st.integers(min_value=0, max_value=65535))
 @settings(deadline=None)
-def test_length_validation(length):
+def test_length_validation(length: int) -> None:
     """Fuzz length field with all possible 16-bit values.
 
     Only 19-4096 should be valid BGP message lengths.
@@ -180,7 +180,7 @@ def test_length_validation(length):
 @pytest.mark.fuzz
 @given(msg_type=st.integers(min_value=0, max_value=255))
 @settings(deadline=None)
-def test_message_type_validation(msg_type):
+def test_message_type_validation(msg_type: int) -> None:
     """Fuzz message type with all possible byte values.
 
     Only 1-5 are valid BGP message types.
@@ -203,7 +203,7 @@ def test_message_type_validation(msg_type):
 @pytest.mark.fuzz
 @given(data=st.binary(min_size=0, max_size=18))
 @settings(deadline=None)
-def test_truncated_headers(data):
+def test_truncated_headers(data: bytes) -> None:
     """Test headers shorter than minimum (19 bytes)."""
     # All truncated headers should be rejected
     with pytest.raises((ValueError, IndexError, struct.error)):
@@ -216,7 +216,7 @@ def test_truncated_headers(data):
     position=st.integers(min_value=0, max_value=15),
 )
 @settings(deadline=None)
-def test_marker_single_bit_flips(marker_byte, position):
+def test_marker_single_bit_flips(marker_byte: int, position: int) -> None:
     """Test marker with single byte corrupted at each position."""
     marker = bytearray(b'\xFF' * 16)
     marker[position] = marker_byte
@@ -236,7 +236,7 @@ def test_marker_single_bit_flips(marker_byte, position):
 
 
 @pytest.mark.fuzz
-def test_minimum_valid_header():
+def test_minimum_valid_header() -> None:
     """Test minimum valid BGP header (19 bytes, OPEN message)."""
     marker = b'\xFF' * 16
     length = struct.pack('!H', 19)
@@ -250,7 +250,7 @@ def test_minimum_valid_header():
 
 
 @pytest.mark.fuzz
-def test_maximum_valid_header():
+def test_maximum_valid_header() -> None:
     """Test maximum valid BGP header (4096 bytes)."""
     marker = b'\xFF' * 16
     length = struct.pack('!H', 4096)
@@ -264,7 +264,7 @@ def test_maximum_valid_header():
 
 
 @pytest.mark.fuzz
-def test_length_one_below_minimum():
+def test_length_one_below_minimum() -> None:
     """Test length = 18 (one below minimum)."""
     marker = b'\xFF' * 16
     length = struct.pack('!H', 18)
@@ -276,7 +276,7 @@ def test_length_one_below_minimum():
 
 
 @pytest.mark.fuzz
-def test_length_one_above_maximum():
+def test_length_one_above_maximum() -> None:
     """Test length = 4097 (one above maximum)."""
     marker = b'\xFF' * 16
     length = struct.pack('!H', 4097)
@@ -288,14 +288,14 @@ def test_length_one_above_maximum():
 
 
 @pytest.mark.fuzz
-def test_empty_input():
+def test_empty_input() -> None:
     """Test completely empty input."""
     with pytest.raises(ValueError, match="Message too short"):
         parse_header_from_bytes(b'')
 
 
 @pytest.mark.fuzz
-def test_all_zeros():
+def test_all_zeros() -> None:
     """Test header with all zeros."""
     data = b'\x00' * 19
     with pytest.raises(ValueError, match="Invalid marker"):
@@ -303,7 +303,7 @@ def test_all_zeros():
 
 
 @pytest.mark.fuzz
-def test_all_ones():
+def test_all_ones() -> None:
     """Test header with all ones (except length).
 
     Marker all FF - valid
@@ -318,7 +318,7 @@ def test_all_ones():
 
 
 @pytest.mark.fuzz
-def test_all_valid_message_types():
+def test_all_valid_message_types() -> None:
     """Test all valid message types (1-5)."""
     marker = b'\xFF' * 16
     length = struct.pack('!H', 19)
@@ -334,7 +334,7 @@ def test_all_valid_message_types():
 class TestRealWorldHeaders:
     """Test with real-world BGP message headers."""
 
-    def test_typical_open_message_header(self):
+    def test_typical_open_message_header(self) -> None:
         """Test header from typical OPEN message."""
         # Marker (16 bytes of FF) + Length (0x001D = 29) + Type (1 = OPEN)
         data = bytes.fromhex('ffffffffffffffffffffffffffffffff001d01')
@@ -343,7 +343,7 @@ class TestRealWorldHeaders:
         assert result[1] == 29
         assert result[2] == 1
 
-    def test_typical_update_message_header(self):
+    def test_typical_update_message_header(self) -> None:
         """Test header from typical UPDATE message."""
         # Marker + Length (0x0023 = 35) + Type (2 = UPDATE)
         data = bytes.fromhex('ffffffffffffffffffffffffffffffff002302')
@@ -352,7 +352,7 @@ class TestRealWorldHeaders:
         assert result[1] == 35
         assert result[2] == 2
 
-    def test_keepalive_message_header(self):
+    def test_keepalive_message_header(self) -> None:
         """Test header from KEEPALIVE message (minimum size)."""
         # Marker + Length (0x0013 = 19) + Type (4 = KEEPALIVE)
         data = bytes.fromhex('ffffffffffffffffffffffffffffffff001304')
@@ -361,7 +361,7 @@ class TestRealWorldHeaders:
         assert result[1] == 19
         assert result[2] == 4
 
-    def test_notification_message_header(self):
+    def test_notification_message_header(self) -> None:
         """Test header from NOTIFICATION message."""
         # Marker + Length (varies) + Type (3 = NOTIFICATION)
         data = bytes.fromhex('ffffffffffffffffffffffffffffffff001503')
@@ -370,7 +370,7 @@ class TestRealWorldHeaders:
         assert result[1] == 21
         assert result[2] == 3
 
-    def test_route_refresh_message_header(self):
+    def test_route_refresh_message_header(self) -> None:
         """Test header from ROUTE_REFRESH message."""
         # Marker + Length (0x0017 = 23) + Type (5 = ROUTE_REFRESH)
         data = bytes.fromhex('ffffffffffffffffffffffffffffffff001705')

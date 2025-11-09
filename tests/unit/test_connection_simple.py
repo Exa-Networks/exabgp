@@ -24,7 +24,7 @@ from unittest.mock import Mock
 class TestConnectionBasics:
     """Test basic Connection functionality"""
 
-    def test_create_ipv4_connection(self):
+    def test_create_ipv4_connection(self) -> None:
         """Test creating an IPv4 connection"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
@@ -34,7 +34,7 @@ class TestConnectionBasics:
         assert conn.io is None
         assert conn.established is False
 
-    def test_create_ipv6_connection(self):
+    def test_create_ipv6_connection(self) -> None:
         """Test creating an IPv6 connection"""
         conn = Connection(AFI.ipv6, '2001:db8::1', '2001:db8::2')
 
@@ -42,13 +42,13 @@ class TestConnectionBasics:
         assert conn.peer == '2001:db8::1'
         assert conn.local == '2001:db8::2'
 
-    def test_initial_message_size(self):
+    def test_initial_message_size(self) -> None:
         """Test default message size"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         assert conn.msg_size == ExtendedMessage.INITIAL_SIZE
 
-    def test_name_includes_addresses(self):
+    def test_name_includes_addresses(self) -> None:
         """Test connection name contains addresses"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
         name = conn.name()
@@ -56,7 +56,7 @@ class TestConnectionBasics:
         assert '192.0.2.1' in name
         assert '192.0.2.2' in name
 
-    def test_session_identifier(self):
+    def test_session_identifier(self) -> None:
         """Test session identifier format"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
         session = conn.session()
@@ -64,13 +64,13 @@ class TestConnectionBasics:
         # Should contain direction and ID
         assert '-' in session
 
-    def test_fd_without_socket(self):
+    def test_fd_without_socket(self) -> None:
         """Test fd() returns -1 when no socket"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         assert conn.fd() == -1
 
-    def test_fd_with_socket(self):
+    def test_fd_with_socket(self) -> None:
         """Test fd() returns file descriptor with socket"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
@@ -81,7 +81,7 @@ class TestConnectionBasics:
         assert conn.fd() == 42
         mock_sock.fileno.assert_called_once()
 
-    def test_success_increments_identifier(self):
+    def test_success_increments_identifier(self) -> None:
         """Test success() increments connection identifier"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
@@ -91,7 +91,7 @@ class TestConnectionBasics:
         assert new_id == initial_id + 1
         assert Connection.identifier.get(conn.direction) == new_id
 
-    def test_close_without_socket(self):
+    def test_close_without_socket(self) -> None:
         """Test close() when no socket exists"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
@@ -99,7 +99,7 @@ class TestConnectionBasics:
         conn.close()
         assert conn.io is None
 
-    def test_close_with_socket(self):
+    def test_close_with_socket(self) -> None:
         """Test close() handles socket cleanup"""
         from unittest.mock import patch
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
@@ -114,7 +114,7 @@ class TestConnectionBasics:
 
         assert conn.io is None
 
-    def test_close_handles_exception(self):
+    def test_close_handles_exception(self) -> None:
         """Test close() handles exceptions gracefully"""
         from unittest.mock import patch
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
@@ -128,7 +128,7 @@ class TestConnectionBasics:
             conn.close()
         assert conn.io is None
 
-    def test_del_calls_close(self):
+    def test_del_calls_close(self) -> None:
         """Test __del__ calls close()"""
         from unittest.mock import patch
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
@@ -144,7 +144,7 @@ class TestConnectionBasics:
 
         assert conn.io is None
 
-    def test_defensive_mode_initialized(self):
+    def test_defensive_mode_initialized(self) -> None:
         """Test defensive mode is initialized from environment"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 

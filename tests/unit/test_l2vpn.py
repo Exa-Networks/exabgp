@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import unittest
+from typing import Any
 
 from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -15,7 +16,7 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 class TestL2VPN(unittest.TestCase):
     @staticmethod
-    def generate_rd(rd):
+    def generate_rd(rd: Any):
         """Only ip:num is supported atm.code from configure.file"""
         separator = rd.find(':')
         prefix = rd[:separator]
@@ -26,7 +27,7 @@ class TestL2VPN(unittest.TestCase):
         bin_rd = ''.join(data)
         return RouteDistinguisher(bin_rd)
 
-    def setUp(self):
+    def setUp(self) -> None:
         """SetUp unittesting
 
         l2vpn:endpoint:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.4:13
@@ -42,7 +43,7 @@ class TestL2VPN(unittest.TestCase):
         """
         self.encoded_ext_community = bytearray.fromhex('0002 D53F 0000 0006 800A 1300 0000 0064')
 
-    def test_l2vpn_decode(self):
+    def test_l2vpn_decode(self) -> None:
         """Decode and test against known data
 
         we do know what routes Juniper sends us and we testing decoded values against it
@@ -60,7 +61,7 @@ class TestL2VPN(unittest.TestCase):
         # self.assertEqual(l2vpn_route2.base,262145)
         # self.assertEqual(l2vpn_route2.size,8)
 
-    def test_l2vpn_encode(self):
+    def test_l2vpn_encode(self) -> None:
         """Encode and test against known data
 
         we are encoding routes and testing em against what we have recvd from Juniper

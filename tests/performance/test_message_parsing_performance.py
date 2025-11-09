@@ -6,6 +6,7 @@ at high message rates.
 
 import pytest
 from io import BytesIO
+from typing import Any
 from unittest.mock import Mock
 
 from exabgp.reactor.network.connection import Connection
@@ -27,7 +28,7 @@ from .perf_helpers import (
 class TestUpdateMessageParsingPerformance:
     """Performance tests for UPDATE message parsing."""
 
-    def test_parse_single_route_update(self, benchmark):
+    def test_parse_single_route_update(self, benchmark: Any) -> None:
         """Benchmark parsing a simple UPDATE with one route."""
         msg_bytes = create_simple_update_bytes(num_routes=1)
         negotiated = create_mock_negotiated()
@@ -46,7 +47,7 @@ class TestUpdateMessageParsingPerformance:
         result = benchmark(parse_update)
         assert result is not None
 
-    def test_parse_multi_route_update(self, benchmark):
+    def test_parse_multi_route_update(self, benchmark: Any) -> None:
         """Benchmark parsing UPDATE with 10 routes."""
         msg_bytes = create_simple_update_bytes(num_routes=10)
         negotiated = create_mock_negotiated()
@@ -63,7 +64,7 @@ class TestUpdateMessageParsingPerformance:
         result = benchmark(parse_update)
         assert result is not None
 
-    def test_parse_many_routes_update(self, benchmark):
+    def test_parse_many_routes_update(self, benchmark: Any) -> None:
         """Benchmark parsing UPDATE with 50 routes."""
         msg_bytes = create_simple_update_bytes(num_routes=50)
         negotiated = create_mock_negotiated()
@@ -80,7 +81,7 @@ class TestUpdateMessageParsingPerformance:
         result = benchmark(parse_update)
         assert result is not None
 
-    def test_parse_100_simple_updates(self, benchmark):
+    def test_parse_100_simple_updates(self, benchmark: Any) -> None:
         """Benchmark parsing 100 simple UPDATE messages in sequence."""
         negotiated = create_mock_negotiated()
 
@@ -100,7 +101,7 @@ class TestUpdateMessageParsingPerformance:
         result = benchmark(parse_batch)
         assert result == 100
 
-    def test_parse_1000_simple_updates(self, benchmark):
+    def test_parse_1000_simple_updates(self, benchmark: Any) -> None:
         """Benchmark parsing 1000 simple UPDATE messages in sequence."""
         negotiated = create_mock_negotiated()
 
@@ -124,7 +125,7 @@ class TestUpdateMessageParsingPerformance:
 class TestKeepAliveParsingPerformance:
     """Performance tests for KEEPALIVE message parsing."""
 
-    def test_parse_single_keepalive(self, benchmark):
+    def test_parse_single_keepalive(self, benchmark: Any) -> None:
         """Benchmark parsing a single KEEPALIVE message."""
         msg_bytes = create_keepalive_bytes()
         negotiated = create_mock_negotiated()
@@ -141,7 +142,7 @@ class TestKeepAliveParsingPerformance:
         result = benchmark(parse_keepalive)
         assert result is not None
 
-    def test_parse_1000_keepalives(self, benchmark):
+    def test_parse_1000_keepalives(self, benchmark: Any) -> None:
         """Benchmark parsing 1000 KEEPALIVE messages."""
         msg_bytes = create_keepalive_bytes()
 
@@ -163,7 +164,7 @@ class TestKeepAliveParsingPerformance:
 class TestRawMessageReading:
     """Performance tests for raw message reading and header parsing."""
 
-    def test_read_message_headers_100(self, benchmark):
+    def test_read_message_headers_100(self, benchmark: Any) -> None:
         """Benchmark reading 100 message headers."""
         batch_bytes = create_batch_messages('update', count=100)
 
@@ -183,7 +184,7 @@ class TestRawMessageReading:
         result = benchmark(read_headers)
         assert result == 100
 
-    def test_read_and_validate_headers(self, benchmark):
+    def test_read_and_validate_headers(self, benchmark: Any) -> None:
         """Benchmark reading and validating message headers."""
         batch_bytes = create_batch_messages('update', count=100)
 
@@ -211,7 +212,7 @@ class TestRawMessageReading:
 class TestHighVolumeParsingStress:
     """Stress tests for parsing very high message volumes."""
 
-    def test_parse_10000_keepalives(self, benchmark):
+    def test_parse_10000_keepalives(self, benchmark: Any) -> None:
         """Stress test: Parse 10,000 KEEPALIVE messages."""
         msg_bytes = create_keepalive_bytes()
 
@@ -229,7 +230,7 @@ class TestHighVolumeParsingStress:
         result = benchmark(parse_batch)
         assert result == 10000
 
-    def test_parse_5000_updates(self, benchmark):
+    def test_parse_5000_updates(self, benchmark: Any) -> None:
         """Stress test: Parse 5,000 UPDATE messages."""
         negotiated = create_mock_negotiated()
 
@@ -249,7 +250,7 @@ class TestHighVolumeParsingStress:
         result = benchmark(parse_batch)
         assert result == 5000
 
-    def test_read_continuous_stream(self, benchmark):
+    def test_read_continuous_stream(self, benchmark: Any) -> None:
         """Stress test: Read continuous stream of 1000 messages."""
         batch_bytes = create_mixed_message_batch(
             update_count=600,

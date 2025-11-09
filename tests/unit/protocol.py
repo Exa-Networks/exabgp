@@ -20,7 +20,7 @@ from exabgp.bgp.neighbor import Neighbor
 
 
 class Network(StringIO):
-    def pending(self):
+    def pending(self) -> bool:
         return True
 
 
@@ -41,14 +41,14 @@ class Network(StringIO):
 
 
 class TestProtocol(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.neighbor = Neighbor()
         self.neighbor.local_as = ASN(65000)
         self.neighbor.peer_as = ASN(65000)
         # self.neighbor.peer_address = InetIP('1.2.3.4')
         # self.neighbor.local_address = InetIP('5.6.7.8')
 
-    def test_1_selfparse_open(self):
+    def test_1_selfparse_open(self) -> None:
         # ds = Open(4,65000,'1.2.3.4',Capabilities().default(),30)
         #
         # txt = ds.message()
@@ -64,7 +64,7 @@ class TestProtocol(unittest.TestCase):
         # self.assertEqual(str(o.router_id),'1.2.3.4')
         pass
 
-    def test_2_selfparse_KeepAlive(self):
+    def test_2_selfparse_KeepAlive(self) -> None:
         # ds = KeepAlive()
         #
         # txt = ds.message()
@@ -75,7 +75,7 @@ class TestProtocol(unittest.TestCase):
         # self.assertEqual(message.TYPE,KeepAlive.TYPE)
         pass
 
-    def test_3_parse_update(self):
+    def test_3_parse_update(self) -> None:
         # txt = ''.join([chr(c) for c in [0x0, 0x0, 0x0, 0x1c, 0x40, 0x1, 0x1, 0x2, 0x40, 0x2, 0x0, 0x40, 0x3, 0x4, 0xc0, 0x0, 0x2, 0xfe, 0x80, 0x4, 0x4, 0x0, 0x0, 0x0, 0x0, 0x40, 0x5, 0x4, 0x0, 0x0, 0x1, 0x23, 0x20, 0x52, 0xdb, 0x0, 0x7, 0x20, 0x52, 0xdb, 0x0, 0x45, 0x20, 0x52, 0xdb, 0x0, 0x47]])
         # updates = new_Update(txt)
         #
@@ -86,13 +86,13 @@ class TestProtocol(unittest.TestCase):
         # self.assertEqual(routes[2],'82.219.0.71/32 next-hop 192.0.2.254')
         pass
 
-    def test_4_parse_update(self):
+    def test_4_parse_update(self) -> None:
         # txt = ''.join([chr(c) for c in [0x0, 0x0, 0x0, 0x12, 0x40, 0x1, 0x1, 0x0, 0x40, 0x2, 0x4, 0x2, 0x1, 0x78, 0x14, 0x40, 0x3, 0x4, 0x52, 0xdb, 0x2, 0xb5, 0x0]])
         # updates = new_Update(txt)
         # self.assertEqual(str(updates.added()[0]),'0.0.0.0/0 next-hop 82.219.2.181')
         pass
 
-    def test_6_holdtime(self):
+    def test_6_holdtime(self) -> None:
         # class MyPeer(Network):
         # 	_data = StringIO(Open(4,65000,'1.2.3.4',Capabilities().default(),90).message())
         # 	def read (self, l):
@@ -111,14 +111,14 @@ class TestProtocol(unittest.TestCase):
         # self.assertEqual(after,min(before,90))
         pass
 
-    def test_7_message(self):
+    def test_7_message(self) -> None:
         # txt = ''.join([chr(_) for _ in [0x0, 0x0, 0x0, 0x30, 0x40, 0x1, 0x1, 0x0, 0x50, 0x2, 0x0, 0x4, 0x2, 0x1, 0xff, 0xfe, 0x80, 0x4, 0x4, 0x0, 0x0, 0x0, 0x0, 0x80, 0xe, 0x1a, 0x0, 0x2, 0x1, 0x10, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x20, 0x12, 0x34, 0x56, 0x78]])
         # updates = new_Update(txt)
         # print updates
         # self.assertEqual(str(updates.added()[0]),'1234:5678::/32 next-hop ::')
         pass
 
-    def test_7_ipv6(self):
+    def test_7_ipv6(self) -> None:
         # txt = ''.join([chr(_) for _ in [0x0, 0x0, 0x0, 0x25, 0x40, 0x1, 0x1, 0x0, 0x40, 0x2, 0x4, 0x2, 0x1, 0xfd, 0xe8, 0xc0, 0x8, 0x8, 0x78, 0x14, 0x0, 0x0, 0x78, 0x14, 0x78, 0x14, 0x40, 0xf, 0xc, 0x0, 0x2, 0x1, 0x40, 0x2a, 0x2, 0xb, 0x80, 0x0, 0x0, 0x0, 0x1]])
         # updates = new_Update(txt)
         pass

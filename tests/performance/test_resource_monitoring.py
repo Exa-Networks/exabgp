@@ -9,6 +9,7 @@ import psutil
 import os
 from io import BytesIO
 from collections import deque
+from typing import Any
 from unittest.mock import Mock
 
 from exabgp.reactor.protocol import Protocol, MAX_BACKLOG
@@ -29,7 +30,7 @@ from .perf_helpers import (
 class TestMemoryUsage:
     """Tests for memory usage under various load scenarios."""
 
-    def test_memory_baseline_message_parsing(self, benchmark):
+    def test_memory_baseline_message_parsing(self, benchmark: Any) -> None:
         """Measure baseline memory usage for message parsing."""
         msg_bytes = create_simple_update_bytes(num_routes=1)
         negotiated = create_mock_negotiated()
@@ -56,7 +57,7 @@ class TestMemoryUsage:
         # Note: This returns memory delta, actual benchmark is on the function
         result = benchmark(parse_with_memory_tracking)
 
-    def test_memory_growth_with_backlog(self, benchmark):
+    def test_memory_growth_with_backlog(self, benchmark: Any) -> None:
         """Monitor memory growth as backlog increases."""
         messages = [create_simple_update_bytes(num_routes=1) for _ in range(10000)]
         process = psutil.Process(os.getpid())
@@ -84,7 +85,7 @@ class TestMemoryUsage:
         result = benchmark(track_memory_growth)
         assert result > 0
 
-    def test_memory_large_message_handling(self, benchmark):
+    def test_memory_large_message_handling(self, benchmark: Any) -> None:
         """Monitor memory when handling large messages."""
         messages = [create_large_update_bytes(num_routes=200) for _ in range(1000)]
         process = psutil.Process(os.getpid())
@@ -112,7 +113,7 @@ class TestMemoryUsage:
 
         result = benchmark(handle_large_messages)
 
-    def test_memory_recovery_after_load(self, benchmark):
+    def test_memory_recovery_after_load(self, benchmark: Any) -> None:
         """Test memory recovery after processing high load."""
         process = psutil.Process(os.getpid())
 
@@ -142,7 +143,7 @@ class TestMemoryUsage:
 class TestResourceUtilization:
     """Tests for overall resource utilization."""
 
-    def test_cpu_usage_during_parsing(self, benchmark):
+    def test_cpu_usage_during_parsing(self, benchmark: Any) -> None:
         """Monitor CPU usage during message parsing."""
         batch_bytes = create_batch_messages('update', count=5000)
         negotiated = create_mock_negotiated()
@@ -174,7 +175,7 @@ class TestResourceUtilization:
 
         result = benchmark(parse_with_cpu_tracking)
 
-    def test_resource_usage_multi_peer(self, benchmark):
+    def test_resource_usage_multi_peer(self, benchmark: Any) -> None:
         """Monitor resource usage with multiple peers."""
         num_peers = 50
         messages_per_peer = 100
@@ -215,7 +216,7 @@ class TestResourceUtilization:
 class TestMemoryLeakDetection:
     """Tests designed to detect potential memory leaks."""
 
-    def test_repeated_allocation_deallocation(self, benchmark):
+    def test_repeated_allocation_deallocation(self, benchmark: Any) -> None:
         """Test for leaks in repeated allocation/deallocation cycles."""
         process = psutil.Process(os.getpid())
 
@@ -241,7 +242,7 @@ class TestMemoryLeakDetection:
 
         result = benchmark(cycle_allocations)
 
-    def test_backlog_growth_shrink_cycles(self, benchmark):
+    def test_backlog_growth_shrink_cycles(self, benchmark: Any) -> None:
         """Test for leaks in backlog growth/shrink cycles."""
         process = psutil.Process(os.getpid())
 
@@ -271,7 +272,7 @@ class TestMemoryLeakDetection:
 class TestScalabilityLimits:
     """Tests to identify scalability limits."""
 
-    def test_max_sustainable_message_rate(self, benchmark):
+    def test_max_sustainable_message_rate(self, benchmark: Any) -> None:
         """Determine maximum sustainable message processing rate."""
         process = psutil.Process(os.getpid())
 
@@ -304,7 +305,7 @@ class TestScalabilityLimits:
 
         result = benchmark(measure_max_rate)
 
-    def test_backlog_size_limits(self, benchmark):
+    def test_backlog_size_limits(self, benchmark: Any) -> None:
         """Test behavior at different backlog size limits."""
         process = psutil.Process(os.getpid())
 
@@ -334,7 +335,7 @@ class TestScalabilityLimits:
 class TestStressWithMonitoring:
     """Stress tests with comprehensive resource monitoring."""
 
-    def test_extreme_load_monitoring(self, benchmark):
+    def test_extreme_load_monitoring(self, benchmark: Any) -> None:
         """Stress test with full resource monitoring."""
         process = psutil.Process(os.getpid())
 
@@ -377,7 +378,7 @@ class TestStressWithMonitoring:
 
         result = benchmark(extreme_load)
 
-    def test_sustained_high_throughput(self, benchmark):
+    def test_sustained_high_throughput(self, benchmark: Any) -> None:
         """Test sustained high throughput with monitoring."""
         process = psutil.Process(os.getpid())
 

@@ -17,7 +17,7 @@ from exabgp.protocol.ip import IP, NoNextHop
 class TestLabelCreation:
     """Test basic Label route creation"""
 
-    def test_create_label_ipv4(self):
+    def test_create_label_ipv4(self) -> None:
         """Test creating basic IPv4 labeled route"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
 
@@ -26,14 +26,14 @@ class TestLabelCreation:
         assert label.action == Action.ANNOUNCE
         assert label.labels == Labels.NOLABEL
 
-    def test_create_label_ipv6(self):
+    def test_create_label_ipv6(self) -> None:
         """Test creating basic IPv6 labeled route"""
         label = Label(AFI.ipv6, SAFI.nlri_mpls, Action.ANNOUNCE)
 
         assert label.afi == AFI.ipv6
         assert label.safi == SAFI.nlri_mpls
 
-    def test_create_label_with_data(self):
+    def test_create_label_with_data(self) -> None:
         """Test creating labeled route with all attributes"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -49,7 +49,7 @@ class TestLabelCreation:
 class TestLabelStringRepresentation:
     """Test string representations of Label routes"""
 
-    def test_str_label(self):
+    def test_str_label(self) -> None:
         """Test string representation"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -58,7 +58,7 @@ class TestLabelStringRepresentation:
         result = str(label)
         assert '192.168.1.0/24' in result
 
-    def test_repr_label(self):
+    def test_repr_label(self) -> None:
         """Test repr matches str"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -66,7 +66,7 @@ class TestLabelStringRepresentation:
 
         assert repr(label) == str(label)
 
-    def test_extensive_without_nexthop(self):
+    def test_extensive_without_nexthop(self) -> None:
         """Test extensive representation without nexthop"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -75,7 +75,7 @@ class TestLabelStringRepresentation:
         result = label.extensive()
         assert '192.168.1.0/24' in result
 
-    def test_extensive_with_nexthop(self):
+    def test_extensive_with_nexthop(self) -> None:
         """Test extensive representation with nexthop"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -90,7 +90,7 @@ class TestLabelStringRepresentation:
 class TestLabelPrefix:
     """Test prefix generation for Label routes"""
 
-    def test_prefix_basic(self):
+    def test_prefix_basic(self) -> None:
         """Test basic prefix generation"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -99,7 +99,7 @@ class TestLabelPrefix:
         prefix = label.prefix()
         assert '192.168.1.0/24' in prefix
 
-    def test_prefix_with_labels(self):
+    def test_prefix_with_labels(self) -> None:
         """Test prefix includes label information"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -112,7 +112,7 @@ class TestLabelPrefix:
 class TestLabelLength:
     """Test length calculations for Label routes"""
 
-    def test_len_basic(self):
+    def test_len_basic(self) -> None:
         """Test basic length calculation"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -122,7 +122,7 @@ class TestLabelLength:
         expected = len(label.cidr) + len(label.labels) + len(label.path_info)
         assert len(label) == expected
 
-    def test_len_with_multiple_labels(self):
+    def test_len_with_multiple_labels(self) -> None:
         """Test length with multiple labels"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -135,7 +135,7 @@ class TestLabelLength:
 class TestLabelEquality:
     """Test equality and hashing for Label routes"""
 
-    def test_equal_routes(self):
+    def test_equal_routes(self) -> None:
         """Test that identical routes are equal"""
         label1 = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label1.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -147,7 +147,7 @@ class TestLabelEquality:
 
         assert label1 == label2
 
-    def test_equal_checks_labels(self):
+    def test_equal_checks_labels(self) -> None:
         """Test that routes with different labels are checked for equality"""
         label1 = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label1.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -163,7 +163,7 @@ class TestLabelEquality:
         # Just verify comparison doesn't raise exception
         assert isinstance(result, bool)
 
-    def test_hash_consistency(self):
+    def test_hash_consistency(self) -> None:
         """Test that hash is consistent"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -178,7 +178,7 @@ class TestLabelEquality:
 class TestLabelFeedback:
     """Test feedback validation for Label routes"""
 
-    def test_feedback_with_nexthop_announce(self):
+    def test_feedback_with_nexthop_announce(self) -> None:
         """Test feedback when nexthop is set for ANNOUNCE"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -188,7 +188,7 @@ class TestLabelFeedback:
         feedback = label.feedback(Action.ANNOUNCE)
         assert feedback == ''
 
-    def test_feedback_without_nexthop_announce(self):
+    def test_feedback_without_nexthop_announce(self) -> None:
         """Test feedback when nexthop is missing for ANNOUNCE"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -198,7 +198,7 @@ class TestLabelFeedback:
         feedback = label.feedback(Action.ANNOUNCE)
         assert 'labelled nlri next-hop missing' in feedback
 
-    def test_feedback_withdraw_no_nexthop_required(self):
+    def test_feedback_withdraw_no_nexthop_required(self) -> None:
         """Test feedback for WITHDRAW doesn't require nexthop"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.WITHDRAW)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -213,7 +213,7 @@ class TestLabelFeedback:
 class TestLabelPack:
     """Test packing Label routes"""
 
-    def test_pack_basic(self):
+    def test_pack_basic(self) -> None:
         """Test basic pack operation"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -224,7 +224,7 @@ class TestLabelPack:
         assert isinstance(packed, bytes)
         assert len(packed) > 0
 
-    def test_pack_ipv4_various_masks(self):
+    def test_pack_ipv4_various_masks(self) -> None:
         """Test packing IPv4 routes with various masks"""
         test_cases = [8, 16, 24, 25, 30, 32]
 
@@ -236,7 +236,7 @@ class TestLabelPack:
             packed = label.pack()
             assert len(packed) > 0
 
-    def test_pack_ipv6(self):
+    def test_pack_ipv6(self) -> None:
         """Test packing IPv6 labeled route"""
         label = Label(AFI.ipv6, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('2001:db8::'), 32)
@@ -245,7 +245,7 @@ class TestLabelPack:
         packed = label.pack()
         assert len(packed) > 0
 
-    def test_pack_multiple_labels(self):
+    def test_pack_multiple_labels(self) -> None:
         """Test packing route with multiple labels"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -259,7 +259,7 @@ class TestLabelPack:
 class TestLabelIndex:
     """Test index generation for Label routes"""
 
-    def test_index_basic(self):
+    def test_index_basic(self) -> None:
         """Test basic index generation"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -270,7 +270,7 @@ class TestLabelIndex:
         assert isinstance(index, bytes)
         assert len(index) > 0
 
-    def test_index_contains_family(self):
+    def test_index_contains_family(self) -> None:
         """Test index contains family information"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -282,7 +282,7 @@ class TestLabelIndex:
         # Index should start with family index
         assert index.startswith(family_index)
 
-    def test_index_no_pathinfo(self):
+    def test_index_no_pathinfo(self) -> None:
         """Test index uses 'no-pi' when PathInfo is NOPATH"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -298,7 +298,7 @@ class TestLabelIndex:
 class TestLabelJSON:
     """Test JSON serialization of Label routes"""
 
-    def test_json_announced(self):
+    def test_json_announced(self) -> None:
         """Test JSON serialization for announced route"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -310,7 +310,7 @@ class TestLabelJSON:
         # Should contain label information
         assert 'label' in json_str.lower() or '100' in json_str
 
-    def test_json_withdrawn(self):
+    def test_json_withdrawn(self) -> None:
         """Test JSON serialization for withdrawn route"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.WITHDRAW)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -324,7 +324,7 @@ class TestLabelJSON:
 class TestLabelEdgeCases:
     """Test edge cases for Label routes"""
 
-    def test_label_zero_prefix_length(self):
+    def test_label_zero_prefix_length(self) -> None:
         """Test Label with /0 prefix"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('0.0.0.0'), 0)
@@ -333,7 +333,7 @@ class TestLabelEdgeCases:
         packed = label.pack()
         assert len(packed) > 0
 
-    def test_label_host_route_ipv4(self):
+    def test_label_host_route_ipv4(self) -> None:
         """Test Label with /32 host route"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.1'), 32)
@@ -342,7 +342,7 @@ class TestLabelEdgeCases:
         packed = label.pack()
         assert len(packed) > 0
 
-    def test_label_host_route_ipv6(self):
+    def test_label_host_route_ipv6(self) -> None:
         """Test Label with /128 host route"""
         label = Label(AFI.ipv6, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('2001:db8::1'), 128)
@@ -351,7 +351,7 @@ class TestLabelEdgeCases:
         packed = label.pack()
         assert len(packed) > 0
 
-    def test_label_no_labels(self):
+    def test_label_no_labels(self) -> None:
         """Test Label with NOLABEL"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -361,7 +361,7 @@ class TestLabelEdgeCases:
         packed = label.pack()
         assert len(packed) > 0
 
-    def test_label_maximum_label_value(self):
+    def test_label_maximum_label_value(self) -> None:
         """Test Label with maximum label value"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
@@ -375,19 +375,19 @@ class TestLabelEdgeCases:
 class TestLabelInheritance:
     """Test that Label properly inherits from INET"""
 
-    def test_label_inherits_from_inet(self):
+    def test_label_inherits_from_inet(self) -> None:
         """Test Label is subclass of INET"""
         from exabgp.bgp.message.update.nlri.inet import INET
 
         assert issubclass(Label, INET)
 
-    def test_label_has_cidr(self):
+    def test_label_has_cidr(self) -> None:
         """Test Label has CIDR attribute from INET"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
 
         assert hasattr(label, 'cidr')
 
-    def test_label_has_path_info(self):
+    def test_label_has_path_info(self) -> None:
         """Test Label has path_info attribute from INET"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
 
@@ -398,7 +398,7 @@ class TestLabelInheritance:
 class TestLabelMultipleRoutes:
     """Test handling multiple Label routes"""
 
-    def test_different_label_routes(self):
+    def test_different_label_routes(self) -> None:
         """Test creating different labeled routes"""
         routes = [
             (AFI.ipv4, '10.1.0.0', 16, [100]),

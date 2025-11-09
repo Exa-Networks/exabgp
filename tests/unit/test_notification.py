@@ -13,7 +13,7 @@ from exabgp.bgp.message.notification import Notify, Notification
 
 
 class TestNotifyException(unittest.TestCase):
-    def test_notify_message_wire_format(self):
+    def test_notify_message_wire_format(self) -> None:
         # Build a Notify exception and generate its wire-format packet
         code, subcode, data = 2, 1, 'AB'
         notify_exc = Notify(code, subcode, data)
@@ -35,7 +35,7 @@ class TestNotifyException(unittest.TestCase):
         self.assertEqual(packet[20], subcode)
         self.assertEqual(packet[21:], data.encode('ascii'))
 
-    def test_message_klass_unknown_raises_notify(self):
+    def test_message_klass_unknown_raises_notify(self) -> None:
         # Message.klass should raise Notify for unknown message codes
         from exabgp.bgp.message.message import Message
 

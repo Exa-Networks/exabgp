@@ -1,3 +1,4 @@
+from typing import Any, Generator
 # encoding: utf-8
 """tests/unit/test_async_infrastructure.py
 
@@ -17,7 +18,7 @@ from exabgp.reactor.asynchronous import ASYNC
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
 
@@ -47,12 +48,12 @@ def mock_logger():
     option.formater = original_formater
 
 
-def test_async_supports_generators():
+def test_async_supports_generators() -> None:
     """Test that ASYNC still works with generators (backward compatibility)"""
     async_handler = ASYNC()
     results = []
 
-    def gen_callback():
+    def gen_callback() -> Generator[None, None, None]:
         results.append(1)
         yield
         results.append(2)
@@ -67,7 +68,7 @@ def test_async_supports_generators():
 
 
 @pytest.mark.asyncio
-async def test_async_supports_coroutines():
+async def test_async_supports_coroutines() -> None:
     """Test that ASYNC works with new coroutines"""
     async_handler = ASYNC()
     results = []
@@ -85,12 +86,12 @@ async def test_async_supports_coroutines():
 
 
 @pytest.mark.asyncio
-async def test_async_mixed_workload():
+async def test_async_mixed_workload() -> None:
     """Test that ASYNC handles both generators and coroutines"""
     async_handler = ASYNC()
     results = []
 
-    def gen_callback():
+    def gen_callback() -> Generator[None, None, None]:
         results.append('gen')
         yield
 
@@ -108,12 +109,12 @@ async def test_async_mixed_workload():
 
 
 @pytest.mark.asyncio
-async def test_async_multiple_yields():
+async def test_async_multiple_yields() -> None:
     """Test that ASYNC handles generators with multiple yields"""
     async_handler = ASYNC()
     results = []
 
-    def gen_with_yields():
+    def gen_with_yields() -> Generator[None, None, None]:
         for i in range(3):
             results.append(i)
             yield
@@ -129,7 +130,7 @@ async def test_async_multiple_yields():
 
 
 @pytest.mark.asyncio
-async def test_async_coroutine_exception_handling():
+async def test_async_coroutine_exception_handling() -> None:
     """Test that ASYNC handles exceptions in coroutines"""
     async_handler = ASYNC()
     results = []
@@ -152,17 +153,17 @@ async def test_async_coroutine_exception_handling():
 
 
 @pytest.mark.asyncio
-async def test_async_generator_exception_handling():
+async def test_async_generator_exception_handling() -> None:
     """Test that ASYNC handles exceptions in generators (backward compatibility)"""
     async_handler = ASYNC()
     results = []
 
-    def failing_gen():
+    def failing_gen() -> Generator[None, None, None]:
         results.append('gen_start')
         raise ValueError('Test exception')
         yield
 
-    def success_gen():
+    def success_gen() -> Generator[None, None, None]:
         results.append('gen_success')
         yield
 
@@ -176,14 +177,14 @@ async def test_async_generator_exception_handling():
     assert 'gen_success' in results
 
 
-def test_async_ready():
+def test_async_ready() -> None:
     """Test that ready() returns correct status"""
     async_handler = ASYNC()
 
     # Should be ready when empty
     assert async_handler.ready()
 
-    def gen():
+    def gen() -> Generator[None, None, None]:
         yield
 
     async_handler.schedule('test', 'test-cmd', gen())
@@ -192,14 +193,14 @@ def test_async_ready():
     assert not async_handler.ready()
 
 
-def test_async_clear():
+def test_async_clear() -> None:
     """Test that clear() removes scheduled tasks"""
     async_handler = ASYNC()
 
-    def gen1():
+    def gen1() -> Generator[None, None, None]:
         yield
 
-    def gen2():
+    def gen2() -> Generator[None, None, None]:
         yield
 
     async_handler.schedule('uid1', 'cmd1', gen1())
@@ -214,7 +215,7 @@ def test_async_clear():
     assert async_handler.ready()
 
 
-def test_async_sync_run_with_coroutines():
+def test_async_sync_run_with_coroutines() -> None:
     """Test that synchronous run() works with coroutines"""
     async_handler = ASYNC()
     results = []
@@ -231,14 +232,14 @@ def test_async_sync_run_with_coroutines():
 
 
 @pytest.mark.asyncio
-async def test_async_is_coroutine_helper():
+async def test_async_is_coroutine_helper() -> None:
     """Test the _is_coroutine helper method"""
     async_handler = ASYNC()
 
     async def coro():
         pass
 
-    def gen():
+    def gen() -> Generator[None, None, None]:
         yield
 
     # Test with coroutine

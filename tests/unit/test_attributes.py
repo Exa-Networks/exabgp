@@ -1,3 +1,4 @@
+from typing import Generator, Any
 """Comprehensive tests for BGP path attributes framework.
 
 The Attributes class orchestrates parsing of all path attributes in UPDATE messages.
@@ -29,14 +30,14 @@ from unittest.mock import Mock, patch
 
 # Mock logger at module level to avoid initialization issues
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Generator[None, None, None]:
     """Mock the logger to avoid initialization issues."""
     with patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_log:
         mock_log.debug = Mock()
         yield
 
 
-def create_negotiated_mock(asn4=False):
+def create_negotiated_mock(asn4: Any =False) -> Any:
     """Create minimal mock negotiated object for testing."""
     negotiated = Mock()
     negotiated.asn4 = asn4
@@ -46,7 +47,7 @@ def create_negotiated_mock(asn4=False):
     return negotiated
 
 
-def create_attribute_header(flag, type_code, length, extended=False):
+def create_attribute_header(flag: Any, type_code: Any, length: Any, extended: Any =False) -> Any:
     """Create attribute header bytes.
 
     Args:
@@ -74,7 +75,7 @@ def create_attribute_header(flag, type_code, length, extended=False):
 # Test Flag Parsing
 # =============================================================================
 
-def test_attributes_parse_origin_transitive():
+def test_attributes_parse_origin_transitive() -> None:
     """Test parsing ORIGIN attribute (well-known mandatory transitive)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -92,7 +93,7 @@ def test_attributes_parse_origin_transitive():
     assert attributes[1].origin == Origin.IGP
 
 
-def test_attributes_parse_optional_attribute():
+def test_attributes_parse_optional_attribute() -> None:
     """Test parsing optional attribute (MED)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.med import MED
@@ -110,7 +111,7 @@ def test_attributes_parse_optional_attribute():
     assert attributes[4].med == 100
 
 
-def test_attributes_parse_extended_length():
+def test_attributes_parse_extended_length() -> None:
     """Test parsing attribute with extended length (2 bytes)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.direction import Direction
@@ -131,7 +132,7 @@ def test_attributes_parse_extended_length():
 # Test Multiple Attributes
 # =============================================================================
 
-def test_attributes_parse_multiple_attributes():
+def test_attributes_parse_multiple_attributes() -> None:
     """Test parsing UPDATE with multiple attributes."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -154,7 +155,7 @@ def test_attributes_parse_multiple_attributes():
     assert isinstance(attributes[4], MED)
 
 
-def test_attributes_parse_as_path():
+def test_attributes_parse_as_path() -> None:
     """Test parsing AS_PATH attribute."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.aspath import ASPath
@@ -176,7 +177,7 @@ def test_attributes_parse_as_path():
 # Test Duplicate Attributes
 # =============================================================================
 
-def test_attributes_duplicate_attribute_ignored():
+def test_attributes_duplicate_attribute_ignored() -> None:
     """Test that duplicate attributes are ignored (for most attributes)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.direction import Direction
@@ -196,7 +197,7 @@ def test_attributes_duplicate_attribute_ignored():
     assert attributes[1].origin == 0  # IGP from first attribute
 
 
-def test_attributes_duplicate_attribute_handling():
+def test_attributes_duplicate_attribute_handling() -> None:
     """Test duplicate attribute handling.
 
     Note: The actual behavior depends on the attribute type.
@@ -225,7 +226,7 @@ def test_attributes_duplicate_attribute_handling():
 # Test Zero-Length Attributes
 # =============================================================================
 
-def test_attributes_zero_length_atomic_aggregate_valid():
+def test_attributes_zero_length_atomic_aggregate_valid() -> None:
     """Test that ATOMIC_AGGREGATE can have zero length."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
@@ -242,7 +243,7 @@ def test_attributes_zero_length_atomic_aggregate_valid():
     assert isinstance(attributes[6], AtomicAggregate)
 
 
-def test_attributes_zero_length_as_path_valid():
+def test_attributes_zero_length_as_path_valid() -> None:
     """Test that AS_PATH can have zero length (empty path)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.direction import Direction
@@ -262,7 +263,7 @@ def test_attributes_zero_length_as_path_valid():
 
 
 @pytest.mark.parametrize("attr_type", [1, 3, 4, 5])  # ORIGIN, NEXT_HOP, MED, LOCAL_PREF
-def test_attributes_zero_length_invalid_treat_as_withdraw(attr_type):
+def test_attributes_zero_length_invalid_treat_as_withdraw(attr_type: Any) -> None:
     """Test that zero-length for certain attributes triggers TREAT_AS_WITHDRAW."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
@@ -285,7 +286,7 @@ def test_attributes_zero_length_invalid_treat_as_withdraw(attr_type):
 # Test Truncated Attributes
 # =============================================================================
 
-def test_attributes_truncated_header():
+def test_attributes_truncated_header() -> None:
     """Test truncated attribute header (only flag byte)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
@@ -303,7 +304,7 @@ def test_attributes_truncated_header():
     assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes
 
 
-def test_attributes_truncated_length():
+def test_attributes_truncated_length() -> None:
     """Test truncated attribute header (missing length byte)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.direction import Direction
@@ -320,7 +321,7 @@ def test_attributes_truncated_length():
     assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes
 
 
-def test_attributes_truncated_value():
+def test_attributes_truncated_value() -> None:
     """Test truncated attribute value."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.direction import Direction
@@ -342,7 +343,7 @@ def test_attributes_truncated_value():
 # Test Unknown Attributes
 # =============================================================================
 
-def test_attributes_unknown_transitive():
+def test_attributes_unknown_transitive() -> None:
     """Test unknown transitive attribute (should be preserved)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.generic import GenericAttribute
@@ -363,7 +364,7 @@ def test_attributes_unknown_transitive():
     assert isinstance(attributes[type_code], GenericAttribute)
 
 
-def test_attributes_unknown_non_transitive():
+def test_attributes_unknown_non_transitive() -> None:
     """Test unknown non-transitive attribute (should be ignored)."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.direction import Direction
@@ -386,7 +387,7 @@ def test_attributes_unknown_non_transitive():
 # Test Flag Validation
 # =============================================================================
 
-def test_attributes_invalid_flag_for_known_attribute_treat_as_withdraw():
+def test_attributes_invalid_flag_for_known_attribute_treat_as_withdraw() -> None:
     """Test that invalid flags for TREAT_AS_WITHDRAW attributes trigger withdrawal."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
@@ -404,7 +405,7 @@ def test_attributes_invalid_flag_for_known_attribute_treat_as_withdraw():
     assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes
 
 
-def test_attributes_invalid_flag_for_discard_attribute():
+def test_attributes_invalid_flag_for_discard_attribute() -> None:
     """Test that invalid flags for DISCARD attributes are discarded."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.direction import Direction
@@ -425,7 +426,7 @@ def test_attributes_invalid_flag_for_discard_attribute():
 # Test AS_PATH + AS4_PATH Merging
 # =============================================================================
 
-def test_attributes_as4_path_alone():
+def test_attributes_as4_path_alone() -> None:
     """Test that AS4_PATH can be parsed independently."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.aspath import AS4Path
@@ -448,7 +449,7 @@ def test_attributes_as4_path_alone():
 # Test Empty Attributes
 # =============================================================================
 
-def test_attributes_empty_data():
+def test_attributes_empty_data() -> None:
     """Test parsing empty attributes data."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.direction import Direction
@@ -467,7 +468,7 @@ def test_attributes_empty_data():
 # Test Attributes Methods
 # =============================================================================
 
-def test_attributes_has_method():
+def test_attributes_has_method() -> None:
     """Test Attributes.has() method."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -479,7 +480,7 @@ def test_attributes_has_method():
     assert not attributes.has(2)  # AS_PATH
 
 
-def test_attributes_remove_method():
+def test_attributes_remove_method() -> None:
     """Test Attributes.remove() method."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.bgp.message.update.attribute.origin import Origin

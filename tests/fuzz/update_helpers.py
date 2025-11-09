@@ -4,9 +4,10 @@ This module provides utilities to create well-formed and malformed UPDATE
 messages for fuzzing and testing the UPDATE message parser.
 """
 import struct
+from typing import Any
 
 
-def create_update_message(withdrawn_routes=b'', path_attributes=b'', nlri=b''):
+def create_update_message(withdrawn_routes: Any =b'', path_attributes: Any =b'', nlri: Any =b'') -> bytes:
     """Create a BGP UPDATE message with given components.
 
     Args:
@@ -23,7 +24,7 @@ def create_update_message(withdrawn_routes=b'', path_attributes=b'', nlri=b''):
     return withdrawn_len + withdrawn_routes + attr_len + path_attributes + nlri
 
 
-def create_ipv4_prefix(ip, prefix_len):
+def create_ipv4_prefix(ip: Any, prefix_len: Any) -> bytes:
     """Create wire-format IPv4 prefix for NLRI or withdrawn routes.
 
     Args:
@@ -54,7 +55,7 @@ def create_ipv4_prefix(ip, prefix_len):
     return bytes([prefix_len]) + ip_bytes[:bytes_needed]
 
 
-def create_path_attribute(type_code, value, optional=False, transitive=True, partial=False, extended=False):
+def create_path_attribute(type_code: Any, value: Any, optional: Any =False, transitive: Any =True, partial: Any =False, extended: Any =False) -> bytes:
     """Create a BGP path attribute.
 
     Args:
@@ -96,7 +97,7 @@ def create_path_attribute(type_code, value, optional=False, transitive=True, par
     return bytes([flags, type_code]) + length_bytes + value
 
 
-def create_origin_attribute(origin_type):
+def create_origin_attribute(origin_type: Any) -> bytes:
     """Create ORIGIN path attribute (Type 1).
 
     Args:
@@ -116,7 +117,7 @@ def create_origin_attribute(origin_type):
     )
 
 
-def create_as_path_attribute(as_sequence):
+def create_as_path_attribute(as_sequence: Any) -> bytes:
     """Create AS_PATH path attribute (Type 2).
 
     Args:
@@ -150,7 +151,7 @@ def create_as_path_attribute(as_sequence):
     )
 
 
-def create_next_hop_attribute(ip_address):
+def create_next_hop_attribute(ip_address: Any) -> bytes:
     """Create NEXT_HOP path attribute (Type 3).
 
     Args:
@@ -173,7 +174,7 @@ def create_next_hop_attribute(ip_address):
     )
 
 
-def create_med_attribute(med_value):
+def create_med_attribute(med_value: Any) -> bytes:
     """Create MULTI_EXIT_DISC (MED) path attribute (Type 4).
 
     Args:
@@ -193,7 +194,7 @@ def create_med_attribute(med_value):
     )
 
 
-def create_local_pref_attribute(local_pref):
+def create_local_pref_attribute(local_pref: Any) -> bytes:
     """Create LOCAL_PREF path attribute (Type 5).
 
     Args:
@@ -213,7 +214,7 @@ def create_local_pref_attribute(local_pref):
     )
 
 
-def create_eor_message():
+def create_eor_message() -> bytes:
     """Create End-of-RIB (EOR) marker for IPv4 unicast.
 
     Returns:
@@ -222,7 +223,7 @@ def create_eor_message():
     return b'\x00\x00\x00\x00'
 
 
-def create_minimal_update(nlri_prefix=None):
+def create_minimal_update(nlri_prefix: Any =None) -> bytes:
     """Create minimal valid UPDATE message.
 
     Args:
@@ -251,7 +252,7 @@ def create_minimal_update(nlri_prefix=None):
     return create_eor_message()
 
 
-def create_withdrawal_update(prefixes):
+def create_withdrawal_update(prefixes: Any) -> bytes:
     """Create UPDATE message with only withdrawals.
 
     Args:
@@ -271,7 +272,7 @@ def create_withdrawal_update(prefixes):
 
 # Malformed message helpers for testing
 
-def create_update_with_invalid_withdrawn_length(actual_data_length, claimed_length):
+def create_update_with_invalid_withdrawn_length(actual_data_length: Any, claimed_length: Any) -> bytes:
     """Create UPDATE with mismatched withdrawn routes length.
 
     Args:
@@ -288,7 +289,7 @@ def create_update_with_invalid_withdrawn_length(actual_data_length, claimed_leng
     return struct.pack('!H', claimed_length) + withdrawn_data + b'\x00\x00'  # Zero attr length
 
 
-def create_update_with_invalid_attr_length(withdrawn, actual_attr_length, claimed_attr_length):
+def create_update_with_invalid_attr_length(withdrawn: Any, actual_attr_length: Any, claimed_attr_length: Any) -> bytes:
     """Create UPDATE with mismatched path attributes length.
 
     Args:
@@ -306,7 +307,7 @@ def create_update_with_invalid_attr_length(withdrawn, actual_attr_length, claime
     return withdrawn_len + withdrawn + attr_len + attr_data
 
 
-def create_truncated_update(valid_update, truncate_at):
+def create_truncated_update(valid_update: Any, truncate_at: Any) -> bytes:
     """Truncate an UPDATE message at specified byte.
 
     Args:

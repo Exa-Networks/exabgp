@@ -21,7 +21,7 @@ from exabgp.protocol.family import AFI, SAFI
 # Phase 1: Basic ROUTE_REFRESH Message Creation
 # ==============================================================================
 
-def test_route_refresh_creation_ipv4_unicast():
+def test_route_refresh_creation_ipv4_unicast() -> None:
     """Test basic ROUTE_REFRESH creation for IPv4 Unicast.
 
     RFC 2918: Route Refresh Capability for BGP-4
@@ -35,7 +35,7 @@ def test_route_refresh_creation_ipv4_unicast():
     assert str(rr) == 'REFRESH'
 
 
-def test_route_refresh_creation_ipv6_unicast():
+def test_route_refresh_creation_ipv6_unicast() -> None:
     """Test ROUTE_REFRESH creation for IPv6 Unicast.
     """
     rr = RouteRefresh(AFI.ipv6, SAFI.unicast, RouteRefresh.request)
@@ -45,7 +45,7 @@ def test_route_refresh_creation_ipv6_unicast():
     assert rr.reserved == RouteRefresh.request
 
 
-def test_route_refresh_creation_with_numeric_values():
+def test_route_refresh_creation_with_numeric_values() -> None:
     """Test ROUTE_REFRESH creation with raw numeric AFI/SAFI values.
 
     AFI: 1 = IPv4, 2 = IPv6
@@ -62,7 +62,7 @@ def test_route_refresh_creation_with_numeric_values():
     assert rr.safi == SAFI.multicast
 
 
-def test_route_refresh_creation_default_reserved():
+def test_route_refresh_creation_default_reserved() -> None:
     """Test ROUTE_REFRESH creation with default reserved field.
 
     Default should be 0 (normal route refresh request).
@@ -76,7 +76,7 @@ def test_route_refresh_creation_default_reserved():
 # Phase 2: Reserved Field and Subtypes (RFC 7313)
 # ==============================================================================
 
-def test_route_refresh_request_subtype():
+def test_route_refresh_request_subtype() -> None:
     """Test ROUTE_REFRESH with request subtype.
 
     RFC 7313 Section 2:
@@ -88,7 +88,7 @@ def test_route_refresh_request_subtype():
     assert str(rr.reserved) == 'query'
 
 
-def test_route_refresh_begin_of_route_refresh_subtype():
+def test_route_refresh_begin_of_route_refresh_subtype() -> None:
     """Test ROUTE_REFRESH with Begin-of-Route-Refresh (BoRR) subtype.
 
     RFC 7313 Section 4:
@@ -100,7 +100,7 @@ def test_route_refresh_begin_of_route_refresh_subtype():
     assert str(rr.reserved) == 'begin'
 
 
-def test_route_refresh_end_of_route_refresh_subtype():
+def test_route_refresh_end_of_route_refresh_subtype() -> None:
     """Test ROUTE_REFRESH with End-of-Route-Refresh (EoRR) subtype.
 
     RFC 7313 Section 4:
@@ -112,7 +112,7 @@ def test_route_refresh_end_of_route_refresh_subtype():
     assert str(rr.reserved) == 'end'
 
 
-def test_route_refresh_reserved_string_representations():
+def test_route_refresh_reserved_string_representations() -> None:
     """Test Reserved field string representations for all valid subtypes.
     """
     from exabgp.bgp.message.refresh import Reserved
@@ -127,7 +127,7 @@ def test_route_refresh_reserved_string_representations():
 # Phase 3: ROUTE_REFRESH Message Encoding
 # ==============================================================================
 
-def test_route_refresh_encoding_ipv4_unicast():
+def test_route_refresh_encoding_ipv4_unicast() -> None:
     """Test ROUTE_REFRESH encoding for IPv4 Unicast.
 
     Wire format:
@@ -164,7 +164,7 @@ def test_route_refresh_encoding_ipv4_unicast():
     assert msg[22] == 0x01
 
 
-def test_route_refresh_encoding_ipv6_multicast():
+def test_route_refresh_encoding_ipv6_multicast() -> None:
     """Test ROUTE_REFRESH encoding for IPv6 Multicast.
     """
     rr = RouteRefresh(AFI.ipv6, SAFI.multicast, RouteRefresh.request)
@@ -177,7 +177,7 @@ def test_route_refresh_encoding_ipv6_multicast():
     assert msg[22] == 0x02
 
 
-def test_route_refresh_encoding_with_borr_subtype():
+def test_route_refresh_encoding_with_borr_subtype() -> None:
     """Test ROUTE_REFRESH encoding with BoRR subtype.
     """
     rr = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.start)
@@ -187,7 +187,7 @@ def test_route_refresh_encoding_with_borr_subtype():
     assert msg[21] == 0x01
 
 
-def test_route_refresh_encoding_with_eorr_subtype():
+def test_route_refresh_encoding_with_eorr_subtype() -> None:
     """Test ROUTE_REFRESH encoding with EoRR subtype.
     """
     rr = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.end)
@@ -201,7 +201,7 @@ def test_route_refresh_encoding_with_eorr_subtype():
 # Phase 4: ROUTE_REFRESH Message Decoding
 # ==============================================================================
 
-def test_route_refresh_unpack_ipv4_unicast():
+def test_route_refresh_unpack_ipv4_unicast() -> None:
     """Test unpacking ROUTE_REFRESH for IPv4 Unicast.
 
     Data format: AFI (2 bytes) + Reserved (1 byte) + SAFI (1 byte)
@@ -216,7 +216,7 @@ def test_route_refresh_unpack_ipv4_unicast():
     assert rr.reserved == 0
 
 
-def test_route_refresh_unpack_ipv6_multicast():
+def test_route_refresh_unpack_ipv6_multicast() -> None:
     """Test unpacking ROUTE_REFRESH for IPv6 Multicast.
     """
     # AFI=2, Reserved=0, SAFI=2
@@ -228,7 +228,7 @@ def test_route_refresh_unpack_ipv6_multicast():
     assert rr.safi == SAFI.multicast
 
 
-def test_route_refresh_unpack_with_borr():
+def test_route_refresh_unpack_with_borr() -> None:
     """Test unpacking ROUTE_REFRESH with Begin-of-RR subtype.
     """
     # AFI=1, Reserved=1 (BoRR), SAFI=1
@@ -240,7 +240,7 @@ def test_route_refresh_unpack_with_borr():
     assert str(rr.reserved) == 'begin'
 
 
-def test_route_refresh_unpack_with_eorr():
+def test_route_refresh_unpack_with_eorr() -> None:
     """Test unpacking ROUTE_REFRESH with End-of-RR subtype.
     """
     # AFI=1, Reserved=2 (EoRR), SAFI=1
@@ -252,7 +252,7 @@ def test_route_refresh_unpack_with_eorr():
     assert str(rr.reserved) == 'end'
 
 
-def test_route_refresh_unpack_through_message_class():
+def test_route_refresh_unpack_through_message_class() -> None:
     """Test unpacking ROUTE_REFRESH through Message base class.
     """
     message_type = Message.CODE.ROUTE_REFRESH
@@ -268,7 +268,7 @@ def test_route_refresh_unpack_through_message_class():
 # Phase 5: ROUTE_REFRESH Validation and Error Handling
 # ==============================================================================
 
-def test_route_refresh_unpack_invalid_data_length():
+def test_route_refresh_unpack_invalid_data_length() -> None:
     """Test that invalid data length raises Notify error.
 
     ROUTE_REFRESH must be exactly 4 bytes.
@@ -282,7 +282,7 @@ def test_route_refresh_unpack_invalid_data_length():
     assert 'invalid route-refresh message' in str(exc_info.value)
 
 
-def test_route_refresh_unpack_empty_data():
+def test_route_refresh_unpack_empty_data() -> None:
     """Test that empty data raises Notify error.
     """
     data = b''
@@ -291,7 +291,7 @@ def test_route_refresh_unpack_empty_data():
         RouteRefresh.unpack_message(data)
 
 
-def test_route_refresh_unpack_invalid_reserved_field():
+def test_route_refresh_unpack_invalid_reserved_field() -> None:
     """Test that invalid reserved field raises Notify error.
 
     RFC 7313: Reserved field must be 0, 1, or 2.
@@ -305,7 +305,7 @@ def test_route_refresh_unpack_invalid_reserved_field():
     assert 'invalid route-refresh message subtype' in str(exc_info.value)
 
 
-def test_route_refresh_unpack_various_invalid_reserved():
+def test_route_refresh_unpack_various_invalid_reserved() -> None:
     """Test various invalid reserved values.
     """
     invalid_reserved = [3, 4, 5, 10, 99, 255]
@@ -321,7 +321,7 @@ def test_route_refresh_unpack_various_invalid_reserved():
 # Phase 6: ROUTE_REFRESH Round-Trip Tests
 # ==============================================================================
 
-def test_route_refresh_encode_decode_roundtrip_ipv4():
+def test_route_refresh_encode_decode_roundtrip_ipv4() -> None:
     """Test ROUTE_REFRESH encode/decode round-trip for IPv4.
     """
     # Create and encode
@@ -340,7 +340,7 @@ def test_route_refresh_encode_decode_roundtrip_ipv4():
     assert decoded.reserved == original.reserved
 
 
-def test_route_refresh_encode_decode_roundtrip_ipv6():
+def test_route_refresh_encode_decode_roundtrip_ipv6() -> None:
     """Test ROUTE_REFRESH encode/decode round-trip for IPv6.
     """
     original = RouteRefresh(AFI.ipv6, SAFI.multicast, RouteRefresh.end)
@@ -353,7 +353,7 @@ def test_route_refresh_encode_decode_roundtrip_ipv6():
     assert decoded.reserved == original.reserved
 
 
-def test_route_refresh_roundtrip_all_subtypes():
+def test_route_refresh_roundtrip_all_subtypes() -> None:
     """Test round-trip for all valid reserved subtypes.
     """
     subtypes = [RouteRefresh.request, RouteRefresh.start, RouteRefresh.end]
@@ -371,7 +371,7 @@ def test_route_refresh_roundtrip_all_subtypes():
 # Phase 7: ROUTE_REFRESH Equality and Comparison
 # ==============================================================================
 
-def test_route_refresh_equality_same_params():
+def test_route_refresh_equality_same_params() -> None:
     """Test that ROUTE_REFRESH messages with same params are equal.
     """
     rr1 = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.request)
@@ -380,7 +380,7 @@ def test_route_refresh_equality_same_params():
     assert rr1 == rr2
 
 
-def test_route_refresh_equality_different_afi():
+def test_route_refresh_equality_different_afi() -> None:
     """Test that ROUTE_REFRESH messages with different AFI are not equal.
     """
     rr1 = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.request)
@@ -389,7 +389,7 @@ def test_route_refresh_equality_different_afi():
     assert rr1 != rr2
 
 
-def test_route_refresh_equality_different_safi():
+def test_route_refresh_equality_different_safi() -> None:
     """Test that ROUTE_REFRESH messages with different SAFI are not equal.
     """
     rr1 = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.request)
@@ -398,7 +398,7 @@ def test_route_refresh_equality_different_safi():
     assert rr1 != rr2
 
 
-def test_route_refresh_equality_different_reserved():
+def test_route_refresh_equality_different_reserved() -> None:
     """Test that ROUTE_REFRESH messages with different reserved are not equal.
     """
     rr1 = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.request)
@@ -407,7 +407,7 @@ def test_route_refresh_equality_different_reserved():
     assert rr1 != rr2
 
 
-def test_route_refresh_equality_with_non_route_refresh():
+def test_route_refresh_equality_with_non_route_refresh() -> None:
     """Test that ROUTE_REFRESH is not equal to non-RouteRefresh objects.
     """
     rr = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.request)
@@ -421,7 +421,7 @@ def test_route_refresh_equality_with_non_route_refresh():
 # Phase 8: ROUTE_REFRESH String Representations
 # ==============================================================================
 
-def test_route_refresh_str_basic():
+def test_route_refresh_str_basic() -> None:
     """Test basic string representation.
     """
     rr = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.request)
@@ -429,7 +429,7 @@ def test_route_refresh_str_basic():
     assert str(rr) == 'REFRESH'
 
 
-def test_route_refresh_extensive_representation():
+def test_route_refresh_extensive_representation() -> None:
     """Test extensive string representation.
     """
     rr = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.request)
@@ -439,7 +439,7 @@ def test_route_refresh_extensive_representation():
     assert 'ipv4' in extensive.lower() or str(AFI.ipv4) in extensive
 
 
-def test_route_refresh_extensive_with_different_families():
+def test_route_refresh_extensive_with_different_families() -> None:
     """Test extensive representation with different AFI/SAFI combinations.
     """
     test_cases = [
@@ -459,7 +459,7 @@ def test_route_refresh_extensive_with_different_families():
 # Phase 9: ROUTE_REFRESH Message Constants
 # ==============================================================================
 
-def test_route_refresh_message_id():
+def test_route_refresh_message_id() -> None:
     """Test ROUTE_REFRESH message ID is correct.
 
     RFC 2918: ROUTE_REFRESH message type is 5.
@@ -468,13 +468,13 @@ def test_route_refresh_message_id():
     assert RouteRefresh.ID == Message.CODE.ROUTE_REFRESH
 
 
-def test_route_refresh_message_type_bytes():
+def test_route_refresh_message_type_bytes() -> None:
     """Test ROUTE_REFRESH TYPE byte representation.
     """
     assert RouteRefresh.TYPE == b'\x05'
 
 
-def test_route_refresh_message_registration():
+def test_route_refresh_message_registration() -> None:
     """Test that ROUTE_REFRESH is properly registered.
     """
     assert Message.CODE.ROUTE_REFRESH in Message.registered_message
@@ -483,7 +483,7 @@ def test_route_refresh_message_registration():
     assert klass == RouteRefresh
 
 
-def test_route_refresh_subtype_constants():
+def test_route_refresh_subtype_constants() -> None:
     """Test ROUTE_REFRESH subtype constants.
     """
     assert RouteRefresh.request == 0
@@ -491,7 +491,7 @@ def test_route_refresh_subtype_constants():
     assert RouteRefresh.end == 2
 
 
-def test_route_refresh_length_validation_rule():
+def test_route_refresh_length_validation_rule() -> None:
     """Test ROUTE_REFRESH length validation rule.
 
     RFC 2918: ROUTE_REFRESH messages must be exactly 23 octets.
@@ -511,7 +511,7 @@ def test_route_refresh_length_validation_rule():
 # Phase 10: ROUTE_REFRESH with Various AFI/SAFI Combinations
 # ==============================================================================
 
-def test_route_refresh_ipv4_mpls_vpn():
+def test_route_refresh_ipv4_mpls_vpn() -> None:
     """Test ROUTE_REFRESH for IPv4 MPLS VPN (AFI 1, SAFI 128).
     """
     rr = RouteRefresh(AFI.ipv4, SAFI.mpls_vpn, RouteRefresh.request)
@@ -527,7 +527,7 @@ def test_route_refresh_ipv4_mpls_vpn():
     assert decoded == rr
 
 
-def test_route_refresh_ipv6_mpls_vpn():
+def test_route_refresh_ipv6_mpls_vpn() -> None:
     """Test ROUTE_REFRESH for IPv6 MPLS VPN (AFI 2, SAFI 128).
     """
     rr = RouteRefresh(AFI.ipv6, SAFI.mpls_vpn, RouteRefresh.request)
@@ -536,7 +536,7 @@ def test_route_refresh_ipv6_mpls_vpn():
     assert rr.safi == SAFI.mpls_vpn
 
 
-def test_route_refresh_flow_ipv4():
+def test_route_refresh_flow_ipv4() -> None:
     """Test ROUTE_REFRESH for IPv4 FlowSpec (AFI 1, SAFI 133).
     """
     rr = RouteRefresh(AFI.ipv4, SAFI.flow_ip, RouteRefresh.request)
@@ -545,7 +545,7 @@ def test_route_refresh_flow_ipv4():
     assert rr.safi == SAFI.flow_ip
 
 
-def test_route_refresh_various_afi_safi_combinations():
+def test_route_refresh_various_afi_safi_combinations() -> None:
     """Test ROUTE_REFRESH with various AFI/SAFI combinations.
     """
     test_cases = [
@@ -578,7 +578,7 @@ def test_route_refresh_various_afi_safi_combinations():
 # Phase 11: ROUTE_REFRESH Message Iterator
 # ==============================================================================
 
-def test_route_refresh_messages_iterator():
+def test_route_refresh_messages_iterator() -> None:
     """Test ROUTE_REFRESH messages() iterator method.
 
     This method is used to generate messages for sending.
@@ -594,7 +594,7 @@ def test_route_refresh_messages_iterator():
     assert len(messages[0]) == 23
 
 
-def test_route_refresh_messages_with_different_params():
+def test_route_refresh_messages_with_different_params() -> None:
     """Test messages() iterator with different negotiated params.
     """
     rr = RouteRefresh(AFI.ipv6, SAFI.multicast, RouteRefresh.start)

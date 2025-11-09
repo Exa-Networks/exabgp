@@ -1,3 +1,4 @@
+from typing import Any
 """pytest configuration for performance tests.
 
 Provides fixtures and configuration for performance testing.
@@ -8,7 +9,7 @@ from unittest.mock import Mock, patch
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues in performance tests."""
     from exabgp.logger.option import option
 

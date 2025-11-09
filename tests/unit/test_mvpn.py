@@ -25,7 +25,7 @@ from exabgp.bgp.message.update.nlri.nlri import Action
 class TestSourceAD:
     """Tests for MVPN Route Type 5: Source Active A-D Route"""
 
-    def test_sourcead_creation(self):
+    def test_sourcead_creation(self) -> None:
         """Test basic creation of SourceAD route"""
         rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
         source = IP.create('192.168.1.1')
@@ -40,7 +40,7 @@ class TestSourceAD:
         assert route.source == source
         assert route.group == group
 
-    def test_sourcead_pack_unpack_ipv4(self):
+    def test_sourcead_pack_unpack_ipv4(self) -> None:
         """Test pack/unpack roundtrip for SourceAD with IPv4"""
         rd = RouteDistinguisher.fromElements('10.0.0.1', 500)
         source = IP.create('192.168.1.1')
@@ -57,7 +57,7 @@ class TestSourceAD:
         assert str(unpacked.source) == str(source)
         assert str(unpacked.group) == str(group)
 
-    def test_sourcead_pack_unpack_ipv6(self):
+    def test_sourcead_pack_unpack_ipv6(self) -> None:
         """Test pack/unpack roundtrip for SourceAD with IPv6"""
         rd = RouteDistinguisher.fromElements('10.0.0.2', 100)
         source = IP.create('2001:db8:1::1')
@@ -74,7 +74,7 @@ class TestSourceAD:
         assert str(unpacked.source) == str(source)
         assert str(unpacked.group) == str(group)
 
-    def test_sourcead_equality(self):
+    def test_sourcead_equality(self) -> None:
         """Test equality comparison for SourceAD routes"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
@@ -86,7 +86,7 @@ class TestSourceAD:
         assert route1 == route2
         assert not route1 != route2
 
-    def test_sourcead_inequality(self):
+    def test_sourcead_inequality(self) -> None:
         """Test inequality for different SourceAD routes"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         source1 = IP.create('192.168.1.1')
@@ -99,7 +99,7 @@ class TestSourceAD:
         assert route1 != route2
         assert not route1 == route2
 
-    def test_sourcead_hash_consistency(self):
+    def test_sourcead_hash_consistency(self) -> None:
         """Test hash consistency for SourceAD routes"""
         rd = RouteDistinguisher.fromElements('2.2.2.2', 20)
         source = IP.create('192.168.2.1')
@@ -110,7 +110,7 @@ class TestSourceAD:
 
         assert hash(route1) == hash(route2)
 
-    def test_sourcead_string_representation(self):
+    def test_sourcead_string_representation(self) -> None:
         """Test string representation of SourceAD"""
         rd = RouteDistinguisher.fromElements('3.3.3.3', 30)
         source = IP.create('172.16.1.1')
@@ -123,7 +123,7 @@ class TestSourceAD:
         assert '172.16.1.1' in route_str
         assert '239.3.3.3' in route_str
 
-    def test_sourcead_json(self):
+    def test_sourcead_json(self) -> None:
         """Test JSON serialization of SourceAD"""
         rd = RouteDistinguisher.fromElements('4.4.4.4', 40)
         source = IP.create('10.20.30.40')
@@ -137,7 +137,7 @@ class TestSourceAD:
         assert '"source": "10.20.30.40"' in json_str
         assert '"group": "239.4.4.4"' in json_str
 
-    def test_sourcead_invalid_length(self):
+    def test_sourcead_invalid_length(self) -> None:
         """Test SourceAD with invalid length raises error"""
         # Create invalid packed data with wrong length (15 bytes instead of 18 or 42)
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
@@ -149,7 +149,7 @@ class TestSourceAD:
         with pytest.raises(Notify):
             MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None)
 
-    def test_sourcead_invalid_source_ip_length(self):
+    def test_sourcead_invalid_source_ip_length(self) -> None:
         """Test SourceAD with invalid source IP length raises error"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         # Create data with invalid source IP length (24 bits instead of 32 or 128)
@@ -160,7 +160,7 @@ class TestSourceAD:
         with pytest.raises(Notify):
             MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None)
 
-    def test_sourcead_multicast_addresses(self):
+    def test_sourcead_multicast_addresses(self) -> None:
         """Test SourceAD with various multicast group addresses"""
         rd = RouteDistinguisher.fromElements('5.5.5.5', 50)
         source = IP.create('10.1.1.1')
@@ -188,7 +188,7 @@ class TestSourceAD:
 class TestSharedJoin:
     """Tests for MVPN Route Type 6: C-Multicast Shared Tree Join"""
 
-    def test_sharedjoin_creation(self):
+    def test_sharedjoin_creation(self) -> None:
         """Test basic creation of SharedJoin route"""
         rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
         source = IP.create('192.168.1.1')
@@ -205,7 +205,7 @@ class TestSharedJoin:
         assert route.group == group
         assert route.source_as == source_as
 
-    def test_sharedjoin_pack_unpack_ipv4(self):
+    def test_sharedjoin_pack_unpack_ipv4(self) -> None:
         """Test pack/unpack roundtrip for SharedJoin with IPv4"""
         rd = RouteDistinguisher.fromElements('10.0.0.1', 500)
         source = IP.create('192.168.1.1')
@@ -224,7 +224,7 @@ class TestSharedJoin:
         assert str(unpacked.group) == str(group)
         assert unpacked.source_as == source_as
 
-    def test_sharedjoin_pack_unpack_ipv6(self):
+    def test_sharedjoin_pack_unpack_ipv6(self) -> None:
         """Test pack/unpack roundtrip for SharedJoin with IPv6"""
         rd = RouteDistinguisher.fromElements('10.0.0.2', 100)
         source = IP.create('2001:db8:1::1')
@@ -243,7 +243,7 @@ class TestSharedJoin:
         assert str(unpacked.group) == str(group)
         assert unpacked.source_as == source_as
 
-    def test_sharedjoin_equality(self):
+    def test_sharedjoin_equality(self) -> None:
         """Test equality comparison for SharedJoin routes"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
@@ -256,7 +256,7 @@ class TestSharedJoin:
         assert route1 == route2
         assert not route1 != route2
 
-    def test_sharedjoin_inequality(self):
+    def test_sharedjoin_inequality(self) -> None:
         """Test inequality for different SharedJoin routes"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
@@ -268,7 +268,7 @@ class TestSharedJoin:
         # Different AS should not affect equality (only rd, source, group matter)
         assert route1 == route2  # AS not included in equality check
 
-    def test_sharedjoin_hash_consistency(self):
+    def test_sharedjoin_hash_consistency(self) -> None:
         """Test hash consistency for SharedJoin routes"""
         rd = RouteDistinguisher.fromElements('2.2.2.2', 20)
         source = IP.create('192.168.2.1')
@@ -280,7 +280,7 @@ class TestSharedJoin:
 
         assert hash(route1) == hash(route2)
 
-    def test_sharedjoin_string_representation(self):
+    def test_sharedjoin_string_representation(self) -> None:
         """Test string representation of SharedJoin"""
         rd = RouteDistinguisher.fromElements('3.3.3.3', 30)
         source = IP.create('172.16.1.1')
@@ -295,7 +295,7 @@ class TestSharedJoin:
         assert '172.16.1.1' in route_str
         assert '239.3.3.3' in route_str
 
-    def test_sharedjoin_json(self):
+    def test_sharedjoin_json(self) -> None:
         """Test JSON serialization of SharedJoin"""
         rd = RouteDistinguisher.fromElements('4.4.4.4', 40)
         source = IP.create('10.20.30.40')
@@ -311,7 +311,7 @@ class TestSharedJoin:
         assert '"source": "10.20.30.40"' in json_str
         assert '"group": "239.4.4.4"' in json_str
 
-    def test_sharedjoin_invalid_length(self):
+    def test_sharedjoin_invalid_length(self) -> None:
         """Test SharedJoin with invalid length raises error"""
         # Create invalid packed data with wrong length
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
@@ -322,7 +322,7 @@ class TestSharedJoin:
         with pytest.raises(Notify):
             MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None)
 
-    def test_sharedjoin_various_as_numbers(self):
+    def test_sharedjoin_various_as_numbers(self) -> None:
         """Test SharedJoin with various AS numbers"""
         rd = RouteDistinguisher.fromElements('5.5.5.5', 50)
         source = IP.create('10.1.1.1')
@@ -346,7 +346,7 @@ class TestSharedJoin:
 class TestSourceJoin:
     """Tests for MVPN Route Type 7: C-Multicast Source Tree Join"""
 
-    def test_sourcejoin_creation(self):
+    def test_sourcejoin_creation(self) -> None:
         """Test basic creation of SourceJoin route"""
         rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
         source = IP.create('192.168.1.1')
@@ -363,7 +363,7 @@ class TestSourceJoin:
         assert route.group == group
         assert route.source_as == source_as
 
-    def test_sourcejoin_pack_unpack_ipv4(self):
+    def test_sourcejoin_pack_unpack_ipv4(self) -> None:
         """Test pack/unpack roundtrip for SourceJoin with IPv4"""
         rd = RouteDistinguisher.fromElements('10.0.0.1', 500)
         source = IP.create('192.168.1.1')
@@ -382,7 +382,7 @@ class TestSourceJoin:
         assert str(unpacked.group) == str(group)
         assert unpacked.source_as == source_as
 
-    def test_sourcejoin_pack_unpack_ipv6(self):
+    def test_sourcejoin_pack_unpack_ipv6(self) -> None:
         """Test pack/unpack roundtrip for SourceJoin with IPv6"""
         rd = RouteDistinguisher.fromElements('10.0.0.2', 100)
         source = IP.create('2001:db8:1::1')
@@ -401,7 +401,7 @@ class TestSourceJoin:
         assert str(unpacked.group) == str(group)
         assert unpacked.source_as == source_as
 
-    def test_sourcejoin_equality(self):
+    def test_sourcejoin_equality(self) -> None:
         """Test equality comparison for SourceJoin routes"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
@@ -414,7 +414,7 @@ class TestSourceJoin:
         assert route1 == route2
         assert not route1 != route2
 
-    def test_sourcejoin_inequality(self):
+    def test_sourcejoin_inequality(self) -> None:
         """Test inequality for different SourceJoin routes"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         source1 = IP.create('192.168.1.1')
@@ -428,7 +428,7 @@ class TestSourceJoin:
         assert route1 != route2
         assert not route1 == route2
 
-    def test_sourcejoin_hash_consistency(self):
+    def test_sourcejoin_hash_consistency(self) -> None:
         """Test hash consistency for SourceJoin routes"""
         rd = RouteDistinguisher.fromElements('2.2.2.2', 20)
         source = IP.create('192.168.2.1')
@@ -440,7 +440,7 @@ class TestSourceJoin:
 
         assert hash(route1) == hash(route2)
 
-    def test_sourcejoin_string_representation(self):
+    def test_sourcejoin_string_representation(self) -> None:
         """Test string representation of SourceJoin"""
         rd = RouteDistinguisher.fromElements('3.3.3.3', 30)
         source = IP.create('172.16.1.1')
@@ -455,7 +455,7 @@ class TestSourceJoin:
         assert '172.16.1.1' in route_str
         assert '239.3.3.3' in route_str
 
-    def test_sourcejoin_json(self):
+    def test_sourcejoin_json(self) -> None:
         """Test JSON serialization of SourceJoin"""
         rd = RouteDistinguisher.fromElements('4.4.4.4', 40)
         source = IP.create('10.20.30.40')
@@ -471,7 +471,7 @@ class TestSourceJoin:
         assert '"source": "10.20.30.40"' in json_str
         assert '"group": "239.4.4.4"' in json_str
 
-    def test_sourcejoin_invalid_length(self):
+    def test_sourcejoin_invalid_length(self) -> None:
         """Test SourceJoin with invalid length raises error"""
         # Create invalid packed data with wrong length
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
@@ -482,7 +482,7 @@ class TestSourceJoin:
         with pytest.raises(Notify):
             MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None)
 
-    def test_sourcejoin_ssm_multicast(self):
+    def test_sourcejoin_ssm_multicast(self) -> None:
         """Test SourceJoin with SSM (Source-Specific Multicast) addresses"""
         rd = RouteDistinguisher.fromElements('5.5.5.5', 50)
         source = IP.create('10.1.1.1')
@@ -504,19 +504,19 @@ class TestSourceJoin:
 class TestMVPNGeneric:
     """Tests for generic MVPN functionality"""
 
-    def test_mvpn_registration(self):
+    def test_mvpn_registration(self) -> None:
         """Test that all MVPN route types are registered"""
         assert 5 in MVPN.registered_mvpn  # SourceAD
         assert 6 in MVPN.registered_mvpn  # SharedJoin
         assert 7 in MVPN.registered_mvpn  # SourceJoin
 
-    def test_mvpn_registered_classes(self):
+    def test_mvpn_registered_classes(self) -> None:
         """Test that registered classes are correct"""
         assert MVPN.registered_mvpn[5] == SourceAD
         assert MVPN.registered_mvpn[6] == SharedJoin
         assert MVPN.registered_mvpn[7] == SourceJoin
 
-    def test_mvpn_unpack_unknown_route_type(self):
+    def test_mvpn_unpack_unknown_route_type(self) -> None:
         """Test unpacking unknown MVPN route type"""
         # Create a route with unknown code (99)
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
@@ -530,7 +530,7 @@ class TestMVPNGeneric:
 
         assert unpacked.CODE == 99
 
-    def test_mvpn_safi(self):
+    def test_mvpn_safi(self) -> None:
         """Test that MVPN routes use correct SAFI"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
@@ -540,7 +540,7 @@ class TestMVPNGeneric:
 
         assert route.safi == SAFI.mcast_vpn
 
-    def test_mvpn_route_distinction(self):
+    def test_mvpn_route_distinction(self) -> None:
         """Test that different MVPN route types are distinct"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')

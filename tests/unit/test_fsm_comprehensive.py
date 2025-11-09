@@ -10,6 +10,7 @@ Created: 2025-11-08
 
 import pytest
 import os
+from typing import Any
 from unittest.mock import Mock, MagicMock, patch
 
 # Set up environment before importing ExaBGP modules
@@ -22,7 +23,7 @@ from exabgp.bgp.fsm import FSM
 class TestFSMStateConstants:
     """Test FSM state constant definitions"""
 
-    def test_state_values(self):
+    def test_state_values(self) -> None:
         """Test that state constants have correct values"""
         assert FSM.IDLE == 0x01
         assert FSM.ACTIVE == 0x02
@@ -31,7 +32,7 @@ class TestFSMStateConstants:
         assert FSM.OPENCONFIRM == 0x10
         assert FSM.ESTABLISHED == 0x20
 
-    def test_state_uniqueness(self):
+    def test_state_uniqueness(self) -> None:
         """Test that all states have unique values"""
         states = [
             FSM.IDLE,
@@ -43,7 +44,7 @@ class TestFSMStateConstants:
         ]
         assert len(states) == len(set(states))
 
-    def test_state_names(self):
+    def test_state_names(self) -> None:
         """Test that state names are correctly mapped"""
         assert FSM.STATE.names[FSM.IDLE] == 'IDLE'
         assert FSM.STATE.names[FSM.ACTIVE] == 'ACTIVE'
@@ -52,7 +53,7 @@ class TestFSMStateConstants:
         assert FSM.STATE.names[FSM.OPENCONFIRM] == 'OPENCONFIRM'
         assert FSM.STATE.names[FSM.ESTABLISHED] == 'ESTABLISHED'
 
-    def test_state_codes_reverse_mapping(self):
+    def test_state_codes_reverse_mapping(self) -> None:
         """Test that state codes dictionary provides reverse mapping"""
         assert FSM.STATE.codes['IDLE'] == FSM.IDLE
         assert FSM.STATE.codes['ACTIVE'] == FSM.ACTIVE
@@ -61,7 +62,7 @@ class TestFSMStateConstants:
         assert FSM.STATE.codes['OPENCONFIRM'] == FSM.OPENCONFIRM
         assert FSM.STATE.codes['ESTABLISHED'] == FSM.ESTABLISHED
 
-    def test_state_valid_list(self):
+    def test_state_valid_list(self) -> None:
         """Test that valid states list contains all state codes"""
         assert FSM.IDLE in FSM.STATE.valid
         assert FSM.ACTIVE in FSM.STATE.valid
@@ -75,7 +76,7 @@ class TestFSMStateConstants:
 class TestFSMStateRepresentation:
     """Test FSM state string representations"""
 
-    def test_state_repr(self):
+    def test_state_repr(self) -> None:
         """Test STATE __repr__ returns proper state names"""
         assert repr(FSM.IDLE) == 'IDLE'
         assert repr(FSM.ACTIVE) == 'ACTIVE'
@@ -84,7 +85,7 @@ class TestFSMStateRepresentation:
         assert repr(FSM.OPENCONFIRM) == 'OPENCONFIRM'
         assert repr(FSM.ESTABLISHED) == 'ESTABLISHED'
 
-    def test_state_str(self):
+    def test_state_str(self) -> None:
         """Test STATE __str__ returns proper state names"""
         assert str(FSM.IDLE) == 'IDLE'
         assert str(FSM.ACTIVE) == 'ACTIVE'
@@ -97,14 +98,14 @@ class TestFSMStateRepresentation:
 class TestFSMInitialization:
     """Test FSM object initialization"""
 
-    def test_init_with_idle_state(self):
+    def test_init_with_idle_state(self) -> None:
         """Test FSM initialization with IDLE state"""
         peer = Mock()
         fsm = FSM(peer, FSM.IDLE)
         assert fsm.peer is peer
         assert fsm.state == FSM.IDLE
 
-    def test_init_with_different_states(self):
+    def test_init_with_different_states(self) -> None:
         """Test FSM initialization with various states"""
         peer = Mock()
 
@@ -122,7 +123,7 @@ class TestFSMInitialization:
             assert fsm.state == state
             assert fsm.peer is peer
 
-    def test_init_preserves_peer_reference(self):
+    def test_init_preserves_peer_reference(self) -> None:
         """Test that FSM maintains reference to peer object"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -136,31 +137,31 @@ class TestFSMInitialization:
 class TestFSMStateComparison:
     """Test FSM state comparison operators"""
 
-    def test_equality_with_same_state(self):
+    def test_equality_with_same_state(self) -> None:
         """Test FSM equality operator with matching state"""
         peer = Mock()
         fsm = FSM(peer, FSM.IDLE)
         assert fsm == FSM.IDLE
 
-    def test_equality_with_different_state(self):
+    def test_equality_with_different_state(self) -> None:
         """Test FSM equality operator with different state"""
         peer = Mock()
         fsm = FSM(peer, FSM.IDLE)
         assert not (fsm == FSM.ACTIVE)
 
-    def test_inequality_with_different_state(self):
+    def test_inequality_with_different_state(self) -> None:
         """Test FSM inequality operator with different state"""
         peer = Mock()
         fsm = FSM(peer, FSM.IDLE)
         assert fsm != FSM.ACTIVE
 
-    def test_inequality_with_same_state(self):
+    def test_inequality_with_same_state(self) -> None:
         """Test FSM inequality operator with matching state"""
         peer = Mock()
         fsm = FSM(peer, FSM.ESTABLISHED)
         assert not (fsm != FSM.ESTABLISHED)
 
-    def test_multiple_state_comparisons(self):
+    def test_multiple_state_comparisons(self) -> None:
         """Test FSM comparison across multiple states"""
         peer = Mock()
         fsm = FSM(peer, FSM.CONNECT)
@@ -176,7 +177,7 @@ class TestFSMStateComparison:
 class TestFSMStateTransitions:
     """Test FSM state transition logic"""
 
-    def test_change_updates_state(self):
+    def test_change_updates_state(self) -> None:
         """Test that change() method updates FSM state"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -186,7 +187,7 @@ class TestFSMStateTransitions:
         fsm.change(FSM.ACTIVE)
         assert fsm.state == FSM.ACTIVE
 
-    def test_change_returns_self(self):
+    def test_change_returns_self(self) -> None:
         """Test that change() returns FSM object for chaining"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -196,7 +197,7 @@ class TestFSMStateTransitions:
         result = fsm.change(FSM.ACTIVE)
         assert result is fsm
 
-    def test_transition_idle_to_active(self):
+    def test_transition_idle_to_active(self) -> None:
         """Test IDLE -> ACTIVE transition"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -206,7 +207,7 @@ class TestFSMStateTransitions:
         fsm.change(FSM.ACTIVE)
         assert fsm == FSM.ACTIVE
 
-    def test_transition_active_to_connect(self):
+    def test_transition_active_to_connect(self) -> None:
         """Test ACTIVE -> CONNECT is allowed (via IDLE)"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -218,7 +219,7 @@ class TestFSMStateTransitions:
         fsm.change(FSM.CONNECT)
         assert fsm == FSM.CONNECT
 
-    def test_transition_connect_to_opensent(self):
+    def test_transition_connect_to_opensent(self) -> None:
         """Test CONNECT -> OPENSENT transition"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -228,7 +229,7 @@ class TestFSMStateTransitions:
         fsm.change(FSM.OPENSENT)
         assert fsm == FSM.OPENSENT
 
-    def test_transition_opensent_to_openconfirm(self):
+    def test_transition_opensent_to_openconfirm(self) -> None:
         """Test OPENSENT -> OPENCONFIRM transition"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -238,7 +239,7 @@ class TestFSMStateTransitions:
         fsm.change(FSM.OPENCONFIRM)
         assert fsm == FSM.OPENCONFIRM
 
-    def test_transition_openconfirm_to_established(self):
+    def test_transition_openconfirm_to_established(self) -> None:
         """Test OPENCONFIRM -> ESTABLISHED transition"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -248,7 +249,7 @@ class TestFSMStateTransitions:
         fsm.change(FSM.ESTABLISHED)
         assert fsm == FSM.ESTABLISHED
 
-    def test_transition_established_to_idle(self):
+    def test_transition_established_to_idle(self) -> None:
         """Test ESTABLISHED -> IDLE transition (session reset)"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -258,7 +259,7 @@ class TestFSMStateTransitions:
         fsm.change(FSM.IDLE)
         assert fsm == FSM.IDLE
 
-    def test_multiple_consecutive_transitions(self):
+    def test_multiple_consecutive_transitions(self) -> None:
         """Test multiple state changes in sequence"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -283,7 +284,7 @@ class TestFSMStateTransitions:
         fsm.change(FSM.ESTABLISHED)
         assert fsm == FSM.ESTABLISHED
 
-    def test_transition_staying_in_same_state(self):
+    def test_transition_staying_in_same_state(self) -> None:
         """Test transition to the same state (no change)"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -297,7 +298,7 @@ class TestFSMStateTransitions:
 class TestFSMTransitionTable:
     """Test FSM transition table validation"""
 
-    def test_transition_table_structure(self):
+    def test_transition_table_structure(self) -> None:
         """Test that transition table has entries for all states"""
         assert FSM.IDLE in FSM.transition
         assert FSM.ACTIVE in FSM.transition
@@ -306,7 +307,7 @@ class TestFSMTransitionTable:
         assert FSM.OPENCONFIRM in FSM.transition
         assert FSM.ESTABLISHED in FSM.transition
 
-    def test_idle_can_transition_from_all_states(self):
+    def test_idle_can_transition_from_all_states(self) -> None:
         """Test IDLE accepts transitions from all states (reset)"""
         allowed_from = FSM.transition[FSM.IDLE]
         assert FSM.IDLE in allowed_from
@@ -316,33 +317,33 @@ class TestFSMTransitionTable:
         assert FSM.OPENCONFIRM in allowed_from
         assert FSM.ESTABLISHED in allowed_from
 
-    def test_active_transition_sources(self):
+    def test_active_transition_sources(self) -> None:
         """Test ACTIVE state allowed transitions"""
         allowed_from = FSM.transition[FSM.ACTIVE]
         assert FSM.IDLE in allowed_from
         assert FSM.ACTIVE in allowed_from
         assert FSM.OPENSENT in allowed_from
 
-    def test_connect_transition_sources(self):
+    def test_connect_transition_sources(self) -> None:
         """Test CONNECT state allowed transitions"""
         allowed_from = FSM.transition[FSM.CONNECT]
         assert FSM.IDLE in allowed_from
         assert FSM.CONNECT in allowed_from
         assert FSM.ACTIVE in allowed_from
 
-    def test_opensent_transition_sources(self):
+    def test_opensent_transition_sources(self) -> None:
         """Test OPENSENT state allowed transitions"""
         allowed_from = FSM.transition[FSM.OPENSENT]
         assert FSM.CONNECT in allowed_from
         # OPENSENT can only come from CONNECT
 
-    def test_openconfirm_transition_sources(self):
+    def test_openconfirm_transition_sources(self) -> None:
         """Test OPENCONFIRM state allowed transitions"""
         allowed_from = FSM.transition[FSM.OPENCONFIRM]
         assert FSM.OPENSENT in allowed_from
         assert FSM.OPENCONFIRM in allowed_from
 
-    def test_established_transition_sources(self):
+    def test_established_transition_sources(self) -> None:
         """Test ESTABLISHED state allowed transitions"""
         allowed_from = FSM.transition[FSM.ESTABLISHED]
         assert FSM.OPENCONFIRM in allowed_from
@@ -352,7 +353,7 @@ class TestFSMTransitionTable:
 class TestFSMAPICallbacks:
     """Test FSM API notification callbacks"""
 
-    def test_change_triggers_api_callback_when_enabled(self):
+    def test_change_triggers_api_callback_when_enabled(self) -> None:
         """Test that state change triggers API callback when enabled"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -366,7 +367,7 @@ class TestFSMAPICallbacks:
 
         peer.reactor.processes.fsm.assert_called_once_with(peer.neighbor, fsm)
 
-    def test_change_skips_api_callback_when_disabled(self):
+    def test_change_skips_api_callback_when_disabled(self) -> None:
         """Test that state change skips API callback when disabled"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -380,7 +381,7 @@ class TestFSMAPICallbacks:
 
         peer.reactor.processes.fsm.assert_not_called()
 
-    def test_multiple_transitions_trigger_multiple_callbacks(self):
+    def test_multiple_transitions_trigger_multiple_callbacks(self) -> None:
         """Test that multiple state changes trigger multiple callbacks"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -396,7 +397,7 @@ class TestFSMAPICallbacks:
 
         assert peer.reactor.processes.fsm.call_count == 3
 
-    def test_api_callback_receives_correct_parameters(self):
+    def test_api_callback_receives_correct_parameters(self) -> None:
         """Test that API callback receives neighbor and FSM instance"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -416,13 +417,13 @@ class TestFSMAPICallbacks:
 class TestFSMRepr:
     """Test FSM object representation"""
 
-    def test_fsm_repr_format(self):
+    def test_fsm_repr_format(self) -> None:
         """Test FSM __repr__ includes state name"""
         peer = Mock()
         fsm = FSM(peer, FSM.IDLE)
         assert 'FSM state' in repr(fsm)
 
-    def test_fsm_repr_different_states(self):
+    def test_fsm_repr_different_states(self) -> None:
         """Test FSM __repr__ for different states"""
         peer = Mock()
 
@@ -444,43 +445,43 @@ class TestFSMRepr:
 class TestFSMName:
     """Test FSM name() method"""
 
-    def test_name_returns_idle(self):
+    def test_name_returns_idle(self) -> None:
         """Test name() returns 'IDLE' for IDLE state"""
         peer = Mock()
         fsm = FSM(peer, FSM.IDLE)
         assert fsm.name() == 'IDLE'
 
-    def test_name_returns_active(self):
+    def test_name_returns_active(self) -> None:
         """Test name() returns 'ACTIVE' for ACTIVE state"""
         peer = Mock()
         fsm = FSM(peer, FSM.ACTIVE)
         assert fsm.name() == 'ACTIVE'
 
-    def test_name_returns_connect(self):
+    def test_name_returns_connect(self) -> None:
         """Test name() returns 'CONNECT' for CONNECT state"""
         peer = Mock()
         fsm = FSM(peer, FSM.CONNECT)
         assert fsm.name() == 'CONNECT'
 
-    def test_name_returns_opensent(self):
+    def test_name_returns_opensent(self) -> None:
         """Test name() returns 'OPENSENT' for OPENSENT state"""
         peer = Mock()
         fsm = FSM(peer, FSM.OPENSENT)
         assert fsm.name() == 'OPENSENT'
 
-    def test_name_returns_openconfirm(self):
+    def test_name_returns_openconfirm(self) -> None:
         """Test name() returns 'OPENCONFIRM' for OPENCONFIRM state"""
         peer = Mock()
         fsm = FSM(peer, FSM.OPENCONFIRM)
         assert fsm.name() == 'OPENCONFIRM'
 
-    def test_name_returns_established(self):
+    def test_name_returns_established(self) -> None:
         """Test name() returns 'ESTABLISHED' for ESTABLISHED state"""
         peer = Mock()
         fsm = FSM(peer, FSM.ESTABLISHED)
         assert fsm.name() == 'ESTABLISHED'
 
-    def test_name_after_transition(self):
+    def test_name_after_transition(self) -> None:
         """Test name() reflects current state after transition"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -499,7 +500,7 @@ class TestFSMName:
 class TestFSMTypicalSessionFlow:
     """Test FSM behavior in typical BGP session scenarios"""
 
-    def test_successful_session_establishment(self):
+    def test_successful_session_establishment(self) -> None:
         """Test typical successful BGP session establishment flow"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -530,7 +531,7 @@ class TestFSMTypicalSessionFlow:
         fsm.change(FSM.ESTABLISHED)
         assert fsm == FSM.ESTABLISHED
 
-    def test_session_reset_from_established(self):
+    def test_session_reset_from_established(self) -> None:
         """Test session reset from ESTABLISHED to IDLE"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -540,7 +541,7 @@ class TestFSMTypicalSessionFlow:
         fsm.change(FSM.IDLE)
         assert fsm == FSM.IDLE
 
-    def test_connection_failure_recovery(self):
+    def test_connection_failure_recovery(self) -> None:
         """Test connection failure and recovery"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -559,7 +560,7 @@ class TestFSMTypicalSessionFlow:
         fsm.change(FSM.ACTIVE)
         assert fsm == FSM.ACTIVE
 
-    def test_open_message_collision(self):
+    def test_open_message_collision(self) -> None:
         """Test handling of simultaneous OPEN messages (collision)"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -580,13 +581,13 @@ class TestFSMTypicalSessionFlow:
 class TestFSMEdgeCases:
     """Test FSM edge cases and boundary conditions"""
 
-    def test_fsm_with_none_peer(self):
+    def test_fsm_with_none_peer(self) -> None:
         """Test FSM initialization with None peer (edge case)"""
         fsm = FSM(None, FSM.IDLE)
         assert fsm.peer is None
         assert fsm.state == FSM.IDLE
 
-    def test_rapid_state_changes(self):
+    def test_rapid_state_changes(self) -> None:
         """Test rapid consecutive state changes"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -601,7 +602,7 @@ class TestFSMEdgeCases:
 
         assert fsm == FSM.IDLE
 
-    def test_state_persistence_across_comparisons(self):
+    def test_state_persistence_across_comparisons(self) -> None:
         """Test that state comparisons don't modify state"""
         peer = Mock()
         fsm = FSM(peer, FSM.CONNECT)
@@ -613,7 +614,7 @@ class TestFSMEdgeCases:
 
         assert fsm == FSM.CONNECT
 
-    def test_fsm_state_is_integer(self):
+    def test_fsm_state_is_integer(self) -> None:
         """Test that FSM states are integer values"""
         peer = Mock()
         fsm = FSM(peer, FSM.IDLE)
@@ -625,7 +626,7 @@ class TestFSMEdgeCases:
 class TestFSMSessionLifecycle:
     """Test complete FSM session lifecycle scenarios"""
 
-    def test_full_lifecycle_with_api_tracking(self):
+    def test_full_lifecycle_with_api_tracking(self) -> None:
         """Test full session lifecycle with API callbacks"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -639,7 +640,7 @@ class TestFSMSessionLifecycle:
         # Track all state changes
         states = []
 
-        def record_state(neighbor, fsm_obj):
+        def record_state(neighbor: Any, fsm_obj: Any):
             states.append(fsm_obj.state)
 
         peer.reactor.processes.fsm.side_effect = record_state
@@ -662,7 +663,7 @@ class TestFSMSessionLifecycle:
             FSM.ESTABLISHED,
         ]
 
-    def test_session_termination_and_restart(self):
+    def test_session_termination_and_restart(self) -> None:
         """Test session termination and restart"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -681,7 +682,7 @@ class TestFSMSessionLifecycle:
         fsm.change(FSM.ESTABLISHED)
         assert fsm == FSM.ESTABLISHED
 
-    def test_multiple_failed_connection_attempts(self):
+    def test_multiple_failed_connection_attempts(self) -> None:
         """Test multiple connection failures before success"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -706,14 +707,14 @@ class TestFSMSessionLifecycle:
 class TestFSMStateValidation:
     """Test FSM state validation and error handling"""
 
-    def test_state_invalid_code_raises_error(self):
+    def test_state_invalid_code_raises_error(self) -> None:
         """Test STATE.__init__ raises error for invalid state code"""
         with pytest.raises(RuntimeError) as exc_info:
             FSM.STATE(0xFF)  # Invalid state code
 
         assert 'invalid FSM code' in str(exc_info.value)
 
-    def test_state_valid_repr(self):
+    def test_state_valid_repr(self) -> None:
         """Test STATE __repr__ returns proper representation for valid states"""
         # Test that valid states have proper repr
         assert 'IDLE' in repr(FSM.IDLE)
@@ -723,7 +724,7 @@ class TestFSMStateValidation:
         assert 'OPENCONFIRM' in repr(FSM.OPENCONFIRM)
         assert 'ESTABLISHED' in repr(FSM.ESTABLISHED)
 
-    def test_name_returns_invalid_for_unknown_state(self):
+    def test_name_returns_invalid_for_unknown_state(self) -> None:
         """Test name() returns 'INVALID' for unknown state"""
         peer = Mock()
         fsm = FSM(peer, FSM.IDLE)
@@ -733,17 +734,17 @@ class TestFSMStateValidation:
 
         assert fsm.name() == 'INVALID'
 
-    def test_state_validation_zero(self):
+    def test_state_validation_zero(self) -> None:
         """Test STATE validation rejects zero"""
         with pytest.raises(RuntimeError):
             FSM.STATE(0)
 
-    def test_state_validation_negative(self):
+    def test_state_validation_negative(self) -> None:
         """Test STATE validation rejects negative values"""
         with pytest.raises(RuntimeError):
             FSM.STATE(-1)
 
-    def test_state_validation_large_value(self):
+    def test_state_validation_large_value(self) -> None:
         """Test STATE validation rejects large invalid values"""
         with pytest.raises(RuntimeError):
             FSM.STATE(0x100)
@@ -752,7 +753,7 @@ class TestFSMStateValidation:
 class TestFSMTransitionValidation:
     """Test FSM transition validation scenarios"""
 
-    def test_idle_transition_from_all_states(self):
+    def test_idle_transition_from_all_states(self) -> None:
         """Test that IDLE can be reached from any state"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -772,7 +773,7 @@ class TestFSMTransitionValidation:
             fsm.change(FSM.IDLE)
             assert fsm == FSM.IDLE
 
-    def test_opensent_only_from_connect(self):
+    def test_opensent_only_from_connect(self) -> None:
         """Test OPENSENT can only come from CONNECT"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -786,7 +787,7 @@ class TestFSMTransitionValidation:
         # Note: The transition validation is commented out in source,
         # but we test the intended valid transition
 
-    def test_established_only_from_openconfirm(self):
+    def test_established_only_from_openconfirm(self) -> None:
         """Test ESTABLISHED typically comes from OPENCONFIRM"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -801,7 +802,7 @@ class TestFSMTransitionValidation:
         fsm.change(FSM.ESTABLISHED)
         assert fsm == FSM.ESTABLISHED
 
-    def test_active_valid_transitions(self):
+    def test_active_valid_transitions(self) -> None:
         """Test ACTIVE accepts transitions from IDLE, ACTIVE, OPENSENT"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -821,7 +822,7 @@ class TestFSMTransitionValidation:
         fsm.change(FSM.ACTIVE)
         assert fsm == FSM.ACTIVE
 
-    def test_connect_valid_transitions(self):
+    def test_connect_valid_transitions(self) -> None:
         """Test CONNECT accepts transitions from IDLE, CONNECT, ACTIVE"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -842,7 +843,7 @@ class TestFSMTransitionValidation:
         fsm.change(FSM.CONNECT)
         assert fsm == FSM.CONNECT
 
-    def test_openconfirm_transitions(self):
+    def test_openconfirm_transitions(self) -> None:
         """Test OPENCONFIRM accepts transitions from OPENSENT, OPENCONFIRM"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -861,7 +862,7 @@ class TestFSMTransitionValidation:
 class TestFSMStateComparisons:
     """Test FSM state comparison operations in detail"""
 
-    def test_eq_with_all_states(self):
+    def test_eq_with_all_states(self) -> None:
         """Test __eq__ operator works with all states"""
         peer = Mock()
 
@@ -882,7 +883,7 @@ class TestFSMStateComparisons:
                 if other_state != state:
                     assert not (fsm == other_state)
 
-    def test_neq_with_all_states(self):
+    def test_neq_with_all_states(self) -> None:
         """Test __neq__ operator works with all states"""
         peer = Mock()
 
@@ -903,7 +904,7 @@ class TestFSMStateComparisons:
                 if other_state != state:
                     assert fsm != other_state
 
-    def test_comparison_type_compatibility(self):
+    def test_comparison_type_compatibility(self) -> None:
         """Test FSM comparison works with int values"""
         peer = Mock()
         fsm = FSM(peer, FSM.IDLE)
@@ -912,7 +913,7 @@ class TestFSMStateComparisons:
         assert fsm == 0x01
         assert not (fsm == 0x02)
 
-    def test_state_value_matches_constant(self):
+    def test_state_value_matches_constant(self) -> None:
         """Test FSM.state value matches state constant"""
         peer = Mock()
 
@@ -928,7 +929,7 @@ class TestFSMStateComparisons:
 class TestFSMStatePersistence:
     """Test FSM state persistence and immutability"""
 
-    def test_state_persists_after_comparison(self):
+    def test_state_persists_after_comparison(self) -> None:
         """Test state doesn't change after comparisons"""
         peer = Mock()
         fsm = FSM(peer, FSM.CONNECT)
@@ -944,7 +945,7 @@ class TestFSMStatePersistence:
 
         assert fsm.state == original_state
 
-    def test_peer_reference_persists(self):
+    def test_peer_reference_persists(self) -> None:
         """Test peer reference remains unchanged"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -960,7 +961,7 @@ class TestFSMStatePersistence:
 
         assert fsm.peer is original_peer
 
-    def test_state_changes_atomic(self):
+    def test_state_changes_atomic(self) -> None:
         """Test that state changes are atomic"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -980,7 +981,7 @@ class TestFSMStatePersistence:
 class TestFSMAPIIntegration:
     """Test FSM integration with API callbacks"""
 
-    def test_api_callback_with_missing_api_dict(self):
+    def test_api_callback_with_missing_api_dict(self) -> None:
         """Test FSM handles missing api dictionary"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -996,7 +997,7 @@ class TestFSMAPIIntegration:
             # Expected if code doesn't handle missing key
             pass
 
-    def test_api_callback_state_matches(self):
+    def test_api_callback_state_matches(self) -> None:
         """Test API callback receives FSM in correct state"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -1006,7 +1007,7 @@ class TestFSMAPIIntegration:
 
         captured_states = []
 
-        def capture_state(neighbor, fsm_obj):
+        def capture_state(neighbor: Any, fsm_obj: Any):
             captured_states.append(fsm_obj.state)
 
         peer.reactor.processes.fsm = capture_state
@@ -1017,7 +1018,7 @@ class TestFSMAPIIntegration:
 
         assert captured_states == [FSM.CONNECT, FSM.OPENSENT]
 
-    def test_api_callback_exception_handling(self):
+    def test_api_callback_exception_handling(self) -> None:
         """Test FSM handles API callback exceptions"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -1032,7 +1033,7 @@ class TestFSMAPIIntegration:
         with pytest.raises(RuntimeError):
             fsm.change(FSM.ACTIVE)
 
-    def test_multiple_peers_independent_fsms(self):
+    def test_multiple_peers_independent_fsms(self) -> None:
         """Test multiple peers have independent FSM instances"""
         peer1 = Mock()
         peer1.neighbor = Mock()
@@ -1056,7 +1057,7 @@ class TestFSMAPIIntegration:
 class TestFSMStateHexValues:
     """Test FSM state hexadecimal value definitions"""
 
-    def test_state_hex_values_correct(self):
+    def test_state_hex_values_correct(self) -> None:
         """Test that state hex values match expected bit patterns"""
         assert FSM.IDLE == 0x01
         assert FSM.ACTIVE == 0x02
@@ -1065,7 +1066,7 @@ class TestFSMStateHexValues:
         assert FSM.OPENCONFIRM == 0x10
         assert FSM.ESTABLISHED == 0x20
 
-    def test_state_hex_values_unique(self):
+    def test_state_hex_values_unique(self) -> None:
         """Test that state hex values are unique (bit flags)"""
         states = [
             FSM.IDLE,
@@ -1080,7 +1081,7 @@ class TestFSMStateHexValues:
         for i, state in enumerate(states):
             assert state == (1 << i)
 
-    def test_state_values_are_powers_of_two(self):
+    def test_state_values_are_powers_of_two(self) -> None:
         """Test that all state values are powers of 2"""
         states = [
             FSM.IDLE,
@@ -1100,7 +1101,7 @@ class TestFSMStateHexValues:
 class TestFSMRealWorldScenarios:
     """Test FSM behavior in real-world BGP scenarios"""
 
-    def test_graceful_restart_scenario(self):
+    def test_graceful_restart_scenario(self) -> None:
         """Test graceful restart state transitions"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -1120,7 +1121,7 @@ class TestFSMRealWorldScenarios:
         fsm.change(FSM.ESTABLISHED)
         assert fsm == FSM.ESTABLISHED
 
-    def test_hold_timer_expiry_scenario(self):
+    def test_hold_timer_expiry_scenario(self) -> None:
         """Test hold timer expiry state transitions"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -1133,7 +1134,7 @@ class TestFSMRealWorldScenarios:
         fsm.change(FSM.IDLE)
         assert fsm == FSM.IDLE
 
-    def test_notification_message_scenario(self):
+    def test_notification_message_scenario(self) -> None:
         """Test NOTIFICATION message state transitions"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -1145,7 +1146,7 @@ class TestFSMRealWorldScenarios:
             fsm.change(FSM.IDLE)
             assert fsm == FSM.IDLE
 
-    def test_collision_detection_scenario(self):
+    def test_collision_detection_scenario(self) -> None:
         """Test connection collision detection"""
         peer = Mock()
         peer.neighbor = Mock()
@@ -1162,7 +1163,7 @@ class TestFSMRealWorldScenarios:
         fsm.change(FSM.ESTABLISHED)
         assert fsm == FSM.ESTABLISHED
 
-    def test_administratively_shutdown_scenario(self):
+    def test_administratively_shutdown_scenario(self) -> None:
         """Test administrative shutdown from any state"""
         peer = Mock()
         peer.neighbor = Mock()

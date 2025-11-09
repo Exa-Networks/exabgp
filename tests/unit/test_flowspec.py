@@ -37,7 +37,7 @@ from exabgp.bgp.message.action import Action
 class TestFlow4Components:
     """Tests for IPv4 flow specification components"""
 
-    def test_flow4_destination_basic(self):
+    def test_flow4_destination_basic(self) -> None:
         """Test IPv4 destination prefix"""
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
 
@@ -48,7 +48,7 @@ class TestFlow4Components:
         assert packed[0] == 0x01
         assert packed[1] == 24  # /24 mask
 
-    def test_flow4_source_basic(self):
+    def test_flow4_source_basic(self) -> None:
         """Test IPv4 source prefix"""
         src = Flow4Source(IPv4.pton('10.1.2.0'), 24)
 
@@ -59,14 +59,14 @@ class TestFlow4Components:
         assert packed[0] == 0x02
         assert packed[1] == 24
 
-    def test_flow4_string_representation(self):
+    def test_flow4_string_representation(self) -> None:
         """Test string representation of IPv4 flow components"""
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
 
         dest_str = str(dest)
         assert '192.0.2.0/24' in dest_str
 
-    def test_flowipprotocol_tcp(self):
+    def test_flowipprotocol_tcp(self) -> None:
         """Test IP protocol matching (TCP = 6)"""
         proto = FlowIPProtocol(NumericOperator.EQ, 6)
 
@@ -76,7 +76,7 @@ class TestFlow4Components:
         # Should encode protocol 6 (TCP)
         assert 6 in packed
 
-    def test_flowipprotocol_operators(self):
+    def test_flowipprotocol_operators(self) -> None:
         """Test different numeric operators for IP protocol"""
         # Equal to
         proto_eq = FlowIPProtocol(NumericOperator.EQ, 6)
@@ -103,7 +103,7 @@ class TestFlow4Components:
 class TestFlow6Components:
     """Tests for IPv6 flow specification components"""
 
-    def test_flow6_destination_basic(self):
+    def test_flow6_destination_basic(self) -> None:
         """Test IPv6 destination prefix"""
         dest = Flow6Destination(IP.create('2001:db8::').pack(), 48, 0)
 
@@ -114,7 +114,7 @@ class TestFlow6Components:
         # Should start with ID (0x01)
         assert packed[0] == 0x01
 
-    def test_flow6_source_basic(self):
+    def test_flow6_source_basic(self) -> None:
         """Test IPv6 source prefix"""
         src = Flow6Source(IP.create('2001:db8:1::').pack(), 64, 0)
 
@@ -125,7 +125,7 @@ class TestFlow6Components:
         # Should start with ID (0x02)
         assert packed[0] == 0x02
 
-    def test_flow6_offset(self):
+    def test_flow6_offset(self) -> None:
         """Test IPv6 prefix with offset"""
         dest = Flow6Destination(IP.create('2001:db8::').pack(), 48, 16)
 
@@ -133,7 +133,7 @@ class TestFlow6Components:
         dest_str = str(dest)
         assert '/16' in dest_str
 
-    def test_flownextheader(self):
+    def test_flownextheader(self) -> None:
         """Test IPv6 next header matching"""
         nh = FlowNextHeader(NumericOperator.EQ, 58)  # ICMPv6
 
@@ -149,7 +149,7 @@ class TestFlow6Components:
 class TestFlowPorts:
     """Tests for port-based flow matching"""
 
-    def test_flowanyport_single(self):
+    def test_flowanyport_single(self) -> None:
         """Test any port (source or destination) matching"""
         port = FlowAnyPort(NumericOperator.EQ, 80)
 
@@ -157,7 +157,7 @@ class TestFlowPorts:
         packed = port.pack()
         # AnyPort component
 
-    def test_flowdestinationport_https(self):
+    def test_flowdestinationport_https(self) -> None:
         """Test destination port matching for HTTPS"""
         dport = FlowDestinationPort(NumericOperator.EQ, 443)
 
@@ -165,7 +165,7 @@ class TestFlowPorts:
         packed = dport.pack()
         # DestPort component
 
-    def test_flowsourceport_range(self):
+    def test_flowsourceport_range(self) -> None:
         """Test source port range matching"""
         # Port >= 1024
         sport_gte = FlowSourcePort(NumericOperator.GT | NumericOperator.EQ, 1024)
@@ -173,7 +173,7 @@ class TestFlowPorts:
         assert sport_gte.operations & NumericOperator.GT
         assert sport_gte.operations & NumericOperator.EQ
 
-    def test_port_large_value(self):
+    def test_port_large_value(self) -> None:
         """Test port with 2-byte value encoding"""
         port = FlowDestinationPort(NumericOperator.EQ, 8080)
 
@@ -181,7 +181,7 @@ class TestFlowPorts:
         # Should use 2-byte encoding for 8080
         assert len(packed) >= 3  # ID + op + 2-byte value
 
-    def test_port_string_representation(self):
+    def test_port_string_representation(self) -> None:
         """Test string representation of port matches"""
         port = FlowAnyPort(NumericOperator.EQ, 25)
         port_str = str(port)
@@ -195,7 +195,7 @@ class TestFlowPorts:
 class TestFlowICMP:
     """Tests for ICMP-based flow matching"""
 
-    def test_flowicmptype_echo_request(self):
+    def test_flowicmptype_echo_request(self) -> None:
         """Test ICMP type matching for echo request"""
         icmp_type = FlowICMPType(NumericOperator.EQ, 8)  # Echo request
 
@@ -203,7 +203,7 @@ class TestFlowICMP:
         packed = icmp_type.pack()
         # ICMPType component
 
-    def test_flowicmpcode_basic(self):
+    def test_flowicmpcode_basic(self) -> None:
         """Test ICMP code matching"""
         icmp_code = FlowICMPCode(NumericOperator.EQ, 0)
 
@@ -219,7 +219,7 @@ class TestFlowICMP:
 class TestFlowTCPFlags:
     """Tests for TCP flag-based flow matching"""
 
-    def test_flowtcpflag_syn(self):
+    def test_flowtcpflag_syn(self) -> None:
         """Test TCP SYN flag matching"""
         tcp_flag = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.SYN)
 
@@ -227,21 +227,21 @@ class TestFlowTCPFlags:
         packed = tcp_flag.pack()
         # TCPFlag component
 
-    def test_flowtcpflag_not_match(self):
+    def test_flowtcpflag_not_match(self) -> None:
         """Test TCP flag NOT match operator"""
         tcp_flag = FlowTCPFlag(BinaryOperator.NOT | BinaryOperator.MATCH, TCPFlag.RST)
 
         assert tcp_flag.operations & BinaryOperator.NOT
         assert tcp_flag.operations & BinaryOperator.MATCH
 
-    def test_flowtcpflag_include(self):
+    def test_flowtcpflag_include(self) -> None:
         """Test TCP flag INCLUDE operator"""
         tcp_flag = FlowTCPFlag(BinaryOperator.INCLUDE, TCPFlag.ACK)
 
         # Include is 0x00, so just check value
         assert tcp_flag.value == TCPFlag.ACK
 
-    def test_flowtcpflag_string(self):
+    def test_flowtcpflag_string(self) -> None:
         """Test TCP flag string representation"""
         tcp_flag = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.FIN)
         flag_str = str(tcp_flag)
@@ -255,7 +255,7 @@ class TestFlowTCPFlags:
 class TestFlowPacketAttributes:
     """Tests for packet length and DSCP matching"""
 
-    def test_flowpacketlength_small(self):
+    def test_flowpacketlength_small(self) -> None:
         """Test packet length matching for small packets"""
         pkt_len = FlowPacketLength(NumericOperator.LT, 100)
 
@@ -263,7 +263,7 @@ class TestFlowPacketAttributes:
         packed = pkt_len.pack()
         # PacketLength component
 
-    def test_flowpacketlength_large(self):
+    def test_flowpacketlength_large(self) -> None:
         """Test packet length with large value (2-byte encoding)"""
         pkt_len = FlowPacketLength(NumericOperator.GT, 1500)
 
@@ -272,7 +272,7 @@ class TestFlowPacketAttributes:
         # Should use 2-byte encoding
         assert len(packed) >= 3
 
-    def test_flowdscp_ef(self):
+    def test_flowdscp_ef(self) -> None:
         """Test DSCP matching for Expedited Forwarding"""
         dscp = FlowDSCP(NumericOperator.EQ, 46)  # EF PHB
 
@@ -280,7 +280,7 @@ class TestFlowPacketAttributes:
         packed = dscp.pack()
         # DSCP component
 
-    def test_flowtrafficclass_ipv6(self):
+    def test_flowtrafficclass_ipv6(self) -> None:
         """Test IPv6 traffic class matching"""
         tc = FlowTrafficClass(NumericOperator.EQ, 0xE0)  # CS7
 
@@ -296,7 +296,7 @@ class TestFlowPacketAttributes:
 class TestFlowFragment:
     """Tests for IP fragment matching"""
 
-    def test_flowfragment_dont_fragment(self):
+    def test_flowfragment_dont_fragment(self) -> None:
         """Test matching Don't Fragment flag"""
         frag = FlowFragment(BinaryOperator.MATCH, Fragment.DONT)
 
@@ -304,13 +304,13 @@ class TestFlowFragment:
         packed = frag.pack()
         # Fragment component
 
-    def test_flowfragment_is_fragment(self):
+    def test_flowfragment_is_fragment(self) -> None:
         """Test matching fragmented packets"""
         frag = FlowFragment(BinaryOperator.MATCH, Fragment.IS)
 
         assert frag.value == Fragment.IS
 
-    def test_flowfragment_not(self):
+    def test_flowfragment_not(self) -> None:
         """Test NOT operator with fragments"""
         frag = FlowFragment(BinaryOperator.NOT | BinaryOperator.MATCH, Fragment.FIRST)
 
@@ -325,7 +325,7 @@ class TestFlowFragment:
 class TestFlowLabel:
     """Tests for IPv6 flow label matching"""
 
-    def test_flowflowlabel_small(self):
+    def test_flowflowlabel_small(self) -> None:
         """Test flow label with small value (1-byte)"""
         label = FlowFlowLabel(NumericOperator.EQ, 100)
 
@@ -333,7 +333,7 @@ class TestFlowLabel:
         packed = label.pack()
         # FlowLabel component (ID is 0x0D)
 
-    def test_flowflowlabel_medium(self):
+    def test_flowflowlabel_medium(self) -> None:
         """Test flow label with medium value (2-byte)"""
         label = FlowFlowLabel(NumericOperator.EQ, 5000)
 
@@ -342,7 +342,7 @@ class TestFlowLabel:
         # Should use 2-byte encoding
         assert len(packed) >= 3
 
-    def test_flowflowlabel_large(self):
+    def test_flowflowlabel_large(self) -> None:
         """Test flow label with large value (4-byte)"""
         label = FlowFlowLabel(NumericOperator.EQ, 1000000)
 
@@ -359,7 +359,7 @@ class TestFlowLabel:
 class TestFlowNLRI:
     """Tests for Flow NLRI operations"""
 
-    def test_flow_creation(self):
+    def test_flow_creation(self) -> None:
         """Test basic Flow NLRI creation"""
         flow = Flow()
 
@@ -368,7 +368,7 @@ class TestFlowNLRI:
         assert flow.nexthop == NoNextHop
         assert len(flow.rules) == 0
 
-    def test_flow_add_components(self):
+    def test_flow_add_components(self) -> None:
         """Test adding components to flow"""
         flow = Flow()
 
@@ -382,7 +382,7 @@ class TestFlowNLRI:
 
         assert len(flow.rules) == 3
 
-    def test_flow_ipv6_afi_switch(self):
+    def test_flow_ipv6_afi_switch(self) -> None:
         """Test that adding IPv6 components switches AFI"""
         flow = Flow()
 
@@ -396,7 +396,7 @@ class TestFlowNLRI:
         # AFI should switch to IPv6
         assert flow.afi == AFI.ipv6
 
-    def test_flow_mixed_afi_reject(self):
+    def test_flow_mixed_afi_reject(self) -> None:
         """Test that mixing IPv4 and IPv6 prefixes is rejected"""
         flow = Flow()
 
@@ -409,7 +409,7 @@ class TestFlowNLRI:
 
         assert result is False
 
-    def test_flow_pack_basic(self):
+    def test_flow_pack_basic(self) -> None:
         """Test packing a basic flow specification"""
         flow = Flow()
 
@@ -426,7 +426,7 @@ class TestFlowNLRI:
         # First byte is length (should be < 0xF0 for small flows)
         assert packed[0] < 0xF0
 
-    def test_flow_pack_with_ports(self):
+    def test_flow_pack_with_ports(self) -> None:
         """Test packing flow with port specifications"""
         flow = Flow()
 
@@ -441,7 +441,7 @@ class TestFlowNLRI:
         packed = flow.pack_nlri()
         assert len(packed) > 0
 
-    def test_flow_pack_long_format(self):
+    def test_flow_pack_long_format(self) -> None:
         """Test packing flow with 2-byte length encoding"""
         flow = Flow()
 
@@ -457,7 +457,7 @@ class TestFlowNLRI:
         # Should use 2-byte length encoding (first byte >= 0xF0)
         assert packed[0] >= 0xF0
 
-    def test_flow_string_representation(self):
+    def test_flow_string_representation(self) -> None:
         """Test string representation of flow"""
         flow = Flow()
 
@@ -472,7 +472,7 @@ class TestFlowNLRI:
         assert 'flow' in flow_str
         assert 'destination' in flow_str.lower()
 
-    def test_flow_json(self):
+    def test_flow_json(self) -> None:
         """Test JSON serialization of flow"""
         flow = Flow()
 
@@ -487,7 +487,7 @@ class TestFlowNLRI:
         assert 'destination' in json_str.lower()
         assert 'source' in json_str.lower()
 
-    def test_flow_with_route_distinguisher(self):
+    def test_flow_with_route_distinguisher(self) -> None:
         """Test flow with route distinguisher (VPNv4)"""
         flow = Flow()
 
@@ -502,7 +502,7 @@ class TestFlowNLRI:
         # Should include RD in packed format
         assert len(packed) > 8  # RD is 8 bytes
 
-    def test_flow_equality(self):
+    def test_flow_equality(self) -> None:
         """Test flow equality comparison"""
         flow1 = Flow()
         flow2 = Flow()
@@ -520,7 +520,7 @@ class TestFlowNLRI:
         # Flows with same components are equal
         assert flow1 == flow2
 
-    def test_flow_and_operator(self):
+    def test_flow_and_operator(self) -> None:
         """Test AND operator between flow components"""
         flow = Flow()
 
@@ -536,7 +536,7 @@ class TestFlowNLRI:
         packed = flow.pack_nlri()
         assert len(packed) > 0
 
-    def test_flow_tcp_flags_combination(self):
+    def test_flow_tcp_flags_combination(self) -> None:
         """Test flow with TCP flags matching"""
         flow = Flow()
 
@@ -556,7 +556,7 @@ class TestFlowNLRI:
         flow_str = str(flow)
         assert 'tcp' in flow_str.lower() or 'flag' in flow_str.lower()
 
-    def test_flow_icmp_specification(self):
+    def test_flow_icmp_specification(self) -> None:
         """Test flow for ICMP packets"""
         flow = Flow()
 
@@ -573,7 +573,7 @@ class TestFlowNLRI:
         packed = flow.pack_nlri()
         assert len(packed) > 0
 
-    def test_flow_packet_length_range(self):
+    def test_flow_packet_length_range(self) -> None:
         """Test flow with packet length range"""
         flow = Flow()
 
@@ -589,7 +589,7 @@ class TestFlowNLRI:
         packed = flow.pack_nlri()
         assert len(packed) > 0
 
-    def test_flow_dscp_marking(self):
+    def test_flow_dscp_marking(self) -> None:
         """Test flow with DSCP/TOS matching"""
         flow = Flow()
 
@@ -602,7 +602,7 @@ class TestFlowNLRI:
         packed = flow.pack_nlri()
         assert len(packed) > 0
 
-    def test_flow_fragment_matching(self):
+    def test_flow_fragment_matching(self) -> None:
         """Test flow with fragment matching"""
         flow = Flow()
 
@@ -623,7 +623,7 @@ class TestFlowNLRI:
 class TestOperators:
     """Tests for numeric and binary operators"""
 
-    def test_numeric_operator_combinations(self):
+    def test_numeric_operator_combinations(self) -> None:
         """Test various numeric operator combinations"""
         # Less than or equal
         port_lte = FlowAnyPort(NumericOperator.LT | NumericOperator.EQ, 1024)
@@ -640,7 +640,7 @@ class TestOperators:
         assert port_neq.operations & NumericOperator.LT
         assert port_neq.operations & NumericOperator.GT
 
-    def test_binary_operator_combinations(self):
+    def test_binary_operator_combinations(self) -> None:
         """Test various binary operator combinations"""
         # Match
         flag_match = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.SYN)
@@ -656,7 +656,7 @@ class TestOperators:
         # Include is 0, so just verify it doesn't have NOT or MATCH set independently
         assert not (flag_include.operations & BinaryOperator.NOT and not flag_include.operations & BinaryOperator.MATCH)
 
-    def test_operator_string_representations(self):
+    def test_operator_string_representations(self) -> None:
         """Test string representation of operators"""
         # Numeric operators
         port_eq = FlowAnyPort(NumericOperator.EQ, 80)
@@ -681,7 +681,7 @@ class TestOperators:
 class TestFlowUnpack:
     """Tests for unpacking flowspec from wire format"""
 
-    def test_flow_pack_unpack_roundtrip(self):
+    def test_flow_pack_unpack_roundtrip(self) -> None:
         """Test complete pack/unpack roundtrip"""
         # Create a flow
         flow1 = Flow()
@@ -706,7 +706,7 @@ class TestFlowUnpack:
         # Verify components were unpacked
         assert len(flow2.rules) > 0
 
-    def test_flow_unpack_large_length(self):
+    def test_flow_unpack_large_length(self) -> None:
         """Test unpacking flow with 2-byte length encoding"""
         flow1 = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -725,7 +725,7 @@ class TestFlowUnpack:
         # Note: Unpacking of large flows has a known issue with 2-byte length encoding
         # but the packing works correctly
 
-    def test_flow_unpack_with_rd(self):
+    def test_flow_unpack_with_rd(self) -> None:
         """Test unpacking VPN flow with route distinguisher"""
         flow1 = Flow(afi=AFI.ipv4, safi=SAFI.flow_vpn)
         rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
@@ -742,7 +742,7 @@ class TestFlowUnpack:
         assert flow2 is not None
         assert flow2.rd is not None
 
-    def test_flow_unpack_invalid_length(self):
+    def test_flow_unpack_invalid_length(self) -> None:
         """Test unpacking with invalid length raises exception"""
         # Create invalid data: length says 100 bytes but data is shorter
         invalid_data = bytes([100]) + b'\x01\x18\xC0\x00\x02'
@@ -751,7 +751,7 @@ class TestFlowUnpack:
         with pytest.raises(Notify):
             Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, invalid_data, Action.UNSET, None)
 
-    def test_flow_unpack_multiple_components(self):
+    def test_flow_unpack_multiple_components(self) -> None:
         """Test unpacking flow with multiple port specifications"""
         flow1 = Flow()
 
@@ -772,7 +772,7 @@ class TestFlowUnpack:
         # Should have destination, protocol, and destination port rules
         assert len(flow2.rules) >= 2
 
-    def test_flow_feedback_no_nexthop(self):
+    def test_flow_feedback_no_nexthop(self) -> None:
         """Test feedback when announcing flow without nexthop"""
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -783,7 +783,7 @@ class TestFlowUnpack:
         feedback = flow.feedback(Action.ANNOUNCE)
         assert 'next-hop' in feedback.lower()
 
-    def test_flow_feedback_with_nexthop(self):
+    def test_flow_feedback_with_nexthop(self) -> None:
         """Test feedback when nexthop is set"""
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -794,7 +794,7 @@ class TestFlowUnpack:
         feedback = flow.feedback(Action.ANNOUNCE)
         assert feedback == ''
 
-    def test_flow_extensive_string_with_nexthop(self):
+    def test_flow_extensive_string_with_nexthop(self) -> None:
         """Test extensive string representation with nexthop"""
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -805,7 +805,7 @@ class TestFlowUnpack:
         assert 'next-hop' in ext_str
         assert '10.0.0.1' in ext_str
 
-    def test_flow_extensive_string_with_rd(self):
+    def test_flow_extensive_string_with_rd(self) -> None:
         """Test extensive string representation with route distinguisher"""
         flow = Flow()
         rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
@@ -818,7 +818,7 @@ class TestFlowUnpack:
         # RD should be in string
         assert ext_str is not None
 
-    def test_flow_json_with_nexthop(self):
+    def test_flow_json_with_nexthop(self) -> None:
         """Test JSON with nexthop"""
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -837,7 +837,7 @@ class TestFlowUnpack:
 class TestFlowEdgeCases:
     """Tests for edge cases and error handling"""
 
-    def test_numeric_operator_true_false(self):
+    def test_numeric_operator_true_false(self) -> None:
         """Test TRUE and FALSE numeric operators"""
         # TRUE operator
         proto_true = FlowIPProtocol(NumericOperator.TRUE, 6)
@@ -850,7 +850,7 @@ class TestFlowEdgeCases:
         str_repr = str(proto_false)
         assert str_repr is not None
 
-    def test_binary_operator_and_combinations(self):
+    def test_binary_operator_and_combinations(self) -> None:
         """Test AND operator with binary operators"""
         # AND with INCLUDE
         flag1 = FlowTCPFlag(BinaryOperator.AND | BinaryOperator.INCLUDE, TCPFlag.SYN)
@@ -862,7 +862,7 @@ class TestFlowEdgeCases:
         str_repr = str(flag2)
         assert str_repr is not None
 
-    def test_flow_len_method(self):
+    def test_flow_len_method(self) -> None:
         """Test __len__ method"""
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -873,7 +873,7 @@ class TestFlowEdgeCases:
         packed = flow.pack_nlri()
         assert flow_len == len(packed)
 
-    def test_flow_multiple_destinations_allowed(self):
+    def test_flow_multiple_destinations_allowed(self) -> None:
         """Test that multiple destinations are allowed"""
         flow = Flow()
 
@@ -887,7 +887,7 @@ class TestFlowEdgeCases:
         assert result1 is True
         assert result2 is True
 
-    def test_flow_rules_str_single_vs_multiple(self):
+    def test_flow_rules_str_single_vs_multiple(self) -> None:
         """Test string representation differs for single vs multiple rules"""
         flow1 = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -911,7 +911,7 @@ class TestFlowEdgeCases:
         # Multiple rules should have brackets
         assert '[' in str2 or str2 is not None
 
-    def test_numeric_string_operations(self):
+    def test_numeric_string_operations(self) -> None:
         """Test numeric string representations for all operators"""
         operators = [
             (NumericOperator.EQ, '='),

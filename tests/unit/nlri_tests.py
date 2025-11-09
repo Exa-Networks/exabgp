@@ -52,7 +52,7 @@ from exabgp.bgp.message import Action
 
 class TestNLRIs(unittest.TestCase):
     # Tests on MVPN NLRIs
-    def test300_MVPNSourceAD_CreatePackUnpack(self):
+    def test300_MVPNSourceAD_CreatePackUnpack(self) -> None:
         """Test pack/unpack for MVPN Source A-D route"""
         nlri = MVPN_SourceAD(
             afi=AFI.ipv4,
@@ -98,7 +98,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual('42.42.42.42:5', unpacked.rd._str())
         self.assertEqual('ff0e::1', str(unpacked.group))
 
-    def test300_MVPNSourceJoin_CreatePackUnpack(self):
+    def test300_MVPNSourceJoin_CreatePackUnpack(self) -> None:
         """Test pack/unpack for MVPN Source-Join route"""
         nlri = MVPN_SourceJoin(
             afi=AFI.ipv4,
@@ -148,7 +148,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual('ff0e::1', str(unpacked.group))
         self.assertEqual(1234, unpacked.source_as)
 
-    def test300_MVPNSharedJoin_CreatePackUnpack(self):
+    def test300_MVPNSharedJoin_CreatePackUnpack(self) -> None:
         """Test pack/unpack for MVPN Shared-Join route"""
         nlri = MVPN_SharedJoin(
             afi=AFI.ipv4,
@@ -200,7 +200,7 @@ class TestNLRIs(unittest.TestCase):
 
     # Tests on IPVPN NLRIs
 
-    def test200_IPVPNCreatePackUnpack(self):
+    def test200_IPVPNCreatePackUnpack(self) -> None:
         """Test pack/unpack for IPVPN routes"""
         nlri = IPVPN.new(
             AFI.ipv4,
@@ -228,7 +228,7 @@ class TestNLRIs(unittest.TestCase):
 
     # Tests on EVPN NLRIs
 
-    def test99_EVPNMACCreatePackUnpack(self):
+    def test99_EVPNMACCreatePackUnpack(self) -> None:
         """Test pack/unpack for E-VPN MAC routes"""
         nlri = EVPNMAC(
             RouteDistinguisher.fromElements('42.42.42.42', 5),
@@ -261,7 +261,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(1, len(unpacked.label.labels))
         self.assertEqual(42, unpacked.label.labels[0])
 
-    def test99_EVPNMulticastCreatePackUnpack(self):
+    def test99_EVPNMulticastCreatePackUnpack(self) -> None:
         """Test pack/unpack for E-VPN Multicast routes"""
 
         nlri = EVPNMulticast(
@@ -285,7 +285,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(EthernetTag(111), unpacked.etag)
         self.assertEqual(IP.create('1.1.1.1'), unpacked.ip)
 
-    def test99_EVPNPrefixCreatePackUnpack(self):
+    def test99_EVPNPrefixCreatePackUnpack(self) -> None:
         """Test pack/unpack for E-VPN Prefix routes"""
 
         nlri = EVPNPrefix(
@@ -318,7 +318,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(1, len(unpacked.label.labels))
         self.assertEqual(42, unpacked.label.labels[0])
 
-    def test100_EVPNMACHashEqual(self):
+    def test100_EVPNMACHashEqual(self) -> None:
         """Two indistinct EVPN NLRI should
         hash to the same value, and be equal
         """
@@ -346,7 +346,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(hash(nlri1), hash(nlri2))
         self.assertEqual(nlri1, nlri2)
 
-    def test101_EVPNHashEqual_somefieldsvary(self):
+    def test101_EVPNHashEqual_somefieldsvary(self) -> None:
         """Two EVPN MAC NLRIs differing by their ESI or label or RD,
         or nexthop, but otherwise identical should hash to the same value,
         and be equal
@@ -443,7 +443,7 @@ class TestNLRIs(unittest.TestCase):
 
     # tests on RTC NLRI
 
-    def test99_RTCCreatePackUnpack(self):
+    def test99_RTCCreatePackUnpack(self) -> None:
         """Test pack/unpack for RTC routes"""
 
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 64512, RouteTarget(64577, 123))
@@ -464,7 +464,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(64577, unpacked.rt.asn)
         self.assertEqual(123, unpacked.rt.number)
 
-    def test98_RTCWildcardPackUnpack(self):
+    def test98_RTCWildcardPackUnpack(self) -> None:
         """Test pack/unpack for RTC routes"""
 
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 0, None)
@@ -485,7 +485,7 @@ class TestNLRIs(unittest.TestCase):
 
     # tests on attributes
 
-    def test4_DistinctAttributes(self):
+    def test4_DistinctAttributes(self) -> None:
         atts1 = Attributes()
         atts1.add(LocalPreference(10))
 
@@ -494,7 +494,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertNotEqual(atts1, atts2)
 
-    def test5_SameAttributes(self):
+    def test5_SameAttributes(self) -> None:
         atts1 = Attributes()
         atts1.add(LocalPreference(10))
 
@@ -504,7 +504,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(hash(atts1), hash(atts2))
         self.assertEqual(atts1, atts2)
 
-    def test6_SameAttributesOrderMultivalued(self):
+    def test6_SameAttributesOrderMultivalued(self) -> None:
         atts1 = Attributes()
         eComs1 = ExtendedCommunities()
         eComs1.communities.append(RouteTarget(64512, 1))
@@ -522,7 +522,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(hash(atts1), hash(atts2))
         self.assertEqual(atts1, atts2)
 
-    def test10_Ecoms(self):
+    def test10_Ecoms(self) -> None:
         eComs1 = ExtendedCommunities()
         eComs1.communities.append(Encapsulation(Encapsulation.Type.VXLAN))
         atts1 = Attributes()
@@ -537,7 +537,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertFalse(atts1.sameValuesAs(atts2))
         self.assertFalse(atts2.sameValuesAs(atts1))
 
-    def test11_RTs(self):
+    def test11_RTs(self) -> None:
         rt1a = RouteTarget(64512, 1)
         rt1b = RouteTarget(64512, 1)
         rt3 = RouteTarget(64512, 2)
@@ -554,7 +554,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(set([rt1a]), set([rt1b]))
         self.assertEqual(1, len(set([rt1a]).intersection(set([rt1b]))))
 
-    def test12_RTRecord(self):
+    def test12_RTRecord(self) -> None:
         rt = RouteTarget(64512, 22)
         rt_record = RTRecord.from_rt(rt)
         _ = rt_record

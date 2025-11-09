@@ -1,3 +1,4 @@
+from typing import Any
 #!/usr/bin/env python3
 # encoding: utf-8
 """test_bgp_timers.py
@@ -23,7 +24,7 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
     from exabgp.logger import log
@@ -57,7 +58,7 @@ def mock_logger():
 class TestReceiveTimerInitialization:
     """Test ReceiveTimer initialization"""
 
-    def test_receive_timer_init(self):
+    def test_receive_timer_init(self) -> None:
         """Test ReceiveTimer initialization"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0, 'hold timer expired')
@@ -69,7 +70,7 @@ class TestReceiveTimerInitialization:
         assert timer.message == 'hold timer expired'
         assert timer.single is False
 
-    def test_receive_timer_tracks_last_read(self):
+    def test_receive_timer_tracks_last_read(self) -> None:
         """Test ReceiveTimer tracks last read time"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
@@ -77,7 +78,7 @@ class TestReceiveTimerInitialization:
         current_time = int(time.time())
         assert abs(timer.last_read - current_time) <= 1
 
-    def test_receive_timer_init_with_zero_holdtime(self):
+    def test_receive_timer_init_with_zero_holdtime(self) -> None:
         """Test ReceiveTimer initialization with zero holdtime"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 0, 4, 0)
@@ -88,7 +89,7 @@ class TestReceiveTimerInitialization:
 class TestReceiveTimerKeepaliveCheck:
     """Test ReceiveTimer keepalive checking"""
 
-    def test_check_ka_with_zero_holdtime(self):
+    def test_check_ka_with_zero_holdtime(self) -> None:
         """Test check_ka with zero holdtime returns True for non-keepalive"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 0, 4, 0)
@@ -99,7 +100,7 @@ class TestReceiveTimerKeepaliveCheck:
         result = timer.check_ka_timer(message)
         assert result is True
 
-    def test_check_ka_with_zero_holdtime_keepalive(self):
+    def test_check_ka_with_zero_holdtime_keepalive(self) -> None:
         """Test check_ka with zero holdtime returns False for keepalive"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 0, 4, 0)
@@ -110,7 +111,7 @@ class TestReceiveTimerKeepaliveCheck:
         result = timer.check_ka_timer(message)
         assert result is False
 
-    def test_check_ka_timer_updates_last_read(self):
+    def test_check_ka_timer_updates_last_read(self) -> None:
         """Test check_ka_timer updates last_read on message"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
@@ -127,7 +128,7 @@ class TestReceiveTimerKeepaliveCheck:
         # last_read should be updated
         assert timer.last_read > old_last_read
 
-    def test_check_ka_timer_ignores_nop(self):
+    def test_check_ka_timer_ignores_nop(self) -> None:
         """Test check_ka_timer ignores NOP messages"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
@@ -145,7 +146,7 @@ class TestReceiveTimerKeepaliveCheck:
         # last_read should NOT be updated for ignored message
         assert timer.last_read == old_last_read
 
-    def test_check_ka_timer_raises_notify_on_expiry(self):
+    def test_check_ka_timer_raises_notify_on_expiry(self) -> None:
         """Test check_ka_timer raises Notify when timer expires"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 2, 4, 0, 'timer expired')
@@ -162,7 +163,7 @@ class TestReceiveTimerKeepaliveCheck:
         assert exc_info.value.code == 4
         assert exc_info.value.subcode == 0
 
-    def test_check_ka_timer_does_not_raise_within_holdtime(self):
+    def test_check_ka_timer_does_not_raise_within_holdtime(self) -> None:
         """Test check_ka_timer does not raise within holdtime"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
@@ -178,7 +179,7 @@ class TestReceiveTimerKeepaliveCheck:
 class TestReceiveTimerCheckKa:
     """Test ReceiveTimer check_ka method"""
 
-    def test_check_ka_normal_message(self):
+    def test_check_ka_normal_message(self) -> None:
         """Test check_ka with normal message"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
@@ -189,7 +190,7 @@ class TestReceiveTimerCheckKa:
         # Should not raise
         timer.check_ka(message)
 
-    def test_check_ka_with_zero_holdtime_sets_single_flag(self):
+    def test_check_ka_with_zero_holdtime_sets_single_flag(self) -> None:
         """Test check_ka with zero holdtime sets single flag on first keepalive"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 0, 2, 6)
@@ -208,7 +209,7 @@ class TestReceiveTimerCheckKa:
         assert exc_info.value.code == 2
         assert exc_info.value.subcode == 6
 
-    def test_check_ka_with_zero_holdtime_second_keepalive(self):
+    def test_check_ka_with_zero_holdtime_second_keepalive(self) -> None:
         """Test check_ka with zero holdtime on second keepalive"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 0, 2, 6)
@@ -230,7 +231,7 @@ class TestReceiveTimerCheckKa:
 class TestReceiveTimerElapsedTime:
     """Test ReceiveTimer elapsed time calculations"""
 
-    def test_elapsed_time_calculation(self):
+    def test_elapsed_time_calculation(self) -> None:
         """Test elapsed time is calculated correctly"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
@@ -247,7 +248,7 @@ class TestReceiveTimerElapsedTime:
         # If elapsed > holdtime, would have raised Notify
         # Since it didn't raise, elapsed < holdtime
 
-    def test_timer_expiry_boundary(self):
+    def test_timer_expiry_boundary(self) -> None:
         """Test timer expiry at exact boundary"""
         session = Mock(return_value='test-session')
         holdtime = 5
@@ -266,7 +267,7 @@ class TestReceiveTimerElapsedTime:
 class TestSendTimerInitialization:
     """Test SendTimer initialization"""
 
-    def test_send_timer_init(self):
+    def test_send_timer_init(self) -> None:
         """Test SendTimer initialization"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(180)
@@ -279,7 +280,7 @@ class TestSendTimerInitialization:
         assert abs(timer.last_sent - current_time) <= 1
         assert abs(timer.last_print - current_time) <= 1
 
-    def test_send_timer_init_with_zero_holdtime(self):
+    def test_send_timer_init_with_zero_holdtime(self) -> None:
         """Test SendTimer initialization with zero holdtime"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(0)
@@ -288,7 +289,7 @@ class TestSendTimerInitialization:
 
         assert timer.keepalive == 0
 
-    def test_send_timer_keepalive_calculation(self):
+    def test_send_timer_keepalive_calculation(self) -> None:
         """Test SendTimer keepalive is 1/3 of holdtime"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(180)
@@ -302,7 +303,7 @@ class TestSendTimerInitialization:
 class TestSendTimerNeedKa:
     """Test SendTimer need_ka method"""
 
-    def test_need_ka_with_zero_keepalive(self):
+    def test_need_ka_with_zero_keepalive(self) -> None:
         """Test need_ka returns False with zero keepalive"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(0)
@@ -311,7 +312,7 @@ class TestSendTimerNeedKa:
 
         assert timer.need_ka() is False
 
-    def test_need_ka_immediately_after_init(self):
+    def test_need_ka_immediately_after_init(self) -> None:
         """Test need_ka returns False immediately after init"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(180)
@@ -321,7 +322,7 @@ class TestSendTimerNeedKa:
         # Should not need keepalive immediately
         assert timer.need_ka() is False
 
-    def test_need_ka_after_keepalive_interval(self):
+    def test_need_ka_after_keepalive_interval(self) -> None:
         """Test need_ka returns True after keepalive interval"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(3)  # Short holdtime for testing
@@ -334,7 +335,7 @@ class TestSendTimerNeedKa:
         # Should need keepalive
         assert timer.need_ka() is True
 
-    def test_need_ka_updates_last_sent(self):
+    def test_need_ka_updates_last_sent(self) -> None:
         """Test need_ka updates last_sent when returning True"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(3)
@@ -350,7 +351,7 @@ class TestSendTimerNeedKa:
         # last_sent should be updated
         assert timer.last_sent > old_last_sent
 
-    def test_need_ka_within_interval(self):
+    def test_need_ka_within_interval(self) -> None:
         """Test need_ka returns False within keepalive interval"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(180)
@@ -360,7 +361,7 @@ class TestSendTimerNeedKa:
         # Should not need keepalive within interval
         assert timer.need_ka() is False
 
-    def test_need_ka_multiple_calls(self):
+    def test_need_ka_multiple_calls(self) -> None:
         """Test multiple need_ka calls"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(3)
@@ -383,7 +384,7 @@ class TestSendTimerNeedKa:
 class TestSendTimerBehavior:
     """Test SendTimer behavioral patterns"""
 
-    def test_send_timer_periodic_keepalives(self):
+    def test_send_timer_periodic_keepalives(self) -> None:
         """Test SendTimer triggers periodic keepalives"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(3)
@@ -401,7 +402,7 @@ class TestSendTimerBehavior:
         result2 = timer.need_ka()
         assert result2 is False
 
-    def test_send_timer_respects_holdtime_thirds(self):
+    def test_send_timer_respects_holdtime_thirds(self) -> None:
         """Test SendTimer keepalive interval is 1/3 holdtime"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(180)
@@ -415,7 +416,7 @@ class TestSendTimerBehavior:
 class TestReceiveTimerIntegration:
     """Test ReceiveTimer integration scenarios"""
 
-    def test_receive_timer_typical_flow(self):
+    def test_receive_timer_typical_flow(self) -> None:
         """Test ReceiveTimer in typical BGP flow"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
@@ -432,7 +433,7 @@ class TestReceiveTimerIntegration:
 
         # Should not raise
 
-    def test_receive_timer_hold_timer_expiry_scenario(self):
+    def test_receive_timer_hold_timer_expiry_scenario(self) -> None:
         """Test ReceiveTimer hold timer expiry scenario"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 2, 4, 0, 'hold timer expired')
@@ -452,7 +453,7 @@ class TestReceiveTimerIntegration:
 class TestSendTimerIntegration:
     """Test SendTimer integration scenarios"""
 
-    def test_send_timer_typical_flow(self):
+    def test_send_timer_typical_flow(self) -> None:
         """Test SendTimer in typical BGP flow"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(180)
@@ -475,7 +476,7 @@ class TestSendTimerIntegration:
 class TestTimerEdgeCases:
     """Test timer edge cases"""
 
-    def test_receive_timer_with_very_short_holdtime(self):
+    def test_receive_timer_with_very_short_holdtime(self) -> None:
         """Test ReceiveTimer with very short holdtime"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 1, 4, 0)
@@ -486,7 +487,7 @@ class TestTimerEdgeCases:
         # Should handle short holdtime
         timer.check_ka_timer(message)
 
-    def test_send_timer_with_very_short_holdtime(self):
+    def test_send_timer_with_very_short_holdtime(self) -> None:
         """Test SendTimer with very short holdtime"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(3)
@@ -496,7 +497,7 @@ class TestTimerEdgeCases:
         # Keepalive should be 1 second
         assert timer.keepalive == 1
 
-    def test_receive_timer_message_none(self):
+    def test_receive_timer_message_none(self) -> None:
         """Test ReceiveTimer with default NOP message"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
@@ -505,7 +506,7 @@ class TestTimerEdgeCases:
         result = timer.check_ka_timer()
         assert result is True
 
-    def test_send_timer_last_print_updates(self):
+    def test_send_timer_last_print_updates(self) -> None:
         """Test SendTimer updates last_print"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(180)
@@ -525,7 +526,7 @@ class TestTimerEdgeCases:
 class TestTimerNotifyMessages:
     """Test timer Notify message generation"""
 
-    def test_receive_timer_notify_code(self):
+    def test_receive_timer_notify_code(self) -> None:
         """Test ReceiveTimer generates correct Notify code"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 1, 4, 5, 'test error')
@@ -541,7 +542,7 @@ class TestTimerNotifyMessages:
         assert exc_info.value.code == 4
         assert exc_info.value.subcode == 5
 
-    def test_receive_timer_notify_message(self):
+    def test_receive_timer_notify_message(self) -> None:
         """Test ReceiveTimer includes message in Notify"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 1, 4, 0, 'custom error message')
@@ -561,7 +562,7 @@ class TestTimerNotifyMessages:
 class TestTimerConcurrentBehavior:
     """Test timer behavior under concurrent scenarios"""
 
-    def test_receive_timer_rapid_messages(self):
+    def test_receive_timer_rapid_messages(self) -> None:
         """Test ReceiveTimer handles rapid messages"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
@@ -575,7 +576,7 @@ class TestTimerConcurrentBehavior:
 
         # Should not raise
 
-    def test_send_timer_rapid_checks(self):
+    def test_send_timer_rapid_checks(self) -> None:
         """Test SendTimer handles rapid checks"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(180)
@@ -591,7 +592,7 @@ class TestTimerConcurrentBehavior:
 class TestHoldTimeKeepaliveRelationship:
     """Test relationship between holdtime and keepalive interval"""
 
-    def test_keepalive_is_one_third_holdtime(self):
+    def test_keepalive_is_one_third_holdtime(self) -> None:
         """Test keepalive interval is 1/3 of holdtime"""
         test_cases = [
             (180, 60),
@@ -608,7 +609,7 @@ class TestHoldTimeKeepaliveRelationship:
             timer = SendTimer(session, holdtime)
             assert timer.keepalive == expected_keepalive
 
-    def test_zero_holdtime_zero_keepalive(self):
+    def test_zero_holdtime_zero_keepalive(self) -> None:
         """Test zero holdtime results in zero keepalive"""
         session = Mock(return_value='test-session')
         holdtime = HoldTime(0)

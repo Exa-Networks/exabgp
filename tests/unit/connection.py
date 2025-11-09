@@ -14,7 +14,7 @@ import unittest
 from exabgp.util.od import od
 
 
-def test():
+def test() -> None:
     OPEN = ''.join(
         [
             chr(int(_, 16))
@@ -53,14 +53,14 @@ def test():
 
 
 class TestData(unittest.TestCase):
-    def test_1(self):
+    def test_1(self) -> None:
         # if not os.environ.get('profile',False):
         # 	result = test()
         # 	if result:
         # 		self.fail(result)
         pass
 
-    def test_2(self):
+    def test_2(self) -> None:
         # if not not os.environ.get('profile',False):
         # 	cProfile.run('test()')
         pass

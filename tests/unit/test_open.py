@@ -70,7 +70,7 @@ open_body = [
 
 
 class TestData(unittest.TestCase):
-    def test_1_open(self):
+    def test_1_open(self) -> None:
         check_capa = {
             1: [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)],
             2: RouteRefresh(),
@@ -90,7 +90,7 @@ class TestData(unittest.TestCase):
         for k, v in o.capabilities.items():
             self.assertEqual(v, check_capa[k])
 
-    def test_2_open(self):
+    def test_2_open(self) -> None:
         capabilities = Capabilities()
         o = Open(Version(4), ASN(65500), HoldTime(180), RouterID('127.0.0.1'), capabilities)
         self.assertEqual(o.version, 4)

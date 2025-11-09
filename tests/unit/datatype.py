@@ -14,7 +14,7 @@ import unittest
 
 
 class TestData(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
     # def test_1_nlri_1 (self):

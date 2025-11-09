@@ -348,7 +348,7 @@ class FakeNeighbor(dict):
 
 
 class TestUpdateDecoding(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.negotiated = {}
 
         for asn4 in (True, False):
@@ -392,13 +392,13 @@ class TestUpdateDecoding(unittest.TestCase):
     # header = [0xFF,]*16 + [size >> 8] + [size & 0xFF] + [0x02]
     # print ''.join('%02X' % _ for _ in header+body
 
-    def test_decoding_udpate_asn(self):
+    def test_decoding_udpate_asn(self) -> None:
         for asn4, body in bodies:
             if asn4:
                 continue
             Update.unpack_message(bytes(body), Direction.IN, self.negotiated[asn4])
 
-    def test_decoding_udpate_asn4(self):
+    def test_decoding_udpate_asn4(self) -> None:
         for asn4, body in bodies:
             if not asn4:
                 continue

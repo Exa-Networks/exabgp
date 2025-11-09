@@ -1,3 +1,4 @@
+from typing import Any
 """Comprehensive tests for BGP Community attributes.
 
 These tests cover all three types of BGP communities:
@@ -46,7 +47,7 @@ from unittest.mock import Mock, patch
 
 
 @pytest.fixture(autouse=True)
-def mock_logger():
+def mock_logger() -> Any:
     """Mock the logger to avoid initialization issues."""
     from exabgp.logger.option import option
     from exabgp.logger import log
@@ -80,7 +81,7 @@ def mock_logger():
 # Phase 1: Standard Communities (RFC 1997)
 # ==============================================================================
 
-def test_standard_community_parsing():
+def test_standard_community_parsing() -> None:
     """Test basic standard community parsing.
 
     Standard communities are 4 bytes: 2-byte ASN + 2-byte value.
@@ -100,7 +101,7 @@ def test_standard_community_parsing():
     assert community.pack() == community_bytes
 
 
-def test_standard_community_well_known():
+def test_standard_community_well_known() -> None:
     """Test well-known standard communities.
 
     Well-known communities (RFC 1997):
@@ -138,7 +139,7 @@ def test_standard_community_well_known():
     assert cached is Community.cache[Community.NO_EXPORT]
 
 
-def test_standard_community_multiple():
+def test_standard_community_multiple() -> None:
     """Test multiple standard communities in one attribute.
 
     The COMMUNITIES attribute can contain multiple 4-byte communities.
@@ -164,7 +165,7 @@ def test_standard_community_multiple():
     assert comm3 in communities.communities
 
 
-def test_standard_community_malformed():
+def test_standard_community_malformed() -> None:
     """Test handling of malformed standard community data.
 
     Test cases:
@@ -190,7 +191,7 @@ def test_standard_community_malformed():
 # Phase 2: Extended Communities - Route Target (RFC 4360, RFC 7153)
 # ==============================================================================
 
-def test_route_target_asn2_number():
+def test_route_target_asn2_number() -> None:
     """Test Route Target with 2-byte ASN.
 
     Type 0x00, Subtype 0x02: 2-byte ASN + 4-byte number
@@ -223,7 +224,7 @@ def test_route_target_asn2_number():
     assert unpacked.number == number
 
 
-def test_route_target_ip_number():
+def test_route_target_ip_number() -> None:
     """Test Route Target with IPv4 address.
 
     Type 0x01, Subtype 0x02: IPv4 address + 2-byte number
@@ -255,7 +256,7 @@ def test_route_target_ip_number():
     assert unpacked.number == number
 
 
-def test_route_target_asn4_number():
+def test_route_target_asn4_number() -> None:
     """Test Route Target with 4-byte ASN.
 
     Type 0x02, Subtype 0x02: 4-byte ASN + 2-byte number
@@ -288,7 +289,7 @@ def test_route_target_asn4_number():
     assert unpacked.number == number
 
 
-def test_route_target_transitive_flag():
+def test_route_target_transitive_flag() -> None:
     """Test Route Target transitive flag handling.
 
     Extended communities have a transitive bit (bit 6):
@@ -311,7 +312,7 @@ def test_route_target_transitive_flag():
     assert (packed_non_trans[0] & 0x40) == 0x40
 
 
-def test_extended_community_base_parsing():
+def test_extended_community_base_parsing() -> None:
     """Test base ExtendedCommunity parsing with unknown types.
 
     Unknown extended community types should still parse correctly,
@@ -337,7 +338,7 @@ def test_extended_community_base_parsing():
 # Phase 3: Extended Communities - Other Types
 # ==============================================================================
 
-def test_route_origin_community():
+def test_route_origin_community() -> None:
     """Test Route Origin extended community.
 
     Similar to Route Target but indicates route origin.
@@ -360,7 +361,7 @@ def test_route_origin_community():
     assert packed[1] == 0x03
 
 
-def test_bandwidth_community():
+def test_bandwidth_community() -> None:
     """Test Link Bandwidth extended community.
 
     draft-ietf-idr-link-bandwidth-06
@@ -391,7 +392,7 @@ def test_bandwidth_community():
     assert abs(unpacked.speed - speed) < 1.0
 
 
-def test_encapsulation_community_vxlan():
+def test_encapsulation_community_vxlan() -> None:
     """Test Encapsulation extended community with VXLAN.
 
     RFC 5512: Tunnel Encapsulation Attribute
@@ -420,7 +421,7 @@ def test_encapsulation_community_vxlan():
     assert unpacked.tunnel_type == Encapsulation.Type.VXLAN
 
 
-def test_encapsulation_community_types():
+def test_encapsulation_community_types() -> None:
     """Test various encapsulation types.
 
     IANA registry tunnel types:
@@ -446,7 +447,7 @@ def test_encapsulation_community_types():
         assert unpacked.tunnel_type == tunnel_type
 
 
-def test_traffic_engineering_community():
+def test_traffic_engineering_community() -> None:
     """Test Traffic Engineering extended community.
 
     Used for QoS and traffic engineering policies.
@@ -467,7 +468,7 @@ def test_traffic_engineering_community():
     assert len(packed) == 8
 
 
-def test_l2info_community():
+def test_l2info_community() -> None:
     """Test L2 Info extended community.
 
     Used in EVPN for L2 attributes (MTU, etc.).
@@ -493,7 +494,7 @@ def test_l2info_community():
     assert unpacked.mtu == mtu
 
 
-def test_mac_mobility_community():
+def test_mac_mobility_community() -> None:
     """Test MAC Mobility extended community.
 
     RFC 7432: Used in EVPN for MAC mobility tracking.
@@ -518,7 +519,7 @@ def test_mac_mobility_community():
     assert unpacked.sequence == sequence
 
 
-def test_flowspec_redirect_community():
+def test_flowspec_redirect_community() -> None:
     """Test FlowSpec redirect extended community.
 
     Used with FlowSpec to redirect matching traffic to VRF.
@@ -538,7 +539,7 @@ def test_flowspec_redirect_community():
     assert str(redirect) == "target:65000:999"
 
 
-def test_rt_record_community():
+def test_rt_record_community() -> None:
     """Test Route Target Record extended community.
 
     RFC 4684: Records Route Targets in path.
@@ -554,7 +555,7 @@ def test_rt_record_community():
     assert len(rt_record) == 8
 
 
-def test_mup_community():
+def test_mup_community() -> None:
     """Test MUP (Mobile User Plane) extended community.
 
     Recent draft for 5G mobile networks.
@@ -576,7 +577,7 @@ def test_mup_community():
 # Phase 4: Large Communities (RFC 8092)
 # ==============================================================================
 
-def test_large_community_parsing():
+def test_large_community_parsing() -> None:
     """Test Large Community basic parsing.
 
     RFC 8092: 12-byte communities (3 x 4-byte values)
@@ -603,7 +604,7 @@ def test_large_community_parsing():
     assert lc.pack() == large_bytes
 
 
-def test_large_community_multiple():
+def test_large_community_multiple() -> None:
     """Test multiple Large Communities.
 
     LARGE_COMMUNITIES attribute can contain multiple 12-byte values.
@@ -627,7 +628,7 @@ def test_large_community_multiple():
     assert len(large_communities.communities) == 3
 
 
-def test_large_community_max_values():
+def test_large_community_max_values() -> None:
     """Test Large Community with maximum values.
 
     All three fields are 32-bit unsigned integers.
@@ -646,7 +647,7 @@ def test_large_community_max_values():
     assert str(lc) == f"{max_val}:{max_val}:{max_val}"
 
 
-def test_large_community_malformed():
+def test_large_community_malformed() -> None:
     """Test handling of malformed Large Community data.
 
     Large communities must be exactly 12 bytes.
@@ -668,7 +669,7 @@ def test_large_community_malformed():
 # Phase 5: Mixed Community Types and Operations
 # ==============================================================================
 
-def test_mixed_community_types():
+def test_mixed_community_types() -> None:
     """Test handling multiple community attribute types together.
 
     A BGP UPDATE can contain:
@@ -703,7 +704,7 @@ def test_mixed_community_types():
     assert len(large_communities.communities) == 1
 
 
-def test_community_ordering():
+def test_community_ordering() -> None:
     """Test that communities maintain order and can be sorted.
 
     Communities should be comparable for sorting/ordering.
@@ -728,7 +729,7 @@ def test_community_ordering():
     assert sorted_communities[2] == comm3
 
 
-def test_community_equality():
+def test_community_equality() -> None:
     """Test community equality and hashing.
 
     Same community values should be equal and hash identically.
@@ -758,7 +759,7 @@ def test_community_equality():
     assert hash(rt1a) != hash(rt2)
 
 
-def test_community_json_representation():
+def test_community_json_representation() -> None:
     """Test JSON representation of communities.
 
     Communities should be serializable to JSON for APIs.

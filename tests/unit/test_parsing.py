@@ -26,14 +26,14 @@ environ.log.parser = False
 
 
 class TestControl(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         location = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', '*.conf'))
         self.files = glob.glob(location)
 
     # These files contains invalid attribute we can not parse
     skip = 'attributes.conf'
 
-    def test_all_configuration(self):
+    def test_all_configuration(self) -> None:
         for filename in self.files:
             if filename.endswith(self.skip):
                 continue

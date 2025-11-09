@@ -1,3 +1,4 @@
+from typing import Any
 """Comprehensive tests for BGP AS_PATH attribute parsing.
 
 AS_PATH is a well-known mandatory transitive attribute that identifies the
@@ -26,7 +27,7 @@ import struct
 from unittest.mock import Mock
 
 
-def create_negotiated_mock(asn4=False):
+def create_negotiated_mock(asn4: Any =False) -> Any:
     """Create minimal mock negotiated object for testing."""
     negotiated = Mock()
     negotiated.asn4 = asn4
@@ -37,7 +38,7 @@ def create_negotiated_mock(asn4=False):
 # Test AS_SEQUENCE (most common segment type)
 # =============================================================================
 
-def test_aspath_empty():
+def test_aspath_empty() -> None:
     """Test empty AS_PATH unpacking."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
     from exabgp.bgp.message.direction import Direction
@@ -50,7 +51,7 @@ def test_aspath_empty():
     assert result is None
 
 
-def test_aspath_simple_sequence_asn2():
+def test_aspath_simple_sequence_asn2() -> None:
     """Test AS_SEQUENCE with 2-byte ASN (legacy format)."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.direction import Direction
@@ -73,7 +74,7 @@ def test_aspath_simple_sequence_asn2():
     assert int(result.aspath[0][2]) == 65003
 
 
-def test_aspath_simple_sequence_asn4():
+def test_aspath_simple_sequence_asn4() -> None:
     """Test AS_SEQUENCE with 4-byte ASN (modern format)."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.direction import Direction
@@ -95,7 +96,7 @@ def test_aspath_simple_sequence_asn4():
     assert int(result.aspath[0][2]) == 300000
 
 
-def test_aspath_single_asn():
+def test_aspath_single_asn() -> None:
     """Test AS_PATH with single ASN."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.direction import Direction
@@ -117,7 +118,7 @@ def test_aspath_single_asn():
 # Test AS_SET
 # =============================================================================
 
-def test_aspath_as_set():
+def test_aspath_as_set() -> None:
     """Test AS_SET segment type (unordered set of ASNs)."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SET
     from exabgp.bgp.message.direction import Direction
@@ -140,7 +141,7 @@ def test_aspath_as_set():
 # Test CONFED_SEQUENCE and CONFED_SET
 # =============================================================================
 
-def test_aspath_confed_sequence():
+def test_aspath_confed_sequence() -> None:
     """Test CONFED_SEQUENCE segment type (BGP confederation)."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, CONFED_SEQUENCE
     from exabgp.bgp.message.direction import Direction
@@ -161,7 +162,7 @@ def test_aspath_confed_sequence():
     assert int(result.aspath[0][1]) == 64513
 
 
-def test_aspath_confed_set():
+def test_aspath_confed_set() -> None:
     """Test CONFED_SET segment type."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, CONFED_SET
     from exabgp.bgp.message.direction import Direction
@@ -184,7 +185,7 @@ def test_aspath_confed_set():
 # Test multiple segments
 # =============================================================================
 
-def test_aspath_multiple_segments():
+def test_aspath_multiple_segments() -> None:
     """Test AS_PATH with multiple segments."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE, SET
     from exabgp.bgp.message.direction import Direction
@@ -209,7 +210,7 @@ def test_aspath_multiple_segments():
     assert len(result.aspath[1]) == 3
 
 
-def test_aspath_mixed_confederation():
+def test_aspath_mixed_confederation() -> None:
     """Test AS_PATH with regular and confederation segments."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE, CONFED_SEQUENCE
     from exabgp.bgp.message.direction import Direction
@@ -234,7 +235,7 @@ def test_aspath_mixed_confederation():
 # Test AS4_PATH attribute
 # =============================================================================
 
-def test_as4path_unpacking():
+def test_as4path_unpacking() -> None:
     """Test AS4_PATH attribute (always uses 4-byte ASNs)."""
     from exabgp.bgp.message.update.attribute.aspath import AS4Path, SEQUENCE
     from exabgp.bgp.message.direction import Direction
@@ -258,7 +259,7 @@ def test_as4path_unpacking():
 # Test error cases
 # =============================================================================
 
-def test_aspath_invalid_segment_type():
+def test_aspath_invalid_segment_type() -> None:
     """Test AS_PATH with invalid segment type."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
     from exabgp.bgp.message.direction import Direction
@@ -276,7 +277,7 @@ def test_aspath_invalid_segment_type():
     assert exc_info.value.subcode == 11  # Malformed AS_PATH
 
 
-def test_aspath_truncated_segment_header():
+def test_aspath_truncated_segment_header() -> None:
     """Test AS_PATH with truncated segment header."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
     from exabgp.bgp.message.direction import Direction
@@ -294,7 +295,7 @@ def test_aspath_truncated_segment_header():
     assert exc_info.value.subcode == 11
 
 
-def test_aspath_truncated_asn_data():
+def test_aspath_truncated_asn_data() -> None:
     """Test AS_PATH with truncated ASN data."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
     from exabgp.bgp.message.direction import Direction
@@ -313,7 +314,7 @@ def test_aspath_truncated_asn_data():
     assert exc_info.value.subcode == 11
 
 
-def test_aspath_truncated_asn4_data():
+def test_aspath_truncated_asn4_data() -> None:
     """Test AS_PATH with truncated 4-byte ASN data."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
     from exabgp.bgp.message.direction import Direction
@@ -337,7 +338,7 @@ def test_aspath_truncated_asn4_data():
 # Test packing
 # =============================================================================
 
-def test_aspath_pack_asn2():
+def test_aspath_pack_asn2() -> None:
     """Test packing AS_PATH with 2-byte ASNs."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
@@ -359,7 +360,7 @@ def test_aspath_pack_asn2():
     assert packed[1] == 2  # AS_PATH type code
 
 
-def test_aspath_pack_asn4():
+def test_aspath_pack_asn4() -> None:
     """Test packing AS_PATH with 4-byte ASNs."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
@@ -377,7 +378,7 @@ def test_aspath_pack_asn4():
     assert len(packed) >= 11  # flags(1) + type(1) + length(1) + segment_type(1) + segment_len(1) + 2*ASN(4)
 
 
-def test_aspath_pack_with_as_trans():
+def test_aspath_pack_with_as_trans() -> None:
     """Test packing AS_PATH with ASN4 when peer doesn't support ASN4."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN, AS_TRANS
@@ -400,7 +401,7 @@ def test_aspath_pack_with_as_trans():
 # Test string representation
 # =============================================================================
 
-def test_aspath_string_representation():
+def test_aspath_string_representation() -> None:
     """Test AS_PATH string formatting."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE, SET
     from exabgp.bgp.message.open.asn import ASN
@@ -416,7 +417,7 @@ def test_aspath_string_representation():
     assert ')' in string_repr
 
 
-def test_aspath_json_representation():
+def test_aspath_json_representation() -> None:
     """Test AS_PATH JSON formatting."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
@@ -437,7 +438,7 @@ def test_aspath_json_representation():
 # Test equality
 # =============================================================================
 
-def test_aspath_equality():
+def test_aspath_equality() -> None:
     """Test AS_PATH equality comparison."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
@@ -451,7 +452,7 @@ def test_aspath_equality():
     assert aspath1 == aspath2
 
 
-def test_aspath_inequality():
+def test_aspath_inequality() -> None:
     """Test AS_PATH inequality comparison."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
