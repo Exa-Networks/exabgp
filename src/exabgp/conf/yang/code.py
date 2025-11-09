@@ -29,9 +29,9 @@ import sys
 if sys.version_info[:3] < (3, 7):
 
     def breakpoint():
-        import pdb
+        import pdb  # noqa: T100
 
-        pdb.set_trace()
+        pdb.set_trace()  # noqa: T100
         pass
 
 

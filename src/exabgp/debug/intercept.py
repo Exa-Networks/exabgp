@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import sys
-import pdb
+import pdb  # noqa: T100
 
 from exabgp.debug.report import format_panic
 
