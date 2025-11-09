@@ -113,7 +113,7 @@ class NodeDescriptor(object):
         if self.node_type == 514:
             node = f'"ospf-area-id": "{self.node_id}"'
         if self.node_type == 515:
-            node = f'"router-id": "{self.node_id}"'
+            node = f'"router-id": "{self.node_id[0]}"'
         designated = None
         if self.dr_id:
             designated = f'"designated-router-id": "{self.dr_id}"'
