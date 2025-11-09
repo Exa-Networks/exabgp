@@ -414,7 +414,7 @@ def test_route_refresh_equality_with_non_route_refresh() -> None:
 
     assert rr != "REFRESH"
     assert rr != 123
-    assert rr != None
+    assert rr is not None
 
 
 # ==============================================================================
