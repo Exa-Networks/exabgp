@@ -1,4 +1,3 @@
-from typing import Any, Generator
 # encoding: utf-8
 """tests/unit/test_async_infrastructure.py
 
@@ -7,14 +6,16 @@ Tests for async/await infrastructure in ASYNC class
 
 import asyncio
 import os
-import pytest
+from typing import Any, Generator
 from unittest.mock import Mock
+
+import pytest
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.reactor.asynchronous import ASYNC
+from exabgp.reactor.asynchronous import ASYNC  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
