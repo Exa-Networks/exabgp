@@ -40,7 +40,7 @@ class ParseFlowThen(Section):
         'action sample|terminal|sample-terminal',
     ]
 
-    syntax = 'then {\n  %s;\n}' % ';\n  '.join(definition)
+    syntax = f'then {{\n  {";\\n  ".join(definition)};\n}}'
 
     known = {
         'accept': accept,

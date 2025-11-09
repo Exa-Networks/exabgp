@@ -71,7 +71,7 @@ def route_distinguisher(tokeniser):
         elif number < pow(2, 32) and suffix < pow(2, 16):
             rtd = bytes([0, 2]) + pack('!L', number) + pack('!H', suffix)
         else:
-            raise ValueError('invalid route-distinguisher %s' % data)
+            raise ValueError(f'invalid route-distinguisher {data}')
 
     return RouteDistinguisher(rtd)
 
@@ -138,11 +138,11 @@ def prefix_sid(tokeniser):  # noqa: C901
 def prefix_sid_srv6(tokeniser):
     value = tokeniser()
     if value != '(':
-        raise Exception("expect '(', but received '%s'" % value)
+        raise Exception(f"expect '(', but received '{value}'")
 
     service_type = tokeniser()
     if service_type not in ['l3-service', 'l2-service']:
-        raise Exception("expect 'l3-service' or 'l2-service', but received '%s'" % value)
+        raise Exception(f"expect 'l3-service' or 'l2-service', but received '{value}'")
 
     sid = IPv6.unpack(IPv6.pton(tokeniser()))
     behavior = 0xFFFF
@@ -159,14 +159,14 @@ def prefix_sid_srv6(tokeniser):
                 if i != 0:
                     value = tokeniser()
                     if value != ',':
-                        raise Exception("expect ',', but received '%s'" % value)
+                        raise Exception(f"expect ',', but received '{value}'")
                 value = tokeniser()
                 base = 10 if not value.startswith('0x') else 16
                 values.append(int(value, base))
 
             value = tokeniser()
             if value != ']':
-                raise Exception("expect ']', but received '%s'" % value)
+                raise Exception(f"expect ']', but received '{value}'")
 
             value = tokeniser()
 
@@ -190,7 +190,7 @@ def prefix_sid_srv6(tokeniser):
     )
 
     if value != ')':
-        raise Exception("expect ')', but received '%s'" % value)
+        raise Exception(f"expect ')', but received '{value}'")
 
     if service_type == 'l3-service':
         return PrefixSid([Srv6L3Service(subtlvs=subtlvs)])
@@ -201,10 +201,10 @@ def prefix_sid_srv6(tokeniser):
 def parse_ip_prefix(tokeninser):
     addrstr, length = tokeninser.split('/')
     if length is None:
-        raise Exception("unexpect prefix format '%s'" % tokeninser)
+        raise Exception(f"unexpect prefix format '{tokeninser}'")
 
     if not length.isdigit():
-        raise Exception("unexpect prefix format '%s'" % tokeninser)
+        raise Exception(f"unexpect prefix format '{tokeninser}'")
 
     addr = ip_address(addrstr)
     if isinstance(addr, IPv4Address):
@@ -212,7 +212,7 @@ def parse_ip_prefix(tokeninser):
     elif isinstance(addr, IPv6Address):
         ip = IPv6.unpack(IPv6.pton(addrstr))
     else:
-        raise Exception("unexpect ipaddress format '%s'" % addrstr)
+        raise Exception(f"unexpect ipaddress format '{addrstr}'")
 
     return ip, int(length)
 
@@ -230,7 +230,7 @@ def mvpn_sharedjoin(tokeniser, afi, action):
         tokeniser.consume('group')
         groupip = IPv6.unpack(IPv6.pton(tokeniser()))
     else:
-        raise Exception('unexpect afi: %s' % afi)
+        raise Exception(f'unexpect afi: {afi}')
 
     tokeniser.consume('rd')
     rd = route_distinguisher(tokeniser)
@@ -238,10 +238,10 @@ def mvpn_sharedjoin(tokeniser, afi, action):
     tokeniser.consume('source-as')
     value = tokeniser()
     if not value.isdigit():
-        raise Exception("expect source-as to be a integer in the range 0-4294967295, but received '%s'" % value)
+        raise Exception(f"expect source-as to be a integer in the range 0-4294967295, but received '{value}'")
     asnum = int(value)
     if asnum > 4294967295:
-        raise Exception("expect source-as to be a integer in the range 0-4294967295, but received '%s'" % value)
+        raise Exception(f"expect source-as to be a integer in the range 0-4294967295, but received '{value}'")
 
     return SharedJoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
 
@@ -259,7 +259,7 @@ def mvpn_sourcejoin(tokeniser, afi, action):
         tokeniser.consume('group')
         groupip = IPv6.unpack(IPv6.pton(tokeniser()))
     else:
-        raise Exception('unexpect afi: %s' % afi)
+        raise Exception(f'unexpect afi: {afi}')
 
     tokeniser.consume('rd')
     rd = route_distinguisher(tokeniser)
@@ -267,10 +267,10 @@ def mvpn_sourcejoin(tokeniser, afi, action):
     tokeniser.consume('source-as')
     value = tokeniser()
     if not value.isdigit():
-        raise Exception("expect source-as to be a integer in the range 0-4294967295, but received '%s'" % value)
+        raise Exception(f"expect source-as to be a integer in the range 0-4294967295, but received '{value}'")
     asnum = int(value)
     if asnum > 4294967295:
-        raise Exception("expect source-as to be a integer in the range 0-4294967295, but received '%s'" % value)
+        raise Exception(f"expect source-as to be a integer in the range 0-4294967295, but received '{value}'")
 
     return SourceJoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
 
@@ -288,7 +288,7 @@ def mvpn_sourcead(tokeniser, afi, action):
         tokeniser.consume('group')
         groupip = IPv6.unpack(IPv6.pton(tokeniser()))
     else:
-        raise Exception('unexpect afi: %s' % afi)
+        raise Exception(f'unexpect afi: {afi}')
 
     tokeniser.consume('rd')
     rd = route_distinguisher(tokeniser)
@@ -302,7 +302,7 @@ def srv6_mup_isd(tokeniser, afi):
 
     value = tokeniser()
     if value != 'rd':
-        raise Exception("expect rd, but received '%s'" % value)
+        raise Exception(f"expect rd, but received '{value}'")
     rd = route_distinguisher(tokeniser)
 
     return InterworkSegmentDiscoveryRoute(
@@ -320,11 +320,11 @@ def srv6_mup_dsd(tokeniser, afi):
     elif afi == AFI.ipv6:
         ip = IPv6.unpack(IPv6.pton(tokeniser()))
     else:
-        raise Exception('unexpect afi: %s' % afi)
+        raise Exception(f'unexpect afi: {afi}')
 
     value = tokeniser()
     if value != 'rd':
-        raise Exception("expect rd, but received '%s'" % value)
+        raise Exception(f"expect rd, but received '{value}'")
     rd = route_distinguisher(tokeniser)
 
     return DirectSegmentDiscoveryRoute(
@@ -344,13 +344,13 @@ def srv6_mup_t1st(tokeniser, afi):
     tokeniser.consume('teid')
     value = tokeniser()
     if not value.isdigit():
-        raise Exception("expect teid to be a number, but received '%s'" % value)
+        raise Exception(f"expect teid to be a number, but received '{value}'")
     teid = int(value)
 
     tokeniser.consume('qfi')
     value = tokeniser()
     if not value.isdigit():
-        raise Exception("expect qfi to be a number, but received '%s'" % value)
+        raise Exception(f"expect qfi to be a number, but received '{value}'")
     qfi = int(value)
 
     tokeniser.consume('endpoint')
@@ -359,7 +359,7 @@ def srv6_mup_t1st(tokeniser, afi):
     elif afi == AFI.ipv6:
         endpoint_ip = IPv6.unpack(IPv6.pton(tokeniser()))
     else:
-        raise Exception('unexpect afi: %s' % afi)
+        raise Exception(f'unexpect afi: {afi}')
 
     source_ip_len = 0
     source_ip = b''
@@ -372,7 +372,7 @@ def srv6_mup_t1st(tokeniser, afi):
             source_ip = IPv6.unpack(IPv6.pton(tokeniser()))
             source_ip_len = 128
         else:
-            raise Exception('unexpect afi: %s' % afi)
+            raise Exception(f'unexpect afi: {afi}')
 
     return Type1SessionTransformedRoute(
         rd=rd,
@@ -395,17 +395,17 @@ def srv6_mup_t2st(tokeniser, afi):
     elif afi == AFI.ipv6:
         endpoint_ip = IPv6.unpack(IPv6.pton(tokeniser()))
     else:
-        raise Exception('unexpect afi: %s' % afi)
+        raise Exception(f'unexpect afi: {afi}')
 
     value = tokeniser()
     if 'rd' != value:
-        raise Exception("expect rd, but received '%s'" % value)
+        raise Exception(f"expect rd, but received '{value}'")
 
     rd = route_distinguisher(tokeniser)
 
     value = tokeniser()
     if value != 'teid':
-        raise Exception("expect teid, but received '%s'" % value)
+        raise Exception(f"expect teid, but received '{value}'")
 
     teids = tokeniser().split('/')
     if len(teids) != 2:
