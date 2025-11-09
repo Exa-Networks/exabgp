@@ -50,15 +50,17 @@ class Graceful(Capability, dict):
         return f'Graceful Restart Flags {hex(self.restart_flag)} Time {self.restart_time} {sfamilies}'
 
     def json(self):
+        restart_str = ' "restart"'
+        forwarding_str = ' "forwarding" '
         families_json = ', '.join(
-            f'"{afi}/{safi}": [{" \"restart\"" if family & 0x80 else ""} ] '
+            f'"{afi}/{safi}": [{restart_str if family & 0x80 else ""} ] '
             for afi, safi, family in [(str(a), str(s), self[(a, s)]) for (a, s) in self.keys()]
         )
         d = {
             'name': '"graceful restart"',
             'time': self.restart_time,
             'address-family-flags': f'{{ {families_json}}}',
-            'restart-flags': f'[{" \"forwarding\" " if self.restart_flag & 0x8 else " "}] ',
+            'restart-flags': f'[{forwarding_str if self.restart_flag & 0x8 else " "}] ',
         }
         items = ", ".join(f'"{k}": {v}' for k, v in d.items())
         return f'{{ {items} }}'
