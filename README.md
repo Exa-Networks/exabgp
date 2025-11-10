@@ -8,9 +8,9 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 
 ## Table of Contents
 
-<table>
+<table width="100%">
 <tr valign="top">
-<td width="25%">
+<td>
 
 **Getting Started**
 - [Use Cases](#use-cases)
@@ -18,7 +18,7 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 - [Quick Start](#quick-start)
 
 </td>
-<td width="25%">
+<td>
 
 **Installation**
 - [Docker](#docker)
@@ -29,7 +29,7 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 - [OS packages](#os-packages)
 
 </td>
-<td width="25%">
+<td>
 
 **Usage**
 - [Upgrade](#upgrade)
@@ -38,7 +38,7 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 - [Contributing](#contributing)
 
 </td>
-<td width="25%">
+<td>
 
 **Development**
 - [Requirements](#requirements)
@@ -296,7 +296,6 @@ ExaBGP is nearly as old as Python 3. A lot has changed since 2009; the applicati
 - **Current stable**: 4.2.x (recommended for production)
 - **Development**: 5.0.x (main branch)
   - **Breaking changes**: Command-line arguments changed from 4.x
-  - **Migration**: See [3.4 to 4.x migration guide](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.x)
 
 The main branch (previously the master branch) is now ExaBGP 5.0.x. The program command line arguments have already been changed and are no longer fully backwards compatible with versions 3 and 4. We recommend using the 4.2 releases in production, but running main is sometimes required for troubleshooting.
 
