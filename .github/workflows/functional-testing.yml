@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  functional-tests:
     # runs-on: ubuntu-latest
     runs-on: ${{ matrix.os }}
     strategy:
