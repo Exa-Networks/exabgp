@@ -66,6 +66,12 @@ The fastest way to get started:
 docker pull ghcr.io/exa-networks/exabgp:latest
 docker run -it --rm ghcr.io/exa-networks/exabgp:latest --help
 
+# Using zipapp (self-contained executable)
+git clone https://github.com/Exa-Networks/exabgp
+cd exabgp
+./release binary /usr/local/sbin/exabgp
+/usr/local/sbin/exabgp --version
+
 # Using pip
 pip install exabgp
 exabgp --help
@@ -77,8 +83,6 @@ cd exabgp
 ```
 
 See [Installation](#installation) for detailed options and [Documentation](#documentation) for configuration examples.
->>>>>>> ec9bc0c2 (Update README.md)
->>>>>>> 8167ea9a (Update README.md)
 
 ## Installation
 
