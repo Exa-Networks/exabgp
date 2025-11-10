@@ -97,7 +97,7 @@ def setargs(parser):
     g = parser.add_argument_group('advertising options')
     g.add_argument('--next-hop', '-N', metavar='IP', type=ip_address, help='self IP address to use as next hop')
     g.add_argument('--ip', metavar='IP', type=ip_network, dest='ips', action='append', help='advertise this IP address or network (CIDR notation)')
-    g.add_argument('--ip-ifname', metavar='IP%IFNAME', dest='ip_ifnames', action='append', help='bind this IP address or network (CIDR) to the given physical or logical interface (i.e. 192.165.14.1%eth0')
+    g.add_argument('--ip-ifname', metavar='IP%IFNAME', dest='ip_ifnames', action='append', help='bind this IP address or network (CIDR) to the given physical or logical interface (i.e. 192.165.14.1%%eth0)')
     g.add_argument('--local-preference', metavar='P', type=int, default=-1, help='advertise with local preference P')
     g.add_argument('--deaggregate-networks', dest='deaggregate_networks', action='store_true', help='Deaggregate Networks specified in --ip')
     g.add_argument('--no-ip-setup', action='store_false', dest='ip_setup', help="don't setup missing IP addresses")
