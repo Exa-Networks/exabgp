@@ -34,7 +34,7 @@ jobs:
 
       - name: Wait for required checks
         if: github.event_name == 'workflow_run'
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: lewagon/wait-on-check-action@v1.4.1
         with:
           ref: ${{ github.sha }}
           check-regexp: '(Unit Testing|Linting|Testing \(Python 3\.8 to 3\.12\)).*'
