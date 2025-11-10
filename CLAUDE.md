@@ -24,6 +24,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Uses `ruff` for linting and formatting (configured in pyproject.toml)
 - `ruff format` - Format code (single quotes, 120 char lines)
 
+## Git Workflow
+
+**IMPORTANT: Commit but don't auto-push**
+- Create commits as work progresses
+- DO NOT automatically push commits to remote
+- Allow the user to review, squash, or amend commits before pushing
+- Only push when explicitly requested by the user
+
 ## Architecture Overview
 
 **ExaBGP is a BGP implementation that does NOT manipulate the FIB (Forwarding Information Base).** Instead, it focuses on BGP protocol implementation and external process communication via JSON API.
