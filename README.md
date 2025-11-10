@@ -7,26 +7,46 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 **Key Differentiator**: Unlike traditional BGP daemons (BIRD, FRRouting), ExaBGP does **not** manipulate the FIB (Forwarding Information Base). Instead, it focuses on BGP protocol implementation and provides an API for external process.
 
 ## Table of Contents
+
+<table>
+<tr valign="top">
+<td width="33%">
+
+**Getting Started**
 - [Use Cases](#use-cases)
 - [Features](#features)
 - [Quick Start](#quick-start)
-- [Installation](#installation)
-  - [Docker](#docker)
-  - [Zipapp](#zipapp)
-  - [pip releases](#pip-releases)
-  - [GitHub releases](#github-releases)
-  - [git main](#git-main)
-  - [OS packages](#os-packages)
+
+**[Installation](#installation)**
+- [Docker](#docker)
+- [Zipapp](#zipapp)
+- [pip releases](#pip-releases)
+- [GitHub releases](#github-releases)
+- [git main](#git-main)
+- [OS packages](#os-packages)
+
+</td>
+<td width="33%">
+
+**Usage**
 - [Upgrade](#upgrade)
 - [Documentation](#documentation)
-- [Development](#development)
-  - [Requirements](#requirements)
-  - [Version Information](#version-information)
-  - [Testing](#testing)
-  - [Debug Options](#debug-options)
-  - [Message Decoding](#message-decoding)
 - [Support](#support)
 - [Contributing](#contributing)
+
+</td>
+<td width="34%">
+
+**[Development](#development)**
+- [Requirements](#requirements)
+- [Version Information](#version-information)
+- [Testing](#testing)
+- [Debug Options](#debug-options)
+- [Message Decoding](#message-decoding)
+
+</td>
+</tr>
+</table>
 
 ## Use Cases
 
