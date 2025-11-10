@@ -37,7 +37,7 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.4.1
         with:
           ref: ${{ github.sha }}
-          check-regexp: '^(unit-tests|lint-test|functional-tests) \('
+          check-regexp: '^(unit-tests|lint-tests|functional-tests) \('
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
 
