@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  lint-test:
     # runs-on: ubuntu-latest
     runs-on: ${{ matrix.os }}
     strategy:
