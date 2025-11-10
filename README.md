@@ -10,14 +10,17 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 
 <table>
 <tr valign="top">
-<td width="33%">
+<td width="25%">
 
 **Getting Started**
 - [Use Cases](#use-cases)
 - [Features](#features)
 - [Quick Start](#quick-start)
 
-**[Installation](#installation)**
+</td>
+<td width="25%">
+
+**Installation**
 - [Docker](#docker)
 - [Zipapp](#zipapp)
 - [pip releases](#pip-releases)
@@ -26,7 +29,7 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 - [OS packages](#os-packages)
 
 </td>
-<td width="33%">
+<td width="25%">
 
 **Usage**
 - [Upgrade](#upgrade)
@@ -35,9 +38,9 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 - [Contributing](#contributing)
 
 </td>
-<td width="34%">
+<td width="25%">
 
-**[Development](#development)**
+**Development**
 - [Requirements](#requirements)
 - [Version Information](#version-information)
 - [Testing](#testing)
