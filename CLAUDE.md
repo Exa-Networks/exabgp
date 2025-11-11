@@ -50,11 +50,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Git Workflow
 
-**IMPORTANT: Commit but don't auto-push**
-- Create commits as work progresses
-- DO NOT automatically push commits to remote
-- Allow the user to review, squash, or amend commits before pushing
-- Only push when explicitly requested by the user
+**🚨 CRITICAL GIT RULES - NEVER VIOLATE THESE 🚨**
+
+**NEVER COMMIT WITHOUT EXPLICIT USER REQUEST:**
+- DO NOT commit after completing work unless user explicitly says "commit"
+- DO NOT commit automatically after edits
+- WAIT for user to review changes first
+- User must explicitly say: "commit", "make a commit", "git commit", etc.
+
+**NEVER PUSH WITHOUT EXPLICIT USER REQUEST:**
+- DO NOT push automatically after committing
+- DO NOT push even if user said "commit and push" for a PREVIOUS task
+- EACH push requires explicit instruction for THAT SPECIFIC WORK
+- User must explicitly say: "push", "git push", "push now", etc.
+
+**When work is complete:**
+1. Stop and report what was done
+2. WAIT for user instruction
+3. Only commit if user explicitly asks
+4. Only push if user explicitly asks for that specific commit
 
 ## Repository State Verification
 
