@@ -7,11 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Testing:**
 - **Check file descriptor limit before running tests:** `ulimit -n` (should be ≥64000)
 - **If needed, increase limit:** `ulimit -n 64000`
-- `./qa/bin/functional encoding` - Run all functional tests (spawns client and server pairs)
-- `./qa/bin/functional encoding --list` - List available tests with unique letter identifiers
+- `./qa/bin/functional encoding` - Run all encoding tests (spawns client and server pairs)
+- `./qa/bin/functional encoding --list` or `--short-list` - List available tests with unique letter identifiers
 - `./qa/bin/functional encoding <letter>` - Run specific test using letter from --list (e.g., `A`, `B`)
-- `./qa/bin/functional encoding --server <letter>` - Run only the server component for a specific test
-- `./qa/bin/functional encoding --client <letter>` - Run only the client component for a specific test
+- If one test fails, run it independently:
+  - `./qa/bin/functional encoding --server <letter>` - Run only the server component
+  - `./qa/bin/functional encoding --client <letter>` - Run only the client component
 - Each test spawns both an ExaBGP client and a dummy test server to verify expected client behavior
 - `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py` - Unit tests with coverage
 - `./qa/bin/parsing` - Configuration parsing tests
@@ -24,6 +25,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Uses `ruff` for linting and formatting (configured in pyproject.toml)
 - `ruff format` - Format code (single quotes, 120 char lines)
 
+## Testing Requirements
+
+**Before declaring code ready for merge:**
+- See `.claude/docs/CI_TESTING_GUIDE.md` for complete pre-merge checklist
+- All CI tests must pass:
+  - Linting (ruff format + ruff check)
+  - Unit tests (Python 3.8-3.12)
+  - Functional tests (parsing, encoding, decoding)
+  - Legacy tests (Python 3.6-3.7)
+- **File descriptor limit:** Check `ulimit -n` (must be ≥64000)
+  - If lower: `ulimit -n 64000` before running tests
+- **Encoding tests:** `./qa/bin/functional encoding` runs all tests in parallel (this is fine)
+  - Before running: `killall -9 python` to clear leftover test processes and avoid port conflicts
+  - Should complete in <20 seconds; if longer, remaining tests have failed
+  - Use `--list` or `--short-list` to see available tests
+  - If one test fails, run it independently with `--server <letter>` and `--client <letter>`
+- When tests fail, investigate and fix - don't just re-run
+
+**Quick test commands:**
+- Unit tests: `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py`
+- Encoding tests: `./qa/bin/functional encoding`
+- Linting: `ruff format && ruff check`
+
 ## Git Workflow
 
 **IMPORTANT: Commit but don't auto-push**
@@ -31,6 +55,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - DO NOT automatically push commits to remote
 - Allow the user to review, squash, or amend commits before pushing
 - Only push when explicitly requested by the user
+
+## Repository State Verification
+
+**CRITICAL: Always verify repository state before git operations**
+
+Before ANY git operations (commit, rebase, amend, reset, merge):
+1. **ALWAYS run `git status`** - Check for staged/unstaged changes
+2. **ALWAYS run `git log --oneline -5`** - Check recent commit history
+3. **ALWAYS verify user hasn't made manual changes** since last interaction
+4. **NEVER assume** the repository is in the state you last saw it
+5. **If unexpected changes detected:** STOP and ask user before proceeding
+
+This prevents overwriting user's manual work and ensures awareness of repository state.
 
 ## Architecture Overview
 
