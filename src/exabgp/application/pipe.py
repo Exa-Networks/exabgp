@@ -159,6 +159,25 @@ class Control:
         standard_in = sys.stdin.fileno()
         standard_out = sys.stdout.fileno()
 
+        # Enable ACK for this CLI control process to ensure command responses are always received
+        try:
+            os.write(standard_out, b'enable-ack\n')
+            # Read and discard the 'done' response to prevent it from interfering with user commands
+            # Wait up to 1 second for the response
+            poller = select.poll()
+            poller.register(standard_in, select.POLLIN)
+            if poller.poll(1000):
+                # Read until we get a newline (the 'done' response)
+                response = b''
+                while b'\n' not in response:
+                    chunk = os.read(standard_in, 1024)
+                    if not chunk:
+                        break
+                    response += chunk
+        except OSError:
+            # If we can't send the command or read the response, continue anyway
+            pass
+
         def monitor(function):
             def wrapper(*args):
                 r = function(*args)
