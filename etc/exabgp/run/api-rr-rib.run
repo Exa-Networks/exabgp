@@ -7,7 +7,7 @@ import select
 import json
 
 
-def wait_for_ack(expected_count=1, timeout=30):
+def wait_for_ack(expected_count=1, timeout=2):
     """
     Wait for ACK responses from ExaBGP.
 
@@ -20,7 +20,7 @@ def wait_for_ack(expected_count=1, timeout=30):
 
     Args:
         expected_count: Number of ACK messages expected (default: 1)
-        timeout: Total timeout in seconds (default: 30)
+        timeout: Total timeout in seconds (default: 2)
 
     Returns:
         True if all ACKs received successfully
