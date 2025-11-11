@@ -3,6 +3,63 @@
 import os
 import sys
 import time
+import select
+import json
+
+
+def wait_for_ack(expected_count=1, timeout=1):
+    """
+    Wait for ACK responses from ExaBGP.
+
+    Polls STDIN until all expected ACK messages are received.
+    ExaBGP may not respond immediately, so we loop with sleep.
+    Supports both text mode ("done"/"error") and JSON mode.
+
+    Args:
+        expected_count: Number of ACK messages expected (default: 1)
+        timeout: Total timeout in seconds (default: 1)
+
+    Returns:
+        True if all ACKs received successfully
+        False if any command failed or timeout occurred
+
+    Raises:
+        SystemExit: If ExaBGP sends shutdown message
+    """
+    received = 0
+    start_time = time.time()
+
+    while received < expected_count:
+        elapsed = time.time() - start_time
+        if elapsed >= timeout:
+            return False
+
+        ready, _, _ = select.select([sys.stdin], [], [], 0.1)
+
+        if ready:
+            line = sys.stdin.readline().strip()
+
+            # Handle text mode
+            if line == "done":
+                received += 1
+            elif line == "error":
+                return False
+            elif line == "shutdown":
+                raise SystemExit(0)
+            # Handle JSON mode
+            elif line.startswith('{'):
+                try:
+                    data = json.loads(line)
+                    if data.get("answer") == "done":
+                        received += 1
+                    elif data.get("answer") == "error":
+                        return False
+                except (json.JSONDecodeError, KeyError):
+                    pass
+        else:
+            time.sleep(0.1)
+
+    return True
 
 messages = [
     'neighbor 127.0.0.1 announce vpls endpoint 5 base 10702 offset 1 size 8 rd 192.168.201.1:123 next-hop 192.168.201.1 origin igp as-path [ 30740 30740 30740 30740 30740 30740 30740 ] local-preference 100 med 2000 community [ 54591:123] extended-community [ target:54591:6 l2info:19:0:1500:111] originator-id 192.168.22.1 cluster-list [ 3.3.3.3 192.168.201.1 ]',
@@ -17,6 +74,11 @@ while messages:
     sys.stdout.flush()
     time.sleep(0.2)
 
+if not wait_for_ack(expected_count=2):
+    # ACK not received, continuing anyway (ACKs may be disabled in config)
+    pass
+
+# Wait for shutdown signal
 try:
     now = time.time()
     while os.getppid() != 1 and time.time() < now + 5:
