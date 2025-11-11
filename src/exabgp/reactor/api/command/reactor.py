@@ -99,3 +99,26 @@ def crash(self, reactor, service, line, use_json):
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
+
+
+@Command.register('disable-ack', False)
+def disable_ack(self, reactor, service, line, use_json):
+    """Disable ACK responses for this connection (sends 'done' for this command, then disables)"""
+    reactor.processes.set_ack(service, False)
+    reactor.processes.answer_done(service, force=True)
+    return True
+
+
+@Command.register('enable-ack', False)
+def enable_ack(self, reactor, service, line, use_json):
+    """Re-enable ACK responses for this connection"""
+    reactor.processes.set_ack(service, True)
+    reactor.processes.answer_done(service)
+    return True
+
+
+@Command.register('silence-ack', False)
+def silence_ack(self, reactor, service, line, use_json):
+    """Disable ACK responses immediately (no 'done' sent for this command)"""
+    reactor.processes.set_ack(service, False)
+    return True

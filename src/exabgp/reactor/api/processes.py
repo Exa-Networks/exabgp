@@ -62,7 +62,7 @@ class Processes:
 
         self.respawn_number = 5 if getenv().api.respawn else 0
         self.terminate_on_error = getenv().api.terminate
-        self.ack = getenv().api.ack
+        self._default_ack = getenv().api.ack
 
     def number(self):
         return len(self._process)
@@ -72,6 +72,7 @@ class Processes:
         self._process = {}
         self._encoder = {}
         self._ackjson = {}
+        self._ack = {}
         self._broken = []
         self._respawning = {}
 
@@ -152,6 +153,8 @@ class Processes:
                 self._encoder[process] = Response.JSON(json_version) if use_json else Response.Text(text_version)
                 # XXX: add an option to ack in JSON (do not break backward compatibility)
                 self._ackjson[process] = False
+                # Initialize per-process ACK state (process config overrides global default)
+                self._ack[process] = configuration.get('ack', self._default_ack)
 
                 self._process[process] = subprocess.Popen(
                     run,
@@ -321,24 +324,35 @@ class Processes:
         return True
 
     def _answer(self, service, string, force=False):
-        if force or self.ack:
+        # Check per-process ACK state
+        process_ack = self._ack[service]
+        if force or process_ack:
             # NOTE: Do not convert to f-string! F-strings with backslash escapes in
             # expressions (like \n in .replace()) require Python 3.12+.
             # This project supports Python 3.8+, so we must use % formatting.
             log.debug(lambda: 'responding to {} : {}'.format(service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
-    def answer_done(self, service):
+    def answer_done(self, service, force=False):
         if self._ackjson[service]:
-            self._answer(service, Answer.json_done)
+            self._answer(service, Answer.json_done, force=force)
         else:
-            self._answer(service, Answer.text_done)
+            self._answer(service, Answer.text_done, force=force)
 
     def answer_error(self, service):
         if self._ackjson[service]:
             self._answer(service, Answer.json_error)
         else:
             self._answer(service, Answer.text_error)
+
+    def set_ack(self, service, enabled):
+        """Set ACK state for a specific service/process"""
+        self._ack[service] = enabled
+        log.debug(lambda: 'ACK {} for {}'.format('enabled' if enabled else 'disabled', service), 'process')
+
+    def get_ack(self, service):
+        """Get ACK state for a specific service/process"""
+        return self._ack[service]
 
     def _notify(self, neighbor, event):
         for process in neighbor.api[event]:
