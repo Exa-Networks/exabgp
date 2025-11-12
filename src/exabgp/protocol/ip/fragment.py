@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Dict
+
 from exabgp.protocol.resource import BitResource
 
 
@@ -27,15 +29,15 @@ from exabgp.protocol.resource import BitResource
 
 
 class Fragment(BitResource):
-    NAME = 'fragment'
+    NAME: ClassVar[str] = 'fragment'
 
-    DONT = 0x01
-    IS = 0x02
-    FIRST = 0x04
-    LAST = 0x08
+    DONT: ClassVar[int] = 0x01
+    IS: ClassVar[int] = 0x02
+    FIRST: ClassVar[int] = 0x04
+    LAST: ClassVar[int] = 0x08
     # reserved = 0xF0
 
-    codes = dict(
+    codes: ClassVar[Dict[str, int]] = dict(
         (k.lower().replace('_', '-'), v)
         for (k, v) in {
             'DONT-FRAGMENT': DONT,
@@ -45,4 +47,4 @@ class Fragment(BitResource):
         }.items()
     )
 
-    names = dict([(value, name) for (name, value) in codes.items()])
+    names: ClassVar[Dict[int, str]] = dict([(value, name) for (name, value) in codes.items()])
