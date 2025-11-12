@@ -8,8 +8,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import socket
+from typing import Dict, Optional, Set, Type, ClassVar, Iterator, Any
 
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, _AFI, _SAFI
 from exabgp.protocol.ip.netmask import NetMask
 
 # XXX: The IP,Range and CIDR class API are totally broken, fix it.
@@ -21,70 +22,74 @@ from exabgp.protocol.ip.netmask import NetMask
 
 
 class IPSelf:
-    SELF = True
+    SELF: ClassVar[bool] = True
+    afi: _AFI
 
-    def __init__(self, afi):
+    def __init__(self, afi: _AFI) -> None:
         self.afi = afi
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'self'
 
-    def top(self, negotiated, afi=AFI.undefined):
-        return negotiated.nexthopself(afi).top()
+    def top(self, negotiated: Any, afi: _AFI = AFI.undefined) -> str:
+        return negotiated.nexthopself(afi).top()  # type: ignore[no-any-return]
 
-    def ton(self, negotiated, afi=AFI.undefined):
-        return negotiated.nexthopself(afi).ton()
+    def ton(self, negotiated: Any, afi: _AFI = AFI.undefined) -> bytes:
+        return negotiated.nexthopself(afi).ton()  # type: ignore[no-any-return]
 
-    def pack(self, negotiated):
-        return negotiated.nexthopself(self.afi).ton()
+    def pack(self, negotiated: Any) -> bytes:
+        return negotiated.nexthopself(self.afi).ton()  # type: ignore[no-any-return]
 
-    def index(self):
+    def index(self) -> str:
         return 'self-' + AFI.names[self.afi]
 
 
 class IP:
-    SELF = False
+    SELF: ClassVar[bool] = False
 
-    afi = None  # here for the API, changed in init which does not change this
-    BITS = None
-    BYTES = None
+    afi: _AFI  # here for the API, changed in init (subclasses override as ClassVar)
+    # BITS and BYTES are defined as ClassVar in subclasses (IPv4/IPv6)
+    # Not annotated here to allow proper ClassVar override
 
-    _known = dict()
+    _known: ClassVar[Dict[_AFI, Type[IP]]] = dict()
 
-    _UNICAST = SAFI.unicast
-    _MULTICAST = SAFI.multicast
+    _UNICAST: ClassVar[_SAFI] = SAFI.unicast
+    _MULTICAST: ClassVar[_SAFI] = SAFI.multicast
 
-    _multicast_range = set(range(224, 240))  # 239
+    _multicast_range: ClassVar[Set[int]] = set(range(224, 240))  # 239
+
+    _string: str
+    _packed: bytes
 
     # deprecate the string API in favor of top()
 
-    def __init__(self):
+    def __init__(self) -> None:
         raise RuntimeError('You should use IP.create() to use IP')
 
-    def init(self, string, packed=None):
+    def init(self, string: str, packed: Optional[bytes] = None) -> IP:
         # XXX: the str should not be needed
         self._string = string
         self._packed = IP.pton(string) if packed is None else packed
         self.afi = IP.toafi(string)
         return self
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         for letter in self._string:
             yield letter
 
     @staticmethod
-    def pton(ip):
+    def pton(ip: str) -> bytes:
         return socket.inet_pton(IP.toaf(ip), ip)
 
     @staticmethod
-    def ntop(data):
+    def ntop(data: bytes) -> str:
         return socket.inet_ntop(socket.AF_INET if len(data) == IPv4.BYTES else socket.AF_INET6, data)
 
-    def top(self, negotiated=None, afi=AFI.undefined):
+    def top(self, negotiated: Optional[Any] = None, afi: _AFI = AFI.undefined) -> str:
         return self._string
 
     @staticmethod
-    def toaf(ip):
+    def toaf(ip: str) -> int:
         # the orders matters as ::FFFF:<ipv4> is an IPv6 address
         if ':' in ip:
             return socket.AF_INET6
@@ -93,7 +98,7 @@ class IP:
         raise ValueError(f'unrecognised ip address {ip}')
 
     @staticmethod
-    def toafi(ip):
+    def toafi(ip: str) -> _AFI:
         # the orders matters as ::FFFF:<ipv4> is an IPv6 address
         if ':' in ip:
             return AFI.ipv6
@@ -102,7 +107,7 @@ class IP:
         raise ValueError(f'unrecognised ip address {ip}')
 
     @staticmethod
-    def tosafi(ip):
+    def tosafi(ip: str) -> _SAFI:
         if ':' in ip:
             # XXX: FIXME: I assume that ::FFFF:<ip> must be treated unicast
             # if int(ip.split(':')[-1].split('.')[0]) in IP._multicast_range:
@@ -113,13 +118,13 @@ class IP:
             return SAFI.unicast
         raise ValueError(f'unrecognised ip address {ip}')
 
-    def ipv4(self):
+    def ipv4(self) -> bool:
         return len(self._packed) == IPv4.BYTES
 
-    def ipv6(self):
+    def ipv6(self) -> bool:
         return len(self._packed) != IPv4.BYTES
 
-    def address(self):
+    def address(self) -> int:
         value = 0
         for char in self._packed:
             value <<= 8
@@ -127,51 +132,52 @@ class IP:
         return value
 
     @staticmethod
-    def length(afi):
+    def length(afi: _AFI) -> int:
         return 4 if afi == AFI.ipv4 else 16
 
-    def index(self):
+    def index(self) -> bytes:
         return self._packed
 
-    def pack(self):
+    def pack(self) -> bytes:
         return self._packed
 
-    def ton(self, negotiated=None, afi=AFI.undefined):
+    def ton(self, negotiated: Optional[Any] = None, afi: _AFI = AFI.undefined) -> bytes:
         return self._packed
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self._string
 
-    def decode(self, encoding='utf-8', errors='strict'):
+    def decode(self, encoding: str = 'utf-8', errors: str = 'strict') -> str:
         assert encoding in ('utf-8', 'ascii')
         return self._string
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, IP):
             return False
         return self._packed == other._packed
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __lt__(self, other):
+    def __lt__(self, other: IP) -> bool:
         return self._packed < other._packed
 
-    def __le__(self, other):
+    def __le__(self, other: IP) -> bool:
         return self._packed <= other._packed
 
-    def __gt__(self, other):
+    def __gt__(self, other: IP) -> bool:
         return self._packed > other._packed
 
-    def __ge__(self, other):
+    def __ge__(self, other: IP) -> bool:
         return self._packed >= other._packed
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.__class__.__name__, self._packed))
 
     @classmethod
-    def klass(cls, ip):
+    def klass(cls, ip: str) -> Optional[Type[IP]]:
         # the orders matters as ::FFFF:<ipv4> is an IPv6 address
+        afi: Optional[_AFI]
         if ':' in ip:
             afi = IPv6.afi
         elif '.' in ip:
@@ -180,19 +186,20 @@ class IP:
             raise ValueError(f'can not decode this ip address : {ip}')
         if afi in cls._known:
             return cls._known[afi]
+        return None
 
     @classmethod
-    def create(cls, string, packed=None, klass=None):
+    def create(cls, string: str, packed: Optional[bytes] = None, klass: Optional[Type[IP]] = None) -> IP:
         if klass:
-            return klass(string, packed)
-        return cls.klass(string)(string, packed)
+            return klass(string, packed)  # type: ignore[call-arg]
+        return cls.klass(string)(string, packed)  # type: ignore[call-arg,misc]
 
     @classmethod
-    def register(cls):
+    def register(cls) -> None:
         cls._known[cls.afi] = cls
 
     @classmethod
-    def unpack(cls, data, klass=None):
+    def unpack(cls, data: bytes, klass: Optional[Type[IP]] = None) -> IP:
         return cls.create(IP.ntop(data), data, klass)
 
 
@@ -201,15 +208,17 @@ class IP:
 
 
 class IPRange(IP):
-    def __init__(self, ip, mask):
+    mask: NetMask
+
+    def __init__(self, ip: str, mask: int) -> None:
         IP.init(self, ip)
         self.mask = NetMask.create(mask, IP.toafi(ip))
 
     @classmethod
-    def create(klass, ip, mask):
+    def create(klass: Type[IPRange], ip: str, mask: int) -> IPRange:  # type: ignore[override]
         return klass(ip, mask)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if (self.ipv4() and self.mask == IPv4.HOST_MASK) or (self.ipv6() and self.mask == IPv6.HOST_MASK):
             return super(IPRange, self).__repr__()
         return f'{self.top()}/{int(self.mask)}'
@@ -220,33 +229,33 @@ class IPRange(IP):
 
 
 class _NoNextHop:
-    SELF = False
+    SELF: ClassVar[bool] = False
 
-    packed = ''
+    packed: ClassVar[str] = ''
 
-    afi = AFI.undefined
-    safi = SAFI.undefined
+    afi: ClassVar[_AFI] = AFI.undefined
+    safi: ClassVar[_SAFI] = SAFI.undefined
 
-    def pack(self, data, negotiated=None):
+    def pack(self, data: Any, negotiated: Optional[Any] = None) -> str:
         return ''
 
-    def index(self):
+    def index(self) -> str:
         return ''
 
-    def ton(self, negotiated=None, afi=AFI.undefined):
+    def ton(self, negotiated: Optional[Any] = None, afi: _AFI = AFI.undefined) -> str:
         return ''
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'no-nexthop'
 
-    def __deepcopy__(self, _):
+    def __deepcopy__(self, _: Any) -> _NoNextHop:
         return self
 
-    def __copy__(self, _):
+    def __copy__(self, _: Any) -> _NoNextHop:
         return self
 
 
-NoNextHop = _NoNextHop()
+NoNextHop: _NoNextHop = _NoNextHop()
 
 
 # ========================================================================= IPv4
@@ -254,46 +263,44 @@ NoNextHop = _NoNextHop()
 
 
 class IPv4(IP):
-    # lower case to match the class Address API
-    afi = AFI.ipv4
-    bits = 32
-    bytes = 4
+    # Override afi as ClassVar (base class has it as instance variable)
+    afi: ClassVar[_AFI] = AFI.ipv4  # type: ignore[misc]
 
     # IPv4-specific constants
-    BITS = 32  # IPv4 address bit length
-    BYTES = 4  # IPv4 address byte length
-    DOT_COUNT = 3  # Number of dots in IPv4 address format (e.g., 192.168.1.1)
-    HOST_MASK = 32  # IPv4 host prefix length (/32)
+    BITS: ClassVar[int] = 32  # IPv4 address bit length
+    BYTES: ClassVar[int] = 4  # IPv4 address byte length
+    DOT_COUNT: ClassVar[int] = 3  # Number of dots in IPv4 address format (e.g., 192.168.1.1)
+    HOST_MASK: ClassVar[int] = 32  # IPv4 host prefix length (/32)
 
-    def __init__(self, string, packed=None):
+    def __init__(self, string: str, packed: Optional[bytes] = None) -> None:
         self.init(string, packed if packed else IP.pton(string))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 4
 
-    def unicast(self):
+    def unicast(self) -> bool:
         return not self.multicast()
 
-    def multicast(self):
+    def multicast(self) -> bool:
         return self._packed[0] in set(range(224, 240))  # 239 is last
 
-    def ipv4(self):
+    def ipv4(self) -> bool:
         return True
 
-    def ipv6(self):
+    def ipv6(self) -> bool:
         return False
 
     @staticmethod
-    def pton(ip):
+    def pton(ip: str) -> bytes:
         return socket.inet_pton(socket.AF_INET, ip)
 
     @staticmethod
-    def ntop(data):
+    def ntop(data: bytes) -> str:
         return socket.inet_ntop(socket.AF_INET, data)
 
     # klass is a trick for subclasses of IP/IPv4 such as NextHop / OriginatorID
     @classmethod
-    def unpack(cls, data, klass=None):
+    def unpack(cls, data: bytes, klass: Optional[Type[IPv4]] = None) -> IPv4:  # type: ignore[override]
         ip = socket.inet_ntop(socket.AF_INET, data)
         if klass:
             return klass(ip, data)
@@ -308,45 +315,43 @@ IPv4.register()
 
 
 class IPv6(IP):
-    # lower case to match the class Address API
-    afi = AFI.ipv6
-    bits = 128
-    bytes = 16
+    # Override afi as ClassVar (base class has it as instance variable)
+    afi: ClassVar[_AFI] = AFI.ipv6  # type: ignore[misc]
 
     # IPv6-specific constants
-    BITS = 128  # IPv6 address bit length
-    BYTES = 16  # IPv6 address byte length
-    COLON_MIN = 2  # Minimum number of colons in IPv6 address format
-    HOST_MASK = 128  # IPv6 host prefix length (/128)
+    BITS: ClassVar[int] = 128  # IPv6 address bit length
+    BYTES: ClassVar[int] = 16  # IPv6 address byte length
+    COLON_MIN: ClassVar[int] = 2  # Minimum number of colons in IPv6 address format
+    HOST_MASK: ClassVar[int] = 128  # IPv6 host prefix length (/128)
 
-    def __init__(self, string, packed=None):
+    def __init__(self, string: str, packed: Optional[bytes] = None) -> None:
         self.init(string, packed if packed else socket.inet_pton(socket.AF_INET6, string))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 16
 
-    def ipv4(self):
+    def ipv4(self) -> bool:
         return False
 
-    def ipv6(self):
+    def ipv6(self) -> bool:
         return True
 
-    def unicast(self):
+    def unicast(self) -> bool:
         return True
 
-    def multicast(self):
+    def multicast(self) -> bool:
         return False
 
     @staticmethod
-    def pton(ip):
+    def pton(ip: str) -> bytes:
         return socket.inet_pton(socket.AF_INET6, ip)
 
     @staticmethod
-    def ntop(data):
+    def ntop(data: bytes) -> str:
         return socket.inet_ntop(socket.AF_INET6, data)
 
     @classmethod
-    def unpack(cls, data, klass=None):
+    def unpack(cls, data: bytes, klass: Optional[Type[IPv6]] = None) -> IPv6:  # type: ignore[override]
         ip6 = socket.inet_ntop(socket.AF_INET6, data)
         if klass:
             return klass(ip6)
