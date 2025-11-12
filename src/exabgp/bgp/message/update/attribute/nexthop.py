@@ -1,4 +1,3 @@
-
 """nexthop.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -7,6 +6,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from typing import Any, ClassVar, Optional
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
@@ -25,51 +26,51 @@ class NextHop(Attribute, IP):
     ID = Attribute.CODE.NEXT_HOP
     FLAG = Attribute.Flag.TRANSITIVE
     CACHING = True
-    SELF = False
+    SELF: ClassVar[bool] = False
 
     # XXX: This is a bad API, as it works on non-raw data
-    def __init__(self, string, packed=None):
+    def __init__(self, string: str, packed: Optional[bytes] = None) -> None:
         self.init(string, packed)
 
-    def __eq__(self, other):
-        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other.ton()
+    def __eq__(self, other: object) -> bool:
+        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other.ton()  # type: ignore[attr-defined]
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def ton(self, negotiated=None, afi=AFI.undefined):
+    def ton(self, negotiated: Any = None, afi: AFI = AFI.undefined) -> bytes:
         return self._packed
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         return self._attribute(self.ton())
 
     @classmethod
-    def unpack(cls, data, direction=None, negotiated=None):
+    def unpack(cls, data: bytes, direction: Optional[int] = None, negotiated: Any = None) -> IP:
         if not data:
-            return NoNextHop
-        return IP.unpack(data, NextHop)
+            return NoNextHop  # type: ignore[return-value]
+        return IP.unpack(data, NextHop)  # type: ignore[return-value]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return IP.__repr__(self)
 
 
 class NextHopSelf(NextHop):
-    SELF = True
+    SELF: ClassVar[bool] = True
 
-    def __init__(self, afi):
-        self.afi = afi
+    def __init__(self, afi: AFI) -> None:
+        self.afi: AFI = afi
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'self'
 
-    def ipv4(self):
+    def ipv4(self) -> bool:
         return self.afi == AFI.ipv4
 
-    def pack(self, negotiated):
+    def pack(self, negotiated: Any) -> bytes:
         return self._attribute(negotiated.nexthopself(self.afi).ton())
 
-    def ton(self, negotiated=None, afi=AFI.undefined):
+    def ton(self, negotiated: Any = None, afi: AFI = AFI.undefined) -> bytes:
         return negotiated.nexthopself(afi).ton()
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         raise RuntimeError('do not use __eq__ with NextHop')

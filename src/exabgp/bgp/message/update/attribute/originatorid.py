@@ -1,4 +1,3 @@
-
 """originatorid.py
 
 Created by Thomas Mangin on 2012-07-07.
@@ -7,6 +6,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from exabgp.protocol.ip import IPv4
 
@@ -22,15 +23,15 @@ class OriginatorID(Attribute, IPv4):
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
 
-    def __eq__(self, other):
-        return self.ID == other.ID and self.FLAG == other.FLAG
+    def __eq__(self, other: object) -> bool:
+        return self.ID == other.ID and self.FLAG == other.FLAG  # type: ignore[attr-defined]
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         return self._attribute(self.ton())
 
     @classmethod
-    def unpack(cls, data, direction, negotiated):
-        return IPv4.unpack(data, cls)
+    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> IPv4:
+        return IPv4.unpack(data, cls)  # type: ignore[return-value]
