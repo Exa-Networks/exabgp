@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import error, unpack
+from typing import Any, Generator, Optional
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
@@ -24,7 +25,7 @@ class Reserved(int):
     ROUTE_REFRESH_BEGIN = 1  # Beginning of Route Refresh (BoRR)
     ROUTE_REFRESH_END = 2  # End of Route Refresh (EoRR)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self == self.ROUTE_REFRESH_QUERY:
             return 'query'
         if self == self.ROUTE_REFRESH_BEGIN:
@@ -43,21 +44,21 @@ class RouteRefresh(Message):
     start = 1
     end = 2
 
-    def __init__(self, afi, safi, reserved=0):
+    def __init__(self, afi: int, safi: int, reserved: int = 0) -> None:
         self.afi = AFI.create(afi)
         self.safi = SAFI.create(safi)
         self.reserved = Reserved(reserved)
 
-    def message(self, negotiated=None):
+    def message(self, negotiated: Any = None) -> bytes:
         return self._message(self.afi.pack() + bytes([self.reserved]) + self.safi.pack())
 
-    def messages(self, negotiated, include_withdraw):
+    def messages(self, negotiated: Any, include_withdraw: bool) -> Generator[bytes, None, None]:
         yield self.message(negotiated)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'REFRESH'
 
-    def extensive(self):
+    def extensive(self) -> str:
         return 'route refresh %s/%d/%s' % (self.afi, self.reserved, self.safi)
 
     # XXX: Check how we get this data into the RR
@@ -65,7 +66,7 @@ class RouteRefresh(Message):
     # 	return self._families[:]
 
     @classmethod
-    def unpack_message(cls, data, direction=None, negotiated=None):
+    def unpack_message(cls, data: bytes, direction: Optional[int] = None, negotiated: Any = None) -> RouteRefresh:
         try:
             afi, reserved, safi = unpack('!HBB', data)
         except error:
@@ -74,7 +75,7 @@ class RouteRefresh(Message):
             raise Notify(7, 2, 'invalid route-refresh message subtype')
         return RouteRefresh(afi, safi, reserved)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, RouteRefresh):
             return False
         if self.afi != other.afi:
@@ -85,5 +86,5 @@ class RouteRefresh(Message):
             return False
         return True
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
