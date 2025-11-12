@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from struct import error, unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Type, Union
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

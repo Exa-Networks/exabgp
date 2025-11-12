@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import string
-from typing import Any, ClassVar, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import ClassVar, Dict, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
