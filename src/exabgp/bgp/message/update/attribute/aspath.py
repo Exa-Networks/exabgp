@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import json
 from struct import error, unpack
-from typing import Any, ClassVar, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, Type, Union
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
@@ -19,28 +22,28 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # only 2-4% of duplicated data therefore it is not worth to cache
 
 
-class SET(list[ASN]):
+class SET(List[ASN]):
     ID: ClassVar[int] = 0x01
     NAME: ClassVar[str] = 'as-set'
     HEAD: ClassVar[str] = '['
     TAIL: ClassVar[str] = ']'
 
 
-class SEQUENCE(list[ASN]):
+class SEQUENCE(List[ASN]):
     ID: ClassVar[int] = 0x02
     NAME: ClassVar[str] = 'as-sequence'
     HEAD: ClassVar[str] = '('
     TAIL: ClassVar[str] = ')'
 
 
-class CONFED_SEQUENCE(list[ASN]):
+class CONFED_SEQUENCE(List[ASN]):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'as-sequence'
     HEAD: ClassVar[str] = '{('
     TAIL: ClassVar[str] = ')}'
 
 
-class CONFED_SET(list[ASN]):
+class CONFED_SET(List[ASN]):
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'as-sequence'
     HEAD: ClassVar[str] = '{['
@@ -69,7 +72,7 @@ class ASPath(Attribute):
 
     Empty: ClassVar[Optional[ASPath]] = None
 
-    _DISPATCH: ClassVar[dict[int, Type[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET]]]] = {
+    _DISPATCH: ClassVar[Dict[int, Type[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET]]]] = {
         SET.ID: SET,
         SEQUENCE.ID: SEQUENCE,
         CONFED_SEQUENCE.ID: CONFED_SEQUENCE,
@@ -77,9 +80,9 @@ class ASPath(Attribute):
     }
 
     def __init__(
-        self, as_path: tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...] = (), data: Optional[bytes] = None
+        self, as_path: Tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...] = (), data: Optional[bytes] = None
     ) -> None:
-        self.aspath: tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...] = as_path
+        self.aspath: Tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...] = as_path
         self.segments: bytes = b''
         self.index: Optional[bytes] = data  # the original packed data, use for indexing
         self._str: str = ''
@@ -113,7 +116,7 @@ class ASPath(Attribute):
         return bytes([seg_type, length]) + b''.join(v.pack(asn4) for v in values)
 
     @classmethod
-    def pack_segments(cls, aspath: tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...], asn4: bool) -> bytes:
+    def pack_segments(cls, aspath: Tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...], asn4: bool) -> bytes:
         segments = b''
         for content in aspath:
             segments += cls._segment(content.ID, content, asn4)
@@ -123,7 +126,7 @@ class ASPath(Attribute):
     def _asn_pack(cls, aspath: Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], asn4: bool) -> bytes:  # type: ignore[misc]
         return cls._attribute(cls._segment(cls.ID, aspath, asn4))  # type: ignore[arg-type]
 
-    def pack(self, negotiated: Any) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         if negotiated.asn4:
             return self.pack_segments(self.aspath, negotiated.asn4)
 
@@ -191,7 +194,7 @@ class ASPath(Attribute):
         upr = unpacker[asn4]
         length = size[asn4]
 
-        aspath: list[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET]] = []
+        aspath: List[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET]] = []
 
         try:
             while data:
@@ -224,7 +227,7 @@ class ASPath(Attribute):
         return cls(tuple(aspath), backup)
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> Optional[ASPath]:
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> Optional[ASPath]:
         if not data:
             return None  # ASPath.Empty
         return cls._new_aspaths(data, negotiated.asn4, ASPath)  # type: ignore[return-value]
@@ -245,11 +248,11 @@ class AS4Path(ASPath):
 
     Empty: ClassVar[Optional[AS4Path]] = None
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return ASPath.pack(self, True)  # type: ignore[arg-type]
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> Optional[AS4Path]:
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> Optional[AS4Path]:
         if not data:
             return None  # AS4Path.Empty
         return cls._new_aspaths(data, True, AS4Path)  # type: ignore[return-value]

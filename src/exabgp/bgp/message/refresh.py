@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import error, unpack
-from typing import Any, Generator, Optional
+from typing import Any, Generator, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
@@ -49,10 +52,10 @@ class RouteRefresh(Message):
         self.safi = SAFI.create(safi)
         self.reserved = Reserved(reserved)
 
-    def message(self, negotiated: Any = None) -> bytes:
+    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._message(self.afi.pack() + bytes([self.reserved]) + self.safi.pack())
 
-    def messages(self, negotiated: Any, include_withdraw: bool) -> Generator[bytes, None, None]:
+    def messages(self, negotiated: Negotiated, include_withdraw: bool) -> Generator[bytes, None, None]:
         yield self.message(negotiated)
 
     def __str__(self) -> str:
@@ -66,7 +69,7 @@ class RouteRefresh(Message):
     # 	return self._families[:]
 
     @classmethod
-    def unpack_message(cls, data: bytes, direction: Optional[int] = None, negotiated: Any = None) -> RouteRefresh:
+    def unpack_message(cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None) -> RouteRefresh:
         try:
             afi, reserved, safi = unpack('!HBB', data)
         except error:

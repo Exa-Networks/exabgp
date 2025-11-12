@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, ClassVar, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, List, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -197,7 +200,7 @@ class LINK(BGPLS):
     def __hash__(self) -> int:
         return hash((self.CODE, self.domain, self.proto_id, tuple(self.topology_ids), self.route_d))
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         if self._packed:
             return self._packed
         raise RuntimeError('Not implemented')

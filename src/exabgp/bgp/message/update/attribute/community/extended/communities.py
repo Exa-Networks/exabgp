@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
@@ -30,7 +33,7 @@ class ExtendedCommunities(Communities):
     ID = Attribute.CODE.EXTENDED_COMMUNITY
 
     @staticmethod
-    def unpack(data: bytes, direction: Any, negotiated: Any) -> ExtendedCommunities:
+    def unpack(data: bytes, direction: Any, negotiated: Negotiated) -> ExtendedCommunities:
         communities = ExtendedCommunities()
         while data:
             if data and len(data) < EXTENDED_COMMUNITY_SIZE:
@@ -49,7 +52,7 @@ class ExtendedCommunitiesIPv6(Communities):
     ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
 
     @staticmethod
-    def unpack(data: bytes, direction: Any, negotiated: Any) -> ExtendedCommunitiesIPv6:
+    def unpack(data: bytes, direction: Any, negotiated: Negotiated) -> ExtendedCommunitiesIPv6:
         communities = ExtendedCommunitiesIPv6()
         while data:
             if data and len(data) < EXTENDED_COMMUNITY_IPV6_SIZE:

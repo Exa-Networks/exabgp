@@ -9,7 +9,10 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Generator, Optional
+from typing import TYPE_CHECKING, ClassVar, Generator, List, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -36,7 +39,7 @@ class TLV:
         self.value: bytes = value
 
 
-class TLVS(list[TLV]):
+class TLVS(List[TLV]):
     @staticmethod
     def unpack(data: bytes) -> TLVS:
         def loop(data: bytes) -> Generator[TLV, None, None]:
@@ -61,7 +64,7 @@ class AIGP(Attribute):
     ID = Attribute.CODE.AIGP
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
-    TYPES: ClassVar[list[int]] = [
+    TYPES: ClassVar[List[int]] = [
         1,
     ]
 
@@ -78,7 +81,7 @@ class AIGP(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Any) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         if negotiated.aigp:
             return self._packed
         if negotiated.local_as == negotiated.peer_as:
@@ -89,7 +92,7 @@ class AIGP(Attribute):
         return '0x' + ''.join('{:02x}'.format(_) for _ in self.aigp[-8:])
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> Optional[AIGP]:
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> Optional[AIGP]:
         if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
             return None

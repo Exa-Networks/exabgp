@@ -6,7 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Type
+from typing import List, Optional, Type
 
 from struct import pack
 from struct import unpack
@@ -16,18 +16,18 @@ from struct import unpack
 # RFC 3107
 
 
-def opt_raw_label(label: int | None, format: str = ' (%d)') -> str:
+def opt_raw_label(label: Optional[int], format: str = ' (%d)') -> str:
     return format % label if label else ''
 
 
 class Labels:
     MAX = pow(2, 20) - 1
 
-    NOLABEL: Labels | None = None
+    NOLABEL: Optional[Labels] = None
 
-    def __init__(self, labels: list[int], bos: bool = True, raw_labels: list[int] | None = None) -> None:
-        self.labels: list[int] = labels
-        self.raw_labels: list[int | None] = raw_labels if raw_labels else []
+    def __init__(self, labels: List[int], bos: bool = True, raw_labels: Optional[List[int]] = None) -> None:
+        self.labels: List[int] = labels
+        self.raw_labels: List[Optional[int]] = raw_labels if raw_labels else []
         packed = []
         if raw_labels:
             for label in raw_labels:

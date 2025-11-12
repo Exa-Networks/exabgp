@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, ClassVar, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, List, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -155,5 +158,5 @@ class PREFIXv4(BGPLS):
 
         return f'{{ {content} }}'
 
-    def pack(self, negotiated: Any = None) -> Optional[bytes]:
+    def pack(self, negotiated: Negotiated = None) -> Optional[bytes]:  # type: ignore[assignment]
         return self._pack

@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.message import Message
 
@@ -19,14 +22,14 @@ class NOP(Message):
     ID = Message.CODE.NOP
     TYPE = bytes([Message.CODE.NOP])
 
-    def message(self, negotiated: Any = None) -> bytes:
+    def message(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         raise RuntimeError('NOP messages can not be sent on the wire')
 
     def __str__(self) -> str:
         return 'NOP'
 
     @classmethod
-    def unpack_message(cls, data: bytes, direction: int, negotiated: Any) -> NOP:  # pylint: disable=W0613
+    def unpack_message(cls, data: bytes, direction: int, negotiated: Negotiated) -> NOP:  # pylint: disable=W0613
         return NOP()
 
 

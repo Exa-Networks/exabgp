@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.notification import Notify
@@ -27,7 +30,7 @@ class AtomicAggregate(Attribute):
     # def __eq__ (self, other):
     # def __ne__ (self, other):
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._attribute(b'')
 
     def __len__(self) -> int:
@@ -40,7 +43,7 @@ class AtomicAggregate(Attribute):
         return 0
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> AtomicAggregate:
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> AtomicAggregate:
         if data:
             raise Notify(3, 2, 'invalid ATOMIC_AGGREGATE %s' % [hex(_) for _ in data])
         return cls()

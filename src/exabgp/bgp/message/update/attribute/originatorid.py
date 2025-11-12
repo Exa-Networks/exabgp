@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.ip import IPv4
 
@@ -29,9 +32,9 @@ class OriginatorID(Attribute, IPv4):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self._attribute(self.ton())
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> IPv4:
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> IPv4:
         return IPv4.unpack(data, cls)  # type: ignore[return-value]

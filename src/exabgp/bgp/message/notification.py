@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import string
-from typing import Any, ClassVar, Dict, Optional, Tuple
+from typing import Any, ClassVar, Dict, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.util import hexbytes
 from exabgp.util import hexstring
@@ -157,7 +160,7 @@ class Notification(Message, Exception):
 
     @classmethod
     def unpack_message(
-        cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Any] = None
+        cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None
     ) -> Notification:
         return cls(data[0], data[1], data[2:])
 
@@ -174,5 +177,5 @@ class Notify(Notification):
             data = chr(len(data)) + data
         Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)
 
-    def message(self, negotiated: Optional[Any] = None) -> bytes:
+    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._message(bytes([self.code, self.subcode]) + self.data)

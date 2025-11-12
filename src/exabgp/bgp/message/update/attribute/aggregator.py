@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IPv4
@@ -40,7 +43,7 @@ class Aggregator(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Any) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         if negotiated.asn4:
             return self._attribute(self.asn.pack(True) + self.speaker.pack())
         if self.asn.asn4():
@@ -62,7 +65,7 @@ class Aggregator(Attribute):
         return '{ "asn" : %d, "speaker" : "%d" }' % (self.asn, self.speaker)
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> Aggregator:
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> Aggregator:
         if negotiated.asn4:
             return cls(ASN.unpack(data[:4]), IPv4.unpack(data[-4:]))
         return cls(ASN.unpack(data[:2]), IPv4.unpack(data[-4:]))
@@ -76,5 +79,5 @@ class Aggregator(Attribute):
 class Aggregator4(Aggregator):
     ID = Attribute.CODE.AS4_AGGREGATOR
 
-    def pack(self, negotiated: Any) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         return self._attribute(self.asn.pack(True) + self.speaker.pack())

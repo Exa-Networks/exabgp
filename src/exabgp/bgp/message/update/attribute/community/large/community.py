@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict
+from typing import TYPE_CHECKING, Any, ClassVar, Dict
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute import Attribute
 
@@ -45,7 +48,7 @@ class LargeCommunity(Attribute):
     def json(self) -> str:
         return '[ %d, %d , %d ]' % unpack('!LLL', self.large_community)
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self.large_community
 
     def __repr__(self) -> str:
@@ -55,7 +58,7 @@ class LargeCommunity(Attribute):
         return 12
 
     @classmethod
-    def unpack(cls, large_community: bytes, direction: Any, negotiated: Any) -> LargeCommunity:
+    def unpack(cls, large_community: bytes, direction: Any, negotiated: Negotiated) -> LargeCommunity:
         return cls(large_community)
 
     @classmethod

@@ -11,7 +11,7 @@ import os
 import uuid
 import copy
 import socket
-from typing import Any, ClassVar, Dict, Generator, Optional, Tuple
+from typing import Any, ClassVar, Dict, Generator, List, Optional, Tuple
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
@@ -180,7 +180,7 @@ class Listener:
         yield None
 
         reactor: Any = self._reactor
-        ranged_neighbor: list[Any] = []
+        ranged_neighbor: List[Any] = []
 
         for connection in self._connected():
             log.debug(lambda connection=connection: f'new connection received {connection.name()}', 'network')

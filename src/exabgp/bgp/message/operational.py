@@ -10,7 +10,13 @@ from __future__ import annotations
 import sys
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -99,7 +105,7 @@ class Operational(Message):
         return klass
 
     @classmethod
-    def unpack_message(cls, data: bytes, direction: Optional[int], negotiated: Any) -> Optional[Operational]:  # pylint: disable=W0613
+    def unpack_message(cls, data: bytes, direction: Optional[int], negotiated: Negotiated) -> Optional[Operational]:  # pylint: disable=W0613
         what = Type(unpack('!H', data[0:2])[0])
         length = unpack('!H', data[2:4])[0]
 
@@ -146,7 +152,7 @@ class OperationalFamily(Operational):
     def _message(self, data: bytes) -> bytes:
         return Operational._message(self, self.afi.pack() + self.safi.pack() + data)
 
-    def message(self, negotiated: Any) -> bytes:
+    def message(self, negotiated: Negotiated) -> bytes:
         return self._message(self.data)
 
 
@@ -173,7 +179,7 @@ class SequencedOperationalFamily(OperationalFamily):
         self._sequence: Optional[int] = self.sequence
         self._routerid: Optional[RouterID] = self.routerid
 
-    def message(self, negotiated: Any) -> bytes:
+    def message(self, negotiated: Negotiated) -> bytes:
         self.sent_routerid: RouterID = self.routerid if self.routerid else negotiated.sent_open.router_id
         if self.sequence is None:
             self.sent_sequence: int = (self.__sequence_number.setdefault(self.routerid, 0) + 1) % 0xFFFFFFFF

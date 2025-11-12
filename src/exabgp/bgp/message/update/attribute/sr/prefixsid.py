@@ -7,7 +7,10 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Optional, Type, TypeVar
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -50,7 +53,7 @@ class PrefixSid(Attribute):
         return register_srid
 
     @classmethod
-    def unpack(cls: Type[T], data: bytes, direction: Any, negotiated: Any) -> T:
+    def unpack(cls: Type[T], data: bytes, direction: Any, negotiated: Negotiated) -> T:
         sr_attrs: List[Any] = []
         while data:
             # Type = 1 octet
@@ -82,7 +85,7 @@ class PrefixSid(Attribute):
         # if not, we try to decode path attribute for SRv6
         return '[ ' + ', '.join([str(attr) for attr in self.sr_attrs]) + ' ]'
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self._packed
 
 

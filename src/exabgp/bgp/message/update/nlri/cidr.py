@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import math
+from typing import Optional
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
@@ -23,7 +24,7 @@ class CIDR:
 
     _mask_to_bytes = {}
 
-    NOCIDR: CIDR | None = None
+    NOCIDR: Optional[CIDR] = None
 
     def __init__(self, packed, mask):
         self._packed = packed

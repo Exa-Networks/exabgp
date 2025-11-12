@@ -9,7 +9,10 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Dict, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -91,7 +94,7 @@ class BGPLS(NLRI):
         NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
         self._packed: bytes = b''
 
-    def pack_nlri(self, negotiated: Any = None) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
 
     def __len__(self) -> int:

@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, List, Optional, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union
 
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -35,7 +35,7 @@ class Negotiated:
         self.nexthop: List[Tuple[_AFI, _SAFI]] = []
         self.asn4: bool = False
         self.addpath: RequirePath = RequirePath()
-        self.multisession: bool | Tuple[int, int, str] = False
+        self.multisession: Union[bool, Tuple[int, int, str]] = False
         self.msg_size: int = ExtendedMessage.INITIAL_SIZE
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101

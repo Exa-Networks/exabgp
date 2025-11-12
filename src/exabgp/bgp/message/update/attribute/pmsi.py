@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Dict, Optional, Type
+from typing import TYPE_CHECKING, ClassVar, Dict, Optional, Type
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -75,7 +78,7 @@ class PMSI(Attribute):
     def name(tunnel_type: int) -> str:
         return PMSI._name.get(tunnel_type, 'unknown')
 
-    def pack(self, negotiated: Any) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         if self.raw_label:
             packed_label = pack('!L', self.raw_label)[1:4]
         else:
@@ -115,7 +118,7 @@ class PMSI(Attribute):
         return pmsi
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> PMSI:
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> PMSI:
         flags, subtype = unpack('!BB', data[:2])
         raw_label = unpack('!L', b'\0' + data[2:5])[0]
         label = raw_label >> 4

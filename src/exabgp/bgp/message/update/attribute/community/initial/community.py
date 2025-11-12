@@ -9,7 +9,10 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Dict
+from typing import TYPE_CHECKING, Any, ClassVar, Dict
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 # ==================================================================== Community
@@ -65,7 +68,7 @@ class Community:
     def json(self) -> str:
         return '[ %d, %d ]' % unpack('!HH', self.community)
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self.community
 
     def __repr__(self) -> str:
@@ -75,7 +78,7 @@ class Community:
         return 4
 
     @classmethod
-    def unpack(cls, community: bytes, direction: Any, negotiated: Any) -> Community:
+    def unpack(cls, community: bytes, direction: Any, negotiated: Negotiated) -> Community:
         return cls(community)
 
     @classmethod

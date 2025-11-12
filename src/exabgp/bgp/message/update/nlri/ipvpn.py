@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -87,12 +90,12 @@ class IPVPN(Label):
     def has_rd(cls) -> bool:
         return True
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
         mask = bytes([len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask])
         return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 
-    def index(self, negotiated: Any = None) -> bytes:
+    def index(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
         mask = bytes([len(self.rd) * 8 + self.cidr.mask])
         return Family.index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()

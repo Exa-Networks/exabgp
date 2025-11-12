@@ -25,6 +25,7 @@ from exabgp.reactor.api.response import Response
 from exabgp.reactor.api.response.answer import Answer
 
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.logger import log
 
 from exabgp.version import json as json_version
@@ -400,7 +401,7 @@ class Processes:
             self.write(process, self._encoder[process].down(neighbor, reason), neighbor)
 
     @silenced
-    def negotiated(self, neighbor: Any, negotiated: Any) -> None:
+    def negotiated(self, neighbor: Any, negotiated: Negotiated) -> None:
         for process in self._notify(neighbor, 'negotiated'):
             self.write(process, self._encoder[process].negotiated(neighbor, negotiated), neighbor)
 
@@ -415,7 +416,7 @@ class Processes:
             self.write(process, self._encoder[process].signal(neighbor, signal), neighbor)
 
     @silenced
-    def packets(self, neighbor: Any, direction: str, category: int, negotiated: Any, header: str, body: str) -> None:
+    def packets(self, neighbor: Any, direction: str, category: int, negotiated: Negotiated, header: str, body: str) -> None:
         for process in self._notify(neighbor, '{}-packets'.format(direction)):
             self.write(
                 process,
@@ -436,7 +437,7 @@ class Processes:
 
     @silenced
     def message(
-        self, message_id: int, neighbor: Any, direction: str, message: Any, negotiated: Any, header: str, *body: str
+        self, message_id: int, neighbor: Any, direction: str, message: Any, negotiated: Negotiated, header: str, *body: str
     ) -> None:
         self._dispatch[message_id](self, neighbor, direction, message, negotiated, header, *body)
 
@@ -456,17 +457,17 @@ class Processes:
     # notifications are handled in the loop as they use different arguments
 
     @register_process(Message.CODE.OPEN)
-    def _open(self, peer: Any, direction: str, message: Any, negotiated: Any, header: str, body: str) -> None:
+    def _open(self, peer: Any, direction: str, message: Any, negotiated: Negotiated, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.OPEN.SHORT}'):
             self.write(process, self._encoder[process].open(peer, direction, message, negotiated, header, body), peer)
 
     @register_process(Message.CODE.UPDATE)
-    def _update(self, peer: Any, direction: str, update: Any, negotiated: Any, header: str, body: str) -> None:
+    def _update(self, peer: Any, direction: str, update: Any, negotiated: Negotiated, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
             self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)
 
     @register_process(Message.CODE.NOTIFICATION)
-    def _notification(self, peer: Any, direction: str, message: Any, negotiated: Any, header: str, body: str) -> None:
+    def _notification(self, peer: Any, direction: str, message: Any, negotiated: Negotiated, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
             self.write(
                 process,
@@ -476,12 +477,12 @@ class Processes:
 
     # unused-argument, must keep the API
     @register_process(Message.CODE.KEEPALIVE)
-    def _keepalive(self, peer: Any, direction: str, keepalive: Any, negotiated: Any, header: str, body: str) -> None:
+    def _keepalive(self, peer: Any, direction: str, keepalive: Any, negotiated: Negotiated, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.KEEPALIVE.SHORT}'):
             self.write(process, self._encoder[process].keepalive(peer, direction, negotiated, header, body), peer)
 
     @register_process(Message.CODE.ROUTE_REFRESH)
-    def _refresh(self, peer: Any, direction: str, refresh: Any, negotiated: Any, header: str, body: str) -> None:
+    def _refresh(self, peer: Any, direction: str, refresh: Any, negotiated: Negotiated, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.ROUTE_REFRESH.SHORT}'):
             self.write(
                 process,
@@ -491,7 +492,7 @@ class Processes:
 
     @register_process(Message.CODE.OPERATIONAL)
     def _operational(
-        self, peer: Any, direction: str, operational: Any, negotiated: Any, header: str, body: str
+        self, peer: Any, direction: str, operational: Any, negotiated: Negotiated, header: str, body: str
     ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.OPERATIONAL.SHORT}'):
             self.write(

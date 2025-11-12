@@ -6,7 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Type
+from typing import Optional, Type
 
 from struct import pack
 from struct import unpack
@@ -19,7 +19,7 @@ from exabgp.util import hexstring
 
 
 class RouteDistinguisher:
-    NORD: RouteDistinguisher | None = None
+    NORD: Optional[RouteDistinguisher] = None
 
     # RFC 4364 - Route Distinguisher Type Field
     TYPE_AS2_ADMIN = 0  # Type 0: 2-byte AS administrator + 4-byte assigned number

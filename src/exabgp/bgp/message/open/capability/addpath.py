@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar, Dict, Iterable, List, Tuple
+from typing import ClassVar, Dict, Iterable, List, Optional, Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -67,7 +67,7 @@ class AddPath(Capability, dict):  # type: ignore[type-arg]
         ]
 
     @staticmethod
-    def unpack_capability(instance: AddPath, data: bytes, capability: int | None = None) -> AddPath:  # pylint: disable=W0613
+    def unpack_capability(instance: AddPath, data: bytes, capability: Optional[int] = None) -> AddPath:  # pylint: disable=W0613
         # XXX: FIXME: should check that we have not yet seen the capability
         while data:
             afi = AFI.unpack(data[:2])

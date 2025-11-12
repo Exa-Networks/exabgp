@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Any, Type
+from typing import Any, Optional, Type
 
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
 # (since draft-ietf-l2vpn-evpn-05)
@@ -20,7 +20,7 @@ class ESI:
     DEFAULT = bytes([0x00] * LENGTH)  # All zeros
     MAX = bytes([0xFF] * LENGTH)  # All ones
 
-    def __init__(self, esi: bytes | None = None) -> None:
+    def __init__(self, esi: Optional[bytes] = None) -> None:
         self.esi: bytes = self.DEFAULT if esi is None else esi
         if len(self.esi) != self.LENGTH:
             raise Exception(f'incorrect ESI, len {len(esi)} instead of {self.LENGTH}')

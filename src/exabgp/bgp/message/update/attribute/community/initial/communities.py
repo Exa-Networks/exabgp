@@ -10,7 +10,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.initial.community import Community
@@ -26,10 +29,10 @@ class Communities(Attribute):
     ID = Attribute.CODE.COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    def __init__(self, communities: Optional[list[Community]] = None) -> None:
+    def __init__(self, communities: Optional[List[Community]] = None) -> None:
         # Must be None as = param is only evaluated once
         if communities:
-            self.communities: list[Community] = communities
+            self.communities: List[Community] = communities
         else:
             self.communities = []
 
@@ -38,7 +41,7 @@ class Communities(Attribute):
         self.communities.sort()
         return self
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         if len(self.communities):
             return self._attribute(b''.join(c.pack() for c in self.communities))
         return b''
@@ -58,7 +61,7 @@ class Communities(Attribute):
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @staticmethod
-    def unpack(data: bytes, direction: Any, negotiated: Any) -> Communities:
+    def unpack(data: bytes, direction: Any, negotiated: Negotiated) -> Communities:
         communities = Communities()
         while data:
             if data and len(data) < COMMUNITY_SIZE:

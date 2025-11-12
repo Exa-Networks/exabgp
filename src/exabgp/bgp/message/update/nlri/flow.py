@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Optional, Tuple, Type, Union
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.ip.port import Port
@@ -593,7 +596,7 @@ class Flow(NLRI):
         return True
 
     # The API requires addpath, but it is irrelevant here.
-    def pack_nlri(self, negotiated: Any = None) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         ordered_rules: List[bytes] = []
         # the order is a RFC requirement
         for ID in sorted(self.rules.keys()):

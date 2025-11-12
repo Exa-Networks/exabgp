@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Type
+from typing import Any, Callable, ClassVar, Dict, List, Optional, Type, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 class _MessageCode(int):
@@ -165,7 +168,7 @@ class Message:
         message_len: bytes = pack('!H', 19 + len(message))
         return self.MARKER + message_len + self.TYPE + message
 
-    def message(self, negotiated: Any = None) -> bytes:
+    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
         raise NotImplementedError('message not implemented in subclasses')
 
     @classmethod
@@ -184,7 +187,7 @@ class Message:
         raise Notify(2, 4, f'can not handle message {what}')
 
     @classmethod
-    def unpack(cls, message: int, data: bytes, direction: int, negotiated: Any) -> Message:
+    def unpack(cls, message: int, data: bytes, direction: int, negotiated: Negotiated) -> Message:
         if message in cls.registered_message:
             return cls.klass(message).unpack_message(data, direction, negotiated)  # type: ignore[attr-defined,no-any-return]
         return cls.klass_unknown(message, data, direction, negotiated)  # type: ignore[return-value]
