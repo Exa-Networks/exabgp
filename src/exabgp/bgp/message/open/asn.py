@@ -6,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+from typing import Any, Type
 
 from struct import pack, unpack
 
@@ -21,38 +22,38 @@ class ASN(Resource):
     SIZE_4BYTE = 4  # 4-byte ASN encoding size
     SIZE_2BYTE = 2  # 2-byte ASN encoding size
 
-    def asn4(self):
+    def asn4(self) -> bool:
         return self > self.MAX
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         asn4 = negotiated if negotiated is not None else self.asn4()
         return pack('!L' if asn4 else '!H', self)
 
     @classmethod
-    def unpack(cls, data, klass=None):
+    def unpack(cls: Type[ASN], data: bytes, klass: Type[ASN] | None = None) -> ASN:
         kls = cls if klass is None else klass
         value = unpack('!L' if len(data) == cls.SIZE_4BYTE else '!H', data)[0]
         return kls(value)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.SIZE_4BYTE if self.asn4() else self.SIZE_2BYTE
 
-    def extract(self):
+    def extract(self) -> list[bytes]:
         return [pack('!L', self)]
 
-    def trans(self):
+    def trans(self) -> ASN:
         if self.asn4():
             return AS_TRANS
         return self
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%ld' % int(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '%ld' % int(self)
 
     @classmethod
-    def from_string(cls, value):
+    def from_string(cls: Type[ASN], value: str) -> ASN:
         return cls(int(value))
 
 
