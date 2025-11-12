@@ -6,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+from typing import Any
 
 from exabgp.bgp.message.open.capability.capability import Capability
 
@@ -19,7 +20,7 @@ class REFRESH:
     ENHANCED = 0x04
 
     @staticmethod
-    def json(refresh):
+    def json(refresh: int) -> str:
         if refresh == REFRESH.ABSENT:
             return 'absent'
         if refresh == REFRESH.NORMAL:
@@ -28,7 +29,7 @@ class REFRESH:
             return 'enhanced'
         return 'unknown'
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self == REFRESH.ABSENT:
             return 'absent'
         if self == REFRESH.NORMAL:
@@ -43,42 +44,42 @@ class REFRESH:
 class RouteRefresh(Capability):
     ID = Capability.CODE.ROUTE_REFRESH
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.ID == Capability.CODE.ROUTE_REFRESH:
             return 'Route Refresh'
         return 'Cisco Route Refresh'
 
-    def json(self):
+    def json(self) -> str:
         return '{ "name": "route-refresh", "variant": "%s" }' % (
             'RFC' if self.ID == Capability.CODE.ROUTE_REFRESH else 'Cisco'
         )
 
-    def extract(self):
+    def extract(self) -> list[bytes]:
         return [b'']
 
     @staticmethod
-    def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+    def unpack_capability(instance: RouteRefresh, data: bytes, capability: Any = None) -> RouteRefresh:  # pylint: disable=W0613
         # XXX: FIXME: we should set that that instance was seen and raise if seen twice
         return instance
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, RouteRefresh):
             return False
         return self.ID == other.ID
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
 
 
@@ -90,16 +91,16 @@ class RouteRefresh(Capability):
 class EnhancedRouteRefresh(Capability):
     ID = Capability.CODE.ENHANCED_ROUTE_REFRESH
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Enhanced Route Refresh'
 
-    def json(self):
+    def json(self) -> str:
         return '{ "name": "enhanced-route-refresh" }'
 
-    def extract(self):
+    def extract(self) -> list[bytes]:
         return [b'']
 
     @staticmethod
-    def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+    def unpack_capability(instance: EnhancedRouteRefresh, data: bytes, capability: Any = None) -> EnhancedRouteRefresh:  # pylint: disable=W0613
         # XXX: FIXME: we should set that that instance was seen and raise if seen twice
         return instance
