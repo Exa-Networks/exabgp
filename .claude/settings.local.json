@@ -9,7 +9,10 @@
       "Bash(python3:*)",
       "Bash(ulimit:*)",
       "Bash(./qa/bin/functional:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(for dir in /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/*/)",
+      "Bash(done)",
+      "Bash(sed:*)"
     ],
     "deny": []
   },
