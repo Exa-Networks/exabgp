@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # (since draft-ietf-l2vpn-evpn-05)
 
 from __future__ import annotations
+from typing import Any, Type
 
 from struct import pack
 from struct import unpack
@@ -18,45 +19,45 @@ from struct import unpack
 class EthernetTag:
     MAX = pow(2, 32) - 1
 
-    def __init__(self, tag=0):
-        self.tag = tag
+    def __init__(self, tag: int = 0) -> None:
+        self.tag: int = tag
 
-    def __eq__(self, other):
-        return self.tag == other.tag
+    def __eq__(self, other: object) -> bool:
+        return self.tag == other.tag  # type: ignore[attr-defined]
 
-    def __neq__(self, other):
-        return self.tag != other.tag
+    def __neq__(self, other: object) -> bool:
+        return self.tag != other.tag  # type: ignore[attr-defined]
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self.tag)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self.tag)
 
-    def pack(self):
+    def pack(self) -> bytes:
         return pack('!L', self.tag)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 4
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.tag)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls: Type[EthernetTag], data: bytes) -> EthernetTag:
         return cls(unpack('!L', data[:4])[0])
 
-    def json(self, compact=None):
+    def json(self, compact: Any = None) -> str:
         return '"ethernet-tag": {}'.format(self.tag)
