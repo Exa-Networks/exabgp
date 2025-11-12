@@ -33,7 +33,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - Linting (ruff format + ruff check)
   - Unit tests (Python 3.8-3.12)
   - Functional tests (parsing, encoding, decoding)
-  - Legacy tests (Python 3.6-3.7)
+  - Legacy tests (Python 3.6)
 - **File descriptor limit:** Check `ulimit -n` (must be ≥64000)
   - If lower: `ulimit -n 64000` before running tests
 - **Encoding tests:** `./qa/bin/functional encoding` runs all tests in parallel (this is fine)

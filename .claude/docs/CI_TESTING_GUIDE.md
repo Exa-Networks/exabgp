@@ -96,28 +96,6 @@ export EXABGP_DAEMON_USER=$(whoami)
 ./qa/bin/functional-3.6 all
 ```
 
-#### Python 3.7 (ubuntu-22.04)
-**Workflow:** `.github/workflows/functional-3.7.yml`
-
-```bash
-# Install dependencies
-python -m pip install --no-cache-dir --upgrade pip
-pip install --no-cache-dir -r requirements.txt
-pip install psutil
-
-# Configuration/Parsing tests
-./qa/bin/functional parsing
-
-# Encoding tests (sequential)
-for test in $(./qa/bin/functional encoding --short-list); do
-  echo "Running test: $test"
-  ./qa/bin/functional encoding "$test"
-done
-
-# Decoding tests
-./qa/bin/functional decoding
-```
-
 ---
 
 ## Test Infrastructure Details
@@ -194,7 +172,6 @@ Before declaring code ready for merging, verify:
 
 - [ ] **Legacy tests pass**
   - [ ] Python 3.6 functional tests pass
-  - [ ] Python 3.7 functional tests pass
 
 ---
 
@@ -238,7 +215,7 @@ If parsing tests fail:
 
 ### Runtime Requirements:
 - Python 3.8+ (main support)
-- Python 3.6-3.7 (legacy support)
+- Python 3.6 (legacy support)
 - psutil (for functional tests)
 
 ---
@@ -288,7 +265,7 @@ done
 
 1. **Encoding tests must run sequentially** - They use network ports and can conflict if run in parallel
 2. **Functional tests are comprehensive** - They test actual BGP protocol behavior, not just unit functionality
-3. **Legacy support is important** - Python 3.6 and 3.7 tests ensure backward compatibility
+3. **Legacy support is important** - Python 3.6 tests ensure backward compatibility
 4. **Test timeout is 60 seconds by default** - Configurable with `--timeout` flag
 
 ---
