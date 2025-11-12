@@ -48,6 +48,7 @@ exabgp-healthcheck = 'exabgp.application.healthcheck:main'
 environments = ["sys_platform == 'darwin'", "sys_platform == 'linux'"]
 dev-dependencies = [
 	"ruff",
+	"mypy",
 	"pytest",
 	"pytest-asyncio",
 	"pytest-cov",
@@ -109,3 +110,38 @@ docstring-code-format = true
 # F401 imported but unused
 # F403
 # the last , is required otherwise the last error ignore is not applied
+
+
+[tool.mypy]
+# Type annotation project started: 2025-11-12
+# Target: Full codebase type coverage over 14 weeks (6 sprints)
+# Note: Using 3.9 for mypy (requires 3.9+), but code remains 3.8+ compatible
+python_version = "3.9"
+warn_unused_configs = true
+warn_return_any = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Start permissive, tighten gradually as sprints complete
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+
+# Incremental checking - only check annotated modules
+follow_imports = "normal"
+ignore_missing_imports = true
+
+# Exclude vendored code
+exclude = [
+    "src/exabgp/vendoring/",
+]
+
+# Per-module strictness (enabled as sprints complete)
+# Sprint 1: Foundation (40 files)
+# [[tool.mypy.overrides]]
+# module = "exabgp.util.*"
+# disallow_untyped_defs = true
+
+# [[tool.mypy.overrides]]
+# module = "exabgp.protocol.*"
+# disallow_untyped_defs = true
