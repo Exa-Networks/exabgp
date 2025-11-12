@@ -12,18 +12,18 @@ import time
 import socket
 
 
-__warned = False
-__host_name = ''
-__domain_name = ''
+__warned: bool = False
+__host_name: str = ''
+__domain_name: str = ''
 
-__warning = """
+__warning: str = """
 Your OS is very slow when returning the host FQDN
 Most likely you do not have valid forward/reverse DNS setup
 Adding your hostname to the /etc/hosts file should fix the issue
 """
 
 
-def host():
+def host() -> str:
     global __host_name
     if not __host_name:
         value = socket.gethostname()
@@ -31,7 +31,7 @@ def host():
     return __host_name
 
 
-def domain():
+def domain() -> str:
     global __domain_name
     if not __domain_name:
         value = socket.getfqdn()
@@ -39,7 +39,7 @@ def domain():
     return __domain_name
 
 
-def warn():
+def warn() -> str:
     if __warned:
         return ''
 
@@ -47,3 +47,4 @@ def warn():
     _ = host(), domain()
     if time.time() - now > 1.0:
         return __warning
+    return ''
