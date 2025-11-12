@@ -1,4 +1,3 @@
-
 """ospfaddr.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -30,7 +29,7 @@ class OspfForwardingAddress(BaseLS):
     JSON = 'ospf-forwarding-address'
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> OspfForwardingAddress:
         length = len(data)
         if length not in (4, 16):
             raise Notify(3, 5, 'Error parsing OSPF Forwarding Address. Wrong size')

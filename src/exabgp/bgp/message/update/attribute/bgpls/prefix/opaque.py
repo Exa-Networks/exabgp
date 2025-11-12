@@ -1,4 +1,3 @@
-
 """nodename.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -30,5 +29,5 @@ class PrefixOpaque(BaseLS):
     JSON = 'opaque-prefix'
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> PrefixOpaque:
         return cls(unpack('!%ds' % len(data), data)[0])

@@ -1,4 +1,3 @@
-
 """igpextags.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -32,6 +31,6 @@ class IgpExTags(BaseLS):
     # XXX: can we find a LEN to check?
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> IgpExTags:
         cls.check(data)
         return cls([unpack('!Q', _)[0] for _ in split(data, 8)])
