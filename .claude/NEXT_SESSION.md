@@ -1,8 +1,8 @@
 # Next Session Quick Start
 
-**Date**: 2025-11-12 20:55 UTC
+**Date**: 2025-11-12 21:15 UTC
 **Sprint**: Sprint 2 - Simple Implementations
-**Phase**: Phase 2C - Simple Capabilities
+**Phase**: Phase 2D - NLRI Qualifiers
 
 ---
 
@@ -11,29 +11,29 @@
 **Current Status**:
 - ✅ Phase 2A Complete (5 files - Simple Messages)
 - ✅ Phase 2B Complete (43 files - Simple Attributes + BGP-LS)
-- 🟡 Phase 2C Next (10 files - Simple Capabilities)
-- ⏸️ Phase 2D Pending (10 files - NLRI Qualifiers)
+- ✅ Phase 2C Complete (9 files - Simple Capabilities)
+- 🟡 Phase 2D Next (~10 files - NLRI Qualifiers)
 
-**Progress**: 48 / 341 files (14%) | Sprint 2: 80% complete
+**Progress**: 57 / 341 files (17%) | Sprint 2: 95% complete
 
 ---
 
-## 🚀 Next Tasks: Phase 2C - Simple Capabilities
+## 🚀 Next Tasks: Phase 2D - NLRI Qualifiers
 
-Start with these ~10 files in `src/exabgp/bgp/message/open/`:
+Start with these ~10 files in `src/exabgp/bgp/message/update/nlri/qualifier/`:
 
-### Capability Files
-1. **`capability/asn4.py`** - 4-byte ASN capability
-2. **`capability/refresh.py`** - Route refresh capability
-3. **`capability/extended.py`** - Extended message capability
-4. **`capability/hostname.py`** - Hostname capability
-5. **`capability/software.py`** - Software version capability
+### Qualifier Files
+1. **`esi.py`** - Ethernet Segment Identifier
+2. **`etag.py`** - Ethernet Tag
+3. **`labels.py`** - MPLS labels
+4. **`mac.py`** - MAC address
+5. **`path.py`** - Path identifier (AddPath)
+6. **`rd.py`** - Route Distinguisher
+7. **`__init__.py`** - Module initialization
+8. Additional qualifier classes as needed
 
-### Supporting Classes
-6. **`asn.py`** - ASN handling
-7. **`holdtime.py`** - Hold time
-8. **`routerid.py`** - Router ID
-9. **`version.py`** - BGP version
+### Pattern
+Simple data structure classes with pack/unpack methods
 
 ---
 
@@ -108,6 +108,10 @@ class ParameterName:
 - 7 simple attributes (origin, med, localpref, nexthop, atomicaggregate, originatorid, clusterlist)
 - 36 BGP-LS attributes (link: 20, node: 7, prefix: 9)
 
+**Phase 2C - Simple Capabilities (9 files)**:
+- 5 capability files (asn4, refresh, extended, hostname, software)
+- 4 supporting classes (asn, holdtime, routerid, version)
+
 **Additional Work**:
 - ✅ Fixed flaky integration test (race condition in connection establishment)
 - ✅ Fixed pytest warnings (registered timeout marker)
@@ -158,17 +162,16 @@ git log --oneline -10
 ## 📈 Sprint 2 Goal
 
 **Target**: 60 files total
-**Completed**: 48 files (80%)
-**Remaining**: 12 files
-  - Phase 2C: ~10 files
-  - Phase 2D: ~10 files (will exceed target by ~8 files)
+**Completed**: 57 files (95%)
+**Remaining**: ~3 files
+  - Phase 2D: ~10 files (will exceed target by ~7 files, completing Sprint 2)
 
-**Estimated Time**: 1-2 hours for Phase 2C
+**Estimated Time**: 1 hour for Phase 2D (will complete Sprint 2!)
 
 ---
 
-**Ready to start Phase 2C!** 🚀
+**Ready to start Phase 2D!** 🚀
 
-Read the capability files, add type annotations, test, commit, and move to Phase 2D.
+Read the qualifier files, add type annotations, test, commit, and complete Sprint 2!
 
 Good luck!
