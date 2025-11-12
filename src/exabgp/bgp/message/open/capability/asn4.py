@@ -6,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+from typing import Any
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -22,14 +23,14 @@ class ASN4(Capability, ASN):
     # def __init__ (self, value=0):
     # 	ASN.__init__(self,value)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'ASN4(%d)' % int(self)
 
     @staticmethod
-    def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+    def unpack_capability(instance: ASN, data: bytes, capability: Any = None) -> ASN:  # pylint: disable=W0613
         # XXX: FIXME: if instance is not ASN(0) we have two ASN - raise
         instance = ASN.unpack(data, ASN4)
         return instance
 
-    def json(self):
+    def json(self) -> str:
         return '{ "name": "asn4", "asn4": %d }' % int(self)
