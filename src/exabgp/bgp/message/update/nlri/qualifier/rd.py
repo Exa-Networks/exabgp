@@ -6,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+from typing import Type
 
 from struct import pack
 from struct import unpack
@@ -26,35 +27,35 @@ class RouteDistinguisher:
     TYPE_AS4_ADMIN = 2  # Type 2: 4-byte AS administrator + 2-byte assigned number
     LENGTH = 8  # Route Distinguisher is always 8 bytes
 
-    def __init__(self, rd):
-        self.rd = rd
-        self._len = len(self.rd)
+    def __init__(self, rd: bytes) -> None:
+        self.rd: bytes = rd
+        self._len: int = len(self.rd)
 
-    def __eq__(self, other):
-        return self.rd == other.rd
+    def __eq__(self, other: object) -> bool:
+        return self.rd == other.rd  # type: ignore[attr-defined]
 
-    def __neq__(self, other):
-        return self.rd != other.rd
+    def __neq__(self, other: object) -> bool:
+        return self.rd != other.rd  # type: ignore[attr-defined]
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
 
-    def pack(self):
+    def pack(self) -> bytes:
         return self.rd
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._len
 
-    def _str(self):
+    def _str(self) -> str:
         t, c1, c2, c3 = unpack('!HHHH', self.rd)
         if t == self.TYPE_AS2_ADMIN:
             rd = '%d:%d' % (c1, (c2 << 16) + c3)
@@ -66,26 +67,26 @@ class RouteDistinguisher:
             rd = hexstring(self.rd)
         return rd
 
-    def json(self):
+    def json(self) -> str:
         if not self.rd:
             return ''
         return '"rd": "{}"'.format(self._str())
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.rd)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if not self.rd:
             return ''
         return ' rd {}'.format(self._str())
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls: Type[RouteDistinguisher], data: bytes) -> RouteDistinguisher:
         return cls(data[:8])
 
     # DO NOT USE, the right function is route_distinguisher() in exabgp.configuation.static.mpls
     @classmethod
-    def fromElements(cls, prefix, suffix):
+    def fromElements(cls: Type[RouteDistinguisher], prefix: str, suffix: int) -> RouteDistinguisher:
         try:
             if '.' in prefix:
                 data = [bytes([0, 1])]
