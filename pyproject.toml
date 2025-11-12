@@ -70,6 +70,7 @@ requires = ["setuptools", "wheel"]
 markers = [
 	"fuzz: Fuzzing tests using Hypothesis (deselect with '-m \"not fuzz\"')",
 	"asyncio: Async tests using pytest-asyncio",
+	"timeout: Test timeout in seconds (requires pytest-timeout plugin)",
 ]
 
 [tool.ruff]
