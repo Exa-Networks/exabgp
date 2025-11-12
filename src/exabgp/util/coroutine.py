@@ -9,20 +9,23 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from functools import wraps
+from typing import Callable, Any, TypeVar, Iterator
+
+T = TypeVar('T')
 
 
-def each(function):
+def each(function: Callable[..., Iterator[T]]) -> Callable[..., Callable[[], T]]:
     @wraps(function)
-    def start(*args, **kwargs):
+    def start(*args: Any, **kwargs: Any) -> Callable[[], T]:
         generator = function(*args, **kwargs)
         return lambda: next(generator)  # noqa
 
     return start
 
 
-def join(function):
+def join(function: Callable[..., Iterator[str]]) -> Callable[..., str]:
     @wraps(function)
-    def start(*args, **kwargs):
+    def start(*args: Any, **kwargs: Any) -> str:
         return ''.join(function(*args, **kwargs))
 
     return start
