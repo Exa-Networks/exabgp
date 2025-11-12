@@ -9,39 +9,44 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
+from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple, Type
 
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
 
 # Attribute length encoding constants
-ATTR_LENGTH_EXTENDED_MAX = 0xFF  # Maximum length for non-extended encoding (255)
+ATTR_LENGTH_EXTENDED_MAX: int = 0xFF  # Maximum length for non-extended encoding (255)
 
 # ============================================================== TreatAsWithdraw
 #
 
 
 class TreatAsWithdraw:
-    ID = 0xFFFF
-    GENERIC = False
+    ID: ClassVar[int] = 0xFFFF
+    GENERIC: ClassVar[bool] = False
 
-    def __init__(self, aid=None):
+    aid: Optional[int]
+
+    def __init__(self, aid: Optional[int] = None) -> None:
         self.aid = aid
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.aid is None:
             return 'treat-as-withdraw'
         return 'treat-as-withdraw due to {}'.format(Attribute.CODE(self.aid))
 
 
 class Discard:
-    ID = 0xFFFE
-    GENERIC = False
+    ID: ClassVar[int] = 0xFFFE
+    GENERIC: ClassVar[bool] = False
 
-    def __init__(self, aid=None):
+    aid: Optional[int]
+
+    def __init__(self, aid: Optional[int] = None) -> None:
         self.aid = aid
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.aid is None:
             return 'discard'
         return 'discard due to {}'.format(Attribute.CODE(self.aid))
@@ -53,27 +58,27 @@ class Discard:
 
 class Attribute:
     # we need to define ID and FLAG inside of the subclasses
-    ID = 0x00
-    FLAG = 0x00
+    ID: ClassVar[int] = 0x00
+    FLAG: ClassVar[int] = 0x00
 
     # Should this Attribute be cached
-    CACHING = False
+    CACHING: ClassVar[bool] = False
     # Generic Class or implementation
-    GENERIC = False
+    GENERIC: ClassVar[bool] = False
 
     # Registered subclasses we know how to decode
-    registered_attributes = dict()
+    registered_attributes: ClassVar[Dict[Tuple[int, int], Type[Attribute]]] = dict()
 
     # what this implementation knows as attributes
-    attributes_known = []
-    attributes_well_know = []
-    attributes_optional = []
+    attributes_known: ClassVar[List[int]] = []
+    attributes_well_know: ClassVar[List[int]] = []
+    attributes_optional: ClassVar[List[int]] = []
 
     # Are we caching Attributes (configuration)
-    caching = False
+    caching: ClassVar[bool] = False
 
     # The attribute cache per attribute ID
-    cache = {}
+    cache: ClassVar[Dict[int, Cache]] = {}
 
     # ---------------------------------------------------------------------------
 
@@ -82,49 +87,49 @@ class Attribute:
     class CODE(int):
         # This should move within the classes and not be here
         # RFC 4271
-        ORIGIN = 0x01
-        AS_PATH = 0x02
-        NEXT_HOP = 0x03
-        MED = 0x04
-        LOCAL_PREF = 0x05
-        ATOMIC_AGGREGATE = 0x06
-        AGGREGATOR = 0x07
+        ORIGIN: ClassVar[int] = 0x01
+        AS_PATH: ClassVar[int] = 0x02
+        NEXT_HOP: ClassVar[int] = 0x03
+        MED: ClassVar[int] = 0x04
+        LOCAL_PREF: ClassVar[int] = 0x05
+        ATOMIC_AGGREGATE: ClassVar[int] = 0x06
+        AGGREGATOR: ClassVar[int] = 0x07
         # RFC 1997
-        COMMUNITY = 0x08
+        COMMUNITY: ClassVar[int] = 0x08
         # RFC 4456
-        ORIGINATOR_ID = 0x09
-        CLUSTER_LIST = 0x0A  # 10
+        ORIGINATOR_ID: ClassVar[int] = 0x09
+        CLUSTER_LIST: ClassVar[int] = 0x0A  # 10
         # RFC 4760
-        MP_REACH_NLRI = 0x0E  # 14
-        MP_UNREACH_NLRI = 0x0F  # 15
+        MP_REACH_NLRI: ClassVar[int] = 0x0E  # 14
+        MP_UNREACH_NLRI: ClassVar[int] = 0x0F  # 15
         # RFC 4360
-        EXTENDED_COMMUNITY = 0x10  # 16
+        EXTENDED_COMMUNITY: ClassVar[int] = 0x10  # 16
         # RFC 4893
-        AS4_PATH = 0x11  # 17
-        AS4_AGGREGATOR = 0x12  # 18
+        AS4_PATH: ClassVar[int] = 0x11  # 17
+        AS4_AGGREGATOR: ClassVar[int] = 0x12  # 18
         # RFC6514
-        PMSI_TUNNEL = 0x16  # 22
+        PMSI_TUNNEL: ClassVar[int] = 0x16  # 22
         # RFC5512
-        TUNNEL_ENCAP = 0x17  # 23
+        TUNNEL_ENCAP: ClassVar[int] = 0x17  # 23
         # RFC5701
-        IPV6_EXTENDED_COMMUNITY = 0x19  # 25
-        AIGP = 0x1A  # 26
+        IPV6_EXTENDED_COMMUNITY: ClassVar[int] = 0x19  # 25
+        AIGP: ClassVar[int] = 0x1A  # 26
         # RFC7752
-        BGP_LS = 0x1D  # 29
+        BGP_LS: ClassVar[int] = 0x1D  # 29
         # draft-ietf-idr-large-community
-        LARGE_COMMUNITY = 0x20  # 32
+        LARGE_COMMUNITY: ClassVar[int] = 0x20  # 32
         # draft-ietf-idr-bgp-prefix-sid
-        BGP_PREFIX_SID = 0x28  # 40
+        BGP_PREFIX_SID: ClassVar[int] = 0x28  # 40
 
-        INTERNAL_NAME = 0xFFFA
-        INTERNAL_WITHDRAW = 0xFFFB
-        INTERNAL_WATCHDOG = 0xFFFC
-        INTERNAL_SPLIT = 0xFFFD
-        INTERNAL_DISCARD = 0xFFFE
-        INTERNAL_TREAT_AS_WITHDRAW = 0xFFFF  # Treat as Withdraw
+        INTERNAL_NAME: ClassVar[int] = 0xFFFA
+        INTERNAL_WITHDRAW: ClassVar[int] = 0xFFFB
+        INTERNAL_WATCHDOG: ClassVar[int] = 0xFFFC
+        INTERNAL_SPLIT: ClassVar[int] = 0xFFFD
+        INTERNAL_DISCARD: ClassVar[int] = 0xFFFE
+        INTERNAL_TREAT_AS_WITHDRAW: ClassVar[int] = 0xFFFF  # Treat as Withdraw
 
         # Currently formatting is done with %-18s
-        names = {
+        names: ClassVar[Dict[int, str]] = {
             ORIGIN: 'origin',
             AS_PATH: 'as-path',
             NEXT_HOP: 'next-hop',
@@ -155,32 +160,32 @@ class Attribute:
             0xFFFF: 'internal-treath-as-withdraw',
         }
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return self.names.get(self, 'unknown-attribute-{}'.format(hex(self)))
 
-        def __str__(self):
+        def __str__(self) -> str:
             return repr(self)
 
         @classmethod
-        def name(cls, self):
+        def name(cls, self: int) -> str:
             return cls.names.get(self, 'unknown-attribute-{}'.format(hex(self)))
 
     # ---------------------------------------------------------------------------
 
     class Flag(int):
-        EXTENDED_LENGTH = 0x10  # .  16 - 0001 0000
-        PARTIAL = 0x20  # .  32 - 0010 0000
-        TRANSITIVE = 0x40  # .  64 - 0100 0000
-        OPTIONAL = 0x80  # . 128 - 1000 0000
+        EXTENDED_LENGTH: ClassVar[int] = 0x10  # .  16 - 0001 0000
+        PARTIAL: ClassVar[int] = 0x20  # .  32 - 0010 0000
+        TRANSITIVE: ClassVar[int] = 0x40  # .  64 - 0100 0000
+        OPTIONAL: ClassVar[int] = 0x80  # . 128 - 1000 0000
 
-        MASK_EXTENDED = 0xEF  # . 239 - 1110 1111
-        MASK_PARTIAL = 0xDF  # . 223 - 1101 1111
-        MASK_TRANSITIVE = 0xBF  # . 191 - 1011 1111
-        MASK_OPTIONAL = 0x7F  # . 127 - 0111 1111
+        MASK_EXTENDED: ClassVar[int] = 0xEF  # . 239 - 1110 1111
+        MASK_PARTIAL: ClassVar[int] = 0xDF  # . 223 - 1101 1111
+        MASK_TRANSITIVE: ClassVar[int] = 0xBF  # . 191 - 1011 1111
+        MASK_OPTIONAL: ClassVar[int] = 0x7F  # . 127 - 0111 1111
 
-        def __str__(self):
-            r = []
-            v = int(self)
+        def __str__(self) -> str:
+            r: List[str] = []
+            v: int = int(self)
             if v & 0x10:
                 r.append('EXTENDED_LENGTH')
                 v -= 0x10
@@ -197,52 +202,57 @@ class Attribute:
                 r.append('UNKNOWN {}'.format(hex(v)))
             return ' '.join(r)
 
-        def matches(self, value):
-            return self | 0x10 == value | 0x10
+        def matches(self, value: int) -> bool:
+            return bool(self | 0x10 == value | 0x10)
 
     # ---------------------------------------------------------------------------
 
     @classmethod
-    def _attribute(klass, value):
-        flag = klass.FLAG
+    def _attribute(klass, value: bytes) -> bytes:
+        flag: int = klass.FLAG
         if flag & Attribute.Flag.OPTIONAL and not value:
             return b''
-        length = len(value)
+        length: int = len(value)
         if length > ATTR_LENGTH_EXTENDED_MAX:
             flag |= Attribute.Flag.EXTENDED_LENGTH
+        len_value: bytes
         if flag & Attribute.Flag.EXTENDED_LENGTH:
             len_value = pack('!H', length)
         else:
             len_value = bytes([length])
         return bytes([flag, klass.ID]) + len_value + value
 
-    def _len(self, value):
-        length = len(value)
+    def _len(self, value: bytes) -> int:
+        length: int = len(value)
         return length + 3 if length <= ATTR_LENGTH_EXTENDED_MAX else length + 4
 
-    def __eq__(self, other):
-        return self.ID == other.ID and self.FLAG == other.FLAG
+    def __eq__(self, other: Any) -> bool:
+        return bool(self.ID == other.ID and self.FLAG == other.FLAG)
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __lt__(self, other):
-        return self.ID < other.ID
+    def __lt__(self, other: Any) -> bool:
+        return bool(self.ID < other.ID)
 
-    def __le__(self, other):
-        return self.ID <= other.ID
+    def __le__(self, other: Any) -> bool:
+        return bool(self.ID <= other.ID)
 
-    def __gt__(self, other):
-        return self.ID > other.ID
+    def __gt__(self, other: Any) -> bool:
+        return bool(self.ID > other.ID)
 
-    def __ge__(self, other):
-        return self.ID >= other.ID
+    def __ge__(self, other: Any) -> bool:
+        return bool(self.ID >= other.ID)
 
     @classmethod
-    def register(cls, attribute_id=None, flag=None):
-        def register_attribute(klass):
-            aid = klass.ID if attribute_id is None else attribute_id
-            flg = klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
+    def register(
+        cls, attribute_id: Optional[int] = None, flag: Optional[int] = None
+    ) -> Callable[[Type[Attribute]], Type[Attribute]]:
+        def register_attribute(klass: Type[Attribute]) -> Type[Attribute]:
+            aid: int = klass.ID if attribute_id is None else attribute_id
+            flg: int = (
+                klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
+            )
             if (aid, flg) in cls.registered_attributes:
                 raise RuntimeError('only one class can be registered per attribute')
             cls.registered_attributes[(aid, flg)] = klass
@@ -256,29 +266,29 @@ class Attribute:
         return register_attribute
 
     @classmethod
-    def registered(cls, attribute_id, flag):
+    def registered(cls, attribute_id: int, flag: int) -> bool:
         return (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH) in cls.registered_attributes
 
     @classmethod
-    def klass(cls, attribute_id, flag):
-        key = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
+    def klass(cls, attribute_id: int, flag: int) -> Type[Attribute]:
+        key: Tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in cls.registered_attributes:
-            kls = cls.registered_attributes[key]
+            kls: Type[Attribute] = cls.registered_attributes[key]
             kls.ID = attribute_id
             return kls
 
         raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
 
     @classmethod
-    def unpack(cls, attribute_id, flag, data, direction, negotiated):
-        cache = cls.caching and cls.CACHING
+    def unpack(cls, attribute_id: int, flag: int, data: bytes, direction: int, negotiated: Any) -> Attribute:
+        cache: bool = cls.caching and cls.CACHING
 
         if cache and data in cls.cache.get(cls.ID, {}):
-            return cls.cache[cls.ID].retrieve(data)
+            return cls.cache[cls.ID].retrieve(data)  # type: ignore[no-any-return]
 
-        key = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
+        key: Tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in Attribute.registered_attributes.keys():
-            instance = cls.klass(attribute_id, flag).unpack(data, direction, negotiated)
+            instance: Attribute = cls.klass(attribute_id, flag).unpack(data, direction, negotiated)  # type: ignore[call-arg,arg-type]
 
             if cache:
                 cls.cache[cls.ID].cache(data, instance)
@@ -287,7 +297,7 @@ class Attribute:
         raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
 
     @classmethod
-    def setCache(cls):
+    def setCache(cls) -> None:
         if not cls.cache:
             for attribute in Attribute.CODE.names:
                 if attribute not in cls.cache:
