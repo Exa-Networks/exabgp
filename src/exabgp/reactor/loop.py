@@ -1,4 +1,3 @@
-
 """reactor/loop.py
 
 Created by Thomas Mangin on 2012-06-10.
@@ -304,8 +303,12 @@ class Reactor:
             self.processes.start(self.configuration.processes)
 
         if not self.daemon.drop_privileges():
-            log.critical(lambda: f"could not drop privileges to '{self.daemon.user}' refusing to run as root", 'reactor')
-            log.critical(lambda: 'set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor')
+            log.critical(
+                lambda: f"could not drop privileges to '{self.daemon.user}' refusing to run as root", 'reactor'
+            )
+            log.critical(
+                lambda: 'set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor'
+            )
             return self.Exit.privileges
 
         if self.early_drop:
@@ -369,7 +372,9 @@ class Reactor:
                 if self.listener.incoming():
                     # check all incoming connection
                     self.asynchronous.schedule(
-                        str(uuid.uuid1()), 'checking for new connection(s)', self.listener.new_connections(),
+                        str(uuid.uuid1()),
+                        'checking for new connection(s)',
+                        self.listener.new_connections(),
                     )
 
                 sleep = ms_sleep
@@ -406,7 +411,8 @@ class Reactor:
                         io = peer.socket()
                         if io != -1:
                             self._poller.register(
-                                io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
+                                io,
+                                select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
                             )
                             workers[io] = key
                         # no need to come back to it before a a full cycle
@@ -435,7 +441,8 @@ class Reactor:
                             continue
                         if fd not in api_fds:
                             self._poller.register(
-                                fd, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
+                                fd,
+                                select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
                             )
                     api_fds = self.processes.fds
 
@@ -514,12 +521,19 @@ class Reactor:
             # same peer but perhaps not the routes
             else:
                 # finding what route changed and sending the delta is not obvious
-                log.debug(lambda key=key: f'peer definition identical, updating peer routes if required for {key}', 'reactor')
+                log.debug(
+                    lambda key=key: f'peer definition identical, updating peer routes if required for {key}', 'reactor'
+                )
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
                 if ip.afi == neighbor['peer-address'].afi:
                     self.listener.listen_on(
-                        ip, neighbor['peer-address'], self._port, neighbor['md5-password'], neighbor['md5-base64'], None,
+                        ip,
+                        neighbor['peer-address'],
+                        self._port,
+                        neighbor['md5-password'],
+                        neighbor['md5-base64'],
+                        None,
                     )
         log.info(lambda: 'loaded new configuration successfully', 'reactor')
 

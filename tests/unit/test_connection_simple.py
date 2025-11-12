@@ -102,6 +102,7 @@ class TestConnectionBasics:
     def test_close_with_socket(self) -> None:
         """Test close() handles socket cleanup"""
         from unittest.mock import patch
+
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -117,10 +118,11 @@ class TestConnectionBasics:
     def test_close_handles_exception(self) -> None:
         """Test close() handles exceptions gracefully"""
         from unittest.mock import patch
+
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
-        mock_sock.close.side_effect = Exception("Close failed")
+        mock_sock.close.side_effect = Exception('Close failed')
         conn.io = mock_sock
 
         # Should not raise, just set io to None
@@ -131,6 +133,7 @@ class TestConnectionBasics:
     def test_del_calls_close(self) -> None:
         """Test __del__ calls close()"""
         from unittest.mock import patch
+
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()

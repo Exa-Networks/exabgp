@@ -1,4 +1,3 @@
-
 """store.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -169,7 +168,8 @@ class OutgoingRIB(Cache):
             prev_change_index = prev_change.index()
             prev_change_attr_index = prev_change.attributes.index()
             attr_af_nlri.setdefault(prev_change_attr_index, {}).setdefault(change_family, RIBdict({})).pop(
-                prev_change_index, None,
+                prev_change_index,
+                None,
             )
 
         change = deepcopy(change)

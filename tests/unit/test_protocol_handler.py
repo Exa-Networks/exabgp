@@ -12,6 +12,7 @@ Test Coverage:
 - EOR (End-of-RIB) handling
 - API callback integration
 """
+
 import pytest
 from typing import Any, Generator
 from unittest.mock import Mock, MagicMock, patch
@@ -32,7 +33,7 @@ def mock_logger() -> Generator[None, None, None]:
     mock_option_logger.error = Mock()
     mock_option_logger.critical = Mock()
 
-    mock_formater = Mock(return_value="formatted message")
+    mock_formater = Mock(return_value='formatted message')
 
     option.logger = mock_option_logger
     option.formater = mock_formater
@@ -47,36 +48,38 @@ def mock_logger() -> Generator[None, None, None]:
 def mock_neighbor() -> Any:
     """Create a mock neighbor configuration."""
     neighbor = MagicMock()
-    neighbor.__getitem__ = Mock(side_effect=lambda x: {
-        'peer-address': Mock(top=Mock(return_value='192.0.2.1'), afi=1, __str__=Mock(return_value='192.0.2.1')),
-        'peer-as': 65001,
-        'local-as': 65000,
-        'local-address': None,
-        'router-id': Mock(__str__=Mock(return_value='1.2.3.4')),
-        'hold-time': 180,
-        'connect': None,
-        'md5-ip': Mock(top=Mock(return_value=None)),
-        'md5-password': None,
-        'md5-base64': False,
-        'outgoing-ttl': None,
-        'source-interface': None,
-        'adj-rib-in': False,
-        'group-updates': False,
-        'host-name': 'test-host',
-        'domain-name': 'test-domain',
-        'capability': {
-            'aigp': False,
-            'asn4': True,
-            'nexthop': False,
-            'operational': False,
-            'multi-session': False,
-            'add-path': False,
-            'graceful-restart': False,
-            'route-refresh': False,
-            'extended-message': False,
-            'software-version': False,
-        },
-    }.get(x))
+    neighbor.__getitem__ = Mock(
+        side_effect=lambda x: {
+            'peer-address': Mock(top=Mock(return_value='192.0.2.1'), afi=1, __str__=Mock(return_value='192.0.2.1')),
+            'peer-as': 65001,
+            'local-as': 65000,
+            'local-address': None,
+            'router-id': Mock(__str__=Mock(return_value='1.2.3.4')),
+            'hold-time': 180,
+            'connect': None,
+            'md5-ip': Mock(top=Mock(return_value=None)),
+            'md5-password': None,
+            'md5-base64': False,
+            'outgoing-ttl': None,
+            'source-interface': None,
+            'adj-rib-in': False,
+            'group-updates': False,
+            'host-name': 'test-host',
+            'domain-name': 'test-domain',
+            'capability': {
+                'aigp': False,
+                'asn4': True,
+                'nexthop': False,
+                'operational': False,
+                'multi-session': False,
+                'add-path': False,
+                'graceful-restart': False,
+                'route-refresh': False,
+                'extended-message': False,
+                'software-version': False,
+            },
+        }.get(x)
+    )
     neighbor.auto_discovery = False
     # Add required methods
     neighbor.families = Mock(return_value=[])
@@ -100,6 +103,7 @@ def mock_neighbor() -> Any:
 @pytest.fixture
 def mock_peer(mock_neighbor: Any) -> Any:
     """Create a mock peer."""
+
     # Create a custom stats class that behaves like defaultdict
     class Stats(dict):
         def __getitem__(self, key: Any):
@@ -124,6 +128,7 @@ def mock_peer(mock_neighbor: Any) -> Any:
 # ==============================================================================
 # Phase 1: Protocol Initialization and Basic Operations
 # ==============================================================================
+
 
 def test_protocol_initialization(mock_peer: Any) -> None:
     """Test Protocol initialization with neighbor configuration."""
@@ -238,6 +243,7 @@ def test_protocol_close_with_connection(mock_peer: Any) -> None:
 # Phase 2: Message Writing and Statistics
 # ==============================================================================
 
+
 def test_protocol_write_keepalive(mock_peer: Any) -> None:
     """Test writing a KEEPALIVE message updates statistics."""
     from exabgp.reactor.protocol import Protocol
@@ -283,6 +289,7 @@ def test_protocol_write_with_api_callback(mock_peer: Any) -> None:
 # Phase 3: Message Reading - Basic
 # ==============================================================================
 
+
 def test_protocol_read_message_keepalive(mock_peer: Any) -> None:
     """Test reading a KEEPALIVE message."""
     from exabgp.reactor.protocol import Protocol
@@ -293,9 +300,11 @@ def test_protocol_read_message_keepalive(mock_peer: Any) -> None:
 
     # Mock connection reader that yields KEEPALIVE
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -314,9 +323,11 @@ def test_protocol_read_message_nop(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (0, Message.CODE.KEEPALIVE, b'', b'', None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (0, Message.CODE.KEEPALIVE, b'', b'', None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -334,9 +345,11 @@ def test_protocol_read_message_invalid_type(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (19, 99, b'\xff' * 19, b'', None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (19, 99, b'\xff' * 19, b'', None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -349,6 +362,7 @@ def test_protocol_read_message_invalid_type(mock_peer: Any) -> None:
 # ==============================================================================
 # Phase 4: EOR (End-of-RIB) Support
 # ==============================================================================
+
 
 def test_protocol_new_eor_single_family(mock_peer: Any) -> None:
     """Test creating and sending EOR for a single address family."""
@@ -412,6 +426,7 @@ def test_protocol_new_eors_no_families(mock_peer: Any) -> None:
 # Phase 5: Advanced Features
 # ==============================================================================
 
+
 def test_protocol_read_update_basic(mock_peer: Any) -> None:
     """Test reading a basic UPDATE message."""
     from exabgp.reactor.protocol import Protocol
@@ -425,9 +440,11 @@ def test_protocol_read_update_basic(mock_peer: Any) -> None:
     update_body = struct.pack('!HH', 0, 0)  # withdrawn_len=0, attr_len=0
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -447,9 +464,11 @@ def test_protocol_api_callbacks_with_packets(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -521,9 +540,11 @@ def test_protocol_read_open_wrong_message(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -544,9 +565,11 @@ def test_protocol_read_keepalive_wrong_message(mock_peer: Any) -> None:
 
     # Mock connection that returns UPDATE instead of KEEPALIVE
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, struct.pack('!HH', 0, 0), None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (23, Message.CODE.UPDATE, b'\xff' * 19, struct.pack('!HH', 0, 0), None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -561,6 +584,7 @@ def test_protocol_read_keepalive_wrong_message(mock_peer: Any) -> None:
 # Phase 6: UPDATE Message Routing and Special Attributes
 # ==============================================================================
 
+
 def test_protocol_read_update_with_internal_treat_as_withdraw(mock_peer: Any) -> None:
     """Test UPDATE message with INTERNAL_TREAT_AS_WITHDRAW attribute."""
     from exabgp.reactor.protocol import Protocol
@@ -574,9 +598,11 @@ def test_protocol_read_update_with_internal_treat_as_withdraw(mock_peer: Any) ->
     update_body = struct.pack('!HH', 0, 0)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -597,9 +623,11 @@ def test_protocol_read_update_with_internal_discard(mock_peer: Any) -> None:
     update_body = struct.pack('!HH', 0, 0)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -619,9 +647,11 @@ def test_protocol_read_update_decode_error(mock_peer: Any) -> None:
     update_body = b'\x00\x00'  # Missing path attributes length
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (21, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (21, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -638,6 +668,7 @@ def test_protocol_read_update_decode_error(mock_peer: Any) -> None:
 # Phase 7: NOTIFICATION Handling During Read
 # ==============================================================================
 
+
 def test_protocol_read_notification_from_peer(mock_peer: Any) -> None:
     """Test reading a NOTIFICATION message from peer raises it."""
     from exabgp.reactor.protocol import Protocol
@@ -650,9 +681,11 @@ def test_protocol_read_notification_from_peer(mock_peer: Any) -> None:
     notify_body = struct.pack('!BB', 2, 4) + b'test'
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.NOTIFICATION, b'\xff' * 19, notify_body, None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (23, Message.CODE.NOTIFICATION, b'\xff' * 19, notify_body, None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -680,9 +713,11 @@ def test_protocol_read_internal_notification(mock_peer: Any) -> None:
     mock_notify.__str__ = Mock(return_value='test error')
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (0, Message.CODE.KEEPALIVE, b'', b'', mock_notify),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (0, Message.CODE.KEEPALIVE, b'', b'', mock_notify),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -711,9 +746,11 @@ def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) -> Non
     mock_connection = Mock()
     header = b'\xff' * 19
     body = b'\x02\x01test'
-    mock_connection.reader = Mock(return_value=[
-        (len(body), Message.CODE.NOTIFICATION, header, body, mock_notify),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (len(body), Message.CODE.NOTIFICATION, header, body, mock_notify),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -731,6 +768,7 @@ def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) -> Non
 # ==============================================================================
 # Phase 8: OPERATIONAL and REFRESH Messages
 # ==============================================================================
+
 
 def test_protocol_new_operational(mock_peer: Any) -> None:
     """Test creating and sending an OPERATIONAL message."""
@@ -778,6 +816,7 @@ def test_protocol_new_refresh(mock_peer: Any) -> None:
 # ==============================================================================
 # Phase 9: validate_open and Connection Negotiation
 # ==============================================================================
+
 
 def test_protocol_validate_open_success(mock_peer: Any) -> None:
     """Test validate_open with valid configuration."""
@@ -851,6 +890,7 @@ def test_protocol_validate_open_with_family_mismatch(mock_peer: Any) -> None:
 # Phase 10: send() Method for Raw BGP Messages
 # ==============================================================================
 
+
 def test_protocol_send_raw_update(mock_peer: Any) -> None:
     """Test send() method with raw UPDATE message."""
     from exabgp.reactor.protocol import Protocol
@@ -915,6 +955,7 @@ def test_protocol_send_with_api_callback(mock_peer: Any) -> None:
 # Phase 11: new_update() Method for Outgoing Updates
 # ==============================================================================
 
+
 def test_protocol_new_update(mock_peer: Any) -> None:
     """Test new_update() method sends updates from RIB."""
     from exabgp.reactor.protocol import Protocol
@@ -966,6 +1007,7 @@ def test_protocol_new_update_no_updates(mock_peer: Any) -> None:
 # Phase 12: API Callback Variations
 # ==============================================================================
 
+
 def test_protocol_api_send_packets_mode(mock_peer: Any) -> None:
     """Test API callback with send-packets mode."""
     from exabgp.reactor.protocol import Protocol
@@ -1001,9 +1043,11 @@ def test_protocol_api_receive_parsed_mode(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -1029,9 +1073,11 @@ def test_protocol_api_receive_consolidate_mode(mock_peer: Any) -> None:
     mock_connection = Mock()
     header = b'\xff' * 19
     body = b''
-    mock_connection.reader = Mock(return_value=[
-        (19, Message.CODE.KEEPALIVE, header, body, None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (19, Message.CODE.KEEPALIVE, header, body, None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -1047,6 +1093,7 @@ def test_protocol_api_receive_consolidate_mode(mock_peer: Any) -> None:
 # ==============================================================================
 # Phase 13: connect() Method and Connection Establishment
 # ==============================================================================
+
 
 def test_protocol_connect_establishes_outgoing(mock_peer: Any) -> None:
     """Test connect() establishes outgoing connection."""
@@ -1121,6 +1168,7 @@ def test_protocol_connect_already_connected(mock_peer: Any) -> None:
 # Phase 14: ADD-PATH Support
 # ==============================================================================
 
+
 def test_protocol_with_addpath_negotiated(mock_peer: Any) -> None:
     """Test protocol with ADD-PATH capability negotiated."""
     from exabgp.reactor.protocol import Protocol
@@ -1149,15 +1197,18 @@ def test_protocol_read_update_with_addpath(mock_peer: Any) -> None:
 
     # Enable ADD-PATH
     from exabgp.bgp.message.open.capability.negotiated import RequirePath
+
     protocol.negotiated.addpath = RequirePath()
     protocol.negotiated.addpath._receive[(AFI.ipv4, SAFI.unicast)] = True
 
     update_body = struct.pack('!HH', 0, 0)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(return_value=[
-        (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-    ])
+    mock_connection.reader = Mock(
+        return_value=[
+            (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
+        ]
+    )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -1168,6 +1219,7 @@ def test_protocol_read_update_with_addpath(mock_peer: Any) -> None:
 # ==============================================================================
 # Phase 15: EOR (End-of-RIB) Extended Coverage
 # ==============================================================================
+
 
 def test_protocol_new_eor_specific_family(mock_peer: Any) -> None:
     """Test new_eors() for a specific address family."""
@@ -1222,6 +1274,7 @@ def test_protocol_new_notification_message(mock_peer: Any) -> None:
 # Phase 16: new_open() Method
 # ==============================================================================
 
+
 def test_protocol_new_open_flow(mock_peer: Any) -> None:
     """Test new_open() basic flow (simplified)."""
     from exabgp.reactor.protocol import Protocol
@@ -1248,6 +1301,7 @@ def test_protocol_new_open_flow(mock_peer: Any) -> None:
 # ==============================================================================
 # Phase 17: read_open() Method
 # ==============================================================================
+
 
 def test_protocol_read_open_success(mock_peer: Any) -> None:
     """Test read_open() successfully reads OPEN message."""
@@ -1304,6 +1358,7 @@ def test_protocol_read_open_with_nop(mock_peer: Any) -> None:
 # ==============================================================================
 # Phase 18: read_keepalive() Method
 # ==============================================================================
+
 
 def test_protocol_read_keepalive_success(mock_peer: Any) -> None:
     """Test read_keepalive() successfully reads KEEPALIVE."""

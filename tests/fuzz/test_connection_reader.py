@@ -3,6 +3,7 @@
 These tests exercise the actual reader() implementation by mocking
 the underlying _reader() generator to provide test data.
 """
+
 import pytest
 from typing import Any
 from unittest.mock import MagicMock
@@ -83,7 +84,7 @@ def test_reader_with_random_data(data: bytes) -> None:
 def test_reader_with_valid_keepalive() -> None:
     """Test reader() with a valid KEEPALIVE message."""
     # Valid KEEPALIVE: marker + length(19) + type(4)
-    data = b'\xFF' * 16 + struct.pack('!H', 19) + b'\x04'
+    data = b'\xff' * 16 + struct.pack('!H', 19) + b'\x04'
 
     connection = create_mock_connection_with_data(data)
     reader = connection.reader()
@@ -122,7 +123,7 @@ def test_reader_with_invalid_length_too_small() -> None:
     from exabgp.reactor.network.error import NotifyError
 
     # Length = 18 (one below minimum)
-    data = b'\xFF' * 16 + struct.pack('!H', 18) + b'\x01'
+    data = b'\xff' * 16 + struct.pack('!H', 18) + b'\x01'
 
     connection = create_mock_connection_with_data(data)
     reader = connection.reader()
@@ -141,7 +142,7 @@ def test_reader_with_invalid_length_too_large() -> None:
     from exabgp.reactor.network.error import NotifyError
 
     # Length = 4097 (one above standard maximum)
-    data = b'\xFF' * 16 + struct.pack('!H', 4097) + b'\x01'
+    data = b'\xff' * 16 + struct.pack('!H', 4097) + b'\x01'
 
     connection = create_mock_connection_with_data(data)
     reader = connection.reader()
@@ -158,7 +159,7 @@ def test_reader_with_invalid_length_too_large() -> None:
 def test_reader_with_valid_open_message() -> None:
     """Test reader() with a valid OPEN message header."""
     # OPEN message with length 29
-    header_data = b'\xFF' * 16 + struct.pack('!H', 29) + b'\x01'
+    header_data = b'\xff' * 16 + struct.pack('!H', 29) + b'\x01'
     body_data = b'\x00' * 10  # 10 bytes of body data (29 - 19)
     data = header_data + body_data
 
@@ -183,7 +184,7 @@ def test_reader_with_all_valid_lengths(length: int) -> None:
 
     body_size = length - 19
     # Use KEEPALIVE (type 4) which accepts length >= 19
-    header_data = b'\xFF' * 16 + struct.pack('!H', length) + b'\x04'
+    header_data = b'\xff' * 16 + struct.pack('!H', length) + b'\x04'
     body_data = b'\x00' * body_size
     data = header_data + body_data
 
@@ -208,5 +209,5 @@ def test_reader_with_all_valid_lengths(length: int) -> None:
         assert isinstance(error, NotifyError)
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-m", "fuzz"])
+if __name__ == '__main__':
+    pytest.main([__file__, '-v', '-m', 'fuzz'])

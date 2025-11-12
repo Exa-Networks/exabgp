@@ -1,4 +1,3 @@
-
 """aigp.py
 
 Created by Thomas Mangin on 2013-09-24.

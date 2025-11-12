@@ -19,6 +19,7 @@ from exabgp.bgp.message.direction import Direction
 # Phase 1: Basic KEEPALIVE Message Creation and Encoding
 # ==============================================================================
 
+
 def test_keepalive_creation() -> None:
     """Test basic KEEPALIVE message creation.
 
@@ -75,6 +76,7 @@ def test_keepalive_message_encoding_with_negotiated() -> None:
 # Phase 2: KEEPALIVE Message Decoding and Parsing
 # ==============================================================================
 
+
 def test_keepalive_unpack_valid_message() -> None:
     """Test unpacking a valid KEEPALIVE message.
 
@@ -124,6 +126,7 @@ def test_keepalive_unpack_with_direction() -> None:
 # Phase 3: KEEPALIVE Message Validation and Error Handling
 # ==============================================================================
 
+
 def test_keepalive_with_payload_raises_error() -> None:
     """Test that KEEPALIVE with payload raises an error.
 
@@ -140,8 +143,7 @@ def test_keepalive_with_payload_raises_error() -> None:
 
 
 def test_keepalive_with_multi_byte_payload_raises_error() -> None:
-    """Test that KEEPALIVE with multi-byte payload raises an error.
-    """
+    """Test that KEEPALIVE with multi-byte payload raises an error."""
     data = b'\x01\x02\x03\x04'
     negotiated = {}
 
@@ -150,14 +152,13 @@ def test_keepalive_with_multi_byte_payload_raises_error() -> None:
 
 
 def test_keepalive_with_various_invalid_payloads() -> None:
-    """Test various invalid payloads to ensure robust error handling.
-    """
+    """Test various invalid payloads to ensure robust error handling."""
     invalid_payloads = [
-        b'\x00',                    # Single null byte
-        b'\xff' * 10,               # 10 bytes of 0xFF
-        b'\x00\x01\x02',            # Arbitrary data
-        b'invalid',                 # ASCII text
-        b'\x01' * 100,              # Large payload
+        b'\x00',  # Single null byte
+        b'\xff' * 10,  # 10 bytes of 0xFF
+        b'\x00\x01\x02',  # Arbitrary data
+        b'invalid',  # ASCII text
+        b'\x01' * 100,  # Large payload
     ]
 
     for payload in invalid_payloads:
@@ -169,9 +170,9 @@ def test_keepalive_with_various_invalid_payloads() -> None:
 # Phase 4: KEEPALIVE Message Round-Trip Tests
 # ==============================================================================
 
+
 def test_keepalive_encode_decode_roundtrip() -> None:
-    """Test that KEEPALIVE can be encoded and decoded back successfully.
-    """
+    """Test that KEEPALIVE can be encoded and decoded back successfully."""
     # Create and encode
     keepalive_original = KeepAlive()
     encoded = keepalive_original.message()
@@ -188,8 +189,7 @@ def test_keepalive_encode_decode_roundtrip() -> None:
 
 
 def test_keepalive_multiple_encode_decode_cycles() -> None:
-    """Test multiple encode/decode cycles produce consistent results.
-    """
+    """Test multiple encode/decode cycles produce consistent results."""
     keepalive = KeepAlive()
 
     for _ in range(10):
@@ -211,6 +211,7 @@ def test_keepalive_multiple_encode_decode_cycles() -> None:
 # Phase 5: KEEPALIVE Message ID and Type Verification
 # ==============================================================================
 
+
 def test_keepalive_message_id() -> None:
     """Test that KEEPALIVE has correct message ID.
 
@@ -221,14 +222,12 @@ def test_keepalive_message_id() -> None:
 
 
 def test_keepalive_message_type_bytes() -> None:
-    """Test that KEEPALIVE TYPE is correct byte representation.
-    """
+    """Test that KEEPALIVE TYPE is correct byte representation."""
     assert KeepAlive.TYPE == b'\x04'
 
 
 def test_keepalive_message_registration() -> None:
-    """Test that KEEPALIVE is properly registered with Message class.
-    """
+    """Test that KEEPALIVE is properly registered with Message class."""
     # Verify KEEPALIVE is in registered messages
     assert Message.CODE.KEEPALIVE in Message.registered_message
 
@@ -240,6 +239,7 @@ def test_keepalive_message_registration() -> None:
 # ==============================================================================
 # Phase 6: KEEPALIVE Message Comparison and Equality
 # ==============================================================================
+
 
 def test_keepalive_instances_are_equal() -> None:
     """Test that KEEPALIVE instances are considered equal.
@@ -254,8 +254,7 @@ def test_keepalive_instances_are_equal() -> None:
 
 
 def test_keepalive_string_representation() -> None:
-    """Test KEEPALIVE string representation.
-    """
+    """Test KEEPALIVE string representation."""
     keepalive = KeepAlive()
 
     # String representation should be 'KEEPALIVE'
@@ -267,9 +266,9 @@ def test_keepalive_string_representation() -> None:
 # Phase 7: KEEPALIVE Message with Edge Cases
 # ==============================================================================
 
+
 def test_keepalive_with_none_negotiated() -> None:
-    """Test KEEPALIVE encoding/decoding with None negotiated parameters.
-    """
+    """Test KEEPALIVE encoding/decoding with None negotiated parameters."""
     keepalive = KeepAlive()
 
     # Should work with None
@@ -312,6 +311,7 @@ def test_keepalive_header_length_field() -> None:
 
     # Verify it decodes to 19
     import struct
+
     length = struct.unpack('!H', length_bytes)[0]
     assert length == 19
 
@@ -320,9 +320,9 @@ def test_keepalive_header_length_field() -> None:
 # Phase 8: KEEPALIVE Message Constants Verification
 # ==============================================================================
 
+
 def test_keepalive_message_constants() -> None:
-    """Test KEEPALIVE message constants against RFC specifications.
-    """
+    """Test KEEPALIVE message constants against RFC specifications."""
     # Message header length is always 19 bytes
     assert Message.HEADER_LEN == 19
 

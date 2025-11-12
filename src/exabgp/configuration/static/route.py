@@ -1,4 +1,3 @@
-
 """inet/__init__.py
 
 Created by Thomas Mangin on 2015-06-04.

@@ -176,10 +176,24 @@ class JSON:
                 # NOTE: Do not convert to f-string! The nested % formatting with complex
                 # comprehensions and conditional logic is more readable with % formatting.
                 'add_path': '{{ "send": {}, "receive": {} }}'.format(
-                    '[ {} ]'.format(', '.join(['"{} {}"'.format(*family) for family in negotiated.families if negotiated.addpath.send(*family)])),
-                    '[ {} ]'.format(', '.join(
-                        ['"{} {}"'.format(*family) for family in negotiated.families if negotiated.addpath.receive(*family)],
-                    )),
+                    '[ {} ]'.format(
+                        ', '.join(
+                            [
+                                '"{} {}"'.format(*family)
+                                for family in negotiated.families
+                                if negotiated.addpath.send(*family)
+                            ]
+                        )
+                    ),
+                    '[ {} ]'.format(
+                        ', '.join(
+                            [
+                                '"{} {}"'.format(*family)
+                                for family in negotiated.families
+                                if negotiated.addpath.receive(*family)
+                            ],
+                        )
+                    ),
                 ),
             },
         )
@@ -196,7 +210,11 @@ class JSON:
 
     def fsm(self, neighbor, fsm):
         return self._header(
-            self._neighbor(neighbor, None, self._kv({'state': fsm.name()})), '', '', neighbor, message_type='fsm',
+            self._neighbor(neighbor, None, self._kv({'state': fsm.name()})),
+            '',
+            '',
+            neighbor,
+            message_type='fsm',
         )
 
     def signal(self, neighbor, signal):
@@ -356,7 +374,11 @@ class JSON:
         if negotiated:
             message.update(self._negotiated(negotiated))
         return self._header(
-            self._neighbor(neighbor, direction, self._kv(message)), header, body, neighbor, message_type='update',
+            self._neighbor(neighbor, direction, self._kv(message)),
+            header,
+            body,
+            neighbor,
+            message_type='update',
         )
 
     def refresh(self, neighbor, direction, refresh, negotiated, header, body):

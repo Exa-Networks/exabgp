@@ -1,4 +1,3 @@
-
 """capability.py
 
 Created by Thomas Mangin on 2012-07-17.
@@ -37,10 +36,14 @@ class _CapabilityCode(int):
     # 70-127    Unassigned
     ROUTE_REFRESH_CISCO: ClassVar[int] = 0x80  # I Can only find reference to this in the router logs
     # 128-255   Reserved for Private Use [RFC5492]
-    MULTISESSION_CISCO: ClassVar[int] = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
+    MULTISESSION_CISCO: ClassVar[int] = (
+        0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
+    )
 
     HOSTNAME: ClassVar[int] = 0x49  # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
-    SOFTWARE_VERSION: ClassVar[int] = 0x4B  # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
+    SOFTWARE_VERSION: ClassVar[int] = (
+        0x4B  # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
+    )
     OPERATIONAL: ClassVar[int] = 0xB9  # ExaBGP only ...
 
     # Internal

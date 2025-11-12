@@ -1,4 +1,3 @@
-
 """pipe.py
 
 Created by Thomas Mangin on <unset>.

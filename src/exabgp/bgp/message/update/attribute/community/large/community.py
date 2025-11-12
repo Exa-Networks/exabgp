@@ -1,4 +1,3 @@
-
 """Support for RFC 8092
 
 Copyright (c) 2016 Job Snijders <job@ntt.net>

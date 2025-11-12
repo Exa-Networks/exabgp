@@ -18,6 +18,7 @@ Phase 2: Attribute combinations (tests 6-10)
 Phase 3: MP extensions (tests 11-15)
 Phase 4: Edge cases and limits (tests 16-20)
 """
+
 import struct
 from typing import Any
 from unittest.mock import Mock, patch
@@ -44,15 +45,15 @@ def mock_logger() -> Any:
     mock_option_logger.critical = Mock()
 
     # Create a mock formater that accepts all arguments
-    mock_formater = Mock(return_value="formatted message")
+    mock_formater = Mock(return_value='formatted message')
 
     option.logger = mock_option_logger
     option.formater = mock_formater
 
     # Also mock log to avoid other issues
-    with patch('exabgp.bgp.message.update.log') as mock_log, \
-         patch('exabgp.bgp.message.update.nlri.nlri.log') as mock_nlri_log, \
-         patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_attr_log:
+    with patch('exabgp.bgp.message.update.log') as mock_log, patch(
+        'exabgp.bgp.message.update.nlri.nlri.log'
+    ) as mock_nlri_log, patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_attr_log:
         mock_log.debug = Mock()
         mock_nlri_log.debug = Mock()
         mock_attr_log.debug = Mock()
@@ -64,7 +65,7 @@ def mock_logger() -> Any:
     option.formater = original_formater
 
 
-def create_negotiated_mock(families: Any =None, asn4: Any =False) -> Any:
+def create_negotiated_mock(families: Any = None, asn4: Any = False) -> Any:
     """Create a mock negotiated object with optional family support."""
     negotiated = Mock()
     negotiated.asn4 = asn4
@@ -80,6 +81,7 @@ def create_negotiated_mock(families: Any =None, asn4: Any =False) -> Any:
 # Phase 1: Mandatory Attribute Validation
 # ==============================================================================
 
+
 def test_update_with_mandatory_attributes() -> None:
     """Test UPDATE with all mandatory attributes for IPv4 announcement.
 
@@ -91,20 +93,23 @@ def test_update_with_mandatory_attributes() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_as_path_attribute, create_next_hop_attribute,
+        create_update_message,
+        create_ipv4_prefix,
+        create_origin_attribute,
+        create_as_path_attribute,
+        create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
 
     # Create UPDATE with all mandatory attributes
     attributes = (
-        create_origin_attribute(0) +  # IGP
-        create_as_path_attribute([65001, 65002]) +  # AS_PATH
-        create_next_hop_attribute("192.0.2.1")  # NEXT_HOP
+        create_origin_attribute(0)  # IGP
+        + create_as_path_attribute([65001, 65002])  # AS_PATH
+        + create_next_hop_attribute('192.0.2.1')  # NEXT_HOP
     )
 
-    nlri = create_ipv4_prefix("10.0.0.0", 8)
+    nlri = create_ipv4_prefix('10.0.0.0', 8)
 
     data = create_update_message(
         withdrawn_routes=b'',
@@ -118,6 +123,7 @@ def test_update_with_mandatory_attributes() -> None:
     assert len(result.nlris) == 1
     # Verify attributes were parsed
     from exabgp.bgp.message.update.attribute import Attribute
+
     assert Attribute.CODE.ORIGIN in result.attributes
     assert Attribute.CODE.AS_PATH in result.attributes
     assert Attribute.CODE.NEXT_HOP in result.attributes
@@ -134,20 +140,22 @@ def test_update_missing_mandatory_origin() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_ipv4_prefix,
-        create_as_path_attribute, create_next_hop_attribute,
+        create_update_message,
+        create_ipv4_prefix,
+        create_as_path_attribute,
+        create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
 
     # Create UPDATE without ORIGIN (missing mandatory)
     attributes = (
-        create_as_path_attribute([65001]) +  # AS_PATH present
-        create_next_hop_attribute("192.0.2.1")  # NEXT_HOP present
+        create_as_path_attribute([65001])  # AS_PATH present
+        + create_next_hop_attribute('192.0.2.1')  # NEXT_HOP present
         # ORIGIN missing!
     )
 
-    nlri = create_ipv4_prefix("10.0.0.0", 8)
+    nlri = create_ipv4_prefix('10.0.0.0', 8)
 
     data = create_update_message(
         withdrawn_routes=b'',
@@ -161,6 +169,7 @@ def test_update_missing_mandatory_origin() -> None:
     assert isinstance(result, Update)
     # Verify ORIGIN is missing from attributes
     from exabgp.bgp.message.update.attribute import Attribute
+
     assert Attribute.CODE.ORIGIN not in result.attributes
 
 
@@ -169,20 +178,22 @@ def test_update_missing_mandatory_as_path() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_next_hop_attribute,
+        create_update_message,
+        create_ipv4_prefix,
+        create_origin_attribute,
+        create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
 
     # Create UPDATE without AS_PATH
     attributes = (
-        create_origin_attribute(0) +  # ORIGIN present
-        create_next_hop_attribute("192.0.2.1")  # NEXT_HOP present
+        create_origin_attribute(0)  # ORIGIN present
+        + create_next_hop_attribute('192.0.2.1')  # NEXT_HOP present
         # AS_PATH missing!
     )
 
-    nlri = create_ipv4_prefix("10.0.0.0", 8)
+    nlri = create_ipv4_prefix('10.0.0.0', 8)
 
     data = create_update_message(
         withdrawn_routes=b'',
@@ -195,6 +206,7 @@ def test_update_missing_mandatory_as_path() -> None:
     assert isinstance(result, Update)
     # Verify AS_PATH is missing
     from exabgp.bgp.message.update.attribute import Attribute
+
     assert Attribute.CODE.AS_PATH not in result.attributes
 
 
@@ -203,20 +215,22 @@ def test_update_missing_mandatory_next_hop() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_as_path_attribute,
+        create_update_message,
+        create_ipv4_prefix,
+        create_origin_attribute,
+        create_as_path_attribute,
     )
 
     negotiated = create_negotiated_mock()
 
     # Create UPDATE without NEXT_HOP
     attributes = (
-        create_origin_attribute(0) +  # ORIGIN present
-        create_as_path_attribute([65001])  # AS_PATH present
+        create_origin_attribute(0)  # ORIGIN present
+        + create_as_path_attribute([65001])  # AS_PATH present
         # NEXT_HOP missing!
     )
 
-    nlri = create_ipv4_prefix("10.0.0.0", 8)
+    nlri = create_ipv4_prefix('10.0.0.0', 8)
 
     data = create_update_message(
         withdrawn_routes=b'',
@@ -243,9 +257,12 @@ def test_update_with_all_wellknown_attributes() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_as_path_attribute,
-        create_next_hop_attribute, create_med_attribute,
+        create_update_message,
+        create_ipv4_prefix,
+        create_origin_attribute,
+        create_as_path_attribute,
+        create_next_hop_attribute,
+        create_med_attribute,
         create_local_pref_attribute,
     )
 
@@ -253,14 +270,14 @@ def test_update_with_all_wellknown_attributes() -> None:
 
     # Create UPDATE with multiple well-known attributes
     attributes = (
-        create_origin_attribute(0) +  # ORIGIN
-        create_as_path_attribute([65001, 65002, 65003]) +  # AS_PATH
-        create_next_hop_attribute("192.0.2.1") +  # NEXT_HOP
-        create_med_attribute(100) +  # MED (optional)
-        create_local_pref_attribute(200)  # LOCAL_PREF
+        create_origin_attribute(0)  # ORIGIN
+        + create_as_path_attribute([65001, 65002, 65003])  # AS_PATH
+        + create_next_hop_attribute('192.0.2.1')  # NEXT_HOP
+        + create_med_attribute(100)  # MED (optional)
+        + create_local_pref_attribute(200)  # LOCAL_PREF
     )
 
-    nlri = create_ipv4_prefix("10.0.0.0", 8)
+    nlri = create_ipv4_prefix('10.0.0.0', 8)
 
     data = create_update_message(
         withdrawn_routes=b'',
@@ -273,6 +290,7 @@ def test_update_with_all_wellknown_attributes() -> None:
     assert isinstance(result, Update)
     # Verify multiple attributes were parsed
     from exabgp.bgp.message.update.attribute import Attribute
+
     assert Attribute.CODE.ORIGIN in result.attributes
     assert Attribute.CODE.AS_PATH in result.attributes
     assert Attribute.CODE.NEXT_HOP in result.attributes
@@ -284,6 +302,7 @@ def test_update_with_all_wellknown_attributes() -> None:
 # Phase 2: Attribute Combinations and NLRI
 # ==============================================================================
 
+
 def test_update_attribute_order_independence() -> None:
     """Test that attribute order doesn't affect parsing.
 
@@ -293,30 +312,33 @@ def test_update_attribute_order_independence() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_as_path_attribute,
-        create_next_hop_attribute, create_med_attribute,
+        create_update_message,
+        create_ipv4_prefix,
+        create_origin_attribute,
+        create_as_path_attribute,
+        create_next_hop_attribute,
+        create_med_attribute,
     )
 
     negotiated = create_negotiated_mock()
 
     # Order 1: Standard order
     attributes1 = (
-        create_origin_attribute(0) +
-        create_as_path_attribute([65001]) +
-        create_next_hop_attribute("192.0.2.1") +
-        create_med_attribute(100)
+        create_origin_attribute(0)
+        + create_as_path_attribute([65001])
+        + create_next_hop_attribute('192.0.2.1')
+        + create_med_attribute(100)
     )
 
     # Order 2: Reversed order
     attributes2 = (
-        create_med_attribute(100) +
-        create_next_hop_attribute("192.0.2.1") +
-        create_as_path_attribute([65001]) +
-        create_origin_attribute(0)
+        create_med_attribute(100)
+        + create_next_hop_attribute('192.0.2.1')
+        + create_as_path_attribute([65001])
+        + create_origin_attribute(0)
     )
 
-    nlri = create_ipv4_prefix("10.0.0.0", 8)
+    nlri = create_ipv4_prefix('10.0.0.0', 8)
 
     data1 = create_update_message(b'', attributes1, nlri)
     data2 = create_update_message(b'', attributes2, nlri)
@@ -330,6 +352,7 @@ def test_update_attribute_order_independence() -> None:
 
     # Both should have the same attributes
     from exabgp.bgp.message.update.attribute import Attribute
+
     assert Attribute.CODE.ORIGIN in result1.attributes
     assert Attribute.CODE.ORIGIN in result2.attributes
     assert Attribute.CODE.MED in result1.attributes
@@ -346,30 +369,22 @@ def test_update_with_withdrawn_and_announced() -> None:
     from exabgp.bgp.message.direction import Direction
     from exabgp.bgp.message.action import Action
     from tests.fuzz.update_helpers import (
-        create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_as_path_attribute,
+        create_update_message,
+        create_ipv4_prefix,
+        create_origin_attribute,
+        create_as_path_attribute,
         create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
 
     # Withdrawn routes
-    withdrawn = (
-        create_ipv4_prefix("172.16.0.0", 12) +
-        create_ipv4_prefix("192.168.0.0", 16)
-    )
+    withdrawn = create_ipv4_prefix('172.16.0.0', 12) + create_ipv4_prefix('192.168.0.0', 16)
 
     # Announced routes with attributes
-    attributes = (
-        create_origin_attribute(0) +
-        create_as_path_attribute([65001]) +
-        create_next_hop_attribute("192.0.2.1")
-    )
+    attributes = create_origin_attribute(0) + create_as_path_attribute([65001]) + create_next_hop_attribute('192.0.2.1')
 
-    nlri = (
-        create_ipv4_prefix("10.0.0.0", 8) +
-        create_ipv4_prefix("10.1.0.0", 16)
-    )
+    nlri = create_ipv4_prefix('10.0.0.0', 8) + create_ipv4_prefix('10.1.0.0', 16)
 
     data = create_update_message(withdrawn, attributes, nlri)
 
@@ -409,26 +424,24 @@ def test_update_with_multiple_nlri_prefixes() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_as_path_attribute,
+        create_update_message,
+        create_ipv4_prefix,
+        create_origin_attribute,
+        create_as_path_attribute,
         create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
 
-    attributes = (
-        create_origin_attribute(0) +
-        create_as_path_attribute([65001]) +
-        create_next_hop_attribute("192.0.2.1")
-    )
+    attributes = create_origin_attribute(0) + create_as_path_attribute([65001]) + create_next_hop_attribute('192.0.2.1')
 
     # Multiple NLRI prefixes
     nlri = (
-        create_ipv4_prefix("10.0.0.0", 8) +
-        create_ipv4_prefix("10.1.0.0", 16) +
-        create_ipv4_prefix("10.2.0.0", 16) +
-        create_ipv4_prefix("10.3.0.0", 16) +
-        create_ipv4_prefix("192.168.1.0", 24)
+        create_ipv4_prefix('10.0.0.0', 8)
+        + create_ipv4_prefix('10.1.0.0', 16)
+        + create_ipv4_prefix('10.2.0.0', 16)
+        + create_ipv4_prefix('10.3.0.0', 16)
+        + create_ipv4_prefix('192.168.1.0', 24)
     )
 
     data = create_update_message(b'', attributes, nlri)
@@ -453,10 +466,7 @@ def test_update_only_withdrawals_no_attributes() -> None:
     negotiated = create_negotiated_mock()
 
     # Only withdrawals, no attributes
-    withdrawn = (
-        create_ipv4_prefix("10.0.0.0", 8) +
-        create_ipv4_prefix("192.168.0.0", 16)
-    )
+    withdrawn = create_ipv4_prefix('10.0.0.0', 8) + create_ipv4_prefix('192.168.0.0', 16)
 
     data = create_update_message(withdrawn, b'', b'')
 
@@ -471,6 +481,7 @@ def test_update_only_withdrawals_no_attributes() -> None:
 # ==============================================================================
 # Phase 3: MP Extensions (MP_REACH_NLRI / MP_UNREACH_NLRI)
 # ==============================================================================
+
 
 def test_update_with_mp_reach_nlri() -> None:
     """Test UPDATE with MP_REACH_NLRI attribute (RFC 4760).
@@ -489,11 +500,11 @@ def test_update_with_mp_reach_nlri() -> None:
     # Create minimal MP_REACH_NLRI attribute (Type 14) with no actual NLRI
     # Format: AFI (2) + SAFI (1) + NH Length (1) + NH + Reserved (1) + [NLRI]
     mp_reach_value = (
-        struct.pack('!H', AFI.ipv6) +  # AFI: IPv6
-        struct.pack('!B', SAFI.unicast) +  # SAFI: unicast
-        struct.pack('!B', 16) +  # Next-hop length: 16 bytes
-        b'\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01' +  # IPv6 NH
-        struct.pack('!B', 0)  # Reserved, no NLRI data
+        struct.pack('!H', AFI.ipv6)  # AFI: IPv6
+        + struct.pack('!B', SAFI.unicast)  # SAFI: unicast
+        + struct.pack('!B', 16)  # Next-hop length: 16 bytes
+        + b'\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'  # IPv6 NH
+        + struct.pack('!B', 0)  # Reserved, no NLRI data
     )
 
     attributes = create_path_attribute(14, mp_reach_value, optional=True, transitive=False)
@@ -509,7 +520,7 @@ def test_update_with_mp_reach_nlri() -> None:
     except Exception as e:
         # MP_REACH with no NLRI might be treated as EOR or error
         # Either behavior is acceptable for this test
-        assert "EOR" in str(type(e)) or "Notify" in str(type(e)) or "UPDATE" in str(type(result))
+        assert 'EOR' in str(type(e)) or 'Notify' in str(type(e)) or 'UPDATE' in str(type(result))
 
 
 def test_update_with_mp_unreach_nlri() -> None:
@@ -530,8 +541,8 @@ def test_update_with_mp_unreach_nlri() -> None:
     # This effectively creates an EOR marker for IPv6 unicast
     # Format: AFI (2) + SAFI (1) + [Withdrawn Routes]
     mp_unreach_value = (
-        struct.pack('!H', AFI.ipv6) +  # AFI: IPv6
-        struct.pack('!B', SAFI.unicast)  # SAFI: unicast, no withdrawn routes
+        struct.pack('!H', AFI.ipv6)  # AFI: IPv6
+        + struct.pack('!B', SAFI.unicast)  # SAFI: unicast, no withdrawn routes
     )
 
     attributes = create_path_attribute(15, mp_unreach_value, optional=True, transitive=False)
@@ -588,8 +599,7 @@ def test_update_mp_reach_and_mp_unreach_together() -> None:
 
     # Create MP_UNREACH_NLRI (Type 15) with no withdrawn (simpler case)
     mp_unreach_value = (
-        struct.pack('!H', AFI.ipv6) +
-        struct.pack('!B', SAFI.unicast)  # No withdrawn routes
+        struct.pack('!H', AFI.ipv6) + struct.pack('!B', SAFI.unicast)  # No withdrawn routes
     )
 
     attributes = create_path_attribute(15, mp_unreach_value, optional=True, transitive=False)
@@ -621,8 +631,7 @@ def test_update_mp_unreach_only_is_valid() -> None:
 
     # Only MP_UNREACH_NLRI, no other attributes, no withdrawn routes (EOR)
     mp_unreach_value = (
-        struct.pack('!H', AFI.ipv6) +
-        struct.pack('!B', SAFI.unicast)  # No withdrawn routes
+        struct.pack('!H', AFI.ipv6) + struct.pack('!B', SAFI.unicast)  # No withdrawn routes
     )
 
     attributes = create_path_attribute(15, mp_unreach_value, optional=True, transitive=False)
@@ -640,6 +649,7 @@ def test_update_mp_unreach_only_is_valid() -> None:
 # Phase 4: Edge Cases and Limits
 # ==============================================================================
 
+
 def test_update_maximum_attributes_size() -> None:
     """Test UPDATE with large number of attributes approaching max size.
 
@@ -648,8 +658,10 @@ def test_update_maximum_attributes_size() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_origin_attribute,
-        create_as_path_attribute, create_next_hop_attribute,
+        create_update_message,
+        create_origin_attribute,
+        create_as_path_attribute,
+        create_next_hop_attribute,
         create_path_attribute,
     )
 
@@ -657,10 +669,11 @@ def test_update_maximum_attributes_size() -> None:
 
     # Build attributes with long AS_PATH
     attributes = (
-        create_origin_attribute(0) +
+        create_origin_attribute(0)
+        +
         # Long AS_PATH with many hops
-        create_as_path_attribute(list(range(65001, 65100))) +  # 99 AS numbers
-        create_next_hop_attribute("192.0.2.1")
+        create_as_path_attribute(list(range(65001, 65100)))  # 99 AS numbers
+        + create_next_hop_attribute('192.0.2.1')
     )
 
     # Add multiple community attributes (Type 8) to increase size
@@ -717,8 +730,10 @@ def test_update_empty_as_path_allowed() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_ipv4_prefix,
-        create_origin_attribute, create_as_path_attribute,
+        create_update_message,
+        create_ipv4_prefix,
+        create_origin_attribute,
+        create_as_path_attribute,
         create_next_hop_attribute,
     )
 
@@ -726,12 +741,12 @@ def test_update_empty_as_path_allowed() -> None:
 
     # Empty AS_PATH
     attributes = (
-        create_origin_attribute(0) +
-        create_as_path_attribute([]) +  # Empty
-        create_next_hop_attribute("192.0.2.1")
+        create_origin_attribute(0)
+        + create_as_path_attribute([])  # Empty
+        + create_next_hop_attribute('192.0.2.1')
     )
 
-    nlri = create_ipv4_prefix("10.0.0.0", 8)
+    nlri = create_ipv4_prefix('10.0.0.0', 8)
 
     data = create_update_message(b'', attributes, nlri)
 
@@ -740,6 +755,7 @@ def test_update_empty_as_path_allowed() -> None:
     assert isinstance(result, Update)
     # Empty AS_PATH should be valid
     from exabgp.bgp.message.update.attribute import Attribute
+
     assert Attribute.CODE.AS_PATH in result.attributes
 
 
@@ -756,8 +772,8 @@ def test_update_with_duplicate_attributes_detected() -> None:
 
     # Duplicate ORIGIN attributes
     attributes = (
-        create_origin_attribute(0) +  # First ORIGIN
-        create_origin_attribute(1)    # Duplicate ORIGIN (different value)
+        create_origin_attribute(0)  # First ORIGIN
+        + create_origin_attribute(1)  # Duplicate ORIGIN (different value)
     )
 
     data = create_update_message(b'', attributes, b'')
@@ -775,18 +791,16 @@ def test_update_zero_length_nlri_section() -> None:
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import (
-        create_update_message, create_origin_attribute,
-        create_as_path_attribute, create_next_hop_attribute,
+        create_update_message,
+        create_origin_attribute,
+        create_as_path_attribute,
+        create_next_hop_attribute,
     )
 
     negotiated = create_negotiated_mock()
 
     # Attributes but no NLRI
-    attributes = (
-        create_origin_attribute(0) +
-        create_as_path_attribute([65001]) +
-        create_next_hop_attribute("192.0.2.1")
-    )
+    attributes = create_origin_attribute(0) + create_as_path_attribute([65001]) + create_next_hop_attribute('192.0.2.1')
 
     data = create_update_message(b'', attributes, b'')  # Empty NLRI
 
@@ -797,5 +811,5 @@ def test_update_zero_length_nlri_section() -> None:
     assert result is not None
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+if __name__ == '__main__':
+    pytest.main([__file__, '-v'])

@@ -342,7 +342,7 @@ class TestRTCEdgeCases:
     def test_unpack_with_invalid_length(self) -> None:
         """Test unpacking with invalid length raises exception"""
         # Create a packed RTC with length less than 32 bits (invalid)
-        invalid_packed = b'\x10\x00\x00\xFD\xE8'  # length=16 (too short)
+        invalid_packed = b'\x10\x00\x00\xfd\xe8'  # length=16 (too short)
 
         with pytest.raises(Exception) as exc_info:
             RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, invalid_packed, Action.UNSET, None)

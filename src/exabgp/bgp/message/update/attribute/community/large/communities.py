@@ -1,4 +1,3 @@
-
 """Copyright (c) 2016 Job Snijders <job@ntt.net>
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
@@ -13,7 +12,9 @@ from exabgp.bgp.message.update.attribute.community.large.community import LargeC
 from exabgp.bgp.message.notification import Notify
 
 # Large community size constant
-LARGE_COMMUNITY_SIZE = 12  # Each large community is 12 bytes (4 bytes global admin + 4 bytes local data 1 + 4 bytes local data 2)
+LARGE_COMMUNITY_SIZE = (
+    12  # Each large community is 12 bytes (4 bytes global admin + 4 bytes local data 1 + 4 bytes local data 2)
+)
 
 
 @Attribute.register()

@@ -1,4 +1,3 @@
-
 """configuration.py
 
 Created by Thomas Mangin on 2009-08-25.
@@ -95,7 +94,10 @@ class _Configuration:
                         self.neighbors[neighbor].asm[operational.family().afi_safi()] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:
-                    log.error(lambda neighbor=neighbor: f'the route family {operational.family().afi_safi()} is not configured on neighbor {neighbor}', 'configuration')
+                    log.error(
+                        lambda neighbor=neighbor: f'the route family {operational.family().afi_safi()} is not configured on neighbor {neighbor}',
+                        'configuration',
+                    )
                     result = False
         return result
 
@@ -108,7 +110,11 @@ class _Configuration:
                     if family in self.neighbors[neighbor].families():
                         self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi, refresh.safi))
                     else:
-                        log.error(lambda family=family, neighbor=neighbor: f'the route family {family} is not configured on neighbor {neighbor}', 'configuration')
+                        log.error(
+                            lambda family=family,
+                            neighbor=neighbor: f'the route family {family} is not configured on neighbor {neighbor}',
+                            'configuration',
+                        )
                         result = False
         return result
 
@@ -454,7 +460,9 @@ class Configuration(_Configuration):
             has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']
             if has_procs and has_match:
                 return self.error.set(
-                    "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '{}' configuration.\n\n".format(neighbor['peer-address']),
+                    "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '{}' configuration.\n\n".format(
+                        neighbor['peer-address']
+                    ),
                 )
 
             for notification in neighbor.api:

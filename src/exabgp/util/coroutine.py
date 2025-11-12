@@ -1,4 +1,3 @@
-
 """coroutine.py
 
 Created by Thomas Mangin on 2013-07-01.

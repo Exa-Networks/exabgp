@@ -1,4 +1,3 @@
-
 """family.py
 
 Created by Thomas Mangin on 2010-01-19.
@@ -40,7 +39,7 @@ class _AFI(int):
     }
 
     _address_lengths: ClassVar[Dict[int, int]] = {
-        IPv4: 4,   # 4 bytes = 32 bits
+        IPv4: 4,  # 4 bytes = 32 bits
         IPv6: 16,  # 16 bytes = 128 bits
     }
 

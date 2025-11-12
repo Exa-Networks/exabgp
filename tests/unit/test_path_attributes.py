@@ -30,6 +30,7 @@ Note: AS_PATH is extensively tested in test_aspath.py (21 tests)
 Note: COMMUNITIES are extensively tested in test_communities.py (27 tests)
 Note: Multiprotocol extensions (MP_REACH/MP_UNREACH) will be in test_multiprotocol.py
 """
+
 import struct
 from typing import Any
 from unittest.mock import Mock
@@ -55,7 +56,7 @@ def mock_logger() -> Any:
     mock_option_logger.critical = Mock()
 
     # Create a mock formater
-    mock_formater = Mock(return_value="formatted message")
+    mock_formater = Mock(return_value='formatted message')
 
     option.logger = mock_option_logger
     option.formater = mock_formater
@@ -71,6 +72,7 @@ def mock_logger() -> Any:
 # Phase 1: Well-Known Mandatory - ORIGIN (Type 1)
 # ==============================================================================
 
+
 def test_origin_igp() -> None:
     """Test ORIGIN attribute with IGP value.
 
@@ -84,16 +86,16 @@ def test_origin_igp() -> None:
 
     # Verify value
     assert origin.origin == Origin.IGP
-    assert str(origin) == "igp"
+    assert str(origin) == 'igp'
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + value(1) = 4 bytes
     packed = origin.pack()
     assert len(packed) == 4
     assert packed[0] == 0x40  # Transitive flag
-    assert packed[1] == 1     # ORIGIN type code
-    assert packed[2] == 1     # Length
-    assert packed[3] == 0     # IGP value
+    assert packed[1] == 1  # ORIGIN type code
+    assert packed[2] == 1  # Length
+    assert packed[3] == 0  # IGP value
 
 
 def test_origin_egp() -> None:
@@ -109,7 +111,7 @@ def test_origin_egp() -> None:
 
     # Verify value
     assert origin.origin == Origin.EGP
-    assert str(origin) == "egp"
+    assert str(origin) == 'egp'
 
     # Verify pack (flag + type + length + value)
     packed = origin.pack()
@@ -130,7 +132,7 @@ def test_origin_incomplete() -> None:
 
     # Verify value
     assert origin.origin == Origin.INCOMPLETE
-    assert str(origin) == "incomplete"
+    assert str(origin) == 'incomplete'
 
     # Verify pack (flag + type + length + value)
     packed = origin.pack()
@@ -142,6 +144,7 @@ def test_origin_incomplete() -> None:
 # Phase 1: Well-Known Mandatory - NEXT_HOP (Type 3)
 # ==============================================================================
 
+
 def test_nexthop_valid_ipv4() -> None:
     """Test NEXT_HOP attribute with valid IPv4 address.
 
@@ -152,19 +155,19 @@ def test_nexthop_valid_ipv4() -> None:
     from exabgp.protocol.ip import IPv4
 
     # Create NEXT_HOP
-    nh_ip = "192.0.2.1"
+    nh_ip = '192.0.2.1'
     nexthop = NextHop(nh_ip)
 
     # Verify value
-    assert str(nexthop) == "192.0.2.1"  # __repr__ returns just the IP
+    assert str(nexthop) == '192.0.2.1'  # __repr__ returns just the IP
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + IPv4(4) = 7 bytes
     packed = nexthop.pack()
     assert len(packed) == 7
     assert packed[0] == 0x40  # Transitive flag
-    assert packed[1] == 3     # NEXT_HOP type code
-    assert packed[2] == 4     # Length (IPv4 = 4 bytes)
+    assert packed[1] == 3  # NEXT_HOP type code
+    assert packed[2] == 4  # Length (IPv4 = 4 bytes)
     # Last 4 bytes should be 192.0.2.1 in network byte order
     assert packed[3:] == IPv4.pton(nh_ip)
 
@@ -178,10 +181,10 @@ def test_nexthop_zero_address() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create NEXT_HOP with 0.0.0.0
-    nexthop = NextHop("0.0.0.0")
+    nexthop = NextHop('0.0.0.0')
 
     # Should create successfully
-    assert str(nexthop) == "0.0.0.0"  # __repr__ returns just the IP
+    assert str(nexthop) == '0.0.0.0'  # __repr__ returns just the IP
 
     # Verify pack (flag + type + length + value)
     packed = nexthop.pack()
@@ -198,9 +201,9 @@ def test_nexthop_self() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create NEXT_HOP pointing to self
-    nexthop = NextHop("10.0.0.1")
+    nexthop = NextHop('10.0.0.1')
 
-    assert str(nexthop) == "10.0.0.1"  # __repr__ returns just the IP
+    assert str(nexthop) == '10.0.0.1'  # __repr__ returns just the IP
 
     # Verify pack (flag + type + length + value)
     packed = nexthop.pack()
@@ -215,9 +218,9 @@ def test_nexthop_third_party() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create third-party NEXT_HOP
-    nexthop = NextHop("10.0.0.254")
+    nexthop = NextHop('10.0.0.254')
 
-    assert "10.0.0.254" in str(nexthop)
+    assert '10.0.0.254' in str(nexthop)
 
     # Verify pack (flag + type + length + value)
     packed = nexthop.pack()
@@ -227,6 +230,7 @@ def test_nexthop_third_party() -> None:
 # ==============================================================================
 # Phase 2: Well-Known Discretionary - LOCAL_PREF (Type 5)
 # ==============================================================================
+
 
 def test_localpref_basic() -> None:
     """Test LOCAL_PREF attribute basic parsing.
@@ -242,7 +246,7 @@ def test_localpref_basic() -> None:
 
     # Verify value
     assert localpref.localpref == 100
-    assert str(localpref) == "100"  # __repr__ returns just the value
+    assert str(localpref) == '100'  # __repr__ returns just the value
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + value(4) = 7 bytes
@@ -288,6 +292,7 @@ def test_localpref_ibgp_only() -> None:
 # Phase 2: Well-Known Discretionary - ATOMIC_AGGREGATE (Type 6)
 # ==============================================================================
 
+
 def test_atomic_aggregate_zero_length() -> None:
     """Test ATOMIC_AGGREGATE attribute.
 
@@ -300,7 +305,7 @@ def test_atomic_aggregate_zero_length() -> None:
     atomic = AtomicAggregate()
 
     # Verify representation (__repr__ returns empty string)
-    assert str(atomic) == ""
+    assert str(atomic) == ''
 
     # Verify pack (flag + type + length, but zero-length value)
     # Format: flag(1) + type(1) + length(1) = 3 bytes
@@ -330,6 +335,7 @@ def test_atomic_aggregate_presence() -> None:
 # Phase 3: Optional Transitive - AGGREGATOR (Type 7)
 # ==============================================================================
 
+
 def test_aggregator_2byte_asn() -> None:
     """Test AGGREGATOR attribute with 2-byte ASN.
 
@@ -346,12 +352,12 @@ def test_aggregator_2byte_asn() -> None:
 
     # Create AGGREGATOR with 2-byte ASN
     asn = ASN(65000)
-    speaker = IPv4.create("192.0.2.1")
+    speaker = IPv4.create('192.0.2.1')
     aggregator = Aggregator(asn, speaker)
 
     # Verify representation
-    assert "65000" in str(aggregator)
-    assert "192.0.2.1" in str(aggregator)
+    assert '65000' in str(aggregator)
+    assert '192.0.2.1' in str(aggregator)
 
     # Verify pack (flag + type + length + 2-byte ASN + 4-byte IP)
     # Format: flag(1) + type(1) + length(1) + ASN(2) + IP(4) = 9 bytes
@@ -375,7 +381,7 @@ def test_aggregator_4byte_asn() -> None:
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
-    speaker = IPv4.create("192.0.2.1")
+    speaker = IPv4.create('192.0.2.1')
     aggregator = Aggregator(asn, speaker)
 
     # Verify pack (flag + type + length + 4-byte ASN + 4-byte IP)
@@ -400,7 +406,7 @@ def test_aggregator_as_trans() -> None:
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
-    speaker = IPv4.create("192.0.2.1")
+    speaker = IPv4.create('192.0.2.1')
     aggregator = Aggregator(asn, speaker)
 
     # Pack for old speaker (should use AS_TRANS + AS4_AGGREGATOR)
@@ -421,6 +427,7 @@ def test_aggregator_as_trans() -> None:
 # Phase 4: Optional Non-Transitive - MED (Type 4)
 # ==============================================================================
 
+
 def test_med_basic() -> None:
     """Test MULTI_EXIT_DISC (MED) attribute.
 
@@ -436,7 +443,7 @@ def test_med_basic() -> None:
 
     # Verify value
     assert med.med == med_value
-    assert str(med) == "100"  # __repr__ returns just the value
+    assert str(med) == '100'  # __repr__ returns just the value
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + value(4) = 7 bytes
@@ -480,6 +487,7 @@ def test_med_comparison() -> None:
 # Phase 4: Optional Non-Transitive - ORIGINATOR_ID (Type 9)
 # ==============================================================================
 
+
 def test_originator_id_basic() -> None:
     """Test ORIGINATOR_ID attribute for route reflection.
 
@@ -490,11 +498,11 @@ def test_originator_id_basic() -> None:
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
     # Create ORIGINATOR_ID
-    originator_ip = "192.0.2.1"
+    originator_ip = '192.0.2.1'
     originator_id = OriginatorID(originator_ip)
 
     # Verify representation
-    assert "192.0.2.1" in str(originator_id)
+    assert '192.0.2.1' in str(originator_id)
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + IPv4(4) = 7 bytes
@@ -512,7 +520,7 @@ def test_originator_id_loop_prevention() -> None:
     from exabgp.bgp.message.update.attribute import Attribute
 
     # Create ORIGINATOR_ID
-    OriginatorID("192.0.2.1")
+    OriginatorID('192.0.2.1')
 
     # Verify it's optional non-transitive
     assert OriginatorID.ID == Attribute.CODE.ORIGINATOR_ID
@@ -522,6 +530,7 @@ def test_originator_id_loop_prevention() -> None:
 # ==============================================================================
 # Phase 4: Optional Non-Transitive - CLUSTER_LIST (Type 10)
 # ==============================================================================
+
 
 def test_cluster_list_single() -> None:
     """Test CLUSTER_LIST attribute with single cluster.
@@ -533,7 +542,7 @@ def test_cluster_list_single() -> None:
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Create single cluster
-    cluster_id = ClusterID("192.0.2.1")
+    cluster_id = ClusterID('192.0.2.1')
     cluster_list = ClusterList([cluster_id])
 
     # Verify pack (flag + type + length + value)
@@ -551,8 +560,8 @@ def test_cluster_list_multiple() -> None:
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Create multiple clusters
-    cluster1 = ClusterID("192.0.2.1")
-    cluster2 = ClusterID("192.0.2.2")
+    cluster1 = ClusterID('192.0.2.1')
+    cluster2 = ClusterID('192.0.2.2')
     cluster_list = ClusterList([cluster1, cluster2])
 
     # Verify pack (flag + type + length + 2 ClusterIDs)
@@ -578,6 +587,7 @@ def test_cluster_list_loop_detection() -> None:
 # ==============================================================================
 # Phase 5: Extended Attributes - AIGP (Type 26)
 # ==============================================================================
+
 
 def test_aigp_basic() -> None:
     """Test AIGP (Accumulated IGP) attribute.
@@ -653,6 +663,7 @@ def test_aigp_optional_attribute() -> None:
 # Phase 5: Attribute Handling Tests
 # ==============================================================================
 
+
 def test_attribute_flags() -> None:
     """Test attribute flag combinations.
 
@@ -666,17 +677,20 @@ def test_attribute_flags() -> None:
 
     # Test well-known mandatory (ORIGIN)
     from exabgp.bgp.message.update.attribute.origin import Origin
+
     # Well-known = transitive, not optional
     assert Origin.FLAG & Attribute.Flag.TRANSITIVE
     assert not (Origin.FLAG & Attribute.Flag.OPTIONAL)
 
     # Test optional transitive (AGGREGATOR)
     from exabgp.bgp.message.update.attribute.aggregator import Aggregator
+
     assert Aggregator.FLAG & Attribute.Flag.OPTIONAL
     assert Aggregator.FLAG & Attribute.Flag.TRANSITIVE
 
     # Test optional non-transitive (MED)
     from exabgp.bgp.message.update.attribute.med import MED
+
     assert MED.FLAG & Attribute.Flag.OPTIONAL
     assert not (MED.FLAG & Attribute.Flag.TRANSITIVE)
 
@@ -731,12 +745,13 @@ def test_attribute_length_encoding() -> None:
 # Enhanced NEXT_HOP Tests (Type 3) - Pack/Unpack Roundtrip
 # ==============================================================================
 
+
 def test_nexthop_pack_unpack_roundtrip() -> None:
     """Test NEXT_HOP pack/unpack roundtrip preserves data."""
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create NEXT_HOP
-    original_ip = "192.0.2.1"
+    original_ip = '192.0.2.1'
     nexthop = NextHop(original_ip)
 
     # Pack the attribute
@@ -758,14 +773,14 @@ def test_nexthop_equality() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create two identical next hops
-    nh1 = NextHop("192.0.2.1")
-    nh2 = NextHop("192.0.2.1")
+    nh1 = NextHop('192.0.2.1')
+    nh2 = NextHop('192.0.2.1')
 
     # Should be equal
     assert nh1 == nh2
 
     # Different next hops
-    nh3 = NextHop("192.0.2.2")
+    nh3 = NextHop('192.0.2.2')
     assert nh1 != nh3
 
 
@@ -781,7 +796,7 @@ def test_nexthop_self_basic() -> None:
     assert nh_self.SELF is True
 
     # Verify string representation
-    assert str(nh_self) == "self"
+    assert str(nh_self) == 'self'
 
     # Verify AFI check
     assert nh_self.ipv4() is True
@@ -803,6 +818,7 @@ def test_nexthop_empty_unpack() -> None:
 # Enhanced AGGREGATOR Tests (Type 7) - Roundtrip and Equality
 # ==============================================================================
 
+
 def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
     """Test AGGREGATOR pack/unpack roundtrip with 2-byte ASN."""
     from exabgp.bgp.message.update.attribute.aggregator import Aggregator
@@ -814,7 +830,7 @@ def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
 
     # Create original
     original_asn = ASN(65000)
-    original_speaker = IPv4.create("192.0.2.1")
+    original_speaker = IPv4.create('192.0.2.1')
     original = Aggregator(original_asn, original_speaker)
 
     # Pack
@@ -842,7 +858,7 @@ def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
 
     # Create original with 4-byte ASN
     original_asn = ASN(4200000000)
-    original_speaker = IPv4.create("192.0.2.1")
+    original_speaker = IPv4.create('192.0.2.1')
     original = Aggregator(original_asn, original_speaker)
 
     # Pack
@@ -866,18 +882,18 @@ def test_aggregator_equality() -> None:
     from exabgp.protocol.ip import IPv4
 
     # Create two identical aggregators
-    agg1 = Aggregator(ASN(65000), IPv4.create("192.0.2.1"))
-    agg2 = Aggregator(ASN(65000), IPv4.create("192.0.2.1"))
+    agg1 = Aggregator(ASN(65000), IPv4.create('192.0.2.1'))
+    agg2 = Aggregator(ASN(65000), IPv4.create('192.0.2.1'))
 
     # Should be equal
     assert agg1 == agg2
 
     # Different ASN
-    agg3 = Aggregator(ASN(65001), IPv4.create("192.0.2.1"))
+    agg3 = Aggregator(ASN(65001), IPv4.create('192.0.2.1'))
     assert agg1 != agg3
 
     # Different speaker
-    agg4 = Aggregator(ASN(65000), IPv4.create("192.0.2.2"))
+    agg4 = Aggregator(ASN(65000), IPv4.create('192.0.2.2'))
     assert agg1 != agg4
 
 
@@ -887,7 +903,7 @@ def test_aggregator_json() -> None:
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.protocol.ip import IPv4
 
-    agg = Aggregator(ASN(65000), IPv4.create("192.0.2.1"))
+    agg = Aggregator(ASN(65000), IPv4.create('192.0.2.1'))
 
     # Note: json() method has a bug (uses %d for IPv4), so we skip this test
     # or just verify the object has the method
@@ -898,12 +914,13 @@ def test_aggregator_json() -> None:
 # Enhanced ORIGINATOR_ID Tests (Type 9) - Roundtrip and Equality
 # ==============================================================================
 
+
 def test_originator_id_pack_unpack_roundtrip() -> None:
     """Test ORIGINATOR_ID pack/unpack roundtrip."""
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
     # Create original
-    original_ip = "192.0.2.1"
+    original_ip = '192.0.2.1'
     original = OriginatorID(original_ip)
 
     # Pack
@@ -925,8 +942,8 @@ def test_originator_id_equality() -> None:
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
     # Create two with same IP
-    oid1 = OriginatorID("192.0.2.1")
-    oid2 = OriginatorID("192.0.2.1")
+    oid1 = OriginatorID('192.0.2.1')
+    oid2 = OriginatorID('192.0.2.1')
 
     # Should be equal (note: implementation only checks ID and FLAG)
     assert oid1 == oid2
@@ -938,8 +955,8 @@ def test_originator_id_different_ips() -> None:
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
     # Create with different IPs
-    oid1 = OriginatorID("192.0.2.1")
-    oid2 = OriginatorID("192.0.2.2")
+    oid1 = OriginatorID('192.0.2.1')
+    oid2 = OriginatorID('192.0.2.2')
 
     # They are equal by implementation (only checks ID and FLAG)
     # But packed data is different
@@ -950,7 +967,7 @@ def test_originator_id_inherits_ipv4() -> None:
     """Test ORIGINATOR_ID inherits IPv4 functionality."""
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
-    oid = OriginatorID("192.0.2.1")
+    oid = OriginatorID('192.0.2.1')
 
     # Should have IPv4 methods
     assert hasattr(oid, 'pack')
@@ -965,12 +982,13 @@ def test_originator_id_inherits_ipv4() -> None:
 # Enhanced CLUSTER_LIST Tests (Type 10) - Roundtrip and Equality
 # ==============================================================================
 
+
 def test_cluster_list_pack_unpack_roundtrip_single() -> None:
     """Test CLUSTER_LIST pack/unpack roundtrip with single cluster."""
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Create original
-    cluster = ClusterID("192.0.2.1")
+    cluster = ClusterID('192.0.2.1')
     original = ClusterList([cluster])
 
     # Pack
@@ -984,7 +1002,7 @@ def test_cluster_list_pack_unpack_roundtrip_single() -> None:
 
     # Verify match
     assert len(unpacked.clusters) == 1
-    assert str(unpacked.clusters[0]) == "192.0.2.1"
+    assert str(unpacked.clusters[0]) == '192.0.2.1'
 
 
 def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
@@ -992,9 +1010,9 @@ def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Create original with multiple clusters
-    cluster1 = ClusterID("192.0.2.1")
-    cluster2 = ClusterID("192.0.2.2")
-    cluster3 = ClusterID("192.0.2.3")
+    cluster1 = ClusterID('192.0.2.1')
+    cluster2 = ClusterID('192.0.2.2')
+    cluster3 = ClusterID('192.0.2.3')
     original = ClusterList([cluster1, cluster2, cluster3])
 
     # Pack
@@ -1008,9 +1026,9 @@ def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
 
     # Verify match
     assert len(unpacked.clusters) == 3
-    assert str(unpacked.clusters[0]) == "192.0.2.1"
-    assert str(unpacked.clusters[1]) == "192.0.2.2"
-    assert str(unpacked.clusters[2]) == "192.0.2.3"
+    assert str(unpacked.clusters[0]) == '192.0.2.1'
+    assert str(unpacked.clusters[1]) == '192.0.2.2'
+    assert str(unpacked.clusters[2]) == '192.0.2.3'
 
 
 def test_cluster_list_equality() -> None:
@@ -1018,8 +1036,8 @@ def test_cluster_list_equality() -> None:
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Create two identical cluster lists
-    cl1 = ClusterList([ClusterID("192.0.2.1"), ClusterID("192.0.2.2")])
-    cl2 = ClusterList([ClusterID("192.0.2.1"), ClusterID("192.0.2.2")])
+    cl1 = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
+    cl2 = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
 
     # Should be equal
     assert cl1 == cl2
@@ -1031,11 +1049,11 @@ def test_cluster_list_length() -> None:
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Single cluster
-    cl_single = ClusterList([ClusterID("192.0.2.1")])
+    cl_single = ClusterList([ClusterID('192.0.2.1')])
     assert len(cl_single) == 4  # 1 cluster * 4 bytes
 
     # Multiple clusters
-    cl_multi = ClusterList([ClusterID("192.0.2.1"), ClusterID("192.0.2.2"), ClusterID("192.0.2.3")])
+    cl_multi = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2'), ClusterID('192.0.2.3')])
     assert len(cl_multi) == 12  # 3 clusters * 4 bytes
 
 
@@ -1043,43 +1061,44 @@ def test_cluster_list_repr_single() -> None:
     """Test CLUSTER_LIST string representation with single cluster."""
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
-    cl = ClusterList([ClusterID("192.0.2.1")])
+    cl = ClusterList([ClusterID('192.0.2.1')])
     # Implementation returns "[ IP ]" format even for single cluster if _len != 1 after initialization
     repr_str = str(cl)
-    assert "192.0.2.1" in repr_str
+    assert '192.0.2.1' in repr_str
 
 
 def test_cluster_list_repr_multiple() -> None:
     """Test CLUSTER_LIST string representation with multiple clusters."""
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
-    cl = ClusterList([ClusterID("192.0.2.1"), ClusterID("192.0.2.2")])
+    cl = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
     repr_str = str(cl)
 
     # Should be in bracket format
-    assert "[" in repr_str
-    assert "]" in repr_str
-    assert "192.0.2.1" in repr_str
-    assert "192.0.2.2" in repr_str
+    assert '[' in repr_str
+    assert ']' in repr_str
+    assert '192.0.2.1' in repr_str
+    assert '192.0.2.2' in repr_str
 
 
 def test_cluster_list_json() -> None:
     """Test CLUSTER_LIST JSON serialization."""
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
-    cl = ClusterList([ClusterID("192.0.2.1"), ClusterID("192.0.2.2")])
+    cl = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
     json_str = cl.json()
 
     # Should contain cluster IDs in JSON array format
-    assert "[" in json_str
-    assert "]" in json_str
-    assert "192.0.2.1" in json_str
-    assert "192.0.2.2" in json_str
+    assert '[' in json_str
+    assert ']' in json_str
+    assert '192.0.2.1' in json_str
+    assert '192.0.2.2' in json_str
 
 
 # ==============================================================================
 # Enhanced AIGP Tests (Type 26) - Roundtrip and Negotiation
 # ==============================================================================
+
 
 def test_aigp_pack_unpack_roundtrip() -> None:
     """Test AIGP pack/unpack roundtrip."""
@@ -1174,7 +1193,7 @@ def test_aigp_repr_format() -> None:
 
     # Representation should be hex of last 8 bytes (metric)
     repr_str = str(aigp)
-    assert repr_str.startswith("0x")
+    assert repr_str.startswith('0x')
     # Should be 16 hex chars (8 bytes)
     assert len(repr_str) == 18  # "0x" + 16 chars
 
@@ -1182,6 +1201,7 @@ def test_aigp_repr_format() -> None:
 # ==============================================================================
 # NEW PMSI Tests (Type 22) - Comprehensive Coverage
 # ==============================================================================
+
 
 def test_pmsi_basic_creation() -> None:
     """Test PMSI attribute basic creation."""
@@ -1232,7 +1252,7 @@ def test_pmsi_pack_unpack_roundtrip() -> None:
     import struct
 
     # Create PMSI
-    tunnel_data = b'\xC0\xA8\x01\x01'  # 192.168.1.1
+    tunnel_data = b'\xc0\xa8\x01\x01'  # 192.168.1.1
     label = 100
     flags = 0
     tunnel_type = 1
@@ -1315,8 +1335,8 @@ def test_pmsi_repr_format() -> None:
     repr_str = str(pmsi)
 
     # Should contain tunnel type name
-    assert "pmsi:" in repr_str
-    assert "rsvp-tep2mplsp" in repr_str or "rsvp" in repr_str.lower()
+    assert 'pmsi:' in repr_str
+    assert 'rsvp-tep2mplsp' in repr_str or 'rsvp' in repr_str.lower()
     assert str(flags) in repr_str
     assert str(label) in repr_str
 
@@ -1387,7 +1407,7 @@ def test_pmsi_ingress_replication() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSIIngressReplication
 
     # Create PMSIIngressReplication
-    ip = "192.168.1.1"
+    ip = '192.168.1.1'
     pmsi = PMSIIngressReplication(ip, label=100, flags=0)
 
     # Verify tunnel type
@@ -1404,7 +1424,7 @@ def test_pmsi_ingress_replication_pack() -> None:
     """Test PMSIIngressReplication pack method."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSIIngressReplication
 
-    pmsi = PMSIIngressReplication("192.168.1.1", label=100, flags=0)
+    pmsi = PMSIIngressReplication('192.168.1.1', label=100, flags=0)
 
     negotiated = Mock()
     packed = pmsi.pack(negotiated)
@@ -1419,7 +1439,7 @@ def test_pmsi_ingress_replication_unpack() -> None:
     from exabgp.protocol.ip import IPv4
 
     # Create tunnel with IP
-    ip = "192.168.1.1"
+    ip = '192.168.1.1'
     tunnel = IPv4.pton(ip)
 
     # Unpack
@@ -1434,7 +1454,7 @@ def test_pmsi_ingress_replication_prettytunnel() -> None:
     """Test PMSIIngressReplication prettytunnel method."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSIIngressReplication
 
-    ip = "192.168.1.1"
+    ip = '192.168.1.1'
     pmsi = PMSIIngressReplication(ip, label=100, flags=0)
 
     # Pretty tunnel should return IP address

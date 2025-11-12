@@ -1,4 +1,3 @@
-
 """environment.py
 
 Created by Thomas Mangin on 2011-11-29.
@@ -49,7 +48,7 @@ class Env:
                     if values['write'] in (parsing.list, parsing.path, parsing.quote, parsing.syslog_name)
                     else values['value']
                 )
-                yield f"{base.APPLICATION}.{section}.{option} {' ' * (18 - len(section) - len(option))} {values['help']}. default ({default})"
+                yield f'{base.APPLICATION}.{section}.{option} {" " * (18 - len(section) - len(option))} {values["help"]}. default ({default})'
 
     @classmethod
     def iter_ini(cls, diff: bool = False) -> Iterator[str]:
@@ -66,7 +65,7 @@ class Env:
                 if header:
                     yield header
                     header = ''
-                yield f"{k} = {cls.definition[section][k]['write'](v)}"
+                yield f'{k} = {cls.definition[section][k]["write"](v)}'
 
     @classmethod
     def iter_env(cls, diff: bool = False) -> Iterator[str]:
@@ -81,7 +80,7 @@ class Env:
                 if cls.definition[section][k]['write'] == parsing.quote:
                     yield f"{base.APPLICATION}.{section}.{k}='{v}'"
                     continue
-                yield f"{base.APPLICATION}.{section}.{k}={cls.definition[section][k]['write'](v)}"
+                yield f'{base.APPLICATION}.{section}.{k}={cls.definition[section][k]["write"](v)}'
 
     @classmethod
     def setup(cls, configuration: Dict[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:

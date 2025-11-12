@@ -210,6 +210,7 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
         ch.setFormatter(logging.Formatter('%(levelname)s[%(name)s] %(message)s'))
         logger.addHandler(ch)
 
+
 def system_ips(ip_ifnames, label, label_only, label_exact_match):
     """Retrieve IP addresses for loopback and ip-ifname given interfaces"""
     logger.debug('Retrieve IP addresses for loopback and ip-ifname interfaces')
@@ -222,8 +223,10 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
         ipre = re.compile(r'^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+' r'(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*')
         labelre = re.compile(r'.*\s+(?:' + '|'.join(ifnames) + r'):(?P<label>[^\\\s]+).*')
         for ifname in ifnames:
-            cmd = subprocess.Popen(f'/sbin/ip -o address show dev {ifname}'.split(), shell=False, stdout=subprocess.PIPE)
-            output += [ line for line in cmd.stdout ]
+            cmd = subprocess.Popen(
+                f'/sbin/ip -o address show dev {ifname}'.split(), shell=False, stdout=subprocess.PIPE
+            )
+            output += [line for line in cmd.stdout]
     else:
         # Try with ifconfig
         ipre = re.compile(
@@ -234,7 +237,7 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
         labelre = re.compile(r'')
         for ifname in ifnames:
             cmd = subprocess.Popen(f'/sbin/ifconfig {ifname}'.split(), shell=False, stdout=subprocess.PIPE)
-            output += [ line for line in cmd.stdout]
+            output += [line for line in cmd.stdout]
     for line in output or []:
         line = line.decode('ascii', 'ignore').strip()
         mo = ipre.match(line)
@@ -245,7 +248,7 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
         else:
             mask = bin(int(mo.group('netmask'), 16)).count('1')
         try:
-            ip = ip_network(f"{mo.group('ip')}/{mask}")
+            ip = ip_network(f'{mo.group("ip")}/{mask}')
         except ValueError:
             continue
         if not ip.is_loopback:
@@ -318,7 +321,8 @@ def remove_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
                 logger.warning(
                     'Unable to remove %s IP address %s - is \
                     healthcheck running as root?',
-                    ifname, str(ip),
+                    ifname,
+                    str(ip),
                 )
 
 
@@ -357,7 +361,6 @@ def check(cmd, timeout):
 
     class Alarm(Exception):
         """Exception to signal an alarm condition."""
-
 
     def alarm_handler(number, frame):  # pylint: disable=W0613
         """Handle SIGALRM signal."""
@@ -420,7 +423,7 @@ def loop(options):
                 command = 'neighbor * announce' if target is states.UP else 'neighbor * withdraw'
             else:
                 command = 'neighbor * announce'
-            announce = f"route {ip} next-hop {options.next_hop or 'self'}"
+            announce = f'route {ip} next-hop {options.next_hop or "self"}'
 
             if command == 'neighbor * announce':
                 announce = f'{announce} med {metric}'

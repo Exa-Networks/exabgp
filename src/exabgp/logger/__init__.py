@@ -77,6 +77,7 @@ class log(_log):
         # DEVELOPER WARNING: Log messages must always be callable (lambda) for lazy evaluation
         if not callable(message):
             import sys
+
             warning = (
                 f'\n'
                 f'================================================================================\n'

@@ -19,6 +19,7 @@ Test Coverage:
     - Off-by-one errors
     - Wraparound scenarios
 """
+
 import pytest
 from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
@@ -50,13 +51,13 @@ def test_update_split_with_random_data(data: bytes) -> None:
         # Verify the lengths add up
         # Format: 2 (withdrawn_len) + withdrawn + 2 (attr_len) + attributes + announced
         expected_len = 2 + len(withdrawn) + 2 + len(attributes) + len(announced)
-        assert expected_len == len(data), f"Length mismatch: {expected_len} != {len(data)}"
+        assert expected_len == len(data), f'Length mismatch: {expected_len} != {len(data)}'
 
     except Notify as e:
         # Expected for malformed data
         # UPDATE errors should be code 3 (Update Message Error)
-        assert e.code == 3, f"Expected code 3, got {e.code}"
-        assert e.subcode == 1, f"Expected subcode 1 (Malformed Attribute List), got {e.subcode}"
+        assert e.code == 3, f'Expected code 3, got {e.code}'
+        assert e.subcode == 1, f'Expected subcode 1 (Malformed Attribute List), got {e.subcode}'
     except struct.error:
         # Expected when data is too short for unpack
         pass
@@ -78,23 +79,23 @@ def test_update_split_withdrawn_length_fuzzing(withdrawn_len: int) -> None:
     actual_withdrawn_data = b'\x08\x0a' * 5  # 10 bytes of data
 
     data = (
-        struct.pack('!H', withdrawn_len) +  # Claimed length
-        actual_withdrawn_data +              # Actual data (10 bytes)
-        struct.pack('!H', 0)                # Attr length = 0
+        struct.pack('!H', withdrawn_len)  # Claimed length
+        + actual_withdrawn_data  # Actual data (10 bytes)
+        + struct.pack('!H', 0)  # Attr length = 0
     )
 
     try:
         withdrawn, attributes, announced = Update.split(data)
 
         # Should only succeed if withdrawn_len == 10
-        assert withdrawn_len == 10, f"Should have failed with length {withdrawn_len} != 10"
+        assert withdrawn_len == 10, f'Should have failed with length {withdrawn_len} != 10'
         assert len(withdrawn) == 10
         assert len(attributes) == 0
         assert len(announced) == 0
 
     except Notify as e:
         # Should fail for all other lengths
-        assert withdrawn_len != 10, f"Should have succeeded with length {withdrawn_len}"
+        assert withdrawn_len != 10, f'Should have succeeded with length {withdrawn_len}'
         assert e.code == 3 and e.subcode == 1
 
 
@@ -114,9 +115,9 @@ def test_update_split_attr_length_fuzzing(attr_len: int) -> None:
     actual_attr_data = b'\x40\x01\x01\x00' + b'\x40\x02\x00' + b'\x40\x03\x04\xc0\x00\x02\x01\x00'  # 15 bytes
 
     data = (
-        struct.pack('!H', 0) +              # Withdrawn length = 0
-        struct.pack('!H', attr_len) +       # Claimed attr length
-        actual_attr_data                    # Actual data (15 bytes)
+        struct.pack('!H', 0)  # Withdrawn length = 0
+        + struct.pack('!H', attr_len)  # Claimed attr length
+        + actual_attr_data  # Actual data (15 bytes)
         # No NLRI
     )
 
@@ -131,11 +132,11 @@ def test_update_split_attr_length_fuzzing(attr_len: int) -> None:
             assert len(attributes) == attr_len
             assert len(announced) == 15 - attr_len
         else:
-            pytest.fail(f"Should have raised Notify with attr_len={attr_len} > 15")
+            pytest.fail(f'Should have raised Notify with attr_len={attr_len} > 15')
 
     except Notify as e:
         # Should fail when attr_len > actual data (15 bytes)
-        assert attr_len > 15, f"Should have succeeded with length {attr_len} <= 15"
+        assert attr_len > 15, f'Should have succeeded with length {attr_len} <= 15'
         assert e.code == 3 and e.subcode == 1
 
 
@@ -160,7 +161,7 @@ def test_update_split_with_withdrawals_only() -> None:
     from exabgp.bgp.message.update import Update
 
     # Withdrawal: 192.0.2.0/24
-    prefix = create_ipv4_prefix("192.0.2.0", 24)
+    prefix = create_ipv4_prefix('192.0.2.0', 24)
 
     data = create_update_message(
         withdrawn_routes=prefix,
@@ -184,7 +185,7 @@ def test_update_split_with_attributes_and_nlri() -> None:
     attrs = b'\x40\x01\x01\x00'  # ORIGIN attribute
 
     # NLRI: 10.0.0.0/8
-    nlri = create_ipv4_prefix("10.0.0.0", 8)
+    nlri = create_ipv4_prefix('10.0.0.0', 8)
 
     data = create_update_message(
         withdrawn_routes=b'',
@@ -208,9 +209,9 @@ def test_update_split_truncation(truncate_at: int) -> None:
     from exabgp.bgp.message.notification import Notify
 
     # Create a valid UPDATE with known size
-    prefix = create_ipv4_prefix("192.0.2.0", 24)
+    prefix = create_ipv4_prefix('192.0.2.0', 24)
     attrs = b'\x40\x01\x01\x00' + b'\x40\x02\x00'
-    nlri = create_ipv4_prefix("10.0.0.0", 2)
+    nlri = create_ipv4_prefix('10.0.0.0', 2)
 
     valid_update = create_update_message(
         withdrawn_routes=prefix,
@@ -252,9 +253,9 @@ def test_update_split_length_one_byte_too_short() -> None:
     actual_data = b'\x18\xc0\x00\x02' + b'\x08\x0a' * 3  # 10 bytes
 
     data = (
-        struct.pack('!H', 9) +  # Claim 9 bytes
-        actual_data +            # Actually 10 bytes
-        struct.pack('!H', 0)     # No attributes
+        struct.pack('!H', 9)  # Claim 9 bytes
+        + actual_data  # Actually 10 bytes
+        + struct.pack('!H', 0)  # No attributes
     )
 
     with pytest.raises(Notify) as exc_info:
@@ -275,9 +276,9 @@ def test_update_split_length_one_byte_too_long() -> None:
 
     # Need to have enough data for the attr_len field too
     data = (
-        struct.pack('!H', 11) +  # Claim 11 bytes of withdrawals
-        actual_data +            # Actually 10 bytes
-        b'\x00'                  # Not enough for attr_len (need 2 bytes)
+        struct.pack('!H', 11)  # Claim 11 bytes of withdrawals
+        + actual_data  # Actually 10 bytes
+        + b'\x00'  # Not enough for attr_len (need 2 bytes)
     )
 
     # This will fail with struct.error or Notify
@@ -293,8 +294,8 @@ def test_update_split_total_length_mismatch() -> None:
 
     # Claim 5 bytes of withdrawals but only provide 4 bytes + attr_len field
     data = (
-        struct.pack('!H', 5) +      # Claim 5 bytes of withdrawals
-        b'\x18\xc0\x00\x02'         # Actually 4 bytes (not enough for attr_len field)
+        struct.pack('!H', 5)  # Claim 5 bytes of withdrawals
+        + b'\x18\xc0\x00\x02'  # Actually 4 bytes (not enough for attr_len field)
     )
 
     # Should fail with either Notify or struct.error (not enough data)
@@ -317,5 +318,5 @@ def test_update_split_max_valid_lengths() -> None:
     assert announced == b''
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-m", "fuzz"])
+if __name__ == '__main__':
+    pytest.main([__file__, '-v', '-m', 'fuzz'])

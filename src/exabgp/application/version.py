@@ -1,5 +1,3 @@
-
-
 """exabgp current version"""
 
 from __future__ import annotations

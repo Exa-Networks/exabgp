@@ -22,6 +22,7 @@ Test Coverage:
 8. TREAT_AS_WITHDRAW behavior
 9. DISCARD behavior
 """
+
 import struct
 from typing import Any, Generator
 from unittest.mock import Mock, patch
@@ -38,7 +39,7 @@ def mock_logger() -> Generator[None, None, None]:
         yield
 
 
-def create_negotiated_mock(asn4: Any =False) -> Any:
+def create_negotiated_mock(asn4: Any = False) -> Any:
     """Create minimal mock negotiated object for testing."""
     negotiated = Mock()
     negotiated.asn4 = asn4
@@ -48,7 +49,7 @@ def create_negotiated_mock(asn4: Any =False) -> Any:
     return negotiated
 
 
-def create_attribute_header(flag: Any, type_code: Any, length: Any, extended: Any =False) -> Any:
+def create_attribute_header(flag: Any, type_code: Any, length: Any, extended: Any = False) -> Any:
     """Create attribute header bytes.
 
     Args:
@@ -75,6 +76,7 @@ def create_attribute_header(flag: Any, type_code: Any, length: Any, extended: An
 # =============================================================================
 # Test Flag Parsing
 # =============================================================================
+
 
 def test_attributes_parse_origin_transitive() -> None:
     """Test parsing ORIGIN attribute (well-known mandatory transitive)."""
@@ -133,6 +135,7 @@ def test_attributes_parse_extended_length() -> None:
 # Test Multiple Attributes
 # =============================================================================
 
+
 def test_attributes_parse_multiple_attributes() -> None:
     """Test parsing UPDATE with multiple attributes."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
@@ -177,6 +180,7 @@ def test_attributes_parse_as_path() -> None:
 # =============================================================================
 # Test Duplicate Attributes
 # =============================================================================
+
 
 def test_attributes_duplicate_attribute_ignored() -> None:
     """Test that duplicate attributes are ignored (for most attributes)."""
@@ -227,6 +231,7 @@ def test_attributes_duplicate_attribute_handling() -> None:
 # Test Zero-Length Attributes
 # =============================================================================
 
+
 def test_attributes_zero_length_atomic_aggregate_valid() -> None:
     """Test that ATOMIC_AGGREGATE can have zero length."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
@@ -263,7 +268,7 @@ def test_attributes_zero_length_as_path_valid() -> None:
     assert True  # If we get here without exception, test passes
 
 
-@pytest.mark.parametrize("attr_type", [1, 3, 4, 5])  # ORIGIN, NEXT_HOP, MED, LOCAL_PREF
+@pytest.mark.parametrize('attr_type', [1, 3, 4, 5])  # ORIGIN, NEXT_HOP, MED, LOCAL_PREF
 def test_attributes_zero_length_invalid_treat_as_withdraw(attr_type: Any) -> None:
     """Test that zero-length for certain attributes triggers TREAT_AS_WITHDRAW."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
@@ -279,12 +284,14 @@ def test_attributes_zero_length_invalid_treat_as_withdraw(attr_type: Any) -> Non
 
     # Should have TREAT_AS_WITHDRAW marker
     from exabgp.bgp.message.update.attribute.attribute import Attribute
+
     assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes
 
 
 # =============================================================================
 # Test Truncated Attributes
 # =============================================================================
+
 
 def test_attributes_truncated_header() -> None:
     """Test truncated attribute header (only flag byte)."""
@@ -300,6 +307,7 @@ def test_attributes_truncated_header() -> None:
 
     # Should trigger TREAT_AS_WITHDRAW due to IndexError
     from exabgp.bgp.message.update.attribute.attribute import Attribute
+
     assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes
 
 
@@ -317,6 +325,7 @@ def test_attributes_truncated_length() -> None:
 
     # Should trigger TREAT_AS_WITHDRAW
     from exabgp.bgp.message.update.attribute.attribute import Attribute
+
     assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes
 
 
@@ -334,6 +343,7 @@ def test_attributes_truncated_value() -> None:
 
     # Should handle gracefully (empty value becomes treat-as-withdraw or parse error)
     from exabgp.bgp.message.update.attribute.attribute import Attribute
+
     # Either TREAT_AS_WITHDRAW or attribute is not present
     assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes or 1 not in attributes
 
@@ -341,6 +351,7 @@ def test_attributes_truncated_value() -> None:
 # =============================================================================
 # Test Unknown Attributes
 # =============================================================================
+
 
 def test_attributes_unknown_transitive() -> None:
     """Test unknown transitive attribute (should be preserved)."""
@@ -386,6 +397,7 @@ def test_attributes_unknown_non_transitive() -> None:
 # Test Flag Validation
 # =============================================================================
 
+
 def test_attributes_invalid_flag_for_known_attribute_treat_as_withdraw() -> None:
     """Test that invalid flags for TREAT_AS_WITHDRAW attributes trigger withdrawal."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
@@ -400,6 +412,7 @@ def test_attributes_invalid_flag_for_known_attribute_treat_as_withdraw() -> None
 
     # Should trigger TREAT_AS_WITHDRAW
     from exabgp.bgp.message.update.attribute.attribute import Attribute
+
     assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes
 
 
@@ -424,6 +437,7 @@ def test_attributes_invalid_flag_for_discard_attribute() -> None:
 # Test AS_PATH + AS4_PATH Merging
 # =============================================================================
 
+
 def test_attributes_as4_path_alone() -> None:
     """Test that AS4_PATH can be parsed independently."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
@@ -447,6 +461,7 @@ def test_attributes_as4_path_alone() -> None:
 # Test Empty Attributes
 # =============================================================================
 
+
 def test_attributes_empty_data() -> None:
     """Test parsing empty attributes data."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
@@ -465,6 +480,7 @@ def test_attributes_empty_data() -> None:
 # =============================================================================
 # Test Attributes Methods
 # =============================================================================
+
 
 def test_attributes_has_method() -> None:
     """Test Attributes.has() method."""
@@ -493,5 +509,5 @@ def test_attributes_remove_method() -> None:
     assert not attributes.has(1)
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+if __name__ == '__main__':
+    pytest.main([__file__, '-v'])
