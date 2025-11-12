@@ -9,10 +9,20 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import time
+from typing import TypeVar, Generic, List
+
+KT = TypeVar('KT')
+VT = TypeVar('VT')
 
 
-class Cache(dict):
-    def __init__(self, min_items=10, max_items=2000, cache_life=3600):
+class Cache(dict, Generic[KT, VT]):
+    ordered: List[KT]
+    min_items: int
+    max_items: int
+    cache_life: int
+    last_accessed: int
+
+    def __init__(self, min_items: int = 10, max_items: int = 2000, cache_life: int = 3600) -> None:
         dict.__init__(self)
         self.ordered = []
         self.min_items = min_items
@@ -20,7 +30,7 @@ class Cache(dict):
         self.cache_life = cache_life
         self.last_accessed = int(time.time())
 
-    def cache(self, key, value):
+    def cache(self, key: KT, value: VT) -> VT:
         now = int(time.time())
 
         if now - self.last_accessed >= self.cache_life:
@@ -37,9 +47,9 @@ class Cache(dict):
 
         return value
 
-    def retrieve(self, key):
+    def retrieve(self, key: KT) -> VT:
         now = int(time.time())
-        res = self[key]
+        res: VT = self[key]
 
         if now - self.last_accessed >= self.cache_life:
             self.truncate(self.min_items)
@@ -49,7 +59,7 @@ class Cache(dict):
 
         return res
 
-    def truncate(self, pos):
+    def truncate(self, pos: int) -> None:
         pos = len(self.ordered) - pos
         expiring = self.ordered[:pos]
         self.ordered = self.ordered[pos:]
