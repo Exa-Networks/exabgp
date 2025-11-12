@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Dict, ClassVar, Optional, List, Tuple, Union
+from typing import Dict, ClassVar, Optional, List, Tuple
 
 from exabgp.protocol.resource import Resource
 
