@@ -6,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+from typing import Any
 
 from exabgp.bgp.message.open.capability.capability import Capability
 
@@ -19,15 +20,15 @@ class ExtendedMessage(Capability):
     INITIAL_SIZE = 4096
     EXTENDED_SIZE = 65535
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Extended Message(%d)' % self.EXTENDED_SIZE
 
-    def extract(self):
+    def extract(self) -> list[bytes]:
         return [b'']
 
     @staticmethod
-    def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+    def unpack_capability(instance: ExtendedMessage, data: bytes, capability: Any = None) -> ExtendedMessage:  # pylint: disable=W0613
         return ExtendedMessage()
 
-    def json(self):
+    def json(self) -> str:
         return '{ "name": "extended-message", "size": %d }' % self.EXTENDED_SIZE
