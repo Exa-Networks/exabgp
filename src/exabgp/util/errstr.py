@@ -11,9 +11,9 @@ from __future__ import annotations
 import errno
 
 
-def errstr(exc):
+def errstr(exc: BaseException) -> str:
     try:
-        code = exc.args[0] if exc.args else exc.errno
+        code = exc.args[0] if exc.args else exc.errno  # type: ignore[attr-defined]
         return f'[Errno {errno.errorcode.get(code, str(code))}] {exc!s}'
     except KeyError:
         return f'[Errno unknown (key)] {exc!s}'
