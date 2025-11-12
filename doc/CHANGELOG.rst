@@ -3,6 +3,10 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 6.0.0:
+ * Compatibility: Drop support for Python 3.7
+ * Feature: Add type annotations to the codebase for better type safety
+
 Version 5.0.0:
  * Compatibility: The text encoding of AS-SEQUENCE in the AS-PATH has changed
  * Compatibility: The AS-PATH JSON format has changed
