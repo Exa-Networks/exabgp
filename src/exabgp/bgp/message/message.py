@@ -9,18 +9,19 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
+from typing import Any, Callable, ClassVar, Dict, Optional, Type
 
 
 class _MessageCode(int):
-    NOP = 0x00  # .           0 - internal
-    OPEN = 0x01  # .          1
-    UPDATE = 0x02  # .        2
-    NOTIFICATION = 0x03  # .  3
-    KEEPALIVE = 0x04  # .     4
-    ROUTE_REFRESH = 0x05  # . 5
-    OPERATIONAL = 0x06  # .   6  # Not IANA assigned yet
+    NOP: ClassVar[int] = 0x00  # .           0 - internal
+    OPEN: ClassVar[int] = 0x01  # .          1
+    UPDATE: ClassVar[int] = 0x02  # .        2
+    NOTIFICATION: ClassVar[int] = 0x03  # .  3
+    KEEPALIVE: ClassVar[int] = 0x04  # .     4
+    ROUTE_REFRESH: ClassVar[int] = 0x05  # . 5
+    OPERATIONAL: ClassVar[int] = 0x06  # .   6  # Not IANA assigned yet
 
-    names = {
+    names: ClassVar[Dict[Optional[int], str]] = {
         None: 'INVALID',
         NOP: 'NOP',
         OPEN: 'OPEN',
@@ -31,7 +32,7 @@ class _MessageCode(int):
         OPERATIONAL: 'OPERATIONAL',
     }
 
-    short_names = {
+    short_names: ClassVar[Dict[Optional[int], str]] = {
         None: 'invalid',
         NOP: 'nop',
         OPEN: 'open',
@@ -42,7 +43,7 @@ class _MessageCode(int):
         OPERATIONAL: 'operational',
     }
 
-    long_names = {
+    long_names: ClassVar[Dict[Optional[int], str]] = {
         None: 'invalid',
         NOP: 'nop',
         OPEN: 'open',
@@ -55,17 +56,20 @@ class _MessageCode(int):
 
     # to_short_names = dict((name,code) for (code,name) in short_names.items())
 
-    def __init__(self, value):
+    SHORT: str
+    NAME: str
+
+    def __init__(self, value: int) -> None:
         self.SHORT = self.short()
         self.NAME = str(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.names.get(self, 'unknown message {}'.format(hex(self)))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
-    def short(self):
+    def short(self) -> str:
         return self.short_names.get(self, '{}'.format(self))
 
 
@@ -92,34 +96,42 @@ class Message:
     # otherwise we can not dynamically create different UnknownMessage
     # TYPE = None
 
-    MARKER = bytes(
+    MARKER: ClassVar[bytes] = bytes(
         [
             0xFF,
         ]
         * 16,
     )
-    HEADER_LEN = 19
+    HEADER_LEN: ClassVar[int] = 19
 
-    registered_message = {}
-    klass_unknown = Exception
+    registered_message: ClassVar[Dict[int, Type[Message]]] = {}
+    klass_unknown: ClassVar[Type[Exception]] = Exception
+
+    # TYPE attribute set by subclasses
+    TYPE: bytes
+    ID: int
 
     class CODE:
-        NOP = _MessageCode(_MessageCode.NOP)
-        OPEN = _MessageCode(_MessageCode.OPEN)
-        UPDATE = _MessageCode(_MessageCode.UPDATE)
-        NOTIFICATION = _MessageCode(_MessageCode.NOTIFICATION)
-        KEEPALIVE = _MessageCode(_MessageCode.KEEPALIVE)
-        ROUTE_REFRESH = _MessageCode(_MessageCode.ROUTE_REFRESH)
-        OPERATIONAL = _MessageCode(_MessageCode.OPERATIONAL)
+        NOP: ClassVar[_MessageCode] = _MessageCode(_MessageCode.NOP)
+        OPEN: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPEN)
+        UPDATE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.UPDATE)
+        NOTIFICATION: ClassVar[_MessageCode] = _MessageCode(_MessageCode.NOTIFICATION)
+        KEEPALIVE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.KEEPALIVE)
+        ROUTE_REFRESH: ClassVar[_MessageCode] = _MessageCode(_MessageCode.ROUTE_REFRESH)
+        OPERATIONAL: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPERATIONAL)
 
-        MESSAGES = [NOP, OPEN, UPDATE, NOTIFICATION, KEEPALIVE, ROUTE_REFRESH, OPERATIONAL]
+        MESSAGES: ClassVar[list[_MessageCode]] = [NOP, OPEN, UPDATE, NOTIFICATION, KEEPALIVE, ROUTE_REFRESH, OPERATIONAL]
 
         @staticmethod
-        def name(message_id):
+        def name(message_id: Optional[int]) -> str:
+            if message_id is None:
+                return _MessageCode.names.get(message_id, 'unknown message')
             return _MessageCode.names.get(message_id, 'unknown message {}'.format(hex(message_id)))
 
         @staticmethod
-        def short(message_id):
+        def short(message_id: Optional[int]) -> str:
+            if message_id is None:
+                return _MessageCode.short_names.get(message_id, 'unknown message')
             return _MessageCode.short_names.get(message_id, 'unknown message {}'.format(hex(message_id)))
 
         # # Can raise KeyError
@@ -127,10 +139,10 @@ class Message:
         # def code (short):
         # 	return _MessageCode.names.get[short]
 
-        def __init__(self):
+        def __init__(self) -> None:
             raise RuntimeError('This class can not be instantiated')
 
-    Length = {
+    Length: ClassVar[Dict[_MessageCode, Callable[[int], bool]]] = {
         CODE.OPEN: lambda _: _ >= 29,  # noqa
         CODE.UPDATE: lambda _: _ >= 23,  # noqa
         CODE.NOTIFICATION: lambda _: _ >= 21,  # noqa
@@ -139,25 +151,25 @@ class Message:
     }
 
     @staticmethod
-    def string(code):
+    def string(code: Optional[int]) -> str:
         return _MessageCode.long_names.get(code, 'unknown')
 
-    def _message(self, message):
-        message_len = pack('!H', 19 + len(message))
+    def _message(self, message: bytes) -> bytes:
+        message_len: bytes = pack('!H', 19 + len(message))
         return self.MARKER + message_len + self.TYPE + message
 
-    def message(self, negotiated=None):
+    def message(self, negotiated: Any = None) -> bytes:
         raise NotImplementedError('message not implemented in subclasses')
 
     @classmethod
-    def register(cls, klass):
+    def register(cls, klass: Type[Message]) -> Type[Message]:
         if klass.TYPE in cls.registered_message:
             raise RuntimeError('only one class can be registered per message')
         cls.registered_message[klass.ID] = klass
         return klass
 
     @classmethod
-    def klass(cls, what):
+    def klass(cls, what: int) -> Type[Message]:
         if what in cls.registered_message:
             return cls.registered_message[what]
         from exabgp.bgp.message.notification import Notify
@@ -165,13 +177,13 @@ class Message:
         raise Notify(2, 4, f'can not handle message {what}')
 
     @classmethod
-    def unpack(cls, message, data, direction, negotiated):
+    def unpack(cls, message: int, data: bytes, direction: int, negotiated: Any) -> Message:
         if message in cls.registered_message:
-            return cls.klass(message).unpack_message(data, direction, negotiated)
-        return cls.klass_unknown(message, data, direction, negotiated)
+            return cls.klass(message).unpack_message(data, direction, negotiated)  # type: ignore[attr-defined,no-any-return]
+        return cls.klass_unknown(message, data, direction, negotiated)  # type: ignore[return-value]
 
     @classmethod
-    def code(cls, name):
+    def code(cls, name: str) -> _MessageCode:
         for message in cls.CODE.MESSAGES:
             if name == str(message) or name == message.short():
                 return message
