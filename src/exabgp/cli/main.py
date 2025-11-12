@@ -149,6 +149,8 @@ def main():
         run(config, cmd)
         message[msg.command] = ''
     sys.stdout.write('exit\n')
+
+
 if __name__ == '__main__':
     try:
         main()

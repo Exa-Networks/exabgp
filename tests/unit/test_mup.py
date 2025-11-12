@@ -24,6 +24,7 @@ from exabgp.bgp.message.update.nlri.nlri import Action
 # MUP Route Type 1: Interwork Segment Discovery (ISD)
 # ============================================================================
 
+
 class TestInterworkSegmentDiscoveryRoute:
     """Tests for MUP Route Type 1: Interwork Segment Discovery"""
 
@@ -156,6 +157,7 @@ class TestInterworkSegmentDiscoveryRoute:
 # MUP Route Type 2: Direct Segment Discovery (DSD)
 # ============================================================================
 
+
 class TestDirectSegmentDiscoveryRoute:
     """Tests for MUP Route Type 2: Direct Segment Discovery"""
 
@@ -277,6 +279,7 @@ class TestDirectSegmentDiscoveryRoute:
 # ============================================================================
 # MUP Route Type 3: Type 1 Session Transformed (T1ST)
 # ============================================================================
+
 
 class TestType1SessionTransformedRoute:
     """Tests for MUP Route Type 3: Type 1 Session Transformed"""
@@ -403,10 +406,28 @@ class TestType1SessionTransformedRoute:
         source_ip = IP.create('192.168.2.1')
 
         route1 = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 12345, 5, 32, endpoint_ip, 32, source_ip, AFI.ipv4,
+            rd,
+            24,
+            prefix_ip,
+            12345,
+            5,
+            32,
+            endpoint_ip,
+            32,
+            source_ip,
+            AFI.ipv4,
         )
         route2 = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 12345, 5, 32, endpoint_ip, 32, source_ip, AFI.ipv4,
+            rd,
+            24,
+            prefix_ip,
+            12345,
+            5,
+            32,
+            endpoint_ip,
+            32,
+            source_ip,
+            AFI.ipv4,
         )
 
         assert route1 == route2
@@ -419,10 +440,28 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('192.168.1.1')
 
         route1 = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 11111, 1, 32, endpoint_ip, 0, b'', AFI.ipv4,
+            rd,
+            24,
+            prefix_ip,
+            11111,
+            1,
+            32,
+            endpoint_ip,
+            0,
+            b'',
+            AFI.ipv4,
         )
         route2 = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 11111, 1, 32, endpoint_ip, 0, b'', AFI.ipv4,
+            rd,
+            24,
+            prefix_ip,
+            11111,
+            1,
+            32,
+            endpoint_ip,
+            0,
+            b'',
+            AFI.ipv4,
         )
 
         assert hash(route1) == hash(route2)
@@ -434,7 +473,16 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('10.1.1.1')
 
         route = Type1SessionTransformedRoute(
-            rd, 12, prefix_ip, 12345, 5, 32, endpoint_ip, 0, b'', AFI.ipv4,
+            rd,
+            12,
+            prefix_ip,
+            12345,
+            5,
+            32,
+            endpoint_ip,
+            0,
+            b'',
+            AFI.ipv4,
         )
         route_str = str(route)
 
@@ -448,7 +496,16 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('10.1.1.1')
 
         route = Type1SessionTransformedRoute(
-            rd, 24, prefix_ip, 88888, 8, 32, endpoint_ip, 0, b'', AFI.ipv4,
+            rd,
+            24,
+            prefix_ip,
+            88888,
+            8,
+            32,
+            endpoint_ip,
+            0,
+            b'',
+            AFI.ipv4,
         )
         json_str = route.json()
 
@@ -483,7 +540,16 @@ class TestType1SessionTransformedRoute:
         for prefix_len in [8, 16, 24, 32]:
             prefix_ip = IP.create('10.0.0.0')
             route = Type1SessionTransformedRoute(
-                rd, prefix_len, prefix_ip, 1000, 1, 32, endpoint_ip, 0, b'', AFI.ipv4,
+                rd,
+                prefix_len,
+                prefix_ip,
+                1000,
+                1,
+                32,
+                endpoint_ip,
+                0,
+                b'',
+                AFI.ipv4,
             )
             packed = route.pack_nlri()
             unpacked, _ = MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, None)
@@ -494,6 +560,7 @@ class TestType1SessionTransformedRoute:
 # ============================================================================
 # MUP Route Type 4: Type 2 Session Transformed (T2ST)
 # ============================================================================
+
 
 class TestType2SessionTransformedRoute:
     """Tests for MUP Route Type 4: Type 2 Session Transformed"""
@@ -670,6 +737,7 @@ class TestType2SessionTransformedRoute:
 # ============================================================================
 # Generic MUP Tests
 # ============================================================================
+
 
 class TestMUPGeneric:
     """Tests for generic MUP functionality"""

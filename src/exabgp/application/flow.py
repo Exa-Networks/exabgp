@@ -59,7 +59,9 @@ class ACL:
             return None
         try:
             return subprocess.Popen(
-                ['cl-acltool', '-i'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+                ['cl-acltool', '-i'],
+                stderr=subprocess.STDOUT,
+                stdout=subprocess.PIPE,
             ).communicate()[0]
         except Exception:
             pass

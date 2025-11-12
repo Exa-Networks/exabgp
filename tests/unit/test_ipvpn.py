@@ -528,9 +528,30 @@ class TestIPVPNMultipleRoutes:
     def test_pack_unpack_multiple_routes(self) -> None:
         """Test packing/unpacking multiple IPVPN routes"""
         routes = [
-            IPVPN.new(AFI.ipv4, SAFI.mpls_vpn, IP.pton('10.1.0.0'), 16, Labels([100], True), RouteDistinguisher.fromElements('10.0.0.1', 1)),
-            IPVPN.new(AFI.ipv4, SAFI.mpls_vpn, IP.pton('10.2.0.0'), 16, Labels([200], True), RouteDistinguisher.fromElements('10.0.0.1', 2)),
-            IPVPN.new(AFI.ipv4, SAFI.mpls_vpn, IP.pton('10.3.0.0'), 16, Labels([300], True), RouteDistinguisher.fromElements('10.0.0.1', 3)),
+            IPVPN.new(
+                AFI.ipv4,
+                SAFI.mpls_vpn,
+                IP.pton('10.1.0.0'),
+                16,
+                Labels([100], True),
+                RouteDistinguisher.fromElements('10.0.0.1', 1),
+            ),
+            IPVPN.new(
+                AFI.ipv4,
+                SAFI.mpls_vpn,
+                IP.pton('10.2.0.0'),
+                16,
+                Labels([200], True),
+                RouteDistinguisher.fromElements('10.0.0.1', 2),
+            ),
+            IPVPN.new(
+                AFI.ipv4,
+                SAFI.mpls_vpn,
+                IP.pton('10.3.0.0'),
+                16,
+                Labels([300], True),
+                RouteDistinguisher.fromElements('10.0.0.1', 3),
+            ),
         ]
 
         # Pack all routes

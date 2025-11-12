@@ -1,4 +1,3 @@
-
 """capabilities.py
 
 Created by Thomas Mangin on 2012-07-17.
@@ -214,13 +213,21 @@ class Capabilities(dict):
     def unpack(data):
         def _extended_type_length(name, data):
             if len(data) < MIN_EXTENDED_PARAM_LEN:
-                raise Notify(2, 0, 'Bad length for OPEN (extended) {} (<{}) {}'.format(name, MIN_EXTENDED_PARAM_LEN, Capability.hex(data)))
+                raise Notify(
+                    2,
+                    0,
+                    'Bad length for OPEN (extended) {} (<{}) {}'.format(
+                        name, MIN_EXTENDED_PARAM_LEN, Capability.hex(data)
+                    ),
+                )
             # Optional parameters length
             ld = unpack('!H', data[1:3])[0]
             boundary = ld + 3
             if len(data) < boundary:
                 raise Notify(
-                    2, 0, 'Bad length for OPEN (extended) {} (buffer underrun) {}'.format(name, Capability.hex(data)),
+                    2,
+                    0,
+                    'Bad length for OPEN (extended) {} (buffer underrun) {}'.format(name, Capability.hex(data)),
                 )
             key = data[0]
             value = data[3:boundary]

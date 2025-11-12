@@ -147,7 +147,7 @@ class TestConnectionResetDuringIO:
         test_data = b'test message data'
 
         # Mock send to return partial write, then connection reset
-        mock_sock.send.side_effect = [5, OSError(errno.ECONNRESET, "Connection reset")]
+        mock_sock.send.side_effect = [5, OSError(errno.ECONNRESET, 'Connection reset')]
 
         # Start writer generator
         writer_gen = conn.writer(test_data)
@@ -357,7 +357,7 @@ class TestPollingStateRaces:
         conn.io = mock_sock
 
         # Mock recv to raise socket error
-        mock_sock.recv.side_effect = OSError(errno.ECONNRESET, "Connection reset")
+        mock_sock.recv.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
 
         reader_gen = conn._reader(10)
 
@@ -458,8 +458,8 @@ class TestMessageQueueOrderingRaces:
 
         # Mock recv to return message in parts
         mock_sock.recv.side_effect = [
-            bgp_msg[:10],   # First 10 bytes
-            bgp_msg[10:],   # Remaining 9 bytes
+            bgp_msg[:10],  # First 10 bytes
+            bgp_msg[10:],  # Remaining 9 bytes
         ]
 
         # Create reader for BGP message
@@ -481,7 +481,7 @@ class TestMessageQueueOrderingRaces:
                     # Verify we got a complete message structure
                     # Result is (length, msg_type, header, body, error)
                     assert result[0] == 19  # Message length
-                    assert result[1] == 4   # KEEPALIVE type
+                    assert result[1] == 4  # KEEPALIVE type
 
     def test_buffer_state_consistency(self) -> None:
         """Test buffer state remains consistent during concurrent operations.
@@ -499,7 +499,7 @@ class TestMessageQueueOrderingRaces:
 
         # Mock recv to return data in chunks
         chunk_size = 10
-        chunks = [test_data[i:i+chunk_size] for i in range(0, len(test_data), chunk_size)]
+        chunks = [test_data[i : i + chunk_size] for i in range(0, len(test_data), chunk_size)]
         mock_sock.recv.side_effect = chunks
 
         reader_gen = conn._reader(100)

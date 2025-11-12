@@ -1,4 +1,3 @@
-
 """attributes.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -358,7 +357,9 @@ class Attributes(dict):
                 raise Notify(3, 1, 'multiple attribute for {}'.format(str(Attribute.CODE(attribute.ID))))
 
             log.debug(
-                lambda: 'duplicate attribute {} (flag 0x{:02X}, aid 0x{:02X}) skipping'.format(Attribute.CODE.names.get(aid, 'unset'), flag, aid),
+                lambda: 'duplicate attribute {} (flag 0x{:02X}, aid 0x{:02X}) skipping'.format(
+                    Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                ),
                 'parser',
             )
             return self.parse(left, direction, negotiated)
@@ -392,19 +393,25 @@ class Attributes(dict):
         if aid in Attribute.attributes_known:
             if aid in self.TREAT_AS_WITHDRAW:
                 log.debug(
-                    lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) treat as withdraw'.format(Attribute.CODE.names.get(aid, 'unset'), flag, aid),
+                    lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) treat as withdraw'.format(
+                        Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                    ),
                     'parser',
                 )
                 self.add(TreatAsWithdraw())
             if aid in self.DISCARD:
                 log.debug(
-                    lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) discard'.format(Attribute.CODE.names.get(aid, 'unset'), flag, aid),
+                    lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) discard'.format(
+                        Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                    ),
                     'parser',
                 )
                 return self.parse(left, direction, negotiated)
             # XXX: Check if we are missing any
             log.debug(
-                lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) unspecified (should not happen)'.format(Attribute.CODE.names.get(aid, 'unset'), flag, aid),
+                lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) unspecified (should not happen)'.format(
+                    Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                ),
                 'parser',
             )
             return self.parse(left, direction, negotiated)
@@ -420,7 +427,10 @@ class Attributes(dict):
             return self.parse(left, direction, negotiated)
 
         # it is an unknown non-transitive attribute we can ignore.
-        log.debug(lambda: 'ignoring unknown non-transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid), 'parser')
+        log.debug(
+            lambda: 'ignoring unknown non-transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid),
+            'parser',
+        )
         return self.parse(left, direction, negotiated)
 
     def merge_attributes(self):

@@ -1,4 +1,3 @@
-
 """scope.py
 
 Created by Stephane Litkowski on 2017-02-24.

@@ -842,6 +842,7 @@ class TestPollingMechanisms:
 
         with patch('select.poll') as mock_poll:
             import select
+
             mock_poller = Mock()
             mock_poller.poll.return_value = [(5, select.POLLHUP)]
             mock_poll.return_value = mock_poller
@@ -862,6 +863,7 @@ class TestPollingMechanisms:
 
         with patch('select.poll') as mock_poll:
             import select
+
             mock_poller = Mock()
             mock_poller.poll.return_value = [(5, select.POLLERR)]
             mock_poll.return_value = mock_poller
@@ -892,6 +894,7 @@ class TestConnectionBasics:
     def test_init_ipv6_connection(self) -> None:
         """Test Connection initialization with IPv6"""
         from exabgp.protocol.family import AFI
+
         conn = Connection(AFI.ipv6, '2001:db8::1', '2001:db8::2')
 
         assert conn.afi == AFI.ipv6
@@ -1486,6 +1489,7 @@ class TestEdgeCasesAndDefensiveMode:
 
         with patch('select.poll') as mock_poll:
             import select
+
             mock_poller = Mock()
             mock_poller.poll.return_value = [(5, select.POLLNVAL)]
             mock_poll.return_value = mock_poller
@@ -1505,6 +1509,7 @@ class TestEdgeCasesAndDefensiveMode:
 
         with patch('select.poll') as mock_poll:
             import select
+
             mock_poller = Mock()
             mock_poller.poll.return_value = [(5, select.POLLNVAL)]
             mock_poll.return_value = mock_poller

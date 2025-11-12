@@ -239,10 +239,7 @@ class TestPeerLoadBalancing:
         num_peers = 10
         messages_per_peer = 300
 
-        peer_data = {
-            peer_id: create_batch_messages('update', count=messages_per_peer)
-            for peer_id in range(num_peers)
-        }
+        peer_data = {peer_id: create_batch_messages('update', count=messages_per_peer) for peer_id in range(num_peers)}
 
         def fair_schedule():
             readers = {peer_id: BytesIO(data) for peer_id, data in peer_data.items()}
@@ -325,10 +322,7 @@ class TestHighPeerCountStress:
         num_peers = 500
         messages_per_peer = 10
 
-        peer_data = {
-            peer_id: create_batch_messages('update', count=messages_per_peer)
-            for peer_id in range(num_peers)
-        }
+        peer_data = {peer_id: create_batch_messages('update', count=messages_per_peer) for peer_id in range(num_peers)}
 
         def process_many():
             readers = {peer_id: BytesIO(data) for peer_id, data in peer_data.items()}
@@ -360,8 +354,7 @@ class TestHighPeerCountStress:
         messages_per_peer = 5
 
         peer_data = {
-            peer_id: create_batch_messages('keepalive', count=messages_per_peer)
-            for peer_id in range(num_peers)
+            peer_id: create_batch_messages('keepalive', count=messages_per_peer) for peer_id in range(num_peers)
         }
 
         def process_light_load():

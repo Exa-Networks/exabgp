@@ -1,4 +1,3 @@
-
 """neighbor/__init__.py
 
 Created by Thomas Mangin on 2015-06-04.
@@ -196,7 +195,10 @@ class ParseNeighbor(Section):
         for family in ParseAddPath.convert:
             for pair in add_path.get(family, []):
                 if pair not in families:
-                    log.debug(lambda pair=pair: 'skipping add-path family ' + str(pair) + ' as it is not negotiated', 'configuration')
+                    log.debug(
+                        lambda pair=pair: 'skipping add-path family ' + str(pair) + ' as it is not negotiated',
+                        'configuration',
+                    )
                     continue
                 neighbor.add_addpath(pair)
 
@@ -318,7 +320,9 @@ class ParseNeighbor(Section):
             family = change.nlri.family().afi_safi()
             if family not in families and family != (AFI.ipv4, SAFI.unicast):
                 return self.error.set(
-                    'Trying to announce a route of type {},{} when we are not announcing the family to our peer'.format(*change.nlri.family().afi_safi()),
+                    'Trying to announce a route of type {},{} when we are not announcing the family to our peer'.format(
+                        *change.nlri.family().afi_safi()
+                    ),
                 )
 
         # create one neighbor object per family for multisession

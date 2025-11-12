@@ -1,4 +1,3 @@
-
 """hostname.py
 
 Created by Thomas Mangin on 2015-05-16.

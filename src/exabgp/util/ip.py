@@ -1,4 +1,3 @@
-
 """ip.py
 
 Created by Thomas Mangin on 2009-09-12.

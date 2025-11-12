@@ -22,6 +22,7 @@ from exabgp.bgp.message.update.nlri.nlri import Action
 # MVPN Route Type 5: Source Active A-D Route (SourceAD)
 # ============================================================================
 
+
 class TestSourceAD:
     """Tests for MVPN Route Type 5: Source Active A-D Route"""
 
@@ -167,9 +168,9 @@ class TestSourceAD:
 
         # Test various multicast groups
         multicast_groups = [
-            '224.0.0.1',    # All hosts
+            '224.0.0.1',  # All hosts
             '239.255.255.255',  # Site-local
-            '232.1.1.1',    # SSM range
+            '232.1.1.1',  # SSM range
         ]
 
         for group_str in multicast_groups:
@@ -184,6 +185,7 @@ class TestSourceAD:
 # ============================================================================
 # MVPN Route Type 6: C-Multicast Shared Tree Join (SharedJoin)
 # ============================================================================
+
 
 class TestSharedJoin:
     """Tests for MVPN Route Type 6: C-Multicast Shared Tree Join"""
@@ -343,6 +345,7 @@ class TestSharedJoin:
 # MVPN Route Type 7: C-Multicast Source Tree Join (SourceJoin)
 # ============================================================================
 
+
 class TestSourceJoin:
     """Tests for MVPN Route Type 7: C-Multicast Source Tree Join"""
 
@@ -500,6 +503,7 @@ class TestSourceJoin:
 # ============================================================================
 # Generic MVPN Tests
 # ============================================================================
+
 
 class TestMVPNGeneric:
     """Tests for generic MVPN functionality"""

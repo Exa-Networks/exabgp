@@ -1,4 +1,3 @@
-
 """listener.py
 
 Created by Thomas Mangin on 2013-07-11.
@@ -112,7 +111,8 @@ class Listener:
         except NetworkError as exc:
             if os.geteuid() != 0 and port <= MAX_PRIVILEGED_PORT:
                 log.critical(
-                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root', 'network',
+                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root',
+                    'network',
                 )
             else:
                 log.critical(lambda exc=exc: f'can not bind to {local_addr}:{port} ({exc})', 'network')
@@ -194,7 +194,10 @@ class Listener:
 
                 denied = reactor.handle_connection(key, connection)
                 if denied:
-                    log.debug(lambda connection=connection: f'refused connection from {connection.name()} due to the state machine', 'network')
+                    log.debug(
+                        lambda connection=connection: f'refused connection from {connection.name()} due to the state machine',
+                        'network',
+                    )
                     break
                 log.debug(lambda connection=connection: f'accepted connection from {connection.name()}', 'network')
                 break
@@ -232,7 +235,10 @@ class Listener:
                 new_peer = Peer(new_neighbor, reactor)
                 denied = new_peer.handle_connection(connection)
                 if denied:
-                    log.debug(lambda connection=connection: f'refused connection from {connection.name()} due to the state machine', 'network')
+                    log.debug(
+                        lambda connection=connection: f'refused connection from {connection.name()} due to the state machine',
+                        'network',
+                    )
                     return
 
                 reactor.register_peer(new_neighbor.name(), new_peer)

@@ -11,15 +11,25 @@ Tests cover RFC 5575 (Dissemination of Flow Specification Rules) components:
 import pytest
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.nlri.flow import (
-    Flow4Source, Flow4Destination,
-    Flow6Source, Flow6Destination,
-    FlowIPProtocol, FlowNextHeader,
-    FlowAnyPort, FlowDestinationPort, FlowSourcePort,
-    FlowICMPType, FlowICMPCode,
-    FlowTCPFlag, FlowPacketLength,
-    FlowDSCP, FlowTrafficClass,
-    FlowFragment, FlowFlowLabel,
-    NumericOperator, BinaryOperator,
+    Flow4Source,
+    Flow4Destination,
+    Flow6Source,
+    Flow6Destination,
+    FlowIPProtocol,
+    FlowNextHeader,
+    FlowAnyPort,
+    FlowDestinationPort,
+    FlowSourcePort,
+    FlowICMPType,
+    FlowICMPCode,
+    FlowTCPFlag,
+    FlowPacketLength,
+    FlowDSCP,
+    FlowTrafficClass,
+    FlowFragment,
+    FlowFlowLabel,
+    NumericOperator,
+    BinaryOperator,
 )
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.ip import IPv4, IP, NoNextHop
@@ -33,6 +43,7 @@ from exabgp.bgp.message.action import Action
 # ============================================================================
 # IPv4 Flow Components
 # ============================================================================
+
 
 class TestFlow4Components:
     """Tests for IPv4 flow specification components"""
@@ -100,6 +111,7 @@ class TestFlow4Components:
 # IPv6 Flow Components
 # ============================================================================
 
+
 class TestFlow6Components:
     """Tests for IPv6 flow specification components"""
 
@@ -145,6 +157,7 @@ class TestFlow6Components:
 # ============================================================================
 # Port Matching
 # ============================================================================
+
 
 class TestFlowPorts:
     """Tests for port-based flow matching"""
@@ -192,6 +205,7 @@ class TestFlowPorts:
 # ICMP Matching
 # ============================================================================
 
+
 class TestFlowICMP:
     """Tests for ICMP-based flow matching"""
 
@@ -215,6 +229,7 @@ class TestFlowICMP:
 # ============================================================================
 # TCP Flags
 # ============================================================================
+
 
 class TestFlowTCPFlags:
     """Tests for TCP flag-based flow matching"""
@@ -251,6 +266,7 @@ class TestFlowTCPFlags:
 # ============================================================================
 # Packet Length and DSCP
 # ============================================================================
+
 
 class TestFlowPacketAttributes:
     """Tests for packet length and DSCP matching"""
@@ -293,6 +309,7 @@ class TestFlowPacketAttributes:
 # Fragment Matching
 # ============================================================================
 
+
 class TestFlowFragment:
     """Tests for IP fragment matching"""
 
@@ -321,6 +338,7 @@ class TestFlowFragment:
 # ============================================================================
 # IPv6 Flow Label
 # ============================================================================
+
 
 class TestFlowLabel:
     """Tests for IPv6 flow label matching"""
@@ -355,6 +373,7 @@ class TestFlowLabel:
 # ============================================================================
 # Flow NLRI
 # ============================================================================
+
 
 class TestFlowNLRI:
     """Tests for Flow NLRI operations"""
@@ -620,6 +639,7 @@ class TestFlowNLRI:
 # Operator Tests
 # ============================================================================
 
+
 class TestOperators:
     """Tests for numeric and binary operators"""
 
@@ -677,6 +697,7 @@ class TestOperators:
 # ============================================================================
 # Unpack/Roundtrip Tests
 # ============================================================================
+
 
 class TestFlowUnpack:
     """Tests for unpacking flowspec from wire format"""
@@ -745,7 +766,7 @@ class TestFlowUnpack:
     def test_flow_unpack_invalid_length(self) -> None:
         """Test unpacking with invalid length raises exception"""
         # Create invalid data: length says 100 bytes but data is shorter
-        invalid_data = bytes([100]) + b'\x01\x18\xC0\x00\x02'
+        invalid_data = bytes([100]) + b'\x01\x18\xc0\x00\x02'
 
         # Should raise Notify for invalid length
         with pytest.raises(Notify):
@@ -833,6 +854,7 @@ class TestFlowUnpack:
 # ============================================================================
 # Edge Cases and Error Handling
 # ============================================================================
+
 
 class TestFlowEdgeCases:
     """Tests for edge cases and error handling"""

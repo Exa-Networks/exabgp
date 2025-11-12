@@ -1,4 +1,3 @@
-
 """reactor/interrupt.py
 
 Created by Thomas Mangin on 2017-07-01.
@@ -26,14 +25,12 @@ class Signal:
             for v, k in reversed(sorted(signal.__dict__.items()))
             if v.startswith('SIG') and not v.startswith('SIG_')
         ),
-        
-            NONE: 'none',
-            SHUTDOWN: 'shutdown',
-            RESTART: 'restart',
-            RELOAD: 'reload',
-            FULL_RELOAD: 'full reload'
-            # some padding to make black format this as we like :-)
-        ,
+        NONE: 'none',
+        SHUTDOWN: 'shutdown',
+        RESTART: 'restart',
+        RELOAD: 'reload',
+        FULL_RELOAD: 'full reload',
+        # some padding to make black format this as we like :-)
     }
 
     @classmethod

@@ -1,4 +1,3 @@
-
 """tcp.py
 
 Created by Thomas Mangin on 2013-07-13.
@@ -187,7 +186,9 @@ def md5(io, ip, port, md5, md5_base64):
 
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 ({})'.format(errstr(exc))) from None
+                raise MD5Error(
+                    'This linux machine does not support TCP_MD5SIG, you can not use MD5 ({})'.format(errstr(exc))
+                ) from None
     elif md5:
         raise MD5Error('ExaBGP has no MD5 support for {}'.format(platform_os))
 
@@ -214,7 +215,9 @@ def ttlv6(io, ip, ttl):
         try:
             io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
         except OSError as exc:
-            raise TTLError('This OS does not support unicast_hops (ttl-security) for {} ({})'.format(ip, errstr(exc))) from None
+            raise TTLError(
+                'This OS does not support unicast_hops (ttl-security) for {} ({})'.format(ip, errstr(exc))
+            ) from None
 
 
 def min_ttl(io, ip, ttl):
@@ -223,7 +226,9 @@ def min_ttl(io, ip, ttl):
         try:
             io.setsockopt(socket.IPPROTO_IP, socket.IP_MINTTL, ttl)
         except OSError as exc:
-            raise TTLError('This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))) from None
+            raise TTLError(
+                'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))
+            ) from None
         except AttributeError:
             pass
 

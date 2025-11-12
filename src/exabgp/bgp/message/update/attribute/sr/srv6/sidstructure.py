@@ -1,4 +1,3 @@
-
 """srv6/sidstructure.py
 
 Created by Ryoga Saito 2022-02-24

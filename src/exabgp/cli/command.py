@@ -18,6 +18,8 @@ if sys.version_info[:3] < (3, 7):
 def _nop(config, path):
     order = path[0]
     sys.stdout.write(f'command {order} not implemented ({path})\n')
+
+
 def _run(config, path):
     order, more = path.split(' ', 1) if ' ' in path else (path, '')
 
@@ -51,6 +53,8 @@ def xml(config, path):
             sys.stdout.write(f'{key}: ' + '{...}\n')
         else:
             sys.stdout.write(f'{key}: {value}\n')
+
+
 public = {
     'confirm': 'Confirm prior commit-confirm',
     'comment': 'Add comment to this configuration element',

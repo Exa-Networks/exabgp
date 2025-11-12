@@ -1,4 +1,3 @@
-
 """protocol.py
 
 Created by Thomas Mangin on 2009-08-25.
@@ -81,7 +80,7 @@ class Protocol:
     # XXX: we use self.peer.neighbor['peer-address'] when we could use self.neighbor['peer-address']
 
     def me(self, message):
-        return f"{self.peer.neighbor['peer-address']}/{self.peer.neighbor['peer-as']} {message}"
+        return f'{self.peer.neighbor["peer-address"]}/{self.peer.neighbor["peer-as"]} {message}'
 
     def accept(self, incoming):
         self.connection = incoming

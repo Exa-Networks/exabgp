@@ -171,10 +171,7 @@ class TestConcurrentMessageProcessing:
     def test_interleaved_message_streams(self, benchmark: Any) -> None:
         """Benchmark processing interleaved messages from multiple peers."""
         # Create messages from 5 different "peers"
-        peer_messages = {
-            f'peer{i}': create_batch_messages('update', count=200)
-            for i in range(5)
-        }
+        peer_messages = {f'peer{i}': create_batch_messages('update', count=200) for i in range(5)}
 
         def process_interleaved():
             processed = {f'peer{i}': 0 for i in range(5)}

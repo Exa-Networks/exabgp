@@ -1,4 +1,3 @@
-
 """command.py
 
 Created by Thomas Mangin on 2015-12-15.
@@ -7,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from typing import Dict, List
+
 
 class Command:
     callback: Dict[str, dict] = {'text': {}, 'json': {}, 'neighbor': {}, 'options': {}}

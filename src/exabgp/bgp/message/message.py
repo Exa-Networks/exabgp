@@ -1,4 +1,3 @@
-
 """message.py
 
 Created by Thomas Mangin on 2010-01-15.
@@ -120,7 +119,15 @@ class Message:
         ROUTE_REFRESH: ClassVar[_MessageCode] = _MessageCode(_MessageCode.ROUTE_REFRESH)
         OPERATIONAL: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPERATIONAL)
 
-        MESSAGES: ClassVar[List[_MessageCode]] = [NOP, OPEN, UPDATE, NOTIFICATION, KEEPALIVE, ROUTE_REFRESH, OPERATIONAL]
+        MESSAGES: ClassVar[List[_MessageCode]] = [
+            NOP,
+            OPEN,
+            UPDATE,
+            NOTIFICATION,
+            KEEPALIVE,
+            ROUTE_REFRESH,
+            OPERATIONAL,
+        ]
 
         @staticmethod
         def name(message_id: Optional[int]) -> str:

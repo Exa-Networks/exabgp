@@ -1,5 +1,3 @@
-
-
 """exabgp configuration validation"""
 
 from __future__ import annotations
@@ -50,13 +48,17 @@ def cmdline(cmdarg):
         log.info(lambda configuration=configuration: f'loading {configuration}', 'configuration')
         location = getconf(configuration)
         if not location:
-            log.critical(lambda configuration=configuration: f'{configuration} is not an exabgp config file', 'configuration')
+            log.critical(
+                lambda configuration=configuration: f'{configuration} is not an exabgp config file', 'configuration'
+            )
             sys.exit(1)
 
         config = Configuration([location])
 
         if not config.reload():
-            log.critical(lambda configuration=configuration: f'{configuration} is not a valid config file', 'configuration')
+            log.critical(
+                lambda configuration=configuration: f'{configuration} is not a valid config file', 'configuration'
+            )
             sys.exit(1)
         log.info(lambda: '\u2713 loading', 'configuration')
 
@@ -70,7 +72,9 @@ def cmdline(cmdarg):
         if cmdarg.route:
             log.warning(lambda: 'checking routes', 'configuration')
             if not check_generation(config.neighbors):
-                log.critical(lambda configuration=configuration: f'{configuration} has an invalid route', 'configuration')
+                log.critical(
+                    lambda configuration=configuration: f'{configuration} has an invalid route', 'configuration'
+                )
                 sys.exit(1)
             log.info(lambda: '\u2713 routes', 'configuration')
 

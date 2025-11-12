@@ -1,4 +1,3 @@
-
 """sequence.py
 
 Created by Thomas Mangin on 2015-03-31.
@@ -7,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from typing import Dict
+
 
 class Sequence(int):
     _instance: Dict[str, int] = dict()

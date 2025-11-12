@@ -1,4 +1,3 @@
-
 """check.py
 
 Created by Thomas Mangin on 2013-03-18.
@@ -244,7 +243,12 @@ def community(data: Any) -> bool:
     ):
         return True
     return (
-        array(data) and len(data) == COMMUNITY_PARTS and integer(data[0]) and integer(data[1]) and asn16(data[0]) and uint16(data[1])
+        array(data)
+        and len(data) == COMMUNITY_PARTS
+        and integer(data[0])
+        and integer(data[1])
+        and asn16(data[0])
+        and uint16(data[1])
     )
 
 
@@ -316,7 +320,11 @@ def _flow_numeric(data: Any, check: Callable[[Any], bool]) -> bool:
         return False
     for et in data:
         if not (
-            array(et) and len(et) == FLOW_NUMERIC_PARTS and et[0] in ('>', '<', '=', '>=', '<=') and integer(et[1]) and check(et[1])
+            array(et)
+            and len(et) == FLOW_NUMERIC_PARTS
+            and et[0] in ('>', '<', '=', '>=', '<=')
+            and integer(et[1])
+            and check(et[1])
         ):
             return False
     return True

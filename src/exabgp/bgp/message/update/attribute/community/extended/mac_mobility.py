@@ -1,4 +1,3 @@
-
 """mac_mobility.py
 
 Created by Anton Aksola on 2018-11-03

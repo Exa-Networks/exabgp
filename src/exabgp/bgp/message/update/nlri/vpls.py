@@ -1,4 +1,3 @@
-
 """vpls.py
 
 Created by Nikita Shirokov on 2014-06-16.

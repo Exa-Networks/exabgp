@@ -10,6 +10,7 @@ Coverage targets:
 - src/exabgp/bgp/message/update/attribute/sr/labelindex.py (52% → 90%+)
 - src/exabgp/bgp/message/update/attribute/sr/srgb.py (48% → 90%+)
 """
+
 import pytest
 import struct
 from unittest.mock import Mock
@@ -33,6 +34,7 @@ from exabgp.protocol.ip import IPv6
 # =============================================================================
 # SrLabelIndex Tests (TLV Type 1)
 # =============================================================================
+
 
 class TestSrLabelIndex:
     """Test Label-Index TLV (Type 1) for SR-MPLS."""
@@ -124,6 +126,7 @@ class TestSrLabelIndex:
 # SrGb (Originator SRGB) Tests (TLV Type 3)
 # =============================================================================
 
+
 class TestSrGb:
     """Test Originator SRGB TLV (Type 3) for SR-MPLS."""
 
@@ -178,7 +181,7 @@ class TestSrGb:
         # Pack: Flags(2) + Base(3) + Range(3)
         data = struct.pack('!H', 0)  # Flags
         data += struct.pack('!L', 16000)[1:]  # Base (3 bytes)
-        data += struct.pack('!L', 8000)[1:]   # Range (3 bytes)
+        data += struct.pack('!L', 8000)[1:]  # Range (3 bytes)
 
         srgb = SrGb.unpack(data, length=8)
         assert len(srgb.srgbs) == 1
@@ -251,6 +254,7 @@ class TestSrGb:
 # PrefixSid (Main Attribute) Tests
 # =============================================================================
 
+
 class TestPrefixSid:
     """Test PrefixSid attribute that contains SR TLVs."""
 
@@ -312,7 +316,7 @@ class TestPrefixSid:
         data += struct.pack('!H', 8)  # Length = 8 (Flags + 1 range)
         data += struct.pack('!H', 0)  # Flags
         data += struct.pack('!L', 16000)[1:]  # Base (3 bytes)
-        data += struct.pack('!L', 8000)[1:]   # Range (3 bytes)
+        data += struct.pack('!L', 8000)[1:]  # Range (3 bytes)
 
         negotiated = Mock()
         prefix_sid = PrefixSid.unpack(data, Direction.IN, negotiated)
@@ -335,7 +339,7 @@ class TestPrefixSid:
         data += struct.pack('!H', 8)  # Length
         data += struct.pack('!H', 0)  # Flags
         data += struct.pack('!L', 16000)[1:]  # Base
-        data += struct.pack('!L', 8000)[1:]   # Range
+        data += struct.pack('!L', 8000)[1:]  # Range
 
         negotiated = Mock()
         prefix_sid = PrefixSid.unpack(data, Direction.IN, negotiated)
@@ -426,6 +430,7 @@ class TestPrefixSid:
 # GenericSRId Tests
 # =============================================================================
 
+
 class TestGenericSRId:
     """Test GenericSRId for unknown SR TLV types."""
 
@@ -454,6 +459,7 @@ class TestGenericSRId:
 # Registration Tests
 # =============================================================================
 
+
 class TestPrefixSidRegistration:
     """Test SR TLV registration mechanism."""
 
@@ -478,6 +484,7 @@ class TestPrefixSidRegistration:
 # =============================================================================
 # Edge Cases and Error Handling
 # =============================================================================
+
 
 class TestSREdgeCases:
     """Test edge cases and error handling for SR attributes."""
@@ -531,6 +538,7 @@ class TestSREdgeCases:
 # =============================================================================
 # SRv6 Tests
 # =============================================================================
+
 
 class TestSrv6SidStructure:
     """Test SRv6 SID Structure Sub-Sub-TLV."""

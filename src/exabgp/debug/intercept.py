@@ -1,4 +1,3 @@
-
 """debug.py
 
 Created by Thomas Mangin on 2011-03-29.

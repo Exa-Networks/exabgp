@@ -226,7 +226,8 @@ class Processes:
 
                 poller = select.poll()
                 poller.register(
-                    proc.stdout, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
+                    proc.stdout,
+                    select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
                 )
 
                 ready = False
@@ -259,9 +260,14 @@ class Processes:
                         line = line.rstrip()
                         consumed_data = True
                         if line.startswith('debug '):
-                            log.warning(lambda line=line, process=process: f'debug info from {process} : {line[6:]} ', 'api')
+                            log.warning(
+                                lambda line=line, process=process: f'debug info from {process} : {line[6:]} ', 'api'
+                            )
                         else:
-                            log.debug(lambda line=line, process=process: f'command from process {process} : {line} ', 'process')
+                            log.debug(
+                                lambda line=line, process=process: f'command from process {process} : {line} ',
+                                'process',
+                            )
                             yield (process, formated(line))
 
                     self._buffer[process] = raw
@@ -275,7 +281,9 @@ class Processes:
                         # we most likely have data, we will try to read them a the next loop iteration
                         pass
                     else:
-                        log.debug(lambda exc=exc: f'unexpected errno received from forked process ({errstr(exc)})', 'process')
+                        log.debug(
+                            lambda exc=exc: f'unexpected errno received from forked process ({errstr(exc)})', 'process'
+                        )
                     continue
                 except StopIteration:
                     if not consumed_data:
@@ -310,7 +318,8 @@ class Processes:
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
-                        lambda exc=exc: f'error received while sending data to helper program, retrying ({errstr(exc)})', 'process',
+                        lambda exc=exc: f'error received while sending data to helper program, retrying ({errstr(exc)})',
+                        'process',
                     )
                     continue
             break
@@ -319,7 +328,10 @@ class Processes:
             self._process[process].stdin.flush()
         except OSError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
-            log.debug(lambda exc=exc: f'error received while FLUSHING data to helper program, retrying ({errstr(exc)})', 'process')
+            log.debug(
+                lambda exc=exc: f'error received while FLUSHING data to helper program, retrying ({errstr(exc)})',
+                'process',
+            )
 
         return True
 
@@ -451,7 +463,9 @@ class Processes:
     def _notification(self, peer, direction, message, negotiated, header, body):
         for process in self._notify(peer, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
             self.write(
-                process, self._encoder[process].notification(peer, direction, message, negotiated, header, body), peer,
+                process,
+                self._encoder[process].notification(peer, direction, message, negotiated, header, body),
+                peer,
             )
 
     # unused-argument, must keep the API
@@ -464,7 +478,9 @@ class Processes:
     def _refresh(self, peer, direction, refresh, negotiated, header, body):
         for process in self._notify(peer, f'{direction}-{Message.CODE.ROUTE_REFRESH.SHORT}'):
             self.write(
-                process, self._encoder[process].refresh(peer, direction, refresh, negotiated, header, body), peer,
+                process,
+                self._encoder[process].refresh(peer, direction, refresh, negotiated, header, body),
+                peer,
             )
 
     @register_process(Message.CODE.OPERATIONAL)
@@ -473,7 +489,13 @@ class Processes:
             self.write(
                 process,
                 self._encoder[process].operational(
-                    peer, direction, operational.category, operational, negotiated, header, body,
+                    peer,
+                    direction,
+                    operational.category,
+                    operational,
+                    negotiated,
+                    header,
+                    body,
                 ),
                 peer,
             )
