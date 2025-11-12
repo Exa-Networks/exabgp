@@ -1,5 +1,6 @@
 # running the test suite/code
 ruff
+mypy
 coveralls
 nose
 psutil

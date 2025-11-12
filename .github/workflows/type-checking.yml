@@ -1,0 +1,43 @@
+name: Type Checking
+
+on:
+  push:
+    branches: [main, 4.2, 3.4]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  mypy-type-check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+        os: ["ubuntu-latest"]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r qa/requirements.txt
+
+      - name: mypy type checking
+        run: |
+          python --version
+          mypy --version
+          mypy src/exabgp/ --no-error-summary 2>&1 | head -100 || true
+        continue-on-error: true
+
+      - name: Type checking summary
+        run: |
+          echo "Type checking completed (non-blocking during annotation rollout)"
+          echo "As modules are annotated, this check will become stricter"
