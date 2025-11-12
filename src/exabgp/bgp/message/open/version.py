@@ -9,5 +9,5 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 class Version(int):
     BGP_4 = 4  # RFC 4271 - BGP version 4
 
-    def pack(self):
+    def pack(self) -> bytes:
         return bytes([self])
