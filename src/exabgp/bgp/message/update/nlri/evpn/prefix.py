@@ -11,6 +11,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, Optional
+
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
@@ -19,6 +21,7 @@ from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+from exabgp.bgp.message import Action
 
 from exabgp.bgp.message.notification import Notify
 
@@ -51,11 +54,24 @@ from exabgp.bgp.message.notification import Notify
 
 @EVPN.register
 class Prefix(EVPN):
-    CODE = 5
-    NAME = 'IP Prefix Advertisement'
-    SHORT_NAME = 'PrfxAdv'
+    CODE: ClassVar[int] = 5
+    NAME: ClassVar[str] = 'IP Prefix Advertisement'
+    SHORT_NAME: ClassVar[str] = 'PrfxAdv'
 
-    def __init__(self, rd, esi, etag, label, ip, iplen, gwip, packed=None, nexthop=None, action=None, addpath=None):
+    def __init__(
+        self,
+        rd: RouteDistinguisher,
+        esi: ESI,
+        etag: EthernetTag,
+        label: Optional[Labels],
+        ip: IP,
+        iplen: int,
+        gwip: IP,
+        packed: Optional[bytes] = None,
+        nexthop: Any = None,
+        action: Optional[Action] = None,
+        addpath: Any = None,
+    ) -> None:
         """rd: a RouteDistinguisher
         esi: an EthernetSegmentIdentifier
         etag: an EthernetTag
@@ -77,7 +93,7 @@ class Prefix(EVPN):
         self.label = label if label else Labels.NOLABEL
         self._pack(packed)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             NLRI.__eq__(self, other)
             and self.CODE == other.CODE
@@ -88,10 +104,10 @@ class Prefix(EVPN):
         )
         # esi, label and gwip must not be compared
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{}:{}:{}:{}:{}{}:{}:{}'.format(
             self._prefix(),
             self.rd._str(),
@@ -103,11 +119,11 @@ class Prefix(EVPN):
             self.label,
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         # esi, and label, gwip must *not* be part of the hash
         return hash('{}:{}:{}:{}'.format(self.rd, self.etag, self.ip, self.iplen))
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -127,7 +143,7 @@ class Prefix(EVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, exdata):
+    def unpack(cls, exdata: bytes) -> Prefix:
         data = exdata
 
         # Get the data length to understand if addresses are IPv4 or IPv6
@@ -167,7 +183,7 @@ class Prefix(EVPN):
 
         return cls(rd, esi, etag, label, ip, iplen, gwip, exdata)
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[bool] = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

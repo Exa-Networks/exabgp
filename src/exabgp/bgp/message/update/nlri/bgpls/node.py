@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
+from typing import Any, ClassVar, List, Optional
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -30,7 +31,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 #             |     0      | Default Layer 3 Routing topology |
 
 # BGP-LS Node Descriptor TLV type
-NODE_DESCRIPTOR_TYPE = 256  # Local Node Descriptors TLV type
+NODE_DESCRIPTOR_TYPE: int = 256  # Local Node Descriptors TLV type
 #             +------------+----------------------------------+
 #   The Protocol-ID field can contain one of the following values:
 # ===================================================================== DOMAIN
@@ -38,20 +39,30 @@ NODE_DESCRIPTOR_TYPE = 256  # Local Node Descriptors TLV type
 
 @BGPLS.register
 class NODE(BGPLS):
-    CODE = 1
-    NAME = 'bgpls-node'
-    SHORT_NAME = 'Node'
+    CODE: ClassVar[int] = 1
+    NAME: ClassVar[str] = 'bgpls-node'
+    SHORT_NAME: ClassVar[str] = 'Node'
 
-    def __init__(self, domain, proto_id, node_ids, packed=None, nexthop=None, action=None, route_d=None, addpath=None):
+    def __init__(
+        self,
+        domain: int,
+        proto_id: int,
+        node_ids: List[NodeDescriptor],
+        packed: Optional[bytes] = None,
+        nexthop: Any = None,
+        action: Any = None,
+        route_d: Any = None,
+        addpath: Any = None,
+    ) -> None:
         BGPLS.__init__(self, action, addpath)
-        self.domain = domain
-        self.proto_id = proto_id
-        self.node_ids = node_ids
-        self.nexthop = nexthop
-        self._pack = packed
-        self.route_d = route_d
+        self.domain: int = domain
+        self.proto_id: int = proto_id
+        self.node_ids: List[NodeDescriptor] = node_ids
+        self.nexthop: Any = nexthop
+        self._pack: Optional[bytes] = packed
+        self.route_d: Any = route_d
 
-    def json(self, compact=None):
+    def json(self, compact: Any = None) -> str:
         nodes = ', '.join(d.json() for d in self.node_ids)
         content = ', '.join(
             [
@@ -67,7 +78,7 @@ class NODE(BGPLS):
         return f'{{ {content} }}'
 
     @classmethod
-    def unpack_nlri(cls, data, rd):
+    def unpack_nlri(cls, data: bytes, rd: Any) -> NODE:
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
@@ -81,7 +92,7 @@ class NODE(BGPLS):
             )
         values = data[13 : 13 + node_length]
 
-        node_ids = []
+        node_ids: List[NodeDescriptor] = []
         while values:
             # Unpack Node Descriptor Sub-TLVs
             node_id, left = NodeDescriptor.unpack(values, proto_id)
@@ -92,7 +103,7 @@ class NODE(BGPLS):
 
         return cls(domain=domain, proto_id=proto_id, node_ids=node_ids, route_d=rd, packed=data)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, BGPLS)
             and self.CODE == other.CODE
@@ -101,14 +112,14 @@ class NODE(BGPLS):
             and self.route_d == other.route_d
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.json()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.proto_id, tuple(self.node_ids)))
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> Optional[bytes]:
         return self._pack

@@ -7,12 +7,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, Optional
+
 from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import ESI
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+from exabgp.bgp.message import Action
 
 from exabgp.bgp.message.notification import Notify
 
@@ -32,11 +35,20 @@ from exabgp.bgp.message.notification import Notify
 
 @EVPN.register
 class EthernetSegment(EVPN):
-    CODE = 4
-    NAME = 'Ethernet Segment'
-    SHORT_NAME = 'Segment'
+    CODE: ClassVar[int] = 4
+    NAME: ClassVar[str] = 'Ethernet Segment'
+    SHORT_NAME: ClassVar[str] = 'Segment'
 
-    def __init__(self, rd, esi, ip, packed=None, nexthop=None, action=None, addpath=None):
+    def __init__(
+        self,
+        rd: RouteDistinguisher,
+        esi: ESI,
+        ip: IP,
+        packed: Optional[bytes] = None,
+        nexthop: Any = None,
+        action: Optional[Action] = None,
+        addpath: Any = None,
+    ) -> None:
         EVPN.__init__(self, action, addpath)
         self.nexthop = nexthop
         self.rd = rd
@@ -44,7 +56,7 @@ class EthernetSegment(EVPN):
         self.ip = ip
         self._pack(packed)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, EthernetSegment)
             and self.CODE == other.CODE
@@ -53,17 +65,17 @@ class EthernetSegment(EVPN):
         )
         # esi and label must not be part of the comparaison
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{}:{}:{}:{}'.format(self._prefix(), self.rd._str(), self.esi, self.ip if self.ip else '')
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         # esi and label MUST *NOT* be part of the hash
         return hash((self.rd, self.ip))
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -82,7 +94,7 @@ class EthernetSegment(EVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> EthernetSegment:
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
         iplen = data[18]
@@ -98,7 +110,7 @@ class EthernetSegment(EVPN):
 
         return cls(rd, esi, ip, data)
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[bool] = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

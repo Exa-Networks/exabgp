@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
+from typing import Any, ClassVar, Dict, Optional
 
 
 # ==================================================================== Community
@@ -16,19 +17,20 @@ from struct import unpack
 
 
 class Community:
-    MAX = 0xFFFFFFFF
+    MAX: ClassVar[int] = 0xFFFFFFFF
 
-    NO_EXPORT = pack('!L', 0xFFFFFF01)
-    NO_ADVERTISE = pack('!L', 0xFFFFFF02)
-    NO_EXPORT_SUBCONFED = pack('!L', 0xFFFFFF03)
-    NO_PEER = pack('!L', 0xFFFFFF04)
-    BLACKHOLE = pack('!L', 0xFFFF029A)
+    NO_EXPORT: ClassVar[bytes] = pack('!L', 0xFFFFFF01)
+    NO_ADVERTISE: ClassVar[bytes] = pack('!L', 0xFFFFFF02)
+    NO_EXPORT_SUBCONFED: ClassVar[bytes] = pack('!L', 0xFFFFFF03)
+    NO_PEER: ClassVar[bytes] = pack('!L', 0xFFFFFF04)
+    BLACKHOLE: ClassVar[bytes] = pack('!L', 0xFFFF029A)
 
-    cache = {}
-    caching = True
+    cache: ClassVar[Dict[bytes, Community]] = {}
+    caching: ClassVar[bool] = True
 
-    def __init__(self, community):
-        self.community = community
+    def __init__(self, community: bytes) -> None:
+        self.community: bytes = community
+        self._str: str
         if community == self.NO_EXPORT:
             self._str = 'no-export'
         elif community == self.NO_ADVERTISE:
@@ -42,42 +44,42 @@ class Community:
         else:
             self._str = '%d:%d' % unpack('!HH', self.community)
 
-    def __eq__(self, other):
-        return self.community == other.community
+    def __eq__(self, other: object) -> bool:
+        return self.community == other.community  # type: ignore[attr-defined]
 
-    def __ne__(self, other):
-        return self.community != other.community
+    def __ne__(self, other: object) -> bool:
+        return self.community != other.community  # type: ignore[attr-defined]
 
-    def __lt__(self, other):
-        return self.community < other.community
+    def __lt__(self, other: object) -> bool:
+        return self.community < other.community  # type: ignore[attr-defined]
 
-    def __le__(self, other):
-        return self.community <= other.community
+    def __le__(self, other: object) -> bool:
+        return self.community <= other.community  # type: ignore[attr-defined]
 
-    def __gt__(self, other):
-        return self.community > other.community
+    def __gt__(self, other: object) -> bool:
+        return self.community > other.community  # type: ignore[attr-defined]
 
-    def __ge__(self, other):
-        return self.community >= other.community
+    def __ge__(self, other: object) -> bool:
+        return self.community >= other.community  # type: ignore[attr-defined]
 
-    def json(self):
+    def json(self) -> str:
         return '[ %d, %d ]' % unpack('!HH', self.community)
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         return self.community
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self._str
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 4
 
     @classmethod
-    def unpack(cls, community, direction, negotiated):
+    def unpack(cls, community: bytes, direction: Any, negotiated: Any) -> Community:
         return cls(community)
 
     @classmethod
-    def cached(cls, community):
+    def cached(cls, community: bytes) -> Community:
         if not cls.caching:
             return cls(community)
         if community in cls.cache:

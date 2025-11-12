@@ -4,34 +4,38 @@ Created by Ryoga Saito 2022-02-24
 Copyright (c) 2022 Ryoga Saito. All rights reserved.
 """
 
+from __future__ import annotations
+
+from typing import Optional
+
 
 class GenericSrv6ServiceSubTlv:
-    def __init__(self, code, packed):
-        self.code = code
-        self.packed = packed
+    def __init__(self, code: int, packed: bytes) -> None:
+        self.code: int = code
+        self.packed: bytes = packed
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'SRv6 Service Sub-TLV type %d not implemented' % self.code
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[bool] = None) -> str:
         # TODO:
         return ''
 
-    def pack(self):
+    def pack(self) -> bytes:
         return self.packed
 
 
 class GenericSrv6ServiceDataSubSubTlv:
-    def __init__(self, code, packed):
-        self.code = code
-        self.packed = packed
+    def __init__(self, code: int, packed: bytes) -> None:
+        self.code: int = code
+        self.packed: bytes = packed
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'SRv6 Service Data Sub-Sub-TLV type %d not implemented' % self.code
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[bool] = None) -> str:
         # TODO:
         return ''
 
-    def pack(self):
+    def pack(self) -> bytes:
         return self.packed

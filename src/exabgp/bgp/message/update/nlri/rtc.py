@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
+from typing import Any, Optional, Tuple
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
@@ -29,20 +30,22 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 class RTC(NLRI):
     # XXX: FIXME: no support yet for RTC variable length with prefixing
 
-    def __init__(self, afi, safi, action, origin, rt):
+    def __init__(self, afi: AFI, safi: SAFI, action: Action, origin: ASN, rt: Optional[RouteTarget]) -> None:
         NLRI.__init__(self, afi, safi)
         self.action = action
         self.origin = origin
         self.rt = rt
         self.nexthop = NoNextHop
 
-    def feedback(self, action):
+    def feedback(self, action: Action) -> str:
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'rtc nlri next-hop missing'
         return ''
 
     @classmethod
-    def new(cls, afi, safi, origin, rt, nexthop=NoNextHop, action=Action.UNSET):
+    def new(
+        cls, afi: AFI, safi: SAFI, origin: ASN, rt: RouteTarget, nexthop: Any = NoNextHop, action: Action = Action.UNSET
+    ) -> RTC:
         instance = cls(afi, safi, action, origin, rt)
         instance.origin = origin
         instance.rt = rt
@@ -50,20 +53,20 @@ class RTC(NLRI):
         instance.action = action
         return instance
 
-    def __len__(self):
+    def __len__(self) -> int:
         return (4 + len(self.rt)) * 8 if self.rt else 1
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'rtc {}:{}'.format(self.origin, self.rt) if self.rt else 'rtc wildcard'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
     @staticmethod
-    def resetFlags(char):
+    def resetFlags(char: int) -> int:
         return char & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL)
 
-    def pack_nlri(self, negotiated=None):
+    def pack_nlri(self, negotiated: Any = None) -> bytes:
         # XXX: no support for addpath yet
         # We reset ext com flag bits from the first byte in the packed RT
         # because in an RTC route these flags never appear.
@@ -73,7 +76,7 @@ class RTC(NLRI):
         return pack('!B', 0)
 
     @classmethod
-    def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> Tuple[RTC, bytes]:
         length = bgp[0]
 
         if length == 0:

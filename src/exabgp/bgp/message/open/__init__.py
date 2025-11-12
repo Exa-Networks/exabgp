@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
+from typing import Any, Optional
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
@@ -55,14 +56,16 @@ class Open(Message):
     ID = Message.CODE.OPEN
     TYPE = bytes([Message.CODE.OPEN])
 
-    def __init__(self, version, asn, hold_time, router_id, capabilities):
-        self.version = version
-        self.asn = asn
-        self.hold_time = hold_time
-        self.router_id = router_id
-        self.capabilities = capabilities
+    def __init__(
+        self, version: Version, asn: ASN, hold_time: HoldTime, router_id: RouterID, capabilities: Capabilities
+    ) -> None:
+        self.version: Version = version
+        self.asn: ASN = asn
+        self.hold_time: HoldTime = hold_time
+        self.router_id: RouterID = router_id
+        self.capabilities: Capabilities = capabilities
 
-    def message(self, negotiated=None):
+    def message(self, negotiated: Any = None) -> bytes:
         return self._message(
             self.version.pack()
             + self.asn.trans().pack()
@@ -71,7 +74,7 @@ class Open(Message):
             + self.capabilities.pack(),
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]' % (
             self.version,
             self.asn.trans(),
@@ -81,7 +84,7 @@ class Open(Message):
         )
 
     @classmethod
-    def unpack_message(cls, data, direction=None, negotiated=None):
+    def unpack_message(cls, data: bytes, direction: Optional[int] = None, negotiated: Any = None) -> Open:
         version = data[0]
         if version != Version.BGP_4:
             # Only version 4 is supported nowdays ..

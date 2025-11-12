@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
+from typing import Any, ClassVar, Dict, Optional, Tuple, Type
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -65,7 +66,7 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 #            +-------------+----------------------------------+
 # ===================================================================== PROTO_ID
 
-PROTO_CODES = {
+PROTO_CODES: Dict[int, str] = {
     1: 'isis_l1',
     2: 'isis_l2',
     3: 'ospf_v2',
@@ -80,45 +81,45 @@ PROTO_CODES = {
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls)
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls_vpn)
 class BGPLS(NLRI):
-    registered_bgpls = dict()
+    registered_bgpls: ClassVar[Dict[int, Type[BGPLS]]] = dict()
 
-    CODE = -1
-    NAME = 'Unknown'
-    SHORT_NAME = 'unknown'
+    CODE: ClassVar[int] = -1
+    NAME: ClassVar[str] = 'Unknown'
+    SHORT_NAME: ClassVar[str] = 'unknown'
 
-    def __init__(self, action=Action.UNSET, addpath=None):
+    def __init__(self, action: Action = Action.UNSET, addpath: Any = None) -> None:
         NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
-        self._packed = b''
+        self._packed: bytes = b''
 
-    def pack_nlri(self, negotiated=None):
+    def pack_nlri(self, negotiated: Any = None) -> bytes:
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._packed) + 2
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'bgp-ls:{}:{}'.format(
             self.registered_bgpls.get(self.CODE, self).SHORT_NAME.lower(),
             '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
     @classmethod
-    def register(cls, klass):
+    def register(cls, klass: Type[BGPLS]) -> Type[BGPLS]:
         if klass.CODE in cls.registered_bgpls:
             raise RuntimeError('only one BGP LINK_STATE registration allowed')
         cls.registered_bgpls[klass.CODE] = klass
         return klass
 
     @classmethod
-    def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> Tuple[BGPLS, bytes]:
         code, length = unpack('!HH', bgp[:4])
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher
-                rd = RouteDistinguisher.unpack(bgp[4:12])
+                rd: Optional[RouteDistinguisher] = RouteDistinguisher.unpack(bgp[4:12])
                 klass = cls.registered_bgpls[code].unpack_nlri(bgp[12 : length + 4], rd)
             else:
                 rd = None
@@ -131,23 +132,24 @@ class BGPLS(NLRI):
 
         return klass, bgp[length + 4 :]
 
-    def _raw(self):
+    def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self.pack())
 
 
 class GenericBGPLS(BGPLS):
-    def __init__(self, code, packed):
+    def __init__(self, code: int, packed: bytes) -> None:
         BGPLS.__init__(self)
         self.CODE = code
         self._pack(packed)
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> Optional[bytes]:
         if self._packed:
             return self._packed
 
         if packed:
             self._packed = packed
             return packed
+        return None
 
-    def json(self, compact=None):
+    def json(self, compact: Any = None) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())

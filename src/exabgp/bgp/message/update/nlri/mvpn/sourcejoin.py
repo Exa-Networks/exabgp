@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from struct import pack
+from typing import ClassVar, Optional
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.protocol.family import _AFI
+from exabgp.bgp.message import Action
 
 # +-----------------------------------+
 # |      RD   (8 octets)              |
@@ -22,25 +25,35 @@ from exabgp.protocol.ip import IP, IPv4, IPv6
 # +-----------------------------------+
 
 # MVPN Source Join Route length constants (RFC 6514)
-MVPN_SOURCEJOIN_IPV4_LENGTH = 22  # 8 (RD) + 4 (Source AS) + 1 (source len) + 4 (IPv4) + 1 (group len) + 4 (IPv4)
-MVPN_SOURCEJOIN_IPV6_LENGTH = 46  # 8 (RD) + 4 (Source AS) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
+MVPN_SOURCEJOIN_IPV4_LENGTH: int = 22  # 8 (RD) + 4 (Source AS) + 1 (source len) + 4 (IPv4) + 1 (group len) + 4 (IPv4)
+MVPN_SOURCEJOIN_IPV6_LENGTH: int = 46  # 8 (RD) + 4 (Source AS) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
 @MVPN.register
 class SourceJoin(MVPN):
-    CODE = 7
-    NAME = 'C-Multicast Source Tree Join route'
-    SHORT_NAME = 'Source-Join'
+    CODE: ClassVar[int] = 7
+    NAME: ClassVar[str] = 'C-Multicast Source Tree Join route'
+    SHORT_NAME: ClassVar[str] = 'Source-Join'
 
-    def __init__(self, rd, afi, source, group, source_as, packed=None, action=None, addpath=None):
+    def __init__(
+        self,
+        rd: RouteDistinguisher,
+        afi: _AFI,
+        source: IP,
+        group: IP,
+        source_as: int,
+        packed: Optional[bytes] = None,
+        action: Optional[Action] = None,
+        addpath: Optional[int] = None,
+    ) -> None:
         MVPN.__init__(self, afi=afi, action=action, addpath=addpath)
-        self.rd = rd
-        self.group = group
-        self.source = source
-        self.source_as = source_as
+        self.rd: RouteDistinguisher = rd
+        self.group: IP = group
+        self.source: IP = source
+        self.source_as: int = source_as
         self._pack(packed)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, SourceJoin)
             and self.CODE == other.CODE
@@ -49,16 +62,16 @@ class SourceJoin(MVPN):
             and self.group == other.group
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self._prefix()}:{self.rd._str()}:{self.source_as!s}:{self.source!s}:{self.group!s}'
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.rd, self.source, self.group, self.source_as))
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -76,7 +89,7 @@ class SourceJoin(MVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data, afi):
+    def unpack(cls, data: bytes, afi: _AFI) -> SourceJoin:
         datalen = len(data)
         if datalen not in (MVPN_SOURCEJOIN_IPV4_LENGTH, MVPN_SOURCEJOIN_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Invalid C-Multicast Route length ({datalen} bytes).')
@@ -106,7 +119,7 @@ class SourceJoin(MVPN):
         groupip = IP.unpack(data[cursor : cursor + groupiplen])
         return cls(afi=afi, rd=rd, source=sourceip, group=groupip, source_as=source_as, packed=data)
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[bool] = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

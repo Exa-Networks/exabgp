@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
+from typing import Any, Generator, Union
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -30,17 +31,17 @@ class MPURNLRI(Attribute, Family):
     FLAG = Attribute.Flag.OPTIONAL
     ID = Attribute.CODE.MP_UNREACH_NLRI
 
-    def __init__(self, afi, safi, nlris):
+    def __init__(self, afi: Union[int, AFI], safi: Union[int, SAFI], nlris: list[NLRI]) -> None:
         Family.__init__(self, afi, safi)
-        self.nlris = nlris
+        self.nlris: list[NLRI] = nlris
 
-    def __eq__(self, other):
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris
+    def __eq__(self, other: object) -> bool:
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris  # type: ignore[attr-defined]
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def packed_attributes(self, negotiated, maximum=Negotiated.FREE_SIZE):
+    def packed_attributes(self, negotiated: Any, maximum: int = Negotiated.FREE_SIZE) -> Generator[bytes, None, None]:
         if not self.nlris:
             return
 
@@ -66,17 +67,17 @@ class MPURNLRI(Attribute, Family):
             raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
         yield self._attribute(payload)
 
-    def pack(self, negotiated):
+    def pack(self, negotiated: Any) -> bytes:
         return b''.join(self.packed_attributes(negotiated))
 
-    def __len__(self):
+    def __len__(self) -> int:
         raise RuntimeError('we can not give you the size of an MPURNLRI - was it with our witout addpath ?')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'MP_UNREACH_NLRI for %s %s with %d NLRI(s)' % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
-    def unpack(cls, data, direction, negotiated):
+    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> MPURNLRI:
         nlris = []
 
         # -- Reading AFI/SAFI

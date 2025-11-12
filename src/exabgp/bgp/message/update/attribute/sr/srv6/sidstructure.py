@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from struct import pack
+from typing import ClassVar, Dict, Optional
 
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
 
@@ -32,27 +33,36 @@ from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidIn
 
 @Srv6SidInformation.register()
 class Srv6SidStructure:
-    TLV = 1
+    TLV: ClassVar[int] = 1
 
-    registered_subsubtlvs = dict()
+    registered_subsubtlvs: ClassVar[Dict[int, type]] = dict()
 
-    def __init__(self, loc_block_len, loc_node_len, func_len, arg_len, tpose_len, tpose_offset, packed=None):
-        self.loc_block_len = loc_block_len
-        self.loc_node_len = loc_node_len
-        self.func_len = func_len
-        self.arg_len = arg_len
-        self.tpose_len = tpose_len
-        self.tpose_offset = tpose_offset
-        self.packed = self.pack()
+    def __init__(
+        self,
+        loc_block_len: int,
+        loc_node_len: int,
+        func_len: int,
+        arg_len: int,
+        tpose_len: int,
+        tpose_offset: int,
+        packed: Optional[bytes] = None,
+    ) -> None:
+        self.loc_block_len: int = loc_block_len
+        self.loc_node_len: int = loc_node_len
+        self.func_len: int = func_len
+        self.arg_len: int = arg_len
+        self.tpose_len: int = tpose_len
+        self.tpose_offset: int = tpose_offset
+        self.packed: bytes = self.pack()
 
     @classmethod
-    def unpack(cls, data, length):
-        loc_block_len = data[0]
-        loc_node_len = data[1]
-        func_len = data[2]
-        arg_len = data[3]
-        tpose_len = data[4]
-        tpose_offset = data[5]
+    def unpack(cls, data: bytes, length: int) -> Srv6SidStructure:
+        loc_block_len: int = data[0]
+        loc_node_len: int = data[1]
+        func_len: int = data[2]
+        arg_len: int = data[3]
+        tpose_len: int = data[4]
+        tpose_offset: int = data[5]
 
         return cls(
             loc_block_len=loc_block_len,
@@ -63,7 +73,7 @@ class Srv6SidStructure:
             tpose_offset=tpose_offset,
         )
 
-    def pack(self):
+    def pack(self) -> bytes:
         return (
             pack('!B', self.TLV)
             + pack('!H', 6)
@@ -75,7 +85,7 @@ class Srv6SidStructure:
             + pack('!B', self.tpose_offset)
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'sid-structure [%d,%d,%d,%d,%d,%d]' % (
             self.loc_block_len,
             self.loc_node_len,
@@ -85,8 +95,8 @@ class Srv6SidStructure:
             self.tpose_offset,
         )
 
-    def json(self, compact=None):
-        pairs = {
+    def json(self, compact: Optional[bool] = None) -> str:
+        pairs: Dict[str, int] = {
             'locator-block-length': self.loc_block_len,
             'locator-node-length': self.loc_node_len,
             'function-length': self.func_len,

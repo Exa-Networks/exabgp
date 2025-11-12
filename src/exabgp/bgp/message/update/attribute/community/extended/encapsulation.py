@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Dict, Optional
+
 from struct import pack
 from struct import unpack
 
@@ -19,22 +21,22 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 @ExtendedCommunity.register
 class Encapsulation(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x03
-    COMMUNITY_SUBTYPE = 0x0C
+    COMMUNITY_TYPE: ClassVar[int] = 0x03
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
     # https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml#tunnel-types
     class Type:
-        DEFAULT = 0x00
-        L2TPv3 = 0x01
-        GRE = 0x02
-        IPIP = 0x07
-        VXLAN = 0x08
-        NVGRE = 0x09
-        MPLS = 0x0A
-        VXLAN_GPE = 0x0C
-        MPLS_UDP = 0x0D
+        DEFAULT: ClassVar[int] = 0x00
+        L2TPv3: ClassVar[int] = 0x01
+        GRE: ClassVar[int] = 0x02
+        IPIP: ClassVar[int] = 0x07
+        VXLAN: ClassVar[int] = 0x08
+        NVGRE: ClassVar[int] = 0x09
+        MPLS: ClassVar[int] = 0x0A
+        VXLAN_GPE: ClassVar[int] = 0x0C
+        MPLS_UDP: ClassVar[int] = 0x0D
 
-    _string = {
+    _string: ClassVar[Dict[int, str]] = {
         Type.DEFAULT: 'Default',
         Type.L2TPv3: 'L2TPv3',
         Type.GRE: 'GRE',
@@ -46,18 +48,18 @@ class Encapsulation(ExtendedCommunity):
         Type.MPLS_UDP: 'MPLS-in-UDP',
     }
 
-    def __init__(self, tunnel_type, community=None):
-        self.tunnel_type = tunnel_type
+    def __init__(self, tunnel_type: int, community: Optional[bytes] = None) -> None:
+        self.tunnel_type: int = tunnel_type
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sLH', self._subtype(), 0, self.tunnel_type),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'encap:{}'.format(Encapsulation._string.get(self.tunnel_type, 'encap:UNKNOWN-%d' % self.tunnel_type))
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> Encapsulation:
         (tunnel,) = unpack('!H', data[6:8])
         return Encapsulation(tunnel, data[:8])
 

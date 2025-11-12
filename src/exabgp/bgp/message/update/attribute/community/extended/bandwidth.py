@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Optional
+
 from struct import pack
 from struct import unpack
 
@@ -18,18 +20,18 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 @ExtendedCommunity.register
 class Bandwidth(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x40
-    COMMUNITY_SUBTYPE = 0x04
+    COMMUNITY_TYPE: ClassVar[int] = 0x40
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x04
 
-    def __init__(self, asn, speed, community=None):
-        self.asn = asn
-        self.speed = speed
+    def __init__(self, asn: int, speed: float, community: Optional[bytes] = None) -> None:
+        self.asn: int = asn
+        self.speed: float = speed
         ExtendedCommunity.__init__(self, community if community is not None else pack('!Hf', asn, speed))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'bandwith:%d:%0.f' % (self.asn, self.speed)
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> Bandwidth:
         asn, speed = unpack('!Hf', data[2:8])
         return Bandwidth(asn, speed, data[:8])

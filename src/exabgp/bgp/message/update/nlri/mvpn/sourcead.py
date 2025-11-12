@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from typing import ClassVar, Optional
+
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.protocol.family import _AFI
+from exabgp.bgp.message import Action
 
 # +-----------------------------------+
 # |      RD   (8 octets)              |
@@ -18,24 +22,33 @@ from exabgp.protocol.ip import IP, IPv4, IPv6
 # +-----------------------------------+
 
 # MVPN Source Active A-D Route length constants (RFC 6514)
-MVPN_SOURCEAD_IPV4_LENGTH = 18  # 8 (RD) + 1 (source len) + 4 (IPv4) + 1 (group len) + 4 (IPv4)
-MVPN_SOURCEAD_IPV6_LENGTH = 42  # 8 (RD) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
+MVPN_SOURCEAD_IPV4_LENGTH: int = 18  # 8 (RD) + 1 (source len) + 4 (IPv4) + 1 (group len) + 4 (IPv4)
+MVPN_SOURCEAD_IPV6_LENGTH: int = 42  # 8 (RD) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
 @MVPN.register
 class SourceAD(MVPN):
-    CODE = 5
-    NAME = 'Source Active A-D Route'
-    SHORT_NAME = 'SourceAD'
+    CODE: ClassVar[int] = 5
+    NAME: ClassVar[str] = 'Source Active A-D Route'
+    SHORT_NAME: ClassVar[str] = 'SourceAD'
 
-    def __init__(self, rd, afi, source, group, packed=None, action=None, addpath=None):
+    def __init__(
+        self,
+        rd: RouteDistinguisher,
+        afi: _AFI,
+        source: IP,
+        group: IP,
+        packed: Optional[bytes] = None,
+        action: Optional[Action] = None,
+        addpath: Optional[int] = None,
+    ) -> None:
         MVPN.__init__(self, afi=afi, action=action, addpath=addpath)
-        self.rd = rd
-        self.source = source
-        self.group = group
+        self.rd: RouteDistinguisher = rd
+        self.source: IP = source
+        self.group: IP = group
         self._pack(packed)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, SourceAD)
             and self.CODE == other.CODE
@@ -44,16 +57,16 @@ class SourceAD(MVPN):
             and self.group == other.group
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self._prefix()}:{self.rd._str()}:{self.source!s}:{self.group!s}'
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.rd, self.source, self.group))
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -70,7 +83,7 @@ class SourceAD(MVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data, afi):
+    def unpack(cls, data: bytes, afi: _AFI) -> SourceAD:
         datalen = len(data)
         if datalen not in (MVPN_SOURCEAD_IPV4_LENGTH, MVPN_SOURCEAD_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')
@@ -105,7 +118,7 @@ class SourceAD(MVPN):
 
         return cls(afi=afi, rd=rd, source=sourceip, group=groupip, packed=data)
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[bool] = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())
