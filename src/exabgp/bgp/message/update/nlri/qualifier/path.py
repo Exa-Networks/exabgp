@@ -7,15 +7,17 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Optional
+
 
 # ===================================================================== PathInfo
 # RFC draft-ietf-idr-add-paths-09
 
 
 class PathInfo:
-    NOPATH: 'PathInfo | None' = None
+    NOPATH: Optional['PathInfo'] = None
 
-    def __init__(self, packed: bytes | None = None, integer: int | None = None, ip: str | None = None) -> None:
+    def __init__(self, packed: Optional[bytes] = None, integer: Optional[int] = None, ip: Optional[str] = None) -> None:
         if packed:
             self.path_info: bytes = packed
         elif ip:

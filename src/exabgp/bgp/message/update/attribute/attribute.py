@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Optional, Tuple, Type
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.notification import Notify
 
@@ -279,7 +282,7 @@ class Attribute:
         raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
 
     @classmethod
-    def unpack(cls, attribute_id: int, flag: int, data: bytes, direction: int, negotiated: Any) -> Attribute:
+    def unpack(cls, attribute_id: int, flag: int, data: bytes, direction: int, negotiated: Negotiated) -> Attribute:
         cache: bool = cls.caching and cls.CACHING
 
         if cache and data in cls.cache.get(cls.ID, {}):

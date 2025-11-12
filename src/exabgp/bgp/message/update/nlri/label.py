@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import TYPE_CHECKING, Any, List
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
@@ -57,12 +60,12 @@ class Label(INET):
     def prefix(self) -> str:
         return '{}{}'.format(INET.prefix(self), self.labels)
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
         mask = bytes([len(self.labels) * 8 + self.cidr.mask])
         return addpath + mask + self.labels.pack() + self.cidr.pack_ip()
 
-    def index(self, negotiated: Any = None) -> bytes:
+    def index(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
         mask = bytes([self.cidr.mask])
         return Family.index(self) + addpath + mask + self.cidr.pack_ip()

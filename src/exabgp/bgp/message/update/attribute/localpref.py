@@ -9,7 +9,10 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -33,7 +36,7 @@ class LocalPreference(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._packed
 
     def __len__(self) -> int:
@@ -43,5 +46,5 @@ class LocalPreference(Attribute):
         return str(self.localpref)
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> LocalPreference:
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> LocalPreference:
         return cls(unpack('!L', data)[0], data)

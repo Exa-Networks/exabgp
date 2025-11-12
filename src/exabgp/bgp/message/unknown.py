@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.message import Message
 
@@ -23,7 +26,7 @@ class UnknownMessage(Message):
         self.TYPE = bytes([code])
         self.data = data
 
-    def message(self, negotiated: Any = None) -> bytes:
+    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._message(self.data)
 
     def __str__(self) -> str:

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import ClassVar, Dict, Iterable, List, Tuple
+from typing import ClassVar, Dict, Iterable, List, Optional, Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -73,7 +73,7 @@ class Graceful(Capability, dict):  # type: ignore[type-arg]
         return self.keys()  # type: ignore[return-value]
 
     @staticmethod
-    def unpack_capability(instance: Graceful, data: bytes, capability: int | None = None) -> Graceful:  # pylint: disable=W0613
+    def unpack_capability(instance: Graceful, data: bytes, capability: Optional[int] = None) -> Graceful:  # pylint: disable=W0613
         # XXX: FIXME: should raise if instance was already setup
         restart = unpack('!H', data[:2])[0]
         restart_flag = restart >> 12

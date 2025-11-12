@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Optional, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Type
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from struct import pack
 from exabgp.util import hexstring
@@ -40,7 +43,7 @@ class GenericAttribute(Attribute):
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Optional[Any] = None) -> bytes:
+    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
         flag: int = self.FLAG
         length: int = len(self.data)
         if length > MAX_SINGLE_OCTET_LENGTH:

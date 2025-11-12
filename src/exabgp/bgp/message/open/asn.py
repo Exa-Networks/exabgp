@@ -6,11 +6,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Any, Type
+from typing import TYPE_CHECKING, Optional, Type
 
 from struct import pack, unpack
 
 from exabgp.protocol.resource import Resource
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # =================================================================== ASN
 
@@ -25,7 +28,7 @@ class ASN(Resource):
     def asn4(self) -> bool:
         return self > self.MAX
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
         asn4 = negotiated if negotiated is not None else self.asn4()
         return pack('!L' if asn4 else '!H', self)
 

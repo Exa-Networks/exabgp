@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
@@ -65,7 +68,7 @@ class Open(Message):
         self.router_id: RouterID = router_id
         self.capabilities: Capabilities = capabilities
 
-    def message(self, negotiated: Any = None) -> bytes:
+    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._message(
             self.version.pack()
             + self.asn.trans().pack()
@@ -84,7 +87,7 @@ class Open(Message):
         )
 
     @classmethod
-    def unpack_message(cls, data: bytes, direction: Optional[int] = None, negotiated: Any = None) -> Open:
+    def unpack_message(cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None) -> Open:
         version = data[0]
         if version != Version.BGP_4:
             # Only version 4 is supported nowdays ..

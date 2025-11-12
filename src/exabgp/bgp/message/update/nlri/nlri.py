@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Dict, List, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Tuple, Type
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -67,10 +70,10 @@ class NLRI(Family):
         return Family.index(self) + self.pack_nlri()
 
     # remove this when code restructure is finished
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self.pack_nlri(negotiated)
 
-    def pack_nlri(self, negotiated: Any = None) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         raise Exception('unimplemented in NLRI children class')
 
     @classmethod

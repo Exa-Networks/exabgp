@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import Dict, Optional, Set, Type, ClassVar, Iterator, Any
+from typing import Dict, Optional, Set, Type, ClassVar, Iterator, Any, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI, SAFI, _AFI, _SAFI
 from exabgp.protocol.ip.netmask import NetMask
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # XXX: The IP,Range and CIDR class API are totally broken, fix it.
 # XXX: many of the NLRI classes constructor also need correct @classmethods
@@ -32,13 +35,13 @@ class IPSelf:
     def __repr__(self) -> str:
         return 'self'
 
-    def top(self, negotiated: Any, afi: _AFI = AFI.undefined) -> str:
+    def top(self, negotiated: Negotiated, afi: _AFI = AFI.undefined) -> str:
         return negotiated.nexthopself(afi).top()  # type: ignore[no-any-return]
 
-    def ton(self, negotiated: Any, afi: _AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Negotiated, afi: _AFI = AFI.undefined) -> bytes:
         return negotiated.nexthopself(afi).ton()  # type: ignore[no-any-return]
 
-    def pack(self, negotiated: Any) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         return negotiated.nexthopself(self.afi).ton()  # type: ignore[no-any-return]
 
     def index(self) -> str:
@@ -86,7 +89,7 @@ class IP:
     def ntop(data: bytes) -> str:
         return socket.inet_ntop(socket.AF_INET if len(data) == IPv4.BYTES else socket.AF_INET6, data)
 
-    def top(self, negotiated: Optional[Any] = None, afi: _AFI = AFI.undefined) -> str:
+    def top(self, negotiated: Optional[Negotiated] = None, afi: _AFI = AFI.undefined) -> str:
         return self._string
 
     @staticmethod
@@ -142,7 +145,7 @@ class IP:
     def pack(self) -> bytes:
         return self._packed
 
-    def ton(self, negotiated: Optional[Any] = None, afi: _AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Optional[Negotiated] = None, afi: _AFI = AFI.undefined) -> bytes:
         return self._packed
 
     def __repr__(self) -> str:
@@ -237,13 +240,13 @@ class _NoNextHop:
     afi: ClassVar[_AFI] = AFI.undefined
     safi: ClassVar[_SAFI] = SAFI.undefined
 
-    def pack(self, data: Any, negotiated: Optional[Any] = None) -> str:
+    def pack(self, data: Any, negotiated: Optional[Negotiated] = None) -> str:
         return ''
 
     def index(self) -> str:
         return ''
 
-    def ton(self, negotiated: Optional[Any] = None, afi: _AFI = AFI.undefined) -> str:
+    def ton(self, negotiated: Optional[Negotiated] = None, afi: _AFI = AFI.undefined) -> str:
         return ''
 
     def __str__(self) -> str:

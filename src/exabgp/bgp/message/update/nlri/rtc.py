@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional, Tuple
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
@@ -66,7 +69,7 @@ class RTC(NLRI):
     def resetFlags(char: int) -> int:
         return char & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL)
 
-    def pack_nlri(self, negotiated: Any = None) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         # XXX: no support for addpath yet
         # We reset ext com flag bits from the first byte in the packed RT
         # because in an RTC route these flags never appear.

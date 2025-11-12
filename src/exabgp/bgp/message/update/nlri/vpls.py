@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from struct import unpack
 from struct import pack
-from typing import Any, Iterator, Optional, Tuple
+from typing import Any, Iterator, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -71,7 +74,7 @@ class VPLS(NLRI):
     def assign(self, name: str, value: Any) -> None:
         setattr(self, name, value)
 
-    def pack_nlri(self, negotiated: Any = None) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return (
             b'\x00\x11'  # pack('!H',17)
             + self.rd.pack()

@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, Generator, Union
+from typing import Any, Generator, List, Union
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -31,9 +31,9 @@ class MPURNLRI(Attribute, Family):
     FLAG = Attribute.Flag.OPTIONAL
     ID = Attribute.CODE.MP_UNREACH_NLRI
 
-    def __init__(self, afi: Union[int, AFI], safi: Union[int, SAFI], nlris: list[NLRI]) -> None:
+    def __init__(self, afi: Union[int, AFI], safi: Union[int, SAFI], nlris: List[NLRI]) -> None:
         Family.__init__(self, afi, safi)
-        self.nlris: list[NLRI] = nlris
+        self.nlris: List[NLRI] = nlris
 
     def __eq__(self, other: object) -> bool:
         return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris  # type: ignore[attr-defined]
@@ -41,7 +41,7 @@ class MPURNLRI(Attribute, Family):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def packed_attributes(self, negotiated: Any, maximum: int = Negotiated.FREE_SIZE) -> Generator[bytes, None, None]:
+    def packed_attributes(self, negotiated: Negotiated, maximum: int = Negotiated.FREE_SIZE) -> Generator[bytes, None, None]:
         if not self.nlris:
             return
 
@@ -67,7 +67,7 @@ class MPURNLRI(Attribute, Family):
             raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
         yield self._attribute(payload)
 
-    def pack(self, negotiated: Any) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         return b''.join(self.packed_attributes(negotiated))
 
     def __len__(self) -> int:
@@ -77,7 +77,7 @@ class MPURNLRI(Attribute, Family):
         return 'MP_UNREACH_NLRI for %s %s with %d NLRI(s)' % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> MPURNLRI:
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> MPURNLRI:
         nlris = []
 
         # -- Reading AFI/SAFI

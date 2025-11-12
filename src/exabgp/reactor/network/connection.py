@@ -11,7 +11,7 @@ import random
 import socket
 import select
 from struct import unpack
-from typing import ClassVar, Iterator, Optional
+from typing import ClassVar, Dict, Iterator, Optional
 
 from exabgp.environment import getenv
 
@@ -42,7 +42,7 @@ MIN_BGP_MESSAGE_LENGTH = 19  # Minimum valid BGP message length (header size)
 
 class Connection:
     direction: ClassVar[str] = 'undefined'
-    identifier: ClassVar[dict[str, int]] = {}
+    identifier: ClassVar[Dict[str, int]] = {}
 
     def __init__(self, afi: AFI, peer: str, local: str) -> None:
         self.msg_size: int = ExtendedMessage.INITIAL_SIZE
@@ -54,8 +54,8 @@ class Connection:
 
         self.io: Optional[socket.socket] = None
         self.established: bool = False
-        self._rpoller: dict[socket.socket, select.poll] = {}
-        self._wpoller: dict[socket.socket, select.poll] = {}
+        self._rpoller: Dict[socket.socket, select.poll] = {}
+        self._wpoller: Dict[socket.socket, select.poll] = {}
 
         self.id: int = self.identifier.get(self.direction, 1)
 

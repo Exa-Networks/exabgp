@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
@@ -38,14 +41,14 @@ class NextHop(Attribute, IP):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def ton(self, negotiated: Any = None, afi: AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Negotiated = None, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[assignment]
         return self._packed
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._attribute(self.ton())
 
     @classmethod
-    def unpack(cls, data: bytes, direction: Optional[int] = None, negotiated: Any = None) -> IP:
+    def unpack(cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None) -> IP:
         if not data:
             return NoNextHop  # type: ignore[return-value]
         return IP.unpack(data, NextHop)  # type: ignore[return-value]
@@ -66,10 +69,10 @@ class NextHopSelf(NextHop):
     def ipv4(self) -> bool:
         return self.afi == AFI.ipv4
 
-    def pack(self, negotiated: Any) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         return self._attribute(negotiated.nexthopself(self.afi).ton())
 
-    def ton(self, negotiated: Any = None, afi: AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Negotiated = None, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[assignment]
         return negotiated.nexthopself(afi).ton()
 
     def __eq__(self, other: object) -> bool:

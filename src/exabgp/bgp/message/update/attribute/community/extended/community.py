@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute import Attribute
 
@@ -68,7 +71,7 @@ class ExtendedCommunityBase(Attribute):
         #     Value 1: The community is non-transitive across ASes
         return not (self.community[0] & 0x40)
 
-    def pack(self, negotiated: Any = None) -> bytes:
+    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self.community
 
     def _subtype(self, transitive: bool = True) -> bytes:
@@ -100,7 +103,7 @@ class ExtendedCommunityBase(Attribute):
         return hash(self.community)
 
     @classmethod
-    def unpack(cls, data: bytes, direction: Optional[int] = None, negotiated: Any = None) -> ExtendedCommunityBase:
+    def unpack(cls, data: bytes, direction: Optional[int] = None, negotiated: Negotiated = None) -> ExtendedCommunityBase:  # type: ignore[assignment]
         # 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
         community = (data[0] & 0x0F, data[1])
         if community in cls.registered_extended:  # type: ignore[operator]

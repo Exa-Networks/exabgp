@@ -9,7 +9,10 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Generator, Tuple, Union
+from typing import Any, ClassVar, Generator, List, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
@@ -69,8 +72,8 @@ class Update(Message):
     TYPE = bytes([Message.CODE.UPDATE])
     EOR: ClassVar[bool] = False
 
-    def __init__(self, nlris: list[NLRI], attributes: Attributes) -> None:
-        self.nlris: list[NLRI] = nlris
+    def __init__(self, nlris: List[NLRI], attributes: Attributes) -> None:
+        self.nlris: List[NLRI] = nlris
         self.attributes: Attributes = attributes
 
     # message not implemented we should use messages below.
@@ -118,7 +121,7 @@ class Update(Message):
     # XXX: FIXME: calculate size progressively to not have to do it every time
     # XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
     # XXX: FIXME: are emptied and therefore when we can save calculations
-    def messages(self, negotiated: Any, include_withdraw: bool = True) -> Generator[bytes, None, None]:
+    def messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator[bytes, None, None]:
         # sort the nlris
 
         nlris = []
@@ -264,7 +267,7 @@ class Update(Message):
 
     # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
     @classmethod
-    def unpack_message(cls, data: bytes, direction: int, negotiated: Any) -> Union[Update, EOR]:
+    def unpack_message(cls, data: bytes, direction: int, negotiated: Negotiated) -> Union[Update, EOR]:
         log.debug(lazyformat('parsing UPDATE', data), 'parser')
 
         length = len(data)

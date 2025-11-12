@@ -5,7 +5,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.initial.communities import Communities
@@ -24,7 +27,7 @@ class LargeCommunities(Communities):
     ID = Attribute.CODE.LARGE_COMMUNITY
 
     @staticmethod
-    def unpack(data: bytes, direction: Any, negotiated: Any) -> LargeCommunities:
+    def unpack(data: bytes, direction: Any, negotiated: Negotiated) -> LargeCommunities:
         large_communities = LargeCommunities()
         while data:
             if data and len(data) < LARGE_COMMUNITY_SIZE:

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from struct import pack
-from typing import Any, ClassVar, Dict, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.family import AFI, _AFI
 from exabgp.protocol.family import SAFI, _SAFI
@@ -63,7 +66,7 @@ class MVPN(NLRI):
     def _prefix(self) -> str:
         return 'mvpn:{}:'.format(self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower())
 
-    def pack_nlri(self, negotiated: Any = None) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         # XXX: addpath not supported yet
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
 

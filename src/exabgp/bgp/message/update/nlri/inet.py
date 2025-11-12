@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, Tuple, List
+from typing import Any, Tuple, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
@@ -58,7 +61,7 @@ class INET(NLRI):
             return 'inet nlri next-hop missing'
         return ''
 
-    def pack_nlri(self, negotiated: Any = None) -> bytes:
+    def pack_nlri(self, negotiated: 'Negotiated | None' = None) -> bytes:
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
         return addpath + self.cidr.pack_nlri()
 
