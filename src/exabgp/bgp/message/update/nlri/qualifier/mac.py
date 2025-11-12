@@ -6,55 +6,58 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+from typing import Any, Type
+
 
 # ========================================================================== MAC
 #
 
 
 class MAC:
-    def __init__(self, mac=None, packed=None):
-        self.mac = mac
-        self._packed = packed if packed else b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))
+    def __init__(self, mac: str | None = None, packed: bytes | None = None) -> None:
+        self.mac: str | None = mac
+        self._packed: bytes = packed if packed else b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         # Compare packed representation to handle case-insensitive MAC addresses
-        return self._packed == other._packed
+        return self._packed == other._packed  # type: ignore[attr-defined]
 
-    def __neq__(self, other):
-        return self.mac != other.mac
+    def __neq__(self, other: object) -> bool:
+        return self.mac != other.mac  # type: ignore[attr-defined]
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing MAC for ordering does not make sense')
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         raise RuntimeError('comparing MAC for ordering does not make sense')
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         raise RuntimeError('comparing MAC for ordering does not make sense')
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing MAC for ordering does not make sense')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def pack(self):
+    def pack(self) -> bytes:
         return self._packed
 
     # Orange code was returning 10 !
-    def __len__(self):
+    def __len__(self) -> int:
         return 6
 
     # XXX: FIXME: improve for better performance ?
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls: Type[MAC], data: bytes) -> MAC:
         return cls(':'.join('{:02X}'.format(_) for _ in data[:6]), data[:6])
 
-    def json(self, compact=None):
+    def json(self, compact: Any = None) -> str:
         return '"mac": "{}"'.format(str(self))
