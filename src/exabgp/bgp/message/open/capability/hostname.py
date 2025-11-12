@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
 
 from __future__ import annotations
+from typing import Any
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.util.dns import host, domain
@@ -18,17 +19,17 @@ class HostName(Capability):
     ID = Capability.CODE.HOSTNAME
     HOSTNAME_MAX_LEN = 64
 
-    def __init__(self, host_name=host(), domain_name=domain()):
-        self.host_name = host_name
-        self.domain_name = domain_name
+    def __init__(self, host_name: str = host(), domain_name: str = domain()) -> None:
+        self.host_name: str = host_name
+        self.domain_name: str = domain_name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Hostname({} {})'.format(self.host_name, self.domain_name)
 
-    def json(self):
+    def json(self) -> str:
         return '{{ "host-name": "{}", "domain-name": "{}" }}'.format(self.host_name, self.domain_name)
 
-    def extract(self):
+    def extract(self) -> list[bytes]:
         ret = b''
 
         if self.host_name:
@@ -48,7 +49,7 @@ class HostName(Capability):
         return [ret]
 
     @staticmethod
-    def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+    def unpack_capability(instance: HostName, data: bytes, capability: Any = None) -> HostName:  # pylint: disable=W0613
         l1 = data[0]
         instance.host_name = data[1 : l1 + 1].decode('utf-8')
         l2 = data[l1 + 1]
