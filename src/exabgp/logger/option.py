@@ -3,29 +3,34 @@ from __future__ import annotations
 import os
 import sys
 import time
+from typing import Any, ClassVar, Dict, Optional
+import logging
 
 from exabgp.logger.handler import get_logger
-from exabgp.logger.format import formater
+from exabgp.logger.format import formater as get_formater
 
 
-def echo(_):
+def echo(_: str) -> str:
     return _
 
 
 class option:
-    logger = None
-    formater = echo
+    logger: ClassVar[Optional[logging.Logger]] = None
+    formater: ClassVar[Any] = echo  # Can be echo() or FormatterFunc
 
-    short = False
-    level = 'WARNING'
-    logit = {}
+    short: ClassVar[bool] = False
+    level: ClassVar[str] = 'WARNING'
+    logit: ClassVar[Dict[str, bool]] = {}
 
-    cwd = ''
+    pid: ClassVar[int]  # Set in load()
+    cwd: ClassVar[str] = ''
 
     # where the log should go, stdout, stderr, file, syslog, ...
-    destination = ''
+    destination: ClassVar[str] = ''
 
-    enabled = {
+    option: ClassVar[Dict[str, bool]]  # Set in load()
+
+    enabled: ClassVar[Dict[str, bool]] = {
         'pdb': False,
         'reactor': False,
         'daemon': False,
@@ -42,7 +47,7 @@ class option:
     }
 
     @classmethod
-    def _set_level(cls, level):
+    def _set_level(cls, level: str) -> None:
         cls.level = level
 
         levels = 'FATAL CRITICAL ERROR WARNING INFO DEBUG NOTSET'
@@ -51,11 +56,11 @@ class option:
             cls.logit[level] = levels.index(level) <= index
 
     @classmethod
-    def log_enabled(cls, source, level):
+    def log_enabled(cls, source: str, level: str) -> bool:
         return cls.enabled.get(source, True) and cls.logit.get(level, False)
 
     @classmethod
-    def load(cls, env):
+    def load(cls, env: Any) -> None:
         cls.pid = os.getpid()
         cls.cwd = os.getcwd()
 
@@ -89,7 +94,7 @@ class option:
             cls.destination = 'stdout'
 
     @classmethod
-    def setup(cls, env):
+    def setup(cls, env: Any) -> None:
         cls.load(env)
 
         # the time is used as we will need to re-init the logger once
@@ -104,7 +109,8 @@ class option:
                 stream=sys.stderr,
                 level=cls.level,
             )
-            cls.formater = formater(env.log.short, 'stdout')
+            fmt = get_formater(env.log.short, 'stdout')
+            cls.formater = fmt if fmt else echo
             return
 
         if cls.destination == 'stderr':
@@ -114,13 +120,14 @@ class option:
                 stream=sys.stderr,
                 level=cls.level,
             )
-            cls.formater = formater(env.log.short, 'stderr')
+            fmt = get_formater(env.log.short, 'stderr')
+            cls.formater = fmt if fmt else echo
             return
 
         # if cls.destination == 'file':
         #     os.path.realpath(os.path.normpath(os.path.join(cls._cwd, destination)))
         #     _logger = get_logger('ExaBGP file', filename='')
-        #     _format = formater(cls.enabled, 'stderr')
+        #     _format = get_formater(cls.enabled, 'stderr')
 
         if cls.destination == 'syslog':
             cls.logger = get_logger(
@@ -129,6 +136,7 @@ class option:
                 address='/var/run/syslog' if sys.platform == 'darwin' else '/dev/log',
                 level=cls.level,
             )
-            cls.formater = formater(env.log.short, 'syslog')
+            fmt = get_formater(env.log.short, 'syslog')
+            cls.formater = fmt if fmt else echo
 
         # need to re-add remote syslog
