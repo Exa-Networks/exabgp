@@ -1,4 +1,3 @@
-
 """prefixmetric.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -31,6 +30,6 @@ class PrefixMetric(BaseLS):
     LEN = 4
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> PrefixMetric:
         cls.check(data)
         return cls(int(unpack('!L', data)[0]))
