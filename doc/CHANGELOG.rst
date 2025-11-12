@@ -52,6 +52,138 @@ Version 5.0.0:
  * Compatibility: remove "alias" not-a-fragment which should be not expressed as !is-fragment
  * Compatibility: the JSON string changed
  * Compatibility: "route refresh" is now "route-refresh"
+ * Compatibility: Hostname capability (FQDN) is no longer sent by default - must be explicitly enabled
+ * Compatibility: Python 3.13.x is now supported
+ * Feature: Complete SRv6 (Segment Routing over IPv6) support for BGP-LS
+   - SRv6 Capabilities TLV and SRv6 Locator TLV
+   - SRv6 End.X SID TLV and SRv6 LAN End.X SID
+   - SRv6 Endpoint Behavior TLV
+   - SRv6 SID NLRI
+   patch: multiple contributors
+ * Feature: RFC 9072 Extended Optional Parameters Length for BGP OPEN
+ * Feature: Software version capability for BGP (draft-abraitis-bgp-version-capability)
+ * Feature: RFC 6514 MCAST-VPN Route Types 5, 6, 7 support
+ * Feature: MUP (Mobile User Plane) improvements
+   - Add Source Address to MUP Type 1 ST Route
+   - Improved MUP Type2SessionTransformedRoute encoding and parsing
+ * Feature: Add 'source-interface' parameter to peer configuration for binding TCP connections
+ * Feature: Add '--ip-ifname' argument to healthcheck for setting IP addresses on physical interfaces
+ * Feature: Add '--debounce' flag to healthcheck.py
+ * Feature: Add 'processes-match' keyword for regex-based process matching in configuration
+ * Feature: Add 'neighbor <*>' support in API for bulk route announcements to all neighbors
+ * Feature: Refactor 'tcp.once' to 'tcp.attempts' for configurable connection retry limits
+ * Feature: Add ACK control API commands: 'disable-ack', 'enable-ack', 'silence-ack' for per-connection ACK management
+ * Feature: Add API debug command for troubleshooting
+ * Feature: Add '--pipename' CLI option to allow multiple CLI instances with different named pipes
+ * Feature: Add '--label-exact-match' support for exact loopback interface label matching in healthcheck
+ * Feature: Announce user-defined loopback IPs when '--ip' not configured in healthcheck
+ * Feature: Official container support via GitHub Container Registry (ghcr.io/exa-networks/exabgp)
+ * Fix: TOCTOU (Time-of-Check-Time-of-Use) race condition in configuration parser
+   Added comprehensive validation for process executables (setuid/setgid checks, file type validation)
+ * Fix: Multiple bugs in EVPN implementation discovered during test coverage improvements
+ * Fix: ADM/ASM unpacking issue (bytes vs string type mismatch) in operational messages
+ * Fix: Shutdown communication bug (bytes/string formatting in RFC 8203 handling) in NOTIFICATION
+ * Fix: Route-refresh handling (data type mismatch between reactor and API)
+ * Fix: IPv6 route-target flowspec redirect encoding per RFC 8956/RFC 5701
+ * Fix: Handling of non-encapsulated IPv6 in flowspec
+ * Fix: RIB injection with 'neighbor <*>' - only fail if NO peer can accept route
+ * Fix: Allow 'withdraw' attribute in API announcements
+ * Fix: Accept 'no_export' and 'no_advertise' community names as specified in RFCs
+ * Fix: Do not fail on missing nexthop in JSON API responses
+ * Fix: Do not JSON-encode ACK messages without explicit option
+ * Fix: Version reporting when using zipapp
+ * Fix: Parser.py to allow symlinks and correct executable permission checks
+ * Fix: Provide warning when closing connection causes issues
+ * Fix: Critical logging bugs that could affect error reporting
+ * Fix: Various Python 3.8 compatibility issues
+
+Version 4.2.25
+ * Fix: regression in 4.2.23 introduced by doctopt changes
+
+Version 4.2.24
+ * Fix: remove unused vendored code breaking 4.2.23
+
+Version 4.2.23
+ * Fix: update doctopt to master to fix issues with python3.13
+ * Fix: issue with code with python 3.13
+ * Fix: workaround for deprecated asyncore
+
+Version 4.2.22
+ * Fix: route reload for offline neighbors #1126
+   patch: Malcolm Dodds
+ * Fix: make sure we compare next-hop self and next-hop IP correctly (#1153)
+   reported: gitneep
+ * Compatibility: remove "not-a-fragment" "!is-fragment" should be used instead
+ * Upgrade six to the latest version
+
+Version 4.2.21
+ * Fix: regressing on announcing routes from the API #1108
+
+Version 4.2.20
+ * Fix: correctly filter routes announced by the API to the right peer #1005
+ * Feature: healthcheck neighbor filtering and path-information backport of #1098 and #1099
+ * Fix: backport #1101 fix parsing of FlowSpec TCPFlags with NS
+ * Fix: backport #1102 fix parsing of Fragment with IPv6 destinations/sources
+ * Fix: bug in CLI when failing to read data
+
+Version 4.2.19
+ * Feature: force PGP signing of tags
+ * Feature: backport ICMP types
+ * Fix: backport healthcheck setup_ips requiring a label
+   backport by: Steven Honson
+
+Version 4.2.18
+ * Feature: add ICMP experimental codes
+   reported: enag11
+ * Feature: PGP signing releases
+
+Version 4.2.17
+ * Feature: add flags ECE, CW and NS to TCP, (not sure if any flowspec implementation uses them) #1053
+   reported by: enag11
+ * Fix: bug with IGP Metric #1056
+   patch by: hkml2000
+
+Version 4.2.16
+ * Fix: bacckport of fix for #1051 tcp-flag operators != and &!= return syntax error
+   reported by: enag11
+
+Version 4.2.15
+ * Fix: #1035 Socket remains in CLOSED state after the interface goes down
+   patch: borjam
+ * Fix: #1041 backport
+
+Version 4.2.14
+ * Fix: issue reading data from the peer
+   reported by: isjerryxiao
+ * Feature: allow IPv6 redirect
+   patch by: rzalamena
+ * Fix: fix decoding of path information (inbound vs outbound)
+   reported by: isjerryxiao
+
+Version 4.2.13
+ * Fix: issue when there is no route to the peer and the connection looked like it established with the API
+   reported by: iddq
+ * Fix: healthcheck was not ending if/when exabgp did
+   reported by: mzealey
+ * Fix: issue with poller
+   reported by: emilstahl97
+
+Version 4.2.12
+ * Fix: issue with flow fragment (issue #1027)
+
+Version 4.2.11
+ * Feature: new release code allowing the creation of zipapp
+
+ Version 4.2.10:
+ * Fix: cache invalidation on clear command
+ patch by: Boris Murashov
+
+Version 4.2.9
+ * Fix: healthcheck --sudo, --debug and --no-ack are not exclusive
+   reported by: sincerywaing
+
+Version 4.2.8:
+ * Fix: restore python -m exabgp
 
 Version 4.2.7:
  * Feature: logging parsing in debug mode will now print the JSON of updates

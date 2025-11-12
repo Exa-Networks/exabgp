@@ -78,7 +78,7 @@ See [RFC compliance details](https://github.com/Exa-Networks/exabgp/wiki/RFC-Inf
 - **Event-Driven**: Custom reactor pattern (pre-dates asyncio)
 - **Extensible**: Registry-based plugin architecture
 
-**Note**: If you need FIB manipulation, consider other open source BGP daemons such as [BIRD](http://bird.network.cz/), [FRRouting](https://frrouting.org/), or [Quagga](http://www.quagga.net/).
+**Note**: If you need FIB manipulation, consider other open source BGP daemons such as [BIRD](http://bird.network.cz/) or [FRRouting](https://frrouting.org/).
 
 ## Quick Start
 
@@ -228,7 +228,7 @@ ExaBGP is self-contained and easy to upgrade/downgrade by:
 
 **If you are migrating your application from ExaBGP 3.4 to 4.x please read this [wiki](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.0) entry**.
 
-The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/main/CHANGELOG) and check their setup after any upgrade.
+The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://raw.githubusercontent.com/Exa-Networks/exabgp/main/CHANGELOG) and check their setup after any upgrade.
 
 ## Documentation
 
