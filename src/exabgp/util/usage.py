@@ -12,6 +12,7 @@ import sys
 import resource
 
 
+DIVISOR: float
 if sys.platform == 'darwin':
     # darwin returns bytes
     DIVISOR = 1024.0 * 1024.0
@@ -20,6 +21,6 @@ else:
     DIVISOR = 1024.0 * 1024.0 / resource.getpagesize()
 
 
-def usage(label='usage'):
+def usage(label: str = 'usage') -> str:
     rusage = resource.getrusage(resource.RUSAGE_SELF)
     return f'{label}: usertime={rusage.ru_utime} systime={rusage.ru_stime} mem={rusage.ru_maxrss / DIVISOR} mb'
