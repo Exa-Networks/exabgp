@@ -1,4 +1,3 @@
-
 """atomicaggregate.py
 
 Created by Thomas Mangin on 2012-07-14.
@@ -7,6 +6,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.notification import Notify
@@ -26,26 +27,26 @@ class AtomicAggregate(Attribute):
     # def __eq__ (self, other):
     # def __ne__ (self, other):
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         return self._attribute(b'')
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 0
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return ''
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return 0
 
     @classmethod
-    def unpack(cls, data, direction, negotiated):
+    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> AtomicAggregate:
         if data:
             raise Notify(3, 2, 'invalid ATOMIC_AGGREGATE %s' % [hex(_) for _ in data])
         return cls()
 
     @classmethod
-    def setCache(cls):
+    def setCache(cls) -> None:
         # There can only be one, build it now :)
         cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][''] = cls()
 

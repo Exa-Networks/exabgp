@@ -1,4 +1,3 @@
-
 """clusterlist.py
 
 Created by Thomas Mangin on 2012-07-07.
@@ -7,6 +6,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from typing import Any, List, Optional
 
 from exabgp.protocol.ip import IPv4
 
@@ -18,7 +19,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
 class ClusterID(IPv4):
-    def __init__(self, ip):
+    def __init__(self, ip: str) -> None:
         IPv4.__init__(self, ip)
 
 
@@ -28,35 +29,35 @@ class ClusterList(Attribute):
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
 
-    def __init__(self, clusters, packed=None):
-        self.clusters = clusters
-        self._packed = self._attribute(packed if packed else b''.join(_.pack() for _ in clusters))
-        self._len = len(clusters) * 4
+    def __init__(self, clusters: List[IPv4], packed: Optional[bytes] = None) -> None:
+        self.clusters: List[IPv4] = clusters
+        self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack() for _ in clusters))
+        self._len: int = len(clusters) * 4
 
-    def __eq__(self, other):
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.clusters == other.clusters
+    def __eq__(self, other: object) -> bool:
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.clusters == other.clusters  # type: ignore[attr-defined]
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         return self._packed
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._len
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self._len != 1:
             return '[ {} ]'.format(' '.join([str(_) for _ in self.clusters]))
         return '{}'.format(self.clusters[0])
 
-    def json(self):
+    def json(self) -> str:
         return '[ {} ]'.format(', '.join(['"{}"'.format(str(_)) for _ in self.clusters]))
 
     @classmethod
-    def unpack(cls, data, direction, negotiated):
-        clusters = []
+    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> ClusterList:
+        clusters: List[IPv4] = []
         while data:
-            clusters.append(IPv4.unpack(data[:4]))
+            clusters.append(IPv4.unpack(data[:4]))  # type: ignore[arg-type]
             data = data[4:]
         return cls(clusters)
