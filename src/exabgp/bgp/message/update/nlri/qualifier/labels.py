@@ -6,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+from typing import Type
 
 from struct import pack
 from struct import unpack
@@ -15,7 +16,7 @@ from struct import unpack
 # RFC 3107
 
 
-def opt_raw_label(label, format=' (%d)'):
+def opt_raw_label(label: int | None, format: str = ' (%d)') -> str:
     return format % label if label else ''
 
 
@@ -24,9 +25,9 @@ class Labels:
 
     NOLABEL: Labels | None = None
 
-    def __init__(self, labels, bos=True, raw_labels=None):
-        self.labels = labels
-        self.raw_labels = raw_labels
+    def __init__(self, labels: list[int], bos: bool = True, raw_labels: list[int] | None = None) -> None:
+        self.labels: list[int] = labels
+        self.raw_labels: list[int | None] = raw_labels if raw_labels else []
         packed = []
         if raw_labels:
             for label in raw_labels:
@@ -34,7 +35,7 @@ class Labels:
             # fill self.labels as well, not for packing, but to allow
             # consistent string representations
             if not self.labels:
-                self.labels = [x >> 4 for x in self.raw_labels]
+                self.labels = [x >> 4 for x in raw_labels]
         else:
             for label in labels:
                 # shift to 20 bits of the label to be at the top of three bytes and then truncate.
@@ -44,34 +45,34 @@ class Labels:
                 packed.pop()
                 packed.append(pack('!L', (label << 4) | 1)[1:])
             self.raw_labels = [None for _ in self.labels]
-        self.packed = b''.join(packed)
-        self._len = len(self.packed)
+        self.packed: bytes = b''.join(packed)
+        self._len: int = len(self.packed)
 
-    def __eq__(self, other):
-        return self.labels == other.labels
+    def __eq__(self, other: object) -> bool:
+        return self.labels == other.labels  # type: ignore[attr-defined]
 
-    def __neq__(self, other):
-        return self.labels != other.labels
+    def __neq__(self, other: object) -> bool:
+        return self.labels != other.labels  # type: ignore[attr-defined]
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
-    def pack(self):
+    def pack(self) -> bytes:
         return self.packed
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._len
 
-    def json(self):
+    def json(self) -> str:
         if len(self.labels) >= 1:
             return '"label": [ {} ]'.format(
                 ', '.join(
@@ -83,7 +84,7 @@ class Labels:
             )
         return ''
 
-    def __str__(self):
+    def __str__(self) -> str:
         if len(self.labels) > 1:
             return ' label [ {} ]'.format(
                 ' '.join(
@@ -94,7 +95,7 @@ class Labels:
             return ' label %d%s' % (self.labels[0], opt_raw_label(self.raw_labels[0]))
         return ''
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if len(self.labels) > 1:
             return '[ {} ]'.format(
                 ','.join(
@@ -106,7 +107,7 @@ class Labels:
         return '[ ]'
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls: Type[Labels], data: bytes) -> Labels:
         labels = []
         raw_labels = []
         while len(data):
