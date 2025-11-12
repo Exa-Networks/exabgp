@@ -11,7 +11,7 @@ from __future__ import annotations
 import socket
 
 
-def isipv4(address):
+def isipv4(address: str) -> bool:
     try:
         socket.inet_pton(socket.AF_INET, address)
         return True
@@ -19,7 +19,7 @@ def isipv4(address):
         return False
 
 
-def isipv6(address):
+def isipv6(address: str) -> bool:
     try:
         socket.inet_pton(socket.AF_INET6, address)
         return True
@@ -27,5 +27,5 @@ def isipv6(address):
         return False
 
 
-def isip(address):
+def isip(address: str) -> bool:
     return isipv4(address) or isipv6(address)
