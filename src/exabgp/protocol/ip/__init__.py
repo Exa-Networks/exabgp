@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import builtins
 import socket
 from typing import Dict, Optional, Set, Type, ClassVar, Iterator, Any
 
@@ -266,13 +267,17 @@ class IPv4(IP):
     # Override afi as ClassVar (base class has it as instance variable)
     afi: ClassVar[_AFI] = AFI.ipv4  # type: ignore[misc]
 
+    # lowercase to match the Address API (used in configuration code)
+    bits: ClassVar[int] = 32
+    bytes: ClassVar[int] = 4  # shadows builtin, but required for compatibility
+
     # IPv4-specific constants
     BITS: ClassVar[int] = 32  # IPv4 address bit length
     BYTES: ClassVar[int] = 4  # IPv4 address byte length
     DOT_COUNT: ClassVar[int] = 3  # Number of dots in IPv4 address format (e.g., 192.168.1.1)
     HOST_MASK: ClassVar[int] = 32  # IPv4 host prefix length (/32)
 
-    def __init__(self, string: str, packed: Optional[bytes] = None) -> None:
+    def __init__(self, string: str, packed: Optional[builtins.bytes] = None) -> None:
         self.init(string, packed if packed else IP.pton(string))
 
     def __len__(self) -> int:
@@ -291,16 +296,16 @@ class IPv4(IP):
         return False
 
     @staticmethod
-    def pton(ip: str) -> bytes:
+    def pton(ip: str) -> builtins.bytes:
         return socket.inet_pton(socket.AF_INET, ip)
 
     @staticmethod
-    def ntop(data: bytes) -> str:
+    def ntop(data: builtins.bytes) -> str:
         return socket.inet_ntop(socket.AF_INET, data)
 
     # klass is a trick for subclasses of IP/IPv4 such as NextHop / OriginatorID
     @classmethod
-    def unpack(cls, data: bytes, klass: Optional[Type[IPv4]] = None) -> IPv4:  # type: ignore[override]
+    def unpack(cls, data: builtins.bytes, klass: Optional[Type[IPv4]] = None) -> IPv4:  # type: ignore[override]
         ip = socket.inet_ntop(socket.AF_INET, data)
         if klass:
             return klass(ip, data)
@@ -318,13 +323,17 @@ class IPv6(IP):
     # Override afi as ClassVar (base class has it as instance variable)
     afi: ClassVar[_AFI] = AFI.ipv6  # type: ignore[misc]
 
+    # lowercase to match the Address API (used in configuration code)
+    bits: ClassVar[int] = 128
+    bytes: ClassVar[int] = 16  # shadows builtin, but required for compatibility
+
     # IPv6-specific constants
     BITS: ClassVar[int] = 128  # IPv6 address bit length
     BYTES: ClassVar[int] = 16  # IPv6 address byte length
     COLON_MIN: ClassVar[int] = 2  # Minimum number of colons in IPv6 address format
     HOST_MASK: ClassVar[int] = 128  # IPv6 host prefix length (/128)
 
-    def __init__(self, string: str, packed: Optional[bytes] = None) -> None:
+    def __init__(self, string: str, packed: Optional[builtins.bytes] = None) -> None:
         self.init(string, packed if packed else socket.inet_pton(socket.AF_INET6, string))
 
     def __len__(self) -> int:
@@ -343,15 +352,15 @@ class IPv6(IP):
         return False
 
     @staticmethod
-    def pton(ip: str) -> bytes:
+    def pton(ip: str) -> builtins.bytes:
         return socket.inet_pton(socket.AF_INET6, ip)
 
     @staticmethod
-    def ntop(data: bytes) -> str:
+    def ntop(data: builtins.bytes) -> str:
         return socket.inet_ntop(socket.AF_INET6, data)
 
     @classmethod
-    def unpack(cls, data: bytes, klass: Optional[Type[IPv6]] = None) -> IPv6:  # type: ignore[override]
+    def unpack(cls, data: builtins.bytes, klass: Optional[Type[IPv6]] = None) -> IPv6:  # type: ignore[override]
         ip6 = socket.inet_ntop(socket.AF_INET6, data)
         if klass:
             return klass(ip6)
