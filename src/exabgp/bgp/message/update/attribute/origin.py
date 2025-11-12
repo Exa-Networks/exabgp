@@ -1,4 +1,3 @@
-
 """origin.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -7,6 +6,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from typing import Any, ClassVar, Optional
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -20,27 +21,27 @@ class Origin(Attribute):
     FLAG = Attribute.Flag.TRANSITIVE
     CACHING = True
 
-    IGP = 0x00
-    EGP = 0x01
-    INCOMPLETE = 0x02
+    IGP: ClassVar[int] = 0x00
+    EGP: ClassVar[int] = 0x01
+    INCOMPLETE: ClassVar[int] = 0x02
 
-    def __init__(self, origin, packed=None):
-        self.origin = origin
-        self._packed = self._attribute(packed if packed else bytes([origin]))
+    def __init__(self, origin: int, packed: Optional[bytes] = None) -> None:
+        self.origin: int = origin
+        self._packed: bytes = self._attribute(packed if packed else bytes([origin]))
 
-    def __eq__(self, other):
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.origin == other.origin
+    def __eq__(self, other: object) -> bool:
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.origin == other.origin  # type: ignore[attr-defined]
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         return self._packed
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._packed)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.origin == Origin.IGP:
             return 'igp'
         if self.origin == Origin.EGP:
@@ -50,11 +51,11 @@ class Origin(Attribute):
         return 'invalid'
 
     @classmethod
-    def unpack(cls, data, direction, negotiated):
+    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> Origin:
         return cls(data[0], data)
 
     @classmethod
-    def setCache(cls):
+    def setCache(cls) -> None:
         # there can only be three, build them now
         IGP = Origin(Origin.IGP)
         EGP = Origin(Origin.EGP)
