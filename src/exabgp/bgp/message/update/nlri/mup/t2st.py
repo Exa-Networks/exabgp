@@ -47,7 +47,15 @@ class Type2SessionTransformedRoute(MUP):
     NAME: ClassVar[str] = 'Type2SessionTransformedRoute'
     SHORT_NAME: ClassVar[str] = 'T2ST'
 
-    def __init__(self, rd: RouteDistinguisher, endpoint_len: int, endpoint_ip: IP, teid: int, afi: AFI, packed: Optional[bytes] = None) -> None:
+    def __init__(
+        self,
+        rd: RouteDistinguisher,
+        endpoint_len: int,
+        endpoint_ip: IP,
+        teid: int,
+        afi: AFI,
+        packed: Optional[bytes] = None,
+    ) -> None:
         MUP.__init__(self, afi)
         self.rd: RouteDistinguisher = rd
         self.endpoint_len: int = endpoint_len

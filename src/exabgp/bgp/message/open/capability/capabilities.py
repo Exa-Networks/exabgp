@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, List, Tuple, TYPE_CHECKING
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -28,21 +30,24 @@ from exabgp.bgp.message.notification import Notify
 
 from struct import pack, unpack
 
+if TYPE_CHECKING:
+    from exabgp.bgp.neighbor import Neighbor
+
 # BGP OPEN message parameter size constants (RFC 4271, RFC 9072)
-OPEN_PARAM_LEN_MAX = 255  # Maximum parameter length for standard OPEN (8-bit field)
-OPEN_EXTENDED_MARKER = 255  # Marker value indicating extended optional parameters format
-MIN_EXTENDED_PARAM_LEN = 3  # Minimum length for extended parameter (type + 2-byte length)
-MIN_PARAM_LEN = 2  # Minimum length for standard parameter (type + length)
+OPEN_PARAM_LEN_MAX: int = 255  # Maximum parameter length for standard OPEN (8-bit field)
+OPEN_EXTENDED_MARKER: int = 255  # Marker value indicating extended optional parameters format
+MIN_EXTENDED_PARAM_LEN: int = 3  # Minimum length for extended parameter (type + 2-byte length)
+MIN_PARAM_LEN: int = 2  # Minimum length for standard parameter (type + length)
 
 # =================================================================== Parameter
 #
 
 
 class Parameter(int):
-    AUTHENTIFICATION_INFORMATION = 0x01  # Depreciated
-    CAPABILITIES = 0x02
+    AUTHENTIFICATION_INFORMATION: ClassVar[int] = 0x01  # Depreciated
+    CAPABILITIES: ClassVar[int] = 0x02
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self == self.AUTHENTIFICATION_INFORMATION:
             return 'AUTHENTIFICATION INFORMATION'
         if self == self.CAPABILITIES:
@@ -64,9 +69,9 @@ class Parameter(int):
 
 class Capabilities(dict):
     # RFC 9072 - Extended Optional Parameters Length
-    EXTENDED_LENGTH = 0xFF  # IANA Extended Length type code - indicates extended format in use
+    EXTENDED_LENGTH: ClassVar[int] = 0xFF  # IANA Extended Length type code - indicates extended format in use
 
-    _ADD_PATH = [
+    _ADD_PATH: ClassVar[List[Tuple[AFI, SAFI]]] = [
         (AFI.ipv4, SAFI.unicast),
         (AFI.ipv6, SAFI.unicast),
         (AFI.ipv4, SAFI.nlri_mpls),
@@ -77,58 +82,58 @@ class Capabilities(dict):
         (AFI.ipv6, SAFI.mup),
     ]
 
-    _NEXTHOP = [
+    _NEXTHOP: ClassVar[List[Tuple[AFI, SAFI, AFI]]] = [
         (AFI.ipv4, SAFI.unicast, AFI.ipv6),
         (AFI.ipv4, SAFI.multicast, AFI.ipv6),
         (AFI.ipv4, SAFI.nlri_mpls, AFI.ipv6),
         (AFI.ipv4, SAFI.mpls_vpn, AFI.ipv6),
     ]
 
-    def announced(self, capability):
+    def announced(self, capability: int) -> bool:
         return capability in self
 
-    def __str__(self):
-        r = []
+    def __str__(self) -> str:
+        r: List[str] = []
         for key in sorted(self.keys()):
             r.append(str(self[key]))
         return ', '.join(r)
 
-    def _protocol(self, neighbor):
+    def _protocol(self, neighbor: Neighbor) -> None:
         families = neighbor.families()
         mp = MultiProtocol()
         mp.extend(families)
         self[Capability.CODE.MULTIPROTOCOL] = mp
 
-    def _asn4(self, neighbor):
+    def _asn4(self, neighbor: Neighbor) -> None:
         if not neighbor['capability']['asn4']:
             return
 
         self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor['local-as'])
 
-    def _nexthop(self, neighbor):
+    def _nexthop(self, neighbor: Neighbor) -> None:
         if not neighbor['capability']['nexthop']:
             return
 
         nexthops = neighbor.nexthops()
-        nh_pairs = []
+        nh_pairs: List[Tuple[AFI, SAFI, AFI]] = []
         for allowed in self._NEXTHOP:
             if allowed not in nexthops:
                 continue
             nh_pairs.append(allowed)
         self[Capability.CODE.NEXTHOP] = NextHop(nh_pairs)
 
-    def _addpath(self, neighbor):
+    def _addpath(self, neighbor: Neighbor) -> None:
         if not neighbor['capability']['add-path']:
             return
 
         families = neighbor.addpaths()
-        ap_families = []
+        ap_families: List[Tuple[AFI, SAFI]] = []
         for allowed in self._ADD_PATH:
             if allowed in families:
                 ap_families.append(allowed)
         self[Capability.CODE.ADD_PATH] = AddPath(ap_families, neighbor['capability']['add-path'])
 
-    def _graceful(self, neighbor, restarted):
+    def _graceful(self, neighbor: Neighbor, restarted: bool) -> None:
         if not neighbor['capability']['graceful-restart']:
             return
 
@@ -138,39 +143,39 @@ class Capabilities(dict):
             [(afi, safi, Graceful.FORWARDING_STATE) for (afi, safi) in neighbor.families()],
         )
 
-    def _refresh(self, neighbor):
+    def _refresh(self, neighbor: Neighbor) -> None:
         if not neighbor['capability']['route-refresh']:
             return
         self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
         self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
 
-    def _extended_message(self, neighbor):
+    def _extended_message(self, neighbor: Neighbor) -> None:
         if not neighbor['capability']['extended-message']:
             return
 
         self[Capability.CODE.EXTENDED_MESSAGE] = ExtendedMessage()
 
-    def _hostname(self, neighbor):
+    def _hostname(self, neighbor: Neighbor) -> None:
         self[Capability.CODE.HOSTNAME] = HostName(neighbor['host-name'], neighbor['domain-name'])
 
-    def _software_version(self, neighbor):
+    def _software_version(self, neighbor: Neighbor) -> None:
         if not neighbor['capability']['software-version']:
             return
 
         self[Capability.CODE.SOFTWARE_VERSION] = Software()
 
-    def _operational(self, neighbor):
+    def _operational(self, neighbor: Neighbor) -> None:
         if not neighbor['capability']['operational']:
             return
         self[Capability.CODE.OPERATIONAL] = Operational()
 
-    def _session(self, neighbor):
+    def _session(self, neighbor: Neighbor) -> None:
         if not neighbor['capability']['multi-session']:
             return
         # XXX: FIXME: should it not be the RFC version ?
         self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
 
-    def new(self, neighbor, restarted):
+    def new(self, neighbor: Neighbor, restarted: bool) -> Capabilities:
         self._protocol(neighbor)
         self._asn4(neighbor)
         self._nexthop(neighbor)
@@ -184,7 +189,7 @@ class Capabilities(dict):
         self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
         return self
 
-    def pack(self):
+    def pack(self) -> bytes:
         parameters = b''
         for k, capabilities in self.items():
             for capability in capabilities.extract():
@@ -210,8 +215,8 @@ class Capabilities(dict):
         return pack('!BBH', OPEN_EXTENDED_MARKER, OPEN_EXTENDED_MARKER, len(parameters)) + parameters
 
     @staticmethod
-    def unpack(data):
-        def _extended_type_length(name, data):
+    def unpack(data: bytes) -> Capabilities:
+        def _extended_type_length(name: str, data: bytes) -> Tuple[int, bytes, bytes]:
             if len(data) < MIN_EXTENDED_PARAM_LEN:
                 raise Notify(
                     2,
@@ -221,36 +226,36 @@ class Capabilities(dict):
                     ),
                 )
             # Optional parameters length
-            ld = unpack('!H', data[1:3])[0]
-            boundary = ld + 3
+            ld: int = unpack('!H', data[1:3])[0]
+            boundary: int = ld + 3
             if len(data) < boundary:
                 raise Notify(
                     2,
                     0,
                     'Bad length for OPEN (extended) {} (buffer underrun) {}'.format(name, Capability.hex(data)),
                 )
-            key = data[0]
-            value = data[3:boundary]
-            rest = data[boundary:]
+            key: int = data[0]
+            value: bytes = data[3:boundary]
+            rest: bytes = data[boundary:]
             return key, value, rest
 
-        def _key_values(name, data):
+        def _key_values(name: str, data: bytes) -> Tuple[int, bytes, bytes]:
             if len(data) < MIN_PARAM_LEN:
                 raise Notify(2, 0, 'Bad length for OPEN {} (<{}) {}'.format(name, MIN_PARAM_LEN, Capability.hex(data)))
-            ld = data[1]
-            boundary = ld + 2
+            ld: int = data[1]
+            boundary: int = ld + 2
             if len(data) < boundary:
                 raise Notify(2, 0, 'Bad length for OPEN {} (buffer underrun) {}'.format(name, Capability.hex(data)))
-            key = data[0]
-            value = data[2:boundary]
-            rest = data[boundary:]
+            key: int = data[0]
+            value: bytes = data[2:boundary]
+            rest: bytes = data[boundary:]
             return key, value, rest
 
         capabilities = Capabilities()
 
         # Extended optional parameters
-        option_len = data[0]
-        option_type = data[1]
+        option_len: int = data[0]
+        option_type: int = data[1]
 
         if option_len == Capabilities.EXTENDED_LENGTH and option_type == Capabilities.EXTENDED_LENGTH:
             option_len = unpack('!H', data[2:4])[0]

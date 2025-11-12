@@ -5,51 +5,64 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Tuple
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.update.nlri.nlri import NLRI
+    from exabgp.bgp.message.update.attribute.attributes import Attributes
+    from exabgp.protocol.family import _AFI, _SAFI
+
 
 class Change:
+    nlri: NLRI
+    attributes: Attributes
+    _Change__index: bytes
+
     @staticmethod
-    def family_prefix(family):
+    def family_prefix(family: Tuple[_AFI, _SAFI]) -> bytes:
         return b'%02x%02x' % family
 
-    def __init__(self, nlri, attributes):
+    def __init__(self, nlri: NLRI, attributes: Attributes) -> None:
         self.nlri = nlri
         self.attributes = attributes
         # prevent multiple allocation of the index when calling .index()
         # storing the value at __init__ time causes api-attributes.sequence to fail
         # XXX: the NLRI content is half missing !!
-        self.__index = ''
+        self.__index = b''
 
-    def index(self):
+    def index(self) -> bytes:
         if not self.__index:
             self.__index = b'%02x%02x' % self.nlri.family().afi_safi() + self.nlri.index()
         return self.__index
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return self.nlri == other.nlri and self.attributes == other.attributes
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return self.nlri != other.nlri or self.attributes != other.attributes
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> bool:
         raise RuntimeError('comparing Change for ordering does not make sense')
 
-    def __le__(self, other):
+    def __le__(self, other: Any) -> bool:
         raise RuntimeError('comparing Change for ordering does not make sense')
 
-    def __gt__(self, other):
+    def __gt__(self, other: Any) -> bool:
         raise RuntimeError('comparing Change for ordering does not make sense')
 
-    def __ge__(self, other):
+    def __ge__(self, other: Any) -> bool:
         raise RuntimeError('comparing Change for ordering does not make sense')
 
-    def extensive(self):
+    def extensive(self) -> str:
         # If you change this you must change as well extensive in Update
         return f'{self.nlri!s}{self.attributes!s}'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.extensive()
 
-    def feedback(self):
+    def feedback(self) -> str:
         if self.nlri is not None:
             return self.nlri.feedback(self.nlri.action)
         return 'no check implemented for the family {} {}'.format(*self.nlri.family().afi_safi())

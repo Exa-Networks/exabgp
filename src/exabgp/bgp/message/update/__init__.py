@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Dict, Generator, Optional, Tuple, Union
+from typing import Any, ClassVar, Generator, Tuple, Union
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI

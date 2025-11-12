@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, List
+
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # ================================================================= MultiSession
@@ -16,27 +18,27 @@ from exabgp.bgp.message.open.capability.capability import Capability
 @Capability.register()
 @Capability.register(Capability.CODE.MULTISESSION_CISCO)
 class MultiSession(Capability, list):
-    ID = Capability.CODE.MULTISESSION
+    ID: ClassVar[int] = Capability.CODE.MULTISESSION
 
-    def set(self, data):
+    def set(self, data: List[Any]) -> MultiSession:
         self.extend(data)
         return self
 
     # XXX: FIXME: Looks like we could do with something in this Caoability
-    def __str__(self):
+    def __str__(self) -> str:
         info = ' (RFC)' if self.ID == Capability.CODE.MULTISESSION else ''
         return 'Multisession{} {}'.format(info, ' '.join([str(capa) for capa in self]))
 
-    def json(self):
+    def json(self) -> str:
         variant = 'RFC' if self.ID == Capability.CODE.MULTISESSION else 'Cisco'
         return '{{ "name": "multisession", "variant": "{}", "capabilities": [{} ] }}'.format(
             variant,
             ','.join(' "{}"'.format(str(capa)) for capa in self),
         )
 
-    def extract(self):
+    def extract(self) -> List[bytes]:
         # can probably be written better
-        rs = [
+        rs: List[bytes] = [
             bytes([0]),
         ]
         for v in self:
@@ -44,6 +46,6 @@ class MultiSession(Capability, list):
         return rs
 
     @staticmethod
-    def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+    def unpack_capability(instance: MultiSession, data: bytes, capability: Any = None) -> MultiSession:  # pylint: disable=W0613
         # XXX: FIXME: we should set that that instance was seen and raise if seen twice
         return instance

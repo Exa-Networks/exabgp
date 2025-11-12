@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import string
+from typing import Any, ClassVar, Dict, Optional, Tuple
 
 from exabgp.util import hexbytes
 from exabgp.util import hexstring
@@ -28,14 +29,14 @@ from exabgp.bgp.message.message import Message
 
 @Message.register
 class Notification(Message, Exception):
-    ID = Message.CODE.NOTIFICATION
-    TYPE = bytes([Message.CODE.NOTIFICATION])
+    ID: ClassVar[int] = Message.CODE.NOTIFICATION
+    TYPE: ClassVar[bytes] = bytes([Message.CODE.NOTIFICATION])
 
     # RFC 8203 / RFC 9003 - Shutdown Communication
-    SHUTDOWN_COMM_MAX_LEGACY = 128  # RFC 8203 - legacy max length
-    SHUTDOWN_COMM_MAX_EXTENDED = 255  # RFC 9003 - extended max length
+    SHUTDOWN_COMM_MAX_LEGACY: ClassVar[int] = 128  # RFC 8203 - legacy max length
+    SHUTDOWN_COMM_MAX_EXTENDED: ClassVar[int] = 255  # RFC 9003 - extended max length
 
-    _str_code = {
+    _str_code: ClassVar[Dict[int, str]] = {
         1: 'Message header error',
         2: 'OPEN message error',
         3: 'UPDATE message error',
@@ -44,7 +45,7 @@ class Notification(Message, Exception):
         6: 'Cease',
     }
 
-    _str_subcode = {
+    _str_subcode: ClassVar[Dict[Tuple[int, int], str]] = {
         (1, 0): 'Unspecific',
         (1, 1): 'Connection Not Synchronized',
         (1, 2): 'Bad Message Length',
@@ -95,7 +96,11 @@ class Notification(Message, Exception):
         (7, 2): 'Malformed Message Subtype',
     }
 
-    def __init__(self, code, subcode, data=b'', parse_data=True):
+    code: int
+    subcode: int
+    data: bytes
+
+    def __init__(self, code: int, subcode: int, data: bytes = b'', parse_data: bool = True) -> None:
         Exception.__init__(self)
         self.code = code
         self.subcode = subcode
@@ -144,14 +149,16 @@ class Notification(Message, Exception):
         if trailer:
             self.data += (', trailing data: ' + hexstring(trailer)).encode('utf-8')
 
-    def __str__(self):
+    def __str__(self) -> str:
         code_str = self._str_code.get(self.code, 'unknown error')
         subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')
         data_str = f' / {self.data.decode("ascii")}' if self.data else ''
         return f'{code_str} / {subcode_str}{data_str}'
 
     @classmethod
-    def unpack_message(cls, data, direction=None, negotiated=None):
+    def unpack_message(
+        cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Any] = None
+    ) -> Notification:
         return cls(data[0], data[1], data[2:])
 
 
@@ -160,12 +167,12 @@ class Notification(Message, Exception):
 
 
 class Notify(Notification):
-    def __init__(self, code, subcode, data=None):
+    def __init__(self, code: int, subcode: int, data: Optional[str] = None) -> None:
         if data is None:
             data = self._str_subcode.get((code, subcode), 'unknown notification type')
         if (code, subcode) in [(6, 2), (6, 4)]:
             data = chr(len(data)) + data
         Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)
 
-    def message(self, negotiated=None):
+    def message(self, negotiated: Optional[Any] = None) -> bytes:
         return self._message(bytes([self.code, self.subcode]) + self.data)

@@ -7,48 +7,52 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
+
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
+from exabgp.protocol.family import _AFI
+from exabgp.protocol.family import _SAFI
 
 
 class Negotiated:
-    FREE_SIZE = ExtendedMessage.INITIAL_SIZE - 19 - 2 - 2
+    FREE_SIZE: ClassVar[int] = ExtendedMessage.INITIAL_SIZE - 19 - 2 - 2
 
-    def __init__(self, neighbor):
-        self.neighbor = neighbor
+    def __init__(self, neighbor: Any) -> None:
+        self.neighbor: Any = neighbor
 
-        self.sent_open = None
-        self.received_open = None
+        self.sent_open: Optional[Any] = None  # Open message
+        self.received_open: Optional[Any] = None  # Open message
 
-        self.holdtime = HoldTime(0)
-        self.local_as = ASN(0)
-        self.peer_as = ASN(0)
-        self.families = []
-        self.nexthop = []
-        self.asn4 = False
-        self.addpath = RequirePath()
-        self.multisession = False
-        self.msg_size = ExtendedMessage.INITIAL_SIZE
-        self.operational = False
-        self.refresh = REFRESH.ABSENT  # pylint: disable=E1101
-        self.aigp = neighbor['capability']['aigp']
-        self.mismatch = []
+        self.holdtime: HoldTime = HoldTime(0)
+        self.local_as: ASN = ASN(0)
+        self.peer_as: ASN = ASN(0)
+        self.families: List[Tuple[_AFI, _SAFI]] = []
+        self.nexthop: List[Tuple[_AFI, _SAFI]] = []
+        self.asn4: bool = False
+        self.addpath: RequirePath = RequirePath()
+        self.multisession: bool | Tuple[int, int, str] = False
+        self.msg_size: int = ExtendedMessage.INITIAL_SIZE
+        self.operational: bool = False
+        self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
+        self.aigp: bool = neighbor['capability']['aigp']
+        self.mismatch: List[Tuple[str, Tuple[_AFI, _SAFI]]] = []
 
-    def sent(self, sent_open):
+    def sent(self, sent_open: Any) -> None:  # Open message
         self.sent_open = sent_open
         if self.received_open:
             self._negotiate()
 
-    def received(self, received_open):
+    def received(self, received_open: Any) -> None:  # Open message
         self.received_open = received_open
         if self.sent_open:
             self._negotiate()
 
-    def _negotiate(self):
+    def _negotiate(self) -> None:
         sent_capa = self.sent_open.capabilities
         recv_capa = self.received_open.capabilities
 
@@ -133,7 +137,7 @@ class Negotiated:
         # 	if self.peer.bgp.received_open_size:
         # 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
-    def validate(self, neighbor):
+    def validate(self, neighbor: Any) -> Optional[Tuple[int, int, str]]:
         if neighbor['peer-as'] is not None and self.peer_as != neighbor['peer-as']:
             return (
                 2,
@@ -163,7 +167,7 @@ class Negotiated:
         if self.multisession not in (True, False):
             # XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
             # XXX: FIXME: or should we use this trick in the other case ?
-            return self.multisession
+            return self.multisession  # type: ignore[return-value]
 
         s = set(self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))
         r = set(self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))
@@ -174,7 +178,7 @@ class Negotiated:
 
         return None
 
-    def nexthopself(self, afi):
+    def nexthopself(self, afi: _AFI) -> Any:
         return self.neighbor.ip_self(afi)
 
 
@@ -182,26 +186,26 @@ class Negotiated:
 
 
 class RequirePath:
-    CANT = 0b00
-    RECEIVE = 0b01
-    SEND = 0b10
-    BOTH = SEND | RECEIVE
+    CANT: ClassVar[int] = 0b00
+    RECEIVE: ClassVar[int] = 0b01
+    SEND: ClassVar[int] = 0b10
+    BOTH: ClassVar[int] = SEND | RECEIVE
 
-    def __init__(self):
-        self._send = {}
-        self._receive = {}
+    def __init__(self) -> None:
+        self._send: Dict[Tuple[_AFI, _SAFI], bool] = {}
+        self._receive: Dict[Tuple[_AFI, _SAFI], bool] = {}
 
-    def setup(self, received_open, sent_open):
+    def setup(self, received_open: Any, sent_open: Any) -> None:  # Open messages
         # A Dict always returning False
-        class FalseDict(dict):
-            def __getitem__(self, key):
+        class FalseDict(dict):  # type: ignore[type-arg]
+            def __getitem__(self, key: Any) -> bool:
                 return False
 
         receive = received_open.capabilities.get(Capability.CODE.ADD_PATH, FalseDict())
         send = sent_open.capabilities.get(Capability.CODE.ADD_PATH, FalseDict())
 
         # python 2.4 compatibility mean no simple union but using sets.Set
-        union = []
+        union: List[Tuple[_AFI, _SAFI]] = []
         union.extend(send.keys())
         union.extend([k for k in receive.keys() if k not in send.keys()])
 
@@ -215,8 +219,8 @@ class RequirePath:
             self._send[k] = here_will_send and they_will_recv
             self._receive[k] = here_will_recv and they_will_send
 
-    def send(self, afi, safi):
+    def send(self, afi: _AFI, safi: _SAFI) -> bool:
         return self._send.get((afi, safi), False)
 
-    def receive(self, afi, safi):
+    def receive(self, afi: _AFI, safi: _SAFI) -> bool:
         return self._receive.get((afi, safi), False)

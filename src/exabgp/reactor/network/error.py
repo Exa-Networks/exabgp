@@ -8,10 +8,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import errno
+from typing import ClassVar
 
 
 class error:
-    block = set(
+    block: ClassVar[set[int]] = set(
         (
             errno.EINPROGRESS,
             errno.EALREADY,
@@ -26,7 +27,7 @@ class error:
         ),
     )
 
-    fatal = set(
+    fatal: ClassVar[set[int]] = set(
         (
             errno.ECONNABORTED,
             errno.EPIPE,
@@ -40,7 +41,7 @@ class error:
         ),
     )
 
-    unavailable = set(
+    unavailable: ClassVar[set[int]] = set(
         (
             errno.ECONNREFUSED,
             errno.EHOSTUNREACH,
@@ -96,7 +97,7 @@ class SizeError(NetworkError):
 
 
 class NotifyError(Exception):
-    def __init__(self, code, subcode, msg):
-        self.code = code
-        self.subcode = subcode
+    def __init__(self, code: int, subcode: int, msg: str) -> None:
+        self.code: int = code
+        self.subcode: int = subcode
         Exception.__init__(self, msg)

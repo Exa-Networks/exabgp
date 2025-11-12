@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Dict, Optional
+from typing import Any, ClassVar, Dict
 
 
 # ==================================================================== Community

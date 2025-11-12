@@ -10,7 +10,7 @@ from __future__ import annotations
 import sys
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Dict, Optional, Tuple, Type, Union
+from typing import Any, ClassVar, Dict, Optional, Tuple, Union
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -248,7 +248,11 @@ class Advisory:
         code: ClassVar[int] = Operational.CODE.ADM
 
         def __init__(
-            self, afi: Union[int, AFI], safi: Union[int, SAFI], advisory: Union[str, bytes], routerid: Optional[RouterID] = None
+            self,
+            afi: Union[int, AFI],
+            safi: Union[int, SAFI],
+            advisory: Union[str, bytes],
+            routerid: Optional[RouterID] = None,
         ) -> None:
             # Handle both string and bytes input
             if isinstance(advisory, bytes):
@@ -265,7 +269,11 @@ class Advisory:
         code: ClassVar[int] = Operational.CODE.ASM
 
         def __init__(
-            self, afi: Union[int, AFI], safi: Union[int, SAFI], advisory: Union[str, bytes], routerid: Optional[RouterID] = None
+            self,
+            afi: Union[int, AFI],
+            safi: Union[int, SAFI],
+            advisory: Union[str, bytes],
+            routerid: Optional[RouterID] = None,
         ) -> None:
             # Handle both string and bytes input
             if isinstance(advisory, bytes):

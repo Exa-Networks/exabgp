@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import socket
+from typing import ClassVar, Iterator
+
 from exabgp.util.errstr import errstr
 
 from .connection import Connection
@@ -11,11 +14,13 @@ from .error import NotConnected
 from exabgp.bgp.message import Notify
 from exabgp.logger import log
 
+from exabgp.protocol.family import AFI
+
 
 class Incoming(Connection):
-    direction = 'incoming'
+    direction: ClassVar[str] = 'incoming'
 
-    def __init__(self, afi, peer, local, io):
+    def __init__(self, afi: AFI, peer: str, local: str, io: socket.socket) -> None:
         Connection.__init__(self, afi, peer, local)
 
         log.debug(lambda: 'connection from {}'.format(self.peer), 'network')
@@ -29,7 +34,7 @@ class Incoming(Connection):
             self.close()
             raise NotConnected(errstr(exc)) from None
 
-    def notification(self, code, subcode, message):
+    def notification(self, code: int, subcode: int, message: bytes) -> Iterator[bool]:
         try:
             notification = Notify(code, subcode, message).message()
             for boolean in self.writer(notification):

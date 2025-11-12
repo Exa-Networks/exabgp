@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, List
+
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # https://tools.ietf.org/html/draft-ietf-idr-operational-message-00
@@ -16,19 +18,19 @@ from exabgp.bgp.message.open.capability.capability import Capability
 
 @Capability.register()
 class Operational(Capability, list):
-    ID = Capability.CODE.OPERATIONAL
+    ID: ClassVar[int] = Capability.CODE.OPERATIONAL
 
-    def __str__(self):
+    def __str__(self) -> str:
         # XXX: FIXME: could be more verbose
         return 'Operational'
 
-    def json(self):
+    def json(self) -> str:
         return '{ "name": "operational" }'
 
-    def extract(self):
+    def extract(self) -> List[bytes]:
         return [b'']
 
     @staticmethod
-    def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+    def unpack_capability(instance: Operational, data: bytes, capability: Any = None) -> Operational:  # pylint: disable=W0613
         # XXX: FIXME: we should set that that instance was seen and raise if seen twice
         return instance

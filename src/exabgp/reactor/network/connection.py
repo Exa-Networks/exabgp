@@ -11,6 +11,7 @@ import random
 import socket
 import select
 from struct import unpack
+from typing import ClassVar, Iterator, Optional
 
 from exabgp.environment import getenv
 
@@ -31,6 +32,8 @@ from exabgp.reactor.network.error import NotifyError
 
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 
+from exabgp.protocol.family import AFI
+
 # from .error import *
 
 # BGP message minimum length (RFC 4271)
@@ -38,46 +41,46 @@ MIN_BGP_MESSAGE_LENGTH = 19  # Minimum valid BGP message length (header size)
 
 
 class Connection:
-    direction = 'undefined'
-    identifier = {}
+    direction: ClassVar[str] = 'undefined'
+    identifier: ClassVar[dict[str, int]] = {}
 
-    def __init__(self, afi, peer, local):
-        self.msg_size = ExtendedMessage.INITIAL_SIZE
-        self.defensive = getenv().debug.defensive
+    def __init__(self, afi: AFI, peer: str, local: str) -> None:
+        self.msg_size: int = ExtendedMessage.INITIAL_SIZE
+        self.defensive: bool = getenv().debug.defensive
 
-        self.afi = afi
-        self.peer = peer
-        self.local = local
+        self.afi: AFI = afi
+        self.peer: str = peer
+        self.local: str = local
 
-        self.io = None
-        self.established = False
-        self._rpoller = {}
-        self._wpoller = {}
+        self.io: Optional[socket.socket] = None
+        self.established: bool = False
+        self._rpoller: dict[socket.socket, select.poll] = {}
+        self._wpoller: dict[socket.socket, select.poll] = {}
 
-        self.id = self.identifier.get(self.direction, 1)
+        self.id: int = self.identifier.get(self.direction, 1)
 
-    def success(self):
+    def success(self) -> int:
         identifier = self.identifier.get(self.direction, 1) + 1
         self.identifier[self.direction] = identifier
         return identifier
 
     # Just in case ..
-    def __del__(self):
+    def __del__(self) -> None:
         self.close()
 
-    def name(self):
+    def name(self) -> str:
         return f'{self.direction}-{self.id} {self.local}-{self.peer}'
 
-    def session(self):
+    def session(self) -> str:
         return f'{self.direction}-{self.id}'
 
-    def fd(self):
+    def fd(self) -> int:
         if self.io:
             return self.io.fileno()
         # the socket is closed (fileno() == -1) or not open yet (io is None)
         return -1
 
-    def close(self):
+    def close(self) -> None:
         if not self.io:
             return
         message = f'{self.name()}, closing connection'
@@ -90,7 +93,7 @@ class Connection:
         self.io = None
         log.warning(lambda: message, source=self.session())
 
-    def reading(self):
+    def reading(self) -> bool:
         poller = self._rpoller.get(self.io, None)
         if poller is None:
             poller = select.poll()
@@ -106,7 +109,7 @@ class Connection:
                 ready = True
         return ready
 
-    def writing(self):
+    def writing(self) -> bool:
         poller = self._wpoller.get(self.io, None)
         if poller is None:
             poller = select.poll()
@@ -122,7 +125,7 @@ class Connection:
                 ready = True
         return ready
 
-    def _reader(self, number):
+    def _reader(self, number: int) -> Iterator[bytes]:
         # The function must not be called if it does not return with no data with a smaller size as parameter
         if not self.io:
             self.close()
@@ -174,7 +177,7 @@ class Connection:
                     log.critical(lambda: f'{self.name()} {self.peer} undefined error reading on socket', self.session())
                     raise NetworkError(f'Problem while reading data from the network ({errstr(exc)})') from None
 
-    def writer(self, data):
+    def writer(self, data: bytes) -> Iterator[bool]:
         if not self.io:
             # XXX: FIXME: Make sure it does not hold the cleanup during the closing of the peering session
             yield True
@@ -225,7 +228,7 @@ class Connection:
                     log.critical(lambda: f'{self.name()} {self.peer} undefined error writing on socket', self.session())
                     yield False
 
-    def reader(self):
+    def reader(self) -> Iterator[tuple[int, int, bytes, bytes, Optional[NotifyError]]]:
         # _reader returns the whole number requested or nothing and then stops
         for header in self._reader(Message.HEADER_LEN):
             if not header:
