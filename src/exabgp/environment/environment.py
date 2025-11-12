@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import os
-from typing import Any, ClassVar, Dict, Iterator, Optional
+from typing import Any, ClassVar, Dict, Iterator, List, Optional
 
 import configparser as ConfigParser
 
@@ -92,11 +92,11 @@ class Env:
 
         ini: ConfigParser.ConfigParser = ConfigParser.ConfigParser()
 
-        _conf_paths: list[str] = [
+        _conf_paths: List[str] = [
             ENVFILE,
         ]
 
-        ini_files: list[str] = [path for path in _conf_paths if os.path.exists(path)]
+        ini_files: List[str] = [path for path in _conf_paths if os.path.exists(path)]
         if ini_files:
             ini.read(ini_files[0])
 
