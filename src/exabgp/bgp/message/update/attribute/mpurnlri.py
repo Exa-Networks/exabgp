@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, Generator, List, Union
+from typing import Generator, List, Union
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI

@@ -10,7 +10,7 @@ from __future__ import annotations
 import sys
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Union, TYPE_CHECKING
+from typing import ClassVar, Dict, Optional, Tuple, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

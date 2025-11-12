@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Type, TYPE_CHECKING
+from typing import Callable, ClassVar, Dict, List, Optional, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
