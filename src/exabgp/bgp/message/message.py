@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import Any, Callable, ClassVar, Dict, Optional, Type
+from typing import Any, Callable, ClassVar, Dict, List, Optional, Type
 
 
 class _MessageCode(int):
@@ -120,7 +120,7 @@ class Message:
         ROUTE_REFRESH: ClassVar[_MessageCode] = _MessageCode(_MessageCode.ROUTE_REFRESH)
         OPERATIONAL: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPERATIONAL)
 
-        MESSAGES: ClassVar[list[_MessageCode]] = [NOP, OPEN, UPDATE, NOTIFICATION, KEEPALIVE, ROUTE_REFRESH, OPERATIONAL]
+        MESSAGES: ClassVar[List[_MessageCode]] = [NOP, OPEN, UPDATE, NOTIFICATION, KEEPALIVE, ROUTE_REFRESH, OPERATIONAL]
 
         @staticmethod
         def name(message_id: Optional[int]) -> str:
