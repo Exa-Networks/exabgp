@@ -1,4 +1,3 @@
-
 """nodename.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -39,7 +38,7 @@ class NodeName(BaseLS):
         BaseLS.__init__(self, nodename)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> NodeName:
         if len(data) > MAX_NODE_NAME_LENGTH:
             raise Notify(3, 5, 'Node Name TLV length too large')
 

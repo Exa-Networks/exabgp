@@ -1,4 +1,3 @@
-
 """nodename.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -37,7 +36,7 @@ class NodeOpaque(BaseLS):
         BaseLS.__init__(self, opaque)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> NodeOpaque:
         return cls(unpack('!%ds' % len(data), data)[0])
 
     def json(self, compact=None):

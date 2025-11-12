@@ -1,4 +1,3 @@
-
 """nodename.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -33,7 +32,7 @@ class LocalTeRid(BaseLS):
         BaseLS.__init__(self, terids)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> LocalTeRid:
         length = len(data)
 
         if length not in (4, 16):
