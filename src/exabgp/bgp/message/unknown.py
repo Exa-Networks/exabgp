@@ -1,4 +1,3 @@
-
 """unknown.py
 
 Created by Thomas Mangin on 2013-07-20.
@@ -7,6 +6,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from exabgp.bgp.message.message import Message
 
@@ -17,19 +18,19 @@ from exabgp.bgp.message.message import Message
 class UnknownMessage(Message):
     # Make sure we have a value, which is not defined in any RFC !
 
-    def __init__(self, code, data=b''):
+    def __init__(self, code: int, data: bytes = b'') -> None:
         self.ID = code
         self.TYPE = bytes([code])
         self.data = data
 
-    def message(self, negotiated=None):
+    def message(self, negotiated: Any = None) -> bytes:
         return self._message(self.data)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'UNKNOWN'
 
     @classmethod
-    def unpack_message(cls, data):  # pylint: disable=W0613
+    def unpack_message(cls, data: bytes) -> UnknownMessage:  # pylint: disable=W0613
         raise RuntimeError('should not have been used')
 
 
