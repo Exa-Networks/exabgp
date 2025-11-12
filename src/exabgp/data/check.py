@@ -6,79 +6,83 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
+from typing import Any, Callable, ClassVar, Dict
+
 from exabgp.protocol.ip import IPv4
 from exabgp.protocol.ip import IPv6
 
 # MD5 password maximum length (RFC 2385)
-MD5_PASSWORD_MAX_LENGTH = 18  # Maximum length for MD5 authentication password
+MD5_PASSWORD_MAX_LENGTH: int = 18  # Maximum length for MD5 authentication password
 
 # Extended community format
-EXTENDED_COMMUNITY_COLON_COUNT = 2  # Number of colons in extended community format (type:value:value)
+EXTENDED_COMMUNITY_COLON_COUNT: int = 2  # Number of colons in extended community format (type:value:value)
 
 # Route distinguisher format
-ROUTE_DISTINGUISHER_PARTS = 2  # Number of parts in route distinguisher (asn:value or ip:value)
+ROUTE_DISTINGUISHER_PARTS: int = 2  # Number of parts in route distinguisher (asn:value or ip:value)
 
 # Array size for aggregate data
-AGGREGATOR_PARTS = 2  # Number of parts in aggregator (asn, ip)
+AGGREGATOR_PARTS: int = 2  # Number of parts in aggregator (asn, ip)
 
 # Array size for community data
-COMMUNITY_PARTS = 2  # Number of parts in standard community (high:low)
-LARGE_COMMUNITY_PARTS = 3  # Number of parts in large community (global:local1:local2)
+COMMUNITY_PARTS: int = 2  # Number of parts in standard community (high:low)
+LARGE_COMMUNITY_PARTS: int = 3  # Number of parts in large community (global:local1:local2)
 
 # Flow numeric operator array size
-FLOW_NUMERIC_PARTS = 2  # Number of parts in flow numeric operator (operator, value)
+FLOW_NUMERIC_PARTS: int = 2  # Number of parts in flow numeric operator (operator, value)
 
 # Route distinguisher separator count
-RD_SEPARATOR_COUNT = 1  # Number of colons in route distinguisher
+RD_SEPARATOR_COUNT: int = 1  # Number of colons in route distinguisher
 
 # IPv4 range separator count
-IPV4_RANGE_SEPARATOR_COUNT = 1  # Number of slashes in IPv4 range
+IPV4_RANGE_SEPARATOR_COUNT: int = 1  # Number of slashes in IPv4 range
 
 
 class TYPE:
-    NULL = 0x01
-    BOOLEAN = 0x02
-    INTEGER = 0x04
-    STRING = 0x08
-    ARRAY = 0x10
-    HASH = 0x20
+    NULL: ClassVar[int] = 0x01
+    BOOLEAN: ClassVar[int] = 0x02
+    INTEGER: ClassVar[int] = 0x04
+    STRING: ClassVar[int] = 0x08
+    ARRAY: ClassVar[int] = 0x10
+    HASH: ClassVar[int] = 0x20
 
 
 class PRESENCE:
-    OPTIONAL = 0x01
-    MANDATORY = 0x02
+    OPTIONAL: ClassVar[int] = 0x01
+    MANDATORY: ClassVar[int] = 0x02
 
 
 # TYPE CHECK
 
 
-def null(data):
+def null(data: Any) -> bool:
     return type(data) == type(None)  # noqa
 
 
-def boolean(data):
+def boolean(data: Any) -> bool:
     return type(data) == type(True)  # noqa
 
 
-def integer(data):
+def integer(data: Any) -> bool:
     return type(data) == type(0)  # noqa
 
 
-def string(data):
+def string(data: Any) -> bool:
     return type(data) == type('') or type(data) == type('')  # noqa
 
 
-def array(data):
+def array(data: Any) -> bool:
     return type(data) == type([])  # noqa
 
 
-def hashtable(data):
+def hashtable(data: Any) -> bool:
     return type(data) == type({})  # noqa
 
 
 # XXX: Not very good to redefine the keyword object, but this class uses no OO ...
 
-CHECK_TYPE = {
+CHECK_TYPE: Dict[int, Callable[[Any], bool]] = {
     TYPE.NULL: null,
     TYPE.BOOLEAN: boolean,
     TYPE.INTEGER: integer,
@@ -88,7 +92,7 @@ CHECK_TYPE = {
 }
 
 
-def kind(kind, data):
+def kind(kind: int, data: Any) -> bool:
     for t in CHECK_TYPE:
         if kind & t:
             if CHECK_TYPE[t](data):
@@ -99,51 +103,51 @@ def kind(kind, data):
 # DATA CHECK
 
 
-def nop(data):
+def nop(data: Any) -> bool:
     return True
 
 
-def uint8(data):
-    return 0 <= data < pow(2, 8)
+def uint8(data: Any) -> bool:
+    return bool(0 <= data < pow(2, 8))
 
 
-def uint16(data):
-    return 0 <= data < pow(2, 16)
+def uint16(data: Any) -> bool:
+    return bool(0 <= data < pow(2, 16))
 
 
-def uint32(data):
-    return 0 <= data < pow(2, 32)
+def uint32(data: Any) -> bool:
+    return bool(0 <= data < pow(2, 32))
 
 
-def uint96(data):
-    return 0 <= data < pow(2, 96)
+def uint96(data: Any) -> bool:
+    return bool(0 <= data < pow(2, 96))
 
 
-def float(data):
-    return 0 <= data < 3.4 * pow(10, 38)  # approximation of max from wikipedia
+def float(data: Any) -> bool:
+    return bool(0 <= data < 3.4 * pow(10, 38))  # approximation of max from wikipedia
 
 
-def ip(data):
+def ip(data: Any) -> bool:
     return ipv4(data) or ipv6(data)
 
 
-def ipv4(data):  # XXX: improve
+def ipv4(data: Any) -> bool:  # XXX: improve
     return string(data) and data.count('.') == IPv4.DOT_COUNT
 
 
-def ipv6(data):  # XXX: improve
+def ipv6(data: Any) -> bool:  # XXX: improve
     return string(data) and ':' in data
 
 
-def range4(data):
-    return 0 < data <= IPv4.BITS
+def range4(data: Any) -> bool:
+    return bool(0 < data <= IPv4.BITS)
 
 
-def range6(data):
-    return 0 < data <= IPv6.BITS
+def range6(data: Any) -> bool:
+    return bool(0 < data <= IPv6.BITS)
 
 
-def ipv4_range(data):
+def ipv4_range(data: Any) -> bool:
     if not data.count('/') == IPV4_RANGE_SEPARATOR_COUNT:
         return False
     ip, r = data.split('/')
@@ -156,42 +160,42 @@ def ipv4_range(data):
     return True
 
 
-def port(data):
-    return 0 <= data < pow(2, 16)
+def port(data: Any) -> bool:
+    return bool(0 <= data < pow(2, 16))
 
 
-def asn16(data):
-    return 1 <= data < pow(2, 16)
+def asn16(data: Any) -> bool:
+    return bool(1 <= data < pow(2, 16))
 
 
-def asn32(data):
-    return 1 <= data < pow(2, 32)
+def asn32(data: Any) -> bool:
+    return bool(1 <= data < pow(2, 32))
 
 
 asn = asn32
 
 
-def md5(data):
+def md5(data: Any) -> bool:
     return len(data) <= MD5_PASSWORD_MAX_LENGTH
 
 
-def localpreference(data):
+def localpreference(data: Any) -> bool:
     return uint32(data)
 
 
-def med(data):
+def med(data: Any) -> bool:
     return uint32(data)
 
 
-def aigp(data):
+def aigp(data: Any) -> bool:
     return uint32(data)
 
 
-def originator(data):
+def originator(data: Any) -> bool:
     return ipv4(data)
 
 
-def distinguisher(data):
+def distinguisher(data: Any) -> bool:
     parts = data.split(':')
     if len(parts) != ROUTE_DISTINGUISHER_PARTS:
         return False
@@ -199,7 +203,7 @@ def distinguisher(data):
     return (_.isdigit() and asn16(int(_)) and ipv4(__)) or (ipv4(_) and __.isdigit() and asn16(int(__)))
 
 
-def pathinformation(data):
+def pathinformation(data: Any) -> bool:
     if integer(data):
         return uint32(data)
     if string(data):
@@ -207,11 +211,11 @@ def pathinformation(data):
     return False
 
 
-def watchdog(data):
+def watchdog(data: Any) -> bool:
     return ' ' not in data  # TODO: improve
 
 
-def split(data):
+def split(data: Any) -> bool:
     return range6(data)
 
 
@@ -219,15 +223,15 @@ def split(data):
 # Those function need to perform type checks before using the data
 
 
-def aspath(data):
+def aspath(data: Any) -> bool:
     return integer(data) and data < pow(2, 32)
 
 
-def assequence(data):
+def assequence(data: Any) -> bool:
     return integer(data) and data < pow(2, 32)
 
 
-def community(data):
+def community(data: Any) -> bool:
     if integer(data):
         return uint32(data)
     if string(data) and data.lower() in (
@@ -244,7 +248,7 @@ def community(data):
     )
 
 
-def largecommunity(data):
+def largecommunity(data: Any) -> bool:
     if integer(data):
         return uint96(data)
     return (
@@ -259,7 +263,7 @@ def largecommunity(data):
     )
 
 
-def extendedcommunity(data):  # TODO: improve, incomplete see https://tools.ietf.org/rfc/rfc4360.txt
+def extendedcommunity(data: Any) -> bool:  # TODO: improve, incomplete see https://tools.ietf.org/rfc/rfc4360.txt
     if integer(data):
         return True
     if string(data) and data.count(':') == EXTENDED_COMMUNITY_COLON_COUNT:
@@ -270,15 +274,15 @@ def extendedcommunity(data):  # TODO: improve, incomplete see https://tools.ietf
     return False
 
 
-def label(data):
+def label(data: Any) -> bool:
     return integer(data) and 0 <= data < pow(2, 20)  # XXX: SHOULD be taken from Label class
 
 
-def clusterlist(data):
+def clusterlist(data: Any) -> bool:
     return integer(data) and uint8(data)
 
 
-def aggregator(data):
+def aggregator(data: Any) -> bool:
     if not array(data):
         return False
     if len(data) == 0:
@@ -288,7 +292,7 @@ def aggregator(data):
     return False
 
 
-def dscp(data):
+def dscp(data: Any) -> bool:
     return integer(data) and uint8(data)
 
 
@@ -296,17 +300,18 @@ def dscp(data):
 #
 
 
-def flow_ipv4_range(data):
+def flow_ipv4_range(data: Any) -> bool:
     if array(data):
         for r in data:
             if not ipv4_range(r):
                 return False
+        return True
     if string(data):
         return ipv4_range(data)
     return False
 
 
-def _flow_numeric(data, check):
+def _flow_numeric(data: Any, check: Callable[[Any], bool]) -> bool:
     if not array(data):
         return False
     for et in data:
@@ -317,19 +322,19 @@ def _flow_numeric(data, check):
     return True
 
 
-def flow_port(data):
+def flow_port(data: Any) -> bool:
     return _flow_numeric(data, port)
 
 
-def _length(data):
+def _length(data: Any) -> bool:
     return uint16(data)
 
 
-def flow_length(data):
+def flow_length(data: Any) -> bool:
     return _flow_numeric(data, _length)
 
 
-def redirect(data):  # TODO: check that we are not too restrictive with our asn() calls
+def redirect(data: Any) -> bool:  # TODO: check that we are not too restrictive with our asn() calls
     parts = data.split(':')
     if len(parts) != ROUTE_DISTINGUISHER_PARTS:
         return False
