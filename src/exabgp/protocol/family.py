@@ -50,8 +50,8 @@ class _AFI(int):
     def name(self) -> str:
         return self._names.get(self, f'unknown-afi-{hex(self)}')
 
-    def mask(self) -> Union[int, str]:
-        return self._masks.get(self, 'invalid request for this family')
+    def mask(self) -> Optional[int]:
+        return self._masks.get(self, None)
 
     def address_length(self) -> int:
         """Return address length in bytes.
@@ -95,13 +95,13 @@ class AFI(Resource):
         }.items()
     )
 
-    cache: ClassVar[Dict[int, _AFI]] = dict([(_AFI(inst), inst) for (_, inst) in codes.items()])  # type: ignore[assignment]
-    names: ClassVar[Dict[int, str]] = dict([(_AFI(inst), name) for (name, inst) in codes.items()])
+    cache: ClassVar[Dict[int, _AFI]] = dict([(inst, inst) for (_, inst) in codes.items()])  # type: ignore[assignment]
+    names: ClassVar[Dict[int, str]] = dict([(inst, name) for (name, inst) in codes.items()])
 
-    inet_names: ClassVar[Dict[int, str]] = dict([(_AFI(inst), name.replace('ipv', 'inet')) for (name, inst) in codes.items()])
+    inet_names: ClassVar[Dict[int, str]] = dict([(inst, name.replace('ipv', 'inet')) for (name, inst) in codes.items()])
 
     def name(self) -> str:
-        return self.inet_names.get(_AFI(self), 'unknown afi')
+        return self.inet_names.get(self, 'unknown afi')
 
     @staticmethod
     def unpack(data: bytes) -> _AFI:
@@ -261,11 +261,11 @@ class SAFI(Resource):
 
     names: ClassVar[Dict[int, str]] = _SAFI._names
 
-    cache: ClassVar[Dict[int, _SAFI]] = dict([(_SAFI(inst), inst) for (_, inst) in codes.items()])  # type: ignore[assignment]
+    cache: ClassVar[Dict[int, _SAFI]] = dict([(inst, inst) for (_, inst) in codes.items()])  # type: ignore[assignment]
 
     @staticmethod
     def unpack(data: bytes) -> _SAFI:
-        return SAFI.common.get(data, _SAFI(data[0] if data else 0))
+        return SAFI.common.get(data, _SAFI(data if data else 0))
 
     @classmethod
     def value(cls, name: str) -> Optional[_SAFI]:
