@@ -8,23 +8,25 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Dict
+
 from exabgp.protocol.resource import Resource
 
 
-# ============================================================== ICMP Code Field
-# https://www.iana.org/assignments/icmp-parameters
+# ============================================================ TCP/UDP Port Numbers
+# https://www.iana.org/assignments/service-names-port-numbers
 
 
 class Port(Resource):
-    NAME = 'port'
+    NAME: ClassVar[str] = 'port'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(int(self))
 
-    def name(self):
+    def name(self) -> str:
         return self.names.get(self, '%d' % int(self))
 
-    names = {
+    names: ClassVar[Dict[int, str]] = {
         1: 'tcpmux',
         2: 'compressnet',
         3: 'compressnet',
@@ -4955,7 +4957,7 @@ class Port(Resource):
         48556: 'com-bardac-dw',
     }
 
-    codes = dict([(inst, name) for (name, inst) in names.items()])
+    codes: ClassVar[Dict[str, int]] = dict([(inst, name) for (name, inst) in names.items()])
 
 
 # try:
