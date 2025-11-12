@@ -8,13 +8,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, Dict
+
 from exabgp.environment import parsing
 from exabgp.environment.environment import Env
 
 
-_SPACE = ' ' * 33
+_SPACE: str = ' ' * 33
 
-LOGGING_HELP_STDOUT = f"""\
+LOGGING_HELP_STDOUT: str = f"""\
 where logging should log
 {_SPACE} syslog (or no setting) sends the data to the local syslog syslog
 {_SPACE} host:<location> sends the data to a remote syslog server
@@ -22,8 +24,8 @@ where logging should log
 {_SPACE} stderr sends the data to stderr
 {_SPACE} <filename> send the data to a file"""
 
-
-CONFIGURATION = {
+# Each config entry has: read (parser), write (formatter), value (default), help (description)
+CONFIGURATION: Dict[str, Dict[str, Dict[str, Any]]] = {
     'profile': {
         'enable': {
             'read': parsing.boolean,
