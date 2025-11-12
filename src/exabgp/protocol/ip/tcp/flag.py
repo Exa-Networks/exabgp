@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Dict
+
 from exabgp.protocol.resource import BitResource
 
 
@@ -16,19 +18,19 @@ from exabgp.protocol.resource import BitResource
 
 
 class TCPFlag(BitResource):
-    NAME = 'tcp flag'
+    NAME: ClassVar[str] = 'tcp flag'
 
-    FIN = 0x01
-    SYN = 0x02
-    RST = 0x04
-    PUSH = 0x08
-    ACK = 0x10
-    URG = 0x20
-    ECE = 0x40
-    CWR = 0x80
-    NS = 0x100
+    FIN: ClassVar[int] = 0x01
+    SYN: ClassVar[int] = 0x02
+    RST: ClassVar[int] = 0x04
+    PUSH: ClassVar[int] = 0x08
+    ACK: ClassVar[int] = 0x10
+    URG: ClassVar[int] = 0x20
+    ECE: ClassVar[int] = 0x40
+    CWR: ClassVar[int] = 0x80
+    NS: ClassVar[int] = 0x100
 
-    codes = dict(
+    codes: ClassVar[Dict[str, int]] = dict(
         (k.lower().replace('_', '-'), v)
         for (k, v) in {
             'FIN': FIN,
@@ -43,7 +45,8 @@ class TCPFlag(BitResource):
         }.items()
     )
 
-    names = dict([(value, name) for (name, value) in codes.items()])
+    names: ClassVar[Dict[int, str]] = dict([(value, name) for (name, value) in codes.items()])
 
-    # Backward compatibility
-    codes['urgent'] = URG
+
+# Backward compatibility
+TCPFlag.codes['urgent'] = TCPFlag.URG
