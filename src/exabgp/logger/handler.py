@@ -5,12 +5,13 @@ from __future__ import annotations
 import sys
 import logging
 import logging.handlers as handlers
+from typing import Any, Dict, Optional
 
-TIMED = '%(asctime)s: %(message)s'
-SHORT = '%(filename)s: %(message)s'
-CLEAR = '%(levelname) %(asctime)s %(filename)s: %(message)s'
+TIMED: str = '%(asctime)s: %(message)s'
+SHORT: str = '%(filename)s: %(message)s'
+CLEAR: str = '%(levelname) %(asctime)s %(filename)s: %(message)s'
 
-levels = {
+levels: Dict[str, int] = {
     'FATAL': logging.FATAL,
     'CRITICAL': logging.CRITICAL,
     'ERROR': logging.ERROR,
@@ -21,10 +22,10 @@ levels = {
 }
 
 # prevent recreation of already created logger
-_created = {}
+_created: Dict[Optional[str], logging.Logger] = {}
 
 
-def get_logger(name=None, **kwargs):
+def get_logger(name: Optional[str] = None, **kwargs: Any) -> logging.Logger:
     if name in _created:
         if len(kwargs) == 0:
             return _created[name]
@@ -44,7 +45,7 @@ def get_logger(name=None, **kwargs):
     return logger
 
 
-def _syslog(**kwargs):
+def _syslog(**kwargs: Any) -> handlers.SysLogHandler:
     syslog_file = '/dev/log'
     if sys.platform == 'netbsd':
         syslog_file = '/var/run/log'
@@ -60,7 +61,7 @@ def _syslog(**kwargs):
     return handler
 
 
-def _stream(**kwargs):
+def _stream(**kwargs: Any) -> logging.StreamHandler[Any]:
     formating = kwargs.get('format', CLEAR)
     handler = logging.StreamHandler(
         stream=kwargs.get('stream', sys.stderr),
@@ -69,7 +70,7 @@ def _stream(**kwargs):
     return handler
 
 
-def _file(**kwargs):
+def _file(**kwargs: Any) -> handlers.RotatingFileHandler:
     formating = kwargs.get('format', CLEAR)
     handler = handlers.RotatingFileHandler(
         filename=kwargs.get('filename', 1048576),
