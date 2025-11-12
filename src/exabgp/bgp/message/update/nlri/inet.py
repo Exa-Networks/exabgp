@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, ClassVar, Tuple, List, Optional
+from typing import Any, Tuple, List
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop

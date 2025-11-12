@@ -18,10 +18,10 @@ class Action(IntEnum):
     ANNOUNCE = 0x01
     WITHDRAW = 0x02
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__format__('s')
 
-    def __format__(self, what):
+    def __format__(self, what: str) -> str:
         if what == 's':
             if self is Action.ANNOUNCE:
                 return 'announce'

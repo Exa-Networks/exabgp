@@ -8,6 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
+from typing import Any, ClassVar, Dict, Generator, Optional, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.environment import getenv
 
@@ -30,11 +34,11 @@ from exabgp.logger import lazyattribute
 
 
 class _NOTHING:
-    def pack(self, _=None):
+    def pack(self, _: Any = None) -> bytes:
         return b''
 
 
-NOTHING = _NOTHING()
+NOTHING: _NOTHING = _NOTHING()
 
 
 # =================================================================== Attributes
@@ -48,7 +52,7 @@ NOTHING = _NOTHING()
 
 
 class Attributes(dict):
-    INTERNAL = (
+    INTERNAL: ClassVar[Tuple[int, ...]] = (
         Attribute.CODE.INTERNAL_SPLIT,
         Attribute.CODE.INTERNAL_WATCHDOG,
         Attribute.CODE.INTERNAL_NAME,
@@ -57,9 +61,9 @@ class Attributes(dict):
         # Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW,
     )
 
-    NO_GENERATION = (Attribute.CODE.NEXT_HOP,) + INTERNAL
+    NO_GENERATION: ClassVar[Tuple[int, ...]] = (Attribute.CODE.NEXT_HOP,) + INTERNAL
 
-    TREAT_AS_WITHDRAW = (
+    TREAT_AS_WITHDRAW: ClassVar[Tuple[int, ...]] = (
         Attribute.CODE.ORIGIN,
         Attribute.CODE.AS_PATH,
         Attribute.CODE.NEXT_HOP,
@@ -68,32 +72,32 @@ class Attributes(dict):
         Attribute.CODE.LARGE_COMMUNITY,
     )
 
-    DISCARD = (
+    DISCARD: ClassVar[Tuple[int, ...]] = (
         Attribute.CODE.ATOMIC_AGGREGATE,
         Attribute.CODE.AGGREGATOR,
     )
 
-    MANDATORY = (Attribute.CODE.ORIGIN, Attribute.CODE.AS_PATH, Attribute.CODE.LOCAL_PREF)
+    MANDATORY: ClassVar[Tuple[int, ...]] = (Attribute.CODE.ORIGIN, Attribute.CODE.AS_PATH, Attribute.CODE.LOCAL_PREF)
 
-    NO_DUPLICATE = (
+    NO_DUPLICATE: ClassVar[Tuple[int, ...]] = (
         Attribute.CODE.MP_REACH_NLRI,
         Attribute.CODE.MP_UNREACH_NLRI,
     )
 
-    VALID_ZERO = (
+    VALID_ZERO: ClassVar[Tuple[int, ...]] = (
         Attribute.CODE.ATOMIC_AGGREGATE,
         Attribute.CODE.AS_PATH,
     )
 
     # A cache of parsed attributes
-    cache = {}
+    cache: ClassVar[Dict[str, Attributes]] = {}
 
     # The previously parsed Attributes
-    cached = None
+    cached: ClassVar[Optional[Attributes]] = None
     # previously parsed attribute, from which cached was made of
-    previous = ''
+    previous: ClassVar[bytes] = b''
 
-    representation = {
+    representation: ClassVar[Dict[int, Tuple[str, str, Union[str, Tuple[str, ...]], str, str]]] = {
         # key:  (how, default, name, text_presentation, json_presentation),
         Attribute.CODE.ORIGIN: ('string', '', 'origin', '%s', '%s'),
         Attribute.CODE.AS_PATH: ('list', '', 'as-path', '%s', '%s'),
@@ -117,7 +121,12 @@ class Attributes(dict):
         Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW: ('string', '', 'error', '%s', '%s'),
     }
 
-    def _generate_text(self):
+    _str: str
+    _idx: str
+    _json: str
+    cacheable: bool
+
+    def _generate_text(self) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
             # XXX: FIXME: really we should have a INTERNAL attribute in the classes
             if code in Attributes.NO_GENERATION:
@@ -143,7 +152,7 @@ class Attributes(dict):
             else:
                 yield ' {} {}'.format(name, presentation % str(attribute))
 
-    def _generate_json(self):
+    def _generate_json(self) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
             # remove the next-hop from the attribute as it is define with the NLRI
             if code in Attributes.NO_GENERATION:
@@ -173,7 +182,7 @@ class Attributes(dict):
             else:
                 yield '"{}": {}'.format(name, presentation % str(attribute))
 
-    def __init__(self):
+    def __init__(self) -> None:
         dict.__init__(self)
         # cached representation of the object
         self._str = ''
@@ -185,10 +194,10 @@ class Attributes(dict):
         # XXX: FIXME: surely not the best place for this
         Attribute.caching = getenv().cache.attributes
 
-    def has(self, k):
+    def has(self, k: int) -> bool:
         return k in self
 
-    def add(self, attribute, _=None):
+    def add(self, attribute: Optional[Union[Attribute, TreatAsWithdraw, Discard]], _: Any = None) -> None:
         # we return None as attribute if the unpack code must not generate them
         if attribute is None:
             return
@@ -209,16 +218,16 @@ class Attributes(dict):
         self._json = ''
         self[attribute.ID] = attribute
 
-    def remove(self, attrid):
+    def remove(self, attrid: int) -> None:
         self.pop(attrid)
 
-    def watchdog(self):
+    def watchdog(self) -> Optional[Attribute]:
         return self.pop(Attribute.CODE.INTERNAL_WATCHDOG, None)
 
-    def withdraw(self):
+    def withdraw(self) -> bool:
         return self.pop(Attribute.CODE.INTERNAL_WITHDRAW, None) is not None
 
-    def pack(self, negotiated, with_default=True):
+    def pack(self, negotiated: Negotiated, with_default: bool = True) -> bytes:
         local_asn = negotiated.local_as
         peer_asn = negotiated.peer_as
 
@@ -267,17 +276,17 @@ class Attributes(dict):
 
         return message
 
-    def json(self):
+    def json(self) -> str:
         if not self._json:
             self._json = ', '.join(self._generate_json())
         return self._json
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if not self._str:
             self._str = ''.join(self._generate_text())
         return self._str
 
-    def index(self):
+    def index(self) -> str:
         # XXX: something a little bit smaller memory wise ?
         if not self._idx:
             idx = ''.join(self._generate_text())
@@ -286,7 +295,7 @@ class Attributes(dict):
         return self._idx
 
     @classmethod
-    def unpack(cls, data, direction, negotiated):
+    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> Attributes:
         if cls.cached and data == cls.previous:
             return cls.cached
 
@@ -302,13 +311,13 @@ class Attributes(dict):
             cls.previous = data
             cls.cached = attributes
         else:
-            cls.previous = ''
+            cls.previous = b''
             cls.cached = None
 
         return attributes
 
     @staticmethod
-    def flag_attribute_content(data):
+    def flag_attribute_content(data: bytes) -> Tuple[int, int, bytes]:
         flag = Attribute.Flag(data[0])
         attr = Attribute.CODE(data[1])
 
@@ -318,7 +327,7 @@ class Attributes(dict):
         length = data[2]
         return flag, attr, data[3 : length + 3]
 
-    def parse(self, data, direction, negotiated):
+    def parse(self, data: bytes, direction: int, negotiated: Negotiated) -> Attributes:
         if not data:
             return self
 
@@ -433,7 +442,7 @@ class Attributes(dict):
         )
         return self.parse(left, direction, negotiated)
 
-    def merge_attributes(self):
+    def merge_attributes(self) -> None:
         as2path = self[Attribute.CODE.AS_PATH]
         as4path = self[Attribute.CODE.AS4_PATH]
         self.remove(Attribute.CODE.AS_PATH)
@@ -474,12 +483,12 @@ class Attributes(dict):
         aspath = ASPath(as_seq, as_set)
         self.add(aspath, key)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         # FIXME: two routes with distinct nh but other attributes equal
         # will hash to the same value until repr represents the nh (??)
         return hash(repr(self))
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return self.sameValuesAs(other)
 
     # BaGPipe code ..
@@ -487,10 +496,13 @@ class Attributes(dict):
     # test that sets of attributes exactly match
     # can't rely on __eq__ for this, because __eq__ relies on Attribute.__eq__ which does not look at attributes values
 
-    def sameValuesAs(self, other):
+    def sameValuesAs(self, other: object) -> bool:
+        if not isinstance(other, Attributes):
+            return False
+
         # we sort based on packed values since the items do not
         # necessarily implement __cmp__
-        def pack_(x):
+        def pack_(x: Any) -> bytes:
             return x.pack()
 
         try:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from typing import ClassVar, Iterator, Optional
 
 from exabgp.protocol.family import AFI
 from .connection import Connection
@@ -19,19 +20,29 @@ from exabgp.logger import log
 
 
 class Outgoing(Connection):
-    direction = 'outgoing'
+    direction: ClassVar[str] = 'outgoing'
 
-    def __init__(self, afi, peer, local, port=179, md5='', md5_base64=False, ttl=None, itf=None):
+    def __init__(
+        self,
+        afi: AFI,
+        peer: str,
+        local: str,
+        port: int = 179,
+        md5: str = '',
+        md5_base64: bool = False,
+        ttl: Optional[int] = None,
+        itf: Optional[str] = None,
+    ) -> None:
         Connection.__init__(self, afi, peer, local)
 
-        self.ttl = ttl
-        self.afi = afi
-        self.md5 = md5
-        self.md5_base64 = md5_base64
-        self.port = port
-        self.interface = itf
+        self.ttl: Optional[int] = ttl
+        self.afi: AFI = afi
+        self.md5: str = md5
+        self.md5_base64: bool = md5_base64
+        self.port: int = port
+        self.interface: Optional[str] = itf
 
-    def _setup(self):
+    def _setup(self) -> Optional[Exception]:
         try:
             self.io = create(self.afi, self.interface)
             md5(self.io, self.peer, self.port, self.md5, self.md5_base64)
@@ -48,7 +59,7 @@ class Outgoing(Connection):
             self.io = None
             return exc
 
-    def _connect(self):
+    def _connect(self) -> Optional[Exception]:
         if not self.io:
             setup_issue = self._setup()
             if setup_issue:
@@ -61,7 +72,7 @@ class Outgoing(Connection):
             self.io = None
             return exc
 
-    def establish(self):
+    def establish(self) -> Iterator[bool]:
         last = time.time() - 2.0
 
         while True:

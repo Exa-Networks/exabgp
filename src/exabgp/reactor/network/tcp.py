@@ -14,6 +14,7 @@ import select
 import platform
 
 from struct import pack, calcsize
+from typing import Iterator, Optional
 
 from exabgp.util.errstr import errstr
 
@@ -30,7 +31,7 @@ from exabgp.reactor.network.error import TTLError
 from exabgp.reactor.network.error import AsyncError
 
 
-def create(afi, interface=None):
+def create(afi: AFI, interface: Optional[str] = None) -> socket.socket:
     try:
         if afi == AFI.ipv4:
             io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
@@ -58,7 +59,7 @@ def create(afi, interface=None):
     return io
 
 
-def bind(io, ip, afi):
+def bind(io: socket.socket, ip: str, afi: AFI) -> None:
     try:
         if afi == AFI.ipv4:
             io.bind((ip, 0))
@@ -68,7 +69,7 @@ def bind(io, ip, afi):
         raise BindingError(f'Could not bind to local ip {ip} - {exc!s}') from None
 
 
-def connect(io, ip, port, afi, md5):
+def connect(io: socket.socket, ip: str, port: int, afi: AFI, md5: str) -> None:
     try:
         if afi == AFI.ipv4:
             io.connect((ip, port))
@@ -112,7 +113,7 @@ def connect(io, ip, port, afi, md5):
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
 
-def md5(io, ip, port, md5, md5_base64):
+def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: Optional[bool]) -> None:
     platform_os = platform.system()
     if platform_os == 'FreeBSD':
         if md5:
@@ -193,7 +194,7 @@ def md5(io, ip, port, md5, md5_base64):
         raise MD5Error('ExaBGP has no MD5 support for {}'.format(platform_os))
 
 
-def nagle(io, ip):
+def nagle(io: socket.socket, ip: str) -> None:
     try:
         # diable Nagle's algorithm (no grouping of packets)
         io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -201,7 +202,7 @@ def nagle(io, ip):
         raise NagleError("Could not disable nagle's algorithm for {}".format(ip)) from None
 
 
-def ttl(io, ip, ttl):
+def ttl(io: socket.socket, ip: str, ttl: Optional[int]) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
         try:
@@ -210,7 +211,7 @@ def ttl(io, ip, ttl):
             raise TTLError(f'This OS does not support IP_TTL (ttl-security) for {ip} ({errstr(exc)})') from None
 
 
-def ttlv6(io, ip, ttl):
+def ttlv6(io: socket.socket, ip: str, ttl: Optional[int]) -> None:
     if ttl:
         try:
             io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
@@ -220,7 +221,7 @@ def ttlv6(io, ip, ttl):
             ) from None
 
 
-def min_ttl(io, ip, ttl):
+def min_ttl(io: socket.socket, ip: str, ttl: Optional[int]) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
         try:
@@ -240,14 +241,14 @@ def min_ttl(io, ip, ttl):
             ) from None
 
 
-def asynchronous(io, ip):
+def asynchronous(io: socket.socket, ip: str) -> None:
     try:
         io.setblocking(0)
     except OSError as exc:
         raise AsyncError('could not set socket non-blocking for {} ({})'.format(ip, errstr(exc))) from None
 
 
-def ready(io):
+def ready(io: socket.socket) -> Iterator[tuple[bool, str]]:
     poller = select.poll()
     poller.register(io, select.POLLOUT | select.POLLNVAL | select.POLLERR)
 

@@ -7,11 +7,21 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Set, Tuple
+
 from exabgp.bgp.message import Action
+
+if TYPE_CHECKING:
+    from exabgp.rib.change import Change
+    from exabgp.protocol.family import _AFI, _SAFI
 
 
 class Cache:
-    def __init__(self, cache, families):
+    cache: bool
+    families: Set[Tuple[_AFI, _SAFI]]
+    _seen: Dict[Tuple[_AFI, _SAFI], Dict[bytes, Change]]
+
+    def __init__(self, cache: bool, families: Set[Tuple[_AFI, _SAFI]]) -> None:
         self.cache = cache
         self._seen = {}
         # self._seen[family][change-index] = change
@@ -20,15 +30,19 @@ class Cache:
         # we pre-compute change.index() so that it is only allocted once
         self.families = families
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         self._seen = {}
 
-    def delete_cached_family(self, families):
+    def delete_cached_family(self, families: Set[Tuple[_AFI, _SAFI]]) -> None:
         for family in self._seen.keys():
             if family not in families:
                 del self._seen[family]
 
-    def cached_changes(self, families=None, actions=(Action.ANNOUNCE,)):
+    def cached_changes(
+        self,
+        families: Optional[List[Tuple[_AFI, _SAFI]]] = None,
+        actions: Tuple[int, ...] = (Action.ANNOUNCE,),
+    ) -> Iterator[Change]:
         # families can be None or []
         requested_families = self.families if families is None else set(families).intersection(self.families)
 
@@ -38,7 +52,7 @@ class Cache:
                 if change.nlri.action in actions:
                     yield change
 
-    def in_cache(self, change):
+    def in_cache(self, change: Change) -> bool:
         if not self.cache:
             return False
 
@@ -58,7 +72,7 @@ class Cache:
         return True
 
     # add a change to the cache of seen Change
-    def update_cache(self, change):
+    def update_cache(self, change: Change) -> None:
         if not self.cache:
             return
         family = change.nlri.family().afi_safi()

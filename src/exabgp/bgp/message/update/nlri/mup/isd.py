@@ -32,7 +32,9 @@ class InterworkSegmentDiscoveryRoute(MUP):
     NAME: ClassVar[str] = 'InterworkSegmentDiscoveryRoute'
     SHORT_NAME: ClassVar[str] = 'ISD'
 
-    def __init__(self, rd: RouteDistinguisher, prefix_ip_len: int, prefix_ip: IP, afi: AFI, packed: Optional[bytes] = None) -> None:
+    def __init__(
+        self, rd: RouteDistinguisher, prefix_ip_len: int, prefix_ip: IP, afi: AFI, packed: Optional[bytes] = None
+    ) -> None:
         MUP.__init__(self, afi)
         self.rd: RouteDistinguisher = rd
         self.prefix_ip_len: int = prefix_ip_len

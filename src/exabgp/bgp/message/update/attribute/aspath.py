@@ -102,24 +102,25 @@ class ASPath(Attribute):
         if length == 0:
             return b''
         if length > cls.SEGMENT_MAX_LENGTH:
-            return cls._segment(seg_type, values[: cls.SEGMENT_MAX_LENGTH], asn4) + cls._segment(  # type: ignore[misc]
-                seg_type, values[cls.SEGMENT_MAX_LENGTH :], asn4  # type: ignore[misc]
+            return (
+                cls._segment(seg_type, values[: cls.SEGMENT_MAX_LENGTH], asn4)
+                + cls._segment(  # type: ignore[misc]
+                    seg_type,
+                    values[cls.SEGMENT_MAX_LENGTH :],
+                    asn4,  # type: ignore[misc]
+                )
             )
         return bytes([seg_type, length]) + b''.join(v.pack(asn4) for v in values)
 
     @classmethod
-    def pack_segments(
-        cls, aspath: tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...], asn4: bool
-    ) -> bytes:
+    def pack_segments(cls, aspath: tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...], asn4: bool) -> bytes:
         segments = b''
         for content in aspath:
             segments += cls._segment(content.ID, content, asn4)
         return cls._attribute(segments)
 
     @classmethod
-    def _asn_pack(
-        cls, aspath: Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], asn4: bool
-    ) -> bytes:  # type: ignore[misc]
+    def _asn_pack(cls, aspath: Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], asn4: bool) -> bytes:  # type: ignore[misc]
         return cls._attribute(cls._segment(cls.ID, aspath, asn4))  # type: ignore[arg-type]
 
     def pack(self, negotiated: Any) -> bytes:
