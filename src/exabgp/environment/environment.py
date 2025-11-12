@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import os
+from typing import Any, ClassVar, Dict, Iterator, Optional
 
 import configparser as ConfigParser
 
@@ -19,31 +20,31 @@ from exabgp.environment.hashtable import HashTable
 from exabgp.environment.hashtable import GlobalHashTable
 
 
-class NoneDict(dict):
-    def __getitem__(self, name):
+class NoneDict(dict[str, None]):
+    def __getitem__(self, name: str) -> None:
         return None
 
 
-nonedict = NoneDict()
+nonedict: NoneDict = NoneDict()
 
 
 class Env:
-    _setup = False
+    _setup: ClassVar[bool] = False
 
     # the configuration to be set by the program
-    definition = {}
+    definition: ClassVar[Dict[str, Dict[str, Any]]] = {}
 
     # one copy of the global configuration
-    _env = GlobalHashTable()
+    _env: ClassVar[GlobalHashTable] = GlobalHashTable()
 
     @classmethod
-    def default(cls):
+    def default(cls) -> Iterator[str]:
         for section in sorted(cls.definition):
             if section in ('internal', 'debug'):
                 continue
             for option in sorted(cls.definition[section]):
-                values = cls.definition[section][option]
-                default = (
+                values: Dict[str, Any] = cls.definition[section][option]
+                default: Any = (
                     "'{}'".format(values['value'])
                     if values['write'] in (parsing.list, parsing.path, parsing.quote, parsing.syslog_name)
                     else values['value']
@@ -51,15 +52,15 @@ class Env:
                 yield f"{base.APPLICATION}.{section}.{option} {' ' * (18 - len(section) - len(option))} {values['help']}. default ({default})"
 
     @classmethod
-    def iter_ini(cls, diff=False):
+    def iter_ini(cls, diff: bool = False) -> Iterator[str]:
         for section in sorted(cls._env):
             if section in ('internal', 'debug'):
                 continue
-            header = f'\n[{base.APPLICATION}.{section}]'
+            header: str = f'\n[{base.APPLICATION}.{section}]'
             for k in sorted(cls._env[section]):
-                v = cls._env[section][k]
-                func = cls.definition[section][k]['read']
-                value = cls.definition[section][k]['value']
+                v: Any = cls._env[section][k]
+                func: Any = cls.definition[section][k]['read']
+                value: Any = cls.definition[section][k]['value']
                 if diff and func(value) == v:
                     continue
                 if header:
@@ -68,13 +69,13 @@ class Env:
                 yield f"{k} = {cls.definition[section][k]['write'](v)}"
 
     @classmethod
-    def iter_env(cls, diff=False):
+    def iter_env(cls, diff: bool = False) -> Iterator[str]:
         for section, values in cls._env.items():
             if section in ('internal', 'debug'):
                 continue
             for k, v in values.items():
-                func = cls.definition[section][k]['read']
-                value = cls.definition[section][k]['value']
+                func: Any = cls.definition[section][k]['read']
+                value: Any = cls.definition[section][k]['value']
                 if diff and func(value) == v:
                     continue
                 if cls.definition[section][k]['write'] == parsing.quote:
@@ -83,38 +84,39 @@ class Env:
                 yield f"{base.APPLICATION}.{section}.{k}={cls.definition[section][k]['write'](v)}"
 
     @classmethod
-    def setup(cls, configuration):
+    def setup(cls, configuration: Dict[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         if cls._setup:
             return {}
         cls._setup = True
         cls.definition = configuration
 
-        ini = ConfigParser.ConfigParser()
+        ini: ConfigParser.ConfigParser = ConfigParser.ConfigParser()
 
-        _conf_paths = [
+        _conf_paths: list[str] = [
             ENVFILE,
         ]
 
-        ini_files = [path for path in _conf_paths if os.path.exists(path)]
+        ini_files: list[str] = [path for path in _conf_paths if os.path.exists(path)]
         if ini_files:
             ini.read(ini_files[0])
 
         for section in cls.definition:
-            default = cls.definition[section]
+            default: Dict[str, Any] = cls.definition[section]
 
             for option in default:
-                convert = default[option]['read']
+                convert: Any = default[option]['read']
                 try:
-                    proxy_section = f'{base.APPLICATION}.{section}'
-                    env_name = f'{proxy_section}.{option}'
-                    rep_name = env_name.replace('.', '_')
+                    proxy_section: str = f'{base.APPLICATION}.{section}'
+                    env_name: str = f'{proxy_section}.{option}'
+                    rep_name: str = env_name.replace('.', '_')
 
+                    conf: Optional[str]
                     if env_name in os.environ:
                         conf = os.environ.get(env_name)
                     elif rep_name in os.environ:
                         conf = os.environ.get(rep_name)
                     else:
-                        conf = parsing.unquote(ini.get(proxy_section, option, vars=nonedict))
+                        conf = parsing.unquote(ini.get(proxy_section, option, vars=nonedict))  # type: ignore[arg-type]
                         # name without an = or : in the configuration and no value
                         if conf is None:
                             conf = default[option]['value']
@@ -128,13 +130,15 @@ class Env:
         # Backward compatibility and alias handling
         if 'tcp' in cls._env:
             # Handle exabgp_tcp_connections as an alias for exabgp_tcp_attempts
-            connections_env = os.environ.get('exabgp.tcp.connections') or os.environ.get('exabgp_tcp_connections')
+            connections_env: Optional[str] = os.environ.get('exabgp.tcp.connections') or os.environ.get(
+                'exabgp_tcp_connections'
+            )
             if connections_env:
                 cls._env['tcp']['attempts'] = int(connections_env)
 
             # Backward compatibility: convert tcp.once to tcp.attempts if tcp.attempts not explicitly set
-            once_env = os.environ.get('exabgp.tcp.once') or os.environ.get('exabgp_tcp_once')
-            attempts_env = os.environ.get('exabgp.tcp.attempts') or os.environ.get('exabgp_tcp_attempts')
+            once_env: Optional[str] = os.environ.get('exabgp.tcp.once') or os.environ.get('exabgp_tcp_once')
+            attempts_env: Optional[str] = os.environ.get('exabgp.tcp.attempts') or os.environ.get('exabgp_tcp_attempts')
 
             # Only apply backward compatibility if tcp.attempts wasn't explicitly set
             if once_env and not attempts_env and not connections_env:
@@ -142,7 +146,8 @@ class Env:
                     cls._env['tcp']['attempts'] = 1
                 else:
                     cls._env['tcp']['attempts'] = 0
+        return None
 
     @classmethod
-    def settings(cls):
+    def settings(cls) -> GlobalHashTable:
         return cls._env
