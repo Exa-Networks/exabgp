@@ -7,6 +7,7 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
+from typing import Any, Callable, ClassVar, Dict, List, Optional, Type
 
 from exabgp.protocol.ip import IPv6
 
@@ -36,20 +37,20 @@ from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6Servi
 @Srv6L2Service.register()
 @Srv6L3Service.register()
 class Srv6SidInformation:
-    TLV = 1
+    TLV: ClassVar[int] = 1
 
-    registered_subsubtlvs = dict()
+    registered_subsubtlvs: ClassVar[Dict[int, Type[Any]]] = dict()
 
-    def __init__(self, sid, behavior, subsubtlvs, packed=None):
-        self.sid = sid
-        self.behavior = behavior
-        self.subsubtlvs = subsubtlvs
-        self.packed = self.pack()
+    def __init__(self, sid: IPv6, behavior: int, subsubtlvs: List[Any], packed: Optional[bytes] = None) -> None:
+        self.sid: IPv6 = sid
+        self.behavior: int = behavior
+        self.subsubtlvs: List[Any] = subsubtlvs
+        self.packed: bytes = self.pack()
 
     @classmethod
-    def register(cls):
-        def register_subsubtlv(klass):
-            code = klass.TLV
+    def register(cls) -> Callable[[Type[Any]], Type[Any]]:
+        def register_subsubtlv(klass: Type[Any]) -> Type[Any]:
+            code: int = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Service Sub-Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
@@ -58,17 +59,17 @@ class Srv6SidInformation:
         return register_subsubtlv
 
     @classmethod
-    def unpack(cls, data, length):
-        sid = IPv6.unpack(data[1:17])
-        behavior = unpack('!H', data[18:20])[0]
-        subsubtlvs = []
+    def unpack(cls, data: bytes, length: int) -> Srv6SidInformation:
+        sid: IPv6 = IPv6.unpack(data[1:17])
+        behavior: int = unpack('!H', data[18:20])[0]
+        subsubtlvs: List[Any] = []
 
         data = data[21:]
         while data:
-            code = data[0]
+            code: int = data[0]
             length = unpack('!H', data[1:3])[0]
             if code in cls.registered_subsubtlvs:
-                subsubtlv = cls.registered_subsubtlvs[code].unpack(data[3 : length + 3], length)
+                subsubtlv: Any = cls.registered_subsubtlvs[code].unpack(data[3 : length + 3], length)
             else:
                 subsubtlv = GenericSrv6ServiceDataSubSubTlv(code, data[3 : length + 3])
             subsubtlvs.append(subsubtlv)
@@ -76,10 +77,11 @@ class Srv6SidInformation:
 
         return cls(sid=sid, behavior=behavior, subsubtlvs=subsubtlvs)
 
-    def pack(self):
-        subsubtlvs_packed = b''.join([_.pack() for _ in self.subsubtlvs])
-        length = len(subsubtlvs_packed) + 21
-        reserved, flags = 0, 0
+    def pack(self) -> bytes:
+        subsubtlvs_packed: bytes = b''.join([_.pack() for _ in self.subsubtlvs])
+        length: int = len(subsubtlvs_packed) + 21
+        reserved: int = 0
+        flags: int = 0
 
         return (
             pack('!B', self.TLV)
@@ -92,16 +94,16 @@ class Srv6SidInformation:
             + subsubtlvs_packed
         )
 
-    def __str__(self):
-        s = 'sid-information [ sid:{} flags:0 endpoint_behavior:0x{:x} '.format(str(self.sid), self.behavior)
+    def __str__(self) -> str:
+        s: str = 'sid-information [ sid:{} flags:0 endpoint_behavior:0x{:x} '.format(str(self.sid), self.behavior)
         if len(self.subsubtlvs) != 0:
             s += ' [ ' + ', '.join([str(subsubtlv) for subsubtlv in self.subsubtlvs]) + ' ]'
         s + ' ]'
         return s
 
-    def json(self, compact=None):
-        s = '{ "sid": "%s", "flags": 0, "endpoint_behavior": %d'
-        content = ', '.join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
+    def json(self, compact: Optional[bool] = None) -> str:
+        s: str = '{ "sid": "%s", "flags": 0, "endpoint_behavior": %d'
+        content: str = ', '.join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
         if content:
             s += ', {}'.format(content)
         s += ' }'

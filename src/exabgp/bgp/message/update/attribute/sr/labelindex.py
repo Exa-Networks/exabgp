@@ -6,6 +6,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, Optional
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.notification import Notify
@@ -25,17 +27,17 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
 @PrefixSid.register()
 class SrLabelIndex:
-    TLV = 1
-    LENGTH = 7
+    TLV: ClassVar[int] = 1
+    LENGTH: ClassVar[int] = 7
 
-    def __init__(self, labelindex, packed=None):
-        self.labelindex = labelindex
-        self.packed = self.pack()
+    def __init__(self, labelindex: int, packed: Optional[bytes] = None) -> None:
+        self.labelindex: int = labelindex
+        self.packed: bytes = self.pack()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '{}'.format(self.labelindex)
 
-    def pack(self):
+    def pack(self) -> bytes:
         reserved, flags = 0, 0
         return (
             pack('!B', self.TLV)
@@ -46,7 +48,7 @@ class SrLabelIndex:
         )
 
     @classmethod
-    def unpack(cls, data, length):
+    def unpack(cls, data: bytes, length: int) -> SrLabelIndex:
         labelindex = -1
         if length != cls.LENGTH:
             raise Notify(3, 5, f'Invalid TLV size. Should be 7 but {length} received')
@@ -60,5 +62,5 @@ class SrLabelIndex:
         labelindex = unpack('!I', data)[0]
         return cls(labelindex=labelindex, packed=data)
 
-    def json(self, compact=None):
+    def json(self, compact: Any = None) -> str:
         return '"sr-label-index": %d' % (self.labelindex)

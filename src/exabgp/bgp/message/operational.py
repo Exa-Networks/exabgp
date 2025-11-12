@@ -10,6 +10,7 @@ from __future__ import annotations
 import sys
 from struct import pack
 from struct import unpack
+from typing import Any, ClassVar, Dict, Optional, Tuple, Type, Union
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -23,17 +24,17 @@ MAX_ADVISORY = 2048  # 2K
 
 
 class Type(int):
-    def pack(self):
+    def pack(self) -> bytes:
         return pack('!H', self)
 
-    def extract(self):
+    def extract(self) -> list[bytes]:
         return [pack('!H', self)]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 2
 
-    def __str__(self):
-        pass
+    def __str__(self) -> str:
+        pass  # type: ignore[return]
 
 
 # ================================================================== Operational
@@ -45,11 +46,11 @@ class Operational(Message):
     ID = Message.CODE.OPERATIONAL
     TYPE = bytes([Message.CODE.OPERATIONAL])
 
-    registered_operational = dict()
+    registered_operational: ClassVar[Dict[int, Tuple[str, Type[Operational]]]] = dict()
 
-    has_family = False
-    has_routerid = False
-    is_fault = False
+    has_family: ClassVar[bool] = False
+    has_routerid: ClassVar[bool] = False
+    is_fault: ClassVar[bool] = False
 
     # really this should be called ID if not for the naming conflict
     class CODE:
@@ -75,30 +76,30 @@ class Operational(Message):
         NS = 0xFFFF  # 65535: Not Satisfied
 
     # XXX: FIXME: should be upper case
-    name = ''
-    category = ''
-    code = CODE.NOP
+    name: ClassVar[str] = ''
+    category: ClassVar[str] = ''
+    code: ClassVar[int] = CODE.NOP
 
-    def __init__(self, what):
+    def __init__(self, what: int) -> None:
         Message.__init__(self)
-        self.what = Type(what)
+        self.what: Type = Type(what)
 
-    def _message(self, data):
+    def _message(self, data: bytes) -> bytes:
         return Message._message(self, self.what.pack() + pack('!H', len(data)) + data)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.extensive()
 
-    def extensive(self):
+    def extensive(self) -> str:
         return f'operational {self.name}'
 
     @staticmethod
-    def register(klass):
+    def register(klass: Type[Operational]) -> Type[Operational]:
         Operational.registered_operational[klass.code] = (klass.category, klass)
         return klass
 
     @classmethod
-    def unpack_message(cls, data, direction, negotiated):  # pylint: disable=W0613
+    def unpack_message(cls, data: bytes, direction: Optional[int], negotiated: Any) -> Optional[Operational]:  # pylint: disable=W0613
         what = Type(unpack('!H', data[0:2])[0])
         length = unpack('!H', data[2:4])[0]
 
@@ -108,21 +109,22 @@ class Operational(Message):
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             data = data[7 : length + 4]
-            return klass(afi, safi, data)
+            return klass(afi, safi, data)  # type: ignore[misc]
         if decode == 'query':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
-            return klass(afi, safi, routerid, sequence)
+            return klass(afi, safi, routerid, sequence)  # type: ignore[misc]
         if decode == 'counter':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
             counter = unpack('!L', data[15:19])[0]
-            return klass(afi, safi, routerid, sequence, counter)
+            return klass(afi, safi, routerid, sequence, counter)  # type: ignore[misc]
         sys.stdout.write('ignoring ATM this kind of message\n')
+        return None
 
 
 # ============================================================ OperationalFamily
@@ -130,21 +132,21 @@ class Operational(Message):
 
 
 class OperationalFamily(Operational):
-    has_family = True
+    has_family: ClassVar[bool] = True
 
-    def __init__(self, what, afi, safi, data=b''):
+    def __init__(self, what: int, afi: Union[int, AFI], safi: Union[int, SAFI], data: bytes = b'') -> None:
         Operational.__init__(self, what)
-        self.afi = AFI.create(afi)
-        self.safi = SAFI.create(safi)
-        self.data = data
+        self.afi: AFI = AFI.create(afi)
+        self.safi: SAFI = SAFI.create(safi)
+        self.data: bytes = data
 
-    def family(self):
+    def family(self) -> Tuple[AFI, SAFI]:
         return (self.afi, self.safi)
 
-    def _message(self, data):
+    def _message(self, data: bytes) -> bytes:
         return Operational._message(self, self.afi.pack() + self.safi.pack() + data)
 
-    def message(self, negotiated):
+    def message(self, negotiated: Any) -> bytes:
         return self._message(self.data)
 
 
@@ -153,20 +155,28 @@ class OperationalFamily(Operational):
 
 
 class SequencedOperationalFamily(OperationalFamily):
-    __sequence_number = {}
-    has_routerid = True
+    __sequence_number: ClassVar[Dict[Optional[RouterID], int]] = {}
+    has_routerid: ClassVar[bool] = True
 
-    def __init__(self, what, afi, safi, routerid, sequence, data=b''):
+    def __init__(
+        self,
+        what: int,
+        afi: Union[int, AFI],
+        safi: Union[int, SAFI],
+        routerid: Optional[RouterID],
+        sequence: Optional[int],
+        data: bytes = b'',
+    ) -> None:
         OperationalFamily.__init__(self, what, afi, safi, data)
-        self.routerid = routerid if routerid else None
-        self.sequence = sequence if sequence else None
-        self._sequence = self.sequence
-        self._routerid = self.routerid
+        self.routerid: Optional[RouterID] = routerid if routerid else None
+        self.sequence: Optional[int] = sequence if sequence else None
+        self._sequence: Optional[int] = self.sequence
+        self._routerid: Optional[RouterID] = self.routerid
 
-    def message(self, negotiated):
-        self.sent_routerid = self.routerid if self.routerid else negotiated.sent_open.router_id
+    def message(self, negotiated: Any) -> bytes:
+        self.sent_routerid: RouterID = self.routerid if self.routerid else negotiated.sent_open.router_id
         if self.sequence is None:
-            self.sent_sequence = (self.__sequence_number.setdefault(self.routerid, 0) + 1) % 0xFFFFFFFF
+            self.sent_sequence: int = (self.__sequence_number.setdefault(self.routerid, 0) + 1) % 0xFFFFFFFF
             self.__sequence_number[self.sent_routerid] = self.sent_sequence
         else:
             self.sent_sequence = self.sequence
@@ -187,37 +197,38 @@ class NS:
     NOTFOUND = 0x06  # Not Found
 
     class _NS(OperationalFamily):
-        is_fault = True
+        is_fault: ClassVar[bool] = True
+        ERROR_SUBCODE: ClassVar[bytes]
 
-        def __init__(self, afi, safi, sequence):
+        def __init__(self, afi: Union[int, AFI], safi: Union[int, SAFI], sequence: bytes) -> None:
             OperationalFamily.__init__(self, Operational.CODE.NS, afi, safi, sequence + self.ERROR_SUBCODE)
 
-        def extensive(self):
+        def extensive(self) -> str:
             return f'operational NS {self.name} {self.afi}/{self.safi}'
 
     class Malformed(_NS):
-        name = 'NS malformed'
-        ERROR_SUBCODE = b'\x00\x01'  # pack('!H',MALFORMED)
+        name: ClassVar[str] = 'NS malformed'
+        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x01'  # pack('!H',MALFORMED)
 
     class Unsupported(_NS):
-        name = 'NS unsupported'
-        ERROR_SUBCODE = b'\x00\x02'  # pack('!H',UNSUPPORTED)
+        name: ClassVar[str] = 'NS unsupported'
+        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x02'  # pack('!H',UNSUPPORTED)
 
     class Maximum(_NS):
-        name = 'NS maximum'
-        ERROR_SUBCODE = b'\x00\x03'  # pack('!H',MAXIMUM)
+        name: ClassVar[str] = 'NS maximum'
+        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x03'  # pack('!H',MAXIMUM)
 
     class Prohibited(_NS):
-        name = 'NS prohibited'
-        ERROR_SUBCODE = b'\x00\x04'  # pack('!H',PROHIBITED)
+        name: ClassVar[str] = 'NS prohibited'
+        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x04'  # pack('!H',PROHIBITED)
 
     class Busy(_NS):
-        name = 'NS busy'
-        ERROR_SUBCODE = b'\x00\x05'  # pack('!H',BUSY)
+        name: ClassVar[str] = 'NS busy'
+        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x05'  # pack('!H',BUSY)
 
     class NotFound(_NS):
-        name = 'NS notfound'
-        ERROR_SUBCODE = b'\x00\x06'  # pack('!H',NOTFOUND)
+        name: ClassVar[str] = 'NS notfound'
+        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x06'  # pack('!H',NOTFOUND)
 
 
 # ===================================================================== Advisory
@@ -226,17 +237,19 @@ class NS:
 
 class Advisory:
     class _Advisory(OperationalFamily):
-        category = 'advisory'
+        category: ClassVar[str] = 'advisory'
 
-        def extensive(self):
+        def extensive(self) -> str:
             return f'operational {self.name} afi {self.afi} safi {self.safi} "{self.data}"'
 
     @Operational.register
     class ADM(_Advisory):
-        name = 'ADM'
-        code = Operational.CODE.ADM
+        name: ClassVar[str] = 'ADM'
+        code: ClassVar[int] = Operational.CODE.ADM
 
-        def __init__(self, afi, safi, advisory, routerid=None):
+        def __init__(
+            self, afi: Union[int, AFI], safi: Union[int, SAFI], advisory: Union[str, bytes], routerid: Optional[RouterID] = None
+        ) -> None:
             # Handle both string and bytes input
             if isinstance(advisory, bytes):
                 utf8 = advisory
@@ -248,10 +261,12 @@ class Advisory:
 
     @Operational.register
     class ASM(_Advisory):
-        name = 'ASM'
-        code = Operational.CODE.ASM
+        name: ClassVar[str] = 'ASM'
+        code: ClassVar[int] = Operational.CODE.ASM
 
-        def __init__(self, afi, safi, advisory, routerid=None):
+        def __init__(
+            self, afi: Union[int, AFI], safi: Union[int, SAFI], advisory: Union[str, bytes], routerid: Optional[RouterID] = None
+        ) -> None:
             # Handle both string and bytes input
             if isinstance(advisory, bytes):
                 utf8 = advisory
@@ -268,30 +283,33 @@ class Advisory:
 
 class Query:
     class _Query(SequencedOperationalFamily):
-        category = 'query'
+        category: ClassVar[str] = 'query'
+        code: ClassVar[int]
 
-        def __init__(self, afi, safi, routerid, sequence):
+        def __init__(
+            self, afi: Union[int, AFI], safi: Union[int, SAFI], routerid: Optional[RouterID], sequence: Optional[int]
+        ) -> None:
             SequencedOperationalFamily.__init__(self, self.code, afi, safi, routerid, sequence)
 
-        def extensive(self):
+        def extensive(self) -> str:
             if self._routerid and self._sequence:
                 return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence}'
             return f'operational {self.name} afi {self.afi} safi {self.safi}'
 
     @Operational.register
     class RPCQ(_Query):
-        name = 'RPCQ'
-        code = Operational.CODE.RPCQ
+        name: ClassVar[str] = 'RPCQ'
+        code: ClassVar[int] = Operational.CODE.RPCQ
 
     @Operational.register
     class APCQ(_Query):
-        name = 'APCQ'
-        code = Operational.CODE.APCQ
+        name: ClassVar[str] = 'APCQ'
+        code: ClassVar[int] = Operational.CODE.APCQ
 
     @Operational.register
     class LPCQ(_Query):
-        name = 'LPCQ'
-        code = Operational.CODE.LPCQ
+        name: ClassVar[str] = 'LPCQ'
+        code: ClassVar[int] = Operational.CODE.LPCQ
 
 
 # ===================================================================== Response
@@ -300,31 +318,39 @@ class Query:
 
 class Response:
     class _Counter(SequencedOperationalFamily):
-        category = 'counter'
+        category: ClassVar[str] = 'counter'
+        code: ClassVar[int]
 
-        def __init__(self, afi, safi, routerid, sequence, counter):
-            self.counter = counter
+        def __init__(
+            self,
+            afi: Union[int, AFI],
+            safi: Union[int, SAFI],
+            routerid: Optional[RouterID],
+            sequence: Optional[int],
+            counter: int,
+        ) -> None:
+            self.counter: int = counter
             SequencedOperationalFamily.__init__(self, self.code, afi, safi, routerid, sequence, pack('!L', counter))
 
-        def extensive(self):
+        def extensive(self) -> str:
             if self._routerid and self._sequence:
                 return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence} counter {self.counter}'
             return f'operational {self.name} afi {self.afi} safi {self.safi} counter {self.counter}'
 
     @Operational.register
     class RPCP(_Counter):
-        name = 'RPCP'
-        code = Operational.CODE.RPCP
+        name: ClassVar[str] = 'RPCP'
+        code: ClassVar[int] = Operational.CODE.RPCP
 
     @Operational.register
     class APCP(_Counter):
-        name = 'APCP'
-        code = Operational.CODE.APCP
+        name: ClassVar[str] = 'APCP'
+        code: ClassVar[int] = Operational.CODE.APCP
 
     @Operational.register
     class LPCP(_Counter):
-        name = 'LPCP'
-        code = Operational.CODE.LPCP
+        name: ClassVar[str] = 'LPCP'
+        code: ClassVar[int] = Operational.CODE.LPCP
 
 
 # ========================================================================= Dump

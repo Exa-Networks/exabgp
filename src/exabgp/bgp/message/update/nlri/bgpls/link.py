@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
+from typing import Any, ClassVar, List, Optional
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -20,14 +21,14 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 from exabgp.logger import log
 
 # BGP-LS Link TLV type codes (RFC 7752)
-TLV_LOCAL_NODE_DESC = 256  # Local Node Descriptors TLV
-TLV_REMOTE_NODE_DESC = 257  # Remote Node Descriptors TLV
-TLV_LINK_ID = 258  # Link Local/Remote Identifiers TLV
-TLV_IPV4_IFACE_ADDR = 259  # IPv4 Interface Address TLV
-TLV_IPV4_NEIGH_ADDR = 260  # IPv4 Neighbor Address TLV
-TLV_IPV6_IFACE_ADDR = 261  # IPv6 Interface Address TLV
-TLV_IPV6_NEIGH_ADDR = 262  # IPv6 Neighbor Address TLV
-TLV_MULTI_TOPO_ID = 263  # Multi-Topology Identifier TLV
+TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
+TLV_REMOTE_NODE_DESC: int = 257  # Remote Node Descriptors TLV
+TLV_LINK_ID: int = 258  # Link Local/Remote Identifiers TLV
+TLV_IPV4_IFACE_ADDR: int = 259  # IPv4 Interface Address TLV
+TLV_IPV4_NEIGH_ADDR: int = 260  # IPv4 Neighbor Address TLV
+TLV_IPV6_IFACE_ADDR: int = 261  # IPv6 Interface Address TLV
+TLV_IPV6_NEIGH_ADDR: int = 262  # IPv6 Neighbor Address TLV
+TLV_MULTI_TOPO_ID: int = 263  # Multi-Topology Identifier TLV
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -66,49 +67,49 @@ TLV_MULTI_TOPO_ID = 263  # Multi-Topology Identifier TLV
 
 @BGPLS.register
 class LINK(BGPLS):
-    CODE = 2
-    NAME = 'bgpls-link'
-    SHORT_NAME = 'Link'
+    CODE: ClassVar[int] = 2
+    NAME: ClassVar[str] = 'bgpls-link'
+    SHORT_NAME: ClassVar[str] = 'Link'
 
     def __init__(
         self,
-        domain,
-        proto_id,
-        local_node,
-        remote_node,
-        neigh_addrs=None,
-        iface_addrs=None,
-        topology_ids=None,
-        link_ids=None,
-        nexthop=None,
-        action=None,
-        route_d=None,
-        addpath=None,
-        packed=None,
-    ):
+        domain: int,
+        proto_id: int,
+        local_node: Optional[List[NodeDescriptor]],
+        remote_node: Optional[List[NodeDescriptor]],
+        neigh_addrs: Optional[List[NeighAddr]] = None,
+        iface_addrs: Optional[List[IfaceAddr]] = None,
+        topology_ids: Optional[List[MTID]] = None,
+        link_ids: Optional[List[LinkIdentifier]] = None,
+        nexthop: Any = None,
+        action: Any = None,
+        route_d: Any = None,
+        addpath: Any = None,
+        packed: Optional[bytes] = None,
+    ) -> None:
         BGPLS.__init__(self, action, addpath)
-        self.domain = domain
-        self.proto_id = proto_id
-        self.local_node = local_node if local_node else []
-        self.remote_node = remote_node if remote_node else []
-        self.neigh_addrs = neigh_addrs if neigh_addrs else []
-        self.iface_addrs = iface_addrs if iface_addrs else []
-        self.link_ids = link_ids if link_ids else []
-        self.topology_ids = topology_ids if topology_ids else []
-        self.nexthop = nexthop
-        self.route_d = route_d
-        self._packed = packed
+        self.domain: int = domain
+        self.proto_id: int = proto_id
+        self.local_node: List[NodeDescriptor] = local_node if local_node else []
+        self.remote_node: List[NodeDescriptor] = remote_node if remote_node else []
+        self.neigh_addrs: List[NeighAddr] = neigh_addrs if neigh_addrs else []
+        self.iface_addrs: List[IfaceAddr] = iface_addrs if iface_addrs else []
+        self.link_ids: List[LinkIdentifier] = link_ids if link_ids else []
+        self.topology_ids: List[MTID] = topology_ids if topology_ids else []
+        self.nexthop: Any = nexthop
+        self.route_d: Any = route_d
+        self._packed: Optional[bytes] = packed
 
     @classmethod
-    def unpack_nlri(cls, data, rd):
+    def unpack_nlri(cls, data: bytes, rd: Any) -> LINK:
         proto_id = unpack('!B', data[0:1])[0]
         # FIXME: all these list should probably be defined in the objects
-        iface_addrs = []
-        neigh_addrs = []
-        link_identifiers = []
-        topology_ids = []
-        remote_node = []
-        local_node = []
+        iface_addrs: List[IfaceAddr] = []
+        neigh_addrs: List[NeighAddr] = []
+        link_identifiers: List[LinkIdentifier] = []
+        topology_ids: List[MTID] = []
+        remote_node: List[NodeDescriptor] = []
+        local_node: List[NodeDescriptor] = []
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
@@ -177,7 +178,7 @@ class LINK(BGPLS):
             packed=data,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, LINK)
             and self.CODE == other.CODE
@@ -187,21 +188,21 @@ class LINK(BGPLS):
             and self.route_d == other.route_d
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.json()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.CODE, self.domain, self.proto_id, tuple(self.topology_ids), self.route_d))
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         if self._packed:
             return self._packed
         raise RuntimeError('Not implemented')
 
-    def json(self, compact=None):
+    def json(self, compact: Any = None) -> str:
         content = f'"ls-nlri-type": "{self.NAME}", '
         content += f'"l3-routing-topology": {int(self.domain)}, '
         content += f'"protocol-id": {int(self.proto_id)}, '

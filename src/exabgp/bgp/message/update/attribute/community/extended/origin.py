@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Optional
+
 from struct import pack
 from struct import unpack
 
@@ -21,19 +23,19 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 
 class Origin(ExtendedCommunity):
-    COMMUNITY_SUBTYPE = 0x03
-    LIMIT = 0  # This is to prevent warnings from scrutinizer
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x03
+    LIMIT: ClassVar[int] = 0  # This is to prevent warnings from scrutinizer
 
     @property
-    def la(self):
+    def la(self) -> bytes:
         return self.community[2 : self.LIMIT]
 
     @property
-    def ga(self):
+    def ga(self) -> bytes:
         return self.community[self.LIMIT : 8]
 
-    def __eq__(self, other):
-        return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)
+    def __eq__(self, other: object) -> bool:
+        return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)  # type: ignore[attr-defined]
 
 
 # ================================================================== OriginASNIP
@@ -42,19 +44,19 @@ class Origin(ExtendedCommunity):
 
 @ExtendedCommunity.register
 class OriginASNIP(Origin):
-    COMMUNITY_TYPE = 0x00
-    LIMIT = 4
+    COMMUNITY_TYPE: ClassVar[int] = 0x00
+    LIMIT: ClassVar[int] = 4
 
-    def __init__(self, asn, ip, transitive, community=None):
-        self.asn = asn
-        self.ip = ip
+    def __init__(self, asn: ASN, ip: str, transitive: bool, community: Optional[bytes] = None) -> None:
+        self.asn: ASN = asn
+        self.ip: str = ip
         Origin.__init__(self, community if community else pack('!2sH4s', self._subtype(), asn, IPv4.pton(ip)))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'origin:{}:{}'.format(self.asn, self.ip)
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> OriginASNIP:
         asn, ip = unpack('!H4s', data[2:8])
         return OriginASNIP(ASN(asn), IPv4.ntop(ip), False, data[:8])
 
@@ -65,19 +67,19 @@ class OriginASNIP(Origin):
 
 @ExtendedCommunity.register
 class OriginIPASN(Origin):
-    COMMUNITY_TYPE = 0x01
-    LIMIT = 6
+    COMMUNITY_TYPE: ClassVar[int] = 0x01
+    LIMIT: ClassVar[int] = 6
 
-    def __init__(self, asn, ip, transitive, community=None):
-        self.ip = ip
-        self.asn = asn
+    def __init__(self, ip: str, asn: ASN, transitive: bool, community: Optional[bytes] = None) -> None:
+        self.ip: str = ip
+        self.asn: ASN = asn
         Origin.__init__(self, community if community else pack('!2s4sH', self._subtype(), IPv4.pton(ip), asn))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'origin:{}:{}'.format(self.ip, self.asn)
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> OriginIPASN:
         ip, asn = unpack('!4sH', data[2:8])
         return OriginIPASN(IPv4.ntop(ip), ASN(asn), False, data[:8])
 
@@ -88,18 +90,18 @@ class OriginIPASN(Origin):
 
 @ExtendedCommunity.register
 class OriginASN4Number(Origin):
-    COMMUNITY_TYPE = 0x02
-    LIMIT = 6
+    COMMUNITY_TYPE: ClassVar[int] = 0x02
+    LIMIT: ClassVar[int] = 6
 
-    def __init__(self, asn, number, transitive, community=None):
-        self.asn = asn
-        self.number = number
+    def __init__(self, asn: ASN, number: int, transitive: bool, community: Optional[bytes] = None) -> None:
+        self.asn: ASN = asn
+        self.number: int = number
         Origin.__init__(self, community if community else pack('!2sLH', self._subtype(), asn, number))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'origin:{}:{}'.format(self.asn, self.number)
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> OriginASN4Number:
         asn, number = unpack('!LH', data[2:8])
         return OriginASN4Number(ASN(asn), number, False, data[:8])

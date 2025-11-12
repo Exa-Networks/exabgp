@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, List
+
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -25,47 +27,47 @@ from exabgp.bgp.message.update.nlri.qualifier import Labels
 @NLRI.register(AFI.ipv4, SAFI.nlri_mpls)
 @NLRI.register(AFI.ipv6, SAFI.nlri_mpls)
 class Label(INET):
-    def __init__(self, afi, safi, action):
+    def __init__(self, afi: AFI, safi: SAFI, action: Action) -> None:
         INET.__init__(self, afi, safi, action)
         self.labels = Labels.NOLABEL
 
-    def feedback(self, action):
+    def feedback(self, action: Action) -> str:
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'labelled nlri next-hop missing'
         return ''
 
-    def extensive(self):
+    def extensive(self) -> str:
         return '{}{}'.format(self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop {}'.format(self.nexthop))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.extensive()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.extensive()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return INET.__len__(self) + len(self.labels)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return self.labels == other.labels and INET.__eq__(self, other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.pack())
 
-    def prefix(self):
+    def prefix(self) -> str:
         return '{}{}'.format(INET.prefix(self), self.labels)
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
         mask = bytes([len(self.labels) * 8 + self.cidr.mask])
         return addpath + mask + self.labels.pack() + self.cidr.pack_ip()
 
-    def index(self, negotiated=None):
+    def index(self, negotiated: Any = None) -> bytes:
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
         mask = bytes([self.cidr.mask])
         return Family.index(self) + addpath + mask + self.cidr.pack_ip()
 
-    def _internal(self, announced=True):
+    def _internal(self, announced: bool = True) -> List[str]:
         r = INET._internal(self, announced)
         if announced and self.labels:
             r.append(self.labels.json())

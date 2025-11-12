@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Optional
+
 from struct import pack
 from struct import unpack
 
@@ -21,22 +23,22 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 
 class RouteTarget(ExtendedCommunity):
-    COMMUNITY_SUBTYPE = 0x02
-    LIMIT = 0
-    DESCRIPTION = 'target'
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x02
+    LIMIT: ClassVar[int] = 0
+    DESCRIPTION: ClassVar[str] = 'target'
 
     @property
-    def la(self):
+    def la(self) -> bytes:
         return self.community[2 : self.LIMIT]
 
     @property
-    def ga(self):
+    def ga(self) -> bytes:
         return self.community[self.LIMIT : 8]
 
-    def __eq__(self, other):
-        return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)
+    def __eq__(self, other: object) -> bool:
+        return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)  # type: ignore[attr-defined]
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
 
@@ -46,23 +48,23 @@ class RouteTarget(ExtendedCommunity):
 
 @ExtendedCommunity.register
 class RouteTargetASN2Number(RouteTarget):
-    COMMUNITY_TYPE = 0x00
-    LIMIT = 4
+    COMMUNITY_TYPE: ClassVar[int] = 0x00
+    LIMIT: ClassVar[int] = 4
 
-    def __init__(self, asn, number, transitive=True, community=None):
-        self.asn = asn
-        self.number = number
+    def __init__(self, asn: ASN, number: int, transitive: bool = True, community: Optional[bytes] = None) -> None:
+        self.asn: ASN = asn
+        self.number: int = number
         # assert(number < pow(2,32))
         RouteTarget.__init__(self, community if community else pack('!2sHL', self._subtype(transitive), asn, number))
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.asn, self.number))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> RouteTargetASN2Number:
         asn, number = unpack('!HL', data[2:8])
         return cls(ASN(asn), number, False, data[:8])
 
@@ -73,12 +75,12 @@ class RouteTargetASN2Number(RouteTarget):
 
 @ExtendedCommunity.register
 class RouteTargetIPNumber(RouteTarget):
-    COMMUNITY_TYPE = 0x01
-    LIMIT = 6
+    COMMUNITY_TYPE: ClassVar[int] = 0x01
+    LIMIT: ClassVar[int] = 6
 
-    def __init__(self, ip, number, transitive=True, community=None):
-        self.ip = ip
-        self.number = number
+    def __init__(self, ip: str, number: int, transitive: bool = True, community: Optional[bytes] = None) -> None:
+        self.ip: str = ip
+        self.number: int = number
         # assert(number < pow(2,16))
         RouteTarget.__init__(
             self,
@@ -86,14 +88,14 @@ class RouteTargetIPNumber(RouteTarget):
         )
 
     # why could we not simply use ExtendedCommunity.hash ?
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.ip, self.number))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%s:%s:%d' % (self.DESCRIPTION, self.ip, self.number)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> RouteTargetIPNumber:
         ip, number = unpack('!4sH', data[2:8])
         return cls(IPv4.ntop(ip), number, False, data[:8])
 
@@ -104,23 +106,23 @@ class RouteTargetIPNumber(RouteTarget):
 
 @ExtendedCommunity.register
 class RouteTargetASN4Number(RouteTarget):
-    COMMUNITY_TYPE = 0x02
-    LIMIT = 6
+    COMMUNITY_TYPE: ClassVar[int] = 0x02
+    LIMIT: ClassVar[int] = 6
 
-    def __init__(self, asn, number, transitive=True, community=None):
-        self.asn = asn
-        self.number = number
+    def __init__(self, asn: ASN, number: int, transitive: bool = True, community: Optional[bytes] = None) -> None:
+        self.asn: ASN = asn
+        self.number: int = number
         # assert(number < pow(2,16))
         RouteTarget.__init__(self, community if community else pack('!2sLH', self._subtype(transitive), asn, number))
 
     # why could we not simply use ExtendedCommunity.hash ?
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.asn, self.number))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> RouteTargetASN4Number:
         asn, number = unpack('!LH', data[2:8])
         return cls(ASN(asn), number, False, data[:8])

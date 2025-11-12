@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
+from typing import Any, ClassVar, Dict, Optional, Type
 
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -36,12 +37,12 @@ class PMSI(Attribute):
     ID = Attribute.CODE.PMSI_TUNNEL
     FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
     CACHING = True
-    TUNNEL_TYPE = -1
+    TUNNEL_TYPE: ClassVar[int] = -1
 
     # TUNNEL_TYPE MUST NOT BE DEFINED HERE ( it allows to set it up as a self. value)
 
-    _pmsi_known = dict()
-    _name = {
+    _pmsi_known: ClassVar[Dict[int, Type[PMSI]]] = dict()
+    _name: ClassVar[Dict[int, str]] = {
         0: 'No tunnel',
         1: 'RSVP-TE P2MP LSP',
         2: 'mLDP P2MP LSP',
@@ -52,29 +53,29 @@ class PMSI(Attribute):
         7: 'mLDP MP2MP LSP',
     }
 
-    def __init__(self, tunnel, label, flags, raw_label=None):
-        self.label = label  # integer
-        self.raw_label = raw_label  # integer
-        self.flags = flags  # integer
-        self.tunnel = tunnel  # tunnel id, packed data
+    def __init__(self, tunnel: bytes, label: int, flags: int, raw_label: Optional[int] = None) -> None:
+        self.label: int = label  # integer
+        self.raw_label: Optional[int] = raw_label  # integer
+        self.flags: int = flags  # integer
+        self.tunnel: bytes = tunnel  # tunnel id, packed data
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
-            self.ID == other.ID
-            and self.FLAG == other.FLAG
-            and self.label == other.label
-            and self.flags == other.flags
-            and self.tunnel == other.tunnel
+            self.ID == other.ID  # type: ignore[attr-defined]
+            and self.FLAG == other.FLAG  # type: ignore[attr-defined]
+            and self.label == other.label  # type: ignore[attr-defined]
+            and self.flags == other.flags  # type: ignore[attr-defined]
+            and self.tunnel == other.tunnel  # type: ignore[attr-defined]
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     @staticmethod
-    def name(tunnel_type):
+    def name(tunnel_type: int) -> str:
         return PMSI._name.get(tunnel_type, 'unknown')
 
-    def pack(self, negotiated):
+    def pack(self, negotiated: Any) -> bytes:
         if self.raw_label:
             packed_label = pack('!L', self.raw_label)[1:4]
         else:
@@ -82,13 +83,13 @@ class PMSI(Attribute):
         return self._attribute(pack('!BB3s', self.flags, self.TUNNEL_TYPE, packed_label) + self.tunnel)
 
     # XXX: FIXME: Orange code had 4 (and another reference to it in the code elsewhere)
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
 
-    def prettytunnel(self):
+    def prettytunnel(self) -> str:
         return '0x' + ''.join('{:02X}'.format(_) for _ in self.tunnel) if self.tunnel else ''
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.raw_label:
             label_repr = '%d(%d)' % (self.label, self.raw_label)
         else:
@@ -101,20 +102,20 @@ class PMSI(Attribute):
         )
 
     @classmethod
-    def register(cls, klass):
+    def register(cls, klass: Type[PMSI]) -> Type[PMSI]:
         if klass.TUNNEL_TYPE in cls._pmsi_known:
             raise RuntimeError('only one registration for PMSI')
         cls._pmsi_known[klass.TUNNEL_TYPE] = klass
         return klass
 
     @staticmethod
-    def pmsi_unknown(subtype, tunnel, label, flags, raw_label):
+    def pmsi_unknown(subtype: int, tunnel: bytes, label: int, flags: int, raw_label: Optional[int]) -> PMSI:
         pmsi = PMSI(tunnel, label, flags)
-        pmsi.TUNNEL_TYPE = subtype
+        pmsi.TUNNEL_TYPE = subtype  # type: ignore[misc]
         return pmsi
 
     @classmethod
-    def unpack(cls, data, direction, negotiated):
+    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> PMSI:
         flags, subtype = unpack('!BB', data[:2])
         raw_label = unpack('!L', b'\0' + data[2:5])[0]
         label = raw_label >> 4
@@ -130,16 +131,16 @@ class PMSI(Attribute):
 
 @PMSI.register
 class PMSINoTunnel(PMSI):
-    TUNNEL_TYPE = 0
+    TUNNEL_TYPE: ClassVar[int] = 0
 
-    def __init__(self, label=0, flags=0, raw_label=None):
+    def __init__(self, label: int = 0, flags: int = 0, raw_label: Optional[int] = None) -> None:
         PMSI.__init__(self, b'', label, flags, raw_label=None)
 
-    def prettytunnel(self):
+    def prettytunnel(self) -> str:
         return ''
 
     @classmethod
-    def unpack(cls, tunnel, label, flags, raw_label=None):
+    def unpack(cls, tunnel: bytes, label: int, flags: int, raw_label: Optional[int] = None) -> PMSINoTunnel:
         return cls(label, flags, raw_label)
 
 
@@ -149,16 +150,18 @@ class PMSINoTunnel(PMSI):
 
 @PMSI.register
 class PMSIIngressReplication(PMSI):
-    TUNNEL_TYPE = 6
+    TUNNEL_TYPE: ClassVar[int] = 6
 
-    def __init__(self, ip, label=0, flags=0, tunnel=None, raw_label=None):
-        self.ip = ip  # looks like a bad name
+    def __init__(
+        self, ip: str, label: int = 0, flags: int = 0, tunnel: Optional[bytes] = None, raw_label: Optional[int] = None
+    ) -> None:
+        self.ip: str = ip  # looks like a bad name
         PMSI.__init__(self, tunnel if tunnel else IPv4.pton(ip), label, flags, raw_label)
 
-    def prettytunnel(self):
+    def prettytunnel(self) -> str:
         return self.ip
 
     @classmethod
-    def unpack(cls, tunnel, label, flags, raw_label):
+    def unpack(cls, tunnel: bytes, label: int, flags: int, raw_label: Optional[int]) -> PMSIIngressReplication:
         ip = IPv4.ntop(tunnel)
         return cls(ip, label, flags, tunnel, raw_label)

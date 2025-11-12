@@ -5,6 +5,8 @@ Created by Stephane Litkowski on 2017-02-24.
 
 from __future__ import annotations
 
+from typing import ClassVar, Dict, Optional
+
 from struct import pack
 from struct import unpack
 
@@ -18,32 +20,32 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 @ExtendedCommunity.register
 class InterfaceSet(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x07
-    COMMUNITY_SUBTYPE = 0x02
+    COMMUNITY_TYPE: ClassVar[int] = 0x07
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x02
 
-    names = {
+    names: ClassVar[Dict[int, str]] = {
         1: 'input',
         2: 'output',
         3: 'input-output',
     }
 
-    def __init__(self, trans, asn, target, direction, community=None):
-        self.asn = asn
-        self.target = target
-        self.direction = direction
-        self.transitive = trans
+    def __init__(self, trans: bool, asn: ASN, target: int, direction: int, community: Optional[bytes] = None) -> None:
+        self.asn: ASN = asn
+        self.target: int = target
+        self.direction: int = direction
+        self.transitive: bool = trans
         new_target = (direction << 14) + target
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sLH', self._subtype(self.transitive), asn, new_target),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         str_direction = self.names.get(self.direction, str(self.direction))
         return 'interface-set:{}:{}:{}'.format(str_direction, str(self.asn), str(self.target))
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> InterfaceSet:
         asn, target = unpack('!LH', data[2:8])
         direction = target >> 14
         target = target & 0x1FFF

@@ -7,11 +7,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, Optional
+
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+from exabgp.bgp.message import Action
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
@@ -29,11 +32,20 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
 @EVPN.register
 class Multicast(EVPN):
-    CODE = 3
-    NAME = 'Inclusive Multicast Ethernet Tag'
-    SHORT_NAME = 'Multicast'
+    CODE: ClassVar[int] = 3
+    NAME: ClassVar[str] = 'Inclusive Multicast Ethernet Tag'
+    SHORT_NAME: ClassVar[str] = 'Multicast'
 
-    def __init__(self, rd, etag, ip, packed=None, nexthop=None, action=None, addpath=None):
+    def __init__(
+        self,
+        rd: RouteDistinguisher,
+        etag: EthernetTag,
+        ip: IP,
+        packed: Optional[bytes] = None,
+        nexthop: Any = None,
+        action: Optional[Action] = None,
+        addpath: Any = None,
+    ) -> None:
         EVPN.__init__(self, action, addpath)
         self.nexthop = nexthop
         self.rd = rd
@@ -41,10 +53,10 @@ class Multicast(EVPN):
         self.ip = ip
         self._pack(packed)
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{}:{}:{}:{}'.format(
             self._prefix(),
             self.rd._str(),
@@ -52,10 +64,10 @@ class Multicast(EVPN):
             self.ip,
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.afi, self.safi, self.CODE, self.rd, self.etag, self.ip))
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -67,7 +79,7 @@ class Multicast(EVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> Multicast:
         rd = RouteDistinguisher.unpack(data[:8])
         etag = EthernetTag.unpack(data[8:12])
         iplen = data[12]
@@ -76,7 +88,7 @@ class Multicast(EVPN):
         ip = IP.unpack(data[13 : 13 + iplen // 8])
         return cls(rd, etag, ip, data)
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[bool] = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

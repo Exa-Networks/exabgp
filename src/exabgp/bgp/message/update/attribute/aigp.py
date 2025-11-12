@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
+from typing import Any, ClassVar, Generator, Optional
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -30,15 +31,15 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
 class TLV:
-    def __init__(self, what, value):
-        self.type = what
-        self.value = value
+    def __init__(self, what: int, value: bytes) -> None:
+        self.type: int = what
+        self.value: bytes = value
 
 
-class TLVS(list):
+class TLVS(list[TLV]):
     @staticmethod
-    def unpack(data):
-        def loop(data):
+    def unpack(data: bytes) -> TLVS:
+        def loop(data: bytes) -> Generator[TLV, None, None]:
             while data:
                 t = data[0]
                 length = unpack('!H', data[1:3])[0]
@@ -47,7 +48,7 @@ class TLVS(list):
 
         return TLVS(list(loop(data)))
 
-    def pack(self):
+    def pack(self) -> bytes:
         return b''.join([bytes([tlv.type]) + pack('!H', len(tlv.value) + 3) + tlv.value for tlv in self])
 
 
@@ -60,36 +61,36 @@ class AIGP(Attribute):
     ID = Attribute.CODE.AIGP
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
-    TYPES = [
+    TYPES: ClassVar[list[int]] = [
         1,
     ]
 
-    def __init__(self, aigp, packed=None):
-        self.aigp = aigp
+    def __init__(self, aigp: bytes, packed: Optional[bytes] = None) -> None:
+        self.aigp: bytes = aigp
         if packed:
             self._packed = packed
         else:
             self._packed = self._attribute(aigp)
 
-    def __eq__(self, other):
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.aigp == other.aigp
+    def __eq__(self, other: object) -> bool:
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.aigp == other.aigp  # type: ignore[attr-defined]
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated):
+    def pack(self, negotiated: Any) -> bytes:
         if negotiated.aigp:
             return self._packed
         if negotiated.local_as == negotiated.peer_as:
             return self._packed
         return b''
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '0x' + ''.join('{:02x}'.format(_) for _ in self.aigp[-8:])
 
     @classmethod
-    def unpack(cls, data, direction, negotiated):
+    def unpack(cls, data: bytes, direction: int, negotiated: Any) -> Optional[AIGP]:
         if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
             return None
-        return cls(unpack('!Q', data[:8] & 0x000000FFFFFFFFFF), data[:8])
+        return cls(unpack('!Q', data[:8] & 0x000000FFFFFFFFFF), data[:8])  # type: ignore[arg-type]

@@ -7,18 +7,22 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Type, TypeVar
+
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import rt
 
 # draft-ietf-bess-service-chaining
 
+T = TypeVar('T', bound='RTRecord')
+
 
 class RTRecord(rt.RouteTarget):
-    COMMUNITY_SUBTYPE = 0x13
-    DESCRIPTION = 'rtrecord'
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x13
+    DESCRIPTION: ClassVar[str] = 'rtrecord'
 
     @classmethod
-    def from_rt(cls, route_target):
+    def from_rt(cls: Type[T], route_target: rt.RouteTarget) -> T:
         packed = route_target.pack()
         return cls.unpack(packed[0:1] + bytes([cls.COMMUNITY_SUBTYPE]) + packed[2:])
 

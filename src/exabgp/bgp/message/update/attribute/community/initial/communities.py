@@ -10,6 +10,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, Iterator, Optional
+
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.initial.community import Community
 
@@ -24,27 +26,27 @@ class Communities(Attribute):
     ID = Attribute.CODE.COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    def __init__(self, communities=None):
+    def __init__(self, communities: Optional[list[Community]] = None) -> None:
         # Must be None as = param is only evaluated once
         if communities:
-            self.communities = communities
+            self.communities: list[Community] = communities
         else:
             self.communities = []
 
-    def add(self, data):
+    def add(self, data: Community) -> Communities:
         self.communities.append(data)
         self.communities.sort()
         return self
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         if len(self.communities):
             return self._attribute(b''.join(c.pack() for c in self.communities))
         return b''
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Community]:
         return iter(self.communities)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         lc = len(self.communities)
         if lc > 1:
             return '[ {} ]'.format(' '.join(repr(community) for community in sorted(self.communities)))
@@ -52,11 +54,11 @@ class Communities(Attribute):
             return repr(self.communities[0])
         return ''
 
-    def json(self):
+    def json(self) -> str:
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @staticmethod
-    def unpack(data, direction, negotiated):
+    def unpack(data: bytes, direction: Any, negotiated: Any) -> Communities:
         communities = Communities()
         while data:
             if data and len(data) < COMMUNITY_SIZE:

@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, List, Optional
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -17,6 +19,7 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
+from exabgp.bgp.message.update.nlri.qualifier import Labels
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
@@ -30,17 +33,27 @@ from exabgp.protocol.family import Family
 @NLRI.register(AFI.ipv4, SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6, SAFI.mpls_vpn)
 class IPVPN(Label):
-    def __init__(self, afi, safi, action=Action.UNSET):
+    def __init__(self, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
         Label.__init__(self, afi, safi, action)
         self.rd = RouteDistinguisher.NORD
 
-    def feedback(self, action):
+    def feedback(self, action: Action) -> str:
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'ip-vpn nlri next-hop missing'
         return ''
 
     @classmethod
-    def new(cls, afi, safi, packed, mask, labels, rd, nexthop=None, action=Action.UNSET):
+    def new(
+        cls,
+        afi: AFI,
+        safi: SAFI,
+        packed: bytes,
+        mask: int,
+        labels: Labels,
+        rd: RouteDistinguisher,
+        nexthop: Optional[str] = None,
+        action: Action = Action.UNSET,
+    ) -> IPVPN:
         instance = cls(afi, safi, action)
         instance.cidr = CIDR(packed, mask)
         instance.labels = labels
@@ -49,42 +62,42 @@ class IPVPN(Label):
         instance.action = action
         return instance
 
-    def extensive(self):
+    def extensive(self) -> str:
         return '{}{}'.format(Label.extensive(self), str(self.rd))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.extensive()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.extensive()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return Label.__len__(self) + len(self.rd)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return Label.__eq__(self, other) and self.rd == other.rd and Label.__eq__(self, other)
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.pack())
 
     @classmethod
-    def has_rd(cls):
+    def has_rd(cls) -> bool:
         return True
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> bytes:
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
         mask = bytes([len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask])
         return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 
-    def index(self, negotiated=None):
+    def index(self, negotiated: Any = None) -> bytes:
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
         mask = bytes([len(self.rd) * 8 + self.cidr.mask])
         return Family.index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()
 
-    def _internal(self, announced=True):
+    def _internal(self, announced: bool = True) -> List[str]:
         r = Label._internal(self, announced)
         if announced and self.rd:
             r.append(self.rd.json())

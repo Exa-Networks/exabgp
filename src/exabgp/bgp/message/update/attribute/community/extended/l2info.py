@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Optional
+
 from struct import pack
 from struct import unpack
 
@@ -19,24 +21,24 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 @ExtendedCommunity.register
 class L2Info(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x80
-    COMMUNITY_SUBTYPE = 0x0A
+    COMMUNITY_TYPE: ClassVar[int] = 0x80
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x0A
 
-    def __init__(self, encaps, control, mtu, reserved, community=None):
-        self.encaps = encaps
-        self.control = control
-        self.mtu = mtu
-        self.reserved = reserved
+    def __init__(self, encaps: int, control: int, mtu: int, reserved: int, community: Optional[bytes] = None) -> None:
+        self.encaps: int = encaps
+        self.control: int = control
+        self.mtu: int = mtu
+        self.reserved: int = reserved
         # reserved is called preference in draft-ietf-l2vpn-vpls-multihoming-07
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sBBHH', self._subtype(), encaps, control, mtu, reserved),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'l2info:{}:{}:{}:{}'.format(self.encaps, self.control, self.mtu, self.reserved)
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> L2Info:
         encaps, control, mtu, reserved = unpack('!BBHH', data[2:8])
         return L2Info(encaps, control, mtu, reserved, data[:8])

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import socket
 
+from typing import ClassVar, Dict, Optional
+
 from struct import pack
 from struct import unpack
 
@@ -26,22 +28,22 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 @ExtendedCommunity.register
 class TrafficRate(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x80
-    COMMUNITY_SUBTYPE = 0x06
+    COMMUNITY_TYPE: ClassVar[int] = 0x80
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x06
 
-    def __init__(self, asn, rate, community=None):
-        self.asn = asn
-        self.rate = rate
+    def __init__(self, asn: ASN, rate: float, community: Optional[bytes] = None) -> None:
+        self.asn: ASN = asn
+        self.rate: float = rate
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sHf', self._subtype(), asn, rate),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'rate-limit:%d' % self.rate
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> TrafficRate:
         asn, rate = unpack('!Hf', data[2:8])
         return TrafficRate(ASN(asn), rate, data[:8])
 
@@ -52,29 +54,29 @@ class TrafficRate(ExtendedCommunity):
 
 @ExtendedCommunity.register
 class TrafficAction(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x80
-    COMMUNITY_SUBTYPE = 0x07
+    COMMUNITY_TYPE: ClassVar[int] = 0x80
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x07
 
-    _sample = {
+    _sample: ClassVar[Dict[bool, int]] = {
         False: 0x0,
         True: 0x2,
     }
 
-    _terminal = {
+    _terminal: ClassVar[Dict[bool, int]] = {
         False: 0x0,
         True: 0x1,
     }
 
-    def __init__(self, sample, terminal, community=None):
-        self.sample = sample
-        self.terminal = terminal
+    def __init__(self, sample: bool, terminal: bool, community: Optional[bytes] = None) -> None:
+        self.sample: bool = sample
+        self.terminal: bool = terminal
         bitmask = self._sample[sample] | self._terminal[terminal]
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sLBB', self._subtype(), 0, 0, bitmask),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = []
         if self.sample:
             s.append('sample')
@@ -83,7 +85,7 @@ class TrafficAction(ExtendedCommunity):
         return 'action {}'.format('-'.join(s))
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> TrafficAction:
         (bit,) = unpack('!B', data[7:8])
         sample = bool(bit & 0x02)
         terminal = bool(bit & 0x01)
@@ -96,44 +98,44 @@ class TrafficAction(ExtendedCommunity):
 
 @ExtendedCommunity.register
 class TrafficRedirect(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x80
-    COMMUNITY_SUBTYPE = 0x08
+    COMMUNITY_TYPE: ClassVar[int] = 0x80
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x08
 
-    def __init__(self, asn, target, community=None):
-        self.asn = asn
-        self.target = target
+    def __init__(self, asn: ASN, target: int, community: Optional[bytes] = None) -> None:
+        self.asn: ASN = asn
+        self.target: int = target
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sHL', self._subtype(), asn, target),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'redirect:{}:{}'.format(self.asn, self.target)
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> TrafficRedirect:
         asn, target = unpack('!HL', data[2:8])
         return TrafficRedirect(ASN(asn), target, data[:8])
 
 
 @ExtendedCommunity.register
 class TrafficRedirectASN4(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x82
-    COMMUNITY_SUBTYPE = 0x08
+    COMMUNITY_TYPE: ClassVar[int] = 0x82
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x08
 
-    def __init__(self, asn, target, community=None):
-        self.asn = asn
-        self.target = target
+    def __init__(self, asn: ASN4, target: int, community: Optional[bytes] = None) -> None:
+        self.asn: ASN4 = asn
+        self.target: int = target
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sLH', self._subtype(), asn, target),
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'redirect:{}:{}'.format(self.asn, self.target)
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> TrafficRedirectASN4:
         asn, target = unpack('!LH', data[2:8])
         return TrafficRedirectASN4(ASN4(asn), target, data[:8])
 
@@ -144,21 +146,21 @@ class TrafficRedirectASN4(ExtendedCommunity):
 
 @ExtendedCommunity.register
 class TrafficMark(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x80
-    COMMUNITY_SUBTYPE = 0x09
+    COMMUNITY_TYPE: ClassVar[int] = 0x80
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x09
 
-    def __init__(self, dscp, community=None):
-        self.dscp = dscp
+    def __init__(self, dscp: int, community: Optional[bytes] = None) -> None:
+        self.dscp: int = dscp
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sLBB', self._subtype(), 0, 0, dscp),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'mark %d' % self.dscp
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> TrafficMark:
         (dscp,) = unpack('!B', data[7:8])
         return TrafficMark(dscp, data[:8])
 
@@ -170,18 +172,18 @@ class TrafficMark(ExtendedCommunity):
 
 @ExtendedCommunity.register
 class TrafficNextHopIPv4IETF(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x01
-    COMMUNITY_SUBTYPE = 0x0C
+    COMMUNITY_TYPE: ClassVar[int] = 0x01
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
-    def __init__(self, ip, copy, community=None):
-        self.ip = ip
-        self.copy = copy
+    def __init__(self, ip: IPv4, copy: bool, community: Optional[bytes] = None) -> None:
+        self.ip: IPv4 = ip
+        self.copy: bool = copy
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2s4sH', self._subtype(), ip.pack(), 1 if copy else 0),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             'copy-to-nexthop-ietf {} (with copy)'.format(self.ip)
             if self.copy
@@ -189,7 +191,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
         )
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> TrafficNextHopIPv4IETF:
         ip, bit = unpack('!4sH', data[2:8])
         return TrafficNextHopIPv4IETF(IPv4.ntop(ip), bool(bit & 0x01), data[:8])
 
@@ -201,18 +203,18 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
 
 @ExtendedCommunityIPv6.register
 class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
-    COMMUNITY_TYPE = 0x00
-    COMMUNITY_SUBTYPE = 0x0C
+    COMMUNITY_TYPE: ClassVar[int] = 0x00
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
-    def __init__(self, ip, copy, community=None):
-        self.ip = ip
-        self.copy = copy
+    def __init__(self, ip: IPv6, copy: bool, community: Optional[bytes] = None) -> None:
+        self.ip: IPv6 = ip
+        self.copy: bool = copy
         ExtendedCommunityIPv6.__init__(
             self,
             community if community is not None else pack('!2s16sH', self._subtype(), ip.pack(), 1 if copy else 0),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             'copy-to-nexthop-ietf {} (with copy)'.format(self.ip)
             if self.copy
@@ -220,7 +222,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
         )
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> TrafficNextHopIPv6IETF:
         ip, bit = unpack('!16sH', data[2:20])
         return TrafficNextHopIPv6IETF(IPv6.ntop(ip), bool(bit & 0x01), data[:20])
 
@@ -233,21 +235,21 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
 
 @ExtendedCommunity.register
 class TrafficNextHopSimpson(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x08
-    COMMUNITY_SUBTYPE = 0x00
+    COMMUNITY_TYPE: ClassVar[int] = 0x08
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
 
-    def __init__(self, copy, community=None):
-        self.copy = copy
+    def __init__(self, copy: bool, community: Optional[bytes] = None) -> None:
+        self.copy: bool = copy
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sLH', self._subtype(), 0, 1 if copy else 0),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'copy-to-nexthop' if self.copy else 'redirect-to-nexthop'
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> TrafficNextHopSimpson:
         (bit,) = unpack('!B', data[7:8])
         return TrafficNextHopSimpson(bool(bit & 0x01), data[:8])
 
@@ -258,12 +260,12 @@ class TrafficNextHopSimpson(ExtendedCommunity):
 
 @ExtendedCommunityIPv6.register
 class TrafficRedirectIPv6(ExtendedCommunityIPv6):
-    COMMUNITY_TYPE = 0x80
-    COMMUNITY_SUBTYPE = 0x0B
+    COMMUNITY_TYPE: ClassVar[int] = 0x80
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x0B
 
-    def __init__(self, ip, asn, community=None):
-        self.ip = ip
-        self.asn = asn
+    def __init__(self, ip: str, asn: int, community: Optional[bytes] = None) -> None:
+        self.ip: str = ip
+        self.asn: int = asn
         ExtendedCommunityIPv6.__init__(
             self,
             (
@@ -273,11 +275,11 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
             ),
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'redirect %s:%d' % (self.ip, self.asn)
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> TrafficRedirectIPv6:
         ip, asn = unpack('!16sH', data[2:11])
         return TrafficRedirectIPv6(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:11])
 

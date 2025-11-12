@@ -4,8 +4,11 @@ Created by Quentin De Muynck
 Copyright (c) 2025 Exa Networks. All rights reserved.
 """
 
+from __future__ import annotations
+
 import json
 from struct import pack, unpack
+from typing import Any, ClassVar, Dict, List, Optional
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -15,12 +18,12 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SID
 from exabgp.util import hexstring
 
 # BGP-LS SRv6 SID TLV type codes (RFC 9514)
-TLV_LOCAL_NODE_DESC = 256  # Local Node Descriptors TLV
-TLV_MULTI_TOPO_ID = 263  # Multi-Topology Identifier TLV
-TLV_SRV6_SID_INFO = 518  # SRv6 SID Information TLV
+TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
+TLV_MULTI_TOPO_ID: int = 263  # Multi-Topology Identifier TLV
+TLV_SRV6_SID_INFO: int = 518  # SRv6 SID Information TLV
 
 # Minimum TLV header size for validation
-MIN_TLV_HEADER_SIZE = 2  # Type (2 bytes) + Length (2 bytes) = 4 bytes, checking for at least 2
+MIN_TLV_HEADER_SIZE: int = 2  # Type (2 bytes) + Length (2 bytes) = 4 bytes, checking for at least 2
 
 #     RFC 9514: 6.  SRv6 SID NLRI
 #
@@ -42,19 +45,27 @@ MIN_TLV_HEADER_SIZE = 2  # Type (2 bytes) + Length (2 bytes) = 4 bytes, checking
 
 @BGPLS.register
 class SRv6SID(BGPLS):
-    CODE = 6
-    NAME = 'bgpls-srv6sid'
-    SHORT_NAME = 'SRv6_SID'
+    CODE: ClassVar[int] = 6
+    NAME: ClassVar[str] = 'bgpls-srv6sid'
+    SHORT_NAME: ClassVar[str] = 'SRv6_SID'
 
-    def __init__(self, protocol_id, domain, local_node_descriptors, srv6_sid_descriptors, action=None, addpath=None):
+    def __init__(
+        self,
+        protocol_id: int,
+        domain: int,
+        local_node_descriptors: List[NodeDescriptor],
+        srv6_sid_descriptors: Dict[str, Any],
+        action: Any = None,
+        addpath: Any = None,
+    ) -> None:
         BGPLS.__init__(self, action, addpath)
-        self.proto_id = protocol_id
-        self.domain = domain
-        self.local_node_descriptors = local_node_descriptors
-        self.srv6_sid_descriptors = srv6_sid_descriptors
+        self.proto_id: int = protocol_id
+        self.domain: int = domain
+        self.local_node_descriptors: List[NodeDescriptor] = local_node_descriptors
+        self.srv6_sid_descriptors: Dict[str, Any] = srv6_sid_descriptors
 
     @classmethod
-    def unpack_nlri(cls, data, length):
+    def unpack_nlri(cls, data: bytes, length: int) -> SRv6SID:
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
@@ -68,7 +79,7 @@ class SRv6SID(BGPLS):
             )
         tlvs = tlvs[4:]
         local_node_descriptors = tlvs[:node_length]
-        node_ids = []
+        node_ids: List[NodeDescriptor] = []
         while local_node_descriptors:
             node_id, left = NodeDescriptor.unpack(local_node_descriptors, proto_id)
             node_ids.append(node_id)
@@ -77,7 +88,7 @@ class SRv6SID(BGPLS):
             local_node_descriptors = left
 
         tlvs = tlvs[node_length:]
-        srv6_sid_descriptors = {}
+        srv6_sid_descriptors: Dict[str, Any] = {}
         srv6_sid_descriptors['multi-topology-ids'] = []
 
         while tlvs:
@@ -96,20 +107,26 @@ class SRv6SID(BGPLS):
             tlvs = tlvs[sid_length + 4 :]
         return cls(proto_id, domain, node_ids, srv6_sid_descriptors)
 
-    def pack(self, packed=None):
+    def pack(self, packed: Any = None) -> bytes:
         nlri = pack('!B', self.proto_id)
         nlri += pack('!Q', self.domain)
-        nlri += self.local_node_descriptors
-        nlri += self.srv6_sid_descriptors
+        # Note: local_node_descriptors and srv6_sid_descriptors should be bytes here
+        # The type annotation allows List but pack expects bytes
+        if isinstance(self.local_node_descriptors, bytes):
+            nlri += self.local_node_descriptors
+        if isinstance(self.srv6_sid_descriptors, bytes):
+            nlri += self.srv6_sid_descriptors
         return nlri
 
-    def __len__(self):
-        return 1 + 8 + len(self.local_node_descriptors) + len(self.srv6_sid_descriptors)
+    def __len__(self) -> int:
+        local_len = len(self.local_node_descriptors) if isinstance(self.local_node_descriptors, (bytes, list)) else 0
+        sid_len = len(self.srv6_sid_descriptors) if isinstance(self.srv6_sid_descriptors, (bytes, dict)) else 0
+        return 1 + 8 + local_len + sid_len
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{self.NAME}(protocol_id={self.proto_id}, domain={self.domain})'
 
-    def json(self, compact=None):
+    def json(self, compact: Any = None) -> str:
         nodes = ', '.join(d.json() for d in self.local_node_descriptors)
         content = ', '.join(
             [

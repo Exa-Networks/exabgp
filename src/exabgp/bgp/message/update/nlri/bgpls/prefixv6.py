@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
+from typing import Any, ClassVar, List, Optional
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
@@ -18,9 +19,9 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.logger import log
 
 # BGP-LS Prefix TLV type codes (RFC 7752)
-TLV_LOCAL_NODE_DESC = 256  # Local Node Descriptors TLV
-TLV_OSPF_ROUTE_TYPE = 264  # OSPF Route Type TLV
-TLV_IP_REACHABILITY = 265  # IP Reachability Information TLV
+TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
+TLV_OSPF_ROUTE_TYPE: int = 264  # OSPF Route Type TLV
+TLV_IP_REACHABILITY: int = 265  # IP Reachability Information TLV
 
 #   The IPv4 and IPv6 Prefix NLRIs (NLRI Type = 3 and Type = 4) use the
 #   same format, as shown in the following figure.
@@ -41,38 +42,38 @@ TLV_IP_REACHABILITY = 265  # IP Reachability Information TLV
 
 @BGPLS.register
 class PREFIXv6(BGPLS):
-    CODE = 4
-    NAME = 'bgpls-prefix-v6'
-    SHORT_NAME = 'PREFIX_V6'
+    CODE: ClassVar[int] = 4
+    NAME: ClassVar[str] = 'bgpls-prefix-v6'
+    SHORT_NAME: ClassVar[str] = 'PREFIX_V6'
 
     def __init__(
         self,
-        domain,
-        proto_id,
-        local_node,
-        packed=None,
-        ospf_type=None,
-        prefix=None,
-        nexthop=None,
-        route_d=None,
-        action=None,
-        addpath=None,
-    ):
+        domain: int,
+        proto_id: int,
+        local_node: List[NodeDescriptor],
+        packed: Optional[bytes] = None,
+        ospf_type: Optional[OspfRoute] = None,
+        prefix: Optional[IpReach] = None,
+        nexthop: Any = None,
+        route_d: Any = None,
+        action: Any = None,
+        addpath: Any = None,
+    ) -> None:
         BGPLS.__init__(self, action, addpath)
-        self.domain = domain
-        self.ospf_type = ospf_type
-        self.proto_id = proto_id
-        self.local_node = local_node
-        self.prefix = prefix
-        self.nexthop = nexthop
-        self._pack = packed
-        self.route_d = route_d
+        self.domain: int = domain
+        self.ospf_type: Optional[OspfRoute] = ospf_type
+        self.proto_id: int = proto_id
+        self.local_node: List[NodeDescriptor] = local_node
+        self.prefix: Optional[IpReach] = prefix
+        self.nexthop: Any = nexthop
+        self._pack: Optional[bytes] = packed
+        self.route_d: Any = route_d
 
     @classmethod
-    def unpack_nlri(cls, data, rd):
-        ospf_type = None
-        local_node = []
-        prefix = None
+    def unpack_nlri(cls, data: bytes, rd: Any) -> PREFIXv6:
+        ospf_type: Optional[OspfRoute] = None
+        local_node: List[NodeDescriptor] = []
+        prefix: Optional[IpReach] = None
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
@@ -116,7 +117,7 @@ class PREFIXv6(BGPLS):
             route_d=rd,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, PREFIXv6)
             and self.CODE == other.CODE
@@ -125,16 +126,16 @@ class PREFIXv6(BGPLS):
             and self.route_d == other.route_d
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.json()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.CODE, self.domain, self.proto_id, self.route_d))
 
-    def json(self, compact=None):
+    def json(self, compact: Any = None) -> str:
         nodes = ', '.join(d.json() for d in self.local_node)
         content = ', '.join(
             [
@@ -154,5 +155,5 @@ class PREFIXv6(BGPLS):
 
         return f'{{ {content} }}'
 
-    def pack(self, negotiated=None):
+    def pack(self, negotiated: Any = None) -> Optional[bytes]:
         return self._pack

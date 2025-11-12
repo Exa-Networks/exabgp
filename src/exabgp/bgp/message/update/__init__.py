@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
+from typing import Any, ClassVar, Dict, Generator, Optional, Tuple, Union
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
@@ -66,24 +67,24 @@ EOR_WITH_PREFIX_LENGTH = 11  # Length of EOR with NLRI prefix
 class Update(Message):
     ID = Message.CODE.UPDATE
     TYPE = bytes([Message.CODE.UPDATE])
-    EOR = False
+    EOR: ClassVar[bool] = False
 
-    def __init__(self, nlris, attributes):
-        self.nlris = nlris
-        self.attributes = attributes
+    def __init__(self, nlris: list[NLRI], attributes: Attributes) -> None:
+        self.nlris: list[NLRI] = nlris
+        self.attributes: Attributes = attributes
 
     # message not implemented we should use messages below.
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '\n'.join(['{}{}'.format(str(self.nlris[n]), str(self.attributes)) for n in range(len(self.nlris))])
 
     @staticmethod
-    def prefix(data):
+    def prefix(data: bytes) -> bytes:
         # This function needs renaming
         return pack('!H', len(data)) + data
 
     @staticmethod
-    def split(data):
+    def split(data: bytes) -> Tuple[bytes, bytes, bytes]:
         length = len(data)
 
         len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
@@ -117,7 +118,7 @@ class Update(Message):
     # XXX: FIXME: calculate size progressively to not have to do it every time
     # XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
     # XXX: FIXME: are emptied and therefore when we can save calculations
-    def messages(self, negotiated, include_withdraw=True):
+    def messages(self, negotiated: Any, include_withdraw: bool = True) -> Generator[bytes, None, None]:
         # sort the nlris
 
         nlris = []
@@ -263,7 +264,7 @@ class Update(Message):
 
     # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
     @classmethod
-    def unpack_message(cls, data, direction, negotiated):
+    def unpack_message(cls, data: bytes, direction: int, negotiated: Any) -> Union[Update, EOR]:
         log.debug(lazyformat('parsing UPDATE', data), 'parser')
 
         length = len(data)

@@ -6,6 +6,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, Optional, Union
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
@@ -43,38 +44,38 @@ from struct import pack
 
 @MUP.register
 class Type1SessionTransformedRoute(MUP):
-    ARCHTYPE = 1
-    CODE = 3
-    NAME = 'Type1SessionTransformedRoute'
-    SHORT_NAME = 'T1ST'
+    ARCHTYPE: ClassVar[int] = 1
+    CODE: ClassVar[int] = 3
+    NAME: ClassVar[str] = 'Type1SessionTransformedRoute'
+    SHORT_NAME: ClassVar[str] = 'T1ST'
 
     def __init__(
         self,
-        rd,
-        prefix_ip_len,
-        prefix_ip,
-        teid,
-        qfi,
-        endpoint_ip_len,
-        endpoint_ip,
-        source_ip_len,
-        source_ip,
-        afi,
-        packed=None,
-    ):
+        rd: RouteDistinguisher,
+        prefix_ip_len: int,
+        prefix_ip: IP,
+        teid: int,
+        qfi: int,
+        endpoint_ip_len: int,
+        endpoint_ip: IP,
+        source_ip_len: int,
+        source_ip: Union[IP, bytes],
+        afi: AFI,
+        packed: Optional[bytes] = None,
+    ) -> None:
         MUP.__init__(self, afi)
-        self.rd = rd
-        self.prefix_ip_len = prefix_ip_len
-        self.prefix_ip = prefix_ip
-        self.teid = teid
-        self.qfi = qfi
-        self.endpoint_ip_len = endpoint_ip_len
-        self.endpoint_ip = endpoint_ip
-        self.source_ip_len = source_ip_len
-        self.source_ip = source_ip
+        self.rd: RouteDistinguisher = rd
+        self.prefix_ip_len: int = prefix_ip_len
+        self.prefix_ip: IP = prefix_ip
+        self.teid: int = teid
+        self.qfi: int = qfi
+        self.endpoint_ip_len: int = endpoint_ip_len
+        self.endpoint_ip: IP = endpoint_ip
+        self.source_ip_len: int = source_ip_len
+        self.source_ip: Union[IP, bytes] = source_ip
         self._pack(packed)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, Type1SessionTransformedRoute)
             # and self.ARCHTYPE == other.ARCHTYPE
@@ -90,10 +91,10 @@ class Type1SessionTransformedRoute(MUP):
             and self.source_ip == other.source_ip
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = '{}:{}:{}{}:{}:{}:{}{}'.format(
             self._prefix(),
             self.rd._str(),
@@ -110,15 +111,15 @@ class Type1SessionTransformedRoute(MUP):
 
         return s
 
-    def pack_index(self):
+    def pack_index(self) -> bytes:
         # removed teid, qfi, endpointip
         packed = self.rd.pack() + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack()
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(packed)) + packed
 
-    def index(self):
+    def index(self) -> bytes:
         return Family.index(self) + self.pack_index()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(
             (
                 self.rd,
@@ -133,7 +134,7 @@ class Type1SessionTransformedRoute(MUP):
             ),
         )
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -159,13 +160,14 @@ class Type1SessionTransformedRoute(MUP):
         )
 
         if self.source_ip_len != 0:
-            self._packed += pack('!B', self.source_ip_len) + self.source_ip.pack()
+            source_ip_packed = self.source_ip.pack() if isinstance(self.source_ip, IP) else self.source_ip
+            self._packed += pack('!B', self.source_ip_len) + source_ip_packed
 
         # fmt: on
         return self._packed
 
     @classmethod
-    def unpack(cls, data, afi):
+    def unpack(cls, data: bytes, afi: AFI) -> Type1SessionTransformedRoute:
         datasize = len(data)
         rd = RouteDistinguisher.unpack(data[:8])
         prefix_ip_len = data[8]
@@ -200,7 +202,7 @@ class Type1SessionTransformedRoute(MUP):
         source_ip_size = datasize - size
 
         source_ip_len = 0
-        source_ip = b''
+        source_ip: Union[IP, bytes] = b''
 
         if source_ip_size > 0:
             source_ip_len = data[size]
@@ -213,7 +215,7 @@ class Type1SessionTransformedRoute(MUP):
 
         return cls(rd, prefix_ip_len, prefix_ip, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[Any] = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE

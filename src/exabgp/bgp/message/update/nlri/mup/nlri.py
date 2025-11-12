@@ -7,6 +7,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 from __future__ import annotations
 
 from struct import pack
+from typing import Any, ClassVar, Dict, Optional, Type
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import Action
@@ -28,47 +29,47 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 @NLRI.register(AFI.ipv4, SAFI.mup)
 @NLRI.register(AFI.ipv6, SAFI.mup)
 class MUP(NLRI):
-    registered = dict()
+    registered: ClassVar[Dict[str, Type[MUP]]] = dict()
 
     # NEED to be defined in the subclasses
-    ARCHTYPE = 0
-    CODE = 0
-    NAME = 'Unknown'
-    SHORT_NAME = 'unknown'
+    ARCHTYPE: ClassVar[int] = 0
+    CODE: ClassVar[int] = 0
+    NAME: ClassVar[str] = 'Unknown'
+    SHORT_NAME: ClassVar[str] = 'unknown'
 
-    def __init__(self, afi, action=Action.ANNOUNCE):
+    def __init__(self, afi: AFI, action: Action = Action.ANNOUNCE) -> None:
         NLRI.__init__(self, afi, SAFI.mup, action)
-        self._packed = b''
+        self._packed: bytes = b''
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash('{}:{}:{}:{}:{}'.format(self.afi, self.safi, self.ARCHTYPE, self.CODE, self._packed))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._packed) + 2
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'mup:{}:{}'.format(
             self.registered.get(self.CODE, self).SHORT_NAME.lower(),
             '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
-    def feedback(self, action):
+    def feedback(self, action: Action) -> str:
         return ''
 
-    def _prefix(self):
+    def _prefix(self) -> str:
         return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())
 
-    def pack_nlri(self, negotiated=None):
+    def pack_nlri(self, negotiated: Any = None) -> bytes:
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
     @classmethod
-    def register(cls, klass):
+    def register(cls, klass: Type[MUP]) -> Type[MUP]:
         key = '{}:{}'.format(klass.ARCHTYPE, klass.CODE)
         if key in cls.registered:
             raise RuntimeError('only one Mup registration allowed')
@@ -76,7 +77,7 @@ class MUP(NLRI):
         return klass
 
     @classmethod
-    def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> tuple[MUP, bytes]:
         arch = bgp[0]
         code = int.from_bytes(bgp[1:3], 'big')
         length = bgp[3]
@@ -94,18 +95,18 @@ class MUP(NLRI):
 
         return klass, bgp[end:]
 
-    def _raw(self):
+    def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self.pack_nlri())
 
 
 class GenericMUP(MUP):
-    def __init__(self, afi, arch, code, packed):
+    def __init__(self, afi: AFI, arch: int, code: int, packed: bytes) -> None:
         MUP.__init__(self, afi)
         self.ARCHTYPE = arch
         self.CODE = code
         self._pack(packed)
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -113,5 +114,7 @@ class GenericMUP(MUP):
             self._packed = packed
             return packed
 
-    def json(self, compact=None):
+        return b''
+
+    def json(self, compact: Optional[Any] = None) -> str:
         return '{ "arch": %d, "code": %d, "raw": "%s" }' % (self.ARCHTYPE, self.CODE, self._raw())

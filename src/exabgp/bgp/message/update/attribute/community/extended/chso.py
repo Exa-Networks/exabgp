@@ -5,6 +5,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar, Optional
+
 from struct import pack
 from struct import unpack
 
@@ -15,23 +17,23 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 @ExtendedCommunity.register
 class ConsistentHashSortOrder(ExtendedCommunity):
-    COMMUNITY_TYPE = 0x03
-    COMMUNITY_SUBTYPE = 0x14
-    DESCRIPTION = 'consistentHashSortOrder'
+    COMMUNITY_TYPE: ClassVar[int] = 0x03
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x14
+    DESCRIPTION: ClassVar[str] = 'consistentHashSortOrder'
 
-    def __init__(self, order, reserved=0, community=None):
-        self.order = order
-        self.reserved = reserved
+    def __init__(self, order: int, reserved: int = 0, community: Optional[bytes] = None) -> None:
+        self.order: int = order
+        self.reserved: int = reserved
 
         ExtendedCommunity.__init__(
             self,
             community if community is not None else pack('!2sIH', self._subtype(), order, reserved),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%s:%d' % (self.DESCRIPTION, self.order)
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> ConsistentHashSortOrder:
         order, reserved = unpack('!IH', data[2:8])
         return ConsistentHashSortOrder(order, reserved, data[:8])

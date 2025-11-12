@@ -6,6 +6,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, Optional
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
@@ -32,32 +33,32 @@ from struct import pack
 # +-----------------------------------+
 
 # MUP Type 2 Session Transformed Route constants
-MUP_T2ST_IPV4_SIZE_BITS = 32  # IPv4 address size in bits
-MUP_T2ST_IPV6_SIZE_BITS = 128  # IPv6 address size in bits
-MUP_T2ST_TEID_MAX_SIZE = 32  # Maximum TEID size in bits
-MUP_T2ST_IPV4_MAX_ENDPOINT = 64  # Max endpoint length for IPv4 (32 IP + 32 TEID)
-MUP_T2ST_IPV6_MAX_ENDPOINT = 160  # Max endpoint length for IPv6 (128 IP + 32 TEID)
+MUP_T2ST_IPV4_SIZE_BITS: int = 32  # IPv4 address size in bits
+MUP_T2ST_IPV6_SIZE_BITS: int = 128  # IPv6 address size in bits
+MUP_T2ST_TEID_MAX_SIZE: int = 32  # Maximum TEID size in bits
+MUP_T2ST_IPV4_MAX_ENDPOINT: int = 64  # Max endpoint length for IPv4 (32 IP + 32 TEID)
+MUP_T2ST_IPV6_MAX_ENDPOINT: int = 160  # Max endpoint length for IPv6 (128 IP + 32 TEID)
 
 
 @MUP.register
 class Type2SessionTransformedRoute(MUP):
-    ARCHTYPE = 1
-    CODE = 4
-    NAME = 'Type2SessionTransformedRoute'
-    SHORT_NAME = 'T2ST'
+    ARCHTYPE: ClassVar[int] = 1
+    CODE: ClassVar[int] = 4
+    NAME: ClassVar[str] = 'Type2SessionTransformedRoute'
+    SHORT_NAME: ClassVar[str] = 'T2ST'
 
-    def __init__(self, rd, endpoint_len, endpoint_ip, teid, afi, packed=None):
+    def __init__(self, rd: RouteDistinguisher, endpoint_len: int, endpoint_ip: IP, teid: int, afi: AFI, packed: Optional[bytes] = None) -> None:
         MUP.__init__(self, afi)
-        self.rd = rd
-        self.endpoint_len = endpoint_len
-        self.endpoint_ip = endpoint_ip
-        self.teid = teid
+        self.rd: RouteDistinguisher = rd
+        self.endpoint_len: int = endpoint_len
+        self.endpoint_ip: IP = endpoint_ip
+        self.teid: int = teid
         self._pack(packed)
 
-    def index(self):
+    def index(self) -> bytes:
         return MUP.index(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, Type2SessionTransformedRoute)
             and self.rd == other.rd
@@ -66,10 +67,10 @@ class Type2SessionTransformedRoute(MUP):
             and self.endpoint_ip == other.endpoint_ip
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{}:{}:{}:{}:{}:'.format(
             self._prefix(),
             self.rd._str(),
@@ -78,7 +79,7 @@ class Type2SessionTransformedRoute(MUP):
             self.teid,
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(
             (
                 self.rd,
@@ -88,7 +89,7 @@ class Type2SessionTransformedRoute(MUP):
             ),
         )
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -125,7 +126,7 @@ class Type2SessionTransformedRoute(MUP):
         return self._packed
 
     @classmethod
-    def unpack(cls, data, afi):
+    def unpack(cls, data: bytes, afi: AFI) -> Type2SessionTransformedRoute:
         afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
         afi_bytes_size = 4 if afi == AFI.ipv4 else 16
         rd = RouteDistinguisher.unpack(data[:8])
@@ -149,7 +150,7 @@ class Type2SessionTransformedRoute(MUP):
 
         return cls(rd, endpoint_len, endpoint_ip, teid, afi)
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[Any] = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
         content += ' "arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE

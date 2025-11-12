@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, ClassVar, Optional
+
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
@@ -15,6 +17,7 @@ from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+from exabgp.bgp.message import Action
 
 from exabgp.bgp.message.notification import Notify
 
@@ -46,11 +49,24 @@ IPV6_ADDRESS_LEN_BITS = 128  # IPv6 address length in bits
 
 @EVPN.register
 class MAC(EVPN):
-    CODE = 2
-    NAME = 'MAC/IP advertisement'
-    SHORT_NAME = 'MACAdv'
+    CODE: ClassVar[int] = 2
+    NAME: ClassVar[str] = 'MAC/IP advertisement'
+    SHORT_NAME: ClassVar[str] = 'MACAdv'
 
-    def __init__(self, rd, esi, etag, mac, maclen, label, ip, packed=None, nexthop=None, action=None, addpath=None):
+    def __init__(
+        self,
+        rd: RouteDistinguisher,
+        esi: ESI,
+        etag: EthernetTag,
+        mac: MACQUAL,
+        maclen: int,
+        label: Optional[Labels],
+        ip: Optional[IP],
+        packed: Optional[bytes] = None,
+        nexthop: Any = None,
+        action: Optional[Action] = None,
+        addpath: Any = None,
+    ) -> None:
         EVPN.__init__(self, action, addpath)
         self.nexthop = nexthop
         self.rd = rd
@@ -63,10 +79,10 @@ class MAC(EVPN):
         self._pack(packed)
 
     # XXX: we have to ignore a part of the route
-    def index(self):
+    def index(self) -> str:
         return EVPN.index(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, MAC)
             and self.CODE == other.CODE
@@ -77,10 +93,10 @@ class MAC(EVPN):
         )
         # esi and label must not be part of the comparaison
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{}:{}:{}:{}:{}{}:{}:{}'.format(
             self._prefix(),
             self.rd._str(),
@@ -92,11 +108,11 @@ class MAC(EVPN):
             self.label,
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         # esi and label MUST *NOT* be part of the hash
         return hash((self.rd, self.etag, self.mac, self.ip))
 
-    def _pack(self, packed=None):
+    def _pack(self, packed: Optional[bytes] = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -119,7 +135,7 @@ class MAC(EVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> MAC:
         datalen = len(data)
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
@@ -171,7 +187,7 @@ class MAC(EVPN):
 
         return cls(rd, esi, etag, mac, maclength, label, ip, data)
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[bool] = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
+from typing import Any, ClassVar, Tuple, List, Optional
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
@@ -23,13 +24,13 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
 
 # INET NLRI label constants (RFC 3107)
-LABEL_SIZE_BITS = 24  # Each MPLS label is 24 bits (3 bytes)
-LABEL_WITHDRAW_VALUE = 0x800000  # Special label value for route withdrawal
-LABEL_NEXTHOP_VALUE = 0x000000  # Special label value indicating next-hop
-LABEL_BOTTOM_OF_STACK_BIT = 1  # Bottom of stack bit in label
+LABEL_SIZE_BITS: int = 24  # Each MPLS label is 24 bits (3 bytes)
+LABEL_WITHDRAW_VALUE: int = 0x800000  # Special label value for route withdrawal
+LABEL_NEXTHOP_VALUE: int = 0x000000  # Special label value indicating next-hop
+LABEL_BOTTOM_OF_STACK_BIT: int = 1  # Bottom of stack bit in label
 
 # AddPath path-info size
-PATH_INFO_SIZE = 4  # Path Identifier is 4 bytes (RFC 7911)
+PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
 
 
 @NLRI.register(AFI.ipv4, SAFI.unicast)
@@ -37,46 +38,46 @@ PATH_INFO_SIZE = 4  # Path Identifier is 4 bytes (RFC 7911)
 @NLRI.register(AFI.ipv4, SAFI.multicast)
 @NLRI.register(AFI.ipv6, SAFI.multicast)
 class INET(NLRI):
-    def __init__(self, afi, safi, action=Action.UNSET):
+    def __init__(self, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
         NLRI.__init__(self, afi, safi, action)
         self.path_info = PathInfo.NOPATH
         self.cidr = CIDR.NOCIDR
         self.nexthop = NoNextHop
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.cidr) + len(self.path_info)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.extensive()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.extensive()
 
-    def feedback(self, action):
+    def feedback(self, action: Action) -> str:
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'inet nlri next-hop missing'
         return ''
 
-    def pack_nlri(self, negotiated=None):
+    def pack_nlri(self, negotiated: Any = None) -> bytes:
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
         return addpath + self.cidr.pack_nlri()
 
-    def index(self):
+    def index(self) -> bytes:
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
         return Family.index(self) + addpath + self.cidr.pack_nlri()
 
-    def prefix(self):
+    def prefix(self) -> str:
         return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
 
-    def extensive(self):
+    def extensive(self) -> str:
         return '{}{}'.format(self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop {}'.format(self.nexthop))
 
-    def _internal(self, announced=True):
+    def _internal(self, announced: bool = True) -> List[str]:
         return [self.path_info.json()]
 
     # The announced feature is not used by ExaBGP, is it by BAGPIPE ?
 
-    def json(self, announced=True, compact=False):
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         internal = ', '.join([_ for _ in self._internal(announced) if _])
         if internal:
             return '{{ "nlri": "{}", {} }}'.format(self.cidr.prefix(), internal)
@@ -85,7 +86,7 @@ class INET(NLRI):
         return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
 
     @classmethod
-    def _pathinfo(cls, data, addpath):
+    def _pathinfo(cls, data: bytes, addpath: Any) -> Tuple[PathInfo, bytes]:
         if addpath:
             return PathInfo(data[:4]), data[4:]
         return PathInfo.NOPATH, data
@@ -98,7 +99,7 @@ class INET(NLRI):
     # 	return nlri,data
 
     @classmethod
-    def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> Tuple[INET, bytes]:
         nlri = cls(afi, safi, action)
 
         if addpath:
@@ -114,7 +115,7 @@ class INET(NLRI):
         rd_mask = rd_size * 8
 
         if safi.has_label():
-            labels = []
+            labels: List[int] = []
             while mask - rd_mask >= LABEL_SIZE_BITS:
                 label = int(unpack('!L', bytes([0]) + bgp[:3])[0])
                 bgp = bgp[3:]
