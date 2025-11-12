@@ -1,4 +1,3 @@
-
 """admingroup.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -21,6 +20,6 @@ class AdminGroup(BaseLS):
     LEN = 4
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> AdminGroup:
         cls.check(data)
         return cls(unpack('!L', data[:4])[0])

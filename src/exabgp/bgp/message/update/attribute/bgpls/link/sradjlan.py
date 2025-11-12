@@ -1,4 +1,3 @@
-
 """sradjlan.py
 
 Created by Evelio Vila
@@ -51,7 +50,7 @@ class SrAdjacencyLan(FlagLS):
         return f'sr-adj-lan-sids: {self.sr_adj_lan_sids}'
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> SrAdjacencyLan:
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         # Parse adj weight

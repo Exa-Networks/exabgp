@@ -65,7 +65,7 @@ class Srv6EndX(FlagLS):
         return register_subsubtlv
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> Srv6EndX:
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]

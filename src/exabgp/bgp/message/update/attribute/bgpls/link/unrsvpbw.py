@@ -1,4 +1,3 @@
-
 """nunrsvpbw.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -31,6 +30,6 @@ class UnRsvpBw(BaseLS):
     LEN = 32
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> UnRsvpBw:
         cls.check(data)
         return cls(unpack('!ffffffff', data))

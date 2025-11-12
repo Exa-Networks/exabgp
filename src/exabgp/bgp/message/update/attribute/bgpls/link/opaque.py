@@ -1,4 +1,3 @@
-
 """opaque.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -31,6 +30,6 @@ class LinkOpaque:
     REPR = 'opaque-link'
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> LinkOpaque:
         length = len(data)
         return cls(unpack('!%ds' % length, data)[0])

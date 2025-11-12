@@ -1,4 +1,3 @@
-
 """sradj.py
 
 Created by Evelio Vila
@@ -42,7 +41,7 @@ class SrAdjacency(FlagLS):
         return 'adj_flags: {}, sids: {}, undecoded_sid {}'.format(self.flags, self.sids, self.undecoded)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> SrAdjacency:
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         # Parse adj weight

@@ -1,4 +1,3 @@
-
 """srlg.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -37,7 +36,7 @@ class Srlg(BaseLS):
     JSON = 'shared-risk-link-groups'
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> Srlg:
         if len(data) % 4:
             raise Notify(3, 5, 'Unable to decode SRLG')
         return cls([unpack('!L', _)[0] for _ in split(data, 4)])
