@@ -6,6 +6,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import time
@@ -13,6 +15,8 @@ import signal
 import thread
 import subprocess
 from collections import deque
+
+from typing import Any, ClassVar, List
 
 from exabgp.reactor.api.transcoder import Transcoder
 from exabgp.reactor.api.processes import preexec_helper
@@ -34,15 +38,15 @@ from exabgp.reactor.api.processes import preexec_helper
 
 
 class Application:
-    Q = deque()
-    running = True
+    Q: ClassVar[deque[str]] = deque()
+    running: ClassVar[bool] = True
 
     @staticmethod
-    def _signal(_, __):
+    def _signal(_: int, __: Any) -> None:
         Application.running = False
 
-    def process(self):
-        run = sys.argv[1:]
+    def process(self) -> subprocess.Popen[bytes]:
+        run: List[str] = sys.argv[1:]
         if not run:
             sys.stderr.write('no consummer program provided\n')
             sys.exit(1)
@@ -52,7 +56,7 @@ class Application:
         os.environ['TERM'] = 'dumb'
 
         try:
-            sub = subprocess.Popen(
+            sub: subprocess.Popen[bytes] = subprocess.Popen(
                 run,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -66,7 +70,10 @@ class Application:
 
         return sub
 
-    def __init__(self):
+    sub: subprocess.Popen[bytes]
+    transcoder: Transcoder
+
+    def __init__(self) -> None:
         thread.start_new_thread(self.reader, (os.getpid(),))
         signal.signal(signal.SIGTERM, Application._signal)
         self.sub = self.process()
@@ -82,9 +89,9 @@ class Application:
     # 	time.sleep(2)
     # 	os.kill(myself,signal.SIGTERM)
 
-    def reader(self, myself):
-        ok = True
-        line = ''
+    def reader(self, myself: int) -> None:
+        ok: bool = True
+        line: str = ''
         while True:
             line = sys.stdin.readline().strip()
             if ok:
@@ -98,11 +105,12 @@ class Application:
             self.Q.append(line)
         os.kill(myself, signal.SIGTERM)
 
-    def main(self):
+    def main(self) -> None:
         while self.running or len(self.Q):
             try:
-                line = self.Q.popleft()
-                self.sub.stdin.write(self.transcoder.convert(line))
+                line: str = self.Q.popleft()
+                result: Any = self.transcoder.convert(line)
+                self.sub.stdin.write(result)
                 self.sub.stdin.flush()
             except IndexError:
                 # no data on the Q to read
