@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from typing import Any, Callable, ClassVar, Union
 
 from exabgp.logger.option import option
 from exabgp.logger.handler import get_logger  # noqa: F401,E261,E501
@@ -13,63 +14,66 @@ from exabgp.logger.format import lazynlri  # noqa: F401,E261,E501
 from exabgp.logger.history import history  # noqa: F401,E261,E501
 from exabgp.logger.history import record  # noqa: F401,E261,E501
 
+# Type for log messages - can be string or callable returning string
+LogMessage = Union[str, Callable[[], str]]
+
 
 class _log:
-    logger = None
+    logger: ClassVar[Any] = None
 
     @staticmethod
-    def init(env):
+    def init(env: Any) -> None:
         option.setup(env)
 
     @classmethod
-    def disable(cls):
-        def eat(cls, message, source='', level=''):
+    def disable(cls) -> None:
+        def eat(cls: Any, message: LogMessage, source: str = '', level: str = '') -> None:
             pass
 
-        cls.debug = eat
-        cls.info = eat
-        cls.warning = eat
-        cls.error = eat
-        cls.critical = eat
-        cls.fatal = eat
+        cls.debug = eat  # type: ignore[assignment]
+        cls.info = eat  # type: ignore[assignment]
+        cls.warning = eat  # type: ignore[assignment]
+        cls.error = eat  # type: ignore[assignment]
+        cls.critical = eat  # type: ignore[assignment]
+        cls.fatal = eat  # type: ignore[assignment]
 
     @classmethod
-    def silence(cls):
-        def eat(cls, message, source='', level=''):
+    def silence(cls) -> None:
+        def eat(cls: Any, message: LogMessage, source: str = '', level: str = '') -> None:
             pass
 
-        cls.debug = eat
-        cls.info = eat
-        cls.warning = eat
-        cls.error = eat
+        cls.debug = eat  # type: ignore[assignment]
+        cls.info = eat  # type: ignore[assignment]
+        cls.warning = eat  # type: ignore[assignment]
+        cls.error = eat  # type: ignore[assignment]
 
     @classmethod
-    def debug(cls, message, source='', level='DEBUG'):
-        cls.logger(option.logger.debug, message, source, level)
+    def debug(cls, message: LogMessage, source: str = '', level: str = 'DEBUG') -> None:
+        cls.logger(option.logger.debug, message, source, level)  # type: ignore[union-attr]
 
     @classmethod
-    def info(cls, message, source='', level='INFO'):
-        cls.logger(option.logger.info, message, source, level)
+    def info(cls, message: LogMessage, source: str = '', level: str = 'INFO') -> None:
+        cls.logger(option.logger.info, message, source, level)  # type: ignore[union-attr]
 
     @classmethod
-    def warning(cls, message, source='', level='WARNING'):
-        cls.logger(option.logger.warning, message, source, level)
+    def warning(cls, message: LogMessage, source: str = '', level: str = 'WARNING') -> None:
+        cls.logger(option.logger.warning, message, source, level)  # type: ignore[union-attr]
 
     @classmethod
-    def error(cls, message, source='', level='ERROR'):
-        cls.logger(option.logger.error, message, source, level)
+    def error(cls, message: LogMessage, source: str = '', level: str = 'ERROR') -> None:
+        cls.logger(option.logger.error, message, source, level)  # type: ignore[union-attr]
 
     @classmethod
-    def critical(cls, message, source='', level='CRITICAL'):
-        cls.logger(option.logger.critical, message, source, level)
+    def critical(cls, message: LogMessage, source: str = '', level: str = 'CRITICAL') -> None:
+        cls.logger(option.logger.critical, message, source, level)  # type: ignore[union-attr]
 
     @classmethod
-    def fatal(cls, message, source='', level='FATAL'):
-        cls.logger(option.logger.fatal, message, source, level)
+    def fatal(cls, message: LogMessage, source: str = '', level: str = 'FATAL') -> None:
+        cls.logger(option.logger.fatal, message, source, level)  # type: ignore[union-attr]
 
 
 class log(_log):
-    def logger(logger, message, source, level):
+    def logger(logger: Any, message: LogMessage, source: str, level: str) -> None:
         # DEVELOPER WARNING: Log messages must always be callable (lambda) for lazy evaluation
         if not callable(message):
             import sys
@@ -96,10 +100,14 @@ class log(_log):
             return
 
         # If message is callable, call it now
+        msg_str: str
         if callable(message):
-            message = message()
+            msg_str = message()
+        else:
+            msg_str = message
 
-        timestamp = time.localtime()
-        for line in message.split('\n'):
-            logger(option.formater(line, source, level, timestamp))
-            record(line, source, level, timestamp)
+        timestamp_struct = time.localtime()
+        timestamp_float = time.time()
+        for line in msg_str.split('\n'):
+            logger(option.formater(line, source, level, timestamp_struct))
+            record(line, source, level, timestamp_float)
