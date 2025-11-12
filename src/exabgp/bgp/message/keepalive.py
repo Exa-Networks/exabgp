@@ -1,4 +1,3 @@
-
 """keepalive.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -7,6 +6,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from exabgp.util import hexstring
 
@@ -22,14 +23,14 @@ class KeepAlive(Message):
     ID = Message.CODE.KEEPALIVE
     TYPE = bytes([Message.CODE.KEEPALIVE])
 
-    def message(self, negotiated=None):
+    def message(self, negotiated: Any = None) -> bytes:
         return self._message(b'')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'KEEPALIVE'
 
     @classmethod
-    def unpack_message(cls, data, direction, negotiated):  # pylint: disable=W0613
+    def unpack_message(cls, data: bytes, direction: int, negotiated: Any) -> KeepAlive:  # pylint: disable=W0613
         # This can not happen at decode time as we check the length of the KEEPALIVE message
         # But could happen when calling the function programmatically
         if data:
