@@ -7,30 +7,34 @@ Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from exabgp.protocol.family import AFI
+from typing import ClassVar, Dict, Union
+
+from exabgp.protocol.family import AFI, _AFI
 from exabgp.protocol.resource import Resource
 
 
 class NetMask(Resource):
-    NAME = 'netmask'
+    NAME: ClassVar[str] = 'netmask'
 
-    def size(self):
-        return pow(2, self.maximum - self)
+    maximum: int  # Set by create() - 32 for IPv4, 128 for IPv6
 
-    def andmask(self):
-        return pow(2, self.maximum) - 1
+    def size(self) -> int:
+        return int(pow(2, self.maximum - int(self)))
 
-    def hostmask(self):
-        return pow(2, self.maximum - self) - 1
+    def andmask(self) -> int:
+        return int(pow(2, self.maximum)) - 1
 
-    def networkmask(self):
+    def hostmask(self) -> int:
+        return int(pow(2, self.maximum - int(self))) - 1
+
+    def networkmask(self) -> int:
         return self.hostmask() ^ self.andmask()
 
-    def __str__(self):
+    def __str__(self) -> str:
         # return self.names.get(self,'%d' % int(self))
         return '%d' % int(self)
 
-    names = {
+    names: ClassVar[Dict[int, str]] = {
         32: '255.255.255.255',
         31: '255.255.255.254',
         30: '255.255.255.252',
@@ -66,24 +70,24 @@ class NetMask(Resource):
         0: '0.0.0.0',
     }
 
-    codes = dict([(inst, name) for (name, inst) in names.items()])
+    codes: ClassVar[Dict[str, int]] = dict([(inst, name) for (name, inst) in names.items()])
 
     @classmethod
-    def create(cls, string, afi):
+    def create(cls, string: Union[str, int], afi: _AFI) -> NetMask:
         if afi == AFI.ipv4:
-            if string is cls.codes:
-                klass = cls(cls.codes[string], 32)
+            if isinstance(string, str) and string in cls.codes:
+                klass = cls(cls.codes[string])
                 klass.maximum = 32
                 return klass
             maximum = 32
         elif afi == AFI.ipv6:
-            if string in cls.codes:
+            if isinstance(string, str) and string in cls.codes:
                 raise ValueError('IPv4 mask used with an IPv6 address')
             maximum = 128
         else:
             raise ValueError('invalid address family')
 
-        if not string.isdigit():
+        if not str(string).isdigit():
             raise ValueError('invalid netmask {}'.format(string))
 
         value = int(string)
