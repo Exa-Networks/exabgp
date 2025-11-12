@@ -12,6 +12,7 @@ import re
 import time
 import uuid
 import select
+from typing import Any, Dict, Generator, List, Optional, Set
 
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener
@@ -34,55 +35,55 @@ from exabgp.logger import log
 
 class Reactor:
     class Exit:
-        normal = 0
-        validate = 0
-        listening = 1
-        configuration = 1
-        privileges = 1
-        log = 1
-        pid = 1
-        socket = 1
-        io_error = 1
-        process = 1
-        select = 1
-        unknown = 1
+        normal: int = 0
+        validate: int = 0
+        listening: int = 1
+        configuration: int = 1
+        privileges: int = 1
+        log: int = 1
+        pid: int = 1
+        socket: int = 1
+        io_error: int = 1
+        process: int = 1
+        select: int = 1
+        unknown: int = 1
 
     # [hex(ord(c)) for c in os.popen('clear').read()]
-    clear = b''.join(bytes([int(c, 16)]) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
+    clear: bytes = b''.join(bytes([int(c, 16)]) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
-    def __init__(self, configuration):
-        self._ips = getenv().tcp.bind
-        self._port = getenv().tcp.port
-        self._stopping = getenv().tcp.attempts > 0
-        self.exit_code = self.Exit.unknown
+    def __init__(self, configuration: Any) -> None:
+        self._ips: List[Any] = getenv().tcp.bind
+        self._port: int = getenv().tcp.port
+        self._stopping: bool = getenv().tcp.attempts > 0
+        self.exit_code: int = self.Exit.unknown
 
-        self.max_loop_time = getenv().reactor.speed
-        self._sleep_time = self.max_loop_time / 100
-        self._busyspin = {}
-        self._ratelimit = {}
-        self.early_drop = getenv().daemon.drop
+        self.max_loop_time: float = getenv().reactor.speed
+        self._sleep_time: float = self.max_loop_time / 100
+        self._busyspin: Dict[int, int] = {}
+        self._ratelimit: Dict[str, Dict[int, int]] = {}
+        self.early_drop: bool = getenv().daemon.drop
 
-        self.processes = None
+        self.processes: Optional[Processes] = None
 
-        self.configuration = configuration
-        self.asynchronous = ASYNC()
-        self.signal = Signal()
-        self.daemon = Daemon(self)
-        self.listener = Listener(self)
-        self.api = API(self)
+        self.configuration: Any = configuration
+        self.asynchronous: ASYNC = ASYNC()
+        self.signal: Signal = Signal()
+        self.daemon: Daemon = Daemon(self)
+        self.listener: Listener = Listener(self)
+        self.api: API = API(self)
 
-        self._peers = {}
+        self._peers: Dict[str, Peer] = {}
 
-        self._saved_pid = False
-        self._poller = select.poll()
+        self._saved_pid: bool = False
+        self._poller: select.poll = select.poll()
 
-    def _termination(self, reason, exit_code):
+    def _termination(self, reason: str, exit_code: int) -> None:
         self.exit_code = exit_code
         self.signal.received = Signal.SHUTDOWN
         log.critical(lambda: reason, 'reactor')
 
-    def _prevent_spin(self):
-        second = int(time.time())
+    def _prevent_spin(self) -> bool:
+        second: int = int(time.time())
         if second not in self._busyspin:
             self._busyspin = {second: 0}
         self._busyspin[second] += 1
@@ -91,11 +92,11 @@ class Reactor:
             return True
         return False
 
-    def _rate_limited(self, peer, rate):
+    def _rate_limited(self, peer: str, rate: int) -> bool:
         if rate <= 0:
             return False
-        second = int(time.time())
-        ratelimit = self._ratelimit.get(peer, {})
+        second: int = int(time.time())
+        ratelimit: Dict[int, int] = self._ratelimit.get(peer, {})
         if second not in ratelimit:
             self._ratelimit[peer] = {second: rate - 1}
             return False
@@ -104,7 +105,7 @@ class Reactor:
             return False
         return True
 
-    def _wait_for_io(self, sleeptime):
+    def _wait_for_io(self, sleeptime: int) -> Generator[int, None, None]:
         spin_prevention = False
         try:
             for fd, event in self._poller.poll(sleeptime):
@@ -125,23 +126,23 @@ class Reactor:
 
     # peer related functions
 
-    def active_peers(self):
-        peers = set()
+    def active_peers(self) -> Set[str]:
+        peers: Set[str] = set()
         for key, peer in self._peers.items():
             if peer.neighbor['passive'] and not peer.proto:
                 continue
             peers.add(key)
         return peers
 
-    def established_peers(self):
-        peers = set()
+    def established_peers(self) -> Set[str]:
+        peers: Set[str] = set()
         for key, peer in self._peers.items():
             if peer.fsm == FSM.ESTABLISHED:
                 peers.add(key)
         return peers
 
-    def peers(self, service=''):
-        matching = []
+    def peers(self, service: str = '') -> List[str]:
+        matching: List[str] = []
         for peer_name, peer in self._peers.items():
             if service == '':
                 matching.append(peer_name)
@@ -158,68 +159,68 @@ class Reactor:
 
         return matching
 
-    def handle_connection(self, peer_name, connection):
-        peer = self._peers.get(peer_name, None)
+    def handle_connection(self, peer_name: str, connection: Any) -> None:
+        peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.handle_connection(connection)
 
-    def neighbor(self, peer_name):
-        peer = self._peers.get(peer_name, None)
+    def neighbor(self, peer_name: str) -> Optional[Any]:
+        peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return None
         return peer.neighbor
 
-    def neighbor_name(self, peer_name):
-        peer = self._peers.get(peer_name, None)
+    def neighbor_name(self, peer_name: str) -> str:
+        peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return ''
         return peer.neighbor.name()
 
-    def neighbor_ip(self, peer_name):
-        peer = self._peers.get(peer_name, None)
+    def neighbor_ip(self, peer_name: str) -> str:
+        peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return ''
         return str(peer.neighbor['peer-address'])
 
-    def neighbor_cli_data(self, peer_name):
-        peer = self._peers.get(peer_name, None)
+    def neighbor_cli_data(self, peer_name: str) -> Any:
+        peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return ''
         return peer.cli_data()
 
-    def neighor_rib(self, peer_name, rib_name, advertised=False):
-        peer = self._peers.get(peer_name, None)
+    def neighor_rib(self, peer_name: str, rib_name: str, advertised: bool = False) -> List[Any]:
+        peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return []
-        families = None
+        families: Optional[List[Any]] = None
         if advertised:
             families = peer.proto.negotiated.families if peer.proto else []
         rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming
         return list(rib.cached_changes(families))
 
-    def neighbor_rib_resend(self, peer_name):
-        peer = self._peers.get(peer_name, None)
+    def neighbor_rib_resend(self, peer_name: str) -> None:
+        peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.resend(peer.neighbor['capability']['route-refresh'])
 
-    def neighbor_rib_out_withdraw(self, peer_name):
-        peer = self._peers.get(peer_name, None)
+    def neighbor_rib_out_withdraw(self, peer_name: str) -> None:
+        peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.neighbor.rib.outgoing.withdraw()
 
-    def neighbor_rib_in_clear(self, peer_name):
-        peer = self._peers.get(peer_name, None)
+    def neighbor_rib_in_clear(self, peer_name: str) -> None:
+        peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
@@ -227,13 +228,13 @@ class Reactor:
 
     # ...
 
-    def _pending_adjribout(self):
+    def _pending_adjribout(self) -> bool:
         for peer in self.active_peers():
             if self._peers[peer].neighbor.rib.outgoing.pending():
                 return True
         return False
 
-    def check(self, route, nlri_only=False):
+    def check(self, route: str, nlri_only: bool = False) -> bool:
         from exabgp.configuration.check import check_message
         from exabgp.configuration.check import check_nlri
 
@@ -248,7 +249,7 @@ class Reactor:
                 return False
         return True
 
-    def display(self, route, nlri_only=False):
+    def display(self, route: str, nlri_only: bool = False) -> bool:
         from exabgp.configuration.check import display_message
         from exabgp.configuration.check import display_nlri
 
@@ -263,7 +264,7 @@ class Reactor:
                 return False
         return True
 
-    def run(self):
+    def run(self) -> int:
         self.daemon.daemonise()
 
         # Make sure we create processes once we have closed file descriptor
@@ -473,13 +474,13 @@ class Reactor:
 
         return self.exit_code
 
-    def register_peer(self, name, peer):
+    def register_peer(self, name: str, peer: Peer) -> None:
         self._peers[name] = peer
 
-    def teardown_peer(self, name, code):
+    def teardown_peer(self, name: str, code: int) -> None:
         self._peers[name].teardown(code)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Terminate all the current BGP connections"""
         log.critical(lambda: 'performing shutdown', 'reactor')
         if self.listener:
@@ -492,7 +493,7 @@ class Reactor:
         self.daemon.removepid()
         self._stopping = True
 
-    def reload(self):
+    def reload(self) -> bool:
         """Reload the configuration and send to the peer the route which changed"""
         log.info(lambda: f'performing reload of exabgp {version}', 'configuration')
 
@@ -539,7 +540,7 @@ class Reactor:
 
         return True
 
-    def restart(self):
+    def restart(self) -> None:
         """Kill the BGP session and restart it"""
         log.info(lambda: f'performing restart of exabgp {version}', 'reactor')
 

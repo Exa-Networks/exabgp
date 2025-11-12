@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Union
+
 from exabgp.bgp.message.open.capability.graceful import Graceful
 
 from exabgp.configuration.core import Section
@@ -14,7 +16,7 @@ from exabgp.configuration.parser import boolean
 from exabgp.configuration.parser import string
 
 
-def addpath(tokeniser):
+def addpath(tokeniser: object) -> int:
     if not tokeniser.tokens:
         raise ValueError('add-path must be one of send, receive, send/receive, disable')
 
@@ -37,7 +39,7 @@ def addpath(tokeniser):
     raise ValueError('"{}" is an invalid add-path, options are: send, receive, send/receive'.format(ap))
 
 
-def gracefulrestart(tokeniser, default):
+def gracefulrestart(tokeniser: object, default: Union[int, bool]) -> Union[int, bool]:
     if len(tokeniser.tokens) == 1:
         return default
 
@@ -115,14 +117,14 @@ class ParseCapability(Section):
 
     name = 'capability'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: object, scope: object, error: object) -> None:
         Section.__init__(self, tokeniser, scope, error)
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return True
 
-    def clear(self):
+    def clear(self) -> None:
         pass

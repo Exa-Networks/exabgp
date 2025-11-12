@@ -14,6 +14,9 @@ import subprocess
 import select
 import fcntl
 
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from threading import Thread
+
 from exabgp.util.errstr import errstr
 from exabgp.reactor.network.error import error
 
@@ -28,7 +31,6 @@ from exabgp.version import json as json_version
 from exabgp.version import text as text_version
 
 from exabgp.environment import getenv
-from threading import Thread
 
 
 # pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
@@ -38,7 +40,7 @@ class ProcessError(Exception):
     pass
 
 
-def preexec_helper():
+def preexec_helper() -> None:
     # make this process a new process group
     # os.setsid()
     # This prevent the signal to be sent to the children (and create a new process group)
@@ -48,35 +50,35 @@ def preexec_helper():
 
 class Processes:
     # how many time can a process can respawn in the time interval
-    respawn_timemask = 0xFFFFFF - 0b111111
+    respawn_timemask: int = 0xFFFFFF - 0b111111
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
-    _dispatch = {}
+    _dispatch: Dict[int, Any] = {}
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.clean()
-        self.silence = False
-        self._buffer = {}
-        self._configuration = {}
-        self._restart = {}
+        self.silence: bool = False
+        self._buffer: Dict[str, str] = {}
+        self._configuration: Dict[str, Dict[str, Any]] = {}
+        self._restart: Dict[str, bool] = {}
 
-        self.respawn_number = 5 if getenv().api.respawn else 0
-        self.terminate_on_error = getenv().api.terminate
-        self._default_ack = getenv().api.ack
+        self.respawn_number: int = 5 if getenv().api.respawn else 0
+        self.terminate_on_error: bool = getenv().api.terminate
+        self._default_ack: bool = getenv().api.ack
 
-    def number(self):
+    def number(self) -> int:
         return len(self._process)
 
-    def clean(self):
-        self.fds = []
-        self._process = {}
-        self._encoder = {}
-        self._ackjson = {}
-        self._ack = {}
-        self._broken = []
-        self._respawning = {}
+    def clean(self) -> None:
+        self.fds: List[int] = []
+        self._process: Dict[str, subprocess.Popen[bytes]] = {}
+        self._encoder: Dict[str, Union[Response.JSON, Response.Text]] = {}
+        self._ackjson: Dict[str, bool] = {}
+        self._ack: Dict[str, bool] = {}
+        self._broken: List[str] = []
+        self._respawning: Dict[str, Dict[int, int]] = {}
 
-    def _handle_problem(self, process):
+    def _handle_problem(self, process: str) -> None:
         if process not in self._process:
             return
         if self.respawn_number and self._restart[process]:
@@ -87,7 +89,7 @@ class Processes:
             log.debug(lambda: f'process {process} ended', 'process')
             self._terminate(process)
 
-    def _terminate(self, process_name):
+    def _terminate(self, process_name: str) -> Thread:
         log.debug(lambda: f'terminating process {process_name}', 'process')
         process = self._process[process_name]
         del self._process[process_name]
@@ -96,7 +98,7 @@ class Processes:
         thread.start()
         return thread
 
-    def _terminate_run(self, process, process_name):
+    def _terminate_run(self, process: subprocess.Popen[bytes], process_name: str) -> None:
         try:
             process.terminate()
             try:
@@ -109,7 +111,7 @@ class Processes:
             # the process is most likely already dead
             pass
 
-    def terminate(self):
+    def terminate(self) -> None:
         for process in list(self._process):
             if not self.silence:
                 try:
@@ -129,7 +131,7 @@ class Processes:
                 log.debug(lambda process=process: f'child process {process} was already dead', 'process')
         self.clean()
 
-    def _start(self, process):
+    def _start(self, process: str) -> None:
         if not self._restart.get(process, True):
             return
 
@@ -193,7 +195,7 @@ class Processes:
             log.debug(lambda: 'could not start process {}'.format(process), 'process')
             log.debug(lambda exc=exc: 'reason: {}'.format(str(exc)), 'process')
 
-    def start(self, configuration, restart=False):
+    def start(self, configuration: Dict[str, Dict[str, Any]], restart: bool = False) -> None:
         for process in list(self._process):
             if process not in configuration:
                 self._terminate(process)
@@ -206,17 +208,17 @@ class Processes:
                 continue
             self._start(process)
 
-    def broken(self, neighbor):
+    def broken(self, neighbor: Any) -> bool:
         if self._broken:
             for process in self._configuration:
                 if process in self._broken:
                     return True
         return False
 
-    def _update_fds(self):
+    def _update_fds(self) -> None:
         self.fds = [self._process[process].stdout.fileno() for process in self._process]
 
-    def received(self):
+    def received(self) -> Generator[Tuple[str, str], None, None]:
         consumed_data = False
 
         for process in list(self._process):
@@ -301,7 +303,7 @@ class Processes:
             except (subprocess.CalledProcessError, OSError, ValueError):
                 self._handle_problem(process)
 
-    def write(self, process, string, neighbor=None):
+    def write(self, process: str, string: Optional[str], neighbor: Any = None) -> bool:
         if string is None:
             return True
 
@@ -335,7 +337,7 @@ class Processes:
 
         return True
 
-    def _answer(self, service, string, force=False):
+    def _answer(self, service: str, string: str, force: bool = False) -> None:
         # Check per-process ACK state
         process_ack = self._ack[service]
         if force or process_ack:
@@ -345,28 +347,28 @@ class Processes:
             log.debug(lambda: 'responding to {} : {}'.format(service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
-    def answer_done(self, service, force=False):
+    def answer_done(self, service: str, force: bool = False) -> None:
         if self._ackjson[service]:
             self._answer(service, Answer.json_done, force=force)
         else:
             self._answer(service, Answer.text_done, force=force)
 
-    def answer_error(self, service):
+    def answer_error(self, service: str) -> None:
         if self._ackjson[service]:
             self._answer(service, Answer.json_error)
         else:
             self._answer(service, Answer.text_error)
 
-    def set_ack(self, service, enabled):
+    def set_ack(self, service: str, enabled: bool) -> None:
         """Set ACK state for a specific service/process"""
         self._ack[service] = enabled
         log.debug(lambda: 'ACK {} for {}'.format('enabled' if enabled else 'disabled', service), 'process')
 
-    def get_ack(self, service):
+    def get_ack(self, service: str) -> bool:
         """Get ACK state for a specific service/process"""
         return self._ack[service]
 
-    def _notify(self, neighbor, event):
+    def _notify(self, neighbor: Any, event: str) -> Generator[str, None, None]:
         for process in neighbor.api[event]:
             yield process
 
@@ -383,37 +385,37 @@ class Processes:
 
     # invalid-name
     @silenced
-    def up(self, neighbor):
+    def up(self, neighbor: Any) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].up(neighbor), neighbor)
 
     @silenced
-    def connected(self, neighbor):
+    def connected(self, neighbor: Any) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].connected(neighbor), neighbor)
 
     @silenced
-    def down(self, neighbor, reason):
+    def down(self, neighbor: Any, reason: str) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].down(neighbor, reason), neighbor)
 
     @silenced
-    def negotiated(self, neighbor, negotiated):
+    def negotiated(self, neighbor: Any, negotiated: Any) -> None:
         for process in self._notify(neighbor, 'negotiated'):
             self.write(process, self._encoder[process].negotiated(neighbor, negotiated), neighbor)
 
     @silenced
-    def fsm(self, neighbor, fsm):
+    def fsm(self, neighbor: Any, fsm: Any) -> None:
         for process in self._notify(neighbor, 'fsm'):
             self.write(process, self._encoder[process].fsm(neighbor, fsm), neighbor)
 
     @silenced
-    def signal(self, neighbor, signal):
+    def signal(self, neighbor: Any, signal: str) -> None:
         for process in self._notify(neighbor, 'signal'):
             self.write(process, self._encoder[process].signal(neighbor, signal), neighbor)
 
     @silenced
-    def packets(self, neighbor, direction, category, negotiated, header, body):
+    def packets(self, neighbor: Any, direction: str, category: int, negotiated: Any, header: str, body: str) -> None:
         for process in self._notify(neighbor, '{}-packets'.format(direction)):
             self.write(
                 process,
@@ -422,7 +424,9 @@ class Processes:
             )
 
     @silenced
-    def notification(self, neighbor, direction, code, subcode, data, header, body):
+    def notification(
+        self, neighbor: Any, direction: str, code: int, subcode: int, data: str, header: str, body: str
+    ) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(
                 process,
@@ -431,13 +435,15 @@ class Processes:
             )
 
     @silenced
-    def message(self, message_id, neighbor, direction, message, negotiated, header, *body):
+    def message(
+        self, message_id: int, neighbor: Any, direction: str, message: Any, negotiated: Any, header: str, *body: str
+    ) -> None:
         self._dispatch[message_id](self, neighbor, direction, message, negotiated, header, *body)
 
     # registering message functions
     # no-self-argument
 
-    def register_process(message_id, storage=_dispatch):
+    def register_process(message_id: int, storage: Dict[int, Any] = _dispatch):
         def closure(function):
             def wrap(*args):
                 function(*args)
@@ -450,17 +456,17 @@ class Processes:
     # notifications are handled in the loop as they use different arguments
 
     @register_process(Message.CODE.OPEN)
-    def _open(self, peer, direction, message, negotiated, header, body):
+    def _open(self, peer: Any, direction: str, message: Any, negotiated: Any, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.OPEN.SHORT}'):
             self.write(process, self._encoder[process].open(peer, direction, message, negotiated, header, body), peer)
 
     @register_process(Message.CODE.UPDATE)
-    def _update(self, peer, direction, update, negotiated, header, body):
+    def _update(self, peer: Any, direction: str, update: Any, negotiated: Any, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
             self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)
 
     @register_process(Message.CODE.NOTIFICATION)
-    def _notification(self, peer, direction, message, negotiated, header, body):
+    def _notification(self, peer: Any, direction: str, message: Any, negotiated: Any, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
             self.write(
                 process,
@@ -470,12 +476,12 @@ class Processes:
 
     # unused-argument, must keep the API
     @register_process(Message.CODE.KEEPALIVE)
-    def _keepalive(self, peer, direction, keepalive, negotiated, header, body):
+    def _keepalive(self, peer: Any, direction: str, keepalive: Any, negotiated: Any, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.KEEPALIVE.SHORT}'):
             self.write(process, self._encoder[process].keepalive(peer, direction, negotiated, header, body), peer)
 
     @register_process(Message.CODE.ROUTE_REFRESH)
-    def _refresh(self, peer, direction, refresh, negotiated, header, body):
+    def _refresh(self, peer: Any, direction: str, refresh: Any, negotiated: Any, header: str, body: str) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.ROUTE_REFRESH.SHORT}'):
             self.write(
                 process,
@@ -484,7 +490,9 @@ class Processes:
             )
 
     @register_process(Message.CODE.OPERATIONAL)
-    def _operational(self, peer, direction, operational, negotiated, header, body):
+    def _operational(
+        self, peer: Any, direction: str, operational: Any, negotiated: Any, header: str, body: str
+    ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.OPERATIONAL.SHORT}'):
             self.write(
                 process,

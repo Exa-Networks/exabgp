@@ -7,7 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, Callable, Dict, List
+
 from exabgp.configuration.core import Section
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.flow.parser import accept
 from exabgp.configuration.flow.parser import discard
@@ -25,7 +30,7 @@ from exabgp.configuration.static.parser import extended_community
 
 
 class ParseFlowThen(Section):
-    definition = [
+    definition: List[str] = [
         'accept',
         'discard',
         'rate-limit 9600',
@@ -38,10 +43,10 @@ class ParseFlowThen(Section):
         'action sample|terminal|sample-terminal',
     ]
 
-    joined = ';\\n  '.join(definition)
-    syntax = f'then {{\n  {joined};\n}}'
+    joined: str = ';\\n  '.join(definition)
+    syntax: str = f'then {{\n  {joined};\n}}'
 
-    known = {
+    known: Dict[str, Callable[[Any], Any]] = {
         'accept': accept,
         'discard': discard,
         'rate-limit': rate_limit,
@@ -58,7 +63,7 @@ class ParseFlowThen(Section):
 
     # 'community','extended-community'
 
-    action = {
+    action: Dict[str, str] = {
         'accept': 'nop',
         'discard': 'attribute-add',
         'rate-limit': 'attribute-add',
@@ -73,16 +78,16 @@ class ParseFlowThen(Section):
         'extended-community': 'attribute-add',
     }
 
-    name = 'flow/then'
+    name: str = 'flow/then'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         Section.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return True

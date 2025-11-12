@@ -8,18 +8,20 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import signal
+from typing import ClassVar, Dict, Optional
+from types import FrameType
 
 from exabgp.logger import log
 
 
 class Signal:
-    NONE = 0
-    SHUTDOWN = -1
-    RESTART = -2
-    RELOAD = -4
-    FULL_RELOAD = -8
+    NONE: int = 0
+    SHUTDOWN: int = -1
+    RESTART: int = -2
+    RELOAD: int = -4
+    FULL_RELOAD: int = -8
 
-    _names = {
+    _names: ClassVar[Dict[int, str]] = {
         **dict(
             (k, v)
             for v, k in reversed(sorted(signal.__dict__.items()))
@@ -34,15 +36,15 @@ class Signal:
     }
 
     @classmethod
-    def name(cls, received):
+    def name(cls, received: int) -> str:
         return cls._names.get(received, 'unknown')
 
-    def __init__(self):
-        self.received = self.NONE
-        self.number = 0
+    def __init__(self) -> None:
+        self.received: int = self.NONE
+        self.number: int = 0
         self.rearm()
 
-    def rearm(self):
+    def rearm(self) -> None:
         self.received = Signal.NONE
         self.number = 0
 
@@ -52,7 +54,7 @@ class Signal:
         signal.signal(signal.SIGUSR1, self.sigusr1)
         signal.signal(signal.SIGUSR2, self.sigusr2)
 
-    def sigterm(self, signum, frame):
+    def sigterm(self, signum: int, frame: Optional[FrameType]) -> None:
         log.critical(lambda: 'SIGTERM received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
@@ -61,7 +63,7 @@ class Signal:
         self.received = self.SHUTDOWN
         self.number = signum
 
-    def sighup(self, signum, frame):
+    def sighup(self, signum: int, frame: Optional[FrameType]) -> None:
         log.critical(lambda: 'SIGHUP received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
@@ -70,7 +72,7 @@ class Signal:
         self.received = self.SHUTDOWN
         self.number = signum
 
-    def sigalrm(self, signum, frame):
+    def sigalrm(self, signum: int, frame: Optional[FrameType]) -> None:
         log.critical(lambda: 'SIGALRM received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
@@ -79,7 +81,7 @@ class Signal:
         self.received = self.RESTART
         self.number = signum
 
-    def sigusr1(self, signum, frame):
+    def sigusr1(self, signum: int, frame: Optional[FrameType]) -> None:
         log.critical(lambda: 'SIGUSR1 received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
@@ -88,7 +90,7 @@ class Signal:
         self.received = self.RELOAD
         self.number = signum
 
-    def sigusr2(self, signum, frame):
+    def sigusr2(self, signum: int, frame: Optional[FrameType]) -> None:
         log.critical(lambda: 'SIGUSR2 received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')

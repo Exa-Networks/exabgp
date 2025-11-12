@@ -7,7 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, Callable, Dict, List
+
 from exabgp.configuration.core import Section
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.flow.parser import source
 from exabgp.configuration.flow.parser import destination
@@ -27,7 +32,7 @@ from exabgp.configuration.flow.parser import flow_label
 
 
 class ParseFlowMatch(Section):
-    definition = [
+    definition: List[str] = [
         'source 10.0.0.0/24',
         'source ::1/128/0',
         'destination 10.0.1.0/24',
@@ -44,10 +49,10 @@ class ParseFlowMatch(Section):
         '(ipv6 only) icmp-code 55  # to check',
     ]
 
-    joined = ';\\n  '.join(definition)
-    syntax = f'match {{\n  {joined};\n}}'
+    joined: str = ';\\n  '.join(definition)
+    syntax: str = f'match {{\n  {joined};\n}}'
 
-    known = {
+    known: Dict[str, Callable[[Any], Any]] = {
         'source': source,
         'source-ipv4': source,
         'source-ipv6': source,
@@ -71,7 +76,7 @@ class ParseFlowMatch(Section):
 
     # 'source-ipv4','destination-ipv4',
 
-    action = {
+    action: Dict[str, str] = {
         'source': 'nlri-add',
         'source-ipv4': 'nlri-add',
         'source-ipv6': 'nlri-add',
@@ -93,16 +98,16 @@ class ParseFlowMatch(Section):
         'flow-label': 'nlri-add',
     }
 
-    name = 'flow/match'
+    name: str = 'flow/match'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         Section.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return True

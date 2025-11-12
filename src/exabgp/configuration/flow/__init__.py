@@ -7,9 +7,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, Dict, List
+
 from exabgp.protocol.family import SAFI
 
 from exabgp.configuration.core import Section
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.flow.route import ParseFlowRoute
 from exabgp.configuration.flow.route import ParseFlowMatch
@@ -23,47 +28,47 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 class ParseFlow(Section):
-    parts = ';\\n  '.join(ParseFlowRoute.syntax.split('\\n'))
-    syntax = f'flow {{\n  {parts}}}'
+    parts: str = ';\\n  '.join(ParseFlowRoute.syntax.split('\\n'))
+    syntax: str = f'flow {{\n  {parts}}}'
 
-    name = 'flow'
+    name: str = 'flow'
 
-    known = dict(ParseFlowMatch.known)
+    known: Dict[str, Any] = dict(ParseFlowMatch.known)
     known.update(ParseFlowThen.known)
     known.update(ParseFlowScope.known)
 
-    action = dict(ParseFlowMatch.action)
+    action: Dict[str, str] = dict(ParseFlowMatch.action)
     action.update(ParseFlowThen.action)
     action.update(ParseFlowScope.action)
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         Section.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         self.scope.set('routes', self.scope.get_routes())
         return True
 
-    def check(self):
+    def check(self) -> bool:
         return True
 
 
 @ParseFlow.register('route', 'append-route')
-def route(tokeniser):
-    change = Change(Flow(), Attributes())
+def route(tokeniser: Any) -> List[Change]:
+    change: Change = Change(Flow(), Attributes())
 
     while True:
-        command = tokeniser()
+        command: str = tokeniser()
 
         if not command:
             break
 
-        action = ParseFlow.action[command]
+        action: str = ParseFlow.action[command]
 
         if action == 'nlri-add':
             for adding in ParseFlow.known[command](tokeniser):
@@ -71,6 +76,8 @@ def route(tokeniser):
         elif action == 'attribute-add':
             change.attributes.add(ParseFlow.known[command](tokeniser))
         elif action == 'nexthop-and-attribute':
+            nexthop: Any
+            attribute: Any
             nexthop, attribute = ParseFlow.known[command](tokeniser)
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)

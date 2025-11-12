@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import List, Optional
+
 from exabgp.rib.change import Change
 
 from exabgp.bgp.message import Action
@@ -20,6 +22,9 @@ from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.ip import AnnounceIP
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.parser import path_information
@@ -55,23 +60,23 @@ class AnnouncePath(AnnounceIP):
     )
 
     name = 'path'
-    afi = None
+    afi: Optional[AFI] = None
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         AnnounceIP.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> bool:
         return True
 
     @staticmethod
-    def check(change, afi):
+    def check(change: Change, afi: Optional[AFI]) -> bool:
         if not AnnounceIP.check(change, afi):
             return False
 
         return True
 
 
-def ip_unicast(tokeniser, afi, safi):
+def ip_unicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
@@ -106,10 +111,10 @@ def ip_unicast(tokeniser, afi, safi):
 
 
 @ParseAnnounce.register('unicast', 'extend-name', 'ipv4')
-def unicast_v4(tokeniser):
+def unicast_v4(tokeniser: Tokeniser) -> List[Change]:
     return ip_unicast(tokeniser, AFI.ipv4, SAFI.unicast)
 
 
 @ParseAnnounce.register('unicast', 'extend-name', 'ipv6')
-def unicast_v6(tokeniser):
+def unicast_v6(tokeniser: Tokeniser) -> List[Change]:
     return ip_unicast(tokeniser, AFI.ipv6, SAFI.unicast)

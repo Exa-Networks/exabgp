@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Generator, Tuple, Union
+
 from exabgp.bgp.message.open.asn import (
     ASN,
 )
@@ -75,17 +77,19 @@ MAX_RATE_LIMIT_BPS = 1000000000000  # Maximum rate limit (1 terabyte/s)
 DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
 
 
-def flow(tokeniser):
+def flow(tokeniser: Any) -> Change:
     return Change(Flow(), Attributes())
 
 
-def source(tokeniser):
+def source(tokeniser: Any) -> Generator[Union[Flow4Source, Flow6Source], None, None]:
     """Update source to handle both IPv4 and IPv6 flows."""
-    data = tokeniser()
+    data: str = tokeniser()
     # Check if it's IPv4
     if data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0:
+        ip: str
+        netmask: str
         ip, netmask = data.split('/')
-        raw = b''.join(bytes([int(_)]) for _ in ip.split('.'))
+        raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
         yield Flow4Source(raw, int(netmask))
     # Check if it's IPv6 without an offset
     elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
@@ -93,17 +97,20 @@ def source(tokeniser):
         yield Flow6Source(IP.pton(ip), int(netmask), 0)
     # Check if it's IPv6 with an offset
     elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
+        offset: str
         ip, netmask, offset = data.split('/')
         yield Flow6Source(IP.pton(ip), int(netmask), int(offset))
 
 
-def destination(tokeniser):
+def destination(tokeniser: Any) -> Generator[Union[Flow4Destination, Flow6Destination], None, None]:
     """Update destination to handle both IPv4 and IPv6 flows."""
-    data = tokeniser()
+    data: str = tokeniser()
     # Check if it's IPv4
     if data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0:
+        ip: str
+        netmask: str
         ip, netmask = data.split('/')
-        raw = b''.join(bytes([int(_)]) for _ in ip.split('.'))
+        raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
         yield Flow4Destination(raw, int(netmask))
     # Check if it's IPv6 without an offset
     elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
@@ -111,6 +118,7 @@ def destination(tokeniser):
         yield Flow6Destination(IP.pton(ip), int(netmask), 0)
     # Check if it's IPv6 with an offset
     elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
+        offset: str
         ip, netmask, offset = data.split('/')
         yield Flow6Destination(IP.pton(ip), int(netmask), int(offset))
 
@@ -118,11 +126,12 @@ def destination(tokeniser):
 # Expressions
 
 
-def _operator_numeric(string):
+def _operator_numeric(string: str) -> Tuple[int, str]:
     try:
-        char = string[0].lower()
+        char: str = string[0].lower()
         if char == '=':
             return NumericOperator.EQ, string[1:]
+        operator: int
         if char == '>':
             operator = NumericOperator.GT
         elif char == '<':
@@ -145,7 +154,7 @@ def _operator_numeric(string):
         raise ValueError('Invalid expression (too short) {}'.format(string)) from None
 
 
-def _operator_binary(string):
+def _operator_binary(string: str) -> Tuple[int, str]:
     try:
         if string[0] == '=':
             return BinaryOperator.MATCH, string[1:]
@@ -158,8 +167,8 @@ def _operator_binary(string):
         raise ValueError('Invalid expression (too short) {}'.format(string)) from None
 
 
-def _value(string):
-    ls = 0
+def _value(string: str) -> Tuple[str, str]:
+    ls: int = 0
     for c in string:
         if c not in [
             '&',
@@ -172,16 +181,19 @@ def _value(string):
 
 # parse [ content1 content2 content3 ]
 # parse =80 or >80 or <25 or &>10<20
-def _generic_condition(tokeniser, klass):
-    _operator = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric
-    data = tokeniser()
-    AND = BinaryOperator.NOP
+def _generic_condition(tokeniser: Any, klass: Any) -> Generator[Any, None, None]:
+    _operator: Any = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric
+    data: str = tokeniser()
+    AND: int = BinaryOperator.NOP
     if data == '[':
         data = tokeniser()
         while True:
             if data == ']':
                 break
+            operator: int
+            _: str
             operator, _ = _operator(data)
+            value: str
             value, data = _value(_)
             # XXX: should do a check that the rule is valid for the family
             yield klass(AND | operator, klass.converter(value))
@@ -207,92 +219,92 @@ def _generic_condition(tokeniser, klass):
                 data = data[1:]
 
 
-def any_port(tokeniser):
+def any_port(tokeniser: Any) -> Generator[FlowAnyPort, None, None]:
     for _ in _generic_condition(tokeniser, FlowAnyPort):
         yield _
 
 
-def source_port(tokeniser):
+def source_port(tokeniser: Any) -> Generator[FlowSourcePort, None, None]:
     for _ in _generic_condition(tokeniser, FlowSourcePort):
         yield _
 
 
-def destination_port(tokeniser):
+def destination_port(tokeniser: Any) -> Generator[FlowDestinationPort, None, None]:
     for _ in _generic_condition(tokeniser, FlowDestinationPort):
         yield _
 
 
-def packet_length(tokeniser):
+def packet_length(tokeniser: Any) -> Generator[FlowPacketLength, None, None]:
     for _ in _generic_condition(tokeniser, FlowPacketLength):
         yield _
 
 
-def tcp_flags(tokeniser):
+def tcp_flags(tokeniser: Any) -> Generator[FlowTCPFlag, None, None]:
     for _ in _generic_condition(tokeniser, FlowTCPFlag):
         yield _
 
 
-def protocol(tokeniser):
+def protocol(tokeniser: Any) -> Generator[FlowIPProtocol, None, None]:
     for _ in _generic_condition(tokeniser, FlowIPProtocol):
         yield _
 
 
-def next_header(tokeniser):
+def next_header(tokeniser: Any) -> Generator[FlowNextHeader, None, None]:
     for _ in _generic_condition(tokeniser, FlowNextHeader):
         yield _
 
 
-def icmp_type(tokeniser):
+def icmp_type(tokeniser: Any) -> Generator[FlowICMPType, None, None]:
     for _ in _generic_condition(tokeniser, FlowICMPType):
         yield _
 
 
-def icmp_code(tokeniser):
+def icmp_code(tokeniser: Any) -> Generator[FlowICMPCode, None, None]:
     for _ in _generic_condition(tokeniser, FlowICMPCode):
         yield _
 
 
-def fragment(tokeniser):
+def fragment(tokeniser: Any) -> Generator[FlowFragment, None, None]:
     for _ in _generic_condition(tokeniser, FlowFragment):
         yield _
 
 
-def dscp(tokeniser):
+def dscp(tokeniser: Any) -> Generator[FlowDSCP, None, None]:
     for _ in _generic_condition(tokeniser, FlowDSCP):
         yield _
 
 
-def traffic_class(tokeniser):
+def traffic_class(tokeniser: Any) -> Generator[FlowTrafficClass, None, None]:
     for _ in _generic_condition(tokeniser, FlowTrafficClass):
         yield _
 
 
-def flow_label(tokeniser):
+def flow_label(tokeniser: Any) -> Generator[FlowFlowLabel, None, None]:
     for _ in _generic_condition(tokeniser, FlowFlowLabel):
         yield _
 
 
-def next_hop(tokeniser):
-    value = tokeniser()
+def next_hop(tokeniser: Any) -> Union[NextHopSelf, NextHop]:
+    value: str = tokeniser()
 
     if value.lower() == 'self':
         return NextHopSelf(AFI.ipv4)
-    ip = IP.create(value)
+    ip: IP = IP.create(value)
     return NextHop(ip.top(), ip.pack())
 
 
-def accept(tokeniser):
+def accept(tokeniser: Any) -> None:
     return
 
 
-def discard(tokeniser):
+def discard(tokeniser: Any) -> ExtendedCommunities:
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
     return ExtendedCommunities().add(TrafficRate(ASN(0), 0))
 
 
-def rate_limit(tokeniser):
+def rate_limit(tokeniser: Any) -> ExtendedCommunities:
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
-    speed = int(tokeniser())
+    speed: int = int(tokeniser())
     if speed < MIN_RATE_LIMIT_BPS and speed != 0:
         log.warning(
             lambda: f'rate-limiting flow under {MIN_RATE_LIMIT_BPS} bytes per seconds may not work', 'configuration'
@@ -303,9 +315,9 @@ def rate_limit(tokeniser):
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 
-def redirect(tokeniser):
-    data = tokeniser()
-    count = data.count(':')
+def redirect(tokeniser: Any) -> Tuple[Union[IP, type], ExtendedCommunities]:
+    data: str = tokeniser()
+    count: int = data.count(':')
 
     # the redirect is an IPv4 or an IPv6 nexthop
     if count == 0 or (count > 1 and '[' not in data and ']' not in data):
@@ -319,20 +331,23 @@ def redirect(tokeniser):
     if count > 1:
         if ']:' not in data:
             try:
-                ip = IP.create(data)
+                ip: IP = IP.create(data)
                 return ip, ExtendedCommunities().add(TrafficNextHopSimpson(False))
             except Exception:
                 raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
 
+        nn: str
         ip, nn = data.split(']:')
         ip = ip.replace('[', '', 1)
 
-        if nn >= pow(2, LOCAL_ADMIN_16_BITS):
+        if int(nn) >= pow(2, LOCAL_ADMIN_16_BITS):
             raise ValueError('Local administrator field is a 16 bits number, value too large {}'.format(nn))
-        return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, nn))
+        return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, int(nn)))
 
     # the redirect is an ASN:NN route-target
     if True:  # count == 1:
+        prefix: str
+        suffix: str
         prefix, suffix = data.split(':', 1)
 
         if prefix.count('.'):
@@ -340,47 +355,49 @@ def redirect(tokeniser):
                 'this format has been deprecated as it does not make sense and it is not supported by other vendors',
             )
 
-        asn = int(prefix)
-        nn = int(suffix)
+        asn: int = int(prefix)
+        nn_int: int = int(suffix)
 
         if asn >= pow(2, ASN32_MAX_BITS):
             raise ValueError('asn is a 32 bits number, value too large {}'.format(asn))
 
         if asn >= pow(2, ASN16_MAX_BITS):
-            if nn >= pow(2, LOCAL_ADMIN_16_BITS):
-                raise ValueError('asn is a 32 bits number, local administrator field can only be 16 bit {}'.format(nn))
-            return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, nn))
+            if nn_int >= pow(2, LOCAL_ADMIN_16_BITS):
+                raise ValueError(
+                    'asn is a 32 bits number, local administrator field can only be 16 bit {}'.format(nn_int)
+                )
+            return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, nn_int))
 
-        if nn >= pow(2, LOCAL_ADMIN_32_BITS):
-            raise ValueError('Local administrator field is a 32 bits number, value too large {}'.format(nn))
+        if nn_int >= pow(2, LOCAL_ADMIN_32_BITS):
+            raise ValueError('Local administrator field is a 32 bits number, value too large {}'.format(nn_int))
 
-        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn))
+        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn_int))
 
     raise ValueError('redirect format incorrect')
 
 
-def redirect_next_hop(tokeniser):
+def redirect_next_hop(tokeniser: Any) -> ExtendedCommunities:
     return ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
 
-def redirect_next_hop_ietf(tokeniser):
-    ip = IP.create(tokeniser())
+def redirect_next_hop_ietf(tokeniser: Any) -> Union[ExtendedCommunities, ExtendedCommunitiesIPv6]:
+    ip: IP = IP.create(tokeniser())
     if ip.ipv4():
         return ExtendedCommunities().add(TrafficNextHopIPv4IETF(ip, False))
     return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(ip, False))
 
 
-def copy(tokeniser):
+def copy(tokeniser: Any) -> Tuple[IP, ExtendedCommunities]:
     return IP.create(tokeniser()), ExtendedCommunities().add(TrafficNextHopSimpson(True))
 
 
-def mark(tokeniser):
-    value = tokeniser()
+def mark(tokeniser: Any) -> ExtendedCommunities:
+    value: str = tokeniser()
 
     if not value.isdigit():
         raise ValueError('dscp is not a number')
 
-    dscp_value = int(value)
+    dscp_value: int = int(value)
 
     if dscp_value < 0 or dscp_value > DSCP_MAX_VALUE:
         raise ValueError('dscp is not a valid number')
@@ -388,11 +405,11 @@ def mark(tokeniser):
     return ExtendedCommunities().add(TrafficMark(dscp_value))
 
 
-def action(tokeniser):
-    value = tokeniser()
+def action(tokeniser: Any) -> ExtendedCommunities:
+    value: str = tokeniser()
 
-    sample = 'sample' in value
-    terminal = 'terminal' in value
+    sample: bool = 'sample' in value
+    terminal: bool = 'terminal' in value
 
     if not sample and not terminal:
         raise ValueError('invalid flow action')
@@ -400,20 +417,26 @@ def action(tokeniser):
     return ExtendedCommunities().add(TrafficAction(sample, terminal))
 
 
-def _interface_set(data):
+def _interface_set(data: str) -> InterfaceSet:
     if data.count(':') != INTERFACE_SET_COLON_COUNT:
         raise ValueError('not a valid format {}'.format(data))
 
+    trans: str
+    direction: str
+    prefix: str
+    suffix: str
     trans, direction, prefix, suffix = data.split(':', INTERFACE_SET_COLON_COUNT)
 
+    trans_bool: bool
     if trans == 'transitive':
-        trans = True
+        trans_bool = True
     elif trans == 'non-transitive':
-        trans = False
+        trans_bool = False
     else:
         raise ValueError('Bad transitivity type {}, should be transitive or non-transitive'.format(trans))
     if prefix.count('.'):
         raise ValueError('a 32 bits number must be used, invalid value {}'.format(prefix))
+    int_direction: int
     if direction == 'input':
         int_direction = DIRECTION_INPUT
     elif direction == 'output':
@@ -422,19 +445,19 @@ def _interface_set(data):
         int_direction = DIRECTION_INPUT_OUTPUT
     else:
         raise ValueError('Bad direction {}, should be input, output or input-output'.format(direction))
-    asn = int(prefix)
-    route_target = int(suffix)
+    asn: int = int(prefix)
+    route_target: int = int(suffix)
     if asn >= pow(2, ASN32_MAX_BITS):
         raise ValueError('asn can only be 32 bits, value too large {}'.format(asn))
     if route_target >= pow(2, GROUP_ID_BITS):
         raise ValueError('group-id is a 14 bits number, value too large {}'.format(route_target))
-    return InterfaceSet(trans, asn, route_target, int_direction)
+    return InterfaceSet(trans_bool, asn, route_target, int_direction)
 
 
-def interface_set(tokeniser):
-    communities = ExtendedCommunities()
+def interface_set(tokeniser: Any) -> ExtendedCommunities:
+    communities: ExtendedCommunities = ExtendedCommunities()
 
-    value = tokeniser()
+    value: str = tokeniser()
     if value == '[':
         while True:
             value = tokeniser()

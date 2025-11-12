@@ -12,31 +12,32 @@ import sys
 import pwd
 import errno
 import socket
+from typing import Any
 
 from exabgp.environment import getenv
 
 from exabgp.logger import log
 
-MAXFD = 2048
+MAXFD: int = 2048
 
 
 class Daemon:
     # NOTE: This class logs full PID file paths (self.pid) for operational clarity
     # Security review: Accepted as necessary for troubleshooting and debugging
-    def __init__(self, reactor):
-        self.pid = getenv().daemon.pid
-        self.user = getenv().daemon.user
-        self.daemonize = getenv().daemon.daemonize
-        self.umask = getenv().daemon.umask
-        self._saved_pid = False
+    def __init__(self, reactor: Any) -> None:
+        self.pid: str = getenv().daemon.pid
+        self.user: str = getenv().daemon.user
+        self.daemonize: bool = getenv().daemon.daemonize
+        self.umask: int = getenv().daemon.umask
+        self._saved_pid: bool = False
 
-        self.reactor = reactor
+        self.reactor: Any = reactor
 
         os.chdir('/')
         os.umask(self.umask)
 
     @staticmethod
-    def check_pid(pid):
+    def check_pid(pid: int) -> bool:
         if pid < 0:  # user input error
             return False
         if pid == 0:  # all processes
@@ -52,7 +53,7 @@ class Daemon:
             # should never happen
             return False
 
-    def savepid(self):
+    def savepid(self) -> bool:
         if not self.pid:
             return True
 
@@ -89,7 +90,7 @@ class Daemon:
         log.warning(lambda: f'Created PIDfile {self.pid} with value {ownid}', 'daemon')
         return True
 
-    def removepid(self):
+    def removepid(self) -> None:
         if not self.pid or not self._saved_pid:
             return
         try:
@@ -102,7 +103,7 @@ class Daemon:
                 return
         log.debug(lambda: f'Removed PIDfile {self.pid}', 'daemon')
 
-    def drop_privileges(self):
+    def drop_privileges(self) -> bool:
         """Return true if we are left with insecure privileges"""
         # os.name can be ['posix', 'nt', 'os2', 'ce', 'java', 'riscos']
         if os.name not in [
@@ -110,16 +111,16 @@ class Daemon:
         ]:
             return True
 
-        uid = os.getuid()
-        gid = os.getgid()
+        uid: int = os.getuid()
+        gid: int = os.getgid()
 
         if uid and gid:
             return True
 
         try:
-            user = pwd.getpwnam(self.user)
-            nuid = int(user.pw_uid)
-            ngid = int(user.pw_gid)
+            user: pwd.struct_passwd = pwd.getpwnam(self.user)
+            nuid: int = int(user.pw_uid)
+            ngid: int = int(user.pw_gid)
         except KeyError:
             return False
 
@@ -153,9 +154,9 @@ class Daemon:
         return True
 
     @staticmethod
-    def _is_socket(fd):
+    def _is_socket(fd: int) -> bool:
         try:
-            s = socket.fromfd(fd, socket.AF_INET, socket.SOCK_RAW)
+            s: socket.socket = socket.fromfd(fd, socket.AF_INET, socket.SOCK_RAW)
         except (ValueError, OSError):
             # The file descriptor is closed
             return False
@@ -167,7 +168,7 @@ class Daemon:
                 return False
         return True
 
-    def daemonise(self):
+    def daemonise(self) -> None:
         if not self.daemonize:
             return
 
@@ -176,9 +177,9 @@ class Daemon:
             log.critical(lambda: f'ExaBGP can not fork when logs are going to {logging.destination.lower()}', 'daemon')
             return
 
-        def fork_exit():
+        def fork_exit() -> None:
             try:
-                pid = os.fork()
+                pid: int = os.fork()
                 if pid > 0:
                     os._exit(0)
             except OSError as exc:
@@ -194,7 +195,7 @@ class Daemon:
         self.silence()
 
     @staticmethod
-    def silence():
+    def silence() -> None:
         # closing more would close the log file too if open
         maxfd = 3
 

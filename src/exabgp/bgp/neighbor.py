@@ -10,14 +10,11 @@ from __future__ import annotations
 import json
 
 from copy import deepcopy
-
-from collections import deque
-
-from collections import Counter
-
+from collections import deque, Counter
 from datetime import timedelta
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, TYPE_CHECKING
 
-from exabgp.protocol.family import AFI
+from exabgp.protocol.family import AFI, _AFI, _SAFI
 # from exabgp.util.dns import host, domain
 
 from exabgp.bgp.message import Message
@@ -28,6 +25,10 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import NextHop
 
 from exabgp.rib import RIB
+
+if TYPE_CHECKING:
+    from exabgp.protocol.ip import IP
+    from exabgp.rib.change import Change
 
 
 # class Section(dict):
@@ -51,9 +52,9 @@ from exabgp.rib import RIB
 
 
 # The definition of a neighbor (from reading the configuration)
-class Neighbor(dict):
-    class Capability(dict):
-        defaults = {
+class Neighbor(dict):  # type: ignore[type-arg]
+    class Capability(dict):  # type: ignore[type-arg]
+        defaults: ClassVar[Dict[str, Any]] = {
             'asn4': True,
             'extended-message': True,
             'graceful-restart': False,
@@ -66,7 +67,7 @@ class Neighbor(dict):
             'software-version': None,
         }
 
-    defaults = {
+    defaults: ClassVar[Dict[str, Any]] = {
         # Those are the field from the configuration
         'description': '',
         'router-id': None,
@@ -98,9 +99,27 @@ class Neighbor(dict):
         'incoming-ttl': None,
     }
 
-    _GLOBAL = {'uid': 1}
+    _GLOBAL: ClassVar[Dict[str, int]] = {'uid': 1}
 
-    def __init__(self):
+    # Instance attributes
+    api: Optional[Dict[str, Any]]  # XXX: not scriptable - is replaced outside the class
+    auto_discovery: bool
+    range_size: int
+    generated: bool
+    _families: List[Tuple[_AFI, _SAFI]]
+    _nexthop: List[Tuple[_AFI, _SAFI, _AFI]]
+    _addpath: List[Tuple[_AFI, _SAFI]]
+    rib: Optional[RIB]
+    changes: List[Change]
+    previous: Optional[Change]
+    eor: deque[Tuple[_AFI, _SAFI]]  # type: ignore[type-arg]
+    asm: Dict[Tuple[_AFI, _SAFI], bool]
+    messages: deque[Message]  # type: ignore[type-arg]
+    refresh: deque[Tuple[_AFI, _SAFI]]  # type: ignore[type-arg]
+    counter: Counter[str]  # type: ignore[type-arg]
+    uid: str
+
+    def __init__(self) -> None:
         # super init
         self.update(self.defaults)
 
@@ -141,7 +160,7 @@ class Neighbor(dict):
         self.uid = f'{self._GLOBAL["uid"]}'
         self._GLOBAL['uid'] += 1
 
-    def infer(self):
+    def infer(self) -> None:
         if self['md5-ip'] is None:
             self['md5-ip'] = self['local-address']
 
@@ -153,31 +172,31 @@ class Neighbor(dict):
 
         self['capability']['graceful-restart'] = int(self['hold-time'])
 
-    def id(self):
+    def id(self) -> str:
         return f'neighbor-{self.uid}'
 
     # This set must be unique between peer, not full draft-ietf-idr-bgp-multisession-07
-    def index(self):
+    def index(self) -> str:
         if self['listen'] != 0:
             return f'peer-ip {self["peer-address"]} listen {self["listen"]}'
         return self.name()
 
-    def make_rib(self):
+    def make_rib(self) -> None:
         self.rib = RIB(self.name(), self['adj-rib-in'], self['adj-rib-out'], self._families)
 
     # will resend all the routes once we reconnect
-    def reset_rib(self):
-        self.rib.reset()
+    def reset_rib(self) -> None:
+        self.rib.reset()  # type: ignore[union-attr]
         self.messages = deque()
         self.refresh = deque()
 
     # back to square one, all the routes are removed
-    def clear_rib(self):
-        self.rib.clear()
+    def clear_rib(self) -> None:
+        self.rib.clear()  # type: ignore[union-attr]
         self.messages = deque()
         self.refresh = deque()
 
-    def name(self):
+    def name(self) -> str:
         if self['capability']['multi-session']:
             session = '/'.join(f'{afi.name()}-{safi.name()}' for (afi, safi) in self.families())
         else:
@@ -187,24 +206,24 @@ class Neighbor(dict):
         peer_as = self['peer-as'] if self['peer-as'] is not None else 'auto'
         return f'neighbor {self["peer-address"]} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self["router-id"]} family-allowed {session}'
 
-    def families(self):
+    def families(self) -> List[Tuple[_AFI, _SAFI]]:
         # this list() is important .. as we use the function to modify self._families
         return list(self._families)
 
-    def nexthops(self):
+    def nexthops(self) -> List[Tuple[_AFI, _SAFI, _AFI]]:
         # this list() is important .. as we use the function to modify self._nexthop
         return list(self._nexthop)
 
-    def addpaths(self):
+    def addpaths(self) -> List[Tuple[_AFI, _SAFI]]:
         # this list() is important .. as we use the function to modify self._add_path
         return list(self._addpath)
 
-    def add_family(self, family):
+    def add_family(self, family: Tuple[_AFI, _SAFI]) -> None:
         # the families MUST be sorted for neighbor indexing name to be predictable for API users
         # this list() is important .. as we use the function to modify self._families
         if family not in self.families():
             afi, safi = family
-            d = dict()
+            d: Dict[_AFI, List[_SAFI]] = dict()
             d[afi] = [
                 safi,
             ]
@@ -212,16 +231,16 @@ class Neighbor(dict):
                 d.setdefault(afi, []).append(safi)
             self._families = [(afi, safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
-    def add_nexthop(self, afi, safi, nhafi):
+    def add_nexthop(self, afi: _AFI, safi: _SAFI, nhafi: _AFI) -> None:
         if (afi, safi, nhafi) not in self._nexthop:
             self._nexthop.append((afi, safi, nhafi))
 
-    def add_addpath(self, family):
+    def add_addpath(self, family: Tuple[_AFI, _SAFI]) -> None:
         # the families MUST be sorted for neighbor indexing name to be predictable for API users
         # this list() is important .. as we use the function to modify self._add_path
         if family not in self.addpaths():
             afi, safi = family
-            d = dict()
+            d: Dict[_AFI, List[_SAFI]] = dict()
             d[afi] = [
                 safi,
             ]
@@ -229,19 +248,19 @@ class Neighbor(dict):
                 d.setdefault(afi, []).append(safi)
             self._addpath = [(afi, safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
-    def remove_family(self, family):
+    def remove_family(self, family: Tuple[_AFI, _SAFI]) -> None:
         if family in self.families():
             self._families.remove(family)
 
-    def remove_nexthop(self, afi, safi, nhafi):
+    def remove_nexthop(self, afi: _AFI, safi: _SAFI, nhafi: _AFI) -> None:
         if (afi, safi, nhafi) in self.nexthops():
             self._nexthop.remove((afi, safi, nhafi))
 
-    def remove_addpath(self, family):
+    def remove_addpath(self, family: Tuple[_AFI, _SAFI]) -> None:
         if family in self.addpaths():
             self._addpath.remove(family)
 
-    def missing(self):
+    def missing(self) -> str:
         if self['local-address'] is None and not self.auto_discovery:
             return 'local-address'
         if self['listen'] > 0 and self.auto_discovery:
@@ -255,7 +274,9 @@ class Neighbor(dict):
         return ''
 
     # This function only compares the neighbor BUT NOT ITS ROUTES
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Neighbor):
+            return False
         # Comparing local_address is skipped in the case where either
         # peer is configured to auto discover its local address. In
         # this case it can happen that one local_address is None and
@@ -287,10 +308,10 @@ class Neighbor(dict):
             and self.families() == other.families()
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def ip_self(self, afi):
+    def ip_self(self, afi: _AFI) -> IP:
         if afi == self['local-address'].afi:
             return self['local-address']
 
@@ -302,7 +323,7 @@ class Neighbor(dict):
             f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({self["local-address"].afi})',
         )
 
-    def remove_self(self, changes):
+    def remove_self(self, changes: Change) -> Change:
         change = deepcopy(changes)
         if not change.nlri.nexthop.SELF:
             return change
@@ -312,23 +333,23 @@ class Neighbor(dict):
             change.attributes[Attribute.CODE.NEXT_HOP] = NextHop(str(neighbor_self), neighbor_self.pack())
         return change
 
-    def __str__(self):
+    def __str__(self) -> str:
         return NeighborTemplate.configuration(self, False)
 
 
-def _en(value):
+def _en(value: Optional[bool]) -> str:
     if value is None:
         return 'n/a'
     return 'enabled' if value else 'disabled'
 
 
-def _pr(value):
+def _pr(value: Any) -> str:
     if value is None:
         return 'n/a'
     return str(value)
 
 
-def _addpath(send, receive):
+def _addpath(send: bool, receive: bool) -> str:
     if send and receive:
         return 'send/receive'
     if send:
@@ -339,8 +360,8 @@ def _addpath(send, receive):
 
 
 class NeighborTemplate:
-    extensive_kv = '   %-20s %15s %15s %15s'
-    extensive_template = """\
+    extensive_kv: ClassVar[str] = '   %-20s %15s %15s %15s'
+    extensive_template: ClassVar[str] = """\
 Neighbor {peer-address}
 
     Session                         Local
@@ -363,11 +384,11 @@ Neighbor {peer-address}
 {messages}
 """.replace('\t', '  ')
 
-    summary_header = 'Peer            AS        up/down state       |     #sent     #recvd'
-    summary_template = '%-15s %-7s %9s %-12s %10d %10d'
+    summary_header: ClassVar[str] = 'Peer            AS        up/down state       |     #sent     #recvd'
+    summary_template: ClassVar[str] = '%-15s %-7s %9s %-12s %10d %10d'
 
     @classmethod
-    def configuration(cls, neighbor, with_changes=True):
+    def configuration(cls, neighbor: Neighbor, with_changes: bool = True) -> str:
         changes = ''
         if with_changes:
             changes += '\nstatic { '
@@ -527,10 +548,10 @@ Neighbor {peer-address}
         return returned.replace('\t', '  ')
 
     @classmethod
-    def as_dict(cls, answer):
+    def as_dict(cls, answer: Dict[str, Any]) -> Dict[str, Any]:
         up = answer['duration']
 
-        formated = {
+        formated: Dict[str, Any] = {
             'state': 'up' if up else 'down',
             'duration': answer['duration'] if up else answer['down'],
             'fsm': answer['state'],
@@ -583,7 +604,7 @@ Neighbor {peer-address}
         return formated
 
     @classmethod
-    def formated_dict(cls, answer):
+    def formated_dict(cls, answer: Dict[str, Any]) -> Dict[str, Any]:
         if answer['duration']:
             duration_value = timedelta(seconds=answer['duration'])
             duration = f'   {"up for":<20} {duration_value:>15} {"":<15} {"":<15}'
@@ -591,7 +612,7 @@ Neighbor {peer-address}
             down_value = timedelta(seconds=answer['down'])
             duration = f'   {"down for":<20} {down_value:>15} {"":<15} {"":<15}'
 
-        formated = {
+        formated: Dict[str, Any] = {
             'peer-address': answer['peer-address'],
             'local-address': f'   {"local":<20} {answer["local-address"]:>15} {"":<15} {"":<15}',
             'state': f'   {"state":<20} {answer["state"]:>15} {"":<15} {"":<15}',
@@ -615,15 +636,15 @@ Neighbor {peer-address}
         return formated
 
     @classmethod
-    def to_json(cls, answer):
+    def to_json(cls, answer: Dict[str, Any]) -> str:
         return json.dumps(cls.formated_dict(answer))
 
     @classmethod
-    def extensive(cls, answer):
+    def extensive(cls, answer: Dict[str, Any]) -> str:
         return cls.extensive_template.format(**cls.formated_dict(answer))
 
     @classmethod
-    def summary(cls, answer):
+    def summary(cls, answer: Dict[str, Any]) -> str:
         peer_addr = str(answer['peer-address'])
         peer_as_str = _pr(answer['peer-as'])
         duration_str = str(timedelta(seconds=answer['duration']) if answer['duration'] else 'down')

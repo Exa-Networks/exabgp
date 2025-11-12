@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, List, Union
+
 from exabgp.configuration.core.format import formated
 from exabgp.configuration.operational.parser import operational
 
@@ -29,19 +31,19 @@ API_EOR_TOKEN_COUNT = 2  # EOR command requires 2 tokens (AFI and SAFI)
 
 
 class API(Command):
-    def __init__(self, reactor):
-        self.reactor = reactor
-        self.configuration = Configuration([])
+    def __init__(self, reactor: Any) -> None:
+        self.reactor: Any = reactor
+        self.configuration: Configuration = Configuration([])
 
-    def log_message(self, message, level='INFO'):
+    def log_message(self, message: str, level: str = 'INFO') -> None:
         log.info(lambda: message, 'processes', level)
 
-    def log_failure(self, message, level='ERR'):
+    def log_failure(self, message: str, level: str = 'ERR') -> None:
         error = str(self.configuration.tokeniser.error)
         report = '{}\nreason: {}'.format(message, error) if error else message
         log.error(lambda: report, 'processes', level)
 
-    def process(self, reactor, service, command):
+    def process(self, reactor: Any, service: str, command: str) -> bool:
         use_json = False
         # it to allow a global "set encoding json"
         # it to allow a global "set encoding text"
@@ -50,7 +52,7 @@ class API(Command):
             use_json = True
         return self.response(reactor, service, command, use_json)
 
-    def response(self, reactor, service, command, use_json):
+    def response(self, reactor: Any, service: str, command: str, use_json: bool) -> bool:
         api = 'json' if use_json else 'text'
         for registered in self.functions:
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
@@ -59,7 +61,7 @@ class API(Command):
         log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')
         return False
 
-    def api_route(self, command):
+    def api_route(self, command: str) -> List[Any]:
         action, line = command.split(' ', 1)
 
         self.configuration.static.clear()
@@ -73,7 +75,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_announce_v4(self, command):
+    def api_announce_v4(self, command: str) -> List[Any]:
         action, line = command.split(' ', 1)
         _, line = line.split(' ', 1)
 
@@ -88,7 +90,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_announce_v6(self, command):
+    def api_announce_v6(self, command: str) -> List[Any]:
         action, line = command.split(' ', 1)
         _, line = line.split(' ', 1)
 
@@ -103,7 +105,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_flow(self, command):
+    def api_flow(self, command: str) -> List[Any]:
         action, flow, line = command.split(' ', 2)
 
         self.configuration.flow.clear()
@@ -117,7 +119,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_vpls(self, command):
+    def api_vpls(self, command: str) -> List[Any]:
         action, line = command.split(' ', 1)
 
         self.configuration.l2vpn.clear()
@@ -128,7 +130,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_attributes(self, command, peers):
+    def api_attributes(self, command: str, peers: Any) -> List[Any]:
         action, line = command.split(' ', 1)
 
         self.configuration.static.clear()
@@ -142,7 +144,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_refresh(self, command):
+    def api_refresh(self, command: str) -> Union[bool, List[RouteRefresh]]:
         tokens = formated(command).split(' ')[2:]
         if len(tokens) != API_REFRESH_TOKEN_COUNT:
             return False
@@ -152,7 +154,7 @@ class API(Command):
             return False
         return [RouteRefresh(afi, safi)]
 
-    def api_eor(self, command):
+    def api_eor(self, command: str) -> Union[bool, Family]:
         tokens = formated(command).split(' ')[2:]
         number = len(tokens)
 
@@ -172,7 +174,7 @@ class API(Command):
 
         return Family(afi, safi)
 
-    def api_operational(self, command):
+    def api_operational(self, command: str) -> Union[bool, Any]:
         tokens = formated(command).split(' ')
 
         op = tokens[1].lower()

@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import List, Optional
+
 from exabgp.rib.change import Change
 
 from exabgp.protocol.family import AFI
@@ -16,6 +18,9 @@ from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import origin
@@ -129,24 +134,24 @@ class AnnounceVPLS(ParseAnnounce):
     }
 
     name = 'vpls'
-    afi = None
+    afi: Optional[AFI] = None
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return self._check()
 
     @staticmethod
-    def check(change, afi):
+    def check(change: Change, afi: Optional[AFI]) -> bool:
         # No check performed :-(
         return True
 
 
-def l2vpn_vpls(tokeniser, afi, safi):
+def l2vpn_vpls(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     change = Change(VPLS(None, None, None, None, None), Attributes())
 
     while True:
@@ -174,5 +179,5 @@ def l2vpn_vpls(tokeniser, afi, safi):
 
 
 @ParseAnnounce.register('vpls', 'extend-name', 'l2vpn')
-def vpls_v4(tokeniser):
+def vpls_v4(tokeniser: Tokeniser) -> List[Change]:
     return l2vpn_vpls(tokeniser, AFI.l2vpn, SAFI.vpls)

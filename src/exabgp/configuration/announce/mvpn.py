@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import List, Optional
+
 from exabgp.rib.change import Change
 
 from exabgp.bgp.message import Action
@@ -10,6 +12,9 @@ from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.ip import AnnounceIP
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.static.mpls import mvpn_sourcead
 from exabgp.configuration.static.mpls import mvpn_sourcejoin
@@ -38,30 +43,30 @@ class AnnounceMVPN(ParseAnnounce):
     )
 
     name = 'mvpn'
-    afi = None
+    afi: Optional[AFI] = None
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         self.scope.to_context(self.name)
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return ParseAnnounce.post(self) and self._check()
 
     @staticmethod
-    def check(change, afi):
+    def check(change: Change, afi: Optional[AFI]) -> bool:
         if not AnnounceIP.check(change, afi):
             return False
 
         return True
 
 
-def mvpn_route(tokeniser, afi):
+def mvpn_route(tokeniser: Tokeniser, afi: AFI) -> List[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     route_type = tokeniser()
     if route_type == 'source-ad':
@@ -101,10 +106,10 @@ def mvpn_route(tokeniser, afi):
 
 
 @ParseAnnounce.register('mcast-vpn', 'extend-name', 'ipv4')
-def mcast_vpn_v4(tokeniser):
+def mcast_vpn_v4(tokeniser: Tokeniser) -> List[Change]:
     return mvpn_route(tokeniser, AFI.ipv4)
 
 
 @ParseAnnounce.register('mcast-vpn', 'extend-name', 'ipv6')
-def mcast_vpn_v6(tokeniser):
+def mcast_vpn_v6(tokeniser: Tokeniser) -> List[Change]:
     return mvpn_route(tokeniser, AFI.ipv6)

@@ -6,6 +6,8 @@ Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import Any, Generator, Optional
+
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Notify
 
@@ -17,13 +19,13 @@ from exabgp.reactor.network.error import NetworkError
 
 
 class KA:
-    def __init__(self, session, proto):
-        self._generator = self._keepalive(proto)
-        self.send_timer = SendTimer(session, proto.negotiated.holdtime)
+    def __init__(self, session: Any, proto: Any) -> None:
+        self._generator: Generator[bool, None, None] = self._keepalive(proto)
+        self.send_timer: SendTimer = SendTimer(session, proto.negotiated.holdtime)
 
-    def _keepalive(self, proto):
-        need_ka = False
-        generator = None
+    def _keepalive(self, proto: Any) -> Generator[bool, None, None]:
+        need_ka: bool = False
+        generator: Optional[Generator[Any, None, None]] = None
 
         while True:
             # SEND KEEPALIVES
@@ -50,7 +52,7 @@ class KA:
                 generator = None
                 yield False
 
-    def __call__(self):
+    def __call__(self) -> bool:
         #  True  if we need or are trying
         #  False if we do not need to send one
         try:

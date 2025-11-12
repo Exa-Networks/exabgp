@@ -7,10 +7,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import List
+from typing import Tuple
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.configuration.core import Section
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 from exabgp.configuration.neighbor.family import ParseFamily
 
 
@@ -37,27 +43,27 @@ class ParseNextHop(Section):
 
     name = 'nexthop'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         Section.__init__(self, tokeniser, scope, error)
         self.known = {
             'ipv4': self.ipv4,
             'ipv6': self.ipv6,
         }
-        self._all = ''
-        self._seen = []
+        self._all: bool = False
+        self._seen: List[Tuple[AFI, SAFI, AFI]] = []
 
-    def clear(self):
+    def clear(self) -> None:
         self._all = False
         self._seen = []
 
-    def pre(self):
+    def pre(self) -> bool:
         self.clear()
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return True
 
-    def _family(self, tokeniser, afi, safis, nhafis):
+    def _family(self, tokeniser, afi: str, safis: List[str], nhafis: List[str]) -> Tuple[AFI, SAFI, AFI]:
         safi = tokeniser().lower()
         if safi not in safis:
             raise ValueError(f'invalid afi/safi pair {afi}/{safi}')
@@ -70,7 +76,7 @@ class ParseNextHop(Section):
         self._seen.append(seen)
         return seen
 
-    def ipv4(self, tokeniser):
+    def ipv4(self, tokeniser) -> Tuple[AFI, SAFI, AFI]:
         return self._family(
             tokeniser,
             'ipv4',
@@ -80,7 +86,7 @@ class ParseNextHop(Section):
             ],
         )
 
-    def ipv6(self, tokeniser):
+    def ipv6(self, tokeniser) -> Tuple[AFI, SAFI, AFI]:
         return self._family(
             tokeniser,
             'ipv6',

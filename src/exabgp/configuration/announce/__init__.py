@@ -6,6 +6,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import Iterator as TypingIterator, Optional
+
 from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import Action
@@ -13,21 +15,24 @@ from exabgp.rib.change import Change
 
 from exabgp.protocol.family import AFI
 from exabgp.configuration.core import Section
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute import Attribute
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
-def pack_int(afi, integer):
+def pack_int(afi: AFI, integer: int) -> bytes:
     return b''.join(bytes([(integer >> (offset * 8)) & 0xFF]) for offset in range(IP.length(afi) - 1, -1, -1))
 
 
 class ParseAnnounce(Section):
-    syntax = ''
-    afi = None
+    syntax: str = ''
+    afi: Optional[AFI] = None
 
-    def post(self):
+    def post(self) -> bool:
         self._split()
         routes = self.scope.pop(self.name)
         if routes:
@@ -35,7 +40,7 @@ class ParseAnnounce(Section):
         return True
 
     @staticmethod
-    def split(last):
+    def split(last: Change) -> TypingIterator[Change]:
         if Attribute.CODE.INTERNAL_SPLIT not in last.attributes:
             yield last
             return
@@ -81,34 +86,34 @@ class ParseAnnounce(Section):
             ip += increment
             yield Change(nlri, last.attributes)
 
-    def _split(self):
+    def _split(self) -> None:
         for route in self.scope.pop_routes():
             for splat in self.split(route):
                 self.scope.append_route(splat)
 
-    def _check(self):
+    def _check(self) -> bool:
         if not self.check(self.scope.get(self.name), self.afi):
             return self.error.set(self.syntax)
         return True
 
     @staticmethod
-    def check(change, afi):
+    def check(change: Change, afi: Optional[AFI]) -> bool:
         raise RuntimeError('need to be implemented by subclasses')
 
 
 class SectionAnnounce(ParseAnnounce):
     name = 'announce'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> bool:
         return True
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         routes = self.scope.pop('routes', [])
         self.scope.pop()
         if routes:
@@ -121,7 +126,7 @@ class AnnounceIPv4(ParseAnnounce):
     name = 'ipv4'
     afi = AFI.ipv4
 
-    def clear(self):
+    def clear(self) -> bool:
         return True
 
 
@@ -129,7 +134,7 @@ class AnnounceIPv6(ParseAnnounce):
     name = 'ipv6'
     afi = AFI.ipv6
 
-    def clear(self):
+    def clear(self) -> bool:
         return True
 
 
@@ -137,5 +142,5 @@ class AnnounceL2VPN(ParseAnnounce):
     name = 'l2vpn'
     afi = AFI.l2vpn
 
-    def clear(self):
+    def clear(self) -> bool:
         return True

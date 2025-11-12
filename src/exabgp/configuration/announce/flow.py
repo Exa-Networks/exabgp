@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import List
+
 from exabgp.rib.change import Change
 
 from exabgp.bgp.message import Action
@@ -16,6 +18,11 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.attribute import Attributes
+
+from exabgp.configuration.announce import ParseAnnounce
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.flow.parser import source
 from exabgp.configuration.flow.parser import destination
@@ -48,8 +55,6 @@ from exabgp.configuration.static.parser import large_community
 from exabgp.configuration.static.parser import extended_community
 
 from exabgp.configuration.flow.parser import interface_set
-
-from exabgp.configuration.announce import ParseAnnounce
 
 
 class AnnounceFlow(ParseAnnounce):
@@ -159,27 +164,27 @@ class AnnounceFlow(ParseAnnounce):
 
     name = 'flow'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         self.scope.to_context(self.name)
         return True
 
-    def post(self):
+    def post(self) -> bool:
         self.scope.to_context(self.name)
         self.scope.set('routes', self.scope.pop('route', {}).get('routes', []))
         self.scope.extend('routes', self.scope.pop('flow', []))
         return True
 
-    def check(self):
+    def check(self) -> bool:
         return True
 
 
-def flow(tokeniser, afi, safi):
+def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     change = Change(Flow(afi, safi, Action.ANNOUNCE), Attributes())
 
     while True:
@@ -208,20 +213,20 @@ def flow(tokeniser, afi, safi):
 
 
 @ParseAnnounce.register('flow', 'extend-name', 'ipv4')
-def flow_ip_v4(tokeniser):
+def flow_ip_v4(tokeniser: Tokeniser) -> List[Change]:
     return flow(tokeniser, AFI.ipv4, SAFI.flow_ip)
 
 
 @ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv4')
-def flow_vpn_v4(tokeniser):
+def flow_vpn_v4(tokeniser: Tokeniser) -> List[Change]:
     return flow(tokeniser, AFI.ipv4, SAFI.flow_vpn)
 
 
 @ParseAnnounce.register('flow', 'extend-name', 'ipv6')
-def flow_ip_v6(tokeniser):
+def flow_ip_v6(tokeniser: Tokeniser) -> List[Change]:
     return flow(tokeniser, AFI.ipv6, SAFI.flow_ip)
 
 
 @ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv6')
-def flow_vpn_v6(tokeniser):
+def flow_vpn_v6(tokeniser: Tokeniser) -> List[Change]:
     return flow(tokeniser, AFI.ipv6, SAFI.flow_vpn)

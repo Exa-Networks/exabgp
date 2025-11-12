@@ -7,12 +7,19 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import List
+
 from exabgp.rib.change import Change
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.attribute import Attributes
+
+from exabgp.configuration.announce import ParseAnnounce
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.static.parser import next_hop
 from exabgp.configuration.static.mpls import label
@@ -22,8 +29,6 @@ from exabgp.configuration.static.mpls import srv6_mup_dsd
 from exabgp.configuration.static.mpls import srv6_mup_t1st
 from exabgp.configuration.static.mpls import srv6_mup_t2st
 from exabgp.configuration.static.parser import extended_community
-
-from exabgp.configuration.announce import ParseAnnounce
 
 
 class AnnounceMup(ParseAnnounce):
@@ -57,24 +62,24 @@ class AnnounceMup(ParseAnnounce):
 
     name = 'mup'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         self.scope.to_context(self.name)
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return ParseAnnounce.post(self) and self._check()
 
-    def check(self):
+    def check(self) -> bool:
         return True
 
 
-def mup(tokeniser, afi, safi):
+def mup(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     muptype = tokeniser()
     if muptype == 'mup-isd':
         mup_nlri = srv6_mup_isd(tokeniser, afi)
@@ -113,10 +118,10 @@ def mup(tokeniser, afi, safi):
 
 
 @ParseAnnounce.register('mup', 'extend-name', 'ipv4')
-def mup_ip_v4(tokeniser):
+def mup_ip_v4(tokeniser: Tokeniser) -> List[Change]:
     return mup(tokeniser, AFI.ipv4, SAFI.mup)
 
 
 @ParseAnnounce.register('mup', 'extend-name', 'ipv6')
-def mup_ip_v6(tokeniser):
+def mup_ip_v6(tokeniser: Tokeniser) -> List[Change]:
     return mup(tokeniser, AFI.ipv6, SAFI.mup)

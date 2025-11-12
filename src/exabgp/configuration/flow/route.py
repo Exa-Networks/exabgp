@@ -7,10 +7,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, Callable, Dict
+
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 from exabgp.configuration.core import Section
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.flow.match import ParseFlowMatch
 from exabgp.configuration.flow.then import ParseFlowThen
@@ -25,7 +30,7 @@ from exabgp.logger import log
 
 
 class ParseFlowRoute(Section):
-    syntax = (
+    syntax: str = (
         'route give-me-a-name {{\n'
         '  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n'
         '  next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n'
@@ -39,41 +44,41 @@ class ParseFlowRoute(Section):
         )
     )
 
-    known = {
+    known: Dict[str, Callable[[Any], Any]] = {
         'rd': route_distinguisher,
         'route-distinguisher': route_distinguisher,
         'next-hop': next_hop,
     }
 
-    action = {
+    action: Dict[str, str] = {
         'rd': 'nlri-set',
         'route-distinguisher': 'nlri-set',
         'next-hop': 'nlri-nexthop',
     }
 
-    assign = {
+    assign: Dict[str, str] = {
         'rd': 'rd',
         'route-distinguisher': 'rd',
     }
 
-    name = 'flow/route'
+    name: str = 'flow/route'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         Section.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         self.scope.append_route(flow(None))
         return True
 
-    def post(self):
-        route = self.scope.get_route()
+    def post(self) -> bool:
+        route: Any = self.scope.get_route()
         if route.nlri.rd is not RouteDistinguisher.NORD:
             route.nlri.safi = SAFI.flow_vpn
         return True
 
-    def _check(self, change):
+    def _check(self, change: Any) -> bool:
         log.debug(lambda: 'warning: no check on flows are implemented', 'configuration')
         return True
