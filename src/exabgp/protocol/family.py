@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
+from typing import Dict, ClassVar, Optional, List, Tuple, Union
 
 from exabgp.protocol.resource import Resource
 
@@ -19,13 +20,13 @@ from exabgp.protocol.resource import Resource
 
 
 class _AFI(int):
-    UNDEFINED = 0x00  # internal
-    IPv4 = 0x01
-    IPv6 = 0x02
-    L2VPN = 0x19
-    BGPLS = 0x4004
+    UNDEFINED: ClassVar[int] = 0x00  # internal
+    IPv4: ClassVar[int] = 0x01
+    IPv6: ClassVar[int] = 0x02
+    L2VPN: ClassVar[int] = 0x19
+    BGPLS: ClassVar[int] = 0x4004
 
-    _names = {
+    _names: ClassVar[Dict[int, str]] = {
         UNDEFINED: 'undefined',
         IPv4: 'ipv4',
         IPv6: 'ipv6',
@@ -33,26 +34,26 @@ class _AFI(int):
         BGPLS: 'bgp-ls',
     }
 
-    _masks = {
+    _masks: ClassVar[Dict[int, int]] = {
         IPv4: 32,
         IPv6: 128,
     }
 
-    _address_lengths = {
+    _address_lengths: ClassVar[Dict[int, int]] = {
         IPv4: 4,   # 4 bytes = 32 bits
         IPv6: 16,  # 16 bytes = 128 bits
     }
 
-    def pack(self):
+    def pack(self) -> bytes:
         return pack('!H', self)
 
-    def name(self):
+    def name(self) -> str:
         return self._names.get(self, f'unknown-afi-{hex(self)}')
 
-    def mask(self):
+    def mask(self) -> Union[int, str]:
         return self._masks.get(self, 'invalid request for this family')
 
-    def address_length(self):
+    def address_length(self) -> int:
         """Return address length in bytes.
 
         Raises:
@@ -62,10 +63,10 @@ class _AFI(int):
             raise ValueError(f'Address length not defined for AFI {self.name()}')
         return self._address_lengths[self]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name()
 
 
@@ -84,7 +85,7 @@ class AFI(Resource):
         bgpls.pack(): bgpls,
     }
 
-    codes = dict(
+    codes: ClassVar[Dict[str, _AFI]] = dict(  # type: ignore[assignment]
         (k.lower().replace('_', '-'), v)
         for (k, v) in {
             'ipv4': ipv4,
@@ -94,24 +95,24 @@ class AFI(Resource):
         }.items()
     )
 
-    cache = dict([(inst, inst) for (_, inst) in codes.items()])
-    names = dict([(inst, name) for (name, inst) in codes.items()])
+    cache: ClassVar[Dict[int, _AFI]] = dict([(_AFI(inst), inst) for (_, inst) in codes.items()])  # type: ignore[assignment]
+    names: ClassVar[Dict[int, str]] = dict([(_AFI(inst), name) for (name, inst) in codes.items()])
 
-    inet_names = dict([(inst, name.replace('ipv', 'inet')) for (name, inst) in codes.items()])
+    inet_names: ClassVar[Dict[int, str]] = dict([(_AFI(inst), name.replace('ipv', 'inet')) for (name, inst) in codes.items()])
 
-    def name(self):
-        return self.inet_names.get(self, 'unknown afi')
+    def name(self) -> str:
+        return self.inet_names.get(_AFI(self), 'unknown afi')
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> _AFI:
         return AFI.common.get(data, _AFI(unpack('!H', data)[0]))
 
     @classmethod
-    def value(cls, name):
+    def value(cls, name: str) -> Optional[_AFI]:
         return cls.codes.get(name, None)
 
     @staticmethod
-    def implemented_safi(afi):
+    def implemented_safi(afi: str) -> List[str]:
         if afi == 'ipv4':
             return ['unicast', 'multicast', 'nlri-mpls', 'mcast-vpnmpls-vpn', 'flow', 'flow-vpn', 'mup']
         if afi == 'ipv6':
@@ -123,11 +124,11 @@ class AFI(Resource):
         return []
 
     @classmethod
-    def fromString(cls, string):
+    def fromString(cls, string: str) -> _AFI:
         return cls.codes.get(string, cls.undefined)
 
     @classmethod
-    def create(cls, value):
+    def create(cls, value: int) -> _AFI:
         return cls.cache.get(value, _AFI(value))
 
 
@@ -136,20 +137,20 @@ class AFI(Resource):
 
 
 class _SAFI(int):
-    UNDEFINED = 0  # internal
-    UNICAST = 1  # [RFC4760]
-    MULTICAST = 2  # [RFC4760]
-    NLRI_MPLS = 4  # [RFC3107]
-    VPLS = 65  # [RFC4761]
-    EVPN = 70  # [draft-ietf-l2vpn-evpn]
-    BGPLS = 71  # [RFC7752]
-    BGPLS_VPN = 72  # [RFC7752]
-    MUP = 85  # [draft-mpmz-bess-mup-safi]
-    MPLS_VPN = 128  # [RFC4364]
-    MCAST_VPN = 5  # [RFC6514]
-    RTC = 132  # [RFC4684]
-    FLOW_IP = 133  # [RFC5575]
-    FLOW_VPN = 134  # [RFC5575]
+    UNDEFINED: ClassVar[int] = 0  # internal
+    UNICAST: ClassVar[int] = 1  # [RFC4760]
+    MULTICAST: ClassVar[int] = 2  # [RFC4760]
+    NLRI_MPLS: ClassVar[int] = 4  # [RFC3107]
+    VPLS: ClassVar[int] = 65  # [RFC4761]
+    EVPN: ClassVar[int] = 70  # [draft-ietf-l2vpn-evpn]
+    BGPLS: ClassVar[int] = 71  # [RFC7752]
+    BGPLS_VPN: ClassVar[int] = 72  # [RFC7752]
+    MUP: ClassVar[int] = 85  # [draft-mpmz-bess-mup-safi]
+    MPLS_VPN: ClassVar[int] = 128  # [RFC4364]
+    MCAST_VPN: ClassVar[int] = 5  # [RFC6514]
+    RTC: ClassVar[int] = 132  # [RFC4684]
+    FLOW_IP: ClassVar[int] = 133  # [RFC5575]
+    FLOW_VPN: ClassVar[int] = 134  # [RFC5575]
     # deprecated = 3            # [RFC4760]
     # mcast_vpn = 5             # [draft-ietf-l3vpn-2547bis-mcast-bgp] (TEMPORARY - Expires 2008-06-19)
     # pseudowire = 6            # [draft-ietf-pwe3-dynamic-ms-pw] (TEMPORARY - Expires 2008-08-23)
@@ -166,7 +167,7 @@ class _SAFI(int):
     # unassigned = [_ for _ in range(8,64)] + [_ for _ in range(70,128)]
     # reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,] # [RFC4760]
 
-    _names = {
+    _names: ClassVar[Dict[int, str]] = {
         UNICAST: 'unicast',
         MULTICAST: 'multicast',
         NLRI_MPLS: 'nlri-mpls',
@@ -182,27 +183,27 @@ class _SAFI(int):
         FLOW_VPN: 'flow-vpn',
     }
 
-    def pack(self):
+    def pack(self) -> bytes:
         return bytes([self])
 
-    def name(self):
+    def name(self) -> str:
         return self._names.get(self, f'unknown safi {int(self)}')
 
-    def has_label(self):
+    def has_label(self) -> bool:
         return self in (SAFI.nlri_mpls, SAFI.mpls_vpn, SAFI.mcast_vpn)
 
-    def has_rd(self):
+    def has_rd(self) -> bool:
         return self in (SAFI.mup, SAFI.mpls_vpn, SAFI.mcast_vpn, SAFI.flow_vpn)
         # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
-    def has_path(self):
+    def has_path(self) -> bool:
         return self in (SAFI.unicast, SAFI.nlri_mpls)
         # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
 
@@ -239,7 +240,7 @@ class SAFI(Resource):
         flow_vpn.pack(): flow_vpn,
     }
 
-    codes = dict(
+    codes: ClassVar[Dict[str, _SAFI]] = dict(  # type: ignore[assignment]
         (k.lower().replace('_', '-'), v)
         for (k, v) in {
             'unicast': unicast,
@@ -258,24 +259,24 @@ class SAFI(Resource):
         }.items()
     )
 
-    names = _SAFI._names
+    names: ClassVar[Dict[int, str]] = _SAFI._names
 
-    cache = dict([(inst, inst) for (_, inst) in codes.items()])
+    cache: ClassVar[Dict[int, _SAFI]] = dict([(_SAFI(inst), inst) for (_, inst) in codes.items()])  # type: ignore[assignment]
 
     @staticmethod
-    def unpack(data):
-        return SAFI.common.get(data, _SAFI(data))
+    def unpack(data: bytes) -> _SAFI:
+        return SAFI.common.get(data, _SAFI(data[0] if data else 0))
 
     @classmethod
-    def value(cls, name):
+    def value(cls, name: str) -> Optional[_SAFI]:
         return cls.codes.get(name, None)
 
     @classmethod
-    def fromString(cls, string):
+    def fromString(cls, string: str) -> _SAFI:
         return cls.codes.get(string, cls.undefined)
 
     @classmethod
-    def create(cls, value):
+    def create(cls, value: int) -> _SAFI:
         return cls.cache.get(value, _SAFI(value))
 
 
@@ -283,7 +284,7 @@ class SAFI(Resource):
 
 
 class Family:
-    size = {
+    size: ClassVar[Dict[Tuple[_AFI, _SAFI], Tuple[Tuple[int, ...], int]]] = {
         # family                   next-hop   RD
         (AFI.ipv4, SAFI.unicast): ((4,), 0),
         (AFI.ipv4, SAFI.multicast): ((4,), 0),
@@ -306,51 +307,58 @@ class Family:
         (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
     }
 
-    def __init__(self, afi, safi):
+    afi: _AFI
+    safi: _SAFI
+
+    def __init__(self, afi: int, safi: int) -> None:
         self.afi = AFI.create(afi)
         self.safi = SAFI.create(safi)
 
-    def has_label(self):
+    def has_label(self) -> bool:
         return self.safi.has_label()
 
-    def has_rd(self):
+    def has_rd(self) -> bool:
         return self.safi.has_rd()
 
-    def has_path(self):
+    def has_path(self) -> bool:
         return self.safi.has_path()
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Family):
+            return NotImplemented
         return self.afi == other.afi and self.safi == other.safi
 
-    def __neq__(self, other):
-        return self.afi != other.afi or self.safi != other.safi
+    def __neq__(self, other: object) -> bool:
+        if not isinstance(other, Family):
+            return NotImplemented  # type: ignore[no-any-return]
+        return bool(self.afi != other.afi or self.safi != other.safi)
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing Family for ordering does not make sense')
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         raise RuntimeError('comparing Family for ordering does not make sense')
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         raise RuntimeError('comparing Family for ordering does not make sense')
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing Family for ordering does not make sense')
 
-    def afi_safi(self):
+    def afi_safi(self) -> Tuple[_AFI, _SAFI]:
         return (self.afi, self.safi)
 
-    def family(self):
+    def family(self) -> Family:
         return Family(self.afi, self.safi)
 
-    def short(self):
+    def short(self) -> str:
         return f'{self.afi}/{self.safi}'
 
-    def extensive(self):
+    def extensive(self) -> str:
         return f'afi {self.afi} safi {self.safi}'
 
-    def index(self):
+    def index(self) -> bytes:
         return f'{self.afi:02x}{self.safi:02x}'.encode()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{self.afi!s} {self.safi!s}'
