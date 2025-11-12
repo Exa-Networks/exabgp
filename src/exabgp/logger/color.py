@@ -1,5 +1,9 @@
+from __future__ import annotations
+
+from typing import Dict
+
 # 'FATAL CRITICAL ERROR WARNING INFO DEBUG NOTSET'
-_RECORD = {
+_RECORD: Dict[str, str] = {
     'FATAL': '\033[00;31m',  # Strong Red
     'CRITICAL': '\033[00;31m',  # Strong Red
     'ERROR': '\033[01;31m',  # Red
@@ -9,7 +13,7 @@ _RECORD = {
     'NOTSET': '\033[01;34m',  # Blue
 }
 
-_MESSAGE = {
+_MESSAGE: Dict[str, str] = {
     'FATAL': '\033[1m',
     'CRITICAL': '',
     'ERROR': '\033[1m',
@@ -19,17 +23,17 @@ _MESSAGE = {
     'NOTSET': '',
 }
 
-_END = '\033[0m'
+_END: str = '\033[0m'
 
 
-def source(level, message):
+def source(level: str, message: str) -> str:
     color = _RECORD.get(level, '')
     if color:
         return f'{color}{message:<15}{_END}'
     return message
 
 
-def message(level, message):
+def message(level: str, message: str) -> str:
     color = _MESSAGE.get(level, '')
     if color:
         return f'{color}{message:<8}{_END}'
