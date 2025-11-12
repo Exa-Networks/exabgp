@@ -5,12 +5,14 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from typing import Dict
+from __future__ import annotations
+
+from typing import ClassVar, Dict
 
 
 class Sequence(int):
-    _instance: Dict[str, int] = dict()
+    _instance: ClassVar[Dict[str, int]] = dict()
 
-    def __new__(cls):
+    def __new__(cls) -> int:
         cls._instance['next'] = cls._instance.get('next', 0) + 1
         return cls._instance['next']
