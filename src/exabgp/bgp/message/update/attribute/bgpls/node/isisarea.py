@@ -1,4 +1,3 @@
-
 """isisarea.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -30,7 +29,7 @@ class IsisArea(BaseLS):
         BaseLS.__init__(self, areaid)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> IsisArea:
         return cls(int(data.hex(), 16))
 
     def json(self, compact=None):

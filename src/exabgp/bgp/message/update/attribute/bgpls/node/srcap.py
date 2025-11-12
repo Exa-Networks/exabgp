@@ -1,4 +1,3 @@
-
 """srcap.py
 
 Created by Evelio Vila
@@ -64,7 +63,7 @@ class SrCapabilities(FlagLS):
         return '{}: {}, sids: {}'.format(self.REPR, self.flags, self.sids)
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> SrCapabilities:
         # Extract node capability flags
         flags = cls.unpack_flags(data[0:1])
         # Move pointer past flags and reserved bytes
@@ -79,12 +78,16 @@ class SrCapabilities(FlagLS):
             # SID/Label: If length is set to 3, then the 20 rightmost bits
             # represent a label.  If length is set to 4, then the value
             # represents a 32 bit SID.
-            sub_type, length = unpack('!HH', data[SRCAP_RANGE_SIZE_BYTES : SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE])
+            sub_type, length = unpack(
+                '!HH', data[SRCAP_RANGE_SIZE_BYTES : SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE]
+            )
             if sub_type != SRCAP_LABEL_SUB_TLV_TYPE:
                 raise Notify(3, 5, f'Invalid sub-TLV type: {sub_type}')
             if length == SRCAP_LABEL_SIZE_3:
                 start = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE
-                sids.append([range_size, unpack('!I', bytes([0]) + data[start : start + length])[0] & SRCAP_LABEL_MASK_20BIT])
+                sids.append(
+                    [range_size, unpack('!I', bytes([0]) + data[start : start + length])[0] & SRCAP_LABEL_MASK_20BIT]
+                )
             elif length == SRCAP_LABEL_SIZE_4:
                 # XXX: really we are reading 7+ but then re-parsing it again ??
                 start = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE
