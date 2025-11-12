@@ -20,7 +20,7 @@ from exabgp.environment.hashtable import HashTable
 from exabgp.environment.hashtable import GlobalHashTable
 
 
-class NoneDict(dict[str, None]):
+class NoneDict(dict):
     def __getitem__(self, name: str) -> None:
         return None
 
@@ -116,7 +116,7 @@ class Env:
                     elif rep_name in os.environ:
                         conf = os.environ.get(rep_name)
                     else:
-                        conf = parsing.unquote(ini.get(proxy_section, option, vars=nonedict))  # type: ignore[arg-type]
+                        conf = parsing.unquote(ini.get(proxy_section, option, vars=nonedict))
                         # name without an = or : in the configuration and no value
                         if conf is None:
                             conf = default[option]['value']

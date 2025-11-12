@@ -15,7 +15,7 @@ def _(key: str) -> str:
     return key.replace('_', '-')
 
 
-class HashTable(dict[str, Any]):
+class HashTable(dict):
     def __getitem__(self, key: str) -> Any:
         return dict.__getitem__(self, _(key))
 
