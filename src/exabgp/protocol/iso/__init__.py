@@ -7,21 +7,30 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import Optional, Any
+
 
 # =========================================================================== ISO
 #
 
 
 class ISO:
-    def __init__(self, sysid, selector=None, area_id=None, afi=49):
+    sysid: str
+    area_id: Optional[str]
+    selector: Optional[str]
+    afi: int
+
+    def __init__(
+        self, sysid: str, selector: Optional[str] = None, area_id: Optional[str] = None, afi: int = 49
+    ) -> None:
         self.sysid = sysid
         self.area_id = area_id
         self.selector = selector
         self.afi = afi
 
     @classmethod
-    def unpack_sysid(cls, data):
+    def unpack_sysid(cls, data: bytes) -> str:
         return data.hex()
 
-    def json(self, compact=None):
+    def json(self, compact: Optional[Any] = None) -> str:
         return self.sysid
