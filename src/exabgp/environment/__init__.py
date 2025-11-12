@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 # this is where the environment should be taken from
 # it makes sure the environment is setup before it is imported
@@ -19,21 +20,25 @@ from exabgp.environment.base import ETC  # noqa: F401,E261
 # at the time of import, so using a function get around it
 from exabgp.environment.hashtable import GlobalHashTable as __
 
+if TYPE_CHECKING:
+    from exabgp.environment.hashtable import GlobalHashTable
 
-def getenv():
+
+def getenv() -> GlobalHashTable:
     return __()
 
 
-def getconf(name):
+def getconf(name: str) -> str:
     # some users are using symlinks for atomic change of the configuration file
     # using mv may however be better practice :p
     # so we must not follow symlink when looking for the file
+    normalised: str
     if name.startswith('etc/exabgp'):
         normalised = os.path.join(ETC, name[11:])
     else:
         normalised = os.path.normpath(name)
 
-    absolute = os.path.abspath(normalised)
+    absolute: str = os.path.abspath(normalised)
     if os.path.isfile(absolute):
         return absolute
 
