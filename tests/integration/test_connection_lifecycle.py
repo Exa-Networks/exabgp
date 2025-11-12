@@ -297,7 +297,16 @@ class TestOutgoingConnectionLifecycle:
 
             assert established, "Connection should establish"
             assert outgoing.io is not None, "Socket should be assigned"
-            assert server.connection_established, "Server should receive connection"
+
+            # Wait for server thread to accept the connection (race condition fix)
+            server_accepted = False
+            for _ in range(20):  # Wait up to 2 seconds
+                if server.connection_established:
+                    server_accepted = True
+                    break
+                time.sleep(0.1)
+
+            assert server_accepted, "Server should receive connection"
 
             outgoing.close()
         finally:
