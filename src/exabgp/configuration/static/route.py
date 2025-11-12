@@ -9,6 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, Iterator
+
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 
@@ -54,7 +56,7 @@ from exabgp.configuration.static.mpls import prefix_sid_srv6
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
-def pack_int(afi, integer):
+def pack_int(afi: AFI, integer: int) -> bytes:
     return b''.join(bytes([(integer >> (offset * 8)) & 0xFF]) for offset in range(IP.length(afi) - 1, -1, -1))
 
 
@@ -84,9 +86,9 @@ class ParseStaticRoute(Section):
         'withdraw',
     ]
 
-    syntax = 'route <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
+    syntax: str = 'route <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known = {
+    known: dict = {
         'path-information': path_information,
         'rd': route_distinguisher,
         'route-distinguisher': route_distinguisher,
@@ -113,7 +115,7 @@ class ParseStaticRoute(Section):
         'withdraw': withdraw,
     }
 
-    action = {
+    action: dict = {
         'path-information': 'nlri-set',
         'rd': 'nlri-set',
         'route-distinguisher': 'nlri-set',
@@ -142,26 +144,26 @@ class ParseStaticRoute(Section):
         'aigp': 'attribute-add',
     }
 
-    assign = {
+    assign: dict = {
         'path-information': 'path_info',
         'rd': 'rd',
         'route-distinguisher': 'rd',
         'label': 'labels',
     }
 
-    name = 'static/route'
+    name: str = 'static/route'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Any, scope: Any, error: Any) -> None:
         Section.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> bool:
         return True
 
-    def pre(self):
+    def pre(self) -> bool:
         self.scope.append_route(mpls(self.tokeniser.iterate))
         return True
 
-    def post(self):
+    def post(self) -> bool:
         self._split()
         routes = self.scope.pop_routes()
         if routes:
@@ -173,13 +175,13 @@ class ParseStaticRoute(Section):
                 self.scope.append_route(route)
         return True
 
-    def _check(self):
+    def _check(self) -> bool:
         if not self.check(self.scope.get(self.name)):
             return self.error.set(self.syntax)
         return True
 
     @staticmethod
-    def check(change):
+    def check(change: Change) -> bool:
         if (
             change.nlri.nexthop is NoNextHop
             and change.nlri.action == Action.ANNOUNCE
@@ -190,7 +192,7 @@ class ParseStaticRoute(Section):
         return True
 
     @staticmethod
-    def split(last):
+    def split(last: Change) -> Iterator[Change]:
         if Attribute.CODE.INTERNAL_SPLIT not in last.attributes:
             yield last
             return
@@ -246,7 +248,7 @@ class ParseStaticRoute(Section):
             ip += increment
             yield Change(nlri, last.attributes)
 
-    def _split(self):
+    def _split(self) -> None:
         for route in self.scope.pop_routes():
             for splat in self.split(route):
                 self.scope.append_route(splat)

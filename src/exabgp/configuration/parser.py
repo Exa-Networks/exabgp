@@ -7,17 +7,18 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Optional
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPRange
 
 
-def string(tokeniser):
+def string(tokeniser: object) -> str:
     return tokeniser()
 
 
-def boolean(tokeniser, default):
+def boolean(tokeniser: object, default: bool) -> bool:
     status = tokeniser().lower()
     if not status:
         return default
@@ -28,7 +29,7 @@ def boolean(tokeniser, default):
     raise ValueError('invalid value ({}) for a boolean'.format(status))
 
 
-def auto_boolean(tokeniser, default):
+def auto_boolean(tokeniser: object, default: bool) -> Optional[bool]:
     status = tokeniser().lower()
     if not status:
         return default
@@ -41,7 +42,7 @@ def auto_boolean(tokeniser, default):
     raise ValueError('invalid value ({}) for a boolean'.format(status))
 
 
-def port(tokeniser):
+def port(tokeniser: object) -> int:
     if not tokeniser.tokens:
         raise ValueError('a port number is required')
 
@@ -57,7 +58,7 @@ def port(tokeniser):
     return value
 
 
-def auto_asn(tokeniser, value=None):
+def auto_asn(tokeniser: object, value: Optional[str] = None) -> Optional[ASN]:
     if value is None:
         if not tokeniser.tokens:
             raise ValueError("an asn or 'auto' is required")
@@ -69,7 +70,7 @@ def auto_asn(tokeniser, value=None):
     return asn(tokeniser)
 
 
-def asn(tokeniser, value=None):
+def asn(tokeniser: object, value: Optional[str] = None) -> ASN:
     if value is None:
         if not tokeniser.tokens:
             raise ValueError('an asn is required')
@@ -86,7 +87,7 @@ def asn(tokeniser, value=None):
         raise ValueError('"{}" is an invalid ASN'.format(value)) from None
 
 
-def peer_ip(tokeniser):
+def peer_ip(tokeniser: object) -> IPRange:
     if not tokeniser.tokens:
         raise ValueError('an ip address is required')
 
@@ -103,7 +104,7 @@ def peer_ip(tokeniser):
         raise ValueError('"{}" is an invalid IP address'.format(value)) from None
 
 
-def ip(tokeniser):
+def ip(tokeniser: object) -> IP:
     if not tokeniser.tokens:
         raise ValueError('an ip address is required')
 

@@ -10,24 +10,25 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import deque
+from typing import Any, Deque, Optional, Tuple
 
 from exabgp.logger import log
 
 
 class ASYNC:
-    LIMIT = 50
+    LIMIT: int = 50
 
-    def __init__(self):
-        self._async = deque()
+    def __init__(self) -> None:
+        self._async: Deque[Tuple[str, Any]] = deque()
 
-    def ready(self):
+    def ready(self) -> bool:
         return not self._async
 
-    def _is_coroutine(self, callback):
+    def _is_coroutine(self, callback: Any) -> bool:
         """Check if callback is a coroutine or coroutine function"""
         return inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback)
 
-    def schedule(self, uid, command, callback):
+    def schedule(self, uid: str, command: str, callback: Any) -> None:
         """Schedule a callback (generator or coroutine) for execution
 
         Args:
@@ -38,7 +39,7 @@ class ASYNC:
         log.debug(lambda: f'async | {uid} | {command}', 'reactor')
         self._async.append((uid, callback))
 
-    def clear(self, deluid=None):
+    def clear(self, deluid: Optional[str] = None) -> None:
         if not self._async:
             return
         if deluid is None:
@@ -51,7 +52,7 @@ class ASYNC:
                 running.append((uid, generator))
         self._async = running
 
-    def run(self):
+    def run(self) -> bool:
         """Execute scheduled callbacks (synchronous wrapper for backward compatibility)
 
         This method provides backward compatibility by calling the async version.
@@ -63,13 +64,13 @@ class ASYNC:
             return False
 
         # Check if we have any coroutines in the queue
-        has_coroutines = any(self._is_coroutine(callback) for _, callback in self._async)
+        has_coroutines: bool = any(self._is_coroutine(callback) for _, callback in self._async)
 
         if has_coroutines:
             # If we have coroutines, we need to run in async context
             try:
                 # Try to get existing loop
-                loop = asyncio.get_event_loop()
+                loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
                 if loop.is_running():
                     # If loop is already running, we can't use run_until_complete
                     # This shouldn't happen in normal operation
@@ -83,7 +84,7 @@ class ASYNC:
             # Only generators, run synchronously
             return asyncio.run(self._run_async())
 
-    async def _run_async(self):
+    async def _run_async(self) -> bool:
         """Execute scheduled callbacks (supports both generators and coroutines)"""
         if not self._async:
             return False

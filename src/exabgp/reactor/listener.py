@@ -11,6 +11,7 @@ import os
 import uuid
 import copy
 import socket
+from typing import Any, ClassVar, Dict, Generator, Optional, Tuple
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
@@ -31,31 +32,39 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.logger import log
 
 # Network port constants
-MAX_PRIVILEGED_PORT = 1024  # Highest privileged port number (requires root on Unix)
+MAX_PRIVILEGED_PORT: int = 1024  # Highest privileged port number (requires root on Unix)
 
 
 class Listener:
-    _family_AFI_map = {
+    _family_AFI_map: ClassVar[Dict[socket.AddressFamily, AFI]] = {
         socket.AF_INET: AFI.ipv4,
         socket.AF_INET6: AFI.ipv6,
     }
 
-    def __init__(self, reactor, backlog=200):
-        self.serving = False
+    def __init__(self, reactor: Any, backlog: int = 200) -> None:
+        self.serving: bool = False
 
-        self._reactor = reactor
-        self._backlog = backlog
-        self._sockets = {}
-        self._accepted = {}
+        self._reactor: Any = reactor
+        self._backlog: int = backlog
+        self._sockets: Dict[socket.socket, Tuple[str, int, str, Optional[str]]] = {}
+        self._accepted: Dict[socket.socket, socket.socket] = {}
 
-    def _new_socket(self, ip):
+    def _new_socket(self, ip: IP) -> socket.socket:
         if ip.afi == AFI.ipv6:
             return socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         if ip.afi == AFI.ipv4:
             return socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         raise NetworkError(f'Can not create socket for listening, family of IP {ip} is unknown')
 
-    def _listen(self, local_ip, peer_ip, local_port, use_md5, md5_base64, ttl_in):
+    def _listen(
+        self,
+        local_ip: IP,
+        peer_ip: IP,
+        local_port: int,
+        use_md5: Optional[str],
+        md5_base64: bool,
+        ttl_in: Optional[int],
+    ) -> None:
         self.serving = True
 
         for sock, (local, port, peer, md) in self._sockets.items():
@@ -97,12 +106,20 @@ class Listener:
             log.critical(lambda exc=exc: str(exc), 'network')
             raise exc
 
-    def listen_on(self, local_addr, remote_addr, port, md5_password, md5_base64, ttl_in):
+    def listen_on(
+        self,
+        local_addr: IP,
+        remote_addr: Optional[IP],
+        port: int,
+        md5_password: Optional[str],
+        md5_base64: bool,
+        ttl_in: Optional[int],
+    ) -> bool:
         try:
             if not remote_addr:
                 remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
             self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
-            md5_suffix = ' with MD5' if md5_password else ''
+            md5_suffix: str = ' with MD5' if md5_password else ''
             log.debug(
                 f'listening for BGP session(s) on {local_addr}:{port}{md5_suffix}',
                 'network',
@@ -120,11 +137,11 @@ class Listener:
             log.critical(lambda: f'and check that no other daemon is already binding to port {port}', 'network')
             return False
 
-    def incoming(self):
+    def incoming(self) -> bool:
         if not self.serving:
             return False
 
-        peer_connected = False
+        peer_connected: bool = False
 
         for sock in self._sockets:
             if sock in self._accepted:
@@ -140,7 +157,7 @@ class Listener:
 
         return peer_connected
 
-    def _connected(self):
+    def _connected(self) -> Generator[Incoming, None, None]:
         try:
             for sock, io in list(self._accepted.items()):
                 del self._accepted[sock]
@@ -157,13 +174,13 @@ class Listener:
         except NetworkError as exc:
             log.critical(lambda exc=exc: str(exc), 'network')
 
-    def new_connections(self):
+    def new_connections(self) -> Generator[None, None, None]:
         if not self.serving:
             return
         yield None
 
-        reactor = self._reactor
-        ranged_neighbor = []
+        reactor: Any = self._reactor
+        ranged_neighbor: list[Any] = []
 
         for connection in self._connected():
             log.debug(lambda connection=connection: f'new connection received {connection.name()}', 'network')
@@ -244,7 +261,7 @@ class Listener:
                 reactor.register_peer(new_neighbor.name(), new_peer)
                 return
 
-    def stop(self):
+    def stop(self) -> None:
         if not self.serving:
             return
 

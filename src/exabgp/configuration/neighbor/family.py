@@ -7,11 +7,17 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import List
+from typing import Tuple
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.configuration.core import Section
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 
 class ParseFamily(Section):
@@ -77,7 +83,7 @@ class ParseFamily(Section):
 
     name = 'family'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         Section.__init__(self, tokeniser, scope, error)
         self.known = {
             'ipv4': self.ipv4,
@@ -86,21 +92,21 @@ class ParseFamily(Section):
             'bgp-ls': self.bgpls,
             'all': self.all,
         }
-        self._all = ''
-        self._seen = []
+        self._all: bool = False
+        self._seen: List[Tuple[AFI, SAFI]] = []
 
-    def clear(self):
+    def clear(self) -> None:
         self._all = False
         self._seen = []
 
-    def pre(self):
+    def pre(self) -> bool:
         self.clear()
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return True
 
-    def _family(self, tokeniser, afi):
+    def _family(self, tokeniser, afi: str) -> Tuple[AFI, SAFI]:
         if self._all:
             raise ValueError('can not add any family once family all is set')
 
@@ -114,22 +120,22 @@ class ParseFamily(Section):
         self._seen.append(pair)
         return pair
 
-    def ipv4(self, tokeniser):
+    def ipv4(self, tokeniser) -> Tuple[AFI, SAFI]:
         return self._family(tokeniser, 'ipv4')
 
-    def ipv6(self, tokeniser):
+    def ipv6(self, tokeniser) -> Tuple[AFI, SAFI]:
         return self._family(tokeniser, 'ipv6')
 
-    def l2vpn(self, tokeniser):
+    def l2vpn(self, tokeniser) -> Tuple[AFI, SAFI]:
         return self._family(tokeniser, 'l2vpn')
 
-    def bgpls(self, tokeniser):
+    def bgpls(self, tokeniser) -> Tuple[AFI, SAFI]:
         return self._family(tokeniser, 'bgp-ls')
 
-    def minimal(self, tokeniser):
+    def minimal(self, tokeniser) -> None:
         raise ValueError('family minimal is deprecated')
 
-    def all(self, tokeniser):
+    def all(self, tokeniser) -> None:
         if self._all or self._seen:
             return self.error.set('all can not be used with any other options')
         self._all = True

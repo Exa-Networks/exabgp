@@ -5,6 +5,8 @@ import sys
 import json
 import string
 
+from typing import Callable, Dict, Optional
+
 from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
@@ -23,7 +25,7 @@ MAX_SHUTDOWN_COMM_LENGTH = 128  # Maximum length of shutdown communication messa
 
 
 class _FakeNeighbor(dict):
-    def __init__(self, local, remote, asn, peer):
+    def __init__(self, local: str, remote: str, asn: int, peer: int) -> None:
         self['local-address'] = IPv4(local)
         self['peer_address'] = IPv4(remote)
         self['peer-as'] = ASN(asn)
@@ -34,30 +36,30 @@ class _FakeNeighbor(dict):
 
 
 class Transcoder:
-    seen_open = {
+    seen_open: Dict[str, Optional[Open]] = {
         'send': None,
         'receive': None,
     }
-    negotiated = None
+    negotiated: Optional[Negotiated] = None
 
-    json = Response.JSON(json_version)
+    json: Response.JSON = Response.JSON(json_version)
 
-    def __init__(self, src='json', dst='json'):
+    def __init__(self, src: str = 'json', dst: str = 'json') -> None:
         if src != 'json':
             raise RuntimeError('left as an exercise to the reader')
 
         if dst != 'json':
             raise RuntimeError('left as an exercise to the reader')
 
-        self.convert = self._from_json
-        self.encoder = self.json
+        self.convert: Callable[[str, str], Optional[str]] = self._from_json
+        self.encoder: Response.JSON = self.json
 
-    def _state(self):
+    def _state(self) -> None:
         self.seen_open['send'] = None
         self.seen_open['receive'] = None
         self.negotiated = None
 
-    def _open(self, direction, message):
+    def _open(self, direction: str, message: Open) -> None:
         self.seen_open[direction] = message
 
         if all(self.seen_open.values()):
@@ -65,7 +67,7 @@ class Transcoder:
             self.negotiated.sent(self.seen_open['send'])
             self.negotiated.received(self.seen_open['receive'])
 
-    def _from_json(self, direction, json_string):
+    def _from_json(self, direction: str, json_string: str) -> Optional[str]:
         try:
             parsed = json.loads(json_string)
         except ValueError:

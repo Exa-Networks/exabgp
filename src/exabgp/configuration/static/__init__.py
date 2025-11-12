@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, Callable, List
+
 from exabgp.configuration.static.route import ParseStaticRoute
 from exabgp.configuration.static.parser import prefix
 
@@ -15,6 +17,7 @@ from exabgp.configuration.announce.label import AnnounceLabel
 from exabgp.configuration.announce.vpn import AnnounceVPN
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import Action
@@ -32,35 +35,35 @@ from exabgp.configuration.static.mpls import route_distinguisher
 from exabgp.configuration.static.parser import path_information
 
 
-def _check_true(change, afi):
+def _check_true(change: Change, afi: AFI) -> bool:
     return True
 
 
 class ParseStatic(ParseStaticRoute):
-    syntax = 'route <ip>/<netmask> {};'.format(' '.join(ParseStaticRoute.definition))
+    syntax: str = 'route <ip>/<netmask> {};'.format(' '.join(ParseStaticRoute.definition))
 
-    action = dict(ParseStaticRoute.action)
+    action: dict = dict(ParseStaticRoute.action)
 
-    name = 'static'
+    name: str = 'static'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Any, scope: Any, error: Any) -> None:
         ParseStaticRoute.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> bool:
         return True
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return ParseStaticRoute.post(self)
 
 
 @ParseStatic.register('route', 'append-route')
-def route(tokeniser):
+def route(tokeniser: Any) -> List[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
-    check = _check_true
+    check: Callable[[Change, AFI], bool] = _check_true
 
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
         nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
@@ -114,7 +117,7 @@ def route(tokeniser):
 
 
 @ParseStatic.register('attributes', 'append-route')
-def attributes(tokeniser):
+def attributes(tokeniser: Any) -> List[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(lambda: tokeniser.tokens[-1])
     tokeniser.afi = ipmask.afi
@@ -129,9 +132,9 @@ def attributes(tokeniser):
     nlri.cidr = CIDR(ipmask.pack(), ipmask.mask)
     attr = Attributes()
 
-    labels = None
-    rd = None
-    path_info = None
+    labels: Any = None
+    rd: Any = None
+    path_info: Any = None
 
     while True:
         command = tokeniser()

@@ -12,6 +12,7 @@ from __future__ import annotations
 import sys
 import copy
 import struct
+from typing import Any, Dict, List, Optional
 
 from exabgp.environment import getenv
 
@@ -56,13 +57,13 @@ BGP_MSG_UPDATE = 2  # BGP UPDATE message type
 BGP_MSG_NOTIFICATION = 3  # BGP NOTIFICATION message type
 
 
-def _hexa(data):
+def _hexa(data: str) -> bytes:
     full = data.replace(':', '')
     hexa = [full[i * 2 : (i * 2) + 2] for i in range(len(full) // 2)]
     return bytes([int(_, 16) for _ in hexa])
 
 
-def _negotiated(neighbor):
+def _negotiated(neighbor: Dict[str, Any]) -> Negotiated:
     path = {}
     for f in NLRI.known_families():
         if neighbor['capability']['add-path']:
@@ -89,7 +90,7 @@ def _negotiated(neighbor):
 # ...
 
 
-def check_generation(neighbors):
+def check_generation(neighbors: Dict[str, Any]) -> bool:
     option.enabled['parser'] = True
 
     for name in neighbors.keys():
@@ -194,7 +195,7 @@ def check_generation(neighbors):
 #
 
 
-def check_message(neighbor, message):
+def check_message(neighbor: Dict[str, Any], message: str) -> bool:
     raw = _hexa(message)
 
     if not raw.startswith(b'\xff' * 16):
@@ -215,7 +216,7 @@ def check_message(neighbor, message):
     return False
 
 
-def display_message(neighbor, message):
+def display_message(neighbor: Dict[str, Any], message: str) -> bool:
     raw = _hexa(message)
 
     if not raw.startswith(b'\xff' * 16):
@@ -243,7 +244,7 @@ def display_message(neighbor, message):
 #
 
 
-def _make_nlri(neighbor, routes):
+def _make_nlri(neighbor: Dict[str, Any], routes: str) -> List[NLRI]:
     option.enabled['parser'] = True
 
     announced = _hexa(routes)
@@ -272,7 +273,7 @@ def _make_nlri(neighbor, routes):
     return nlris
 
 
-def check_nlri(neighbor, routes):
+def check_nlri(neighbor: Dict[str, Any], routes: str) -> bool:
     nlris = _make_nlri(neighbor, routes)
     if not nlris:
         return False
@@ -283,7 +284,7 @@ def check_nlri(neighbor, routes):
     return True
 
 
-def display_nlri(neighbor, routes):
+def display_nlri(neighbor: Dict[str, Any], routes: str) -> bool:
     nlris = _make_nlri(neighbor, routes)
     if not nlris:
         return False
@@ -297,7 +298,7 @@ def display_nlri(neighbor, routes):
 #
 
 
-def check_open(neighbor, raw):
+def check_open(neighbor: Dict[str, Any], raw: bytes) -> None:
     import sys
     import traceback
 
@@ -314,7 +315,7 @@ def check_open(neighbor, raw):
         raise
 
 
-def display_open(neighbor, raw):
+def display_open(neighbor: Dict[str, Any], raw: bytes) -> bool:
     try:
         o = Open.unpack_message(raw)
         sys.stdout.write(Response.JSON(json_version).open(neighbor, 'in', o, None, '', ''))
@@ -328,7 +329,7 @@ def display_open(neighbor, raw):
 #
 
 
-def _make_update(neighbor, raw):
+def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
     option.enabled['parser'] = True
     negotiated = _negotiated(neighbor)
 
@@ -343,10 +344,10 @@ def _make_update(neighbor, raw):
                 log.debug(lambda: 'the message is an update', 'parser')
             else:
                 log.debug(lambda kind=kind: 'the message is not an update (%d) - aborting' % kind, 'parser')
-                return False
+                return None
         else:
             log.debug(lambda: 'header missing, assuming this message is ONE update', 'parser')
-            injected, raw = raw, ''
+            injected, raw = raw, b''
 
         try:
             # This does not take the BGP header - let's assume we will not break that :)
@@ -373,7 +374,7 @@ def _make_update(neighbor, raw):
     return None
 
 
-def _make_notification(neighbor, raw):
+def _make_notification(neighbor: Dict[str, Any], raw: bytes) -> Optional[Notification]:
     option.enabled['parser'] = True
     negotiated = _negotiated(neighbor)
 
@@ -385,11 +386,11 @@ def _make_notification(neighbor, raw):
 
         if kind != BGP_MSG_NOTIFICATION:
             log.debug(lambda: 'the message is not an notification (%d) - aborting' % kind, 'parser')
-            return False
+            return None
         log.debug(lambda: 'the message is an notification', 'parser')
     else:
         log.debug(lambda: 'header missing, assuming this message is ONE notification', 'parser')
-        injected, raw = raw, ''
+        injected, raw = raw, b''
 
     try:
         # This does not take the BGP header - let's assume we will not break that :)
@@ -414,7 +415,7 @@ def _make_notification(neighbor, raw):
     return notification
 
 
-def check_update(neighbor, raw):
+def check_update(neighbor: Dict[str, Any], raw: bytes) -> bool:
     update = _make_update(neighbor, raw)
     if not update:
         return False
@@ -429,7 +430,7 @@ def check_update(neighbor, raw):
     return True
 
 
-def display_update(neighbor, raw):
+def display_update(neighbor: Dict[str, Any], raw: bytes) -> bool:
     update = _make_update(neighbor, raw)
     if not update:
         return False
@@ -439,7 +440,7 @@ def display_update(neighbor, raw):
     return True
 
 
-def display_notification(neighbor, raw):
+def display_notification(neighbor: Dict[str, Any], raw: bytes) -> bool:
     notification = _make_notification(neighbor, raw)
     if not notification:
         return False
@@ -453,7 +454,7 @@ def display_notification(neighbor, raw):
 #
 
 
-def check_notification(raw):
+def check_notification(raw: bytes) -> bool:
     notification = Notification.unpack_message(raw[18:], None, None)
     # XXX: FIXME: should be using logger here
     sys.stdout.write(f'{notification}\n')

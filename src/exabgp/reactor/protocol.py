@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 
 import traceback
+from typing import Any, Generator, Optional, Tuple
 
 # ================================================================ Registration
 #
@@ -51,16 +52,16 @@ _OPERATIONAL = Operational(0x00)
 
 
 class Protocol:
-    decode = True
+    decode: bool = True
 
-    def __init__(self, peer):
-        self.peer = peer
-        self.neighbor = peer.neighbor
-        self.negotiated = Negotiated(self.neighbor)
-        self.connection = None
+    def __init__(self, peer: Any) -> None:
+        self.peer: Any = peer
+        self.neighbor: Any = peer.neighbor
+        self.negotiated: Negotiated = Negotiated(self.neighbor)
+        self.connection: Optional[Any] = None
 
         if self.neighbor['connect']:
-            self.port = self.neighbor['connect']
+            self.port: int = self.neighbor['connect']
         elif os.environ.get('exabgp.tcp.port', '').isdigit():
             self.port = int(os.environ.get('exabgp.tcp.port'))
         elif os.environ.get('exabgp_tcp_port', '').isdigit():
@@ -70,19 +71,19 @@ class Protocol:
 
         from exabgp.environment import getenv
 
-        self.log_routes = peer.neighbor['adj-rib-in'] or getenv().log.routes
+        self.log_routes: bool = peer.neighbor['adj-rib-in'] or getenv().log.routes
 
-    def fd(self):
+    def fd(self) -> int:
         if self.connection is None:
             return -1
         return self.connection.fd()
 
     # XXX: we use self.peer.neighbor['peer-address'] when we could use self.neighbor['peer-address']
 
-    def me(self, message):
+    def me(self, message: str) -> str:
         return f'{self.peer.neighbor["peer-address"]}/{self.peer.neighbor["peer-as"]} {message}'
 
-    def accept(self, incoming):
+    def accept(self, incoming: Any) -> Protocol:
         self.connection = incoming
 
         if self.peer.neighbor.api['neighbor-changes']:
@@ -91,7 +92,7 @@ class Protocol:
         # very important - as we use this function on __init__
         return self
 
-    def connect(self):
+    def connect(self) -> Generator[bool, None, None]:
         # allows to test the protocol code using modified StringIO with a extra 'pending' function
         if self.connection:
             return
@@ -118,7 +119,7 @@ class Protocol:
 
         yield True
 
-    def close(self, reason='protocol closed, reason unspecified'):
+    def close(self, reason: str = 'protocol closed, reason unspecified') -> None:
         if self.connection:
             log.debug(lambda: reason, self.connection.session())
             self.peer.stats['down'] += 1
@@ -126,11 +127,11 @@ class Protocol:
             self.connection.close()
             self.connection = None
 
-    def _to_api(self, direction, message, raw):
-        packets = self.neighbor.api['{}-packets'.format(direction)]
-        parsed = self.neighbor.api['{}-parsed'.format(direction)]
-        consolidate = self.neighbor.api['{}-consolidate'.format(direction)]
-        negotiated = self.negotiated if self.neighbor.api['negotiated'] else None
+    def _to_api(self, direction: str, message: Any, raw: bytes) -> None:
+        packets: bool = self.neighbor.api['{}-packets'.format(direction)]
+        parsed: bool = self.neighbor.api['{}-parsed'.format(direction)]
+        consolidate: bool = self.neighbor.api['{}-consolidate'.format(direction)]
+        negotiated: Optional[Negotiated] = self.negotiated if self.neighbor.api['negotiated'] else None
 
         if consolidate:
             if packets:
@@ -174,10 +175,10 @@ class Protocol:
                     b'',
                 )
 
-    def write(self, message, negotiated=None):
-        raw = message.message(negotiated)
+    def write(self, message: Any, negotiated: Optional[Negotiated] = None) -> Generator[bool, None, None]:
+        raw: bytes = message.message(negotiated)
 
-        code = 'send-{}'.format(Message.CODE.short(message.ID))
+        code: str = 'send-{}'.format(Message.CODE.short(message.ID))
         self.peer.stats[code] += 1
         if self.neighbor.api.get(code, False):
             self._to_api('send', message, raw)
@@ -185,11 +186,11 @@ class Protocol:
         for boolean in self.connection.writer(raw):
             yield boolean
 
-    def send(self, raw):
-        code = 'send-{}'.format(Message.CODE.short(raw[18]))
+    def send(self, raw: bytes) -> Generator[bool, None, None]:
+        code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
         self.peer.stats[code] += 1
         if self.neighbor.api.get(code, False):
-            message = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)
+            message: Update = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)
             self._to_api('send', message, raw)
 
         for boolean in self.connection.writer(raw):
@@ -197,7 +198,7 @@ class Protocol:
 
     # Read from network .......................................................
 
-    def read_message(self):
+    def read_message(self) -> Generator[Any, None, None]:
         # This will always be defined by the loop but scope leaking upset scrutinizer/pylint
         msg_id = None
 
@@ -303,8 +304,8 @@ class Protocol:
             else:
                 yield message
 
-    def validate_open(self):
-        error = self.negotiated.validate(self.neighbor)
+    def validate_open(self) -> None:
+        error: Optional[Tuple[int, int, str]] = self.negotiated.validate(self.neighbor)
         if error is not None:
             raise Notify(*error)
 
@@ -334,7 +335,7 @@ class Protocol:
                 self.connection.session(),
             )
 
-    def read_open(self, ip):
+    def read_open(self, ip: str) -> Generator[Any, None, None]:
         for received_open in self.read_message():
             if received_open.TYPE == NOP.TYPE:
                 yield received_open
@@ -351,7 +352,7 @@ class Protocol:
         log.debug(lambda: '<< {}'.format(received_open), self.connection.session())
         yield received_open
 
-    def read_keepalive(self):
+    def read_keepalive(self) -> Generator[Any, None, None]:
         for message in self.read_message():
             if message.TYPE == NOP.TYPE:
                 yield message
@@ -367,7 +368,7 @@ class Protocol:
     # Sending message to peer
     #
 
-    def new_open(self):
+    def new_open(self) -> Generator[Any, None, None]:
         if self.neighbor['local-as']:
             local_as = self.neighbor['local-as']
         elif self.negotiated.received_open:
@@ -390,8 +391,8 @@ class Protocol:
         log.debug(lambda: '>> {}'.format(sent_open), self.connection.session())
         yield sent_open
 
-    def new_keepalive(self, comment=''):
-        keepalive = KeepAlive()
+    def new_keepalive(self, comment: str = '') -> Generator[Any, None, None]:
+        keepalive: KeepAlive = KeepAlive()
 
         for _ in self.write(keepalive):
             yield _NOP
@@ -403,7 +404,7 @@ class Protocol:
 
         yield keepalive
 
-    def new_notification(self, notification):
+    def new_notification(self, notification: Notify) -> Generator[Any, None, None]:
         for _ in self.write(notification):
             yield _NOP
         log.debug(
@@ -412,9 +413,9 @@ class Protocol:
         )
         yield notification
 
-    def new_update(self, include_withdraw):
+    def new_update(self, include_withdraw: bool) -> Generator[Any, None, None]:
         updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
-        number = 0
+        number: int = 0
         for update in updates:
             for message in update.messages(self.negotiated, include_withdraw):
                 number += 1
@@ -425,14 +426,14 @@ class Protocol:
             log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())
         yield _UPDATE
 
-    def new_eor(self, afi, safi):
-        eor = EOR(afi, safi)
+    def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Any, None, None]:
+        eor: EOR = EOR(afi, safi)
         for _ in self.write(eor):
             yield _NOP
         log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self.connection.session())
         yield eor
 
-    def new_eors(self, afi=AFI.undefined, safi=SAFI.undefined):
+    def new_eors(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> Generator[Any, None, None]:
         # Send EOR to let our peer know he can perform a RIB update
         if self.negotiated.families:
             families = (
@@ -453,13 +454,13 @@ class Protocol:
                 yield _NOP
             yield _UPDATE
 
-    def new_operational(self, operational, negotiated):
+    def new_operational(self, operational: Operational, negotiated: Negotiated) -> Generator[Any, None, None]:
         for _ in self.write(operational, negotiated):
             yield _NOP
         log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self.connection.session())
         yield operational
 
-    def new_refresh(self, refresh):
+    def new_refresh(self, refresh: Any) -> Generator[Any, None, None]:
         for _ in self.write(refresh, None):
             yield _NOP
         log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self.connection.session())

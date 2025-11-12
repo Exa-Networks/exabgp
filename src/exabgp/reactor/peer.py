@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
+from typing import Any, Dict, Generator, Iterator, Optional, Set, Tuple
 
 # import traceback
 from exabgp.bgp.timer import ReceiveTimer
@@ -62,17 +63,19 @@ class Stop(Exception):
 
 
 class Stats(dict):
-    __format = {'complete': lambda t: 'time {}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t)))}
+    __format: Dict[str, Any] = {
+        'complete': lambda t: 'time {}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t)))
+    }
 
-    def __init__(self, *args):
+    def __init__(self, *args: Tuple[Any, ...]) -> None:
         dict.__init__(self, args)
-        self.__changed = set()
+        self.__changed: Set[str] = set()
 
-    def __setitem__(self, key, val):
+    def __setitem__(self, key: str, val: Any) -> None:
         dict.__setitem__(self, key, val)
         self.__changed.add(key)
 
-    def changed_statistics(self):
+    def changed_statistics(self) -> Iterator[str]:
         for name in self.__changed:
             formater = self.__format.get(name, lambda v: f'counter {v}')
             yield f'statistics for {name} {formater(self[name])}'
@@ -84,22 +87,22 @@ class Stats(dict):
 
 
 class Peer:
-    def __init__(self, neighbor, reactor):
+    def __init__(self, neighbor: Any, reactor: Any) -> None:
         # Maximum connection attempts (0 = unlimited)
-        self.max_connection_attempts = getenv().tcp.attempts
-        self.connection_attempts = 0
-        self.bind = True if getenv().tcp.bind else False
+        self.max_connection_attempts: int = getenv().tcp.attempts
+        self.connection_attempts: int = 0
+        self.bind: bool = True if getenv().tcp.bind else False
 
-        now = time.time()
+        now: float = time.time()
 
-        self.reactor = reactor
-        self.neighbor = neighbor
+        self.reactor: Any = reactor
+        self.neighbor: Any = neighbor
         # The next restart neighbor definition
-        self._neighbor = None
+        self._neighbor: Optional[Any] = None
 
-        self.proto = None
-        self.fsm = FSM(self, FSM.IDLE)
-        self.stats = Stats()
+        self.proto: Optional[Protocol] = None
+        self.fsm: FSM = FSM(self, FSM.IDLE)
+        self.stats: Stats = Stats()
         self.stats.update(
             {
                 'fsm': self.fsm,
@@ -121,23 +124,23 @@ class Peer:
             },
         )
 
-        self.generator = None
+        self.generator: Optional[Generator[int, None, None]] = None
 
         # The peer should restart after a stop
-        self._restart = True
+        self._restart: bool = True
         # The peer was restarted (to know what kind of open to send for graceful restart)
-        self._restarted = FORCE_GRACEFUL
+        self._restarted: bool = FORCE_GRACEFUL
 
         # We have been asked to teardown the session with this code
-        self._teardown = None
+        self._teardown: Optional[int] = None
 
-        self._delay = Delay()
-        self.recv_timer = None
+        self._delay: Delay = Delay()
+        self.recv_timer: Optional[ReceiveTimer] = None
 
-    def id(self):
+    def id(self) -> str:
         return 'peer-{}'.format(self.neighbor.uid)
 
-    def _close(self, message='', error=''):
+    def _close(self, message: str = '', error: str = '') -> None:
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
             try:
                 if self.neighbor.api['neighbor-changes']:
@@ -177,11 +180,11 @@ class Peer:
 
         self.proto = None
 
-    def _reset(self, message='', error=''):
+    def _reset(self, message: str = '', error: str = '') -> None:
         self._close(message, error)
 
         if not self._restart or self.neighbor.generated:
-            self.generator = False
+            self.generator = False  # type: ignore
             return
 
         self.generator = None
@@ -193,25 +196,25 @@ class Peer:
             self.neighbor = self._neighbor
             self._neighbor = None
 
-    def _stop(self, message):
+    def _stop(self, message: str) -> None:
         self.generator = None
         if self.proto:
             self._close(f'stop, message [{message}]')
 
     # logging
 
-    def me(self, message):
+    def me(self, message: str) -> str:
         return f'peer {self.neighbor["peer-address"]} ASN {self.neighbor["peer-as"]:<7} {message}'
 
     # control
 
-    def can_reconnect(self):
+    def can_reconnect(self) -> bool:
         """Check if peer can attempt another connection"""
         if self.max_connection_attempts == 0:  # unlimited
             return True
         return self.connection_attempts < self.max_connection_attempts
 
-    def stop(self):
+    def stop(self) -> None:
         self._teardown = 3
         self._restart = False
         self._restarted = False
@@ -236,19 +239,19 @@ class Peer:
         )
         self.neighbor.rib.uncache()
 
-    def remove(self):
+    def remove(self) -> None:
         self._stop('removed')
         self.stop()
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         self._stop('shutting down')
         self.stop()
 
-    def resend(self, enhanced, family=None):
+    def resend(self, enhanced: bool, family: Optional[Tuple[Any, Any]] = None) -> None:
         self.neighbor.rib.outgoing.resend(enhanced, family)
         self._delay.reset()
 
-    def reestablish(self, restart_neighbor=None):
+    def reestablish(self, restart_neighbor: Optional[Any] = None) -> None:
         # we want to tear down the session and re-establish it
         self._teardown = 3
         self._restart = True
@@ -256,21 +259,21 @@ class Peer:
         self._neighbor = restart_neighbor
         self._delay.reset()
 
-    def reconfigure(self, restart_neighbor=None):
+    def reconfigure(self, restart_neighbor: Optional[Any] = None) -> None:
         # we want to update the route which were in the configuration file
         self._neighbor = restart_neighbor
 
-    def teardown(self, code, restart=True):
+    def teardown(self, code: int, restart: bool = True) -> None:
         self._restart = restart
         self._teardown = code
         self._delay.reset()
 
-    def socket(self):
+    def socket(self) -> int:
         if self.proto:
             return self.proto.fd()
         return -1
 
-    def handle_connection(self, connection):
+    def handle_connection(self, connection: Any) -> Optional[Any]:
         log.debug(lambda: 'state machine for the peer is {}'.format(self.fsm.name()), self.id())
 
         # if the other side fails, we go back to idle
@@ -321,10 +324,10 @@ class Peer:
         self._delay.reset()
         return None
 
-    def established(self):
+    def established(self) -> bool:
         return self.fsm == FSM.ESTABLISHED
 
-    def negotiated_families(self):
+    def negotiated_families(self) -> str:
         if self.proto:
             families = [f'{x[0]}/{x[1]}' for x in self.proto.negotiated.families]
         else:
@@ -338,7 +341,7 @@ class Peer:
 
         return ''
 
-    def _connect(self):
+    def _connect(self) -> Generator[int, None, None]:
         # Increment connection attempt counter
         self.connection_attempts += 1
 
@@ -363,14 +366,14 @@ class Peer:
                 yield ACTION.NOW
                 raise Interrupted('connection failed') from None
 
-    def _send_open(self):
+    def _send_open(self) -> Generator[Any, None, None]:
         message = Message.CODE.NOP
         for message in self.proto.new_open():
             if message.ID == Message.CODE.NOP:
                 yield ACTION.NOW
         yield message
 
-    def _read_open(self):
+    def _read_open(self) -> Generator[Any, None, None]:
         wait = getenv().bgp.openwait
         opentimer = ReceiveTimer(
             self.proto.connection.session,
@@ -393,17 +396,17 @@ class Peer:
                 yield ACTION.LATER
         yield message
 
-    def _send_ka(self):
+    def _send_ka(self) -> Generator[int, None, None]:
         for message in self.proto.new_keepalive('OPENCONFIRM'):
             yield ACTION.NOW
 
-    def _read_ka(self):
+    def _read_ka(self) -> Generator[int, None, None]:
         # Start keeping keepalive timer
         for message in self.proto.read_keepalive():
             self.recv_timer.check_ka_timer(message)
             yield ACTION.NOW
 
-    def _establish(self):
+    def _establish(self) -> Generator[int, None, None]:
         # try to establish the outgoing connection
         self.fsm.change(FSM.ACTIVE)
 
@@ -457,7 +460,7 @@ class Peer:
         # let the caller know that we were sucesfull
         yield ACTION.NOW
 
-    def _main(self):
+    def _main(self) -> Generator[int, None, None]:
         """Yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
         if self._teardown:
             raise Notify(6, 3)
@@ -632,7 +635,7 @@ class Peer:
         # notify our peer of the shutdown
         raise Notify(6, self._teardown)
 
-    def _run(self):
+    def _run(self) -> Generator[int, None, None]:
         """Yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"""
         try:
             for action in self._establish():
@@ -715,7 +718,7 @@ class Peer:
 
     # loop
 
-    def run(self):
+    def run(self) -> int:
         if self.reactor.processes.broken(self.neighbor):
             # XXX: we should perhaps try to restart the process ??
             log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
@@ -723,7 +726,7 @@ class Peer:
                 self.reactor.api_shutdown()
             else:
                 self.stop()
-            return True
+            return True  # type: ignore
 
         if self.generator:
             try:
@@ -740,7 +743,7 @@ class Peer:
         elif self.generator is None:
             if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
                 log.debug(lambda: 'stopping, other connection is established', self.id())
-                self.generator = False
+                self.generator = False  # type: ignore
                 return ACTION.LATER
             if self._delay.backoff():
                 return ACTION.LATER
@@ -750,7 +753,7 @@ class Peer:
                 return ACTION.LATER  # make sure we go through a clean loop
             return ACTION.CLOSE
 
-    def cli_data(self):
+    def cli_data(self) -> Dict[str, Any]:
         def tri(value):
             if value is None:
                 return None

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+from typing import Any, Dict, List, Optional, Union
 
 from exabgp.logger import log
 
@@ -57,11 +58,11 @@ from exabgp.configuration.announce.mup import AnnounceMup  # noqa: F401,E261,E50
 
 
 class _Configuration:
-    def __init__(self):
-        self.processes = {}
-        self.neighbors = {}
+    def __init__(self) -> None:
+        self.processes: Dict[str, Any] = {}
+        self.neighbors: Dict[str, Any] = {}
 
-    def inject_change(self, peers, change):
+    def inject_change(self, peers: List[str], change: object) -> bool:
         result = False
         for neighbor_name in self.neighbors:
             if neighbor_name in peers:
@@ -77,7 +78,7 @@ class _Configuration:
                     )
         return result
 
-    def inject_eor(self, peers, family):
+    def inject_eor(self, peers: List[str], family: object) -> bool:
         result = False
         for neighbor in self.neighbors:
             if neighbor in peers:
@@ -85,7 +86,7 @@ class _Configuration:
                 self.neighbors[neighbor].eor.append(family)
         return result
 
-    def inject_operational(self, peers, operational):
+    def inject_operational(self, peers: List[str], operational: object) -> bool:
         result = True
         for neighbor in self.neighbors:
             if neighbor in peers:
@@ -101,7 +102,7 @@ class _Configuration:
                     result = False
         return result
 
-    def inject_refresh(self, peers, refreshes):
+    def inject_refresh(self, peers: List[str], refreshes: List[object]) -> bool:
         result = True
         for neighbor in self.neighbors:
             if neighbor in peers:
@@ -120,17 +121,17 @@ class _Configuration:
 
 
 class Configuration(_Configuration):
-    def __init__(self, configurations, text=False):
+    def __init__(self, configurations: List[str], text: bool = False) -> None:
         _Configuration.__init__(self)
-        self.api_encoder = getenv().api.encoder
+        self.api_encoder: str = getenv().api.encoder
 
-        self._configurations = configurations
-        self._text = text
+        self._configurations: List[str] = configurations
+        self._text: bool = text
 
-        self.error = Error()
-        self.scope = Scope()
+        self.error: Error = Error()
+        self.scope: Scope = Scope()
 
-        self.tokeniser = Tokeniser(self.scope, self.error)
+        self.tokeniser: Tokeniser = Tokeniser(self.scope, self.error)
 
         params = (self.tokeniser, self.scope, self.error)
         self.section = Section(*params)
@@ -162,7 +163,7 @@ class Configuration(_Configuration):
 
         # We should check if name are unique when running Section.__init__
 
-        self._structure = {
+        self._structure: Dict[str, Dict[str, Any]] = {
             'root': {
                 'class': self.section,
                 'commands': [],
@@ -338,17 +339,17 @@ class Configuration(_Configuration):
             },
         }
 
-        self._neighbors = {}
-        self._previous_neighbors = {}
+        self._neighbors: Dict[str, Any] = {}
+        self._previous_neighbors: Dict[str, Any] = {}
 
-    def _clear(self):
+    def _clear(self) -> None:
         self.processes = {}
         self._previous_neighbors = self.neighbors
         self.neighbors = {}
         self._neighbors = {}
 
     # clear the parser data (ie: free memory)
-    def _cleanup(self):
+    def _cleanup(self) -> None:
         self.error.clear()
         self.tokeniser.clear()
         self.scope.clear()
@@ -377,13 +378,13 @@ class Configuration(_Configuration):
         self.vpls.clear()
         self.operational.clear()
 
-    def _rollback_reload(self):
+    def _rollback_reload(self) -> None:
         self.neighbors = self._previous_neighbors
         self.processes = self.process.processes
         self._neighbors = {}
         self._previous_neighbors = {}
 
-    def _commit_reload(self):
+    def _commit_reload(self) -> None:
         self.neighbors = self.neighbor.neighbors
         # XXX: Yes, we do not detect changes in processes and restart anything ..
         # XXX: This is a bug ..
@@ -398,7 +399,7 @@ class Configuration(_Configuration):
         self._previous_neighbors = {}
         self._cleanup()
 
-    def reload(self):
+    def reload(self) -> Union[bool, str]:
         try:
             return self._reload()
         except KeyboardInterrupt:
@@ -416,7 +417,7 @@ class Configuration(_Configuration):
                 f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}',
             )
 
-    def _reload(self):
+    def _reload(self) -> Union[bool, str]:
         # taking the first configuration available (FIFO buffer)
         fname = self._configurations.pop(0)
         self._configurations.append(fname)
@@ -454,7 +455,7 @@ class Configuration(_Configuration):
 
         return True
 
-    def validate(self):
+    def validate(self) -> Optional[str]:
         for neighbor in self.neighbors.values():
             has_procs = 'processes' in neighbor.api and neighbor.api['processes']
             has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']
@@ -486,7 +487,7 @@ class Configuration(_Configuration):
                         ' '.join(errors),
                     )
 
-    def _link(self):
+    def _link(self) -> None:
         for neighbor in self.neighbors.values():
             api = neighbor.api
             processes = []
@@ -510,7 +511,7 @@ class Configuration(_Configuration):
                         if api[key]:
                             self.processes[process].setdefault(key, []).append(neighbor['router-id'])
 
-    def partial(self, section, text, action='announce'):
+    def partial(self, section: str, text: str, action: str = 'announce') -> bool:
         self._cleanup()  # this perform a big cleanup (may be able to be smarter)
         self._clear()
         self.tokeniser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
@@ -529,7 +530,7 @@ class Configuration(_Configuration):
             return False
         return True
 
-    def _enter(self, name):
+    def _enter(self, name: str) -> Union[bool, str]:
         location = self.tokeniser.iterate()
         log.debug(lambda: f'> {location:<16} | {self.tokeniser.params()}', 'configuration')
 
@@ -561,7 +562,7 @@ class Configuration(_Configuration):
         log.debug(lambda: f'< {left:<16} | {self.tokeniser.params()}', 'configuration')
         return True
 
-    def _run(self, name):
+    def _run(self, name: str) -> bool:
         command = self.tokeniser.iterate()
         log.debug(lambda: f'. {command:<16} | {self.tokeniser.params()}', 'configuration')
 
@@ -569,7 +570,7 @@ class Configuration(_Configuration):
             return False
         return True
 
-    def dispatch(self, name):
+    def dispatch(self, name: str) -> Union[bool, str]:
         while True:
             self.tokeniser()
 
@@ -592,7 +593,7 @@ class Configuration(_Configuration):
             return self.error.set('invalid syntax line %d' % self.tokeniser.index_line)
         return False
 
-    def parse_section(self, name):
+    def parse_section(self, name: str) -> Union[bool, str]:
         if name not in self._structure:
             return self.error.set('option {} is not allowed here'.format(name))
 
@@ -603,7 +604,7 @@ class Configuration(_Configuration):
         instance.post()
         return True
 
-    def run(self, name, command):
+    def run(self, name: str, command: str) -> Union[bool, str]:
         # restore 'anounce attribute' to provide backward 3.4 compatibility
         if name == 'static' and command == 'attribute':
             command = 'attributes'

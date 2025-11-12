@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, List, Optional, Tuple, Union
+
 from struct import pack
 
 from exabgp.protocol.family import AFI
@@ -59,7 +61,7 @@ from exabgp.rib.change import Change
 EXTENDED_COMMUNITY_TARGET_PARTS = 2  # Target extended community has 2 parts (ASN:value)
 
 
-def prefix(tokeniser):
+def prefix(tokeniser: Any) -> IPRange:
     # XXX: could raise
     ip = tokeniser()
     try:
@@ -78,14 +80,14 @@ def prefix(tokeniser):
     return iprange
 
 
-def path_information(tokeniser):
+def path_information(tokeniser: Any) -> PathInfo:
     pi = tokeniser()
     if pi.isdigit():
         return PathInfo(integer=int(pi))
     return PathInfo(ip=pi)
 
 
-def next_hop(tokeniser, afi=None):
+def next_hop(tokeniser: Any, afi: Optional[AFI] = None) -> Tuple[Union[IP, IPSelf], Union[NextHop, NextHopSelf]]:
     value = tokeniser()
     if value.lower() == 'self':
         return IPSelf(tokeniser.afi), NextHopSelf(tokeniser.afi)
@@ -99,7 +101,7 @@ def next_hop(tokeniser, afi=None):
 # action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
 
-def inet(tokeniser):
+def inet(tokeniser: Any) -> Change:
     ipmask = prefix(tokeniser)
     inet = INET(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=Action.UNSET)
     inet.cidr = CIDR(ipmask.ton(), ipmask.mask)
@@ -111,7 +113,7 @@ def inet(tokeniser):
 # action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
 
-def mpls(tokeniser):
+def mpls(tokeniser: Any) -> Change:
     ipmask = prefix(tokeniser)
     mpls = IPVPN(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=Action.ANNOUNCE)
     mpls.cidr = CIDR(ipmask.ton(), ipmask.mask)
@@ -119,7 +121,7 @@ def mpls(tokeniser):
     return Change(mpls, Attributes())
 
 
-def attribute(tokeniser):
+def attribute(tokeniser: Any) -> GenericAttribute:
     start = tokeniser()
     if start != '[':
         raise ValueError('invalid attribute, does not starts with [')
@@ -128,7 +130,7 @@ def attribute(tokeniser):
     if not code.startswith('0x'):
         raise ValueError('invalid attribute, code is not 0x hexadecimal')
     try:
-        code = int(code, 16)
+        code_int: int = int(code, 16)
     except ValueError:
         raise ValueError('invalid attribute, code is not 0x hexadecimal') from None
 
@@ -136,7 +138,7 @@ def attribute(tokeniser):
     if not flag.startswith('0x'):
         raise ValueError('invalid attribute, flag is not 0x hexadecimal')
     try:
-        flag = int(flag, 16)
+        flag_int: int = int(flag, 16)
     except ValueError:
         raise ValueError('invalid attribute, flag is not 0x hexadecimal') from None
 
@@ -145,13 +147,13 @@ def attribute(tokeniser):
         raise ValueError('invalid attribute, data is not 0x hexadecimal')
     if len(data) % 2:
         raise ValueError('invalid attribute, data is not 0x hexadecimal')
-    data = b''.join(bytes([int(data[_ : _ + 2], 16)]) for _ in range(2, len(data), 2))
+    data_bytes: bytes = b''.join(bytes([int(data[_ : _ + 2], 16)]) for _ in range(2, len(data), 2))
 
     end = tokeniser()
     if end != ']':
         raise ValueError('invalid attribute, does not ends with ]')
 
-    return GenericAttribute(code, flag, data)
+    return GenericAttribute(code_int, flag_int, data_bytes)
 
     # for ((ID,flag),klass) in Attribute.registered_attributes.items():
     # 	length = len(data)
@@ -163,7 +165,7 @@ def attribute(tokeniser):
     # 		return klass.unpack(data,None)
 
 
-def aigp(tokeniser):
+def aigp(tokeniser: Any) -> AIGP:
     if not tokeniser.tokens:
         raise ValueError('aigp requires number (decimal or hexadecimal 0x prefixed)')
     value = tokeniser()
@@ -176,7 +178,7 @@ def aigp(tokeniser):
     return AIGP(b'\x01\x00\x0b' + pack('!Q', number))
 
 
-def origin(tokeniser):
+def origin(tokeniser: Any) -> Origin:
     value = tokeniser().lower()
     if value == 'igp':
         return Origin(Origin.IGP)
@@ -187,16 +189,16 @@ def origin(tokeniser):
     raise ValueError('unknown origin {}'.format(value))
 
 
-def med(tokeniser):
+def med(tokeniser: Any) -> MED:
     value = tokeniser()
     if not value.isdigit():
         raise ValueError('invalid MED {}'.format(value))
     return MED(int(value))
 
 
-def as_path(tokeniser):
-    as_path = []
-    insert = None
+def as_path(tokeniser: Any) -> ASPath:
+    as_path: List[Any] = []
+    insert: Optional[Union[SEQUENCE, CONFED_SEQUENCE, SET, CONFED_SET]] = None
 
     while True:
         value = tokeniser()
@@ -249,18 +251,18 @@ def as_path(tokeniser):
                 raise ValueError('could not parse as-path') from None
 
 
-def local_preference(tokeniser):
+def local_preference(tokeniser: Any) -> LocalPreference:
     value = tokeniser()
     if not value.isdigit():
         raise ValueError('invalid local preference {}'.format(value))
     return LocalPreference(int(value))
 
 
-def atomic_aggregate(tokeniser):
+def atomic_aggregate(tokeniser: Any) -> AtomicAggregate:
     return AtomicAggregate()
 
 
-def aggregator(tokeniser):
+def aggregator(tokeniser: Any) -> Aggregator:
     agg = tokeniser()
     eat = agg == '('
 
@@ -291,7 +293,7 @@ def aggregator(tokeniser):
     return Aggregator(local_as, local_address)
 
 
-def originator_id(tokeniser):
+def originator_id(tokeniser: Any) -> OriginatorID:
     value = tokeniser()
     if value.count('.') != IPv4.DOT_COUNT:
         raise ValueError('invalid Originator ID {}'.format(value))
@@ -300,8 +302,8 @@ def originator_id(tokeniser):
     return OriginatorID(value)
 
 
-def cluster_list(tokeniser):
-    clusterids = []
+def cluster_list(tokeniser: Any) -> ClusterList:
+    clusterids: List[ClusterID] = []
     value = tokeniser()
     try:
         if value == '[':
@@ -322,7 +324,7 @@ def cluster_list(tokeniser):
 # XXX: Community does does not cache anymore .. we SHOULD really do it !
 
 
-def _community(value):
+def _community(value: str) -> Community:
     separator = value.find(':')
     if separator > 0:
         prefix = value[:separator]
@@ -331,15 +333,15 @@ def _community(value):
         if not prefix.isdigit() or not suffix.isdigit():
             raise ValueError('invalid community {}'.format(value))
 
-        prefix, suffix = int(prefix), int(suffix)
+        prefix_int, suffix_int = int(prefix), int(suffix)
 
-        if prefix > Community.MAX:
+        if prefix_int > Community.MAX:
             raise ValueError('invalid community {} (prefix too large)'.format(value))
 
-        if suffix > Community.MAX:
+        if suffix_int > Community.MAX:
             raise ValueError('invalid community {} (suffix too large)'.format(value))
 
-        return Community(pack('!L', (prefix << 16) + suffix))
+        return Community(pack('!L', (prefix_int << 16) + suffix_int))
 
     if value[:2].lower() == '0x':
         number = int(value, 16)
@@ -367,7 +369,7 @@ def _community(value):
     raise ValueError('invalid community name {}'.format(value))
 
 
-def community(tokeniser):
+def community(tokeniser: Any) -> Communities:
     communities = Communities()
 
     value = tokeniser()
@@ -383,7 +385,7 @@ def community(tokeniser):
     return communities
 
 
-def _large_community(value):
+def _large_community(value: str) -> LargeCommunity:
     separator = value.find(':')
     if separator > 0:
         prefix, affix, suffix = value.split(':')
@@ -391,13 +393,13 @@ def _large_community(value):
         if not any(map(lambda c: c.isdigit(), [prefix, affix, suffix])):
             raise ValueError('invalid community {}'.format(value))
 
-        prefix, affix, suffix = map(int, [prefix, affix, suffix])
+        prefix_int, affix_int, suffix_int = map(int, [prefix, affix, suffix])
 
-        for i in [prefix, affix, suffix]:
+        for i in [prefix_int, affix_int, suffix_int]:
             if i > LargeCommunity.MAX:
                 raise ValueError('invalid community %i in %s too large' % (i, value))
 
-        return LargeCommunity(pack('!LLL', prefix, affix, suffix))
+        return LargeCommunity(pack('!LLL', prefix_int, affix_int, suffix_int))
 
     if value[:2].lower() == '0x':
         number = int(value)
@@ -414,7 +416,7 @@ def _large_community(value):
     raise ValueError('invalid large community name {}'.format(value))
 
 
-def large_community(tokeniser):
+def large_community(tokeniser: Any) -> LargeCommunities:
     large_communities = LargeCommunities()
 
     value = tokeniser()
@@ -467,14 +469,14 @@ _SIZE_H = 0xFFFF
 _SIZE_L = 0xFFFFFFFF
 
 
-def _digit(string):
+def _digit(string: str) -> bool:
     if string.endswith('L'):
         string = string[:-1]
     return string.isdigit()
 
 
 # backward compatibility hack
-def _integer(string):
+def _integer(string: str) -> int:
     base = 10
     if string.startswith('0x'):
         string = string[2:]
@@ -484,7 +486,7 @@ def _integer(string):
     return int(string, base)
 
 
-def _ip(string, error):
+def _ip(string: str, error: str) -> int:
     if '.' not in string:
         raise ValueError('invalid extended community: {}'.format(error))
     v = [int(_) for _ in string.split('.')]
@@ -492,7 +494,7 @@ def _ip(string, error):
     return (v[0] << 24) + (v[1] << 16) + (v[2] << 8) + v[3]
 
 
-def _encode(command, components, parts):
+def _encode(command: str, components: List[int], parts: List[str]) -> Tuple[bytes, str]:
     if command not in _HEADER:
         raise ValueError('invalid extended community type {}'.format(command))
 
@@ -516,7 +518,7 @@ def _encode(command, components, parts):
     return _HEADER[command], '!' + _ENCODE[command]
 
 
-def _extended_community_hex(value):
+def _extended_community_hex(value: str) -> ExtendedCommunity:
     # we could raise if the length is not 8 bytes (16 chars)
     if len(value) % 2:
         raise ValueError('invalid extended community {}'.format(value))
@@ -524,7 +526,7 @@ def _extended_community_hex(value):
     return ExtendedCommunity.unpack(raw)
 
 
-def _extended_community(value):
+def _extended_community(value: str) -> ExtendedCommunity:
     if not value.count(':'):
         if value[:2].lower() == '0x':
             return _extended_community_hex(value)
@@ -543,7 +545,7 @@ def _extended_community(value):
     return ExtendedCommunity.unpack(header + pack(packed, *components))
 
 
-def extended_community(tokeniser):
+def extended_community(tokeniser: Any) -> ExtendedCommunities:
     communities = ExtendedCommunities()
 
     value = tokeniser()
@@ -565,14 +567,14 @@ def extended_community(tokeniser):
 # As this is not a real BGP attribute this stays in the configuration file
 
 
-def name(tokeniser):
+def name(tokeniser: Any) -> Any:
     class Name(str):
         ID = Attribute.CODE.INTERNAL_NAME
 
     return Name(tokeniser())
 
 
-def split(tokeniser):
+def split(tokeniser: Any) -> Any:
     class Split(int):
         ID = Attribute.CODE.INTERNAL_SPLIT
 
@@ -589,7 +591,7 @@ def split(tokeniser):
     return Split(int(size))
 
 
-def watchdog(tokeniser):
+def watchdog(tokeniser: Any) -> Any:
     class Watchdog(str):
         ID = Attribute.CODE.INTERNAL_WATCHDOG
 
@@ -599,7 +601,7 @@ def watchdog(tokeniser):
     return Watchdog(command)
 
 
-def withdraw(tokeniser=None):
+def withdraw(tokeniser: Optional[Any] = None) -> Any:
     class Withdrawn:
         ID = Attribute.CODE.INTERNAL_WITHDRAW
 

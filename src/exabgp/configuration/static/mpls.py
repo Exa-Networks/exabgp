@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Any, List, Tuple, Union
+
 from struct import pack
 from ipaddress import ip_address
 from ipaddress import IPv4Address
@@ -38,8 +40,8 @@ ASN_MAX_VALUE = 4294967295  # Maximum value for 32-bit ASN
 TEID_MAX_BITS = 32  # Maximum TEID length in bits
 
 
-def label(tokeniser):
-    labels = []
+def label(tokeniser: Any) -> Labels:
+    labels: List[int] = []
     value = tokeniser()
 
     if value == '[':
@@ -54,7 +56,7 @@ def label(tokeniser):
     return Labels(labels)
 
 
-def route_distinguisher(tokeniser):
+def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
     data = tokeniser()
 
     separator = data.find(':')
@@ -63,10 +65,10 @@ def route_distinguisher(tokeniser):
         suffix = int(data[separator + 1 :])
 
     if '.' in prefix:
-        data = [bytes([0, 1])]
-        data.extend([bytes([int(_)]) for _ in prefix.split('.')])
-        data.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
-        rtd = b''.join(data)
+        data_list: List[bytes] = [bytes([0, 1])]
+        data_list.extend([bytes([int(_)]) for _ in prefix.split('.')])
+        data_list.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
+        rtd = b''.join(data_list)
     else:
         number = int(prefix)
         if number < pow(2, 16) and suffix < pow(2, 32):
@@ -80,10 +82,10 @@ def route_distinguisher(tokeniser):
 
 
 # [ 300, [ ( 800000,100 ), ( 1000000,5000 ) ] ]
-def prefix_sid(tokeniser):  # noqa: C901
-    sr_attrs = []
-    srgbs = []
-    srgb_data = []
+def prefix_sid(tokeniser: Any) -> PrefixSid:  # noqa: C901
+    sr_attrs: List[Union[SrLabelIndex, SrGb]] = []
+    srgbs: List[Tuple[int, int]] = []
+    srgb_data: List[Any] = []
     value = tokeniser()
     get_range = False
     consume_extra = False
@@ -138,7 +140,7 @@ def prefix_sid(tokeniser):  # noqa: C901
 # ( [l2-service|l3-service] <SID:ipv6-addr> )
 # ( [l2-service|l3-service] <SID:ipv6-addr> <Endpoint Behavior:int> )
 # ( [l2-service|l3-service] <SID:ipv6-addr> <Endpoint Behavior:int> [<LBL:int>, <LNL:int>, <FL:int>, <AL:int>, <Tpose-len:int>, <Tpose-offset:int>] )
-def prefix_sid_srv6(tokeniser):
+def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:
     value = tokeniser()
     if value != '(':
         raise Exception(f"expect '(', but received '{value}'")
@@ -149,8 +151,8 @@ def prefix_sid_srv6(tokeniser):
 
     sid = IPv6.unpack(IPv6.pton(tokeniser()))
     behavior = 0xFFFF
-    subtlvs = []
-    subsubtlvs = []
+    subtlvs: List[Srv6SidInformation] = []
+    subsubtlvs: List[Srv6SidStructure] = []
     value = tokeniser()
     if value != ')':
         base = 10 if not value.startswith('0x') else 16
@@ -201,7 +203,7 @@ def prefix_sid_srv6(tokeniser):
         return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])
 
 
-def parse_ip_prefix(tokeninser):
+def parse_ip_prefix(tokeninser: str) -> Tuple[Union[IPv4, IPv6], int]:
     addrstr, length = tokeninser.split('/')
     if length is None:
         raise Exception(f"unexpect prefix format '{tokeninser}'")
@@ -221,7 +223,7 @@ def parse_ip_prefix(tokeninser):
 
 
 # shared-join rp <ip> group <ip> rd <rd> source-as <source-as>
-def mvpn_sharedjoin(tokeniser, afi, action):
+def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
     if afi == AFI.ipv4:
         tokeniser.consume('rp')
         sourceip = IPv4.unpack(IPv4.pton(tokeniser()))
@@ -250,7 +252,7 @@ def mvpn_sharedjoin(tokeniser, afi, action):
 
 
 # source-join source <ip> group <ip> rd <rd> source-as <source-as>
-def mvpn_sourcejoin(tokeniser, afi, action):
+def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
     if afi == AFI.ipv4:
         tokeniser.consume('source')
         sourceip = IPv4.unpack(IPv4.pton(tokeniser()))
@@ -279,7 +281,7 @@ def mvpn_sourcejoin(tokeniser, afi, action):
 
 
 #'source-ad source <ip address> group <ip address> rd <rd>'
-def mvpn_sourcead(tokeniser, afi, action):
+def mvpn_sourcead(tokeniser: Any, afi: AFI, action: Any) -> SourceAD:
     if afi == AFI.ipv4:
         tokeniser.consume('source')
         sourceip = IPv4.unpack(IPv4.pton(tokeniser()))
@@ -300,7 +302,7 @@ def mvpn_sourcead(tokeniser, afi, action):
 
 
 # 'mup-isd <ip prefix> rd <rd>',
-def srv6_mup_isd(tokeniser, afi):
+def srv6_mup_isd(tokeniser: Any, afi: AFI) -> InterworkSegmentDiscoveryRoute:
     prefix_ip, prefix_len = parse_ip_prefix(tokeniser())
 
     value = tokeniser()
@@ -317,7 +319,7 @@ def srv6_mup_isd(tokeniser, afi):
 
 
 # 'mup-dsd <ip address> rd <rd>',
-def srv6_mup_dsd(tokeniser, afi):
+def srv6_mup_dsd(tokeniser: Any, afi: AFI) -> DirectSegmentDiscoveryRoute:
     if afi == AFI.ipv4:
         ip = IPv4.unpack(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
@@ -338,7 +340,7 @@ def srv6_mup_dsd(tokeniser, afi):
 
 
 # 'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint> [source <source>]',
-def srv6_mup_t1st(tokeniser, afi):
+def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
     prefix_ip, prefix_ip_len = parse_ip_prefix(tokeniser())
 
     tokeniser.consume('rd')
@@ -392,7 +394,7 @@ def srv6_mup_t1st(tokeniser, afi):
 
 
 # 'mup-t2st <endpoint address> rd <rd> teid <teid>',
-def srv6_mup_t2st(tokeniser, afi):
+def srv6_mup_t2st(tokeniser: Any, afi: AFI) -> Type2SessionTransformedRoute:
     if afi == AFI.ipv4:
         endpoint_ip = IPv4.unpack(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:

@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 from string import ascii_letters
 from string import digits
+from typing import List
+from typing import Optional
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -25,7 +27,7 @@ HOSTNAME_MAX_LENGTH = 255  # Maximum hostname length (RFC 1123)
 MIN_NONZERO_HOLDTIME = 3  # Minimum hold time in seconds (must be 0 or >= 3)
 
 
-def inherit(tokeniser):
+def inherit(tokeniser) -> List[str]:
     if len(tokeniser.tokens) == INHERIT_SINGLE_TOKEN_COUNT:
         return [tokeniser()]
     if (
@@ -37,7 +39,7 @@ def inherit(tokeniser):
     return tokeniser.tokens[2:-1]
 
 
-def hostname(tokeniser):
+def hostname(tokeniser) -> str:
     value = string(tokeniser)
     if not value[0].isalnum():
         raise ValueError('bad host-name (alphanumeric)')
@@ -53,7 +55,7 @@ def hostname(tokeniser):
     return value
 
 
-def domainname(tokeniser):
+def domainname(tokeniser) -> str:
     value = string(tokeniser)
     if not value:
         raise ValueError('bad domain-name')
@@ -70,14 +72,14 @@ def domainname(tokeniser):
     return value
 
 
-def description(tokeniser):
+def description(tokeniser) -> str:
     try:
         return string(tokeniser)
     except Exception:
         raise ValueError('bad neighbor description') from None
 
 
-def md5(tokeniser):
+def md5(tokeniser) -> str:
     value = tokeniser()
     if not value:
         raise ValueError(
@@ -86,7 +88,7 @@ def md5(tokeniser):
     return value
 
 
-def ttl(tokeniser):
+def ttl(tokeniser) -> Optional[int]:
     value = tokeniser()
     try:
         attl = int(value)
@@ -101,7 +103,7 @@ def ttl(tokeniser):
     return attl
 
 
-def local_address(tokeniser):
+def local_address(tokeniser) -> Optional[IP]:
     if not tokeniser.tokens:
         raise ValueError("an ip address  or 'auto' is required")
 
@@ -114,14 +116,14 @@ def local_address(tokeniser):
         raise ValueError(f'"{value}" is an invalid IP address') from None
 
 
-def source_interface(tokeniser):
+def source_interface(tokeniser) -> str:
     try:
         return string(tokeniser)
     except Exception:
         raise ValueError('bad source interface') from None
 
 
-def router_id(tokeniser):
+def router_id(tokeniser) -> RouterID:
     value = tokeniser()
     try:
         return RouterID(value)
@@ -129,7 +131,7 @@ def router_id(tokeniser):
         raise ValueError(f'"{value}" is an invalid router-id') from None
 
 
-def hold_time(tokeniser):
+def hold_time(tokeniser) -> HoldTime:
     value = tokeniser()
     try:
         holdtime = HoldTime(int(value))
@@ -142,8 +144,8 @@ def hold_time(tokeniser):
     return holdtime
 
 
-def processes(tokeniser):
-    result = []
+def processes(tokeniser) -> List[str]:
+    result: List[str] = []
     token = tokeniser()
     if token != '[':
         raise ValueError('invalid processes, does not start with [')
@@ -161,8 +163,8 @@ def processes(tokeniser):
     return result
 
 
-def processes_match(tokeniser):
-    result = []
+def processes_match(tokeniser) -> List[str]:
+    result: List[str] = []
     token = tokeniser()
     if token != '[':
         raise ValueError('invalid processes-match, does not start with [')
@@ -184,7 +186,7 @@ def processes_match(tokeniser):
     return result
 
 
-def rate_limit(tokeniser):
+def rate_limit(tokeniser) -> int:
     value = tokeniser().lower()
     if value in ('disable', 'disabled'):
         return 0

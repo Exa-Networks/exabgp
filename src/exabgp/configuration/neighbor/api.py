@@ -9,8 +9,13 @@ from __future__ import annotations
 
 import time
 import copy
+from typing import Any
+from typing import Dict
 
 from exabgp.configuration.core import Section
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.neighbor.parser import processes
 from exabgp.configuration.neighbor.parser import processes_match
@@ -55,16 +60,16 @@ class _ParseDirection(Section):
 
     syntax = '{{\n  {};\n}}'.format(';\n  '.join(default.keys()))
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         Section.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return True
 
 
@@ -127,21 +132,21 @@ class ParseAPI(Section):
 
     name = 'api'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         Section.__init__(self, tokeniser, scope, error)
-        self.api = {}
-        self.named = ''
+        self.api: Dict[str, Any] = {}
+        self.named: str = ''
 
     @classmethod
-    def _empty(cls):
+    def _empty(cls) -> Dict[str, Any]:
         return copy.deepcopy(cls.DEFAULT_API)
 
-    def clear(self):
+    def clear(self) -> None:
         self.api = {}
         self.named = ''
         Section.clear(self)
 
-    def pre(self):
+    def pre(self) -> bool:
         named = self.tokeniser.iterate()
         self.named = named if named else 'auto-named-%d' % int(time.time() * 1000000)
         self.check_name(self.named)
@@ -149,13 +154,13 @@ class ParseAPI(Section):
         self.scope.to_context()
         return True
 
-    def post(self):
+    def post(self) -> bool:
         self.scope.leave()
         self.scope.to_context()
         return True
 
     @classmethod
-    def flatten(cls, apis):
+    def flatten(cls, apis: Dict[str, Any]) -> Dict[str, Any]:
         built = cls._empty()
 
         for api in apis.values():

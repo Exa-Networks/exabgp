@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import List, Optional
+
 from exabgp.protocol.ip import NoNextHop
 
 from exabgp.rib.change import Change
@@ -21,6 +23,9 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.static.parser import prefix
 
@@ -117,20 +122,20 @@ class AnnounceIP(ParseAnnounce):
 
     name = 'ip'
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> bool:
         return True
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return ParseAnnounce.post(self) and self._check()
 
     @staticmethod
-    def check(change, afi):
+    def check(change: Change, afi: Optional[AFI]) -> bool:
         if (
             change.nlri.action == Action.ANNOUNCE
             and change.nlri.nexthop is NoNextHop
@@ -142,7 +147,7 @@ class AnnounceIP(ParseAnnounce):
         return True
 
 
-def ip(tokeniser, afi, safi):
+def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
@@ -176,7 +181,7 @@ def ip(tokeniser, afi, safi):
     return [change]
 
 
-def ip_multicast(tokeniser, afi, safi):
+def ip_multicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
@@ -208,10 +213,10 @@ def ip_multicast(tokeniser, afi, safi):
 
 
 @ParseAnnounce.register('multicast', 'extend-name', 'ipv4')
-def multicast_v4(tokeniser):
+def multicast_v4(tokeniser: Tokeniser) -> List[Change]:
     return ip_multicast(tokeniser, AFI.ipv4, SAFI.multicast)
 
 
 @ParseAnnounce.register('multicast', 'extend-name', 'ipv6')
-def multicast_v6(tokeniser):
+def multicast_v6(tokeniser: Tokeniser) -> List[Change]:
     return ip_multicast(tokeniser, AFI.ipv6, SAFI.multicast)

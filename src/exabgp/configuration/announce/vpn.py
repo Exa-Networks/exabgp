@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import List, Optional
+
 from exabgp.rib.change import Change
 
 from exabgp.bgp.message import Action
@@ -21,6 +23,9 @@ from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.label import AnnounceLabel
+from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Scope
+from exabgp.configuration.core import Error
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import route_distinguisher
@@ -50,16 +55,16 @@ class AnnounceVPN(ParseAnnounce):
     )
 
     name = 'vpn'
-    afi = None
+    afi: Optional[AFI] = None
 
-    def __init__(self, tokeniser, scope, error):
+    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, tokeniser, scope, error)
 
-    def clear(self):
+    def clear(self) -> bool:
         return True
 
     @staticmethod
-    def check(change, afi):
+    def check(change: Change, afi: Optional[AFI]) -> bool:
         if not AnnounceLabel.check(change, afi):
             return False
 
@@ -69,7 +74,7 @@ class AnnounceVPN(ParseAnnounce):
         return True
 
 
-def ip_vpn(tokeniser, afi, safi):
+def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
@@ -104,10 +109,10 @@ def ip_vpn(tokeniser, afi, safi):
 
 
 @ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv4')
-def mpls_vpn_v4(tokeniser):
+def mpls_vpn_v4(tokeniser: Tokeniser) -> List[Change]:
     return ip_vpn(tokeniser, AFI.ipv4, SAFI.unicast)
 
 
 @ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv6')
-def mpls_vpn_v6(tokeniser):
+def mpls_vpn_v6(tokeniser: Tokeniser) -> List[Change]:
     return ip_vpn(tokeniser, AFI.ipv6, SAFI.unicast)
