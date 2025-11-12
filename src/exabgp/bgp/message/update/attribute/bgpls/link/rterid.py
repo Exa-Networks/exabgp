@@ -1,4 +1,3 @@
-
 """rterid.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -27,7 +26,7 @@ class RemoteTeRid(BaseLS):
     JSON = 'remote-te-router-id'
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> RemoteTeRid:
         length = len(data)
         if length not in (4, 16):
             raise Notify(3, 5, 'Invalid remote-te size')

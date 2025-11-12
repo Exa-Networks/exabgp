@@ -1,4 +1,3 @@
-
 """srv6lanendx.py
 
 Created by Quentin De Muynck
@@ -67,7 +66,9 @@ def unpack_data(cls, data, type):
         length = unpack('!H', data[2:4])[0]
 
         if code in cls.registered_subsubtlvs:
-            subsubtlv = cls.registered_subsubtlvs[code].unpack(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
+            subsubtlv = cls.registered_subsubtlvs[code].unpack(
+                data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE]
+            )
             subtlvs.append(subsubtlv.json())
         else:
             subsubtlv = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
@@ -80,8 +81,9 @@ def unpack_data(cls, data, type):
         'behavior': behavior,
         'algorithm': algorithm,
         'weight': weight,
-        'sid': sid
-    , **json.loads('{' + ', '.join(subtlvs) + '}')}
+        'sid': sid,
+        **json.loads('{' + ', '.join(subtlvs) + '}'),
+    }
 
 
 @LinkState.register()
@@ -97,7 +99,9 @@ class Srv6LanEndXISIS(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
-                'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid)
+                'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
+                    d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid
+                )
                 for d in self.content
             ],
         )
@@ -114,7 +118,7 @@ class Srv6LanEndXISIS(FlagLS):
         return register_subsubtlv
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> Srv6LanEndXISIS:
         return cls(unpack_data(cls, data, ISIS))
 
     def json(self, compact=None):
@@ -134,7 +138,9 @@ class Srv6LanEndXOSPF(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
-                'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid)
+                'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
+                    d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid
+                )
                 for d in self.content
             ],
         )
@@ -151,7 +157,7 @@ class Srv6LanEndXOSPF(FlagLS):
         return register_subsubtlv
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> Srv6LanEndXISIS:
         return cls(unpack_data(cls, data, OSPF))
 
     def json(self, compact=None):

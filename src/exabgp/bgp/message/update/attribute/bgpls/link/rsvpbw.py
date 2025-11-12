@@ -1,4 +1,3 @@
-
 """rsvpbw.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -31,6 +30,6 @@ class RsvpBw(BaseLS):
     LEN = 4
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> RsvpBw:
         cls.check(data)
         return cls(unpack('!f', data)[0])

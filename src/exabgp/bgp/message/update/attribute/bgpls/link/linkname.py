@@ -29,7 +29,7 @@ class LinkName(BaseLS):
     BGPLS_TLV_MAX_LENGTH = 255  # Maximum TLV data length
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> LinkName:
         if len(data) > cls.BGPLS_TLV_MAX_LENGTH:
             raise Notify(3, 5, 'Link Name TLV length too large')
         return cls(data)

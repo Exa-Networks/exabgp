@@ -1,4 +1,3 @@
-
 """igpmetric.py
 
 Created by Evelio Vila on 2016-12-01.
@@ -30,9 +29,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 # IGP Metric TLV size constants
-IGP_METRIC_SIZE_OSPF = 2  # OSPF link metrics are 2 octets
-IGP_METRIC_SIZE_ISIS_SMALL = 1  # IS-IS small metrics are 1 octet
-IGP_METRIC_SIZE_ISIS_WIDE = 3  # IS-IS wide metrics are 3 octets
+IGP_METRIC_SIZE_OSPF: int = 2  # OSPF link metrics are 2 octets
+IGP_METRIC_SIZE_ISIS_SMALL: int = 1  # IS-IS small metrics are 1 octet
+IGP_METRIC_SIZE_ISIS_WIDE: int = 3  # IS-IS wide metrics are 3 octets
 
 
 @LinkState.register()
@@ -42,7 +41,7 @@ class IgpMetric(BaseLS):
     JSON = 'igp-metric'
 
     @classmethod
-    def unpack(cls, data):
+    def unpack(cls, data: bytes) -> IgpMetric:
         if len(data) == IGP_METRIC_SIZE_OSPF:
             # OSPF
             return cls(unpack('!H', data)[0])
