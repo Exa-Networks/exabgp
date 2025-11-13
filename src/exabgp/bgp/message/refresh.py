@@ -69,7 +69,9 @@ class RouteRefresh(Message):
     # 	return self._families[:]
 
     @classmethod
-    def unpack_message(cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None) -> RouteRefresh:
+    def unpack_message(
+        cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None
+    ) -> RouteRefresh:
         try:
             afi, reserved, safi = unpack('!HBB', data)
         except error:

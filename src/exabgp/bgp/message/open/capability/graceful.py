@@ -13,8 +13,6 @@ from typing import ClassVar, Dict, Iterable, List, Optional, Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import _AFI
-from exabgp.protocol.family import _SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
@@ -37,7 +35,7 @@ class Graceful(Capability, dict):
     restart_flag: int
     restart_time: int
 
-    def set(self, restart_flag: int, restart_time: int, protos: Iterable[Tuple[_AFI, _SAFI, int]]) -> Graceful:
+    def set(self, restart_flag: int, restart_time: int, protos: Iterable[Tuple[AFI, SAFI, int]]) -> Graceful:
         self.restart_flag = restart_flag
         self.restart_time = restart_time & Graceful.TIME_MASK
         for afi, safi, family_flag in protos:
@@ -70,7 +68,7 @@ class Graceful(Capability, dict):
         items = ', '.join(f'"{k}": {v}' for k, v in d.items())
         return f'{{ {items} }}'
 
-    def families(self) -> Iterable[Tuple[_AFI, _SAFI]]:
+    def families(self) -> Iterable[Tuple[AFI, SAFI]]:
         return self.keys()
 
     @staticmethod
@@ -80,7 +78,7 @@ class Graceful(Capability, dict):
         restart_flag = restart >> 12
         restart_time = restart & Graceful.TIME_MASK
         data = data[2:]
-        families: List[Tuple[_AFI, _SAFI, int]] = []
+        families: List[Tuple[AFI, SAFI, int]] = []
         while data:
             afi = AFI.unpack(data[:2])
             safi = SAFI.unpack(data[2:3])

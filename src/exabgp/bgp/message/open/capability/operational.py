@@ -32,6 +32,8 @@ class Operational(Capability, list):
         return [b'']
 
     @staticmethod
-    def unpack_capability(instance: Operational, data: bytes, capability: Optional[CapabilityCode] = None) -> Operational:  # pylint: disable=W0613
+    def unpack_capability(
+        instance: Operational, data: bytes, capability: Optional[CapabilityCode] = None
+    ) -> Operational:  # pylint: disable=W0613
         # XXX: FIXME: we should set that that instance was seen and raise if seen twice
         return instance

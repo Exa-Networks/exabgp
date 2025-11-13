@@ -12,8 +12,6 @@ from typing import ClassVar, List, Optional
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import _AFI
-from exabgp.protocol.family import _SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
@@ -40,9 +38,11 @@ class MultiProtocol(Capability, list):
         return rs
 
     @staticmethod
-    def unpack_capability(instance: MultiProtocol, data: bytes, capability: Optional[CapabilityCode] = None) -> MultiProtocol:  # pylint: disable=W0613
+    def unpack_capability(
+        instance: MultiProtocol, data: bytes, capability: Optional[CapabilityCode] = None
+    ) -> MultiProtocol:  # pylint: disable=W0613
         # XXX: FIXME: we should raise if we have twice the same AFI/SAFI
-        afi: _AFI = AFI.unpack(data[:2])
-        safi: _SAFI = SAFI.unpack(data[3:4])
+        afi: AFI = AFI.unpack(data[:2])
+        safi: SAFI = SAFI.unpack(data[3:4])
         instance.append((afi, safi))
         return instance

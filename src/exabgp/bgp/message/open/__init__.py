@@ -87,7 +87,9 @@ class Open(Message):
         )
 
     @classmethod
-    def unpack_message(cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None) -> Open:
+    def unpack_message(
+        cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None
+    ) -> Open:
         version = data[0]
         if version != Version.BGP_4:
             # Only version 4 is supported nowdays ..

@@ -70,44 +70,49 @@ class _AFI(int):
 
 
 class AFI(Resource):
-    undefined = _AFI(_AFI.UNDEFINED)
-    ipv4 = _AFI(_AFI.IPv4)
-    ipv6 = _AFI(_AFI.IPv6)
-    l2vpn = _AFI(_AFI.L2VPN)
-    bgpls = _AFI(_AFI.BGPLS)
+    undefined: ClassVar[AFI]
+    ipv4: ClassVar[AFI]
+    ipv6: ClassVar[AFI]
+    l2vpn: ClassVar[AFI]
+    bgpls: ClassVar[AFI]
 
-    common = {
-        undefined.pack(): undefined,
-        ipv4.pack(): ipv4,
-        ipv6.pack(): ipv6,
-        l2vpn.pack(): l2vpn,
-        bgpls.pack(): bgpls,
-    }
+    common: ClassVar[Dict[bytes, AFI]] = {}
+    codes: ClassVar[Dict[str, AFI]] = {}
+    cache: ClassVar[Dict[int, AFI]] = {}
+    names: ClassVar[Dict[int, str]] = {}
+    inet_names: ClassVar[Dict[int, str]] = {}
 
-    codes: ClassVar[Dict[str, _AFI]] = dict(  # type: ignore[assignment]
-        (k.lower().replace('_', '-'), v)
-        for (k, v) in {
-            'ipv4': ipv4,
-            'ipv6': ipv6,
-            'l2vpn': l2vpn,
-            'bgp-ls': bgpls,
-        }.items()
-    )
+    def pack(self) -> bytes:
+        return pack('!H', self)
 
-    cache: ClassVar[Dict[int, _AFI]] = dict([(inst, inst) for (_, inst) in codes.items()])  # type: ignore[assignment]
-    names: ClassVar[Dict[int, str]] = dict([(inst, name) for (name, inst) in codes.items()])
+    def mask(self) -> Optional[int]:
+        return _AFI._masks.get(self, None)
 
-    inet_names: ClassVar[Dict[int, str]] = dict([(inst, name.replace('ipv', 'inet')) for (name, inst) in codes.items()])
+    def address_length(self) -> int:
+        """Return address length in bytes.
+
+        Raises:
+            ValueError: If address length is not defined for this AFI
+        """
+        if self not in _AFI._address_lengths:
+            raise ValueError(f'Address length not defined for AFI {self.name()}')
+        return _AFI._address_lengths[self]
 
     def name(self) -> str:
-        return self.inet_names.get(self, 'unknown afi')
+        return self.names.get(self, 'unknown afi')
+
+    def __repr__(self) -> str:
+        return _AFI._names.get(self, f'unknown-afi-{hex(self)}')
+
+    def __str__(self) -> str:
+        return _AFI._names.get(self, f'unknown-afi-{hex(self)}')
 
     @staticmethod
-    def unpack(data: bytes) -> _AFI:
-        return AFI.common.get(data, _AFI(unpack('!H', data)[0]))
+    def unpack(data: bytes) -> AFI:
+        return AFI.common.get(data, AFI(unpack('!H', data)[0]))
 
     @classmethod
-    def value(cls, name: str) -> Optional[_AFI]:
+    def value(cls, name: str) -> Optional[AFI]:
         return cls.codes.get(name, None)
 
     @staticmethod
@@ -123,12 +128,42 @@ class AFI(Resource):
         return []
 
     @classmethod
-    def fromString(cls, string: str) -> _AFI:
+    def fromString(cls, string: str) -> AFI:
         return cls.codes.get(string, cls.undefined)
 
     @classmethod
-    def create(cls, value: int) -> _AFI:
-        return cls.cache.get(value, _AFI(value))
+    def create(cls, value: int) -> AFI:
+        return cls.cache.get(value, AFI(value))
+
+
+# Initialize AFI class attributes after class definition
+AFI.undefined = AFI(_AFI.UNDEFINED)
+AFI.ipv4 = AFI(_AFI.IPv4)
+AFI.ipv6 = AFI(_AFI.IPv6)
+AFI.l2vpn = AFI(_AFI.L2VPN)
+AFI.bgpls = AFI(_AFI.BGPLS)
+
+AFI.common = {
+    AFI.undefined.pack(): AFI.undefined,
+    AFI.ipv4.pack(): AFI.ipv4,
+    AFI.ipv6.pack(): AFI.ipv6,
+    AFI.l2vpn.pack(): AFI.l2vpn,
+    AFI.bgpls.pack(): AFI.bgpls,
+}
+
+AFI.codes = dict(
+    (k.lower().replace('_', '-'), v)
+    for (k, v) in {
+        'ipv4': AFI.ipv4,
+        'ipv6': AFI.ipv6,
+        'l2vpn': AFI.l2vpn,
+        'bgp-ls': AFI.bgpls,
+    }.items()
+)
+
+AFI.cache = dict([(inst, inst) for (_, inst) in AFI.codes.items()])
+AFI.names = dict([(inst, name) for (name, inst) in AFI.codes.items()])
+AFI.inet_names = dict([(inst, name.replace('ipv', 'inet')) for (name, inst) in AFI.codes.items()])
 
 
 # ======================================================================= SAFI
@@ -207,83 +242,127 @@ class _SAFI(int):
 
 
 class SAFI(Resource):
-    undefined = _SAFI(_SAFI.UNDEFINED)
-    unicast = _SAFI(_SAFI.UNICAST)
-    multicast = _SAFI(_SAFI.MULTICAST)
-    nlri_mpls = _SAFI(_SAFI.NLRI_MPLS)
-    vpls = _SAFI(_SAFI.VPLS)
-    evpn = _SAFI(_SAFI.EVPN)
-    bgp_ls = _SAFI(_SAFI.BGPLS)
-    bgp_ls_vpn = _SAFI(_SAFI.BGPLS_VPN)
-    mup = _SAFI(_SAFI.MUP)
-    mpls_vpn = _SAFI(_SAFI.MPLS_VPN)
-    mcast_vpn = _SAFI(_SAFI.MCAST_VPN)
-    rtc = _SAFI(_SAFI.RTC)
-    flow_ip = _SAFI(_SAFI.FLOW_IP)
-    flow_vpn = _SAFI(_SAFI.FLOW_VPN)
+    undefined: ClassVar[SAFI]
+    unicast: ClassVar[SAFI]
+    multicast: ClassVar[SAFI]
+    nlri_mpls: ClassVar[SAFI]
+    vpls: ClassVar[SAFI]
+    evpn: ClassVar[SAFI]
+    bgp_ls: ClassVar[SAFI]
+    bgp_ls_vpn: ClassVar[SAFI]
+    mup: ClassVar[SAFI]
+    mpls_vpn: ClassVar[SAFI]
+    mcast_vpn: ClassVar[SAFI]
+    rtc: ClassVar[SAFI]
+    flow_ip: ClassVar[SAFI]
+    flow_vpn: ClassVar[SAFI]
 
-    common = {
-        undefined.pack(): undefined,
-        unicast.pack(): unicast,
-        multicast.pack(): multicast,
-        nlri_mpls.pack(): nlri_mpls,
-        vpls.pack(): vpls,
-        evpn.pack(): evpn,
-        bgp_ls.pack(): bgp_ls,
-        bgp_ls_vpn.pack(): bgp_ls_vpn,
-        mup.pack(): mup,
-        mpls_vpn.pack(): mpls_vpn,
-        mcast_vpn.pack(): mcast_vpn,
-        rtc.pack(): rtc,
-        flow_ip.pack(): flow_ip,
-        flow_vpn.pack(): flow_vpn,
-    }
+    common: ClassVar[Dict[bytes, SAFI]] = {}
+    codes: ClassVar[Dict[str, SAFI]] = {}
+    cache: ClassVar[Dict[int, SAFI]] = {}
+    names: ClassVar[Dict[int, str]] = {}
 
-    codes: ClassVar[Dict[str, _SAFI]] = dict(  # type: ignore[assignment]
-        (k.lower().replace('_', '-'), v)
-        for (k, v) in {
-            'unicast': unicast,
-            'multicast': multicast,
-            'nlri-mpls': nlri_mpls,
-            'vpls': vpls,
-            'evpn': evpn,
-            'bgp-ls': bgp_ls,
-            'bgp-ls-vpn': bgp_ls_vpn,
-            'mup': mup,
-            'mpls-vpn': mpls_vpn,
-            'mcast-vpn': mcast_vpn,
-            'rtc': rtc,
-            'flow': flow_ip,
-            'flow-vpn': flow_vpn,
-        }.items()
-    )
+    def pack(self) -> bytes:
+        return bytes([self])
 
-    names: ClassVar[Dict[int, str]] = _SAFI._names
+    def name(self) -> str:
+        return _SAFI._names.get(self, f'unknown safi {int(self)}')
 
-    cache: ClassVar[Dict[int, _SAFI]] = dict([(inst, inst) for (_, inst) in codes.items()])  # type: ignore[assignment]
+    def has_label(self) -> bool:
+        return self in (SAFI.nlri_mpls, SAFI.mpls_vpn, SAFI.mcast_vpn)
+
+    def has_rd(self) -> bool:
+        return self in (SAFI.mup, SAFI.mpls_vpn, SAFI.mcast_vpn, SAFI.flow_vpn)
+        # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
+
+    def has_path(self) -> bool:
+        return self in (SAFI.unicast, SAFI.nlri_mpls)
+        # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
+
+    def __str__(self) -> str:
+        return self.name()
+
+    def __repr__(self) -> str:
+        return str(self)
 
     @staticmethod
-    def unpack(data: bytes) -> _SAFI:
-        return SAFI.common.get(data, _SAFI(data if data else 0))
+    def unpack(data: bytes) -> SAFI:
+        return SAFI.common.get(data, SAFI(data[0] if data else 0))
 
     @classmethod
-    def value(cls, name: str) -> Optional[_SAFI]:
+    def value(cls, name: str) -> Optional[SAFI]:
         return cls.codes.get(name, None)
 
     @classmethod
-    def fromString(cls, string: str) -> _SAFI:
+    def fromString(cls, string: str) -> SAFI:
         return cls.codes.get(string, cls.undefined)
 
     @classmethod
-    def create(cls, value: int) -> _SAFI:
-        return cls.cache.get(value, _SAFI(value))
+    def create(cls, value: int) -> SAFI:
+        return cls.cache.get(value, SAFI(value))
+
+
+# Initialize SAFI class attributes after class definition
+SAFI.undefined = SAFI(_SAFI.UNDEFINED)
+SAFI.unicast = SAFI(_SAFI.UNICAST)
+SAFI.multicast = SAFI(_SAFI.MULTICAST)
+SAFI.nlri_mpls = SAFI(_SAFI.NLRI_MPLS)
+SAFI.vpls = SAFI(_SAFI.VPLS)
+SAFI.evpn = SAFI(_SAFI.EVPN)
+SAFI.bgp_ls = SAFI(_SAFI.BGPLS)
+SAFI.bgp_ls_vpn = SAFI(_SAFI.BGPLS_VPN)
+SAFI.mup = SAFI(_SAFI.MUP)
+SAFI.mpls_vpn = SAFI(_SAFI.MPLS_VPN)
+SAFI.mcast_vpn = SAFI(_SAFI.MCAST_VPN)
+SAFI.rtc = SAFI(_SAFI.RTC)
+SAFI.flow_ip = SAFI(_SAFI.FLOW_IP)
+SAFI.flow_vpn = SAFI(_SAFI.FLOW_VPN)
+
+SAFI.common = {
+    SAFI.undefined.pack(): SAFI.undefined,
+    SAFI.unicast.pack(): SAFI.unicast,
+    SAFI.multicast.pack(): SAFI.multicast,
+    SAFI.nlri_mpls.pack(): SAFI.nlri_mpls,
+    SAFI.vpls.pack(): SAFI.vpls,
+    SAFI.evpn.pack(): SAFI.evpn,
+    SAFI.bgp_ls.pack(): SAFI.bgp_ls,
+    SAFI.bgp_ls_vpn.pack(): SAFI.bgp_ls_vpn,
+    SAFI.mup.pack(): SAFI.mup,
+    SAFI.mpls_vpn.pack(): SAFI.mpls_vpn,
+    SAFI.mcast_vpn.pack(): SAFI.mcast_vpn,
+    SAFI.rtc.pack(): SAFI.rtc,
+    SAFI.flow_ip.pack(): SAFI.flow_ip,
+    SAFI.flow_vpn.pack(): SAFI.flow_vpn,
+}
+
+SAFI.codes = dict(
+    (k.lower().replace('_', '-'), v)
+    for (k, v) in {
+        'unicast': SAFI.unicast,
+        'multicast': SAFI.multicast,
+        'nlri-mpls': SAFI.nlri_mpls,
+        'vpls': SAFI.vpls,
+        'evpn': SAFI.evpn,
+        'bgp-ls': SAFI.bgp_ls,
+        'bgp-ls-vpn': SAFI.bgp_ls_vpn,
+        'mup': SAFI.mup,
+        'mpls-vpn': SAFI.mpls_vpn,
+        'mcast-vpn': SAFI.mcast_vpn,
+        'rtc': SAFI.rtc,
+        'flow': SAFI.flow_ip,
+        'flow-vpn': SAFI.flow_vpn,
+    }.items()
+)
+
+SAFI.names = _SAFI._names
+SAFI.cache = dict([(inst, inst) for (_, inst) in SAFI.codes.items()])
 
 
 # ===================================================================== FAMILY
 
 
 class Family:
-    size: ClassVar[Dict[Tuple[_AFI, _SAFI], Tuple[Tuple[int, ...], int]]] = {
+    size: ClassVar[Dict[Tuple[AFI, SAFI], Tuple[Tuple[int, ...], int]]] = {
         # family                   next-hop   RD
         (AFI.ipv4, SAFI.unicast): ((4,), 0),
         (AFI.ipv4, SAFI.multicast): ((4,), 0),
@@ -306,8 +385,8 @@ class Family:
         (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
     }
 
-    afi: _AFI
-    safi: _SAFI
+    afi: AFI
+    safi: SAFI
 
     def __init__(self, afi: int, safi: int) -> None:
         self.afi = AFI.create(afi)
@@ -344,7 +423,7 @@ class Family:
     def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing Family for ordering does not make sense')
 
-    def afi_safi(self) -> Tuple[_AFI, _SAFI]:
+    def afi_safi(self) -> Tuple[AFI, SAFI]:
         return (self.afi, self.safi)
 
     def family(self) -> Family:

@@ -47,6 +47,8 @@ class MultiSession(Capability, list):
         return rs
 
     @staticmethod
-    def unpack_capability(instance: MultiSession, data: bytes, capability: Optional[CapabilityCode] = None) -> MultiSession:  # pylint: disable=W0613
+    def unpack_capability(
+        instance: MultiSession, data: bytes, capability: Optional[CapabilityCode] = None
+    ) -> MultiSession:  # pylint: disable=W0613
         # XXX: FIXME: we should set that that instance was seen and raise if seen twice
         return instance
