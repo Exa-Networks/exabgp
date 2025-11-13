@@ -12,8 +12,6 @@ from typing import ClassVar, Dict, Iterable, List, Optional, Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import _AFI
-from exabgp.protocol.family import _SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
@@ -32,11 +30,11 @@ class AddPath(Capability, dict):
         3: 'send/receive',
     }
 
-    def __init__(self, families: Iterable[Tuple[_AFI, _SAFI]] = (), send_receive: int = 0) -> None:
+    def __init__(self, families: Iterable[Tuple[AFI, SAFI]] = (), send_receive: int = 0) -> None:
         for afi, safi in families:
             self.add_path(afi, safi, send_receive)
 
-    def add_path(self, afi: _AFI, safi: _SAFI, send_receive: int) -> None:
+    def add_path(self, afi: AFI, safi: SAFI, send_receive: int) -> None:
         self[(afi, safi)] = send_receive
 
     def __str__(self) -> str:

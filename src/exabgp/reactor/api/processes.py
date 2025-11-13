@@ -416,7 +416,9 @@ class Processes:
             self.write(process, self._encoder[process].signal(neighbor, signal), neighbor)
 
     @silenced
-    def packets(self, neighbor: Any, direction: str, category: int, negotiated: Negotiated, header: str, body: str) -> None:
+    def packets(
+        self, neighbor: Any, direction: str, category: int, negotiated: Negotiated, header: str, body: str
+    ) -> None:
         for process in self._notify(neighbor, '{}-packets'.format(direction)):
             self.write(
                 process,
@@ -437,7 +439,14 @@ class Processes:
 
     @silenced
     def message(
-        self, message_id: int, neighbor: Any, direction: str, message: Any, negotiated: Negotiated, header: str, *body: str
+        self,
+        message_id: int,
+        neighbor: Any,
+        direction: str,
+        message: Any,
+        negotiated: Negotiated,
+        header: str,
+        *body: str,
     ) -> None:
         self._dispatch[message_id](self, neighbor, direction, message, negotiated, header, *body)
 
@@ -467,7 +476,9 @@ class Processes:
             self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)
 
     @register_process(Message.CODE.NOTIFICATION)
-    def _notification(self, peer: Any, direction: str, message: Any, negotiated: Negotiated, header: str, body: str) -> None:
+    def _notification(
+        self, peer: Any, direction: str, message: Any, negotiated: Negotiated, header: str, body: str
+    ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
             self.write(
                 process,
@@ -477,7 +488,9 @@ class Processes:
 
     # unused-argument, must keep the API
     @register_process(Message.CODE.KEEPALIVE)
-    def _keepalive(self, peer: Any, direction: str, keepalive: Any, negotiated: Negotiated, header: str, body: str) -> None:
+    def _keepalive(
+        self, peer: Any, direction: str, keepalive: Any, negotiated: Negotiated, header: str, body: str
+    ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.KEEPALIVE.SHORT}'):
             self.write(process, self._encoder[process].keepalive(peer, direction, negotiated, header, body), peer)
 

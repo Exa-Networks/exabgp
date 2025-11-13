@@ -15,8 +15,8 @@ from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.protocol.family import _AFI
-from exabgp.protocol.family import _SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 
 
 class Negotiated:
@@ -31,8 +31,8 @@ class Negotiated:
         self.holdtime: HoldTime = HoldTime(0)
         self.local_as: ASN = ASN(0)
         self.peer_as: ASN = ASN(0)
-        self.families: List[Tuple[_AFI, _SAFI]] = []
-        self.nexthop: List[Tuple[_AFI, _SAFI]] = []
+        self.families: List[Tuple[AFI, SAFI]] = []
+        self.nexthop: List[Tuple[AFI, SAFI]] = []
         self.asn4: bool = False
         self.addpath: RequirePath = RequirePath()
         self.multisession: Union[bool, Tuple[int, int, str]] = False
@@ -40,7 +40,7 @@ class Negotiated:
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
         self.aigp: bool = neighbor['capability']['aigp']
-        self.mismatch: List[Tuple[str, Tuple[_AFI, _SAFI]]] = []
+        self.mismatch: List[Tuple[str, Tuple[AFI, SAFI]]] = []
 
     def sent(self, sent_open: Any) -> None:  # Open message
         self.sent_open = sent_open
@@ -178,7 +178,7 @@ class Negotiated:
 
         return None
 
-    def nexthopself(self, afi: _AFI) -> Any:
+    def nexthopself(self, afi: AFI) -> Any:
         return self.neighbor.ip_self(afi)
 
 
@@ -192,12 +192,12 @@ class RequirePath:
     BOTH: ClassVar[int] = SEND | RECEIVE
 
     def __init__(self) -> None:
-        self._send: Dict[Tuple[_AFI, _SAFI], bool] = {}
-        self._receive: Dict[Tuple[_AFI, _SAFI], bool] = {}
+        self._send: Dict[Tuple[AFI, SAFI], bool] = {}
+        self._receive: Dict[Tuple[AFI, SAFI], bool] = {}
 
     def setup(self, received_open: Any, sent_open: Any) -> None:  # Open messages
         # A Dict always returning False
-        class FalseDict(dict):  # type: ignore[type-arg]
+        class FalseDict(dict):
             def __getitem__(self, key: Any) -> bool:
                 return False
 
@@ -205,7 +205,7 @@ class RequirePath:
         send = sent_open.capabilities.get(Capability.CODE.ADD_PATH, FalseDict())
 
         # python 2.4 compatibility mean no simple union but using sets.Set
-        union: List[Tuple[_AFI, _SAFI]] = []
+        union: List[Tuple[AFI, SAFI]] = []
         union.extend(send.keys())
         union.extend([k for k in receive.keys() if k not in send.keys()])
 
@@ -219,8 +219,8 @@ class RequirePath:
             self._send[k] = here_will_send and they_will_recv
             self._receive[k] = here_will_recv and they_will_send
 
-    def send(self, afi: _AFI, safi: _SAFI) -> bool:
+    def send(self, afi: AFI, safi: SAFI) -> bool:
         return self._send.get((afi, safi), False)
 
-    def receive(self, afi: _AFI, safi: _SAFI) -> bool:
+    def receive(self, afi: AFI, safi: SAFI) -> bool:
         return self._receive.get((afi, safi), False)

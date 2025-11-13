@@ -121,7 +121,7 @@ class Capabilities(dict):
             if allowed not in nexthops:
                 continue
             nh_pairs.append(allowed)
-        self[Capability.CODE.NEXTHOP] = NextHop(nh_pairs)
+        self[Capability.CODE.NEXTHOP] = NextHop(tuple(nh_pairs))
 
     def _addpath(self, neighbor: Neighbor) -> None:
         if not neighbor['capability']['add-path']:
@@ -141,7 +141,7 @@ class Capabilities(dict):
         self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(
             Graceful.RESTART_STATE if restarted else 0x0,
             neighbor['capability']['graceful-restart'],
-            [(afi, safi, Graceful.FORWARDING_STATE) for (afi, safi) in neighbor.families()],
+            [(afi, safi, Graceful.FORWARDING_STATE) for (afi, safi) in neighbor.families()],  # type: ignore[misc]
         )
 
     def _refresh(self, neighbor: Neighbor) -> None:

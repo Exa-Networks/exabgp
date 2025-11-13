@@ -41,7 +41,9 @@ class MPURNLRI(Attribute, Family):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def packed_attributes(self, negotiated: Negotiated, maximum: int = Negotiated.FREE_SIZE) -> Generator[bytes, None, None]:
+    def packed_attributes(
+        self, negotiated: Negotiated, maximum: int = Negotiated.FREE_SIZE
+    ) -> Generator[bytes, None, None]:
         if not self.nlris:
             return
 
