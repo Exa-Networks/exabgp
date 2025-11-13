@@ -16,6 +16,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import _AFI
 from exabgp.protocol.family import _SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 # =========================================================== Graceful (Restart)
 # RFC 4727 - https://tools.ietf.org/html/rfc4727
@@ -73,7 +74,7 @@ class Graceful(Capability, dict):  # type: ignore[type-arg]
         return self.keys()  # type: ignore[return-value]
 
     @staticmethod
-    def unpack_capability(instance: Graceful, data: bytes, capability: Optional[int] = None) -> Graceful:  # pylint: disable=W0613
+    def unpack_capability(instance: Graceful, data: bytes, capability: Optional[CapabilityCode] = None) -> Graceful:  # pylint: disable=W0613
         # XXX: FIXME: should raise if instance was already setup
         restart = unpack('!H', data[:2])[0]
         restart_flag = restart >> 12
