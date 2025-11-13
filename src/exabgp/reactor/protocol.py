@@ -39,6 +39,7 @@ from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message import Notification
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message import Operational
+from exabgp.bgp.message.refresh import RouteRefresh
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
@@ -203,7 +204,7 @@ class Protocol:
 
     # Read from network .......................................................
 
-    def read_message(self) -> Generator[Any, None, None]:
+    def read_message(self) -> Generator[Union[Message, NOP], None, None]:
         # This will always be defined by the loop but scope leaking upset scrutinizer/pylint
         msg_id = None
 
@@ -340,7 +341,7 @@ class Protocol:
                 self.connection.session(),
             )
 
-    def read_open(self, ip: str) -> Generator[Any, None, None]:
+    def read_open(self, ip: str) -> Generator[Union[Open, NOP], None, None]:
         for received_open in self.read_message():
             if received_open.TYPE == NOP.TYPE:
                 yield received_open
@@ -357,7 +358,7 @@ class Protocol:
         log.debug(lambda: '<< {}'.format(received_open), self.connection.session())
         yield received_open
 
-    def read_keepalive(self) -> Generator[Any, None, None]:
+    def read_keepalive(self) -> Generator[Union[KeepAlive, NOP], None, None]:
         for message in self.read_message():
             if message.TYPE == NOP.TYPE:
                 yield message
@@ -373,7 +374,7 @@ class Protocol:
     # Sending message to peer
     #
 
-    def new_open(self) -> Generator[Any, None, None]:
+    def new_open(self) -> Generator[Union[Open, NOP], None, None]:
         if self.neighbor['local-as']:
             local_as = self.neighbor['local-as']
         elif self.negotiated.received_open:
@@ -396,7 +397,7 @@ class Protocol:
         log.debug(lambda: '>> {}'.format(sent_open), self.connection.session())
         yield sent_open
 
-    def new_keepalive(self, comment: str = '') -> Generator[Any, None, None]:
+    def new_keepalive(self, comment: str = '') -> Generator[Union[KeepAlive, NOP], None, None]:
         keepalive: KeepAlive = KeepAlive()
 
         for _ in self.write(keepalive):
@@ -409,7 +410,7 @@ class Protocol:
 
         yield keepalive
 
-    def new_notification(self, notification: Notify) -> Generator[Any, None, None]:
+    def new_notification(self, notification: Notify) -> Generator[Union[Notify, NOP], None, None]:
         for _ in self.write(notification):
             yield _NOP
         log.debug(
@@ -418,7 +419,7 @@ class Protocol:
         )
         yield notification
 
-    def new_update(self, include_withdraw: bool) -> Generator[Any, None, None]:
+    def new_update(self, include_withdraw: bool) -> Generator[Union[Update, NOP], None, None]:
         updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
         number: int = 0
         for update in updates:
@@ -431,14 +432,16 @@ class Protocol:
             log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())
         yield _UPDATE
 
-    def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Any, None, None]:
+    def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Union[EOR, NOP], None, None]:
         eor: EOR = EOR(afi, safi)
         for _ in self.write(eor):
             yield _NOP
         log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self.connection.session())
         yield eor
 
-    def new_eors(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> Generator[Any, None, None]:
+    def new_eors(
+        self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined
+    ) -> Generator[Union[Update, NOP], None, None]:
         # Send EOR to let our peer know he can perform a RIB update
         if self.negotiated.families:
             families = (
@@ -459,13 +462,15 @@ class Protocol:
                 yield _NOP
             yield _UPDATE
 
-    def new_operational(self, operational: Operational, negotiated: Negotiated) -> Generator[Any, None, None]:
+    def new_operational(
+        self, operational: Operational, negotiated: Negotiated
+    ) -> Generator[Union[Operational, NOP], None, None]:
         for _ in self.write(operational, negotiated):
             yield _NOP
         log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self.connection.session())
         yield operational
 
-    def new_refresh(self, refresh: Any) -> Generator[Any, None, None]:
+    def new_refresh(self, refresh: RouteRefresh) -> Generator[Union[RouteRefresh, NOP], None, None]:
         for _ in self.write(refresh, None):
             yield _NOP
         log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self.connection.session())
