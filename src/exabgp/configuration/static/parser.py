@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.tokeniser import Tokeniser
 
 from struct import pack
 
@@ -61,7 +64,7 @@ from exabgp.rib.change import Change
 EXTENDED_COMMUNITY_TARGET_PARTS = 2  # Target extended community has 2 parts (ASN:value)
 
 
-def prefix(tokeniser: Any) -> IPRange:
+def prefix(tokeniser: 'Tokeniser') -> IPRange:
     # XXX: could raise
     ip = tokeniser()
     try:
@@ -80,14 +83,16 @@ def prefix(tokeniser: Any) -> IPRange:
     return iprange
 
 
-def path_information(tokeniser: Any) -> PathInfo:
+def path_information(tokeniser: 'Tokeniser') -> PathInfo:
     pi = tokeniser()
     if pi.isdigit():
         return PathInfo(integer=int(pi))
     return PathInfo(ip=pi)
 
 
-def next_hop(tokeniser: Any, afi: Optional[AFI] = None) -> Tuple[Union[IP, IPSelf], Union[NextHop, NextHopSelf]]:
+def next_hop(
+    tokeniser: 'Tokeniser', afi: Optional[AFI] = None
+) -> Tuple[Union[IP, IPSelf], Union[NextHop, NextHopSelf]]:
     value = tokeniser()
     if value.lower() == 'self':
         return IPSelf(tokeniser.afi), NextHopSelf(tokeniser.afi)
@@ -101,7 +106,7 @@ def next_hop(tokeniser: Any, afi: Optional[AFI] = None) -> Tuple[Union[IP, IPSel
 # action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
 
-def inet(tokeniser: Any) -> Change:
+def inet(tokeniser: 'Tokeniser') -> Change:
     ipmask = prefix(tokeniser)
     inet = INET(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=Action.UNSET)
     inet.cidr = CIDR(ipmask.ton(), ipmask.mask)
@@ -113,7 +118,7 @@ def inet(tokeniser: Any) -> Change:
 # action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
 
-def mpls(tokeniser: Any) -> Change:
+def mpls(tokeniser: 'Tokeniser') -> Change:
     ipmask = prefix(tokeniser)
     mpls = IPVPN(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=Action.ANNOUNCE)
     mpls.cidr = CIDR(ipmask.ton(), ipmask.mask)
@@ -121,7 +126,7 @@ def mpls(tokeniser: Any) -> Change:
     return Change(mpls, Attributes())
 
 
-def attribute(tokeniser: Any) -> GenericAttribute:
+def attribute(tokeniser: 'Tokeniser') -> GenericAttribute:
     start = tokeniser()
     if start != '[':
         raise ValueError('invalid attribute, does not starts with [')
@@ -165,7 +170,7 @@ def attribute(tokeniser: Any) -> GenericAttribute:
     # 		return klass.unpack(data,None)
 
 
-def aigp(tokeniser: Any) -> AIGP:
+def aigp(tokeniser: 'Tokeniser') -> AIGP:
     if not tokeniser.tokens:
         raise ValueError('aigp requires number (decimal or hexadecimal 0x prefixed)')
     value = tokeniser()
@@ -178,7 +183,7 @@ def aigp(tokeniser: Any) -> AIGP:
     return AIGP(b'\x01\x00\x0b' + pack('!Q', number))
 
 
-def origin(tokeniser: Any) -> Origin:
+def origin(tokeniser: 'Tokeniser') -> Origin:
     value = tokeniser().lower()
     if value == 'igp':
         return Origin(Origin.IGP)
@@ -189,15 +194,15 @@ def origin(tokeniser: Any) -> Origin:
     raise ValueError('unknown origin {}'.format(value))
 
 
-def med(tokeniser: Any) -> MED:
+def med(tokeniser: 'Tokeniser') -> MED:
     value = tokeniser()
     if not value.isdigit():
         raise ValueError('invalid MED {}'.format(value))
     return MED(int(value))
 
 
-def as_path(tokeniser: Any) -> ASPath:
-    as_path: List[Any] = []
+def as_path(tokeniser: 'Tokeniser') -> ASPath:
+    as_path: List[Union[SEQUENCE, CONFED_SEQUENCE, SET, CONFED_SET, ASN]] = []
     insert: Optional[Union[SEQUENCE, CONFED_SEQUENCE, SET, CONFED_SET]] = None
 
     while True:
@@ -251,18 +256,18 @@ def as_path(tokeniser: Any) -> ASPath:
                 raise ValueError('could not parse as-path') from None
 
 
-def local_preference(tokeniser: Any) -> LocalPreference:
+def local_preference(tokeniser: 'Tokeniser') -> LocalPreference:
     value = tokeniser()
     if not value.isdigit():
         raise ValueError('invalid local preference {}'.format(value))
     return LocalPreference(int(value))
 
 
-def atomic_aggregate(tokeniser: Any) -> AtomicAggregate:
+def atomic_aggregate(tokeniser: 'Tokeniser') -> AtomicAggregate:
     return AtomicAggregate()
 
 
-def aggregator(tokeniser: Any) -> Aggregator:
+def aggregator(tokeniser: 'Tokeniser') -> Aggregator:
     agg = tokeniser()
     eat = agg == '('
 
@@ -293,7 +298,7 @@ def aggregator(tokeniser: Any) -> Aggregator:
     return Aggregator(local_as, local_address)
 
 
-def originator_id(tokeniser: Any) -> OriginatorID:
+def originator_id(tokeniser: 'Tokeniser') -> OriginatorID:
     value = tokeniser()
     if value.count('.') != IPv4.DOT_COUNT:
         raise ValueError('invalid Originator ID {}'.format(value))
@@ -302,7 +307,7 @@ def originator_id(tokeniser: Any) -> OriginatorID:
     return OriginatorID(value)
 
 
-def cluster_list(tokeniser: Any) -> ClusterList:
+def cluster_list(tokeniser: 'Tokeniser') -> ClusterList:
     clusterids: List[ClusterID] = []
     value = tokeniser()
     try:
@@ -369,7 +374,7 @@ def _community(value: str) -> Community:
     raise ValueError('invalid community name {}'.format(value))
 
 
-def community(tokeniser: Any) -> Communities:
+def community(tokeniser: 'Tokeniser') -> Communities:
     communities = Communities()
 
     value = tokeniser()
@@ -416,7 +421,7 @@ def _large_community(value: str) -> LargeCommunity:
     raise ValueError('invalid large community name {}'.format(value))
 
 
-def large_community(tokeniser: Any) -> LargeCommunities:
+def large_community(tokeniser: 'Tokeniser') -> LargeCommunities:
     large_communities = LargeCommunities()
 
     value = tokeniser()
@@ -545,7 +550,7 @@ def _extended_community(value: str) -> ExtendedCommunity:
     return ExtendedCommunity.unpack(header + pack(packed, *components))
 
 
-def extended_community(tokeniser: Any) -> ExtendedCommunities:
+def extended_community(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     communities = ExtendedCommunities()
 
     value = tokeniser()
@@ -567,14 +572,14 @@ def extended_community(tokeniser: Any) -> ExtendedCommunities:
 # As this is not a real BGP attribute this stays in the configuration file
 
 
-def name(tokeniser: Any) -> Any:
+def name(tokeniser: 'Tokeniser') -> str:
     class Name(str):
         ID = Attribute.CODE.INTERNAL_NAME
 
     return Name(tokeniser())
 
 
-def split(tokeniser: Any) -> Any:
+def split(tokeniser: 'Tokeniser') -> int:
     class Split(int):
         ID = Attribute.CODE.INTERNAL_SPLIT
 
@@ -591,7 +596,7 @@ def split(tokeniser: Any) -> Any:
     return Split(int(size))
 
 
-def watchdog(tokeniser: Any) -> Any:
+def watchdog(tokeniser: 'Tokeniser') -> str:
     class Watchdog(str):
         ID = Attribute.CODE.INTERNAL_WATCHDOG
 
@@ -601,7 +606,7 @@ def watchdog(tokeniser: Any) -> Any:
     return Watchdog(command)
 
 
-def withdraw(tokeniser: Optional[Any] = None) -> Any:
+def withdraw(tokeniser: Optional['Tokeniser'] = None) -> object:
     class Withdrawn:
         ID = Attribute.CODE.INTERNAL_WITHDRAW
 

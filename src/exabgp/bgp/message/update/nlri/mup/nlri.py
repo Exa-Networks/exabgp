@@ -120,5 +120,5 @@ class GenericMUP(MUP):
 
         return b''
 
-    def json(self, compact: Optional[Any] = None) -> str:
+    def json(self, compact: Optional[bool] = None) -> str:
         return '{ "arch": %d, "code": %d, "raw": "%s" }' % (self.ARCHTYPE, self.CODE, self._raw())

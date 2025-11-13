@@ -82,7 +82,7 @@ class DirectSegmentDiscoveryRoute(MUP):
 
         return cls(rd, ip, afi)
 
-    def json(self, compact: Optional[Any] = None) -> str:
+    def json(self, compact: Optional[bool] = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE

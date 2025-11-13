@@ -6,7 +6,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import Optional
 
 
 # =========================================================================== ISO
@@ -31,5 +31,5 @@ class ISO:
     def unpack_sysid(cls, data: bytes) -> str:
         return data.hex()
 
-    def json(self, compact: Optional[Any] = None) -> str:
+    def json(self, compact: Optional[bool] = None) -> str:
         return self.sysid

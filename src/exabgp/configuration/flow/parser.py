@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Generator, Tuple, Union
+from typing import Generator, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.tokeniser import Tokeniser
 
 from exabgp.bgp.message.open.asn import (
     ASN,
@@ -77,11 +80,11 @@ MAX_RATE_LIMIT_BPS = 1000000000000  # Maximum rate limit (1 terabyte/s)
 DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
 
 
-def flow(tokeniser: Any) -> Change:
+def flow(tokeniser: 'Tokeniser') -> Change:
     return Change(Flow(), Attributes())
 
 
-def source(tokeniser: Any) -> Generator[Union[Flow4Source, Flow6Source], None, None]:
+def source(tokeniser: 'Tokeniser') -> Generator[Union[Flow4Source, Flow6Source], None, None]:
     """Update source to handle both IPv4 and IPv6 flows."""
     data: str = tokeniser()
     # Check if it's IPv4
@@ -102,7 +105,7 @@ def source(tokeniser: Any) -> Generator[Union[Flow4Source, Flow6Source], None, N
         yield Flow6Source(IP.pton(ip), int(netmask), int(offset))
 
 
-def destination(tokeniser: Any) -> Generator[Union[Flow4Destination, Flow6Destination], None, None]:
+def destination(tokeniser: 'Tokeniser') -> Generator[Union[Flow4Destination, Flow6Destination], None, None]:
     """Update destination to handle both IPv4 and IPv6 flows."""
     data: str = tokeniser()
     # Check if it's IPv4
@@ -181,8 +184,28 @@ def _value(string: str) -> Tuple[str, str]:
 
 # parse [ content1 content2 content3 ]
 # parse =80 or >80 or <25 or &>10<20
-def _generic_condition(tokeniser: Any, klass: Any) -> Generator[Any, None, None]:
-    _operator: Any = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric
+def _generic_condition(
+    tokeniser: 'Tokeniser', klass: type
+) -> Generator[
+    Union[
+        FlowIPProtocol,
+        FlowNextHeader,
+        FlowAnyPort,
+        FlowSourcePort,
+        FlowDestinationPort,
+        FlowICMPType,
+        FlowICMPCode,
+        FlowTCPFlag,
+        FlowPacketLength,
+        FlowDSCP,
+        FlowTrafficClass,
+        FlowFragment,
+        FlowFlowLabel,
+    ],
+    None,
+    None,
+]:
+    _operator = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric
     data: str = tokeniser()
     AND: int = BinaryOperator.NOP
     if data == '[':
@@ -219,72 +242,72 @@ def _generic_condition(tokeniser: Any, klass: Any) -> Generator[Any, None, None]
                 data = data[1:]
 
 
-def any_port(tokeniser: Any) -> Generator[FlowAnyPort, None, None]:
+def any_port(tokeniser: 'Tokeniser') -> Generator[FlowAnyPort, None, None]:
     for _ in _generic_condition(tokeniser, FlowAnyPort):
         yield _
 
 
-def source_port(tokeniser: Any) -> Generator[FlowSourcePort, None, None]:
+def source_port(tokeniser: 'Tokeniser') -> Generator[FlowSourcePort, None, None]:
     for _ in _generic_condition(tokeniser, FlowSourcePort):
         yield _
 
 
-def destination_port(tokeniser: Any) -> Generator[FlowDestinationPort, None, None]:
+def destination_port(tokeniser: 'Tokeniser') -> Generator[FlowDestinationPort, None, None]:
     for _ in _generic_condition(tokeniser, FlowDestinationPort):
         yield _
 
 
-def packet_length(tokeniser: Any) -> Generator[FlowPacketLength, None, None]:
+def packet_length(tokeniser: 'Tokeniser') -> Generator[FlowPacketLength, None, None]:
     for _ in _generic_condition(tokeniser, FlowPacketLength):
         yield _
 
 
-def tcp_flags(tokeniser: Any) -> Generator[FlowTCPFlag, None, None]:
+def tcp_flags(tokeniser: 'Tokeniser') -> Generator[FlowTCPFlag, None, None]:
     for _ in _generic_condition(tokeniser, FlowTCPFlag):
         yield _
 
 
-def protocol(tokeniser: Any) -> Generator[FlowIPProtocol, None, None]:
+def protocol(tokeniser: 'Tokeniser') -> Generator[FlowIPProtocol, None, None]:
     for _ in _generic_condition(tokeniser, FlowIPProtocol):
         yield _
 
 
-def next_header(tokeniser: Any) -> Generator[FlowNextHeader, None, None]:
+def next_header(tokeniser: 'Tokeniser') -> Generator[FlowNextHeader, None, None]:
     for _ in _generic_condition(tokeniser, FlowNextHeader):
         yield _
 
 
-def icmp_type(tokeniser: Any) -> Generator[FlowICMPType, None, None]:
+def icmp_type(tokeniser: 'Tokeniser') -> Generator[FlowICMPType, None, None]:
     for _ in _generic_condition(tokeniser, FlowICMPType):
         yield _
 
 
-def icmp_code(tokeniser: Any) -> Generator[FlowICMPCode, None, None]:
+def icmp_code(tokeniser: 'Tokeniser') -> Generator[FlowICMPCode, None, None]:
     for _ in _generic_condition(tokeniser, FlowICMPCode):
         yield _
 
 
-def fragment(tokeniser: Any) -> Generator[FlowFragment, None, None]:
+def fragment(tokeniser: 'Tokeniser') -> Generator[FlowFragment, None, None]:
     for _ in _generic_condition(tokeniser, FlowFragment):
         yield _
 
 
-def dscp(tokeniser: Any) -> Generator[FlowDSCP, None, None]:
+def dscp(tokeniser: 'Tokeniser') -> Generator[FlowDSCP, None, None]:
     for _ in _generic_condition(tokeniser, FlowDSCP):
         yield _
 
 
-def traffic_class(tokeniser: Any) -> Generator[FlowTrafficClass, None, None]:
+def traffic_class(tokeniser: 'Tokeniser') -> Generator[FlowTrafficClass, None, None]:
     for _ in _generic_condition(tokeniser, FlowTrafficClass):
         yield _
 
 
-def flow_label(tokeniser: Any) -> Generator[FlowFlowLabel, None, None]:
+def flow_label(tokeniser: 'Tokeniser') -> Generator[FlowFlowLabel, None, None]:
     for _ in _generic_condition(tokeniser, FlowFlowLabel):
         yield _
 
 
-def next_hop(tokeniser: Any) -> Union[NextHopSelf, NextHop]:
+def next_hop(tokeniser: 'Tokeniser') -> Union[NextHopSelf, NextHop]:
     value: str = tokeniser()
 
     if value.lower() == 'self':
@@ -293,16 +316,16 @@ def next_hop(tokeniser: Any) -> Union[NextHopSelf, NextHop]:
     return NextHop(ip.top(), ip.pack())
 
 
-def accept(tokeniser: Any) -> None:
+def accept(tokeniser: 'Tokeniser') -> None:
     return
 
 
-def discard(tokeniser: Any) -> ExtendedCommunities:
+def discard(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
     return ExtendedCommunities().add(TrafficRate(ASN(0), 0))
 
 
-def rate_limit(tokeniser: Any) -> ExtendedCommunities:
+def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
     speed: int = int(tokeniser())
     if speed < MIN_RATE_LIMIT_BPS and speed != 0:
@@ -315,7 +338,7 @@ def rate_limit(tokeniser: Any) -> ExtendedCommunities:
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 
-def redirect(tokeniser: Any) -> Tuple[Union[IP, type], ExtendedCommunities]:
+def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, type], ExtendedCommunities]:
     data: str = tokeniser()
     count: int = data.count(':')
 
@@ -376,22 +399,22 @@ def redirect(tokeniser: Any) -> Tuple[Union[IP, type], ExtendedCommunities]:
     raise ValueError('redirect format incorrect')
 
 
-def redirect_next_hop(tokeniser: Any) -> ExtendedCommunities:
+def redirect_next_hop(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     return ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
 
-def redirect_next_hop_ietf(tokeniser: Any) -> Union[ExtendedCommunities, ExtendedCommunitiesIPv6]:
+def redirect_next_hop_ietf(tokeniser: 'Tokeniser') -> Union[ExtendedCommunities, ExtendedCommunitiesIPv6]:
     ip: IP = IP.create(tokeniser())
     if ip.ipv4():
         return ExtendedCommunities().add(TrafficNextHopIPv4IETF(ip, False))
     return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(ip, False))
 
 
-def copy(tokeniser: Any) -> Tuple[IP, ExtendedCommunities]:
+def copy(tokeniser: 'Tokeniser') -> Tuple[IP, ExtendedCommunities]:
     return IP.create(tokeniser()), ExtendedCommunities().add(TrafficNextHopSimpson(True))
 
 
-def mark(tokeniser: Any) -> ExtendedCommunities:
+def mark(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     value: str = tokeniser()
 
     if not value.isdigit():
@@ -405,7 +428,7 @@ def mark(tokeniser: Any) -> ExtendedCommunities:
     return ExtendedCommunities().add(TrafficMark(dscp_value))
 
 
-def action(tokeniser: Any) -> ExtendedCommunities:
+def action(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     value: str = tokeniser()
 
     sample: bool = 'sample' in value
@@ -454,7 +477,7 @@ def _interface_set(data: str) -> InterfaceSet:
     return InterfaceSet(trans_bool, asn, route_target, int_direction)
 
 
-def interface_set(tokeniser: Any) -> ExtendedCommunities:
+def interface_set(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     communities: ExtendedCommunities = ExtendedCommunities()
 
     value: str = tokeniser()
