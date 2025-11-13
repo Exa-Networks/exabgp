@@ -7,13 +7,17 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Type
+from typing import Callable, ClassVar, Dict, List, Optional, Type, TypeVar
 
 from exabgp.protocol.ip import IPv6
 
 from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
 from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceDataSubSubTlv
+
+
+# TypeVar for SRv6 Service Data Sub-Sub-TLV types
+SubSubTlvType = TypeVar('SubSubTlvType', bound=GenericSrv6ServiceDataSubSubTlv)
 
 # 3.1.  SRv6 SID Information Sub-TLV
 #
@@ -39,17 +43,24 @@ from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6Servi
 class Srv6SidInformation:
     TLV: ClassVar[int] = 1
 
-    registered_subsubtlvs: ClassVar[Dict[int, Type[Any]]] = dict()
+    # Registry maps TLV codes to Sub-Sub-TLV classes
+    registered_subsubtlvs: ClassVar[Dict[int, Type[GenericSrv6ServiceDataSubSubTlv]]] = dict()
 
-    def __init__(self, sid: IPv6, behavior: int, subsubtlvs: List[Any], packed: Optional[bytes] = None) -> None:
+    def __init__(
+        self,
+        sid: IPv6,
+        behavior: int,
+        subsubtlvs: List[GenericSrv6ServiceDataSubSubTlv],
+        packed: Optional[bytes] = None,
+    ) -> None:
         self.sid: IPv6 = sid
         self.behavior: int = behavior
-        self.subsubtlvs: List[Any] = subsubtlvs
+        self.subsubtlvs: List[GenericSrv6ServiceDataSubSubTlv] = subsubtlvs
         self.packed: bytes = self.pack()
 
     @classmethod
-    def register(cls) -> Callable[[Type[Any]], Type[Any]]:
-        def register_subsubtlv(klass: Type[Any]) -> Type[Any]:
+    def register(cls) -> Callable[[Type[SubSubTlvType]], Type[SubSubTlvType]]:
+        def register_subsubtlv(klass: Type[SubSubTlvType]) -> Type[SubSubTlvType]:
             code: int = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Service Sub-Sub-TLV type')
@@ -62,14 +73,16 @@ class Srv6SidInformation:
     def unpack(cls, data: bytes, length: int) -> Srv6SidInformation:
         sid: IPv6 = IPv6.unpack(data[1:17])
         behavior: int = unpack('!H', data[18:20])[0]
-        subsubtlvs: List[Any] = []
+        subsubtlvs: List[GenericSrv6ServiceDataSubSubTlv] = []
 
         data = data[21:]
         while data:
             code: int = data[0]
             length = unpack('!H', data[1:3])[0]
             if code in cls.registered_subsubtlvs:
-                subsubtlv: Any = cls.registered_subsubtlvs[code].unpack(data[3 : length + 3], length)
+                subsubtlv: GenericSrv6ServiceDataSubSubTlv = cls.registered_subsubtlvs[code].unpack(
+                    data[3 : length + 3], length
+                )
             else:
                 subsubtlv = GenericSrv6ServiceDataSubSubTlv(code, data[3 : length + 3])
             subsubtlvs.append(subsubtlv)
