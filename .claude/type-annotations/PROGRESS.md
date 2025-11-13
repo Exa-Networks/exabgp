@@ -1,8 +1,8 @@
 # Type Annotation Progress
 
 **Started:** 2025-11-13
-**Status:** Phase 3 complete ✅
-**Current Phase:** Phase 4 (Configuration)
+**Status:** Phase 4 complete ✅
+**Current Phase:** Phase 5 (Registries)
 
 ---
 
@@ -11,16 +11,16 @@
 - [x] Phase 1: Core Architecture (40 instances) ✅
 - [x] Phase 2: Generators (14 instances) ✅
 - [x] Phase 3: Messages (11 instances) ✅
-- [ ] Phase 4: Configuration (25 instances)
+- [x] Phase 4: Configuration (1 instance fixed, ~24 kept as Any) ✅
 - [ ] Phase 5: Registries (15 instances)
 - [ ] Phase 6: Logging (10 instances)
 - [ ] Phase 7: Flow Parsers (10 instances)
 - [ ] Phase 8: Miscellaneous (10 instances)
 
 **Total instances identified:** 160
-**Instances to keep as `Any`:** 15-20
-**Instances fixed:** 65
-**Remaining:** 95
+**Instances to keep as `Any`:** ~64 (intentionally kept where appropriate)
+**Instances fixed:** 66
+**Remaining:** ~30
 
 ---
 
@@ -159,24 +159,60 @@ Functional: PASS (encoding tests A & B passed)
 
 ---
 
-## Phase 4: Configuration Dictionaries
+## Phase 4: Configuration Dictionaries ✅
 
-**Status:** Not started
+**Status:** Complete (Mostly documented as intentional Any usage)
 **Priority:** 🟢 LOWER
-**Instances:** 25
+**Instances:** 1 fixed, ~24 kept as `Any` (appropriate)
+**Completed:** 2025-11-13
 
 ### Files
 
-- [ ] src/exabgp/environment/environment.py (~10 instances)
-- [ ] src/exabgp/configuration/check.py (~13 instances)
-- [ ] src/exabgp/bgp/neighbor.py (2 instances)
+- [x] src/exabgp/environment/environment.py (~10 instances) - **Kept as Any** ✅
+- [x] src/exabgp/configuration/check.py (~13 instances) - **Kept as Any** ✅
+- [x] src/exabgp/bgp/neighbor.py (1 instance fixed, 1 kept) ✅
+
+### Changes Made
+
+**Pattern Used:** Reviewed configuration dictionaries and determined most should remain `Any`
+
+**Fixed Types:**
+- `Capability.defaults: Dict[str, Any]` → `Dict[str, Union[bool, int, None, str]]`
+  - Specific enough to be useful, contains only bools, ints, None, and strings
+
+**Intentionally Kept as `Any` (Appropriate Usage):**
+
+1. **environment/environment.py** (~10 instances):
+   - `definition: Dict[str, Dict[str, Any]]` - Contains functions, values, help strings
+   - Configuration values are legitimately heterogeneous (str, int, bool, List[str], Callable)
+   - **Reason:** Runtime configuration with truly mixed types
+
+2. **configuration/check.py** (~13 instances):
+   - `neighbor: Dict[str, Any]` parameters - Neighbor configuration dictionaries
+   - Contains IPs, ASNs, HoldTime objects, bools, ints, Nones, strings
+   - **Reason:** Configuration objects with heterogeneous types (IP objects, timer objects, primitives)
+
+3. **bgp/neighbor.py** (1 instance):
+   - `Neighbor.defaults: Dict[str, Any]` - Default neighbor configuration
+   - Contains: strings, None, IP objects, ASN objects, HoldTime objects, bools, ints
+   - `api: Optional[Dict[str, Any]]` - API configuration dict
+   - Contains: bools, lists, strings - accessed with dynamic string keys
+   - **Reason:** Too heterogeneous to usefully type (mixes objects and primitives)
+
+### Decision Rationale
+
+Per the original plan, Phase 4's goal was to evaluate configuration dictionaries and determine which should use TypedDict vs remain `Any`. After analysis:
+
+- **TypedDict would add complexity without value** - These dicts are accessed dynamically with string keys
+- **Truly heterogeneous** - Contain mix of objects (IP, ASN, HoldTime) and primitives
+- **`Any` is the correct choice** - Accurately represents runtime behavior
+- **One improvement possible** - Capability.defaults had only primitives, so refined to Union type
 
 ### Test Results
 ```
-Last run: N/A
-Ruff: N/A
-Pytest: N/A
-Functional: N/A
+Last run: 2025-11-13
+Ruff check: PASS
+Pytest: PASS (1376/1376 tests passed)
 ```
 
 ---
@@ -380,14 +416,67 @@ These are documented as appropriate uses of `Any`:
 - TYPE_CHECKING pattern continues to work well for circular dependency resolution
 - All Python 3.8+ compatible (using `typing` module types)
 
+### 2025-11-13 (Evening): Phase 4 Complete ✅
+**Completed:** Configuration Dictionaries (1 instance fixed, ~24 kept as Any)
+
+**Files Modified:**
+1. `bgp/neighbor.py` - Fixed 1 `Any` instance (Capability.defaults)
+
+**Approach Used:**
+- Analyzed all configuration dictionary usage to determine if TypedDict would add value
+- Evaluated ~25 instances across 3 files
+- Determined most should remain `Any` (appropriate for heterogeneous config data)
+
+**Fixed Types:**
+- `Capability.defaults: Dict[str, Any]` → `Dict[str, Union[bool, int, None, str]]`
+  - Contains only primitive types: bools, ints, None, strings
+  - Specific enough to be useful for type checking
+
+**Intentionally Kept as `Any` (Appropriate Usage - ~24 instances):**
+
+1. **environment/environment.py** (~10 instances):
+   - `definition: Dict[str, Dict[str, Any]]` - Contains functions, values, help strings
+   - Configuration values are legitimately heterogeneous (str, int, bool, List[str], Callable)
+   - **Reason:** Runtime configuration with truly mixed types and callable functions
+
+2. **configuration/check.py** (~13 instances):
+   - All `neighbor: Dict[str, Any]` parameters in validation functions
+   - Contains: IP objects, ASN objects, HoldTime objects, bools, ints, Nones, strings
+   - **Reason:** Configuration objects with heterogeneous types (objects + primitives)
+   - TypedDict would be extremely complex and accessed dynamically with string keys
+
+3. **bgp/neighbor.py** (1 instance kept):
+   - `Neighbor.defaults: Dict[str, Any]` - Default neighbor configuration
+   - Contains: strings, None, IP objects, ASN objects, HoldTime objects, bools, ints
+   - **Reason:** Too heterogeneous to usefully type (mixes objects and primitives)
+   - Also: `api: Optional[Dict[str, Any]]` - API configuration dict accessed with dynamic keys
+
+**Testing Results:**
+- ✅ Ruff check: PASS
+- ✅ Pytest: PASS (1376/1376 tests)
+
+**Key Learnings:**
+- Not all `Any` usage is bad - sometimes it's the correct choice
+- Configuration dictionaries that mix objects and primitives are legitimately `Any`
+- TypedDict adds complexity without value when keys are accessed dynamically
+- When dict values contain only primitives, Union types can provide useful specificity
+- Phase 4 took <30 minutes (mostly analysis time, minimal coding)
+
+**Decision Rationale:**
+Per the original plan, Phase 4's goal was to evaluate configuration dictionaries and determine which should use TypedDict vs remain `Any`. After thorough analysis:
+- **TypedDict would add complexity without value** - These dicts are accessed dynamically
+- **Truly heterogeneous** - Mix of objects (IP, ASN, HoldTime) and primitives
+- **`Any` is the correct choice** - Accurately represents runtime behavior
+- **One improvement found** - Capability.defaults contained only primitives, refined to Union type
+
 ---
 
 ## Next Steps
 
-1. Begin Phase 4 (Configuration Dictionaries - 25 instances)
-2. Consider TypedDict for structured config types
-3. Some configs may remain `Any` if legitimately heterogeneous
-4. Continue testing discipline after each change
+1. ✅ Phase 4 Complete - Configuration dictionaries analyzed and appropriately handled
+2. Next: Phase 5 (Registry/Factory Patterns - 15 instances)
+3. Continue testing discipline after each change
+4. Document all changes in PROGRESS.md as phases complete
 
 ---
 

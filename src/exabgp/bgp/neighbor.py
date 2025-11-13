@@ -12,7 +12,7 @@ import json
 from copy import deepcopy
 from collections import deque, Counter
 from datetime import timedelta
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI, _AFI, _SAFI
 # from exabgp.util.dns import host, domain
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 # The definition of a neighbor (from reading the configuration)
 class Neighbor(dict):  # type: ignore[type-arg]
     class Capability(dict):  # type: ignore[type-arg]
-        defaults: ClassVar[Dict[str, Any]] = {
+        defaults: ClassVar[Dict[str, Union[bool, int, None, str]]] = {
             'asn4': True,
             'extended-message': True,
             'graceful-restart': False,
