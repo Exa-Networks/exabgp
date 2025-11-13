@@ -1,5 +1,17 @@
 # ExaBGP CI Testing Guide
 
+## ⚠️ CRITICAL REQUIREMENTS ⚠️
+
+**YOU MUST RUN ALL TESTS BEFORE DECLARING CODE FIXED OR READY**
+
+Never tell the user that code is "fixed", "ready", "working", or "complete" unless you have run ALL of the following:
+
+1. ✅ `ruff format src && ruff check src` - MUST pass with no errors
+2. ✅ `env exabgp_log_enable=false pytest ./tests/unit/` - ALL unit tests MUST pass
+3. ✅ `./qa/bin/functional encoding <test_id>` - MUST pass for affected tests
+
+**MEMORIZE THIS:** If you make code changes, you MUST run these tests BEFORE claiming success.
+
 ## Overview
 This guide documents the complete CI testing requirements for ExaBGP. Before declaring code ready for merging, ALL tests described here must pass.
 
@@ -19,7 +31,8 @@ flake8 . --max-line-length 120 \
   --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages \
   --count --select=E9,F63,F7,F82 --show-source --statistics
 
-# Run ruff
+# Run ruff (format then check)
+ruff format src
 ruff check src
 ```
 
@@ -155,11 +168,13 @@ export EXABGP_DAEMON_USER=$(whoami)
 
 ## Pre-Merge Checklist
 
-Before declaring code ready for merging, verify:
+⚠️ **MANDATORY - DO NOT SKIP ANY ITEMS** ⚠️
+
+Before declaring code "fixed", "ready", "working", or "complete", you MUST verify ALL of the following:
 
 - [ ] **Linting passes** on Python 3.12
   - [ ] flake8 shows no critical errors
-  - [ ] ruff check passes
+  - [ ] ruff format and ruff check pass
 
 - [ ] **Unit tests pass** on Python 3.8, 3.9, 3.10, 3.11, 3.12
   - [ ] All pytest tests pass
@@ -234,7 +249,7 @@ All workflows trigger on:
 ```bash
 # Linting
 flake8 . --max-line-length 120 --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages --count --select=E9,F63,F7,F82 --show-source --statistics
-ruff check src
+ruff format src && ruff check src
 
 # Unit tests
 env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py

@@ -27,9 +27,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Testing Requirements
 
-**Before declaring code ready for merge:**
-- See `.claude/docs/CI_TESTING_GUIDE.md` for complete pre-merge checklist
-- All CI tests must pass:
+⚠️ **CRITICAL: NEVER DECLARE CODE "FIXED" WITHOUT RUNNING ALL TESTS** ⚠️
+
+**MANDATORY REQUIREMENTS - Before declaring code "fixed", "ready", "working", or "complete":**
+
+You MUST run ALL of these tests and they MUST all pass:
+1. ✅ `ruff format src && ruff check src` - MUST pass with no errors
+2. ✅ `env exabgp_log_enable=false pytest ./tests/unit/` - ALL unit tests MUST pass
+3. ✅ `./qa/bin/functional encoding <test_id>` - MUST pass for affected tests
+
+**DO NOT skip any tests. DO NOT claim success without verification.**
+
+See `.claude/docs/CI_TESTING_GUIDE.md` for complete pre-merge checklist.
+
+All CI tests must pass:
   - Linting (ruff format + ruff check)
   - Unit tests (Python 3.8-3.12)
   - Functional tests (parsing, encoding, decoding)
@@ -46,7 +57,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Quick test commands:**
 - Unit tests: `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py`
 - Encoding tests: `./qa/bin/functional encoding`
-- Linting: `ruff format && ruff check`
+- Linting: `ruff format src && ruff check src`
 
 ## Git Workflow
 
