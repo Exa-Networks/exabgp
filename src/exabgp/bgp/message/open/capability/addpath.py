@@ -15,6 +15,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import _AFI
 from exabgp.protocol.family import _SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 # ====================================================================== AddPath
 #
@@ -67,7 +68,7 @@ class AddPath(Capability, dict):  # type: ignore[type-arg]
         ]
 
     @staticmethod
-    def unpack_capability(instance: AddPath, data: bytes, capability: Optional[int] = None) -> AddPath:  # pylint: disable=W0613
+    def unpack_capability(instance: AddPath, data: bytes, capability: Optional[CapabilityCode] = None) -> AddPath:  # pylint: disable=W0613
         # XXX: FIXME: should check that we have not yet seen the capability
         while data:
             afi = AFI.unpack(data[:2])

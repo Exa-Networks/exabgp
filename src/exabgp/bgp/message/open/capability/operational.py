@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, List
+from typing import ClassVar, List, Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 # https://tools.ietf.org/html/draft-ietf-idr-operational-message-00
 # ================================================================== Operational
@@ -31,6 +32,6 @@ class Operational(Capability, list):
         return [b'']
 
     @staticmethod
-    def unpack_capability(instance: Operational, data: bytes, capability: Any = None) -> Operational:  # pylint: disable=W0613
+    def unpack_capability(instance: Operational, data: bytes, capability: Optional[CapabilityCode] = None) -> Operational:  # pylint: disable=W0613
         # XXX: FIXME: we should set that that instance was seen and raise if seen twice
         return instance

@@ -14,8 +14,8 @@ from typing import Any, Callable, ClassVar, Dict, Optional, Type
 from exabgp.bgp.message.notification import Notify
 
 
-class _CapabilityCode(int):
-    _cache: ClassVar[Dict[int, _CapabilityCode]] = dict()
+class CapabilityCode(int):
+    _cache: ClassVar[Dict[int, CapabilityCode]] = dict()
 
     RESERVED: ClassVar[int] = 0x00  # [RFC5492]
     MULTIPROTOCOL: ClassVar[int] = 0x01  # [RFC2858]
@@ -73,10 +73,10 @@ class _CapabilityCode(int):
 
     NAME: str
 
-    def __new__(cls, value: int) -> _CapabilityCode:
+    def __new__(cls, value: int) -> CapabilityCode:
         if value in cls._cache:
             return cls._cache[value]
-        obj: _CapabilityCode = super(_CapabilityCode, cls).__new__(cls, value)
+        obj: CapabilityCode = super(CapabilityCode, cls).__new__(cls, value)
         obj.NAME = cls.names.get(value, 'unknown capability {}'.format(hex(value)))
         cls._cache[value] = obj
         return obj
@@ -98,32 +98,32 @@ class _CapabilityCode(int):
 class Capability:
     class CODE(int):
         # fmt: off
-        RESERVED: ClassVar[_CapabilityCode] =                 _CapabilityCode(_CapabilityCode.RESERVED)
-        MULTIPROTOCOL: ClassVar[_CapabilityCode] =            _CapabilityCode(_CapabilityCode.MULTIPROTOCOL)
-        ROUTE_REFRESH: ClassVar[_CapabilityCode] =            _CapabilityCode(_CapabilityCode.ROUTE_REFRESH)
-        OUTBOUND_ROUTE_FILTERING: ClassVar[_CapabilityCode] = _CapabilityCode(_CapabilityCode.OUTBOUND_ROUTE_FILTERING)
-        MULTIPLE_ROUTES: ClassVar[_CapabilityCode] =          _CapabilityCode(_CapabilityCode.MULTIPLE_ROUTES)
-        NEXTHOP: ClassVar[_CapabilityCode] =                  _CapabilityCode(_CapabilityCode.NEXTHOP)
-        EXTENDED_MESSAGE: ClassVar[_CapabilityCode] =         _CapabilityCode(_CapabilityCode.EXTENDED_MESSAGE)
-        GRACEFUL_RESTART: ClassVar[_CapabilityCode] =         _CapabilityCode(_CapabilityCode.GRACEFUL_RESTART)
-        FOUR_BYTES_ASN: ClassVar[_CapabilityCode] =           _CapabilityCode(_CapabilityCode.FOUR_BYTES_ASN)
-        DYNAMIC_CAPABILITY: ClassVar[_CapabilityCode] =       _CapabilityCode(_CapabilityCode.DYNAMIC_CAPABILITY)
-        MULTISESSION: ClassVar[_CapabilityCode] =             _CapabilityCode(_CapabilityCode.MULTISESSION)
-        ADD_PATH: ClassVar[_CapabilityCode] =                 _CapabilityCode(_CapabilityCode.ADD_PATH)
-        ENHANCED_ROUTE_REFRESH: ClassVar[_CapabilityCode] =   _CapabilityCode(_CapabilityCode.ENHANCED_ROUTE_REFRESH)
-        ROUTE_REFRESH_CISCO: ClassVar[_CapabilityCode] =      _CapabilityCode(_CapabilityCode.ROUTE_REFRESH_CISCO)
-        MULTISESSION_CISCO: ClassVar[_CapabilityCode] =       _CapabilityCode(_CapabilityCode.MULTISESSION_CISCO)
-        HOSTNAME: ClassVar[_CapabilityCode] =                 _CapabilityCode(_CapabilityCode.HOSTNAME)
-        SOFTWARE_VERSION: ClassVar[_CapabilityCode] =         _CapabilityCode(_CapabilityCode.SOFTWARE_VERSION)
-        OPERATIONAL: ClassVar[_CapabilityCode] =              _CapabilityCode(_CapabilityCode.OPERATIONAL)
-        AIGP: ClassVar[_CapabilityCode] =                     _CapabilityCode(_CapabilityCode.AIGP)
+        RESERVED: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.RESERVED)
+        MULTIPROTOCOL: ClassVar[CapabilityCode] =            CapabilityCode(CapabilityCode.MULTIPROTOCOL)
+        ROUTE_REFRESH: ClassVar[CapabilityCode] =            CapabilityCode(CapabilityCode.ROUTE_REFRESH)
+        OUTBOUND_ROUTE_FILTERING: ClassVar[CapabilityCode] = CapabilityCode(CapabilityCode.OUTBOUND_ROUTE_FILTERING)
+        MULTIPLE_ROUTES: ClassVar[CapabilityCode] =          CapabilityCode(CapabilityCode.MULTIPLE_ROUTES)
+        NEXTHOP: ClassVar[CapabilityCode] =                  CapabilityCode(CapabilityCode.NEXTHOP)
+        EXTENDED_MESSAGE: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.EXTENDED_MESSAGE)
+        GRACEFUL_RESTART: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.GRACEFUL_RESTART)
+        FOUR_BYTES_ASN: ClassVar[CapabilityCode] =           CapabilityCode(CapabilityCode.FOUR_BYTES_ASN)
+        DYNAMIC_CAPABILITY: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.DYNAMIC_CAPABILITY)
+        MULTISESSION: ClassVar[CapabilityCode] =             CapabilityCode(CapabilityCode.MULTISESSION)
+        ADD_PATH: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.ADD_PATH)
+        ENHANCED_ROUTE_REFRESH: ClassVar[CapabilityCode] =   CapabilityCode(CapabilityCode.ENHANCED_ROUTE_REFRESH)
+        ROUTE_REFRESH_CISCO: ClassVar[CapabilityCode] =      CapabilityCode(CapabilityCode.ROUTE_REFRESH_CISCO)
+        MULTISESSION_CISCO: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.MULTISESSION_CISCO)
+        HOSTNAME: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.HOSTNAME)
+        SOFTWARE_VERSION: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.SOFTWARE_VERSION)
+        OPERATIONAL: ClassVar[CapabilityCode] =              CapabilityCode(CapabilityCode.OPERATIONAL)
+        AIGP: ClassVar[CapabilityCode] =                     CapabilityCode(CapabilityCode.AIGP)
         # fmt: on
 
         unassigned: ClassVar[range] = range(70, 128)
         reserved: ClassVar[range] = range(128, 256)
 
         def __str__(self) -> str:
-            name: Optional[str] = _CapabilityCode.names.get(self, None)
+            name: Optional[str] = CapabilityCode.names.get(self, None)
             if name is None:
                 if self in Capability.CODE.unassigned:
                     return 'unassigned-{}'.format(hex(self))
@@ -135,10 +135,10 @@ class Capability:
         def __repr__(self) -> str:
             return str(self)
 
-        # XXX: Could use cls instead of _CapabilityCode and other tidy up
+        # XXX: Could use cls instead of CapabilityCode and other tidy up
         @classmethod
         def name(cls, self: int) -> Optional[str]:
-            name: Optional[str] = _CapabilityCode.names.get(self, None)
+            name: Optional[str] = CapabilityCode.names.get(self, None)
             if name is None:
                 if self in Capability.CODE.unassigned:
                     return 'unassigned-{}'.format(hex(self))
@@ -185,6 +185,6 @@ class Capability:
         raise Notify(2, 4, 'can not handle capability {}'.format(what))
 
     @classmethod
-    def unpack(cls, capability: int, capabilities: Any, data: bytes) -> Capability:
+    def unpack(cls, capability: CapabilityCode, capabilities: Any, data: bytes) -> Capability:
         instance: Capability = capabilities.get(capability, Capability.klass(capability)())
         return cls.klass(capability).unpack_capability(instance, data, capability)  # type: ignore[attr-defined,no-any-return]

@@ -8,12 +8,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import Any, ClassVar, List, Tuple
+from typing import ClassVar, List, Optional, Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 # ================================================================ NextHop
 #
@@ -51,7 +52,7 @@ class NextHop(Capability, list):
         ]
 
     @staticmethod
-    def unpack_capability(instance: NextHop, data: bytes, capability: Any = None) -> NextHop:  # pylint: disable=W0613
+    def unpack_capability(instance: NextHop, data: bytes, capability: Optional[CapabilityCode] = None) -> NextHop:  # pylint: disable=W0613
         # XXX: FIXME: we should complain if we have twice the same AFI/SAFI
         # XXX: FIXME: should check that we have not yet seen the capability
         while data:

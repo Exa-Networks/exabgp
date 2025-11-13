@@ -6,9 +6,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Any
+from typing import Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 # ========================================================================= ASN4
 #
@@ -27,7 +28,7 @@ class ExtendedMessage(Capability):
         return [b'']
 
     @staticmethod
-    def unpack_capability(instance: ExtendedMessage, data: bytes, capability: Any = None) -> ExtendedMessage:  # pylint: disable=W0613
+    def unpack_capability(instance: ExtendedMessage, data: bytes, capability: Optional[CapabilityCode] = None) -> ExtendedMessage:  # pylint: disable=W0613
         return ExtendedMessage()
 
     def json(self) -> str:

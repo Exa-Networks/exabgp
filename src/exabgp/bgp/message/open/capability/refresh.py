@@ -6,9 +6,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Any
+from typing import Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 # ================================================================= RouteRefresh
 #
@@ -58,7 +59,7 @@ class RouteRefresh(Capability):
         return [b'']
 
     @staticmethod
-    def unpack_capability(instance: RouteRefresh, data: bytes, capability: Any = None) -> RouteRefresh:  # pylint: disable=W0613
+    def unpack_capability(instance: RouteRefresh, data: bytes, capability: Optional[CapabilityCode] = None) -> RouteRefresh:  # pylint: disable=W0613
         # XXX: FIXME: we should set that that instance was seen and raise if seen twice
         return instance
 
@@ -101,6 +102,6 @@ class EnhancedRouteRefresh(Capability):
         return [b'']
 
     @staticmethod
-    def unpack_capability(instance: EnhancedRouteRefresh, data: bytes, capability: Any = None) -> EnhancedRouteRefresh:  # pylint: disable=W0613
+    def unpack_capability(instance: EnhancedRouteRefresh, data: bytes, capability: Optional[CapabilityCode] = None) -> EnhancedRouteRefresh:  # pylint: disable=W0613
         # XXX: FIXME: we should set that that instance was seen and raise if seen twice
         return instance

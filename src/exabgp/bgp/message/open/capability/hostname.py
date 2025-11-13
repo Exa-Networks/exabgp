@@ -8,9 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
 
 from __future__ import annotations
-from typing import Any
+from typing import Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.util.dns import host, domain
 
 
@@ -49,7 +50,7 @@ class HostName(Capability):
         return [ret]
 
     @staticmethod
-    def unpack_capability(instance: HostName, data: bytes, capability: Any = None) -> HostName:  # pylint: disable=W0613
+    def unpack_capability(instance: HostName, data: bytes, capability: Optional[CapabilityCode] = None) -> HostName:  # pylint: disable=W0613
         l1 = data[0]
         instance.host_name = data[1 : l1 + 1].decode('utf-8')
         l2 = data[l1 + 1]

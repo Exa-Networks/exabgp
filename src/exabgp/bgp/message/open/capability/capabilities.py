@@ -13,6 +13,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.asn4 import ASN4
@@ -278,7 +279,7 @@ class Capabilities(dict):
             if key == Parameter.CAPABILITIES:
                 while value:
                     capability, capv, value = _key_values('capability', value)
-                    capabilities[capability] = Capability.unpack(capability, capabilities, capv)
+                    capabilities[capability] = Capability.unpack(CapabilityCode(capability), capabilities, capv)
             else:
                 raise Notify(2, 0, 'Unknow OPEN parameter {}'.format(hex(key)))
         return capabilities
