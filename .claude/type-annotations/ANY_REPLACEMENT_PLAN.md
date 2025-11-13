@@ -1,8 +1,8 @@
 # Plan: Replace All `Any` Type Annotations
 
-**Status:** Phase 2 Complete ✅
-**Total instances:** 150+
-**Instances fixed:** 54
+**Status:** Phase 3 Complete ✅
+**Total instances:** 160
+**Instances fixed:** 65
 **Estimated effort:** 4-7 hours
 **Approach:** 8 phases, ordered by impact and dependency
 
@@ -142,12 +142,12 @@ env exabgp_log_enable=false pytest ./tests/unit/  # PASS (1376/1376)
 
 ---
 
-## Phase 3: Message and Connection Types 🟡 MEDIUM PRIORITY
+## Phase 3: Message and Connection Types ✅ COMPLETE
 
 **Goal:** Specify message types in API and handlers
 **Impact:** Better type checking for message processing
-**Instances:** ~20
-**Estimated time:** 45 minutes
+**Instances:** 11 (fixed)
+**Completion time:** <30 minutes
 
 ### Files to Update
 
@@ -165,10 +165,12 @@ from exabgp.rib.change import Change
 from exabgp.bgp.message import Open, Operational
 ```
 
-### Testing After Phase 3
+### Testing After Phase 3 ✅
 ```bash
-ruff format src/exabgp/reactor/api src/exabgp/bgp/message && ruff check src
-env exabgp_log_enable=false pytest ./tests/unit/
+# All tests PASSED
+ruff format src/exabgp/reactor/api src/exabgp/bgp/message && ruff check src  # PASS (no changes)
+env exabgp_log_enable=false pytest ./tests/unit/  # PASS (1376/1376)
+./qa/bin/functional encoding B  # PASS
 ```
 
 ---
@@ -455,7 +457,7 @@ env exabgp_log_enable=false pytest --cov ./tests/unit/
 Use `PROGRESS.md` to track:
 - [x] Phase 1: Core Architecture (40 instances) ✅
 - [x] Phase 2: Generators (14 instances) ✅
-- [ ] Phase 3: Messages (20 instances)
+- [x] Phase 3: Messages (11 instances) ✅
 - [ ] Phase 4: Configuration (25 instances)
 - [ ] Phase 5: Registries (15 instances)
 - [ ] Phase 6: Logging (10 instances)
