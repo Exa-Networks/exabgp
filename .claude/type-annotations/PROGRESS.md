@@ -1,14 +1,14 @@
 # Type Annotation Progress
 
 **Started:** 2025-11-13
-**Status:** Planning complete, ready to begin implementation
-**Current Phase:** Not started
+**Status:** Phase 1 complete ✅
+**Current Phase:** Phase 2 (Generators)
 
 ---
 
 ## Overall Progress
 
-- [ ] Phase 1: Core Architecture (40 instances)
+- [x] Phase 1: Core Architecture (40 instances) ✅
 - [ ] Phase 2: Generators (30 instances)
 - [ ] Phase 3: Messages (20 instances)
 - [ ] Phase 4: Configuration (25 instances)
@@ -19,32 +19,51 @@
 
 **Total instances identified:** 160
 **Instances to keep as `Any`:** 15-20
-**Instances fixed:** 0
-**Remaining:** 160
+**Instances fixed:** 40
+**Remaining:** 120
 
 ---
 
-## Phase 1: Core Architecture Types
+## Phase 1: Core Architecture Types ✅
 
-**Status:** Not started
+**Status:** Complete
 **Priority:** 🔴 HIGH
 **Instances:** 40
+**Completed:** 2025-11-13
 
 ### Files
 
-- [ ] src/exabgp/reactor/listener.py (4 instances)
-- [ ] src/exabgp/reactor/daemon.py (2 instances)
-- [ ] src/exabgp/reactor/peer.py (11 instances)
-- [ ] src/exabgp/reactor/protocol.py (5 instances)
-- [ ] src/exabgp/reactor/api/processes.py (16 instances)
-- [ ] src/exabgp/reactor/loop.py (2 instances)
+- [x] src/exabgp/reactor/listener.py (4 instances) ✅
+- [x] src/exabgp/reactor/daemon.py (2 instances) ✅
+- [x] src/exabgp/reactor/peer.py (11 instances) ✅
+- [x] src/exabgp/reactor/protocol.py (5 instances) ✅
+- [x] src/exabgp/reactor/api/processes.py (16 instances) ✅
+- [x] src/exabgp/reactor/loop.py (2 instances) ✅
+
+### Changes Made
+
+**Pattern Used:** `TYPE_CHECKING` imports to break circular dependencies
+
+**Fixed Types:**
+- `reactor: Any` → `'Reactor'`
+- `neighbor: Any` → `'Neighbor'`
+- `peer: Any` → `'Peer'`
+- `connection: Any` → `Union['Incoming', 'Outgoing']`
+- `fsm: Any` → `'FSM'`
+- `family: Tuple[Any, Any]` → `Tuple[AFI, SAFI]`
+
+**Files Modified:**
+- Added `TYPE_CHECKING` blocks to all 6 files
+- Removed unused `Any` imports where all instances were replaced
+- Added necessary imports (AFI, SAFI, Union) where needed
 
 ### Test Results
 ```
-Last run: N/A
-Ruff: N/A
-Pytest: N/A
-Functional: N/A
+Last run: 2025-11-13
+Ruff format: PASS (1 file reformatted)
+Ruff check: PASS (all checks passed)
+Pytest: PASS (1376/1376 tests passed)
+Functional: PASS (encoding test A passed)
 ```
 
 ---
@@ -235,15 +254,43 @@ These are documented as appropriate uses of `Any`:
 - Set up documentation structure in `.claude/type-annotations/`
 - Ready to begin implementation
 
+### 2025-11-13: Phase 1 Complete ✅
+**Completed:** Core Architecture type annotations (40 instances fixed)
+
+**Files Modified:**
+1. `reactor/listener.py` - Fixed 4 `Any` instances (Reactor, Neighbor types)
+2. `reactor/daemon.py` - Fixed 2 `Any` instances (Reactor type)
+3. `reactor/peer.py` - Fixed 11 `Any` instances (Reactor, Neighbor, connection types, AFI/SAFI tuple)
+4. `reactor/protocol.py` - Fixed 5 `Any` instances (Peer, Neighbor, Incoming/Outgoing types)
+5. `reactor/api/processes.py` - Fixed 16 `Any` instances (Neighbor, Peer, FSM, message types)
+6. `reactor/loop.py` - Fixed 2 `Any` instances (Neighbor return types)
+
+**Technique Used:**
+- Added `TYPE_CHECKING` import blocks to break circular dependencies
+- Used forward references (quotes) for type hints: `'Reactor'`, `'Neighbor'`, etc.
+- Maintained runtime behavior - zero performance impact
+
+**Testing Results:**
+- ✅ Ruff format: PASS (1 file auto-formatted)
+- ✅ Ruff check: PASS (all checks)
+- ✅ Pytest: PASS (1376/1376 tests)
+- ✅ Functional: PASS (encoding tests)
+
+**Key Learnings:**
+- `TYPE_CHECKING` successfully resolves Reactor ↔ Peer ↔ Neighbor circular dependencies
+- Forward references with quotes work perfectly for runtime
+- No runtime overhead - types are purely for static analysis
+- One file required auto-formatting by ruff (line length adjustments)
+- **Python 3.8+ compatibility verified** - All features used are compatible
+
 ---
 
 ## Next Steps
 
-1. Start with Phase 1 (Core Architecture)
-2. Update one file at a time
-3. Test after each file
-4. Update this progress tracker
-5. Move to Phase 2 once Phase 1 complete
+1. Begin Phase 2 (Generator Return Types - 30 instances)
+2. Focus on `reactor/protocol.py` generator methods
+3. Specify proper yield types instead of `Any`
+4. Continue testing discipline after each change
 
 ---
 

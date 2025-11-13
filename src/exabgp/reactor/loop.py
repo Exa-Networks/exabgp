@@ -12,7 +12,10 @@ import re
 import time
 import uuid
 import select
-from typing import Any, Dict, Generator, List, Optional, Set
+from typing import Any, Dict, Generator, List, Optional, Set, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener
@@ -166,7 +169,7 @@ class Reactor:
             return
         peer.handle_connection(connection)
 
-    def neighbor(self, peer_name: str) -> Optional[Any]:
+    def neighbor(self, peer_name: str) -> Optional['Neighbor']:
         peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
@@ -187,7 +190,7 @@ class Reactor:
             return ''
         return str(peer.neighbor['peer-address'])
 
-    def neighbor_cli_data(self, peer_name: str) -> Any:
+    def neighbor_cli_data(self, peer_name: str) -> Union[Dict[str, Any], str]:
         peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')

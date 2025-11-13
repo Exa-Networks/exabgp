@@ -10,7 +10,12 @@ from __future__ import annotations
 import os
 
 import traceback
-from typing import Any, Generator, Optional, Tuple
+from typing import Any, Generator, Optional, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.reactor.peer import Peer
+    from exabgp.reactor.network.incoming import Incoming
+    from exabgp.bgp.neighbor import Neighbor
 
 # ================================================================ Registration
 #
@@ -54,11 +59,11 @@ _OPERATIONAL = Operational(0x00)
 class Protocol:
     decode: bool = True
 
-    def __init__(self, peer: Any) -> None:
-        self.peer: Any = peer
-        self.neighbor: Any = peer.neighbor
+    def __init__(self, peer: 'Peer') -> None:
+        self.peer: 'Peer' = peer
+        self.neighbor: 'Neighbor' = peer.neighbor
         self.negotiated: Negotiated = Negotiated(self.neighbor)
-        self.connection: Optional[Any] = None
+        self.connection: Optional[Union['Incoming', Outgoing]] = None
 
         if self.neighbor['connect']:
             self.port: int = self.neighbor['connect']
@@ -83,7 +88,7 @@ class Protocol:
     def me(self, message: str) -> str:
         return f'{self.peer.neighbor["peer-address"]}/{self.peer.neighbor["peer-as"]} {message}'
 
-    def accept(self, incoming: Any) -> Protocol:
+    def accept(self, incoming: 'Incoming') -> Protocol:
         self.connection = incoming
 
         if self.peer.neighbor.api['neighbor-changes']:
