@@ -7,12 +7,32 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List
+from typing import Callable, Dict, Generator, List, Union
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+
+from exabgp.bgp.message.update.nlri.flow import (
+    Flow4Source,
+    Flow4Destination,
+    Flow6Source,
+    Flow6Destination,
+    FlowAnyPort,
+    FlowSourcePort,
+    FlowDestinationPort,
+    FlowTCPFlag,
+    FlowIPProtocol,
+    FlowNextHeader,
+    FlowFragment,
+    FlowPacketLength,
+    FlowICMPCode,
+    FlowICMPType,
+    FlowDSCP,
+    FlowTrafficClass,
+    FlowFlowLabel,
+)
 
 from exabgp.configuration.flow.parser import source
 from exabgp.configuration.flow.parser import destination
@@ -52,7 +72,35 @@ class ParseFlowMatch(Section):
     joined: str = ';\\n  '.join(definition)
     syntax: str = f'match {{\n  {joined};\n}}'
 
-    known: Dict[str, Callable[[Any], Any]] = {
+    known: Dict[
+        str,
+        Callable[
+            [Tokeniser],
+            Generator[
+                Union[
+                    Flow4Source,
+                    Flow4Destination,
+                    Flow6Source,
+                    Flow6Destination,
+                    FlowAnyPort,
+                    FlowSourcePort,
+                    FlowDestinationPort,
+                    FlowTCPFlag,
+                    FlowIPProtocol,
+                    FlowNextHeader,
+                    FlowFragment,
+                    FlowPacketLength,
+                    FlowICMPCode,
+                    FlowICMPType,
+                    FlowDSCP,
+                    FlowTrafficClass,
+                    FlowFlowLabel,
+                ],
+                None,
+                None,
+            ],
+        ],
+    ] = {
         'source': source,
         'source-ipv4': source,
         'source-ipv6': source,

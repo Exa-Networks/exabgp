@@ -198,10 +198,12 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 class IOperation(IComponent):
     # need to implement encode which encode the value of the operator
     operations: int
-    value: Any
-    first: Optional[Any]
+    value: Union[int, 'Protocol', 'Port', 'ICMPType', 'ICMPCode', 'TCPFlag', 'Fragment']
+    first: Optional[bool]
 
-    def __init__(self, operations: int, value: Any) -> None:
+    def __init__(
+        self, operations: int, value: Union[int, 'Protocol', 'Port', 'ICMPType', 'ICMPCode', 'TCPFlag', 'Fragment']
+    ) -> None:
         self.operations = operations
         self.value = value
         self.first = None  # handled by pack/str
@@ -211,7 +213,9 @@ class IOperation(IComponent):
         op = self.operations | _len_to_bit(length)
         return bytes([op]) + value
 
-    def encode(self, value: Any) -> Tuple[int, bytes]:
+    def encode(
+        self, value: Union[int, 'Protocol', 'Port', 'ICMPType', 'ICMPCode', 'TCPFlag', 'Fragment']
+    ) -> Tuple[int, bytes]:
         raise NotImplementedError('this method must be implemented by subclasses')
 
     # def decode (self, value):
@@ -253,7 +257,7 @@ class IOperationByteShortLong(IOperation):
 class NumericString:
     OPERATION: ClassVar[str] = 'numeric'
     operations: Optional[int] = None
-    value: Optional[Any] = None
+    value: Optional[Union[int, 'Protocol', 'ICMPType', 'ICMPCode']] = None
 
     _string: ClassVar[Dict[int, str]] = {
         NumericOperator.TRUE: 'true',
@@ -289,7 +293,7 @@ class NumericString:
 class BinaryString:
     OPERATION: ClassVar[str] = 'binary'
     operations: Optional[int] = None
-    value: Optional[Any] = None
+    value: Optional[Union[int, 'TCPFlag', 'Fragment']] = None
 
     _string: ClassVar[Dict[int, str]] = {
         BinaryOperator.INCLUDE: '',
@@ -313,8 +317,10 @@ class BinaryString:
 # Components ..............................
 
 
-def converter(function: Callable[[str], Any], klass: Optional[Type] = None) -> Callable[[str], Any]:
-    def _integer(value: str) -> Any:
+def converter(
+    function: Callable[[str], Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']], klass: Optional[Type] = None
+) -> Callable[[str], Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']]:
+    def _integer(value: str) -> Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']:
         if klass is None:
             return function(value)
         try:
@@ -325,8 +331,10 @@ def converter(function: Callable[[str], Any], klass: Optional[Type] = None) -> C
     return _integer
 
 
-def decoder(function: Callable[[bytes], Any], klass: Type = int) -> Callable[[bytes], Any]:
-    def _inner(value: bytes) -> Any:
+def decoder(
+    function: Callable[[bytes], int], klass: Type = int
+) -> Callable[[bytes], Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']]:
+    def _inner(value: bytes) -> Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']:
         return klass(function(value))
 
     return _inner
@@ -409,64 +417,64 @@ class Flow6Source(IPrefix6, FlowSource):
 class FlowIPProtocol(IOperationByte, NumericString, IPv4):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'protocol'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(Protocol.named, Protocol))
-    decoder: ClassVar[Callable[[bytes], Any]] = staticmethod(decoder(ord, Protocol))
+    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = staticmethod(converter(Protocol.named, Protocol))
+    decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = staticmethod(decoder(ord, Protocol))
 
 
 class FlowNextHeader(IOperationByte, NumericString, IPv6):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'next-header'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(Protocol.named, Protocol))
-    decoder: ClassVar[Callable[[bytes], Any]] = staticmethod(decoder(ord, Protocol))
+    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = staticmethod(converter(Protocol.named, Protocol))
+    decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = staticmethod(decoder(ord, Protocol))
 
 
 class FlowAnyPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'port'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(port_value))
+    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(port_value))
     decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
 
 
 class FlowDestinationPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x05
     NAME: ClassVar[str] = 'destination-port'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(port_value))
+    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(port_value))
     decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
 
 
 class FlowSourcePort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x06
     NAME: ClassVar[str] = 'source-port'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(port_value))
+    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(port_value))
     decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
 
 
 class FlowICMPType(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x07
     NAME: ClassVar[str] = 'icmp-type'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(ICMPType.named, ICMPType))
-    decoder: ClassVar[Callable[[bytes], Any]] = staticmethod(decoder(_number, ICMPType))
+    converter: ClassVar[Callable[[str], Union[int, ICMPType]]] = staticmethod(converter(ICMPType.named, ICMPType))
+    decoder: ClassVar[Callable[[bytes], Union[int, ICMPType]]] = staticmethod(decoder(_number, ICMPType))
 
 
 class FlowICMPCode(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x08
     NAME: ClassVar[str] = 'icmp-code'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(ICMPCode.named, ICMPCode))
-    decoder: ClassVar[Callable[[bytes], Any]] = staticmethod(decoder(_number, ICMPCode))
+    converter: ClassVar[Callable[[str], Union[int, ICMPCode]]] = staticmethod(converter(ICMPCode.named, ICMPCode))
+    decoder: ClassVar[Callable[[bytes], Union[int, ICMPCode]]] = staticmethod(decoder(_number, ICMPCode))
 
 
 class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x09
     NAME: ClassVar[str] = 'tcp-flags'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(TCPFlag.named))
-    decoder: ClassVar[Callable[[bytes], Any]] = staticmethod(decoder(_number, TCPFlag))
+    converter: ClassVar[Callable[[str], Union[int, TCPFlag]]] = staticmethod(converter(TCPFlag.named))
+    decoder: ClassVar[Callable[[bytes], Union[int, TCPFlag]]] = staticmethod(decoder(_number, TCPFlag))
 
 
 class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x0A
     NAME: ClassVar[str] = 'packet-length'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(packet_length))
+    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(packet_length))
     decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
 
 
@@ -474,7 +482,7 @@ class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
 class FlowDSCP(IOperationByte, NumericString, IPv4):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'dscp'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(dscp_value))
+    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(dscp_value))
     decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
 
 
@@ -482,7 +490,7 @@ class FlowDSCP(IOperationByte, NumericString, IPv4):
 class FlowTrafficClass(IOperationByte, NumericString, IPv6):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'traffic-class'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(class_value))
+    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(class_value))
     decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
 
 
@@ -491,15 +499,15 @@ class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(Fragment.named))
-    decoder: ClassVar[Callable[[bytes], Any]] = staticmethod(decoder(ord, Fragment))
+    converter: ClassVar[Callable[[str], Union[int, Fragment]]] = staticmethod(converter(Fragment.named))
+    decoder: ClassVar[Callable[[bytes], Union[int, Fragment]]] = staticmethod(decoder(ord, Fragment))
 
 
 # draft-raszuk-idr-flow-spec-v6-01
 class FlowFlowLabel(IOperationByteShortLong, NumericString, IPv6):
     ID: ClassVar[int] = 0x0D
     NAME: ClassVar[str] = 'flow-label'
-    converter: ClassVar[Callable[[str], Any]] = staticmethod(converter(label_value))
+    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(label_value))
     decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
 
 

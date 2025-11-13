@@ -7,12 +7,28 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List
+from typing import Callable, Dict, Generator, List, Tuple, Union
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+
+from exabgp.bgp.message.update.attribute import NextHop
+from exabgp.bgp.message.update.attribute.community import Communities
+from exabgp.bgp.message.update.attribute.community.large.communities import LargeCommunities
+from exabgp.bgp.message.update.attribute.community.extended import (
+    ExtendedCommunities,
+    TrafficRate,
+    TrafficAction,
+    TrafficMark,
+    TrafficRedirect,
+    TrafficRedirectASN4,
+    TrafficRedirectIPv6,
+    TrafficNextHopIPv4IETF,
+    TrafficNextHopIPv6IETF,
+    TrafficNextHopSimpson,
+)
 
 from exabgp.configuration.flow.parser import accept
 from exabgp.configuration.flow.parser import discard
@@ -46,7 +62,36 @@ class ParseFlowThen(Section):
     joined: str = ';\\n  '.join(definition)
     syntax: str = f'then {{\n  {joined};\n}}'
 
-    known: Dict[str, Callable[[Any], Any]] = {
+    known: Dict[
+        str,
+        Callable[
+            [Tokeniser],
+            Generator[
+                Union[
+                    bool,
+                    TrafficRate,
+                    TrafficAction,
+                    TrafficMark,
+                    Tuple[
+                        NextHop,
+                        Union[
+                            TrafficRedirect,
+                            TrafficRedirectASN4,
+                            TrafficRedirectIPv6,
+                            TrafficNextHopIPv4IETF,
+                            TrafficNextHopIPv6IETF,
+                            TrafficNextHopSimpson,
+                        ],
+                    ],
+                    Communities,
+                    LargeCommunities,
+                    ExtendedCommunities,
+                ],
+                None,
+                None,
+            ],
+        ],
+    ] = {
         'accept': accept,
         'discard': discard,
         'rate-limit': rate_limit,

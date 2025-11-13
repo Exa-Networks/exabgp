@@ -5,13 +5,14 @@ Created by Stephane Litkowski on 2017-02-24.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List
+from typing import Callable, Dict, Generator, List
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
 
+from exabgp.bgp.message.update.attribute.community.extended import InterfaceSet
 from exabgp.configuration.flow.parser import interface_set
 
 
@@ -21,7 +22,7 @@ class ParseFlowScope(Section):
     joined: str = ';\\n  '.join(definition)
     syntax: str = f'scope {{\n  {joined};\n}}'
 
-    known: Dict[str, Callable[[Any], Any]] = {
+    known: Dict[str, Callable[[Tokeniser], Generator[InterfaceSet, None, None]]] = {
         'interface-set': interface_set,
     }
 
