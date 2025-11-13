@@ -1,8 +1,8 @@
 # Type Annotation Progress
 
 **Started:** 2025-11-13
-**Status:** Phase 4 complete ✅
-**Current Phase:** Phase 5 (Registries)
+**Status:** Phase 6 complete ✅
+**Current Phase:** Phase 7 (Flow Parsers)
 
 ---
 
@@ -13,14 +13,14 @@
 - [x] Phase 3: Messages (11 instances) ✅
 - [x] Phase 4: Configuration (1 instance fixed, ~24 kept as Any) ✅
 - [x] Phase 5: Registries (28 instances) ✅
-- [ ] Phase 6: Logging (10 instances)
+- [x] Phase 6: Logging (14 instances) ✅
 - [ ] Phase 7: Flow Parsers (10 instances)
-- [ ] Phase 8: Miscellaneous (10 instances)
+- [ ] Phase 8: Miscellaneous (2 instances)
 
 **Total instances identified:** 160
 **Instances to keep as `Any`:** ~64 (intentionally kept where appropriate)
-**Instances fixed:** 94
-**Remaining:** ~2
+**Instances fixed:** 108
+**Remaining:** ~12
 
 ---
 
@@ -264,25 +264,47 @@ Functional: PASS (encoding test A passed)
 
 ---
 
-## Phase 6: Logger and Formatter Types
+## Phase 6: Logger and Formatter Types ✅
 
-**Status:** Not started
-**Priority:** 🟢 LOWER
-**Instances:** 10
+**Status:** Complete
+**Priority:** 🟡 MEDIUM
+**Instances:** 14
+**Completed:** 2025-11-13
 
 ### Files
 
-- [ ] src/exabgp/logger/__init__.py (5 instances)
-- [ ] src/exabgp/logger/option.py (3 instances)
-- [ ] src/exabgp/logger/tty.py (1 instance)
-- [ ] src/exabgp/logger/format.py (1 instance)
+- [x] src/exabgp/logger/__init__.py (6 instances) ✅
+- [x] src/exabgp/logger/option.py (3 instances) ✅
+- [x] src/exabgp/logger/format.py (5 instances) ✅
+
+### Changes Made
+
+**Pattern Used:** TYPE_CHECKING imports for Env, AFI, SAFI; refined Callable types
+
+**Fixed Types:**
+- `logger: ClassVar[Any]` → `ClassVar[Optional[Callable[[Callable[[str], None], LogMessage, str, str], None]]]`
+- `env: Any` → `'Env'` (3 instances across files)
+- `cls: Any` → `Type['_log']` (in eat function)
+- `logger: Any` → `Callable[[str], None]` (in log.logger method)
+- `formater: ClassVar[Any]` → `Union[Callable[[str], str], FormatterFunc]`
+- `FormatterFunc = Callable[[str, str, str, Any], str]` → `Callable[[str, str, str, time.struct_time], str]`
+- `timestamp: Any` → `time.struct_time` (4 formatter functions)
+- `aid: Any` → `aid: int` (lazyattribute function)
+- `afi: Any, safi: Any` → `'AFI', 'SAFI'` (lazynlri function)
+
+**Technique Used:**
+- Added TYPE_CHECKING imports to avoid circular dependencies with Env, AFI, SAFI
+- Analyzed time.strftime usage to determine timestamp is time.struct_time
+- Determined FormatterFunc signature by examining formatter call sites
+- Used Union type for option.formater (can be echo or FormatterFunc)
 
 ### Test Results
 ```
-Last run: N/A
-Ruff: N/A
-Pytest: N/A
-Functional: N/A
+Last run: 2025-11-13
+Ruff format: PASS (no changes needed)
+Ruff check: PASS (all checks passed)
+Pytest: PASS (1376/1376 tests passed)
+Functional: PASS (encoding test A passed)
 ```
 
 ---
@@ -522,14 +544,42 @@ Per the original plan, Phase 4's goal was to evaluate configuration dictionaries
 - SRv6 code has elegant multi-level TLV registration (TLV → Sub-TLV → Sub-Sub-TLV)
 - Phase 5 took ~45 minutes (straightforward pattern application)
 
+### 2025-11-13 (Evening): Phase 6 Complete ✅
+**Completed:** Logger and Formatter Types (14 instances fixed)
+
+**Files Modified:**
+1. `logger/__init__.py` - Fixed 6 `Any` instances (logger class var, env params, cls types, logger param)
+2. `logger/option.py` - Fixed 3 `Any` instances (formater type, env params)
+3. `logger/format.py` - Fixed 5 `Any` instances (timestamp types, aid type, afi/safi types)
+
+**Technique Used:**
+- Used TYPE_CHECKING to import `Env`, `AFI`, `SAFI` (avoids circular dependencies)
+- Analyzed time.strftime usage to determine `timestamp` is `time.struct_time`
+- Determined `FormatterFunc` signature by examining formatter call sites
+- Used `Union[Callable[[str], str], FormatterFunc]` for option.formater (can be echo or FormatterFunc)
+- Changed complex logger type from `Any` to specific `Callable[[Callable[[str], None], LogMessage, str, str], None]`
+
+**Testing Results:**
+- ✅ Ruff format & check: PASS (no formatting needed)
+- ✅ Pytest: PASS (1376/1376 tests)
+- ✅ Functional: PASS (encoding test A)
+
+**Key Learnings:**
+- Logger infrastructure uses lazy evaluation (lambda functions) for messages
+- Formatters consistently take 4 parameters: message, source, level, timestamp
+- The `option` class uses either echo function (identity) or proper FormatterFunc
+- Complex nested Callable types provide excellent documentation of logger architecture
+- All Python 3.8+ compatible (using `typing` module types)
+- Phase 6 took ~30 minutes (required understanding logging architecture first)
+
 ---
 
 ## Next Steps
 
-1. ✅ Phase 5 Complete - Registry patterns now fully type-safe
-2. Phases 6-8 remaining: Logging (~10), Flow Parsers (~10), Miscellaneous (~2)
+1. ✅ Phase 6 Complete - Logger types now fully specified
+2. Phases 7-8 remaining: Flow Parsers (~10), Miscellaneous (~2)
 3. Continue testing discipline after each change
-4. 94 of ~96 fixable instances now complete (~98% done)
+4. 108 of ~120 fixable instances now complete (~90% done)
 
 ---
 

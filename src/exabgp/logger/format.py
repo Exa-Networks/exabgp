@@ -2,32 +2,35 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Callable, Optional, Tuple, Dict, Any
+from typing import Callable, Optional, Tuple, Dict, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.protocol.family import AFI, SAFI
 
 from exabgp.logger import color
 from exabgp.logger.tty import istty
 from exabgp.util.od import od
 
-# Type alias for formatter functions
-FormatterFunc = Callable[[str, str, str, Any], str]
+# Type alias for formatter functions - timestamp is time.struct_time
+FormatterFunc = Callable[[str, str, str, time.struct_time], str]
 
 
-def _short_formater(message: str, source: str, level: str, timestamp: Any) -> str:
+def _short_formater(message: str, source: str, level: str, timestamp: time.struct_time) -> str:
     return f'{source:<15} {message}'
 
 
-def _long_formater(message: str, source: str, level: str, timestamp: Any) -> str:
+def _long_formater(message: str, source: str, level: str, timestamp: time.struct_time) -> str:
     now = time.strftime('%H:%M:%S', timestamp)
     return f'{now} {os.getpid():<6} {source:<15} {message}'
 
 
-def _short_color_formater(message: str, source: str, level: str, timestamp: Any) -> str:
+def _short_color_formater(message: str, source: str, level: str, timestamp: time.struct_time) -> str:
     source = color.source(level, source)
     message = color.message(level, message)
     return f'\r{source:<15} {message}'
 
 
-def _long_color_formater(message: str, source: str, level: str, timestamp: Any) -> str:
+def _long_color_formater(message: str, source: str, level: str, timestamp: time.struct_time) -> str:
     now = time.strftime('%H:%M:%S', timestamp)
     source = color.source(level, source)
     message = color.message(level, message)
@@ -74,7 +77,7 @@ def lazyformat(prefix: str, message: bytes, formater: Callable[[bytes], str] = o
     return _lazy
 
 
-def lazyattribute(flag: int, aid: Any, length: int, data: bytes) -> Callable[[], str]:
+def lazyattribute(flag: int, aid: int, length: int, data: bytes) -> Callable[[], str]:
     def _lazy() -> str:
         return 'attribute %-18s flag 0x%02x type 0x%02x len 0x%02x%s' % (
             str(aid),
@@ -87,7 +90,7 @@ def lazyattribute(flag: int, aid: Any, length: int, data: bytes) -> Callable[[],
     return _lazy
 
 
-def lazynlri(afi: Any, safi: Any, addpath: bool, data: bytes) -> Callable[[], str]:
+def lazynlri(afi: 'AFI', safi: 'SAFI', addpath: bool, data: bytes) -> Callable[[], str]:
     def _lazy() -> str:
         family = '{} {}'.format(afi, safi)
         path = 'with path-information' if addpath else 'without path-information'

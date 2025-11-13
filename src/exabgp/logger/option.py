@@ -3,11 +3,14 @@ from __future__ import annotations
 import os
 import sys
 import time
-from typing import Any, ClassVar, Dict, Optional
+from typing import Callable, ClassVar, Dict, Optional, Union, TYPE_CHECKING
 import logging
 
+if TYPE_CHECKING:
+    from exabgp.environment.environment import Env
+
 from exabgp.logger.handler import get_logger
-from exabgp.logger.format import formater as get_formater
+from exabgp.logger.format import formater as get_formater, FormatterFunc
 
 
 def echo(_: str) -> str:
@@ -16,7 +19,8 @@ def echo(_: str) -> str:
 
 class option:
     logger: ClassVar[Optional[logging.Logger]] = None
-    formater: ClassVar[Any] = echo  # Can be echo() or FormatterFunc
+    # Formatter can be echo function or a proper FormatterFunc
+    formater: ClassVar[Union[Callable[[str], str], FormatterFunc]] = echo
 
     short: ClassVar[bool] = False
     level: ClassVar[str] = 'WARNING'
@@ -60,7 +64,7 @@ class option:
         return cls.enabled.get(source, True) and cls.logit.get(level, False)
 
     @classmethod
-    def load(cls, env: Any) -> None:
+    def load(cls, env: 'Env') -> None:
         cls.pid = os.getpid()
         cls.cwd = os.getcwd()
 
@@ -94,7 +98,7 @@ class option:
             cls.destination = 'stdout'
 
     @classmethod
-    def setup(cls, env: Any) -> None:
+    def setup(cls, env: 'Env') -> None:
         cls.load(env)
 
         # the time is used as we will need to re-init the logger once

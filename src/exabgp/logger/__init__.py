@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, ClassVar, Union
+from typing import Callable, ClassVar, Optional, Type, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.environment.environment import Env
 
 from exabgp.logger.option import option
 from exabgp.logger.handler import get_logger  # noqa: F401,E261,E501
@@ -19,15 +22,16 @@ LogMessage = Union[str, Callable[[], str]]
 
 
 class _log:
-    logger: ClassVar[Any] = None
+    # Logger function that writes formatted log messages
+    logger: ClassVar[Optional[Callable[[Callable[[str], None], LogMessage, str, str], None]]] = None
 
     @staticmethod
-    def init(env: Any) -> None:
+    def init(env: 'Env') -> None:
         option.setup(env)
 
     @classmethod
     def disable(cls) -> None:
-        def eat(cls: Any, message: LogMessage, source: str = '', level: str = '') -> None:
+        def eat(cls: Type['_log'], message: LogMessage, source: str = '', level: str = '') -> None:
             pass
 
         cls.debug = eat  # type: ignore[assignment]
@@ -39,7 +43,7 @@ class _log:
 
     @classmethod
     def silence(cls) -> None:
-        def eat(cls: Any, message: LogMessage, source: str = '', level: str = '') -> None:
+        def eat(cls: Type['_log'], message: LogMessage, source: str = '', level: str = '') -> None:
             pass
 
         cls.debug = eat  # type: ignore[assignment]
@@ -73,7 +77,7 @@ class _log:
 
 
 class log(_log):
-    def logger(logger: Any, message: LogMessage, source: str, level: str) -> None:
+    def logger(logger: Callable[[str], None], message: LogMessage, source: str, level: str) -> None:
         # DEVELOPER WARNING: Log messages must always be callable (lambda) for lazy evaluation
         if not callable(message):
             import sys
