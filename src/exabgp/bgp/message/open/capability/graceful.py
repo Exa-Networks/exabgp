@@ -23,7 +23,7 @@ from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 
 @Capability.register()
-class Graceful(Capability, dict):  # type: ignore[type-arg]
+class Graceful(Capability, dict):
     MAX: ClassVar[int] = 0xFFFF
     ID: ClassVar[int] = Capability.CODE.GRACEFUL_RESTART
 
@@ -71,7 +71,7 @@ class Graceful(Capability, dict):  # type: ignore[type-arg]
         return f'{{ {items} }}'
 
     def families(self) -> Iterable[Tuple[_AFI, _SAFI]]:
-        return self.keys()  # type: ignore[return-value]
+        return self.keys()
 
     @staticmethod
     def unpack_capability(instance: Graceful, data: bytes, capability: Optional[CapabilityCode] = None) -> Graceful:  # pylint: disable=W0613
@@ -83,7 +83,7 @@ class Graceful(Capability, dict):  # type: ignore[type-arg]
         families: List[Tuple[_AFI, _SAFI, int]] = []
         while data:
             afi = AFI.unpack(data[:2])
-            safi = SAFI.unpack(data[2])
+            safi = SAFI.unpack(data[2:3])
             flag_family = data[3]
             families.append((afi, safi, flag_family))
             data = data[4:]

@@ -22,7 +22,7 @@ from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 
 @Capability.register()
-class MultiProtocol(Capability, list):  # type: ignore[type-arg]
+class MultiProtocol(Capability, list):
     ID: ClassVar[int] = Capability.CODE.MULTIPROTOCOL
 
     def __str__(self) -> str:
@@ -43,6 +43,6 @@ class MultiProtocol(Capability, list):  # type: ignore[type-arg]
     def unpack_capability(instance: MultiProtocol, data: bytes, capability: Optional[CapabilityCode] = None) -> MultiProtocol:  # pylint: disable=W0613
         # XXX: FIXME: we should raise if we have twice the same AFI/SAFI
         afi: _AFI = AFI.unpack(data[:2])
-        safi: _SAFI = SAFI.unpack(data[3])
+        safi: _SAFI = SAFI.unpack(data[3:4])
         instance.append((afi, safi))
         return instance

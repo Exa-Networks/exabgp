@@ -22,7 +22,7 @@ from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 
 @Capability.register()
-class AddPath(Capability, dict):  # type: ignore[type-arg]
+class AddPath(Capability, dict):
     ID: ClassVar[int] = Capability.CODE.ADD_PATH
 
     string: ClassVar[Dict[int, str]] = {
@@ -72,7 +72,7 @@ class AddPath(Capability, dict):  # type: ignore[type-arg]
         # XXX: FIXME: should check that we have not yet seen the capability
         while data:
             afi = AFI.unpack(data[:2])
-            safi = SAFI.unpack(data[2])
+            safi = SAFI.unpack(data[2:3])
             sr = data[3]
             instance.add_path(afi, safi, sr)
             data = data[4:]
