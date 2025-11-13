@@ -7,7 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message import Open
 
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -25,8 +28,8 @@ class Negotiated:
     def __init__(self, neighbor: Any) -> None:
         self.neighbor: Any = neighbor
 
-        self.sent_open: Optional[Any] = None  # Open message
-        self.received_open: Optional[Any] = None  # Open message
+        self.sent_open: Optional['Open'] = None  # Open message
+        self.received_open: Optional['Open'] = None  # Open message
 
         self.holdtime: HoldTime = HoldTime(0)
         self.local_as: ASN = ASN(0)

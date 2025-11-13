@@ -1,8 +1,8 @@
 # Type Annotation Progress
 
 **Started:** 2025-11-13
-**Status:** Phase 2 complete ✅
-**Current Phase:** Phase 3 (Messages)
+**Status:** Phase 3 complete ✅
+**Current Phase:** Phase 4 (Configuration)
 
 ---
 
@@ -10,7 +10,7 @@
 
 - [x] Phase 1: Core Architecture (40 instances) ✅
 - [x] Phase 2: Generators (14 instances) ✅
-- [ ] Phase 3: Messages (20 instances)
+- [x] Phase 3: Messages (11 instances) ✅
 - [ ] Phase 4: Configuration (25 instances)
 - [ ] Phase 5: Registries (15 instances)
 - [ ] Phase 6: Logging (10 instances)
@@ -19,8 +19,8 @@
 
 **Total instances identified:** 160
 **Instances to keep as `Any`:** 15-20
-**Instances fixed:** 54
-**Remaining:** 106
+**Instances fixed:** 65
+**Remaining:** 95
 
 ---
 
@@ -116,23 +116,45 @@ Functional: PASS (encoding test A passed)
 
 ---
 
-## Phase 3: Message and Connection Types
+## Phase 3: Message and Connection Types ✅
 
-**Status:** Not started
+**Status:** Complete
 **Priority:** 🟡 MEDIUM
-**Instances:** 20
+**Instances:** 11
+**Completed:** 2025-11-13
 
 ### Files
 
-- [ ] src/exabgp/reactor/api/__init__.py (7 instances)
-- [ ] src/exabgp/bgp/message/open/capability/negotiated.py (2 instances)
+- [x] src/exabgp/reactor/api/__init__.py (9 instances) ✅
+- [x] src/exabgp/bgp/message/open/capability/negotiated.py (2 instances) ✅
+
+### Changes Made
+
+**Pattern Used:** Replaced `Any` with specific message and connection types
+
+**Fixed Types in reactor/api/__init__.py:**
+- `reactor: Any` → `'Reactor'` (3 instances - __init__, process, response)
+- `List[Any]` → `List[Change]` (6 instances - route APIs return route changes)
+  - `api_route()`, `api_announce_v4()`, `api_announce_v6()`
+  - `api_flow()`, `api_vpls()`, `api_attributes()`
+- `peers: Any` → `List[str]` (peer names in api_attributes)
+- `Union[bool, Any]` → `Union[bool, Optional[Operational]]` (api_operational return)
+
+**Fixed Types in negotiated.py:**
+- `sent_open: Optional[Any]` → `Optional['Open']`
+- `received_open: Optional[Any]` → `Optional['Open']`
+
+**Files Modified:**
+- Added TYPE_CHECKING imports for `Reactor`, `Open`
+- Added imports for `Operational`, `Change`
+- Removed unused `Any` import from reactor/api/__init__.py
 
 ### Test Results
 ```
-Last run: N/A
-Ruff: N/A
-Pytest: N/A
-Functional: N/A
+Last run: 2025-11-13
+Ruff format & check: PASS (no changes needed)
+Pytest: PASS (1376/1376 tests passed)
+Functional: PASS (encoding tests A & B passed)
 ```
 
 ---
@@ -334,13 +356,37 @@ These are documented as appropriate uses of `Any`:
 - Peer generators also yield ACTION ints for reactor scheduling
 - All Python 3.8+ compatible (using `typing.Union`, `typing.Generator`)
 
+### 2025-11-13 (Afternoon): Phase 3 Complete ✅
+**Completed:** Message and Connection Types (11 instances fixed)
+
+**Files Modified:**
+1. `reactor/api/__init__.py` - Fixed 9 `Any` instances (Reactor, Change, Operational types)
+2. `bgp/message/open/capability/negotiated.py` - Fixed 2 `Any` instances (Open message types)
+
+**Technique Used:**
+- Used TYPE_CHECKING to import `Reactor` and `Open` (avoids circular dependencies)
+- Analyzed code usage to determine `List[Any]` should be `List[Change]` (route changes)
+- Determined `peers` parameter is `List[str]` (peer names)
+- Found `api_operational` returns `Union[bool, Optional[Operational]]` (None when not found)
+
+**Testing Results:**
+- ✅ Ruff format & check: PASS (no formatting needed)
+- ✅ Pytest: PASS (1376/1376 tests)
+- ✅ Functional: PASS (encoding tests A & B)
+
+**Key Learnings:**
+- API methods that parse routes consistently return `List[Change]`
+- `operational()` function can return None, requiring `Optional[Operational]`
+- TYPE_CHECKING pattern continues to work well for circular dependency resolution
+- All Python 3.8+ compatible (using `typing` module types)
+
 ---
 
 ## Next Steps
 
-1. Begin Phase 3 (Message and Connection Types - 20 instances)
-2. Focus on `reactor/api/__init__.py` and message handling
-3. Specify proper message types instead of `Any`
+1. Begin Phase 4 (Configuration Dictionaries - 25 instances)
+2. Consider TypedDict for structured config types
+3. Some configs may remain `Any` if legitimately heterogeneous
 4. Continue testing discipline after each change
 
 ---
