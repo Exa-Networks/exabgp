@@ -11,7 +11,11 @@ import os
 import uuid
 import copy
 import socket
-from typing import Any, ClassVar, Dict, Generator, List, Optional, Tuple
+from typing import ClassVar, Dict, Generator, List, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.reactor.loop import Reactor
+    from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
@@ -41,10 +45,10 @@ class Listener:
         socket.AF_INET6: AFI.ipv6,
     }
 
-    def __init__(self, reactor: Any, backlog: int = 200) -> None:
+    def __init__(self, reactor: 'Reactor', backlog: int = 200) -> None:
         self.serving: bool = False
 
-        self._reactor: Any = reactor
+        self._reactor: 'Reactor' = reactor
         self._backlog: int = backlog
         self._sockets: Dict[socket.socket, Tuple[str, int, str, Optional[str]]] = {}
         self._accepted: Dict[socket.socket, socket.socket] = {}
@@ -179,8 +183,8 @@ class Listener:
             return
         yield None
 
-        reactor: Any = self._reactor
-        ranged_neighbor: List[Any] = []
+        reactor: Reactor = self._reactor
+        ranged_neighbor: List[Neighbor] = []
 
         for connection in self._connected():
             log.debug(lambda connection=connection: f'new connection received {connection.name()}', 'network')

@@ -14,8 +14,14 @@ import subprocess
 import select
 import fcntl
 
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union, TYPE_CHECKING
 from threading import Thread
+
+if TYPE_CHECKING:
+    from exabgp.bgp.neighbor import Neighbor
+    from exabgp.reactor.peer import Peer
+    from exabgp.bgp.message import Open, Update
+    from exabgp.bgp.fsm import FSM
 
 from exabgp.util.errstr import errstr
 from exabgp.reactor.network.error import error
@@ -209,7 +215,7 @@ class Processes:
                 continue
             self._start(process)
 
-    def broken(self, neighbor: Any) -> bool:
+    def broken(self, neighbor: 'Neighbor') -> bool:
         if self._broken:
             for process in self._configuration:
                 if process in self._broken:
@@ -304,7 +310,7 @@ class Processes:
             except (subprocess.CalledProcessError, OSError, ValueError):
                 self._handle_problem(process)
 
-    def write(self, process: str, string: Optional[str], neighbor: Any = None) -> bool:
+    def write(self, process: str, string: Optional[str], neighbor: Optional['Neighbor'] = None) -> bool:
         if string is None:
             return True
 
@@ -369,7 +375,7 @@ class Processes:
         """Get ACK state for a specific service/process"""
         return self._ack[service]
 
-    def _notify(self, neighbor: Any, event: str) -> Generator[str, None, None]:
+    def _notify(self, neighbor: 'Neighbor', event: str) -> Generator[str, None, None]:
         for process in neighbor.api[event]:
             yield process
 
@@ -386,38 +392,38 @@ class Processes:
 
     # invalid-name
     @silenced
-    def up(self, neighbor: Any) -> None:
+    def up(self, neighbor: 'Neighbor') -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].up(neighbor), neighbor)
 
     @silenced
-    def connected(self, neighbor: Any) -> None:
+    def connected(self, neighbor: 'Neighbor') -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].connected(neighbor), neighbor)
 
     @silenced
-    def down(self, neighbor: Any, reason: str) -> None:
+    def down(self, neighbor: 'Neighbor', reason: str) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].down(neighbor, reason), neighbor)
 
     @silenced
-    def negotiated(self, neighbor: Any, negotiated: Negotiated) -> None:
+    def negotiated(self, neighbor: 'Neighbor', negotiated: Negotiated) -> None:
         for process in self._notify(neighbor, 'negotiated'):
             self.write(process, self._encoder[process].negotiated(neighbor, negotiated), neighbor)
 
     @silenced
-    def fsm(self, neighbor: Any, fsm: Any) -> None:
+    def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> None:
         for process in self._notify(neighbor, 'fsm'):
             self.write(process, self._encoder[process].fsm(neighbor, fsm), neighbor)
 
     @silenced
-    def signal(self, neighbor: Any, signal: str) -> None:
+    def signal(self, neighbor: 'Neighbor', signal: str) -> None:
         for process in self._notify(neighbor, 'signal'):
             self.write(process, self._encoder[process].signal(neighbor, signal), neighbor)
 
     @silenced
     def packets(
-        self, neighbor: Any, direction: str, category: int, negotiated: Negotiated, header: str, body: str
+        self, neighbor: 'Neighbor', direction: str, category: int, negotiated: Negotiated, header: str, body: str
     ) -> None:
         for process in self._notify(neighbor, '{}-packets'.format(direction)):
             self.write(
@@ -428,7 +434,7 @@ class Processes:
 
     @silenced
     def notification(
-        self, neighbor: Any, direction: str, code: int, subcode: int, data: str, header: str, body: str
+        self, neighbor: 'Neighbor', direction: str, code: int, subcode: int, data: str, header: str, body: str
     ) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(
@@ -441,9 +447,9 @@ class Processes:
     def message(
         self,
         message_id: int,
-        neighbor: Any,
+        neighbor: 'Neighbor',
         direction: str,
-        message: Any,
+        message: Message,
         negotiated: Negotiated,
         header: str,
         *body: str,
@@ -466,12 +472,16 @@ class Processes:
     # notifications are handled in the loop as they use different arguments
 
     @register_process(Message.CODE.OPEN)
-    def _open(self, peer: Any, direction: str, message: Any, negotiated: Negotiated, header: str, body: str) -> None:
+    def _open(
+        self, peer: 'Peer', direction: str, message: 'Open', negotiated: Negotiated, header: str, body: str
+    ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.OPEN.SHORT}'):
             self.write(process, self._encoder[process].open(peer, direction, message, negotiated, header, body), peer)
 
     @register_process(Message.CODE.UPDATE)
-    def _update(self, peer: Any, direction: str, update: Any, negotiated: Negotiated, header: str, body: str) -> None:
+    def _update(
+        self, peer: 'Peer', direction: str, update: 'Update', negotiated: Negotiated, header: str, body: str
+    ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
             self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)
 

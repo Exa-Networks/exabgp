@@ -1,9 +1,21 @@
 # Plan: Replace All `Any` Type Annotations
 
-**Status:** Ready to start
+**Status:** Phase 1 Complete ✅
 **Total instances:** 150+
 **Estimated effort:** 4-7 hours
 **Approach:** 8 phases, ordered by impact and dependency
+
+---
+
+## ⚠️  Python 3.8.1+ Compatibility REQUIRED
+
+**Before working on ANY phase, read:** `PYTHON38_COMPATIBILITY.md`
+
+ExaBGP must support Python 3.8.1+. All type annotations MUST:
+- Use `typing.Optional`, `typing.Union`, `typing.List/Dict/Tuple` (NOT built-in generics)
+- Avoid `|` operator (Python 3.10+ only)
+- Have `from __future__ import annotations` at top of file
+- Use `TYPE_CHECKING` for circular dependency imports
 
 ---
 
@@ -16,6 +28,7 @@ This plan systematically replaces all `Any` type annotations in ExaBGP with prop
 - Start with core architecture (highest impact)
 - Test after each file/small set of changes
 - Document any intentional `Any` usage that remains
+- **Maintain Python 3.8.1+ compatibility** (see PYTHON38_COMPATIBILITY.md)
 
 ---
 

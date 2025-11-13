@@ -9,7 +9,13 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
-from typing import Any, Dict, Generator, Iterator, Optional, Set, Tuple
+from typing import Any, Dict, Generator, Iterator, Optional, Set, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.reactor.loop import Reactor
+    from exabgp.reactor.network.incoming import Incoming
+    from exabgp.reactor.network.outgoing import Outgoing
+    from exabgp.bgp.neighbor import Neighbor
 
 # import traceback
 from exabgp.bgp.timer import ReceiveTimer
@@ -22,6 +28,7 @@ from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Notification
 from exabgp.bgp.message import Notify
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.protocol import Protocol
 from exabgp.reactor.delay import Delay
 from exabgp.reactor.keepalive import KA
@@ -87,7 +94,7 @@ class Stats(dict):
 
 
 class Peer:
-    def __init__(self, neighbor: Any, reactor: Any) -> None:
+    def __init__(self, neighbor: 'Neighbor', reactor: 'Reactor') -> None:
         # Maximum connection attempts (0 = unlimited)
         self.max_connection_attempts: int = getenv().tcp.attempts
         self.connection_attempts: int = 0
@@ -95,10 +102,10 @@ class Peer:
 
         now: float = time.time()
 
-        self.reactor: Any = reactor
-        self.neighbor: Any = neighbor
+        self.reactor: 'Reactor' = reactor
+        self.neighbor: 'Neighbor' = neighbor
         # The next restart neighbor definition
-        self._neighbor: Optional[Any] = None
+        self._neighbor: Optional['Neighbor'] = None
 
         self.proto: Optional[Protocol] = None
         self.fsm: FSM = FSM(self, FSM.IDLE)
@@ -247,11 +254,11 @@ class Peer:
         self._stop('shutting down')
         self.stop()
 
-    def resend(self, enhanced: bool, family: Optional[Tuple[Any, Any]] = None) -> None:
+    def resend(self, enhanced: bool, family: Optional[Tuple[AFI, SAFI]] = None) -> None:
         self.neighbor.rib.outgoing.resend(enhanced, family)
         self._delay.reset()
 
-    def reestablish(self, restart_neighbor: Optional[Any] = None) -> None:
+    def reestablish(self, restart_neighbor: Optional['Neighbor'] = None) -> None:
         # we want to tear down the session and re-establish it
         self._teardown = 3
         self._restart = True
@@ -259,7 +266,7 @@ class Peer:
         self._neighbor = restart_neighbor
         self._delay.reset()
 
-    def reconfigure(self, restart_neighbor: Optional[Any] = None) -> None:
+    def reconfigure(self, restart_neighbor: Optional['Neighbor'] = None) -> None:
         # we want to update the route which were in the configuration file
         self._neighbor = restart_neighbor
 
@@ -273,7 +280,7 @@ class Peer:
             return self.proto.fd()
         return -1
 
-    def handle_connection(self, connection: Any) -> Optional[Any]:
+    def handle_connection(self, connection: Union['Incoming', 'Outgoing']) -> Optional[Iterator[bool]]:
         log.debug(lambda: 'state machine for the peer is {}'.format(self.fsm.name()), self.id())
 
         # if the other side fails, we go back to idle
