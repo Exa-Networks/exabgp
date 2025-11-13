@@ -1,7 +1,8 @@
 # Plan: Replace All `Any` Type Annotations
 
-**Status:** Phase 1 Complete ✅
+**Status:** Phase 2 Complete ✅
 **Total instances:** 150+
+**Instances fixed:** 54
 **Estimated effort:** 4-7 hours
 **Approach:** 8 phases, ordered by impact and dependency
 
@@ -97,12 +98,12 @@ env exabgp_log_enable=false pytest ./tests/unit/
 
 ---
 
-## Phase 2: Generator Return Types 🟡 MEDIUM PRIORITY
+## Phase 2: Generator Return Types ✅ COMPLETE
 
 **Goal:** Specify what generators yield for better type safety
 **Impact:** Improves protocol layer type checking
-**Instances:** ~30
-**Estimated time:** 1 hour
+**Instances:** 14 (fixed)
+**Completion time:** <1 hour
 
 ### Files to Update
 
@@ -131,11 +132,12 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.reactor.protocol import NOP
 ```
 
-### Testing After Phase 2
+### Testing After Phase 2 ✅
 ```bash
-ruff format src/exabgp/reactor && ruff check src/exabgp/reactor
-env exabgp_log_enable=false pytest ./tests/unit/test_protocol.py
-./qa/bin/functional encoding
+# All tests PASSED
+ruff format src/exabgp/reactor && ruff check src/exabgp/reactor  # PASS (1 file reformatted)
+env exabgp_log_enable=false pytest ./tests/unit/  # PASS (1376/1376)
+./qa/bin/functional encoding A  # PASS
 ```
 
 ---
@@ -451,8 +453,8 @@ env exabgp_log_enable=false pytest --cov ./tests/unit/
 ## Progress Tracking
 
 Use `PROGRESS.md` to track:
-- [ ] Phase 1: Core Architecture (40 instances)
-- [ ] Phase 2: Generators (30 instances)
+- [x] Phase 1: Core Architecture (40 instances) ✅
+- [x] Phase 2: Generators (14 instances) ✅
 - [ ] Phase 3: Messages (20 instances)
 - [ ] Phase 4: Configuration (25 instances)
 - [ ] Phase 5: Registries (15 instances)

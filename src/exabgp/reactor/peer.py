@@ -24,6 +24,7 @@ from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import REFRESH
 from exabgp.bgp.message import NOP
+from exabgp.bgp.message import Open
 from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Notification
@@ -373,14 +374,14 @@ class Peer:
                 yield ACTION.NOW
                 raise Interrupted('connection failed') from None
 
-    def _send_open(self) -> Generator[Any, None, None]:
+    def _send_open(self) -> Generator[Union[int, Open, NOP], None, None]:
         message = Message.CODE.NOP
         for message in self.proto.new_open():
             if message.ID == Message.CODE.NOP:
                 yield ACTION.NOW
         yield message
 
-    def _read_open(self) -> Generator[Any, None, None]:
+    def _read_open(self) -> Generator[Union[int, Open, NOP], None, None]:
         wait = getenv().bgp.openwait
         opentimer = ReceiveTimer(
             self.proto.connection.session,

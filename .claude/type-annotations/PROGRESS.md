@@ -1,15 +1,15 @@
 # Type Annotation Progress
 
 **Started:** 2025-11-13
-**Status:** Phase 1 complete ✅
-**Current Phase:** Phase 2 (Generators)
+**Status:** Phase 2 complete ✅
+**Current Phase:** Phase 3 (Messages)
 
 ---
 
 ## Overall Progress
 
 - [x] Phase 1: Core Architecture (40 instances) ✅
-- [ ] Phase 2: Generators (30 instances)
+- [x] Phase 2: Generators (14 instances) ✅
 - [ ] Phase 3: Messages (20 instances)
 - [ ] Phase 4: Configuration (25 instances)
 - [ ] Phase 5: Registries (15 instances)
@@ -19,8 +19,8 @@
 
 **Total instances identified:** 160
 **Instances to keep as `Any`:** 15-20
-**Instances fixed:** 40
-**Remaining:** 120
+**Instances fixed:** 54
+**Remaining:** 106
 
 ---
 
@@ -68,24 +68,50 @@ Functional: PASS (encoding test A passed)
 
 ---
 
-## Phase 2: Generator Return Types
+## Phase 2: Generator Return Types ✅
 
-**Status:** Not started
+**Status:** Complete
 **Priority:** 🟡 MEDIUM
-**Instances:** 30
+**Instances:** 14
+**Completed:** 2025-11-13
 
 ### Files
 
-- [ ] src/exabgp/reactor/protocol.py (11 instances)
-- [ ] src/exabgp/reactor/peer.py (2 instances)
-- [ ] src/exabgp/reactor/keepalive.py (1 instance)
+- [x] src/exabgp/reactor/protocol.py (11 instances) ✅
+- [x] src/exabgp/reactor/peer.py (2 instances) ✅
+- [x] src/exabgp/reactor/keepalive.py (1 instance) ✅
+
+### Changes Made
+
+**Pattern Used:** Replaced `Generator[Any, None, None]` with specific yield types
+
+**Fixed Types:**
+- `read_message()` → `Generator[Union[Message, NOP], None, None]`
+- `read_open()` → `Generator[Union[Open, NOP], None, None]`
+- `read_keepalive()` → `Generator[Union[KeepAlive, NOP], None, None]`
+- `new_open()` → `Generator[Union[Open, NOP], None, None]`
+- `new_keepalive()` → `Generator[Union[KeepAlive, NOP], None, None]`
+- `new_notification()` → `Generator[Union[Notify, NOP], None, None]`
+- `new_update()` → `Generator[Union[Update, NOP], None, None]`
+- `new_eor()` → `Generator[Union[EOR, NOP], None, None]`
+- `new_eors()` → `Generator[Union[Update, NOP], None, None]`
+- `new_operational()` → `Generator[Union[Operational, NOP], None, None]`
+- `new_refresh(refresh: RouteRefresh)` → `Generator[Union[RouteRefresh, NOP], None, None]`
+- `_send_open()` → `Generator[Union[int, Open, NOP], None, None]` (yields ACTION ints)
+- `_read_open()` → `Generator[Union[int, Open, NOP], None, None]` (yields ACTION ints)
+- `generator` variable in keepalive → `Optional[Generator[Union[KeepAlive, NOP], None, None]]`
+
+**Files Modified:**
+- Added `RouteRefresh` import to protocol.py
+- Added `Open` import to peer.py
+- Added `KeepAlive`, `NOP`, `Union` imports to keepalive.py
 
 ### Test Results
 ```
-Last run: N/A
-Ruff: N/A
-Pytest: N/A
-Functional: N/A
+Last run: 2025-11-13
+Ruff format & check: PASS (1 file reformatted - protocol.py)
+Pytest: PASS (1376/1376 tests passed)
+Functional: PASS (encoding test A passed)
 ```
 
 ---
@@ -254,7 +280,7 @@ These are documented as appropriate uses of `Any`:
 - Set up documentation structure in `.claude/type-annotations/`
 - Ready to begin implementation
 
-### 2025-11-13: Phase 1 Complete ✅
+### 2025-11-13 (Morning): Phase 1 Complete ✅
 **Completed:** Core Architecture type annotations (40 instances fixed)
 
 **Files Modified:**
@@ -283,13 +309,38 @@ These are documented as appropriate uses of `Any`:
 - One file required auto-formatting by ruff (line length adjustments)
 - **Python 3.8+ compatibility verified** - All features used are compatible
 
+### 2025-11-13 (Afternoon): Phase 2 Complete ✅
+**Completed:** Generator Return Types (14 instances fixed)
+
+**Files Modified:**
+1. `reactor/protocol.py` - Fixed 11 generator return types
+2. `reactor/peer.py` - Fixed 2 generator return types
+3. `reactor/keepalive.py` - Fixed 1 generator variable type
+
+**Technique Used:**
+- Analyzed generator yield patterns to determine specific types
+- Replaced `Generator[Any, None, None]` with `Generator[Union[SpecificType, NOP], None, None]`
+- For generators that yield ACTION constants (int), used `Generator[Union[int, Open, NOP], None, None]`
+- Added necessary imports: `RouteRefresh`, `Open`, `KeepAlive`, `NOP`
+
+**Testing Results:**
+- ✅ Ruff format & check: PASS (1 file auto-formatted)
+- ✅ Pytest: PASS (1376/1376 tests)
+- ✅ Functional: PASS (encoding test A)
+
+**Key Learnings:**
+- Generator types are very informative - they document what callers can expect
+- Most generators yield a specific message type plus NOP for flow control
+- Peer generators also yield ACTION ints for reactor scheduling
+- All Python 3.8+ compatible (using `typing.Union`, `typing.Generator`)
+
 ---
 
 ## Next Steps
 
-1. Begin Phase 2 (Generator Return Types - 30 instances)
-2. Focus on `reactor/protocol.py` generator methods
-3. Specify proper yield types instead of `Any`
+1. Begin Phase 3 (Message and Connection Types - 20 instances)
+2. Focus on `reactor/api/__init__.py` and message handling
+3. Specify proper message types instead of `Any`
 4. Continue testing discipline after each change
 
 ---
