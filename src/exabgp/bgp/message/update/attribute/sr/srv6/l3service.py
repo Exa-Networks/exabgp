@@ -7,10 +7,14 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Type
+from typing import Callable, ClassVar, Dict, List, Optional, Type, TypeVar
 
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceSubTlv
+
+
+# TypeVar for SRv6 Service Sub-TLV types
+SubTlvType = TypeVar('SubTlvType', bound=GenericSrv6ServiceSubTlv)
 
 # 2.  SRv6 Services TLVs
 #
@@ -29,15 +33,16 @@ from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6Servi
 class Srv6L3Service:
     TLV: ClassVar[int] = 5
 
-    registered_subtlvs: ClassVar[Dict[int, Type[Any]]] = dict()
+    # Registry maps TLV codes to Sub-TLV classes
+    registered_subtlvs: ClassVar[Dict[int, Type[GenericSrv6ServiceSubTlv]]] = dict()
 
-    def __init__(self, subtlvs: List[Any], packed: Optional[bytes] = None) -> None:
-        self.subtlvs: List[Any] = subtlvs
+    def __init__(self, subtlvs: List[GenericSrv6ServiceSubTlv], packed: Optional[bytes] = None) -> None:
+        self.subtlvs: List[GenericSrv6ServiceSubTlv] = subtlvs
         self.packed: bytes = self.pack()
 
     @classmethod
-    def register(cls) -> Callable[[Type[Any]], Type[Any]]:
-        def register_subtlv(klass: Type[Any]) -> Type[Any]:
+    def register(cls) -> Callable[[Type[SubTlvType]], Type[SubTlvType]]:
+        def register_subtlv(klass: Type[SubTlvType]) -> Type[SubTlvType]:
             scode: int = klass.TLV
             if scode in cls.registered_subtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Service Sub-TLV type')
@@ -48,7 +53,7 @@ class Srv6L3Service:
 
     @classmethod
     def unpack(cls, data: bytes, length: int) -> Srv6L3Service:
-        subtlvs: List[Any] = []
+        subtlvs: List[GenericSrv6ServiceSubTlv] = []
 
         # First byte is eserved
         data = data[1:]
@@ -56,7 +61,7 @@ class Srv6L3Service:
             code: int = data[0]
             length = unpack('!H', data[1:3])[0]
             if code in cls.registered_subtlvs:
-                subtlv: Any = cls.registered_subtlvs[code].unpack(data[3 : length + 3], length)
+                subtlv: GenericSrv6ServiceSubTlv = cls.registered_subtlvs[code].unpack(data[3 : length + 3], length)
             else:
                 subtlv = GenericSrv6ServiceSubTlv(code, data[3 : length + 3])
             subtlvs.append(subtlv)
