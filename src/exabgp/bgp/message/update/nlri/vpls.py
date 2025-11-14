@@ -110,7 +110,9 @@ class VPLS(NLRI):
         return self.extensive()
 
     @classmethod
-    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> Tuple[VPLS, bytes]:
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> Tuple[VPLS, bytes]:
         # label is 20bits, stored using 3 bytes, 24 bits
         (length,) = unpack('!H', bgp[0:2])
         if len(bgp) != length + 2:

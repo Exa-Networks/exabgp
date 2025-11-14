@@ -5,6 +5,11 @@
 Created for comprehensive test coverage improvement
 """
 
+from unittest.mock import Mock
+
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import pytest
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message import Action
@@ -13,6 +18,13 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.ip import IP
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 class TestINETFeedback:
@@ -104,7 +116,9 @@ class TestINETUnpackErrors:
         """Test unpacking with insufficient data for path info"""
         # Try to unpack with addpath but insufficient data (less than 4 bytes)
         with pytest.raises(ValueError) as exc_info:
-            INET.unpack_nlri(AFI.ipv4, SAFI.unicast, b'\x18\xc0\xa8', Action.UNSET, addpath=True)
+            INET.unpack_nlri(
+                AFI.ipv4, SAFI.unicast, b'\x18\xc0\xa8', Action.UNSET, addpath=True, negotiated=create_negotiated()
+            )
 
         assert 'path-information' in str(exc_info.value)
 
@@ -116,7 +130,9 @@ class TestINETUnpackErrors:
 
         # This may raise Notify for various reasons depending on data
         try:
-            INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, invalid_data, Action.UNSET, addpath=False)
+            INET.unpack_nlri(
+                AFI.ipv4, SAFI.nlri_mpls, invalid_data, Action.UNSET, addpath=False, negotiated=create_negotiated()
+            )
         except (Notify, ValueError, IndexError):
             # Expected to raise some kind of error
             pass
@@ -128,7 +144,9 @@ class TestINETUnpackErrors:
         invalid_data = b'\x18'  # mask=24 but no following data
 
         with pytest.raises(Notify) as exc_info:
-            INET.unpack_nlri(AFI.ipv4, SAFI.unicast, invalid_data, Action.UNSET, addpath=False)
+            INET.unpack_nlri(
+                AFI.ipv4, SAFI.unicast, invalid_data, Action.UNSET, addpath=False, negotiated=create_negotiated()
+            )
 
         assert 'not enough data' in str(exc_info.value)
 
@@ -139,7 +157,9 @@ class TestINETUnpackErrors:
         invalid_data = b'\x18\xc0\xa8'  # mask=24 requires 3 bytes, but only 2 provided
 
         with pytest.raises(Notify) as exc_info:
-            INET.unpack_nlri(AFI.ipv4, SAFI.unicast, invalid_data, Action.UNSET, addpath=False)
+            INET.unpack_nlri(
+                AFI.ipv4, SAFI.unicast, invalid_data, Action.UNSET, addpath=False, negotiated=create_negotiated()
+            )
 
         assert 'could not decode nlri' in str(exc_info.value)
 
@@ -176,7 +196,9 @@ class TestINETUnpackLabels:
         withdraw_label = b'\x00\x80\x00\x00'  # Label 0x800000
         data = b'\x38' + withdraw_label + b'\xc0\xa8\x01'  # mask=56 (24 for label + 32 for prefix)
 
-        nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, addpath=False)
+        nlri, leftover = INET.unpack_nlri(
+            AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, addpath=False, negotiated=create_negotiated()
+        )
 
         assert isinstance(nlri, INET)
         assert nlri.action == Action.WITHDRAW
@@ -187,7 +209,9 @@ class TestINETUnpackLabels:
         null_label = b'\x00\x00\x00\x00'
         data = b'\x38' + null_label + b'\xc0\xa8\x01'
 
-        nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False)
+        nlri, leftover = INET.unpack_nlri(
+            AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
+        )
 
         assert isinstance(nlri, INET)
 
@@ -201,7 +225,9 @@ class TestINETUnpackLabels:
         # Mask = 24 (label) + 24 (for /24 prefix) = 48
         data = b'\x30' + bos_label + b'\xc0\xa8\x01\x00'
 
-        nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False)
+        nlri, leftover = INET.unpack_nlri(
+            AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
+        )
 
         assert isinstance(nlri, INET)
         assert hasattr(nlri, 'labels')
@@ -215,7 +241,9 @@ class TestINETUnpackMulticast:
         # Simple IPv4 multicast prefix
         data = b'\x18\xc0\xa8\x01'  # 192.168.1.0/24
 
-        nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.multicast, data, Action.ANNOUNCE, addpath=False)
+        nlri, leftover = INET.unpack_nlri(
+            AFI.ipv4, SAFI.multicast, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
+        )
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.multicast
@@ -226,7 +254,9 @@ class TestINETUnpackMulticast:
         # IPv6 prefix ff00::/8
         data = b'\x08\xff'
 
-        nlri, leftover = INET.unpack_nlri(AFI.ipv6, SAFI.multicast, data, Action.ANNOUNCE, addpath=False)
+        nlri, leftover = INET.unpack_nlri(
+            AFI.ipv6, SAFI.multicast, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
+        )
 
         assert nlri.afi == AFI.ipv6
         assert nlri.safi == SAFI.multicast

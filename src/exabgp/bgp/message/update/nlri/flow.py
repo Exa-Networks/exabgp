@@ -675,7 +675,7 @@ class Flow(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any
+        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> Tuple[Optional[Flow], bytes]:
         length, bgp = bgp[0], bgp[1:]
 

@@ -52,7 +52,6 @@ def create_negotiated_mock() -> Any:
 def test_unpack_simple_withdrawal() -> None:
     """Test unpacking UPDATE with only withdrawals."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import create_withdrawal_update
 
     negotiated = create_negotiated_mock()
@@ -76,7 +75,6 @@ def test_unpack_empty_update_is_eor() -> None:
     """Test that empty UPDATE is detected as EOR."""
     from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.update.eor import EOR
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock()
 
@@ -92,7 +90,6 @@ def test_unpack_empty_update_is_eor() -> None:
 def test_unpack_with_minimal_attributes() -> None:
     """Test UPDATE with minimal valid attributes (ORIGIN only)."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.direction import Direction
     from exabgp.bgp.message.update.attribute import Attributes
     from tests.fuzz.update_helpers import create_update_message, create_origin_attribute
 
@@ -119,7 +116,6 @@ def test_unpack_with_minimal_attributes() -> None:
 def test_split_integration_with_unpack() -> None:
     """Test that split() output integrates correctly with unpack_message()."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import create_update_message, create_ipv4_prefix
 
     negotiated = create_negotiated_mock()
@@ -150,7 +146,6 @@ def test_split_integration_with_unpack() -> None:
 def test_unpack_with_multiple_withdrawals() -> None:
     """Test UPDATE with multiple withdrawn routes."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import create_withdrawal_update
 
     negotiated = create_negotiated_mock()
@@ -175,7 +170,6 @@ def test_unpack_with_multiple_withdrawals() -> None:
 def test_unpack_handles_split_validation() -> None:
     """Test that unpack_message() properly handles split() validation errors."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.direction import Direction
     from exabgp.bgp.message.notification import Notify
 
     negotiated = create_negotiated_mock()
@@ -195,7 +189,6 @@ def test_unpack_handles_split_validation() -> None:
 def test_unpack_preserves_data_integrity() -> None:
     """Test that data flows correctly through split() to unpack_message()."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.direction import Direction
     from tests.fuzz.update_helpers import create_ipv4_prefix, create_update_message
 
     negotiated = create_negotiated_mock()

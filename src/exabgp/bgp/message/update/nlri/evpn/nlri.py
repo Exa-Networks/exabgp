@@ -84,7 +84,9 @@ class EVPN(NLRI):
         return klass
 
     @classmethod
-    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> Tuple[EVPN, bytes]:
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> Tuple[EVPN, bytes]:
         code = bgp[0]
         length = bgp[1]
 

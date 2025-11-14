@@ -5,6 +5,11 @@
 Created for comprehensive test coverage improvement
 """
 
+from unittest.mock import Mock
+
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import pytest
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message import Action
@@ -12,6 +17,13 @@ from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.ip import IP
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 class TestVPLSCreation:
@@ -69,7 +81,9 @@ class TestVPLSPackUnpack:
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         packed = vpls.pack_nlri()
-        unpacked, leftover = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None)
+        unpacked, leftover = VPLS.unpack_nlri(
+            AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+        )
 
         assert len(leftover) == 0
         assert isinstance(unpacked, VPLS)
@@ -92,7 +106,9 @@ class TestVPLSPackUnpack:
             vpls = VPLS(rd, endpoint, base, offset, size)
 
             packed = vpls.pack_nlri()
-            unpacked, leftover = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None)
+            unpacked, leftover = VPLS.unpack_nlri(
+                AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+            )
 
             assert unpacked.endpoint == endpoint
             assert unpacked.base == base
@@ -121,7 +137,7 @@ class TestVPLSPackUnpack:
         packed = vpls.pack_nlri() + b'\x01\x02\x03\x04'
 
         with pytest.raises(Notify) as exc_info:
-            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None)
+            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated())
 
         assert 'length is not consistent' in str(exc_info.value)
 
@@ -131,7 +147,9 @@ class TestVPLSPackUnpack:
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         packed = vpls.pack_nlri()
-        unpacked, _ = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.WITHDRAW, None)
+        unpacked, _ = VPLS.unpack_nlri(
+            AFI.l2vpn, SAFI.vpls, packed, Action.WITHDRAW, None, negotiated=create_negotiated()
+        )
 
         assert unpacked.action == Action.WITHDRAW
 
@@ -140,7 +158,9 @@ class TestVPLSPackUnpack:
         # l2vpn:endpoint:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.4:13
         encoded = bytearray.fromhex('0011 0001 AC1E 0504 000D 0003 0001 0008 4000 11')
 
-        unpacked, leftover = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, bytes(encoded), Action.ANNOUNCE, None)
+        unpacked, leftover = VPLS.unpack_nlri(
+            AFI.l2vpn, SAFI.vpls, bytes(encoded), Action.ANNOUNCE, None, negotiated=create_negotiated()
+        )
 
         assert len(leftover) == 0
         assert unpacked.endpoint == 3
@@ -382,7 +402,9 @@ class TestVPLSEdgeCases:
         assert vpls.base == max_base
 
         packed = vpls.pack_nlri()
-        unpacked, _ = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None)
+        unpacked, _ = VPLS.unpack_nlri(
+            AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+        )
 
         assert unpacked.base == max_base
 
@@ -392,7 +414,7 @@ class TestVPLSEdgeCases:
         invalid = b'\x00\x10' + b'\x00' * 18  # Says 16 bytes but provides 18
 
         with pytest.raises(Notify) as exc_info:
-            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, None)
+            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, None, negotiated=create_negotiated())
 
         assert 'length is not consistent' in str(exc_info.value)
 
@@ -423,7 +445,9 @@ class TestVPLSMultipleRoutes:
         # VPLS requires exact length, so pack and unpack each separately
         for route in routes:
             packed = route.pack_nlri()
-            unpacked, leftover = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None)
+            unpacked, leftover = VPLS.unpack_nlri(
+                AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+            )
 
             assert len(leftover) == 0
             assert unpacked.rd._str() == route.rd._str()
@@ -445,7 +469,9 @@ class TestVPLSMultipleRoutes:
             vpls = VPLS(rd, endpoint, base, offset, size)
 
             packed = vpls.pack_nlri()
-            unpacked, _ = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None)
+            unpacked, _ = VPLS.unpack_nlri(
+                AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+            )
 
             assert unpacked.rd._str() == f'{ip}:{rd_num}'
 

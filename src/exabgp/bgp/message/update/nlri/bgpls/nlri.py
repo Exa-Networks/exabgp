@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -80,6 +80,8 @@ PROTO_CODES: Dict[int, str] = {
     227: 'freertr',
 }
 
+T = TypeVar('T', bound='BGPLS')
+
 
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls)
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls_vpn)
@@ -117,7 +119,9 @@ class BGPLS(NLRI):
         return klass
 
     @classmethod
-    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> Tuple[BGPLS, bytes]:
+    def unpack_nlri(
+        cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated
+    ) -> Tuple[T, bytes]:
         code, length = unpack('!HH', bgp[:4])
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:

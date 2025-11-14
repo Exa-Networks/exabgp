@@ -7,33 +7,21 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import pack
-from struct import unpack
-from typing import ClassVar, Generator, List, Tuple, Union, TYPE_CHECKING
+from struct import pack, unpack
+from typing import TYPE_CHECKING, ClassVar, Generator, List, Tuple, Union
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.ip import NoNextHop
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.direction import Direction
-
 from exabgp.bgp.message.message import Message
-from exabgp.bgp.message.update.eor import EOR
-
-from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute import MPRNLRI
-from exabgp.bgp.message.update.attribute import MPURNLRI
-
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, Attributes
+from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.update.nlri import NLRI
-
-from exabgp.logger import log
-from exabgp.logger import lazyformat
+from exabgp.logger import lazyformat, log
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import NoNextHop
 
 # Update message header offsets and constants
 UPDATE_WITHDRAWN_LENGTH_OFFSET = 2  # Offset to start of withdrawn routes
@@ -299,13 +287,13 @@ class Update(Message):
 
         nlris = []
         while withdrawn:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath)
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath, negotiated)
             log.debug(lambda nlri=nlri: 'withdrawn NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type]
             withdrawn = left  # type: ignore[has-type]
             nlris.append(nlri)  # type: ignore[has-type]
 
         while announced:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath)
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath, negotiated)
             nlri.nexthop = nexthop  # type: ignore[has-type]
             log.debug(lambda nlri=nlri: 'announced NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type]
             announced = left  # type: ignore[has-type]

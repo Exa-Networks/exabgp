@@ -18,6 +18,8 @@ import pytest
 from unittest.mock import Mock
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, GenericBGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.node import NODE
 from exabgp.bgp.message.update.nlri.bgpls.link import LINK
@@ -29,6 +31,13 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
 from exabgp.protocol.family import AFI, SAFI
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 class TestBGPLSBase:
@@ -860,7 +869,7 @@ class TestBGPLSUnpack:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None)
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
 
         assert isinstance(nlri, NODE)
         assert nlri.CODE == 1
@@ -879,7 +888,7 @@ class TestBGPLSUnpack:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None)
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
 
         assert isinstance(nlri, LINK)
         assert nlri.CODE == 2
@@ -897,7 +906,7 @@ class TestBGPLSUnpack:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None)
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
 
         assert isinstance(nlri, PREFIXv4)
         assert nlri.CODE == 3
@@ -915,7 +924,7 @@ class TestBGPLSUnpack:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None)
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
 
         assert isinstance(nlri, PREFIXv6)
         assert nlri.CODE == 4
@@ -929,7 +938,7 @@ class TestBGPLSUnpack:
             b'\x01\x02\x03\x04'
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None)
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
 
         assert isinstance(nlri, GenericBGPLS)
         assert nlri.CODE == 153
@@ -948,7 +957,7 @@ class TestBGPLSUnpack:
             b'\xff\xff\xff\xff'  # Leftover data
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None)
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
 
         assert isinstance(nlri, NODE)
         assert leftover == b'\xff\xff\xff\xff'
@@ -960,7 +969,7 @@ class TestBGPLSTLVs:
     def test_ip_reach_ipv4(self) -> None:
         """Test IpReach TLV for IPv4"""
         data = b'\x0a\x0a\x00'
-        tlv = IpReach.unpack_attribute(data, 3)
+        tlv = IpReach.unpack(data, 3)
 
         json_output = tlv.json()
         assert 'ip-reachability-tlv' in json_output
@@ -969,7 +978,7 @@ class TestBGPLSTLVs:
     def test_ip_reach_ipv6(self) -> None:
         """Test IpReach TLV for IPv6"""
         data = b'\x7f\x20\x01\x07\x00\x00\x00\x80'
-        tlv = IpReach.unpack_attribute(data, 4)
+        tlv = IpReach.unpack(data, 4)
 
         json_output = tlv.json()
         assert 'ip-reachability-tlv' in json_output
@@ -978,7 +987,7 @@ class TestBGPLSTLVs:
     def test_ospf_route_type(self) -> None:
         """Test OspfRoute TLV"""
         data = b'\x04'
-        tlv = OspfRoute.unpack_attribute(data)
+        tlv = OspfRoute.unpack(data)
 
         json_output = tlv.json()
         assert '"ospf-route-type": 4' in json_output
@@ -986,7 +995,7 @@ class TestBGPLSTLVs:
     def test_srv6_sid_information(self) -> None:
         """Test Srv6SIDInformation TLV"""
         data = b'\xfc\x30\x22\x01\x00\x0d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        tlv = Srv6SIDInformation.unpack_attribute(data)
+        tlv = Srv6SIDInformation.unpack(data)
 
         json_output = tlv.json()
         assert '"srv6-sid": "fc30:2201:d::"' in json_output
@@ -997,15 +1006,15 @@ class TestBGPLSTLVs:
         igp_type = 3  # OSPFv2
 
         # First descriptor: AS
-        descriptor1, remain = NodeDescriptor.unpack_attribute(data, igp_type)
+        descriptor1, remain = NodeDescriptor.unpack(data, igp_type)
         assert '"autonomous-system": 65533' in descriptor1.json()
 
         # Second descriptor: BGP-LS Identifier
-        descriptor2, remain = NodeDescriptor.unpack_attribute(remain, igp_type)
+        descriptor2, remain = NodeDescriptor.unpack(remain, igp_type)
         assert '"bgp-ls-identifier": "0"' in descriptor2.json()
 
         # Third descriptor: Router ID
-        descriptor3, remain = NodeDescriptor.unpack_attribute(remain, igp_type)
+        descriptor3, remain = NodeDescriptor.unpack(remain, igp_type)
         assert '"router-id": "10.113.63.240"' in descriptor3.json()
 
 

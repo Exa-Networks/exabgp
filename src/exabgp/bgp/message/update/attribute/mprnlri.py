@@ -13,22 +13,15 @@ from typing import TYPE_CHECKING, Generator, List, Union
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.ip import NoNextHop
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
-
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.direction import Direction
-
-# from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute import NextHop
-from exabgp.bgp.message.update.nlri import NLRI
-
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 
+# from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute import Attribute, NextHop
+from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import NoNextHop
 
 # ==================================================== MP Unreacheable NLRI (15)
 #
@@ -190,13 +183,13 @@ class MPRNLRI(Attribute, Family):
         while data:
             if nexthops:
                 for nexthop in nexthops:
-                    nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)
+                    nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)
                     # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
                     if nlri:  # type: ignore[has-type]
-                        nlri.nexthop = NextHop.unpack_attribute(nexthop)  # type: ignore[has-type]
+                        nlri.nexthop = NextHop.unpack_attribute(nexthop, negotiated)  # type: ignore[has-type]
                         nlris.append(nlri)  # type: ignore[has-type]
             else:
-                nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)
+                nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)
                 # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
                 if nlri:  # type: ignore[has-type]
                     nlris.append(nlri)  # type: ignore[has-type]

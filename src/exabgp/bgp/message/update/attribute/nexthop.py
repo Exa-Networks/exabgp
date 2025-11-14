@@ -46,11 +46,11 @@ class NextHop(Attribute, IP):
     def ton(self, negotiated: Negotiated = None, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[assignment]
         return self._packed
 
-    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         return self._attribute(self.ton())
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> IP:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> IP:
         if not data:
             return NoNextHop  # type: ignore[return-value]
         return IP.unpack(data, NextHop)

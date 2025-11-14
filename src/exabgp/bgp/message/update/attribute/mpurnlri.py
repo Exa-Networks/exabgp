@@ -10,18 +10,12 @@ from __future__ import annotations
 from struct import unpack
 from typing import Generator, List, Union
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
-
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.nlri import NLRI
-
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
-
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.protocol.family import AFI, SAFI, Family
 
 # ================================================================= MP NLRI (14)
 
@@ -96,7 +90,7 @@ class MPURNLRI(Attribute, Family):
         addpath = negotiated.required(afi, safi)
 
         while data:
-            nlri, data = NLRI.unpack_nlri(afi, safi, data, Action.WITHDRAW, addpath)
+            nlri, data = NLRI.unpack_nlri(afi, safi, data, Action.WITHDRAW, addpath, negotiated)
             # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
             if nlri:  # type: ignore[has-type]
                 nlris.append(nlri)  # type: ignore[has-type]

@@ -81,7 +81,9 @@ class MUP(NLRI):
         return klass
 
     @classmethod
-    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> tuple[MUP, bytes]:
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[MUP, bytes]:
         arch = bgp[0]
         code = int.from_bytes(bgp[1:3], 'big')
         length = bgp[3]

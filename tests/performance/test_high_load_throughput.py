@@ -25,7 +25,6 @@ class TestMessageStreamProcessing:
         """Benchmark parsing 100 messages from a stream."""
         batch_bytes = create_batch_messages('update', count=100)
         from exabgp.bgp.message import Update
-        from exabgp.bgp.message.direction import Direction
 
         def process_stream():
             stream = BytesIO(batch_bytes)
@@ -59,7 +58,6 @@ class TestMessageStreamProcessing:
             notification_count=100,
         )
         from exabgp.bgp.message import Update, KeepAlive
-        from exabgp.bgp.message.direction import Direction
 
         def process_stream():
             stream = BytesIO(batch_bytes)

@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -20,6 +20,8 @@ from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import log
 from exabgp.logger import lazynlri
+
+T = TypeVar('T', bound='NLRI')
 
 
 class NLRI(Family):
@@ -99,7 +101,9 @@ class NLRI(Family):
         return list(NLRI.registered_families)
 
     @classmethod
-    def unpack_nlri(cls, afi: int, safi: int, data: bytes, action: int, addpath: bool) -> NLRI:
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, data: bytes, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> NLRI:
         a: AFI
         s: SAFI
         a, s = AFI.create(afi), SAFI.create(safi)
@@ -107,5 +111,5 @@ class NLRI(Family):
 
         key: str = '{}/{}'.format(a, s)
         if key in cls.registered_nlri:
-            return cls.registered_nlri[key].unpack_nlri(a, s, data, action, addpath)
+            return cls.registered_nlri[key].unpack_nlri(a, s, data, action, addpath, negotiated)
         raise Notify(3, 0, 'trying to decode unknown family {}/{}'.format(a, s))
