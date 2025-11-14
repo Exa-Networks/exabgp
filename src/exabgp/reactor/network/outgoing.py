@@ -65,7 +65,7 @@ class Outgoing(Connection):
             if setup_issue:
                 return setup_issue
         try:
-            connect(self.io, self.peer, self.port, self.afi, self.md5)
+            connect(self.io, self.peer, self.port, self.afi, self.md5)  # type: ignore[arg-type]
             return None
         except Exception as exc:
             self.io.close()  # type: ignore[union-attr]
@@ -92,7 +92,7 @@ class Outgoing(Connection):
                 continue
 
             connected = False
-            for r, message in ready(self.io):
+            for r, message in ready(self.io):  # type: ignore[arg-type]
                 if not r:
                     yield False
                     continue

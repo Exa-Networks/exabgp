@@ -38,7 +38,7 @@ class ExtendedCommunities(Communities):
         while data:
             if data and len(data) < EXTENDED_COMMUNITY_SIZE:
                 raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data])))
-            communities.add(ExtendedCommunity.unpack(data[:EXTENDED_COMMUNITY_SIZE], direction, negotiated))
+            communities.add(ExtendedCommunity.unpack(data[:EXTENDED_COMMUNITY_SIZE], direction, negotiated))  # type: ignore[arg-type]
             data = data[EXTENDED_COMMUNITY_SIZE:]
         return communities
 
@@ -57,6 +57,6 @@ class ExtendedCommunitiesIPv6(Communities):
         while data:
             if data and len(data) < EXTENDED_COMMUNITY_IPV6_SIZE:
                 raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
-            communities.add(ExtendedCommunityIPv6.unpack(data[:EXTENDED_COMMUNITY_IPV6_SIZE], direction, negotiated))
+            communities.add(ExtendedCommunityIPv6.unpack(data[:EXTENDED_COMMUNITY_IPV6_SIZE], direction, negotiated))  # type: ignore[arg-type]
             data = data[EXTENDED_COMMUNITY_IPV6_SIZE:]
         return communities

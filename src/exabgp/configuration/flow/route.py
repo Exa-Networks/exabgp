@@ -70,7 +70,7 @@ class ParseFlowRoute(Section):
         pass
 
     def pre(self) -> bool:
-        self.scope.append_route(flow(None))
+        self.scope.append_route(flow(None))  # type: ignore[arg-type]
         return True
 
     def post(self) -> bool:

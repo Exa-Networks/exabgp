@@ -44,7 +44,7 @@ class Aggregator(Attribute):
 
     def pack(self, negotiated: Negotiated) -> bytes:
         if negotiated.asn4:
-            return self._attribute(self.asn.pack(True) + self.speaker.pack())
+            return self._attribute(self.asn.pack(True) + self.speaker.pack())  # type: ignore[arg-type]
         if self.asn.asn4():
             return self._attribute(self.asn.trans().pack() + self.speaker.pack()) + Aggregator4(
                 self.asn,
@@ -79,4 +79,4 @@ class Aggregator4(Aggregator):
     ID = Attribute.CODE.AS4_AGGREGATOR
 
     def pack(self, negotiated: Negotiated) -> bytes:
-        return self._attribute(self.asn.pack(True) + self.speaker.pack())
+        return self._attribute(self.asn.pack(True) + self.speaker.pack())  # type: ignore[arg-type]

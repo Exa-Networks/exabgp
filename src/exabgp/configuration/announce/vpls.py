@@ -152,7 +152,7 @@ class AnnounceVPLS(ParseAnnounce):
 
 
 def l2vpn_vpls(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
-    change = Change(VPLS(None, None, None, None, None), Attributes())
+    change = Change(VPLS(None, None, None, None, None), Attributes())  # type: ignore[arg-type]
 
     while True:
         command = tokeniser()

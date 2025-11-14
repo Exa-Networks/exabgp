@@ -49,7 +49,7 @@ class EthernetSegment(EVPN):
         action: Optional[Action] = None,
         addpath: Any = None,
     ) -> None:
-        EVPN.__init__(self, action, addpath)
+        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
         self.nexthop = nexthop
         self.rd = rd
         self.esi = esi
@@ -87,7 +87,7 @@ class EthernetSegment(EVPN):
         self._packed = (
             self.rd.pack()
             + self.esi.pack()
-            + bytes([len(self.ip) * 8 if self.ip else 0])
+            + bytes([len(self.ip) * 8 if self.ip else 0]) # type: ignore[arg-type]
             + self.ip.pack() if self.ip else b''
         )
         # fmt: on

@@ -36,7 +36,7 @@ class Incoming(Connection):
 
     def notification(self, code: int, subcode: int, message: bytes) -> Iterator[bool]:
         try:
-            notification = Notify(code, subcode, message).message()
+            notification = Notify(code, subcode, message).message()  # type: ignore[arg-type]
             for boolean in self.writer(notification):
                 yield False
             self.close()

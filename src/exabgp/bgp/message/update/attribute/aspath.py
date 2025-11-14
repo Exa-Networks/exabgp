@@ -104,12 +104,15 @@ class ASPath(Attribute):
         if length == 0:
             return b''
         if length > cls.SEGMENT_MAX_LENGTH:
-            return cls._segment(seg_type, values[: cls.SEGMENT_MAX_LENGTH], asn4) + cls._segment(
-                seg_type,
-                values[cls.SEGMENT_MAX_LENGTH :],
-                asn4,
+            return (
+                cls._segment(seg_type, values[: cls.SEGMENT_MAX_LENGTH], asn4)
+                + cls._segment(  # type: ignore[arg-type]
+                    seg_type,
+                    values[cls.SEGMENT_MAX_LENGTH :],  # type: ignore[arg-type]
+                    asn4,
+                )
             )
-        return bytes([seg_type, length]) + b''.join(v.pack(asn4) for v in values)
+        return bytes([seg_type, length]) + b''.join(v.pack(asn4) for v in values)  # type: ignore[arg-type]
 
     @classmethod
     def pack_segments(cls, aspath: Tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...], asn4: bool) -> bytes:
@@ -140,7 +143,7 @@ class ASPath(Attribute):
                     asn4 = True
             astrans.append(local)
 
-        message = ASPath.pack_segments(astrans, negotiated.asn4)
+        message = ASPath.pack_segments(astrans, negotiated.asn4)  # type: ignore[arg-type]
         if asn4:
             message += AS4Path.pack_segments(self.aspath, asn4)
 
@@ -229,7 +232,7 @@ class ASPath(Attribute):
         return cls._new_aspaths(data, negotiated.asn4, ASPath)
 
 
-ASPath.Empty = ASPath([])
+ASPath.Empty = ASPath([])  # type: ignore[arg-type]
 
 
 # ================================================================= AS4Path (17)
@@ -254,4 +257,4 @@ class AS4Path(ASPath):
         return cls._new_aspaths(data, True, AS4Path)  # type: ignore[return-value]
 
 
-AS4Path.Empty = AS4Path([], [])
+AS4Path.Empty = AS4Path([], [])  # type: ignore[arg-type]

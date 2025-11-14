@@ -36,5 +36,5 @@ class LargeCommunities(Communities):
             data = data[LARGE_COMMUNITY_SIZE:]
             if lc in large_communities.communities:
                 continue
-            large_communities.add(lc)
+            large_communities.add(lc)  # type: ignore[arg-type]
         return large_communities

@@ -46,7 +46,7 @@ class SourceJoin(MVPN):
         action: Optional[Action] = None,
         addpath: Optional[int] = None,
     ) -> None:
-        MVPN.__init__(self, afi=afi, action=action, addpath=addpath)
+        MVPN.__init__(self, afi=afi, action=action, addpath=addpath)  # type: ignore[arg-type]
         self.rd: RouteDistinguisher = rd
         self.group: IP = group
         self.source: IP = source
@@ -81,9 +81,9 @@ class SourceJoin(MVPN):
         self._packed = (
             self.rd.pack()
             + pack('!I', self.source_as)
-            + bytes([len(self.source) * 8])
+            + bytes([len(self.source) * 8])  # type: ignore[arg-type]
             + self.source.pack()
-            + bytes([len(self.group) * 8])
+            + bytes([len(self.group) * 8])  # type: ignore[arg-type]
             + self.group.pack()
         )
         return self._packed

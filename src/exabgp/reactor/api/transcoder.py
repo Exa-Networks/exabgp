@@ -172,7 +172,7 @@ class Transcoder:
             sys.stderr.write('invalid message sequence, open not exchange not complete', json_string + '\n')
             sys.exit(1)
 
-        message = Message.unpack(category, data, direction, self.negotiated)
+        message = Message.unpack(category, data, direction, self.negotiated)  # type: ignore[arg-type]
 
         if content == 'update':
             return self.encoder.update(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]

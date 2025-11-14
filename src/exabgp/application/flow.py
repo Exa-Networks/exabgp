@@ -125,7 +125,7 @@ class ACL:
         sys.stderr.flush()
 
 
-signal.signal(signal.SIGTERM, ACL.end)
+signal.signal(signal.SIGTERM, ACL.end)  # type: ignore[arg-type]
 
 
 opened = 0

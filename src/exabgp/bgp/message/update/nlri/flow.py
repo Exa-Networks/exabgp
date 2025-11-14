@@ -730,7 +730,7 @@ class Flow(NLRI):
                         length = CommonOperator.length(byte)
                         value, bgp = bgp[:length], bgp[length:]
                         adding = klass.decoder(value)
-                        nlri.add(klass(operator, adding))
+                        nlri.add(klass(operator, adding))  # type: ignore[arg-type]
 
             return nlri, bgp + over
         except Notify:

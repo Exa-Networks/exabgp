@@ -97,7 +97,7 @@ class RTC(NLRI):
                 safi,
                 action,
                 ASN(unpack('!L', bgp[1:5])[0]),
-                RouteTarget.unpack(bytes([RTC.resetFlags(bgp[5])]) + bgp[6:13]),
+                RouteTarget.unpack(bytes([RTC.resetFlags(bgp[5])]) + bgp[6:13]),  # type: ignore[arg-type]
             ),
             bgp[13:],
         )

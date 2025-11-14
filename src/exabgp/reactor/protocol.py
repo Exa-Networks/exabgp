@@ -53,7 +53,7 @@ from exabgp.logger import log
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
 
-_UPDATE = Update([], b'')
+_UPDATE = Update([], b'')  # type: ignore[arg-type]
 _OPERATIONAL = Operational(0x00)
 
 
@@ -69,9 +69,9 @@ class Protocol:
         if self.neighbor['connect']:
             self.port: int = self.neighbor['connect']
         elif os.environ.get('exabgp.tcp.port', '').isdigit():
-            self.port = int(os.environ.get('exabgp.tcp.port'))
+            self.port = int(os.environ.get('exabgp.tcp.port'))  # type: ignore[arg-type]
         elif os.environ.get('exabgp_tcp_port', '').isdigit():
-            self.port = int(os.environ.get('exabgp_tcp_port'))
+            self.port = int(os.environ.get('exabgp_tcp_port'))  # type: ignore[arg-type]
         else:
             self.port = 179
 
@@ -110,7 +110,7 @@ class Protocol:
         md5_base64 = self.neighbor['md5-base64']
         ttl_out = self.neighbor['outgoing-ttl']
         itf = self.neighbor['source-interface']
-        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
+        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)  # type: ignore[arg-type]
 
         for connected in self.connection.establish():
             yield False
@@ -196,7 +196,7 @@ class Protocol:
         code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
         self.peer.stats[code] += 1
         if self.neighbor.api.get(code, False):  # type: ignore[union-attr]
-            message: Update = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)
+            message: Update = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)  # type: ignore[arg-type]
             self._to_api('send', message, raw)
 
         for boolean in self.connection.writer(raw):  # type: ignore[union-attr]
@@ -272,7 +272,7 @@ class Protocol:
                     return
 
             try:
-                message = Message.unpack(msg_id, body, Direction.IN, self.negotiated)
+                message = Message.unpack(msg_id, body, Direction.IN, self.negotiated)  # type: ignore[arg-type]
             except (KeyboardInterrupt, SystemExit, Notify):
                 raise
             except Exception as exc:
