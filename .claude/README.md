@@ -44,6 +44,7 @@ Systematic replacement of `Any` type annotations with proper, specific types.
 
 ### Root Level
 
+- **`CODING_STANDARDS.md`** - **CRITICAL:** Python 3.8+ compatibility requirements, type annotation standards, and coding conventions. **READ THIS FIRST** before making any code changes.
 - **`PLANNING_GUIDE.md`** - Standards for organizing planning documentation. Read this before creating new project plans.
 - **`TESTING_DISCIPLINE.md`** - Testing requirements and discipline
 - **`settings.local.json`** - Local configuration
