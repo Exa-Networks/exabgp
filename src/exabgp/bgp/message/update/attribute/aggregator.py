@@ -61,7 +61,7 @@ class Aggregator(Attribute):
         return self._str
 
     def json(self) -> str:
-        return '{ "asn" : %d, "speaker" : "%d" }' % (self.asn, self.speaker)
+        return '{ "asn" : %d, "speaker" : "%d" }' % (self.asn, self.speaker)  # type: ignore[str-format]
 
     @classmethod
     def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> Aggregator:

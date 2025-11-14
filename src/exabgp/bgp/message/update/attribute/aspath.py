@@ -105,8 +105,8 @@ class ASPath(Attribute):
             return b''
         if length > cls.SEGMENT_MAX_LENGTH:
             return (
-                cls._segment(seg_type, values[: cls.SEGMENT_MAX_LENGTH], asn4)
-                + cls._segment(  # type: ignore[arg-type]
+                cls._segment(seg_type, values[: cls.SEGMENT_MAX_LENGTH], asn4)  # type: ignore[arg-type]
+                + cls._segment(
                     seg_type,
                     values[cls.SEGMENT_MAX_LENGTH :],  # type: ignore[arg-type]
                     asn4,

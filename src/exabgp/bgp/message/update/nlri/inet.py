@@ -92,7 +92,7 @@ class INET(NLRI):
     def _pathinfo(cls, data: bytes, addpath: Any) -> Tuple[PathInfo, bytes]:
         if addpath:
             return PathInfo(data[:4]), data[4:]
-        return PathInfo.NOPATH, data
+        return PathInfo.NOPATH, data  # type: ignore[return-value]
 
     # @classmethod
     # def unpack_inet (cls, afi, safi, data, action, addpath):

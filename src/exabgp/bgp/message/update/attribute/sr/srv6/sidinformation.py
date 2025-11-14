@@ -38,7 +38,7 @@ SubSubTlvType = TypeVar('SubSubTlvType', bound=GenericSrv6ServiceDataSubSubTlv)
 #            Figure 3: SRv6 SID Information Sub-TLV
 
 
-@Srv6L2Service.register()
+@Srv6L2Service.register()  # type: ignore[type-var]
 @Srv6L3Service.register()
 class Srv6SidInformation:
     TLV: ClassVar[int] = 1

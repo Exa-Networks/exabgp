@@ -193,21 +193,21 @@ class MPRNLRI(Attribute, Family):
         while data:
             if nexthops:
                 for nexthop in nexthops:
-                    nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)
+                    nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)  # type: ignore[has-type]
                     # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
-                    if nlri:
-                        nlri.nexthop = NextHop.unpack(nexthop)
+                    if nlri:  # type: ignore[has-type]
+                        nlri.nexthop = NextHop.unpack(nexthop)  # type: ignore[has-type]
                         nlris.append(nlri)
             else:
-                nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)
+                nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)  # type: ignore[has-type]
                 # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
-                if nlri:
+                if nlri:  # type: ignore[has-type]
                     nlris.append(nlri)
 
-            if left == data:
+            if left == data:  # type: ignore[has-type]
                 raise RuntimeError('sub-calls should consume data')
 
-            data = left
+            data = left  # type: ignore[has-type]
         return cls(afi, safi, nlris)
 
 

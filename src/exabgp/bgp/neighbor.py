@@ -453,7 +453,7 @@ Neighbor {peer-address}
                     [
                         f'\t\t{name};\n',
                     ]
-                    if process in neighbor.api[api]
+                    if process in neighbor.api[api]  # type: ignore[index]
                     else [],
                 )
 
@@ -462,7 +462,7 @@ Neighbor {peer-address}
                     [
                         f'\t\t\t{name};\n',
                     ]
-                    if process in neighbor.api[api]
+                    if process in neighbor.api[api]  # type: ignore[index]
                     else [],
                 )
 
@@ -471,7 +471,7 @@ Neighbor {peer-address}
                     [
                         f'\t\t\t{name};\n',
                     ]
-                    if process in neighbor.api[api]
+                    if process in neighbor.api[api]  # type: ignore[index]
                     else [],
                 )
 

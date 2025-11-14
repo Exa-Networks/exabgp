@@ -60,7 +60,7 @@ def addresses() -> None:
 
         for neighbor in neighbors.get(ifi.index, {}):
             if neighbor.state == Neighbor.Type.State.NUD_REACHABLE:
-                address: Any = neighbor.attributes.get(Neighbor.Type.Flag.NTF_USE, '\0\0\0\0')
+                address: Any = neighbor.attributes.get(Neighbor.Type.Flag.NTF_USE, '\0\0\0\0')  # type: ignore[no-redef]
                 if ifa.family == socket.AF_INET or ifa.family == socket.AF_INET6:
                     sys.stdout.write('  {} {} '.format('inet ', socket.inet_ntop(neighbor.family, address)))
                 else:

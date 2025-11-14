@@ -32,4 +32,4 @@ class LinkOpaque:
     @classmethod
     def unpack(cls, data: bytes) -> LinkOpaque:
         length = len(data)
-        return cls(unpack('!%ds' % length, data)[0])
+        return cls(unpack('!%ds' % length, data)[0])  # type: ignore[call-arg]

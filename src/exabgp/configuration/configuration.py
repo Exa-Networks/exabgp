@@ -109,7 +109,7 @@ class _Configuration:
                 for refresh in refreshes:
                     family = (refresh.afi, refresh.safi)
                     if family in self.neighbors[neighbor].families():
-                        self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi, refresh.safi))
+                        self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi, refresh.safi))  # type: ignore[call-arg]
                     else:
                         log.error(
                             lambda family=family,
@@ -455,7 +455,7 @@ class Configuration(_Configuration):
 
         return True
 
-    def validate(self) -> Optional[str]:
+    def validate(self) -> Optional[str]:  # type: ignore[return]
         for neighbor in self.neighbors.values():
             has_procs = 'processes' in neighbor.api and neighbor.api['processes']
             has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']

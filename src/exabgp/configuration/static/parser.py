@@ -528,7 +528,7 @@ def _extended_community_hex(value: str) -> ExtendedCommunity:
     if len(value) % 2:
         raise ValueError('invalid extended community {}'.format(value))
     raw = b''.join(bytes([int(value[_ : _ + 2], 16)]) for _ in range(2, len(value), 2))
-    return ExtendedCommunity.unpack(raw)
+    return ExtendedCommunity.unpack(raw)  # type: ignore[return-value]
 
 
 def _extended_community(value: str) -> ExtendedCommunity:
@@ -538,7 +538,7 @@ def _extended_community(value: str) -> ExtendedCommunity:
 
         if value == 'redirect-to-nexthop':
             header = _HEADER[value]
-            return ExtendedCommunity.unpack(header + pack('!HL', 0, 0), None)
+            return ExtendedCommunity.unpack(header + pack('!HL', 0, 0), None)  # type: ignore[return-value]
 
         raise ValueError('invalid extended community {} - lc+gc'.format(value))
 
@@ -547,7 +547,7 @@ def _extended_community(value: str) -> ExtendedCommunity:
     components = [_integer(_) if _digit(_) else _ip(_, value) for _ in parts]
     header, packed = _encode(command, components, parts)
 
-    return ExtendedCommunity.unpack(header + pack(packed, *components))
+    return ExtendedCommunity.unpack(header + pack(packed, *components))  # type: ignore[return-value]
 
 
 def extended_community(tokeniser: 'Tokeniser') -> ExtendedCommunities:

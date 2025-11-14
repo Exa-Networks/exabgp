@@ -126,7 +126,7 @@ class PMSI(Attribute):
         label = raw_label >> 4
         # should we check for bottom of stack before the shift ?
         if subtype in cls._pmsi_known:
-            return cls._pmsi_known[subtype].unpack(data[5:], label, flags, raw_label)
+            return cls._pmsi_known[subtype].unpack(data[5:], label, flags, raw_label)  # type: ignore[call-arg]
         return cls.pmsi_unknown(subtype, data[5:], label, flags, raw_label)
 
 

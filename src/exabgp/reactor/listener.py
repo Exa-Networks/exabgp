@@ -192,14 +192,14 @@ class Listener:
                 neighbor = reactor.neighbor(key)
 
                 connection_local = IP.create(connection.local).address()
-                neighbor_peer_start = neighbor['peer-address'].address()
+                neighbor_peer_start = neighbor['peer-address'].address()  # type: ignore[index]
                 neighbor_peer_next = neighbor_peer_start + neighbor.range_size  # type: ignore[union-attr]
 
                 if not neighbor_peer_start <= connection_local < neighbor_peer_next:
                     continue
 
                 connection_peer = IP.create(connection.peer).address()
-                neighbor_local = neighbor['local-address'].address()
+                neighbor_local = neighbor['local-address'].address()  # type: ignore[index]
 
                 if connection_peer != neighbor_local:
                     if not neighbor.auto_discovery:  # type: ignore[union-attr]
@@ -213,7 +213,7 @@ class Listener:
                     ranged_neighbor.append(neighbor)  # type: ignore[arg-type]
                     continue
 
-                denied = reactor.handle_connection(key, connection)
+                denied = reactor.handle_connection(key, connection)  # type: ignore[func-returns-value]
                 if denied:
                     log.debug(
                         lambda connection=connection: f'refused connection from {connection.name()} due to the state machine',
