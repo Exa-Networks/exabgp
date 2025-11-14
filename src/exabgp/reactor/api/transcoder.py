@@ -12,6 +12,7 @@ from exabgp.util import hexstring
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import Open
 from exabgp.bgp.message import Notification
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Negotiated
 
@@ -57,15 +58,19 @@ class Transcoder:
     def _state(self) -> None:
         self.seen_open['send'] = None
         self.seen_open['receive'] = None
-        self.negotiated = None
+        self.negotiated_in = None
+        self.negotiated_out = None
 
     def _open(self, direction: str, message: Open) -> None:
         self.seen_open[direction] = message
 
         if all(self.seen_open.values()):
-            self.negotiated = Negotiated(None)
-            self.negotiated.sent(self.seen_open['send'])
-            self.negotiated.received(self.seen_open['receive'])
+            self.negotiated_in = Negotiated(None, Direction.IN)
+            self.negotiated_out = Negotiated(None, Direction.OUT)
+            self.negotiated_in.sent(self.seen_open['send'])
+            self.negotiated_in.received(self.seen_open['receive'])
+            self.negotiated_out.sent(self.seen_open['send'])
+            self.negotiated_out.received(self.seen_open['receive'])
 
     def _from_json(self, direction: str, json_string: str) -> Optional[str]:
         try:
@@ -168,11 +173,12 @@ class Transcoder:
 
             return self.encoder.notification(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
 
-        if not self.negotiated:
+        if not self.negotiated_in or not self.negotiated_out:
             sys.stderr.write('invalid message sequence, open not exchange not complete', json_string + '\n')  # type: ignore[call-arg]
             sys.exit(1)
 
-        message = Message.unpack(category, data, direction, self.negotiated)  # type: ignore[arg-type]
+        negotiated = self.negotiated_in if direction == 'receive' else self.negotiated_out
+        message = Message.unpack(category, data, negotiated)  # type: ignore[arg-type]
 
         if content == 'update':
             return self.encoder.update(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]

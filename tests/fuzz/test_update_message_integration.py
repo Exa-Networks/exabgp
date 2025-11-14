@@ -65,12 +65,15 @@ def create_negotiated_mock(families: Any = None, asn4: Any = False, msg_size: An
     """Create a mock negotiated object with configurable parameters."""
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.direction import Direction
 
     negotiated = Mock()
+    negotiated.direction = Direction.IN
     negotiated.asn4 = asn4
     negotiated.addpath = Mock()
     negotiated.addpath.receive = Mock(return_value=False)
     negotiated.addpath.send = Mock(return_value=False)
+    negotiated.required = Mock(return_value=False)
 
     # Default families if not specified
     if families is None:
@@ -301,7 +304,7 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
     packed_data = messages[0][19:]  # Skip 19-byte BGP header
 
     # Unpack message
-    unpacked = Update.unpack_message(packed_data, Direction.IN, negotiated)
+    unpacked = Update.unpack_message(packed_data, negotiated)
 
     # Verify unpacked data
     assert isinstance(unpacked, Update)
@@ -339,7 +342,7 @@ def test_roundtrip_ipv4_withdrawal() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = Update.unpack_message(packed_data, Direction.IN, negotiated)
+    unpacked = Update.unpack_message(packed_data, negotiated)
 
     # Verify
     assert isinstance(unpacked, Update)
@@ -386,7 +389,7 @@ def test_roundtrip_multiple_nlris() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = Update.unpack_message(packed_data, Direction.IN, negotiated)
+    unpacked = Update.unpack_message(packed_data, negotiated)
 
     # Verify
     assert isinstance(unpacked, Update)
@@ -434,7 +437,7 @@ def test_roundtrip_with_multiple_attributes() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = Update.unpack_message(packed_data, Direction.IN, negotiated)
+    unpacked = Update.unpack_message(packed_data, negotiated)
 
     # Verify all attributes preserved
     assert isinstance(unpacked, Update)
@@ -489,7 +492,7 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = Update.unpack_message(packed_data, Direction.IN, negotiated)
+    unpacked = Update.unpack_message(packed_data, negotiated)
 
     # Verify both types present
     assert isinstance(unpacked, Update)
@@ -578,7 +581,7 @@ def test_roundtrip_ipv6_announcement() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = Update.unpack_message(packed_data, Direction.IN, negotiated)
+    unpacked = Update.unpack_message(packed_data, negotiated)
 
     # Verify
     assert unpacked is not None
@@ -827,7 +830,7 @@ def test_integration_full_update_cycle() -> None:
     # Unpack each message
     for msg in messages:
         packed_data = msg[19:]
-        unpacked = Update.unpack_message(packed_data, Direction.IN, negotiated)
+        unpacked = Update.unpack_message(packed_data, negotiated)
 
         assert unpacked is not None
 
@@ -871,7 +874,7 @@ def test_integration_empty_attributes_for_withdrawal_only() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = Update.unpack_message(packed_data, Direction.IN, negotiated)
+    unpacked = Update.unpack_message(packed_data, negotiated)
 
     # Should be valid
     assert isinstance(unpacked, Update)

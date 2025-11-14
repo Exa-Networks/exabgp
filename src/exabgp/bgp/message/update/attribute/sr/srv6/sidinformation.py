@@ -64,7 +64,7 @@ class Srv6SidInformation:  # type: ignore[type-var]
             code: int = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Service Sub-Sub-TLV type')
-            cls.registered_subsubtlvs[code] = klass  # type: ignore[type-var]
+            cls.registered_subsubtlvs[code] = klass
             return klass
 
         return register_subsubtlv

@@ -282,7 +282,7 @@ class Attribute:
         raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
 
     @classmethod
-    def unpack(cls, attribute_id: int, flag: int, data: bytes, direction: int, negotiated: Negotiated) -> Attribute:
+    def unpack(cls, attribute_id: int, flag: int, data: bytes, negotiated: Negotiated) -> Attribute:
         cache: bool = cls.caching and cls.CACHING
 
         if cache and data in cls.cache.get(cls.ID, {}):
@@ -290,7 +290,7 @@ class Attribute:
 
         key: Tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in Attribute.registered_attributes.keys():
-            instance: Attribute = cls.klass(attribute_id, flag).unpack(data, direction, negotiated)  # type: ignore[call-arg,arg-type]
+            instance: Attribute = cls.klass(attribute_id, flag).unpack(data, negotiated)  # type: ignore[call-arg,arg-type]
 
             if cache:
                 cls.cache[cls.ID].cache(data, instance)

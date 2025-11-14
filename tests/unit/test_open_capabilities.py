@@ -16,6 +16,7 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
+from unittest.mock import Mock
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open import Version, ASN, RouterID, HoldTime
@@ -25,7 +26,21 @@ from exabgp.bgp.message.open.capability import RouteRefresh
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.protocol.family import AFI, SAFI
+
+
+# ==============================================================================
+# Test Helper Functions
+# ==============================================================================
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 # ==============================================================================
@@ -457,7 +472,7 @@ def test_open_message_encoding_basic() -> None:
     capabilities = Capabilities()
     open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
-    msg = open_msg.message()
+    msg = open_msg.message(create_negotiated())
 
     # Should start with BGP marker
     assert msg[0:16] == b'\xff' * 16
@@ -484,7 +499,7 @@ def test_open_message_encoding_with_capabilities() -> None:
 
     open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
-    msg = open_msg.message()
+    msg = open_msg.message(create_negotiated())
 
     # Should be larger than minimum due to capabilities
     assert len(msg) > 29

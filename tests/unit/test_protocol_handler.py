@@ -1177,7 +1177,10 @@ def test_protocol_with_addpath_negotiated(mock_peer: Any) -> None:
 
     protocol = Protocol(mock_peer)
 
-    # Simulate ADD-PATH negotiation
+    # Simulate ADD-PATH negotiation - set on both in and out
+    protocol.negotiated.addpath = RequirePath()
+    protocol.negotiated.addpath._send[(AFI.ipv4, SAFI.unicast)] = True
+    protocol.negotiated.addpath._receive[(AFI.ipv4, SAFI.unicast)] = True
     protocol.negotiated.addpath = RequirePath()
     protocol.negotiated.addpath._send[(AFI.ipv4, SAFI.unicast)] = True
     protocol.negotiated.addpath._receive[(AFI.ipv4, SAFI.unicast)] = True
@@ -1195,7 +1198,7 @@ def test_protocol_read_update_with_addpath(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
     protocol.neighbor.api['receive-parsed'] = True
 
-    # Enable ADD-PATH
+    # Enable ADD-PATH for receiving
     from exabgp.bgp.message.open.capability.negotiated import RequirePath
 
     protocol.negotiated.addpath = RequirePath()

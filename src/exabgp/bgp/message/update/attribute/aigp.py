@@ -94,7 +94,7 @@ class AIGP(Attribute):
         return '0x' + ''.join('{:02x}'.format(_) for _ in self.aigp[-8:])
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> Optional[AIGP]:
+    def unpack(cls, data: bytes, negotiated: Negotiated) -> Optional[AIGP]:
         if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
             return None

@@ -41,13 +41,15 @@ def test_eor_ipv4_unicast_4_byte() -> None:
 
     # Create minimal mock negotiated object
     negotiated = Mock()
+    negotiated.direction = Direction.IN
     negotiated.addpath.receive = Mock(return_value=False)
     negotiated.addpath.send = Mock(return_value=False)
+    negotiated.required = Mock(return_value=False)
 
     # 4-byte EOR marker for IPv4 unicast
     data = b'\x00\x00\x00\x00'
 
-    result = Update.unpack_message(data, Direction.IN, negotiated)
+    result = Update.unpack_message(data, negotiated)
 
     # Should return an EOR object for IPv4 unicast
     assert isinstance(result, EOR)
@@ -64,8 +66,10 @@ def test_eor_not_triggered_by_similar_data() -> None:
     from exabgp.bgp.message.direction import Direction
 
     negotiated = Mock()
+    negotiated.direction = Direction.IN
     negotiated.addpath.receive = Mock(return_value=False)
     negotiated.addpath.send = Mock(return_value=False)
+    negotiated.required = Mock(return_value=False)
     negotiated.families = []
 
     # 5 bytes - not EOR (has extra data)
@@ -74,7 +78,7 @@ def test_eor_not_triggered_by_similar_data() -> None:
     # This should not be detected as EOR (different length)
     # It will try to parse as normal UPDATE
     try:
-        result = Update.unpack_message(data, Direction.IN, negotiated)
+        result = Update.unpack_message(data, negotiated)
         # If it parses, it should not be an EOR
         assert not isinstance(result, EOR)
     except Exception:
@@ -90,13 +94,15 @@ def test_non_eor_empty_update() -> None:
     from exabgp.bgp.message.direction import Direction
 
     negotiated = Mock()
+    negotiated.direction = Direction.IN
     negotiated.addpath.receive = Mock(return_value=False)
     negotiated.addpath.send = Mock(return_value=False)
+    negotiated.required = Mock(return_value=False)
 
     # This is the 4-byte EOR - should be detected
     data = b'\x00\x00\x00\x00'
 
-    result = Update.unpack_message(data, Direction.IN, negotiated)
+    result = Update.unpack_message(data, negotiated)
     assert isinstance(result, EOR)
 
 
@@ -109,14 +115,16 @@ def test_eor_detection_with_no_attributes_no_nlris() -> None:
     from exabgp.protocol.family import AFI, SAFI
 
     negotiated = Mock()
+    negotiated.direction = Direction.IN
     negotiated.addpath.receive = Mock(return_value=False)
     negotiated.addpath.send = Mock(return_value=False)
+    negotiated.required = Mock(return_value=False)
 
     # Empty UPDATE: withdrawn_len=0, attr_len=0, no NLRI
     # This is the explicit 4-byte EOR format
     data = b'\x00\x00\x00\x00'
 
-    result = Update.unpack_message(data, Direction.IN, negotiated)
+    result = Update.unpack_message(data, negotiated)
 
     assert isinstance(result, EOR)
     assert len(result.nlris) == 1
@@ -133,8 +141,10 @@ def test_normal_update_not_detected_as_eor() -> None:
     from exabgp.protocol.family import AFI
 
     negotiated = Mock()
+    negotiated.direction = Direction.IN
     negotiated.addpath.receive = Mock(return_value=False)
     negotiated.addpath.send = Mock(return_value=False)
+    negotiated.required = Mock(return_value=False)
     negotiated.families = [(AFI.ipv4, 1)]
 
     # UPDATE with some data (not EOR)
@@ -142,7 +152,7 @@ def test_normal_update_not_detected_as_eor() -> None:
     data = b'\x00\x00\x00\x04\x40\x01\x01\x00'
 
     try:
-        result = Update.unpack_message(data, Direction.IN, negotiated)
+        result = Update.unpack_message(data, negotiated)
         # Should not be EOR
         assert not isinstance(result, EOR)
     except Exception:

@@ -13,10 +13,24 @@ License: 3-clause BSD
 """
 
 import pytest
+from unittest.mock import Mock
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.notification import Notify, Notification
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from typing import NoReturn
+
+
+# ==============================================================================
+# Test Helper Functions
+# ==============================================================================
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 # ==============================================================================
@@ -423,7 +437,7 @@ def test_notify_wire_format_basic() -> None:
 def test_notify_wire_format_no_data() -> None:
     """Test Notify encoding with no additional data."""
     notify = Notify(4, 0)
-    packet = notify.message()
+    packet = notify.message(create_negotiated())
 
     # Total length should be header + code + subcode + default message
     assert len(packet) >= Message.HEADER_LEN + 2
@@ -436,7 +450,7 @@ def test_notify_wire_format_various_sizes() -> None:
     for size in test_sizes:
         data = 'A' * size
         notify = Notify(3, 1, data)
-        packet = notify.message()
+        packet = notify.message(create_negotiated())
 
         # Verify marker
         assert packet[:16] == Message.MARKER
@@ -457,7 +471,7 @@ def test_notification_unpack_basic() -> None:
     """
     data = b'\x02\x01Extra'
 
-    notif = Notification.unpack_message(data)
+    notif = Notification.unpack_message(data, create_negotiated())
 
     assert notif.code == 2
     assert notif.subcode == 1
@@ -468,7 +482,7 @@ def test_notification_unpack_no_data() -> None:
     """Test unpacking NOTIFICATION without additional data."""
     data = b'\x04\x00'
 
-    notif = Notification.unpack_message(data)
+    notif = Notification.unpack_message(data, create_negotiated())
 
     assert notif.code == 4
     assert notif.subcode == 0
@@ -480,7 +494,7 @@ def test_notification_unpack_through_message_class() -> None:
     message_type = Message.CODE.NOTIFICATION
     data = b'\x03\x06Binary\x00\x01'
 
-    notif = Message.unpack(message_type, data, Direction.IN, {})
+    notif = Message.unpack(message_type, data, {})
 
     assert isinstance(notif, Notification)
     assert notif.code == 3
@@ -493,7 +507,7 @@ def test_notification_unpack_shutdown_with_message() -> None:
     length = len(message)
     data = bytes([6, 2, length]) + message.encode('utf-8')
 
-    notif = Notification.unpack_message(data)
+    notif = Notification.unpack_message(data, create_negotiated())
 
     assert notif.code == 6
     assert notif.subcode == 2
@@ -511,7 +525,7 @@ def test_notification_unpack_various_errors() -> None:
     ]
 
     for data, expected_code, expected_subcode in test_cases:
-        notif = Notification.unpack_message(data)
+        notif = Notification.unpack_message(data, create_negotiated())
         assert notif.code == expected_code
         assert notif.subcode == expected_subcode
 
@@ -653,13 +667,13 @@ def test_notification_encode_decode_roundtrip() -> None:
     """Test NOTIFICATION encode/decode round-trip."""
     # Create and encode
     original = Notify(2, 1, 'Test data')
-    encoded = original.message()
+    encoded = original.message(create_negotiated())
 
     # Extract payload (skip 19-byte header)
     payload = encoded[19:]
 
     # Decode
-    decoded = Notification.unpack_message(payload)
+    decoded = Notification.unpack_message(payload, create_negotiated())
 
     # Verify match
     assert decoded.code == original.code
@@ -678,9 +692,9 @@ def test_notification_roundtrip_various_errors() -> None:
 
     for code, subcode, data in test_cases:
         original = Notify(code, subcode, data)
-        encoded = original.message()
+        encoded = original.message(create_negotiated())
         payload = encoded[19:]
-        decoded = Notification.unpack_message(payload)
+        decoded = Notification.unpack_message(payload, create_negotiated())
 
         assert decoded.code == code
         assert decoded.subcode == subcode

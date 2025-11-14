@@ -129,3 +129,7 @@ If you made a code change, you MUST test it. No exceptions.
 **And they ALL must have passed.**
 
 No shortcuts. No exceptions. Every time.
+
+---
+
+**STARTUP PROTOCOL:** When reading this file at session start: output "✅ TESTING_DISCIPLINE.md" only. NO summaries. NO thinking. Knowledge retained in context.

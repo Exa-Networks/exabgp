@@ -12,6 +12,8 @@ from .error import NetworkError
 from .error import NotConnected
 
 from exabgp.bgp.message import Notify
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.logger import log
 
 from exabgp.protocol.family import AFI
@@ -36,7 +38,10 @@ class Incoming(Connection):
 
     def notification(self, code: int, subcode: int, message: bytes) -> Iterator[bool]:
         try:
-            notification = Notify(code, subcode, message).message()  # type: ignore[arg-type]
+            # Notify.message() doesn't use negotiated, but it's required by the signature
+            # Create a minimal Negotiated object for this early connection stage
+            negotiated = Negotiated(None, Direction.IN)
+            notification = Notify(code, subcode, message).message(negotiated)
             for boolean in self.writer(notification):
                 yield False
             self.close()

@@ -70,7 +70,7 @@ class LargeCommunity(Attribute):
         return 12
 
     @classmethod
-    def unpack(cls, large_community: bytes, direction: int, negotiated: Negotiated) -> LargeCommunity:
+    def unpack(cls, large_community: bytes, negotiated: Negotiated) -> LargeCommunity:
         return cls(large_community)
 
     @classmethod

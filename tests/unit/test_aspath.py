@@ -44,12 +44,11 @@ def create_negotiated_mock(asn4: Any = False) -> Any:
 def test_aspath_empty() -> None:
     """Test empty AS_PATH unpacking."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)
     data = b''
 
-    result = ASPath.unpack(data, Direction.IN, negotiated)
+    result = ASPath.unpack(data, negotiated)
 
     assert result is None
 
@@ -57,7 +56,6 @@ def test_aspath_empty() -> None:
 def test_aspath_simple_sequence_asn2() -> None:
     """Test AS_SEQUENCE with 2-byte ASN (legacy format)."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -66,7 +64,7 @@ def test_aspath_simple_sequence_asn2() -> None:
     data = struct.pack('!BB', 2, 3)  # type=AS_SEQUENCE, length=3
     data += struct.pack('!HHH', 65001, 65002, 65003)
 
-    result = ASPath.unpack(data, Direction.IN, negotiated)
+    result = ASPath.unpack(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -80,7 +78,6 @@ def test_aspath_simple_sequence_asn2() -> None:
 def test_aspath_simple_sequence_asn4() -> None:
     """Test AS_SEQUENCE with 4-byte ASN (modern format)."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=True)
 
@@ -88,7 +85,7 @@ def test_aspath_simple_sequence_asn4() -> None:
     data = struct.pack('!BB', 2, 3)  # type=AS_SEQUENCE, length=3
     data += struct.pack('!LLL', 100000, 200000, 300000)
 
-    result = ASPath.unpack(data, Direction.IN, negotiated)
+    result = ASPath.unpack(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -102,14 +99,13 @@ def test_aspath_simple_sequence_asn4() -> None:
 def test_aspath_single_asn() -> None:
     """Test AS_PATH with single ASN."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)
 
     # Single ASN: 65000
     data = struct.pack('!BB', 2, 1) + struct.pack('!H', 65000)
 
-    result = ASPath.unpack(data, Direction.IN, negotiated)
+    result = ASPath.unpack(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -125,7 +121,6 @@ def test_aspath_single_asn() -> None:
 def test_aspath_as_set() -> None:
     """Test AS_SET segment type (unordered set of ASNs)."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SET
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -133,7 +128,7 @@ def test_aspath_as_set() -> None:
     data = struct.pack('!BB', 1, 4)  # type=AS_SET, length=4
     data += struct.pack('!HHHH', 65001, 65002, 65003, 65004)
 
-    result = ASPath.unpack(data, Direction.IN, negotiated)
+    result = ASPath.unpack(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -149,7 +144,6 @@ def test_aspath_as_set() -> None:
 def test_aspath_confed_sequence() -> None:
     """Test CONFED_SEQUENCE segment type (BGP confederation)."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, CONFED_SEQUENCE
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -157,7 +151,7 @@ def test_aspath_confed_sequence() -> None:
     data = struct.pack('!BB', 3, 2)  # type=CONFED_SEQUENCE, length=2
     data += struct.pack('!HH', 64512, 64513)
 
-    result = ASPath.unpack(data, Direction.IN, negotiated)
+    result = ASPath.unpack(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -170,7 +164,6 @@ def test_aspath_confed_sequence() -> None:
 def test_aspath_confed_set() -> None:
     """Test CONFED_SET segment type."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, CONFED_SET
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -178,7 +171,7 @@ def test_aspath_confed_set() -> None:
     data = struct.pack('!BB', 4, 3)  # type=CONFED_SET, length=3
     data += struct.pack('!HHH', 64512, 64513, 64514)
 
-    result = ASPath.unpack(data, Direction.IN, negotiated)
+    result = ASPath.unpack(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -194,7 +187,6 @@ def test_aspath_confed_set() -> None:
 def test_aspath_multiple_segments() -> None:
     """Test AS_PATH with multiple segments."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE, SET
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -206,7 +198,7 @@ def test_aspath_multiple_segments() -> None:
 
     data = segment1 + segment2
 
-    result = ASPath.unpack(data, Direction.IN, negotiated)
+    result = ASPath.unpack(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 2
@@ -219,7 +211,6 @@ def test_aspath_multiple_segments() -> None:
 def test_aspath_mixed_confederation() -> None:
     """Test AS_PATH with regular and confederation segments."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE, CONFED_SEQUENCE
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -229,7 +220,7 @@ def test_aspath_mixed_confederation() -> None:
 
     data = confed + regular
 
-    result = ASPath.unpack(data, Direction.IN, negotiated)
+    result = ASPath.unpack(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 2
@@ -245,7 +236,6 @@ def test_aspath_mixed_confederation() -> None:
 def test_as4path_unpacking() -> None:
     """Test AS4_PATH attribute (always uses 4-byte ASNs)."""
     from exabgp.bgp.message.update.attribute.aspath import AS4Path, SEQUENCE
-    from exabgp.bgp.message.direction import Direction
 
     negotiated = create_negotiated_mock(asn4=False)  # Negotiated ASN2, but AS4Path is always ASN4
 
@@ -253,7 +243,7 @@ def test_as4path_unpacking() -> None:
     data = struct.pack('!BB', 2, 2)  # AS_SEQUENCE with 2 ASNs
     data += struct.pack('!LL', 100000, 200000)
 
-    result = AS4Path.unpack(data, Direction.IN, negotiated)
+    result = AS4Path.unpack(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -270,7 +260,6 @@ def test_as4path_unpacking() -> None:
 def test_aspath_invalid_segment_type() -> None:
     """Test AS_PATH with invalid segment type."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
-    from exabgp.bgp.message.direction import Direction
     from exabgp.bgp.message.notification import Notify
 
     negotiated = create_negotiated_mock(asn4=False)
@@ -279,7 +268,7 @@ def test_aspath_invalid_segment_type() -> None:
     data = struct.pack('!BB', 99, 1) + struct.pack('!H', 65000)
 
     with pytest.raises(Notify) as exc_info:
-        ASPath.unpack(data, Direction.IN, negotiated)
+        ASPath.unpack(data, negotiated)
 
     assert exc_info.value.code == 3  # UPDATE Message Error
     assert exc_info.value.subcode == 11  # Malformed AS_PATH
@@ -288,7 +277,6 @@ def test_aspath_invalid_segment_type() -> None:
 def test_aspath_truncated_segment_header() -> None:
     """Test AS_PATH with truncated segment header."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
-    from exabgp.bgp.message.direction import Direction
     from exabgp.bgp.message.notification import Notify
 
     negotiated = create_negotiated_mock(asn4=False)
@@ -297,7 +285,7 @@ def test_aspath_truncated_segment_header() -> None:
     data = b'\x02'
 
     with pytest.raises(Notify) as exc_info:
-        ASPath.unpack(data, Direction.IN, negotiated)
+        ASPath.unpack(data, negotiated)
 
     assert exc_info.value.code == 3
     assert exc_info.value.subcode == 11
@@ -306,7 +294,6 @@ def test_aspath_truncated_segment_header() -> None:
 def test_aspath_truncated_asn_data() -> None:
     """Test AS_PATH with truncated ASN data."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
-    from exabgp.bgp.message.direction import Direction
     from exabgp.bgp.message.notification import Notify
 
     negotiated = create_negotiated_mock(asn4=False)
@@ -316,7 +303,7 @@ def test_aspath_truncated_asn_data() -> None:
     data += struct.pack('!HH', 65001, 65002)  # Only 2 ASNs
 
     with pytest.raises(Notify) as exc_info:
-        ASPath.unpack(data, Direction.IN, negotiated)
+        ASPath.unpack(data, negotiated)
 
     assert exc_info.value.code == 3
     assert exc_info.value.subcode == 11
@@ -325,7 +312,6 @@ def test_aspath_truncated_asn_data() -> None:
 def test_aspath_truncated_asn4_data() -> None:
     """Test AS_PATH with truncated 4-byte ASN data."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath
-    from exabgp.bgp.message.direction import Direction
     from exabgp.bgp.message.notification import Notify
 
     negotiated = create_negotiated_mock(asn4=True)
@@ -336,7 +322,7 @@ def test_aspath_truncated_asn4_data() -> None:
     data += b'\x00\x00'  # Incomplete second ASN
 
     with pytest.raises(Notify) as exc_info:
-        ASPath.unpack(data, Direction.IN, negotiated)
+        ASPath.unpack(data, negotiated)
 
     assert exc_info.value.code == 3
     assert exc_info.value.subcode == 11

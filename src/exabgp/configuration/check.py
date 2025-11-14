@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 import copy
 import struct
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from exabgp.environment import getenv
 
@@ -63,7 +63,7 @@ def _hexa(data: str) -> bytes:
     return bytes([int(_, 16) for _ in hexa])
 
 
-def _negotiated(neighbor: Dict[str, Any]) -> Negotiated:
+def _negotiated(neighbor: Dict[str, Any]) -> Tuple[Negotiated, Negotiated]:
     path = {}
     for f in NLRI.known_families():
         if neighbor['capability']['add-path']:
@@ -79,11 +79,14 @@ def _negotiated(neighbor: Dict[str, Any]) -> Negotiated:
 
     o1 = Open(Version(4), ASN(neighbor['local-as']), HoldTime(180), RouterID(routerid_1), capa)
     o2 = Open(Version(4), ASN(neighbor['peer-as']), HoldTime(180), RouterID(routerid_2), capa)
-    negotiated = Negotiated(neighbor)
-    negotiated.sent(o1)
-    negotiated.received(o2)
+    negotiated_in = Negotiated(neighbor, Direction.IN)
+    negotiated_out = Negotiated(neighbor, Direction.OUT)
+    negotiated_in.sent(o1)
+    negotiated_in.received(o2)
+    negotiated_out.sent(o1)
+    negotiated_out.received(o2)
     # grouped = False
-    return negotiated
+    return negotiated_in, negotiated_out
 
 
 # =============================================================== check_neighbor
@@ -96,14 +99,14 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
     for name in neighbors.keys():
         neighbor = copy.deepcopy(neighbors[name])
         neighbor['local-as'] = neighbor['peer-as']
-        negotiated = _negotiated(neighbor)
+        negotiated_in, negotiated_out = _negotiated(neighbor)
 
         for _ in neighbor.rib.outgoing.updates(False):
             pass
 
         for change1 in neighbor.rib.outgoing.cached_changes():
             str1 = change1.extensive()
-            packed = list(Update([change1.nlri], change1.attributes).messages(negotiated))
+            packed = list(Update([change1.nlri], change1.attributes).messages(negotiated_out))
             pack1 = packed[0]
 
             log.debug(lambda packed=packed: 'parsed route requires %d updates' % len(packed), 'parser')
@@ -117,11 +120,11 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
                 log.debug(lambda: '')  # new line
 
                 pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
-                update = Update.unpack_message(pack1s, Direction.IN, negotiated)  # type: ignore[arg-type]
+                update = Update.unpack_message(pack1s, negotiated_in)  # type: ignore[arg-type]
 
                 change2 = Change(update.nlris[0], update.attributes)
                 str2 = change2.extensive()
-                pack2 = list(Update([update.nlris[0]], update.attributes).messages(negotiated))[0]
+                pack2 = list(Update([update.nlris[0]], update.attributes).messages(negotiated_out))[0]
 
                 log.debug(lambda str2=str2: 'recoded route {}'.format(str2), 'parser')
                 log.debug(lambda pack2=pack2: 'recoded hex   {}'.format(od(pack2)), 'parser')
@@ -248,12 +251,12 @@ def _make_nlri(neighbor: Dict[str, Any], routes: str) -> List[NLRI]:
     option.enabled['parser'] = True
 
     announced = _hexa(routes)
-    negotiated = _negotiated(neighbor)
+    negotiated_in, negotiated_out = _negotiated(neighbor)
 
     afi, safi = neighbor.families()[0]
 
     # Is the peer going to send us some Path Information with the route (AddPath)
-    addpath = negotiated.addpath.send(afi, safi)
+    addpath = negotiated_out.addpath.send(afi, safi)
 
     nlris = []
     try:
@@ -305,7 +308,8 @@ def check_open(neighbor: Dict[str, Any], raw: bytes) -> None:
     sys.excepthook = traceback.print_exception
 
     try:
-        o = Open.unpack_message(raw, Direction.IN, _negotiated(neighbor))  # type: ignore[arg-type]
+        negotiated_in, _ = _negotiated(neighbor)
+        o = Open.unpack_message(raw, negotiated_in)
         sys.stdout.write(f'{o}\n')
     except Exception:
         sys.stdout.write('\n')
@@ -317,7 +321,8 @@ def check_open(neighbor: Dict[str, Any], raw: bytes) -> None:
 
 def display_open(neighbor: Dict[str, Any], raw: bytes) -> bool:
     try:
-        o = Open.unpack_message(raw)
+        negotiated_in, _ = _negotiated(neighbor)
+        o = Open.unpack_message(raw, negotiated_in)
         sys.stdout.write(Response.JSON(json_version).open(neighbor, 'in', o, None, '', ''))
         sys.stdout.write('\n')
         return True
@@ -331,7 +336,7 @@ def display_open(neighbor: Dict[str, Any], raw: bytes) -> bool:
 
 def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
     option.enabled['parser'] = True
-    negotiated = _negotiated(neighbor)
+    negotiated_in, _ = _negotiated(neighbor)
 
     while raw:
         if raw.startswith(b'\xff' * 16):
@@ -351,7 +356,7 @@ def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
 
         try:
             # This does not take the BGP header - let's assume we will not break that :)
-            update = Update.unpack_message(injected, Direction.IN, negotiated)  # type: ignore[arg-type]
+            update = Update.unpack_message(injected, negotiated_in)  # type: ignore[arg-type]
         except Notify:
             import traceback
 
@@ -376,7 +381,7 @@ def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
 
 def _make_notification(neighbor: Dict[str, Any], raw: bytes) -> Optional[Notification]:
     option.enabled['parser'] = True
-    negotiated = _negotiated(neighbor)
+    negotiated_in, negotiated_out = _negotiated(neighbor)
 
     if raw.startswith(b'\xff' * 16):
         kind = raw[18]
@@ -394,7 +399,7 @@ def _make_notification(neighbor: Dict[str, Any], raw: bytes) -> Optional[Notific
 
     try:
         # This does not take the BGP header - let's assume we will not break that :)
-        notification = Notification.unpack_message(injected, Direction.IN, negotiated)  # type: ignore[arg-type]
+        notification = Notification.unpack_message(injected, Direction.IN, negotiated_in)  # type: ignore[arg-type]
     except Notify:
         import traceback
 

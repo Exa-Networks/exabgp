@@ -9,6 +9,7 @@ from io import BytesIO
 from typing import Any
 from unittest.mock import Mock
 
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.ip import IPv4
 
@@ -29,10 +30,12 @@ def create_mock_logger() -> Any:
 def create_mock_negotiated(add_path: Any = False, extended_message: Any = False) -> Any:
     """Create a mock negotiated capabilities object."""
     negotiated = Mock()
+    negotiated.direction = Direction.IN
     negotiated.families = {(1, 1)}  # IPv4 Unicast
     negotiated.addpath = Mock()
     negotiated.addpath.receive = Mock(return_value=add_path)
     negotiated.addpath.send = Mock(return_value=add_path)
+    negotiated.required = Mock(return_value=add_path)
     negotiated.extended_message = extended_message
     return negotiated
 

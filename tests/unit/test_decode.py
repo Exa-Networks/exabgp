@@ -19,6 +19,7 @@ from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import Open
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import Version
 from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.open import RouterID
@@ -27,8 +28,6 @@ from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
-
-from exabgp.bgp.message.direction import Direction
 
 from exabgp.logger import log
 from exabgp.environment import getenv
@@ -382,7 +381,7 @@ class TestUpdateDecoding(unittest.TestCase):
                 capa,
             )
 
-            negotiated = Negotiated(neighbor)
+            negotiated = Negotiated(neighbor, Direction.IN)
             negotiated.sent(o1)
             negotiated.received(o2)
 
@@ -396,13 +395,13 @@ class TestUpdateDecoding(unittest.TestCase):
         for asn4, body in bodies:
             if asn4:
                 continue
-            Update.unpack_message(bytes(body), Direction.IN, self.negotiated[asn4])
+            Update.unpack_message(bytes(body), self.negotiated[asn4])
 
     def test_decoding_udpate_asn4(self) -> None:
         for asn4, body in bodies:
             if not asn4:
                 continue
-            Update.unpack_message(bytes(body), Direction.IN, self.negotiated[asn4])
+            Update.unpack_message(bytes(body), self.negotiated[asn4])
 
 
 if __name__ == '__main__':

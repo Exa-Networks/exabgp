@@ -267,7 +267,7 @@ class Update(Message):
 
     # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
     @classmethod
-    def unpack_message(cls, data: bytes, direction: int, negotiated: Negotiated) -> Union[Update, EOR]:  # type: ignore[valid-type]
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Union[Update, EOR]:  # type: ignore[valid-type]
         log.debug(lazyformat('parsing UPDATE', data), 'parser')
 
         length = len(data)
@@ -276,23 +276,20 @@ class Update(Message):
         if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
             return EOR(AFI.ipv4, SAFI.unicast)  # pylint: disable=E1101
         if length == EOR_WITH_PREFIX_LENGTH and data.startswith(EOR.NLRI.PREFIX):
-            return EOR.unpack_message(data, direction, negotiated)  # type: ignore[no-any-return]
+            return EOR.unpack_message(data, negotiated)  # type: ignore[no-any-return]
 
         withdrawn, _attributes, announced = cls.split(data)
 
         if not withdrawn:
             log.debug(lambda: 'withdrawn NLRI none', 'routes')
 
-        attributes = Attributes.unpack(_attributes, direction, negotiated)
+        attributes = Attributes.unpack(_attributes, negotiated)
 
         if not announced:
             log.debug(lambda: 'announced NLRI none', 'routes')
 
         # Is the peer going to send us some Path Information with the route (AddPath)
-        if direction == Direction.IN:
-            addpath = negotiated.addpath.receive(AFI.ipv4, SAFI.unicast)
-        else:
-            addpath = negotiated.addpath.send(AFI.ipv4, SAFI.unicast)
+        addpath = negotiated.required(AFI.ipv4, SAFI.unicast)
 
         # empty string for NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
         nexthop = attributes.get(Attribute.CODE.NEXT_HOP, NoNextHop)

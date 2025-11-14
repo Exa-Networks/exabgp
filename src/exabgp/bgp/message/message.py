@@ -168,7 +168,7 @@ class Message:
         message_len: bytes = pack('!H', 19 + len(message))
         return self.MARKER + message_len + self.TYPE + message
 
-    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def message(self, negotiated: Negotiated) -> bytes:
         raise NotImplementedError('message not implemented in subclasses')
 
     @classmethod
@@ -187,10 +187,10 @@ class Message:
         raise Notify(2, 4, f'can not handle message {what}')
 
     @classmethod
-    def unpack(cls, message: int, data: bytes, direction: int, negotiated: Negotiated) -> Message:
+    def unpack(cls, message: int, data: bytes, negotiated: Negotiated) -> Message:
         if message in cls.registered_message:
-            return cls.klass(message).unpack_message(data, direction, negotiated)  # type: ignore[attr-defined,no-any-return]
-        return cls.klass_unknown(message, data, direction, negotiated)  # type: ignore[return-value]
+            return cls.klass(message).unpack_message(data, negotiated)  # type: ignore[attr-defined,no-any-return]
+        return cls.klass_unknown(message, data, negotiated)  # type: ignore[return-value]
 
     @classmethod
     def code(cls, name: str) -> _MessageCode:

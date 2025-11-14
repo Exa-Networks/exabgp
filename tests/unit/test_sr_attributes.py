@@ -26,7 +26,6 @@ from exabgp.bgp.message.update.attribute.sr.srv6.generic import (
     GenericSrv6ServiceSubTlv,
     GenericSrv6ServiceDataSubSubTlv,
 )
-from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.ip import IPv6
 
@@ -303,7 +302,7 @@ class TestPrefixSid:
         data += struct.pack('!I', 100)  # Label Index
 
         negotiated = Mock()
-        prefix_sid = PrefixSid.unpack(data, Direction.IN, negotiated)
+        prefix_sid = PrefixSid.unpack(data, negotiated)
 
         assert len(prefix_sid.sr_attrs) == 1
         assert prefix_sid.sr_attrs[0].TLV == 1
@@ -319,7 +318,7 @@ class TestPrefixSid:
         data += struct.pack('!L', 8000)[1:]  # Range (3 bytes)
 
         negotiated = Mock()
-        prefix_sid = PrefixSid.unpack(data, Direction.IN, negotiated)
+        prefix_sid = PrefixSid.unpack(data, negotiated)
 
         assert len(prefix_sid.sr_attrs) == 1
         assert prefix_sid.sr_attrs[0].TLV == 3
@@ -342,7 +341,7 @@ class TestPrefixSid:
         data += struct.pack('!L', 8000)[1:]  # Range
 
         negotiated = Mock()
-        prefix_sid = PrefixSid.unpack(data, Direction.IN, negotiated)
+        prefix_sid = PrefixSid.unpack(data, negotiated)
 
         assert len(prefix_sid.sr_attrs) == 2
         assert prefix_sid.sr_attrs[0].TLV == 1
@@ -379,7 +378,7 @@ class TestPrefixSid:
         data = b''.join(attr.pack() for attr in original.sr_attrs)
 
         negotiated = Mock()
-        unpacked = PrefixSid.unpack(data, Direction.IN, negotiated)
+        unpacked = PrefixSid.unpack(data, negotiated)
 
         assert len(unpacked.sr_attrs) == 2
         assert unpacked.sr_attrs[0].labelindex == 200

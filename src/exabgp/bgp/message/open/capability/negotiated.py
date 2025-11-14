@@ -11,6 +11,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union, TYPE_CHECK
 
 if TYPE_CHECKING:
     from exabgp.bgp.message import Open
+    from exabgp.bgp.message.direction import Direction
 
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -25,8 +26,9 @@ from exabgp.protocol.family import SAFI
 class Negotiated:
     FREE_SIZE: ClassVar[int] = ExtendedMessage.INITIAL_SIZE - 19 - 2 - 2
 
-    def __init__(self, neighbor: Any) -> None:
+    def __init__(self, neighbor: Any, direction: 'Direction') -> None:
         self.neighbor: Any = neighbor
+        self.direction: 'Direction' = direction
 
         self.sent_open: Optional['Open'] = None  # Open message
         self.received_open: Optional['Open'] = None  # Open message
@@ -183,6 +185,15 @@ class Negotiated:
 
     def nexthopself(self, afi: AFI) -> Any:
         return self.neighbor.ip_self(afi)
+
+    def required(self, afi: AFI, safi: SAFI) -> bool:
+        """Get addpath status based on internal direction - if IN use receive, else use send"""
+        from exabgp.bgp.message.direction import Direction
+
+        if self.direction == Direction.IN:
+            return self.addpath.receive(afi, safi)
+        else:
+            return self.addpath.send(afi, safi)
 
 
 # =================================================================== RequirePath

@@ -45,6 +45,8 @@ Systematic replacement of `Any` type annotations with proper, specific types.
 ### Root Level
 
 - **`CODING_STANDARDS.md`** - **CRITICAL:** Python 3.8+ compatibility requirements, type annotation standards, and coding conventions. **READ THIS FIRST** before making any code changes.
+- **`COMMUNICATION_STYLE.md`** - **CRITICAL:** Terse communication style requirements. No sugar-coating, saves tokens and energy.
+- **`EMOJI_GUIDE.md`** - **CRITICAL:** Systematic emoji usage for clear, concise communication.
 - **`PLANNING_GUIDE.md`** - Standards for organizing planning documentation. Read this before creating new project plans.
 - **`TESTING_DISCIPLINE.md`** - Testing requirements and discipline
 - **`settings.local.json`** - Local configuration
@@ -100,3 +102,7 @@ When planning new projects, follow the structure in `PLANNING_GUIDE.md`:
 ## Archive
 
 The `archive/` directory contains deprecated planning documents that have been superseded by better-structured versions. These are kept for historical reference only.
+
+---
+
+**STARTUP PROTOCOL:** When reading this file at session start: output "✅ README.md" only. NO summaries. NO thinking. Knowledge retained in context.

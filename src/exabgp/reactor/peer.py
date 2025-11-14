@@ -440,12 +440,14 @@ class Peer:
                 if sent_open in ACTION.ALL:
                     yield sent_open
             self.proto.negotiated.sent(sent_open)  # type: ignore[union-attr]
+            self.proto.negotiated.sent(sent_open)  # type: ignore[union-attr]
             self.fsm.change(FSM.OPENSENT)
 
         # read the peer's open
         for received_open in self._read_open():
             if received_open in ACTION.ALL:
                 yield received_open
+        self.proto.negotiated.received(received_open)  # type: ignore[union-attr]
         self.proto.negotiated.received(received_open)  # type: ignore[union-attr]
 
         self.proto.connection.msg_size = self.proto.negotiated.msg_size  # type: ignore[union-attr]
@@ -455,6 +457,7 @@ class Peer:
             for sent_open in self._send_open():
                 if sent_open in ACTION.ALL:
                     yield sent_open
+            self.proto.negotiated.sent(sent_open)  # type: ignore[union-attr]
             self.proto.negotiated.sent(sent_open)  # type: ignore[union-attr]
             self.fsm.change(FSM.OPENSENT)
 
@@ -637,7 +640,9 @@ class Peer:
                     break
 
         # If graceful restart, silent shutdown
-        if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
+        if self.neighbor['capability'][
+            'graceful-restart'
+        ] and self.proto.negotiated.sent_open.capabilities.announced(
             Capability.CODE.GRACEFUL_RESTART,
         ):
             log.error(lambda: 'closing the session without notification', self.id())
