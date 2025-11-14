@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Type
+from typing import TYPE_CHECKING, ClassVar, Optional, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -37,10 +37,12 @@ class GenericAttribute(Attribute):
         self.data = data
         self.index = ''
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, GenericAttribute):
+            return False
         return self.ID == other.ID and self.FLAG == other.FLAG and self.data == other.data
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:

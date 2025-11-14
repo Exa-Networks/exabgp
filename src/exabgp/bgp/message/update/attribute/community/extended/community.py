@@ -43,22 +43,32 @@ class ExtendedCommunityBase(Attribute):
         self.klass: Optional[Type[ExtendedCommunityBase]] = None
 
     def __eq__(self, other: object) -> bool:
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.community == other.community  # type: ignore[attr-defined]
+        if not isinstance(other, ExtendedCommunityBase):
+            return False
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.community == other.community
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     def __lt__(self, other: object) -> bool:
-        return self.community < other.community  # type: ignore[attr-defined]
+        if not isinstance(other, ExtendedCommunityBase):
+            return NotImplemented
+        return self.community < other.community
 
     def __le__(self, other: object) -> bool:
-        return self.community <= other.community  # type: ignore[attr-defined]
+        if not isinstance(other, ExtendedCommunityBase):
+            return NotImplemented
+        return self.community <= other.community
 
     def __gt__(self, other: object) -> bool:
-        return self.community > other.community  # type: ignore[attr-defined]
+        if not isinstance(other, ExtendedCommunityBase):
+            return NotImplemented
+        return self.community > other.community
 
     def __ge__(self, other: object) -> bool:
-        return self.community >= other.community  # type: ignore[attr-defined]
+        if not isinstance(other, ExtendedCommunityBase):
+            return NotImplemented
+        return self.community >= other.community
 
     def iana(self) -> bool:
         return not not (self.community[0] & 0x80)

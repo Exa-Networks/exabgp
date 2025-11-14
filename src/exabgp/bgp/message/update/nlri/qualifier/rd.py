@@ -32,10 +32,14 @@ class RouteDistinguisher:
         self._len: int = len(self.rd)
 
     def __eq__(self, other: object) -> bool:
-        return self.rd == other.rd  # type: ignore[attr-defined]
+        if not isinstance(other, RouteDistinguisher):
+            return False
+        return self.rd == other.rd
 
     def __neq__(self, other: object) -> bool:
-        return self.rd != other.rd  # type: ignore[attr-defined]
+        if not isinstance(other, RouteDistinguisher):
+            return True
+        return self.rd != other.rd
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')

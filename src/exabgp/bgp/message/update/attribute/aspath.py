@@ -89,11 +89,10 @@ class ASPath(Attribute):
         self._json: str = ''
 
     def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ASPath):
+            return False
         return (
-            self.ID == other.ID  # type: ignore[attr-defined]
-            and self.FLAG == other.FLAG  # type: ignore[attr-defined]
-            and self.ASN4 == other.ASN4  # type: ignore[attr-defined]
-            and self.aspath == other.aspath  # type: ignore[attr-defined]
+            self.ID == other.ID and self.FLAG == other.FLAG and self.ASN4 == other.ASN4 and self.aspath == other.aspath
         )
 
     def __ne__(self, other: object) -> bool:

@@ -63,12 +63,14 @@ class PMSI(Attribute):
         self.tunnel: bytes = tunnel  # tunnel id, packed data
 
     def __eq__(self, other: object) -> bool:
+        if not isinstance(other, PMSI):
+            return False
         return (
-            self.ID == other.ID  # type: ignore[attr-defined]
-            and self.FLAG == other.FLAG  # type: ignore[attr-defined]
-            and self.label == other.label  # type: ignore[attr-defined]
-            and self.flags == other.flags  # type: ignore[attr-defined]
-            and self.tunnel == other.tunnel  # type: ignore[attr-defined]
+            self.ID == other.ID
+            and self.FLAG == other.FLAG
+            and self.label == other.label
+            and self.flags == other.flags
+            and self.tunnel == other.tunnel
         )
 
     def __ne__(self, other: object) -> bool:

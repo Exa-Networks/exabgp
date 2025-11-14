@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict
+from typing import TYPE_CHECKING, ClassVar, Dict
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -48,22 +48,34 @@ class Community:
             self._str = '%d:%d' % unpack('!HH', self.community)
 
     def __eq__(self, other: object) -> bool:
-        return self.community == other.community  # type: ignore[attr-defined]
+        if not isinstance(other, Community):
+            return False
+        return self.community == other.community
 
     def __ne__(self, other: object) -> bool:
-        return self.community != other.community  # type: ignore[attr-defined]
+        if not isinstance(other, Community):
+            return True
+        return self.community != other.community
 
     def __lt__(self, other: object) -> bool:
-        return self.community < other.community  # type: ignore[attr-defined]
+        if not isinstance(other, Community):
+            return NotImplemented
+        return self.community < other.community
 
     def __le__(self, other: object) -> bool:
-        return self.community <= other.community  # type: ignore[attr-defined]
+        if not isinstance(other, Community):
+            return NotImplemented
+        return self.community <= other.community
 
     def __gt__(self, other: object) -> bool:
-        return self.community > other.community  # type: ignore[attr-defined]
+        if not isinstance(other, Community):
+            return NotImplemented
+        return self.community > other.community
 
     def __ge__(self, other: object) -> bool:
-        return self.community >= other.community  # type: ignore[attr-defined]
+        if not isinstance(other, Community):
+            return NotImplemented
+        return self.community >= other.community
 
     def json(self) -> str:
         return '[ %d, %d ]' % unpack('!HH', self.community)
@@ -78,7 +90,7 @@ class Community:
         return 4
 
     @classmethod
-    def unpack(cls, community: bytes, direction: Any, negotiated: Negotiated) -> Community:
+    def unpack(cls, community: bytes, direction: int, negotiated: Negotiated) -> Community:
         return cls(community)
 
     @classmethod

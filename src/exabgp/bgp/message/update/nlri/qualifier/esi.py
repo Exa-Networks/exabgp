@@ -26,10 +26,14 @@ class ESI:
             raise Exception(f'incorrect ESI, len {len(esi)} instead of {self.LENGTH}')
 
     def __eq__(self, other: object) -> bool:
-        return self.esi == other.esi  # type: ignore[attr-defined]
+        if not isinstance(other, ESI):
+            return False
+        return self.esi == other.esi
 
     def __neq__(self, other: object) -> bool:
-        return self.esi != other.esi  # type: ignore[attr-defined]
+        if not isinstance(other, ESI):
+            return True
+        return self.esi != other.esi
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing ESI for ordering does not make sense')

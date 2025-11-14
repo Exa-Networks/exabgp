@@ -45,7 +45,9 @@ class MPRNLRI(Attribute, Family):
         self.nlris: List[NLRI] = nlris
 
     def __eq__(self, other: object) -> bool:
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris  # type: ignore[attr-defined]
+        if not isinstance(other, MPRNLRI):
+            return False
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)

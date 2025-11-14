@@ -29,10 +29,14 @@ class PathInfo:
         # sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
 
     def __eq__(self, other: object) -> bool:
-        return self.path_info == other.path_info  # type: ignore[attr-defined]
+        if not isinstance(other, PathInfo):
+            return False
+        return self.path_info == other.path_info
 
     def __neq__(self, other: object) -> bool:
-        return self.path_info != other.path_info  # type: ignore[attr-defined]
+        if not isinstance(other, PathInfo):
+            return True
+        return self.path_info != other.path_info
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing PathInfo for ordering does not make sense')

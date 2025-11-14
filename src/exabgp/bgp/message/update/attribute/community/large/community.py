@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Dict
+from typing import TYPE_CHECKING, ClassVar, Dict
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -28,22 +28,34 @@ class LargeCommunity(Attribute):
         self._str: str = '%d:%d:%d' % unpack('!LLL', self.large_community)
 
     def __eq__(self, other: object) -> bool:
-        return self.large_community == other.large_community  # type: ignore[attr-defined]
+        if not isinstance(other, LargeCommunity):
+            return False
+        return self.large_community == other.large_community
 
     def __ne__(self, other: object) -> bool:
-        return self.large_community != other.large_community  # type: ignore[attr-defined]
+        if not isinstance(other, LargeCommunity):
+            return True
+        return self.large_community != other.large_community
 
     def __lt__(self, other: object) -> bool:
-        return self.large_community < other.large_community  # type: ignore[attr-defined]
+        if not isinstance(other, LargeCommunity):
+            return NotImplemented
+        return self.large_community < other.large_community
 
     def __le__(self, other: object) -> bool:
-        return self.large_community <= other.large_community  # type: ignore[attr-defined]
+        if not isinstance(other, LargeCommunity):
+            return NotImplemented
+        return self.large_community <= other.large_community
 
     def __gt__(self, other: object) -> bool:
-        return self.large_community > other.large_community  # type: ignore[attr-defined]
+        if not isinstance(other, LargeCommunity):
+            return NotImplemented
+        return self.large_community > other.large_community
 
     def __ge__(self, other: object) -> bool:
-        return self.large_community >= other.large_community  # type: ignore[attr-defined]
+        if not isinstance(other, LargeCommunity):
+            return NotImplemented
+        return self.large_community >= other.large_community
 
     def json(self) -> str:
         return '[ %d, %d , %d ]' % unpack('!LLL', self.large_community)
@@ -58,7 +70,7 @@ class LargeCommunity(Attribute):
         return 12
 
     @classmethod
-    def unpack(cls, large_community: bytes, direction: Any, negotiated: Negotiated) -> LargeCommunity:
+    def unpack(cls, large_community: bytes, direction: int, negotiated: Negotiated) -> LargeCommunity:
         return cls(large_community)
 
     @classmethod

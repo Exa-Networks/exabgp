@@ -38,7 +38,9 @@ class ClusterList(Attribute):
         self._len: int = len(clusters) * 4
 
     def __eq__(self, other: object) -> bool:
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.clusters == other.clusters  # type: ignore[attr-defined]
+        if not isinstance(other, ClusterList):
+            return False
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.clusters == other.clusters
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)

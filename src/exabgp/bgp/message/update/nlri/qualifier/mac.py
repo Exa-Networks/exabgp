@@ -21,10 +21,14 @@ class MAC:
 
     def __eq__(self, other: object) -> bool:
         # Compare packed representation to handle case-insensitive MAC addresses
-        return self._packed == other._packed  # type: ignore[attr-defined]
+        if not isinstance(other, MAC):
+            return False
+        return self._packed == other._packed
 
     def __neq__(self, other: object) -> bool:
-        return self.mac != other.mac  # type: ignore[attr-defined]
+        if not isinstance(other, MAC):
+            return True
+        return self.mac != other.mac
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing MAC for ordering does not make sense')

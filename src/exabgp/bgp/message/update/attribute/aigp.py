@@ -76,7 +76,9 @@ class AIGP(Attribute):
             self._packed = self._attribute(aigp)
 
     def __eq__(self, other: object) -> bool:
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.aigp == other.aigp  # type: ignore[attr-defined]
+        if not isinstance(other, AIGP):
+            return False
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.aigp == other.aigp
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
