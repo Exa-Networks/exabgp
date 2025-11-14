@@ -150,3 +150,9 @@ class Env:
     @classmethod
     def settings(cls) -> GlobalHashTable:
         return cls._env
+
+    @classmethod
+    def __getattr__(cls, name: str) -> HashTable:
+        # Allow attribute-style access to configuration sections (e.g., Env.log, Env.debug)
+        # Returns HashTable which supports dynamic attribute access
+        return cls._env[name]
