@@ -196,12 +196,12 @@ def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         action = AnnounceFlow.action[command]
 
         if action == 'nlri-add':
-            for adding in AnnounceFlow.known[command](tokeniser):
+            for adding in AnnounceFlow.known[command](tokeniser):  # type: ignore[operator]
                 change.nlri.add(adding)
         elif action == 'attribute-add':
-            change.attributes.add(AnnounceFlow.known[command](tokeniser))
+            change.attributes.add(AnnounceFlow.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceFlow.known[command](tokeniser)
+            nexthop, attribute = AnnounceFlow.known[command](tokeniser)  # type: ignore[operator]
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         elif action == 'nop':

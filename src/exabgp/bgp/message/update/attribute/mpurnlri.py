@@ -60,13 +60,13 @@ class MPURNLRI(Attribute, Family):
         payload = self.afi.pack() + self.safi.pack()
         header_length = len(payload)
         for nlri in mpurnlri:
-            if self._len(payload + nlri) > maximum:
+            if self._len(payload + nlri) > maximum:  # type: ignore[operator]
                 if len(payload) == header_length or len(payload) > maximum:
                     raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
                 yield self._attribute(payload)
-                payload = self.afi.pack() + self.safi.pack() + nlri
+                payload = self.afi.pack() + self.safi.pack() + nlri  # type: ignore[operator]
                 continue
-            payload = payload + nlri
+            payload = payload + nlri  # type: ignore[operator]
         if len(payload) == header_length or len(payload) > maximum:
             raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
         yield self._attribute(payload)

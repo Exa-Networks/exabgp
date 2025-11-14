@@ -101,12 +101,12 @@ def mup(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
         action = AnnounceMup.action[command]
         if action == 'nlri-add':
-            for adding in AnnounceMup.known[command](tokeniser):
+            for adding in AnnounceMup.known[command](tokeniser):  # type: ignore[operator]
                 change.nlri.add(adding)
         elif action == 'attribute-add':
-            change.attributes.add(AnnounceMup.known[command](tokeniser))
+            change.attributes.add(AnnounceMup.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceMup.known[command](tokeniser, afi)
+            nexthop, attribute = AnnounceMup.known[command](tokeniser, afi)  # type: ignore[operator]
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         elif action == 'nop':

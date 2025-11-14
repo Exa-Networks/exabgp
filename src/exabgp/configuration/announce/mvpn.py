@@ -89,11 +89,11 @@ def mvpn_route(tokeniser: Tokeniser, afi: AFI) -> List[Change]:
         action = AnnounceMVPN.action.get(command, '')
 
         if action == 'attribute-add':
-            change.attributes.add(AnnounceMVPN.known[command](tokeniser))
+            change.attributes.add(AnnounceMVPN.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nlri-set':
-            change.nlri.assign(AnnounceMVPN.assign[command], AnnounceMVPN.known[command](tokeniser))
+            change.nlri.assign(AnnounceMVPN.assign[command], AnnounceMVPN.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceMVPN.known[command](tokeniser)
+            nexthop, attribute = AnnounceMVPN.known[command](tokeniser)  # type: ignore[operator]
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:

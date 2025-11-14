@@ -98,4 +98,4 @@ class AIGP(Attribute):
         if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
             return None
-        return cls(unpack('!Q', data[:8] & 0x000000FFFFFFFFFF), data[:8])  # type: ignore[arg-type]
+        return cls(unpack('!Q', data[:8] & 0x000000FFFFFFFFFF), data[:8])  # type: ignore[arg-type,operator]
