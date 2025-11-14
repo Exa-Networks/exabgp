@@ -174,7 +174,7 @@ class Processes:
                     # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
                 )
                 self._update_fds()
-                fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+                fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)  # type: ignore[union-attr]
 
                 log.debug(lambda: 'forked process {}'.format(process), 'process')
 
@@ -223,7 +223,7 @@ class Processes:
         return False
 
     def _update_fds(self) -> None:
-        self.fds = [self._process[process].stdout.fileno() for process in self._process]
+        self.fds = [self._process[process].stdout.fileno() for process in self._process]  # type: ignore[union-attr]
 
     def received(self) -> Generator[Tuple[str, str], None, None]:
         consumed_data = False
@@ -253,7 +253,7 @@ class Processes:
                     # Calling next() on Linux and OSX works perfectly well
                     # but not on OpenBSD where it always raise StopIteration
                     # and only read() works (not even readline)
-                    buf = str(proc.stdout.read(16384), 'ascii')
+                    buf = str(proc.stdout.read(16384), 'ascii')  # type: ignore[union-attr]
                     if buf == '' and poll is not None:
                         # if proc.poll() is None then
                         # process is fine, we received an empty line because
@@ -317,7 +317,7 @@ class Processes:
         # XXX: FIXME: This is potentially blocking
         while True:
             try:
-                self._process[process].stdin.write(bytes(f'{string}\n', 'ascii'))
+                self._process[process].stdin.write(bytes(f'{string}\n', 'ascii'))  # type: ignore[union-attr]
             except OSError as exc:
                 self._broken.append(process)
                 if exc.errno == errno.EPIPE:
@@ -334,7 +334,7 @@ class Processes:
             break
 
         try:
-            self._process[process].stdin.flush()
+            self._process[process].stdin.flush()  # type: ignore[union-attr]
         except OSError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
             log.debug(

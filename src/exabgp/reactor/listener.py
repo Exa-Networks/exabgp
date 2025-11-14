@@ -193,7 +193,7 @@ class Listener:
 
                 connection_local = IP.create(connection.local).address()
                 neighbor_peer_start = neighbor['peer-address'].address()
-                neighbor_peer_next = neighbor_peer_start + neighbor.range_size
+                neighbor_peer_next = neighbor_peer_start + neighbor.range_size  # type: ignore[union-attr]
 
                 if not neighbor_peer_start <= connection_local < neighbor_peer_next:
                     continue
@@ -202,14 +202,14 @@ class Listener:
                 neighbor_local = neighbor['local-address'].address()
 
                 if connection_peer != neighbor_local:
-                    if not neighbor.auto_discovery:
+                    if not neighbor.auto_discovery:  # type: ignore[union-attr]
                         continue
 
                 # we found a range matching for this connection
                 # but the peer may already have connected, so
                 # we need to iterate all individual peers before
                 # handling "range" peers
-                if neighbor.range_size > 1:
+                if neighbor.range_size > 1:  # type: ignore[union-attr]
                     ranged_neighbor.append(neighbor)
                     continue
 

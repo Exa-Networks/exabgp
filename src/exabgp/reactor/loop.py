@@ -205,7 +205,7 @@ class Reactor:
         families: Optional[List[Any]] = None
         if advertised:
             families = peer.proto.negotiated.families if peer.proto else []
-        rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming
+        rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming  # type: ignore[union-attr]
         return list(rib.cached_changes(families))
 
     def neighbor_rib_resend(self, peer_name: str) -> None:
@@ -220,20 +220,20 @@ class Reactor:
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
-        peer.neighbor.rib.outgoing.withdraw()
+        peer.neighbor.rib.outgoing.withdraw()  # type: ignore[union-attr]
 
     def neighbor_rib_in_clear(self, peer_name: str) -> None:
         peer: Optional[Peer] = self._peers.get(peer_name, None)
         if not peer:
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
-        peer.neighbor.rib.incoming.clear()
+        peer.neighbor.rib.incoming.clear()  # type: ignore[union-attr]
 
     # ...
 
     def _pending_adjribout(self) -> bool:
         for peer in self.active_peers():
-            if self._peers[peer].neighbor.rib.outgoing.pending():
+            if self._peers[peer].neighbor.rib.outgoing.pending():  # type: ignore[union-attr]
                 return True
         return False
 
@@ -343,7 +343,7 @@ class Reactor:
                     # report that we received a signal
                     for key in self._peers:
                         if self._peers[key].neighbor.api['signal']:
-                            self._peers[key].reactor.processes.signal(self._peers[key].neighbor, self.signal.number)
+                            self._peers[key].reactor.processes.signal(self._peers[key].neighbor, self.signal.number)  # type: ignore[union-attr]
 
                     self.signal.rearm()
 
@@ -492,7 +492,7 @@ class Reactor:
         for key in self._peers.keys():
             self._peers[key].shutdown()
         self.asynchronous.clear()
-        self.processes.terminate()
+        self.processes.terminate()  # type: ignore[union-attr]
         self.daemon.removepid()
         self._stopping = True
 
@@ -560,7 +560,7 @@ class Reactor:
                 self._peers[key].remove()
             else:
                 self._peers[key].reestablish()
-        self.processes.start(self.configuration.processes, True)
+        self.processes.start(self.configuration.processes, True)  # type: ignore[union-attr]
 
     # def nexthops (self, peers):
     # 	return dict((peer,self._peers[peer].neighbor['local-address']) for peer in peers)

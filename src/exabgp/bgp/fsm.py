@@ -80,7 +80,7 @@ class FSM:
         # 	raise RuntimeError ('invalid state machine transition (from %s to %s)' % (str(self.state),str(state)))
         self.state = state
         if self.peer.neighbor.api['fsm']:
-            self.peer.reactor.processes.fsm(self.peer.neighbor, self)
+            self.peer.reactor.processes.fsm(self.peer.neighbor, self)  # type: ignore[union-attr]
         return self
 
     def __eq__(self, other: object) -> bool:

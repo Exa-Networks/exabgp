@@ -62,31 +62,31 @@ class INET(NLRI):
         return ''
 
     def pack_nlri(self, negotiated: 'Negotiated | None' = None) -> bytes:
-        addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
-        return addpath + self.cidr.pack_nlri()  # type: ignore[no-any-return]
+        addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
+        return addpath + self.cidr.pack_nlri()  # type: ignore[no-any-return,union-attr]
 
     def index(self) -> bytes:
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
-        return Family.index(self) + addpath + self.cidr.pack_nlri()  # type: ignore[no-any-return]
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()  # type: ignore[union-attr]
+        return Family.index(self) + addpath + self.cidr.pack_nlri()  # type: ignore[no-any-return,union-attr]
 
     def prefix(self) -> str:
-        return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
+        return '{}{}'.format(self.cidr.prefix(), str(self.path_info))  # type: ignore[union-attr]
 
     def extensive(self) -> str:
         return '{}{}'.format(self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop {}'.format(self.nexthop))
 
     def _internal(self, announced: bool = True) -> List[str]:
-        return [self.path_info.json()]
+        return [self.path_info.json()]  # type: ignore[union-attr]
 
     # The announced feature is not used by ExaBGP, is it by BAGPIPE ?
 
     def json(self, announced: bool = True, compact: bool = False) -> str:
         internal = ', '.join([_ for _ in self._internal(announced) if _])
         if internal:
-            return '{{ "nlri": "{}", {} }}'.format(self.cidr.prefix(), internal)
+            return '{{ "nlri": "{}", {} }}'.format(self.cidr.prefix(), internal)  # type: ignore[union-attr]
         if compact:
-            return '"{}"'.format(self.cidr.prefix())
-        return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
+            return '"{}"'.format(self.cidr.prefix())  # type: ignore[union-attr]
+        return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())  # type: ignore[union-attr]
 
     @classmethod
     def _pathinfo(cls, data: bytes, addpath: Any) -> Tuple[PathInfo, bytes]:

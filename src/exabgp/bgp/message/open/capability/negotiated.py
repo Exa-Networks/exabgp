@@ -56,10 +56,10 @@ class Negotiated:
             self._negotiate()
 
     def _negotiate(self) -> None:
-        sent_capa = self.sent_open.capabilities
-        recv_capa = self.received_open.capabilities
+        sent_capa = self.sent_open.capabilities  # type: ignore[union-attr]
+        recv_capa = self.received_open.capabilities  # type: ignore[union-attr]
 
-        self.holdtime = HoldTime(min(self.sent_open.hold_time, self.received_open.hold_time))
+        self.holdtime = HoldTime(min(self.sent_open.hold_time, self.received_open.hold_time))  # type: ignore[union-attr]
 
         self.addpath.setup(self.received_open, self.sent_open)
         self.asn4 = sent_capa.announced(Capability.CODE.FOUR_BYTES_ASN) and recv_capa.announced(
@@ -69,9 +69,9 @@ class Negotiated:
             Capability.CODE.OPERATIONAL,
         )
 
-        self.local_as = self.sent_open.asn
-        self.peer_as = self.received_open.asn
-        if self.received_open.asn == AS_TRANS and self.asn4:
+        self.local_as = self.sent_open.asn  # type: ignore[union-attr]
+        self.peer_as = self.received_open.asn  # type: ignore[union-attr]
+        if self.received_open.asn == AS_TRANS and self.asn4:  # type: ignore[union-attr]
             self.peer_as = recv_capa.get(Capability.CODE.FOUR_BYTES_ASN, self.peer_as)
 
         self.families = []
@@ -145,35 +145,35 @@ class Negotiated:
             return (
                 2,
                 2,
-                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn, neighbor['peer-as']),
+                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn, neighbor['peer-as']),  # type: ignore[union-attr]
             )
 
         # RFC 6286 : https://tools.ietf.org/html/rfc6286
         # XXX: FIXME: check that router id is not self
-        if self.received_open.router_id == RouterID('0.0.0.0'):
+        if self.received_open.router_id == RouterID('0.0.0.0'):  # type: ignore[union-attr]
             return (2, 3, '0.0.0.0 is an invalid router_id')
 
-        if self.received_open.asn == neighbor['local-as']:
+        if self.received_open.asn == neighbor['local-as']:  # type: ignore[union-attr]
             # router-id must be unique within an ASN
-            if self.received_open.router_id == neighbor['router-id']:
+            if self.received_open.router_id == neighbor['router-id']:  # type: ignore[union-attr]
                 return (
                     2,
                     3,
                     'BGP Identifier collision, same router-id ({}) on both sides of this IBGP session'.format(
-                        self.received_open.router_id
+                        self.received_open.router_id  # type: ignore[union-attr]
                     ),
                 )
 
-        if self.received_open.hold_time and self.received_open.hold_time < HoldTime.MIN:
-            return (2, 6, 'Hold Time is invalid (%d)' % self.received_open.hold_time)
+        if self.received_open.hold_time and self.received_open.hold_time < HoldTime.MIN:  # type: ignore[union-attr]
+            return (2, 6, 'Hold Time is invalid (%d)' % self.received_open.hold_time)  # type: ignore[union-attr]
 
         if self.multisession not in (True, False):
             # XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
             # XXX: FIXME: or should we use this trick in the other case ?
             return self.multisession  # type: ignore[return-value]
 
-        s = set(self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))
-        r = set(self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))
+        s = set(self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))  # type: ignore[union-attr]
+        r = set(self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))  # type: ignore[union-attr]
         mismatch = s ^ r
 
         for family in mismatch:

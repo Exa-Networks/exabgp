@@ -82,7 +82,7 @@ class EthernetAD(EVPN):
             self._packed = packed
             return packed
 
-        self._packed = self.rd.pack() + self.esi.pack() + self.etag.pack() + self.label.pack()
+        self._packed = self.rd.pack() + self.esi.pack() + self.etag.pack() + self.label.pack()  # type: ignore[union-attr]
         return self._packed
 
     @classmethod
@@ -102,5 +102,5 @@ class EthernetAD(EVPN):
         content += '{}, '.format(self.rd.json())
         content += '{}, '.format(self.esi.json())
         content += '{}, '.format(self.etag.json())
-        content += '{} '.format(self.label.json())
+        content += '{} '.format(self.label.json())  # type: ignore[union-attr]
         return '{{{}}}'.format(content)

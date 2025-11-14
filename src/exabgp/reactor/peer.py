@@ -152,7 +152,7 @@ class Peer:
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
             try:
                 if self.neighbor.api['neighbor-changes']:
-                    self.reactor.processes.down(self.neighbor, message)
+                    self.reactor.processes.down(self.neighbor, message)  # type: ignore[union-attr]
             except ProcessError:
                 log.debug(
                     lambda: 'could not send notification of neighbor close to API',
@@ -245,7 +245,7 @@ class Peer:
                 'send-keepalive': 0,
             },
         )
-        self.neighbor.rib.uncache()
+        self.neighbor.rib.uncache()  # type: ignore[union-attr]
 
     def remove(self) -> None:
         self._stop('removed')
@@ -256,7 +256,7 @@ class Peer:
         self.stop()
 
     def resend(self, enhanced: bool, family: Optional[Tuple[AFI, SAFI]] = None) -> None:
-        self.neighbor.rib.outgoing.resend(enhanced, family)
+        self.neighbor.rib.outgoing.resend(enhanced, family)  # type: ignore[union-attr]
         self._delay.reset()
 
     def reestablish(self, restart_neighbor: Optional['Neighbor'] = None) -> None:
@@ -290,7 +290,7 @@ class Peer:
                 lambda: 'we already have a peer in state established for {}'.format(connection.name()),
                 self.id(),
             )
-            return connection.notification(6, 7, 'could not accept the connection, already established')
+            return connection.notification(6, 7, 'could not accept the connection, already established')  # type: ignore[union-attr]
 
         # 6.8 The convention is to compare the BGP Identifiers of the peers
         # involved in the collision and to retain only the connection initiated
@@ -301,7 +301,7 @@ class Peer:
             # We cheat: we are not really reading the OPEN, we use the data we have instead
             # it does not matter as the open message will be the same anyway
             local_id = self.neighbor['router-id'].pack()
-            remote_id = self.proto.negotiated.received_open.router_id.pack()
+            remote_id = self.proto.negotiated.received_open.router_id.pack()  # type: ignore[union-attr]
 
             if remote_id < local_id:
                 log.debug(
@@ -310,7 +310,7 @@ class Peer:
                     ),
                     self.id(),
                 )
-                return connection.notification(
+                return connection.notification(  # type: ignore[union-attr]
                     6,
                     7,
                     'could not accept the connection, as another connection is already in open-confirm and will go through',
@@ -376,7 +376,7 @@ class Peer:
 
     def _send_open(self) -> Generator[Union[int, Open, NOP], None, None]:
         message = Message.CODE.NOP
-        for message in self.proto.new_open():
+        for message in self.proto.new_open():  # type: ignore[union-attr]
             if message.ID == Message.CODE.NOP:
                 yield ACTION.NOW
         yield message
@@ -384,7 +384,7 @@ class Peer:
     def _read_open(self) -> Generator[Union[int, Open, NOP], None, None]:
         wait = getenv().bgp.openwait
         opentimer = ReceiveTimer(
-            self.proto.connection.session,
+            self.proto.connection.session,  # type: ignore[union-attr]
             wait,
             1,
             1,
@@ -392,7 +392,7 @@ class Peer:
         )
         # Only yield if we have not the open, otherwise the reactor can run the other connection
         # which would be bad as we need to do the collission check without going to the other peer
-        for message in self.proto.read_open(self.neighbor['peer-address'].top()):
+        for message in self.proto.read_open(self.neighbor['peer-address'].top()):  # type: ignore[union-attr]
             opentimer.check_ka(message)
             # XXX: FIXME: change the whole code to use the ord and not the chr version
             # Only yield if we have not the open, otherwise the reactor can run the other connection
@@ -405,13 +405,13 @@ class Peer:
         yield message
 
     def _send_ka(self) -> Generator[int, None, None]:
-        for message in self.proto.new_keepalive('OPENCONFIRM'):
+        for message in self.proto.new_keepalive('OPENCONFIRM'):  # type: ignore[union-attr]
             yield ACTION.NOW
 
     def _read_ka(self) -> Generator[int, None, None]:
         # Start keeping keepalive timer
-        for message in self.proto.read_keepalive():
-            self.recv_timer.check_ka_timer(message)
+        for message in self.proto.read_keepalive():  # type: ignore[union-attr]
+            self.recv_timer.check_ka_timer(message)  # type: ignore[union-attr]
             yield ACTION.NOW
 
     def _establish(self) -> Generator[int, None, None]:
@@ -435,29 +435,29 @@ class Peer:
             for sent_open in self._send_open():
                 if sent_open in ACTION.ALL:
                     yield sent_open
-            self.proto.negotiated.sent(sent_open)
+            self.proto.negotiated.sent(sent_open)  # type: ignore[union-attr]
             self.fsm.change(FSM.OPENSENT)
 
         # read the peer's open
         for received_open in self._read_open():
             if received_open in ACTION.ALL:
                 yield received_open
-        self.proto.negotiated.received(received_open)
+        self.proto.negotiated.received(received_open)  # type: ignore[union-attr]
 
-        self.proto.connection.msg_size = self.proto.negotiated.msg_size
+        self.proto.connection.msg_size = self.proto.negotiated.msg_size  # type: ignore[union-attr]
 
         # if we mirror the ASN, we need to read first and send second
         if not self.neighbor['local-as']:
             for sent_open in self._send_open():
                 if sent_open in ACTION.ALL:
                     yield sent_open
-            self.proto.negotiated.sent(sent_open)
+            self.proto.negotiated.sent(sent_open)  # type: ignore[union-attr]
             self.fsm.change(FSM.OPENSENT)
 
-        self.proto.validate_open()
+        self.proto.validate_open()  # type: ignore[union-attr]
         self.fsm.change(FSM.OPENCONFIRM)
 
-        self.recv_timer = ReceiveTimer(self.proto.connection.session, self.proto.negotiated.holdtime, 4, 0)
+        self.recv_timer = ReceiveTimer(self.proto.connection.session, self.proto.negotiated.holdtime, 4, 0)  # type: ignore[union-attr]
         for action in self._send_ka():
             yield action
         for action in self._read_ka():
@@ -473,19 +473,19 @@ class Peer:
         if self._teardown:
             raise Notify(6, 3)
 
-        self.neighbor.rib.incoming.clear()
+        self.neighbor.rib.incoming.clear()  # type: ignore[union-attr]
 
         include_withdraw = False
 
         # Announce to the process BGP is up
         log.info(
-            lambda: f'connected to {self.id()} with {self.proto.connection.name()}',
+            lambda: f'connected to {self.id()} with {self.proto.connection.name()}',  # type: ignore[union-attr]
             'reactor',
         )
         self.stats['up'] += 1
         if self.neighbor.api['neighbor-changes']:
             try:
-                self.reactor.processes.up(self.neighbor)
+                self.reactor.processes.up(self.neighbor)  # type: ignore[union-attr]
             except ProcessError:
                 # Can not find any better error code than 6,0 !
                 # XXX: We can not restart the program so this will come back again and again - FIX
@@ -505,15 +505,15 @@ class Peer:
         refresh = None
         command_eor = None
         number = 0
-        refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED
+        refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED  # type: ignore[union-attr]
 
-        send_ka = KA(self.proto.connection.session, self.proto)
+        send_ka = KA(self.proto.connection.session, self.proto)  # type: ignore[union-attr]
 
         # we need to make sure to send what was already issued by the api
         # from the previous time
         previous = self.neighbor.previous.changes if self.neighbor.previous else []
         current = self.neighbor.changes
-        self.neighbor.rib.outgoing.replace_restart(previous, current)
+        self.neighbor.rib.outgoing.replace_restart(previous, current)  # type: ignore[union-attr]
         self.neighbor.previous = None
 
         self._delay.reset()
@@ -521,15 +521,15 @@ class Peer:
             # we are here following a configuration change
             if self._neighbor:
                 # see what changed in the configuration
-                previous = self._neighbor.previous.changes
+                previous = self._neighbor.previous.changes  # type: ignore[union-attr]
                 current = self._neighbor.changes
-                self.neighbor.rib.outgoing.replace_reload(previous, current)
+                self.neighbor.rib.outgoing.replace_reload(previous, current)  # type: ignore[union-attr]
                 # do not keep the previous routes in memory as they are not useful anymore
                 self._neighbor.previous = None
                 self._neighbor = None
 
-            for message in self.proto.read_message():
-                self.recv_timer.check_ka(message)
+            for message in self.proto.read_message():  # type: ignore[union-attr]
+                self.recv_timer.check_ka(message)  # type: ignore[union-attr]
 
                 if send_ka() is not False:
                     # we need and will send a keepalive
@@ -543,24 +543,24 @@ class Peer:
                     number += 1
                     log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())
 
-                    for nlri in message.nlris:
-                        self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
+                    for nlri in message.nlris:  # type: ignore[union-attr]
+                        self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))  # type: ignore[union-attr]
                         log.debug(
                             lazyformat('   UPDATE #%d nlri ' % number, nlri, str),
                             self.id(),
                         )
 
                 elif message.TYPE == RouteRefresh.TYPE:
-                    enhanced = message.reserved == RouteRefresh.request
+                    enhanced = message.reserved == RouteRefresh.request  # type: ignore[union-attr]
                     enhanced = enhanced and refresh_enhanced
-                    self.resend(enhanced, (message.afi, message.safi))
+                    self.resend(enhanced, (message.afi, message.safi))  # type: ignore[union-attr]
 
                 # SEND OPERATIONAL
                 if self.neighbor['capability']['operational']:
                     if not operational:
                         new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                         if new_operational:
-                            operational = self.proto.new_operational(new_operational, self.proto.negotiated)
+                            operational = self.proto.new_operational(new_operational, self.proto.negotiated)  # type: ignore[union-attr]
 
                     if operational:
                         try:
@@ -577,7 +577,7 @@ class Peer:
                     if not refresh:
                         new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                         if new_refresh:
-                            refresh = self.proto.new_refresh(new_refresh)
+                            refresh = self.proto.new_refresh(new_refresh)  # type: ignore[union-attr]
 
                     if refresh:
                         try:
@@ -586,9 +586,9 @@ class Peer:
                             refresh = None
 
                 # Need to send update
-                if not new_routes and self.neighbor.rib.outgoing.pending():
+                if not new_routes and self.neighbor.rib.outgoing.pending():  # type: ignore[union-attr]
                     # XXX: in proto really. hum to think about ?
-                    new_routes = self.proto.new_update(include_withdraw)
+                    new_routes = self.proto.new_update(include_withdraw)  # type: ignore[union-attr]
 
                 if new_routes:
                     try:
@@ -601,14 +601,14 @@ class Peer:
 
                 elif send_eor:
                     send_eor = False
-                    for _ in self.proto.new_eors():
+                    for _ in self.proto.new_eors():  # type: ignore[union-attr]
                         yield ACTION.NOW
                     log.debug(lambda: '>> all EOR(s) sent', self.id())
 
                 # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
                 elif not command_eor and self.neighbor.eor:
                     new_eor = self.neighbor.eor.popleft()
-                    command_eor = self.proto.new_eors(new_eor.afi, new_eor.safi)
+                    command_eor = self.proto.new_eors(new_eor.afi, new_eor.safi)  # type: ignore[union-attr]
 
                 if command_eor:
                     try:
@@ -727,10 +727,10 @@ class Peer:
     # loop
 
     def run(self) -> int:
-        if self.reactor.processes.broken(self.neighbor):
+        if self.reactor.processes.broken(self.neighbor):  # type: ignore[union-attr]
             # XXX: we should perhaps try to restart the process ??
             log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
-            if self.reactor.processes.terminate_on_error:
+            if self.reactor.processes.terminate_on_error:  # type: ignore[union-attr]
                 self.reactor.api_shutdown()
             else:
                 self.stop()
@@ -775,19 +775,19 @@ class Peer:
         if have_peer:
             peer.update(
                 {
-                    'multi-session': self.proto.negotiated.multisession,
-                    'operational': self.proto.negotiated.operational,
+                    'multi-session': self.proto.negotiated.multisession,  # type: ignore[union-attr]
+                    'operational': self.proto.negotiated.operational,  # type: ignore[union-attr]
                 },
             )
 
         if have_open:
-            capa = self.proto.negotiated.received_open.capabilities
+            capa = self.proto.negotiated.received_open.capabilities  # type: ignore[union-attr]
             peer.update(
                 {
-                    'router-id': self.proto.negotiated.sent_open.router_id,
-                    'peer-id': self.proto.negotiated.received_open.router_id,
-                    'hold-time': self.proto.negotiated.received_open.hold_time,
-                    'asn4': self.proto.negotiated.asn4,
+                    'router-id': self.proto.negotiated.sent_open.router_id,  # type: ignore[union-attr]
+                    'peer-id': self.proto.negotiated.received_open.router_id,  # type: ignore[union-attr]
+                    'hold-time': self.proto.negotiated.received_open.hold_time,  # type: ignore[union-attr]
+                    'asn4': self.proto.negotiated.asn4,  # type: ignore[union-attr]
                     'route-refresh': capa.announced(Capability.CODE.ROUTE_REFRESH),
                     'multi-session': capa.announced(Capability.CODE.MULTISESSION)
                     or capa.announced(Capability.CODE.MULTISESSION_CISCO),
@@ -828,9 +828,9 @@ class Peer:
         families = {}
         for family in self.neighbor.families():
             if have_open:
-                common = family in self.proto.negotiated.families
-                send_addpath = self.proto.negotiated.addpath.send(*family)
-                recv_addpath = self.proto.negotiated.addpath.receive(*family)
+                common = family in self.proto.negotiated.families  # type: ignore[union-attr]
+                send_addpath = self.proto.negotiated.addpath.send(*family)  # type: ignore[union-attr]
+                recv_addpath = self.proto.negotiated.addpath.receive(*family)  # type: ignore[union-attr]
             else:
                 common = None
                 send_addpath = None if family in self.neighbor.addpaths() else False
