@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Testing:**
 - **Check file descriptor limit before running tests:** `ulimit -n` (should be ≥64000)
 - **If needed, increase limit:** `ulimit -n 64000`
+- `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py` - Unit tests with coverage
+- `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation test
 - `./qa/bin/functional encoding` - Run all encoding tests (spawns client and server pairs)
 - `./qa/bin/functional encoding --list` or `--short-list` - List available tests with unique letter identifiers
 - `./qa/bin/functional encoding <letter>` - Run specific test using letter from --list (e.g., `A`, `B`)
@@ -14,7 +16,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `./qa/bin/functional encoding --server <letter>` - Run only the server component
   - `./qa/bin/functional encoding --client <letter>` - Run only the client component
 - Each test spawns both an ExaBGP client and a dummy test server to verify expected client behavior
-- `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py` - Unit tests with coverage
 - `./qa/bin/parsing` - Configuration parsing tests
 
 **Build:**
@@ -34,7 +35,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 You MUST run ALL of these tests and they MUST all pass:
 1. ✅ `ruff format src && ruff check src` - MUST pass with no errors
 2. ✅ `env exabgp_log_enable=false pytest ./tests/unit/` - ALL unit tests MUST pass
-3. ✅ `./qa/bin/functional encoding <test_id>` - MUST pass for affected tests
+3. ✅ `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation MUST pass
+4. ✅ `./qa/bin/functional encoding <test_id>` - MUST pass for affected tests
 
 **DO NOT skip any tests. DO NOT claim success without verification.**
 
@@ -56,6 +58,7 @@ All CI tests must pass:
 
 **Quick test commands:**
 - Unit tests: `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py`
+- Configuration validation: `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf`
 - Encoding tests: `./qa/bin/functional encoding`
 - Linting: `ruff format src && ruff check src`
 
