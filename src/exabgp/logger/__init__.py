@@ -53,31 +53,32 @@ class _log:
 
     @classmethod
     def debug(cls, message: LogMessage, source: str = '', level: str = 'DEBUG') -> None:
-        cls.logger(option.logger.debug, message, source, level)  # type: ignore[union-attr]
+        cls.logger(option.logger.debug, message, source, level)  # type: ignore[misc,union-attr]
 
     @classmethod
     def info(cls, message: LogMessage, source: str = '', level: str = 'INFO') -> None:
-        cls.logger(option.logger.info, message, source, level)  # type: ignore[union-attr]
+        cls.logger(option.logger.info, message, source, level)  # type: ignore[misc,union-attr]
 
     @classmethod
     def warning(cls, message: LogMessage, source: str = '', level: str = 'WARNING') -> None:
-        cls.logger(option.logger.warning, message, source, level)  # type: ignore[union-attr]
+        cls.logger(option.logger.warning, message, source, level)  # type: ignore[misc,union-attr]
 
     @classmethod
     def error(cls, message: LogMessage, source: str = '', level: str = 'ERROR') -> None:
-        cls.logger(option.logger.error, message, source, level)  # type: ignore[union-attr]
+        cls.logger(option.logger.error, message, source, level)  # type: ignore[misc,union-attr]
 
     @classmethod
     def critical(cls, message: LogMessage, source: str = '', level: str = 'CRITICAL') -> None:
-        cls.logger(option.logger.critical, message, source, level)  # type: ignore[union-attr]
+        cls.logger(option.logger.critical, message, source, level)  # type: ignore[misc,union-attr]
 
     @classmethod
     def fatal(cls, message: LogMessage, source: str = '', level: str = 'FATAL') -> None:
-        cls.logger(option.logger.fatal, message, source, level)  # type: ignore[union-attr]
+        cls.logger(option.logger.fatal, message, source, level)  # type: ignore[misc,union-attr]
 
 
 class log(_log):
-    def logger(logger: Callable[[str], None], message: LogMessage, source: str, level: str) -> None:
+    @staticmethod
+    def logger(logger: Callable[[str], None], message: LogMessage, source: str, level: str) -> None:  # type: ignore[override]
         # DEVELOPER WARNING: Log messages must always be callable (lambda) for lazy evaluation
         if not callable(message):
             import sys
@@ -114,5 +115,5 @@ class log(_log):
         timestamp_struct = time.localtime()
         timestamp_float = time.time()
         for line in msg_str.split('\n'):
-            logger(option.formater(line, source, level, timestamp_struct))
+            logger(option.formater(line, source, level, timestamp_struct))  # type: ignore[call-arg]
             record(line, source, level, timestamp_float)

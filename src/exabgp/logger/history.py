@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from collections import deque
 from typing import Deque, Tuple
 
@@ -10,7 +11,7 @@ _max_history: int = 20
 
 
 def history() -> str:
-    return '\n'.join(formater(*_) for _ in _history)
+    return '\n'.join(formater(msg, src, lvl, time.localtime(ts)) for msg, src, lvl, ts in _history)
 
 
 def record(message: str, source: str, level: str, timestamp: float) -> None:
