@@ -76,24 +76,24 @@ class Listener:
                 continue
             if local_port != port:
                 continue
-            md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
+            md5(sock, peer_ip.top(), 0, use_md5, md5_base64)  # type: ignore[arg-type]
             if ttl_in:
-                min_ttl(sock, peer_ip, ttl_in)
+                min_ttl(sock, peer_ip, ttl_in)  # type: ignore[arg-type]
             return
 
         try:
             sock = self._new_socket(local_ip)
             # MD5 must match the peer side of the TCP, not the local one
-            md5(sock, peer_ip.top(), 0, md5, md5_base64)
+            md5(sock, peer_ip.top(), 0, md5, md5_base64)  # type: ignore[arg-type]
             if ttl_in:
-                min_ttl(sock, peer_ip, ttl_in)
+                min_ttl(sock, peer_ip, ttl_in)  # type: ignore[arg-type]
             try:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 if local_ip.ipv6():
                     sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
             except (OSError, AttributeError):
                 pass
-            sock.setblocking(0)
+            sock.setblocking(0)  # type: ignore[arg-type]
             # s.settimeout(0.0)
             sock.bind((local_ip.top(), local_port))
             sock.listen(self._backlog)
@@ -210,7 +210,7 @@ class Listener:
                 # we need to iterate all individual peers before
                 # handling "range" peers
                 if neighbor.range_size > 1:  # type: ignore[union-attr]
-                    ranged_neighbor.append(neighbor)
+                    ranged_neighbor.append(neighbor)  # type: ignore[arg-type]
                     continue
 
                 denied = reactor.handle_connection(key, connection)
@@ -233,7 +233,7 @@ class Listener:
                     reactor.asynchronous.schedule(
                         str(uuid.uuid1()),
                         'sending notification (6,5)',
-                        connection.notification(6, 5, 'could not accept the connection (more than one neighbor match)'),
+                        connection.notification(6, 5, 'could not accept the connection (more than one neighbor match)'),  # type: ignore[arg-type]
                     )
                     return
                 if not matched:
@@ -241,7 +241,7 @@ class Listener:
                     reactor.asynchronous.schedule(
                         str(uuid.uuid1()),
                         'sending notification (6,3)',
-                        connection.notification(6, 3, 'no session configured for the peer'),
+                        connection.notification(6, 3, 'no session configured for the peer'),  # type: ignore[arg-type]
                     )
                     return
 

@@ -92,7 +92,7 @@ class MUP(NLRI):
         if key in cls.registered:
             klass = cls.registered[key].unpack(bgp[4:end], afi)
         else:
-            klass = GenericMUP(arch, afi, code, bgp[4:end])
+            klass = GenericMUP(arch, afi, code, bgp[4:end])  # type: ignore[arg-type]
         klass.CODE = code
         klass.action = action
         klass.addpath = addpath

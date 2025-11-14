@@ -319,7 +319,7 @@ class Reactor:
             self.processes.start(self.configuration.processes)
 
         # This is required to make sure we can write in the log location as we now have dropped root privileges
-        log.init(getenv())
+        log.init(getenv())  # type: ignore[arg-type]
 
         if not self.daemon.savepid():
             return self.Exit.pid

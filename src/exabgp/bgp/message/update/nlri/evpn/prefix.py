@@ -81,7 +81,7 @@ class Prefix(EVPN):
         iplen: prefixlength for ip (defaults to 32)
         gwip: an IP address (dotted quad string notation)
         """
-        EVPN.__init__(self, action, addpath)
+        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
         self.nexthop = nexthop
         self.rd = rd
         self.esi = esi

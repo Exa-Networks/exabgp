@@ -48,7 +48,7 @@ class INET(NLRI):
         self.nexthop = NoNextHop
 
     def __len__(self) -> int:
-        return len(self.cidr) + len(self.path_info)
+        return len(self.cidr) + len(self.path_info)  # type: ignore[arg-type]
 
     def __str__(self) -> str:
         return self.extensive()

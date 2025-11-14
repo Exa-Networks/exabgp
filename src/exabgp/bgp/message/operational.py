@@ -248,7 +248,7 @@ class Advisory:
         def extensive(self) -> str:
             return f'operational {self.name} afi {self.afi} safi {self.safi} "{self.data}"'
 
-    @Operational.register
+    @Operational.register  # type: ignore[arg-type]
     class ADM(_Advisory):
         name: ClassVar[str] = 'ADM'
         code: ClassVar[int] = Operational.CODE.ADM
@@ -269,7 +269,7 @@ class Advisory:
                 utf8 = utf8[: MAX_ADVISORY - 3] + b'...'
             Advisory._Advisory.__init__(self, Operational.CODE.ADM, afi, safi, utf8)
 
-    @Operational.register
+    @Operational.register  # type: ignore[arg-type]
     class ASM(_Advisory):
         name: ClassVar[str] = 'ASM'
         code: ClassVar[int] = Operational.CODE.ASM
@@ -310,17 +310,17 @@ class Query:
                 return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence}'
             return f'operational {self.name} afi {self.afi} safi {self.safi}'
 
-    @Operational.register
+    @Operational.register  # type: ignore[arg-type]
     class RPCQ(_Query):
         name: ClassVar[str] = 'RPCQ'
         code: ClassVar[int] = Operational.CODE.RPCQ
 
-    @Operational.register
+    @Operational.register  # type: ignore[arg-type]
     class APCQ(_Query):
         name: ClassVar[str] = 'APCQ'
         code: ClassVar[int] = Operational.CODE.APCQ
 
-    @Operational.register
+    @Operational.register  # type: ignore[arg-type]
     class LPCQ(_Query):
         name: ClassVar[str] = 'LPCQ'
         code: ClassVar[int] = Operational.CODE.LPCQ
@@ -351,17 +351,17 @@ class Response:
                 return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence} counter {self.counter}'
             return f'operational {self.name} afi {self.afi} safi {self.safi} counter {self.counter}'
 
-    @Operational.register
+    @Operational.register  # type: ignore[arg-type]
     class RPCP(_Counter):
         name: ClassVar[str] = 'RPCP'
         code: ClassVar[int] = Operational.CODE.RPCP
 
-    @Operational.register
+    @Operational.register  # type: ignore[arg-type]
     class APCP(_Counter):
         name: ClassVar[str] = 'APCP'
         code: ClassVar[int] = Operational.CODE.APCP
 
-    @Operational.register
+    @Operational.register  # type: ignore[arg-type]
     class LPCP(_Counter):
         name: ClassVar[str] = 'LPCP'
         code: ClassVar[int] = Operational.CODE.LPCP

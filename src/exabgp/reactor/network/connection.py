@@ -94,10 +94,10 @@ class Connection:
         log.warning(lambda: message, source=self.session())
 
     def reading(self) -> bool:
-        poller = self._rpoller.get(self.io, None)
+        poller = self._rpoller.get(self.io, None)  # type: ignore[arg-type]
         if poller is None:
             poller = select.poll()
-            poller.register(self.io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
+            poller.register(self.io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)  # type: ignore[arg-type]
             self._rpoller = {self.io: poller}
 
         ready = False
@@ -110,10 +110,10 @@ class Connection:
         return ready
 
     def writing(self) -> bool:
-        poller = self._wpoller.get(self.io, None)
+        poller = self._wpoller.get(self.io, None)  # type: ignore[arg-type]
         if poller is None:
             poller = select.poll()
-            poller.register(self.io, select.POLLOUT | select.POLLHUP | select.POLLNVAL | select.POLLERR)
+            poller.register(self.io, select.POLLOUT | select.POLLHUP | select.POLLNVAL | select.POLLERR)  # type: ignore[arg-type]
             self._wpoller = {self.io: poller}
 
         ready = False

@@ -46,7 +46,7 @@ class Multicast(EVPN):
         action: Optional[Action] = None,
         addpath: Any = None,
     ) -> None:
-        EVPN.__init__(self, action, addpath)
+        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
         self.nexthop = nexthop
         self.rd = rd
         self.etag = etag
@@ -75,7 +75,7 @@ class Multicast(EVPN):
             self._packed = packed
             return packed
 
-        self._packed = self.rd.pack() + self.etag.pack() + bytes([len(self.ip) * 8]) + self.ip.pack()
+        self._packed = self.rd.pack() + self.etag.pack() + bytes([len(self.ip) * 8]) + self.ip.pack()  # type: ignore[arg-type]
         return self._packed
 
     @classmethod

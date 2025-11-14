@@ -190,7 +190,7 @@ def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:
         Srv6SidInformation(
             sid=sid,
             behavior=behavior,
-            subsubtlvs=subsubtlvs,
+            subsubtlvs=subsubtlvs,  # type: ignore[arg-type]
         ),
     )
 
@@ -198,9 +198,9 @@ def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:
         raise Exception(f"expect ')', but received '{value}'")
 
     if service_type == 'l3-service':
-        return PrefixSid([Srv6L3Service(subtlvs=subtlvs)])
+        return PrefixSid([Srv6L3Service(subtlvs=subtlvs)])  # type: ignore[arg-type]
     if service_type == 'l2-service':
-        return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])
+        return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])  # type: ignore[arg-type]
 
 
 def parse_ip_prefix(tokeninser: str) -> Tuple[Union[IPv4, IPv6], int]:

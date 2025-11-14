@@ -58,7 +58,7 @@ class _ParseDirection(Section):
         'operational': True,
     }
 
-    syntax = '{{\n  {};\n}}'.format(';\n  '.join(default.keys()))
+    syntax = '{{\n  {};\n}}'.format(';\n  '.join(default.keys()))  # type: ignore[arg-type]
 
     def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         Section.__init__(self, tokeniser, scope, error)

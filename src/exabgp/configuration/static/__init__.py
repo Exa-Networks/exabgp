@@ -119,7 +119,7 @@ def route(tokeniser: Any) -> List[Change]:
 @ParseStatic.register('attributes', 'append-route')
 def attributes(tokeniser: Any) -> List[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
-    ipmask = prefix(lambda: tokeniser.tokens[-1])
+    ipmask = prefix(lambda: tokeniser.tokens[-1])  # type: ignore[arg-type]
     tokeniser.afi = ipmask.afi
 
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:

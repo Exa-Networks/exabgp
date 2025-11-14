@@ -75,7 +75,7 @@ class IPVPN(Label):
         return self.extensive()
 
     def __len__(self) -> int:
-        return Label.__len__(self) + len(self.rd)
+        return Label.__len__(self) + len(self.rd)  # type: ignore[arg-type]
 
     def __eq__(self, other: Any) -> bool:
         return Label.__eq__(self, other) and self.rd == other.rd and Label.__eq__(self, other)
@@ -92,12 +92,12 @@ class IPVPN(Label):
 
     def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
-        mask = bytes([len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask])  # type: ignore[union-attr]
+        mask = bytes([len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
         return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
 
     def index(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()  # type: ignore[union-attr]
-        mask = bytes([len(self.rd) * 8 + self.cidr.mask])  # type: ignore[union-attr]
+        mask = bytes([len(self.rd) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
         return Family.index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
 
     def _internal(self, announced: bool = True) -> List[str]:

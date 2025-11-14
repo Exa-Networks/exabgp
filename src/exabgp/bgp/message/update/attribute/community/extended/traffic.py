@@ -193,7 +193,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
     @staticmethod
     def unpack(data: bytes) -> TrafficNextHopIPv4IETF:
         ip, bit = unpack('!4sH', data[2:8])
-        return TrafficNextHopIPv4IETF(IPv4.ntop(ip), bool(bit & 0x01), data[:8])
+        return TrafficNextHopIPv4IETF(IPv4.ntop(ip), bool(bit & 0x01), data[:8])  # type: ignore[arg-type]
 
 
 # =============================================================== TrafficNextHopIPv6IETF
@@ -224,7 +224,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
     @staticmethod
     def unpack(data: bytes) -> TrafficNextHopIPv6IETF:
         ip, bit = unpack('!16sH', data[2:20])
-        return TrafficNextHopIPv6IETF(IPv6.ntop(ip), bool(bit & 0x01), data[:20])
+        return TrafficNextHopIPv6IETF(IPv6.ntop(ip), bool(bit & 0x01), data[:20])  # type: ignore[arg-type]
 
 
 # =============================================================== TrafficNextHopSimpson

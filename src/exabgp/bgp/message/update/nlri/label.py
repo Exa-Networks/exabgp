@@ -49,7 +49,7 @@ class Label(INET):
         return self.extensive()
 
     def __len__(self) -> int:
-        return INET.__len__(self) + len(self.labels)
+        return INET.__len__(self) + len(self.labels)  # type: ignore[arg-type]
 
     def __eq__(self, other: Any) -> bool:
         return self.labels == other.labels and INET.__eq__(self, other)
@@ -62,7 +62,7 @@ class Label(INET):
 
     def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
-        mask = bytes([len(self.labels) * 8 + self.cidr.mask])  # type: ignore[union-attr]
+        mask = bytes([len(self.labels) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
         return addpath + mask + self.labels.pack() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
 
     def index(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]

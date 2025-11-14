@@ -148,11 +148,11 @@ class Update(Message):
                 continue
 
             if nlri.nexthop.afi != AFI.undefined:
-                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
+                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)  # type: ignore[arg-type]
                 continue
 
             if nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn):
-                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
+                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)  # type: ignore[arg-type]
                 continue
 
             raise ValueError('unexpected nlri definition ({})'.format(nlri))
@@ -345,6 +345,6 @@ class Update(Message):
                 Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, None, '', '')
             )
 
-        log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
+        log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')  # type: ignore[arg-type]
 
         return update

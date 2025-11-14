@@ -47,7 +47,7 @@ class EthernetAD(EVPN):
         action: Optional[Action] = None,
         addpath: Any = None,
     ) -> None:
-        EVPN.__init__(self, action, addpath)
+        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
         self.nexthop = nexthop
         self.rd = rd
         self.esi = esi

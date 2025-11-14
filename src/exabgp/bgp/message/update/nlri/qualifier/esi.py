@@ -23,7 +23,7 @@ class ESI:
     def __init__(self, esi: Optional[bytes] = None) -> None:
         self.esi: bytes = self.DEFAULT if esi is None else esi
         if len(self.esi) != self.LENGTH:
-            raise Exception(f'incorrect ESI, len {len(esi)} instead of {self.LENGTH}')
+            raise Exception(f'incorrect ESI, len {len(esi)} instead of {self.LENGTH}')  # type: ignore[arg-type]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ESI):

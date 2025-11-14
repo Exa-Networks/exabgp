@@ -236,10 +236,10 @@ class Attributes(dict):
         default = {
             Attribute.CODE.ORIGIN: lambda left, right: Origin(Origin.IGP),
             Attribute.CODE.AS_PATH: lambda left, right: (
-                ASPath([])
+                ASPath([])  # type: ignore[arg-type]
                 if left == right
                 else ASPath(
-                    [
+                    [  # type: ignore[arg-type]
                         SEQUENCE(
                             [
                                 local_asn,

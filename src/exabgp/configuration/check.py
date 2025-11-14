@@ -69,7 +69,7 @@ def _negotiated(neighbor: Dict[str, Any]) -> Negotiated:
         if neighbor['capability']['add-path']:
             path[f] = neighbor['capability']['add-path']
 
-    capa = Capabilities().new(neighbor, False)
+    capa = Capabilities().new(neighbor, False)  # type: ignore[arg-type]
     capa[Capability.CODE.ADD_PATH] = path
     capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
     # capa[Capability.CODE.FOUR_BYTES_ASN] = True
@@ -117,7 +117,7 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
                 log.debug(lambda: '')  # new line
 
                 pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
-                update = Update.unpack_message(pack1s, Direction.IN, negotiated)
+                update = Update.unpack_message(pack1s, Direction.IN, negotiated)  # type: ignore[arg-type]
 
                 change2 = Change(update.nlris[0], update.attributes)
                 str2 = change2.extensive()
@@ -305,7 +305,7 @@ def check_open(neighbor: Dict[str, Any], raw: bytes) -> None:
     sys.excepthook = traceback.print_exception
 
     try:
-        o = Open.unpack_message(raw, Direction.IN, _negotiated(neighbor))
+        o = Open.unpack_message(raw, Direction.IN, _negotiated(neighbor))  # type: ignore[arg-type]
         sys.stdout.write(f'{o}\n')
     except Exception:
         sys.stdout.write('\n')
@@ -351,7 +351,7 @@ def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
 
         try:
             # This does not take the BGP header - let's assume we will not break that :)
-            update = Update.unpack_message(injected, Direction.IN, negotiated)
+            update = Update.unpack_message(injected, Direction.IN, negotiated)  # type: ignore[arg-type]
         except Notify:
             import traceback
 
@@ -394,7 +394,7 @@ def _make_notification(neighbor: Dict[str, Any], raw: bytes) -> Optional[Notific
 
     try:
         # This does not take the BGP header - let's assume we will not break that :)
-        notification = Notification.unpack_message(injected, Direction.IN, negotiated)
+        notification = Notification.unpack_message(injected, Direction.IN, negotiated)  # type: ignore[arg-type]
     except Notify:
         import traceback
 

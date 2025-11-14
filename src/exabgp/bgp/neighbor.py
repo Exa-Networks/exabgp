@@ -182,7 +182,7 @@ class Neighbor(dict):
         return self.name()
 
     def make_rib(self) -> None:
-        self.rib = RIB(self.name(), self['adj-rib-in'], self['adj-rib-out'], self._families)
+        self.rib = RIB(self.name(), self['adj-rib-in'], self['adj-rib-out'], self._families)  # type: ignore[arg-type]
 
     # will resend all the routes once we reconnect
     def reset_rib(self) -> None:

@@ -290,7 +290,7 @@ class Peer:
                 lambda: 'we already have a peer in state established for {}'.format(connection.name()),
                 self.id(),
             )
-            return connection.notification(6, 7, 'could not accept the connection, already established')  # type: ignore[union-attr]
+            return connection.notification(6, 7, 'could not accept the connection, already established')  # type: ignore[union-attr,arg-type]
 
         # 6.8 The convention is to compare the BGP Identifiers of the peers
         # involved in the collision and to retain only the connection initiated
@@ -313,7 +313,7 @@ class Peer:
                 return connection.notification(  # type: ignore[union-attr]
                     6,
                     7,
-                    'could not accept the connection, as another connection is already in open-confirm and will go through',
+                    'could not accept the connection, as another connection is already in open-confirm and will go through',  # type: ignore[arg-type]
                 )
 
         # accept the connection
@@ -326,7 +326,7 @@ class Peer:
             )
             self._close('closing outgoing connection as we have another incoming on with higher router-id')
 
-        self.proto = Protocol(self).accept(connection)
+        self.proto = Protocol(self).accept(connection)  # type: ignore[arg-type]
         self.generator = None
         # Let's make sure we do some work with this connection
         self._delay.reset()
@@ -499,7 +499,7 @@ class Peer:
         # Every last asm message should be re-announced on restart
         for family in self.neighbor.asm:
             if family in self.neighbor.families():
-                self.neighbor.messages.appendleft(self.neighbor.asm[family])
+                self.neighbor.messages.appendleft(self.neighbor.asm[family])  # type: ignore[arg-type]
 
         operational = None
         refresh = None
@@ -560,7 +560,7 @@ class Peer:
                     if not operational:
                         new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                         if new_operational:
-                            operational = self.proto.new_operational(new_operational, self.proto.negotiated)  # type: ignore[union-attr]
+                            operational = self.proto.new_operational(new_operational, self.proto.negotiated)  # type: ignore[union-attr,arg-type]
 
                     if operational:
                         try:
@@ -577,7 +577,7 @@ class Peer:
                     if not refresh:
                         new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                         if new_refresh:
-                            refresh = self.proto.new_refresh(new_refresh)  # type: ignore[union-attr]
+                            refresh = self.proto.new_refresh(new_refresh)  # type: ignore[union-attr,arg-type]
 
                     if refresh:
                         try:
@@ -662,7 +662,7 @@ class Peer:
                 )
                 self.stop()
 
-            self._reset('closing connection', network)
+            self._reset('closing connection', network)  # type: ignore[arg-type]
             return
 
         # NOTIFY THE PEER OF AN ERROR
@@ -678,7 +678,7 @@ class Peer:
                         pass
                 except (NetworkError, ProcessError):
                     log.error(lambda: 'Notification not sent', self.id())
-                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
+                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)  # type: ignore[arg-type]
             else:
                 self._reset()
 
@@ -703,13 +703,13 @@ class Peer:
 
             self._reset(
                 f'notification received ({notification.code},{notification.subcode})',
-                notification,
+                notification,  # type: ignore[arg-type]
             )
             return
 
         # PROBLEM WRITING TO OUR FORKED PROCESSES
         except ProcessError as process:
-            self._reset('process problem', process)
+            self._reset('process problem', process)  # type: ignore[arg-type]
             return
 
         # ....

@@ -40,12 +40,12 @@ class AnnounceLabel(AnnouncePath):
     syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
     known = dict(
-        AnnouncePath.known,
+        AnnouncePath.known,  # type: ignore[arg-type]
         label=label,
     )
 
     action = dict(
-        AnnouncePath.action,
+        AnnouncePath.action,  # type: ignore[arg-type]
         label='nlri-set',
     )
 

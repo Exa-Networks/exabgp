@@ -235,7 +235,7 @@ class Processes:
 
                 poller = select.poll()
                 poller.register(
-                    proc.stdout,
+                    proc.stdout,  # type: ignore[arg-type]
                     select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
                 )
 
@@ -391,37 +391,37 @@ class Processes:
         return closure
 
     # invalid-name
-    @silenced
+    @silenced  # type: ignore[arg-type]
     def up(self, neighbor: 'Neighbor') -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].up(neighbor), neighbor)
 
-    @silenced
+    @silenced  # type: ignore[arg-type]
     def connected(self, neighbor: 'Neighbor') -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].connected(neighbor), neighbor)
 
-    @silenced
+    @silenced  # type: ignore[arg-type]
     def down(self, neighbor: 'Neighbor', reason: str) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].down(neighbor, reason), neighbor)
 
-    @silenced
+    @silenced  # type: ignore[arg-type]
     def negotiated(self, neighbor: 'Neighbor', negotiated: Negotiated) -> None:
         for process in self._notify(neighbor, 'negotiated'):
             self.write(process, self._encoder[process].negotiated(neighbor, negotiated), neighbor)
 
-    @silenced
+    @silenced  # type: ignore[arg-type]
     def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> None:
         for process in self._notify(neighbor, 'fsm'):
             self.write(process, self._encoder[process].fsm(neighbor, fsm), neighbor)
 
-    @silenced
+    @silenced  # type: ignore[arg-type]
     def signal(self, neighbor: 'Neighbor', signal: str) -> None:
         for process in self._notify(neighbor, 'signal'):
             self.write(process, self._encoder[process].signal(neighbor, signal), neighbor)
 
-    @silenced
+    @silenced  # type: ignore[arg-type]
     def packets(
         self, neighbor: 'Neighbor', direction: str, category: int, negotiated: Negotiated, header: str, body: str
     ) -> None:
@@ -432,7 +432,7 @@ class Processes:
                 neighbor,
             )
 
-    @silenced
+    @silenced  # type: ignore[arg-type]
     def notification(
         self, neighbor: 'Neighbor', direction: str, code: int, subcode: int, data: str, header: str, body: str
     ) -> None:
@@ -443,7 +443,7 @@ class Processes:
                 neighbor,
             )
 
-    @silenced
+    @silenced  # type: ignore[arg-type]
     def message(
         self,
         message_id: int,
@@ -475,15 +475,15 @@ class Processes:
     def _open(
         self, peer: 'Peer', direction: str, message: 'Open', negotiated: Negotiated, header: str, body: str
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.OPEN.SHORT}'):
-            self.write(process, self._encoder[process].open(peer, direction, message, negotiated, header, body), peer)
+        for process in self._notify(peer, f'{direction}-{Message.CODE.OPEN.SHORT}'):  # type: ignore[arg-type]
+            self.write(process, self._encoder[process].open(peer, direction, message, negotiated, header, body), peer)  # type: ignore[arg-type]
 
     @register_process(Message.CODE.UPDATE)
     def _update(
         self, peer: 'Peer', direction: str, update: 'Update', negotiated: Negotiated, header: str, body: str
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
-            self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)
+        for process in self._notify(peer, f'{direction}-{Message.CODE.UPDATE.SHORT}'):  # type: ignore[arg-type]
+            self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)  # type: ignore[arg-type]
 
     @register_process(Message.CODE.NOTIFICATION)
     def _notification(

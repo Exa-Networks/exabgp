@@ -226,7 +226,7 @@ def as_path(tokeniser: 'Tokeniser') -> ASPath:
 
         elif len(as_path) == 0:
             try:
-                return ASPath(ASN.from_string(value))
+                return ASPath(ASN.from_string(value))  # type: ignore[arg-type]
             except ValueError:
                 raise ValueError('could not parse as-path') from None
         else:
@@ -247,7 +247,7 @@ def as_path(tokeniser: 'Tokeniser') -> ASPath:
                 if value in ('[', '('):
                     break
 
-                return ASPath(as_path)
+                return ASPath(as_path)  # type: ignore[arg-type]
 
             try:
                 insert.append(ASN.from_string(value))
@@ -321,7 +321,7 @@ def cluster_list(tokeniser: 'Tokeniser') -> ClusterList:
             clusterids.append(ClusterID(value))
         if not clusterids:
             raise ValueError('no cluster-id in the cluster list')
-        return ClusterList(clusterids)
+        return ClusterList(clusterids)  # type: ignore[arg-type]
     except ValueError:
         raise ValueError('invalud cluster list') from None
 
@@ -433,9 +433,9 @@ def large_community(tokeniser: 'Tokeniser') -> LargeCommunities:
             lc = _large_community(value)
             if lc in large_communities.communities:
                 continue
-            large_communities.add(lc)
+            large_communities.add(lc)  # type: ignore[arg-type]
     else:
-        large_communities.add(_large_community(value))
+        large_communities.add(_large_community(value))  # type: ignore[arg-type]
 
     return large_communities
 
@@ -559,9 +559,9 @@ def extended_community(tokeniser: 'Tokeniser') -> ExtendedCommunities:
             value = tokeniser()
             if value == ']':
                 break
-            communities.add(_extended_community(value))
+            communities.add(_extended_community(value))  # type: ignore[arg-type]
     else:
-        communities.add(_extended_community(value))
+        communities.add(_extended_community(value))  # type: ignore[arg-type]
 
     return communities
 
