@@ -7,7 +7,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.ip import IP, IPv4, IPv6
-from exabgp.protocol.family import _AFI
+from exabgp.protocol.family import AFI
 from exabgp.bgp.message import Action
 
 # +-----------------------------------+
@@ -38,7 +38,7 @@ class SourceJoin(MVPN):
     def __init__(
         self,
         rd: RouteDistinguisher,
-        afi: _AFI,
+        afi: AFI,
         source: IP,
         group: IP,
         source_as: int,
@@ -89,7 +89,7 @@ class SourceJoin(MVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes, afi: _AFI) -> SourceJoin:
+    def unpack(cls, data: bytes, afi: AFI) -> SourceJoin:
         datalen = len(data)
         if datalen not in (MVPN_SOURCEJOIN_IPV4_LENGTH, MVPN_SOURCEJOIN_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Invalid C-Multicast Route length ({datalen} bytes).')

@@ -14,7 +14,7 @@ from collections import deque, Counter
 from datetime import timedelta
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
-from exabgp.protocol.family import AFI, _AFI, _SAFI
+from exabgp.protocol.family import AFI, SAFI
 # from exabgp.util.dns import host, domain
 
 from exabgp.bgp.message import Message
@@ -106,16 +106,16 @@ class Neighbor(dict):
     auto_discovery: bool
     range_size: int
     generated: bool
-    _families: List[Tuple[_AFI, _SAFI]]
-    _nexthop: List[Tuple[_AFI, _SAFI, _AFI]]
-    _addpath: List[Tuple[_AFI, _SAFI]]
+    _families: List[Tuple[AFI, SAFI]]
+    _nexthop: List[Tuple[AFI, SAFI, AFI]]
+    _addpath: List[Tuple[AFI, SAFI]]
     rib: Optional[RIB]
     changes: List[Change]
     previous: Optional[Change]
-    eor: deque[Tuple[_AFI, _SAFI]]
-    asm: Dict[Tuple[_AFI, _SAFI], bool]
+    eor: deque[Tuple[AFI, SAFI]]
+    asm: Dict[Tuple[AFI, SAFI], bool]
     messages: deque[Message]
-    refresh: deque[Tuple[_AFI, _SAFI]]
+    refresh: deque[Tuple[AFI, SAFI]]
     counter: Counter[str]
     uid: str
 
@@ -206,24 +206,24 @@ class Neighbor(dict):
         peer_as = self['peer-as'] if self['peer-as'] is not None else 'auto'
         return f'neighbor {self["peer-address"]} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self["router-id"]} family-allowed {session}'
 
-    def families(self) -> List[Tuple[_AFI, _SAFI]]:
+    def families(self) -> List[Tuple[AFI, SAFI]]:
         # this list() is important .. as we use the function to modify self._families
         return list(self._families)
 
-    def nexthops(self) -> List[Tuple[_AFI, _SAFI, _AFI]]:
+    def nexthops(self) -> List[Tuple[AFI, SAFI, AFI]]:
         # this list() is important .. as we use the function to modify self._nexthop
         return list(self._nexthop)
 
-    def addpaths(self) -> List[Tuple[_AFI, _SAFI]]:
+    def addpaths(self) -> List[Tuple[AFI, SAFI]]:
         # this list() is important .. as we use the function to modify self._add_path
         return list(self._addpath)
 
-    def add_family(self, family: Tuple[_AFI, _SAFI]) -> None:
+    def add_family(self, family: Tuple[AFI, SAFI]) -> None:
         # the families MUST be sorted for neighbor indexing name to be predictable for API users
         # this list() is important .. as we use the function to modify self._families
         if family not in self.families():
             afi, safi = family
-            d: Dict[_AFI, List[_SAFI]] = dict()
+            d: Dict[AFI, List[SAFI]] = dict()
             d[afi] = [
                 safi,
             ]
@@ -231,16 +231,16 @@ class Neighbor(dict):
                 d.setdefault(afi, []).append(safi)
             self._families = [(afi, safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
-    def add_nexthop(self, afi: _AFI, safi: _SAFI, nhafi: _AFI) -> None:
+    def add_nexthop(self, afi: AFI, safi: SAFI, nhafi: AFI) -> None:
         if (afi, safi, nhafi) not in self._nexthop:
             self._nexthop.append((afi, safi, nhafi))
 
-    def add_addpath(self, family: Tuple[_AFI, _SAFI]) -> None:
+    def add_addpath(self, family: Tuple[AFI, SAFI]) -> None:
         # the families MUST be sorted for neighbor indexing name to be predictable for API users
         # this list() is important .. as we use the function to modify self._add_path
         if family not in self.addpaths():
             afi, safi = family
-            d: Dict[_AFI, List[_SAFI]] = dict()
+            d: Dict[AFI, List[SAFI]] = dict()
             d[afi] = [
                 safi,
             ]
@@ -248,15 +248,15 @@ class Neighbor(dict):
                 d.setdefault(afi, []).append(safi)
             self._addpath = [(afi, safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
-    def remove_family(self, family: Tuple[_AFI, _SAFI]) -> None:
+    def remove_family(self, family: Tuple[AFI, SAFI]) -> None:
         if family in self.families():
             self._families.remove(family)
 
-    def remove_nexthop(self, afi: _AFI, safi: _SAFI, nhafi: _AFI) -> None:
+    def remove_nexthop(self, afi: AFI, safi: SAFI, nhafi: AFI) -> None:
         if (afi, safi, nhafi) in self.nexthops():
             self._nexthop.remove((afi, safi, nhafi))
 
-    def remove_addpath(self, family: Tuple[_AFI, _SAFI]) -> None:
+    def remove_addpath(self, family: Tuple[AFI, SAFI]) -> None:
         if family in self.addpaths():
             self._addpath.remove(family)
 
@@ -311,7 +311,7 @@ class Neighbor(dict):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def ip_self(self, afi: _AFI) -> IP:
+    def ip_self(self, afi: AFI) -> IP:
         if afi == self['local-address'].afi:
             return self['local-address']
 

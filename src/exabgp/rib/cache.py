@@ -13,15 +13,15 @@ from exabgp.bgp.message import Action
 
 if TYPE_CHECKING:
     from exabgp.rib.change import Change
-    from exabgp.protocol.family import _AFI, _SAFI
+    from exabgp.protocol.family import AFI, SAFI
 
 
 class Cache:
     cache: bool
-    families: Set[Tuple[_AFI, _SAFI]]
-    _seen: Dict[Tuple[_AFI, _SAFI], Dict[bytes, Change]]
+    families: Set[Tuple[AFI, SAFI]]
+    _seen: Dict[Tuple[AFI, SAFI], Dict[bytes, Change]]
 
-    def __init__(self, cache: bool, families: Set[Tuple[_AFI, _SAFI]]) -> None:
+    def __init__(self, cache: bool, families: Set[Tuple[AFI, SAFI]]) -> None:
         self.cache = cache
         self._seen = {}
         # self._seen[family][change-index] = change
@@ -33,14 +33,14 @@ class Cache:
     def clear_cache(self) -> None:
         self._seen = {}
 
-    def delete_cached_family(self, families: Set[Tuple[_AFI, _SAFI]]) -> None:
+    def delete_cached_family(self, families: Set[Tuple[AFI, SAFI]]) -> None:
         for family in self._seen.keys():
             if family not in families:
                 del self._seen[family]
 
     def cached_changes(
         self,
-        families: Optional[List[Tuple[_AFI, _SAFI]]] = None,
+        families: Optional[List[Tuple[AFI, SAFI]]] = None,
         actions: Tuple[int, ...] = (Action.ANNOUNCE,),
     ) -> Iterator[Change]:
         # families can be None or []

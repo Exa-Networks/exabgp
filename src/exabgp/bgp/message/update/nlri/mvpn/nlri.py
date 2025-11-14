@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.family import AFI, _AFI
-from exabgp.protocol.family import SAFI, _SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import Action
 
@@ -36,7 +36,7 @@ class MVPN(NLRI):
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
 
-    def __init__(self, afi: _AFI, action: Action = Action.UNSET, addpath: Optional[int] = None) -> None:
+    def __init__(self, afi: AFI, action: Action = Action.UNSET, addpath: Optional[int] = None) -> None:
         NLRI.__init__(self, afi=afi, safi=SAFI.mcast_vpn, action=action)
         self._packed: bytes = b''
 
@@ -78,7 +78,7 @@ class MVPN(NLRI):
         return klass
 
     @classmethod
-    def unpack_nlri(cls, afi: _AFI, safi: _SAFI, bgp: bytes, action: Action, addpath: Any) -> Tuple[MVPN, bytes]:
+    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> Tuple[MVPN, bytes]:
         code = bgp[0]
         length = bgp[1]
 
@@ -97,7 +97,7 @@ class MVPN(NLRI):
 
 
 class GenericMVPN(MVPN):
-    def __init__(self, afi: _AFI, code: int, packed: bytes) -> None:
+    def __init__(self, afi: AFI, code: int, packed: bytes) -> None:
         MVPN.__init__(self, afi)
         self.CODE = code
         self._pack(packed)
