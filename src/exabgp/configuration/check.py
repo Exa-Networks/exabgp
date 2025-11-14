@@ -206,11 +206,11 @@ def check_message(neighbor: Dict[str, Any], message: str) -> bool:
     # size = (raw[16] << 16) + raw[17]
 
     if kind == BGP_MSG_OPEN:
-        return check_open(neighbor, raw[19:])
+        return check_open(neighbor, raw[19:])  # type: ignore[no-any-return]
     if kind == BGP_MSG_UPDATE:
-        return check_update(neighbor, raw)
+        return check_update(neighbor, raw)  # type: ignore[no-any-return]
     if kind == BGP_MSG_NOTIFICATION:
-        return check_notification(raw)
+        return check_notification(raw)  # type: ignore[no-any-return]
 
     sys.stdout.write(f'unknown type {kind}\n')
     return False
@@ -455,7 +455,7 @@ def display_notification(neighbor: Dict[str, Any], raw: bytes) -> bool:
 
 
 def check_notification(raw: bytes) -> bool:
-    notification = Notification.unpack_message(raw[18:], None, None)
+    notification = Notification.unpack_message(raw[18:], None, None)  # type: ignore[no-any-return]
     # XXX: FIXME: should be using logger here
     sys.stdout.write(f'{notification}\n')
     return True

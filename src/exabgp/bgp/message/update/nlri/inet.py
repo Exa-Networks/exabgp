@@ -63,11 +63,11 @@ class INET(NLRI):
 
     def pack_nlri(self, negotiated: 'Negotiated | None' = None) -> bytes:
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
-        return addpath + self.cidr.pack_nlri()
+        return addpath + self.cidr.pack_nlri()  # type: ignore[no-any-return]
 
     def index(self) -> bytes:
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
-        return Family.index(self) + addpath + self.cidr.pack_nlri()
+        return Family.index(self) + addpath + self.cidr.pack_nlri()  # type: ignore[no-any-return]
 
     def prefix(self) -> str:
         return '{}{}'.format(self.cidr.prefix(), str(self.path_info))

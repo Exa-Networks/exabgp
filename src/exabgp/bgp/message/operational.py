@@ -115,20 +115,20 @@ class Operational(Message):
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             data = data[7 : length + 4]
-            return klass(afi, safi, data)  # type: ignore[misc]
+            return klass(afi, safi, data)  # type: ignore[misc,no-any-return]
         if decode == 'query':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
-            return klass(afi, safi, routerid, sequence)  # type: ignore[misc]
+            return klass(afi, safi, routerid, sequence)  # type: ignore[misc,no-any-return]
         if decode == 'counter':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
             counter = unpack('!L', data[15:19])[0]
-            return klass(afi, safi, routerid, sequence, counter)  # type: ignore[misc]
+            return klass(afi, safi, routerid, sequence, counter)  # type: ignore[misc,no-any-return]
         sys.stdout.write('ignoring ATM this kind of message\n')
         return None
 

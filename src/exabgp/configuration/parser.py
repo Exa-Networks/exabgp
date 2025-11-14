@@ -15,7 +15,7 @@ from exabgp.protocol.ip import IPRange
 
 
 def string(tokeniser: object) -> str:
-    return tokeniser()
+    return tokeniser()  # type: ignore[no-any-return]
 
 
 def boolean(tokeniser: object, default: bool) -> bool:

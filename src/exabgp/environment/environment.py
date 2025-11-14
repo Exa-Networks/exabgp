@@ -155,4 +155,6 @@ class Env:
     def __getattr__(cls, name: str) -> HashTable:
         # Allow attribute-style access to configuration sections (e.g., Env.log, Env.debug)
         # Returns HashTable which supports dynamic attribute access
-        return cls._env[name]
+        from typing import cast
+
+        return cast(HashTable, cls._env[name])
