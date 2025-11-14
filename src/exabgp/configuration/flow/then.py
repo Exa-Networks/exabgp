@@ -91,7 +91,7 @@ class ParseFlowThen(Section):
                 None,
             ],
         ],
-    ] = {  # type: ignore[dict-item]
+    ] = {
         'accept': accept,
         'discard': discard,
         'rate-limit': rate_limit,

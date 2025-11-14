@@ -99,9 +99,9 @@ class MPURNLRI(Attribute, Family):
             addpath = negotiated.addpath.send(afi, safi)
 
         while data:
-            nlri, data = NLRI.unpack_nlri(afi, safi, data, Action.WITHDRAW, addpath)  # type: ignore[has-type]
+            nlri, data = NLRI.unpack_nlri(afi, safi, data, Action.WITHDRAW, addpath)
             # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
-            if nlri:  # type: ignore[has-type]
+            if nlri:
                 nlris.append(nlri)
 
         return cls(afi, safi, nlris)
