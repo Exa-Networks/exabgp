@@ -110,8 +110,8 @@ class Application:
             try:
                 line: str = self.Q.popleft()
                 result: Any = self.transcoder.convert(line)
-                self.sub.stdin.write(result)
-                self.sub.stdin.flush()
+                self.sub.stdin.write(result)  # type: ignore[union-attr]
+                self.sub.stdin.flush()  # type: ignore[union-attr]
             except IndexError:
                 # no data on the Q to read
                 time.sleep(0.1)

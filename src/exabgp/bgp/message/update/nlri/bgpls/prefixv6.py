@@ -146,7 +146,7 @@ class PREFIXv6(BGPLS):
                 f'"l3-routing-topology": {int(self.domain)}',
                 f'"protocol-id": {int(self.proto_id)}',
                 f'"node-descriptors": [ {nodes} ]',
-                self.prefix.json(),
+                self.prefix.json(),  # type: ignore[union-attr]
                 f'"nexthop": "{self.nexthop}"',
             ],
         )

@@ -93,7 +93,7 @@ class Protocol:
         self.connection = incoming
 
         if self.peer.neighbor.api['neighbor-changes']:
-            self.peer.reactor.processes.connected(self.peer.neighbor)
+            self.peer.reactor.processes.connected(self.peer.neighbor)  # type: ignore[union-attr]
 
         # very important - as we use this function on __init__
         return self
@@ -116,7 +116,7 @@ class Protocol:
             yield False
 
         if self.peer.neighbor.api['neighbor-changes']:
-            self.peer.reactor.processes.connected(self.peer.neighbor)
+            self.peer.reactor.processes.connected(self.peer.neighbor)  # type: ignore[union-attr]
 
         if not local:
             self.neighbor['local-address'] = IP.create(self.connection.local)
@@ -141,7 +141,7 @@ class Protocol:
 
         if consolidate:
             if packets:
-                self.peer.reactor.processes.message(
+                self.peer.reactor.processes.message(  # type: ignore[union-attr]
                     message.ID,
                     self.peer.neighbor,
                     direction,
@@ -151,7 +151,7 @@ class Protocol:
                     raw[19:],
                 )
             else:
-                self.peer.reactor.processes.message(
+                self.peer.reactor.processes.message(  # type: ignore[union-attr]
                     message.ID,
                     self.peer.neighbor,
                     direction,
@@ -162,7 +162,7 @@ class Protocol:
                 )
         else:
             if packets:
-                self.peer.reactor.processes.packets(
+                self.peer.reactor.processes.packets(  # type: ignore[union-attr]
                     self.peer.neighbor,
                     direction,
                     int(message.ID),
@@ -171,7 +171,7 @@ class Protocol:
                     raw[19:],
                 )
             if parsed:
-                self.peer.reactor.processes.message(
+                self.peer.reactor.processes.message(  # type: ignore[union-attr]
                     message.ID,
                     self.peer.neighbor,
                     direction,
@@ -186,20 +186,20 @@ class Protocol:
 
         code: str = 'send-{}'.format(Message.CODE.short(message.ID))
         self.peer.stats[code] += 1
-        if self.neighbor.api.get(code, False):
+        if self.neighbor.api.get(code, False):  # type: ignore[union-attr]
             self._to_api('send', message, raw)
 
-        for boolean in self.connection.writer(raw):
+        for boolean in self.connection.writer(raw):  # type: ignore[union-attr]
             yield boolean
 
     def send(self, raw: bytes) -> Generator[bool, None, None]:
         code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
         self.peer.stats[code] += 1
-        if self.neighbor.api.get(code, False):
+        if self.neighbor.api.get(code, False):  # type: ignore[union-attr]
             message: Update = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)
             self._to_api('send', message, raw)
 
-        for boolean in self.connection.writer(raw):
+        for boolean in self.connection.writer(raw):  # type: ignore[union-attr]
             yield boolean
 
     # Read from network .......................................................
@@ -214,13 +214,13 @@ class Protocol:
 
         body, header = b'', b''  # just because pylint/pylama are getting more clever
 
-        for length, msg_id, header, body, notify in self.connection.reader():
+        for length, msg_id, header, body, notify in self.connection.reader():  # type: ignore[union-attr]
             # internal issue
             if notify:
                 code = 'receive-{}'.format(Message.CODE.NOTIFICATION.SHORT)
-                if self.neighbor.api.get(code, False):
+                if self.neighbor.api.get(code, False):  # type: ignore[union-attr]
                     if consolidate:
-                        self.peer.reactor.processes.notification(
+                        self.peer.reactor.processes.notification(  # type: ignore[union-attr]
                             self.peer.neighbor,
                             'receive',
                             notify.code,
@@ -231,7 +231,7 @@ class Protocol:
                             body,
                         )
                     elif parsed:
-                        self.peer.reactor.processes.notification(
+                        self.peer.reactor.processes.notification(  # type: ignore[union-attr]
                             self.peer.neighbor,
                             'receive',
                             notify.code,
@@ -242,7 +242,7 @@ class Protocol:
                             b'',
                         )
                     elif packets:
-                        self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)
+                        self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)  # type: ignore[union-attr]
                 # XXX: is notify not already Notify class ?
                 raise Notify(notify.code, notify.subcode, str(notify))
 
@@ -255,16 +255,16 @@ class Protocol:
 
             log.debug(
                 lambda msg_id=msg_id: '<< message of type {}'.format(Message.CODE.name(msg_id)),
-                self.connection.session(),
+                self.connection.session(),  # type: ignore[union-attr]
             )
 
             code = 'receive-{}'.format(Message.CODE.short(msg_id))
             self.peer.stats[code] += 1
-            for_api = self.neighbor.api.get(code, False)
+            for_api = self.neighbor.api.get(code, False)  # type: ignore[union-attr]
 
             if for_api and packets and not consolidate:
-                negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None
-                self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, negotiated, header, body)
+                negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None  # type: ignore[union-attr]
+                self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, negotiated, header, body)  # type: ignore[union-attr]
 
             if msg_id == Message.CODE.UPDATE:
                 if not self.neighbor['adj-rib-in'] and not (for_api or self.log_routes) and not (parsed or consolidate):
@@ -276,9 +276,9 @@ class Protocol:
             except (KeyboardInterrupt, SystemExit, Notify):
                 raise
             except Exception as exc:
-                log.debug(lambda msg_id=msg_id: 'could not decode message "%d"' % msg_id, self.connection.session())
-                log.debug(lambda exc=exc: '{}'.format(str(exc)), self.connection.session())
-                log.debug(lambda: traceback.format_exc(), self.connection.session())
+                log.debug(lambda msg_id=msg_id: 'could not decode message "%d"' % msg_id, self.connection.session())  # type: ignore[union-attr]
+                log.debug(lambda exc=exc: '{}'.format(str(exc)), self.connection.session())  # type: ignore[union-attr]
+                log.debug(lambda: traceback.format_exc(), self.connection.session())  # type: ignore[union-attr]
                 raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
                 # raise Notify(5,0,'unknown message received')
 
@@ -288,9 +288,9 @@ class Protocol:
                         nlri.action = Action.WITHDRAW
 
             if for_api:
-                negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None
+                negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None  # type: ignore[union-attr]
                 if consolidate:
-                    self.peer.reactor.processes.message(
+                    self.peer.reactor.processes.message(  # type: ignore[union-attr]
                         msg_id,
                         self.neighbor,
                         'receive',
@@ -300,7 +300,7 @@ class Protocol:
                         body,
                     )
                 elif parsed:
-                    self.peer.reactor.processes.message(msg_id, self.neighbor, 'receive', message, negotiated, b'', b'')
+                    self.peer.reactor.processes.message(msg_id, self.neighbor, 'receive', message, negotiated, b'', b'')  # type: ignore[union-attr]
 
             if message.TYPE == Notification.TYPE:
                 raise message
@@ -316,29 +316,29 @@ class Protocol:
             raise Notify(*error)
 
         if self.neighbor.api['negotiated']:
-            self.peer.reactor.processes.negotiated(self.peer.neighbor, self.negotiated)
+            self.peer.reactor.processes.negotiated(self.peer.neighbor, self.negotiated)  # type: ignore[union-attr]
 
         if self.negotiated.mismatch:
             log.warning(
                 lambda: '--------------------------------------------------------------------',
-                self.connection.session(),
+                self.connection.session(),  # type: ignore[union-attr]
             )
             log.warning(
                 lambda: 'the connection can not carry the following family/families',
-                self.connection.session(),
+                self.connection.session(),  # type: ignore[union-attr]
             )
             for reason, (afi, safi) in self.negotiated.mismatch:
                 log.warning(
                     lambda afi=afi, reason=reason, safi=safi: f' - {reason} is not configured for {afi}/{safi}',
-                    self.connection.session(),
+                    self.connection.session(),  # type: ignore[union-attr]
                 )
             log.warning(
                 lambda: 'therefore no routes of this kind can be announced on the connection',
-                self.connection.session(),
+                self.connection.session(),  # type: ignore[union-attr]
             )
             log.warning(
                 lambda: '--------------------------------------------------------------------',
-                self.connection.session(),
+                self.connection.session(),  # type: ignore[union-attr]
             )
 
     def read_open(self, ip: str) -> Generator[Union[Open, NOP], None, None]:
@@ -355,7 +355,7 @@ class Protocol:
                 'The first packet received is not an open message ({})'.format(received_open),
             )
 
-        log.debug(lambda: '<< {}'.format(received_open), self.connection.session())
+        log.debug(lambda: '<< {}'.format(received_open), self.connection.session())  # type: ignore[union-attr]
         yield received_open
 
     def read_keepalive(self) -> Generator[Union[KeepAlive, NOP], None, None]:
@@ -394,7 +394,7 @@ class Protocol:
         for _ in self.write(sent_open):
             yield _NOP
 
-        log.debug(lambda: '>> {}'.format(sent_open), self.connection.session())
+        log.debug(lambda: '>> {}'.format(sent_open), self.connection.session())  # type: ignore[union-attr]
         yield sent_open
 
     def new_keepalive(self, comment: str = '') -> Generator[Union[KeepAlive, NOP], None, None]:
@@ -405,7 +405,7 @@ class Protocol:
 
         log.debug(
             lambda: f'>> KEEPALIVE{f" ({comment})" if comment else ""}',
-            self.connection.session(),
+            self.connection.session(),  # type: ignore[union-attr]
         )
 
         yield keepalive
@@ -415,12 +415,12 @@ class Protocol:
             yield _NOP
         log.debug(
             lambda: f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
-            self.connection.session(),
+            self.connection.session(),  # type: ignore[union-attr]
         )
         yield notification
 
     def new_update(self, include_withdraw: bool) -> Generator[Union[Update, NOP], None, None]:
-        updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
+        updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])  # type: ignore[union-attr]
         number: int = 0
         for update in updates:
             for message in update.messages(self.negotiated, include_withdraw):
@@ -429,14 +429,14 @@ class Protocol:
                     # boolean is a transient network error we already announced
                     yield _NOP
         if number:
-            log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())
+            log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())  # type: ignore[union-attr]
         yield _UPDATE
 
     def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Union[EOR, NOP], None, None]:
         eor: EOR = EOR(afi, safi)
         for _ in self.write(eor):
             yield _NOP
-        log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self.connection.session())
+        log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self.connection.session())  # type: ignore[union-attr]
         yield eor
 
     def new_eors(
@@ -467,11 +467,11 @@ class Protocol:
     ) -> Generator[Union[Operational, NOP], None, None]:
         for _ in self.write(operational, negotiated):
             yield _NOP
-        log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self.connection.session())
+        log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self.connection.session())  # type: ignore[union-attr]
         yield operational
 
     def new_refresh(self, refresh: RouteRefresh) -> Generator[Union[RouteRefresh, NOP], None, None]:
         for _ in self.write(refresh, None):
             yield _NOP
-        log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self.connection.session())
+        log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self.connection.session())  # type: ignore[union-attr]
         yield refresh

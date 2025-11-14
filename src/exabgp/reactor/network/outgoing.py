@@ -55,7 +55,7 @@ class Outgoing(Connection):
             asynchronous(self.io, self.peer)
             return None
         except Exception as exc:
-            self.io.close()
+            self.io.close()  # type: ignore[union-attr]
             self.io = None
             return exc
 
@@ -68,7 +68,7 @@ class Outgoing(Connection):
             connect(self.io, self.peer, self.port, self.afi, self.md5)
             return None
         except Exception as exc:
-            self.io.close()
+            self.io.close()  # type: ignore[union-attr]
             self.io = None
             return exc
 
@@ -101,7 +101,7 @@ class Outgoing(Connection):
             if connected:
                 self.success()
                 if not self.local:
-                    self.local = self.io.getsockname()[0]
+                    self.local = self.io.getsockname()[0]  # type: ignore[union-attr]
                 yield True
                 return
 

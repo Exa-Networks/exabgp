@@ -180,7 +180,7 @@ class SequencedOperationalFamily(OperationalFamily):
         self._routerid: Optional[RouterID] = self.routerid
 
     def message(self, negotiated: Negotiated) -> bytes:
-        self.sent_routerid: RouterID = self.routerid if self.routerid else negotiated.sent_open.router_id
+        self.sent_routerid: RouterID = self.routerid if self.routerid else negotiated.sent_open.router_id  # type: ignore[union-attr]
         if self.sequence is None:
             self.sent_sequence: int = (self.__sequence_number.setdefault(self.routerid, 0) + 1) % 0xFFFFFFFF
             self.__sequence_number[self.sent_routerid] = self.sent_sequence

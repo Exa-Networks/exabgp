@@ -392,7 +392,7 @@ Neighbor {peer-address}
         changes = ''
         if with_changes:
             changes += '\nstatic { '
-            for change in neighbor.rib.outgoing.queued_changes():
+            for change in neighbor.rib.outgoing.queued_changes():  # type: ignore[union-attr]
                 changes += f'\n\t\t{change.extensive()}'
             changes += '\n}'
 
@@ -443,7 +443,7 @@ Neighbor {peer-address}
 
         apis = ''
 
-        for process in neighbor.api.get('processes', []):
+        for process in neighbor.api.get('processes', []):  # type: ignore[union-attr]
             _global = []
             _receive = []
             _send = []

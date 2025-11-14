@@ -129,7 +129,7 @@ class MAC(EVPN):
             + bytes([self.maclen])
             + self.mac.pack()
             + bytes([len(self.ip) * 8 if self.ip else 0])
-            + (self.ip.pack() + self.label.pack() if self.ip else self.label.pack())
+            + (self.ip.pack() + self.label.pack() if self.ip else self.label.pack())  # type: ignore[union-attr]
         )
         # fmt: on
         return self._packed
@@ -196,7 +196,7 @@ class MAC(EVPN):
         content += '{}, '.format(self.esi.json())
         content += '{}, '.format(self.etag.json())
         content += '{}, '.format(self.mac.json())
-        content += self.label.json()
+        content += self.label.json()  # type: ignore[union-attr]
         if self.ip:
             content += ', "ip": "{}"'.format(str(self.ip))
         return '{{{} }}'.format(content)

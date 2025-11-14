@@ -283,7 +283,7 @@ class NumericString:
         if op in [NumericOperator.TRUE, NumericOperator.FALSE]:
             return self._string[op]
         # ugly hack as dynamic languages are what they are and use used __str__ in the past
-        value = self.value.short() if hasattr(self.value, 'short') else str(self.value)
+        value = self.value.short() if hasattr(self.value, 'short') else str(self.value)  # type: ignore[union-attr]
         return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), value)
 
     def __str__(self) -> str:
@@ -585,7 +585,7 @@ class Flow(NLRI):
         return len(self.pack())
 
     def add(self, rule: Union[IPrefix, IOperation]) -> bool:
-        ID = rule.ID
+        ID = rule.ID  # type: ignore[union-attr]
         if ID in (FlowDestination.ID, FlowSource.ID):
             # re-enabled multiple source/destination as it is allowed by some vendor
             # if ID in self.rules:
@@ -595,10 +595,10 @@ class Flow(NLRI):
             else:
                 pair = self.rules.get(FlowDestination.ID, [])
             if pair:
-                if rule.afi != pair[0].afi:
+                if rule.afi != pair[0].afi:  # type: ignore[union-attr]
                     return False
             # TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
-            if rule.NAME.endswith('ipv6'):  # better way to check this ?
+            if rule.NAME.endswith('ipv6'):  # type: ignore[union-attr]
                 self.afi = AFI.ipv6
         self.rules.setdefault(ID, []).append(rule)
         return True
@@ -612,12 +612,12 @@ class Flow(NLRI):
             # for each component get all the operation to do
             # the format use does not prevent two opposing rules meaning that no packet can ever match
             for rule in rules:
-                rule.operations &= CommonOperator.EOL ^ 0xFF
-            rules[-1].operations |= CommonOperator.EOL
+                rule.operations &= CommonOperator.EOL ^ 0xFF  # type: ignore[union-attr]
+            rules[-1].operations |= CommonOperator.EOL  # type: ignore[union-attr]
             # and add it to the last rule
             if ID not in (FlowDestination.ID, FlowSource.ID):
                 ordered_rules.append(bytes([ID]))
-            ordered_rules.append(b''.join(rule.pack() for rule in rules))
+            ordered_rules.append(b''.join(rule.pack() for rule in rules))  # type: ignore[union-attr]
 
         components = self.rd.pack() + b''.join(ordered_rules)
 
@@ -639,14 +639,14 @@ class Flow(NLRI):
             r_str: List[str] = []
             for idx, rule in enumerate(rules):
                 # only add ' ' after the first element
-                if idx and not rule.operations & NumericOperator.AND:
+                if idx and not rule.operations & NumericOperator.AND:  # type: ignore[union-attr]
                     r_str.append(' ')
                 # ugly hack as dynamic languages are what they are and use used __str__ in the past
                 r_str.append(rule.short() if hasattr(rule, 'short') else str(rule))
             line = ''.join(r_str)
             if len(r_str) > 1:
                 line = '[ {} ]'.format(line)
-            string.append(' {} {}'.format(rules[0].NAME, line))
+            string.append(' {} {}'.format(rules[0].NAME, line))  # type: ignore[union-attr]
         return ''.join(string)
 
     def extensive(self) -> str:
@@ -664,10 +664,10 @@ class Flow(NLRI):
             s: List[str] = []
             for idx, rule in enumerate(rules):
                 # only add ' ' after the first element
-                if idx and not rule.operations & NumericOperator.AND:
+                if idx and not rule.operations & NumericOperator.AND:  # type: ignore[union-attr]
                     s.append(', ')
                 s.append('"{}"'.format(rule))
-            string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
+            string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))  # type: ignore[union-attr]
         nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not NoNextHop else ''
         rd = '' if self.rd is RouteDistinguisher.NORD else ', {}'.format(self.rd.json())
         compatibility = ', "string": "{}"'.format(self.extensive())

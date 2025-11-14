@@ -210,7 +210,7 @@ class Attributes(dict):
             self._str = ''
             self._json = ''
 
-            for community in attribute.communities:
+            for community in attribute.communities:  # type: ignore[union-attr]
                 self[attribute.ID].add(community)
             return
 
@@ -264,7 +264,7 @@ class Attributes(dict):
                 continue
 
             if code not in keys and code in default:
-                message += default[code](local_asn, peer_asn).pack(negotiated)
+                message += default[code](local_asn, peer_asn).pack(negotiated)  # type: ignore[union-attr]
                 continue
 
             attribute = self[code]

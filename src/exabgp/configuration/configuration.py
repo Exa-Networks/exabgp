@@ -601,7 +601,7 @@ class Configuration(_Configuration):
             return False
 
         instance = self._structure[name].get('class', None)
-        instance.post()
+        instance.post()  # type: ignore[union-attr]
         return True
 
     def run(self, name: str, command: str) -> Union[bool, str]:
