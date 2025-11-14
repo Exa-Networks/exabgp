@@ -212,8 +212,8 @@ class OutgoingRIB(Cache):
         new_attr = self._new_attribute
 
         # add the route to the list to be announced/withdrawn
-        attr_af_nlri.setdefault(change_attr_index, {}).setdefault(change_family, RIBdict({}))[change_index] = change  # type: ignore[arg-type,index]
-        new_nlri[change_index] = change  # type: ignore[index]
+        attr_af_nlri.setdefault(change_attr_index, {}).setdefault(change_family, RIBdict({}))[change_index] = change
+        new_nlri[change_index] = change
         new_attr[change_attr_index] = change.attributes
         self.update_cache(change)
 

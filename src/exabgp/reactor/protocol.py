@@ -103,25 +103,25 @@ class Protocol:
         if self.connection:
             return
 
-        local = self.neighbor['md5-ip'].top() if not self.neighbor.auto_discovery else None  # type: ignore[index]
-        peer = self.neighbor['peer-address'].top()  # type: ignore[index]
-        afi = self.neighbor['peer-address'].afi  # type: ignore[index]
-        md5 = self.neighbor['md5-password']  # type: ignore[index]
-        md5_base64 = self.neighbor['md5-base64']  # type: ignore[index]
-        ttl_out = self.neighbor['outgoing-ttl']  # type: ignore[index]
-        itf = self.neighbor['source-interface']  # type: ignore[index]
-        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)  # type: ignore[arg-type]
+        local = self.neighbor['md5-ip'].top() if not self.neighbor.auto_discovery else None
+        peer = self.neighbor['peer-address'].top()
+        afi = self.neighbor['peer-address'].afi
+        md5 = self.neighbor['md5-password']
+        md5_base64 = self.neighbor['md5-base64']
+        ttl_out = self.neighbor['outgoing-ttl']
+        itf = self.neighbor['source-interface']
+        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
 
         for connected in self.connection.establish():
             yield False
 
-        if self.peer.neighbor.api['neighbor-changes']:  # type: ignore[index]
-            self.peer.reactor.processes.connected(self.peer.neighbor)  # type: ignore[union-attr]
+        if self.peer.neighbor.api['neighbor-changes']:
+            self.peer.reactor.processes.connected(self.peer.neighbor)
 
         if not local:
-            self.neighbor['local-address'] = IP.create(self.connection.local)  # type: ignore[index]
-            if self.neighbor['router-id'] is None and self.neighbor['local-address'].afi == AFI.ipv4:  # type: ignore[index]
-                self.neighbor['router-id'] = self.neighbor['local-address']  # type: ignore[index]
+            self.neighbor['local-address'] = IP.create(self.connection.local)
+            if self.neighbor['router-id'] is None and self.neighbor['local-address'].afi == AFI.ipv4:
+                self.neighbor['router-id'] = self.neighbor['local-address']
 
         yield True
 
