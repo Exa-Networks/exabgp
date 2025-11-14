@@ -30,6 +30,6 @@ class UnRsvpBw(BaseLS):
     LEN = 32
 
     @classmethod
-    def unpack(cls, data: bytes) -> UnRsvpBw:
+    def unpack_attribute(cls, data: bytes) -> UnRsvpBw:
         cls.check(data)
         return cls(unpack('!ffffffff', data))

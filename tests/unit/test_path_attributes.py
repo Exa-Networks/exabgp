@@ -761,7 +761,7 @@ def test_nexthop_pack_unpack_roundtrip() -> None:
     ip_data = packed[3:]
 
     # Unpack to create new NextHop
-    unpacked = NextHop.unpack(ip_data)
+    unpacked = NextHop.unpack_attribute(ip_data)
 
     # Verify they match
     assert str(unpacked) == original_ip
@@ -808,7 +808,7 @@ def test_nexthop_empty_unpack() -> None:
     from exabgp.protocol.ip import NoNextHop
 
     # Unpack empty data
-    result = NextHop.unpack(b'')
+    result = NextHop.unpack_attribute(b'')
 
     # Should return NoNextHop
     assert result == NoNextHop
@@ -840,7 +840,7 @@ def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
     attr_data = packed[3:]
 
     # Unpack
-    unpacked = Aggregator.unpack(attr_data, negotiated)
+    unpacked = Aggregator.unpack_attribute(attr_data, negotiated)
 
     # Verify match
     assert unpacked.asn == original_asn
@@ -868,7 +868,7 @@ def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
     attr_data = packed[3:]
 
     # Unpack
-    unpacked = Aggregator.unpack(attr_data, negotiated)
+    unpacked = Aggregator.unpack_attribute(attr_data, negotiated)
 
     # Verify match
     assert unpacked.asn == original_asn
@@ -931,7 +931,7 @@ def test_originator_id_pack_unpack_roundtrip() -> None:
 
     # Unpack
     negotiated = Mock()
-    unpacked = OriginatorID.unpack(ip_data, negotiated)
+    unpacked = OriginatorID.unpack_attribute(ip_data, negotiated)
 
     # Verify match
     assert str(unpacked) == original_ip
@@ -1000,7 +1000,7 @@ def test_cluster_list_pack_unpack_roundtrip_single() -> None:
 
     # Unpack
     negotiated = Mock()
-    unpacked = ClusterList.unpack(cluster_data, negotiated)
+    unpacked = ClusterList.unpack_attribute(cluster_data, negotiated)
 
     # Verify match
     assert len(unpacked.clusters) == 1
@@ -1025,7 +1025,7 @@ def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
 
     # Unpack
     negotiated = Mock()
-    unpacked = ClusterList.unpack(cluster_data, negotiated)
+    unpacked = ClusterList.unpack_attribute(cluster_data, negotiated)
 
     # Verify match
     assert len(unpacked.clusters) == 3
@@ -1266,7 +1266,7 @@ def test_pmsi_pack_unpack_roundtrip() -> None:
 
     # Unpack
     negotiated = Mock()
-    unpacked = PMSI.unpack(data, negotiated)
+    unpacked = PMSI.unpack_attribute(data, negotiated)
 
     # Verify
     assert unpacked.flags == flags
@@ -1514,7 +1514,7 @@ def test_pmsi_unknown_tunnel_type() -> None:
 
     # Unpack
     negotiated = Mock()
-    unpacked = PMSI.unpack(data, negotiated)
+    unpacked = PMSI.unpack_attribute(data, negotiated)
 
     # Should create unknown PMSI
     assert unpacked.TUNNEL_TYPE == 99

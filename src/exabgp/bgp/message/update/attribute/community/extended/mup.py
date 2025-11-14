@@ -6,12 +6,15 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, TYPE_CHECKING
 
 from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # draft-mpmz-bess-mup-safi-02
 # 0                   1                   2                   3
@@ -55,6 +58,6 @@ class MUPExtendedCommunity(ExtendedCommunity):
         return '%s:%d:%d' % ('mup', self.sgid2, self.sgid4)
 
     @classmethod
-    def unpack(cls, data: bytes) -> MUPExtendedCommunity:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> MUPExtendedCommunity:
         sgid2, sgid4 = unpack('!HL', data[2:8])
         return MUPExtendedCommunity(sgid2, sgid4, False, data[:8])

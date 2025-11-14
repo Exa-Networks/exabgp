@@ -46,7 +46,7 @@ class Srv6Capabilities(BaseLS):
         return register_subsubtlv
 
     @classmethod
-    def unpack(cls, data: bytes) -> Srv6Capabilities:
+    def unpack_attribute(cls, data: bytes) -> Srv6Capabilities:
         flags_value = int.from_bytes(data[0:2], byteorder='big')
         flags = {'O': flags_value & (1 << 6)}
         return cls(flags=flags)

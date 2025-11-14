@@ -33,12 +33,12 @@ class ExtendedCommunities(Communities):
     ID = Attribute.CODE.EXTENDED_COMMUNITY
 
     @staticmethod
-    def unpack(data: bytes, negotiated: Negotiated) -> ExtendedCommunities:
+    def unpack_attribute(data: bytes, negotiated: Negotiated) -> ExtendedCommunities:
         communities = ExtendedCommunities()
         while data:
             if data and len(data) < EXTENDED_COMMUNITY_SIZE:
                 raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data])))
-            communities.add(ExtendedCommunity.unpack(data[:EXTENDED_COMMUNITY_SIZE], negotiated))  # type: ignore[arg-type]
+            communities.add(ExtendedCommunity.unpack_attribute(data[:EXTENDED_COMMUNITY_SIZE], negotiated))  # type: ignore[arg-type]
             data = data[EXTENDED_COMMUNITY_SIZE:]
         return communities
 
@@ -52,11 +52,11 @@ class ExtendedCommunitiesIPv6(Communities):
     ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
 
     @staticmethod
-    def unpack(data: bytes, negotiated: Negotiated) -> ExtendedCommunitiesIPv6:
+    def unpack_attribute(data: bytes, negotiated: Negotiated) -> ExtendedCommunitiesIPv6:
         communities = ExtendedCommunitiesIPv6()
         while data:
             if data and len(data) < EXTENDED_COMMUNITY_IPV6_SIZE:
                 raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
-            communities.add(ExtendedCommunityIPv6.unpack(data[:EXTENDED_COMMUNITY_IPV6_SIZE], negotiated))  # type: ignore[arg-type]
+            communities.add(ExtendedCommunityIPv6.unpack_attribute(data[:EXTENDED_COMMUNITY_IPV6_SIZE], negotiated))  # type: ignore[arg-type]
             data = data[EXTENDED_COMMUNITY_IPV6_SIZE:]
         return communities

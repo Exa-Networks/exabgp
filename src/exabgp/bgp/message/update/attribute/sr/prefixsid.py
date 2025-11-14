@@ -53,7 +53,7 @@ class PrefixSid(Attribute):
         return register_srid
 
     @classmethod
-    def unpack(cls: Type[T], data: bytes, negotiated: Negotiated) -> T:
+    def unpack_attribute(cls: Type[T], data: bytes, negotiated: Negotiated) -> T:
         sr_attrs: List[Any] = []
         while data:
             # Type = 1 octet
@@ -61,7 +61,7 @@ class PrefixSid(Attribute):
             # L = 2 octet  :|
             length: int = unpack('!H', data[1:3])[0]
             if scode in cls.registered_srids:
-                klass: Any = cls.registered_srids[scode].unpack(data[3 : length + 3], length)
+                klass: Any = cls.registered_srids[scode].unpack_attribute(data[3 : length + 3], length)
             else:
                 klass = GenericSRId(scode, data[3 : length + 3])
             klass.TLV = scode
@@ -100,7 +100,7 @@ class GenericSRId:
         return 'Attribute with code [ {} ] not implemented'.format(self.code)
 
     @classmethod
-    def unpack(cls, scode: int, data: bytes) -> GenericSRId:
+    def unpack_attribute(cls, scode: int, data: bytes) -> GenericSRId:
         return cls(code=scode, rep=data)
 
     def json(self, compact: Optional[bool] = None) -> str:

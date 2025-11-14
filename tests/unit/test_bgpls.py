@@ -960,7 +960,7 @@ class TestBGPLSTLVs:
     def test_ip_reach_ipv4(self) -> None:
         """Test IpReach TLV for IPv4"""
         data = b'\x0a\x0a\x00'
-        tlv = IpReach.unpack(data, 3)
+        tlv = IpReach.unpack_attribute(data, 3)
 
         json_output = tlv.json()
         assert 'ip-reachability-tlv' in json_output
@@ -969,7 +969,7 @@ class TestBGPLSTLVs:
     def test_ip_reach_ipv6(self) -> None:
         """Test IpReach TLV for IPv6"""
         data = b'\x7f\x20\x01\x07\x00\x00\x00\x80'
-        tlv = IpReach.unpack(data, 4)
+        tlv = IpReach.unpack_attribute(data, 4)
 
         json_output = tlv.json()
         assert 'ip-reachability-tlv' in json_output
@@ -978,7 +978,7 @@ class TestBGPLSTLVs:
     def test_ospf_route_type(self) -> None:
         """Test OspfRoute TLV"""
         data = b'\x04'
-        tlv = OspfRoute.unpack(data)
+        tlv = OspfRoute.unpack_attribute(data)
 
         json_output = tlv.json()
         assert '"ospf-route-type": 4' in json_output
@@ -986,7 +986,7 @@ class TestBGPLSTLVs:
     def test_srv6_sid_information(self) -> None:
         """Test Srv6SIDInformation TLV"""
         data = b'\xfc\x30\x22\x01\x00\x0d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        tlv = Srv6SIDInformation.unpack(data)
+        tlv = Srv6SIDInformation.unpack_attribute(data)
 
         json_output = tlv.json()
         assert '"srv6-sid": "fc30:2201:d::"' in json_output
@@ -997,15 +997,15 @@ class TestBGPLSTLVs:
         igp_type = 3  # OSPFv2
 
         # First descriptor: AS
-        descriptor1, remain = NodeDescriptor.unpack(data, igp_type)
+        descriptor1, remain = NodeDescriptor.unpack_attribute(data, igp_type)
         assert '"autonomous-system": 65533' in descriptor1.json()
 
         # Second descriptor: BGP-LS Identifier
-        descriptor2, remain = NodeDescriptor.unpack(remain, igp_type)
+        descriptor2, remain = NodeDescriptor.unpack_attribute(remain, igp_type)
         assert '"bgp-ls-identifier": "0"' in descriptor2.json()
 
         # Third descriptor: Router ID
-        descriptor3, remain = NodeDescriptor.unpack(remain, igp_type)
+        descriptor3, remain = NodeDescriptor.unpack_attribute(remain, igp_type)
         assert '"router-id": "10.113.63.240"' in descriptor3.json()
 
 
@@ -1018,7 +1018,7 @@ class TestBGPLSLinkAttributes:
 
         # Admin group mask: 0x000000ff
         data = b'\x00\x00\x00\xff'
-        attr = AdminGroup.unpack(data)
+        attr = AdminGroup.unpack_attribute(data)
 
         assert attr.TLV == 1088
         assert attr.content == 255
@@ -1033,7 +1033,7 @@ class TestBGPLSLinkAttributes:
         # 1 Gbps in bytes/sec as float
         bandwidth = 125000000.0
         data = pack('!f', bandwidth)
-        attr = MaxBw.unpack(data)
+        attr = MaxBw.unpack_attribute(data)
 
         assert attr.TLV == 1089
         assert abs(attr.content - bandwidth) < 1.0
@@ -1045,7 +1045,7 @@ class TestBGPLSLinkAttributes:
 
         bandwidth = 100000000.0
         data = pack('!f', bandwidth)
-        attr = RsvpBw.unpack(data)
+        attr = RsvpBw.unpack_attribute(data)
 
         assert attr.TLV == 1090
         assert abs(attr.content - bandwidth) < 1.0
@@ -1058,7 +1058,7 @@ class TestBGPLSLinkAttributes:
         # 8 priority levels, each 4 bytes (float)
         bandwidths = [100000000.0] * 8
         data = b''.join(pack('!f', bw) for bw in bandwidths)
-        attr = UnRsvpBw.unpack(data)
+        attr = UnRsvpBw.unpack_attribute(data)
 
         assert attr.TLV == 1091
         assert len(attr.content) == 8
@@ -1070,7 +1070,7 @@ class TestBGPLSLinkAttributes:
 
         metric = 100
         data = pack('!I', metric)
-        attr = TeMetric.unpack(data)
+        attr = TeMetric.unpack_attribute(data)
 
         assert attr.TLV == 1092
         assert attr.content == metric
@@ -1082,7 +1082,7 @@ class TestBGPLSLinkAttributes:
         # Extra Traffic protection (2 bytes: protection cap + reserved)
         # 0x80 = ExtraTrafic bit set (MSB)
         data = b'\x80\x00'
-        attr = LinkProtectionType.unpack(data)
+        attr = LinkProtectionType.unpack_attribute(data)
 
         assert attr.TLV == 1093
         # Check for ExtraTrafic flag (note the typo in the implementation)
@@ -1094,7 +1094,7 @@ class TestBGPLSLinkAttributes:
 
         # LDP and RSVP-TE enabled
         data = b'\xc0'  # 11000000
-        attr = MplsMask.unpack(data)
+        attr = MplsMask.unpack_attribute(data)
 
         assert attr.TLV == 1094
         json_output = attr.json()
@@ -1107,7 +1107,7 @@ class TestBGPLSLinkAttributes:
         # Variable length metric (1, 2, or 3 bytes)
         # Test 3-byte metric
         data = b'\x00\x00\x64'  # metric = 100
-        attr = IgpMetric.unpack(data)
+        attr = IgpMetric.unpack_attribute(data)
 
         assert attr.TLV == 1095
         assert attr.content == 100
@@ -1118,7 +1118,7 @@ class TestBGPLSLinkAttributes:
 
         # Two SRLG values
         data = b'\x00\x00\x00\x01\x00\x00\x00\x02'
-        attr = Srlg.unpack(data)
+        attr = Srlg.unpack_attribute(data)
 
         assert attr.TLV == 1096
         assert len(attr.content) == 2
@@ -1130,7 +1130,7 @@ class TestBGPLSLinkAttributes:
         from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
 
         name = b'link-to-router-2'
-        attr = LinkName.unpack(name)
+        attr = LinkName.unpack_attribute(name)
 
         assert attr.TLV == 1098
         # LinkName stores raw bytes, not decoded string
@@ -1145,7 +1145,7 @@ class TestBGPLSLinkAttributes:
         # Reserved: 0x0000
         # SID: 100
         data = b'\x00\x0a\x00\x00\x00\x00\x00\x64'
-        attr = SrAdjacency.unpack(data)
+        attr = SrAdjacency.unpack_attribute(data)
 
         assert attr.TLV == 1099
         assert attr.weight == 10
@@ -1159,7 +1159,7 @@ class TestBGPLSLinkAttributes:
         # Neighbor System-ID (6 bytes): 0x010203040506
         # SID: 200
         data = b'\x00\x0a\x00\x00\x01\x02\x03\x04\x05\x06\x00\x00\x00\xc8'
-        attr = SrAdjacencyLan.unpack(data)
+        attr = SrAdjacencyLan.unpack_attribute(data)
 
         assert attr.TLV == 1100
         # Note: The __init__ method has a bug that doesn't properly store content,
@@ -1185,7 +1185,7 @@ class TestBGPLSLinkAttributes:
             b'\x00\x00'  # Reserved
             b'\xfc\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'  # SID
         )
-        attr = Srv6EndX.unpack(data)
+        attr = Srv6EndX.unpack_attribute(data)
 
         assert attr.TLV == 1106
         assert len(attr.content) == 1
@@ -1199,7 +1199,7 @@ class TestBGPLSLinkAttributes:
 
         # Endpoint Behavior: 48 (End.X), Flags: [], Algorithm: 128
         data = b'\x00\x30\x00\x80'
-        attr = Srv6EndpointBehavior.unpack(data)
+        attr = Srv6EndpointBehavior.unpack_attribute(data)
 
         assert attr.TLV == 1250
         json_output = attr.json()
@@ -1212,7 +1212,7 @@ class TestBGPLSLinkAttributes:
 
         # LB: 32, LN: 16, Fun: 0, Arg: 80
         data = b'\x20\x10\x00\x50'
-        attr = Srv6SidStructure.unpack(data)
+        attr = Srv6SidStructure.unpack_attribute(data)
 
         assert attr.TLV == 1252
         json_output = attr.json()
@@ -1228,7 +1228,7 @@ class TestBGPLSNodeAttributes:
 
         # Overload=1, Attached=0, External=1, ABR=0, Router=1, V6=1
         data = b'\xa8'  # 10101000
-        attr = NodeFlags.unpack(data)
+        attr = NodeFlags.unpack_attribute(data)
 
         assert attr.TLV == 1024
         json_output = attr.json()
@@ -1243,7 +1243,7 @@ class TestBGPLSNodeAttributes:
 
         # Opaque data
         data = b'\x01\x02\x03\x04\x05'
-        attr = NodeOpaque.unpack(data)
+        attr = NodeOpaque.unpack_attribute(data)
 
         assert attr.TLV == 1025
         assert attr.content == data
@@ -1253,7 +1253,7 @@ class TestBGPLSNodeAttributes:
         from exabgp.bgp.message.update.attribute.bgpls.node.nodename import NodeName
 
         name = b'router-1.example.com'
-        attr = NodeName.unpack(name)
+        attr = NodeName.unpack_attribute(name)
 
         assert attr.TLV == 1026
         assert attr.content == 'router-1.example.com'
@@ -1266,7 +1266,7 @@ class TestBGPLSNodeAttributes:
 
         # ISIS Area ID: 49.0001
         data = b'\x49\x00\x01'
-        attr = IsisArea.unpack(data)
+        attr = IsisArea.unpack_attribute(data)
 
         assert attr.TLV == 1027
         json_output = attr.json()
@@ -1278,7 +1278,7 @@ class TestBGPLSNodeAttributes:
 
         # IPv4 Router ID: 192.0.2.1 (4 bytes -> TLV 1028)
         data = b'\xc0\x00\x02\x01'
-        attr = LocalTeRid.unpack(data)
+        attr = LocalTeRid.unpack_attribute(data)
 
         # TLV 1028 for IPv4, 1029 for IPv6
         assert attr.TLV == 1028
@@ -1303,7 +1303,7 @@ class TestBGPLSNodeAttributes:
             b'\x00\x03'  # Sub-TLV Length: 3
             b'\x00\x3e\x80'  # SID: 16000
         )
-        attr = SrCapabilities.unpack(data)
+        attr = SrCapabilities.unpack_attribute(data)
 
         assert attr.TLV == 1034
         json_output = attr.json()
@@ -1315,7 +1315,7 @@ class TestBGPLSNodeAttributes:
 
         # Algorithms: SPF (0), Strict SPF (1)
         data = b'\x00\x01'
-        attr = SrAlgorithm.unpack(data)
+        attr = SrAlgorithm.unpack_attribute(data)
 
         assert attr.TLV == 1035
         assert len(attr.content) == 2
@@ -1332,7 +1332,7 @@ class TestBGPLSPrefixAttributes:
 
         # D=1 (IS-IS Up/Down), N=0, L=1 (OSPF local), P=0
         data = b'\xa0'  # 10100000
-        attr = IgpFlags.unpack(data)
+        attr = IgpFlags.unpack_attribute(data)
 
         assert attr.TLV == 1152
         json_output = attr.json()
@@ -1346,7 +1346,7 @@ class TestBGPLSPrefixAttributes:
 
         # Single tag: 65534
         data = b'\x00\x00\xff\xfe'
-        attr = IgpTags.unpack(data)
+        attr = IgpTags.unpack_attribute(data)
 
         assert attr.TLV == 1153
         assert 65534 in attr.content
@@ -1359,7 +1359,7 @@ class TestBGPLSPrefixAttributes:
 
         # Two 8-byte extended tags
         data = b'\x00\x00\x00\x00\x00\x00\xff\xfe\x00\x00\x00\x00\x00\x00\xff\xff'
-        attr = IgpExTags.unpack(data)
+        attr = IgpExTags.unpack_attribute(data)
 
         assert attr.TLV == 1154
         assert len(attr.content) == 2
@@ -1372,7 +1372,7 @@ class TestBGPLSPrefixAttributes:
 
         # Metric: 20
         data = b'\x00\x00\x00\x14'
-        attr = PrefixMetric.unpack(data)
+        attr = PrefixMetric.unpack_attribute(data)
 
         assert attr.TLV == 1155
         assert attr.content == 20
@@ -1385,7 +1385,7 @@ class TestBGPLSPrefixAttributes:
 
         # IPv4 forwarding address: 192.0.2.1
         data = b'\xc0\x00\x02\x01'
-        attr = OspfForwardingAddress.unpack(data)
+        attr = OspfForwardingAddress.unpack_attribute(data)
 
         assert attr.TLV == 1156
         json_output = attr.json()
@@ -1397,7 +1397,7 @@ class TestBGPLSPrefixAttributes:
 
         # Opaque data
         data = b'\xde\xad\xbe\xef'
-        attr = PrefixOpaque.unpack(data)
+        attr = PrefixOpaque.unpack_attribute(data)
 
         assert attr.TLV == 1157
         assert attr.content == data
@@ -1411,7 +1411,7 @@ class TestBGPLSPrefixAttributes:
         # Reserved: 0x0000
         # SID Index: 100
         data = b'\x90\x00\x00\x00\x00\x00\x00\x64'
-        attr = SrPrefix.unpack(data)
+        attr = SrPrefix.unpack_attribute(data)
 
         assert attr.TLV == 1158
         json_output = attr.json()
@@ -1423,7 +1423,7 @@ class TestBGPLSPrefixAttributes:
 
         # Flags: X=1, R=0, N=1
         data = b'\xa0'  # 10100000
-        attr = SrIgpPrefixAttr.unpack(data)
+        attr = SrIgpPrefixAttr.unpack_attribute(data)
 
         assert attr.TLV == 1170
         json_output = attr.json()
@@ -1435,7 +1435,7 @@ class TestBGPLSPrefixAttributes:
 
         # IPv4 Router ID: 192.0.2.1
         data = b'\xc0\x00\x02\x01'
-        attr = SrSourceRouterID.unpack(data)
+        attr = SrSourceRouterID.unpack_attribute(data)
 
         assert attr.TLV == 1171
         json_output = attr.json()
@@ -1452,7 +1452,7 @@ class TestBGPLSLinkStateAttribute:
         # TLV: 1155 (PrefixMetric), Length: 4, Value: 20
         data = b'\x04\x83\x00\x04\x00\x00\x00\x14'
         negotiated = Mock()
-        attr = LinkState.unpack(data, negotiated)
+        attr = LinkState.unpack_attribute(data, negotiated)
 
         assert len(attr.ls_attrs) == 1
         assert attr.ls_attrs[0].TLV == 1155
@@ -1470,7 +1470,7 @@ class TestBGPLSLinkStateAttribute:
             b'\x04\x81\x00\x04\x00\x00\xff\xfe'  # IgpTags
         )
         negotiated = Mock()
-        attr = LinkState.unpack(data, negotiated)
+        attr = LinkState.unpack_attribute(data, negotiated)
 
         assert len(attr.ls_attrs) == 2
         assert attr.ls_attrs[0].TLV == 1155
@@ -1483,7 +1483,7 @@ class TestBGPLSLinkStateAttribute:
         # Single attribute: PrefixMetric
         data = b'\x04\x83\x00\x04\x00\x00\x00\x14'
         negotiated = Mock()
-        attr = LinkState.unpack(data, negotiated)
+        attr = LinkState.unpack_attribute(data, negotiated)
 
         json_output = attr.json()
         assert '"prefix-metric": 20' in json_output
@@ -1495,7 +1495,7 @@ class TestBGPLSLinkStateAttribute:
         # Unknown TLV: 9999, Length: 4, Value: 0x01020304
         data = b'\x27\x0f\x00\x04\x01\x02\x03\x04'
         negotiated = Mock()
-        attr = LinkState.unpack(data, negotiated)
+        attr = LinkState.unpack_attribute(data, negotiated)
 
         assert len(attr.ls_attrs) == 1
         # Should be GenericLSID

@@ -64,7 +64,7 @@ class TestSrLabelIndex:
         data += struct.pack('!H', 0)  # Flags
         data += struct.pack('!I', 200)  # Label index
 
-        label_index = SrLabelIndex.unpack(data, length=7)
+        label_index = SrLabelIndex.unpack_attribute(data, length=7)
         assert label_index.labelindex == 200
 
     def test_label_index_pack_unpack_roundtrip(self) -> None:
@@ -75,7 +75,7 @@ class TestSrLabelIndex:
         # Extract the data portion (skip Type and Length fields)
         data = packed[3:]  # Skip Type(1) + Length(2)
 
-        unpacked = SrLabelIndex.unpack(data, length=7)
+        unpacked = SrLabelIndex.unpack_attribute(data, length=7)
         assert unpacked.labelindex == original.labelindex
 
     def test_label_index_repr(self) -> None:
@@ -94,7 +94,7 @@ class TestSrLabelIndex:
         data = struct.pack('!B', 0) + struct.pack('!H', 0) + struct.pack('!I', 100)
 
         with pytest.raises(Notify) as exc_info:
-            SrLabelIndex.unpack(data, length=5)  # Invalid length
+            SrLabelIndex.unpack_attribute(data, length=5)  # Invalid length
 
         assert exc_info.value.code == 3
         assert exc_info.value.subcode == 5
@@ -106,7 +106,7 @@ class TestSrLabelIndex:
 
         packed = label_index.pack()
         data = packed[3:]
-        unpacked = SrLabelIndex.unpack(data, length=7)
+        unpacked = SrLabelIndex.unpack_attribute(data, length=7)
         assert unpacked.labelindex == 0
 
     def test_label_index_max_value(self) -> None:
@@ -117,7 +117,7 @@ class TestSrLabelIndex:
 
         packed = label_index.pack()
         data = packed[3:]
-        unpacked = SrLabelIndex.unpack(data, length=7)
+        unpacked = SrLabelIndex.unpack_attribute(data, length=7)
         assert unpacked.labelindex == max_index
 
 
@@ -182,7 +182,7 @@ class TestSrGb:
         data += struct.pack('!L', 16000)[1:]  # Base (3 bytes)
         data += struct.pack('!L', 8000)[1:]  # Range (3 bytes)
 
-        srgb = SrGb.unpack(data, length=8)
+        srgb = SrGb.unpack_attribute(data, length=8)
         assert len(srgb.srgbs) == 1
         assert srgb.srgbs[0] == (16000, 8000)
 
@@ -193,7 +193,7 @@ class TestSrGb:
         data += struct.pack('!L', 24000)[1:] + struct.pack('!L', 1000)[1:]
         data += struct.pack('!L', 32000)[1:] + struct.pack('!L', 4000)[1:]
 
-        srgb = SrGb.unpack(data, length=20)
+        srgb = SrGb.unpack_attribute(data, length=20)
         assert len(srgb.srgbs) == 3
         assert srgb.srgbs[0] == (16000, 8000)
         assert srgb.srgbs[1] == (24000, 1000)
@@ -208,7 +208,7 @@ class TestSrGb:
         data = packed[3:]
         length = struct.unpack('!H', packed[1:3])[0]
 
-        unpacked = SrGb.unpack(data, length=length)
+        unpacked = SrGb.unpack_attribute(data, length=length)
         assert unpacked.srgbs == original.srgbs
 
     def test_srgb_repr(self) -> None:
@@ -243,7 +243,7 @@ class TestSrGb:
         packed = srgb.pack()
 
         data = packed[3:]
-        unpacked = SrGb.unpack(data, length=len(data))
+        unpacked = SrGb.unpack_attribute(data, length=len(data))
         # Note: 3-byte values are stored with 0 padding
         assert unpacked.srgbs[0][0] <= max_label
         assert unpacked.srgbs[0][1] <= max_label
@@ -302,7 +302,7 @@ class TestPrefixSid:
         data += struct.pack('!I', 100)  # Label Index
 
         negotiated = Mock()
-        prefix_sid = PrefixSid.unpack(data, negotiated)
+        prefix_sid = PrefixSid.unpack_attribute(data, negotiated)
 
         assert len(prefix_sid.sr_attrs) == 1
         assert prefix_sid.sr_attrs[0].TLV == 1
@@ -318,7 +318,7 @@ class TestPrefixSid:
         data += struct.pack('!L', 8000)[1:]  # Range (3 bytes)
 
         negotiated = Mock()
-        prefix_sid = PrefixSid.unpack(data, negotiated)
+        prefix_sid = PrefixSid.unpack_attribute(data, negotiated)
 
         assert len(prefix_sid.sr_attrs) == 1
         assert prefix_sid.sr_attrs[0].TLV == 3
@@ -341,7 +341,7 @@ class TestPrefixSid:
         data += struct.pack('!L', 8000)[1:]  # Range
 
         negotiated = Mock()
-        prefix_sid = PrefixSid.unpack(data, negotiated)
+        prefix_sid = PrefixSid.unpack_attribute(data, negotiated)
 
         assert len(prefix_sid.sr_attrs) == 2
         assert prefix_sid.sr_attrs[0].TLV == 1
@@ -378,7 +378,7 @@ class TestPrefixSid:
         data = b''.join(attr.pack() for attr in original.sr_attrs)
 
         negotiated = Mock()
-        unpacked = PrefixSid.unpack(data, negotiated)
+        unpacked = PrefixSid.unpack_attribute(data, negotiated)
 
         assert len(unpacked.sr_attrs) == 2
         assert unpacked.sr_attrs[0].labelindex == 200
@@ -515,7 +515,7 @@ class TestSREdgeCases:
 
             packed = label_index.pack()
             data = packed[3:]
-            unpacked = SrLabelIndex.unpack(data, length=7)
+            unpacked = SrLabelIndex.unpack_attribute(data, length=7)
             assert unpacked.labelindex == value
 
     def test_srgb_large_number_of_ranges(self) -> None:
@@ -529,7 +529,7 @@ class TestSREdgeCases:
         data = packed[3:]
         length = struct.unpack('!H', packed[1:3])[0]
 
-        unpacked = SrGb.unpack(data, length=length)
+        unpacked = SrGb.unpack_attribute(data, length=length)
         assert len(unpacked.srgbs) == 10
         assert unpacked.srgbs == ranges
 
@@ -577,7 +577,7 @@ class TestSrv6SidStructure:
     def test_sid_structure_unpack(self) -> None:
         """Test unpacking SRv6 SID Structure."""
         data = struct.pack('!BBBBBB', 40, 24, 16, 0, 0, 0)
-        sid_struct = Srv6SidStructure.unpack(data, length=6)
+        sid_struct = Srv6SidStructure.unpack_attribute(data, length=6)
 
         assert sid_struct.loc_block_len == 40
         assert sid_struct.loc_node_len == 24
@@ -599,7 +599,7 @@ class TestSrv6SidStructure:
         packed = original.pack()
         data = packed[3:]  # Skip Type and Length
 
-        unpacked = Srv6SidStructure.unpack(data, length=6)
+        unpacked = Srv6SidStructure.unpack_attribute(data, length=6)
         assert unpacked.loc_block_len == original.loc_block_len
         assert unpacked.loc_node_len == original.loc_node_len
         assert unpacked.func_len == original.func_len
@@ -673,7 +673,7 @@ class TestSrv6SidInformation:
         data += struct.pack('!H', 0x0001)  # Behavior
         data += struct.pack('!B', 0)  # Reserved
 
-        sid_info = Srv6SidInformation.unpack(data, length=21)
+        sid_info = Srv6SidInformation.unpack_attribute(data, length=21)
         assert sid_info.sid == sid
         assert sid_info.behavior == 0x0001
 
@@ -746,7 +746,7 @@ class TestSrv6L3Service:
         # Add reserved byte at the beginning
         data = struct.pack('!B', 0) + sid_data
 
-        l3_service = Srv6L3Service.unpack(data, length=len(data))
+        l3_service = Srv6L3Service.unpack_attribute(data, length=len(data))
         assert len(l3_service.subtlvs) == 1
         assert isinstance(l3_service.subtlvs[0], Srv6SidInformation)
 
@@ -809,7 +809,7 @@ class TestSrv6L2Service:
 
         data = struct.pack('!B', 0) + sid_data
 
-        l2_service = Srv6L2Service.unpack(data, length=len(data))
+        l2_service = Srv6L2Service.unpack_attribute(data, length=len(data))
         assert len(l2_service.subtlvs) == 1
         assert isinstance(l2_service.subtlvs[0], Srv6SidInformation)
 

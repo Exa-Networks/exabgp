@@ -8,12 +8,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, TYPE_CHECKING
 
 from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # ============================================================ Layer2Information
 # RFC 4761
@@ -39,6 +42,6 @@ class L2Info(ExtendedCommunity):
         return 'l2info:{}:{}:{}:{}'.format(self.encaps, self.control, self.mtu, self.reserved)
 
     @staticmethod
-    def unpack(data: bytes) -> L2Info:
+    def unpack_attribute(data: bytes, negotiated: Negotiated) -> L2Info:
         encaps, control, mtu, reserved = unpack('!BBHH', data[2:8])
         return L2Info(encaps, control, mtu, reserved, data[:8])

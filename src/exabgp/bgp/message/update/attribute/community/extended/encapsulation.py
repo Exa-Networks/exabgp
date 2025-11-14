@@ -59,7 +59,7 @@ class Encapsulation(ExtendedCommunity):
         return 'encap:{}'.format(Encapsulation._string.get(self.tunnel_type, 'encap:UNKNOWN-%d' % self.tunnel_type))
 
     @staticmethod
-    def unpack(data: bytes) -> Encapsulation:
+    def unpack_attribute(data: bytes) -> Encapsulation:
         (tunnel,) = unpack('!H', data[6:8])
         return Encapsulation(tunnel, data[:8])
 

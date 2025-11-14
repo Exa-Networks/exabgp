@@ -34,7 +34,7 @@ class SrAlgorithm(BaseLS):
         BaseLS.__init__(self, sr_algos)
 
     @classmethod
-    def unpack(cls, data: bytes) -> SrAlgorithm:
+    def unpack_attribute(cls, data: bytes) -> SrAlgorithm:
         # Looks like IOS XR advertises len 0 on this sub TLV
         # when using default SPF.
         return cls(

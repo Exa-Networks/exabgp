@@ -34,6 +34,6 @@ class ConsistentHashSortOrder(ExtendedCommunity):
         return '%s:%d' % (self.DESCRIPTION, self.order)
 
     @staticmethod
-    def unpack(data: bytes) -> ConsistentHashSortOrder:
+    def unpack_attribute(data: bytes) -> ConsistentHashSortOrder:
         order, reserved = unpack('!IH', data[2:8])
         return ConsistentHashSortOrder(order, reserved, data[:8])

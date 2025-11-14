@@ -64,7 +64,7 @@ class GenericAttribute(Attribute):
         return '0x' + ''.join('{:02x}'.format(_) for _ in self.data)
 
     @classmethod
-    def unpack(cls: Type[GenericAttribute], code: int, flag: int, data: bytes) -> GenericAttribute:
+    def unpack_attribute(cls: Type[GenericAttribute], code: int, flag: int, data: bytes) -> GenericAttribute:
         return cls(code, flag, data)
 
     def json(self) -> str:

@@ -41,7 +41,7 @@ class TLV:
 
 class TLVS(List[TLV]):
     @staticmethod
-    def unpack(data: bytes) -> TLVS:
+    def unpack_attribute(data: bytes) -> TLVS:
         def loop(data: bytes) -> Generator[TLV, None, None]:
             while data:
                 t = data[0]
@@ -94,7 +94,7 @@ class AIGP(Attribute):
         return '0x' + ''.join('{:02x}'.format(_) for _ in self.aigp[-8:])
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Negotiated) -> Optional[AIGP]:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Optional[AIGP]:
         if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
             return None

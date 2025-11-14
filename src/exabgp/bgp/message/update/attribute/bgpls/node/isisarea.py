@@ -29,7 +29,7 @@ class IsisArea(BaseLS):
         BaseLS.__init__(self, areaid)
 
     @classmethod
-    def unpack(cls, data: bytes) -> IsisArea:
+    def unpack_attribute(cls, data: bytes) -> IsisArea:
         return cls(int(data.hex(), 16))
 
     def json(self, compact=None):

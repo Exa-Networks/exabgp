@@ -120,13 +120,13 @@ class PMSI(Attribute):
         return pmsi
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Negotiated) -> PMSI:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> PMSI:
         flags, subtype = unpack('!BB', data[:2])
         raw_label = unpack('!L', b'\0' + data[2:5])[0]
         label = raw_label >> 4
         # should we check for bottom of stack before the shift ?
         if subtype in cls._pmsi_known:
-            return cls._pmsi_known[subtype].from_tunnel(data[5:], label, flags, raw_label)  # type: ignore[attr-defined,no-any-return]
+            return cls._pmsi_known[subtype].unpack_pmsi(data[5:], label, flags, raw_label)  # type: ignore[attr-defined,no-any-return]
         return cls.pmsi_unknown(subtype, data[5:], label, flags, raw_label)
 
 
@@ -145,7 +145,7 @@ class PMSINoTunnel(PMSI):
         return ''
 
     @classmethod
-    def from_tunnel(cls, tunnel: bytes, label: int, flags: int, raw_label: Optional[int] = None) -> PMSINoTunnel:
+    def unpack_pmsi(cls, tunnel: bytes, label: int, flags: int, raw_label: Optional[int] = None) -> PMSINoTunnel:
         return cls(label, flags, raw_label)
 
 
@@ -167,6 +167,6 @@ class PMSIIngressReplication(PMSI):
         return self.ip
 
     @classmethod
-    def from_tunnel(cls, tunnel: bytes, label: int, flags: int, raw_label: Optional[int]) -> PMSIIngressReplication:
+    def unpack_pmsi(cls, tunnel: bytes, label: int, flags: int, raw_label: Optional[int]) -> PMSIIngressReplication:
         ip = IPv4.ntop(tunnel)
         return cls(ip, label, flags, tunnel, raw_label)

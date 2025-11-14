@@ -117,7 +117,7 @@ class MPRNLRI(Attribute, Family):
         return 'MP_REACH_NLRI for %s %s with %d NLRI(s)' % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Negotiated) -> MPRNLRI:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> MPRNLRI:
         nlris = []
 
         # -- Reading AFI/SAFI
@@ -193,7 +193,7 @@ class MPRNLRI(Attribute, Family):
                     nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)
                     # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
                     if nlri:  # type: ignore[has-type]
-                        nlri.nexthop = NextHop.unpack(nexthop)  # type: ignore[has-type]
+                        nlri.nexthop = NextHop.unpack_attribute(nexthop)  # type: ignore[has-type]
                         nlris.append(nlri)  # type: ignore[has-type]
             else:
                 nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath)

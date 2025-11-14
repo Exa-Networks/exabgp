@@ -47,6 +47,16 @@ from unittest.mock import Mock
 
 import pytest
 
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
+
 
 @pytest.fixture(autouse=True)
 def mock_logger() -> Any:
@@ -222,7 +232,7 @@ def test_route_target_asn2_number() -> None:
     assert packed[1] == 0x02  # Subtype 0x02
 
     # Unpack and verify
-    unpacked = RouteTargetASN2Number.unpack(packed)
+    unpacked = RouteTargetASN2Number.unpack_attribute(packed)
     assert unpacked.asn == asn
     assert unpacked.number == number
 
@@ -254,7 +264,7 @@ def test_route_target_ip_number() -> None:
     assert packed[1] == 0x02  # Subtype 0x02
 
     # Unpack and verify
-    unpacked = RouteTargetIPNumber.unpack(packed)
+    unpacked = RouteTargetIPNumber.unpack_attribute(packed)
     assert str(unpacked.ip) == ip
     assert unpacked.number == number
 
@@ -287,7 +297,7 @@ def test_route_target_asn4_number() -> None:
     assert packed[1] == 0x02  # Subtype 0x02
 
     # Unpack and verify
-    unpacked = RouteTargetASN4Number.unpack(packed)
+    unpacked = RouteTargetASN4Number.unpack_attribute(packed)
     assert unpacked.asn == asn
     assert unpacked.number == number
 
@@ -327,7 +337,7 @@ def test_extended_community_base_parsing() -> None:
     # Type 0x0F (unknown), Subtype 0xFF (unknown)
     unknown_data = struct.pack('!BB', 0x0F, 0xFF) + b'\x00\x01\x02\x03\x04\x05'
 
-    ec = ExtendedCommunity.unpack(unknown_data)
+    ec = ExtendedCommunity.unpack_attribute(unknown_data)
 
     # Should store raw bytes
     assert len(ec) == 8
@@ -390,7 +400,7 @@ def test_bandwidth_community() -> None:
 
     # Unpack requires type/subtype prefix
     full_data = struct.pack('!BB', 0x40, 0x04) + packed
-    unpacked = Bandwidth.unpack(full_data)
+    unpacked = Bandwidth.unpack_attribute(full_data, create_negotiated())
     assert unpacked.asn == asn
     # Float comparison with small tolerance
     assert abs(unpacked.speed - speed) < 1.0
@@ -421,7 +431,7 @@ def test_encapsulation_community_vxlan() -> None:
     assert packed[1] == 0x0C
 
     # Unpack and verify
-    unpacked = Encapsulation.unpack(packed)
+    unpacked = Encapsulation.unpack_attribute(packed)
     assert unpacked.tunnel_type == Encapsulation.Type.VXLAN
 
 
@@ -447,7 +457,7 @@ def test_encapsulation_community_types() -> None:
 
         # Verify round-trip
         packed = encap.pack()
-        unpacked = Encapsulation.unpack(packed)
+        unpacked = Encapsulation.unpack_attribute(packed)
         assert unpacked.tunnel_type == tunnel_type
 
 
@@ -494,7 +504,7 @@ def test_l2info_community() -> None:
 
     # Verify pack/unpack
     packed = l2info.pack()
-    unpacked = L2Info.unpack(packed)
+    unpacked = L2Info.unpack_attribute(packed, create_negotiated())
     assert unpacked.mtu == mtu
 
 
@@ -519,7 +529,7 @@ def test_mac_mobility_community() -> None:
 
     # Verify pack/unpack
     packed = mac_mob.pack()
-    unpacked = MacMobility.unpack(packed)
+    unpacked = MacMobility.unpack_attribute(packed, create_negotiated())
     assert unpacked.sequence == sequence
 
 

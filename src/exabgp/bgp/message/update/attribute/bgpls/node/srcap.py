@@ -63,7 +63,7 @@ class SrCapabilities(FlagLS):
         return '{}: {}, sids: {}'.format(self.REPR, self.flags, self.sids)
 
     @classmethod
-    def unpack(cls, data: bytes) -> SrCapabilities:
+    def unpack_attribute(cls, data: bytes) -> SrCapabilities:
         # Extract node capability flags
         flags = cls.unpack_flags(data[0:1])
         # Move pointer past flags and reserved bytes

@@ -50,7 +50,7 @@ class NextHop(Attribute, IP):
         return self._attribute(self.ton())
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> IP:
+    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> IP:
         if not data:
             return NoNextHop  # type: ignore[return-value]
         return IP.unpack(data, NextHop)
