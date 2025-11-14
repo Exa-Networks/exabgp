@@ -31,7 +31,9 @@ class MED(Attribute):
         self._packed: bytes = self._attribute(packed if packed is not None else pack('!L', med))
 
     def __eq__(self, other: object) -> bool:
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.med == other.med  # type: ignore[attr-defined]
+        if not isinstance(other, MED):
+            return False
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.med == other.med
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)

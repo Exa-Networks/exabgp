@@ -36,7 +36,9 @@ class NextHop(Attribute, IP):
         self.init(string, packed)
 
     def __eq__(self, other: object) -> bool:
-        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other.ton()  # type: ignore[attr-defined]
+        if not isinstance(other, NextHop):
+            return False
+        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other.ton()
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)

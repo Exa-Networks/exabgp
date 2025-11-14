@@ -33,11 +33,10 @@ class Aggregator(Attribute):
         self._str: Optional[str] = None
 
     def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Aggregator):
+            return False
         return (
-            self.ID == other.ID  # type: ignore[attr-defined]
-            and self.FLAG == other.FLAG  # type: ignore[attr-defined]
-            and self.asn == other.asn  # type: ignore[attr-defined]
-            and self.speaker == other.speaker  # type: ignore[attr-defined]
+            self.ID == other.ID and self.FLAG == other.FLAG and self.asn == other.asn and self.speaker == other.speaker
         )
 
     def __ne__(self, other: object) -> bool:

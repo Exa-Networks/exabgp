@@ -33,7 +33,9 @@ class Origin(Attribute):
         self._packed: bytes = self._attribute(packed if packed else bytes([origin]))
 
     def __eq__(self, other: object) -> bool:
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.origin == other.origin  # type: ignore[attr-defined]
+        if not isinstance(other, Origin):
+            return False
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.origin == other.origin
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)

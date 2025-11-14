@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Tuple
+from typing import TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -37,22 +37,26 @@ class Change:
             self.__index = b'%02x%02x' % self.nlri.family().afi_safi() + self.nlri.index()
         return self.__index
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Change):
+            return False
         return self.nlri == other.nlri and self.attributes == other.attributes
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: object) -> bool:
+        if not isinstance(other, Change):
+            return True
         return self.nlri != other.nlri or self.attributes != other.attributes
 
-    def __lt__(self, other: Any) -> bool:
+    def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing Change for ordering does not make sense')
 
-    def __le__(self, other: Any) -> bool:
+    def __le__(self, other: object) -> bool:
         raise RuntimeError('comparing Change for ordering does not make sense')
 
-    def __gt__(self, other: Any) -> bool:
+    def __gt__(self, other: object) -> bool:
         raise RuntimeError('comparing Change for ordering does not make sense')
 
-    def __ge__(self, other: Any) -> bool:
+    def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing Change for ordering does not make sense')
 
     def extensive(self) -> str:

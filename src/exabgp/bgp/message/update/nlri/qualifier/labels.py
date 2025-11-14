@@ -49,10 +49,14 @@ class Labels:
         self._len: int = len(self.packed)
 
     def __eq__(self, other: object) -> bool:
-        return self.labels == other.labels  # type: ignore[attr-defined]
+        if not isinstance(other, Labels):
+            return False
+        return self.labels == other.labels
 
     def __neq__(self, other: object) -> bool:
-        return self.labels != other.labels  # type: ignore[attr-defined]
+        if not isinstance(other, Labels):
+            return True
+        return self.labels != other.labels
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
