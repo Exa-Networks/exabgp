@@ -141,7 +141,7 @@ class Capabilities(dict):
         self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(
             Graceful.RESTART_STATE if restarted else 0x0,
             neighbor['capability']['graceful-restart'],
-            [(afi, safi, Graceful.FORWARDING_STATE) for (afi, safi) in neighbor.families()],  # type: ignore[misc]
+            [(afi, safi, Graceful.FORWARDING_STATE) for (afi, safi) in neighbor.families()],
         )
 
     def _refresh(self, neighbor: Neighbor) -> None:
