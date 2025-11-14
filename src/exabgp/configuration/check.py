@@ -206,7 +206,7 @@ def check_message(neighbor: Dict[str, Any], message: str) -> bool:
     # size = (raw[16] << 16) + raw[17]
 
     if kind == BGP_MSG_OPEN:
-        return check_open(neighbor, raw[19:])
+        return check_open(neighbor, raw[19:])  # type: ignore[no-any-return]
     if kind == BGP_MSG_UPDATE:
         return check_update(neighbor, raw)
     if kind == BGP_MSG_NOTIFICATION:
