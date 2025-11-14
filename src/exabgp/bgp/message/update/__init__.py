@@ -276,7 +276,7 @@ class Update(Message):
         if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
             return EOR(AFI.ipv4, SAFI.unicast)  # pylint: disable=E1101
         if length == EOR_WITH_PREFIX_LENGTH and data.startswith(EOR.NLRI.PREFIX):
-            return EOR.unpack_message(data, direction, negotiated)
+            return EOR.unpack_message(data, direction, negotiated)  # type: ignore[no-any-return]
 
         withdrawn, _attributes, announced = cls.split(data)
 

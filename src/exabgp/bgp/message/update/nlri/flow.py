@@ -149,7 +149,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
     def pack(self) -> bytes:
         raw = self.cidr.pack_nlri()
         # ID is defined in subclasses
-        return bytes([self.ID]) + raw  # pylint: disable=E1101
+        return bytes([self.ID]) + raw  # type: ignore[no-any-return]  # pylint: disable=E1101
 
     def short(self) -> str:
         return str(self.cidr)
@@ -180,7 +180,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 
     def pack(self) -> bytes:
         # ID is defined in subclasses
-        return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()  # pylint: disable=E1101
+        return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()  # type: ignore[no-any-return]  # pylint: disable=E1101
 
     def short(self) -> str:
         return '{}/{}'.format(self.cidr, self.offset)
@@ -324,7 +324,7 @@ def converter(
         if klass is None:
             return function(value)
         try:
-            return klass(value)
+            return klass(value)  # type: ignore[no-any-return]
         except ValueError:
             return function(value)
 
@@ -335,7 +335,7 @@ def decoder(
     function: Callable[[bytes], int], klass: Type = int
 ) -> Callable[[bytes], Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']]:
     def _inner(value: bytes) -> Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']:
-        return klass(function(value))
+        return klass(function(value))  # type: ignore[no-any-return]
 
     return _inner
 

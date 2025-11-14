@@ -55,13 +55,13 @@ class API(Command):
         # to not have to set the encoding on each command
         if 'json' in command.split(' '):
             use_json = True
-        return self.response(reactor, service, command, use_json)
+        return self.response(reactor, service, command, use_json)  # type: ignore[no-any-return]
 
     def response(self, reactor: 'Reactor', service: str, command: str, use_json: bool) -> bool:
         api = 'json' if use_json else 'text'
         for registered in self.functions:
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
-                return self.callback[api][registered](self, reactor, service, command, use_json)
+                return self.callback[api][registered](self, reactor, service, command, use_json)  # type: ignore[no-any-return]
         reactor.processes.answer_error(service)
         log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')
         return False
@@ -78,7 +78,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes
+        return changes  # type: ignore[no-any-return]
 
     def api_announce_v4(self, command: str) -> List[Change]:
         action, line = command.split(' ', 1)
@@ -93,7 +93,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes
+        return changes  # type: ignore[no-any-return]
 
     def api_announce_v6(self, command: str) -> List[Change]:
         action, line = command.split(' ', 1)
@@ -108,7 +108,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes
+        return changes  # type: ignore[no-any-return]
 
     def api_flow(self, command: str) -> List[Change]:
         action, flow, line = command.split(' ', 2)
@@ -122,7 +122,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes
+        return changes  # type: ignore[no-any-return]
 
     def api_vpls(self, command: str) -> List[Change]:
         action, line = command.split(' ', 1)
@@ -133,7 +133,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes
+        return changes  # type: ignore[no-any-return]
 
     def api_attributes(self, command: str, peers: List[str]) -> List[Change]:
         action, line = command.split(' ', 1)
@@ -147,7 +147,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes
+        return changes  # type: ignore[no-any-return]
 
     def api_refresh(self, command: str) -> Union[bool, List[RouteRefresh]]:
         tokens = formated(command).split(' ')[2:]
@@ -190,4 +190,4 @@ class API(Command):
 
         self.configuration.tokeniser.iterate.replenish(tokens[3:])
         # None or a class
-        return operational(what, self.configuration.tokeniser.iterate)
+        return operational(what, self.configuration.tokeniser.iterate)  # type: ignore[no-any-return]

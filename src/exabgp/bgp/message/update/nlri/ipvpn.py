@@ -93,12 +93,12 @@ class IPVPN(Label):
     def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''
         mask = bytes([len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask])
-        return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
+        return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()  # type: ignore[no-any-return]
 
     def index(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
         mask = bytes([len(self.rd) * 8 + self.cidr.mask])
-        return Family.index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()
+        return Family.index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()  # type: ignore[no-any-return]
 
     def _internal(self, announced: bool = True) -> List[str]:
         r = Label._internal(self, announced)

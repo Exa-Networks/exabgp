@@ -222,7 +222,7 @@ class Attributes(dict):
         self.pop(attrid)
 
     def watchdog(self) -> Optional[Attribute]:
-        return self.pop(Attribute.CODE.INTERNAL_WATCHDOG, None)
+        return self.pop(Attribute.CODE.INTERNAL_WATCHDOG, None)  # type: ignore[no-any-return]
 
     def withdraw(self) -> bool:
         return self.pop(Attribute.CODE.INTERNAL_WITHDRAW, None) is not None
@@ -455,7 +455,7 @@ class Attributes(dict):
         # found a cache copy
         cached = Attribute.cache.get(Attribute.CODE.AS_PATH, {}).get(key, None)
         if cached:
-            self.add(cached, key)
+            self.add(cached, key)  # type: ignore[no-any-return]
             return
 
         # as_seq = []
@@ -503,7 +503,7 @@ class Attributes(dict):
         # we sort based on packed values since the items do not
         # necessarily implement __cmp__
         def pack_(x: Any) -> bytes:
-            return x.pack()
+            return x.pack()  # type: ignore[no-any-return]
 
         try:
             for key in set(self.keys()).union(set(other.keys())):

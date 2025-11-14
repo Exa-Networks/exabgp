@@ -401,19 +401,19 @@ class Configuration(_Configuration):
 
     def reload(self) -> Union[bool, str]:
         try:
-            return self._reload()
+            return self._reload()  # type: ignore[no-any-return]
         except KeyboardInterrupt:
-            return self.error.set('configuration reload aborted by ^C or SIGINT')
+            return self.error.set('configuration reload aborted by ^C or SIGINT')  # type: ignore[no-any-return]
         except Error as exc:
             if getenv().debug.configuration:
                 raise
-            return self.error.set(
+            return self.error.set(  # type: ignore[no-any-return]
                 f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}',
             )
         except Exception as exc:
             if getenv().debug.configuration:
                 raise
-            return self.error.set(
+            return self.error.set(  # type: ignore[no-any-return]
                 f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}',
             )
 
@@ -442,7 +442,7 @@ class Configuration(_Configuration):
         if self.parse_section('root') is not True:
             self._rollback_reload()
             line_str = ' '.join(self.tokeniser.line)
-            return self.error.set(
+            return self.error.set(  # type: ignore[no-any-return]
                 f'\nsyntax error in section {self.scope.location()}\nline {self.tokeniser.number}: {line_str}\n\n{self.error!s}',
             )
 
@@ -451,7 +451,7 @@ class Configuration(_Configuration):
 
         check = self.validate()
         if check is not None:
-            return check
+            return check  # type: ignore[no-any-return]
 
         return True
 
@@ -460,7 +460,7 @@ class Configuration(_Configuration):
             has_procs = 'processes' in neighbor.api and neighbor.api['processes']
             has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']
             if has_procs and has_match:
-                return self.error.set(
+                return self.error.set(  # type: ignore[no-any-return]
                     "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '{}' configuration.\n\n".format(
                         neighbor['peer-address']
                     ),
@@ -471,7 +471,7 @@ class Configuration(_Configuration):
                 for api in neighbor.api[notification]:
                     if notification == 'processes':
                         if not self.processes[api].get('run', False):
-                            return self.error.set(
+                            return self.error.set(  # type: ignore[no-any-return]
                                 f"\n\nan api called '{api}' is used by neighbor '{neighbor['peer-address']}' but not defined\n\n",
                             )
                     elif notification == 'processes-match':
@@ -483,7 +483,7 @@ class Configuration(_Configuration):
                 # matching mode is an "or", we test all rules and check
                 # if any of rule had a match
                 if len(errors) > 0 and len(errors) == len(neighbor.api[notification]):
-                    return self.error.set(
+                    return self.error.set(  # type: ignore[no-any-return]
                         ' '.join(errors),
                     )
 
@@ -535,7 +535,7 @@ class Configuration(_Configuration):
         log.debug(lambda: f'> {location:<16} | {self.tokeniser.params()}', 'configuration')
 
         if location not in self._structure[name]['sections']:
-            return self.error.set(f'section {location} is invalid in {name}, {self.scope.location()}')
+            return self.error.set(f'section {location} is invalid in {name}, {self.scope.location()}')  # type: ignore[no-any-return]
 
         self.scope.enter(location)
         self.scope.to_context()
@@ -556,7 +556,7 @@ class Configuration(_Configuration):
 
         left = self.scope.leave()
         if not left:
-            return self.error.set('closing too many parenthesis')
+            return self.error.set('closing too many parenthesis')  # type: ignore[no-any-return]
         self.scope.to_context()
 
         log.debug(lambda: f'< {left:<16} | {self.tokeniser.params()}', 'configuration')
@@ -590,12 +590,12 @@ class Configuration(_Configuration):
             if not self.tokeniser.end:  # finished
                 return True
 
-            return self.error.set('invalid syntax line %d' % self.tokeniser.index_line)
+            return self.error.set('invalid syntax line %d' % self.tokeniser.index_line)  # type: ignore[no-any-return]
         return False
 
     def parse_section(self, name: str) -> Union[bool, str]:
         if name not in self._structure:
-            return self.error.set('option {} is not allowed here'.format(name))
+            return self.error.set('option {} is not allowed here'.format(name))  # type: ignore[no-any-return]
 
         if not self.dispatch(name):
             return False
@@ -609,6 +609,6 @@ class Configuration(_Configuration):
         if name == 'static' and command == 'attribute':
             command = 'attributes'
         if command not in self._structure[name]['commands']:
-            return self.error.set('invalid keyword "{}"'.format(command))
+            return self.error.set('invalid keyword "{}"'.format(command))  # type: ignore[no-any-return]
 
-        return self._structure[name]['class'].parse(name, command)
+        return self._structure[name]['class'].parse(name, command)  # type: ignore[no-any-return]

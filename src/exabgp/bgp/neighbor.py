@@ -313,11 +313,11 @@ class Neighbor(dict):
 
     def ip_self(self, afi: AFI) -> IP:
         if afi == self['local-address'].afi:
-            return self['local-address']
+            return self['local-address']  # type: ignore[no-any-return]
 
         # attempting to not barf for next-hop self when the peer is IPv6
         if afi == AFI.ipv4:
-            return self['router-id']
+            return self['router-id']  # type: ignore[no-any-return]
 
         raise TypeError(
             f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({self["local-address"].afi})',
