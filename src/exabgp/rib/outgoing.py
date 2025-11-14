@@ -212,9 +212,9 @@ class OutgoingRIB(Cache):
         new_attr = self._new_attribute
 
         # add the route to the list to be announced/withdrawn
-        attr_af_nlri.setdefault(change_attr_index, {}).setdefault(change_family, RIBdict({}))[change_index] = change
+        attr_af_nlri.setdefault(change_attr_index, {}).setdefault(change_family, RIBdict({}))[change_index] = change  # type: ignore[arg-type]
         new_nlri[change_index] = change
-        new_attr[change_attr_index] = change.attributes
+        new_attr[change_attr_index] = change.attributes  # type: ignore[index]
         self.update_cache(change)
 
     def updates(self, grouped: bool) -> Iterator[Union[Update, RouteRefresh]]:

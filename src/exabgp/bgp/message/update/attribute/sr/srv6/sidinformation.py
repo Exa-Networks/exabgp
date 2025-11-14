@@ -40,7 +40,7 @@ SubSubTlvType = TypeVar('SubSubTlvType', bound=GenericSrv6ServiceDataSubSubTlv)
 
 @Srv6L2Service.register()
 @Srv6L3Service.register()
-class Srv6SidInformation:
+class Srv6SidInformation:  # type: ignore[type-var]
     TLV: ClassVar[int] = 1
 
     # Registry maps TLV codes to Sub-Sub-TLV classes
@@ -64,7 +64,7 @@ class Srv6SidInformation:
             code: int = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Service Sub-Sub-TLV type')
-            cls.registered_subsubtlvs[code] = klass
+            cls.registered_subsubtlvs[code] = klass  # type: ignore[type-var]
             return klass
 
         return register_subsubtlv

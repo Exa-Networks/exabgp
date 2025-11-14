@@ -23,7 +23,7 @@ class ParseFlowScope(Section):
     syntax: str = f'scope {{\n  {joined};\n}}'
 
     known: Dict[str, Callable[[Tokeniser], Generator[InterfaceSet, None, None]]] = {
-        'interface-set': interface_set,
+        'interface-set': interface_set,  # type: ignore[dict-item]
     }
 
     # 'community','extended-community'

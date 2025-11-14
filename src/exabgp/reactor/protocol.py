@@ -110,13 +110,13 @@ class Protocol:
         md5_base64 = self.neighbor['md5-base64']
         ttl_out = self.neighbor['outgoing-ttl']
         itf = self.neighbor['source-interface']
-        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
+        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)  # type: ignore[arg-type]
 
         for connected in self.connection.establish():
             yield False
 
-        if self.peer.neighbor.api['neighbor-changes']:
-            self.peer.reactor.processes.connected(self.peer.neighbor)
+        if self.peer.neighbor.api['neighbor-changes']:  # type: ignore[index]
+            self.peer.reactor.processes.connected(self.peer.neighbor)  # type: ignore[union-attr]
 
         if not local:
             self.neighbor['local-address'] = IP.create(self.connection.local)
