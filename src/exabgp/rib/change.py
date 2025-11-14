@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Tuple
 if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri.nlri import NLRI
     from exabgp.bgp.message.update.attribute.attributes import Attributes
-    from exabgp.protocol.family import _AFI, _SAFI
+    from exabgp.protocol.family import AFI, SAFI
 
 
 class Change:
@@ -21,7 +21,7 @@ class Change:
     _Change__index: bytes
 
     @staticmethod
-    def family_prefix(family: Tuple[_AFI, _SAFI]) -> bytes:
+    def family_prefix(family: Tuple[AFI, SAFI]) -> bytes:
         return b'%02x%02x' % family
 
     def __init__(self, nlri: NLRI, attributes: Attributes) -> None:

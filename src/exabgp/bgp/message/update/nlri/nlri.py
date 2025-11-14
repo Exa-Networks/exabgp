@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
-from exabgp.protocol.family import _AFI
-from exabgp.protocol.family import _SAFI
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 
@@ -28,11 +26,11 @@ class NLRI(Family):
     EOR: ClassVar[bool] = False
 
     registered_nlri: ClassVar[Dict[str, Type[NLRI]]] = dict()
-    registered_families: ClassVar[List[Tuple[_AFI, _SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
+    registered_families: ClassVar[List[Tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
 
     action: int
 
-    def __init__(self, afi: _AFI, safi: _SAFI, action: int = Action.UNSET) -> None:
+    def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET) -> None:
         Family.__init__(self, afi, safi)
         self.action = action
 
@@ -79,7 +77,7 @@ class NLRI(Family):
     @classmethod
     def register(cls, afi: int, safi: int, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
         def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:
-            new: Tuple[_AFI, _SAFI] = (AFI.create(afi), SAFI.create(safi))
+            new: Tuple[AFI, SAFI] = (AFI.create(afi), SAFI.create(safi))
             if new in cls.registered_nlri:
                 if force:
                     # python has a bug and does not allow %ld/%ld (pypy does)
@@ -95,15 +93,15 @@ class NLRI(Family):
         return register_nlri
 
     @staticmethod
-    def known_families() -> List[Tuple[_AFI, _SAFI]]:
+    def known_families() -> List[Tuple[AFI, SAFI]]:
         # we do not want to take the risk of the caller modifying the list by accident
         # it can not be a generator
         return list(NLRI.registered_families)
 
     @classmethod
     def unpack_nlri(cls, afi: int, safi: int, data: bytes, action: int, addpath: bool) -> NLRI:
-        a: _AFI
-        s: _SAFI
+        a: AFI
+        s: SAFI
         a, s = AFI.create(afi), SAFI.create(safi)
         log.debug(lazynlri(a, s, addpath, data), 'parser')
 

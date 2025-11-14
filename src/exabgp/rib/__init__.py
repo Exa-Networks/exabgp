@@ -11,7 +11,7 @@ from typing import ClassVar, Dict, Set, Tuple
 
 from exabgp.rib.incoming import IncomingRIB
 from exabgp.rib.outgoing import OutgoingRIB
-from exabgp.protocol.family import _AFI, _SAFI
+from exabgp.protocol.family import AFI, SAFI
 
 
 class RIB:
@@ -24,7 +24,7 @@ class RIB:
     incoming: IncomingRIB
     outgoing: OutgoingRIB
 
-    def __init__(self, name: str, adj_rib_in: bool, adj_rib_out: bool, families: Set[Tuple[_AFI, _SAFI]]) -> None:
+    def __init__(self, name: str, adj_rib_in: bool, adj_rib_out: bool, families: Set[Tuple[AFI, SAFI]]) -> None:
         self.name = name
 
         if name not in self._cache:

@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING, Set, Tuple
 from exabgp.rib.cache import Cache
 
 if TYPE_CHECKING:
-    from exabgp.protocol.family import _AFI, _SAFI
+    from exabgp.protocol.family import AFI, SAFI
 
 
 class IncomingRIB(Cache):
-    def __init__(self, cache: bool, families: Set[Tuple[_AFI, _SAFI]]) -> None:
+    def __init__(self, cache: bool, families: Set[Tuple[AFI, SAFI]]) -> None:
         Cache.__init__(self, cache, families)
 
     # back to square one, all the routes are removed

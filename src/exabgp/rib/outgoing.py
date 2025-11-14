@@ -24,7 +24,7 @@ from exabgp.rib.cache import Cache
 if TYPE_CHECKING:
     from exabgp.rib.change import Change
     from exabgp.bgp.message.update.attribute.attributes import Attributes
-    from exabgp.protocol.family import _AFI, _SAFI
+    from exabgp.protocol.family import AFI, SAFI
 
 # This is needs to be an ordered dict
 RIBdict = dict
@@ -33,12 +33,12 @@ RIBdict = dict
 class OutgoingRIB(Cache):
     _watchdog: Dict[str, Dict[str, Dict[bytes, Change]]]
     _new_nlri: Dict[bytes, Change]
-    _new_attr_af_nlri: Dict[bytes, Dict[Tuple[_AFI, _SAFI], Dict[bytes, Change]]]
+    _new_attr_af_nlri: Dict[bytes, Dict[Tuple[AFI, SAFI], Dict[bytes, Change]]]
     _new_attribute: Dict[bytes, Attributes]
-    _refresh_families: Set[Tuple[_AFI, _SAFI]]
+    _refresh_families: Set[Tuple[AFI, SAFI]]
     _refresh_changes: List[Change]
 
-    def __init__(self, cache: bool, families: Set[Tuple[_AFI, _SAFI]]) -> None:
+    def __init__(self, cache: bool, families: Set[Tuple[AFI, SAFI]]) -> None:
         Cache.__init__(self, cache, families)
 
         self._watchdog = {}
@@ -84,7 +84,7 @@ class OutgoingRIB(Cache):
     def pending(self) -> bool:
         return len(self._new_nlri) != 0 or len(self._refresh_changes) != 0
 
-    def resend(self, enhanced_refresh: bool, family: Optional[Tuple[_AFI, _SAFI]] = None) -> None:
+    def resend(self, enhanced_refresh: bool, family: Optional[Tuple[AFI, SAFI]] = None) -> None:
         requested_families = set(self.families)
 
         if family is not None:
@@ -97,7 +97,7 @@ class OutgoingRIB(Cache):
         for change in self.cached_changes(list(requested_families)):
             self._refresh_changes.append(change)
 
-    def withdraw(self, families: Optional[Set[Tuple[_AFI, _SAFI]]] = None) -> None:
+    def withdraw(self, families: Optional[Set[Tuple[AFI, SAFI]]] = None) -> None:
         if not families:
             families = self.families
         requested_families = set(families).intersection(self.families)

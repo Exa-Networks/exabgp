@@ -6,7 +6,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.ip import IP, IPv4, IPv6
-from exabgp.protocol.family import _AFI
+from exabgp.protocol.family import AFI
 from exabgp.bgp.message import Action
 
 # +-----------------------------------+
@@ -35,7 +35,7 @@ class SourceAD(MVPN):
     def __init__(
         self,
         rd: RouteDistinguisher,
-        afi: _AFI,
+        afi: AFI,
         source: IP,
         group: IP,
         packed: Optional[bytes] = None,
@@ -83,7 +83,7 @@ class SourceAD(MVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes, afi: _AFI) -> SourceAD:
+    def unpack(cls, data: bytes, afi: AFI) -> SourceAD:
         datalen = len(data)
         if datalen not in (MVPN_SOURCEAD_IPV4_LENGTH, MVPN_SOURCEAD_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')

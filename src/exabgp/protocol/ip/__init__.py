@@ -11,7 +11,7 @@ import builtins
 import socket
 from typing import Dict, Optional, Set, Type, ClassVar, Iterator, Any, TYPE_CHECKING
 
-from exabgp.protocol.family import AFI, SAFI, _AFI, _SAFI
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
 
 if TYPE_CHECKING:
@@ -27,18 +27,18 @@ if TYPE_CHECKING:
 
 class IPSelf:
     SELF: ClassVar[bool] = True
-    afi: _AFI
+    afi: AFI
 
-    def __init__(self, afi: _AFI) -> None:
+    def __init__(self, afi: AFI) -> None:
         self.afi = afi
 
     def __repr__(self) -> str:
         return 'self'
 
-    def top(self, negotiated: Negotiated, afi: _AFI = AFI.undefined) -> str:
+    def top(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> str:
         return negotiated.nexthopself(afi).top()  # type: ignore[no-any-return]
 
-    def ton(self, negotiated: Negotiated, afi: _AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:
         return negotiated.nexthopself(afi).ton()  # type: ignore[no-any-return]
 
     def pack(self, negotiated: Negotiated) -> bytes:
@@ -51,14 +51,14 @@ class IPSelf:
 class IP:
     SELF: ClassVar[bool] = False
 
-    afi: _AFI  # here for the API, changed in init (subclasses override as ClassVar)
+    afi: AFI  # here for the API, changed in init (subclasses override as ClassVar)
     # BITS and BYTES are defined as ClassVar in subclasses (IPv4/IPv6)
     # Not annotated here to allow proper ClassVar override
 
-    _known: ClassVar[Dict[_AFI, Type[IP]]] = dict()
+    _known: ClassVar[Dict[AFI, Type[IP]]] = dict()
 
-    _UNICAST: ClassVar[_SAFI] = SAFI.unicast
-    _MULTICAST: ClassVar[_SAFI] = SAFI.multicast
+    _UNICAST: ClassVar[SAFI] = SAFI.unicast
+    _MULTICAST: ClassVar[SAFI] = SAFI.multicast
 
     _multicast_range: ClassVar[Set[int]] = set(range(224, 240))  # 239
 
@@ -89,7 +89,7 @@ class IP:
     def ntop(data: bytes) -> str:
         return socket.inet_ntop(socket.AF_INET if len(data) == IPv4.BYTES else socket.AF_INET6, data)
 
-    def top(self, negotiated: Optional[Negotiated] = None, afi: _AFI = AFI.undefined) -> str:
+    def top(self, negotiated: Optional[Negotiated] = None, afi: AFI = AFI.undefined) -> str:
         return self._string
 
     @staticmethod
@@ -102,7 +102,7 @@ class IP:
         raise ValueError(f'unrecognised ip address {ip}')
 
     @staticmethod
-    def toafi(ip: str) -> _AFI:
+    def toafi(ip: str) -> AFI:
         # the orders matters as ::FFFF:<ipv4> is an IPv6 address
         if ':' in ip:
             return AFI.ipv6
@@ -111,7 +111,7 @@ class IP:
         raise ValueError(f'unrecognised ip address {ip}')
 
     @staticmethod
-    def tosafi(ip: str) -> _SAFI:
+    def tosafi(ip: str) -> SAFI:
         if ':' in ip:
             # XXX: FIXME: I assume that ::FFFF:<ip> must be treated unicast
             # if int(ip.split(':')[-1].split('.')[0]) in IP._multicast_range:
@@ -136,7 +136,7 @@ class IP:
         return value
 
     @staticmethod
-    def length(afi: _AFI) -> int:
+    def length(afi: AFI) -> int:
         return 4 if afi == AFI.ipv4 else 16
 
     def index(self) -> bytes:
@@ -145,7 +145,7 @@ class IP:
     def pack(self) -> bytes:
         return self._packed
 
-    def ton(self, negotiated: Optional[Negotiated] = None, afi: _AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Optional[Negotiated] = None, afi: AFI = AFI.undefined) -> bytes:
         return self._packed
 
     def __repr__(self) -> str:
@@ -181,7 +181,7 @@ class IP:
     @classmethod
     def klass(cls, ip: str) -> Optional[Type[IP]]:
         # the orders matters as ::FFFF:<ipv4> is an IPv6 address
-        afi: Optional[_AFI]
+        afi: Optional[AFI]
         if ':' in ip:
             afi = IPv6.afi
         elif '.' in ip:
@@ -237,8 +237,8 @@ class _NoNextHop:
 
     packed: ClassVar[str] = ''
 
-    afi: ClassVar[_AFI] = AFI.undefined
-    safi: ClassVar[_SAFI] = SAFI.undefined
+    afi: ClassVar[AFI] = AFI.undefined
+    safi: ClassVar[SAFI] = SAFI.undefined
 
     def pack(self, data: Any, negotiated: Optional[Negotiated] = None) -> str:
         return ''
@@ -246,7 +246,7 @@ class _NoNextHop:
     def index(self) -> str:
         return ''
 
-    def ton(self, negotiated: Optional[Negotiated] = None, afi: _AFI = AFI.undefined) -> str:
+    def ton(self, negotiated: Optional[Negotiated] = None, afi: AFI = AFI.undefined) -> str:
         return ''
 
     def __str__(self) -> str:
@@ -268,7 +268,7 @@ NoNextHop: _NoNextHop = _NoNextHop()
 
 class IPv4(IP):
     # Override afi as ClassVar (base class has it as instance variable)
-    afi: ClassVar[_AFI] = AFI.ipv4  # type: ignore[misc]
+    afi: ClassVar[AFI] = AFI.ipv4  # type: ignore[misc]
 
     # lowercase to match the Address API (used in configuration code)
     bits: ClassVar[int] = 32
@@ -324,7 +324,7 @@ IPv4.register()
 
 class IPv6(IP):
     # Override afi as ClassVar (base class has it as instance variable)
-    afi: ClassVar[_AFI] = AFI.ipv6  # type: ignore[misc]
+    afi: ClassVar[AFI] = AFI.ipv6  # type: ignore[misc]
 
     # lowercase to match the Address API (used in configuration code)
     bits: ClassVar[int] = 128
