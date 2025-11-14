@@ -260,6 +260,10 @@ class Peer:
     def reconfigure(self, restart_neighbor=None):
         # we want to update the route which were in the configuration file
         self._neighbor = restart_neighbor
+        # Update self.neighbor immediately so API processes see the new configuration
+        # during RELOAD (SIGUSR1), not just during connection reset
+        if restart_neighbor:
+            self.neighbor = restart_neighbor
 
     def teardown(self, code, restart=True):
         self._restart = restart
