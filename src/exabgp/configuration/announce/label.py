@@ -92,11 +92,11 @@ def ip_label(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         action = AnnounceLabel.action.get(command, '')
 
         if action == 'attribute-add':
-            change.attributes.add(AnnounceLabel.known[command](tokeniser))
+            change.attributes.add(AnnounceLabel.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nlri-set':
-            change.nlri.assign(AnnounceLabel.assign[command], AnnounceLabel.known[command](tokeniser))
+            change.nlri.assign(AnnounceLabel.assign[command], AnnounceLabel.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceLabel.known[command](tokeniser)
+            nexthop, attribute = AnnounceLabel.known[command](tokeniser)  # type: ignore[operator]
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:

@@ -67,7 +67,7 @@ class VPLS(NLRI):
             return 'vpls nlri size missing'
         if self.rd is None:
             return 'vpls nlri route-distinguisher missing'
-        if self.base > (0xFFFFF - self.size):  # 20 bits, 3 bytes
+        if self.base > (0xFFFFF - self.size):  # type: ignore[operator]  # 20 bits, 3 bytes
             return 'vpls nlri size inconsistency'
         return ''
 

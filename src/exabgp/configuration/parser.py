@@ -15,11 +15,11 @@ from exabgp.protocol.ip import IPRange
 
 
 def string(tokeniser: object) -> str:
-    return tokeniser()  # type: ignore[no-any-return]
+    return tokeniser()  # type: ignore[no-any-return,operator]
 
 
 def boolean(tokeniser: object, default: bool) -> bool:
-    status = tokeniser().lower()
+    status = tokeniser().lower()  # type: ignore[operator]
     if not status:
         return default
     if status in ('true', 'enable', 'enabled'):
@@ -30,7 +30,7 @@ def boolean(tokeniser: object, default: bool) -> bool:
 
 
 def auto_boolean(tokeniser: object, default: bool) -> Optional[bool]:
-    status = tokeniser().lower()
+    status = tokeniser().lower()  # type: ignore[operator]
     if not status:
         return default
     if status in ('true', 'enable', 'enabled'):
@@ -46,7 +46,7 @@ def port(tokeniser: object) -> int:
     if not tokeniser.tokens:
         raise ValueError('a port number is required')
 
-    value = tokeniser()
+    value = tokeniser()  # type: ignore[operator]
     try:
         return int(value)
     except ValueError:
@@ -64,7 +64,7 @@ def auto_asn(tokeniser: object, value: Optional[str] = None) -> Optional[ASN]:
             raise ValueError("an asn or 'auto' is required")
 
     if tokeniser.peek() == 'auto':
-        tokeniser()
+        tokeniser()  # type: ignore[operator]
         return None
 
     return asn(tokeniser)
@@ -75,7 +75,7 @@ def asn(tokeniser: object, value: Optional[str] = None) -> ASN:
         if not tokeniser.tokens:
             raise ValueError('an asn is required')
 
-    value = tokeniser()
+    value = tokeniser()  # type: ignore[operator]
     try:
         if value.count('.'):
             high, low = value.split('.', 1)
@@ -91,7 +91,7 @@ def peer_ip(tokeniser: object) -> IPRange:
     if not tokeniser.tokens:
         raise ValueError('an ip address is required')
 
-    value = tokeniser()
+    value = tokeniser()  # type: ignore[operator]
     if '/' in value:
         value, mask = value.split('/', 1)
     else:
@@ -108,7 +108,7 @@ def ip(tokeniser: object) -> IP:
     if not tokeniser.tokens:
         raise ValueError('an ip address is required')
 
-    value = tokeniser()
+    value = tokeniser()  # type: ignore[operator]
     try:
         return IP.create(value)
     except (OSError, IndexError, ValueError):

@@ -279,7 +279,7 @@ class NumericString:
     }
 
     def short(self) -> str:
-        op = self.operations & (CommonOperator.EOL ^ 0xFF)
+        op = self.operations & (CommonOperator.EOL ^ 0xFF)  # type: ignore[operator]
         if op in [NumericOperator.TRUE, NumericOperator.FALSE]:
             return self._string[op]
         # ugly hack as dynamic languages are what they are and use used __str__ in the past
@@ -307,7 +307,7 @@ class BinaryString:
     }
 
     def short(self) -> str:
-        op = self.operations & (CommonOperator.EOL ^ 0xFF)
+        op = self.operations & (CommonOperator.EOL ^ 0xFF)  # type: ignore[operator]
         return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), self.value)
 
     def __str__(self) -> str:

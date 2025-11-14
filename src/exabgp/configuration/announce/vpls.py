@@ -163,11 +163,11 @@ def l2vpn_vpls(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         action = AnnounceVPLS.action[command]
 
         if 'nlri-set' in action:
-            change.nlri.assign(AnnounceVPLS.assign[command], AnnounceVPLS.known[command](tokeniser))
+            change.nlri.assign(AnnounceVPLS.assign[command], AnnounceVPLS.known[command](tokeniser))  # type: ignore[operator]
         elif 'attribute-add' in action:
-            change.attributes.add(AnnounceVPLS.known[command](tokeniser))
+            change.attributes.add(AnnounceVPLS.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceVPLS.known[command](tokeniser)
+            nexthop, attribute = AnnounceVPLS.known[command](tokeniser)  # type: ignore[operator]
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:

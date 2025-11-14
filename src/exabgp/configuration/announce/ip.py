@@ -165,11 +165,11 @@ def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         action = AnnounceIP.action.get(command, '')
 
         if action == 'attribute-add':
-            change.attributes.add(AnnounceIP.known[command](tokeniser))
+            change.attributes.add(AnnounceIP.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nlri-set':
-            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))
+            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceIP.known[command](tokeniser)
+            nexthop, attribute = AnnounceIP.known[command](tokeniser)  # type: ignore[operator]
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
@@ -199,11 +199,11 @@ def ip_multicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         action = AnnounceIP.action.get(command, '')
 
         if action == 'attribute-add':
-            change.attributes.add(AnnounceIP.known[command](tokeniser))
+            change.attributes.add(AnnounceIP.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nlri-set':
-            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))
+            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceIP.known[command](tokeniser)
+            nexthop, attribute = AnnounceIP.known[command](tokeniser)  # type: ignore[operator]
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:

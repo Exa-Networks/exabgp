@@ -114,7 +114,7 @@ class Transcoder:
             message = Notification.unpack_message(data)
 
             if (message.code, message.subcode) != (6, 2):
-                message.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+                message.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)  # type: ignore[operator]
                 return self.encoder.notification(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
 
             if len(data) == 0:

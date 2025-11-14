@@ -92,11 +92,11 @@ def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         action = AnnounceVPN.action.get(command, '')
 
         if action == 'attribute-add':
-            change.attributes.add(AnnounceVPN.known[command](tokeniser))
+            change.attributes.add(AnnounceVPN.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nlri-set':
-            change.nlri.assign(AnnounceVPN.assign[command], AnnounceVPN.known[command](tokeniser))
+            change.nlri.assign(AnnounceVPN.assign[command], AnnounceVPN.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceVPN.known[command](tokeniser)
+            nexthop, attribute = AnnounceVPN.known[command](tokeniser)  # type: ignore[operator]
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:

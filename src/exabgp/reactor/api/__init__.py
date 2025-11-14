@@ -61,7 +61,7 @@ class API(Command):
         api = 'json' if use_json else 'text'
         for registered in self.functions:
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
-                return self.callback[api][registered](self, reactor, service, command, use_json)  # type: ignore[no-any-return]
+                return self.callback[api][registered](self, reactor, service, command, use_json)  # type: ignore[no-any-return,operator]
         reactor.processes.answer_error(service)
         log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')
         return False

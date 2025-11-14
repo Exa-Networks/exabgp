@@ -94,11 +94,11 @@ def ip_unicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         action = AnnouncePath.action.get(command, '')
 
         if action == 'attribute-add':
-            change.attributes.add(AnnouncePath.known[command](tokeniser))
+            change.attributes.add(AnnouncePath.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nlri-set':
-            change.nlri.assign(AnnouncePath.assign[command], AnnouncePath.known[command](tokeniser))
+            change.nlri.assign(AnnouncePath.assign[command], AnnouncePath.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnouncePath.known[command](tokeniser)
+            nexthop, attribute = AnnouncePath.known[command](tokeniser)  # type: ignore[operator]
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
