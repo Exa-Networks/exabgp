@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from struct import pack
 from struct import unpack
@@ -56,7 +59,7 @@ class OriginASNIP(Origin):
         return 'origin:{}:{}'.format(self.asn, self.ip)
 
     @staticmethod
-    def unpack(data: bytes) -> OriginASNIP:
+    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> OriginASNIP:
         asn, ip = unpack('!H4s', data[2:8])
         return OriginASNIP(ASN(asn), IPv4.ntop(ip), False, data[:8])
 
@@ -79,7 +82,7 @@ class OriginIPASN(Origin):
         return 'origin:{}:{}'.format(self.ip, self.asn)
 
     @staticmethod
-    def unpack(data: bytes) -> OriginIPASN:
+    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> OriginIPASN:
         ip, asn = unpack('!4sH', data[2:8])
         return OriginIPASN(IPv4.ntop(ip), ASN(asn), False, data[:8])
 
@@ -102,6 +105,6 @@ class OriginASN4Number(Origin):
         return 'origin:{}:{}'.format(self.asn, self.number)
 
     @staticmethod
-    def unpack(data: bytes) -> OriginASN4Number:
+    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> OriginASN4Number:
         asn, number = unpack('!LH', data[2:8])
         return OriginASN4Number(ASN(asn), number, False, data[:8])
