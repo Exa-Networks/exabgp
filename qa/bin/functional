@@ -229,11 +229,11 @@ class Record:
         if self.state == State.RUNNING:
             return color(0, 0) + self.nick  # NORMAL
         if self.state == State.FAIL:
-            return color(0, 91) + self.nick  # RED
+            return color(0, 91) + '✖'  # RED - Failed test
         if self.state == State.SUCCESS:
-            return color(1, 92) + '✓'  # GREEN
+            return color(1, 92) + '✓'  # GREEN - Successful test
         if self.state == State.SKIP:
-            return color(0, 34) + '✖'  # BLUE
+            return color(0, 90) + '○'  # GRAY - Skipped test
 
     def result(self, success):
         if success:
@@ -310,6 +310,13 @@ class Tests:
         for test in self.registered():
             sys.stdout.write(' %s' % test.colored())
         sys.stdout.write('%s\r' % color(0, 0))
+        sys.stdout.flush()
+
+    def legend(self):
+        sys.stdout.write('\nTest results (each character is a test):\n')
+        sys.stdout.write(f'  {color(1, 92)}✓{color(0, 0)} = passed  ')
+        sys.stdout.write(f'{color(0, 91)}✖{color(0, 0)} = failed  ')
+        sys.stdout.write(f'{color(0, 90)}○{color(0, 0)} = skipped\n\n')
         sys.stdout.flush()
 
 
@@ -486,6 +493,7 @@ class EncodingTests(Tests):
         return '\n'.join(result)
 
     def run_selected(self, timeout):
+        self.legend()
         success = True
         client = dict()
 
@@ -632,6 +640,7 @@ class DecodingTests(Tests):
         return '\n'.join(result)
 
     def run_selected(self, timeout):
+        self.legend()
         success = True
         for test in self.selected():
             test.running()
@@ -725,6 +734,7 @@ class ParsingTests(Tests):
         return '\n'.join(result)
 
     def run_selected(self, timeout):
+        self.legend()
         success = True
 
         for test in self.selected():
