@@ -39,7 +39,7 @@ class Type(int):
     def __len__(self) -> int:
         return 2
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # type: ignore[empty-body]
         pass
 
 
@@ -52,7 +52,7 @@ class Operational(Message):
     ID = Message.CODE.OPERATIONAL
     TYPE = bytes([Message.CODE.OPERATIONAL])
 
-    registered_operational: ClassVar[Dict[int, Tuple[str, Type[Operational]]]] = dict()
+    registered_operational: ClassVar[Dict[int, Tuple[str, Type[Operational]]]] = dict()  # type: ignore[type-arg]
 
     has_family: ClassVar[bool] = False
     has_routerid: ClassVar[bool] = False
@@ -100,7 +100,7 @@ class Operational(Message):
         return f'operational {self.name}'
 
     @staticmethod
-    def register(klass: Type[Operational]) -> Type[Operational]:
+    def register(klass: Type[Operational]) -> Type[Operational]:  # type: ignore[type-arg]
         Operational.registered_operational[klass.code] = (klass.category, klass)
         return klass
 
@@ -246,7 +246,7 @@ class Advisory:
         category: ClassVar[str] = 'advisory'
 
         def extensive(self) -> str:
-            return f'operational {self.name} afi {self.afi} safi {self.safi} "{self.data}"'
+            return f'operational {self.name} afi {self.afi} safi {self.safi} "{self.data}"'  # type: ignore[str-bytes-safe]
 
     @Operational.register  # type: ignore[arg-type]
     class ADM(_Advisory):

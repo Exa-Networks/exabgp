@@ -92,7 +92,7 @@ class Protocol:
     def accept(self, incoming: 'Incoming') -> Protocol:
         self.connection = incoming
 
-        if self.peer.neighbor.api['neighbor-changes']:
+        if self.peer.neighbor.api['neighbor-changes']:  # type: ignore[index]
             self.peer.reactor.processes.connected(self.peer.neighbor)  # type: ignore[union-attr]
 
         # very important - as we use this function on __init__
@@ -103,25 +103,25 @@ class Protocol:
         if self.connection:
             return
 
-        local = self.neighbor['md5-ip'].top() if not self.neighbor.auto_discovery else None
-        peer = self.neighbor['peer-address'].top()
-        afi = self.neighbor['peer-address'].afi
-        md5 = self.neighbor['md5-password']
-        md5_base64 = self.neighbor['md5-base64']
-        ttl_out = self.neighbor['outgoing-ttl']
-        itf = self.neighbor['source-interface']
+        local = self.neighbor['md5-ip'].top() if not self.neighbor.auto_discovery else None  # type: ignore[index]
+        peer = self.neighbor['peer-address'].top()  # type: ignore[index]
+        afi = self.neighbor['peer-address'].afi  # type: ignore[index]
+        md5 = self.neighbor['md5-password']  # type: ignore[index]
+        md5_base64 = self.neighbor['md5-base64']  # type: ignore[index]
+        ttl_out = self.neighbor['outgoing-ttl']  # type: ignore[index]
+        itf = self.neighbor['source-interface']  # type: ignore[index]
         self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)  # type: ignore[arg-type]
 
         for connected in self.connection.establish():
             yield False
 
-        if self.peer.neighbor.api['neighbor-changes']:
+        if self.peer.neighbor.api['neighbor-changes']:  # type: ignore[index]
             self.peer.reactor.processes.connected(self.peer.neighbor)  # type: ignore[union-attr]
 
         if not local:
-            self.neighbor['local-address'] = IP.create(self.connection.local)
-            if self.neighbor['router-id'] is None and self.neighbor['local-address'].afi == AFI.ipv4:
-                self.neighbor['router-id'] = self.neighbor['local-address']
+            self.neighbor['local-address'] = IP.create(self.connection.local)  # type: ignore[index]
+            if self.neighbor['router-id'] is None and self.neighbor['local-address'].afi == AFI.ipv4:  # type: ignore[index]
+                self.neighbor['router-id'] = self.neighbor['local-address']  # type: ignore[index]
 
         yield True
 
@@ -134,10 +134,10 @@ class Protocol:
             self.connection = None
 
     def _to_api(self, direction: str, message: Any, raw: bytes) -> None:
-        packets: bool = self.neighbor.api['{}-packets'.format(direction)]
-        parsed: bool = self.neighbor.api['{}-parsed'.format(direction)]
-        consolidate: bool = self.neighbor.api['{}-consolidate'.format(direction)]
-        negotiated: Optional[Negotiated] = self.negotiated if self.neighbor.api['negotiated'] else None
+        packets: bool = self.neighbor.api['{}-packets'.format(direction)]  # type: ignore[index]
+        parsed: bool = self.neighbor.api['{}-parsed'.format(direction)]  # type: ignore[index]
+        consolidate: bool = self.neighbor.api['{}-consolidate'.format(direction)]  # type: ignore[index]
+        negotiated: Optional[Negotiated] = self.negotiated if self.neighbor.api['negotiated'] else None  # type: ignore[index]
 
         if consolidate:
             if packets:
@@ -208,9 +208,9 @@ class Protocol:
         # This will always be defined by the loop but scope leaking upset scrutinizer/pylint
         msg_id = None
 
-        packets = self.neighbor.api['receive-packets']
-        consolidate = self.neighbor.api['receive-consolidate']
-        parsed = self.neighbor.api['receive-parsed']
+        packets = self.neighbor.api['receive-packets']  # type: ignore[index]
+        consolidate = self.neighbor.api['receive-consolidate']  # type: ignore[index]
+        parsed = self.neighbor.api['receive-parsed']  # type: ignore[index]
 
         body, header = b'', b''  # just because pylint/pylama are getting more clever
 
@@ -315,7 +315,7 @@ class Protocol:
         if error is not None:
             raise Notify(*error)
 
-        if self.neighbor.api['negotiated']:
+        if self.neighbor.api['negotiated']:  # type: ignore[index]
             self.peer.reactor.processes.negotiated(self.peer.neighbor, self.negotiated)  # type: ignore[union-attr]
 
         if self.negotiated.mismatch:

@@ -322,7 +322,7 @@ def accept(tokeniser: 'Tokeniser') -> None:
 
 def discard(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
-    return ExtendedCommunities().add(TrafficRate(ASN(0), 0))  # type: ignore[arg-type]
+    return ExtendedCommunities().add(TrafficRate(ASN(0), 0))  # type: ignore[arg-type,return-value]
 
 
 def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
@@ -335,7 +335,7 @@ def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     if speed > MAX_RATE_LIMIT_BPS:
         speed = MAX_RATE_LIMIT_BPS
         log.warning(lambda: f'rate-limiting changed for {MAX_RATE_LIMIT_BPS} bytes from {speed}', 'configuration')
-    return ExtendedCommunities().add(TrafficRate(ASN(0), speed))  # type: ignore[arg-type]
+    return ExtendedCommunities().add(TrafficRate(ASN(0), speed))  # type: ignore[arg-type,return-value]
 
 
 def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, type], ExtendedCommunities]:
@@ -344,18 +344,18 @@ def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, type], ExtendedCommuniti
 
     # the redirect is an IPv4 or an IPv6 nexthop
     if count == 0 or (count > 1 and '[' not in data and ']' not in data):
-        return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))  # type: ignore[arg-type]
+        return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))  # type: ignore[arg-type,return-value]
 
     # the redirect is an IPv6 nexthop using [] notation
     if data.startswith('[') and data.endswith(']'):
-        return IP.create(data[1:-1]), ExtendedCommunities().add(TrafficNextHopSimpson(False))  # type: ignore[arg-type]
+        return IP.create(data[1:-1]), ExtendedCommunities().add(TrafficNextHopSimpson(False))  # type: ignore[arg-type,return-value]
 
     # the redirect is an ipv6:NN route-target using []: notation
     if count > 1:
         if ']:' not in data:
             try:
                 ip: IP = IP.create(data)
-                return ip, ExtendedCommunities().add(TrafficNextHopSimpson(False))  # type: ignore[arg-type]
+                return ip, ExtendedCommunities().add(TrafficNextHopSimpson(False))  # type: ignore[arg-type,return-value]
             except Exception:
                 raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
 
@@ -365,7 +365,7 @@ def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, type], ExtendedCommuniti
 
         if int(nn) >= pow(2, LOCAL_ADMIN_16_BITS):
             raise ValueError('Local administrator field is a 16 bits number, value too large {}'.format(nn))
-        return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, int(nn)))  # type: ignore[arg-type]
+        return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, int(nn)))  # type: ignore[arg-type,return-value]
 
     # the redirect is an ASN:NN route-target
     if True:  # count == 1:
@@ -389,29 +389,29 @@ def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, type], ExtendedCommuniti
                 raise ValueError(
                     'asn is a 32 bits number, local administrator field can only be 16 bit {}'.format(nn_int)
                 )
-            return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, nn_int))  # type: ignore[arg-type]
+            return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, nn_int))  # type: ignore[arg-type,return-value]
 
         if nn_int >= pow(2, LOCAL_ADMIN_32_BITS):
             raise ValueError('Local administrator field is a 32 bits number, value too large {}'.format(nn_int))
 
-        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn_int))  # type: ignore[arg-type]
+        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn_int))  # type: ignore[arg-type,return-value]
 
     raise ValueError('redirect format incorrect')
 
 
 def redirect_next_hop(tokeniser: 'Tokeniser') -> ExtendedCommunities:
-    return ExtendedCommunities().add(TrafficNextHopSimpson(False))  # type: ignore[arg-type]
+    return ExtendedCommunities().add(TrafficNextHopSimpson(False))  # type: ignore[arg-type,return-value]
 
 
 def redirect_next_hop_ietf(tokeniser: 'Tokeniser') -> Union[ExtendedCommunities, ExtendedCommunitiesIPv6]:
     ip: IP = IP.create(tokeniser())
     if ip.ipv4():
-        return ExtendedCommunities().add(TrafficNextHopIPv4IETF(ip, False))  # type: ignore[arg-type]
-    return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(ip, False))  # type: ignore[arg-type]
+        return ExtendedCommunities().add(TrafficNextHopIPv4IETF(ip, False))  # type: ignore[arg-type,return-value]
+    return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(ip, False))  # type: ignore[arg-type,return-value]
 
 
 def copy(tokeniser: 'Tokeniser') -> Tuple[IP, ExtendedCommunities]:
-    return IP.create(tokeniser()), ExtendedCommunities().add(TrafficNextHopSimpson(True))  # type: ignore[arg-type]
+    return IP.create(tokeniser()), ExtendedCommunities().add(TrafficNextHopSimpson(True))  # type: ignore[arg-type,return-value]
 
 
 def mark(tokeniser: 'Tokeniser') -> ExtendedCommunities:
@@ -425,7 +425,7 @@ def mark(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     if dscp_value < 0 or dscp_value > DSCP_MAX_VALUE:
         raise ValueError('dscp is not a valid number')
 
-    return ExtendedCommunities().add(TrafficMark(dscp_value))  # type: ignore[arg-type]
+    return ExtendedCommunities().add(TrafficMark(dscp_value))  # type: ignore[arg-type,return-value]
 
 
 def action(tokeniser: 'Tokeniser') -> ExtendedCommunities:
@@ -437,7 +437,7 @@ def action(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     if not sample and not terminal:
         raise ValueError('invalid flow action')
 
-    return ExtendedCommunities().add(TrafficAction(sample, terminal))  # type: ignore[arg-type]
+    return ExtendedCommunities().add(TrafficAction(sample, terminal))  # type: ignore[arg-type,return-value]
 
 
 def _interface_set(data: str) -> InterfaceSet:

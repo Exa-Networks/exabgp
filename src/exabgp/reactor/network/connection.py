@@ -98,7 +98,7 @@ class Connection:
         if poller is None:
             poller = select.poll()
             poller.register(self.io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)  # type: ignore[arg-type]
-            self._rpoller = {self.io: poller}
+            self._rpoller = {self.io: poller}  # type: ignore[dict-item]
 
         ready = False
         for _, event in poller.poll(0):
@@ -114,7 +114,7 @@ class Connection:
         if poller is None:
             poller = select.poll()
             poller.register(self.io, select.POLLOUT | select.POLLHUP | select.POLLNVAL | select.POLLERR)  # type: ignore[arg-type]
-            self._wpoller = {self.io: poller}
+            self._wpoller = {self.io: poller}  # type: ignore[dict-item]
 
         ready = False
         for _, event in poller.poll(0):
@@ -247,7 +247,7 @@ class Connection:
             yield length, 0, header, b'', NotifyError(1, 2, report)
             return
 
-        validator = Message.Length.get(msg, lambda _: _ >= MIN_BGP_MESSAGE_LENGTH)
+        validator = Message.Length.get(msg, lambda _: _ >= MIN_BGP_MESSAGE_LENGTH)  # type: ignore[call-overload]
         if not validator(length):
             # MUST send the faulty length back
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'

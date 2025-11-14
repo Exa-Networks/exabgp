@@ -151,7 +151,7 @@ class Peer:
     def _close(self, message: str = '', error: str = '') -> None:
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
             try:
-                if self.neighbor.api['neighbor-changes']:
+                if self.neighbor.api['neighbor-changes']:  # type: ignore[index]
                     self.reactor.processes.down(self.neighbor, message)  # type: ignore[union-attr]
             except ProcessError:
                 log.debug(
@@ -483,7 +483,7 @@ class Peer:
             'reactor',
         )
         self.stats['up'] += 1
-        if self.neighbor.api['neighbor-changes']:
+        if self.neighbor.api['neighbor-changes']:  # type: ignore[index]
             try:
                 self.reactor.processes.up(self.neighbor)  # type: ignore[union-attr]
             except ProcessError:
@@ -726,7 +726,7 @@ class Peer:
 
     # loop
 
-    def run(self) -> int:
+    def run(self) -> int:  # type: ignore[return]
         if self.reactor.processes.broken(self.neighbor):  # type: ignore[union-attr]
             # XXX: we should perhaps try to restart the process ??
             log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')

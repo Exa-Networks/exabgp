@@ -101,7 +101,7 @@ class BGPLS(NLRI):
         return len(self._packed) + 2
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed))
+        return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed))  # type: ignore[str-bytes-safe]
 
     def __str__(self) -> str:
         return 'bgp-ls:{}:{}'.format(
@@ -123,17 +123,17 @@ class BGPLS(NLRI):
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher
                 rd: Optional[RouteDistinguisher] = RouteDistinguisher.unpack(bgp[4:12])
-                klass = cls.registered_bgpls[code].unpack_nlri(bgp[12 : length + 4], rd)  # type: ignore[arg-type]
+                klass = cls.registered_bgpls[code].unpack_nlri(bgp[12 : length + 4], rd)  # type: ignore[arg-type,call-arg]
             else:
                 rd = None
-                klass = cls.registered_bgpls[code].unpack_nlri(bgp[4 : length + 4], rd)  # type: ignore[arg-type]
+                klass = cls.registered_bgpls[code].unpack_nlri(bgp[4 : length + 4], rd)  # type: ignore[arg-type,call-arg]
         else:
             klass = GenericBGPLS(code, bgp[4 : length + 4])
         klass.CODE = code
         klass.action = action
         klass.addpath = addpath
 
-        return klass, bgp[length + 4 :]
+        return klass, bgp[length + 4 :]  # type: ignore[return-value]
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self.pack())

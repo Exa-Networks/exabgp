@@ -153,10 +153,10 @@ class Reactor:
             if service.startswith(API_PREFIX):
                 matching.append(peer_name)
                 continue
-            if service in peer.neighbor.api['processes']:
+            if service in peer.neighbor.api['processes']:  # type: ignore[index]
                 matching.append(peer_name)
                 continue
-            if any(True for r in peer.neighbor.api['processes-match'] if re.match(r, service)):
+            if any(True for r in peer.neighbor.api['processes-match'] if re.match(r, service)):  # type: ignore[index]
                 matching.append(peer_name)
                 continue
 
@@ -342,7 +342,7 @@ class Reactor:
 
                     # report that we received a signal
                     for key in self._peers:
-                        if self._peers[key].neighbor.api['signal']:
+                        if self._peers[key].neighbor.api['signal']:  # type: ignore[index]
                             self._peers[key].reactor.processes.signal(self._peers[key].neighbor, self.signal.number)  # type: ignore[union-attr]
 
                     self.signal.rearm()

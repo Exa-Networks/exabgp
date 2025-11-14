@@ -140,7 +140,7 @@ def prefix_sid(tokeniser: Any) -> PrefixSid:  # noqa: C901
 # ( [l2-service|l3-service] <SID:ipv6-addr> )
 # ( [l2-service|l3-service] <SID:ipv6-addr> <Endpoint Behavior:int> )
 # ( [l2-service|l3-service] <SID:ipv6-addr> <Endpoint Behavior:int> [<LBL:int>, <LNL:int>, <FL:int>, <AL:int>, <Tpose-len:int>, <Tpose-offset:int>] )
-def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:
+def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:  # type: ignore[return]
     value = tokeniser()
     if value != '(':
         raise Exception(f"expect '(', but received '{value}'")

@@ -267,7 +267,7 @@ class Update(Message):
 
     # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
     @classmethod
-    def unpack_message(cls, data: bytes, direction: int, negotiated: Negotiated) -> Union[Update, EOR]:
+    def unpack_message(cls, data: bytes, direction: int, negotiated: Negotiated) -> Union[Update, EOR]:  # type: ignore[valid-type]
         log.debug(lazyformat('parsing UPDATE', data), 'parser')
 
         length = len(data)
@@ -302,17 +302,17 @@ class Update(Message):
 
         nlris = []
         while withdrawn:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath)
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath)  # type: ignore[has-type]
             log.debug(lambda nlri=nlri: 'withdrawn NLRI {}'.format(nlri), 'routes')
-            withdrawn = left
-            nlris.append(nlri)
+            withdrawn = left  # type: ignore[has-type]
+            nlris.append(nlri)  # type: ignore[has-type]
 
         while announced:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath)
-            nlri.nexthop = nexthop
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath)  # type: ignore[has-type]
+            nlri.nexthop = nexthop  # type: ignore[has-type]
             log.debug(lambda nlri=nlri: 'announced NLRI {}'.format(nlri), 'routes')
-            announced = left
-            nlris.append(nlri)
+            announced = left  # type: ignore[has-type]
+            nlris.append(nlri)  # type: ignore[has-type]
 
         unreach = attributes.pop(MPURNLRI.ID, None)
         reach = attributes.pop(MPRNLRI.ID, None)

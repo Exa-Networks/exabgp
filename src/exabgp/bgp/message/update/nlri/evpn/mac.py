@@ -80,7 +80,7 @@ class MAC(EVPN):
 
     # XXX: we have to ignore a part of the route
     def index(self) -> str:
-        return EVPN.index(self)
+        return EVPN.index(self)  # type: ignore[return-value]
 
     def __eq__(self, other: object) -> bool:
         return (

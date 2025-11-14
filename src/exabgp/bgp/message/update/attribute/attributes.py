@@ -453,7 +453,7 @@ class Attributes(dict):
         key = '{}:{}'.format(as2path.index, as4path.index)
 
         # found a cache copy
-        cached = Attribute.cache.get(Attribute.CODE.AS_PATH, {}).get(key, None)
+        cached = Attribute.cache.get(Attribute.CODE.AS_PATH, {}).get(key, None)  # type: ignore[call-overload]
         if cached:
             self.add(cached, key)
             return

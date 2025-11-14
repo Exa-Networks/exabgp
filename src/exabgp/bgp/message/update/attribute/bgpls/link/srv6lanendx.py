@@ -158,7 +158,7 @@ class Srv6LanEndXOSPF(FlagLS):
 
     @classmethod
     def unpack(cls, data: bytes) -> Srv6LanEndXISIS:
-        return cls(unpack_data(cls, data, OSPF))
+        return cls(unpack_data(cls, data, OSPF))  # type: ignore[return-value]
 
     def json(self, compact=None):
         return '"srv6-lan-endx-ospf": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))

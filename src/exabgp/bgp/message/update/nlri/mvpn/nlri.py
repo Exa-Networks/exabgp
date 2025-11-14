@@ -41,7 +41,7 @@ class MVPN(NLRI):
         self._packed: bytes = b''
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed))
+        return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed))  # type: ignore[str-bytes-safe]
 
     def __len__(self) -> int:
         return len(self._packed) + 2

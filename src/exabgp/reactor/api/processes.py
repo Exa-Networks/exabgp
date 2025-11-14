@@ -376,7 +376,7 @@ class Processes:
         return self._ack[service]
 
     def _notify(self, neighbor: 'Neighbor', event: str) -> Generator[str, None, None]:
-        for process in neighbor.api[event]:
+        for process in neighbor.api[event]:  # type: ignore[index]
             yield process
 
     # do not do anything if silenced
@@ -439,7 +439,7 @@ class Processes:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(
                 process,
-                self._encoder[process].notification(neighbor, direction, code, subcode, data, header, body),
+                self._encoder[process].notification(neighbor, direction, code, subcode, data, header, body),  # type: ignore[call-arg]
                 neighbor,
             )
 

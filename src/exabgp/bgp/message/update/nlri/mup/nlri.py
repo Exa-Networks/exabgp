@@ -46,7 +46,7 @@ class MUP(NLRI):
         self._packed: bytes = b''
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}:{}:{}'.format(self.afi, self.safi, self.ARCHTYPE, self.CODE, self._packed))
+        return hash('{}:{}:{}:{}:{}'.format(self.afi, self.safi, self.ARCHTYPE, self.CODE, self._packed))  # type: ignore[str-bytes-safe]
 
     def __len__(self) -> int:
         return len(self._packed) + 2
@@ -56,7 +56,7 @@ class MUP(NLRI):
 
     def __str__(self) -> str:
         return 'mup:{}:{}'.format(
-            self.registered.get(self.CODE, self).SHORT_NAME.lower(),
+            self.registered.get(self.CODE, self).SHORT_NAME.lower(),  # type: ignore[call-overload]
             '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
@@ -67,7 +67,7 @@ class MUP(NLRI):
         return ''
 
     def _prefix(self) -> str:
-        return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())
+        return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())  # type: ignore[call-overload]
 
     def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
