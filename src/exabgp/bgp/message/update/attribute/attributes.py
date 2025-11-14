@@ -455,7 +455,7 @@ class Attributes(dict):
         # found a cache copy
         cached = Attribute.cache.get(Attribute.CODE.AS_PATH, {}).get(key, None)
         if cached:
-            self.add(cached, key)  # type: ignore[no-any-return]
+            self.add(cached, key)
             return
 
         # as_seq = []

@@ -29,14 +29,14 @@ MIN_NONZERO_HOLDTIME = 3  # Minimum hold time in seconds (must be 0 or >= 3)
 
 def inherit(tokeniser) -> List[str]:
     if len(tokeniser.tokens) == INHERIT_SINGLE_TOKEN_COUNT:
-        return [tokeniser()]  # type: ignore[no-any-return]
+        return [tokeniser()]
     if (
         len(tokeniser.tokens) < INHERIT_MIN_LIST_TOKEN_COUNT
         or tokeniser.tokens[1] != '['
         or tokeniser.tokens[-1] != ']'
     ):
         raise ValueError('invalid inherit list')
-    return tokeniser.tokens[2:-1]  # type: ignore[no-any-return]
+    return tokeniser.tokens[2:-1]
 
 
 def hostname(tokeniser) -> str:

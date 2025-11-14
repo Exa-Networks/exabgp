@@ -401,9 +401,9 @@ class Configuration(_Configuration):
 
     def reload(self) -> Union[bool, str]:
         try:
-            return self._reload()  # type: ignore[no-any-return]
+            return self._reload()
         except KeyboardInterrupt:
-            return self.error.set('configuration reload aborted by ^C or SIGINT')  # type: ignore[no-any-return]
+            return self.error.set('configuration reload aborted by ^C or SIGINT')
         except Error as exc:
             if getenv().debug.configuration:
                 raise
@@ -451,7 +451,7 @@ class Configuration(_Configuration):
 
         check = self.validate()
         if check is not None:
-            return check  # type: ignore[no-any-return]
+            return check
 
         return True
 

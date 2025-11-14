@@ -55,7 +55,7 @@ class API(Command):
         # to not have to set the encoding on each command
         if 'json' in command.split(' '):
             use_json = True
-        return self.response(reactor, service, command, use_json)  # type: ignore[no-any-return]
+        return self.response(reactor, service, command, use_json)
 
     def response(self, reactor: 'Reactor', service: str, command: str, use_json: bool) -> bool:
         api = 'json' if use_json else 'text'
