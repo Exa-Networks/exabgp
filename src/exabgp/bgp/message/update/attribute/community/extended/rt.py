@@ -67,7 +67,7 @@ class RouteTargetASN2Number(RouteTarget):
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> RouteTargetASN2Number:
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> RouteTargetASN2Number:
         asn, number = unpack('!HL', data[2:8])
         return cls(ASN(asn), number, False, data[:8])
 
@@ -98,7 +98,7 @@ class RouteTargetIPNumber(RouteTarget):
         return '%s:%s:%d' % (self.DESCRIPTION, self.ip, self.number)
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> RouteTargetIPNumber:
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> RouteTargetIPNumber:
         ip, number = unpack('!4sH', data[2:8])
         return cls(IPv4.ntop(ip), number, False, data[:8])
 
@@ -126,6 +126,6 @@ class RouteTargetASN4Number(RouteTarget):
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> RouteTargetASN4Number:
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> RouteTargetASN4Number:
         asn, number = unpack('!LH', data[2:8])
         return cls(ASN(asn), number, False, data[:8])

@@ -45,10 +45,10 @@ class TrafficRate(ExtendedCommunity):
     def __repr__(self) -> str:
         return 'rate-limit:%d' % self.rate
 
-    @staticmethod
-    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> TrafficRate:
+    @classmethod
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficRate:
         asn, rate = unpack('!Hf', data[2:8])
-        return TrafficRate(ASN(asn), rate, data[:8])
+        return cls(ASN(asn), rate, data[:8])
 
 
 # ================================================================ TrafficAction
@@ -87,12 +87,12 @@ class TrafficAction(ExtendedCommunity):
             s.append('terminal')
         return 'action {}'.format('-'.join(s))
 
-    @staticmethod
-    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> TrafficAction:
+    @classmethod
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficAction:
         (bit,) = unpack('!B', data[7:8])
         sample = bool(bit & 0x02)
         terminal = bool(bit & 0x01)
-        return TrafficAction(sample, terminal, data[:8])
+        return cls(sample, terminal, data[:8])
 
 
 # ============================================================== TrafficRedirect
@@ -115,10 +115,10 @@ class TrafficRedirect(ExtendedCommunity):
     def __repr__(self) -> str:
         return 'redirect:{}:{}'.format(self.asn, self.target)
 
-    @staticmethod
-    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> TrafficRedirect:
+    @classmethod
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficRedirect:
         asn, target = unpack('!HL', data[2:8])
-        return TrafficRedirect(ASN(asn), target, data[:8])
+        return cls(ASN(asn), target, data[:8])
 
 
 @ExtendedCommunity.register
@@ -137,10 +137,10 @@ class TrafficRedirectASN4(ExtendedCommunity):
     def __str__(self) -> str:
         return 'redirect:{}:{}'.format(self.asn, self.target)
 
-    @staticmethod
-    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> TrafficRedirectASN4:
+    @classmethod
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficRedirectASN4:
         asn, target = unpack('!LH', data[2:8])
-        return TrafficRedirectASN4(ASN4(asn), target, data[:8])
+        return cls(ASN4(asn), target, data[:8])
 
 
 # ================================================================== TrafficMark
@@ -162,10 +162,10 @@ class TrafficMark(ExtendedCommunity):
     def __repr__(self) -> str:
         return 'mark %d' % self.dscp
 
-    @staticmethod
-    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> TrafficMark:
+    @classmethod
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficMark:
         (dscp,) = unpack('!B', data[7:8])
-        return TrafficMark(dscp, data[:8])
+        return cls(dscp, data[:8])
 
 
 # =============================================================== TrafficNextHopIPv4IETF
@@ -193,10 +193,10 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
             else 'redirect-to-nexthop-ietf {}'.format(self.ip)
         )
 
-    @staticmethod
-    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> TrafficNextHopIPv4IETF:
+    @classmethod
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficNextHopIPv4IETF:
         ip, bit = unpack('!4sH', data[2:8])
-        return TrafficNextHopIPv4IETF(IPv4.ntop(ip), bool(bit & 0x01), data[:8])  # type: ignore[arg-type]
+        return cls(IPv4.ntop(ip), bool(bit & 0x01), data[:8])  # type: ignore[arg-type]
 
 
 # =============================================================== TrafficNextHopIPv6IETF
@@ -224,10 +224,10 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
             else 'redirect-to-nexthop-ietf {}'.format(self.ip)
         )
 
-    @staticmethod
-    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> TrafficNextHopIPv6IETF:
+    @classmethod
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficNextHopIPv6IETF:
         ip, bit = unpack('!16sH', data[2:20])
-        return TrafficNextHopIPv6IETF(IPv6.ntop(ip), bool(bit & 0x01), data[:20])  # type: ignore[arg-type]
+        return cls(IPv6.ntop(ip), bool(bit & 0x01), data[:20])  # type: ignore[arg-type]
 
 
 # =============================================================== TrafficNextHopSimpson
@@ -251,10 +251,10 @@ class TrafficNextHopSimpson(ExtendedCommunity):
     def __repr__(self) -> str:
         return 'copy-to-nexthop' if self.copy else 'redirect-to-nexthop'
 
-    @staticmethod
-    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> TrafficNextHopSimpson:
+    @classmethod
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficNextHopSimpson:
         (bit,) = unpack('!B', data[7:8])
-        return TrafficNextHopSimpson(bool(bit & 0x01), data[:8])
+        return cls(bool(bit & 0x01), data[:8])
 
 
 # ============================================================ TrafficRedirectIPv6
@@ -281,10 +281,10 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
     def __str__(self) -> str:
         return 'redirect %s:%d' % (self.ip, self.asn)
 
-    @staticmethod
-    def unpack(data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> TrafficRedirectIPv6:
+    @classmethod
+    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficRedirectIPv6:
         ip, asn = unpack('!16sH', data[2:11])
-        return TrafficRedirectIPv6(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:11])
+        return cls(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:11])
 
 
 # ============================================================ TrafficRedirectIP
