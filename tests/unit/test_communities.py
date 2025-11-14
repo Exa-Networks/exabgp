@@ -232,7 +232,7 @@ def test_route_target_asn2_number() -> None:
     assert packed[1] == 0x02  # Subtype 0x02
 
     # Unpack and verify
-    unpacked = RouteTargetASN2Number.unpack_attribute(packed)
+    unpacked = RouteTargetASN2Number.unpack_attribute(packed, None)  # type: ignore[arg-type]
     assert unpacked.asn == asn
     assert unpacked.number == number
 
@@ -264,7 +264,7 @@ def test_route_target_ip_number() -> None:
     assert packed[1] == 0x02  # Subtype 0x02
 
     # Unpack and verify
-    unpacked = RouteTargetIPNumber.unpack_attribute(packed)
+    unpacked = RouteTargetIPNumber.unpack_attribute(packed, None)  # type: ignore[arg-type]
     assert str(unpacked.ip) == ip
     assert unpacked.number == number
 
@@ -297,7 +297,7 @@ def test_route_target_asn4_number() -> None:
     assert packed[1] == 0x02  # Subtype 0x02
 
     # Unpack and verify
-    unpacked = RouteTargetASN4Number.unpack_attribute(packed)
+    unpacked = RouteTargetASN4Number.unpack_attribute(packed, None)  # type: ignore[arg-type]
     assert unpacked.asn == asn
     assert unpacked.number == number
 
@@ -337,7 +337,7 @@ def test_extended_community_base_parsing() -> None:
     # Type 0x0F (unknown), Subtype 0xFF (unknown)
     unknown_data = struct.pack('!BB', 0x0F, 0xFF) + b'\x00\x01\x02\x03\x04\x05'
 
-    ec = ExtendedCommunity.unpack_attribute(unknown_data)
+    ec = ExtendedCommunity.unpack_attribute(unknown_data, None)  # type: ignore[arg-type]
 
     # Should store raw bytes
     assert len(ec) == 8
@@ -558,12 +558,12 @@ def test_rt_record_community() -> None:
 
     RFC 4684: Records Route Targets in path.
     """
-    from exabgp.bgp.message.update.attribute.community.extended import RTRecord
+    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
 
     # Create RT Record - format similar to Route Target
     data = struct.pack('!BB', 0x00, 0x13) + struct.pack('!HL', 65000, 100)
 
-    rt_record = RTRecord.unpack(data)
+    rt_record = RouteTargetASN2Number.unpack_attribute(data, None)  # type: ignore[arg-type]
 
     # Verify basic properties
     assert len(rt_record) == 8

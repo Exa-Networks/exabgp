@@ -61,7 +61,9 @@ class Srv6L2Service:
             code: int = data[0]
             length = unpack('!H', data[1:3])[0]
             if code in cls.registered_subtlvs:
-                subtlv: GenericSrv6ServiceSubTlv = cls.registered_subtlvs[code].unpack_attribute(data[3 : length + 3], length)
+                subtlv: GenericSrv6ServiceSubTlv = cls.registered_subtlvs[code].unpack_attribute(
+                    data[3 : length + 3], length
+                )
             else:
                 subtlv = GenericSrv6ServiceSubTlv(code, data[3 : length + 3])
             subtlvs.append(subtlv)

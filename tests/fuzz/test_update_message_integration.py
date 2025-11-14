@@ -274,7 +274,6 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.ip import IP
     from exabgp.protocol.family import AFI, SAFI
 
@@ -323,7 +322,6 @@ def test_roundtrip_ipv4_withdrawal() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes
     from exabgp.bgp.message.action import Action
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.ip import IP
     from exabgp.protocol.family import AFI, SAFI
 
@@ -358,7 +356,6 @@ def test_roundtrip_multiple_nlris() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.ip import IP
     from exabgp.protocol.family import AFI, SAFI
 
@@ -404,7 +401,6 @@ def test_roundtrip_with_multiple_attributes() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.ip import IP
     from exabgp.protocol.family import AFI, SAFI
 
@@ -456,7 +452,6 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.ip import IP
     from exabgp.protocol.family import AFI, SAFI
 
@@ -555,7 +550,6 @@ def test_roundtrip_ipv6_announcement() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.ip import IPv6
     from exabgp.protocol.family import AFI, SAFI
 
@@ -785,7 +779,6 @@ def test_integration_full_update_cycle() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.ip import IP
     from exabgp.protocol.family import AFI, SAFI
 
@@ -850,7 +843,6 @@ def test_integration_empty_attributes_for_withdrawal_only() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes
     from exabgp.bgp.message.action import Action
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.ip import IP
     from exabgp.protocol.family import AFI, SAFI
 

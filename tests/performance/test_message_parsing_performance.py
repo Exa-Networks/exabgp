@@ -8,7 +8,6 @@ from io import BytesIO
 from typing import Any
 
 from exabgp.bgp.message import Update, KeepAlive
-from exabgp.bgp.message.direction import Direction
 
 from .perf_helpers import (
     create_simple_update_bytes,

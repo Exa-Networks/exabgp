@@ -118,7 +118,7 @@ class ExtendedCommunityBase(Attribute):
         community = (data[0] & 0x0F, data[1])
         if community in cls.registered_extended:  # type: ignore[operator]
             klass = cls.registered_extended[community]  # type: ignore[index]
-            instance = klass.unpack_attribute(data)
+            instance = klass.unpack_attribute(data, negotiated)  # type: ignore[arg-type]
             instance.klass = klass
             return instance
         return cls(data)

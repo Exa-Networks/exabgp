@@ -640,9 +640,7 @@ class Peer:
                     break
 
         # If graceful restart, silent shutdown
-        if self.neighbor['capability'][
-            'graceful-restart'
-        ] and self.proto.negotiated.sent_open.capabilities.announced(
+        if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
             Capability.CODE.GRACEFUL_RESTART,
         ):
             log.error(lambda: 'closing the session without notification', self.id())

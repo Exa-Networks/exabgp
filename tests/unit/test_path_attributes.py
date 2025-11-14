@@ -163,7 +163,7 @@ def test_nexthop_valid_ipv4() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + IPv4(4) = 7 bytes
-    packed = nexthop.pack()
+    packed = nexthop.pack(None)  # type: ignore[arg-type]
     assert len(packed) == 7
     assert packed[0] == 0x40  # Transitive flag
     assert packed[1] == 3  # NEXT_HOP type code
@@ -187,7 +187,7 @@ def test_nexthop_zero_address() -> None:
     assert str(nexthop) == '0.0.0.0'  # __repr__ returns just the IP
 
     # Verify pack (flag + type + length + value)
-    packed = nexthop.pack()
+    packed = nexthop.pack(None)  # type: ignore[arg-type]
     assert len(packed) == 7
     assert packed[3:] == b'\x00\x00\x00\x00'  # Value part is 0.0.0.0
 
@@ -206,7 +206,7 @@ def test_nexthop_self() -> None:
     assert str(nexthop) == '10.0.0.1'  # __repr__ returns just the IP
 
     # Verify pack (flag + type + length + value)
-    packed = nexthop.pack()
+    packed = nexthop.pack(None)  # type: ignore[arg-type]
     assert len(packed) == 7
 
 
@@ -223,7 +223,7 @@ def test_nexthop_third_party() -> None:
     assert '10.0.0.254' in str(nexthop)
 
     # Verify pack (flag + type + length + value)
-    packed = nexthop.pack()
+    packed = nexthop.pack(None)  # type: ignore[arg-type]
     assert len(packed) == 7
 
 
@@ -755,13 +755,13 @@ def test_nexthop_pack_unpack_roundtrip() -> None:
     nexthop = NextHop(original_ip)
 
     # Pack the attribute
-    packed = nexthop.pack()
+    packed = nexthop.pack(None)  # type: ignore[arg-type]
 
     # Extract just the IP address bytes (skip flag, type, length)
     ip_data = packed[3:]
 
     # Unpack to create new NextHop
-    unpacked = NextHop.unpack_attribute(ip_data)
+    unpacked = NextHop.unpack_attribute(ip_data, None)  # type: ignore[arg-type]
 
     # Verify they match
     assert str(unpacked) == original_ip
@@ -808,7 +808,7 @@ def test_nexthop_empty_unpack() -> None:
     from exabgp.protocol.ip import NoNextHop
 
     # Unpack empty data
-    result = NextHop.unpack_attribute(b'')
+    result = NextHop.unpack_attribute(b'', None)  # type: ignore[arg-type]
 
     # Should return NoNextHop
     assert result == NoNextHop
@@ -1395,11 +1395,11 @@ def test_pmsi_no_tunnel_pack() -> None:
 
 
 def test_pmsi_no_tunnel_unpack() -> None:
-    """Test PMSINoTunnel from_tunnel method."""
+    """Test PMSINoTunnel unpack_pmsi method."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSINoTunnel
 
     # Create from empty tunnel
-    unpacked = PMSINoTunnel.from_tunnel(b'', 100, 0)
+    unpacked = PMSINoTunnel.unpack_pmsi(b'', 100, 0)
 
     assert unpacked.label == 100
     assert unpacked.flags == 0
@@ -1438,7 +1438,7 @@ def test_pmsi_ingress_replication_pack() -> None:
 
 
 def test_pmsi_ingress_replication_unpack() -> None:
-    """Test PMSIIngressReplication from_tunnel method."""
+    """Test PMSIIngressReplication unpack_pmsi method."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSIIngressReplication
     from exabgp.protocol.ip import IPv4
 
@@ -1447,7 +1447,7 @@ def test_pmsi_ingress_replication_unpack() -> None:
     tunnel = IPv4.pton(ip)
 
     # Create from tunnel
-    unpacked = PMSIIngressReplication.from_tunnel(tunnel, 100, 0, None)
+    unpacked = PMSIIngressReplication.unpack_pmsi(tunnel, 100, 0, None)
 
     assert unpacked.ip == ip
     assert unpacked.label == 100

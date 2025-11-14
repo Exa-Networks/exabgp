@@ -102,7 +102,9 @@ class INET(NLRI):
     # 	return nlri,data
 
     @classmethod
-    def unpack_nlri(cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any) -> Tuple[INET, bytes]:
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> Tuple[INET, bytes]:
         nlri = cls(afi, safi, action)
 
         if addpath:

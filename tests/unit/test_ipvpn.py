@@ -5,12 +5,24 @@
 Created for comprehensive test coverage improvement
 """
 
+from unittest.mock import Mock
+
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import pytest
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher, Labels
 from exabgp.protocol.ip import IP
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 class TestIPVPNCreation:
@@ -104,7 +116,9 @@ class TestIPVPNPackUnpack:
         )
 
         packed = nlri.pack()
-        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
+        unpacked, leftover = IPVPN.unpack_nlri(
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
 
         assert len(leftover) == 0
         assert isinstance(unpacked, IPVPN)
@@ -125,7 +139,9 @@ class TestIPVPNPackUnpack:
         )
 
         packed = nlri.pack()
-        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None)
+        unpacked, leftover = IPVPN.unpack_nlri(
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
 
         assert len(leftover) == 0
         assert isinstance(unpacked, IPVPN)
@@ -144,7 +160,9 @@ class TestIPVPNPackUnpack:
         )
 
         packed = nlri.pack()
-        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
+        unpacked, _ = IPVPN.unpack_nlri(
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
 
         assert len(unpacked.labels.labels) == 3
         assert unpacked.labels.labels == [100, 200, 300]
@@ -171,7 +189,9 @@ class TestIPVPNPackUnpack:
             )
 
             packed = nlri.pack()
-            unpacked, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
+            unpacked, _ = IPVPN.unpack_nlri(
+                AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            )
 
             assert unpacked.cidr.mask == mask
 
@@ -187,7 +207,9 @@ class TestIPVPNPackUnpack:
         )
 
         packed = nlri.pack() + b'\x01\x02\x03\x04'
-        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
+        unpacked, leftover = IPVPN.unpack_nlri(
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
 
         assert len(leftover) == 4
         assert leftover == b'\x01\x02\x03\x04'
@@ -491,7 +513,9 @@ class TestIPVPNEdgeCases:
         assert nlri.cidr.mask == 0
 
         packed = nlri.pack()
-        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
+        unpacked, _ = IPVPN.unpack_nlri(
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
 
         assert unpacked.cidr.mask == 0
 
@@ -561,7 +585,9 @@ class TestIPVPNMultipleRoutes:
         data = packed_data
         unpacked_routes = []
         for _ in range(3):
-            route, data = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, data, Action.UNSET, None)
+            route, data = IPVPN.unpack_nlri(
+                AFI.ipv4, SAFI.mpls_vpn, data, Action.UNSET, None, negotiated=create_negotiated()
+            )
             unpacked_routes.append(route)
 
         assert len(unpacked_routes) == 3

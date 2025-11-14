@@ -8,6 +8,11 @@ Tests cover RFC 5575 (Dissemination of Flow Specification Rules) components:
 - JSON serialization
 """
 
+from unittest.mock import Mock
+
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import pytest
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.nlri.flow import (
@@ -43,6 +48,13 @@ from exabgp.bgp.message.action import Action
 # ============================================================================
 # IPv4 Flow Components
 # ============================================================================
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 class TestFlow4Components:
@@ -720,7 +732,9 @@ class TestFlowUnpack:
         packed = flow1.pack_nlri()
 
         # Unpack it
-        flow2, leftover = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, None)
+        flow2, leftover = Flow.unpack_nlri(
+            AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
 
         assert flow2 is not None
         assert len(leftover) == 0
@@ -758,7 +772,9 @@ class TestFlowUnpack:
         packed = flow1.pack_nlri()
 
         # Unpack it
-        flow2, leftover = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_vpn, packed, Action.UNSET, None)
+        flow2, leftover = Flow.unpack_nlri(
+            AFI.ipv4, SAFI.flow_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
 
         assert flow2 is not None
         assert flow2.rd is not None
@@ -770,7 +786,7 @@ class TestFlowUnpack:
 
         # Should raise Notify for invalid length
         with pytest.raises(Notify):
-            Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, invalid_data, Action.UNSET, None)
+            Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, invalid_data, Action.UNSET, None, negotiated=create_negotiated())
 
     def test_flow_unpack_multiple_components(self) -> None:
         """Test unpacking flow with multiple port specifications"""
@@ -787,7 +803,7 @@ class TestFlowUnpack:
         flow1.add(port2)
 
         packed = flow1.pack_nlri()
-        flow2, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, None)
+        flow2, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, None, negotiated=create_negotiated())
 
         assert flow2 is not None
         # Should have destination, protocol, and destination port rules

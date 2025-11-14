@@ -12,7 +12,6 @@ from typing import Any
 
 from exabgp.reactor.protocol import MAX_BACKLOG
 from exabgp.bgp.message import Update
-from exabgp.bgp.message.direction import Direction
 
 from .perf_helpers import (
     create_simple_update_bytes,
