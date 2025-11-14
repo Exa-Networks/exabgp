@@ -92,18 +92,18 @@ class ParseFlowThen(Section):
             ],
         ],
     ] = {
-        'accept': accept,
-        'discard': discard,
-        'rate-limit': rate_limit,
-        'redirect': redirect,
-        'redirect-to-nexthop': redirect_next_hop,
-        'redirect-to-nexthop-ietf': redirect_next_hop_ietf,
-        'copy': copy,
-        'mark': mark,
-        'action': action,
-        'community': community,
-        'large-community': large_community,
-        'extended-community': extended_community,
+        'accept': accept,  # type: ignore[dict-item]
+        'discard': discard,  # type: ignore[dict-item]
+        'rate-limit': rate_limit,  # type: ignore[dict-item]
+        'redirect': redirect,  # type: ignore[dict-item]
+        'redirect-to-nexthop': redirect_next_hop,  # type: ignore[dict-item]
+        'redirect-to-nexthop-ietf': redirect_next_hop_ietf,  # type: ignore[dict-item]
+        'copy': copy,  # type: ignore[dict-item]
+        'mark': mark,  # type: ignore[dict-item]
+        'action': action,  # type: ignore[dict-item]
+        'community': community,  # type: ignore[dict-item]
+        'large-community': large_community,  # type: ignore[dict-item]
+        'extended-community': extended_community,  # type: ignore[dict-item]
     }
 
     # 'community','extended-community'

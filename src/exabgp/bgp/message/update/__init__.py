@@ -303,16 +303,16 @@ class Update(Message):
         nlris = []
         while withdrawn:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath)
-            log.debug(lambda nlri=nlri: 'withdrawn NLRI {}'.format(nlri), 'routes')
-            withdrawn = left
-            nlris.append(nlri)
+            log.debug(lambda nlri=nlri: 'withdrawn NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type]
+            withdrawn = left  # type: ignore[has-type]
+            nlris.append(nlri)  # type: ignore[has-type]
 
         while announced:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath)
-            nlri.nexthop = nexthop
-            log.debug(lambda nlri=nlri: 'announced NLRI {}'.format(nlri), 'routes')
-            announced = left
-            nlris.append(nlri)
+            nlri.nexthop = nexthop  # type: ignore[has-type]
+            log.debug(lambda nlri=nlri: 'announced NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type]
+            announced = left  # type: ignore[has-type]
+            nlris.append(nlri)  # type: ignore[has-type]
 
         unreach = attributes.pop(MPURNLRI.ID, None)
         reach = attributes.pop(MPRNLRI.ID, None)
