@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from struct import pack
 from struct import unpack
@@ -64,7 +67,7 @@ class RouteTargetASN2Number(RouteTarget):
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack(cls, data: bytes) -> RouteTargetASN2Number:
+    def unpack(cls, data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> RouteTargetASN2Number:
         asn, number = unpack('!HL', data[2:8])
         return cls(ASN(asn), number, False, data[:8])
 
@@ -95,7 +98,7 @@ class RouteTargetIPNumber(RouteTarget):
         return '%s:%s:%d' % (self.DESCRIPTION, self.ip, self.number)
 
     @classmethod
-    def unpack(cls, data: bytes) -> RouteTargetIPNumber:
+    def unpack(cls, data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> RouteTargetIPNumber:
         ip, number = unpack('!4sH', data[2:8])
         return cls(IPv4.ntop(ip), number, False, data[:8])
 
@@ -123,6 +126,6 @@ class RouteTargetASN4Number(RouteTarget):
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack(cls, data: bytes) -> RouteTargetASN4Number:
+    def unpack(cls, data: bytes, direction: int = 0, negotiated: Optional[Negotiated] = None) -> RouteTargetASN4Number:
         asn, number = unpack('!LH', data[2:8])
         return cls(ASN(asn), number, False, data[:8])
