@@ -60,7 +60,7 @@ class SrGb:
         return pack('!B', self.TLV) + pack('!H', len(payload)) + payload
 
     @classmethod
-    def unpack(cls, data: bytes, length: int) -> SrGb:
+    def unpack_attribute(cls, data: bytes, length: int) -> SrGb:
         srgbs: List[Tuple[int, int]] = []
         # Flags: 16 bits of flags.  None is defined by this document.  The
         # flag field MUST be clear on transmission and MUST be ignored at

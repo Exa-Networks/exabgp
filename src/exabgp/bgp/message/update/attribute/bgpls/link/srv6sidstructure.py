@@ -39,7 +39,7 @@ class Srv6SidStructure(BaseLS):
         self.arg_len = arg_len
 
     @classmethod
-    def unpack(cls, data: bytes) -> Srv6SidStructure:
+    def unpack_attribute(cls, data: bytes) -> Srv6SidStructure:
         loc_block_len = data[0]
         loc_node_len = data[1]
         func_len = data[2]

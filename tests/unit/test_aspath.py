@@ -48,7 +48,7 @@ def test_aspath_empty() -> None:
     negotiated = create_negotiated_mock(asn4=False)
     data = b''
 
-    result = ASPath.unpack(data, negotiated)
+    result = ASPath.unpack_attribute(data, negotiated)
 
     assert result is None
 
@@ -64,7 +64,7 @@ def test_aspath_simple_sequence_asn2() -> None:
     data = struct.pack('!BB', 2, 3)  # type=AS_SEQUENCE, length=3
     data += struct.pack('!HHH', 65001, 65002, 65003)
 
-    result = ASPath.unpack(data, negotiated)
+    result = ASPath.unpack_attribute(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -85,7 +85,7 @@ def test_aspath_simple_sequence_asn4() -> None:
     data = struct.pack('!BB', 2, 3)  # type=AS_SEQUENCE, length=3
     data += struct.pack('!LLL', 100000, 200000, 300000)
 
-    result = ASPath.unpack(data, negotiated)
+    result = ASPath.unpack_attribute(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -105,7 +105,7 @@ def test_aspath_single_asn() -> None:
     # Single ASN: 65000
     data = struct.pack('!BB', 2, 1) + struct.pack('!H', 65000)
 
-    result = ASPath.unpack(data, negotiated)
+    result = ASPath.unpack_attribute(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -128,7 +128,7 @@ def test_aspath_as_set() -> None:
     data = struct.pack('!BB', 1, 4)  # type=AS_SET, length=4
     data += struct.pack('!HHHH', 65001, 65002, 65003, 65004)
 
-    result = ASPath.unpack(data, negotiated)
+    result = ASPath.unpack_attribute(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -151,7 +151,7 @@ def test_aspath_confed_sequence() -> None:
     data = struct.pack('!BB', 3, 2)  # type=CONFED_SEQUENCE, length=2
     data += struct.pack('!HH', 64512, 64513)
 
-    result = ASPath.unpack(data, negotiated)
+    result = ASPath.unpack_attribute(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -171,7 +171,7 @@ def test_aspath_confed_set() -> None:
     data = struct.pack('!BB', 4, 3)  # type=CONFED_SET, length=3
     data += struct.pack('!HHH', 64512, 64513, 64514)
 
-    result = ASPath.unpack(data, negotiated)
+    result = ASPath.unpack_attribute(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -198,7 +198,7 @@ def test_aspath_multiple_segments() -> None:
 
     data = segment1 + segment2
 
-    result = ASPath.unpack(data, negotiated)
+    result = ASPath.unpack_attribute(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 2
@@ -220,7 +220,7 @@ def test_aspath_mixed_confederation() -> None:
 
     data = confed + regular
 
-    result = ASPath.unpack(data, negotiated)
+    result = ASPath.unpack_attribute(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 2
@@ -243,7 +243,7 @@ def test_as4path_unpacking() -> None:
     data = struct.pack('!BB', 2, 2)  # AS_SEQUENCE with 2 ASNs
     data += struct.pack('!LL', 100000, 200000)
 
-    result = AS4Path.unpack(data, negotiated)
+    result = AS4Path.unpack_attribute(data, negotiated)
 
     assert result is not None
     assert len(result.aspath) == 1
@@ -268,7 +268,7 @@ def test_aspath_invalid_segment_type() -> None:
     data = struct.pack('!BB', 99, 1) + struct.pack('!H', 65000)
 
     with pytest.raises(Notify) as exc_info:
-        ASPath.unpack(data, negotiated)
+        ASPath.unpack_attribute(data, negotiated)
 
     assert exc_info.value.code == 3  # UPDATE Message Error
     assert exc_info.value.subcode == 11  # Malformed AS_PATH
@@ -285,7 +285,7 @@ def test_aspath_truncated_segment_header() -> None:
     data = b'\x02'
 
     with pytest.raises(Notify) as exc_info:
-        ASPath.unpack(data, negotiated)
+        ASPath.unpack_attribute(data, negotiated)
 
     assert exc_info.value.code == 3
     assert exc_info.value.subcode == 11
@@ -303,7 +303,7 @@ def test_aspath_truncated_asn_data() -> None:
     data += struct.pack('!HH', 65001, 65002)  # Only 2 ASNs
 
     with pytest.raises(Notify) as exc_info:
-        ASPath.unpack(data, negotiated)
+        ASPath.unpack_attribute(data, negotiated)
 
     assert exc_info.value.code == 3
     assert exc_info.value.subcode == 11
@@ -322,7 +322,7 @@ def test_aspath_truncated_asn4_data() -> None:
     data += b'\x00\x00'  # Incomplete second ASN
 
     with pytest.raises(Notify) as exc_info:
-        ASPath.unpack(data, negotiated)
+        ASPath.unpack_attribute(data, negotiated)
 
     assert exc_info.value.code == 3
     assert exc_info.value.subcode == 11

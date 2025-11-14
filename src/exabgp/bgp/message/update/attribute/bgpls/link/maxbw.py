@@ -28,6 +28,6 @@ class MaxBw(BaseLS):
     LEN = 4
 
     @classmethod
-    def unpack(cls, data: bytes) -> MaxBw:
+    def unpack_attribute(cls, data: bytes) -> MaxBw:
         cls.check(data)
         return cls(unpack('!f', data)[0])

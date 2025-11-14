@@ -38,5 +38,5 @@ class OriginatorID(Attribute, IPv4):
         return self._attribute(self.ton())
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Negotiated) -> IPv4:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> IPv4:
         return IPv4.unpack(data, cls)

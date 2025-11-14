@@ -7,12 +7,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, TYPE_CHECKING
 
 from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # ==================================================================== Bandwidth
 # draft-ietf-idr-link-bandwidth-06
@@ -32,6 +35,6 @@ class Bandwidth(ExtendedCommunity):
         return 'bandwith:%d:%0.f' % (self.asn, self.speed)
 
     @staticmethod
-    def unpack(data: bytes) -> Bandwidth:
+    def unpack_attribute(data: bytes, negotiated: Negotiated) -> Bandwidth:
         asn, speed = unpack('!Hf', data[2:8])
         return Bandwidth(asn, speed, data[:8])

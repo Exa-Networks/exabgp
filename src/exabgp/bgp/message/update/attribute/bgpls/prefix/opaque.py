@@ -29,5 +29,5 @@ class PrefixOpaque(BaseLS):
     JSON = 'opaque-prefix'
 
     @classmethod
-    def unpack(cls, data: bytes) -> PrefixOpaque:
+    def unpack_attribute(cls, data: bytes) -> PrefixOpaque:
         return cls(unpack('!%ds' % len(data), data)[0])

@@ -56,7 +56,7 @@ class Origin(Attribute):
         return 'invalid'
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Negotiated) -> Origin:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Origin:
         return cls(data[0], data)
 
     @classmethod

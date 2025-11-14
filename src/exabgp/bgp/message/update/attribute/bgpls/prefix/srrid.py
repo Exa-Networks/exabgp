@@ -30,7 +30,7 @@ class SrSourceRouterID(BaseLS):
     JSON = 'sr-source-router-id'
 
     @classmethod
-    def unpack(cls, data: bytes) -> SrSourceRouterID:
+    def unpack_attribute(cls, data: bytes) -> SrSourceRouterID:
         length = len(data)
         if length not in (4, 16):
             raise Notify(3, 5, 'Error parsing SR Source Router ID. Wrong size')

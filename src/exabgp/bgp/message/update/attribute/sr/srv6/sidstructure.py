@@ -56,7 +56,7 @@ class Srv6SidStructure:  # type: ignore[type-var]
         self.packed: bytes = self.pack()
 
     @classmethod
-    def unpack(cls, data: bytes, length: int) -> Srv6SidStructure:
+    def unpack_attribute(cls, data: bytes, length: int) -> Srv6SidStructure:
         loc_block_len: int = data[0]
         loc_node_len: int = data[1]
         func_len: int = data[2]

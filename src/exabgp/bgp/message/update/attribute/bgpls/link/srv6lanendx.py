@@ -118,7 +118,7 @@ class Srv6LanEndXISIS(FlagLS):
         return register_subsubtlv
 
     @classmethod
-    def unpack(cls, data: bytes) -> Srv6LanEndXISIS:
+    def unpack_attribute(cls, data: bytes) -> Srv6LanEndXISIS:
         return cls(unpack_data(cls, data, ISIS))
 
     def json(self, compact=None):
@@ -157,7 +157,7 @@ class Srv6LanEndXOSPF(FlagLS):
         return register_subsubtlv
 
     @classmethod
-    def unpack(cls, data: bytes) -> Srv6LanEndXISIS:
+    def unpack_attribute(cls, data: bytes) -> Srv6LanEndXISIS:
         return cls(unpack_data(cls, data, OSPF))  # type: ignore[return-value]
 
     def json(self, compact=None):

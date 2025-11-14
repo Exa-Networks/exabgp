@@ -5,13 +5,16 @@ Created by Stephane Litkowski on 2017-02-24.
 
 from __future__ import annotations
 
-from typing import ClassVar, Dict, Optional
+from typing import TYPE_CHECKING, ClassVar, Dict, Optional
 
 from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.negotiated import Negotiated
 
 
 # ============================================================== InterfaceSet
@@ -44,9 +47,9 @@ class InterfaceSet(ExtendedCommunity):
         str_direction = self.names.get(self.direction, str(self.direction))
         return 'interface-set:{}:{}:{}'.format(str_direction, str(self.asn), str(self.target))
 
-    @staticmethod
-    def unpack(data: bytes) -> InterfaceSet:
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> InterfaceSet:
         asn, target = unpack('!LH', data[2:8])
         direction = target >> 14
         target = target & 0x1FFF
-        return InterfaceSet(False, ASN(asn), target, direction, data[:8])
+        return cls(False, ASN(asn), target, direction, data[:8])

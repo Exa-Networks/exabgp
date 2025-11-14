@@ -5,12 +5,15 @@ Created by Anton Aksola on 2018-11-03
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, TYPE_CHECKING
 
 from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # ================================================================== MacMobility
 # RFC 7432 Section 7.7.
@@ -40,6 +43,6 @@ class MacMobility(ExtendedCommunity):
         return s
 
     @staticmethod
-    def unpack(data: bytes) -> MacMobility:
+    def unpack_attribute(data: bytes, negotiated: Negotiated) -> MacMobility:
         flags, seq = unpack('!BxI', data[2:8])
         return MacMobility(seq, flags == 1)

@@ -59,7 +59,7 @@ class OriginASNIP(Origin):
         return 'origin:{}:{}'.format(self.asn, self.ip)
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> OriginASNIP:
+    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> OriginASNIP:
         asn, ip = unpack('!H4s', data[2:8])
         return cls(ASN(asn), IPv4.ntop(ip), False, data[:8])
 
@@ -82,7 +82,7 @@ class OriginIPASN(Origin):
         return 'origin:{}:{}'.format(self.ip, self.asn)
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> OriginIPASN:
+    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> OriginIPASN:
         ip, asn = unpack('!4sH', data[2:8])
         return cls(IPv4.ntop(ip), ASN(asn), False, data[:8])
 
@@ -105,6 +105,6 @@ class OriginASN4Number(Origin):
         return 'origin:{}:{}'.format(self.asn, self.number)
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> OriginASN4Number:
+    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> OriginASN4Number:
         asn, number = unpack('!LH', data[2:8])
         return cls(ASN(asn), number, False, data[:8])

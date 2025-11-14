@@ -90,7 +90,7 @@ class Community:
         return 4
 
     @classmethod
-    def unpack(cls, community: bytes, negotiated: Negotiated) -> Community:
+    def unpack_attribute(cls, community: bytes, negotiated: Negotiated) -> Community:
         return cls(community)
 
     @classmethod

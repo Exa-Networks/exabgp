@@ -60,7 +60,7 @@ class ClusterList(Attribute):
         return '[ {} ]'.format(', '.join(['"{}"'.format(str(_)) for _ in self.clusters]))
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Negotiated) -> ClusterList:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> ClusterList:
         clusters: List[IPv4] = []
         while data:
             clusters.append(IPv4.unpack(data[:4]))

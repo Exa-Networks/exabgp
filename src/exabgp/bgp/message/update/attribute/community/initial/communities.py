@@ -61,11 +61,11 @@ class Communities(Attribute):
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @staticmethod
-    def unpack(data: bytes, negotiated: Negotiated) -> Communities:
+    def unpack_attribute(data: bytes, negotiated: Negotiated) -> Communities:
         communities = Communities()
         while data:
             if data and len(data) < COMMUNITY_SIZE:
                 raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data])))
-            communities.add(Community.unpack(data[:COMMUNITY_SIZE], negotiated))
+            communities.add(Community.unpack_attribute(data[:COMMUNITY_SIZE], negotiated))
             data = data[COMMUNITY_SIZE:]
         return communities
