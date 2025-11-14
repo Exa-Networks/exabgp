@@ -46,7 +46,7 @@ class ASYNC:
             # We could delete all the generators just to be safe
             self._async = deque()
             return
-        running = deque()
+        running: deque = deque()
         for uid, generator in self._async:
             if uid != deluid:
                 running.append((uid, generator))

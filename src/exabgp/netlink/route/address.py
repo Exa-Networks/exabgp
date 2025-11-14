@@ -28,7 +28,7 @@ class Address(Message):
         PACK = '4Bi'
         LEN = calcsize(PACK)
 
-    format = namedtuple('Address', 'family prefixlen flags scope index attributes')
+    format = namedtuple('format', 'family prefixlen flags scope index attributes')
 
     class Command:
         RTM_NEWADDR = 0x14

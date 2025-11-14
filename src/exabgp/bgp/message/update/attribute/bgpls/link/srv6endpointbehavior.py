@@ -40,7 +40,7 @@ class Srv6EndpointBehavior(BaseLS):
 
     @classmethod
     def unpack(cls, data: bytes) -> Srv6EndpointBehavior:
-        flags = []  # No flags defined according to RFC 9514 and 9352
+        flags: list[str] = []  # No flags defined according to RFC 9514 and 9352
         algorithm = data[3]
         endpoint_behavior = unpack('!H', data[0:2])[0]
 

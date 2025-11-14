@@ -28,7 +28,7 @@ def nop(_):
 
 
 class JSON:
-    _count = {}
+    _count: dict[str, int] = {}
 
     def __init__(self, version):
         self.version = version

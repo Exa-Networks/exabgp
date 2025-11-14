@@ -91,7 +91,7 @@ class Srv6LanEndXISIS(FlagLS):
     TLV = 1107
     MERGE = True
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    registered_subsubtlvs = dict()
+    registered_subsubtlvs: dict[int, type] = dict()
 
     def __init__(self, content):
         self.content = [content]
@@ -130,7 +130,7 @@ class Srv6LanEndXOSPF(FlagLS):
     TLV = 1108
     MERGE = True
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    registered_subsubtlvs = dict()
+    registered_subsubtlvs: dict[int, type] = dict()
 
     def __init__(self, content):
         self.content = [content]

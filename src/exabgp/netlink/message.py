@@ -17,7 +17,7 @@ from exabgp.netlink.netlink import NetLink
 
 class Message:
     # to be defined by the subclasses
-    format = namedtuple('Parent', 'to be subclassed')
+    format = namedtuple('format', 'to be subclassed')
 
     DEFAULT_FLAGS = NetLink.Flags.NLM_F_REQUEST | NetLink.Flags.NLM_F_DUMP
 

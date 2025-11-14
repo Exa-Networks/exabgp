@@ -58,7 +58,7 @@ class MPRNLRI(Attribute, Family):
 
         # addpath = negotiated.addpath.send(self.afi,self.safi)
         # nexthopself = negotiated.nexthopself(self.afi)
-        mpnlri = {}
+        mpnlri: dict[bytes, list] = {}
         for nlri in self.nlris:
             if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
                 continue

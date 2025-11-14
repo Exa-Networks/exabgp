@@ -38,7 +38,7 @@ class Srv6EndX(FlagLS):
     TLV = 1106
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     MERGE = True
-    registered_subsubtlvs = dict()
+    registered_subsubtlvs: dict[int, type] = dict()
 
     def __init__(self, content):
         self.content = [content]

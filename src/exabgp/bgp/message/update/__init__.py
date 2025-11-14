@@ -124,8 +124,8 @@ class Update(Message):
     def messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator[bytes, None, None]:
         # sort the nlris
 
-        nlris = []
-        mp_nlris = {}
+        nlris: list = []
+        mp_nlris: dict[tuple, list] = {}
 
         for nlri in sorted(self.nlris):
             if nlri.family().afi_safi() not in negotiated.families:

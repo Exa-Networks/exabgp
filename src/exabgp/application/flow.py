@@ -28,7 +28,7 @@ class ACL:
     suffix = '.rules'
 
     __uid = 0
-    _known = dict()
+    _known: dict[str, tuple[int, str]] = dict()
 
     @classmethod
     def _uid(cls):

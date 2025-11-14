@@ -57,8 +57,8 @@ class AnnounceMup(ParseAnnounce):
         'extended-community': 'attribute-add',
     }
 
-    assign = dict()
-    default = dict()
+    assign: dict[str, str] = dict()
+    default: dict[str, object] = dict()
 
     name = 'mup'
 

@@ -20,7 +20,7 @@ class Model:
         'ietf': 'https://raw.githubusercontent.com/YangModels/yang/master/standard/ietf/RFC',
     }
 
-    models = {}
+    models: dict[str, str] = {}
 
     def __init__(self, library, folder, module):
         self.library = library

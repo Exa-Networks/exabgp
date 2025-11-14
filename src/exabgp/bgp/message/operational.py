@@ -40,7 +40,7 @@ class Type(int):
         return 2
 
     def __str__(self) -> str:
-        pass  # type: ignore[return]
+        pass
 
 
 # ================================================================== Operational

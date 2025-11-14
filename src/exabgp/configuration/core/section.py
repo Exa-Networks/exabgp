@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Union
 from string import ascii_letters
 from string import digits
 
@@ -15,10 +16,12 @@ from exabgp.configuration.core.error import Error
 
 class Section(Error):
     name = 'undefined'
-    known = dict()  # command/section and code to handle it
-    default = dict()  # command/section has a a defult value, use it if no data was provided
-    action = {}  # how to handle this command ( append, add, assign, route )
-    assign = {}  # configuration to class variable lookup for setattr
+    known: dict[Union[str, tuple], object] = dict()  # command/section and code to handle it
+    default: dict[Union[str, tuple], object] = (
+        dict()
+    )  # command/section has a a defult value, use it if no data was provided
+    action: dict[Union[str, tuple], str] = {}  # how to handle this command ( append, add, assign, route )
+    assign: dict[str, str] = {}  # configuration to class variable lookup for setattr
 
     def __init__(self, tokerniser, scope, error):
         Error.__init__(self)

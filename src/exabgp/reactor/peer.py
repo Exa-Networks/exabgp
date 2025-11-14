@@ -734,7 +734,7 @@ class Peer:
                 self.reactor.api_shutdown()
             else:
                 self.stop()
-            return True  # type: ignore
+            return True
 
         if self.generator:
             try:
@@ -767,7 +767,7 @@ class Peer:
                 return None
             return True if value else False
 
-        peer = defaultdict(lambda: None)
+        peer: defaultdict = defaultdict(lambda: None)
 
         have_peer = self.proto is not None
         have_open = self.proto and self.proto.negotiated.received_open
