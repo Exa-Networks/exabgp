@@ -24,7 +24,6 @@ from exabgp.bgp.message.operational import (
     OperationalFamily,
     SequencedOperationalFamily,
 )
-from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.family import AFI, SAFI
 
@@ -84,7 +83,7 @@ def test_nop_unpack() -> None:
     Since NOP is internal, unpacking just returns a NOP instance.
     """
     data = b''
-    nop = NOP.unpack_message(data, Direction.IN, {})
+    nop = NOP.unpack_message(data, {})
 
     assert isinstance(nop, NOP)
 
@@ -95,7 +94,7 @@ def test_nop_unpack_with_data() -> None:
     NOP unpacking ignores any data provided.
     """
     data = b'\x01\x02\x03\x04'
-    nop = NOP.unpack_message(data, Direction.IN, {})
+    nop = NOP.unpack_message(data, {})
 
     assert isinstance(nop, NOP)
 
@@ -453,7 +452,7 @@ def test_operational_unpack_adm() -> None:
         + advisory_text  # Advisory message
     )
 
-    op = Operational.unpack_message(data, Direction.IN, {})
+    op = Operational.unpack_message(data, {})
 
     assert isinstance(op, Advisory.ADM)
     assert op.afi == AFI.ipv4
@@ -474,7 +473,7 @@ def test_operational_unpack_asm() -> None:
         + advisory_text  # Advisory message
     )
 
-    op = Operational.unpack_message(data, Direction.IN, {})
+    op = Operational.unpack_message(data, {})
 
     assert isinstance(op, Advisory.ASM)
     assert op.afi == AFI.ipv6
@@ -497,7 +496,7 @@ def test_operational_unpack_rpcq() -> None:
         + struct.pack('!L', sequence)  # Sequence (4 bytes)
     )
 
-    op = Operational.unpack_message(data, Direction.IN, {})
+    op = Operational.unpack_message(data, {})
 
     assert isinstance(op, Query.RPCQ)
     assert op.afi == AFI.ipv4
@@ -522,7 +521,7 @@ def test_operational_unpack_rpcp() -> None:
         + struct.pack('!L', counter)  # Counter
     )
 
-    op = Operational.unpack_message(data, Direction.IN, {})
+    op = Operational.unpack_message(data, {})
 
     assert isinstance(op, Response.RPCP)
     assert op.counter == counter

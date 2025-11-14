@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterator, List, Optional
+from typing import TYPE_CHECKING, Iterator, List, Optional
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -61,11 +61,11 @@ class Communities(Attribute):
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @staticmethod
-    def unpack(data: bytes, direction: Any, negotiated: Negotiated) -> Communities:
+    def unpack(data: bytes, negotiated: Negotiated) -> Communities:
         communities = Communities()
         while data:
             if data and len(data) < COMMUNITY_SIZE:
                 raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data])))
-            communities.add(Community.unpack(data[:COMMUNITY_SIZE], direction, negotiated))
+            communities.add(Community.unpack(data[:COMMUNITY_SIZE], negotiated))
             data = data[COMMUNITY_SIZE:]
         return communities

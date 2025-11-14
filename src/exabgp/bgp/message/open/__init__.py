@@ -68,7 +68,7 @@ class Open(Message):
         self.router_id: RouterID = router_id
         self.capabilities: Capabilities = capabilities
 
-    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def message(self, negotiated: Negotiated) -> bytes:
         return self._message(
             self.version.pack()
             + self.asn.trans().pack()
@@ -87,9 +87,7 @@ class Open(Message):
         )
 
     @classmethod
-    def unpack_message(
-        cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None
-    ) -> Open:
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Open:
         version = data[0]
         if version != Version.BGP_4:
             # Only version 4 is supported nowdays ..

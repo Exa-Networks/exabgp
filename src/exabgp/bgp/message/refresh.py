@@ -52,7 +52,7 @@ class RouteRefresh(Message):
         self.safi = SAFI.create(safi)
         self.reserved = Reserved(reserved)
 
-    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def message(self, negotiated: Negotiated) -> bytes:
         return self._message(self.afi.pack() + bytes([self.reserved]) + self.safi.pack())
 
     def messages(self, negotiated: Negotiated, include_withdraw: bool) -> Generator[bytes, None, None]:
@@ -69,9 +69,7 @@ class RouteRefresh(Message):
     # 	return self._families[:]
 
     @classmethod
-    def unpack_message(
-        cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None
-    ) -> RouteRefresh:
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> RouteRefresh:
         try:
             afi, reserved, safi = unpack('!HBB', data)
         except error:

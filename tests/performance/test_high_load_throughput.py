@@ -42,7 +42,7 @@ class TestMessageStreamProcessing:
 
                 # Parse the message
                 if msg_type == 2:  # UPDATE
-                    Update.unpack_message(body, Direction.IN, negotiated)
+                    Update.unpack_message(body, negotiated)
 
                 count += 1
 
@@ -79,7 +79,7 @@ class TestMessageStreamProcessing:
 
                 # Parse based on type
                 if msg_type == 2:  # UPDATE
-                    Update.unpack_message(body, Direction.IN, negotiated)
+                    Update.unpack_message(body, negotiated)
                 elif msg_type == 4:  # KEEPALIVE
                     KeepAlive()
 

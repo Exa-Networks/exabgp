@@ -63,7 +63,7 @@ class Protocol:
     def __init__(self, peer: 'Peer') -> None:
         self.peer: 'Peer' = peer
         self.neighbor: 'Neighbor' = peer.neighbor
-        self.negotiated: Negotiated = Negotiated(self.neighbor)
+        self.negotiated: Negotiated = Negotiated(self.neighbor, Direction.IN)
         self.connection: Optional[Union['Incoming', Outgoing]] = None
 
         if self.neighbor['connect']:
@@ -137,7 +137,7 @@ class Protocol:
         packets: bool = self.neighbor.api['{}-packets'.format(direction)]  # type: ignore[index]
         parsed: bool = self.neighbor.api['{}-parsed'.format(direction)]  # type: ignore[index]
         consolidate: bool = self.neighbor.api['{}-consolidate'.format(direction)]  # type: ignore[index]
-        negotiated: Optional[Negotiated] = self.negotiated if self.neighbor.api['negotiated'] else None  # type: ignore[index]
+        negotiated: Negotiated = self.negotiated
 
         if consolidate:
             if packets:
@@ -181,7 +181,7 @@ class Protocol:
                     b'',
                 )
 
-    def write(self, message: Any, negotiated: Optional[Negotiated] = None) -> Generator[bool, None, None]:
+    def write(self, message: Any, negotiated: Negotiated) -> Generator[bool, None, None]:
         raw: bytes = message.message(negotiated)
 
         code: str = 'send-{}'.format(Message.CODE.short(message.ID))
@@ -196,7 +196,7 @@ class Protocol:
         code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
         self.peer.stats[code] += 1
         if self.neighbor.api.get(code, False):  # type: ignore[union-attr]
-            message: Update = Update.unpack_message(raw[19:], Direction.OUT, self.negotiated)  # type: ignore[arg-type]
+            message: Update = Update.unpack_message(raw[19:], self.negotiated)  # type: ignore[arg-type]
             self._to_api('send', message, raw)
 
         for boolean in self.connection.writer(raw):  # type: ignore[union-attr]
@@ -272,7 +272,7 @@ class Protocol:
                     return
 
             try:
-                message = Message.unpack(msg_id, body, Direction.IN, self.negotiated)  # type: ignore[arg-type]
+                message = Message.unpack(msg_id, body, self.negotiated)  # type: ignore[arg-type]
             except (KeyboardInterrupt, SystemExit, Notify):
                 raise
             except Exception as exc:
@@ -391,7 +391,7 @@ class Protocol:
         )
 
         # we do not buffer open message in purpose
-        for _ in self.write(sent_open):
+        for _ in self.write(sent_open, self.negotiated):
             yield _NOP
 
         log.debug(lambda: '>> {}'.format(sent_open), self.connection.session())  # type: ignore[union-attr]
@@ -400,7 +400,7 @@ class Protocol:
     def new_keepalive(self, comment: str = '') -> Generator[Union[KeepAlive, NOP], None, None]:
         keepalive: KeepAlive = KeepAlive()
 
-        for _ in self.write(keepalive):
+        for _ in self.write(keepalive, self.negotiated):
             yield _NOP
 
         log.debug(
@@ -411,7 +411,7 @@ class Protocol:
         yield keepalive
 
     def new_notification(self, notification: Notify) -> Generator[Union[Notify, NOP], None, None]:
-        for _ in self.write(notification):
+        for _ in self.write(notification, self.negotiated):
             yield _NOP
         log.debug(
             lambda: f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
@@ -434,7 +434,7 @@ class Protocol:
 
     def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Union[EOR, NOP], None, None]:
         eor: EOR = EOR(afi, safi)
-        for _ in self.write(eor):
+        for _ in self.write(eor, self.negotiated):
             yield _NOP
         log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self.connection.session())  # type: ignore[union-attr]
         yield eor
@@ -471,7 +471,7 @@ class Protocol:
         yield operational
 
     def new_refresh(self, refresh: RouteRefresh) -> Generator[Union[RouteRefresh, NOP], None, None]:
-        for _ in self.write(refresh, None):
+        for _ in self.write(refresh, self.negotiated):
             yield _NOP
         log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self.connection.session())  # type: ignore[union-attr]
         yield refresh

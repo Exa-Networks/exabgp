@@ -81,7 +81,7 @@ class MPURNLRI(Attribute, Family):
         return 'MP_UNREACH_NLRI for %s %s with %d NLRI(s)' % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> MPURNLRI:
+    def unpack(cls, data: bytes, negotiated: Negotiated) -> MPURNLRI:
         nlris = []
 
         # -- Reading AFI/SAFI
@@ -93,10 +93,7 @@ class MPURNLRI(Attribute, Family):
             raise Notify(3, 0, 'presented a non-negotiated family {} {}'.format(AFI.create(afi), SAFI.create(safi)))
 
         # Do we need to handle Path Information with the route (AddPath)
-        if direction == Direction.IN:
-            addpath = negotiated.addpath.receive(afi, safi)
-        else:
-            addpath = negotiated.addpath.send(afi, safi)
+        addpath = negotiated.required(afi, safi)
 
         while data:
             nlri, data = NLRI.unpack_nlri(afi, safi, data, Action.WITHDRAW, addpath)

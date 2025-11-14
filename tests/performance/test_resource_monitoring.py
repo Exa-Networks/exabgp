@@ -41,7 +41,7 @@ class TestMemoryUsage:
                 length = int.from_bytes(reader.read(2), 'big')
                 int.from_bytes(reader.read(1), 'big')
                 body = reader.read(length - 19)
-                Update.unpack_message(body, Direction.IN, negotiated)
+                Update.unpack_message(body, negotiated)
 
             # Get memory after parsing
             final_memory = process.memory_info().rss / 1024 / 1024

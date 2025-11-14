@@ -226,7 +226,7 @@ class ASPath(Attribute):
         return cls(tuple(aspath), backup)
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> Optional[ASPath]:
+    def unpack(cls, data: bytes, negotiated: Negotiated) -> Optional[ASPath]:
         if not data:
             return None  # ASPath.Empty
         return cls._new_aspaths(data, negotiated.asn4, ASPath)
@@ -251,7 +251,7 @@ class AS4Path(ASPath):
         return ASPath.pack(self, True)  # type: ignore[arg-type]
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> Optional[AS4Path]:
+    def unpack(cls, data: bytes, negotiated: Negotiated) -> Optional[AS4Path]:
         if not data:
             return None  # AS4Path.Empty
         return cls._new_aspaths(data, True, AS4Path)  # type: ignore[return-value]

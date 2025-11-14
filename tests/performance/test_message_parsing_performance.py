@@ -35,7 +35,7 @@ class TestUpdateMessageParsingPerformance:
             int.from_bytes(reader.read(1), 'big')
             # Parse body
             body = reader.read(length - 19)
-            msg = Update.unpack_message(body, Direction.IN, negotiated)
+            msg = Update.unpack_message(body, negotiated)
             return msg
 
         result = benchmark(parse_update)
@@ -52,7 +52,7 @@ class TestUpdateMessageParsingPerformance:
             length = int.from_bytes(reader.read(2), 'big')
             int.from_bytes(reader.read(1), 'big')
             body = reader.read(length - 19)
-            msg = Update.unpack_message(body, Direction.IN, negotiated)
+            msg = Update.unpack_message(body, negotiated)
             return msg
 
         result = benchmark(parse_update)
@@ -69,7 +69,7 @@ class TestUpdateMessageParsingPerformance:
             length = int.from_bytes(reader.read(2), 'big')
             int.from_bytes(reader.read(1), 'big')
             body = reader.read(length - 19)
-            msg = Update.unpack_message(body, Direction.IN, negotiated)
+            msg = Update.unpack_message(body, negotiated)
             return msg
 
         result = benchmark(parse_update)
@@ -88,7 +88,7 @@ class TestUpdateMessageParsingPerformance:
                 length = int.from_bytes(reader.read(2), 'big')
                 int.from_bytes(reader.read(1), 'big')
                 body = reader.read(length - 19)
-                Update.unpack_message(body, Direction.IN, negotiated)
+                Update.unpack_message(body, negotiated)
                 count += 1
             return count
 
@@ -108,7 +108,7 @@ class TestUpdateMessageParsingPerformance:
                 length = int.from_bytes(reader.read(2), 'big')
                 int.from_bytes(reader.read(1), 'big')
                 body = reader.read(length - 19)
-                Update.unpack_message(body, Direction.IN, negotiated)
+                Update.unpack_message(body, negotiated)
                 count += 1
             return count
 
@@ -237,7 +237,7 @@ class TestHighVolumeParsingStress:
                 length = int.from_bytes(reader.read(2), 'big')
                 int.from_bytes(reader.read(1), 'big')
                 body = reader.read(length - 19)
-                Update.unpack_message(body, Direction.IN, negotiated)
+                Update.unpack_message(body, negotiated)
                 count += 1
             return count
 

@@ -15,6 +15,7 @@ RFC 9514: Border Gateway Protocol - Link State (BGP-LS) Extensions for Segment R
 """
 
 import pytest
+from unittest.mock import Mock
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, GenericBGPLS, PROTO_CODES
@@ -1450,7 +1451,8 @@ class TestBGPLSLinkStateAttribute:
 
         # TLV: 1155 (PrefixMetric), Length: 4, Value: 20
         data = b'\x04\x83\x00\x04\x00\x00\x00\x14'
-        attr = LinkState.unpack(data, None, None)
+        negotiated = Mock()
+        attr = LinkState.unpack(data, negotiated)
 
         assert len(attr.ls_attrs) == 1
         assert attr.ls_attrs[0].TLV == 1155
@@ -1467,7 +1469,8 @@ class TestBGPLSLinkStateAttribute:
             b'\x04\x83\x00\x04\x00\x00\x00\x14'  # PrefixMetric
             b'\x04\x81\x00\x04\x00\x00\xff\xfe'  # IgpTags
         )
-        attr = LinkState.unpack(data, None, None)
+        negotiated = Mock()
+        attr = LinkState.unpack(data, negotiated)
 
         assert len(attr.ls_attrs) == 2
         assert attr.ls_attrs[0].TLV == 1155
@@ -1479,7 +1482,8 @@ class TestBGPLSLinkStateAttribute:
 
         # Single attribute: PrefixMetric
         data = b'\x04\x83\x00\x04\x00\x00\x00\x14'
-        attr = LinkState.unpack(data, None, None)
+        negotiated = Mock()
+        attr = LinkState.unpack(data, negotiated)
 
         json_output = attr.json()
         assert '"prefix-metric": 20' in json_output
@@ -1490,7 +1494,8 @@ class TestBGPLSLinkStateAttribute:
 
         # Unknown TLV: 9999, Length: 4, Value: 0x01020304
         data = b'\x27\x0f\x00\x04\x01\x02\x03\x04'
-        attr = LinkState.unpack(data, None, None)
+        negotiated = Mock()
+        attr = LinkState.unpack(data, negotiated)
 
         assert len(attr.ls_attrs) == 1
         # Should be GenericLSID

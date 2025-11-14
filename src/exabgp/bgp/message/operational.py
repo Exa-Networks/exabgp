@@ -105,7 +105,7 @@ class Operational(Message):
         return klass
 
     @classmethod
-    def unpack_message(cls, data: bytes, direction: Optional[int], negotiated: Negotiated) -> Optional[Operational]:  # pylint: disable=W0613
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Optional[Operational]:  # pylint: disable=W0613
         what = Type(unpack('!H', data[0:2])[0])
         length = unpack('!H', data[2:4])[0]
 

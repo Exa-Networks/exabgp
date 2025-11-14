@@ -37,9 +37,13 @@ def mock_logger() -> Generator[None, None, None]:
 
 def create_negotiated_mock() -> Any:
     """Create a minimal mock negotiated object."""
+    from exabgp.bgp.message.direction import Direction
+
     negotiated = Mock()
+    negotiated.direction = Direction.IN
     negotiated.addpath.receive = Mock(return_value=False)
     negotiated.addpath.send = Mock(return_value=False)
+    negotiated.required = Mock(return_value=False)
     negotiated.families = []
     return negotiated
 
@@ -56,7 +60,7 @@ def test_unpack_simple_withdrawal() -> None:
     # Create UPDATE withdrawing 192.0.2.0/24
     data = create_withdrawal_update([('192.0.2.0', 24)])
 
-    result = Update.unpack_message(data, Direction.IN, negotiated)
+    result = Update.unpack_message(data, negotiated)
 
     # Should return Update object with nlris
     assert isinstance(result, Update)
@@ -79,7 +83,7 @@ def test_unpack_empty_update_is_eor() -> None:
     # Empty UPDATE (EOR marker)
     data = b'\x00\x00\x00\x00'
 
-    result = Update.unpack_message(data, Direction.IN, negotiated)
+    result = Update.unpack_message(data, negotiated)
 
     assert isinstance(result, EOR)
 
@@ -103,7 +107,7 @@ def test_unpack_with_minimal_attributes() -> None:
         nlri=b'',
     )
 
-    result = Update.unpack_message(data, Direction.IN, negotiated)
+    result = Update.unpack_message(data, negotiated)
 
     # Should return Update object
     assert isinstance(result, Update)
@@ -136,7 +140,7 @@ def test_split_integration_with_unpack() -> None:
     assert len(n) == 0
 
     # Now verify unpack_message() can process it
-    result = Update.unpack_message(data, Direction.IN, negotiated)
+    result = Update.unpack_message(data, negotiated)
 
     assert isinstance(result, Update)
     assert len(result.nlris) >= 1
@@ -160,7 +164,7 @@ def test_unpack_with_multiple_withdrawals() -> None:
 
     data = create_withdrawal_update(prefixes)
 
-    result = Update.unpack_message(data, Direction.IN, negotiated)
+    result = Update.unpack_message(data, negotiated)
 
     assert isinstance(result, Update)
     # Should have multiple NLRI entries
@@ -180,7 +184,7 @@ def test_unpack_handles_split_validation() -> None:
     data = b'\x00\x05\x00\x00'  # Claims 5 bytes of withdrawals but has none
 
     with pytest.raises(Notify) as exc_info:
-        Update.unpack_message(data, Direction.IN, negotiated)
+        Update.unpack_message(data, negotiated)
 
     # Should raise Notify from split()
     assert exc_info.value.code == 3
@@ -210,7 +214,7 @@ def test_unpack_preserves_data_integrity() -> None:
     assert withdrawn == test_prefix
 
     # Verify unpack_message processes the same data
-    result = Update.unpack_message(data, Direction.IN, negotiated)
+    result = Update.unpack_message(data, negotiated)
 
     assert isinstance(result, Update)
     # The withdrawn prefix should be in the result

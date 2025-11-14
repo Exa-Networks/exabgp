@@ -159,9 +159,7 @@ class Notification(Message, Exception):
         return f'{code_str} / {subcode_str}{data_str}'
 
     @classmethod
-    def unpack_message(
-        cls, data: bytes, direction: Optional[int] = None, negotiated: Optional[Negotiated] = None
-    ) -> Notification:
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Notification:
         return cls(data[0], data[1], data[2:])
 
 
@@ -177,5 +175,5 @@ class Notify(Notification):
             data = chr(len(data)) + data
         Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)
 
-    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def message(self, negotiated: Negotiated) -> bytes:
         return self._message(bytes([self.code, self.subcode]) + self.data)

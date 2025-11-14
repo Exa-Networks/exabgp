@@ -26,14 +26,14 @@ class KeepAlive(Message):
     ID = Message.CODE.KEEPALIVE
     TYPE = bytes([Message.CODE.KEEPALIVE])
 
-    def message(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def message(self, negotiated: Negotiated) -> bytes:
         return self._message(b'')
 
     def __str__(self) -> str:
         return 'KEEPALIVE'
 
     @classmethod
-    def unpack_message(cls, data: bytes, direction: int, negotiated: Negotiated) -> KeepAlive:  # pylint: disable=W0613
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> KeepAlive:  # pylint: disable=W0613
         # This can not happen at decode time as we check the length of the KEEPALIVE message
         # But could happen when calling the function programmatically
         if data:

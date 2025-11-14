@@ -10,11 +10,25 @@ License: 3-clause BSD
 
 import pytest
 import struct
+from unittest.mock import Mock
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.protocol.family import AFI, SAFI
+
+
+# ==============================================================================
+# Test Helper Functions
+# ==============================================================================
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 # ==============================================================================
@@ -141,7 +155,7 @@ def test_route_refresh_encoding_ipv4_unicast() -> None:
     Total: 23 bytes
     """
     rr = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.request)
-    msg = rr.message()
+    msg = rr.message(create_negotiated())
 
     # Total length should be 23 bytes
     assert len(msg) == 23
@@ -168,7 +182,7 @@ def test_route_refresh_encoding_ipv4_unicast() -> None:
 def test_route_refresh_encoding_ipv6_multicast() -> None:
     """Test ROUTE_REFRESH encoding for IPv6 Multicast."""
     rr = RouteRefresh(AFI.ipv6, SAFI.multicast, RouteRefresh.request)
-    msg = rr.message()
+    msg = rr.message(create_negotiated())
 
     # AFI field should be 2 (IPv6)
     assert msg[19:21] == b'\x00\x02'
@@ -180,7 +194,7 @@ def test_route_refresh_encoding_ipv6_multicast() -> None:
 def test_route_refresh_encoding_with_borr_subtype() -> None:
     """Test ROUTE_REFRESH encoding with BoRR subtype."""
     rr = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.start)
-    msg = rr.message()
+    msg = rr.message(create_negotiated())
 
     # Reserved field should be 1 (BoRR)
     assert msg[21] == 0x01
@@ -189,7 +203,7 @@ def test_route_refresh_encoding_with_borr_subtype() -> None:
 def test_route_refresh_encoding_with_eorr_subtype() -> None:
     """Test ROUTE_REFRESH encoding with EoRR subtype."""
     rr = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.end)
-    msg = rr.message()
+    msg = rr.message(create_negotiated())
 
     # Reserved field should be 2 (EoRR)
     assert msg[21] == 0x02
@@ -208,7 +222,7 @@ def test_route_refresh_unpack_ipv4_unicast() -> None:
     # AFI=1, Reserved=0, SAFI=1
     data = struct.pack('!HBB', 1, 0, 1)
 
-    rr = RouteRefresh.unpack_message(data)
+    rr = RouteRefresh.unpack_message(data, create_negotiated())
 
     assert rr.afi == AFI.ipv4
     assert rr.safi == SAFI.unicast
@@ -220,7 +234,7 @@ def test_route_refresh_unpack_ipv6_multicast() -> None:
     # AFI=2, Reserved=0, SAFI=2
     data = struct.pack('!HBB', 2, 0, 2)
 
-    rr = RouteRefresh.unpack_message(data)
+    rr = RouteRefresh.unpack_message(data, create_negotiated())
 
     assert rr.afi == AFI.ipv6
     assert rr.safi == SAFI.multicast
@@ -231,7 +245,7 @@ def test_route_refresh_unpack_with_borr() -> None:
     # AFI=1, Reserved=1 (BoRR), SAFI=1
     data = struct.pack('!HBB', 1, 1, 1)
 
-    rr = RouteRefresh.unpack_message(data)
+    rr = RouteRefresh.unpack_message(data, create_negotiated())
 
     assert rr.reserved == 1
     assert str(rr.reserved) == 'begin'
@@ -242,7 +256,7 @@ def test_route_refresh_unpack_with_eorr() -> None:
     # AFI=1, Reserved=2 (EoRR), SAFI=1
     data = struct.pack('!HBB', 1, 2, 1)
 
-    rr = RouteRefresh.unpack_message(data)
+    rr = RouteRefresh.unpack_message(data, create_negotiated())
 
     assert rr.reserved == 2
     assert str(rr.reserved) == 'end'
@@ -253,7 +267,7 @@ def test_route_refresh_unpack_through_message_class() -> None:
     message_type = Message.CODE.ROUTE_REFRESH
     data = struct.pack('!HBB', 1, 0, 1)
 
-    rr = Message.unpack(message_type, data, Direction.IN, {})
+    rr = Message.unpack(message_type, data, {})
 
     assert isinstance(rr, RouteRefresh)
     assert rr.afi == AFI.ipv4
@@ -273,7 +287,7 @@ def test_route_refresh_unpack_invalid_data_length() -> None:
     data = b'\x00\x01\x00'
 
     with pytest.raises(Notify) as exc_info:
-        RouteRefresh.unpack_message(data)
+        RouteRefresh.unpack_message(data, create_negotiated())
 
     assert 'invalid route-refresh message' in str(exc_info.value)
 
@@ -283,7 +297,7 @@ def test_route_refresh_unpack_empty_data() -> None:
     data = b''
 
     with pytest.raises(Notify):
-        RouteRefresh.unpack_message(data)
+        RouteRefresh.unpack_message(data, create_negotiated())
 
 
 def test_route_refresh_unpack_invalid_reserved_field() -> None:
@@ -295,7 +309,7 @@ def test_route_refresh_unpack_invalid_reserved_field() -> None:
     data = struct.pack('!HBB', 1, 99, 1)
 
     with pytest.raises(Notify) as exc_info:
-        RouteRefresh.unpack_message(data)
+        RouteRefresh.unpack_message(data, create_negotiated())
 
     assert 'invalid route-refresh message subtype' in str(exc_info.value)
 
@@ -308,7 +322,7 @@ def test_route_refresh_unpack_various_invalid_reserved() -> None:
         data = struct.pack('!HBB', 1, reserved, 1)
 
         with pytest.raises(Notify):
-            RouteRefresh.unpack_message(data)
+            RouteRefresh.unpack_message(data, create_negotiated())
 
 
 # ==============================================================================
@@ -320,13 +334,13 @@ def test_route_refresh_encode_decode_roundtrip_ipv4() -> None:
     """Test ROUTE_REFRESH encode/decode round-trip for IPv4."""
     # Create and encode
     original = RouteRefresh(AFI.ipv4, SAFI.unicast, RouteRefresh.request)
-    encoded = original.message()
+    encoded = original.message(create_negotiated())
 
     # Extract payload (skip 19-byte header)
     payload = encoded[19:]
 
     # Decode
-    decoded = RouteRefresh.unpack_message(payload)
+    decoded = RouteRefresh.unpack_message(payload, create_negotiated())
 
     # Verify match
     assert decoded.afi == original.afi
@@ -337,9 +351,9 @@ def test_route_refresh_encode_decode_roundtrip_ipv4() -> None:
 def test_route_refresh_encode_decode_roundtrip_ipv6() -> None:
     """Test ROUTE_REFRESH encode/decode round-trip for IPv6."""
     original = RouteRefresh(AFI.ipv6, SAFI.multicast, RouteRefresh.end)
-    encoded = original.message()
+    encoded = original.message(create_negotiated())
     payload = encoded[19:]
-    decoded = RouteRefresh.unpack_message(payload)
+    decoded = RouteRefresh.unpack_message(payload, create_negotiated())
 
     assert decoded.afi == original.afi
     assert decoded.safi == original.safi
@@ -352,9 +366,9 @@ def test_route_refresh_roundtrip_all_subtypes() -> None:
 
     for subtype in subtypes:
         original = RouteRefresh(AFI.ipv4, SAFI.unicast, subtype)
-        encoded = original.message()
+        encoded = original.message(create_negotiated())
         payload = encoded[19:]
-        decoded = RouteRefresh.unpack_message(payload)
+        decoded = RouteRefresh.unpack_message(payload, create_negotiated())
 
         assert decoded.reserved == subtype
 
@@ -504,10 +518,10 @@ def test_route_refresh_ipv4_mpls_vpn() -> None:
     assert rr.safi == SAFI.mpls_vpn
 
     # Encode and verify
-    msg = rr.message()
+    msg = rr.message(create_negotiated())
     payload = msg[19:]
 
-    decoded = RouteRefresh.unpack_message(payload)
+    decoded = RouteRefresh.unpack_message(payload, create_negotiated())
     assert decoded == rr
 
 
@@ -548,9 +562,9 @@ def test_route_refresh_various_afi_safi_combinations() -> None:
         assert rr.safi == safi
 
         # Verify encoding/decoding
-        msg = rr.message()
+        msg = rr.message(create_negotiated())
         payload = msg[19:]
-        decoded = RouteRefresh.unpack_message(payload)
+        decoded = RouteRefresh.unpack_message(payload, create_negotiated())
 
         assert decoded == rr
 

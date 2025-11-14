@@ -9,10 +9,24 @@ License: 3-clause BSD
 """
 
 import pytest
+from unittest.mock import Mock
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+
+# ==============================================================================
+# Test Helper Functions
+# ==============================================================================
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 # ==============================================================================
@@ -42,7 +56,8 @@ def test_keepalive_message_encoding() -> None:
     - Type (1 octet): 4 (KEEPALIVE)
     """
     keepalive = KeepAlive()
-    msg = keepalive.message()
+    negotiated = create_negotiated()
+    msg = keepalive.message(negotiated)
 
     # Total length should be 19 bytes
     assert len(msg) == 19
@@ -85,7 +100,7 @@ def test_keepalive_unpack_valid_message() -> None:
     data = b''
     negotiated = {}
 
-    keepalive = KeepAlive.unpack_message(data, Direction.IN, negotiated)
+    keepalive = KeepAlive.unpack_message(data, negotiated)
 
     assert isinstance(keepalive, KeepAlive)
     assert str(keepalive) == 'KEEPALIVE'
@@ -100,7 +115,7 @@ def test_keepalive_unpack_through_message_class() -> None:
     data = b''
     negotiated = {}
 
-    keepalive = Message.unpack(message_type, data, Direction.IN, negotiated)
+    keepalive = Message.unpack(message_type, data, negotiated)
 
     assert isinstance(keepalive, KeepAlive)
 
@@ -114,11 +129,11 @@ def test_keepalive_unpack_with_direction() -> None:
     negotiated = {}
 
     # Test incoming direction
-    keepalive_in = KeepAlive.unpack_message(data, Direction.IN, negotiated)
+    keepalive_in = KeepAlive.unpack_message(data, negotiated)
     assert isinstance(keepalive_in, KeepAlive)
 
     # Test outgoing direction
-    keepalive_out = KeepAlive.unpack_message(data, Direction.OUT, negotiated)
+    keepalive_out = KeepAlive.unpack_message(data, negotiated)
     assert isinstance(keepalive_out, KeepAlive)
 
 
@@ -139,7 +154,7 @@ def test_keepalive_with_payload_raises_error() -> None:
     negotiated = {}
 
     with pytest.raises(Notify):
-        KeepAlive.unpack_message(data, Direction.IN, negotiated)
+        KeepAlive.unpack_message(data, negotiated)
 
 
 def test_keepalive_with_multi_byte_payload_raises_error() -> None:
@@ -148,7 +163,7 @@ def test_keepalive_with_multi_byte_payload_raises_error() -> None:
     negotiated = {}
 
     with pytest.raises(Notify):
-        KeepAlive.unpack_message(data, Direction.IN, negotiated)
+        KeepAlive.unpack_message(data, negotiated)
 
 
 def test_keepalive_with_various_invalid_payloads() -> None:
@@ -163,7 +178,7 @@ def test_keepalive_with_various_invalid_payloads() -> None:
 
     for payload in invalid_payloads:
         with pytest.raises(Notify):
-            KeepAlive.unpack_message(payload, Direction.IN, {})
+            KeepAlive.unpack_message(payload, {})
 
 
 # ==============================================================================
@@ -175,13 +190,13 @@ def test_keepalive_encode_decode_roundtrip() -> None:
     """Test that KEEPALIVE can be encoded and decoded back successfully."""
     # Create and encode
     keepalive_original = KeepAlive()
-    encoded = keepalive_original.message()
+    encoded = keepalive_original.message(create_negotiated())
 
     # Extract payload (everything after 19-byte header)
     payload = encoded[19:]
 
     # Decode
-    keepalive_decoded = KeepAlive.unpack_message(payload, Direction.IN, {})
+    keepalive_decoded = KeepAlive.unpack_message(payload, {})
 
     # Verify they match
     assert isinstance(keepalive_decoded, KeepAlive)
@@ -194,7 +209,7 @@ def test_keepalive_multiple_encode_decode_cycles() -> None:
 
     for _ in range(10):
         # Encode
-        encoded = keepalive.message()
+        encoded = keepalive.message(create_negotiated())
 
         # Verify encoding is consistent
         assert len(encoded) == 19
@@ -202,7 +217,7 @@ def test_keepalive_multiple_encode_decode_cycles() -> None:
 
         # Extract and decode payload
         payload = encoded[19:]
-        keepalive = KeepAlive.unpack_message(payload, Direction.IN, {})
+        keepalive = KeepAlive.unpack_message(payload, {})
 
         assert isinstance(keepalive, KeepAlive)
 
@@ -250,7 +265,7 @@ def test_keepalive_instances_are_equal() -> None:
     keepalive2 = KeepAlive()
 
     # Both should produce identical wire format
-    assert keepalive1.message() == keepalive2.message()
+    assert keepalive1.message(create_negotiated()) == keepalive2.message(create_negotiated())
 
 
 def test_keepalive_string_representation() -> None:
@@ -276,7 +291,7 @@ def test_keepalive_with_none_negotiated() -> None:
     assert len(msg) == 19
 
     # Should work when unpacking with None
-    decoded = KeepAlive.unpack_message(b'', Direction.IN, None)
+    decoded = KeepAlive.unpack_message(b'', None)
     assert isinstance(decoded, KeepAlive)
 
 
@@ -287,7 +302,8 @@ def test_keepalive_marker_field() -> None:
     The marker field must be all ones for all message types.
     """
     keepalive = KeepAlive()
-    msg = keepalive.message()
+    negotiated = create_negotiated()
+    msg = keepalive.message(negotiated)
 
     # Marker should be 16 bytes of 0xFF
     expected_marker = b'\xff' * 16
@@ -301,7 +317,8 @@ def test_keepalive_header_length_field() -> None:
     For KEEPALIVE, this should be 19 (0x0013).
     """
     keepalive = KeepAlive()
-    msg = keepalive.message()
+    negotiated = create_negotiated()
+    msg = keepalive.message(negotiated)
 
     # Extract length field (bytes 16-17)
     length_bytes = msg[16:18]
@@ -328,7 +345,7 @@ def test_keepalive_message_constants() -> None:
 
     # KEEPALIVE complete message is exactly header length
     keepalive = KeepAlive()
-    assert len(keepalive.message()) == Message.HEADER_LEN
+    assert len(keepalive.message(create_negotiated())) == Message.HEADER_LEN
 
     # Marker is 16 bytes
     assert len(Message.MARKER) == 16

@@ -239,7 +239,7 @@ class TestPeerCollisionDetection:
         peer = Peer(neighbor, reactor)
         peer.fsm.change(FSM.OPENCONFIRM)
 
-        # Create mock protocol with negotiated OPEN
+        # Create mock protocol with negotiated_in OPEN
         peer.proto = Mock()
         peer.proto.negotiated = Mock()
         peer.proto.negotiated.received_open = Mock()
@@ -268,7 +268,7 @@ class TestPeerCollisionDetection:
         peer = Peer(neighbor, reactor)
         peer.fsm.change(FSM.OPENCONFIRM)
 
-        # Create mock protocol with negotiated OPEN
+        # Create mock protocol with negotiated_in OPEN
         peer.proto = Mock()
         peer.proto.negotiated = Mock()
         peer.proto.negotiated.received_open = Mock()

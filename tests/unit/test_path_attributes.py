@@ -840,7 +840,7 @@ def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
     attr_data = packed[3:]
 
     # Unpack
-    unpacked = Aggregator.unpack(attr_data, None, negotiated)
+    unpacked = Aggregator.unpack(attr_data, negotiated)
 
     # Verify match
     assert unpacked.asn == original_asn
@@ -868,7 +868,7 @@ def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
     attr_data = packed[3:]
 
     # Unpack
-    unpacked = Aggregator.unpack(attr_data, None, negotiated)
+    unpacked = Aggregator.unpack(attr_data, negotiated)
 
     # Verify match
     assert unpacked.asn == original_asn
@@ -930,7 +930,8 @@ def test_originator_id_pack_unpack_roundtrip() -> None:
     ip_data = packed[3:]
 
     # Unpack
-    unpacked = OriginatorID.unpack(ip_data, None, None)
+    negotiated = Mock()
+    unpacked = OriginatorID.unpack(ip_data, negotiated)
 
     # Verify match
     assert str(unpacked) == original_ip
@@ -998,7 +999,8 @@ def test_cluster_list_pack_unpack_roundtrip_single() -> None:
     cluster_data = packed[3:]
 
     # Unpack
-    unpacked = ClusterList.unpack(cluster_data, None, None)
+    negotiated = Mock()
+    unpacked = ClusterList.unpack(cluster_data, negotiated)
 
     # Verify match
     assert len(unpacked.clusters) == 1
@@ -1022,7 +1024,8 @@ def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
     cluster_data = packed[3:]
 
     # Unpack
-    unpacked = ClusterList.unpack(cluster_data, None, None)
+    negotiated = Mock()
+    unpacked = ClusterList.unpack(cluster_data, negotiated)
 
     # Verify match
     assert len(unpacked.clusters) == 3
@@ -1262,7 +1265,8 @@ def test_pmsi_pack_unpack_roundtrip() -> None:
     data = struct.pack('!BB', flags, tunnel_type) + struct.pack('!L', raw_label)[1:4] + tunnel_data
 
     # Unpack
-    unpacked = PMSI.unpack(data, None, None)
+    negotiated = Mock()
+    unpacked = PMSI.unpack(data, negotiated)
 
     # Verify
     assert unpacked.flags == flags
@@ -1391,11 +1395,11 @@ def test_pmsi_no_tunnel_pack() -> None:
 
 
 def test_pmsi_no_tunnel_unpack() -> None:
-    """Test PMSINoTunnel unpack method."""
+    """Test PMSINoTunnel from_tunnel method."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSINoTunnel
 
-    # Unpack with empty tunnel
-    unpacked = PMSINoTunnel.unpack(b'', 100, 0)
+    # Create from empty tunnel
+    unpacked = PMSINoTunnel.from_tunnel(b'', 100, 0)
 
     assert unpacked.label == 100
     assert unpacked.flags == 0
@@ -1434,7 +1438,7 @@ def test_pmsi_ingress_replication_pack() -> None:
 
 
 def test_pmsi_ingress_replication_unpack() -> None:
-    """Test PMSIIngressReplication unpack method."""
+    """Test PMSIIngressReplication from_tunnel method."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSIIngressReplication
     from exabgp.protocol.ip import IPv4
 
@@ -1442,8 +1446,8 @@ def test_pmsi_ingress_replication_unpack() -> None:
     ip = '192.168.1.1'
     tunnel = IPv4.pton(ip)
 
-    # Unpack
-    unpacked = PMSIIngressReplication.unpack(tunnel, 100, 0, None)
+    # Create from tunnel
+    unpacked = PMSIIngressReplication.from_tunnel(tunnel, 100, 0, None)
 
     assert unpacked.ip == ip
     assert unpacked.label == 100
@@ -1509,7 +1513,8 @@ def test_pmsi_unknown_tunnel_type() -> None:
     data = struct.pack('!BB', flags, tunnel_type) + struct.pack('!L', raw_label)[1:4] + tunnel_data
 
     # Unpack
-    unpacked = PMSI.unpack(data, None, None)
+    negotiated = Mock()
+    unpacked = PMSI.unpack(data, negotiated)
 
     # Should create unknown PMSI
     assert unpacked.TUNNEL_TYPE == 99

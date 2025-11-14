@@ -29,7 +29,7 @@ class NOP(Message):
         return 'NOP'
 
     @classmethod
-    def unpack_message(cls, data: bytes, direction: int, negotiated: Negotiated) -> NOP:  # pylint: disable=W0613
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> NOP:  # pylint: disable=W0613
         return NOP()
 
 

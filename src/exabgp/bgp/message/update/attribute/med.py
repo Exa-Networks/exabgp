@@ -51,5 +51,5 @@ class MED(Attribute):
         return hash(self.med)
 
     @classmethod
-    def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> MED:
+    def unpack(cls, data: bytes, negotiated: Negotiated) -> MED:
         return cls(unpack('!L', data)[0])
