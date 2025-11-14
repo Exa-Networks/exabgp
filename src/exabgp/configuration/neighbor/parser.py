@@ -36,7 +36,7 @@ def inherit(tokeniser) -> List[str]:
         or tokeniser.tokens[-1] != ']'
     ):
         raise ValueError('invalid inherit list')
-    return tokeniser.tokens[2:-1]
+    return tokeniser.tokens[2:-1]  # type: ignore[no-any-return]
 
 
 def hostname(tokeniser) -> str:

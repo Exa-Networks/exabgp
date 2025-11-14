@@ -403,7 +403,7 @@ class Configuration(_Configuration):
         try:
             return self._reload()
         except KeyboardInterrupt:
-            return self.error.set('configuration reload aborted by ^C or SIGINT')
+            return self.error.set('configuration reload aborted by ^C or SIGINT')  # type: ignore[no-any-return]
         except Error as exc:
             if getenv().debug.configuration:
                 raise
