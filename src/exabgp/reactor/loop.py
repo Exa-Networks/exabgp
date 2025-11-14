@@ -330,9 +330,9 @@ class Reactor:
             log.debug(lambda: f'waiting for {sleeptime} seconds before connecting', 'reactor')
             time.sleep(float(sleeptime))
 
-        workers = {}
+        workers: dict = {}
         peers = set()
-        api_fds = []
+        api_fds: list = []
         ms_sleep = int(self._sleep_time * 1000)
 
         while True:

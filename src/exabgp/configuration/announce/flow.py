@@ -159,8 +159,8 @@ class AnnounceFlow(ParseAnnounce):
         'interface-set': 'attribute-add',
     }
 
-    assign = dict()
-    default = dict()
+    assign: dict[str, str] = dict()
+    default: dict[str, object] = dict()
 
     name = 'flow'
 

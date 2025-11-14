@@ -121,7 +121,7 @@ class ParseAPI(Section):
         'signal': True,
     }
 
-    DEFAULT_API = {
+    DEFAULT_API: dict[str, list] = {
         'neighbor-changes': [],
         'negotiated': [],
         'fsm': [],

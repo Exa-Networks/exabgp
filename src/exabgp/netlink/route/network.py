@@ -34,7 +34,7 @@ class Network(Message):
         PACK = '8BI'  # or is it 8Bi ?
         LEN = calcsize(PACK)
 
-    format = namedtuple('Neighbor', 'family src_len dst_len tos table proto scope type flags attributes')
+    format = namedtuple('format', 'family src_len dst_len tos table proto scope type flags attributes')
 
     class Command:
         RTM_NEWROUTE = 0x18

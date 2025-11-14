@@ -118,7 +118,7 @@ class AnnounceIP(ParseAnnounce):
         'aigp': 'attribute-add',
     }
 
-    assign = {}
+    assign: dict[str, str] = {}
 
     name = 'ip'
 

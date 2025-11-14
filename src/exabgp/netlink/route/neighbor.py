@@ -31,7 +31,7 @@ class Neighbor(Message):
         PACK = 'BxxxiHBB'
         LEN = calcsize(PACK)
 
-    format = namedtuple('Neighbor', 'family index state flags type attributes')
+    format = namedtuple('format', 'family index state flags type attributes')
 
     class Command:
         RTM_NEWNEIGH = 0x1C

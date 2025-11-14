@@ -33,7 +33,7 @@ class Link(Message):
         LEN = calcsize(PACK)
 
     # linux/if_link.h
-    format = namedtuple('Info', 'family type index flags change attributes')
+    format = namedtuple('format', 'family type index flags change attributes')
 
     class Command:
         # linux/rtnetlink.h

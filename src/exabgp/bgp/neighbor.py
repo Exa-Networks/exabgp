@@ -52,8 +52,8 @@ if TYPE_CHECKING:
 
 
 # The definition of a neighbor (from reading the configuration)
-class Neighbor(dict):  # type: ignore[type-arg]
-    class Capability(dict):  # type: ignore[type-arg]
+class Neighbor(dict):
+    class Capability(dict):
         defaults: ClassVar[Dict[str, Union[bool, int, None, str]]] = {
             'asn4': True,
             'extended-message': True,
@@ -112,11 +112,11 @@ class Neighbor(dict):  # type: ignore[type-arg]
     rib: Optional[RIB]
     changes: List[Change]
     previous: Optional[Change]
-    eor: deque[Tuple[_AFI, _SAFI]]  # type: ignore[type-arg]
+    eor: deque[Tuple[_AFI, _SAFI]]
     asm: Dict[Tuple[_AFI, _SAFI], bool]
-    messages: deque[Message]  # type: ignore[type-arg]
-    refresh: deque[Tuple[_AFI, _SAFI]]  # type: ignore[type-arg]
-    counter: Counter[str]  # type: ignore[type-arg]
+    messages: deque[Message]
+    refresh: deque[Tuple[_AFI, _SAFI]]
+    counter: Counter[str]
     uid: str
 
     def __init__(self) -> None:
@@ -584,7 +584,7 @@ Neighbor {peer-address}
         for k, (lc, pc) in answer['capabilities'].items():
             formated['local']['capabilities'][k] = lc
             formated['peer']['capabilities'][k] = pc
-            if locals and pc:
+            if lc and pc:
                 formated['capabilities'].append(k)
 
         for k, (ms, mr) in answer['messages'].items():

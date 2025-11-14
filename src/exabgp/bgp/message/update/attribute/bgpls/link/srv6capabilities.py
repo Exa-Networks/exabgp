@@ -26,7 +26,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register()
 class Srv6Capabilities(BaseLS):
     TLV = 1038
-    registered_subsubtlvs = dict()
+    registered_subsubtlvs: dict[int, type] = dict()
 
     def __init__(self, flags):
         self.flags = flags

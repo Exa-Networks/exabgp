@@ -37,4 +37,4 @@ class OriginatorID(Attribute, IPv4):
 
     @classmethod
     def unpack(cls, data: bytes, direction: int, negotiated: Negotiated) -> IPv4:
-        return IPv4.unpack(data, cls)  # type: ignore[return-value]
+        return IPv4.unpack(data, cls)

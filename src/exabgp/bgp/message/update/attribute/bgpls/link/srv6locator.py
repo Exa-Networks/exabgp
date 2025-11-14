@@ -32,7 +32,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 class Srv6Locator(FlagLS):
     TLV = 1162
     FLAGS = ['D'] + ['RSV' for _ in range(7)]
-    registered_subsubtlvs = dict()
+    registered_subsubtlvs: dict[int, type] = dict()
 
     def __init__(self, flags, algorithm, metric, subtlvs):
         self.flags = flags
@@ -48,7 +48,7 @@ class Srv6Locator(FlagLS):
         flags = cls.unpack_flags(bytes(data[0:1]))
         algorithm = data[1]
         metric = unpack('!I', data[4:8])[0]
-        subtlvs = []  # No sub-TLVs defined in RFC 9514
+        subtlvs: list = []  # No sub-TLVs defined in RFC 9514
 
         return cls(flags=flags, algorithm=algorithm, metric=metric, subtlvs=subtlvs)
 

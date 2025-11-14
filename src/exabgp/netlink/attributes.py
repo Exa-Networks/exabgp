@@ -54,9 +54,9 @@ class Attributes:
 
             length = cls.Header.LEN + len(payload)
             raw = pack(cls.Header.PACK, length, atype) + payload
-            pad = pad(length) - len(raw)
-            if pad:
-                raw += b'\0' * pad
+            pad_length = pad(length) - len(raw)
+            if pad_length:
+                raw += b'\0' * pad_length
             return raw
 
         return b''.join(_encode(k, v) for (k, v) in attributes.items())

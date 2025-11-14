@@ -61,7 +61,7 @@ class NetLink:
 
     NETLINK_ROUTE = 0
 
-    format = namedtuple('Message', 'format_type control_flags sequence pid data')
+    format = namedtuple('format', 'format_type control_flags sequence pid data')
     netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)
 
     class Header:

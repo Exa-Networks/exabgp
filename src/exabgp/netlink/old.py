@@ -69,7 +69,7 @@ class NetLinkError(GlobalError):
 
 
 class Sequence(int):
-    _instance = dict()
+    _instance: dict[str, int] = dict()
 
     def __new__(cls):
         cls._instance['next'] = cls._instance.get('next', 0) + 1
@@ -81,7 +81,7 @@ class NetLinkRoute:
 
     NETLINK_ROUTE = 0
 
-    format = namedtuple('Message', 'type flags seq pid data')
+    format = namedtuple('format', 'type flags seq pid data')
     pid = os.getpid()
     netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)
 
@@ -201,9 +201,9 @@ class Attributes:
 
             length = cls.Header.LEN + len(payload)
             raw = pack(cls.Header.PACK, length, atype) + payload
-            pad = pad(length) - len(raw)
-            if pad:
-                raw += b'\0' * pad
+            pad_length = pad(length) - len(raw)
+            if pad_length:
+                raw += b'\0' * pad_length
             return raw
 
         return b''.join(_encode(k, v) for (k, v) in attributes.items())
@@ -211,7 +211,7 @@ class Attributes:
 
 class _Message:
     # to be defined by the subclasses
-    format = namedtuple('Parent', 'to be subclassed')
+    format = namedtuple('format', 'to be subclassed')
 
     # to be defined by the subclasses
     class Header:
@@ -256,7 +256,7 @@ class Link(_Message):
         LEN = calcsize(PACK)
 
     # linux/if_link.h
-    format = namedtuple('Info', 'family type index flags change attributes')
+    format = namedtuple('format', 'family type index flags change attributes')
 
     class Command:
         # linux/rtnetlink.h
@@ -321,7 +321,7 @@ class Address(_Message):
         PACK = '4Bi'
         LEN = calcsize(PACK)
 
-    format = namedtuple('Address', 'family prefixlen flags scope index attributes')
+    format = namedtuple('format', 'family prefixlen flags scope index attributes')
 
     class Command:
         RTM_NEWADDR = 0x14
@@ -397,7 +397,7 @@ class Neighbor(_Message):
         PACK = 'BxxxiHBB'
         LEN = calcsize(PACK)
 
-    format = namedtuple('Neighbor', 'family index state flags type attributes')
+    format = namedtuple('format', 'family index state flags type attributes')
 
     class Command:
         RTM_NEWNEIGH = 0x1C
@@ -455,7 +455,7 @@ class Network(_Message):
         PACK = '8BI'  # or is it 8Bi ?
         LEN = calcsize(PACK)
 
-    format = namedtuple('Neighbor', 'family src_len dst_len tos table proto scope type flags attributes')
+    format = namedtuple('format', 'family src_len dst_len tos table proto scope type flags attributes')
 
     class Command:
         RTM_NEWROUTE = 0x18

@@ -22,7 +22,7 @@ CIDR_IPV6_LENGTH_BYTES = 4  # IPv6 address length in bytes (for detection)
 class CIDR:
     EOR = False
 
-    _mask_to_bytes = {}
+    _mask_to_bytes: dict[int, int] = {}
 
     NOCIDR: Optional[CIDR] = None
 

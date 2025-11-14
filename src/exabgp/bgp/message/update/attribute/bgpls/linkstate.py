@@ -22,12 +22,12 @@ class LinkState(Attribute):
     TLV = -1
 
     # Registered subclasses we know how to decode
-    registered_lsids = dict()
+    registered_lsids: dict[int, type] = dict()
 
     # what this implementation knows as LS attributes
-    node_lsids = []
-    link_lsids = []
-    prefix_lsids = []
+    node_lsids: list[int] = []
+    link_lsids: list[int] = []
+    prefix_lsids: list[int] = []
 
     def __init__(self, ls_attrs):
         self.ls_attrs = ls_attrs
