@@ -152,7 +152,7 @@ class OperationalFamily(Operational):
     def _message(self, data: bytes) -> bytes:
         return Operational._message(self, self.afi.pack() + self.safi.pack() + data)
 
-    def message(self, negotiated: Negotiated) -> bytes:
+    def pack_message(self, negotiated: Negotiated) -> bytes:
         return self._message(self.data)
 
 
@@ -179,7 +179,7 @@ class SequencedOperationalFamily(OperationalFamily):
         self._sequence: Optional[int] = self.sequence
         self._routerid: Optional[RouterID] = self.routerid
 
-    def message(self, negotiated: Negotiated) -> bytes:
+    def pack_message(self, negotiated: Negotiated) -> bytes:
         self.sent_routerid: RouterID = self.routerid if self.routerid else negotiated.sent_open.router_id  # type: ignore[union-attr]
         if self.sequence is None:
             self.sent_sequence: int = (self.__sequence_number.setdefault(self.routerid, 0) + 1) % 0xFFFFFFFF

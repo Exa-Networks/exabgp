@@ -61,7 +61,7 @@ class EOR(Message):
         ]
         self.attributes = Attributes()
 
-    def message(self, negotiated=None):
+    def pack_message(self, negotiated=None):
         return self._message(self.nlris[0].pack())
 
     def __repr__(self):

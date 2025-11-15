@@ -26,7 +26,7 @@ class UnknownMessage(Message):
         self.TYPE = bytes([code])
         self.data = data
 
-    def message(self, negotiated: Negotiated) -> bytes:
+    def pack_message(self, negotiated: Negotiated) -> bytes:
         return self._message(self.data)
 
     def __str__(self) -> str:

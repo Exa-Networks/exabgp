@@ -472,7 +472,7 @@ def test_open_message_encoding_basic() -> None:
     capabilities = Capabilities()
     open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
-    msg = open_msg.message(create_negotiated())
+    msg = open_msg.pack_message(create_negotiated())
 
     # Should start with BGP marker
     assert msg[0:16] == b'\xff' * 16
@@ -499,7 +499,7 @@ def test_open_message_encoding_with_capabilities() -> None:
 
     open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
-    msg = open_msg.message(create_negotiated())
+    msg = open_msg.pack_message(create_negotiated())
 
     # Should be larger than minimum due to capabilities
     assert len(msg) > 29

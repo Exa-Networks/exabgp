@@ -168,8 +168,8 @@ class Message:
         message_len: bytes = pack('!H', 19 + len(message))
         return self.MARKER + message_len + self.TYPE + message
 
-    def message(self, negotiated: Negotiated) -> bytes:
-        raise NotImplementedError('message not implemented in subclasses')
+    def pack_message(self, negotiated: Negotiated) -> bytes:
+        raise NotImplementedError('pack_message not implemented in subclasses')
 
     @classmethod
     def register(cls, klass: Type[Message]) -> Type[Message]:

@@ -68,7 +68,7 @@ class Open(Message):
         self.router_id: RouterID = router_id
         self.capabilities: Capabilities = capabilities
 
-    def message(self, negotiated: Negotiated) -> bytes:
+    def pack_message(self, negotiated: Negotiated) -> bytes:
         return self._message(
             self.version.pack()
             + self.asn.trans().pack()

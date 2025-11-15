@@ -52,11 +52,11 @@ class RouteRefresh(Message):
         self.safi = SAFI.create(safi)
         self.reserved = Reserved(reserved)
 
-    def message(self, negotiated: Negotiated) -> bytes:
+    def pack_message(self, negotiated: Negotiated) -> bytes:
         return self._message(self.afi.pack() + bytes([self.reserved]) + self.safi.pack())
 
     def messages(self, negotiated: Negotiated, include_withdraw: bool) -> Generator[bytes, None, None]:
-        yield self.message(negotiated)
+        yield self.pack_message(negotiated)
 
     def __str__(self) -> str:
         return 'REFRESH'

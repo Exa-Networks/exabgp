@@ -175,5 +175,5 @@ class Notify(Notification):
             data = chr(len(data)) + data
         Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)
 
-    def message(self, negotiated: Negotiated) -> bytes:
+    def pack_message(self, negotiated: Negotiated) -> bytes:
         return self._message(bytes([self.code, self.subcode]) + self.data)

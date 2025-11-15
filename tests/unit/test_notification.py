@@ -17,7 +17,7 @@ class TestNotifyException(unittest.TestCase):
         # Build a Notify exception and generate its wire-format packet
         code, subcode, data = 2, 1, 'AB'
         notify_exc = Notify(code, subcode, data)
-        packet = notify_exc.message(negotiated=None)
+        packet = notify_exc.pack_message(negotiated=None)
 
         # Marker: 16 bytes of 0xFF
         self.assertEqual(packet[:16], Message.MARKER)
