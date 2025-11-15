@@ -290,7 +290,7 @@ class Attribute:
 
         key: Tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in Attribute.registered_attributes.keys():
-            instance: Attribute = cls.klass(attribute_id, flag).unpack_attribute(data, negotiated)  # type: ignore[call-arg,arg-type]
+            instance: Attribute = cls.klass(attribute_id, flag).unpack_attribute(data, negotiated)  # type: ignore[attr-defined]
 
             if cache:
                 cls.cache[cls.ID].cache(data, instance)
