@@ -47,6 +47,8 @@ class INET(NLRI):
         self.path_info = PathInfo.NOPATH
         self.cidr = CIDR.NOCIDR
         self.nexthop: Union[IP, _NoNextHop] = NoNextHop
+        self.labels: Optional[Labels] = None
+        self.rd: Optional[RouteDistinguisher] = None
 
     def __len__(self) -> int:
         return len(self.cidr) + len(self.path_info)  # type: ignore[arg-type]
