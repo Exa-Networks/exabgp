@@ -123,7 +123,7 @@ class Srv6LanEndXISIS(Srv6):
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
         return cls(cls._unpack_data(data, ISIS))
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"srv6-lan-endx-isis": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
 
 
@@ -162,5 +162,5 @@ class Srv6LanEndXOSPF(Srv6):
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXOSPF:
         return cls(cls._unpack_data(data, OSPF))
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"srv6-lan-endx-ospf": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))

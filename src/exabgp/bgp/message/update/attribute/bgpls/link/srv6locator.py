@@ -52,7 +52,7 @@ class Srv6Locator(FlagLS):
 
         return cls(flags=flags, algorithm=algorithm, metric=metric, subtlvs=subtlvs)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"srv6-locator": ' + json.dumps(
             {
                 'flags': self.flags,

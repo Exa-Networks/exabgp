@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # (since draft-ietf-l2vpn-evpn-05)
 
 from __future__ import annotations
-from typing import Any, Type
+from typing import Type
 
 from struct import pack
 from struct import unpack
@@ -63,5 +63,5 @@ class EthernetTag:
     def unpack_etag(cls: Type[EthernetTag], data: bytes) -> EthernetTag:
         return cls(unpack('!L', data[:4])[0])
 
-    def json(self, compact: Any = None) -> str:
+    def json(self, compact: bool = False) -> str:
         return '"ethernet-tag": {}'.format(self.tag)

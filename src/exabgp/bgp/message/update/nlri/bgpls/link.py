@@ -8,12 +8,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, List, Optional
+from typing import TYPE_CHECKING, ClassVar, List, Optional, Union
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.protocol.ip import IP, _NoNextHop
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
@@ -84,10 +88,10 @@ class LINK(BGPLS):
         iface_addrs: Optional[List[IfaceAddr]] = None,
         topology_ids: Optional[List[MTID]] = None,
         link_ids: Optional[List[LinkIdentifier]] = None,
-        nexthop: Any = None,
-        action: Any = None,
-        route_d: Any = None,
-        addpath: Any = None,
+        nexthop: Optional[Union[IP, _NoNextHop]] = None,
+        action: Action = Action.UNSET,
+        route_d: Optional[RouteDistinguisher] = None,
+        addpath: Optional[PathInfo] = None,
         packed: Optional[bytes] = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
@@ -99,12 +103,12 @@ class LINK(BGPLS):
         self.iface_addrs: List[IfaceAddr] = iface_addrs if iface_addrs else []
         self.link_ids: List[LinkIdentifier] = link_ids if link_ids else []
         self.topology_ids: List[MTID] = topology_ids if topology_ids else []
-        self.nexthop: Any = nexthop
-        self.route_d: Any = route_d
+        self.nexthop: Optional[Union[IP, _NoNextHop]] = nexthop
+        self.route_d: Optional[RouteDistinguisher] = route_d
         self._packed: Optional[bytes] = packed
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: Any) -> LINK:
+    def unpack_bgpls_nlri(cls, data: bytes, rd: Optional[RouteDistinguisher]) -> LINK:
         proto_id = unpack('!B', data[0:1])[0]
         # FIXME: all these list should probably be defined in the objects
         iface_addrs: List[IfaceAddr] = []
@@ -205,7 +209,7 @@ class LINK(BGPLS):
             return self._packed
         raise RuntimeError('Not implemented')
 
-    def json(self, compact: Any = None) -> str:
+    def json(self, compact: bool = False) -> str:
         content = f'"ls-nlri-type": "{self.NAME}", '
         content += f'"l3-routing-topology": {int(self.domain)}, '
         content += f'"protocol-id": {int(self.proto_id)}, '

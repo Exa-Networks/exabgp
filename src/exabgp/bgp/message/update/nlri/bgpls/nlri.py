@@ -158,5 +158,5 @@ class GenericBGPLS(BGPLS):
             return packed
         return None
 
-    def json(self, compact: Any = None) -> str:
+    def json(self, compact: bool = False) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())

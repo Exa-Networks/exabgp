@@ -138,7 +138,7 @@ class PREFIXv6(BGPLS):
     def __hash__(self) -> int:
         return hash((self.CODE, self.domain, self.proto_id, self.route_d))
 
-    def json(self, compact: Any = None) -> str:
+    def json(self, compact: bool = False) -> str:
         nodes = ', '.join(d.json() for d in self.local_node)
         content = ', '.join(
             [

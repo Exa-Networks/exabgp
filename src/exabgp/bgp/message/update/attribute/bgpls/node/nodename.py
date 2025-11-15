@@ -44,5 +44,5 @@ class NodeName(BaseLS):
 
         return cls(data.decode('ascii'))
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return f'"{self.JSON}": {json.dumps(self.content)}'

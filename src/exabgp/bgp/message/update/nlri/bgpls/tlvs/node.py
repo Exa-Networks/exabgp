@@ -128,7 +128,7 @@ class NodeDescriptor:
 
         raise Exception(f'unknown node descriptor sub-tlv (node-type: {node_type}, igp: {igp})')
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         node = None
         if self.node_type == NODE_DESC_TLV_AS:
             node = f'"autonomous-system": {self.node_id}'

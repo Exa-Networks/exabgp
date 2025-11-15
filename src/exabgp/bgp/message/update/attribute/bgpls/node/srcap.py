@@ -96,5 +96,5 @@ class SrCapabilities(FlagLS):
 
         return cls(flags, sids)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return f'{FlagLS.json(self)}, "sids": {self.sids}'

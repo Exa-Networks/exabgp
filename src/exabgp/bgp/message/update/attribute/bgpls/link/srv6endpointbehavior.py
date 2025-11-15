@@ -53,7 +53,7 @@ class Srv6EndpointBehavior(BaseLS):
             self.algorithm,
         )
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"srv6-endpoint-behavior": ' + json.dumps(
             {
                 'endpoint-behavior': self.endpoint_behavior,

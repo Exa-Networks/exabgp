@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Any, Optional, Type
+from typing import Optional, Type
 
 
 # ========================================================================== MAC
@@ -63,5 +63,5 @@ class MAC:
     def unpack_mac(cls: Type[MAC], data: bytes) -> MAC:
         return cls(':'.join('{:02X}'.format(_) for _ in data[:6]), data[:6])
 
-    def json(self, compact: Any = None) -> str:
+    def json(self, compact: bool = False) -> str:
         return '"mac": "{}"'.format(str(self))

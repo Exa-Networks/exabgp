@@ -79,7 +79,7 @@ class IpReach:
 
         return cls(prefix=prefix, plength=plength)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return ', '.join(
             [
                 '"ip-reachability-tlv": "{}"'.format(str(self.prefix)),

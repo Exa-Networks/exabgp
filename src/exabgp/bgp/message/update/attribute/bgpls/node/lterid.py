@@ -40,6 +40,6 @@ class LocalTeRid(BaseLS):
 
         return cls([str(IP.unpack_ip(data))])
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         joined = '", "'.join(self.content)
         return f'"{self.JSON}": ["{joined}"]'

@@ -51,7 +51,7 @@ class Srv6Capabilities(BaseLS):
         flags = {'O': flags_value & (1 << 6)}
         return cls(flags=flags)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"srv6-capabilities": ' + json.dumps(
             {
                 'flags': self.flags,

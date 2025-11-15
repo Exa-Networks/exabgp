@@ -100,5 +100,5 @@ class Srv6EndX(FlagLS):
 
         return cls(content=content)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"srv6-endx": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))

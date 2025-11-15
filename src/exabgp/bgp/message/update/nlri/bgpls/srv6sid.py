@@ -126,7 +126,7 @@ class SRv6SID(BGPLS):
     def __repr__(self) -> str:
         return f'{self.NAME}(protocol_id={self.proto_id}, domain={self.domain})'
 
-    def json(self, compact: Any = None) -> str:
+    def json(self, compact: bool = False) -> str:
         nodes = ', '.join(d.json() for d in self.local_node_descriptors)
         content = ', '.join(
             [

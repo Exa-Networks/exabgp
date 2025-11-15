@@ -36,7 +36,7 @@ class Srv6SIDInformation:
         sid = IPv6.ntop(data)
         return cls(sid)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"srv6-sid": "{}"'.format(str(self.sid))
 
     def __eq__(self, other):
