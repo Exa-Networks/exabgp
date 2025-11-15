@@ -26,13 +26,16 @@ When you make ANY code change, you MUST run this EXACT sequence:
 ruff format src && ruff check src
 
 # Step 2: ALWAYS run pytest unit tests
-env exabgp_log_enable=false pytest ./tests/unit/
+env PYTHONPATH=src exabgp_log_enable=false pytest ./tests/unit/test_*.py ./tests/fuzz/test_*.py
 
 # Step 3: ALWAYS run functional tests for affected functionality
 ./qa/bin/functional encoding <test_id>
+
+# Step 4: ALWAYS run functional tests
+./qa/bin/functional decoding
 ```
 
-**ALL THREE MUST PASS before you declare success.**
+**ALL TESTS MUST PASS before you declare success.**
 
 ### Rule #3: Test Before Speaking
 
@@ -57,6 +60,8 @@ These commands should be automatic muscle memory:
 ruff format src && ruff check src
 env exabgp_log_enable=false pytest ./tests/unit/
 ./qa/bin/functional encoding <affected_test>
+./qa/bin/functional decoding
+
 ```
 
 **Before saying "tests pass":**

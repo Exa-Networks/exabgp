@@ -17,8 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `./qa/bin/functional encoding --client <letter>` - Run only the client component
 - Each test spawns both an ExaBGP client and a dummy test server to verify expected client behavior
 - `./qa/bin/parsing` - Configuration parsing tests
-
-**Build:**
+- `./qa/bin/functional decoding` - Configuration parsing tests
 - `python3 setup.py sdist bdist_wheel` - Build distribution packages
 - `./release binary <target>` - Create self-contained zipapp binary
 
