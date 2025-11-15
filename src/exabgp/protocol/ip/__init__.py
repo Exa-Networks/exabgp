@@ -308,7 +308,7 @@ class IPv4(IP):
 
     # klass is a trick for subclasses of IP/IPv4 such as NextHop / OriginatorID
     @classmethod
-    def unpack_ipv4(cls, data: builtins.bytes, klass: Optional[Type[IPv4]] = None) -> IPv4:  # type: ignore[override]
+    def unpack_ipv4(cls, data: builtins.bytes, klass: Optional[Type[IPv4]] = None) -> IPv4:
         ip = socket.inet_ntop(socket.AF_INET, data)
         if klass:
             return klass(ip, data)
@@ -363,7 +363,7 @@ class IPv6(IP):
         return socket.inet_ntop(socket.AF_INET6, data)
 
     @classmethod
-    def unpack_ipv6(cls, data: builtins.bytes, klass: Optional[Type[IPv6]] = None) -> IPv6:  # type: ignore[override]
+    def unpack_ipv6(cls, data: builtins.bytes, klass: Optional[Type[IPv6]] = None) -> IPv6:
         ip6 = socket.inet_ntop(socket.AF_INET6, data)
         if klass:
             return klass(ip6)

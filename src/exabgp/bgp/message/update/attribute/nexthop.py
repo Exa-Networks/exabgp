@@ -43,7 +43,7 @@ class NextHop(Attribute, IP):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def ton(self, negotiated: Negotiated = None, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[assignment]
+    def ton(self, negotiated: Negotiated = None, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
         return self._packed
 
     def pack(self, negotiated: Negotiated) -> bytes:
@@ -74,7 +74,7 @@ class NextHopSelf(NextHop):
     def pack(self, negotiated: Negotiated) -> bytes:
         return self._attribute(negotiated.nexthopself(self.afi).ton())
 
-    def ton(self, negotiated: Negotiated = None, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[assignment]
+    def ton(self, negotiated: Negotiated = None, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
         return negotiated.nexthopself(afi).ton()  # type: ignore[no-any-return]
 
     def __eq__(self, other: object) -> bool:
