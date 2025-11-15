@@ -8,14 +8,18 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, List, Optional
+from typing import TYPE_CHECKING, ClassVar, List, Optional, Union
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.protocol.ip import IP, _NoNextHop
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -52,18 +56,18 @@ class NODE(BGPLS):
         proto_id: int,
         node_ids: List[NodeDescriptor],
         packed: Optional[bytes] = None,
-        nexthop: Any = None,
-        action: Any = None,
-        route_d: Any = None,
-        addpath: Any = None,
+        nexthop: Optional[Union[IP, _NoNextHop]] = None,
+        action: Action = Action.UNSET,
+        route_d: Optional[RouteDistinguisher] = None,
+        addpath: Optional[PathInfo] = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
         self.domain: int = domain
         self.proto_id: int = proto_id
         self.node_ids: List[NodeDescriptor] = node_ids
-        self.nexthop: Any = nexthop
+        self.nexthop: Optional[Union[IP, _NoNextHop]] = nexthop
         self._pack: Optional[bytes] = packed
-        self.route_d: Any = route_d
+        self.route_d: Optional[RouteDistinguisher] = route_d
 
     def json(self, compact: bool = False) -> str:
         nodes = ', '.join(d.json() for d in self.node_ids)
@@ -81,7 +85,7 @@ class NODE(BGPLS):
         return f'{{ {content} }}'
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: Any) -> NODE:
+    def unpack_bgpls_nlri(cls, data: bytes, rd: Optional[RouteDistinguisher]) -> NODE:
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')

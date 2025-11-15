@@ -7,18 +7,20 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, List, Optional
+from typing import TYPE_CHECKING, ClassVar, List, Optional, Union
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
-
-
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.protocol.ip import IP, _NoNextHop
 from exabgp.logger import log
 
 # BGP-LS Prefix TLV type codes (RFC 7752)
@@ -57,10 +59,10 @@ class PREFIXv6(BGPLS):
         packed: Optional[bytes] = None,
         ospf_type: Optional[OspfRoute] = None,
         prefix: Optional[IpReach] = None,
-        nexthop: Any = None,
-        route_d: Any = None,
-        action: Any = None,
-        addpath: Any = None,
+        nexthop: Optional[Union[IP, _NoNextHop]] = None,
+        route_d: Optional[RouteDistinguisher] = None,
+        action: Action = Action.UNSET,
+        addpath: Optional[PathInfo] = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
         self.domain: int = domain
@@ -68,12 +70,12 @@ class PREFIXv6(BGPLS):
         self.proto_id: int = proto_id
         self.local_node: List[NodeDescriptor] = local_node
         self.prefix: Optional[IpReach] = prefix
-        self.nexthop: Any = nexthop
+        self.nexthop: Optional[Union[IP, _NoNextHop]] = nexthop
         self._pack: Optional[bytes] = packed
-        self.route_d: Any = route_d
+        self.route_d: Optional[RouteDistinguisher] = route_d
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: Any) -> PREFIXv6:
+    def unpack_bgpls_nlri(cls, data: bytes, rd: Optional[RouteDistinguisher]) -> PREFIXv6:
         ospf_type: Optional[OspfRoute] = None
         local_node: List[NodeDescriptor] = []
         prefix: Optional[IpReach] = None
