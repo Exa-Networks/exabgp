@@ -12,7 +12,9 @@
       "Bash(timeout:*)",
       "Bash(for dir in /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/*/)",
       "Bash(done)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(env PYTHONPATH=src exabgp_log_enable=false pytest ./tests/unit/ -x -q)",
+      "Bash(mypy:*)"
     ],
     "deny": []
   },

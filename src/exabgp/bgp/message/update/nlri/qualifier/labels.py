@@ -27,7 +27,7 @@ class Labels:
 
     def __init__(self, labels: List[int], bos: bool = True, raw_labels: Optional[List[int]] = None) -> None:
         self.labels: List[int] = labels
-        self.raw_labels: List[Optional[int]] = raw_labels if raw_labels else []
+        self.raw_labels: List[int] = raw_labels if raw_labels else []
         packed = []
         if raw_labels:
             for label in raw_labels:
