@@ -39,4 +39,4 @@ class OriginatorID(Attribute, IPv4):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> IPv4:
-        return IPv4.unpack(data, cls)
+        return IPv4.unpack_ipv4(data, cls)

@@ -83,12 +83,12 @@ class SourceAD(MVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes, afi: AFI) -> SourceAD:
+    def unpack_mvpn_route(cls, data: bytes, afi: AFI) -> SourceAD:
         datalen = len(data)
         if datalen not in (MVPN_SOURCEAD_IPV4_LENGTH, MVPN_SOURCEAD_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')
         cursor = 0
-        rd = RouteDistinguisher.unpack(data[cursor:8])
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[cursor:8])
         cursor += 8
         sourceiplen = int(data[cursor] / 8)
         cursor += 1
@@ -98,7 +98,7 @@ class SourceAD(MVPN):
                 5,
                 f'Unsupported Source Active A-D Route Multicast Source IP length ({sourceiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
-        sourceip = IP.unpack(data[cursor : cursor + sourceiplen])
+        sourceip = IP.unpack_ip(data[cursor : cursor + sourceiplen])
         cursor += sourceiplen
         groupiplen = int(data[cursor] / 8)
         cursor += 1
@@ -108,7 +108,7 @@ class SourceAD(MVPN):
                 5,
                 f'Unsupported Source Active A-D Route Multicast Group IP length ({groupiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
-        groupip = IP.unpack(data[cursor : cursor + groupiplen])
+        groupip = IP.unpack_ip(data[cursor : cursor + groupiplen])
 
         # Missing implementation of this check from RFC 6514:
         # Source Active A-D routes with a Multicast group belonging to the

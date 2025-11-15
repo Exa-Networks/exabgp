@@ -41,7 +41,7 @@ class IgpMetric(BaseLS):
     JSON = 'igp-metric'
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> IgpMetric:
+    def unpack_bgpls(cls, data: bytes) -> IgpMetric:
         if len(data) == IGP_METRIC_SIZE_OSPF:
             # OSPF
             return cls(unpack('!H', data)[0])

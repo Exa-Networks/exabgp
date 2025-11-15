@@ -55,7 +55,7 @@ def unpack_data(cls, data, type):
     if type == ISIS:
         neighbor_id = ISO.unpack_sysid(data[6:12])
     else:
-        neighbor_id = IP.unpack(data[6:10])
+        neighbor_id = IP.unpack_ip(data[6:10])
     start_offset = 12 if type == ISIS else 6
     sid = IPv6.ntop(data[start_offset : start_offset + 16])
     data = data[start_offset + 16 :]
@@ -118,7 +118,7 @@ class Srv6LanEndXISIS(FlagLS):
         return register_subsubtlv
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> Srv6LanEndXISIS:
+    def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
         return cls(unpack_data(cls, data, ISIS))
 
     def json(self, compact=None):
@@ -157,7 +157,7 @@ class Srv6LanEndXOSPF(FlagLS):
         return register_subsubtlv
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> Srv6LanEndXISIS:
+    def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
         return cls(unpack_data(cls, data, OSPF))  # type: ignore[return-value]
 
     def json(self, compact=None):

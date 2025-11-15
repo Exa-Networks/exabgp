@@ -72,13 +72,13 @@ class DirectSegmentDiscoveryRoute(MUP):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes, afi: AFI) -> DirectSegmentDiscoveryRoute:
+    def unpack_mup_route(cls, data: bytes, afi: AFI) -> DirectSegmentDiscoveryRoute:
         data_len = len(data)
-        rd = RouteDistinguisher.unpack(data[:8])
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
         size = data_len - 8
         if size not in [4, 16]:
             raise Notify(3, 5, 'Invalid IP size, expect 4 or 16 octets. accuracy size %d' % size)
-        ip = IP.unpack(data[8 : 8 + size])
+        ip = IP.unpack_ip(data[8 : 8 + size])
 
         return cls(rd, ip, afi)
 

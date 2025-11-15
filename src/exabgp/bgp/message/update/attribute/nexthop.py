@@ -53,7 +53,7 @@ class NextHop(Attribute, IP):
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> IP:
         if not data:
             return NoNextHop  # type: ignore[return-value]
-        return IP.unpack(data, NextHop)
+        return IP.unpack_ip(data, NextHop)
 
     def __repr__(self) -> str:
         return IP.__repr__(self)

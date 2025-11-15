@@ -30,7 +30,7 @@ class ASN4(Capability, ASN):
     @staticmethod
     def unpack_capability(instance: ASN, data: bytes, capability: Optional[CapabilityCode] = None) -> ASN:  # pylint: disable=W0613
         # XXX: FIXME: if instance is not ASN(0) we have two ASN - raise
-        instance = ASN.unpack(data, ASN4)
+        instance = ASN.unpack_asn(data, ASN4)
         return instance
 
     def json(self) -> str:

@@ -86,11 +86,11 @@ class EthernetAD(EVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes) -> EthernetAD:
-        rd = RouteDistinguisher.unpack(data[:8])
-        esi = ESI.unpack(data[8:18])
-        etag = EthernetTag.unpack(data[18:22])
-        label = Labels.unpack(data[22:25])
+    def unpack_evpn_route(cls, data: bytes) -> EthernetAD:
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
+        esi = ESI.unpack_esi(data[8:18])
+        etag = EthernetTag.unpack_etag(data[18:22])
+        label = Labels.unpack_labels(data[22:25])
 
         return cls(rd, esi, etag, label, data)
 

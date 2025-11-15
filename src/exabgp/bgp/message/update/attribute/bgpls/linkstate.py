@@ -74,7 +74,7 @@ class LinkState(Attribute):
 
             data = data[length + 4 :]
             klass = cls.klass(scode)
-            instance = klass.unpack_attribute(payload)
+            instance = klass.unpack_bgpls(payload)
 
             if not instance.MERGE:
                 ls_attrs.append(instance)
@@ -154,7 +154,7 @@ class GenericLSID(BaseLS):
         return f'"generic-lsid-{self.TLV}": [{merged}]'
 
     @classmethod
-    def unpack_attribute(cls, data):
+    def unpack_bgpls(cls, data):
         return cls(data)
 
 
@@ -192,7 +192,7 @@ class FlagLS(BaseLS):
         return flags
 
     @classmethod
-    def unpack_attribute(cls, data):
+    def unpack_bgpls(cls, data):
         cls.check(data)
         # We only support IS-IS for now.
         return cls(cls.unpack_flags(data[0:1]))

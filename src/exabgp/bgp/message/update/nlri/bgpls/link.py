@@ -104,7 +104,7 @@ class LINK(BGPLS):
         self._packed: Optional[bytes] = packed
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes, rd: Any) -> LINK:
+    def unpack_bgpls_nlri(cls, data: bytes, rd: Any) -> LINK:
         proto_id = unpack('!B', data[0:1])[0]
         # FIXME: all these list should probably be defined in the objects
         iface_addrs: List[IfaceAddr] = []
@@ -129,7 +129,7 @@ class LINK(BGPLS):
                     # Unpack Local Node Descriptor Sub-TLVs
                     # We pass proto_id as TLV interpretation
                     # follows IGP type
-                    node, left = NodeDescriptor.unpack(value, proto_id)
+                    node, left = NodeDescriptor.unpack_node(value, proto_id)
                     local_node.append(node)
                     if left == value:
                         raise RuntimeError('sub-calls should consume data')
@@ -140,7 +140,7 @@ class LINK(BGPLS):
                 # Remote Node Descriptor
                 remote_node = []
                 while value:
-                    node, left = NodeDescriptor.unpack(value, proto_id)
+                    node, left = NodeDescriptor.unpack_node(value, proto_id)
                     remote_node.append(node)
                     if left == value:
                         raise RuntimeError('sub-calls should consume data')
@@ -149,21 +149,21 @@ class LINK(BGPLS):
 
             if tlv_type == TLV_LINK_ID:
                 # Link Local/Remote identifiers
-                link_identifiers = LinkIdentifier.unpack(value)
+                link_identifiers = LinkIdentifier.unpack_linkid(value)
                 continue
 
             if tlv_type in [TLV_IPV4_IFACE_ADDR, TLV_IPV6_IFACE_ADDR]:
                 # IPv{4,6} Interface Address
-                iface_addrs.append(IfaceAddr.unpack(value))
+                iface_addrs.append(IfaceAddr.unpack_ifaceaddr(value))
                 continue
 
             if tlv_type in [TLV_IPV4_NEIGH_ADDR, TLV_IPV6_NEIGH_ADDR]:
                 # IPv{4,6} Neighbor Address
-                neigh_addrs.append(NeighAddr.unpack(value))
+                neigh_addrs.append(NeighAddr.unpack_neighaddr(value))
                 continue
 
             if tlv_type == TLV_MULTI_TOPO_ID:
-                topology_ids.append(MTID.unpack(value))
+                topology_ids.append(MTID.unpack_mtid(value))
                 continue
 
             log.critical(lambda tlv_type=tlv_type: f'unknown link TLV {tlv_type}')

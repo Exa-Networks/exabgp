@@ -30,6 +30,6 @@ class TeMetric(BaseLS):
     LEN = 4
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> TeMetric:
+    def unpack_bgpls(cls, data: bytes) -> TeMetric:
         cls.check(data)
         return cls(unpack('!L', data)[0])

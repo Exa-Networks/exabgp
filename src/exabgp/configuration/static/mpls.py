@@ -149,7 +149,7 @@ def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:  # type: ignore[return]
     if service_type not in ['l3-service', 'l2-service']:
         raise Exception(f"expect 'l3-service' or 'l2-service', but received '{value}'")
 
-    sid = IPv6.unpack(IPv6.pton(tokeniser()))
+    sid = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
     behavior = 0xFFFF
     subtlvs: List[Srv6SidInformation] = []
     subsubtlvs: List[Srv6SidStructure] = []
@@ -213,9 +213,9 @@ def parse_ip_prefix(tokeninser: str) -> Tuple[Union[IPv4, IPv6], int]:
 
     addr = ip_address(addrstr)
     if isinstance(addr, IPv4Address):
-        ip = IPv4.unpack(IPv4.pton(addrstr))
+        ip = IPv4.unpack_ipv4(IPv4.pton(addrstr))
     elif isinstance(addr, IPv6Address):
-        ip = IPv6.unpack(IPv6.pton(addrstr))
+        ip = IPv6.unpack_ipv6(IPv6.pton(addrstr))
     else:
         raise Exception(f"unexpect ipaddress format '{addrstr}'")
 
@@ -226,14 +226,14 @@ def parse_ip_prefix(tokeninser: str) -> Tuple[Union[IPv4, IPv6], int]:
 def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
     if afi == AFI.ipv4:
         tokeniser.consume('rp')
-        sourceip = IPv4.unpack(IPv4.pton(tokeniser()))
+        sourceip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
         tokeniser.consume('group')
-        groupip = IPv4.unpack(IPv4.pton(tokeniser()))
+        groupip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
         tokeniser.consume('rp')
-        sourceip = IPv6.unpack(IPv6.pton(tokeniser()))
+        sourceip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
         tokeniser.consume('group')
-        groupip = IPv6.unpack(IPv6.pton(tokeniser()))
+        groupip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
     else:
         raise Exception(f'unexpect afi: {afi}')
 
@@ -255,14 +255,14 @@ def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
 def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
     if afi == AFI.ipv4:
         tokeniser.consume('source')
-        sourceip = IPv4.unpack(IPv4.pton(tokeniser()))
+        sourceip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
         tokeniser.consume('group')
-        groupip = IPv4.unpack(IPv4.pton(tokeniser()))
+        groupip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
         tokeniser.consume('source')
-        sourceip = IPv6.unpack(IPv6.pton(tokeniser()))
+        sourceip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
         tokeniser.consume('group')
-        groupip = IPv6.unpack(IPv6.pton(tokeniser()))
+        groupip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
     else:
         raise Exception(f'unexpect afi: {afi}')
 
@@ -284,14 +284,14 @@ def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
 def mvpn_sourcead(tokeniser: Any, afi: AFI, action: Any) -> SourceAD:
     if afi == AFI.ipv4:
         tokeniser.consume('source')
-        sourceip = IPv4.unpack(IPv4.pton(tokeniser()))
+        sourceip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
         tokeniser.consume('group')
-        groupip = IPv4.unpack(IPv4.pton(tokeniser()))
+        groupip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
         tokeniser.consume('source')
-        sourceip = IPv6.unpack(IPv6.pton(tokeniser()))
+        sourceip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
         tokeniser.consume('group')
-        groupip = IPv6.unpack(IPv6.pton(tokeniser()))
+        groupip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
     else:
         raise Exception(f'unexpect afi: {afi}')
 
@@ -321,9 +321,9 @@ def srv6_mup_isd(tokeniser: Any, afi: AFI) -> InterworkSegmentDiscoveryRoute:
 # 'mup-dsd <ip address> rd <rd>',
 def srv6_mup_dsd(tokeniser: Any, afi: AFI) -> DirectSegmentDiscoveryRoute:
     if afi == AFI.ipv4:
-        ip = IPv4.unpack(IPv4.pton(tokeniser()))
+        ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
-        ip = IPv6.unpack(IPv6.pton(tokeniser()))
+        ip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
     else:
         raise Exception(f'unexpect afi: {afi}')
 
@@ -360,9 +360,9 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
 
     tokeniser.consume('endpoint')
     if afi == AFI.ipv4:
-        endpoint_ip = IPv4.unpack(IPv4.pton(tokeniser()))
+        endpoint_ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
-        endpoint_ip = IPv6.unpack(IPv6.pton(tokeniser()))
+        endpoint_ip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
     else:
         raise Exception(f'unexpect afi: {afi}')
 
@@ -371,10 +371,10 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
 
     if tokeniser.consume_if_match('source'):
         if afi == AFI.ipv4:
-            source_ip = IPv4.unpack(IPv4.pton(tokeniser()))
+            source_ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
             source_ip_len = 32
         elif afi == AFI.ipv6:
-            source_ip = IPv6.unpack(IPv6.pton(tokeniser()))
+            source_ip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
             source_ip_len = 128
         else:
             raise Exception(f'unexpect afi: {afi}')
@@ -396,9 +396,9 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
 # 'mup-t2st <endpoint address> rd <rd> teid <teid>',
 def srv6_mup_t2st(tokeniser: Any, afi: AFI) -> Type2SessionTransformedRoute:
     if afi == AFI.ipv4:
-        endpoint_ip = IPv4.unpack(IPv4.pton(tokeniser()))
+        endpoint_ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
-        endpoint_ip = IPv6.unpack(IPv6.pton(tokeniser()))
+        endpoint_ip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
     else:
         raise Exception(f'unexpect afi: {afi}')
 

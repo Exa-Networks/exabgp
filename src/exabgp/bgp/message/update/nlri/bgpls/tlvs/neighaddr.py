@@ -26,13 +26,13 @@ class NeighAddr:
         self._packed = packed
 
     @classmethod
-    def unpack(cls, data):
+    def unpack_neighaddr(cls, data):
         if len(data) == IPv4.BYTES:
             # IPv4 address
-            addr = IP.unpack(data[: IPv4.BYTES])
+            addr = IP.unpack_ip(data[: IPv4.BYTES])
         elif len(data) == IPv6.BYTES:
             # IPv6
-            addr = IP.unpack(data[: IPv6.BYTES])
+            addr = IP.unpack_ip(data[: IPv6.BYTES])
         return cls(addr=addr)
 
     def json(self):

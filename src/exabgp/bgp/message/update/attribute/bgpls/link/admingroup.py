@@ -20,6 +20,6 @@ class AdminGroup(BaseLS):
     LEN = 4
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> AdminGroup:
+    def unpack_bgpls(cls, data: bytes) -> AdminGroup:
         cls.check(data)
         return cls(unpack('!L', data[:4])[0])

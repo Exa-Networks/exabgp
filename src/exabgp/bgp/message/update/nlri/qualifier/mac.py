@@ -60,7 +60,7 @@ class MAC:
         return hash(str(self))
 
     @classmethod
-    def unpack(cls: Type[MAC], data: bytes) -> MAC:
+    def unpack_mac(cls: Type[MAC], data: bytes) -> MAC:
         return cls(':'.join('{:02X}'.format(_) for _ in data[:6]), data[:6])
 
     def json(self, compact: Any = None) -> str:

@@ -135,18 +135,18 @@ class MAC(EVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes) -> MAC:
+    def unpack_evpn_route(cls, data: bytes) -> MAC:
         datalen = len(data)
-        rd = RouteDistinguisher.unpack(data[:8])
-        esi = ESI.unpack(data[8:18])
-        etag = EthernetTag.unpack(data[18:22])
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
+        esi = ESI.unpack_esi(data[8:18])
+        etag = EthernetTag.unpack_etag(data[18:22])
         maclength = data[22]
 
         if maclength > MAC_ADDRESS_LEN_BITS or maclength < 0:
             raise Notify(3, 5, 'invalid MAC Address length in {}'.format(cls.NAME))
         end = 23 + 6  # MAC length MUST be 6
 
-        mac = MACQUAL.unpack(data[23:end])
+        mac = MACQUAL.unpack_mac(data[23:end])
 
         length = data[end]
         iplen = length / 8
@@ -180,10 +180,10 @@ class MAC(EVPN):
 
         payload = data[end + 1 : end + 1 + iplenUnpack]
         if payload:
-            ip = IP.unpack(data[end + 1 : end + 1 + iplenUnpack])
+            ip = IP.unpack_ip(data[end + 1 : end + 1 + iplenUnpack])
         else:
             ip = None
-        label = Labels.unpack(data[end + 1 + iplenUnpack : end + 1 + iplenUnpack + 3])
+        label = Labels.unpack_labels(data[end + 1 + iplenUnpack : end + 1 + iplenUnpack + 3])
 
         return cls(rd, esi, etag, mac, maclength, label, ip, data)
 

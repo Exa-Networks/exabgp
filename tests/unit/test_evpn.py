@@ -270,7 +270,7 @@ class TestMAC:
         packed = rd.pack() + esi.pack() + etag.pack() + bytes([64])  # Invalid: > 48
 
         with pytest.raises(Notify):
-            MAC.unpack(packed + mac.pack() + bytes([0]) + Labels([100], True).pack())
+            MAC.unpack_evpn_route(packed + mac.pack() + bytes([0]) + Labels([100], True).pack())
 
     def test_mac_string_representation(self) -> None:
         """Test string representation of MAC route"""
@@ -505,7 +505,7 @@ class TestEthernetSegment:
         packed = rd.pack() + esi.pack() + bytes([64])  # Invalid: not 32 or 128
 
         with pytest.raises(Notify):
-            EthernetSegment.unpack(packed + bytes([0] * 8))
+            EthernetSegment.unpack_evpn_route(packed + bytes([0] * 8))
 
     def test_segment_string_representation(self) -> None:
         """Test string representation of EthernetSegment route"""

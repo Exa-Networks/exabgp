@@ -34,6 +34,6 @@ class IgpTags(BaseLS):
     # XXX: can we find a LEN to check?
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> IgpTags:
+    def unpack_bgpls(cls, data: bytes) -> IgpTags:
         cls.check(data)
         return cls([unpack('!L', _)[0] for _ in split(data, 4)])

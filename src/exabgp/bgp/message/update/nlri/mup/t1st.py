@@ -167,9 +167,9 @@ class Type1SessionTransformedRoute(MUP):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes, afi: AFI) -> Type1SessionTransformedRoute:
+    def unpack_mup_route(cls, data: bytes, afi: AFI) -> Type1SessionTransformedRoute:
         datasize = len(data)
-        rd = RouteDistinguisher.unpack(data[:8])
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
         prefix_ip_len = data[8]
         ip_offset = prefix_ip_len // 8
         ip_remainder = prefix_ip_len % 8
@@ -183,7 +183,7 @@ class Type1SessionTransformedRoute(MUP):
             ip += bytes(ip_padding)
 
         size = ip_offset
-        prefix_ip = IP.unpack(ip)
+        prefix_ip = IP.unpack_ip(ip)
         size += 9
         teid = int.from_bytes(data[size : size + 4], 'big')
         size += 4
@@ -196,7 +196,7 @@ class Type1SessionTransformedRoute(MUP):
             raise RuntimeError('mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len)
 
         ep_len = endpoint_ip_len // 8
-        endpoint_ip = IP.unpack(data[size : size + ep_len])
+        endpoint_ip = IP.unpack_ip(data[size : size + ep_len])
         size += ep_len
 
         source_ip_size = datasize - size
@@ -210,7 +210,7 @@ class Type1SessionTransformedRoute(MUP):
             if source_ip_len not in [32, 128]:
                 raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
             sip_len = source_ip_len // 8
-            source_ip = IP.unpack(data[size : size + sip_len])
+            source_ip = IP.unpack_ip(data[size : size + sip_len])
             size += sip_len
 
         return cls(rd, prefix_ip_len, prefix_ip, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)

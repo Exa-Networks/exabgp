@@ -40,7 +40,7 @@ class OspfRoute:
         self._packed = packed
 
     @classmethod
-    def unpack(cls, data):
+    def unpack_ospfroute(cls, data):
         if len(data) == 1:
             ospf_type = unpack('!B', data[0:1])[0]
         return cls(ospf_type=ospf_type)

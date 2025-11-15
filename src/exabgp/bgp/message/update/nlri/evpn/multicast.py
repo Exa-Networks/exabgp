@@ -79,13 +79,13 @@ class Multicast(EVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes) -> Multicast:
-        rd = RouteDistinguisher.unpack(data[:8])
-        etag = EthernetTag.unpack(data[8:12])
+    def unpack_evpn_route(cls, data: bytes) -> Multicast:
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
+        etag = EthernetTag.unpack_etag(data[8:12])
         iplen = data[12]
         if iplen not in (4 * 8, 16 * 8):
             raise Exception('IP len is %d, but EVPN route currently support only IPv4' % iplen)
-        ip = IP.unpack(data[13 : 13 + iplen // 8])
+        ip = IP.unpack_ip(data[13 : 13 + iplen // 8])
         return cls(rd, etag, ip, data)
 
     def json(self, compact: Optional[bool] = None) -> str:

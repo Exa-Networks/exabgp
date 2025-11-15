@@ -66,8 +66,8 @@ class Aggregator(Attribute):
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Aggregator:
         if negotiated.asn4:
-            return cls(ASN.unpack(data[:4]), IPv4.unpack(data[-4:]))
-        return cls(ASN.unpack(data[:2]), IPv4.unpack(data[-4:]))
+            return cls(ASN.unpack_asn(data[:4]), IPv4.unpack_ipv4(data[-4:]))
+        return cls(ASN.unpack_asn(data[:2]), IPv4.unpack_ipv4(data[-4:]))
 
 
 # ============================================================== AGGREGATOR (18)

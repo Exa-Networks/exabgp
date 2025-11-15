@@ -85,7 +85,7 @@ class RouteDistinguisher:
         return ' rd {}'.format(self._str())
 
     @classmethod
-    def unpack(cls: Type[RouteDistinguisher], data: bytes) -> RouteDistinguisher:
+    def unpack_routedistinguisher(cls: Type[RouteDistinguisher], data: bytes) -> RouteDistinguisher:
         return cls(data[:8])
 
     # DO NOT USE, the right function is route_distinguisher() in exabgp.configuation.static.mpls

@@ -108,7 +108,7 @@ class AFI(Resource):
         return _AFI._names.get(self, f'unknown-afi-{hex(self)}')
 
     @staticmethod
-    def unpack(data: bytes) -> AFI:
+    def unpack_afi(data: bytes) -> AFI:
         return AFI.common.get(data, AFI(unpack('!H', data)[0]))
 
     @classmethod
@@ -286,7 +286,7 @@ class SAFI(Resource):
         return str(self)
 
     @staticmethod
-    def unpack(data: bytes) -> SAFI:
+    def unpack_safi(data: bytes) -> SAFI:
         return SAFI.common.get(data, SAFI(data[0] if data else 0))
 
     @classmethod

@@ -56,9 +56,9 @@ class NextHop(Capability, list):
         # XXX: FIXME: we should complain if we have twice the same AFI/SAFI
         # XXX: FIXME: should check that we have not yet seen the capability
         while data:
-            afi = AFI.unpack(data[:2])
-            safi = SAFI.unpack(data[3:4])
-            nexthop = AFI.unpack(data[4:6])
+            afi = AFI.unpack_afi(data[:2])
+            safi = SAFI.unpack_safi(data[3:4])
+            nexthop = AFI.unpack_afi(data[4:6])
             instance.add_nexthop(afi, safi, nexthop)
             data = data[6:]
         return instance
