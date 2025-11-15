@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.direction import Direction
 
 
 # =================================================================== Origin (1)
@@ -66,9 +68,19 @@ class Origin(Attribute):
         EGP = Origin(Origin.EGP)
         INC = Origin(Origin.INCOMPLETE)
 
-        cls.cache[Attribute.CODE.ORIGIN][IGP.pack_attribute()] = IGP
-        cls.cache[Attribute.CODE.ORIGIN][EGP.pack_attribute()] = EGP
-        cls.cache[Attribute.CODE.ORIGIN][INC.pack_attribute()] = INC
+        # Create a minimal negotiated for cache keys
+        # Origin.pack_attribute() doesn't use negotiated, but API requires it
+        from typing import Any
+
+        class MockNeighbor:
+            def __getitem__(self, key: str) -> Any:
+                return {'aigp': False}
+
+        negotiated = Negotiated(neighbor=MockNeighbor(), direction=Direction.OUT)
+
+        cls.cache[Attribute.CODE.ORIGIN][IGP.pack_attribute(negotiated)] = IGP
+        cls.cache[Attribute.CODE.ORIGIN][EGP.pack_attribute(negotiated)] = EGP
+        cls.cache[Attribute.CODE.ORIGIN][INC.pack_attribute(negotiated)] = INC
 
 
 Origin.setCache()

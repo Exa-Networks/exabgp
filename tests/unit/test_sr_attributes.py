@@ -30,6 +30,16 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.ip import IPv6
 
 
+def create_negotiated():
+    """Create a Negotiated object with a mock neighbor for testing."""
+    from exabgp.bgp.message.direction import Direction
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
+
+
 # =============================================================================
 # SrLabelIndex Tests (TLV Type 1)
 # =============================================================================
@@ -288,7 +298,7 @@ class TestPrefixSid:
         label_index = SrLabelIndex(labelindex=100)
         prefix_sid = PrefixSid(sr_attrs=[label_index])
 
-        packed = prefix_sid.pack_attribute()
+        packed = prefix_sid.pack_attribute(create_negotiated())
         assert packed is not None
         assert len(packed) > 0
 
@@ -370,7 +380,7 @@ class TestPrefixSid:
         srgb = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
         original = PrefixSid(sr_attrs=[label_index, srgb])
 
-        original.pack_attribute()
+        original.pack_attribute(create_negotiated())
 
         # Unpack (need to extract attribute value from full attribute encoding)
         # The pack() method adds attribute header, so we need to skip it
@@ -493,7 +503,7 @@ class TestSREdgeCases:
         prefix_sid = PrefixSid(sr_attrs=[])
         assert len(prefix_sid.sr_attrs) == 0
 
-        packed = prefix_sid.pack_attribute()
+        packed = prefix_sid.pack_attribute(create_negotiated())
         assert packed is not None
 
     def test_prefix_sid_str_no_label_index(self) -> None:
