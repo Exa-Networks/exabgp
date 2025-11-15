@@ -66,7 +66,7 @@ class Reactor:
         self._ratelimit: Dict[str, Dict[int, int]] = {}
         self.early_drop: bool = getenv().daemon.drop
 
-        self.processes: Optional[Processes] = None
+        self.processes: Processes
 
         self.configuration: Any = configuration
         self.asynchronous: ASYNC = ASYNC()
@@ -343,7 +343,7 @@ class Reactor:
                     # report that we received a signal
                     for key in self._peers:
                         if self._peers[key].neighbor.api['signal']:  # type: ignore[index]
-                            self._peers[key].reactor.processes.signal(self._peers[key].neighbor, self.signal.number)  # type: ignore[union-attr]
+                            self._peers[key].reactor.processes.signal(self._peers[key].neighbor, self.signal.number)
 
                     self.signal.rearm()
 
@@ -492,7 +492,7 @@ class Reactor:
         for key in self._peers.keys():
             self._peers[key].shutdown()
         self.asynchronous.clear()
-        self.processes.terminate()  # type: ignore[union-attr]
+        self.processes.terminate()
         self.daemon.removepid()
         self._stopping = True
 
@@ -560,7 +560,7 @@ class Reactor:
                 self._peers[key].remove()
             else:
                 self._peers[key].reestablish()
-        self.processes.start(self.configuration.processes, True)  # type: ignore[union-attr]
+        self.processes.start(self.configuration.processes, True)
 
     # def nexthops (self, peers):
     # 	return dict((peer,self._peers[peer].neighbor['local-address']) for peer in peers)
