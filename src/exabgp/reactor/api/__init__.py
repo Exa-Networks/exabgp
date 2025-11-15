@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, Optional, Union, TYPE_CHECKING
+from typing import Callable, List, Optional, Union, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -61,7 +61,8 @@ class API(Command):
         api = 'json' if use_json else 'text'
         for registered in self.functions:
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
-                return self.callback[api][registered](self, reactor, service, command, use_json)  # type: ignore[no-any-return,operator]
+                handler = cast(Callable, self.callback[api][registered])
+                return handler(self, reactor, service, command, use_json)  # type: ignore[no-any-return]
         reactor.processes.answer_error(service)
         log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')
         return False
