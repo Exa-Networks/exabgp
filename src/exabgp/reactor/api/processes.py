@@ -487,7 +487,7 @@ class Processes:
 
     @register_process(Message.CODE.NOTIFICATION)
     def _notification(
-        self, peer: Any, direction: str, message: Any, negotiated: Negotiated, header: str, body: str
+        self, peer: 'Peer', direction: str, message: Any, negotiated: Negotiated, header: str, body: str
     ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
             self.write(
@@ -499,13 +499,15 @@ class Processes:
     # unused-argument, must keep the API
     @register_process(Message.CODE.KEEPALIVE)
     def _keepalive(
-        self, peer: Any, direction: str, keepalive: Any, negotiated: Negotiated, header: str, body: str
+        self, peer: 'Peer', direction: str, keepalive: Any, negotiated: Negotiated, header: str, body: str
     ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.KEEPALIVE.SHORT}'):
             self.write(process, self._encoder[process].keepalive(peer, direction, negotiated, header, body), peer)
 
     @register_process(Message.CODE.ROUTE_REFRESH)
-    def _refresh(self, peer: Any, direction: str, refresh: Any, negotiated: Negotiated, header: str, body: str) -> None:
+    def _refresh(
+        self, peer: 'Peer', direction: str, refresh: Any, negotiated: Negotiated, header: str, body: str
+    ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.ROUTE_REFRESH.SHORT}'):
             self.write(
                 process,
@@ -515,7 +517,7 @@ class Processes:
 
     @register_process(Message.CODE.OPERATIONAL)
     def _operational(
-        self, peer: Any, direction: str, operational: Any, negotiated: Negotiated, header: str, body: str
+        self, peer: 'Peer', direction: str, operational: Any, negotiated: Negotiated, header: str, body: str
     ) -> None:
         for process in self._notify(peer, f'{direction}-{Message.CODE.OPERATIONAL.SHORT}'):
             self.write(
