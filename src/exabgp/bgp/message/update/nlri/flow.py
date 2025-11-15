@@ -619,7 +619,7 @@ class Flow(NLRI):
                 ordered_rules.append(bytes([ID]))
             ordered_rules.append(b''.join(rule.pack() for rule in rules))  # type: ignore[union-attr]
 
-        components = self.rd.pack() + b''.join(ordered_rules)
+        components = self.rd.pack_rd() + b''.join(ordered_rules)
 
         lc = len(components)
         if lc < FLOW_LENGTH_COMPACT_MAX:

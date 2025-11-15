@@ -70,7 +70,7 @@ class Labels:
     def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
-    def pack(self) -> bytes:
+    def pack_labels(self) -> bytes:
         return self.packed
 
     def __len__(self) -> int:

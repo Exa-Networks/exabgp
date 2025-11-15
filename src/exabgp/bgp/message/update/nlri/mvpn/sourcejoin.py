@@ -79,7 +79,7 @@ class SourceJoin(MVPN):
             self._packed = packed
             return packed
         self._packed = (
-            self.rd.pack()
+            self.rd.pack_rd()
             + pack('!I', self.source_as)
             + bytes([len(self.source) * 8])  # type: ignore[arg-type]
             + self.source.pack()

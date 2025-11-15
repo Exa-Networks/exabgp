@@ -158,7 +158,7 @@ class TestSourceAD:
         """Test SourceAD with invalid length raises error"""
         # Create invalid packed data with wrong length (15 bytes instead of 18 or 42)
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
-        invalid_data = rd.pack() + b'\x20\x01\x02\x03\x04\x20\x05'  # 15 bytes total
+        invalid_data = rd.pack_rd() + b'\x20\x01\x02\x03\x04\x20\x05'  # 15 bytes total
 
         # Pack into MVPN format: CODE=5, length, data
         packed = bytes([5, len(invalid_data)]) + invalid_data
@@ -170,7 +170,7 @@ class TestSourceAD:
         """Test SourceAD with invalid source IP length raises error"""
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
         # Create data with invalid source IP length (24 bits instead of 32 or 128)
-        invalid_data = rd.pack() + bytes([24]) + b'\x01\x02\x03' + bytes([32]) + b'\xef\x01\x01\x01'
+        invalid_data = rd.pack_rd() + bytes([24]) + b'\x01\x02\x03' + bytes([32]) + b'\xef\x01\x01\x01'
 
         packed = bytes([5, len(invalid_data)]) + invalid_data
 
@@ -339,7 +339,7 @@ class TestSharedJoin:
         """Test SharedJoin with invalid length raises error"""
         # Create invalid packed data with wrong length
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
-        invalid_data = rd.pack() + b'\x00\x00\x00\x01\x20\x01\x02'  # Too short
+        invalid_data = rd.pack_rd() + b'\x00\x00\x00\x01\x20\x01\x02'  # Too short
 
         packed = bytes([6, len(invalid_data)]) + invalid_data
 
@@ -506,7 +506,7 @@ class TestSourceJoin:
         """Test SourceJoin with invalid length raises error"""
         # Create invalid packed data with wrong length
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
-        invalid_data = rd.pack() + b'\x00\x00\x00\x01\x20\x01\x02'  # Too short
+        invalid_data = rd.pack_rd() + b'\x00\x00\x00\x01\x20\x01\x02'  # Too short
 
         packed = bytes([7, len(invalid_data)]) + invalid_data
 
@@ -554,7 +554,7 @@ class TestMVPNGeneric:
         """Test unpacking unknown MVPN route type"""
         # Create a route with unknown code (99)
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
-        packed_rd = rd.pack()
+        packed_rd = rd.pack_rd()
 
         # CODE=99, length=8 (just RD)
         packed = bytes([99, 8]) + packed_rd

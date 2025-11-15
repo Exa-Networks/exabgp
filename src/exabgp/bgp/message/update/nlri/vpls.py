@@ -77,7 +77,7 @@ class VPLS(NLRI):
     def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return (
             b'\x00\x11'  # pack('!H',17)
-            + self.rd.pack()
+            + self.rd.pack_rd()
             + pack('!HHH', self.endpoint, self.offset, self.size)
             + pack('!L', (self.base << 4) | 0x1)[1:]  # setting the bottom of stack, should we ?
         )

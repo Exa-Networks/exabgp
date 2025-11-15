@@ -50,7 +50,7 @@ class EthernetTag:
     def __repr__(self) -> str:
         return repr(self.tag)
 
-    def pack(self) -> bytes:
+    def pack_etag(self) -> bytes:
         return pack('!L', self.tag)
 
     def __len__(self) -> int:
