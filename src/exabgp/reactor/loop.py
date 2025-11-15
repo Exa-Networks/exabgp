@@ -163,43 +163,37 @@ class Reactor:
         return matching
 
     def handle_connection(self, peer_name: str, connection: Any) -> None:
-        peer: Optional[Peer] = self._peers.get(peer_name, None)
-        if not peer:
+        if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.handle_connection(connection)
 
     def neighbor(self, peer_name: str) -> Optional['Neighbor']:
-        peer: Optional[Peer] = self._peers.get(peer_name, None)
-        if not peer:
+        if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return None
         return peer.neighbor
 
     def neighbor_name(self, peer_name: str) -> str:
-        peer: Optional[Peer] = self._peers.get(peer_name, None)
-        if not peer:
+        if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return ''
         return peer.neighbor.name()
 
     def neighbor_ip(self, peer_name: str) -> str:
-        peer: Optional[Peer] = self._peers.get(peer_name, None)
-        if not peer:
+        if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return ''
         return str(peer.neighbor['peer-address'])
 
     def neighbor_cli_data(self, peer_name: str) -> Union[Dict[str, Any], str]:
-        peer: Optional[Peer] = self._peers.get(peer_name, None)
-        if not peer:
+        if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return ''
         return peer.cli_data()
 
     def neighor_rib(self, peer_name: str, rib_name: str, advertised: bool = False) -> List[Any]:
-        peer: Optional[Peer] = self._peers.get(peer_name, None)
-        if not peer:
+        if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return []
         families: Optional[List[Any]] = None
@@ -209,22 +203,19 @@ class Reactor:
         return list(rib.cached_changes(families))
 
     def neighbor_rib_resend(self, peer_name: str) -> None:
-        peer: Optional[Peer] = self._peers.get(peer_name, None)
-        if not peer:
+        if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.resend(peer.neighbor['capability']['route-refresh'])
 
     def neighbor_rib_out_withdraw(self, peer_name: str) -> None:
-        peer: Optional[Peer] = self._peers.get(peer_name, None)
-        if not peer:
+        if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.neighbor.rib.outgoing.withdraw()  # type: ignore[union-attr]
 
     def neighbor_rib_in_clear(self, peer_name: str) -> None:
-        peer: Optional[Peer] = self._peers.get(peer_name, None)
-        if not peer:
+        if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return
         peer.neighbor.rib.incoming.clear()  # type: ignore[union-attr]
