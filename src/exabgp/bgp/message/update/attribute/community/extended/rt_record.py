@@ -24,7 +24,7 @@ class RTRecord(rt.RouteTarget):
     @classmethod
     def from_rt(cls: Type[T], route_target: rt.RouteTarget) -> T:
         packed = route_target.pack()
-        return cls.unpack(packed[0:1] + bytes([cls.COMMUNITY_SUBTYPE]) + packed[2:])  # type: ignore[return-value]
+        return cls.unpack_attribute(packed[0:1] + bytes([cls.COMMUNITY_SUBTYPE]) + packed[2:])
 
 
 @ExtendedCommunity.register
