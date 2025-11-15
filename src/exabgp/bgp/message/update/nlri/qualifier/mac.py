@@ -48,7 +48,7 @@ class MAC:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def pack(self) -> bytes:
+    def pack_mac(self) -> bytes:
         return self._packed
 
     # Orange code was returning 10 !

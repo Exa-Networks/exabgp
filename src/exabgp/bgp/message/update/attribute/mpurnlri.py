@@ -49,7 +49,7 @@ class MPURNLRI(Attribute, Family):
         for nlri in self.nlris:
             if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
                 continue
-            mpurnlri.append(nlri.pack(negotiated))
+            mpurnlri.append(nlri.pack_nlri(negotiated))
 
         payload = self.afi.pack() + self.safi.pack()
         header_length = len(payload)
@@ -65,7 +65,7 @@ class MPURNLRI(Attribute, Family):
             raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
         yield self._attribute(payload)
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return b''.join(self.packed_attributes(negotiated))
 
     def __len__(self) -> int:

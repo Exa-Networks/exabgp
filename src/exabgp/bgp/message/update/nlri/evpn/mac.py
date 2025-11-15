@@ -124,13 +124,13 @@ class MAC(EVPN):
         # maclen: only 48 supported by the draft
         # fmt: off
         self._packed = (
-            self.rd.pack()
-            + self.esi.pack()
-            + self.etag.pack()
+            self.rd.pack_rd()
+            + self.esi.pack_esi()
+            + self.etag.pack_etag()
             + bytes([self.maclen])
-            + self.mac.pack()
+            + self.mac.pack_mac()
             + bytes([len(self.ip) * 8 if self.ip else 0]) # type: ignore[arg-type]
-            + (self.ip.pack() + self.label.pack() if self.ip else self.label.pack())  # type: ignore[union-attr]
+            + (self.ip.pack() + self.label.pack_labels() if self.ip else self.label.pack_labels())  # type: ignore[union-attr]
         )
         # fmt: on
         return self._packed

@@ -51,7 +51,7 @@ class TLVS(List[TLV]):
 
         return TLVS(list(loop(data)))
 
-    def pack(self) -> bytes:
+    def pack_tlv(self) -> bytes:
         return b''.join([bytes([tlv.type]) + pack('!H', len(tlv.value) + 3) + tlv.value for tlv in self])
 
 
@@ -83,7 +83,7 @@ class AIGP(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         if negotiated.aigp:
             return self._packed
         if negotiated.local_as == negotiated.peer_as:

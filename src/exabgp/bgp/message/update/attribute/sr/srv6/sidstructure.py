@@ -53,7 +53,7 @@ class Srv6SidStructure:  # type: ignore[type-var]
         self.arg_len: int = arg_len
         self.tpose_len: int = tpose_len
         self.tpose_offset: int = tpose_offset
-        self.packed: bytes = self.pack()
+        self.packed: bytes = self.pack_tlv()
 
     @classmethod
     def unpack_attribute(cls, data: bytes, length: int) -> Srv6SidStructure:
@@ -73,7 +73,7 @@ class Srv6SidStructure:  # type: ignore[type-var]
             tpose_offset=tpose_offset,
         )
 
-    def pack(self) -> bytes:
+    def pack_tlv(self) -> bytes:
         return (
             pack('!B', self.TLV)
             + pack('!H', 6)

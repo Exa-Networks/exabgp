@@ -450,7 +450,7 @@ class TestFlowNLRI:
         flow.add(dest)
         flow.add(src)
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
 
         # Should have length byte followed by components
         assert len(packed) > 0
@@ -469,7 +469,7 @@ class TestFlowNLRI:
         flow.add(port1)
         flow.add(port2)
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
         assert len(packed) > 0
 
     def test_flow_pack_long_format(self) -> None:
@@ -483,7 +483,7 @@ class TestFlowNLRI:
         for port in range(1000, 1100):
             flow.add(FlowAnyPort(NumericOperator.EQ, port))
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
 
         # Should use 2-byte length encoding (first byte >= 0xF0)
         assert packed[0] >= 0xF0
@@ -528,7 +528,7 @@ class TestFlowNLRI:
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
 
         # Should include RD in packed format
         assert len(packed) > 8  # RD is 8 bytes
@@ -564,7 +564,7 @@ class TestFlowNLRI:
         flow.add(port1)
         flow.add(port2)
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
         assert len(packed) > 0
 
     def test_flow_tcp_flags_combination(self) -> None:
@@ -581,7 +581,7 @@ class TestFlowNLRI:
         flow.add(dport)
         flow.add(tcp_syn)
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
         assert len(packed) > 0
 
         flow_str = str(flow)
@@ -601,7 +601,7 @@ class TestFlowNLRI:
         flow.add(icmp_type)
         flow.add(icmp_code)
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
         assert len(packed) > 0
 
     def test_flow_packet_length_range(self) -> None:
@@ -617,7 +617,7 @@ class TestFlowNLRI:
         flow.add(pkt_len1)
         flow.add(pkt_len2)
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
         assert len(packed) > 0
 
     def test_flow_dscp_marking(self) -> None:
@@ -630,7 +630,7 @@ class TestFlowNLRI:
         flow.add(dest)
         flow.add(dscp)
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
         assert len(packed) > 0
 
     def test_flow_fragment_matching(self) -> None:
@@ -643,7 +643,7 @@ class TestFlowNLRI:
         flow.add(dest)
         flow.add(frag)
 
-        packed = flow.pack_nlri()
+        packed = flow.pack()
         assert len(packed) > 0
 
 
@@ -729,7 +729,7 @@ class TestFlowUnpack:
         flow1.add(dport)
 
         # Pack it
-        packed = flow1.pack_nlri()
+        packed = flow1.pack()
 
         # Unpack it
         flow2, leftover = Flow.unpack_nlri(
@@ -751,7 +751,7 @@ class TestFlowUnpack:
         for port in range(1000, 1200):
             flow1.add(FlowAnyPort(NumericOperator.EQ, port))
 
-        packed = flow1.pack_nlri()
+        packed = flow1.pack()
 
         # With 200+ ports, should use 2-byte length (>= 0xF0)
         assert packed[0] >= 0xF0
@@ -769,7 +769,7 @@ class TestFlowUnpack:
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow1.add(dest)
 
-        packed = flow1.pack_nlri()
+        packed = flow1.pack()
 
         # Unpack it
         flow2, leftover = Flow.unpack_nlri(
@@ -802,7 +802,7 @@ class TestFlowUnpack:
         flow1.add(port1)
         flow1.add(port2)
 
-        packed = flow1.pack_nlri()
+        packed = flow1.pack()
         flow2, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, None, negotiated=create_negotiated())
 
         assert flow2 is not None
@@ -908,7 +908,7 @@ class TestFlowEdgeCases:
 
         # Length should match packed size
         flow_len = len(flow)
-        packed = flow.pack_nlri()
+        packed = flow.pack()
         assert flow_len == len(packed)
 
     def test_flow_multiple_destinations_allowed(self) -> None:

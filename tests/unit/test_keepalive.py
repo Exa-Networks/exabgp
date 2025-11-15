@@ -57,7 +57,7 @@ def test_keepalive_message_encoding() -> None:
     """
     keepalive = KeepAlive()
     negotiated = create_negotiated()
-    msg = keepalive.message(negotiated)
+    msg = keepalive.pack_message(negotiated)
 
     # Total length should be 19 bytes
     assert len(msg) == 19
@@ -80,7 +80,7 @@ def test_keepalive_message_encoding_with_negotiated() -> None:
     """
     keepalive = KeepAlive()
     negotiated = {'test': 'value'}
-    msg = keepalive.message(negotiated)
+    msg = keepalive.pack_message(negotiated)
 
     # Should produce same result as without negotiated params
     assert len(msg) == 19
@@ -190,7 +190,7 @@ def test_keepalive_encode_decode_roundtrip() -> None:
     """Test that KEEPALIVE can be encoded and decoded back successfully."""
     # Create and encode
     keepalive_original = KeepAlive()
-    encoded = keepalive_original.message(create_negotiated())
+    encoded = keepalive_original.pack_message(create_negotiated())
 
     # Extract payload (everything after 19-byte header)
     payload = encoded[19:]
@@ -209,7 +209,7 @@ def test_keepalive_multiple_encode_decode_cycles() -> None:
 
     for _ in range(10):
         # Encode
-        encoded = keepalive.message(create_negotiated())
+        encoded = keepalive.pack_message(create_negotiated())
 
         # Verify encoding is consistent
         assert len(encoded) == 19
@@ -265,7 +265,7 @@ def test_keepalive_instances_are_equal() -> None:
     keepalive2 = KeepAlive()
 
     # Both should produce identical wire format
-    assert keepalive1.message(create_negotiated()) == keepalive2.message(create_negotiated())
+    assert keepalive1.pack_message(create_negotiated()) == keepalive2.pack_message(create_negotiated())
 
 
 def test_keepalive_string_representation() -> None:
@@ -287,7 +287,7 @@ def test_keepalive_with_none_negotiated() -> None:
     keepalive = KeepAlive()
 
     # Should work with None
-    msg = keepalive.message(None)
+    msg = keepalive.pack_message(None)
     assert len(msg) == 19
 
     # Should work when unpacking with None
@@ -303,7 +303,7 @@ def test_keepalive_marker_field() -> None:
     """
     keepalive = KeepAlive()
     negotiated = create_negotiated()
-    msg = keepalive.message(negotiated)
+    msg = keepalive.pack_message(negotiated)
 
     # Marker should be 16 bytes of 0xFF
     expected_marker = b'\xff' * 16
@@ -318,7 +318,7 @@ def test_keepalive_header_length_field() -> None:
     """
     keepalive = KeepAlive()
     negotiated = create_negotiated()
-    msg = keepalive.message(negotiated)
+    msg = keepalive.pack_message(negotiated)
 
     # Extract length field (bytes 16-17)
     length_bytes = msg[16:18]
@@ -345,7 +345,7 @@ def test_keepalive_message_constants() -> None:
 
     # KEEPALIVE complete message is exactly header length
     keepalive = KeepAlive()
-    assert len(keepalive.message(create_negotiated())) == Message.HEADER_LEN
+    assert len(keepalive.pack_message(create_negotiated())) == Message.HEADER_LEN
 
     # Marker is 16 bytes
     assert len(Message.MARKER) == 16

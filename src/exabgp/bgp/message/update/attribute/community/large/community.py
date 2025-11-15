@@ -60,7 +60,7 @@ class LargeCommunity(Attribute):
     def json(self) -> str:
         return '[ %d, %d , %d ]' % unpack('!LLL', self.large_community)
 
-    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self.large_community
 
     def __repr__(self) -> str:

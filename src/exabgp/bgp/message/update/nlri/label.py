@@ -55,18 +55,18 @@ class Label(INET):
         return self.labels == other.labels and INET.__eq__(self, other)
 
     def __hash__(self) -> int:
-        return hash(self.pack())
+        return hash(self.pack_nlri())
 
     def prefix(self) -> str:
         return '{}{}'.format(INET.prefix(self), self.labels)
 
-    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
-        addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+        addpath = self.path_info.pack_path() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
         mask = bytes([len(self.labels) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
-        return addpath + mask + self.labels.pack() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
+        return addpath + mask + self.labels.pack_labels() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
 
     def index(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()  # type: ignore[union-attr]
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
         mask = bytes([self.cidr.mask])  # type: ignore[union-attr]
         return Family.index(self) + addpath + mask + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
 

@@ -80,7 +80,7 @@ class PMSI(Attribute):
     def name(tunnel_type: int) -> str:
         return PMSI._name.get(tunnel_type, 'unknown')
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         if self.raw_label:
             packed_label = pack('!L', self.raw_label)[1:4]
         else:

@@ -61,7 +61,7 @@ class TestNLRIs(unittest.TestCase):
             group=IP.create('226.0.0.1'),
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv4,
             safi=SAFI.mcast_vpn,
@@ -83,7 +83,7 @@ class TestNLRIs(unittest.TestCase):
             group=IP.create('ff0e::1'),
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv6,
             safi=SAFI.mcast_vpn,
@@ -108,7 +108,7 @@ class TestNLRIs(unittest.TestCase):
             source_as=1234,
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv4,
             safi=SAFI.mcast_vpn,
@@ -132,7 +132,7 @@ class TestNLRIs(unittest.TestCase):
             source_as=1234,
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv6,
             safi=SAFI.mcast_vpn,
@@ -158,7 +158,7 @@ class TestNLRIs(unittest.TestCase):
             source_as=1234,
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv4,
             safi=SAFI.mcast_vpn,
@@ -182,7 +182,7 @@ class TestNLRIs(unittest.TestCase):
             source_as=1234,
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv6,
             safi=SAFI.mcast_vpn,
@@ -211,7 +211,7 @@ class TestNLRIs(unittest.TestCase):
             RouteDistinguisher.fromElements('42.42.42.42', 5),
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
 
         self.assertEqual(0, len(leftover))
@@ -240,7 +240,7 @@ class TestNLRIs(unittest.TestCase):
             IP.create('1.1.1.1'),
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None)
 
@@ -270,7 +270,7 @@ class TestNLRIs(unittest.TestCase):
             IP.create('1.1.1.1'),
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None)
 
@@ -298,7 +298,7 @@ class TestNLRIs(unittest.TestCase):
             IP.create('2.2.2.2'),
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None)
 
@@ -448,7 +448,7 @@ class TestNLRIs(unittest.TestCase):
 
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 64512, RouteTarget(64577, 123))
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
 
         self.assertEqual(0, len(leftover))
@@ -469,7 +469,7 @@ class TestNLRIs(unittest.TestCase):
 
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 0, None)
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
 
         self.assertEqual(0, len(leftover))

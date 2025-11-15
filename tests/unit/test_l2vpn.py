@@ -69,14 +69,14 @@ class TestL2VPN(unittest.TestCase):
         # encoded_l2vpn = VPLS(None,None,None,None,None)
         # encoded_l2vpn = self.decoded_l2vpn_nlri1
         # self.assertEqual(
-        #     encoded_l2vpn.pack().encode('hex'),
+        #     encoded_l2vpn.pack_attribute().encode('hex'),
         #     str(self.encoded_l2vpn_nlri1).encode('hex')
         # )
         #
         # encoded_l2vpn.nlri = self.decoded_l2vpn_nlri2
         # encoded_l2vpn.rd = self.decoded_l2vpn_nlri2.rd
         # self.assertEqual(
-        #     encoded_l2vpn.pack().encode('hex'),
+        #     encoded_l2vpn.pack_attribute().encode('hex'),
         #     str(self.encoded_l2vpn_nlri2).encode('hex')
         # )
 
@@ -92,7 +92,7 @@ class TestL2VPN(unittest.TestCase):
 
     # def test_l2info_community_encode (self):
     #     l2info_com_encoded = to_ExtendedCommunity('l2info:19:0:0:100')
-    #     self.assertEqual(l2info_com_encoded.pack(),str(self.encoded_ext_community)[8:16])
+    #     self.assertEqual(l2info_com_encoded.pack_attribute(),str(self.encoded_ext_community)[8:16])
 
 
 if __name__ == '__main__':

@@ -133,13 +133,13 @@ class Prefix(EVPN):
             return packed
 
         self._packed = (
-            self.rd.pack()
-            + self.esi.pack()
-            + self.etag.pack()
+            self.rd.pack_rd()
+            + self.esi.pack_esi()
+            + self.etag.pack_etag()
             + bytes([self.iplen])
             + self.ip.pack()
             + self.gwip.pack()
-            + self.label.pack()  # type: ignore[union-attr]
+            + self.label.pack_labels()  # type: ignore[union-attr]
         )
         return self._packed
 

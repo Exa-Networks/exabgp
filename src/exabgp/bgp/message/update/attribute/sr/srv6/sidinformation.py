@@ -56,7 +56,7 @@ class Srv6SidInformation:  # type: ignore[type-var]
         self.sid: IPv6 = sid
         self.behavior: int = behavior
         self.subsubtlvs: List[GenericSrv6ServiceDataSubSubTlv] = subsubtlvs
-        self.packed: bytes = self.pack()
+        self.packed: bytes = self.pack_tlv()
 
     @classmethod
     def register(cls) -> Callable[[Type[SubSubTlvType]], Type[SubSubTlvType]]:
@@ -90,8 +90,8 @@ class Srv6SidInformation:  # type: ignore[type-var]
 
         return cls(sid=sid, behavior=behavior, subsubtlvs=subsubtlvs)
 
-    def pack(self) -> bytes:
-        subsubtlvs_packed: bytes = b''.join([_.pack() for _ in self.subsubtlvs])
+    def pack_tlv(self) -> bytes:
+        subsubtlvs_packed: bytes = b''.join([_.pack_tlv() for _ in self.subsubtlvs])
         length: int = len(subsubtlvs_packed) + 21
         reserved: int = 0
         flags: int = 0

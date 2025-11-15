@@ -74,7 +74,7 @@ class SourceAD(MVPN):
             self._packed = packed
             return packed
         self._packed = (
-            self.rd.pack()
+            self.rd.pack_rd()
             + bytes([len(self.source) * 8])  # type: ignore[arg-type]
             + self.source.pack()
             + bytes([len(self.group) * 8])  # type: ignore[arg-type]

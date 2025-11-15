@@ -38,7 +38,7 @@ class Srv6L2Service:
 
     def __init__(self, subtlvs: List[GenericSrv6ServiceSubTlv], packed: Optional[bytes] = None) -> None:
         self.subtlvs: List[GenericSrv6ServiceSubTlv] = subtlvs
-        self.packed: bytes = self.pack()
+        self.packed: bytes = self.pack_tlv()
 
     @classmethod
     def register(cls) -> Callable[[Type[SubTlvType]], Type[SubTlvType]]:
@@ -71,8 +71,8 @@ class Srv6L2Service:
 
         return cls(subtlvs=subtlvs)
 
-    def pack(self) -> bytes:
-        subtlvs_packed: bytes = b''.join([_.pack() for _ in self.subtlvs])
+    def pack_tlv(self) -> bytes:
+        subtlvs_packed: bytes = b''.join([_.pack_tlv() for _ in self.subtlvs])
         length: int = len(subtlvs_packed) + 1
         reserved: int = 0
 

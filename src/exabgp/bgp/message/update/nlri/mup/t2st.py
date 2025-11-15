@@ -107,7 +107,7 @@ class Type2SessionTransformedRoute(MUP):
 
         # fmt: off
         self._packed = (
-            self.rd.pack()
+            self.rd.pack_rd()
             + pack('!B', self.endpoint_len)
             + self.endpoint_ip.pack()
         )

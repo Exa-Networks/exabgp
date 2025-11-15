@@ -53,7 +53,7 @@ class RouteDistinguisher:
     def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
 
-    def pack(self) -> bytes:
+    def pack_rd(self) -> bytes:
         return self.rd
 
     def __len__(self) -> int:

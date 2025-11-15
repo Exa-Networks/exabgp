@@ -98,7 +98,7 @@ class MTID:
     def __hash__(self):
         return hash(str(self))
 
-    def pack(self):
+    def pack_tlv(self):
         if self._packed:
             return self._packed
         raise RuntimeError('Not implemented')

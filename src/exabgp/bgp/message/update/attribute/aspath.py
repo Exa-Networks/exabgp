@@ -125,7 +125,7 @@ class ASPath(Attribute):
     def _asn_pack(cls, aspath: Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], asn4: bool) -> bytes:
         return cls._attribute(cls._segment(cls.ID, aspath, asn4))
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         if negotiated.asn4:
             return self.pack_segments(self.aspath, negotiated.asn4)
 
@@ -247,7 +247,7 @@ class AS4Path(ASPath):
 
     Empty: ClassVar[Optional[AS4Path]] = None
 
-    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_attribute(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return ASPath.pack(self, True)  # type: ignore[arg-type]
 
     @classmethod

@@ -63,7 +63,7 @@ class PathInfo:
             return ' path-information {}'.format('.'.join([str(_) for _ in self.path_info]))
         return ''
 
-    def pack(self) -> bytes:
+    def pack_path(self) -> bytes:
         if self.path_info:
             return self.path_info
         return b'\x00\x00\x00\x00'

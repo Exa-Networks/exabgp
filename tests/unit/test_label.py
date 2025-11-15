@@ -219,7 +219,7 @@ class TestLabelPack:
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
         label.labels = Labels([100], True)
 
-        packed = label.pack()
+        packed = label.pack_nlri()
 
         assert isinstance(packed, bytes)
         assert len(packed) > 0
@@ -233,7 +233,7 @@ class TestLabelPack:
             label.cidr = CIDR(IP.pton('10.0.0.0'), mask)
             label.labels = Labels([100], True)
 
-            packed = label.pack()
+            packed = label.pack_nlri()
             assert len(packed) > 0
 
     def test_pack_ipv6(self) -> None:
@@ -242,7 +242,7 @@ class TestLabelPack:
         label.cidr = CIDR(IP.pton('2001:db8::'), 32)
         label.labels = Labels([100], True)
 
-        packed = label.pack()
+        packed = label.pack_nlri()
         assert len(packed) > 0
 
     def test_pack_multiple_labels(self) -> None:
@@ -251,7 +251,7 @@ class TestLabelPack:
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
         label.labels = Labels([100, 200, 300], True)
 
-        packed = label.pack()
+        packed = label.pack_nlri()
         # Should include 3 labels
         assert len(packed) >= 9  # 3 labels * 3 bytes
 
@@ -330,7 +330,7 @@ class TestLabelEdgeCases:
         label.cidr = CIDR(IP.pton('0.0.0.0'), 0)
         label.labels = Labels([100], True)
 
-        packed = label.pack()
+        packed = label.pack_nlri()
         assert len(packed) > 0
 
     def test_label_host_route_ipv4(self) -> None:
@@ -339,7 +339,7 @@ class TestLabelEdgeCases:
         label.cidr = CIDR(IP.pton('192.168.1.1'), 32)
         label.labels = Labels([100], True)
 
-        packed = label.pack()
+        packed = label.pack_nlri()
         assert len(packed) > 0
 
     def test_label_host_route_ipv6(self) -> None:
@@ -348,7 +348,7 @@ class TestLabelEdgeCases:
         label.cidr = CIDR(IP.pton('2001:db8::1'), 128)
         label.labels = Labels([100], True)
 
-        packed = label.pack()
+        packed = label.pack_nlri()
         assert len(packed) > 0
 
     def test_label_no_labels(self) -> None:
@@ -358,7 +358,7 @@ class TestLabelEdgeCases:
         label.labels = Labels.NOLABEL
 
         # Should still be able to pack
-        packed = label.pack()
+        packed = label.pack_nlri()
         assert len(packed) > 0
 
     def test_label_maximum_label_value(self) -> None:
@@ -368,7 +368,7 @@ class TestLabelEdgeCases:
         # MPLS label is 20 bits, max value is 2^20-1 = 1048575
         label.labels = Labels([1048575], True)
 
-        packed = label.pack()
+        packed = label.pack_nlri()
         assert len(packed) > 0
 
 
@@ -411,7 +411,7 @@ class TestLabelMultipleRoutes:
             label.cidr = CIDR(IP.pton(ip), mask)
             label.labels = Labels(label_values, True)
 
-            packed = label.pack()
+            packed = label.pack_nlri()
             assert len(packed) > 0
             assert label.labels.labels == label_values
 

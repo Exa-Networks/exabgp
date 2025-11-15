@@ -182,7 +182,7 @@ class Protocol:
                 )
 
     def write(self, message: Any, negotiated: Negotiated) -> Generator[bool, None, None]:
-        raw: bytes = message.message(negotiated)
+        raw: bytes = message.pack_message(negotiated)
 
         code: str = 'send-{}'.format(Message.CODE.short(message.ID))
         self.peer.stats[code] += 1

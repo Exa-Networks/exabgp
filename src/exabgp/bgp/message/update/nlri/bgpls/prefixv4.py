@@ -161,5 +161,5 @@ class PREFIXv4(BGPLS):
 
         return f'{{ {content} }}'
 
-    def pack(self, negotiated: Negotiated = None) -> Optional[bytes]:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated = None) -> Optional[bytes]:  # type: ignore[assignment]
         return self._pack

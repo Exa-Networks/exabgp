@@ -69,5 +69,5 @@ class Srv6SIDInformation:
     def __hash__(self):
         return hash(str(self))
 
-    def pack(self):
+    def pack_tlv(self):
         raise RuntimeError('Not implemented')

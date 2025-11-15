@@ -39,7 +39,7 @@ class PrefixSid(Attribute):
 
     def __init__(self, sr_attrs: List[Any], packed: Optional[bytes] = None) -> None:
         self.sr_attrs: List[Any] = sr_attrs
-        self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack() for _ in sr_attrs))
+        self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack_tlv() for _ in sr_attrs))
 
     @classmethod
     def register(cls, srid: Optional[int] = None, flag: Optional[int] = None) -> Callable[[Type[Any]], Type[Any]]:
@@ -85,7 +85,7 @@ class PrefixSid(Attribute):
         # if not, we try to decode path attribute for SRv6
         return '[ ' + ', '.join([str(attr) for attr in self.sr_attrs]) + ' ]'
 
-    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self._packed
 
 

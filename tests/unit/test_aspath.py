@@ -345,7 +345,7 @@ def test_aspath_pack_asn2() -> None:
     sequence = SEQUENCE(asns)
     aspath = ASPath([sequence])
 
-    packed = aspath.pack(negotiated)
+    packed = aspath.pack_attribute(negotiated)
 
     # Should be: flags(1) + type(1) + length(1) + segment_type(1) + segment_len(1) + 2*ASN(2)
     # For transitive attribute: flags=0x40, type=2
@@ -367,7 +367,7 @@ def test_aspath_pack_asn4() -> None:
     sequence = SEQUENCE(asns)
     aspath = ASPath([sequence])
 
-    packed = aspath.pack(negotiated)
+    packed = aspath.pack_attribute(negotiated)
 
     # Should include 4-byte ASNs
     assert len(packed) >= 11  # flags(1) + type(1) + length(1) + segment_type(1) + segment_len(1) + 2*ASN(4)
@@ -385,7 +385,7 @@ def test_aspath_pack_with_as_trans() -> None:
     sequence = SEQUENCE(asns)
     aspath = ASPath([sequence])
 
-    packed = aspath.pack(negotiated)
+    packed = aspath.pack_attribute(negotiated)
 
     # Should create both AS_PATH (with AS_TRANS) and AS4_PATH attributes
     # The packed data should be longer as it includes both attributes

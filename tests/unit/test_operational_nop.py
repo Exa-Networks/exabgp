@@ -63,7 +63,7 @@ def test_nop_cannot_be_encoded() -> None:
     nop = NOP()
 
     with pytest.raises(RuntimeError) as exc_info:
-        nop.message()
+        nop.pack_message(None)
 
     assert 'NOP messages can not be sent on the wire' in str(exc_info.value)
 
@@ -74,7 +74,7 @@ def test_nop_cannot_be_encoded_with_negotiated() -> None:
     negotiated = {'test': 'value'}
 
     with pytest.raises(RuntimeError):
-        nop.message(negotiated)
+        nop.pack_message(negotiated)
 
 
 def test_nop_unpack() -> None:
@@ -240,7 +240,7 @@ def test_advisory_adm_encoding() -> None:
     # Create mock negotiated object
     negotiated = type('obj', (object,), {})()
 
-    msg = adm.message(negotiated)
+    msg = adm.pack_message(negotiated)
 
     # Should start with BGP marker
     assert msg[0:16] == b'\xff' * 16
@@ -254,7 +254,7 @@ def test_advisory_asm_encoding() -> None:
     asm = Advisory.ASM(AFI.ipv6, SAFI.unicast, 'Message')
 
     negotiated = type('obj', (object,), {})()
-    msg = asm.message(negotiated)
+    msg = asm.pack_message(negotiated)
 
     # Verify basic message structure
     assert len(msg) >= 19  # At least header length
