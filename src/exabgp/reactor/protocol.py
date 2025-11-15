@@ -69,9 +69,9 @@ class Protocol:
         if self.neighbor['connect']:
             self.port: int = self.neighbor['connect']
         elif os.environ.get('exabgp.tcp.port', '').isdigit():
-            self.port = int(os.environ.get('exabgp.tcp.port', '0'))
+            self.port = int(os.environ['exabgp.tcp.port'])
         elif os.environ.get('exabgp_tcp_port', '').isdigit():
-            self.port = int(os.environ.get('exabgp_tcp_port', '0'))
+            self.port = int(os.environ['exabgp_tcp_port'])
         else:
             self.port = 179
 
