@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Any, Optional, Type
+from typing import Optional, Type
 
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
 # (since draft-ietf-l2vpn-evpn-05)
@@ -68,5 +68,5 @@ class ESI:
     def unpack_esi(cls: Type[ESI], data: bytes) -> ESI:
         return cls(data[: cls.LENGTH])
 
-    def json(self, compact: Any = None) -> str:
+    def json(self, compact: bool = False) -> str:
         return '"esi": "{}"'.format(str(self))

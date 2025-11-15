@@ -60,7 +60,7 @@ class Srv6SidStructure(BaseLS):
             self.arg_len,
         )
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"srv6-sid-structure": ' + json.dumps(
             {
                 'loc_block_len': self.loc_block_len,

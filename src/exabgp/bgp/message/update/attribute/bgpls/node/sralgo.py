@@ -44,5 +44,5 @@ class SrAlgorithm(BaseLS):
             ],
         )
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return f'"{self.JSON}": {json.dumps(self.content)}'

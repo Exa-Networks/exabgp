@@ -6,7 +6,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Optional
+from typing import ClassVar, Optional
 
 from struct import pack, unpack
 
@@ -62,5 +62,5 @@ class SrLabelIndex:
         labelindex = unpack('!I', data)[0]
         return cls(labelindex=labelindex, packed=data)
 
-    def json(self, compact: Any = None) -> str:
+    def json(self, compact: bool = False) -> str:
         return '"sr-label-index": %d' % (self.labelindex)

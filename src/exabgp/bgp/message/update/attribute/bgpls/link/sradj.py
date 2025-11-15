@@ -76,7 +76,7 @@ class SrAdjacency(FlagLS):
 
         return cls(flags=flags, sids=sids, weight=weight, undecoded=raw)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"sr-adj": ' + json.dumps(
             {
                 'flags': self.flags,

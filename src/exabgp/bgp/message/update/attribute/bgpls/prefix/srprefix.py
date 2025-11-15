@@ -84,5 +84,5 @@ class SrPrefix(FlagLS):
 
         return cls(flags=flags, sids=sids, sr_algo=sr_algo, undecoded=raw)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return f'"sr-prefix-flags": {json.dumps(self.flags)}, "sids": {json.dumps(self.sids)}, "undecoded-sids": {json.dumps(self.undecoded)}, "sr-algorithm": {json.dumps(self.sr_algo)}'

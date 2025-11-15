@@ -86,7 +86,7 @@ class SrAdjacencyLan(FlagLS):
 
         return cls([{'flags': flags, 'weight': weight, 'system-id': system_id, 'sid': sid, 'undecoded': raw}])
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return f'"sr-adj-lan-sids": {json.dumps(self.sr_adj_lan_sids)}'
 
     def merge(self, klass):

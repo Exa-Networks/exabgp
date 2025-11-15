@@ -37,7 +37,7 @@ class IfaceAddr:
             addr = IP.unpack_ip(data[: IPv6.BYTES])
         return cls(iface_addr=addr)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return '"{}"'.format(self.iface_address)
 
     def __eq__(self, other):

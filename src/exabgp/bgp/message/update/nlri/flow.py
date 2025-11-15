@@ -657,7 +657,7 @@ class Flow(NLRI):
     def __str__(self) -> str:
         return self.extensive()
 
-    def json(self, compact: Optional[Any] = None) -> str:
+    def json(self, compact: bool = False) -> str:
         string: List[str] = []
         for index in sorted(self.rules):
             rules = self.rules[index]

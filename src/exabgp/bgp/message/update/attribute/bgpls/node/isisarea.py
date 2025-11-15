@@ -32,5 +32,5 @@ class IsisArea(BaseLS):
     def unpack_bgpls(cls, data: bytes) -> IsisArea:
         return cls(int(data.hex(), 16))
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return f'"{self.JSON}": "{self.content}"'

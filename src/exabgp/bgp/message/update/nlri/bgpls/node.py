@@ -65,7 +65,7 @@ class NODE(BGPLS):
         self._pack: Optional[bytes] = packed
         self.route_d: Any = route_d
 
-    def json(self, compact: Any = None) -> str:
+    def json(self, compact: bool = False) -> str:
         nodes = ', '.join(d.json() for d in self.node_ids)
         content = ', '.join(
             [

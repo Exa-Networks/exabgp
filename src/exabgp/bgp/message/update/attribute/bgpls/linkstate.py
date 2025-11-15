@@ -89,7 +89,7 @@ class LinkState(Attribute):
 
         return cls(ls_attrs=ls_attrs)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         content = ', '.join(d.json() for d in self.ls_attrs)
         return f'{{ {content} }}'
 
@@ -109,7 +109,7 @@ class BaseLS:
     def __init__(self, content):
         self.content = content
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         try:
             return f'"{self.JSON}": {json.dumps(self.content)}'
         except TypeError:
@@ -149,7 +149,7 @@ class GenericLSID(BaseLS):
     def __repr__(self):
         return 'Attribute with code [ {} ] not implemented'.format(self.TLV)
 
-    def json(self):
+    def json(self, compact: bool = False):
         merged = ', '.join([f'"{hexstring(_)}"' for _ in self.content])
         return f'"generic-lsid-{self.TLV}": [{merged}]'
 
@@ -165,7 +165,7 @@ class FlagLS(BaseLS):
     def __repr__(self):
         return '{}: {}'.format(self.REPR, self.flags)
 
-    def json(self, compact=None):
+    def json(self, compact: bool = False):
         return f'"{self.JSON}": {json.dumps(self.flags)}'
 
     @classmethod
