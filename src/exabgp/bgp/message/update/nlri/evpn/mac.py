@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Optional
+from typing import ClassVar, Optional, Union
 
-from exabgp.protocol.ip import IP
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.protocol.ip import IP, _NoNextHop
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
@@ -63,9 +64,9 @@ class MAC(EVPN):
         label: Optional[Labels],
         ip: Optional[IP],
         packed: Optional[bytes] = None,
-        nexthop: Any = None,
+        nexthop: Optional[Union[IP, _NoNextHop]] = None,
         action: Optional[Action] = None,
-        addpath: Any = None,
+        addpath: Optional[PathInfo] = None,
     ) -> None:
         EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
         self.nexthop = nexthop

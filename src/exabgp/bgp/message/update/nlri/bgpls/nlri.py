@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Dict, Optional, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -21,6 +21,7 @@ from exabgp.bgp.message import Action
 
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 # https://tools.ietf.org/html/rfc7752#section-3.2
 #
@@ -92,7 +93,7 @@ class BGPLS(NLRI):
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
 
-    def __init__(self, action: Action = Action.UNSET, addpath: Any = None) -> None:
+    def __init__(self, action: Action = Action.UNSET, addpath: Optional[PathInfo] = None) -> None:
         NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
         self._packed: bytes = b''
 
@@ -120,7 +121,7 @@ class BGPLS(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated
+        cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Optional[PathInfo], negotiated
     ) -> Tuple[T, bytes]:
         code, length = unpack('!HH', bgp[:4])
         if code in cls.registered_bgpls:

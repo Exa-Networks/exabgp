@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import json
 from struct import pack, unpack
-from typing import Any, ClassVar, Dict, List
+from typing import Any, ClassVar, Dict, List, Optional
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
@@ -55,8 +57,8 @@ class SRv6SID(BGPLS):
         domain: int,
         local_node_descriptors: List[NodeDescriptor],
         srv6_sid_descriptors: Dict[str, Any],
-        action: Any = None,
-        addpath: Any = None,
+        action: Action = Action.UNSET,
+        addpath: Optional[PathInfo] = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
         self.proto_id: int = protocol_id
