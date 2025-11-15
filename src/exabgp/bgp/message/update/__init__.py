@@ -185,7 +185,7 @@ class Update(Message):
         withdraws = b''
         announced = b''
         for nlri in nlris:
-            packed = nlri.pack(negotiated)
+            packed = nlri.pack_nlri(negotiated)
             if len(announced + withdraws + packed) <= msg_size:
                 if nlri.action == Action.ANNOUNCE:
                     announced += packed

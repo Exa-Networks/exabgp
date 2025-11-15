@@ -45,6 +45,20 @@ class IComponent:
     # should have an interface for serialisation and put it here
     FLAG: ClassVar[bool] = False
 
+    def pack(self) -> bytes:
+        """Polymorphic pack method that delegates to specific pack_X() methods.
+
+        Subclasses should implement either pack_prefix() or pack_operation().
+        This method provides backward compatibility and polymorphism.
+        """
+        # Check which specific pack method exists and call it
+        if hasattr(self, 'pack_prefix'):
+            return self.pack_prefix()  # type: ignore[attr-defined,no-any-return]
+        elif hasattr(self, 'pack_operation'):
+            return self.pack_operation()  # type: ignore[attr-defined,no-any-return]
+        else:
+            raise NotImplementedError(f'{self.__class__.__name__} must implement pack_prefix() or pack_operation()')
+
 
 class CommonOperator:
     # power (2,x) is the same as 1 << x which is what the RFC say the len is
@@ -146,7 +160,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
     def __init__(self, raw: bytes, netmask: int) -> None:
         self.cidr = CIDR(raw, netmask)
 
-    def pack(self) -> bytes:
+    def pack_prefix(self) -> bytes:
         raw = self.cidr.pack_nlri()
         # ID is defined in subclasses
         return bytes([self.ID]) + raw  # type: ignore[no-any-return]  # pylint: disable=E1101
@@ -178,7 +192,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
         self.cidr = CIDR(raw, netmask)
         self.offset = offset
 
-    def pack(self) -> bytes:
+    def pack_prefix(self) -> bytes:
         # ID is defined in subclasses
         return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()  # type: ignore[no-any-return]  # pylint: disable=E1101
 
@@ -208,7 +222,7 @@ class IOperation(IComponent):
         self.value = value
         self.first = None  # handled by pack/str
 
-    def pack(self) -> bytes:
+    def pack_operation(self) -> bytes:
         length, value = self.encode(self.value)
         op = self.operations | _len_to_bit(length)
         return bytes([op]) + value
@@ -619,7 +633,7 @@ class Flow(NLRI):
                 ordered_rules.append(bytes([ID]))
             ordered_rules.append(b''.join(rule.pack() for rule in rules))  # type: ignore[union-attr]
 
-        components = self.rd.pack() + b''.join(ordered_rules)
+        components = self.rd.pack_rd() + b''.join(ordered_rules)
 
         lc = len(components)
         if lc < FLOW_LENGTH_COMPACT_MAX:

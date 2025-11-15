@@ -76,7 +76,7 @@ class Multicast(EVPN):
             self._packed = packed
             return packed
 
-        self._packed = self.rd.pack() + self.etag.pack() + bytes([len(self.ip) * 8]) + self.ip.pack()  # type: ignore[arg-type]
+        self._packed = self.rd.pack_rd() + self.etag.pack_etag() + bytes([len(self.ip) * 8]) + self.ip.pack()  # type: ignore[arg-type]
         return self._packed
 
     @classmethod

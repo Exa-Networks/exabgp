@@ -262,7 +262,7 @@ def test_mpls_label_values(label_value: int, exp: int, ttl: int) -> None:
         label_obj = Labels([label_value])
 
         # Verify we can pack it
-        packed = label_obj.pack()
+        packed = label_obj.pack_attribute()
         assert isinstance(packed, bytes)
         assert len(packed) == 3  # One label = 3 bytes
     except (ValueError, Exception) as e:

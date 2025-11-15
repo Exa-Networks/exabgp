@@ -85,7 +85,7 @@ class EthernetAD(EVPN):
             self._packed = packed
             return packed
 
-        self._packed = self.rd.pack() + self.esi.pack() + self.etag.pack() + self.label.pack()  # type: ignore[union-attr]
+        self._packed = self.rd.pack_rd() + self.esi.pack_esi() + self.etag.pack_etag() + self.label.pack_labels()  # type: ignore[union-attr]
         return self._packed
 
     @classmethod

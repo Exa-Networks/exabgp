@@ -77,7 +77,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         prefix_ip_packed = self.prefix_ip.pack()
         # fmt: off
         self._packed = (
-            self.rd.pack()
+            self.rd.pack_rd()
             + pack('!B',self.prefix_ip_len)
             + prefix_ip_packed[0: offset]
         )

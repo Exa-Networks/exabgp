@@ -60,7 +60,7 @@ class Prefix:
         raise RuntimeError('Not implemented')
 
     def __str__(self):
-        return ':'.join('{:02X}'.format(_) for _ in self.pack())
+        return ':'.join('{:02X}'.format(_) for _ in self.pack_tlv())
 
     def __repr__(self):
         return self.__str__()
@@ -71,7 +71,7 @@ class Prefix:
     def __hash__(self):
         return hash(str(self))
 
-    def pack(self):
+    def pack_tlv(self):
         if self._packed:
             return self._packed
         raise RuntimeError('Not implemented')

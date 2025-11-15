@@ -115,7 +115,7 @@ class TestIPVPNPackUnpack:
             RouteDistinguisher.fromElements('10.0.0.1', 100),
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = IPVPN.unpack_nlri(
             AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -138,7 +138,7 @@ class TestIPVPNPackUnpack:
             RouteDistinguisher.fromElements('10.0.0.1', 200),
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, leftover = IPVPN.unpack_nlri(
             AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -159,7 +159,7 @@ class TestIPVPNPackUnpack:
             RouteDistinguisher.fromElements('172.16.0.1', 50),
         )
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, _ = IPVPN.unpack_nlri(
             AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -188,7 +188,7 @@ class TestIPVPNPackUnpack:
                 RouteDistinguisher.fromElements('10.0.0.1', 100),
             )
 
-            packed = nlri.pack()
+            packed = nlri.pack_nlri()
             unpacked, _ = IPVPN.unpack_nlri(
                 AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
             )
@@ -206,7 +206,7 @@ class TestIPVPNPackUnpack:
             RouteDistinguisher.fromElements('10.0.0.1', 100),
         )
 
-        packed = nlri.pack() + b'\x01\x02\x03\x04'
+        packed = nlri.pack_nlri() + b'\x01\x02\x03\x04'
         unpacked, leftover = IPVPN.unpack_nlri(
             AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -512,7 +512,7 @@ class TestIPVPNEdgeCases:
 
         assert nlri.cidr.mask == 0
 
-        packed = nlri.pack()
+        packed = nlri.pack_nlri()
         unpacked, _ = IPVPN.unpack_nlri(
             AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -579,7 +579,7 @@ class TestIPVPNMultipleRoutes:
         ]
 
         # Pack all routes
-        packed_data = b''.join(r.pack() for r in routes)
+        packed_data = b''.join(r.pack_nlri() for r in routes)
 
         # Unpack all routes
         data = packed_data

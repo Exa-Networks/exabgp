@@ -66,7 +66,7 @@ class TestFlow(unittest.TestCase):
             message += bytes(messages[key])
         message = bytes([len(message)]) + message
         # flow.add(to_FlowAction(65000,False,False))
-        flow.pack()
+        flow.pack_nlri()
         # print [hex(_) for _ in flow]
 
     def test_nlri(self) -> None:
@@ -90,7 +90,7 @@ class TestFlow(unittest.TestCase):
             message += bytes(messages[key])
         message = bytes([len(message)]) + message
         # policy.add(to_FlowAction(65000,False,False))
-        flow = flow.pack()
+        flow = flow.pack_nlri()
         if message[0] != flow[0]:
             self.fail(f'size mismatch {flow[0]} {message[0]}\n')
         if len(flow) != flow[0] + 1:

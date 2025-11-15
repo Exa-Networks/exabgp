@@ -44,7 +44,7 @@ class SrGb:
 
     def __init__(self, srgbs: List[Tuple[int, int]], packed: Optional[bytes] = None) -> None:
         self.srgbs: List[Tuple[int, int]] = srgbs
-        self.packed: bytes = self.pack()
+        self.packed: bytes = self.pack_tlv()
 
     def __repr__(self) -> str:
         items: List[str] = []
@@ -53,7 +53,7 @@ class SrGb:
         joined: str = ', '.join(items)
         return f'[ {joined} ]'
 
-    def pack(self) -> bytes:
+    def pack_tlv(self) -> bytes:
         payload: bytes = pack('!H', 0)  # flags
         for b, r in self.srgbs:
             payload = payload + pack('!L', b)[1:] + pack('!L', r)[1:]

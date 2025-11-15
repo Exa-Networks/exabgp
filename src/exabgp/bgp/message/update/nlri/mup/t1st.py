@@ -113,7 +113,7 @@ class Type1SessionTransformedRoute(MUP):
 
     def pack_index(self) -> bytes:
         # removed teid, qfi, endpointip
-        packed = self.rd.pack() + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack()
+        packed = self.rd.pack_rd() + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack()
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(packed)) + packed
 
     def index(self) -> bytes:
@@ -151,7 +151,7 @@ class Type1SessionTransformedRoute(MUP):
 
         # fmt: off
         self._packed = (
-            self.rd.pack()
+            self.rd.pack_rd()
             + pack('!B',self.prefix_ip_len)
             + prefix_ip_packed[0: offset]
             + pack('!IB',self.teid, self.qfi)

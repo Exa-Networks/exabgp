@@ -288,7 +288,7 @@ class TestDirectSegmentDiscoveryRoute:
         """Test DSD with invalid IP size raises error"""
         # Create invalid packed data with wrong IP size (3 bytes instead of 4 or 16)
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
-        packed_rd = rd.pack()
+        packed_rd = rd.pack_rd()
         invalid_data = packed_rd + b'\x01\x02\x03'  # 3 bytes - invalid
 
         # Pack into MUP format
@@ -549,7 +549,7 @@ class TestType1SessionTransformedRoute:
         prefix_ip = IP.create('10.0.0.0')
 
         # Create packed data with invalid endpoint length (33 bits)
-        packed_rd = rd.pack()
+        packed_rd = rd.pack_rd()
         packed_prefix = bytes([24]) + prefix_ip.pack()[:3]  # 24-bit prefix
         packed_teid_qfi = b'\x00\x00\x30\x39\x05'  # TEID=12345, QFI=5
         packed_endpoint = bytes([33])  # Invalid: not 32 or 128
@@ -800,7 +800,7 @@ class TestMUPGeneric:
         """Test unpacking unknown MUP route type"""
         # Create a route with unknown code (99)
         rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
-        packed_rd = rd.pack()
+        packed_rd = rd.pack_rd()
 
         # ARCHTYPE=1, CODE=99, length=8 (just RD)
         packed = b'\x01\x00\x63\x08' + packed_rd

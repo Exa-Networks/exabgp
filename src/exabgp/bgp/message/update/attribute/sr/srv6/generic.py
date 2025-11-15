@@ -21,7 +21,7 @@ class GenericSrv6ServiceSubTlv:
         # TODO:
         return ''
 
-    def pack(self) -> bytes:
+    def pack_tlv(self) -> bytes:
         return self.packed
 
 
@@ -37,5 +37,5 @@ class GenericSrv6ServiceDataSubSubTlv:
         # TODO:
         return ''
 
-    def pack(self) -> bytes:
+    def pack_tlv(self) -> bytes:
         return self.packed

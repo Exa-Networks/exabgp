@@ -40,7 +40,7 @@ class Origin(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_attribute(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._packed
 
     def __len__(self) -> int:
@@ -66,9 +66,9 @@ class Origin(Attribute):
         EGP = Origin(Origin.EGP)
         INC = Origin(Origin.INCOMPLETE)
 
-        cls.cache[Attribute.CODE.ORIGIN][IGP.pack()] = IGP
-        cls.cache[Attribute.CODE.ORIGIN][EGP.pack()] = EGP
-        cls.cache[Attribute.CODE.ORIGIN][INC.pack()] = INC
+        cls.cache[Attribute.CODE.ORIGIN][IGP.pack_attribute()] = IGP
+        cls.cache[Attribute.CODE.ORIGIN][EGP.pack_attribute()] = EGP
+        cls.cache[Attribute.CODE.ORIGIN][INC.pack_attribute()] = INC
 
 
 Origin.setCache()

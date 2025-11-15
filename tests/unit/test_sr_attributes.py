@@ -48,7 +48,7 @@ class TestSrLabelIndex:
     def test_label_index_pack(self) -> None:
         """Test packing Label-Index TLV."""
         label_index = SrLabelIndex(labelindex=100)
-        packed = label_index.pack()
+        packed = label_index.pack_tlv()
 
         # Format: Type(1) + Length(2) + Reserved(1) + Flags(2) + LabelIndex(4)
         assert len(packed) == 10
@@ -70,7 +70,7 @@ class TestSrLabelIndex:
     def test_label_index_pack_unpack_roundtrip(self) -> None:
         """Test pack/unpack roundtrip for Label-Index."""
         original = SrLabelIndex(labelindex=12345)
-        packed = original.pack()
+        packed = original.pack_tlv()
 
         # Extract the data portion (skip Type and Length fields)
         data = packed[3:]  # Skip Type(1) + Length(2)
@@ -104,7 +104,7 @@ class TestSrLabelIndex:
         label_index = SrLabelIndex(labelindex=0)
         assert label_index.labelindex == 0
 
-        packed = label_index.pack()
+        packed = label_index.pack_tlv()
         data = packed[3:]
         unpacked = SrLabelIndex.unpack_attribute(data, length=7)
         assert unpacked.labelindex == 0
@@ -115,7 +115,7 @@ class TestSrLabelIndex:
         label_index = SrLabelIndex(labelindex=max_index)
         assert label_index.labelindex == max_index
 
-        packed = label_index.pack()
+        packed = label_index.pack_tlv()
         data = packed[3:]
         unpacked = SrLabelIndex.unpack_attribute(data, length=7)
         assert unpacked.labelindex == max_index
@@ -146,7 +146,7 @@ class TestSrGb:
     def test_srgb_pack_single_range(self) -> None:
         """Test packing SRGB with single range."""
         srgb = SrGb(srgbs=[(16000, 8000)])
-        packed = srgb.pack()
+        packed = srgb.pack_tlv()
 
         # Format: Type(1) + Length(2) + Flags(2) + Base(3) + Range(3)
         assert packed[0] == 3  # TLV type
@@ -168,7 +168,7 @@ class TestSrGb:
     def test_srgb_pack_multiple_ranges(self) -> None:
         """Test packing SRGB with multiple ranges."""
         srgb = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
-        packed = srgb.pack()
+        packed = srgb.pack_tlv()
 
         # Type(1) + Length(2) + Flags(2) + 2 * (Base(3) + Range(3))
         assert packed[0] == 3
@@ -202,7 +202,7 @@ class TestSrGb:
     def test_srgb_pack_unpack_roundtrip(self) -> None:
         """Test pack/unpack roundtrip for SRGB."""
         original = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
-        packed = original.pack()
+        packed = original.pack_tlv()
 
         # Extract data portion (skip Type and Length)
         data = packed[3:]
@@ -231,7 +231,7 @@ class TestSrGb:
     def test_srgb_empty_ranges(self) -> None:
         """Test SRGB with empty ranges."""
         srgb = SrGb(srgbs=[])
-        packed = srgb.pack()
+        packed = srgb.pack_tlv()
 
         # Should still have Type + Length + Flags
         assert len(packed) >= 5
@@ -240,7 +240,7 @@ class TestSrGb:
         """Test SRGB with maximum 3-byte label values."""
         max_label = 0xFFFFFF  # 3 bytes max
         srgb = SrGb(srgbs=[(max_label, max_label)])
-        packed = srgb.pack()
+        packed = srgb.pack_tlv()
 
         data = packed[3:]
         unpacked = SrGb.unpack_attribute(data, length=len(data))
@@ -288,7 +288,7 @@ class TestPrefixSid:
         label_index = SrLabelIndex(labelindex=100)
         prefix_sid = PrefixSid(sr_attrs=[label_index])
 
-        packed = prefix_sid.pack()
+        packed = prefix_sid.pack_attribute()
         assert packed is not None
         assert len(packed) > 0
 
@@ -370,12 +370,12 @@ class TestPrefixSid:
         srgb = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
         original = PrefixSid(sr_attrs=[label_index, srgb])
 
-        original.pack()
+        original.pack_attribute()
 
         # Unpack (need to extract attribute value from full attribute encoding)
         # The pack() method adds attribute header, so we need to skip it
         # For simplicity, we'll use the sr_attrs directly
-        data = b''.join(attr.pack() for attr in original.sr_attrs)
+        data = b''.join(attr.pack_tlv() for attr in original.sr_attrs)
 
         negotiated = Mock()
         unpacked = PrefixSid.unpack_attribute(data, negotiated)
@@ -493,7 +493,7 @@ class TestSREdgeCases:
         prefix_sid = PrefixSid(sr_attrs=[])
         assert len(prefix_sid.sr_attrs) == 0
 
-        packed = prefix_sid.pack()
+        packed = prefix_sid.pack_attribute()
         assert packed is not None
 
     def test_prefix_sid_str_no_label_index(self) -> None:
@@ -513,7 +513,7 @@ class TestSREdgeCases:
             label_index = SrLabelIndex(labelindex=value)
             assert label_index.labelindex == value
 
-            packed = label_index.pack()
+            packed = label_index.pack_tlv()
             data = packed[3:]
             unpacked = SrLabelIndex.unpack_attribute(data, length=7)
             assert unpacked.labelindex == value
@@ -525,7 +525,7 @@ class TestSREdgeCases:
 
         assert len(srgb.srgbs) == 10
 
-        packed = srgb.pack()
+        packed = srgb.pack_tlv()
         data = packed[3:]
         length = struct.unpack('!H', packed[1:3])[0]
 
@@ -567,7 +567,7 @@ class TestSrv6SidStructure:
             tpose_len=0,
             tpose_offset=0,
         )
-        packed = sid_struct.pack()
+        packed = sid_struct.pack_tlv()
 
         # Format: Type(1) + Length(2) + 6 bytes of structure
         assert len(packed) == 9
@@ -596,7 +596,7 @@ class TestSrv6SidStructure:
             tpose_len=0,
             tpose_offset=64,
         )
-        packed = original.pack()
+        packed = original.pack_tlv()
         data = packed[3:]  # Skip Type and Length
 
         unpacked = Srv6SidStructure.unpack_attribute(data, length=6)
@@ -659,7 +659,7 @@ class TestSrv6SidInformation:
             behavior=0x0001,
             subsubtlvs=[],
         )
-        packed = sid_info.pack()
+        packed = sid_info.pack_tlv()
 
         # Format: Type(1) + Length(2) + Reserved(1) + SID(16) + Flags(1) + Behavior(2) + Reserved(1)
         assert len(packed) >= 24
@@ -725,7 +725,7 @@ class TestSrv6L3Service:
             subsubtlvs=[],
         )
         l3_service = Srv6L3Service(subtlvs=[sid_info])
-        packed = l3_service.pack()
+        packed = l3_service.pack_tlv()
 
         # Format: Type(1) + Length(2) + Reserved(1) + SubTLVs
         assert packed[0] == 5  # TLV type
@@ -791,7 +791,7 @@ class TestSrv6L2Service:
             subsubtlvs=[],
         )
         l2_service = Srv6L2Service(subtlvs=[sid_info])
-        packed = l2_service.pack()
+        packed = l2_service.pack_tlv()
 
         assert packed[0] == 6  # TLV type
         assert len(packed) > 4
@@ -850,7 +850,7 @@ class TestGenericSrv6:
         """Test packing GenericSrv6ServiceSubTlv."""
         data = b'\x01\x02\x03\x04'
         generic = GenericSrv6ServiceSubTlv(code=99, packed=data)
-        packed = generic.pack()
+        packed = generic.pack_tlv()
         assert packed == data
 
     def test_generic_service_subtlv_json(self) -> None:
@@ -877,7 +877,7 @@ class TestGenericSrv6:
         """Test packing GenericSrv6ServiceDataSubSubTlv."""
         data = b'\x0a\x0b\x0c\x0d'
         generic = GenericSrv6ServiceDataSubSubTlv(code=88, packed=data)
-        packed = generic.pack()
+        packed = generic.pack_tlv()
         assert packed == data
 
 

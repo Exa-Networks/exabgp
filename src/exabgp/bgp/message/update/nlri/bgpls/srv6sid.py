@@ -109,7 +109,7 @@ class SRv6SID(BGPLS):
             tlvs = tlvs[sid_length + 4 :]
         return cls(proto_id, domain, node_ids, srv6_sid_descriptors)
 
-    def pack(self, packed: Any = None) -> bytes:
+    def pack_nlri(self, packed: Any = None) -> bytes:
         nlri = pack('!B', self.proto_id)
         nlri += pack('!Q', self.domain)
         # Note: local_node_descriptors and srv6_sid_descriptors should be bytes here

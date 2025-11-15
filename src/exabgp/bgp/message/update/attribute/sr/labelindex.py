@@ -32,12 +32,12 @@ class SrLabelIndex:
 
     def __init__(self, labelindex: int, packed: Optional[bytes] = None) -> None:
         self.labelindex: int = labelindex
-        self.packed: bytes = self.pack()
+        self.packed: bytes = self.pack_tlv()
 
     def __repr__(self) -> str:
         return '{}'.format(self.labelindex)
 
-    def pack(self) -> bytes:
+    def pack_tlv(self) -> bytes:
         reserved, flags = 0, 0
         return (
             pack('!B', self.TLV)

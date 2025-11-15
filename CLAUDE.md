@@ -23,16 +23,29 @@ This protocol is mandatory due to a critical failure where 95 files were refacto
 - **Check file descriptor limit before running tests:** `ulimit -n` (should be ≥64000)
 - **If needed, increase limit:** `ulimit -n 64000`
 - `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py` - Unit tests with coverage
+- `env exabgp_log_enable=false pytest ./tests/unit/` - Faster unit tests without coverage
 - `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation test
-- `./qa/bin/functional encoding` - Run all encoding tests (spawns client and server pairs)
-- `./qa/bin/functional encoding --list` or `--short-list` - List available tests with unique letter identifiers
-- `./qa/bin/functional encoding <letter>` - Run specific test using letter from --list (e.g., `A`, `B`)
-- If one test fails, run it independently:
-  - `./qa/bin/functional encoding --server <letter>` - Run only the server component
-  - `./qa/bin/functional encoding --client <letter>` - Run only the client component
-- Each test spawns both an ExaBGP client and a dummy test server to verify expected client behavior
-- `./qa/bin/parsing` - Configuration parsing tests
-- `./qa/bin/functional decoding` - Configuration parsing tests
+- `./qa/bin/functional encoding` - Run all functional encoding tests (integration tests)
+  - **What it does:** Spawns 72 pairs of ExaBGP client/server instances to test real BGP message exchange
+  - **Output format:** Visual progress bar showing test status with letter identifiers (0-9, A-Z, a-z, α-κ)
+  - **Success criteria:** All 72 tests should pass (100%), typically completes in <60 seconds
+  - **Timeout:** Each test has 20 second timeout; timeouts indicate message encoding/decoding failures
+  - **Test results:**
+    - ✓ (passed) - Test completed successfully
+    - ✖ (failed) - Test failed with error
+    - ⏱ (timed out) - Test exceeded 20 second timeout (usually encoding/decoding bug)
+    - ○ (skipped) - Test was skipped
+  - **Summary output:** Shows counts and IDs of passed/failed/timed out/skipped tests
+  - **Pass percentage:** Total % of tests that passed (should be 100%)
+- `./qa/bin/functional encoding --list` - List all 72 tests with their letter identifiers and descriptions
+- `./qa/bin/functional encoding --short-list` - Compact list of test identifiers only
+- `./qa/bin/functional encoding <letter>` - Run specific test (e.g., `A`, `B`, `0`, `α`)
+  - Use this to debug individual test failures
+  - Test runs both client and server components
+- `./qa/bin/functional encoding --server <letter>` - Run only server component of specific test
+- `./qa/bin/functional encoding --client <letter>` - Run only client component of specific test
+- `./qa/bin/parsing` - Configuration file parsing tests
+- `./qa/bin/functional decoding` - Message decoding tests
 - `python3 setup.py sdist bdist_wheel` - Build distribution packages
 - `./release binary <target>` - Create self-contained zipapp binary
 

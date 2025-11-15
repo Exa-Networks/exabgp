@@ -26,7 +26,7 @@ class KeepAlive(Message):
     ID = Message.CODE.KEEPALIVE
     TYPE = bytes([Message.CODE.KEEPALIVE])
 
-    def message(self, negotiated: Negotiated) -> bytes:
+    def pack_message(self, negotiated: Negotiated) -> bytes:
         return self._message(b'')
 
     def __str__(self) -> str:

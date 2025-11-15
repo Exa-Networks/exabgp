@@ -30,7 +30,7 @@ class AtomicAggregate(Attribute):
     # def __eq__ (self, other):
     # def __ne__ (self, other):
 
-    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_attribute(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._attribute(b'')
 
     def __len__(self) -> int:

@@ -18,11 +18,11 @@ class TestData(unittest.TestCase):
         pass
 
     # def test_1_nlri_1 (self):
-    # 	self.assertEqual(''.join([chr(c) for c in [32,1,2,3,4]]),to_NLRI('1.2.3.4','32').pack())
+    # 	self.assertEqual(''.join([chr(c) for c in [32,1,2,3,4]]),to_NLRI('1.2.3.4','32').pack_attribute())
     # def test_1_nlri_2 (self):
-    # 	self.assertEqual(''.join([chr(c) for c in [24,1,2,3]]),to_NLRI('1.2.3.4','24').pack())
+    # 	self.assertEqual(''.join([chr(c) for c in [24,1,2,3]]),to_NLRI('1.2.3.4','24').pack_attribute())
     # def test_1_nlri_3 (self):
-    # 	self.assertEqual(''.join([chr(c) for c in [20,1,2,3]]),to_NLRI('1.2.3.4','20').pack())
+    # 	self.assertEqual(''.join([chr(c) for c in [20,1,2,3]]),to_NLRI('1.2.3.4','20').pack_attribute())
     #
     # def test_2_ip_2 (self):
     # 	self.assertEqual(str(InetIP('::ffff:192.168.1.26')),'::ffff:192.168.1.26/128')
@@ -58,9 +58,9 @@ class TestData(unittest.TestCase):
     # 	self.assertEqual(str(afi),"%s/24" % ip)
     # 	self.assertEqual(str(bgp),"%s/24" % ip)
     #
-    # 	self.assertEqual(pfx.pack(),bnt)
-    # 	self.assertEqual(afi.pack(),bnt)
-    # 	self.assertEqual(bgp.pack(),bnt)
+    # 	self.assertEqual(pfx.pack_attribute(),bnt)
+    # 	self.assertEqual(afi.pack_attribute(),bnt)
+    # 	self.assertEqual(bgp.pack_attribute(),bnt)
     #
     # 	# README: NEED To add ASN test
     # 	# README: NEED To add NLRI test

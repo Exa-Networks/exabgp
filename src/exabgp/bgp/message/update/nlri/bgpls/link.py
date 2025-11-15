@@ -204,7 +204,7 @@ class LINK(BGPLS):
     def __hash__(self) -> int:
         return hash((self.CODE, self.domain, self.proto_id, tuple(self.topology_ids), self.route_d))
 
-    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         if self._packed:
             return self._packed
         raise RuntimeError('Not implemented')

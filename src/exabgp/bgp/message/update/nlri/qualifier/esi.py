@@ -55,7 +55,7 @@ class ESI:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def pack(self) -> bytes:
+    def pack_esi(self) -> bytes:
         return self.esi
 
     def __len__(self) -> int:

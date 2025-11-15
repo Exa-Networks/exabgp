@@ -267,10 +267,10 @@ class TestMAC:
         mac = MACQUAL('aa:bb:cc:dd:ee:ff')
 
         # Create packed data with invalid MAC length
-        packed = rd.pack() + esi.pack() + etag.pack() + bytes([64])  # Invalid: > 48
+        packed = rd.pack_rd() + esi.pack_esi() + etag.pack_etag() + bytes([64])  # Invalid: > 48
 
         with pytest.raises(Notify):
-            MAC.unpack_evpn_route(packed + mac.pack() + bytes([0]) + Labels([100], True).pack())
+            MAC.unpack_evpn_route(packed + mac.pack_mac() + bytes([0]) + Labels([100], True).pack_labels())
 
     def test_mac_string_representation(self) -> None:
         """Test string representation of MAC route"""
@@ -502,7 +502,7 @@ class TestEthernetSegment:
         esi = ESI()
 
         # Create packed data with invalid IP length
-        packed = rd.pack() + esi.pack() + bytes([64])  # Invalid: not 32 or 128
+        packed = rd.pack_rd() + esi.pack_esi() + bytes([64])  # Invalid: not 32 or 128
 
         with pytest.raises(Notify):
             EthernetSegment.unpack_evpn_route(packed + bytes([0] * 8))

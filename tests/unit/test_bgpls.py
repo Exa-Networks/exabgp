@@ -228,7 +228,7 @@ class TestNodeNLRI:
         )
 
         node = NODE.unpack_bgpls_nlri(data, rd=None)
-        packed = node.pack()
+        packed = node.pack_nlri()
 
         # Should return the original packed data
         assert packed == data
@@ -436,10 +436,10 @@ class TestLinkNLRI:
         # Note: link.py line 191 has typo: checks 'self.packed' instead of 'self._packed'
         # This test documents expected behavior once bug is fixed
         try:
-            packed = link.pack()
+            packed = link.pack_nlri()
             assert packed == data
         except AttributeError:
-            pytest.skip('Known bug in LINK.pack() - checks wrong attribute name')
+            pytest.skip('Known bug in LINK.pack_nlri() - checks wrong attribute name')
 
 
 class TestPrefixV4NLRI:
@@ -578,7 +578,7 @@ class TestPrefixV4NLRI:
         )
 
         prefix = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
-        packed = prefix.pack()
+        packed = prefix.pack_nlri()
 
         assert packed == data
 
@@ -719,7 +719,7 @@ class TestPrefixV6NLRI:
         )
 
         prefix = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
-        packed = prefix.pack()
+        packed = prefix.pack_nlri()
 
         assert packed == data
 

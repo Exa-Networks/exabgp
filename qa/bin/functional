@@ -108,12 +108,22 @@ class Exec(object):
         self._process = None
         self.command = []
 
-    def run(self, command):
+    def run(self, command, env=None):
         self.command = ' '.join([_ if ' ' not in _ else f"'{_}'" for _ in command])
+        # Set up environment to disable ExaBGP logging
+        if env is None:
+            env = os.environ.copy()
+            env['exabgp_log_enable'] = 'false'
+
+        # Use PIPE to capture all output for test verification
         self._process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            close_fds=True,
+            stdin=subprocess.DEVNULL,
+            env=env,
+            start_new_session=True,  # Detach from controlling terminal
         )
         return self
 
@@ -132,12 +142,14 @@ class Exec(object):
         return True
 
     def report(self, reason='issue with exabgp'):
-        flush(reason)
-        flush(f'command> {self.command}')
-        flush(f'return: {self.code}')
-        flush(f'stdout: {self.stdout.decode()}')
-        flush(f'stderr: {self.stderr.decode()}')
-        flush(f'message: {self.message}')
+        # Suppress all diagnostic output to keep test results clean
+        # flush(reason)
+        # flush(f'command> {self.command}')
+        # flush(f'return: {self.code}')
+        # flush(f'stdout: {self.stdout.decode()}')
+        # flush(f'stderr: {self.stderr.decode()}')
+        # flush(f'message: {self.message}')
+        pass
 
     def collect(self):
         if self.stdout:
@@ -160,18 +172,27 @@ class Exec(object):
             self.message = str(exc)
             pass
 
-    def terminate(self):
+    def terminate(self, collect=True):
+        if self._process is None:
+            return
         try:
             self._process.send_signal(signal.SIGTERM)
-        except OSError:  # No such process, Errno 3
+        except (OSError, ProcessLookupError):  # No such process, Errno 3
             pass
-        self.collect()
+        if collect:
+            self.collect()
+        # After collect, try to kill any remaining child processes in the process group
+        try:
+            os.killpg(os.getpgid(self._process.pid), signal.SIGKILL)
+        except (OSError, ProcessLookupError, AttributeError):
+            pass
 
     def __del__(self):
-        self.terminate
+        if self._process is not None:
+            self.terminate()
 
 
-State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP')
+State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP TIMEOUT')
 
 
 class Record:
@@ -184,6 +205,8 @@ class Record:
         self.conf = dict()
         self.files = []
         self.state = State.SKIP
+        self.start_time = None
+        self.timeout = 999999.0  # Effectively disable per-test timeout, use global timeout only
 
     @classmethod
     def new(cls, name):
@@ -208,7 +231,7 @@ class Record:
         return self
 
     def is_active(self):
-        return self.state not in (State.SKIP, State.FAIL, State.SUCCESS)
+        return self.state not in (State.SKIP, State.FAIL, State.SUCCESS, State.TIMEOUT)
 
     def setup(self):
         if self.state == State.NONE:
@@ -216,10 +239,24 @@ class Record:
             return
         if self.state == State.STARTING:
             self.state = State.RUNNING
+            self.start_time = time.time()
             return
 
     def running(self):
         self.state = State.RUNNING
+        if self.start_time is None:
+            self.start_time = time.time()
+
+    def has_timed_out(self):
+        """Check if test has exceeded its individual timeout"""
+        if self.start_time is None:
+            return False
+        return (time.time() - self.start_time) > self.timeout
+
+    def mark_timeout(self):
+        """Mark test as timed out"""
+        self.state = State.TIMEOUT
+        return self
 
     def colored(self):
         if self.state == State.NONE:
@@ -234,6 +271,8 @@ class Record:
             return color(1, 92) + '✓'  # GREEN - Successful test
         if self.state == State.SKIP:
             return color(0, 90) + '○'  # GRAY - Skipped test
+        if self.state == State.TIMEOUT:
+            return color(0, 93) + '⏱'  # YELLOW - Timed out test
 
     def result(self, success):
         if success:
@@ -249,6 +288,10 @@ class Tests:
         self._by_nick = {}
         self._ordered = []
         self._nl = 3
+        self._start_time = None
+        self._max_timeout = 0
+        self._daemons_count = 0
+        self._clients_count = 0
 
     def new(self, name):
         test = self.klass.new(name)
@@ -306,17 +349,148 @@ class Tests:
         sys.stdout.write('\n')
         sys.stdout.flush()
 
-    def display(self):
+    def display(self, daemons_started=None, clients_started=None):
+        # Show timer in setup phase with [0/max] format
+        if daemons_started is not None and clients_started is not None:
+            if self._max_timeout:
+                timer = (
+                    f'{color(0, 33)}timeout{color(0, 0)} [{0:2d}/{color(0, 33)}{self._max_timeout:2d}{color(0, 0)}] '
+                )
+            else:
+                timer = ''
+            status = f'{timer}{color(0, 36)}daemons{color(0, 0)} {daemons_started:2d} {color(0, 36)}clients{color(0, 0)} {clients_started:2d}'
+            # Clear line before writing to prevent artifacts
+            sys.stdout.write('\r')
+            sys.stdout.write('\033[K')
+            sys.stdout.write(status)
+            sys.stdout.flush()
+            return
+
+        # Count test states
+        remaining = 0
+        passed = 0
+        failed = 0
+        failed_tests = []
+        remaining_tests = []
+
         for test in self.registered():
-            sys.stdout.write(' %s' % test.colored())
-        sys.stdout.write('%s\r' % color(0, 0))
+            if test.state == State.SUCCESS:
+                passed += 1
+            elif test.state == State.FAIL:
+                failed += 1
+                failed_tests.append(test.nick)
+            elif test.state == State.TIMEOUT:
+                failed += 1
+                failed_tests.append(test.nick)
+            elif test.state in (State.NONE, State.STARTING, State.RUNNING):
+                remaining += 1
+                remaining_tests.append(test.nick)
+
+        # Show timer: timeout [elapsed/max] - yellow label and max number
+        if self._start_time and self._max_timeout:
+            elapsed = int(time.time() - self._start_time)
+            # Cap elapsed time to max timeout to prevent timer overshoot
+            elapsed = min(elapsed, self._max_timeout)
+            timer = (
+                f'{color(0, 33)}timeout{color(0, 0)} [{elapsed:2d}/{color(0, 33)}{self._max_timeout:2d}{color(0, 0)}] '
+            )
+        else:
+            timer = ''
+
+        # Prepend daemon/client counts if they're set (for encoding tests) - cyan labels only
+        daemon_client = ''
+        if self._daemons_count > 0 or self._clients_count > 0:
+            daemon_client = f'{color(0, 36)}daemons{color(0, 0)} {self._daemons_count:2d} {color(0, 36)}clients{color(0, 0)} {self._clients_count:2d} '
+
+        # Format with labels and colors
+        # Order: timer, daemon/client, passed, failed (if > 0), remaining
+        passed_text = f'{color(0, 32)}passed{color(0, 0)} {passed:2d}'
+
+        # Build status line
+        status_parts = [timer, daemon_client, passed_text]
+
+        # Add failed section if there are failures
+        # "failed   " (9 chars) only for single test to match "remaining", otherwise "failed" (6 chars)
+        if failed > 0:
+            label = 'failed   ' if len(self.selected()) == 1 else 'failed'
+            failed_text = f'{color(0, 31)}{label}{color(0, 0)} {failed:2d}'
+            if failed_tests:
+                failed_text += f' [{", ".join(failed_tests)}]'
+            status_parts.append(failed_text)
+
+        # Add remaining last, show test IDs if < 10
+        remaining_text = f'remaining {remaining:2d}'
+        if remaining > 0 and remaining < 10 and remaining_tests:
+            remaining_text += f' [{", ".join(remaining_tests)}]'
+        status_parts.append(remaining_text)
+
+        status = ' '.join(status_parts)
+
+        # Clear entire line first, then write status, then return to start
+        # This prevents "X] X] X]" artifacts when status text gets shorter
+        sys.stdout.write('\r')  # Return to start of line
+        sys.stdout.write('\033[K')  # Clear from cursor to end of line
+        sys.stdout.write(status)
         sys.stdout.flush()
 
     def legend(self):
-        sys.stdout.write('\nTest results (each character is a test):\n')
-        sys.stdout.write(f'  {color(1, 92)}✓{color(0, 0)} = passed  ')
-        sys.stdout.write(f'{color(0, 91)}✖{color(0, 0)} = failed  ')
-        sys.stdout.write(f'{color(0, 90)}○{color(0, 0)} = skipped\n\n')
+        sys.stdout.write(
+            '\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N remaining N passed N failed N [failed test IDs]\n\n'
+        )
+        sys.stdout.flush()
+
+    def summary(self):
+        """Print summary of test results"""
+        passed = []
+        failed = []
+        timed_out = []
+        skipped = []
+
+        for test in self.registered():
+            if test.state == State.SUCCESS:
+                passed.append(test.nick)
+            elif test.state == State.FAIL:
+                failed.append(test.nick)
+            elif test.state == State.TIMEOUT:
+                timed_out.append(test.nick)
+            elif test.state == State.SKIP:
+                skipped.append(test.nick)
+
+        sys.stdout.write('\n')
+        sys.stdout.write('=' * 60 + '\n')
+        sys.stdout.write('TEST SUMMARY\n')
+        sys.stdout.write('=' * 60 + '\n')
+
+        # Always show all possible outcomes with colors matching the display
+        # Only show test IDs for failed and timed out
+        if passed:
+            sys.stdout.write(f'{color(0, 32)}passed{color(0, 0)} {len(passed):2d}\n')
+        else:
+            sys.stdout.write(f'{color(0, 32)}passed{color(0, 0)} {0:2d}\n')
+
+        if failed:
+            sys.stdout.write(f'{color(0, 31)}failed{color(0, 0)} {len(failed):2d} [{", ".join(failed)}]\n')
+        else:
+            sys.stdout.write(f'failed {0:2d}\n')
+
+        if timed_out:
+            sys.stdout.write(f'{color(0, 33)}timed out{color(0, 0)} {len(timed_out):2d} [{", ".join(timed_out)}]\n')
+        else:
+            sys.stdout.write(f'timed out {0:2d}\n')
+
+        if skipped:
+            sys.stdout.write(f'{color(0, 90)}skipped{color(0, 0)} {len(skipped):2d}\n')
+        else:
+            sys.stdout.write(f'{color(0, 90)}skipped{color(0, 0)} {0:2d}\n')
+
+        sys.stdout.write('=' * 60 + '\n')
+
+        total_run = len(passed) + len(failed) + len(timed_out)
+        if total_run > 0:
+            success_rate = (len(passed) / total_run) * 100 if total_run > 0 else 0
+            sys.stdout.write(f'Total: {total_run} test(s) run, {success_rate:.1f}% passed\n')
+
+        sys.stdout.write('\n')
         sys.stdout.flush()
 
 
@@ -493,13 +667,17 @@ class EncodingTests(Tests):
         return '\n'.join(result)
 
     def run_selected(self, timeout):
+        # Set max timeout before setup so it shows during initialization
+        self._max_timeout = timeout
         self.legend()
         success = True
         client = dict()
 
+        # Start daemons (servers) - timer shows [0/max] during setup
+        daemons_started = 0
+        last_daemon_display = -1  # Track last displayed count to avoid duplicates
         for test in self.selected():
             test.setup()
-            self.display()
             test.run(
                 [
                     sys.argv[0],
@@ -510,13 +688,23 @@ class EncodingTests(Tests):
                     f'{test.conf["port"]}',
                 ]
             )
+            daemons_started += 1
+            # Only display every 10th daemon and avoid duplicate displays
+            if daemons_started % 10 == 0 and daemons_started != last_daemon_display:
+                self.display(daemons_started=daemons_started, clients_started=0)
+                last_daemon_display = daemons_started
             time.sleep(0.005)
 
+        # Final display for daemons (only if not already displayed)
+        if daemons_started != last_daemon_display:
+            self.display(daemons_started=daemons_started, clients_started=0)
         time.sleep(0.02)
 
+        # Start clients - timer shows [0/max] during setup
+        clients_started = 0
+        last_client_display = -1  # Track last displayed count to avoid duplicates
         for test in self.selected():
             test.setup()
-            self.display()
             client[test.nick] = Exec().run(
                 [
                     sys.argv[0],
@@ -527,31 +715,81 @@ class EncodingTests(Tests):
                     f'{test.conf["port"]}',
                 ]
             )
+            clients_started += 1
+            # Only display every 10th client and avoid duplicate displays
+            if clients_started % 10 == 0 and clients_started != last_client_display:
+                self.display(daemons_started=daemons_started, clients_started=clients_started)
+                last_client_display = clients_started
             time.sleep(0.005)
 
+        # Final display for clients (only if not already displayed)
+        if clients_started != last_client_display:
+            self.display(daemons_started=daemons_started, clients_started=clients_started)
+
+        # Store daemon and client counts for display during test execution
+        self._daemons_count = daemons_started
+        self._clients_count = clients_started
+
+        # Start timer AFTER setup is complete
+        self._start_time = time.time()
+
         exit_time = time.time() + timeout
+        last_display = 0  # Track last display time to throttle updates
 
         running = set(self.selected())
 
-        while running and time.time() < exit_time:
-            self.display()
+        while running:
+            current_time = time.time()
+
+            # Check timeout first
+            if current_time >= exit_time:
+                # Show final display before cleanup to avoid timer overshoot
+                self.display()
+                break
+
+            # Throttle display updates to once per second
+            if current_time - last_display >= 1.0:
+                self.display()
+                last_display = current_time
+
             for test in list(running):
+                # Check per-test timeout first
+                if test.has_timed_out():
+                    running.remove(test)
+                    test.mark_timeout()
+                    test.terminate(collect=False)  # Don't block on collect in hot loop
+                    client[test.nick].terminate(collect=False)
+                    success = False
+                    continue
+
                 if not test.ready():
                     continue
                 if not client[test.nick].ready():
                     continue
                 running.remove(test)
-                client[test.nick].terminate()
+                client[test.nick].terminate(collect=False)  # Don't block on collect in hot loop
                 success = test.result(test.success()) and success
+
+            # If no tests are still running, exit immediately
+            if not running:
+                # Show final display before cleanup
                 self.display()
+                break
+
             time.sleep(0.1)
 
+        # Clean up any remaining running tests without blocking
         for test in running:
-            test.fail()
-            test.terminate()
+            test.mark_timeout()
+            test.terminate(collect=False)
+            client[test.nick].terminate(collect=False)
             success = False
 
-        self.display()
+        # Move to new line after final display
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
+        self.summary()
         return success
 
 
@@ -640,6 +878,8 @@ class DecodingTests(Tests):
         return '\n'.join(result)
 
     def run_selected(self, timeout):
+        self._start_time = time.time()
+        self._max_timeout = timeout
         self.legend()
         success = True
         for test in self.selected():
@@ -672,24 +912,56 @@ class DecodingTests(Tests):
             time.sleep(0.05)
 
         exit_time = time.time() + timeout
+        last_display = 0  # Track last display time to throttle updates
         running = set(self.selected())
 
-        while running and time.time() < exit_time:
-            self.display()
+        while running:
+            current_time = time.time()
+
+            # Check timeout first
+            if current_time >= exit_time:
+                # Show final display before cleanup to avoid timer overshoot
+                self.display()
+                break
+
+            # Throttle display updates to once per second
+            if current_time - last_display >= 1.0:
+                self.display()
+                last_display = current_time
+
             for test in list(running):
+                # Check per-test timeout first
+                if test.has_timed_out():
+                    running.remove(test)
+                    test.mark_timeout()
+                    test.terminate(collect=False)  # Don't block on collect in hot loop
+                    success = False
+                    continue
+
                 if not test.ready():
                     continue
                 running.remove(test)
                 success = test.result(test.success()) and success
+
+            # If no tests are still running, exit immediately
+            if not running:
+                # Show final display before cleanup
                 self.display()
+                break
+
             time.sleep(0.1)
 
+        # Clean up any remaining running tests without blocking
         for test in running:
-            test.fail()
-            test.terminate()
+            test.mark_timeout()
+            test.terminate(collect=False)
             success = False
 
-        self.display()
+        # Move to new line after final display
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
+        self.summary()
         return success
 
 
@@ -734,6 +1006,8 @@ class ParsingTests(Tests):
         return '\n'.join(result)
 
     def run_selected(self, timeout):
+        self._start_time = time.time()
+        self._max_timeout = timeout
         self.legend()
         success = True
 
@@ -749,23 +1023,56 @@ class ParsingTests(Tests):
             time.sleep(0.005)
 
         exit_time = time.time() + timeout
+        last_display = 0  # Track last display time to throttle updates
         running = set(self.selected())
 
-        while running and time.time() < exit_time:
+        while running:
+            current_time = time.time()
+
+            # Check timeout first
+            if current_time >= exit_time:
+                # Show final display before cleanup to avoid timer overshoot
+                self.display()
+                break
+
+            # Throttle display updates to once per second
+            if current_time - last_display >= 1.0:
+                self.display()
+                last_display = current_time
+
             for test in list(running):
+                # Check per-test timeout first
+                if test.has_timed_out():
+                    running.remove(test)
+                    test.mark_timeout()
+                    test.terminate(collect=False)  # Don't block on collect in hot loop
+                    success = False
+                    continue
+
                 if not test.ready():
                     continue
                 running.remove(test)
                 success = test.result(test.success()) and success
+
+            # If no tests are still running, exit immediately
+            if not running:
+                # Show final display before cleanup
                 self.display()
+                break
+
             time.sleep(0.1)
 
+        # Clean up any remaining running tests without blocking
         for test in running:
-            test.fail()
-            test.terminate()
+            test.mark_timeout()
+            test.terminate(collect=False)
             success = False
 
-        self.display()
+        # Move to new line after final display
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
+        self.summary()
         return success
 
 
@@ -774,9 +1081,9 @@ def add_test(subparser, name, tests, extra):
     if 'dry' in extra:
         sub.add_argument('--dry', help='show the action', action='store_true')
     if 'server' in extra:
-        sub.add_argument('--server', help='start the server for a test', action='store_true')
+        sub.add_argument('--server', help='start the server for a test', type=str, default=None)
     if 'client' in extra:
-        sub.add_argument('--client', help='start the client for a test', action='store_true')
+        sub.add_argument('--client', help='start the client for a test', type=str, default=None)
     if 'list' in extra:
         sub.add_argument('--list', help='list the files making a test', action='store_true')
     if 'short_list' in extra:
@@ -784,16 +1091,18 @@ def add_test(subparser, name, tests, extra):
     if 'edit' in extra:
         sub.add_argument('--edit', help='edit the files making a test', action='store_true')
     if 'timeout' in extra:
-        sub.add_argument('--timeout', help='timeout for test failure', type=int, default=60)
+        sub.add_argument('--timeout', help='total timeout for all tests (seconds)', type=int, default=20)
     if 'port' in extra:
         sub.add_argument('--port', help='base port to use', type=int, default=1790)
-    sub.add_argument('test', help='name of the test to run', nargs='?', default=None)
+    sub.add_argument('test', help='name of the test(s) to run', nargs='*', default=None)
 
     def func(parsed):
         if 'edit' in extra and parsed.edit:
-            if not tests.enable_by_nick(parsed.test):
+            if not parsed.test or len(parsed.test) != 1:
+                sys.exit('--edit requires exactly one test')
+            if not tests.enable_by_nick(parsed.test[0]):
                 sys.exit('no such test')
-            test = tests.get_by_nick(parsed.test)
+            test = tests.get_by_nick(parsed.test[0])
             if not test.files:
                 sys.exit('no file for the test')
             editor = os.environ.get('EDITOR', 'vi')
@@ -812,14 +1121,14 @@ def add_test(subparser, name, tests, extra):
             return
 
         if 'client' in extra and parsed.client:
-            command = tests.client(parsed.test)
+            command = tests.client(parsed.client)
             flush(f'client> {command}')
             if not parsed.dry:
                 sys.exit(os.system(command))
             return
 
         if 'server' in extra and parsed.server:
-            command = tests.server(parsed.test)
+            command = tests.server(parsed.server)
             flush(f'server> {command}')
             if not parsed.dry:
                 sys.exit(os.system(command))
@@ -829,8 +1138,10 @@ def add_test(subparser, name, tests, extra):
             parsed.timeout = 0
 
         if parsed.test:
-            if not tests.enable_by_nick(parsed.test):
-                sys.exit(f'could not find test {parsed.test}')
+            # Enable multiple tests if provided
+            for test_nick in parsed.test:
+                if not tests.enable_by_nick(test_nick):
+                    sys.exit(f'could not find test {test_nick}')
         else:
             tests.enable_all()
 

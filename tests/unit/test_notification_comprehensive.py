@@ -411,7 +411,7 @@ def test_notify_wire_format_basic() -> None:
     - Data: variable
     """
     notify = Notify(2, 1, 'AB')
-    packet = notify.message(negotiated=None)
+    packet = notify.pack_message(negotiated=None)
 
     # Marker: 16 bytes of 0xFF
     assert packet[:16] == Message.MARKER
@@ -437,7 +437,7 @@ def test_notify_wire_format_basic() -> None:
 def test_notify_wire_format_no_data() -> None:
     """Test Notify encoding with no additional data."""
     notify = Notify(4, 0)
-    packet = notify.message(create_negotiated())
+    packet = notify.pack_message(create_negotiated())
 
     # Total length should be header + code + subcode + default message
     assert len(packet) >= Message.HEADER_LEN + 2
@@ -450,7 +450,7 @@ def test_notify_wire_format_various_sizes() -> None:
     for size in test_sizes:
         data = 'A' * size
         notify = Notify(3, 1, data)
-        packet = notify.message(create_negotiated())
+        packet = notify.pack_message(create_negotiated())
 
         # Verify marker
         assert packet[:16] == Message.MARKER
@@ -667,7 +667,7 @@ def test_notification_encode_decode_roundtrip() -> None:
     """Test NOTIFICATION encode/decode round-trip."""
     # Create and encode
     original = Notify(2, 1, 'Test data')
-    encoded = original.message(create_negotiated())
+    encoded = original.pack_message(create_negotiated())
 
     # Extract payload (skip 19-byte header)
     payload = encoded[19:]
@@ -692,7 +692,7 @@ def test_notification_roundtrip_various_errors() -> None:
 
     for code, subcode, data in test_cases:
         original = Notify(code, subcode, data)
-        encoded = original.message(create_negotiated())
+        encoded = original.pack_message(create_negotiated())
         payload = encoded[19:]
         decoded = Notification.unpack_message(payload, create_negotiated())
 

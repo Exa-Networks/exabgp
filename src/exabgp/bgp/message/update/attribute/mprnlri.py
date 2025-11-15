@@ -82,7 +82,7 @@ class MPRNLRI(Attribute, Family):
                     nexthop = bytes([0]) * 4
 
             # mpunli[nexthop] = nlri
-            mpnlri.setdefault(nexthop, []).append(nlri.pack(negotiated))
+            mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
 
         for nexthop, nlris in mpnlri.items():
             payload = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0])
@@ -99,7 +99,7 @@ class MPRNLRI(Attribute, Family):
                 raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
             yield self._attribute(payload)
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return b''.join(self.packed_attributes(negotiated))
 
     def __len__(self) -> int:

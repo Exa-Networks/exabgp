@@ -117,5 +117,5 @@ class IpReach:
     def __hash__(self):
         return hash(str(self))
 
-    def pack(self):
+    def pack_tlv(self):
         return self._packed

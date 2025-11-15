@@ -81,7 +81,7 @@ class ExtendedCommunityBase(Attribute):
         #     Value 1: The community is non-transitive across ASes
         return not (self.community[0] & 0x40)
 
-    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self.community
 
     def _subtype(self, transitive: bool = True) -> bytes:
