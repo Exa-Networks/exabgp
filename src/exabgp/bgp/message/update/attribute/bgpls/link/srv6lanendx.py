@@ -47,47 +47,49 @@ ISIS = 1
 OSPF = 2
 
 
-def unpack_data(cls, data, type):
-    behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
-    flags = cls.unpack_flags(data[2:3])
-    algorithm = data[3]
-    weight = data[4]
-    if type == ISIS:
-        neighbor_id = ISO.unpack_sysid(data[6:12])
-    else:
-        neighbor_id = IP.unpack_ip(data[6:10])
-    start_offset = 12 if type == ISIS else 6
-    sid = IPv6.ntop(data[start_offset : start_offset + 16])
-    data = data[start_offset + 16 :]
-    subtlvs = []
-
-    while data and len(data) >= BGPLS_SUBTLV_HEADER_SIZE:
-        code = unpack('!H', data[0:2])[0]
-        length = unpack('!H', data[2:4])[0]
-
-        if code in cls.registered_subsubtlvs:
-            subsubtlv = cls.registered_subsubtlvs[code].unpack(
-                data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE]
-            )
-            subtlvs.append(subsubtlv.json())
+class Srv6(FlagLS):
+    @classmethod
+    def _unpack_data(cls, data: bytes, protocol_type: int) -> dict:
+        behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
+        flags = cls.unpack_flags(data[2:3])
+        algorithm = data[3]
+        weight = data[4]
+        if protocol_type == ISIS:
+            neighbor_id = ISO.unpack_sysid(data[6:12])
         else:
-            subsubtlv = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
-            subtlvs.append(f'"{code}-undecoded": "{subsubtlv}"')
-        data = data[length + BGPLS_SUBTLV_HEADER_SIZE :]
+            neighbor_id = IP.unpack_ip(data[6:10])
+        start_offset = 12 if protocol_type == ISIS else 6
+        sid = IPv6.ntop(data[start_offset : start_offset + 16])
+        data = data[start_offset + 16 :]
+        subtlvs = []
 
-    return {
-        'flags': flags,
-        'neighbor-id': neighbor_id,
-        'behavior': behavior,
-        'algorithm': algorithm,
-        'weight': weight,
-        'sid': sid,
-        **json.loads('{' + ', '.join(subtlvs) + '}'),
-    }
+        while data and len(data) >= BGPLS_SUBTLV_HEADER_SIZE:
+            code = unpack('!H', data[0:2])[0]
+            length = unpack('!H', data[2:4])[0]
+
+            if code in cls.registered_subsubtlvs:
+                subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
+                    data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE]
+                )
+                subtlvs.append(subsubtlv.json())
+            else:
+                subsubtlv = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
+                subtlvs.append(f'"{code}-undecoded": "{subsubtlv}"')
+            data = data[length + BGPLS_SUBTLV_HEADER_SIZE :]
+
+        return {
+            'flags': flags,
+            'neighbor-id': neighbor_id,
+            'behavior': behavior,
+            'algorithm': algorithm,
+            'weight': weight,
+            'sid': sid,
+            **json.loads('{' + ', '.join(subtlvs) + '}'),
+        }
 
 
 @LinkState.register()
-class Srv6LanEndXISIS(FlagLS):
+class Srv6LanEndXISIS(Srv6):
     TLV = 1107
     MERGE = True
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
@@ -119,14 +121,14 @@ class Srv6LanEndXISIS(FlagLS):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
-        return cls(unpack_data(cls, data, ISIS))
+        return cls(cls._unpack_data(data, ISIS))
 
     def json(self, compact=None):
         return '"srv6-lan-endx-isis": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
 
 
 @LinkState.register()
-class Srv6LanEndXOSPF(FlagLS):
+class Srv6LanEndXOSPF(Srv6):
     TLV = 1108
     MERGE = True
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
@@ -157,8 +159,8 @@ class Srv6LanEndXOSPF(FlagLS):
         return register_subsubtlv
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
-        return cls(unpack_data(cls, data, OSPF))  # type: ignore[return-value]
+    def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXOSPF:
+        return cls(cls._unpack_data(data, OSPF))
 
     def json(self, compact=None):
         return '"srv6-lan-endx-ospf": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))

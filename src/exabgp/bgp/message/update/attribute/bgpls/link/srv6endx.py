@@ -79,7 +79,7 @@ class Srv6EndX(FlagLS):
             length = unpack('!H', data[2:4])[0]
 
             if code in cls.registered_subsubtlvs:
-                subsubtlv = cls.registered_subsubtlvs[code].unpack(
+                subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
                     data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE]
                 )
                 subtlvs.append(subsubtlv.json())
