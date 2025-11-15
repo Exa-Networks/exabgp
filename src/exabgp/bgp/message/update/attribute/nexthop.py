@@ -38,16 +38,16 @@ class NextHop(Attribute, IP):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NextHop):
             return False
-        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other.ton()
+        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def ton(self, negotiated: Negotiated = None, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
+    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
         return self._packed
 
     def pack(self, negotiated: Negotiated) -> bytes:
-        return self._attribute(self.ton())
+        return self._attribute(self.ton(negotiated))
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> IP:
@@ -74,7 +74,7 @@ class NextHopSelf(NextHop):
     def pack(self, negotiated: Negotiated) -> bytes:
         return self._attribute(negotiated.nexthopself(self.afi).ton())
 
-    def ton(self, negotiated: Negotiated = None, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
+    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
         return negotiated.nexthopself(afi).ton()  # type: ignore[no-any-return]
 
     def __eq__(self, other: object) -> bool:
