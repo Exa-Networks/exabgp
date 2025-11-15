@@ -193,7 +193,7 @@ def test_mpreach_pack_ipv4() -> None:
     negotiated.addpath.send = Mock(return_value=False)
 
     # Pack the attribute
-    packed = mpreach.pack(negotiated)
+    packed = mpreach.pack_attribute(negotiated)
 
     # Verify it produces bytes
     assert isinstance(packed, bytes)
@@ -354,7 +354,7 @@ def test_mpunreach_pack_ipv4() -> None:
     negotiated.addpath.send = Mock(return_value=False)
 
     # Pack the attribute
-    packed = mpunreach.pack(negotiated)
+    packed = mpunreach.pack_attribute(negotiated)
 
     # Verify it produces bytes
     assert isinstance(packed, bytes)

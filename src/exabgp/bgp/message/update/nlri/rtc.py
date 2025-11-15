@@ -70,7 +70,7 @@ class RTC(NLRI):
         # We reset ext com flag bits from the first byte in the packed RT
         # because in an RTC route these flags never appear.
         if self.rt:
-            packedRT = self.rt.pack()
+            packedRT = self.rt.pack_attribute()
             return pack('!BLB', len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]
         return pack('!B', 0)
 

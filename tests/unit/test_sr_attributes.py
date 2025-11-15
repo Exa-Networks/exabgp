@@ -288,7 +288,7 @@ class TestPrefixSid:
         label_index = SrLabelIndex(labelindex=100)
         prefix_sid = PrefixSid(sr_attrs=[label_index])
 
-        packed = prefix_sid.pack()
+        packed = prefix_sid.pack_attribute()
         assert packed is not None
         assert len(packed) > 0
 
@@ -370,7 +370,7 @@ class TestPrefixSid:
         srgb = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
         original = PrefixSid(sr_attrs=[label_index, srgb])
 
-        original.pack()
+        original.pack_attribute()
 
         # Unpack (need to extract attribute value from full attribute encoding)
         # The pack() method adds attribute header, so we need to skip it
@@ -493,7 +493,7 @@ class TestSREdgeCases:
         prefix_sid = PrefixSid(sr_attrs=[])
         assert len(prefix_sid.sr_attrs) == 0
 
-        packed = prefix_sid.pack()
+        packed = prefix_sid.pack_attribute()
         assert packed is not None
 
     def test_prefix_sid_str_no_label_index(self) -> None:

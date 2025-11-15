@@ -45,7 +45,7 @@ class ClusterList(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
         return self._packed
 
     def __len__(self) -> int:

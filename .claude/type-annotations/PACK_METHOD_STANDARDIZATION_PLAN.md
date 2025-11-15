@@ -250,3 +250,121 @@ Each phase:
 - Baseline: 1,149 errors
 - Current: 576 errors (50% reduction)
 - Expected after completion: Further reduction as pack signatures become more strict
+
+---
+
+## Phase 6: Rename Attribute.pack() → pack_attribute() (NEW)
+
+**STATUS:** PLANNED
+
+### Objective
+Create perfect symmetry with `unpack_attribute()` by renaming all attribute `pack()` methods to `pack_attribute()`.
+
+### Rationale
+- **Current asymmetry:** `unpack_attribute()` ←→ `pack()` ❌
+- **Desired symmetry:** `unpack_attribute()` ←→ `pack_attribute()` ✅
+- **Consistency:** Matches the pattern we established for data classes (pack_esi, pack_labels, etc.)
+- **Clarity:** Method name explicitly indicates it's packing an attribute (not a message or NLRI)
+
+### Scope
+**Files to modify:** ~30 attribute class implementations
+
+**Attribute classes with pack() method:**
+- Core: Origin, ASPath, AS4Path, NextHop, LocalPreference, MED, AtomicAggregate
+- Multiprotocol: MPRNLRI, MPURNLRI
+- Communities: Community, Communities, ExtendedCommunity, LargeCommunity
+- Advanced: AIGP, PMSI, PrefixSid
+- Aggregation: Aggregator, Aggregator4
+- Route Reflection: OriginatorId, ClusterList
+- Generic: GenericAttribute
+
+**Call sites to update:**
+- Primary: `Attributes.pack()` at line 275 in `src/exabgp/bgp/message/update/attribute/attributes.py`
+- Tests: Any test files calling `.pack()` on attribute instances
+
+### Implementation Strategy
+1. **No backward compatibility wrappers** - Direct replacement
+2. **Rename method signature:** `def pack(self, negotiated: Negotiated)` → `def pack_attribute(self, negotiated: Negotiated)`
+3. **Update caller:** Change `attribute.pack(negotiated)` to `attribute.pack_attribute(negotiated)`
+4. **Test thoroughly:** All test suites must pass
+
+### Impact Analysis
+- **Low risk:** Only called from `Attributes.pack()` collection
+- **High clarity:** Makes attribute packing explicit
+- **No API break:** External users shouldn't be calling these directly
+
+### Testing Requirements
+- ✅ `ruff format src && ruff check src`
+- ✅ `pytest ./tests/unit/` - All 1376+ tests pass
+- ✅ `./qa/bin/functional encoding` - All encoding tests pass
+- ✅ `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf`
+
+---
+
+## Phase 7: Rename Message.message() → pack_message() (NEW)
+
+**STATUS:** PLANNED (after Phase 6)
+
+### Objective
+Create perfect symmetry with `unpack_message()` by renaming all message `message()` methods to `pack_message()`.
+
+### Rationale
+- **Current asymmetry:** `unpack_message()` ←→ `message()` ❌
+- **Desired symmetry:** `unpack_message()` ←→ `pack_message()` ✅
+- **Historic anomaly:** Messages use `message()` instead of `pack()` for historical reasons
+- **Architectural clarity:** Makes it obvious we're packing a BGP message (not attribute/NLRI)
+
+### Scope
+**Files to modify:** ~10 message class implementations
+
+**Message classes with message() method:**
+- KEEPALIVE
+- OPEN
+- UPDATE
+- NOTIFICATION
+- REFRESH (route refresh)
+- Operational messages (OperationalAdvisory, OperationalQuery, etc.)
+
+**Call sites to update:**
+- Primary: `Protocol.write()` at line 185 in `src/exabgp/reactor/protocol.py`
+- Tests: Protocol and message tests
+
+### Implementation Strategy
+1. **No backward compatibility wrappers** - Direct replacement
+2. **Rename method signature:** `def message(self, negotiated: Negotiated)` → `def pack_message(self, negotiated: Negotiated)`
+3. **Keep `_message()` helper:** The internal `_message()` method that adds BGP header stays unchanged
+4. **Update Protocol layer:** Change `message.message(negotiated)` to `message.pack_message(negotiated)`
+5. **Test thoroughly:** Protocol interaction is critical
+
+### Impact Analysis
+- **Medium risk:** Protocol layer is fundamental
+- **Clear benefit:** Removes historic naming anomaly
+- **Better consistency:** All major types follow same pattern (pack_X/unpack_X)
+
+### Testing Requirements
+- ✅ All Phase 6 tests
+- ✅ Protocol-specific tests (message framing, BGP header construction)
+- ✅ Integration tests (functional encoding/decoding)
+
+---
+
+## Complete Symmetry Achievement
+
+After Phase 1-7, we will have perfect symmetry across all BGP types:
+
+```
+DATA STRUCTURES (Phase 1 ✅):
+unpack_esi()       ←→  pack_esi()
+unpack_labels()    ←→  pack_labels()
+unpack_etag()      ←→  pack_etag()
+unpack_rd()        ←→  pack_rd()
+unpack_mac()       ←→  pack_mac()
+unpack_path()      ←→  pack_path()
+
+PROTOCOL ELEMENTS (Phase 6-7):
+unpack_message()   ←→  pack_message()   (Phase 7)
+unpack_attribute() ←→  pack_attribute() (Phase 6)
+unpack_nlri()      ←→  pack_nlri()      (Already done ✅)
+```
+
+This creates a perfectly consistent, self-documenting API where every `unpack_X()` has a corresponding `pack_X()`.

@@ -46,7 +46,7 @@ class NextHop(Attribute, IP):
     def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
         return self._packed
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._attribute(self.ton(negotiated))
 
     @classmethod
@@ -71,7 +71,7 @@ class NextHopSelf(NextHop):
     def ipv4(self) -> bool:
         return self.afi == AFI.ipv4
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._attribute(negotiated.nexthopself(self.afi).ton())
 
     def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]

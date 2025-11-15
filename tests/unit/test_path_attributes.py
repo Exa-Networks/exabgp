@@ -90,7 +90,7 @@ def test_origin_igp() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + value(1) = 4 bytes
-    packed = origin.pack()
+    packed = origin.pack_attribute()
     assert len(packed) == 4
     assert packed[0] == 0x40  # Transitive flag
     assert packed[1] == 1  # ORIGIN type code
@@ -114,7 +114,7 @@ def test_origin_egp() -> None:
     assert str(origin) == 'egp'
 
     # Verify pack (flag + type + length + value)
-    packed = origin.pack()
+    packed = origin.pack_attribute()
     assert len(packed) == 4
     assert packed[3] == 1  # EGP value
 
@@ -135,7 +135,7 @@ def test_origin_incomplete() -> None:
     assert str(origin) == 'incomplete'
 
     # Verify pack (flag + type + length + value)
-    packed = origin.pack()
+    packed = origin.pack_attribute()
     assert len(packed) == 4
     assert packed[3] == 2  # INCOMPLETE value
 
@@ -163,7 +163,7 @@ def test_nexthop_valid_ipv4() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + IPv4(4) = 7 bytes
-    packed = nexthop.pack(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
     assert len(packed) == 7
     assert packed[0] == 0x40  # Transitive flag
     assert packed[1] == 3  # NEXT_HOP type code
@@ -187,7 +187,7 @@ def test_nexthop_zero_address() -> None:
     assert str(nexthop) == '0.0.0.0'  # __repr__ returns just the IP
 
     # Verify pack (flag + type + length + value)
-    packed = nexthop.pack(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
     assert len(packed) == 7
     assert packed[3:] == b'\x00\x00\x00\x00'  # Value part is 0.0.0.0
 
@@ -206,7 +206,7 @@ def test_nexthop_self() -> None:
     assert str(nexthop) == '10.0.0.1'  # __repr__ returns just the IP
 
     # Verify pack (flag + type + length + value)
-    packed = nexthop.pack(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
     assert len(packed) == 7
 
 
@@ -223,7 +223,7 @@ def test_nexthop_third_party() -> None:
     assert '10.0.0.254' in str(nexthop)
 
     # Verify pack (flag + type + length + value)
-    packed = nexthop.pack(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
     assert len(packed) == 7
 
 
@@ -250,7 +250,7 @@ def test_localpref_basic() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + value(4) = 7 bytes
-    packed = localpref.pack()
+    packed = localpref.pack_attribute()
     assert len(packed) == 7
     assert struct.unpack('!L', packed[3:])[0] == 100  # Value part
 
@@ -269,7 +269,7 @@ def test_localpref_high_preference() -> None:
     assert localpref.localpref == 200
 
     # Verify pack (flag + type + length + value)
-    packed = localpref.pack()
+    packed = localpref.pack_attribute()
     assert len(packed) == 7
     assert struct.unpack('!L', packed[3:])[0] == 200  # Value part
 
@@ -309,7 +309,7 @@ def test_atomic_aggregate_zero_length() -> None:
 
     # Verify pack (flag + type + length, but zero-length value)
     # Format: flag(1) + type(1) + length(1) = 3 bytes
-    packed = atomic.pack()
+    packed = atomic.pack_attribute()
     assert len(packed) == 3
     assert packed[2] == 0  # Length is 0
 
@@ -361,7 +361,7 @@ def test_aggregator_2byte_asn() -> None:
 
     # Verify pack (flag + type + length + 2-byte ASN + 4-byte IP)
     # Format: flag(1) + type(1) + length(1) + ASN(2) + IP(4) = 9 bytes
-    packed = aggregator.pack(negotiated)
+    packed = aggregator.pack_attribute(negotiated)
     assert len(packed) == 9
 
 
@@ -386,7 +386,7 @@ def test_aggregator_4byte_asn() -> None:
 
     # Verify pack (flag + type + length + 4-byte ASN + 4-byte IP)
     # Format: flag(1) + type(1) + length(1) + ASN(4) + IP(4) = 11 bytes
-    packed = aggregator.pack(negotiated)
+    packed = aggregator.pack_attribute(negotiated)
     assert len(packed) == 11
 
 
@@ -411,7 +411,7 @@ def test_aggregator_as_trans() -> None:
 
     # Pack for old speaker (should use AS_TRANS + AS4_AGGREGATOR)
     # Returns both AGGREGATOR (with AS_TRANS) and AS4_AGGREGATOR
-    packed = aggregator.pack(negotiated)
+    packed = aggregator.pack_attribute(negotiated)
     # Should include: AGGREGATOR (flag + type + len + 2-byte AS + 4-byte IP = 9 bytes)
     #                + AS4_AGGREGATOR (flag + type + len + 4-byte AS + 4-byte IP = 11 bytes)
     # Total = 20 bytes
@@ -447,7 +447,7 @@ def test_med_basic() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + value(4) = 7 bytes
-    packed = med.pack()
+    packed = med.pack_attribute()
     assert len(packed) == 7
     assert struct.unpack('!L', packed[3:])[0] == med_value  # Value part
 
@@ -506,7 +506,7 @@ def test_originator_id_basic() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + IPv4(4) = 7 bytes
-    packed = originator_id.pack()
+    packed = originator_id.pack_attribute()
     assert len(packed) == 7
 
 
@@ -547,7 +547,7 @@ def test_cluster_list_single() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + ClusterID(4) = 7 bytes
-    packed = cluster_list.pack()
+    packed = cluster_list.pack_attribute()
     assert len(packed) == 7
 
 
@@ -566,7 +566,7 @@ def test_cluster_list_multiple() -> None:
 
     # Verify pack (flag + type + length + 2 ClusterIDs)
     # Format: flag(1) + type(1) + length(1) + ClusterID(4) + ClusterID(4) = 11 bytes
-    packed = cluster_list.pack()
+    packed = cluster_list.pack_attribute()
     assert len(packed) == 11
 
 
@@ -616,7 +616,7 @@ def test_aigp_basic() -> None:
 
     # Verify pack (flag + type + length + TLV)
     # Format: flag(1) + type(1) + length(1) + TLV(11) = 14 bytes
-    packed = aigp.pack(negotiated)
+    packed = aigp.pack_attribute(negotiated)
     assert len(packed) == 14
 
 
@@ -755,7 +755,7 @@ def test_nexthop_pack_unpack_roundtrip() -> None:
     nexthop = NextHop(original_ip)
 
     # Pack the attribute
-    packed = nexthop.pack(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
 
     # Extract just the IP address bytes (skip flag, type, length)
     ip_data = packed[3:]
@@ -834,7 +834,7 @@ def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
     original = Aggregator(original_asn, original_speaker)
 
     # Pack
-    packed = original.pack(negotiated)
+    packed = original.pack_attribute(negotiated)
 
     # Extract attribute data (skip flag, type, length)
     attr_data = packed[3:]
@@ -862,7 +862,7 @@ def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
     original = Aggregator(original_asn, original_speaker)
 
     # Pack
-    packed = original.pack(negotiated)
+    packed = original.pack_attribute(negotiated)
 
     # Extract attribute data (skip flag, type, length)
     attr_data = packed[3:]
@@ -924,7 +924,7 @@ def test_originator_id_pack_unpack_roundtrip() -> None:
     original = OriginatorID(original_ip)
 
     # Pack
-    packed = original.pack()
+    packed = original.pack_attribute()
 
     # Extract IP data (skip flag, type, length)
     ip_data = packed[3:]
@@ -975,7 +975,7 @@ def test_originator_id_inherits_ipv4() -> None:
     assert hasattr(oid, '_packed')
 
     # Verify packed format
-    packed = oid.pack()
+    packed = oid.pack_attribute()
     assert len(packed) == 7  # flag(1) + type(1) + length(1) + IPv4(4)
 
 
@@ -993,7 +993,7 @@ def test_cluster_list_pack_unpack_roundtrip_single() -> None:
     original = ClusterList([cluster])
 
     # Pack
-    packed = original.pack()
+    packed = original.pack_attribute()
 
     # Extract cluster data (skip flag, type, length)
     cluster_data = packed[3:]
@@ -1018,7 +1018,7 @@ def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
     original = ClusterList([cluster1, cluster2, cluster3])
 
     # Pack
-    packed = original.pack()
+    packed = original.pack_attribute()
 
     # Extract cluster data (skip flag, type, length)
     cluster_data = packed[3:]
@@ -1120,7 +1120,7 @@ def test_aigp_pack_unpack_roundtrip() -> None:
     negotiated.peer_as = 65000
 
     # Pack
-    packed = original.pack(negotiated)
+    packed = original.pack_attribute(negotiated)
 
     # Should have packed data
     assert len(packed) > 0
@@ -1161,7 +1161,7 @@ def test_aigp_no_pack_without_negotiation() -> None:
     negotiated.peer_as = 65001
 
     # Should return empty bytes
-    packed = aigp.pack(negotiated)
+    packed = aigp.pack_attribute(negotiated)
     assert packed == b''
 
 
@@ -1181,7 +1181,7 @@ def test_aigp_pack_with_same_as() -> None:
     negotiated.peer_as = 65000
 
     # Should still pack for IBGP
-    packed = aigp.pack(negotiated)
+    packed = aigp.pack_attribute(negotiated)
     assert len(packed) > 0
 
 
@@ -1237,7 +1237,7 @@ def test_pmsi_pack_basic() -> None:
     negotiated = Mock()
 
     # Pack
-    packed = pmsi.pack(negotiated)
+    packed = pmsi.pack_attribute(negotiated)
 
     # Should have: flag(1) + type(1) + length(1) + flags(1) + tunnel_type(1) + label(3) + tunnel(4)
     assert len(packed) >= 3  # At minimum flag + type + length
@@ -1387,7 +1387,7 @@ def test_pmsi_no_tunnel_pack() -> None:
     pmsi = PMSINoTunnel(label=100, flags=0)
 
     negotiated = Mock()
-    packed = pmsi.pack(negotiated)
+    packed = pmsi.pack_attribute(negotiated)
 
     # Should have: flag(1) + type(1) + length(1) + flags(1) + tunnel_type(1) + label(3)
     # No tunnel data
@@ -1431,7 +1431,7 @@ def test_pmsi_ingress_replication_pack() -> None:
     pmsi = PMSIIngressReplication('192.168.1.1', label=100, flags=0)
 
     negotiated = Mock()
-    packed = pmsi.pack(negotiated)
+    packed = pmsi.pack_attribute(negotiated)
 
     # Should have: flag(1) + type(1) + length(1) + flags(1) + tunnel_type(1) + label(3) + IP(4)
     assert len(packed) >= 3
@@ -1482,7 +1482,7 @@ def test_pmsi_raw_label_handling() -> None:
     # Pack should use raw_label
     negotiated = Mock()
     pmsi.TUNNEL_TYPE = 1
-    packed = pmsi.pack(negotiated)
+    packed = pmsi.pack_attribute(negotiated)
 
     # Verify packed (just ensure it doesn't crash)
     assert len(packed) > 0

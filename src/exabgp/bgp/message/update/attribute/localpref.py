@@ -38,7 +38,7 @@ class LocalPreference(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_attribute(self, negotiated: Optional[Negotiated] = None) -> bytes:
         return self._packed
 
     def __len__(self) -> int:

@@ -83,7 +83,7 @@ class AIGP(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         if negotiated.aigp:
             return self._packed
         if negotiated.local_as == negotiated.peer_as:

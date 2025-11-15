@@ -110,7 +110,7 @@ def test_standard_community_parsing() -> None:
     assert str(community) == '65000:100'
 
     # Verify pack round-trip
-    assert community.pack() == community_bytes
+    assert community.pack_attribute() == community_bytes
 
 
 def test_standard_community_well_known() -> None:
@@ -224,7 +224,7 @@ def test_route_target_asn2_number() -> None:
     assert len(rt) == 8
 
     # Verify pack/unpack round-trip
-    packed = rt.pack()
+    packed = rt.pack_attribute()
     assert len(packed) == 8
 
     # Verify type and subtype
@@ -256,7 +256,7 @@ def test_route_target_ip_number() -> None:
     assert len(rt) == 8
 
     # Verify pack/unpack round-trip
-    packed = rt.pack()
+    packed = rt.pack_attribute()
     assert len(packed) == 8
 
     # Verify type and subtype
@@ -289,7 +289,7 @@ def test_route_target_asn4_number() -> None:
     assert len(rt) == 8
 
     # Verify pack/unpack round-trip
-    packed = rt.pack()
+    packed = rt.pack_attribute()
     assert len(packed) == 8
 
     # Verify type and subtype
@@ -314,13 +314,13 @@ def test_route_target_transitive_flag() -> None:
 
     # Create transitive RT
     rt_transitive = RouteTargetASN2Number(ASN(65000), 100, transitive=True)
-    packed_trans = rt_transitive.pack()
+    packed_trans = rt_transitive.pack_attribute()
     # Transitive: bit 6 should be 0
     assert (packed_trans[0] & 0x40) == 0x00
 
     # Create non-transitive RT
     rt_non_transitive = RouteTargetASN2Number(ASN(65000), 100, transitive=False)
-    packed_non_trans = rt_non_transitive.pack()
+    packed_non_trans = rt_non_transitive.pack_attribute()
     # Non-transitive: bit 6 should be 1
     assert (packed_non_trans[0] & 0x40) == 0x40
 
@@ -341,7 +341,7 @@ def test_extended_community_base_parsing() -> None:
 
     # Should store raw bytes
     assert len(ec) == 8
-    assert ec.pack() == unknown_data
+    assert ec.pack_attribute() == unknown_data
 
     # Verify transitive check
     assert ec.transitive()  # bit 6 is 0
@@ -371,7 +371,7 @@ def test_route_origin_community() -> None:
     assert len(ro) == 8
 
     # Verify subtype (0x03 for origin vs 0x02 for target)
-    packed = ro.pack()
+    packed = ro.pack_attribute()
     assert packed[1] == 0x03
 
 
@@ -394,8 +394,8 @@ def test_bandwidth_community() -> None:
     assert len(bw) == 8
 
     # Verify pack/unpack
-    packed = bw.pack()
-    # Bandwidth.pack() returns only the data (ASN + float), not full extended community
+    packed = bw.pack_attribute()
+    # Bandwidth.pack_attribute() returns only the data (ASN + float), not full extended community
     assert len(packed) == 6
 
     # Unpack requires type/subtype prefix
@@ -423,7 +423,7 @@ def test_encapsulation_community_vxlan() -> None:
     assert len(encap) == 8
 
     # Verify pack/unpack
-    packed = encap.pack()
+    packed = encap.pack_attribute()
     assert len(packed) == 8
 
     # Verify type and subtype
@@ -456,7 +456,7 @@ def test_encapsulation_community_types() -> None:
         assert str(encap) == expected_str
 
         # Verify round-trip
-        packed = encap.pack()
+        packed = encap.pack_attribute()
         unpacked = Encapsulation.unpack_attribute(packed)
         assert unpacked.tunnel_type == tunnel_type
 
@@ -478,7 +478,7 @@ def test_traffic_engineering_community() -> None:
     assert len(tr) == 8
 
     # Verify pack
-    packed = tr.pack()
+    packed = tr.pack_attribute()
     assert len(packed) == 8
 
 
@@ -503,7 +503,7 @@ def test_l2info_community() -> None:
     assert l2info.mtu == mtu
 
     # Verify pack/unpack
-    packed = l2info.pack()
+    packed = l2info.pack_attribute()
     unpacked = L2Info.unpack_attribute(packed, create_negotiated())
     assert unpacked.mtu == mtu
 
@@ -528,7 +528,7 @@ def test_mac_mobility_community() -> None:
     assert mac_mob.sticky == bool(flags)
 
     # Verify pack/unpack
-    packed = mac_mob.pack()
+    packed = mac_mob.pack_attribute()
     unpacked = MacMobility.unpack_attribute(packed, create_negotiated())
     assert unpacked.sequence == sequence
 
@@ -616,7 +616,7 @@ def test_large_community_parsing() -> None:
     assert str(lc) == '65000:100:200'
 
     # Verify pack round-trip
-    assert lc.pack() == large_bytes
+    assert lc.pack_attribute() == large_bytes
 
 
 def test_large_community_multiple() -> None:

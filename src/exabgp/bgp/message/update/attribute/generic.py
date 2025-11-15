@@ -45,7 +45,7 @@ class GenericAttribute(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_attribute(self, negotiated: Optional[Negotiated] = None) -> bytes:
         flag: int = self.FLAG
         length: int = len(self.data)
         if length > MAX_SINGLE_OCTET_LENGTH:

@@ -42,14 +42,14 @@ class Aggregator(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         if negotiated.asn4:
             return self._attribute(self.asn.pack(True) + self.speaker.pack())  # type: ignore[arg-type]
         if self.asn.asn4():
             return self._attribute(self.asn.trans().pack() + self.speaker.pack()) + Aggregator4(
                 self.asn,
                 self.speaker,
-            ).pack(negotiated)
+            ).pack_attribute(negotiated)
         return self._attribute(self.asn.pack() + self.speaker.pack())
 
     def __len__(self) -> int:
@@ -78,5 +78,5 @@ class Aggregator(Attribute):
 class Aggregator4(Aggregator):
     ID = Attribute.CODE.AS4_AGGREGATOR
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._attribute(self.asn.pack(True) + self.speaker.pack())  # type: ignore[arg-type]

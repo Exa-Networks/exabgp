@@ -264,7 +264,7 @@ class Attributes(dict):
                 continue
 
             if code not in keys and code in default:
-                message += default[code](local_asn, peer_asn).pack(negotiated)  # type: ignore[union-attr]
+                message += default[code](local_asn, peer_asn).pack_attribute(negotiated)  # type: ignore[union-attr]
                 continue
 
             attribute = self[code]
@@ -272,7 +272,7 @@ class Attributes(dict):
             if code in skip and skip[code](local_asn, peer_asn, attribute):
                 continue
 
-            message += attribute.pack(negotiated)
+            message += attribute.pack_attribute(negotiated)
 
         return message
 
