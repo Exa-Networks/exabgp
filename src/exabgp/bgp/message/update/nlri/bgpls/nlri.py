@@ -127,10 +127,10 @@ class BGPLS(NLRI):
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher
                 rd: Optional[RouteDistinguisher] = RouteDistinguisher.unpack(bgp[4:12])
-                klass = cls.registered_bgpls[code].unpack_nlri(bgp[12 : length + 4], rd)  # type: ignore[arg-type,call-arg]
+                klass = cls.registered_bgpls[code].unpack_bgpls(bgp[12 : length + 4], rd)  # type: ignore[arg-type,call-arg]
             else:
                 rd = None
-                klass = cls.registered_bgpls[code].unpack_nlri(bgp[4 : length + 4], rd)  # type: ignore[arg-type,call-arg]
+                klass = cls.registered_bgpls[code].unpack_bgpls(bgp[4 : length + 4], rd)  # type: ignore[arg-type,call-arg]
         else:
             klass = GenericBGPLS(code, bgp[4 : length + 4])
         klass.CODE = code

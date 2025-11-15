@@ -65,7 +65,7 @@ class SRv6SID(BGPLS):
         self.srv6_sid_descriptors: Dict[str, Any] = srv6_sid_descriptors
 
     @classmethod
-    def unpack_nlri(cls, data: bytes, length: int) -> SRv6SID:
+    def unpack_bgpls(cls, data: bytes, length: int) -> SRv6SID:
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')

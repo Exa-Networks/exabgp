@@ -81,7 +81,7 @@ class NODE(BGPLS):
         return f'{{ {content} }}'
 
     @classmethod
-    def unpack_nlri(cls, data: bytes, rd: Any) -> NODE:
+    def unpack_bgpls(cls, data: bytes, rd: Any) -> NODE:
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
