@@ -109,10 +109,10 @@ class Transcoder:
         if content == 'open':
             message = Open.unpack_message(data)
             self._open(direction, message)
-            return self.encoder.open(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+            return self.encoder.open(neighbor, direction, message, None, header, body)
 
         if content == 'keepalive':
-            return self.encoder.keepalive(neighbor, direction, None, header, body)  # type: ignore[no-any-return]
+            return self.encoder.keepalive(neighbor, direction, None, header, body)
 
         if content == 'notification':
             # XXX: Use the code of the Notifcation class here ..
@@ -120,12 +120,12 @@ class Transcoder:
 
             if (message.code, message.subcode) != (6, 2):
                 message.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)  # type: ignore[operator]
-                return self.encoder.notification(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+                return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             if len(data) == 0:
                 # shutdown without shutdown communication (the old fashioned way)
                 message.data = ''
-                return self.encoder.notification(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+                return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             # draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
@@ -135,19 +135,19 @@ class Transcoder:
             if shutdown_length == 0:
                 message.data = 'empty Shutdown Communication.'
                 # move offset past length field
-                return self.encoder.notification(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+                return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             if len(data) < shutdown_length:
                 message.data = (
                     f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(data)}]'
                 )
-                return self.encoder.notification(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+                return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             if shutdown_length > MAX_SHUTDOWN_COMM_LENGTH:
                 message.data = (
                     f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'
                 )
-                return self.encoder.notification(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+                return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             try:
                 # NOTE: Do not convert to f-string! The chained method calls with multiline
@@ -165,31 +165,31 @@ class Transcoder:
                 message.data = (
                     f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(data)}]'
                 )
-                return self.encoder.notification(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+                return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             trailer = data[shutdown_length:]
             if trailer:
                 message.data += ', trailing data: ' + hexstring(trailer)
 
-            return self.encoder.notification(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+            return self.encoder.notification(neighbor, direction, message, None, header, body)
 
         if not self.negotiated_in or not self.negotiated_out:
             sys.stderr.write('invalid message sequence, open not exchange not complete', json_string + '\n')  # type: ignore[call-arg]
             sys.exit(1)
 
         negotiated = self.negotiated_in if direction == 'receive' else self.negotiated_out
-        message = Message.unpack(category, data, negotiated)  # type: ignore[arg-type]
+        message = Message.unpack(category, data, negotiated)
 
         if content == 'update':
-            return self.encoder.update(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+            return self.encoder.update(neighbor, direction, message, None, header, body)
 
         if content == 'eor':  # XXX: Should not be required
-            return self.encoder.update(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+            return self.encoder.update(neighbor, direction, message, None, header, body)
 
         if content == 'refresh':
-            return self.json.refresh(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+            return self.json.refresh(neighbor, direction, message, None, header, body)
 
         if content == 'operational':
-            return self.json.refresh(neighbor, direction, message, None, header, body)  # type: ignore[no-any-return]
+            return self.json.refresh(neighbor, direction, message, None, header, body)
 
         raise RuntimeError('the programer is a monkey and forgot a JSON message type')
