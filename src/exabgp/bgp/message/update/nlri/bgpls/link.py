@@ -104,7 +104,7 @@ class LINK(BGPLS):
         self._packed: Optional[bytes] = packed
 
     @classmethod
-    def unpack_nlri(cls, data: bytes, rd: Any) -> LINK:
+    def unpack_bgpls(cls, data: bytes, rd: Any) -> LINK:
         proto_id = unpack('!B', data[0:1])[0]
         # FIXME: all these list should probably be defined in the objects
         iface_addrs: List[IfaceAddr] = []

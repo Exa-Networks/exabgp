@@ -107,7 +107,7 @@ class TestNodeNLRI:
             b'\x02\x03\x00\x04\x0a\x71\x3f\xf0'  # Router ID: 10.113.63.240
         )
 
-        node = NODE.unpack_nlri(data, rd=None)
+        node = NODE.unpack_bgpls(data, rd=None)
 
         assert node.proto_id == 3  # OSPFv2
         assert node.domain == 1
@@ -128,7 +128,7 @@ class TestNodeNLRI:
             b'\x02\x03\x00\x04\x0a\x71\x3f\xf0'
         )
 
-        node = NODE.unpack_nlri(data, rd=None)
+        node = NODE.unpack_bgpls(data, rd=None)
         node.nexthop = '192.0.2.1'
         json_output = node.json()
 
@@ -149,8 +149,8 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node1 = NODE.unpack_nlri(data, rd=None)
-        node2 = NODE.unpack_nlri(data, rd=None)
+        node1 = NODE.unpack_bgpls(data, rd=None)
+        node2 = NODE.unpack_bgpls(data, rd=None)
 
         assert node1 == node2
         assert not (node1 != node2)
@@ -165,7 +165,7 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node = NODE.unpack_nlri(data, rd=None)
+        node = NODE.unpack_bgpls(data, rd=None)
 
         # Note: hash() has a bug in node.py (line 109)
         # Bug: return hash((self.proto_id, self.node_ids))
@@ -187,7 +187,7 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node = NODE.unpack_nlri(data, rd=None)
+        node = NODE.unpack_bgpls(data, rd=None)
         node.nexthop = '192.0.2.1'
         str_repr = str(node)
 
@@ -203,7 +203,7 @@ class TestNodeNLRI:
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            NODE.unpack_nlri(data, rd=None)
+            NODE.unpack_bgpls(data, rd=None)
 
     def test_node_invalid_node_type(self) -> None:
         """Test Node NLRI with invalid node descriptor type"""
@@ -215,7 +215,7 @@ class TestNodeNLRI:
         )
 
         with pytest.raises(Exception, match='Unknown type.*Only Local Node descriptors'):
-            NODE.unpack_nlri(data, rd=None)
+            NODE.unpack_bgpls(data, rd=None)
 
     def test_node_pack(self) -> None:
         """Test Node NLRI packing"""
@@ -227,7 +227,7 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node = NODE.unpack_nlri(data, rd=None)
+        node = NODE.unpack_bgpls(data, rd=None)
         packed = node.pack()
 
         # Should return the original packed data
@@ -253,7 +253,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'  # AS: 65534
         )
 
-        link = LINK.unpack_nlri(data, rd=None)
+        link = LINK.unpack_bgpls(data, rd=None)
 
         assert link.proto_id == 3
         assert link.domain == 1
@@ -278,7 +278,7 @@ class TestLinkNLRI:
             b'\x00\x00\x00\x02'  # Remote ID: 2
         )
 
-        link = LINK.unpack_nlri(data, rd=None)
+        link = LINK.unpack_bgpls(data, rd=None)
 
         # Link IDs are returned as a single LinkIdentifier object, not a list
         assert link.link_ids is not None
@@ -297,7 +297,7 @@ class TestLinkNLRI:
             b'\xc0\x00\x02\x01'  # 192.0.2.1
         )
 
-        link = LINK.unpack_nlri(data, rd=None)
+        link = LINK.unpack_bgpls(data, rd=None)
 
         assert len(link.iface_addrs) == 1
 
@@ -315,7 +315,7 @@ class TestLinkNLRI:
             b'\xc0\x00\x02\x02'  # 192.0.2.2
         )
 
-        link = LINK.unpack_nlri(data, rd=None)
+        link = LINK.unpack_bgpls(data, rd=None)
 
         assert len(link.neigh_addrs) == 1
 
@@ -333,7 +333,7 @@ class TestLinkNLRI:
             b'\x00\x01'  # MT-ID: 1
         )
 
-        link = LINK.unpack_nlri(data, rd=None)
+        link = LINK.unpack_bgpls(data, rd=None)
 
         assert len(link.topology_ids) == 1
 
@@ -348,7 +348,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_nlri(data, rd=None)
+        link = LINK.unpack_bgpls(data, rd=None)
         json_output = link.json()
 
         assert '"ls-nlri-type": "bgpls-link"' in json_output
@@ -367,8 +367,8 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link1 = LINK.unpack_nlri(data, rd=None)
-        link2 = LINK.unpack_nlri(data, rd=None)
+        link1 = LINK.unpack_bgpls(data, rd=None)
+        link2 = LINK.unpack_bgpls(data, rd=None)
 
         assert link1 == link2
         assert not (link1 != link2)
@@ -383,7 +383,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_nlri(data, rd=None)
+        link = LINK.unpack_bgpls(data, rd=None)
 
         # Note: hash() has a bug in link.py (line 188) causing RecursionError
         # This test documents the expected behavior once bug is fixed
@@ -405,7 +405,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_nlri(data, rd=None)
+        link = LINK.unpack_bgpls(data, rd=None)
         str_repr = str(link)
 
         assert 'bgpls-link' in str_repr
@@ -419,7 +419,7 @@ class TestLinkNLRI:
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            LINK.unpack_nlri(data, rd=None)
+            LINK.unpack_bgpls(data, rd=None)
 
     def test_link_pack(self) -> None:
         """Test Link NLRI packing"""
@@ -431,7 +431,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_nlri(data, rd=None)
+        link = LINK.unpack_bgpls(data, rd=None)
 
         # Note: link.py line 191 has typo: checks 'self.packed' instead of 'self._packed'
         # This test documents expected behavior once bug is fixed
@@ -458,7 +458,7 @@ class TestPrefixV4NLRI:
             b'\x0a\x0a\x00'  # Prefix: 10.0.0.0/10
         )
 
-        prefix = PREFIXv4.unpack_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls(data, rd=None)
 
         assert prefix.proto_id == 3
         assert prefix.domain == 1
@@ -483,7 +483,7 @@ class TestPrefixV4NLRI:
             b'\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls(data, rd=None)
 
         assert prefix.ospf_type is not None
 
@@ -497,7 +497,7 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls(data, rd=None)
         prefix.nexthop = '192.0.2.1'
         json_output = prefix.json()
 
@@ -516,8 +516,8 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix1 = PREFIXv4.unpack_nlri(data, rd=None)
-        prefix2 = PREFIXv4.unpack_nlri(data, rd=None)
+        prefix1 = PREFIXv4.unpack_bgpls(data, rd=None)
+        prefix2 = PREFIXv4.unpack_bgpls(data, rd=None)
 
         assert prefix1 == prefix2
         assert not (prefix1 != prefix2)
@@ -531,7 +531,7 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls(data, rd=None)
 
         # Note: hash() has a bug in prefixv4.py (line 131) causing RecursionError
         # Bug: return hash((self)) should be return hash((self.proto_id, ...))
@@ -551,7 +551,7 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls(data, rd=None)
         prefix.nexthop = '192.0.2.1'
         str_repr = str(prefix)
 
@@ -566,7 +566,7 @@ class TestPrefixV4NLRI:
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            PREFIXv4.unpack_nlri(data, rd=None)
+            PREFIXv4.unpack_bgpls(data, rd=None)
 
     def test_prefix_v4_pack(self) -> None:
         """Test IPv4 Prefix NLRI packing"""
@@ -577,7 +577,7 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls(data, rd=None)
         packed = prefix.pack()
 
         assert packed == data
@@ -599,7 +599,7 @@ class TestPrefixV6NLRI:
             b'\x7f\x20\x01\x07'  # Prefix: 2001:700::/127
         )
 
-        prefix = PREFIXv6.unpack_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls(data, rd=None)
 
         assert prefix.proto_id == 3
         assert prefix.domain == 1
@@ -624,7 +624,7 @@ class TestPrefixV6NLRI:
             b'\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls(data, rd=None)
 
         assert prefix.ospf_type is not None
 
@@ -638,7 +638,7 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls(data, rd=None)
         prefix.nexthop = '2001:db8::1'
         json_output = prefix.json()
 
@@ -657,8 +657,8 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix1 = PREFIXv6.unpack_nlri(data, rd=None)
-        prefix2 = PREFIXv6.unpack_nlri(data, rd=None)
+        prefix1 = PREFIXv6.unpack_bgpls(data, rd=None)
+        prefix2 = PREFIXv6.unpack_bgpls(data, rd=None)
 
         assert prefix1 == prefix2
         assert not (prefix1 != prefix2)
@@ -672,7 +672,7 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls(data, rd=None)
 
         # Note: hash() has a bug in prefixv6.py (line 131) causing RecursionError
         # Bug: return hash((self)) should be return hash((self.proto_id, ...))
@@ -692,7 +692,7 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls(data, rd=None)
         prefix.nexthop = '2001:db8::1'
         str_repr = str(prefix)
 
@@ -707,7 +707,7 @@ class TestPrefixV6NLRI:
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            PREFIXv6.unpack_nlri(data, rd=None)
+            PREFIXv6.unpack_bgpls(data, rd=None)
 
     def test_prefix_v6_pack(self) -> None:
         """Test IPv6 Prefix NLRI packing"""
@@ -718,7 +718,7 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls(data, rd=None)
         packed = prefix.pack()
 
         assert packed == data
@@ -741,7 +741,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_nlri(data, len(data))
+        srv6sid = SRv6SID.unpack_bgpls(data, len(data))
 
         assert srv6sid.proto_id == 3
         assert srv6sid.domain == 1
@@ -767,7 +767,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_nlri(data, len(data))
+        srv6sid = SRv6SID.unpack_bgpls(data, len(data))
 
         assert len(srv6sid.srv6_sid_descriptors['multi-topology-ids']) == 1
 
@@ -783,7 +783,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_nlri(data, len(data))
+        srv6sid = SRv6SID.unpack_bgpls(data, len(data))
         json_output = srv6sid.json()
 
         assert '"ls-nlri-type": "bgpls-srv6sid"' in json_output
@@ -804,7 +804,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_nlri(data, len(data))
+        srv6sid = SRv6SID.unpack_bgpls(data, len(data))
         repr_str = repr(srv6sid)
 
         assert 'bgpls-srv6sid' in repr_str
@@ -820,7 +820,7 @@ class TestSRv6SIDNLRI:
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            SRv6SID.unpack_nlri(data, len(data))
+            SRv6SID.unpack_bgpls(data, len(data))
 
     def test_srv6sid_invalid_node_type(self) -> None:
         """Test SRv6 SID NLRI with invalid node descriptor type"""
@@ -832,7 +832,7 @@ class TestSRv6SIDNLRI:
         )
 
         with pytest.raises(Exception, match='Unknown type.*Only Local Node descriptors'):
-            SRv6SID.unpack_nlri(data, len(data))
+            SRv6SID.unpack_bgpls(data, len(data))
 
     def test_srv6sid_len(self) -> None:
         """Test SRv6 SID NLRI length computation"""
@@ -846,7 +846,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_nlri(data, len(data))
+        srv6sid = SRv6SID.unpack_bgpls(data, len(data))
 
         # Length should be: 1 (proto_id) + 8 (domain) + local_node_desc + srv6_sid_desc
         length = len(srv6sid)

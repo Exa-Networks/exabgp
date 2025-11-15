@@ -73,7 +73,7 @@ class PREFIXv6(BGPLS):
         self.route_d: Any = route_d
 
     @classmethod
-    def unpack_nlri(cls, data: bytes, rd: Any) -> PREFIXv6:
+    def unpack_bgpls(cls, data: bytes, rd: Any) -> PREFIXv6:
         ospf_type: Optional[OspfRoute] = None
         local_node: List[NodeDescriptor] = []
         prefix: Optional[IpReach] = None
