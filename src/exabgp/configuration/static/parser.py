@@ -528,7 +528,7 @@ def _extended_community_hex(value: str) -> ExtendedCommunity:
     if len(value) % 2:
         raise ValueError('invalid extended community {}'.format(value))
     raw = b''.join(bytes([int(value[_ : _ + 2], 16)]) for _ in range(2, len(value), 2))
-    return ExtendedCommunity.unpack_attribute(raw, None)  # type: ignore[return-value,arg-type]
+    return ExtendedCommunity.unpack_attribute(raw, None)
 
 
 def _extended_community(value: str) -> ExtendedCommunity:
@@ -547,7 +547,7 @@ def _extended_community(value: str) -> ExtendedCommunity:
     components = [_integer(_) if _digit(_) else _ip(_, value) for _ in parts]
     header, packed = _encode(command, components, parts)
 
-    return ExtendedCommunity.unpack_attribute(header + pack(packed, *components), None)  # type: ignore[return-value,arg-type]
+    return ExtendedCommunity.unpack_attribute(header + pack(packed, *components), None)
 
 
 def extended_community(tokeniser: 'Tokeniser') -> ExtendedCommunities:

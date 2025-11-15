@@ -120,7 +120,7 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
                 log.debug(lambda: '')  # new line
 
                 pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
-                update = Update.unpack_message(pack1s, negotiated_in)  # type: ignore[arg-type]
+                update = Update.unpack_message(pack1s, negotiated_in)
 
                 change2 = Change(update.nlris[0], update.attributes)
                 str2 = change2.extensive()
@@ -356,7 +356,7 @@ def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
 
         try:
             # This does not take the BGP header - let's assume we will not break that :)
-            update = Update.unpack_message(injected, negotiated_in)  # type: ignore[arg-type]
+            update = Update.unpack_message(injected, negotiated_in)
         except Notify:
             import traceback
 
