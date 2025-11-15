@@ -113,12 +113,12 @@ class ExtendedCommunityBase(Attribute):
         return hash(self.community)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> ExtendedCommunityBase:  # type: ignore[override]
+    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> ExtendedCommunityBase:
         # 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
         community = (data[0] & 0x0F, data[1])
         if community in cls.registered_extended:  # type: ignore[operator]
             klass = cls.registered_extended[community]  # type: ignore[index]
-            instance = klass.unpack_attribute(data, negotiated)  # type: ignore[arg-type]
+            instance = klass.unpack_attribute(data, negotiated)
             instance.klass = klass
             return instance
         return cls(data)
