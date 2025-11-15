@@ -262,7 +262,7 @@ def _make_nlri(neighbor: Dict[str, Any], routes: str) -> List[NLRI]:
     try:
         while announced:
             log.debug(lambda announced=announced: 'parsing NLRI {}'.format(announced), 'parser')
-            nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath)
+            nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
             nlris.append(nlri)  # type: ignore[has-type]
     except Exception as exc:
         log.error(lambda: f'could not parse the nlri for afi={afi}, safi={safi}', 'parser')
