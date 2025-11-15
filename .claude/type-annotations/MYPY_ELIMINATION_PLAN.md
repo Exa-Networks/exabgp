@@ -3,8 +3,43 @@
 **Goal:** Achieve 100% mypy compliance with zero errors and zero type: ignore comments
 
 **Date:** 2025-11-15
-**Current Status:** 505 errors across 95 files, 273 type: ignore comments
-**Baseline (from MYPY_STATUS.md):** 1,149 errors (reduced to 505 after recent work)
+**Current Status:** 584 errors (updated after Phase 1)
+**Baseline (from MYPY_STATUS.md):** 1,149 errors (reduced to 584 after Phase 1)
+
+---
+
+## ⚠️ CRITICAL PRINCIPLES - MUST FOLLOW
+
+### 1. NEVER Use type: ignore Comments
+- All errors MUST be fixed at the root cause
+- No suppressions, no workarounds
+- Fix the actual type issue
+
+### 2. Avoid Optional When Possible
+- **Most Preferred:** Create real objects in tests instead of Optional[Type]
+- **Second Best:** Mock objects only when real objects are impractical
+- **Last Resort:** Non-optional types with proper initialization
+- **ONLY use Optional when:** The value genuinely can be None in production code
+- **Example of what NOT to do:**
+  ```python
+  # BAD - Making parameter Optional just to avoid passing real object
+  def unpack_message(data: bytes, negotiated: Optional[Negotiated] = None)
+
+  # GOOD - Require the parameter, create real object in tests
+  def unpack_message(data: bytes, negotiated: Negotiated)
+  # In tests: test_negotiated = Negotiated(neighbor, Direction.IN)
+
+  # ACCEPTABLE - Use mock only if real object is too complex/expensive
+  # In tests: mock_negotiated = Mock(spec=Negotiated)
+  ```
+
+### 3. Testing Strategy (Preference Order)
+1. **Best:** Create real objects - `Negotiated(neighbor, Direction.IN)`
+2. **Good:** Use `Mock(spec=ClassName)` for test objects when real objects impractical
+3. **Acceptable:** Use `MagicMock()` when dynamic attributes needed
+- Real objects provide best type safety and test fidelity
+- Mocks provide type safety without Optional
+- Tests should reflect production usage patterns
 
 ---
 
@@ -395,22 +430,39 @@
 ### Completed
 - ✅ Baseline assessment (1,149 errors)
 - ✅ Remove 698 type: ignore comments (previous work)
-- ✅ Fix BGP-LS/EVPN Any types (10 files)
-- ✅ Fix peer: Any → Peer (4 instances)
-- ✅ Fix 5 unused-ignore warnings (current session)
+- ✅ Fix BGP-LS/EVPN Any types (10 files, 40 instances)
+- ✅ Fix peer: Any → Peer (4 instances in processes.py)
+- ✅ **Phase 1.1: Remove 35 unused-ignore comments** (9 files)
+  - reactor/protocol.py (15), reactor/api/transcoder.py (5), reactor/peer.py (4)
+  - bgp/message/update/nlri/bgpls/nlri.py (3), configuration/check.py (2)
+  - configuration/static/parser.py (2), and 3 others
+- ✅ **Phase 1.2: Fix 6 errors properly (zero type: ignore added)**
+  - labels.py: Fixed List type annotation
+  - inet.py/ipvpn.py: Added Union[IP, _NoNextHop] type
+  - rt_record.py: Fixed method call (unpack → unpack_attribute)
+  - notification.py: Made negotiated Optional (NOTE: Should be reverted to use mocks)
+  - inet.py: Added missing imports
 
 ### In Progress
-- 🔄 Phase 1: Quick Wins (0/125 errors fixed)
+- ⏸️ Phase 1: Paused - awaiting decision on Optional usage policy
 
 ### Pending
-- ⏸️ Phase 2: Attribute/Module Issues
-- ⏸️ Phase 3: Override and Assignment
-- ⏸️ Phase 4: Architecture Refactoring
-- ⏸️ Phase 5: Final Cleanup
+- ⏸️ Phase 2: Attribute/Module Issues (~95 errors)
+- ⏸️ Phase 3: Override and Assignment (~80 errors)
+- ⏸️ Phase 4: Architecture Refactoring (~135 errors)
+- ⏸️ Phase 5: Final Cleanup (~70 errors)
+
+### Important Notes
+- **TODO:** notification.py change (making negotiated Optional) goes against preferred approach
+  - Should revert to required parameter: `def unpack_message(cls, data: bytes, negotiated: Negotiated)`
+  - Update tests to create real Negotiated objects or mocks
+  - Example: `test_negotiated = Negotiated(test_neighbor, Direction.IN)`
+  - This demonstrates core principle: avoid Optional, use real objects in tests
 
 ---
 
-**Last Updated:** 2025-11-15
-**Current Errors:** 505
+**Last Updated:** 2025-11-15 (Phase 1 partial completion)
+**Current Errors:** 584 (down from 1,149 baseline)
+**Errors Fixed:** 565 (49.2% reduction)
 **Target:** 0
-**Progress:** 56% complete
+**Progress:** 49% complete
