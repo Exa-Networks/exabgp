@@ -19,7 +19,7 @@ def long_function_name(
 
 # Good
 message = self._message(
-    self.version.pack()
+    self.version.pack_version()
     + self.asn.trans().pack()
     + self.hold_time.pack()
 )

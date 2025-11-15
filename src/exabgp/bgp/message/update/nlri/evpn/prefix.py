@@ -134,7 +134,7 @@ class Prefix(EVPN):
 
         self._packed = (
             self.rd.pack()
-            + self.esi.pack()
+            + self.esi.pack_esi()
             + self.etag.pack()
             + bytes([self.iplen])
             + self.ip.pack()

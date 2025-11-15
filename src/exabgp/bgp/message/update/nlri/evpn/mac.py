@@ -125,7 +125,7 @@ class MAC(EVPN):
         # fmt: off
         self._packed = (
             self.rd.pack()
-            + self.esi.pack()
+            + self.esi.pack_esi()
             + self.etag.pack()
             + bytes([self.maclen])
             + self.mac.pack()
