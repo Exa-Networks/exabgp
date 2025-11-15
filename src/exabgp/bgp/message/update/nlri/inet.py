@@ -8,13 +8,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, Tuple, List, Optional, TYPE_CHECKING
+from typing import Any, Tuple, List, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import _NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
