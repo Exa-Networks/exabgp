@@ -29,8 +29,8 @@ class OspfForwardingAddress(BaseLS):
     JSON = 'ospf-forwarding-address'
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> OspfForwardingAddress:
+    def unpack_bgpls(cls, data: bytes) -> OspfForwardingAddress:
         length = len(data)
         if length not in (4, 16):
             raise Notify(3, 5, 'Error parsing OSPF Forwarding Address. Wrong size')
-        return cls(IP.unpack(data))
+        return cls(IP.unpack_ip(data))

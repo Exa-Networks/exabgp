@@ -60,7 +60,7 @@ class EthernetTag:
         return hash(self.tag)
 
     @classmethod
-    def unpack(cls: Type[EthernetTag], data: bytes) -> EthernetTag:
+    def unpack_etag(cls: Type[EthernetTag], data: bytes) -> EthernetTag:
         return cls(unpack('!L', data[:4])[0])
 
     def json(self, compact: Any = None) -> str:

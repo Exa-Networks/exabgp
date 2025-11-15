@@ -122,5 +122,5 @@ class VPLS(NLRI):
         base = unpack('!L', b'\x00' + bgp[16:19])[0] >> 4
         nlri = cls(rd, endpoint, base, offset, size)
         nlri.action = action
-        # nlri.nexthop = IP.unpack(nexthop)
+        # nlri.nexthop = IP.unpack_ip(nexthop)
         return nlri, bgp[19:]

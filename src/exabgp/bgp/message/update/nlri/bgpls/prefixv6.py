@@ -73,7 +73,7 @@ class PREFIXv6(BGPLS):
         self.route_d: Any = route_d
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes, rd: Any) -> PREFIXv6:
+    def unpack_bgpls_nlri(cls, data: bytes, rd: Any) -> PREFIXv6:
         ospf_type: Optional[OspfRoute] = None
         local_node: List[NodeDescriptor] = []
         prefix: Optional[IpReach] = None
@@ -93,7 +93,7 @@ class PREFIXv6(BGPLS):
                     # Unpack Local Node Descriptor Sub-TLVs
                     # We pass proto_id as TLV interpretation
                     # follows IGP type
-                    node, left = NodeDescriptor.unpack(value, proto_id)
+                    node, left = NodeDescriptor.unpack_node(value, proto_id)
                     local_node.append(node)
                     if left == value:
                         raise RuntimeError('sub-calls should consume data')
@@ -101,11 +101,11 @@ class PREFIXv6(BGPLS):
                 continue
 
             if tlv_type == TLV_OSPF_ROUTE_TYPE:
-                ospf_type = OspfRoute.unpack(value)
+                ospf_type = OspfRoute.unpack_ospfroute(value)
                 continue
 
             if tlv_type == TLV_IP_REACHABILITY:
-                prefix = IpReach.unpack(value, 4)
+                prefix = IpReach.unpack_ipreachability(value, 4)
                 continue
 
             log.critical(lambda tlv_type=tlv_type: f'unknown prefix v6 TLV {tlv_type}')

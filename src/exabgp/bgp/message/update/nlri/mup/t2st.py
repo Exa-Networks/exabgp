@@ -134,13 +134,13 @@ class Type2SessionTransformedRoute(MUP):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes, afi: AFI) -> Type2SessionTransformedRoute:
+    def unpack_mup_route(cls, data: bytes, afi: AFI) -> Type2SessionTransformedRoute:
         afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
         afi_bytes_size = 4 if afi == AFI.ipv4 else 16
-        rd = RouteDistinguisher.unpack(data[:8])
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
         endpoint_len = data[8]
         end = 9 + afi_bytes_size
-        endpoint_ip = IP.unpack(data[9:end])
+        endpoint_ip = IP.unpack_ip(data[9:end])
 
         teid = 0
         if endpoint_len > afi_bit_size:

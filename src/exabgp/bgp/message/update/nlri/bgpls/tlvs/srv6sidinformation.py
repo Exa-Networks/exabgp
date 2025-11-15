@@ -32,7 +32,7 @@ class Srv6SIDInformation:
         self.sid = sid
 
     @classmethod
-    def unpack(cls, data):
+    def unpack_srv6sid(cls, data):
         sid = IPv6.ntop(data)
         return cls(sid)
 

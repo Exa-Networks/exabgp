@@ -32,13 +32,13 @@ class LocalTeRid(BaseLS):
         BaseLS.__init__(self, terids)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> LocalTeRid:
+    def unpack_bgpls(cls, data: bytes) -> LocalTeRid:
         length = len(data)
 
         if length not in (4, 16):
             raise Notify(3, 5, 'Invalid remote-te size')
 
-        return cls([str(IP.unpack(data))])
+        return cls([str(IP.unpack_ip(data))])
 
     def json(self, compact=None):
         joined = '", "'.join(self.content)

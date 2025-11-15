@@ -65,7 +65,7 @@ class ESI:
         return hash(self.esi)
 
     @classmethod
-    def unpack(cls: Type[ESI], data: bytes) -> ESI:
+    def unpack_esi(cls: Type[ESI], data: bytes) -> ESI:
         return cls(data[: cls.LENGTH])
 
     def json(self, compact: Any = None) -> str:

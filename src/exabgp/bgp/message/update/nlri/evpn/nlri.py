@@ -91,7 +91,7 @@ class EVPN(NLRI):
         length = bgp[1]
 
         if code in cls.registered_evpn:
-            klass = cls.registered_evpn[code].unpack(bgp[2 : length + 2])
+            klass = cls.registered_evpn[code].unpack_evpn_route(bgp[2 : length + 2])
         else:
             klass = GenericEVPN(code, bgp[2 : length + 2])
         klass.CODE = code

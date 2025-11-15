@@ -119,13 +119,13 @@ class Operational(Message):
         if decode == 'query':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
-            routerid = RouterID.unpack(data[7:11])
+            routerid = RouterID.unpack_routerid(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
             return klass(afi, safi, routerid, sequence)  # type: ignore[misc,no-any-return,operator]
         if decode == 'counter':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
-            routerid = RouterID.unpack(data[7:11])
+            routerid = RouterID.unpack_routerid(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
             counter = unpack('!L', data[15:19])[0]
             return klass(afi, safi, routerid, sequence, counter)  # type: ignore[misc,no-any-return,operator]

@@ -46,7 +46,7 @@ class SrPrefix(FlagLS):
         return 'prefix_flags: {}, sids: {}, undecoded_sid: {}'.format(self.flags, self.sids, self.undecoded)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> SrPrefix:
+    def unpack_bgpls(cls, data: bytes) -> SrPrefix:
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         #

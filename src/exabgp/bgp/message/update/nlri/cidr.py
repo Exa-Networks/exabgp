@@ -94,7 +94,7 @@ class CIDR:
         # return data[:4], mask
 
     @classmethod
-    def unpack(cls, data):
+    def unpack_cidr(cls, data):
         afi = AFI.ipv6 if len(data) > CIDR_IPV6_LENGTH_BYTES or data[0] > CIDR_IPV4_MAX_MASK else AFI.ipv4
         prefix, mask = cls.decode(afi, data)
         return cls(prefix, mask)

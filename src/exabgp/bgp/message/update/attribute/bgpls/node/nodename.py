@@ -38,7 +38,7 @@ class NodeName(BaseLS):
         BaseLS.__init__(self, nodename)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> NodeName:
+    def unpack_bgpls(cls, data: bytes) -> NodeName:
         if len(data) > MAX_NODE_NAME_LENGTH:
             raise Notify(3, 5, 'Node Name TLV length too large')
 

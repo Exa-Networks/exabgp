@@ -70,4 +70,4 @@ class EOR(Message):
     @classmethod
     def unpack_message(cls, data, negotiated):
         header_length = len(EOR.NLRI.PREFIX)
-        return cls(AFI.unpack(data[header_length : header_length + 2]), SAFI.unpack(data[header_length + 2]))
+        return cls(AFI.unpack_afi(data[header_length : header_length + 2]), SAFI.unpack_safi(data[header_length + 2]))

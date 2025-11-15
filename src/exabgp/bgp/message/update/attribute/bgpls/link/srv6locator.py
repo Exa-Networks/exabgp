@@ -44,7 +44,7 @@ class Srv6Locator(FlagLS):
         return 'flags: {}, algorithm: {}, metric: {}'.format(self.flags, self.algorithm, self.metric)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> Srv6Locator:
+    def unpack_bgpls(cls, data: bytes) -> Srv6Locator:
         flags = cls.unpack_flags(bytes(data[0:1]))
         algorithm = data[1]
         metric = unpack('!I', data[4:8])[0]

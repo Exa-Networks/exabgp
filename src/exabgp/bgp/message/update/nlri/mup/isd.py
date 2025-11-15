@@ -85,15 +85,15 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes, afi: AFI) -> InterworkSegmentDiscoveryRoute:
-        rd = RouteDistinguisher.unpack(data[:8])
+    def unpack_mup_route(cls, data: bytes, afi: AFI) -> InterworkSegmentDiscoveryRoute:
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
         prefix_ip_len = data[8]
         size = 4 if afi != AFI.ipv6 else 16
         ip = data[9:]
         padding = size - len(ip)
         if padding != 0 and padding > 0:
             ip += bytes(padding)
-        prefix_ip = IP.unpack(ip)
+        prefix_ip = IP.unpack_ip(ip)
 
         return cls(rd, prefix_ip_len, prefix_ip, afi)
 

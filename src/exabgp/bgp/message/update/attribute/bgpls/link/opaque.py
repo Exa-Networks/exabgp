@@ -30,6 +30,6 @@ class LinkOpaque:
     REPR = 'opaque-link'
 
     @classmethod
-    def unpack_attribute(cls, data: bytes) -> LinkOpaque:
+    def unpack_bgpls(cls, data: bytes) -> LinkOpaque:
         length = len(data)
         return cls(unpack('!%ds' % length, data)[0])  # type: ignore[call-arg]

@@ -85,7 +85,7 @@ class MVPN(NLRI):
         length = bgp[1]
 
         if code in cls.registered_mvpn:
-            klass = cls.registered_mvpn[code].unpack(bgp[2 : length + 2], afi)
+            klass = cls.registered_mvpn[code].unpack_mvpn_route(bgp[2 : length + 2], afi)
         else:
             klass = GenericMVPN(afi, code, bgp[2 : length + 2])
         klass.CODE = code

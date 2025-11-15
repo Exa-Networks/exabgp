@@ -111,7 +111,7 @@ class Labels:
         return '[ ]'
 
     @classmethod
-    def unpack(cls: Type[Labels], data: bytes) -> Labels:
+    def unpack_labels(cls: Type[Labels], data: bytes) -> Labels:
         labels = []
         raw_labels = []
         while len(data):

@@ -94,9 +94,9 @@ class EthernetSegment(EVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, data: bytes) -> EthernetSegment:
-        rd = RouteDistinguisher.unpack(data[:8])
-        esi = ESI.unpack(data[8:18])
+    def unpack_evpn_route(cls, data: bytes) -> EthernetSegment:
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
+        esi = ESI.unpack_esi(data[8:18])
         iplen = data[18]
 
         if iplen not in (32, 128):
@@ -106,7 +106,7 @@ class EthernetSegment(EVPN):
                 'IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits' % iplen,
             )
 
-        ip = IP.unpack(data[19 : 19 + (iplen // 8)])
+        ip = IP.unpack_ip(data[19 : 19 + (iplen // 8)])
 
         return cls(rd, esi, ip, data)
 

@@ -55,7 +55,7 @@ class MTID:
         self._packed = packed
 
     @classmethod
-    def unpack(cls, data):
+    def unpack_mtid(cls, data):
         # tids = []
         # for i in range(0, len(data), 2):
         #     payload = struct.unpack('!H', data[i:i+2])[0]

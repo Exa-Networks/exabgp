@@ -63,6 +63,6 @@ class ClusterList(Attribute):
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> ClusterList:
         clusters: List[IPv4] = []
         while data:
-            clusters.append(IPv4.unpack(data[:4]))
+            clusters.append(IPv4.unpack_ipv4(data[:4]))
             data = data[4:]
         return cls(clusters)

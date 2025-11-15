@@ -22,5 +22,5 @@ class RouterID(IPv4):
         IPv4.__init__(self, ip, packed)
 
     @classmethod
-    def unpack(cls: Type[RouterID], data: bytes) -> RouterID:  # pylint: disable=W0221
+    def unpack_routerid(cls: Type[RouterID], data: bytes) -> RouterID:  # pylint: disable=W0221
         return cls('.'.join(str(_) for _ in data), data)

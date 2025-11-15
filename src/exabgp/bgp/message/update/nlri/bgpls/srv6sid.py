@@ -65,7 +65,7 @@ class SRv6SID(BGPLS):
         self.srv6_sid_descriptors: Dict[str, Any] = srv6_sid_descriptors
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes, length: int) -> SRv6SID:
+    def unpack_bgpls_nlri(cls, data: bytes, length: int) -> SRv6SID:
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
@@ -81,7 +81,7 @@ class SRv6SID(BGPLS):
         local_node_descriptors = tlvs[:node_length]
         node_ids: List[NodeDescriptor] = []
         while local_node_descriptors:
-            node_id, left = NodeDescriptor.unpack(local_node_descriptors, proto_id)
+            node_id, left = NodeDescriptor.unpack_node(local_node_descriptors, proto_id)
             node_ids.append(node_id)
             if left == local_node_descriptors:
                 raise RuntimeError('sub-calls should consume data')
@@ -96,9 +96,9 @@ class SRv6SID(BGPLS):
                 raise RuntimeError('SRv6 SID Descriptors are too short')
             sid_type, sid_length = unpack('!HH', tlvs[:4])
             if sid_type == TLV_MULTI_TOPO_ID:
-                srv6_sid_descriptors['multi-topology-ids'].append(MTID.unpack(tlvs[4 : sid_length + 4]).json())
+                srv6_sid_descriptors['multi-topology-ids'].append(MTID.unpack_mtid(tlvs[4 : sid_length + 4]).json())
             elif sid_type == TLV_SRV6_SID_INFO:
-                srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(tlvs[4 : sid_length + 4]))
+                srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack_srv6sid(tlvs[4 : sid_length + 4]))
             else:
                 if f'generic-tlv-{sid_type}' not in srv6_sid_descriptors:
                     srv6_sid_descriptors[f'generic-tlv-{sid_type}'] = []

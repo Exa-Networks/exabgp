@@ -33,7 +33,7 @@ class ASN(Resource):
         return pack('!L' if asn4 else '!H', self)
 
     @classmethod
-    def unpack(cls: Type[ASN], data: bytes, klass: Type[ASN] | None = None) -> ASN:
+    def unpack_asn(cls: Type[ASN], data: bytes, klass: Type[ASN] | None = None) -> ASN:
         kls = cls if klass is None else klass
         value = unpack('!L' if len(data) == cls.SIZE_4BYTE else '!H', data)[0]
         return kls(value)

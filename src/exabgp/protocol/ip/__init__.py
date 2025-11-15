@@ -203,7 +203,7 @@ class IP:
         cls._known[cls.afi] = cls
 
     @classmethod
-    def unpack(cls, data: bytes, klass: Optional[Type[IP]] = None) -> IP:
+    def unpack_ip(cls, data: bytes, klass: Optional[Type[IP]] = None) -> IP:
         return cls.create(IP.ntop(data), data, klass)
 
 
@@ -308,7 +308,7 @@ class IPv4(IP):
 
     # klass is a trick for subclasses of IP/IPv4 such as NextHop / OriginatorID
     @classmethod
-    def unpack(cls, data: builtins.bytes, klass: Optional[Type[IPv4]] = None) -> IPv4:  # type: ignore[override]
+    def unpack_ipv4(cls, data: builtins.bytes, klass: Optional[Type[IPv4]] = None) -> IPv4:  # type: ignore[override]
         ip = socket.inet_ntop(socket.AF_INET, data)
         if klass:
             return klass(ip, data)
@@ -363,7 +363,7 @@ class IPv6(IP):
         return socket.inet_ntop(socket.AF_INET6, data)
 
     @classmethod
-    def unpack(cls, data: builtins.bytes, klass: Optional[Type[IPv6]] = None) -> IPv6:  # type: ignore[override]
+    def unpack_ipv6(cls, data: builtins.bytes, klass: Optional[Type[IPv6]] = None) -> IPv6:  # type: ignore[override]
         ip6 = socket.inet_ntop(socket.AF_INET6, data)
         if klass:
             return klass(ip6)

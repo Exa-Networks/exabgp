@@ -80,8 +80,8 @@ class Graceful(Capability, dict):
         data = data[2:]
         families: List[Tuple[AFI, SAFI, int]] = []
         while data:
-            afi = AFI.unpack(data[:2])
-            safi = SAFI.unpack(data[2:3])
+            afi = AFI.unpack_afi(data[:2])
+            safi = SAFI.unpack_safi(data[2:3])
             flag_family = data[3]
             families.append((afi, safi, flag_family))
             data = data[4:]

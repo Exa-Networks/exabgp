@@ -71,7 +71,7 @@ class Srv6SidInformation:  # type: ignore[type-var]
 
     @classmethod
     def unpack_attribute(cls, data: bytes, length: int) -> Srv6SidInformation:
-        sid: IPv6 = IPv6.unpack(data[1:17])
+        sid: IPv6 = IPv6.unpack_ipv6(data[1:17])
         behavior: int = unpack('!H', data[18:20])[0]
         subsubtlvs: List[GenericSrv6ServiceDataSubSubTlv] = []
 

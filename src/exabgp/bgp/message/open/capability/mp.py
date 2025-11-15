@@ -42,7 +42,7 @@ class MultiProtocol(Capability, list):
         instance: MultiProtocol, data: bytes, capability: Optional[CapabilityCode] = None
     ) -> MultiProtocol:  # pylint: disable=W0613
         # XXX: FIXME: we should raise if we have twice the same AFI/SAFI
-        afi: AFI = AFI.unpack(data[:2])
-        safi: SAFI = SAFI.unpack(data[3:4])
+        afi: AFI = AFI.unpack_afi(data[:2])
+        safi: SAFI = SAFI.unpack_safi(data[3:4])
         instance.append((afi, safi))
         return instance

@@ -81,7 +81,7 @@ class NODE(BGPLS):
         return f'{{ {content} }}'
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes, rd: Any) -> NODE:
+    def unpack_bgpls_nlri(cls, data: bytes, rd: Any) -> NODE:
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
@@ -98,7 +98,7 @@ class NODE(BGPLS):
         node_ids: List[NodeDescriptor] = []
         while values:
             # Unpack Node Descriptor Sub-TLVs
-            node_id, left = NodeDescriptor.unpack(values, proto_id)
+            node_id, left = NodeDescriptor.unpack_node(values, proto_id)
             node_ids.append(node_id)
             if left == values:
                 raise RuntimeError('sub-calls should consume data')

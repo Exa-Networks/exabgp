@@ -143,33 +143,33 @@ class Prefix(EVPN):
         return self._packed
 
     @classmethod
-    def unpack(cls, exdata: bytes) -> Prefix:
+    def unpack_evpn_route(cls, exdata: bytes) -> Prefix:
         data = exdata
 
         # Get the data length to understand if addresses are IPv4 or IPv6
         datalen = len(data)
 
-        rd = RouteDistinguisher.unpack(data[:8])
+        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
         data = data[8:]
 
-        esi = ESI.unpack(data[:10])
+        esi = ESI.unpack_esi(data[:10])
         data = data[10:]
 
-        etag = EthernetTag.unpack(data[:4])
+        etag = EthernetTag.unpack_etag(data[:4])
         data = data[4:]
 
         iplen = data[0]
         data = data[1:]
 
         if datalen == (26 + 8):  # Using IPv4 addresses
-            ip = IP.unpack(data[:4])
+            ip = IP.unpack_ip(data[:4])
             data = data[4:]
-            gwip = IP.unpack(data[:4])
+            gwip = IP.unpack_ip(data[:4])
             data = data[4:]
         elif datalen == (26 + 32):  # Using IPv6 addresses
-            ip = IP.unpack(data[:16])
+            ip = IP.unpack_ip(data[:16])
             data = data[16:]
-            gwip = IP.unpack(data[:16])
+            gwip = IP.unpack_ip(data[:16])
             data = data[16:]
         else:
             raise Notify(
@@ -179,7 +179,7 @@ class Prefix(EVPN):
                 % datalen,
             )
 
-        label = Labels.unpack(data[:3])
+        label = Labels.unpack_labels(data[:3])
 
         return cls(rd, esi, etag, label, ip, iplen, gwip, exdata)
 

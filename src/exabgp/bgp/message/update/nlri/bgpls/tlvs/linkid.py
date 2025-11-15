@@ -28,7 +28,7 @@ class LinkIdentifier:
         self._packed = packed
 
     @classmethod
-    def unpack(cls, data):
+    def unpack_linkid(cls, data):
         local_id = unpack('!L', data[:4])[0]
         remote_id = unpack('!L', data[4:8])[0]
         return cls(local_id=local_id, remote_id=remote_id)
