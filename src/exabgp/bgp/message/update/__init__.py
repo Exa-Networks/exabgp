@@ -167,7 +167,7 @@ class Update(Message):
             else:
                 include_defaults = False
 
-        attr = self.attributes.pack(negotiated, include_defaults)
+        attr = self.attributes.pack_attribute(negotiated, include_defaults)
 
         # Withdraws/NLRIS (IPv4 unicast and multicast)
         msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
