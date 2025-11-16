@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 MANDATORY REFACTORING PROTOCOL 🚨
+
+**For ANY refactoring work (renaming methods, restructuring code, etc.):**
+
+**YOU MUST follow `.claude/MANDATORY_REFACTORING_PROTOCOL.md`**
+
+This protocol is mandatory due to a critical failure where 95 files were refactored and committed with 72 test failures, requiring a full revert and loss of all work.
+
+**The protocol requires:**
+1. **Pre-work:** Write explicit numbered steps with verification for each
+2. **Execution:** Prove each step passes tests before proceeding (paste exact output)
+3. **Pre-commit:** Run full test suite and paste output showing 0 failures
+
+**READ THE PROTOCOL BEFORE ANY REFACTORING WORK.**
+
 ## Development Commands
 
 **Testing:**
