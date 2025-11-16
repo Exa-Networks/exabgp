@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING, ClassVar, List, Optional, Union
 
 if TYPE_CHECKING:
@@ -128,5 +128,17 @@ class NODE(BGPLS):
     def __hash__(self) -> int:
         return hash((self.proto_id, tuple(self.node_ids)))
 
-    def pack_nlri(self, negotiated: Negotiated = None) -> Optional[bytes]:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+        if self._pack:
+            return self._pack
+
+        # Calculate packed bytes dynamically
+        # Pack node descriptor TLVs
+        node_tlvs = b''.join(node_id.pack_tlv() for node_id in self.node_ids)
+        node_length = len(node_tlvs)
+
+        # Structure: proto_id (1) + domain (8) + node_type (2) + node_length (2) + node_tlvs
+        self._pack = (
+            pack('!BQ', self.proto_id, self.domain) + pack('!HH', NODE_DESCRIPTOR_TYPE, node_length) + node_tlvs
+        )
         return self._pack
