@@ -248,7 +248,7 @@ class AS4Path(ASPath):
     Empty: ClassVar[Optional[AS4Path]] = None
 
     def pack_attribute(self, negotiated: Optional[Negotiated] = None) -> bytes:
-        return ASPath.pack(self, True)  # type: ignore[arg-type]
+        return ASPath.pack_segments(self.aspath, True)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Optional[AS4Path]:
