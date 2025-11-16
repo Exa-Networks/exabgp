@@ -110,7 +110,8 @@ def test_standard_community_parsing() -> None:
     assert str(community) == '65000:100'
 
     # Verify pack round-trip
-    assert community.pack_attribute() == community_bytes
+    negotiated = create_negotiated()
+    assert community.pack_attribute(negotiated) == community_bytes
 
 
 def test_standard_community_well_known() -> None:
@@ -214,6 +215,7 @@ def test_route_target_asn2_number() -> None:
     from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
     from exabgp.bgp.message.open.asn import ASN
 
+    negotiated = create_negotiated()
     # Create RT with 2-byte ASN
     asn = ASN(65000)
     number = 100
@@ -224,7 +226,7 @@ def test_route_target_asn2_number() -> None:
     assert len(rt) == 8
 
     # Verify pack/unpack round-trip
-    packed = rt.pack_attribute()
+    packed = rt.pack_attribute(negotiated)
     assert len(packed) == 8
 
     # Verify type and subtype
@@ -246,6 +248,7 @@ def test_route_target_ip_number() -> None:
     """
     from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetIPNumber
 
+    negotiated = create_negotiated()
     # Create RT with IPv4 address
     ip = '192.0.2.1'
     number = 100
@@ -256,7 +259,7 @@ def test_route_target_ip_number() -> None:
     assert len(rt) == 8
 
     # Verify pack/unpack round-trip
-    packed = rt.pack_attribute()
+    packed = rt.pack_attribute(negotiated)
     assert len(packed) == 8
 
     # Verify type and subtype
@@ -279,6 +282,7 @@ def test_route_target_asn4_number() -> None:
     from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN4Number
     from exabgp.bgp.message.open.asn import ASN
 
+    negotiated = create_negotiated()
     # Create RT with 4-byte ASN (>65535)
     asn = ASN(4200000000)
     number = 100
@@ -289,7 +293,7 @@ def test_route_target_asn4_number() -> None:
     assert len(rt) == 8
 
     # Verify pack/unpack round-trip
-    packed = rt.pack_attribute()
+    packed = rt.pack_attribute(negotiated)
     assert len(packed) == 8
 
     # Verify type and subtype
@@ -312,15 +316,16 @@ def test_route_target_transitive_flag() -> None:
     from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
     from exabgp.bgp.message.open.asn import ASN
 
+    negotiated = create_negotiated()
     # Create transitive RT
     rt_transitive = RouteTargetASN2Number(ASN(65000), 100, transitive=True)
-    packed_trans = rt_transitive.pack_attribute()
+    packed_trans = rt_transitive.pack_attribute(negotiated)
     # Transitive: bit 6 should be 0
     assert (packed_trans[0] & 0x40) == 0x00
 
     # Create non-transitive RT
     rt_non_transitive = RouteTargetASN2Number(ASN(65000), 100, transitive=False)
-    packed_non_trans = rt_non_transitive.pack_attribute()
+    packed_non_trans = rt_non_transitive.pack_attribute(negotiated)
     # Non-transitive: bit 6 should be 1
     assert (packed_non_trans[0] & 0x40) == 0x40
 
@@ -333,6 +338,7 @@ def test_extended_community_base_parsing() -> None:
     """
     from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
+    negotiated = create_negotiated()
     # Create unknown extended community type
     # Type 0x0F (unknown), Subtype 0xFF (unknown)
     unknown_data = struct.pack('!BB', 0x0F, 0xFF) + b'\x00\x01\x02\x03\x04\x05'
@@ -341,7 +347,7 @@ def test_extended_community_base_parsing() -> None:
 
     # Should store raw bytes
     assert len(ec) == 8
-    assert ec.pack_attribute() == unknown_data
+    assert ec.pack_attribute(negotiated) == unknown_data
 
     # Verify transitive check
     assert ec.transitive()  # bit 6 is 0
@@ -361,6 +367,7 @@ def test_route_origin_community() -> None:
     from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN4Number
     from exabgp.bgp.message.open.asn import ASN
 
+    negotiated = create_negotiated()
     # Create Route Origin
     asn = ASN(65000)
     number = 200
@@ -371,7 +378,7 @@ def test_route_origin_community() -> None:
     assert len(ro) == 8
 
     # Verify subtype (0x03 for origin vs 0x02 for target)
-    packed = ro.pack_attribute()
+    packed = ro.pack_attribute(negotiated)
     assert packed[1] == 0x03
 
 
@@ -384,6 +391,7 @@ def test_bandwidth_community() -> None:
     """
     from exabgp.bgp.message.update.attribute.community.extended.bandwidth import Bandwidth
 
+    negotiated = create_negotiated()
     # Create bandwidth community: ASN 65000, 1 Gbps = 125000000 bytes/sec
     asn = 65000
     speed = 125000000.0
@@ -394,8 +402,8 @@ def test_bandwidth_community() -> None:
     assert len(bw) == 8
 
     # Verify pack/unpack
-    packed = bw.pack_attribute()
-    # Bandwidth.pack_attribute() returns only the data (ASN + float), not full extended community
+    packed = bw.pack_attribute(negotiated)
+    # Bandwidth.pack_attribute(negotiated) returns only the data (ASN + float), not full extended community
     assert len(packed) == 6
 
     # Unpack requires type/subtype prefix
@@ -415,6 +423,7 @@ def test_encapsulation_community_vxlan() -> None:
     """
     from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 
+    negotiated = create_negotiated()
     # Create VXLAN encapsulation
     encap = Encapsulation(Encapsulation.Type.VXLAN)
 
@@ -423,7 +432,7 @@ def test_encapsulation_community_vxlan() -> None:
     assert len(encap) == 8
 
     # Verify pack/unpack
-    packed = encap.pack_attribute()
+    packed = encap.pack_attribute(negotiated)
     assert len(packed) == 8
 
     # Verify type and subtype
@@ -443,6 +452,7 @@ def test_encapsulation_community_types() -> None:
     """
     from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 
+    negotiated = create_negotiated()
     test_cases = [
         (Encapsulation.Type.GRE, 'encap:GRE'),
         (Encapsulation.Type.IPIP, 'encap:IP-in-IP'),
@@ -456,7 +466,7 @@ def test_encapsulation_community_types() -> None:
         assert str(encap) == expected_str
 
         # Verify round-trip
-        packed = encap.pack_attribute()
+        packed = encap.pack_attribute(negotiated)
         unpacked = Encapsulation.unpack_attribute(packed)
         assert unpacked.tunnel_type == tunnel_type
 
@@ -468,6 +478,7 @@ def test_traffic_engineering_community() -> None:
     """
     from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 
+    negotiated = create_negotiated()
     # Create traffic rate community
     # ASN 0 + 4-byte float rate (bytes/sec)
     asn = 0
@@ -478,7 +489,7 @@ def test_traffic_engineering_community() -> None:
     assert len(tr) == 8
 
     # Verify pack
-    packed = tr.pack_attribute()
+    packed = tr.pack_attribute(negotiated)
     assert len(packed) == 8
 
 
@@ -489,6 +500,7 @@ def test_l2info_community() -> None:
     """
     from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
 
+    negotiated = create_negotiated()
     # Create L2Info with common parameters
     # control_flags, mtu, reserved
     control = 0
@@ -503,7 +515,7 @@ def test_l2info_community() -> None:
     assert l2info.mtu == mtu
 
     # Verify pack/unpack
-    packed = l2info.pack_attribute()
+    packed = l2info.pack_attribute(negotiated)
     unpacked = L2Info.unpack_attribute(packed, create_negotiated())
     assert unpacked.mtu == mtu
 
@@ -516,6 +528,7 @@ def test_mac_mobility_community() -> None:
     """
     from exabgp.bgp.message.update.attribute.community.extended.mac_mobility import MacMobility
 
+    negotiated = create_negotiated()
     # Create MAC mobility with sequence number
     flags = 0x01  # Static flag
     sequence = 5
@@ -528,7 +541,7 @@ def test_mac_mobility_community() -> None:
     assert mac_mob.sticky == bool(flags)
 
     # Verify pack/unpack
-    packed = mac_mob.pack_attribute()
+    packed = mac_mob.pack_attribute(negotiated)
     unpacked = MacMobility.unpack_attribute(packed, create_negotiated())
     assert unpacked.sequence == sequence
 
@@ -603,6 +616,7 @@ def test_large_community_parsing() -> None:
     """
     from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
 
+    negotiated = create_negotiated()
     # Create large community: 65000:100:200
     ga = 65000
     ld1 = 100
@@ -616,7 +630,7 @@ def test_large_community_parsing() -> None:
     assert str(lc) == '65000:100:200'
 
     # Verify pack round-trip
-    assert lc.pack_attribute() == large_bytes
+    assert lc.pack_attribute(negotiated) == large_bytes
 
 
 def test_large_community_multiple() -> None:

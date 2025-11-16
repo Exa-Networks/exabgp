@@ -190,7 +190,7 @@ class Capabilities(dict):
         self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
         return self
 
-    def pack(self) -> bytes:
+    def pack_capabilities(self) -> bytes:
         parameters = b''
         for k, capabilities in self.items():
             for capability in capabilities.extract():

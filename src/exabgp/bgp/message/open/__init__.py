@@ -74,7 +74,7 @@ class Open(Message):
             + self.asn.trans().pack()
             + self.hold_time.pack()
             + self.router_id.pack()
-            + self.capabilities.pack(),
+            + self.capabilities.pack_capabilities(),
         )
 
     def __str__(self) -> str:

@@ -128,7 +128,7 @@ class NODE(BGPLS):
     def __hash__(self) -> int:
         return hash((self.proto_id, tuple(self.node_ids)))
 
-    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
         if self._pack:
             return self._pack
 

@@ -60,7 +60,7 @@ class TestSourceAD:
         group = IP.create('239.1.1.1')
 
         route = SourceAD(rd, AFI.ipv4, source, group)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
             AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -79,7 +79,7 @@ class TestSourceAD:
         group = IP.create('ff0e::1')
 
         route = SourceAD(rd, AFI.ipv6, source, group)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
             AFI.ipv6, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -192,7 +192,7 @@ class TestSourceAD:
         for group_str in multicast_groups:
             group = IP.create(group_str)
             route = SourceAD(rd, AFI.ipv4, source, group)
-            packed = route.pack_nlri()
+            packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MVPN.unpack_nlri(
                 AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
             )
@@ -233,7 +233,7 @@ class TestSharedJoin:
         source_as = 64512
 
         route = SharedJoin(rd, AFI.ipv4, source, group, source_as)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
             AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -254,7 +254,7 @@ class TestSharedJoin:
         source_as = 65000
 
         route = SharedJoin(rd, AFI.ipv6, source, group, source_as)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
             AFI.ipv6, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -357,7 +357,7 @@ class TestSharedJoin:
 
         for asn in as_numbers:
             route = SharedJoin(rd, AFI.ipv4, source, group, asn)
-            packed = route.pack_nlri()
+            packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MVPN.unpack_nlri(
                 AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
             )
@@ -398,7 +398,7 @@ class TestSourceJoin:
         source_as = 64512
 
         route = SourceJoin(rd, AFI.ipv4, source, group, source_as)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
             AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -419,7 +419,7 @@ class TestSourceJoin:
         source_as = 65000
 
         route = SourceJoin(rd, AFI.ipv6, source, group, source_as)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
             AFI.ipv6, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -522,7 +522,7 @@ class TestSourceJoin:
         source_as = 65005
 
         route = SourceJoin(rd, AFI.ipv4, source, group, source_as)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
         unpacked, _ = MVPN.unpack_nlri(
             AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
         )

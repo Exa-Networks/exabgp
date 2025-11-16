@@ -80,7 +80,7 @@ class TestVPLSPackUnpack:
         rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
-        packed = vpls.pack_nlri()
+        packed = vpls.pack_nlri(create_negotiated())
         unpacked, leftover = VPLS.unpack_nlri(
             AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
         )
@@ -105,7 +105,7 @@ class TestVPLSPackUnpack:
             rd = RouteDistinguisher.fromElements(ip, rd_num)
             vpls = VPLS(rd, endpoint, base, offset, size)
 
-            packed = vpls.pack_nlri()
+            packed = vpls.pack_nlri(create_negotiated())
             unpacked, leftover = VPLS.unpack_nlri(
                 AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
             )
@@ -120,7 +120,7 @@ class TestVPLSPackUnpack:
         rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
-        packed = vpls.pack_nlri()
+        packed = vpls.pack_nlri(create_negotiated())
 
         # Length should be 2 + 8 (RD) + 2 + 2 + 2 (endpoint, offset, size) + 3 (base with BOS)
         assert len(packed) == 19
@@ -134,7 +134,7 @@ class TestVPLSPackUnpack:
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         # VPLS requires exact length - extra data causes Notify
-        packed = vpls.pack_nlri() + b'\x01\x02\x03\x04'
+        packed = vpls.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
 
         with pytest.raises(Notify) as exc_info:
             VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated())
@@ -146,7 +146,7 @@ class TestVPLSPackUnpack:
         rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
-        packed = vpls.pack_nlri()
+        packed = vpls.pack_nlri(create_negotiated())
         unpacked, _ = VPLS.unpack_nlri(
             AFI.l2vpn, SAFI.vpls, packed, Action.WITHDRAW, None, negotiated=create_negotiated()
         )
@@ -401,7 +401,7 @@ class TestVPLSEdgeCases:
 
         assert vpls.base == max_base
 
-        packed = vpls.pack_nlri()
+        packed = vpls.pack_nlri(create_negotiated())
         unpacked, _ = VPLS.unpack_nlri(
             AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
         )
@@ -423,7 +423,7 @@ class TestVPLSEdgeCases:
         rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
-        packed = vpls.pack_nlri()
+        packed = vpls.pack_nlri(create_negotiated())
 
         # The last byte should have bit 0 set (bottom of stack)
         # Base is packed in the last 3 bytes with BOS bit
@@ -444,7 +444,7 @@ class TestVPLSMultipleRoutes:
 
         # VPLS requires exact length, so pack and unpack each separately
         for route in routes:
-            packed = route.pack_nlri()
+            packed = route.pack_nlri(create_negotiated())
             unpacked, leftover = VPLS.unpack_nlri(
                 AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
             )
@@ -468,7 +468,7 @@ class TestVPLSMultipleRoutes:
             rd = RouteDistinguisher.fromElements(ip, rd_num)
             vpls = VPLS(rd, endpoint, base, offset, size)
 
-            packed = vpls.pack_nlri()
+            packed = vpls.pack_nlri(create_negotiated())
             unpacked, _ = VPLS.unpack_nlri(
                 AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
             )

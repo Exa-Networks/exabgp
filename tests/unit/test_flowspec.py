@@ -442,6 +442,7 @@ class TestFlowNLRI:
 
     def test_flow_pack_basic(self) -> None:
         """Test packing a basic flow specification"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -450,7 +451,7 @@ class TestFlowNLRI:
         flow.add(dest)
         flow.add(src)
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
 
         # Should have length byte followed by components
         assert len(packed) > 0
@@ -459,6 +460,7 @@ class TestFlowNLRI:
 
     def test_flow_pack_with_ports(self) -> None:
         """Test packing flow with port specifications"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -469,11 +471,12 @@ class TestFlowNLRI:
         flow.add(port1)
         flow.add(port2)
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
         assert len(packed) > 0
 
     def test_flow_pack_long_format(self) -> None:
         """Test packing flow with 2-byte length encoding"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -483,7 +486,7 @@ class TestFlowNLRI:
         for port in range(1000, 1100):
             flow.add(FlowAnyPort(NumericOperator.EQ, port))
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
 
         # Should use 2-byte length encoding (first byte >= 0xF0)
         assert packed[0] >= 0xF0
@@ -520,6 +523,7 @@ class TestFlowNLRI:
 
     def test_flow_with_route_distinguisher(self) -> None:
         """Test flow with route distinguisher (VPNv4)"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
@@ -528,7 +532,7 @@ class TestFlowNLRI:
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
 
         # Should include RD in packed format
         assert len(packed) > 8  # RD is 8 bytes
@@ -553,6 +557,7 @@ class TestFlowNLRI:
 
     def test_flow_and_operator(self) -> None:
         """Test AND operator between flow components"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -564,11 +569,12 @@ class TestFlowNLRI:
         flow.add(port1)
         flow.add(port2)
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
         assert len(packed) > 0
 
     def test_flow_tcp_flags_combination(self) -> None:
         """Test flow with TCP flags matching"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -581,7 +587,7 @@ class TestFlowNLRI:
         flow.add(dport)
         flow.add(tcp_syn)
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
         assert len(packed) > 0
 
         flow_str = str(flow)
@@ -589,6 +595,7 @@ class TestFlowNLRI:
 
     def test_flow_icmp_specification(self) -> None:
         """Test flow for ICMP packets"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -601,11 +608,12 @@ class TestFlowNLRI:
         flow.add(icmp_type)
         flow.add(icmp_code)
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
         assert len(packed) > 0
 
     def test_flow_packet_length_range(self) -> None:
         """Test flow with packet length range"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -617,11 +625,12 @@ class TestFlowNLRI:
         flow.add(pkt_len1)
         flow.add(pkt_len2)
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
         assert len(packed) > 0
 
     def test_flow_dscp_marking(self) -> None:
         """Test flow with DSCP/TOS matching"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -630,11 +639,12 @@ class TestFlowNLRI:
         flow.add(dest)
         flow.add(dscp)
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
         assert len(packed) > 0
 
     def test_flow_fragment_matching(self) -> None:
         """Test flow with fragment matching"""
+        negotiated = create_negotiated()
         flow = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -643,7 +653,7 @@ class TestFlowNLRI:
         flow.add(dest)
         flow.add(frag)
 
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
         assert len(packed) > 0
 
 
@@ -716,6 +726,7 @@ class TestFlowUnpack:
 
     def test_flow_pack_unpack_roundtrip(self) -> None:
         """Test complete pack/unpack roundtrip"""
+        negotiated = create_negotiated()
         # Create a flow
         flow1 = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -729,7 +740,7 @@ class TestFlowUnpack:
         flow1.add(dport)
 
         # Pack it
-        packed = flow1.pack()
+        packed = flow1.pack(negotiated)
 
         # Unpack it
         flow2, leftover = Flow.unpack_nlri(
@@ -743,6 +754,7 @@ class TestFlowUnpack:
 
     def test_flow_unpack_large_length(self) -> None:
         """Test unpacking flow with 2-byte length encoding"""
+        negotiated = create_negotiated()
         flow1 = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow1.add(dest)
@@ -751,7 +763,7 @@ class TestFlowUnpack:
         for port in range(1000, 1200):
             flow1.add(FlowAnyPort(NumericOperator.EQ, port))
 
-        packed = flow1.pack()
+        packed = flow1.pack(negotiated)
 
         # With 200+ ports, should use 2-byte length (>= 0xF0)
         assert packed[0] >= 0xF0
@@ -762,6 +774,7 @@ class TestFlowUnpack:
 
     def test_flow_unpack_with_rd(self) -> None:
         """Test unpacking VPN flow with route distinguisher"""
+        negotiated = create_negotiated()
         flow1 = Flow(afi=AFI.ipv4, safi=SAFI.flow_vpn)
         rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
         flow1.rd = rd
@@ -769,7 +782,7 @@ class TestFlowUnpack:
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow1.add(dest)
 
-        packed = flow1.pack()
+        packed = flow1.pack(negotiated)
 
         # Unpack it
         flow2, leftover = Flow.unpack_nlri(
@@ -790,6 +803,7 @@ class TestFlowUnpack:
 
     def test_flow_unpack_multiple_components(self) -> None:
         """Test unpacking flow with multiple port specifications"""
+        negotiated = create_negotiated()
         flow1 = Flow()
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -802,7 +816,7 @@ class TestFlowUnpack:
         flow1.add(port1)
         flow1.add(port2)
 
-        packed = flow1.pack()
+        packed = flow1.pack(negotiated)
         flow2, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, None, negotiated=create_negotiated())
 
         assert flow2 is not None
@@ -902,13 +916,14 @@ class TestFlowEdgeCases:
 
     def test_flow_len_method(self) -> None:
         """Test __len__ method"""
+        negotiated = create_negotiated()
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
 
         # Length should match packed size
         flow_len = len(flow)
-        packed = flow.pack()
+        packed = flow.pack(negotiated)
         assert flow_len == len(packed)
 
     def test_flow_multiple_destinations_allowed(self) -> None:

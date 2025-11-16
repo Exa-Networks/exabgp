@@ -7,6 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.message import Message
@@ -34,10 +39,15 @@ class EOR(Message):
             self.afi = afi
             self.safi = safi
 
-        def pack_nlri(self, negotiated=None):
+        def _pack_nlri_simple(self) -> bytes:
+            """Pack NLRI without negotiated-dependent data (no addpath)."""
             if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
                 return b'\x00\x00\x00\x00'
             return self.PREFIX + self.afi.pack() + self.safi.pack()
+
+        def pack_nlri(self, negotiated: 'Negotiated') -> bytes:  # type: ignore[override]
+            # EOR (End-of-RIB) marker - addpath not applicable
+            return self._pack_nlri_simple()
 
         def __repr__(self):
             return self.extensive()
@@ -62,7 +72,7 @@ class EOR(Message):
         self.attributes = Attributes()
 
     def pack_message(self, negotiated=None):
-        return self._message(self.nlris[0].pack())
+        return self._message(self.nlris[0].pack(negotiated))
 
     def __repr__(self):
         return 'EOR'

@@ -6,12 +6,22 @@ Created for comprehensive test coverage improvement
 """
 
 import pytest
+from unittest.mock import Mock
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.protocol.ip import IP
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 class TestLabelCreation:
@@ -219,7 +229,7 @@ class TestLabelPack:
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
         label.labels = Labels([100], True)
 
-        packed = label.pack_nlri()
+        packed = label.pack_nlri(create_negotiated())
 
         assert isinstance(packed, bytes)
         assert len(packed) > 0
@@ -233,7 +243,7 @@ class TestLabelPack:
             label.cidr = CIDR(IP.pton('10.0.0.0'), mask)
             label.labels = Labels([100], True)
 
-            packed = label.pack_nlri()
+            packed = label.pack_nlri(create_negotiated())
             assert len(packed) > 0
 
     def test_pack_ipv6(self) -> None:
@@ -242,7 +252,7 @@ class TestLabelPack:
         label.cidr = CIDR(IP.pton('2001:db8::'), 32)
         label.labels = Labels([100], True)
 
-        packed = label.pack_nlri()
+        packed = label.pack_nlri(create_negotiated())
         assert len(packed) > 0
 
     def test_pack_multiple_labels(self) -> None:
@@ -251,7 +261,7 @@ class TestLabelPack:
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
         label.labels = Labels([100, 200, 300], True)
 
-        packed = label.pack_nlri()
+        packed = label.pack_nlri(create_negotiated())
         # Should include 3 labels
         assert len(packed) >= 9  # 3 labels * 3 bytes
 
@@ -330,7 +340,7 @@ class TestLabelEdgeCases:
         label.cidr = CIDR(IP.pton('0.0.0.0'), 0)
         label.labels = Labels([100], True)
 
-        packed = label.pack_nlri()
+        packed = label.pack_nlri(create_negotiated())
         assert len(packed) > 0
 
     def test_label_host_route_ipv4(self) -> None:
@@ -339,7 +349,7 @@ class TestLabelEdgeCases:
         label.cidr = CIDR(IP.pton('192.168.1.1'), 32)
         label.labels = Labels([100], True)
 
-        packed = label.pack_nlri()
+        packed = label.pack_nlri(create_negotiated())
         assert len(packed) > 0
 
     def test_label_host_route_ipv6(self) -> None:
@@ -348,7 +358,7 @@ class TestLabelEdgeCases:
         label.cidr = CIDR(IP.pton('2001:db8::1'), 128)
         label.labels = Labels([100], True)
 
-        packed = label.pack_nlri()
+        packed = label.pack_nlri(create_negotiated())
         assert len(packed) > 0
 
     def test_label_no_labels(self) -> None:
@@ -358,7 +368,7 @@ class TestLabelEdgeCases:
         label.labels = Labels.NOLABEL
 
         # Should still be able to pack
-        packed = label.pack_nlri()
+        packed = label.pack_nlri(create_negotiated())
         assert len(packed) > 0
 
     def test_label_maximum_label_value(self) -> None:
@@ -368,7 +378,7 @@ class TestLabelEdgeCases:
         # MPLS label is 20 bits, max value is 2^20-1 = 1048575
         label.labels = Labels([1048575], True)
 
-        packed = label.pack_nlri()
+        packed = label.pack_nlri(create_negotiated())
         assert len(packed) > 0
 
 
@@ -411,7 +421,7 @@ class TestLabelMultipleRoutes:
             label.cidr = CIDR(IP.pton(ip), mask)
             label.labels = Labels(label_values, True)
 
-            packed = label.pack_nlri()
+            packed = label.pack_nlri(create_negotiated())
             assert len(packed) > 0
             assert label.labels.labels == label_values
 

@@ -17,6 +17,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.ip.port import Port
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import Family
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -596,7 +597,7 @@ class Flow(NLRI):
         return ''
 
     def __len__(self) -> int:
-        return len(self.pack())
+        return len(self._pack_nlri_simple())
 
     def add(self, rule: Union[IPrefix, IOperation]) -> bool:
         ID = rule.ID  # type: ignore[union-attr]
@@ -617,8 +618,8 @@ class Flow(NLRI):
         self.rules.setdefault(ID, []).append(rule)
         return True
 
-    # The API requires addpath, but it is irrelevant here.
-    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def _pack_nlri_simple(self) -> bytes:
+        """Pack NLRI without negotiated-dependent data (no addpath)."""
         ordered_rules: List[bytes] = []
         # the order is a RFC requirement
         for ID in sorted(self.rules.keys()):
@@ -645,6 +646,14 @@ class Flow(NLRI):
             0,
             'my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can',
         )
+
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+        # RFC 7911 ADD-PATH is possible for FlowSpec but not yet implemented
+        # TODO: implement addpath support when negotiated.addpath.send(self.afi, self.safi)
+        return self._pack_nlri_simple()
+
+    def index(self) -> bytes:
+        return Family.index(self) + self._pack_nlri_simple()
 
     def _rules(self) -> str:
         string: List[str] = []

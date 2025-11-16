@@ -69,7 +69,7 @@ class TestEthernetAD:
         label = Labels([100], True)
 
         route = EthernetAD(rd, esi, etag, label)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -182,7 +182,7 @@ class TestMAC:
         ip = IP.create('10.1.1.1')
 
         route = MAC(rd, esi, etag, mac, maclen, label, ip)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -203,7 +203,7 @@ class TestMAC:
         label = Labels([900], True)
 
         route = MAC(rd, esi, etag, mac, maclen, label, None)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -224,7 +224,7 @@ class TestMAC:
         ip = IP.create('2001:db8::1')
 
         route = MAC(rd, esi, etag, mac, maclen, label, ip)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -346,7 +346,7 @@ class TestMulticast:
         ip = IP.create('10.0.0.1')
 
         route = Multicast(rd, etag, ip)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -363,7 +363,7 @@ class TestMulticast:
         ip = IP.create('fe80::1')
 
         route = Multicast(rd, etag, ip)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -450,7 +450,7 @@ class TestEthernetSegment:
         ip = IP.create('10.0.0.1')
 
         route = EthernetSegment(rd, esi, ip)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -466,7 +466,7 @@ class TestEthernetSegment:
         ip = IP.create('fe80::1')
 
         route = EthernetSegment(rd, esi, ip)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -587,7 +587,7 @@ class TestPrefix:
         gwip = IP.create('192.168.1.1')
 
         route = Prefix(rd, esi, etag, label, ip, iplen, gwip)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -609,7 +609,7 @@ class TestPrefix:
         gwip = IP.create('2001:db8:1::1')
 
         route = Prefix(rd, esi, etag, label, ip, iplen, gwip)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
@@ -756,7 +756,7 @@ class TestEVPNIntegration:
         ip = IP.create('192.168.1.1')
 
         route = Multicast(rd, etag, ip)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         # addpath is set during unpacking
         unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, 12345, create_negotiated())

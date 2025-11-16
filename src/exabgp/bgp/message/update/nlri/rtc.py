@@ -19,7 +19,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import NoNextHop
 
 T = TypeVar('T', bound='RTC')
@@ -65,14 +65,22 @@ class RTC(NLRI):
     def resetFlags(char: int) -> int:
         return char & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL)
 
-    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
-        # XXX: no support for addpath yet
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+        # RFC 7911 ADD-PATH is possible for RTC but not yet implemented
         # We reset ext com flag bits from the first byte in the packed RT
         # because in an RTC route these flags never appear.
         if self.rt:
-            packedRT = self.rt.pack_attribute()
+            packedRT = self.rt.pack_attribute(negotiated)
             return pack('!BLB', len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]
         return pack('!B', 0)
+
+    def index(self) -> bytes:
+        # RTC uses negotiated in pack_nlri, so we can't use _pack_nlri_simple
+        # Index should be stable regardless of negotiated, so build it directly
+        if self.rt:
+            packedRT = self.rt._pack()  # Use internal pack without negotiated
+            return Family.index(self) + pack('!BLB', len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]
+        return Family.index(self) + pack('!B', 0)
 
     @classmethod
     def unpack_nlri(

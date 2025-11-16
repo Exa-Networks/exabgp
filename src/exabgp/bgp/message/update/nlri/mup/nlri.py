@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
@@ -69,8 +70,17 @@ class MUP(NLRI):
     def _prefix(self) -> str:
         return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())  # type: ignore[call-overload]
 
-    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def _pack_nlri_simple(self) -> bytes:
+        """Pack NLRI without negotiated-dependent data (no addpath)."""
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
+
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+        # RFC 7911 ADD-PATH is possible for MUP but not yet implemented
+        # TODO: implement addpath support when negotiated.addpath.send(self.afi, SAFI.mup)
+        return self._pack_nlri_simple()
+
+    def index(self) -> bytes:
+        return Family.index(self) + self._pack_nlri_simple()
 
     @classmethod
     def register(cls, klass: Type[MUP]) -> Type[MUP]:
@@ -102,7 +112,7 @@ class MUP(NLRI):
         return klass, bgp[end:]
 
     def _raw(self) -> str:
-        return ''.join('{:02X}'.format(_) for _ in self.pack_nlri())
+        return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())
 
 
 class GenericMUP(MUP):

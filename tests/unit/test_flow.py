@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import unittest
+from unittest.mock import Mock
 
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.nlri.flow import Flow4Source
 from exabgp.bgp.message.update.nlri.flow import Flow4Destination
@@ -19,6 +22,13 @@ from exabgp.bgp.message.update.nlri.flow import NumericOperator
 # from exabgp.bgp.message.update.attribute.community import *
 
 from exabgp.protocol.ip import IPv4
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
 
 
 class TestFlow(unittest.TestCase):
@@ -66,7 +76,7 @@ class TestFlow(unittest.TestCase):
             message += bytes(messages[key])
         message = bytes([len(message)]) + message
         # flow.add(to_FlowAction(65000,False,False))
-        flow.pack_nlri()
+        flow.pack_nlri(create_negotiated())
         # print [hex(_) for _ in flow]
 
     def test_nlri(self) -> None:
@@ -90,7 +100,7 @@ class TestFlow(unittest.TestCase):
             message += bytes(messages[key])
         message = bytes([len(message)]) + message
         # policy.add(to_FlowAction(65000,False,False))
-        flow = flow.pack_nlri()
+        flow = flow.pack_nlri(create_negotiated())
         if message[0] != flow[0]:
             self.fail(f'size mismatch {flow[0]} {message[0]}\n')
         if len(flow) != flow[0] + 1:

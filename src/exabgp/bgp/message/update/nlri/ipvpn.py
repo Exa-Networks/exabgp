@@ -12,22 +12,13 @@ from typing import TYPE_CHECKING, Any, List, Optional
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-
 from exabgp.bgp.message import Action
-
-from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.label import Label
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-from exabgp.bgp.message.update.nlri.qualifier import Labels
-
-from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
-from exabgp.protocol.family import Family
-
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
+from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import IP, NoNextHop
 
 # ====================================================== IPVPN
 # RFC 4364
@@ -84,18 +75,23 @@ class IPVPN(Label):
         return not self.__eq__(other)
 
     def __hash__(self) -> int:
-        return hash(self.pack())
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
+        return hash(addpath + self._pack_nlri_simple())
 
     @classmethod
     def has_rd(cls) -> bool:
         return True
 
-    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
-        addpath = self.path_info.pack_path() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
+    def _pack_nlri_simple(self) -> bytes:
+        """Pack NLRI without negotiated-dependent data (no addpath)."""
         mask = bytes([len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
-        return addpath + mask + self.labels.pack_labels() + self.rd.pack_rd() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
+        return mask + self.labels.pack_labels() + self.rd.pack_rd() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
 
-    def index(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+        addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
+        return addpath + self._pack_nlri_simple()
+
+    def index(self) -> bytes:  # type: ignore[assignment]
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
         mask = bytes([len(self.rd) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
         return Family.index(self) + addpath + mask + self.rd.pack_rd() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]

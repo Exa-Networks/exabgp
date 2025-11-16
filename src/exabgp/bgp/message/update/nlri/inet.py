@@ -59,14 +59,22 @@ class INET(NLRI):
     def __repr__(self) -> str:
         return self.extensive()
 
+    def __hash__(self) -> int:
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
+        return hash(addpath + self._pack_nlri_simple())
+
     def feedback(self, action: Action) -> str:
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'inet nlri next-hop missing'
         return ''
 
-    def pack_nlri(self, negotiated: Optional['Negotiated'] = None) -> bytes:
-        addpath = self.path_info.pack_path() if negotiated and negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
-        return addpath + self.cidr.pack_nlri()  # type: ignore[no-any-return,union-attr]
+    def _pack_nlri_simple(self) -> bytes:
+        """Pack NLRI without negotiated-dependent data (no addpath)."""
+        return self.cidr.pack_nlri()  # type: ignore[no-any-return,union-attr]
+
+    def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
+        addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
+        return addpath + self._pack_nlri_simple()
 
     def index(self) -> bytes:
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
