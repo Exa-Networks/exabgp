@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING, ClassVar, List, Optional, Union
 
 if TYPE_CHECKING:
@@ -161,5 +161,26 @@ class PREFIXv4(BGPLS):
 
         return f'{{ {content} }}'
 
-    def pack_nlri(self, negotiated: Negotiated = None) -> Optional[bytes]:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+        if self._pack:
+            return self._pack
+
+        # Calculate packed bytes dynamically
+        # Structure: proto_id (1) + domain (8) + TLVs
+        tlvs = b''
+
+        # Pack local node descriptors if present
+        if self.local_node:
+            node_tlvs = b''.join(node.pack_tlv() for node in self.local_node)
+            tlvs += pack('!HH', TLV_LOCAL_NODE_DESC, len(node_tlvs)) + node_tlvs
+
+        # Pack OSPF route type if present
+        if self.ospf_type:
+            tlvs += self.ospf_type.pack_tlv()
+
+        # Pack IP reachability if present
+        if self.prefix:
+            tlvs += self.prefix.pack_tlv()
+
+        self._pack = pack('!BQ', self.proto_id, self.domain) + tlvs
         return self._pack
