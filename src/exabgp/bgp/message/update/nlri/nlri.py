@@ -69,10 +69,6 @@ class NLRI(Family):
     def index(self) -> bytes:
         return Family.index(self) + self.pack_nlri()
 
-    # remove this when code restructure is finished
-    def pack(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
-        return self.pack_nlri(negotiated)
-
     def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
         raise Exception('unimplemented in NLRI children class')
 

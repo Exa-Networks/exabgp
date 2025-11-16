@@ -74,7 +74,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         if remainder != 0:
             offset += 1
 
-        prefix_ip_packed = self.prefix_ip.pack()
+        prefix_ip_packed = self.prefix_ip.pack_ip()
         # fmt: off
         self._packed = (
             self.rd.pack_rd()

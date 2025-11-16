@@ -304,8 +304,8 @@ class Peer:
         if self.fsm == FSM.OPENCONFIRM:
             # We cheat: we are not really reading the OPEN, we use the data we have instead
             # it does not matter as the open message will be the same anyway
-            local_id = self.neighbor['router-id'].pack()
-            remote_id = self.proto.negotiated.received_open.router_id.pack()
+            local_id = self.neighbor['router-id'].pack_ip()
+            remote_id = self.proto.negotiated.received_open.router_id.pack_ip()
 
             if remote_id < local_id:
                 log.debug(

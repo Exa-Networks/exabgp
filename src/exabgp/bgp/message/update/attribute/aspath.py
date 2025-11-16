@@ -112,7 +112,7 @@ class ASPath(Attribute):
                     asn4,
                 )
             )
-        return bytes([seg_type, length]) + b''.join(v.pack(asn4) for v in values)  # type: ignore[arg-type]
+        return bytes([seg_type, length]) + b''.join(v.pack_asn(asn4) for v in values)  # type: ignore[arg-type]
 
     @classmethod
     def pack_segments(cls, aspath: Tuple[Union[SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET], ...], asn4: bool) -> bytes:

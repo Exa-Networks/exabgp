@@ -81,7 +81,7 @@ def test_mpreach_ipv4_unicast() -> None:
 
     # Create IPv4 unicast prefix
     prefix = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix.nexthop = IPv4.create('192.0.2.1')
 
     # Create MP_REACH_NLRI
@@ -113,7 +113,7 @@ def test_mpreach_ipv6_unicast() -> None:
 
     # Create IPv6 unicast prefix
     prefix = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    prefix.cidr = CIDR(IPv6.create('2001:db8::').pack(), 32)
+    prefix.cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
     prefix.nexthop = IPv6.create('2001:db8::1')
 
     # Create MP_REACH_NLRI
@@ -153,7 +153,7 @@ def test_mpreach_multiple_prefixes() -> None:
     prefixes = []
     for ip, mask in prefix_cidrs:
         prefix = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        prefix.cidr = CIDR(IPv4.create(ip).pack(), mask)
+        prefix.cidr = CIDR(IPv4.create(ip).pack_ip(), mask)
         prefix.nexthop = nexthop
         prefixes.append(prefix)
 
@@ -180,7 +180,7 @@ def test_mpreach_pack_ipv4() -> None:
 
     # Create IPv4 unicast prefix
     prefix = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix.nexthop = IPv4.create('192.0.2.1')
 
     # Create MP_REACH_NLRI
@@ -221,7 +221,7 @@ def test_mpreach_nexthop_ipv6_global() -> None:
 
     # Create IPv6 unicast prefix with global next-hop
     prefix = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    prefix.cidr = CIDR(IPv6.create('2001:db8::').pack(), 32)
+    prefix.cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
     prefix.nexthop = IPv6.create('2001:db8::1')  # Global next-hop
 
     # Create MP_REACH_NLRI
@@ -252,7 +252,7 @@ def test_mpunreach_ipv4_unicast() -> None:
 
     # Create IPv4 unicast prefix to withdraw
     prefix = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
 
     # Create MP_UNREACH_NLRI
     mpunreach = MPURNLRI(AFI.ipv4, SAFI.unicast, [prefix])
@@ -281,7 +281,7 @@ def test_mpunreach_ipv6_unicast() -> None:
 
     # Create IPv6 unicast prefix to withdraw
     prefix = INET(AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
-    prefix.cidr = CIDR(IPv6.create('2001:db8::').pack(), 32)
+    prefix.cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
 
     # Create MP_UNREACH_NLRI
     mpunreach = MPURNLRI(AFI.ipv6, SAFI.unicast, [prefix])
@@ -315,7 +315,7 @@ def test_mpunreach_multiple_prefixes() -> None:
     prefixes = []
     for ip, mask in prefix_cidrs:
         prefix = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-        prefix.cidr = CIDR(IPv4.create(ip).pack(), mask)
+        prefix.cidr = CIDR(IPv4.create(ip).pack_ip(), mask)
         prefixes.append(prefix)
 
     # Create MP_UNREACH_NLRI with multiple prefixes
@@ -342,7 +342,7 @@ def test_mpunreach_pack_ipv4() -> None:
 
     # Create IPv4 unicast prefix to withdraw
     prefix = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
 
     # Create MP_UNREACH_NLRI
     mpunreach = MPURNLRI(AFI.ipv4, SAFI.unicast, [prefix])
@@ -503,11 +503,11 @@ def test_mpreach_equality() -> None:
 
     # Create two identical MP_REACH_NLRI attributes
     prefix1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix1.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix1.cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix1.nexthop = IPv4.create('192.0.2.1')
 
     prefix2 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix2.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix2.cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix2.nexthop = IPv4.create('192.0.2.1')
 
     mpreach1 = MPRNLRI(AFI.ipv4, SAFI.unicast, [prefix1])
@@ -529,10 +529,10 @@ def test_mpunreach_equality() -> None:
 
     # Create two identical MP_UNREACH_NLRI attributes
     prefix1 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    prefix1.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix1.cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
 
     prefix2 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    prefix2.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix2.cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
 
     mpunreach1 = MPURNLRI(AFI.ipv4, SAFI.unicast, [prefix1])
     mpunreach2 = MPURNLRI(AFI.ipv4, SAFI.unicast, [prefix2])

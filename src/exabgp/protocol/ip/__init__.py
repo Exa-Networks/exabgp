@@ -142,7 +142,7 @@ class IP:
     def index(self) -> bytes:
         return self._packed
 
-    def pack(self) -> bytes:
+    def pack_ip(self) -> bytes:
         return self._packed
 
     def ton(self, negotiated: Optional[Negotiated] = None, afi: AFI = AFI.undefined) -> bytes:

@@ -137,8 +137,8 @@ class Prefix(EVPN):
             + self.esi.pack_esi()
             + self.etag.pack_etag()
             + bytes([self.iplen])
-            + self.ip.pack()
-            + self.gwip.pack()
+            + self.ip.pack_ip()
+            + self.gwip.pack_ip()
             + self.label.pack_labels()  # type: ignore[union-attr]
         )
         return self._packed

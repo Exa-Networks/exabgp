@@ -17,7 +17,7 @@ class HoldTime(int):
     MIN = 3  # RFC 4271 Section 4.2 - minimum hold time in seconds (or 0 to disable keepalives)
     KEEPALIVE_DIVISOR = 3  # RFC 4271 Section 4.4 - keepalive interval = hold time / 3
 
-    def pack(self) -> bytes:
+    def pack_holdtime(self) -> bytes:
         return pack('!H', self)
 
     def keepalive(self) -> int:

@@ -44,13 +44,13 @@ class Aggregator(Attribute):
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         if negotiated.asn4:
-            return self._attribute(self.asn.pack(True) + self.speaker.pack())  # type: ignore[arg-type]
+            return self._attribute(self.asn.pack_asn(True) + self.speaker.pack_ip())  # type: ignore[arg-type]
         if self.asn.asn4():
-            return self._attribute(self.asn.trans().pack() + self.speaker.pack()) + Aggregator4(
+            return self._attribute(self.asn.trans().pack_asn() + self.speaker.pack_ip()) + Aggregator4(
                 self.asn,
                 self.speaker,
             ).pack_attribute(negotiated)
-        return self._attribute(self.asn.pack() + self.speaker.pack())
+        return self._attribute(self.asn.pack_asn() + self.speaker.pack_ip())
 
     def __len__(self) -> int:
         raise RuntimeError('size can be 6 or 8 - we can not say - or can we ?')
@@ -79,4 +79,4 @@ class Aggregator4(Aggregator):
     ID = Attribute.CODE.AS4_AGGREGATOR
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        return self._attribute(self.asn.pack(True) + self.speaker.pack())  # type: ignore[arg-type]
+        return self._attribute(self.asn.pack_asn(True) + self.speaker.pack_ip())  # type: ignore[arg-type]

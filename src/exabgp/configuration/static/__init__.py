@@ -75,7 +75,7 @@ def route(tokeniser: Any) -> List[Change]:
         nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
         check = AnnouncePath.check
 
-    nlri.cidr = CIDR(ipmask.pack(), ipmask.mask)
+    nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
 
     change = Change(nlri, Attributes())
 
@@ -129,7 +129,7 @@ def attributes(tokeniser: Any) -> List[Change]:
     else:
         nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
 
-    nlri.cidr = CIDR(ipmask.pack(), ipmask.mask)
+    nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
     attr = Attributes()
 
     labels: Any = None
@@ -181,7 +181,7 @@ def attributes(tokeniser: Any) -> List[Change]:
 
         ipmask = prefix(tokeniser)
         new = Change(nlri.__class__(nlri.afi, nlri.safi, Action.UNSET), attr)
-        new.nlri.cidr = CIDR(ipmask.pack(), ipmask.mask)
+        new.nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
         if labels:
             new.nlri.labels = labels
         if rd:

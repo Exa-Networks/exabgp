@@ -85,14 +85,21 @@ class MPRNLRI(Attribute, Family):
             mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
 
         for nexthop, nlris in mpnlri.items():
-            payload = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0])
+            payload = self.afi.pack_afi() + self.safi.pack_safi() + bytes([len(nexthop)]) + nexthop + bytes([0])
             header_length = len(payload)
             for nlri in nlris:
                 if self._len(payload + nlri) > maximum:
                     if len(payload) == header_length or len(payload) > maximum:
                         raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
                     yield self._attribute(payload)
-                    payload = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0]) + nlri
+                    payload = (
+                        self.afi.pack_afi()
+                        + self.safi.pack_safi()
+                        + bytes([len(nexthop)])
+                        + nexthop
+                        + bytes([0])
+                        + nlri
+                    )
                     continue
                 payload = payload + nlri
             if len(payload) == header_length or len(payload) > maximum:

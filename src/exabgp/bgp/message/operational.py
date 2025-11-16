@@ -150,7 +150,7 @@ class OperationalFamily(Operational):
         return (self.afi, self.safi)
 
     def _message(self, data: bytes) -> bytes:
-        return Operational._message(self, self.afi.pack() + self.safi.pack() + data)
+        return Operational._message(self, self.afi.pack_afi() + self.safi.pack_safi() + data)
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
         return self._message(self.data)
@@ -187,7 +187,7 @@ class SequencedOperationalFamily(OperationalFamily):
         else:
             self.sent_sequence = self.sequence
 
-        return self._message(self.sent_routerid.pack() + pack('!L', self.sent_sequence) + self.data)
+        return self._message(self.sent_routerid.pack_ip() + pack('!L', self.sent_sequence) + self.data)
 
 
 # =========================================================================== NS

@@ -70,10 +70,10 @@ class Open(Message):
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
         return self._message(
-            self.version.pack()
-            + self.asn.trans().pack()
-            + self.hold_time.pack()
-            + self.router_id.pack()
+            self.version.pack_version()
+            + self.asn.trans().pack_asn()
+            + self.hold_time.pack_holdtime()
+            + self.router_id.pack_ip()
             + self.capabilities.pack_capabilities(),
         )
 
