@@ -34,6 +34,45 @@ def flush(*args, **kwars):
     sys.stdout.flush()
 
 
+def check_ulimit(minimum=40000):
+    """
+    Check and set file descriptor limit (ulimit -n) to at least the minimum value.
+
+    Ensure sufficient file descriptors for tests that spawn many processes.
+    Required for functional tests that spawn many simultaneous processes.
+    Default minimum is 40000 (encoding tests spawn 72 daemon + 72 client processes).
+    """
+    try:
+        import resource
+
+        # Get current soft and hard limits
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+        # If current limit is sufficient, report and return
+        if soft >= minimum:
+            flush(f'[ulimit] File descriptor limit is {soft} (sufficient, minimum: {minimum})')
+            flush()  # Empty line before starting processes
+            return
+
+        # Try to set to minimum (but not higher than hard limit)
+        new_limit = min(minimum, hard)
+
+        try:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (new_limit, hard))
+            flush(f'[ulimit] Increased file descriptor limit from {soft} to {new_limit}')
+            flush()  # Empty line before starting processes
+        except (ValueError, OSError) as exc:
+            # If we can't set it, warn but continue
+            flush(f'[ulimit] Warning: Could not increase file descriptor limit from {soft} to {minimum}')
+            flush(f'[ulimit] Current limit: {soft}, minimum recommended: {minimum}')
+            flush(f'[ulimit] Error: {exc}')
+            flush(f'[ulimit] Tests may timeout or fail. Run: ulimit -n {minimum}')
+
+    except ImportError:
+        # resource module not available (shouldn't happen on POSIX systems)
+        flush('[ulimit] Warning: Could not check file descriptor limit (resource module unavailable)')
+
+
 def alarm_handler(number, frame):  # pylint: disable=W0613
     raise Alarm()
 
@@ -334,36 +373,31 @@ class Tests:
             yield tests
 
     def listing(self):
-        sys.stdout.write('\n')
-        sys.stdout.write('The available tests are:\n')
-        sys.stdout.write('\n')
+        flush()
+        flush('The available tests are:')
+        flush()
         for tests in self._iterate():
+            parts = []
             for test in tests:
-                sys.stdout.write(f' {test.nick:2} {test.name:25}')
-            sys.stdout.write('\n')
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+                parts.append(f' {test.nick:2} {test.name:25}')
+            flush(''.join(parts))
+        flush()
 
     def short_list(self):
-        sys.stdout.write(' '.join([test.nick for test in self.registered()]))
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        flush(' '.join([test.nick for test in self.registered()]))
 
     def display(self, daemons_started=None, clients_started=None):
         # Show timer in setup phase with [0/max] format
         if daemons_started is not None and clients_started is not None:
             if self._max_timeout:
                 timer = (
-                    f'{color(0, 33)}timeout{color(0, 0)} [{0:2d}/{color(0, 33)}{self._max_timeout:2d}{color(0, 0)}] '
+                    f'{color(0, 33)}timeout{color(0, 0)} [{0:2d}/{color(0, 33)}{self._max_timeout:2d}{color(0, 0)}]'
                 )
             else:
                 timer = ''
-            status = f'{timer}{color(0, 36)}daemons{color(0, 0)} {daemons_started:2d} {color(0, 36)}clients{color(0, 0)} {clients_started:2d}'
+            status = f'{timer} {color(0, 36)}daemons{color(0, 0)} {daemons_started:2d} {color(0, 36)}clients{color(0, 0)} {clients_started:2d}' if timer else f'{color(0, 36)}daemons{color(0, 0)} {daemons_started:2d} {color(0, 36)}clients{color(0, 0)} {clients_started:2d}'
             # Clear line before writing to prevent artifacts
-            sys.stdout.write('\r')
-            sys.stdout.write('\033[K')
-            sys.stdout.write(status)
-            sys.stdout.flush()
+            flush(f'\r\033[K{status}', end='')
             return
 
         # Count test states
@@ -392,7 +426,7 @@ class Tests:
             # Cap elapsed time to max timeout to prevent timer overshoot
             elapsed = min(elapsed, self._max_timeout)
             timer = (
-                f'{color(0, 33)}timeout{color(0, 0)} [{elapsed:2d}/{color(0, 33)}{self._max_timeout:2d}{color(0, 0)}] '
+                f'{color(0, 33)}timeout{color(0, 0)} [{elapsed:2d}/{color(0, 33)}{self._max_timeout:2d}{color(0, 0)}]'
             )
         else:
             timer = ''
@@ -400,7 +434,7 @@ class Tests:
         # Prepend daemon/client counts if they're set (for encoding tests) - cyan labels only
         daemon_client = ''
         if self._daemons_count > 0 or self._clients_count > 0:
-            daemon_client = f'{color(0, 36)}daemons{color(0, 0)} {self._daemons_count:2d} {color(0, 36)}clients{color(0, 0)} {self._clients_count:2d} '
+            daemon_client = f'{color(0, 36)}daemons{color(0, 0)} {self._daemons_count:2d} {color(0, 36)}clients{color(0, 0)} {self._clients_count:2d}'
 
         # Format with labels and colors
         # Order: timer, daemon/client, passed, failed (if > 0), remaining
@@ -428,16 +462,10 @@ class Tests:
 
         # Clear entire line first, then write status, then return to start
         # This prevents "X] X] X]" artifacts when status text gets shorter
-        sys.stdout.write('\r')  # Return to start of line
-        sys.stdout.write('\033[K')  # Clear from cursor to end of line
-        sys.stdout.write(status)
-        sys.stdout.flush()
+        flush(f'\r\033[K{status}', end='')
 
     def legend(self):
-        sys.stdout.write(
-            '\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N remaining N passed N failed N [failed test IDs]\n\n'
-        )
-        sys.stdout.flush()
+        flush('\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N remaining N passed N failed N [failed test IDs]\n')
 
     def summary(self):
         """Print summary of test results"""
@@ -456,42 +484,42 @@ class Tests:
             elif test.state == State.SKIP:
                 skipped.append(test.nick)
 
-        sys.stdout.write('\n')
-        sys.stdout.write('=' * 60 + '\n')
-        sys.stdout.write('TEST SUMMARY\n')
-        sys.stdout.write('=' * 60 + '\n')
+        flush()
+        flush('=' * 60)
+        flush('TEST SUMMARY')
+        flush('=' * 60)
 
         # Always show all possible outcomes with colors matching the display
         # Only show test IDs for failed and timed out
+        # Use fixed-width labels (9 chars) to align numbers
         if passed:
-            sys.stdout.write(f'{color(0, 32)}passed{color(0, 0)} {len(passed):2d}\n')
+            flush(f'{color(0, 32)}passed   {color(0, 0)} {len(passed):2d}')
         else:
-            sys.stdout.write(f'{color(0, 32)}passed{color(0, 0)} {0:2d}\n')
+            flush(f'{color(0, 32)}passed   {color(0, 0)} {0:2d}')
 
         if failed:
-            sys.stdout.write(f'{color(0, 31)}failed{color(0, 0)} {len(failed):2d} [{", ".join(failed)}]\n')
+            flush(f'{color(0, 31)}failed   {color(0, 0)} {len(failed):2d} [{", ".join(failed)}]')
         else:
-            sys.stdout.write(f'failed {0:2d}\n')
+            flush(f'failed    {0:2d}')
 
         if timed_out:
-            sys.stdout.write(f'{color(0, 33)}timed out{color(0, 0)} {len(timed_out):2d} [{", ".join(timed_out)}]\n')
+            flush(f'{color(0, 33)}timed out{color(0, 0)} {len(timed_out):2d} [{", ".join(timed_out)}]')
         else:
-            sys.stdout.write(f'timed out {0:2d}\n')
+            flush(f'timed out {0:2d}')
 
         if skipped:
-            sys.stdout.write(f'{color(0, 90)}skipped{color(0, 0)} {len(skipped):2d}\n')
+            flush(f'{color(0, 90)}skipped  {color(0, 0)} {len(skipped):2d}')
         else:
-            sys.stdout.write(f'{color(0, 90)}skipped{color(0, 0)} {0:2d}\n')
+            flush(f'skipped   {0:2d}')
 
-        sys.stdout.write('=' * 60 + '\n')
+        flush('=' * 60)
 
         total_run = len(passed) + len(failed) + len(timed_out)
         if total_run > 0:
             success_rate = (len(passed) / total_run) * 100 if total_run > 0 else 0
-            sys.stdout.write(f'Total: {total_run} test(s) run, {success_rate:.1f}% passed\n')
+            flush(f'Total: {total_run} test(s) run, {success_rate:.1f}% passed')
 
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        flush()
 
 
 def parse_msg_options(msg_file):
@@ -670,6 +698,8 @@ class EncodingTests(Tests):
         # Set max timeout before setup so it shows during initialization
         self._max_timeout = timeout
         self.legend()
+        # Ensure sufficient file descriptors for tests that spawn many processes
+        check_ulimit()
         success = True
         client = dict()
 
@@ -786,8 +816,7 @@ class EncodingTests(Tests):
             success = False
 
         # Move to new line after final display
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        flush()
 
         self.summary()
         return success
@@ -850,15 +879,15 @@ class DecodingTests(Tests):
             test.files.append(filename)
 
     def listing(self):
-        sys.stdout.write('\n')
-        sys.stdout.write('The available tests are:\n')
-        sys.stdout.write('\n')
+        flush()
+        flush('The available tests are:')
+        flush()
         for tests in self._iterate():
+            parts = []
             for test in tests:
-                sys.stdout.write(f' {test.nick:2} {test.name:25}')
-            sys.stdout.write('\n')
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+                parts.append(f' {test.nick:2} {test.name:25}')
+            flush(''.join(parts))
+        flush()
 
     def dry(self):
         result = []
@@ -881,6 +910,8 @@ class DecodingTests(Tests):
         self._start_time = time.time()
         self._max_timeout = timeout
         self.legend()
+        # Ensure sufficient file descriptors for tests that spawn many processes
+        check_ulimit()
         success = True
         for test in self.selected():
             test.running()
@@ -958,8 +989,7 @@ class DecodingTests(Tests):
             success = False
 
         # Move to new line after final display
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        flush()
 
         self.summary()
         return success
@@ -989,15 +1019,15 @@ class ParsingTests(Tests):
             test.files.append(filename)
 
     def listing(self):
-        sys.stdout.write('\n')
-        sys.stdout.write('The available tests are:\n')
-        sys.stdout.write('\n')
+        flush()
+        flush('The available tests are:')
+        flush()
         for tests in self._iterate():
+            parts = []
             for test in tests:
-                sys.stdout.write(f' {test.nick:2} {test.name:25}')
-            sys.stdout.write('\n')
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+                parts.append(f' {test.nick:2} {test.name:25}')
+            flush(''.join(parts))
+        flush()
 
     def dry(self):
         result = []
@@ -1009,6 +1039,8 @@ class ParsingTests(Tests):
         self._start_time = time.time()
         self._max_timeout = timeout
         self.legend()
+        # Ensure sufficient file descriptors for tests that spawn many processes
+        check_ulimit()
         success = True
 
         for test in self.selected():
@@ -1069,8 +1101,7 @@ class ParsingTests(Tests):
             success = False
 
         # Move to new line after final display
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        flush()
 
         self.summary()
         return success
@@ -1151,7 +1182,7 @@ def add_test(subparser, name, tests, extra):
             sys.exit(0)
 
         exit = tests.run_selected(parsed.timeout)
-        sys.stdout.write('\n')
+        flush()
         sys.exit(0 if exit else 1)
 
     sub.set_defaults(func=func)

@@ -74,8 +74,9 @@ All CI tests must pass:
   - Unit tests (Python 3.8-3.12)
   - Functional tests (parsing, encoding, decoding)
   - Legacy tests (Python 3.6)
-- **File descriptor limit:** Check `ulimit -n` (must be ≥64000)
-  - If lower: `ulimit -n 64000` before running tests
+- **File descriptor limit:** Automatically set to ≥40000 by functional tests
+  - The `./qa/bin/functional` tool automatically checks and increases ulimit if needed
+  - If tests fail with resource errors, manually run: `ulimit -n 64000`
 - **Encoding tests:** `./qa/bin/functional encoding` runs all tests in parallel (this is fine)
   - Before running: `killall -9 python` to clear leftover test processes and avoid port conflicts
   - Should complete in <20 seconds; if longer, remaining tests have failed
