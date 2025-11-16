@@ -63,7 +63,7 @@ class TestInterworkSegmentDiscoveryRoute:
         prefix_ip_len = 24
 
         route = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -82,7 +82,7 @@ class TestInterworkSegmentDiscoveryRoute:
         prefix_ip_len = 64
 
         route = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv6)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -163,7 +163,7 @@ class TestInterworkSegmentDiscoveryRoute:
         for prefix_len in [8, 16, 24, 32]:
             prefix_ip = IP.create('10.0.0.0')
             route = InterworkSegmentDiscoveryRoute(rd, prefix_len, prefix_ip, AFI.ipv4)
-            packed = route.pack_nlri()
+            packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MUP.unpack_nlri(
                 AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
             )
@@ -199,7 +199,7 @@ class TestDirectSegmentDiscoveryRoute:
         ip = IP.create('192.168.1.1')
 
         route = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -216,7 +216,7 @@ class TestDirectSegmentDiscoveryRoute:
         ip = IP.create('2001:db8:1:2::1')
 
         route = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv6)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -353,7 +353,7 @@ class TestType1SessionTransformedRoute:
             source_ip=source_ip,
             afi=AFI.ipv4,
         )
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -385,7 +385,7 @@ class TestType1SessionTransformedRoute:
             source_ip=b'',
             afi=AFI.ipv4,
         )
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -415,7 +415,7 @@ class TestType1SessionTransformedRoute:
             source_ip=source_ip,
             afi=AFI.ipv6,
         )
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -579,7 +579,7 @@ class TestType1SessionTransformedRoute:
                 b'',
                 AFI.ipv4,
             )
-            packed = route.pack_nlri()
+            packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MUP.unpack_nlri(
                 AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
             )
@@ -622,7 +622,7 @@ class TestType2SessionTransformedRoute:
         endpoint_ip = IP.create('192.168.1.1')
 
         route = Type2SessionTransformedRoute(rd, 32, endpoint_ip, 0, AFI.ipv4)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -643,7 +643,7 @@ class TestType2SessionTransformedRoute:
         teid = 0xABCDEF12
 
         route = Type2SessionTransformedRoute(rd, 64, endpoint_ip, teid, AFI.ipv4)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -659,7 +659,7 @@ class TestType2SessionTransformedRoute:
         endpoint_ip = IP.create('2001:db8:1::1')
 
         route = Type2SessionTransformedRoute(rd, 128, endpoint_ip, 0, AFI.ipv6)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -678,7 +678,7 @@ class TestType2SessionTransformedRoute:
         teid = 0x1234
 
         route = Type2SessionTransformedRoute(rd, 144, endpoint_ip, teid, AFI.ipv6)
-        packed = route.pack_nlri()
+        packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
             AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -753,7 +753,7 @@ class TestType2SessionTransformedRoute:
         # endpoint_len = 32 (IP) + 33 (TEID bits) = 65 - too large!
         with pytest.raises(Exception):
             route = Type2SessionTransformedRoute(rd, 65, endpoint_ip, 0xFFFFFFFF, AFI.ipv4)
-            route.pack_nlri()  # This should raise when packing
+            route.pack_nlri(create_negotiated())  # This should raise when packing
 
     def test_t2st_various_teid_sizes(self) -> None:
         """Test T2ST with various TEID sizes"""
@@ -766,7 +766,7 @@ class TestType2SessionTransformedRoute:
             teid_value = (1 << teid_bits) - 1 if teid_bits > 0 else 0
 
             route = Type2SessionTransformedRoute(rd, endpoint_len, endpoint_ip, teid_value, AFI.ipv4)
-            packed = route.pack_nlri()
+            packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MUP.unpack_nlri(
                 AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
             )

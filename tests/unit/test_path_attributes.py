@@ -37,6 +37,16 @@ from unittest.mock import Mock
 
 import pytest
 
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
+
 
 @pytest.fixture(autouse=True)
 def mock_logger() -> Any:
@@ -90,7 +100,7 @@ def test_origin_igp() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + value(1) = 4 bytes
-    packed = origin.pack_attribute()
+    packed = origin.pack_attribute(create_negotiated())
     assert len(packed) == 4
     assert packed[0] == 0x40  # Transitive flag
     assert packed[1] == 1  # ORIGIN type code
@@ -114,7 +124,7 @@ def test_origin_egp() -> None:
     assert str(origin) == 'egp'
 
     # Verify pack (flag + type + length + value)
-    packed = origin.pack_attribute()
+    packed = origin.pack_attribute(create_negotiated())
     assert len(packed) == 4
     assert packed[3] == 1  # EGP value
 
@@ -135,7 +145,7 @@ def test_origin_incomplete() -> None:
     assert str(origin) == 'incomplete'
 
     # Verify pack (flag + type + length + value)
-    packed = origin.pack_attribute()
+    packed = origin.pack_attribute(create_negotiated())
     assert len(packed) == 4
     assert packed[3] == 2  # INCOMPLETE value
 
@@ -250,7 +260,7 @@ def test_localpref_basic() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + value(4) = 7 bytes
-    packed = localpref.pack_attribute()
+    packed = localpref.pack_attribute(create_negotiated())
     assert len(packed) == 7
     assert struct.unpack('!L', packed[3:])[0] == 100  # Value part
 
@@ -269,7 +279,7 @@ def test_localpref_high_preference() -> None:
     assert localpref.localpref == 200
 
     # Verify pack (flag + type + length + value)
-    packed = localpref.pack_attribute()
+    packed = localpref.pack_attribute(create_negotiated())
     assert len(packed) == 7
     assert struct.unpack('!L', packed[3:])[0] == 200  # Value part
 
@@ -309,7 +319,7 @@ def test_atomic_aggregate_zero_length() -> None:
 
     # Verify pack (flag + type + length, but zero-length value)
     # Format: flag(1) + type(1) + length(1) = 3 bytes
-    packed = atomic.pack_attribute()
+    packed = atomic.pack_attribute(create_negotiated())
     assert len(packed) == 3
     assert packed[2] == 0  # Length is 0
 
@@ -447,7 +457,7 @@ def test_med_basic() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + value(4) = 7 bytes
-    packed = med.pack_attribute()
+    packed = med.pack_attribute(create_negotiated())
     assert len(packed) == 7
     assert struct.unpack('!L', packed[3:])[0] == med_value  # Value part
 
@@ -506,7 +516,7 @@ def test_originator_id_basic() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + IPv4(4) = 7 bytes
-    packed = originator_id.pack_attribute()
+    packed = originator_id.pack_attribute(create_negotiated())
     assert len(packed) == 7
 
 
@@ -547,7 +557,7 @@ def test_cluster_list_single() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + ClusterID(4) = 7 bytes
-    packed = cluster_list.pack_attribute()
+    packed = cluster_list.pack_attribute(create_negotiated())
     assert len(packed) == 7
 
 
@@ -566,7 +576,7 @@ def test_cluster_list_multiple() -> None:
 
     # Verify pack (flag + type + length + 2 ClusterIDs)
     # Format: flag(1) + type(1) + length(1) + ClusterID(4) + ClusterID(4) = 11 bytes
-    packed = cluster_list.pack_attribute()
+    packed = cluster_list.pack_attribute(create_negotiated())
     assert len(packed) == 11
 
 
@@ -924,7 +934,7 @@ def test_originator_id_pack_unpack_roundtrip() -> None:
     original = OriginatorID(original_ip)
 
     # Pack
-    packed = original.pack_attribute()
+    packed = original.pack_attribute(create_negotiated())
 
     # Extract IP data (skip flag, type, length)
     ip_data = packed[3:]
@@ -975,7 +985,7 @@ def test_originator_id_inherits_ipv4() -> None:
     assert hasattr(oid, '_packed')
 
     # Verify packed format
-    packed = oid.pack_attribute()
+    packed = oid.pack_attribute(create_negotiated())
     assert len(packed) == 7  # flag(1) + type(1) + length(1) + IPv4(4)
 
 
@@ -993,7 +1003,7 @@ def test_cluster_list_pack_unpack_roundtrip_single() -> None:
     original = ClusterList([cluster])
 
     # Pack
-    packed = original.pack_attribute()
+    packed = original.pack_attribute(create_negotiated())
 
     # Extract cluster data (skip flag, type, length)
     cluster_data = packed[3:]
@@ -1018,7 +1028,7 @@ def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
     original = ClusterList([cluster1, cluster2, cluster3])
 
     # Pack
-    packed = original.pack_attribute()
+    packed = original.pack_attribute(create_negotiated())
 
     # Extract cluster data (skip flag, type, length)
     cluster_data = packed[3:]

@@ -34,7 +34,7 @@ class OriginatorID(Attribute, IPv4):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack_attribute(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
         return self._attribute(self.ton())
 
     @classmethod

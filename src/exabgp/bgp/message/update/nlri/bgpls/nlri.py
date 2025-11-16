@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import Family
 
 from exabgp.bgp.message import Action
 
@@ -97,14 +98,23 @@ class BGPLS(NLRI):
         NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
         self._packed: bytes = b''
 
-    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def _pack_nlri_simple(self) -> bytes:
+        """Pack NLRI without negotiated-dependent data (no addpath)."""
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
+
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+        # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
+        # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, self.safi)
+        return self._pack_nlri_simple()
+
+    def index(self) -> bytes:
+        return Family.index(self) + self._pack_nlri_simple()
 
     def __len__(self) -> int:
         return len(self._packed) + 2
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed))  # type: ignore[str-bytes-safe]
+        return hash((self.afi, self.safi, self.CODE, self._pack_nlri_simple()))
 
     def __str__(self) -> str:
         return 'bgp-ls:{}:{}'.format(
@@ -141,7 +151,7 @@ class BGPLS(NLRI):
         return klass, bgp[length + 4 :]
 
     def _raw(self) -> str:
-        return ''.join('{:02X}'.format(_) for _ in self.pack())
+        return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())
 
 
 class GenericBGPLS(BGPLS):

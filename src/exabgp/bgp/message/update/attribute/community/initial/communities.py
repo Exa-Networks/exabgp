@@ -15,10 +15,9 @@ from typing import TYPE_CHECKING, Iterator, List, Optional
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.initial.community import Community
-
-from exabgp.bgp.message.notification import Notify
 
 # Community size constant
 COMMUNITY_SIZE = 4  # Each standard community is 4 bytes (2 bytes ASN + 2 bytes value)
@@ -41,7 +40,7 @@ class Communities(Attribute):
         self.communities.sort()
         return self
 
-    def pack_attribute(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
         if len(self.communities):
             return self._attribute(b''.join(c.pack_attribute(negotiated) for c in self.communities))
         return b''

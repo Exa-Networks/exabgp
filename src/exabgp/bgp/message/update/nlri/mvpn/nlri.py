@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import Family
 
 from exabgp.bgp.message import Action
 
@@ -66,9 +67,17 @@ class MVPN(NLRI):
     def _prefix(self) -> str:
         return 'mvpn:{}:'.format(self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower())
 
-    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
-        # XXX: addpath not supported yet
+    def _pack_nlri_simple(self) -> bytes:
+        """Pack NLRI without negotiated-dependent data (no addpath)."""
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
+
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+        # RFC 7911 ADD-PATH is possible for MVPN but not yet implemented
+        # TODO: implement addpath support when negotiated.addpath.send(self.afi, SAFI.mcast_vpn)
+        return self._pack_nlri_simple()
+
+    def index(self) -> bytes:
+        return Family.index(self) + self._pack_nlri_simple()
 
     @classmethod
     def register(cls, klass: Type[MVPN]) -> Type[MVPN]:
@@ -95,7 +104,7 @@ class MVPN(NLRI):
         return klass, bgp[length + 2 :]
 
     def _raw(self) -> str:
-        return ''.join('{:02X}'.format(_) for _ in self.pack_nlri())
+        return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())
 
 
 class GenericMVPN(MVPN):

@@ -86,7 +86,7 @@ class TestRTCPackUnpack:
         rt = RouteTarget(64512, 100)
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(
             AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -102,7 +102,7 @@ class TestRTCPackUnpack:
         """Test pack/unpack roundtrip for wildcard RTC"""
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None)
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(
             AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -117,7 +117,7 @@ class TestRTCPackUnpack:
         rt = RouteTarget(64512, 100)
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(
             AFI.ipv4, SAFI.rtc, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
         )
@@ -131,7 +131,7 @@ class TestRTCPackUnpack:
         for asn in test_asns:
             rt = RouteTarget(64512, 100)
             nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(asn), rt)
-            packed = nlri.pack_nlri()
+            packed = nlri.pack_nlri(create_negotiated())
             unpacked, leftover = RTC.unpack_nlri(
                 AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
             )
@@ -148,7 +148,7 @@ class TestRTCPackUnpack:
 
         for rt in test_rts:
             nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
-            packed = nlri.pack_nlri()
+            packed = nlri.pack_nlri(create_negotiated())
             unpacked, leftover = RTC.unpack_nlri(
                 AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
             )
@@ -161,7 +161,7 @@ class TestRTCPackUnpack:
         rt = RouteTarget(64512, 100)
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
 
-        packed = nlri.pack_nlri() + b'\x01\x02\x03\x04'
+        packed = nlri.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
         unpacked, leftover = RTC.unpack_nlri(
             AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -174,7 +174,7 @@ class TestRTCPackUnpack:
         rt = RouteTarget(64512, 100)
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
 
         # The flags should be reset in the packed RT
         # Length should be 13 bytes: 1 (length) + 4 (origin) + 8 (RT)
@@ -346,7 +346,7 @@ class TestRTCEdgeCases:
 
         assert nlri.origin == 0
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, _ = RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated())
 
         assert unpacked.origin == 0
@@ -358,7 +358,7 @@ class TestRTCEdgeCases:
 
         assert nlri.origin == 4200000000
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, _ = RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated())
 
         assert unpacked.origin == 4200000000
@@ -378,7 +378,7 @@ class TestRTCEdgeCases:
         rt = RouteTarget(64512, 100)
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         # The implementation uses the same unpacking regardless of SAFI passed
         unpacked, _ = RTC.unpack_nlri(
             AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -399,7 +399,7 @@ class TestRTCMultipleRoutes:
         ]
 
         # Pack all routes
-        packed_data = b''.join(r.pack_nlri() for r in routes)
+        packed_data = b''.join(r.pack_nlri(create_negotiated()) for r in routes)
 
         # Unpack all routes
         data = packed_data

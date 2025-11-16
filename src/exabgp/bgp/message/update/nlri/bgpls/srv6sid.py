@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import json
 from struct import pack, unpack
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
@@ -109,7 +112,8 @@ class SRv6SID(BGPLS):
             tlvs = tlvs[sid_length + 4 :]
         return cls(proto_id, domain, node_ids, srv6_sid_descriptors)
 
-    def pack_nlri(self, packed: Any = None) -> bytes:
+    def _pack_nlri_simple(self) -> bytes:
+        """Pack NLRI without negotiated-dependent data (no addpath)."""
         nlri = pack('!B', self.proto_id)
         nlri += pack('!Q', self.domain)
         # Note: local_node_descriptors and srv6_sid_descriptors should be bytes here
@@ -119,6 +123,11 @@ class SRv6SID(BGPLS):
         if isinstance(self.srv6_sid_descriptors, bytes):
             nlri += self.srv6_sid_descriptors
         return nlri
+
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[override]
+        # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
+        # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, SAFI.bgp_ls)
+        return self._pack_nlri_simple()
 
     def __len__(self) -> int:
         local_len = len(self.local_node_descriptors) if isinstance(self.local_node_descriptors, (bytes, list)) else 0

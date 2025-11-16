@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import unittest
+from unittest.mock import Mock
 
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.reactor.protocol import AFI, SAFI
 
 from exabgp.bgp.message.update import Attributes
@@ -50,6 +53,13 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message import Action
 
 
+def create_negotiated() -> Negotiated:
+    """Create a Negotiated object with a mock neighbor for testing."""
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    return Negotiated(neighbor, Direction.OUT)
+
+
 class TestNLRIs(unittest.TestCase):
     # Tests on MVPN NLRIs
     def test300_MVPNSourceAD_CreatePackUnpack(self) -> None:
@@ -61,13 +71,14 @@ class TestNLRIs(unittest.TestCase):
             group=IP.create('226.0.0.1'),
         )
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv4,
             safi=SAFI.mcast_vpn,
             bgp=packed,
             action=Action.UNSET,
             addpath=None,
+            negotiated=create_negotiated(),
         )
 
         self.assertEqual(0, len(leftover))
@@ -83,13 +94,14 @@ class TestNLRIs(unittest.TestCase):
             group=IP.create('ff0e::1'),
         )
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv6,
             safi=SAFI.mcast_vpn,
             bgp=packed,
             action=Action.UNSET,
             addpath=None,
+            negotiated=create_negotiated(),
         )
 
         self.assertEqual(0, len(leftover))
@@ -108,13 +120,14 @@ class TestNLRIs(unittest.TestCase):
             source_as=1234,
         )
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv4,
             safi=SAFI.mcast_vpn,
             bgp=packed,
             action=Action.UNSET,
             addpath=None,
+            negotiated=create_negotiated(),
         )
 
         self.assertEqual(0, len(leftover))
@@ -132,13 +145,14 @@ class TestNLRIs(unittest.TestCase):
             source_as=1234,
         )
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv6,
             safi=SAFI.mcast_vpn,
             bgp=packed,
             action=Action.UNSET,
             addpath=None,
+            negotiated=create_negotiated(),
         )
 
         self.assertEqual(0, len(leftover))
@@ -158,13 +172,14 @@ class TestNLRIs(unittest.TestCase):
             source_as=1234,
         )
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv4,
             safi=SAFI.mcast_vpn,
             bgp=packed,
             action=Action.UNSET,
             addpath=None,
+            negotiated=create_negotiated(),
         )
 
         self.assertEqual(0, len(leftover))
@@ -182,13 +197,14 @@ class TestNLRIs(unittest.TestCase):
             source_as=1234,
         )
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv6,
             safi=SAFI.mcast_vpn,
             bgp=packed,
             action=Action.UNSET,
             addpath=None,
+            negotiated=create_negotiated(),
         )
 
         self.assertEqual(0, len(leftover))
@@ -211,8 +227,8 @@ class TestNLRIs(unittest.TestCase):
             RouteDistinguisher.fromElements('42.42.42.42', 5),
         )
 
-        packed = nlri.pack_nlri()
-        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
 
         self.assertEqual(0, len(leftover))
 
@@ -240,9 +256,9 @@ class TestNLRIs(unittest.TestCase):
             IP.create('1.1.1.1'),
         )
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None)
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
         self.assertEqual(0, len(leftover))
 
@@ -270,9 +286,9 @@ class TestNLRIs(unittest.TestCase):
             IP.create('1.1.1.1'),
         )
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None)
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
         self.assertEqual(0, len(leftover))
 
@@ -298,9 +314,9 @@ class TestNLRIs(unittest.TestCase):
             IP.create('2.2.2.2'),
         )
 
-        packed = nlri.pack_nlri()
+        packed = nlri.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None)
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
 
         self.assertEqual(0, len(leftover))
 
@@ -448,8 +464,8 @@ class TestNLRIs(unittest.TestCase):
 
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 64512, RouteTarget(64577, 123))
 
-        packed = nlri.pack_nlri()
-        unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
 
         self.assertEqual(0, len(leftover))
 
@@ -469,8 +485,8 @@ class TestNLRIs(unittest.TestCase):
 
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, 0, None)
 
-        packed = nlri.pack_nlri()
-        unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None)
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
 
         self.assertEqual(0, len(leftover))
 

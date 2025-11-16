@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import Family
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -74,13 +75,22 @@ class VPLS(NLRI):
     def assign(self, name: str, value: Any) -> None:
         setattr(self, name, value)
 
-    def pack_nlri(self, negotiated: Negotiated = None) -> bytes:  # type: ignore[assignment]
+    def _pack_nlri_simple(self) -> bytes:
+        """Pack NLRI without negotiated-dependent data (no addpath)."""
         return (
             b'\x00\x11'  # pack('!H',17)
             + self.rd.pack_rd()
             + pack('!HHH', self.endpoint, self.offset, self.size)
             + pack('!L', (self.base << 4) | 0x1)[1:]  # setting the bottom of stack, should we ?
         )
+
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+        # RFC 7911 ADD-PATH is possible for VPLS but not yet implemented
+        # TODO: implement addpath support when negotiated.addpath.send(AFI.l2vpn, SAFI.vpls)
+        return self._pack_nlri_simple()
+
+    def index(self) -> bytes:
+        return Family.index(self) + self._pack_nlri_simple()
 
     # XXX: FIXME: we need an unique key here.
     # XXX: What can we use as unique key ?

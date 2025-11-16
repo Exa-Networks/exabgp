@@ -37,6 +37,9 @@ class _NOTHING:
     def pack(self, _: Any = None) -> bytes:
         return b''
 
+    def pack_attribute(self, _: Any = None) -> bytes:
+        return b''
+
 
 NOTHING: _NOTHING = _NOTHING()
 
