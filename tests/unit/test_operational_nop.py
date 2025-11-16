@@ -492,7 +492,7 @@ def test_operational_unpack_rpcq() -> None:
         + struct.pack('!H', 11)  # Length: AFI(2)+SAFI(1)+RouterID(4)+Seq(4)
         + struct.pack('!H', AFI.ipv4)  # AFI
         + struct.pack('!B', SAFI.unicast)  # SAFI
-        + router_id.pack()  # Router ID (4 bytes)
+        + router_id.pack_ip()  # Router ID (4 bytes)
         + struct.pack('!L', sequence)  # Sequence (4 bytes)
     )
 
@@ -516,7 +516,7 @@ def test_operational_unpack_rpcp() -> None:
         + struct.pack('!H', 15)  # Length: AFI(2)+SAFI(1)+RID(4)+Seq(4)+Counter(4)
         + struct.pack('!H', AFI.ipv4)  # AFI
         + struct.pack('!B', SAFI.unicast)  # SAFI
-        + router_id.pack()  # Router ID
+        + router_id.pack_ip()  # Router ID
         + struct.pack('!L', sequence)  # Sequence
         + struct.pack('!L', counter)  # Counter
     )

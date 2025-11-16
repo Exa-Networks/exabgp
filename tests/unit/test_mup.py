@@ -550,7 +550,7 @@ class TestType1SessionTransformedRoute:
 
         # Create packed data with invalid endpoint length (33 bits)
         packed_rd = rd.pack_rd()
-        packed_prefix = bytes([24]) + prefix_ip.pack()[:3]  # 24-bit prefix
+        packed_prefix = bytes([24]) + prefix_ip.pack_ip()[:3]  # 24-bit prefix
         packed_teid_qfi = b'\x00\x00\x30\x39\x05'  # TEID=12345, QFI=5
         packed_endpoint = bytes([33])  # Invalid: not 32 or 128
 

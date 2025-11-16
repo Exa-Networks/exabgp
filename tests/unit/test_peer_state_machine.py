@@ -232,7 +232,7 @@ class TestPeerCollisionDetection:
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         neighbor.__getitem__ = Mock(
-            side_effect=lambda key: Mock(pack=Mock(return_value=b'\x02\x02\x02\x02')) if key == 'router-id' else None
+            side_effect=lambda key: Mock(pack_ip=Mock(return_value=b'\x02\x02\x02\x02')) if key == 'router-id' else None
         )
         reactor = Mock()
 
@@ -243,7 +243,7 @@ class TestPeerCollisionDetection:
         peer.proto = Mock()
         peer.proto.negotiated = Mock()
         peer.proto.negotiated.received_open = Mock()
-        peer.proto.negotiated.received_open.router_id = Mock(pack=Mock(return_value=b'\x01\x01\x01\x01'))
+        peer.proto.negotiated.received_open.router_id = Mock(pack_ip=Mock(return_value=b'\x01\x01\x01\x01'))
 
         connection = Mock()
         connection.name = Mock(return_value='test-connection')
@@ -261,7 +261,7 @@ class TestPeerCollisionDetection:
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         neighbor.__getitem__ = Mock(
-            side_effect=lambda key: Mock(pack=Mock(return_value=b'\x01\x01\x01\x01')) if key == 'router-id' else None
+            side_effect=lambda key: Mock(pack_ip=Mock(return_value=b'\x01\x01\x01\x01')) if key == 'router-id' else None
         )
         reactor = Mock()
 
@@ -272,7 +272,7 @@ class TestPeerCollisionDetection:
         peer.proto = Mock()
         peer.proto.negotiated = Mock()
         peer.proto.negotiated.received_open = Mock()
-        peer.proto.negotiated.received_open.router_id = Mock(pack=Mock(return_value=b'\x02\x02\x02\x02'))
+        peer.proto.negotiated.received_open.router_id = Mock(pack_ip=Mock(return_value=b'\x02\x02\x02\x02'))
         peer.proto.close = Mock()
 
         from exabgp.reactor.protocol import Protocol

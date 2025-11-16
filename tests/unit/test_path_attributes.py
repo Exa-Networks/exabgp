@@ -981,7 +981,7 @@ def test_originator_id_inherits_ipv4() -> None:
     oid = OriginatorID('192.0.2.1')
 
     # Should have IPv4 methods
-    assert hasattr(oid, 'pack')
+    assert hasattr(oid, 'pack_ip')
     assert hasattr(oid, '_packed')
 
     # Verify packed format
