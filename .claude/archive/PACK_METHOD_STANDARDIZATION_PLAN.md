@@ -1,3 +1,13 @@
+# ARCHIVED: Pack Method Standardization Plan
+
+**⚠️ THIS PLAN IS COMPLETE - SEE `.claude/PACK_METHOD_STANDARDIZATION_STATUS.md`**
+
+**Date Archived:** 2025-11-16
+**Reason:** All work completed, superseded by status document
+**Completion Status:** ✅ All 28 utility classes renamed, all tests passing
+
+---
+
 # Pack Method Standardization Plan
 
 ## Objective
@@ -143,6 +153,11 @@ These classes should rename `pack()` to `pack_X()`:
 - Update all call sites
 - Update tests
 
+Change one class at a time, for each change of a pack function you must make sure that the full unit testing is fully passing:
+- pytest with unit
+- ./qa/bin/function for encoding and parsing
+- validation of the configuration
+
 ### Phase 2: Rename Flow Components (3 classes)
 **Files to modify:** 3 files
 **Estimated impact:** LOW - used within flow module
@@ -152,6 +167,11 @@ These classes should rename `pack()` to `pack_X()`:
 2. IPrefix6.pack() → IPrefix6.pack_prefix()
 3. IOperation.pack() → IOperation.pack_operation()
 
+You must make sure that the full unit testing is fully passing:
+- pytest with unit
+- ./qa/bin/function for encoding and parsing
+- validation of the configuration
+
 ### Phase 3: Rename SR Sub-TLVs (7 classes)
 **Files to modify:** 7 files
 **Estimated impact:** LOW - SR-specific code
@@ -159,6 +179,11 @@ These classes should rename `pack()` to `pack_X()`:
 
 All rename to `pack_tlv()`:
 - LabelIndex, SrGb, SRv6L2Service, SRv6L3Service, SRv6EndpointBehavior, SRv6BGPPeerNode, SRv6SIDStructure
+
+For each change of a pack function you must make sure that the full unit testing is fully passing:
+- pytest with unit
+- ./qa/bin/function for encoding and parsing
+- validation of the configuration
 
 ### Phase 4: Rename BGP-LS TLVs (8 classes)
 **Files to modify:** 8 files
