@@ -53,7 +53,7 @@ class RouteRefresh(Message):
         self.reserved = Reserved(reserved)
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(self.afi.pack() + bytes([self.reserved]) + self.safi.pack())
+        return self._message(self.afi.pack_afi() + bytes([self.reserved]) + self.safi.pack_safi())
 
     def messages(self, negotiated: Negotiated, include_withdraw: bool) -> Generator[bytes, None, None]:
         yield self.pack_message(negotiated)

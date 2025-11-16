@@ -100,7 +100,7 @@ class Srv6SidInformation:  # type: ignore[type-var]
             pack('!B', self.TLV)
             + pack('!H', length)
             + pack('!B', reserved)
-            + self.sid.pack()
+            + self.sid.pack_ip()
             + pack('!B', flags)
             + pack('!H', self.behavior)
             + pack('!B', reserved)

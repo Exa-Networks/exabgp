@@ -82,9 +82,9 @@ class SourceJoin(MVPN):
             self.rd.pack_rd()
             + pack('!I', self.source_as)
             + bytes([len(self.source) * 8])  # type: ignore[arg-type]
-            + self.source.pack()
+            + self.source.pack_ip()
             + bytes([len(self.group) * 8])  # type: ignore[arg-type]
-            + self.group.pack()
+            + self.group.pack_ip()
         )
         return self._packed
 

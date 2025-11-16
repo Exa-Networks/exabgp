@@ -66,7 +66,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         # fmt: off
         self._packed = (
             self.rd.pack_rd()
-            + self.ip.pack()
+            + self.ip.pack_ip()
         )
         # fmt: on
         return self._packed

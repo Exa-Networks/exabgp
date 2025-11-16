@@ -183,7 +183,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
         self.copy: bool = copy
         ExtendedCommunity.__init__(
             self,
-            community if community is not None else pack('!2s4sH', self._subtype(), ip.pack(), 1 if copy else 0),
+            community if community is not None else pack('!2s4sH', self._subtype(), ip.pack_ip(), 1 if copy else 0),
         )
 
     def __repr__(self) -> str:
@@ -214,7 +214,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
         self.copy: bool = copy
         ExtendedCommunityIPv6.__init__(
             self,
-            community if community is not None else pack('!2s16sH', self._subtype(), ip.pack(), 1 if copy else 0),
+            community if community is not None else pack('!2s16sH', self._subtype(), ip.pack_ip(), 1 if copy else 0),
         )
 
     def __repr__(self) -> str:

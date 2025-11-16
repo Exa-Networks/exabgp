@@ -34,7 +34,7 @@ class ClusterList(Attribute):
 
     def __init__(self, clusters: List[IPv4], packed: Optional[bytes] = None) -> None:
         self.clusters: List[IPv4] = clusters
-        self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack() for _ in clusters))
+        self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack_ip() for _ in clusters))
         self._len: int = len(clusters) * 4
 
     def __eq__(self, other: object) -> bool:

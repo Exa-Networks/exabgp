@@ -13,5 +13,5 @@ from typing import ClassVar
 class Version(int):
     BGP_4: ClassVar[int] = 4  # RFC 4271 - BGP version 4
 
-    def pack(self) -> bytes:
+    def pack_version(self) -> bytes:
         return bytes([self])

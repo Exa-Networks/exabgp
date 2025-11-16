@@ -79,7 +79,7 @@ def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     ipmask = prefix(tokeniser)
 
     nlri = IPVPN(afi, safi, action)
-    nlri.cidr = CIDR(ipmask.pack(), ipmask.mask)
+    nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
 
     change = Change(nlri, Attributes())
 

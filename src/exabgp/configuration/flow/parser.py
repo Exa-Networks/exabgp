@@ -313,7 +313,7 @@ def next_hop(tokeniser: 'Tokeniser') -> Union[NextHopSelf, NextHop]:
     if value.lower() == 'self':
         return NextHopSelf(AFI.ipv4)
     ip: IP = IP.create(value)
-    return NextHop(ip.top(), ip.pack())
+    return NextHop(ip.top(), ip.pack_ip())
 
 
 def accept(tokeniser: 'Tokeniser') -> None:

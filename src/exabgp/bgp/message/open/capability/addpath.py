@@ -60,7 +60,7 @@ class AddPath(Capability, dict):
         rs = b''
         for v in self:
             if self[v]:
-                rs += v[0].pack() + v[1].pack() + pack('!B', self[v])
+                rs += v[0].pack_afi() + v[1].pack_safi() + pack('!B', self[v])
         return [
             rs,
         ]

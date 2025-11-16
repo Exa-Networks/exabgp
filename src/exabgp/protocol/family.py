@@ -82,7 +82,7 @@ class AFI(Resource):
     names: ClassVar[Dict[int, str]] = {}
     inet_names: ClassVar[Dict[int, str]] = {}
 
-    def pack(self) -> bytes:
+    def pack_afi(self) -> bytes:
         return pack('!H', self)
 
     def mask(self) -> Optional[int]:
@@ -144,11 +144,11 @@ AFI.l2vpn = AFI(_AFI.L2VPN)
 AFI.bgpls = AFI(_AFI.BGPLS)
 
 AFI.common = {
-    AFI.undefined.pack(): AFI.undefined,
-    AFI.ipv4.pack(): AFI.ipv4,
-    AFI.ipv6.pack(): AFI.ipv6,
-    AFI.l2vpn.pack(): AFI.l2vpn,
-    AFI.bgpls.pack(): AFI.bgpls,
+    AFI.undefined.pack_afi(): AFI.undefined,
+    AFI.ipv4.pack_afi(): AFI.ipv4,
+    AFI.ipv6.pack_afi(): AFI.ipv6,
+    AFI.l2vpn.pack_afi(): AFI.l2vpn,
+    AFI.bgpls.pack_afi(): AFI.bgpls,
 }
 
 AFI.codes = dict(
@@ -262,7 +262,7 @@ class SAFI(Resource):
     cache: ClassVar[Dict[int, SAFI]] = {}
     names: ClassVar[Dict[int, str]] = {}
 
-    def pack(self) -> bytes:
+    def pack_safi(self) -> bytes:
         return bytes([self])
 
     def name(self) -> str:
@@ -319,20 +319,20 @@ SAFI.flow_ip = SAFI(_SAFI.FLOW_IP)
 SAFI.flow_vpn = SAFI(_SAFI.FLOW_VPN)
 
 SAFI.common = {
-    SAFI.undefined.pack(): SAFI.undefined,
-    SAFI.unicast.pack(): SAFI.unicast,
-    SAFI.multicast.pack(): SAFI.multicast,
-    SAFI.nlri_mpls.pack(): SAFI.nlri_mpls,
-    SAFI.vpls.pack(): SAFI.vpls,
-    SAFI.evpn.pack(): SAFI.evpn,
-    SAFI.bgp_ls.pack(): SAFI.bgp_ls,
-    SAFI.bgp_ls_vpn.pack(): SAFI.bgp_ls_vpn,
-    SAFI.mup.pack(): SAFI.mup,
-    SAFI.mpls_vpn.pack(): SAFI.mpls_vpn,
-    SAFI.mcast_vpn.pack(): SAFI.mcast_vpn,
-    SAFI.rtc.pack(): SAFI.rtc,
-    SAFI.flow_ip.pack(): SAFI.flow_ip,
-    SAFI.flow_vpn.pack(): SAFI.flow_vpn,
+    SAFI.undefined.pack_safi(): SAFI.undefined,
+    SAFI.unicast.pack_safi(): SAFI.unicast,
+    SAFI.multicast.pack_safi(): SAFI.multicast,
+    SAFI.nlri_mpls.pack_safi(): SAFI.nlri_mpls,
+    SAFI.vpls.pack_safi(): SAFI.vpls,
+    SAFI.evpn.pack_safi(): SAFI.evpn,
+    SAFI.bgp_ls.pack_safi(): SAFI.bgp_ls,
+    SAFI.bgp_ls_vpn.pack_safi(): SAFI.bgp_ls_vpn,
+    SAFI.mup.pack_safi(): SAFI.mup,
+    SAFI.mpls_vpn.pack_safi(): SAFI.mpls_vpn,
+    SAFI.mcast_vpn.pack_safi(): SAFI.mcast_vpn,
+    SAFI.rtc.pack_safi(): SAFI.rtc,
+    SAFI.flow_ip.pack_safi(): SAFI.flow_ip,
+    SAFI.flow_vpn.pack_safi(): SAFI.flow_vpn,
 }
 
 SAFI.codes = dict(

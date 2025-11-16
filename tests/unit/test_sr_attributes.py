@@ -677,7 +677,7 @@ class TestSrv6SidInformation:
         """Test unpacking SRv6 SID Information."""
         sid = IPv6.create('2001:db8::1')
         data = struct.pack('!B', 0)  # Reserved
-        data += sid.pack()  # SID (16 bytes)
+        data += sid.pack_ip()  # SID (16 bytes)
         data += struct.pack('!B', 0)  # Flags
         data += struct.pack('!H', 0x0001)  # Behavior
         data += struct.pack('!B', 0)  # Reserved
@@ -747,7 +747,7 @@ class TestSrv6L3Service:
         sid_data = struct.pack('!B', 1)  # Type = 1 (SID Info)
         sid_data += struct.pack('!H', 21)  # Length
         sid_data += struct.pack('!B', 0)  # Reserved
-        sid_data += sid.pack()  # SID
+        sid_data += sid.pack_ip()  # SID
         sid_data += struct.pack('!B', 0)  # Flags
         sid_data += struct.pack('!H', 0x0001)  # Behavior
         sid_data += struct.pack('!B', 0)  # Reserved
@@ -811,7 +811,7 @@ class TestSrv6L2Service:
         sid_data = struct.pack('!B', 1)  # Type = 1 (SID Info)
         sid_data += struct.pack('!H', 21)  # Length
         sid_data += struct.pack('!B', 0)  # Reserved
-        sid_data += sid.pack()  # SID
+        sid_data += sid.pack_ip()  # SID
         sid_data += struct.pack('!B', 0)  # Flags
         sid_data += struct.pack('!H', 0x0002)  # Behavior
         sid_data += struct.pack('!B', 0)  # Reserved

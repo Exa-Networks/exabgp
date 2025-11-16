@@ -43,7 +43,7 @@ class EOR(Message):
             """Pack NLRI without negotiated-dependent data (no addpath)."""
             if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
                 return b'\x00\x00\x00\x00'
-            return self.PREFIX + self.afi.pack() + self.safi.pack()
+            return self.PREFIX + self.afi.pack_afi() + self.safi.pack_safi()
 
         def pack_nlri(self, negotiated: 'Negotiated') -> bytes:  # type: ignore[override]
             # EOR (End-of-RIB) marker - addpath not applicable
@@ -72,7 +72,7 @@ class EOR(Message):
         self.attributes = Attributes()
 
     def pack_message(self, negotiated=None):
-        return self._message(self.nlris[0].pack(negotiated))
+        return self._message(self.nlris[0].pack_nlri(negotiated))
 
     def __repr__(self):
         return 'EOR'

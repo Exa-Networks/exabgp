@@ -46,7 +46,7 @@ class NextHop(Capability, list):
     def extract(self) -> List[bytes]:
         rs = b''
         for afi, safi, nhafi in self:
-            rs += afi.pack() + pack('!B', 0) + safi.pack() + nhafi.pack()
+            rs += afi.pack_afi() + pack('!B', 0) + safi.pack_safi() + nhafi.pack_afi()
         return [
             rs,
         ]

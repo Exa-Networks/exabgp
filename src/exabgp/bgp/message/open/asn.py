@@ -28,7 +28,7 @@ class ASN(Resource):
     def asn4(self) -> bool:
         return self > self.MAX
 
-    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_asn(self, negotiated: Optional[Negotiated] = None) -> bytes:
         asn4 = negotiated if negotiated is not None else self.asn4()
         return pack('!L' if asn4 else '!H', self)
 

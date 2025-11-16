@@ -44,7 +44,7 @@ class Graceful(Capability, dict):
 
     def extract(self) -> List[bytes]:
         restart = pack('!H', ((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
-        families = [afi.pack() + safi.pack() + bytes([self[(afi, safi)]]) for (afi, safi) in self.keys()]
+        families = [afi.pack_afi() + safi.pack_safi() + bytes([self[(afi, safi)]]) for (afi, safi) in self.keys()]
         return [restart + b''.join(families)]
 
     def __str__(self) -> str:
