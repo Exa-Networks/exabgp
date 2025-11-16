@@ -198,6 +198,82 @@ Focus is on:
 
 ---
 
+## BGP Method API Standards
+
+### pack() and unpack() Method Signatures
+
+**CRITICAL: The following method signatures are STABLE APIs and must NOT be changed:**
+
+#### Protocol Element Classes (Messages, Attributes, NLRIs)
+
+These classes MUST implement the standard signatures:
+
+```python
+# Pack method - REQUIRED signature for all BGP protocol elements
+def pack(self, negotiated: Negotiated) -> bytes:
+    """Pack BGP element into wire format."""
+    pass
+
+# Unpack method - REQUIRED signature for all BGP protocol elements
+@classmethod
+def unpack_X(cls, data: bytes, negotiated: Negotiated) -> SomeType:
+    """Unpack BGP element from wire format."""
+    pass
+```
+
+**IMPORTANT RULES:**
+
+1. ✅ **Unused parameters are OK and EXPECTED**
+   - Many `pack()` implementations don't use `negotiated` parameter
+   - DO NOT remove unused parameters - they maintain API consistency
+   - DO NOT change the signature to make parameters optional
+   - The uniform API is more important than parameter usage
+
+2. ✅ **Correct: Unused but present**
+   ```python
+   def pack(self, negotiated: Negotiated) -> bytes:
+       # negotiated not used in this implementation
+       return self._value.pack()
+   ```
+
+3. ❌ **WRONG: Removing or making optional**
+   ```python
+   # DO NOT DO THIS - breaks API consistency
+   def pack(self) -> bytes:  # Missing negotiated parameter
+       return self._value.pack()
+
+   # DO NOT DO THIS - breaks API consistency
+   def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
+       return self._value.pack()
+   ```
+
+4. ✅ **Utility/Data Classes use different naming**
+   - Utility classes (ESI, Labels, TLVs, etc.) use `pack_X()` / `unpack_X()`
+   - These do NOT take `negotiated` parameter
+   - Examples: `pack_esi()`, `pack_labels()`, `pack_tlv()`
+
+**Why This Matters:**
+
+- **Polymorphism**: All protocol elements can be called uniformly
+- **Future-proofing**: If a class needs `negotiated` later, API is already correct
+- **Type safety**: MyPy can enforce the signature contract
+- **Registry pattern**: Dynamic dispatch relies on uniform signatures
+- **Maintainability**: Developers know what to expect from protocol classes
+
+**When refactoring:**
+- NEVER change `pack(negotiated)` signature on protocol elements
+- NEVER remove unused `negotiated` parameters
+- NEVER suggest making `negotiated` optional
+- DO suppress linter warnings with `# noqa: ARG002` if needed (ruff/flake8)
+- For mypy: Unused parameters in method overrides are EXPECTED and should not generate errors
+
+**MyPy Configuration:**
+- The uniform API signature is intentional and required for the codebase architecture
+- Type checkers should accept unused parameters in protocol element methods
+- This is standard practice for interface implementation and polymorphism
+
+---
+
 ## Performance Considerations
 
 ### Type Annotations Have Zero Runtime Cost
@@ -296,9 +372,9 @@ Before submitting changes:
 
 ---
 
-**Last Updated:** 2025-11-14
+**Last Updated:** 2025-11-16
 **Maintainer:** Project team
-**Version:** 1.0
+**Version:** 1.1
 
 ---
 
