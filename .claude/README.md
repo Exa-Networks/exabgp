@@ -9,6 +9,7 @@ Documentation and protocols for Claude Code interactions with ExaBGP.
 | File | Purpose | Size |
 |------|---------|------|
 | **MANDATORY_REFACTORING_PROTOCOL.md** | Step-by-step verification for ALL refactoring | 3.7 KB |
+| **ERROR_RECOVERY_PROTOCOL.md** | NEVER rush after mistakes - slow down and follow protocols | 2.2 KB |
 | **GIT_VERIFICATION_PROTOCOL.md** | NEVER make git claims without fresh verification | 0.7 KB |
 | **CODING_STANDARDS.md** | Python 3.8+ compatibility, type annotations, BGP APIs | 3.5 KB |
 | **TESTING_DISCIPLINE.md** | NEVER claim success without testing ALL | 1.1 KB |
@@ -17,50 +18,39 @@ Documentation and protocols for Claude Code interactions with ExaBGP.
 | **PLANNING_GUIDE.md** | Standards for project planning docs | 1.5 KB |
 | **CI_TESTING.md** | Complete testing requirements and commands | 3.2 KB |
 
-**Total core protocols: ~17 KB**
+**Total core protocols: ~20 KB**
 
 ---
 
-## Completed Work (Reference)
+## Active Work (`wip/`)
 
-| File | Status | Size |
-|------|--------|------|
-| PACK_METHOD_STANDARDIZATION_STATUS.md | ✅ Complete - All utility pack() renamed | 1.5 KB |
-| COMPRESSION_PLAN.md | Plan for directory compression | 7 KB |
-| .AUDIT_2025_11_16.md | Audit & cleanup summary | 1.5 KB |
+Active development projects. Completed work moves to `docs/projects/`.
 
----
-
-## Active Projects
-
-### Type Annotations (`type-annotations/`)
+### Type Annotations (`wip/type-annotations/`)
 **Status:** Phase 3 - MyPy error reduction
 **Progress:** 605 errors (47% ↓ from 1,149 baseline)
 
 **Files:**
 - README.md - Project overview
-- ANY_REPLACEMENT_PLAN.md - Phase 1 plan (complete)
-- MYPY_STATUS.md - Current error analysis (605 errors)
-- MYPY_ELIMINATION_PLAN.md - Strategy for remaining errors
-- PROGRESS.md - Phase tracking and recent improvements
-- PYTHON38_COMPATIBILITY.md - Python 3.8+ requirements
-- INDEX.md - Navigation
+- MYPY_STATUS.md - Current error analysis
+- PROGRESS.md - Phase tracking
+- See full structure in `wip/type-annotations/`
+
+**Historical docs:** `docs/projects/type-annotations/` (early planning)
 
 ---
 
-## Archive (`archive/`)
+## Completed Projects
 
-**Completed/inactive projects moved here:**
-- async-migration/ - Async/await migration planning
-- todo/ - Fuzzing and coverage work
-- docs/ - Detailed testing guides (consolidated to CI_TESTING.md)
-- RFC_ALIGNMENT_REFACTORING.md - ✅ Complete (all unpack() renamed)
-- PACK_METHOD_STANDARDIZATION_PLAN.md - ✅ Complete (original plan)
-- TYPE_ANNOTATION_ANALYSIS.md - Original Any analysis
-- INCREMENTAL_PACK_RENAME_PLAN.md - Superseded
-- Various deprecated progress/plan files
+**All completed work moved to:** `docs/projects/`
 
-**Archive total: ~450 KB** (not loaded in active context)
+Major completed projects:
+- AsyncIO Migration (100% test parity)
+- Pack Method Standardization
+- RFC Alignment
+- Testing Improvements
+
+**See:** `docs/projects/README.md` for full project list
 
 ---
 
@@ -108,17 +98,21 @@ env exabgp_log_enable=false pytest ./tests/unit/
 
 ---
 
-## Recent Changes (2025-11-16)
+## Recent Changes (2025-11-17)
 
-✅ Archived inactive projects (async-migration, todo, docs)
-✅ Compressed all core protocols (59 KB → 14 KB, 77% ↓)
-✅ Compressed reference docs
-✅ Consolidated testing documentation
-✅ Updated all baselines (605 MyPy, 1376 tests)
-✅ Removed duplicates
-✅ **Total reduction: 640 KB → ~150 KB (76% ↓)**
+✅ Reorganized documentation structure
+✅ Created `wip/` for active work (clear separation from protocols)
+✅ Moved all completed projects to `docs/projects/`
+✅ Removed `archive/` directory (all content moved to appropriate locations)
+✅ Added Git Verification Protocol (prevent false claims about repo state)
+✅ No .md files directly in docs/ - all in subdirectories
+
+**Previous (2025-11-16):**
+✅ Compressed core protocols (59 KB → 14 KB, 77% ↓)
+✅ Updated baselines (605 MyPy, 1376 tests)
+✅ Total reduction: 640 KB → ~150 KB (76% ↓)
 
 ---
 
-**Current Status:** ✅ 100% Accurate, optimized for context efficiency
-**Last Updated:** 2025-11-16
+**Current Status:** ✅ Clean separation: protocols / active work / completed projects
+**Last Updated:** 2025-11-17
