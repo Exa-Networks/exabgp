@@ -195,21 +195,19 @@ def withdraw_vpls(self, reactor, service, line, use_json):
 @Command.register('announce attribute')
 @Command.register('announce attributes')
 def announce_attributes(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_attributes(command, peers)
             if not changes:
                 self.log_failure(f'command could not parse route in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -217,17 +215,15 @@ def announce_attributes(self, reactor, service, line, use_json):
                 reactor.configuration.inject_change(peers, change)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {change.extensive()}')
-                yield False
+                await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the route')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the route')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -236,21 +232,19 @@ def announce_attributes(self, reactor, service, line, use_json):
 @Command.register('withdraw attribute')
 @Command.register('withdraw attributes')
 def withdraw_attribute(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_attributes(command, peers)
             if not changes:
                 self.log_failure(f'command could not parse route in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -258,21 +252,19 @@ def withdraw_attribute(self, reactor, service, line, use_json):
                 if reactor.configuration.inject_change(peers, change):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'route removed from {peer_list} : {change.extensive()}')
-                    yield False
+                    await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
                 else:
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'route not found on {peer_list} : {change.extensive()}')
-                    yield False
+                    await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the route')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the route')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -280,21 +272,19 @@ def withdraw_attribute(self, reactor, service, line, use_json):
 
 @Command.register('announce flow')
 def announce_flow(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_flow(command)
             if not changes:
                 self.log_failure(f'command could not parse flow in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -302,17 +292,15 @@ def announce_flow(self, reactor, service, line, use_json):
                 reactor.configuration.inject_change(peers, change)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'flow added to {peer_list} : {change.extensive()}')
-                yield False
+                await asyncio.sleep(0)  # Yield control after each flow (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the flow')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the flow')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -320,14 +308,13 @@ def announce_flow(self, reactor, service, line, use_json):
 
 @Command.register('withdraw flow')
 def withdraw_flow(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_flow(command)
@@ -335,7 +322,6 @@ def withdraw_flow(self, reactor, service, line, use_json):
             if not changes:
                 self.log_failure(f'command could not parse flow in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -346,17 +332,15 @@ def withdraw_flow(self, reactor, service, line, use_json):
                 else:
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'flow not found on {peer_list} : {change.extensive()}')
-                yield False
+                await asyncio.sleep(0)  # Yield control after each flow (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the flow')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the flow')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -364,18 +348,17 @@ def withdraw_flow(self, reactor, service, line, use_json):
 
 @Command.register('announce eor')
 def announce_eor(self, reactor, service, line, use_json):
-    def callback(self, command, peers):
+    async def callback(self, command, peers):
         family = self.api_eor(command)
         if not family:
             self.log_failure(f'Command could not parse eor : {command}')
             reactor.processes.answer_error(service)
-            yield True
             return
 
         reactor.configuration.inject_eor(peers, family)
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
         self.log_message(f'Sent to {peer_list} : {family.extensive()}')
-        yield False
+        await asyncio.sleep(0)  # Yield control (matches original yield False)
 
         reactor.processes.answer_done(service)
 
@@ -400,12 +383,11 @@ def announce_eor(self, reactor, service, line, use_json):
 
 @Command.register('announce route-refresh')
 def announce_refresh(self, reactor, service, line, use_json):
-    def callback(self, command, peers):
+    async def callback(self, command, peers):
         refreshes = self.api_refresh(command)
         if not refreshes:
             self.log_failure(f'Command could not parse route-refresh command : {command}')
             reactor.processes.answer_error(service)
-            yield True
             return
 
         reactor.configuration.inject_refresh(peers, refreshes)
@@ -413,7 +395,7 @@ def announce_refresh(self, reactor, service, line, use_json):
             peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
             self.log_message(f'Sent to {peer_list} : {refresh.extensive()}')
 
-        yield False
+        await asyncio.sleep(0)  # Yield control (matches original yield False)
         reactor.processes.answer_done(service)
 
     try:
@@ -437,18 +419,17 @@ def announce_refresh(self, reactor, service, line, use_json):
 
 @Command.register('announce operational')
 def announce_operational(self, reactor, service, line, use_json):
-    def callback(self, command, peers):
+    async def callback(self, command, peers):
         operational = self.api_operational(command)
         if not operational:
             self.log_failure(f'Command could not parse operational command : {command}')
             reactor.processes.answer_error(service)
-            yield True
             return
 
         reactor.configuration.inject_operational(peers, operational)
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
         self.log_message(f'operational message sent to {peer_list} : {operational.extensive()}')
-        yield False
+        await asyncio.sleep(0)  # Yield control (matches original yield False)
         reactor.processes.answer_done(service)
 
     if (line.split() + ['be', 'safe'])[2].lower() not in (
@@ -485,21 +466,19 @@ def announce_operational(self, reactor, service, line, use_json):
 
 @Command.register('announce ipv4')
 def announce_ipv4(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_announce_v4(command)
             if not changes:
                 self.log_failure(f'command could not parse ipv4 in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -507,17 +486,15 @@ def announce_ipv4(self, reactor, service, line, use_json):
                 reactor.configuration.inject_change(peers, change)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'ipv4 added to {peer_list} : {change.extensive()}')
-                yield False
+                await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the ipv4')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the ipv4')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -525,14 +502,13 @@ def announce_ipv4(self, reactor, service, line, use_json):
 
 @Command.register('withdraw ipv4')
 def withdraw_ipv4(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_announce_v4(command)
@@ -540,7 +516,6 @@ def withdraw_ipv4(self, reactor, service, line, use_json):
             if not changes:
                 self.log_failure(f'command could not parse ipv4 in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -551,17 +526,15 @@ def withdraw_ipv4(self, reactor, service, line, use_json):
                 else:
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'ipv4 not found on {peer_list} : {change.extensive()}')
-                yield False
+                await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the ipv4')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the ipv4')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -569,21 +542,19 @@ def withdraw_ipv4(self, reactor, service, line, use_json):
 
 @Command.register('announce ipv6')
 def announce_ipv6(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_announce_v6(command)
             if not changes:
                 self.log_failure(f'command could not parse ipv6 in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -591,17 +562,15 @@ def announce_ipv6(self, reactor, service, line, use_json):
                 reactor.configuration.inject_change(peers, change)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'ipv6 added to {peer_list} : {change.extensive()}')
-                yield False
+                await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the ipv6')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the ipv6')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -609,14 +578,13 @@ def announce_ipv6(self, reactor, service, line, use_json):
 
 @Command.register('withdraw ipv6')
 def withdraw_ipv6(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_announce_v6(command)
@@ -624,7 +592,6 @@ def withdraw_ipv6(self, reactor, service, line, use_json):
             if not changes:
                 self.log_failure(f'command could not parse ipv6 in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -635,17 +602,15 @@ def withdraw_ipv6(self, reactor, service, line, use_json):
                 else:
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'ipv6 not found on {peer_list} : {change.extensive()}')
-                yield False
+                await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the ipv6')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the ipv6')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
