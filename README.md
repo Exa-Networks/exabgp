@@ -171,8 +171,8 @@ python3 -m exabgp healthcheck --help
 It is also possible to download releases from GitHub:
 
 ```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.22.tar.gz | tar zx
-cd exabgp-4.2.22
+curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.0.tar.gz | tar zx
+cd exabgp-5.0.0
 ./sbin/exabgp --version
 ./sbin/exabgp --help
 
@@ -196,10 +196,10 @@ env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
 
-It is then possible to change git to use any release (here 4.2.22):
+It is then possible to change git to use any release (here 5.0.0):
 
 ```sh
-git checkout 4.2.22
+git checkout 5.0.0
 ./sbin/exabgp --version
 ```
 
@@ -227,6 +227,8 @@ ExaBGP is self-contained and easy to upgrade/downgrade by:
 - running `apt update; apt upgrade exabgp` for Debian/Ubuntu
 
 **If you are migrating your application from ExaBGP 3.4 to 4.x please read this [wiki](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.0) entry**.
+
+**ExaBGP 5.0.0 introduces new features** including the `silence-ack` API command. The acknowledgment feature caused issues with simple programs that did not expect ACK messages. The `silence-ack` command resolves this problem by allowing external processes to disable acknowledgment messages.
 
 The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://raw.githubusercontent.com/Exa-Networks/exabgp/main/CHANGELOG) and check their setup after any upgrade.
 
@@ -283,21 +285,22 @@ Documentation contributions are genuinely welcomed! Even small improvements help
 
 ### Requirements
 
-- **Python 3.8.1+** required (supports recent versions through 3.12+)
+- **Python 3.8+** required for ExaBGP 5.0 (supports versions 3.8 through 3.12+)
 - **No asyncio**: Uses custom reactor pattern predating asyncio adoption
 - **Compatibility**: Focus on reliability over adopting latest Python features
 
-ExaBGP 3.4 and previous versions were Python 2 applications. ExaBGP 4.0 had support for both Python 2 and 3. The current version of ExaBGP (4.2 and main) targets Python 3 only. The code should work with all recent versions (>= 3.6), but the requirement is set to 3.8.1 as some of the tooling now requires it (such as ruff).
+**Version 3.x** supported Python 2 only. **Version 4.x** introduced Python 3 support while maintaining Python 2 compatibility (minimum: Python 3.6). **Version 5.0** requires Python 3.8 or later, dropping Python 2 and older Python 3 versions. The minimum was increased to Python 3.8 for better tooling support (ruff, type checking) and to leverage modern Python features.
 
 ExaBGP is nearly as old as Python 3. A lot has changed since 2009; the application does not use Python 3's async-io (as we run a homemade async core engine). It may never do as development slowed, and our primary goal is ensuring reliability for current and new users.
 
 ### Version Information
 
-- **Current stable**: 4.2.x (recommended for production)
-- **Development**: 5.0.x (main branch)
+- **Current stable**: 5.0.0 (recommended for production)
+- **Development**: main branch
   - **Breaking changes**: Command-line arguments changed from 4.x
+  - **Note**: Due to recent async and mypy work, main may not be as stable as it used to be
 
-The main branch (previously the master branch) is now ExaBGP 5.0.x. The program command line arguments have already been changed and are no longer fully backwards compatible with versions 3 and 4. We recommend using the 4.2 releases in production, but running main is sometimes required for troubleshooting.
+The main branch (previously the master branch) is ExaBGP 5.0.x. The program command line arguments have been changed and are no longer fully backwards compatible with versions 3 and 4. Version 5.0.0 is now the stable release recommended for production use. **We recommend using the 5.0.0 release for production deployments** rather than running from main.
 
 ### Testing
 
@@ -411,7 +414,7 @@ Output (JSON format):
 
 ## Support
 
-**The most common issue reported (ExaBGP hangs after some time) is caused by using code written for ExaBGP 3.4 with 4.2 or main without having read [this wiki entry](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.x)**
+**The most common issue reported (ExaBGP hangs after some time) is caused by using code written for ExaBGP 3.4 with current versions (5.0+) without having read [this wiki entry](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.x)**
 
 ExaBGP is supported through GitHub's [issue tracker](https://github.com/Exa-Networks/exabgp/issues). So should you encounter any problems, please do not hesitate to [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you.
 
@@ -419,7 +422,7 @@ During "day time" (GMT/BST) feel free to contact us on [Slack](https://join.slac
 
 The best way to be informed about our progress/releases is to follow us on [Twitter](https://twitter.com/search?q=exabgp).
 
-If there are any bugs, we'd like to ask you to help us fix the issue using the main branch. We may then backport the fixes to the 4.2 stable branch.
+If there are any bugs, we'd like to ask you to help us fix the issue using the main branch. We will backport critical fixes to stable releases.
 
 Please remove any non `git main` installations if you are trying the latest release to prevent running the wrong code by accident; it happens more than you think. Verify the binary by running `exabgp version`.
 

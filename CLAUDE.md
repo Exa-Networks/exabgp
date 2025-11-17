@@ -78,7 +78,7 @@ All CI tests must pass:
   - Linting (ruff format + ruff check)
   - Unit tests (Python 3.8-3.12)
   - Functional tests (parsing, encoding, decoding)
-  - Legacy tests (Python 3.6)
+  - Note: ExaBGP 5.0 requires Python 3.8+ (3.6 no longer supported)
 - **File descriptor limit:** Automatically set to ≥40000 by functional tests
   - The `./qa/bin/functional` tool automatically checks and increases ulimit if needed
   - If tests fail with resource errors, manually run: `ulimit -n 64000`
@@ -285,7 +285,7 @@ Both modes achieve 100% test parity:
 
 ## Development Notes
 
-- **Python 3.8.1+ required** - maintains compatibility with older Python versions
+- **Python 3.8+ required** - ExaBGP 5.0 minimum version (breaking change from 4.x which supported 3.6+)
 - **Dual-mode architecture** - supports both generator-based (sync) and async/await (async) event loops
 - **External Process Model** - communicates with external applications via JSON API
 - **Stateful BGP** - maintains full BGP state machine and RIB (unlike some route servers)
