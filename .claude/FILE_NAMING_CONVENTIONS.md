@@ -23,7 +23,25 @@ These files use UPPERCASE because they are standard project files recognized acr
 
 **Rationale:** These are universal project files with established conventions.
 
-### 2. All Other Files (lowercase-with-hyphens)
+### 2. AI Assistant Protocol Files in `.claude/` (UPPERCASE)
+
+Files in `.claude/` directory use UPPERCASE because they are critical AI assistant protocols:
+
+- `MANDATORY_REFACTORING_PROTOCOL.md`
+- `GIT_VERIFICATION_PROTOCOL.md`
+- `CODING_STANDARDS.md`
+- `TESTING_DISCIPLINE.md`
+- `CI_TESTING.md`
+- `COMMUNICATION_STYLE.md`
+- `EMOJI_GUIDE.md`
+- `PLANNING_GUIDE.md`
+- `FILE_NAMING_CONVENTIONS.md`
+
+**Rationale:** These are important instruction files for AI assistants, similar in importance to README.md. UPPERCASE signals their critical nature.
+
+**Exception:** Subdirectories within `.claude/` (like `.claude/wip/`) follow lowercase-with-hyphens for their contents.
+
+### 3. All Other Files (lowercase-with-hyphens)
 
 Everything else uses lowercase with hyphens:
 

@@ -1,11 +1,12 @@
 # running the test suite/code
 ruff
 mypy
-coveralls
-nose
-psutil
 pytest
 pytest-asyncio
 pytest-cov
-pytest-timeout
-hypothesis
+coveralls
+psutil
+hypothesis>=6.0
+pytest-benchmark>=4.0
+pytest-xdist>=3.0
+pytest-timeout>=2.0

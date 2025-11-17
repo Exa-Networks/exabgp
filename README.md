@@ -436,7 +436,7 @@ Contributions are welcome! Here's how you can help:
 2. **Improve Documentation**: Even small improvements are genuinely appreciated
 3. **Submit Pull Requests**:
    - Target the `main` branch for new features
-   - Target `4.2` branch for bug fixes (we may backport)
+   - Target `5.0` branch for bug fixes (we may backport)
    - Include tests for new functionality
    - Run `ruff format` before committing
 
@@ -446,7 +446,7 @@ Contributions are welcome! Here's how you can help:
 git clone https://github.com/Exa-Networks/exabgp
 cd exabgp
 pip install -e .
-pip install pytest pytest-cov ruff
+pip install -r qa/requirements.txt
 ```
 
 See [CLAUDE.md](./CLAUDE.md) for detailed AI development guidelines and architecture overview.
