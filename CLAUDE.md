@@ -63,7 +63,12 @@ You MUST run ALL of these tests and they MUST all pass:
 1. ✅ `ruff format src && ruff check src` - MUST pass with no errors
 2. ✅ `env exabgp_log_enable=false pytest ./tests/unit/` - ALL unit tests MUST pass
 3. ✅ `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation MUST pass
-4. ✅ `./qa/bin/functional encoding <test_id>` - MUST pass for affected tests
+4. ✅ `./qa/bin/functional encoding` - **Run ALL 72 tests** (NOT individual tests unless debugging)
+
+**IMPORTANT:** When running functional encoding tests:
+- Default: `./qa/bin/functional encoding` runs ALL 72 tests - this is what you should use
+- Only specify test IDs (e.g., `./qa/bin/functional encoding A B C`) when debugging specific failures
+- NEVER run just 1-4 tests and claim success - you must verify all 72 tests pass
 
 **DO NOT skip any tests. DO NOT claim success without verification.**
 
