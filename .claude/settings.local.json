@@ -18,7 +18,11 @@
       "Bash(ruff format:*)",
       "Bash(ruff check:*)",
       "Bash(env exabgp_log_enable=false pytest ./tests/unit/ -q)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(killall:*)",
+      "Bash(env exabgp_log_enable=false pytest:*)",
+      "Bash(./sbin/exabgp validate:*)"
     ],
     "deny": []
   },
