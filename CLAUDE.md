@@ -20,8 +20,6 @@ This protocol is mandatory due to a critical failure where 95 files were refacto
 ## Development Commands
 
 **Testing:**
-- **Check file descriptor limit before running tests:** `ulimit -n` (should be ≥64000)
-- **If needed, increase limit:** `ulimit -n 64000`
 - `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py` - Unit tests with coverage
 - `env exabgp_log_enable=false pytest ./tests/unit/` - Faster unit tests without coverage
 - `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation test
@@ -44,8 +42,8 @@ This protocol is mandatory due to a critical failure where 95 files were refacto
   - Test runs both client and server components
 - `./qa/bin/functional encoding --server <letter>` - Run only server component of specific test
 - `./qa/bin/functional encoding --client <letter>` - Run only client component of specific test
-- `./qa/bin/parsing` - Configuration file parsing tests
 - `./qa/bin/functional decoding` - Message decoding tests
+- `./qa/bin/parsing` - Configuration file parsing tests
 - `python3 setup.py sdist bdist_wheel` - Build distribution packages
 - `./release binary <target>` - Create self-contained zipapp binary
 
@@ -61,9 +59,10 @@ This protocol is mandatory due to a critical failure where 95 files were refacto
 
 You MUST run ALL of these tests and they MUST all pass:
 1. ✅ `ruff format src && ruff check src` - MUST pass with no errors
-2. ✅ `env exabgp_log_enable=false pytest ./tests/unit/` - ALL unit tests MUST pass
-3. ✅ `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation MUST pass
-4. ✅ `./qa/bin/functional encoding` - **Run ALL 72 tests** (NOT individual tests unless debugging)
+2. ✅ `./qa/bin/functional encoding` - **Run ALL 72 tests** (NOT individual tests unless debugging)
+3. ✅ `./qa/bin/functional decoding` - **Run ALL 18 tests** (NOT individual tests unless debugging)
+4. ✅ `env exabgp_log_enable=false pytest ./tests/unit/` - ALL unit tests MUST pass
+5. ✅ `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation MUST pass
 
 **IMPORTANT:** When running functional encoding tests:
 - Default: `./qa/bin/functional encoding` runs ALL 72 tests - this is what you should use
@@ -297,7 +296,7 @@ Both modes achieve 100% test parity:
 
 Example configurations in `etc/exabgp/` demonstrate:
 - API integration (`api-*.conf`)
-- Protocol features (`conf-*.conf`) 
+- Protocol features (`conf-*.conf`)
 - Parsing validation (`parse-*.conf`)
 
 The QA functional tests use these configurations to validate both parsing and BGP message generation.

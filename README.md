@@ -449,4 +449,4 @@ pip install -e .
 pip install pytest pytest-cov ruff
 ```
 
-See [CLAUDE.md](./CLAUDE.md) for detailed development guidelines and architecture overview.
+See [CLAUDE.md](./CLAUDE.md) for detailed AI development guidelines and architecture overview.
