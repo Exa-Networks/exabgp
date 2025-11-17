@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import asyncio
+
 from exabgp.version import version as _version
 from exabgp.reactor.api.command.command import Command
 
@@ -94,9 +96,9 @@ def reset(self, reactor, service, line, use_json):
 
 @Command.register('crash')
 def crash(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         raise ValueError('crash test of the API')
-        yield None
+        await asyncio.sleep(0)  # This line is unreachable but matches original structure
 
     reactor.asynchronous.schedule(service, line, callback())
     return True

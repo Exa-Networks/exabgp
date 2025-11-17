@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 from exabgp.bgp.neighbor import NeighborTemplate
@@ -65,7 +66,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
             for line in json.dumps(jason).split('\n'):
                 reactor.processes.write(service, line)
 
-    def callback():
+    async def callback():
         lines_per_yield = getenv().api.chunk
         if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
             peers = reactor.peers()
@@ -79,7 +80,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
                     to_json(key, changes)
                 else:
                     to_text(key, changes)
-                yield True
+                await asyncio.sleep(0)  # Yield control after each chunk (matches original yield True)
         reactor.processes.answer_done(service)
 
     return callback
@@ -146,12 +147,12 @@ def show_adj_rib(self, reactor, service, line, use_json):
 
 @Command.register('flush adj-rib out')
 def flush_adj_rib_out(self, reactor, service, line, use_json):
-    def callback(self, peers):
+    async def callback(self, peers):
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
         self.log_message(f'flushing adjb-rib out for {peer_list}')
         for peer_name in peers:
             reactor.neighbor_rib_resend(peer_name)
-            yield False
+            await asyncio.sleep(0)  # Yield control after each peer (matches original yield False)
 
         reactor.processes.answer_done(service)
 
@@ -176,7 +177,7 @@ def flush_adj_rib_out(self, reactor, service, line, use_json):
 
 @Command.register('clear adj-rib')
 def clear_adj_rib(self, reactor, service, line, use_json):
-    def callback(self, peers, direction):
+    async def callback(self, peers, direction):
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
         self.log_message(f'clearing adjb-rib-{direction} for {peer_list}')
         for peer_name in peers:
@@ -184,7 +185,7 @@ def clear_adj_rib(self, reactor, service, line, use_json):
                 reactor.neighbor_rib_out_withdraw(peer_name)
             else:
                 reactor.neighbor_rib_in_clear(peer_name)
-            yield False
+            await asyncio.sleep(0)  # Yield control after each peer (matches original yield False)
 
         reactor.processes.answer_done(service)
 

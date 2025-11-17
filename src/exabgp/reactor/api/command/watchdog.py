@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import asyncio
+
 from exabgp.reactor.api.command.command import Command
 
 
@@ -16,14 +18,14 @@ def register_watchdog():
 
 @Command.register('announce watchdog')
 def announce_watchdog(self, reactor, service, line, use_json):
-    def callback(name):
+    async def callback(name):
         # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():
             neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
             if not neighbor:
                 continue
             neighbor.rib.outgoing.announce_watchdog(name)
-            yield False
+            await asyncio.sleep(0)  # Yield control after each neighbor (matches original yield False)
 
         reactor.processes.answer_done(service)
 
@@ -37,14 +39,14 @@ def announce_watchdog(self, reactor, service, line, use_json):
 
 @Command.register('withdraw watchdog')
 def withdraw_watchdog(self, reactor, service, line, use_json):
-    def callback(name):
+    async def callback(name):
         # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():
             neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
             if not neighbor:
                 continue
             neighbor.rib.outgoing.withdraw_watchdog(name)
-            yield False
+            await asyncio.sleep(0)  # Yield control after each neighbor (matches original yield False)
 
         reactor.processes.answer_done(service)
 
