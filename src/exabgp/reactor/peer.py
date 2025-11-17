@@ -818,13 +818,9 @@ class Peer:
                 if not operational:
                     new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                     if new_operational:
-                        operational = self.proto.new_operational(new_operational, self.proto.negotiated)  # type: ignore[union-attr,arg-type]
-
-                if operational:
-                    try:
-                        next(operational)
-                    except StopIteration:
-                        operational = None
+                        # Use async version
+                        await self.proto.new_operational_async(new_operational, self.proto.negotiated)  # type: ignore[union-attr,arg-type]
+                        operational = None  # Mark as sent
             # make sure that if some operational message are received via the API
             # that we do not eat memory for nothing
             elif self.neighbor.messages:
@@ -835,44 +831,27 @@ class Peer:
                 if not refresh:
                     new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                     if new_refresh:
-                        refresh = self.proto.new_refresh(new_refresh)  # type: ignore[union-attr,arg-type]
-
-                if refresh:
-                    try:
-                        next(refresh)
-                    except StopIteration:
-                        refresh = None
+                        # Use async version
+                        await self.proto.new_refresh_async(new_refresh)  # type: ignore[union-attr,arg-type]
+                        refresh = None  # Mark as sent
 
             # Need to send update
             if not new_routes and self.neighbor.rib.outgoing.pending():
-                # XXX: in proto really. hum to think about ?
-                new_routes = self.proto.new_update(include_withdraw)
-
-            if new_routes:
-                try:
-                    for _ in range(routes_per_iteration):
-                        # This can raise a NetworkError
-                        next(new_routes)
-                except StopIteration:
-                    new_routes = None
-                    include_withdraw = True
+                # Use async version
+                await self.proto.new_update_async(include_withdraw)
+                new_routes = None
+                include_withdraw = True
 
             elif send_eor:
                 send_eor = False
-                for _ in self.proto.new_eors():
-                    await asyncio.sleep(0)  # Yield control like ACTION.NOW
+                await self.proto.new_eors_async()
                 log.debug(lambda: '>> all EOR(s) sent', self.id())
 
             # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
             elif not command_eor and self.neighbor.eor:
                 new_eor = self.neighbor.eor.popleft()
-                command_eor = self.proto.new_eors(new_eor.afi, new_eor.safi)
-
-            if command_eor:
-                try:
-                    next(command_eor)
-                except StopIteration:
-                    command_eor = None
+                await self.proto.new_eors_async(new_eor.afi, new_eor.safi)
+                command_eor = None  # Mark as sent
 
             if (
                 new_routes

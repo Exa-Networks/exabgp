@@ -159,6 +159,135 @@ class Reactor:
             self._prevent_spin()
             return []
 
+    async def _run_async_peers(self) -> None:
+        """Run all active peers concurrently as asyncio tasks
+
+        This method manages peer lifecycle:
+        - Creates async tasks for each peer
+        - Monitors task completion/failure
+        - Handles peer removal when tasks complete
+        - Coordinates concurrent peer execution
+        """
+        # Start all active peers as async tasks
+        for key in self.active_peers():
+            peer = self._peers[key]
+            if not hasattr(peer, '_async_task') or peer._async_task is None:
+                peer.start_async_task()
+
+        # Wait briefly to allow tasks to run
+        await asyncio.sleep(0)
+
+        # Check for completed/failed peers
+        completed_peers = []
+        for key in list(self._peers.keys()):
+            peer = self._peers[key]
+            if hasattr(peer, '_async_task') and peer._async_task is not None:
+                if peer._async_task.done():
+                    try:
+                        # Check if task raised an exception
+                        peer._async_task.result()
+                    except Exception as exc:
+                        log.error(lambda exc=exc: f'peer {key} task failed: {exc}', 'reactor')
+                    completed_peers.append(key)
+
+        # Remove completed peers
+        for key in completed_peers:
+            if key in self._peers:
+                del self._peers[key]
+
+    async def _async_main_loop(self) -> None:
+        """Async version of the main event loop
+
+        This replaces the generator-based event loop in run() with
+        async/await patterns while maintaining identical behavior.
+        """
+        ms_sleep = int(self._sleep_time * 1000)
+
+        while True:
+            try:
+                # Handle signals
+                if self.signal.received:
+                    signaled = self.signal.received
+
+                    # Report signal to peers
+                    for key in self._peers:
+                        if self._peers[key].neighbor.api['signal']:  # type: ignore[index]
+                            self._peers[key].reactor.processes.signal(self._peers[key].neighbor, self.signal.number)
+
+                    self.signal.rearm()
+
+                    # Handle SHUTDOWN
+                    if signaled == Signal.SHUTDOWN:
+                        self.exit_code = self.Exit.normal
+                        self.shutdown()
+                        break
+
+                    # Handle RESTART
+                    if signaled == Signal.RESTART:
+                        self.restart()
+                        continue
+
+                    # Wait for pending adjribout
+                    if self._pending_adjribout():
+                        continue
+
+                    # Handle RELOAD
+                    if signaled == Signal.RELOAD:
+                        self.reload()
+                        self.processes.start(self.configuration.processes, False)
+                        continue
+
+                    # Handle FULL_RELOAD
+                    if signaled == Signal.FULL_RELOAD:
+                        self.reload()
+                        self.processes.start(self.configuration.processes, True)
+                        continue
+
+                # Check for incoming connections
+                if self.listener.incoming():
+                    self.asynchronous.schedule(
+                        str(uuid.uuid1()),
+                        'checking for new connection(s)',
+                        self.listener.new_connections(),
+                    )
+
+                # Run all peers concurrently
+                await self._run_async_peers()
+
+                # Process API commands
+                for service, command in self.processes.received():
+                    self.api.process(self, service, command)
+
+                # Run async scheduled tasks
+                self.asynchronous.run()
+
+                # Sleep to yield control
+                await asyncio.sleep(ms_sleep / 1000.0)
+
+                # Check if stopping and no peers left
+                if self._stopping and not self._peers.keys():
+                    self._termination('exiting on peer termination', self.Exit.normal)
+                    break
+
+            except KeyboardInterrupt:
+                self._termination('^C received', self.Exit.normal)
+                break
+            except SystemExit:
+                self._termination('exiting', self.Exit.normal)
+                break
+            except OSError as exc:
+                # Handle OS errors
+                if exc.errno == errno.EINTR:
+                    self._termination('I/O Error received, most likely ^C during IO', self.Exit.io_error)
+                elif exc.errno in (errno.EBADF, errno.EINVAL):
+                    self._termination('problem using select, stopping', self.Exit.select)
+                else:
+                    self._termination('socket error received', self.Exit.socket)
+                break
+            except ProcessError:
+                self._termination('Problem when sending message(s) to helper program, stopping', self.Exit.process)
+                break
+
     # peer related functions
 
     def active_peers(self) -> Set[str]:
@@ -291,6 +420,12 @@ class Reactor:
         return True
 
     def run(self) -> int:
+        # Check if asyncio mode is enabled
+        if getenv().reactor.asyncio:
+            # Use asyncio event loop
+            return asyncio.run(self.run_async())
+
+        # Otherwise use traditional generator-based event loop
         self.daemon.daemonise()
 
         # Make sure we create processes once we have closed file descriptor
@@ -497,6 +632,71 @@ class Reactor:
                     self._termination('socket error received', self.Exit.socket)
             except ProcessError:
                 self._termination('Problem when sending message(s) to helper program, stopping', self.Exit.process)
+
+        return self.exit_code
+
+    async def run_async(self) -> int:
+        """Async version of run() - main entry point for asyncio mode
+
+        Performs the same setup as run() but uses async event loop.
+        """
+        self.daemon.daemonise()
+
+        # Create processes after closing file descriptors
+        self.processes = Processes()
+
+        # Setup listeners
+        for ip in self._ips:
+            if not self.listener.listen_on(ip, None, self._port, None, False, None):
+                return self.Exit.listening
+
+        if not self.reload():
+            return self.Exit.configuration
+
+        for neighbor in self.configuration.neighbors.values():
+            if neighbor['listen']:
+                if not self.listener.listen_on(
+                    neighbor['md5-ip'],
+                    neighbor['peer-address'],
+                    neighbor['listen'],
+                    neighbor['md5-password'],
+                    neighbor['md5-base64'],
+                    neighbor['incoming-ttl'],
+                ):
+                    return self.Exit.listening
+
+        # Start processes
+        if not self.early_drop:
+            self.processes.start(self.configuration.processes)
+
+        # Drop privileges
+        if not self.daemon.drop_privileges():
+            log.critical(
+                lambda: f"could not drop privileges to '{self.daemon.user}' refusing to run as root", 'reactor'
+            )
+            log.critical(
+                lambda: 'set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor'
+            )
+            return self.Exit.privileges
+
+        if self.early_drop:
+            self.processes.start(self.configuration.processes)
+
+        # Initialize logging with dropped privileges
+        log.init(getenv())  # type: ignore[arg-type]
+
+        if not self.daemon.savepid():
+            return self.Exit.pid
+
+        # Wait for initial delay if configured
+        wait = getenv().tcp.delay
+        if wait:
+            sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
+            log.debug(lambda: f'waiting for {sleeptime} seconds before connecting', 'reactor')
+            await asyncio.sleep(float(sleeptime))
+
+        # Run the async main event loop
+        await self._async_main_loop()
 
         return self.exit_code
 

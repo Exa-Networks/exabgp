@@ -608,6 +608,15 @@ class Protocol:
         )
         yield notification
 
+    async def new_notification_async(self, notification: Notify) -> Notify:
+        """Async version of new_notification - send BGP NOTIFICATION message"""
+        await self.write_async(notification, self.negotiated)
+        log.debug(
+            lambda: f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
+            self.connection.session(),
+        )
+        return notification
+
     def new_update(self, include_withdraw: bool) -> Generator[Union[Update, NOP], None, None]:
         updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
         number: int = 0
@@ -621,12 +630,46 @@ class Protocol:
             log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())
         yield _UPDATE
 
+    async def new_update_async(self, include_withdraw: bool) -> Update:
+        """Async version of new_update - send BGP UPDATE messages"""
+        updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
+        number: int = 0
+        for update in updates:
+            for message in update.messages(self.negotiated, include_withdraw):
+                number += 1
+                await self.send_async(message)
+        if number:
+            log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())
+        return _UPDATE
+
     def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Union[EOR, NOP], None, None]:
         eor: EOR = EOR(afi, safi)
         for _ in self.write(eor, self.negotiated):
             yield _NOP
         log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self.connection.session())
         yield eor
+
+    async def new_eor_async(self, afi: AFI, safi: SAFI) -> EOR:
+        """Async version of new_eor - send BGP End-of-RIB marker"""
+        eor: EOR = EOR(afi, safi)
+        await self.write_async(eor, self.negotiated)
+        log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self.connection.session())
+        return eor
+
+    async def new_eors_async(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> Update:
+        """Async version of new_eors - send End-of-RIB markers for all families"""
+        if self.negotiated.families:
+            families = (
+                self.negotiated.families
+                if (afi, safi) == (AFI.undefined, SAFI.undefined)
+                else [(afi, safi)]
+            )
+            for eor_afi, eor_safi in families:
+                await self.new_eor_async(eor_afi, eor_safi)
+        else:
+            # If not sending EOR, send keepalive
+            await self.new_keepalive_async('EOR')
+        return _UPDATE
 
     def new_eors(
         self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined
@@ -659,8 +702,20 @@ class Protocol:
         log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self.connection.session())
         yield operational
 
+    async def new_operational_async(self, operational: Operational, negotiated: Negotiated) -> Operational:
+        """Async version of new_operational - send BGP OPERATIONAL message"""
+        await self.write_async(operational, negotiated)
+        log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self.connection.session())
+        return operational
+
     def new_refresh(self, refresh: RouteRefresh) -> Generator[Union[RouteRefresh, NOP], None, None]:
         for _ in self.write(refresh, self.negotiated):
             yield _NOP
         log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self.connection.session())
         yield refresh
+
+    async def new_refresh_async(self, refresh: RouteRefresh) -> RouteRefresh:
+        """Async version of new_refresh - send BGP ROUTE-REFRESH message"""
+        await self.write_async(refresh, self.negotiated)
+        log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self.connection.session())
+        return refresh
