@@ -4,7 +4,33 @@ Documentation and protocols for Claude Code interactions with ExaBGP.
 
 ---
 
-## Core Protocols (CRITICAL - READ FIRST)
+## 🚨 START OF EVERY SESSION - READ ALL PROTOCOLS 🚨
+
+**BEFORE doing ANYTHING, you MUST read ALL Core Protocols below.**
+
+**NONE are optional. NONE are "nice to have". ALL are MANDATORY.**
+
+You have NO memory between sessions - you MUST read them EVERY time.
+
+**Start with these (apply to ALL interactions):**
+1. **COMMUNICATION_STYLE.md** - How to communicate (terse, direct, emojis)
+2. **EMOJI_GUIDE.md** - Which emojis to use and when
+3. **GIT_VERIFICATION_PROTOCOL.md** - Check for pre-existing git changes
+
+**Then READ THE REST below.**
+
+**Then check git state:**
+```bash
+git status
+git diff
+git diff --staged
+```
+
+If ANY files modified/staged: ASK user how to handle before starting work.
+
+---
+
+## Core Protocols (ALL MANDATORY - READ EVERY SESSION)
 
 | File | Purpose | Size |
 |------|---------|------|
@@ -68,20 +94,21 @@ Major completed projects:
 
 ## Quick Start
 
+**At session start:**
+1. Read ALL Core Protocols above (ALL mandatory, see top of file)
+2. Check `git status`, `git diff`, `git diff --staged`
+3. If files modified: ASK user before proceeding
+
 **For any code changes:**
-1. Read **CODING_STANDARDS.md**
-2. Read **MANDATORY_REFACTORING_PROTOCOL.md** (if refactoring)
-3. Read **TESTING_DISCIPLINE.md**
-4. Make changes
-5. Run ALL tests (see CI_TESTING.md)
-6. Only THEN claim success
+1. Make changes following CODING_STANDARDS.md
+2. Follow MANDATORY_REFACTORING_PROTOCOL.md if refactoring
+3. Run ALL tests per TESTING_DISCIPLINE.md
+4. Only THEN claim success
 
-**For git operations:**
-- Read **GIT_VERIFICATION_PROTOCOL.md** (verify before claiming)
-
-**For communication:**
-- Read **COMMUNICATION_STYLE.md** (terse, direct)
-- Read **EMOJI_GUIDE.md** (visual clarity)
+**Remember:**
+- COMMUNICATION_STYLE.md + EMOJI_GUIDE.md apply to EVERY response
+- GIT_VERIFICATION_PROTOCOL.md applies to EVERY git operation
+- ERROR_RECOVERY_PROTOCOL.md applies when mistakes happen
 
 ---
 
