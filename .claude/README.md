@@ -9,6 +9,7 @@ Documentation and protocols for Claude Code interactions with ExaBGP.
 | File | Purpose | Size |
 |------|---------|------|
 | **MANDATORY_REFACTORING_PROTOCOL.md** | Step-by-step verification for ALL refactoring | 3.7 KB |
+| **GIT_VERIFICATION_PROTOCOL.md** | NEVER make git claims without fresh verification | 0.7 KB |
 | **CODING_STANDARDS.md** | Python 3.8+ compatibility, type annotations, BGP APIs | 3.5 KB |
 | **TESTING_DISCIPLINE.md** | NEVER claim success without testing ALL | 1.1 KB |
 | **COMMUNICATION_STYLE.md** | Terse, direct communication. Use agents. | 2.1 KB |
@@ -84,6 +85,9 @@ Documentation and protocols for Claude Code interactions with ExaBGP.
 4. Make changes
 5. Run ALL tests (see CI_TESTING.md)
 6. Only THEN claim success
+
+**For git operations:**
+- Read **GIT_VERIFICATION_PROTOCOL.md** (verify before claiming)
 
 **For communication:**
 - Read **COMMUNICATION_STYLE.md** (terse, direct)

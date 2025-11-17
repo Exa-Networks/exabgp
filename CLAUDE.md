@@ -120,12 +120,15 @@ All CI tests must pass:
 
 **CRITICAL: Always verify repository state before git operations**
 
+**READ `.claude/GIT_VERIFICATION_PROTOCOL.md` for complete requirements.**
+
 Before ANY git operations (commit, rebase, amend, reset, merge):
 1. **ALWAYS run `git status`** - Check for staged/unstaged changes
 2. **ALWAYS run `git log --oneline -5`** - Check recent commit history
 3. **ALWAYS verify user hasn't made manual changes** since last interaction
 4. **NEVER assume** the repository is in the state you last saw it
 5. **If unexpected changes detected:** STOP and ask user before proceeding
+6. **NEVER make claims about git state without fresh verification** - See protocol
 
 This prevents overwriting user's manual work and ensures awareness of repository state.
 
