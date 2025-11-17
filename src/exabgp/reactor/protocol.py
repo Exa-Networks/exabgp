@@ -126,6 +126,44 @@ class Protocol:
 
         yield True
 
+    async def connect_async(self) -> bool:
+        """Async version of connect() - establishes connection using asyncio
+
+        Returns:
+            True if connection successful, False otherwise
+
+        Uses Outgoing.establish_async() which properly integrates with asyncio
+        instead of generator-based polling.
+        """
+        # allows to test the protocol code using modified StringIO with a extra 'pending' function
+        if self.connection:
+            return True
+
+        local = self.neighbor['md5-ip'].top() if not self.neighbor.auto_discovery else None
+        peer = self.neighbor['peer-address'].top()
+        afi = self.neighbor['peer-address'].afi
+        md5 = self.neighbor['md5-password']
+        md5_base64 = self.neighbor['md5-base64']
+        ttl_out = self.neighbor['outgoing-ttl']
+        itf = self.neighbor['source-interface']
+        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
+
+        # Use async establish instead of generator
+        connected = await self.connection.establish_async()
+
+        if not connected:
+            return False
+
+        if self.peer.neighbor.api['neighbor-changes']:
+            self.peer.reactor.processes.connected(self.peer.neighbor)
+
+        if not local:
+            self.neighbor['local-address'] = IP.create(self.connection.local)
+            if self.neighbor['router-id'] is None and self.neighbor['local-address'].afi == AFI.ipv4:
+                self.neighbor['router-id'] = self.neighbor['local-address']
+
+        return True
+
     def close(self, reason: str = 'protocol closed, reason unspecified') -> None:
         if self.connection:
             log.debug(lambda: reason, self.connection.session())
