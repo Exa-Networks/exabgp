@@ -522,7 +522,7 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
 
     # Create IPv6 route
     nlri = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR(IPv6.create('2001:db8::').pack(), 32)
+    nlri.cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
     nlri.nexthop = IPv6.create('2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -557,7 +557,7 @@ def test_roundtrip_ipv6_announcement() -> None:
 
     # Create IPv6 route
     nlri = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR(IPv6.create('2001:db8::').pack(), 32)
+    nlri.cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
     nlri.nexthop = IPv6.create('2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -613,7 +613,7 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
 
     # Create IPv6 route
     nlri_v6 = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    nlri_v6.cidr = CIDR(IPv6.create('2001:db8::').pack(), 32)
+    nlri_v6.cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
     nlri_v6.nexthop = IPv6.create('2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
