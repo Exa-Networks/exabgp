@@ -112,8 +112,12 @@ class Outgoing(Connection):
         # # Not working after connect() at least on FreeBSD TTL(self.io,self.peer,self.ttl)
         # yield True
 
-    async def establish_async(self) -> bool:
+    async def establish_async(self, timeout: float = 30.0, max_attempts: int = 50) -> bool:
         """Async version of establish() - establishes connection using asyncio
+
+        Args:
+            timeout: Maximum time in seconds to attempt connection (default: 30s)
+            max_attempts: Maximum number of connection attempts (default: 50)
 
         Returns:
             True if connection successful, False otherwise
@@ -122,19 +126,28 @@ class Outgoing(Connection):
         loop instead of polling with select.poll().
         """
         loop = asyncio.get_event_loop()
+        start_time = time.time()
+        attempts = 0
         last = time.time() - 2.0
 
-        while True:
+        while time.time() - start_time < timeout and attempts < max_attempts:
+            attempts += 1
             notify = time.time() - last > 1.0
             if notify:
                 last = time.time()
-                log.debug(lambda: 'attempting connection to %s:%d' % (self.peer, self.port), self.session())
+                log.debug(
+                    lambda: '[ASYNC] connection attempt %d/%d to %s:%d (%.1fs elapsed)'
+                    % (attempts, max_attempts, self.peer, self.port, time.time() - start_time),
+                    self.session(),
+                )
 
             # Setup socket if needed
             setup_issue = self._setup()
             if setup_issue:
                 if notify:
-                    log.debug(lambda: 'connection to %s:%d failed during setup' % (self.peer, self.port), self.session())
+                    log.debug(
+                        lambda: 'connection to %s:%d failed during setup' % (self.peer, self.port), self.session()
+                    )
                     log.debug(lambda setup_issue=setup_issue: str(setup_issue), self.session())
                 await asyncio.sleep(0.1)  # Brief delay before retry
                 continue
@@ -167,3 +180,18 @@ class Outgoing(Connection):
                 # Brief delay before retry
                 await asyncio.sleep(0.1)
                 continue
+
+        # Timeout or max attempts reached - connection failed
+        elapsed = time.time() - start_time
+        log.debug(
+            lambda: '[ASYNC] connection to %s:%d failed after %d attempts (%.1fs elapsed)'
+            % (self.peer, self.port, attempts, elapsed),
+            self.session(),
+        )
+
+        # Cleanup if socket is still open
+        if self.io:
+            self.io.close()  # type: ignore[union-attr]
+        self.io = None
+
+        return False
