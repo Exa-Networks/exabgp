@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import asyncio
+
 from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import match_neighbors
 from exabgp.reactor.api.command.limit import extract_neighbors
@@ -28,21 +30,19 @@ def register_announce():
 
 @Command.register('announce route')
 def announce_route(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_route(command)
             if not changes:
                 self.log_failure(f'command could not parse route in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -54,17 +54,15 @@ def announce_route(self, reactor, service, line, use_json):
                 reactor.configuration.inject_change(peers, change)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {change.extensive()}')
-                yield False
+                await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the route')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the route')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -72,21 +70,19 @@ def announce_route(self, reactor, service, line, use_json):
 
 @Command.register('withdraw route')
 def withdraw_route(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_route(command)
             if not changes:
                 self.log_failure(f'command could not parse route in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -103,21 +99,18 @@ def withdraw_route(self, reactor, service, line, use_json):
                 if reactor.configuration.inject_change(peers, change):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'route removed from {peer_list} : {change.extensive()}')
-                    yield False
                 else:
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'route not found on {peer_list} : {change.extensive()}')
-                    yield False
+                await asyncio.sleep(0)  # Yield control after each route (matches original yield False in both branches)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the route')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the route')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -125,21 +118,19 @@ def withdraw_route(self, reactor, service, line, use_json):
 
 @Command.register('announce vpls')
 def announce_vpls(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_vpls(command)
             if not changes:
                 self.log_failure(f'command could not parse vpls in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -147,17 +138,15 @@ def announce_vpls(self, reactor, service, line, use_json):
                 reactor.configuration.inject_change(peers, change)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'vpls added to {peer_list} : {change.extensive()}')
-                yield False
+                await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the vpls')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the vpls')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -165,14 +154,13 @@ def announce_vpls(self, reactor, service, line, use_json):
 
 @Command.register('withdraw vpls')
 def withdraw_vpls(self, reactor, service, line, use_json):
-    def callback():
+    async def callback():
         try:
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
                 self.log_failure(f'no neighbor matching the command : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             changes = self.api_vpls(command)
@@ -180,7 +168,6 @@ def withdraw_vpls(self, reactor, service, line, use_json):
             if not changes:
                 self.log_failure(f'command could not parse vpls in : {command}')
                 reactor.processes.answer_error(service)
-                yield True
                 return
 
             for change in changes:
@@ -188,21 +175,18 @@ def withdraw_vpls(self, reactor, service, line, use_json):
                 if reactor.configuration.inject_change(peers, change):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'vpls removed from {peer_list} : {change.extensive()}')
-                    yield False
                 else:
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'vpls not found on {peer_list} : {change.extensive()}')
-                    yield False
+                await asyncio.sleep(0)  # Yield control after each route (matches original yield False in both branches)
 
             reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the vpls')
             reactor.processes.answer_error(service)
-            yield True
         except IndexError:
             self.log_failure('issue parsing the vpls')
             reactor.processes.answer_error(service)
-            yield True
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
