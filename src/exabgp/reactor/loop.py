@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import asyncio  # noqa: F401 - Used by async event loop wrapper in Step 9
 import errno
 import re
 import time
@@ -126,6 +127,37 @@ class Reactor:
         except Exception:
             self._prevent_spin()
             return
+
+    async def _wait_for_io_async(self, sleeptime: int) -> list[int]:
+        """Wait for I/O using asyncio (async version)
+
+        Async wrapper for event loop integration.
+        This is a simplified version for the hybrid approach foundation.
+        Full integration will use asyncio I/O multiplexing.
+
+        Args:
+            sleeptime: Milliseconds to wait
+
+        Returns:
+            List of ready file descriptors (empty in this foundation version)
+        """
+        # Convert milliseconds to seconds
+        sleep_seconds = sleeptime / 1000.0
+
+        try:
+            # Use asyncio.sleep for cooperative yielding
+            await asyncio.sleep(sleep_seconds)
+
+            # Return empty list (foundation version)
+            # Full implementation will integrate with asyncio I/O
+            return []
+
+        except KeyboardInterrupt:
+            self._termination('^C received', self.Exit.normal)
+            return []
+        except Exception:
+            self._prevent_spin()
+            return []
 
     # peer related functions
 

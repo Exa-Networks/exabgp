@@ -3,10 +3,20 @@
 Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
+
+ASYNC I/O MIGRATION (2025-11-17):
+
+This module supports both generator-based and async I/O:
+- Original: _reader(), writer(), reader() - generator-based (KEPT)
+- New: _reader_async(), writer_async(), reader_async() - async-based (ADDED)
+
+The async methods use asyncio.sock_recv()/sock_sendall() for I/O.
+Both approaches coexist during migration. State machines remain generators.
 """
 
 from __future__ import annotations
 
+import asyncio  # noqa: F401 - Used by async methods added in Steps 2-4
 import random
 import socket
 import select
@@ -177,6 +187,58 @@ class Connection:
                     log.critical(lambda: f'{self.name()} {self.peer} undefined error reading on socket', self.session())
                     raise NetworkError(f'Problem while reading data from the network ({errstr(exc)})') from None
 
+    async def _reader_async(self, number: int) -> bytes:
+        """Read exactly 'number' bytes from socket (async version)
+
+        Uses asyncio for I/O operations.
+        Async version of _reader() for hybrid event loop integration.
+        """
+        if not self.io:
+            self.close()
+            raise NotConnected('Trying to read on a closed TCP connection')
+        if number == 0:
+            return b''
+
+        loop = asyncio.get_event_loop()
+
+        # Wait for socket to be readable
+        while not self.reading():
+            await asyncio.sleep(0.001)
+
+        data = b''
+        while number > 0:
+            try:
+                # Use asyncio socket operations
+                read = await loop.sock_recv(self.io, number)
+                if not read:
+                    self.close()
+                    log.warning(lambda: f'{self.name()} {self.peer} lost TCP session with peer', self.session())
+                    raise LostConnection('the TCP connection was closed by the remote end')
+
+                data += read
+                number -= len(read)
+
+            except socket.timeout as exc:
+                self.close()
+                log.warning(lambda: f'{self.name()} {self.peer} peer is too slow', self.session())
+                raise TooSlowError(f'Timeout while reading data from the network ({errstr(exc)})') from None
+            except BlockingIOError:
+                # Socket not ready, yield control
+                await asyncio.sleep(0.001)
+            except OSError as exc:
+                if exc.args[0] in error.block:
+                    # Blocking I/O, yield control and retry
+                    await asyncio.sleep(0.001)
+                elif exc.args[0] in error.fatal:
+                    self.close()
+                    raise LostConnection(f'issue reading on the socket: {errstr(exc)}') from None
+                else:
+                    log.critical(lambda: f'{self.name()} {self.peer} undefined error reading on socket', self.session())
+                    raise NetworkError(f'Problem while reading data from the network ({errstr(exc)})') from None
+
+        log.debug(lazyformat('received TCP payload', data), self.session())
+        return data
+
     def writer(self, data: bytes) -> Iterator[bool]:
         if not self.io:
             # XXX: FIXME: Make sure it does not hold the cleanup during the closing of the peering session
@@ -228,6 +290,55 @@ class Connection:
                     log.critical(lambda: f'{self.name()} {self.peer} undefined error writing on socket', self.session())
                     yield False
 
+    async def writer_async(self, data: bytes) -> None:
+        """Write data to socket (async version)
+
+        Uses asyncio for I/O operations.
+        Async version of writer() for hybrid event loop integration.
+        """
+        if not self.io:
+            return
+
+        loop = asyncio.get_event_loop()
+
+        # Wait for socket to be writable
+        while not self.writing():
+            await asyncio.sleep(0.001)
+
+        log.debug(lazyformat('sending TCP payload', data), self.session())
+
+        while data:
+            try:
+                # Use asyncio socket send (sends all data or raises)
+                await loop.sock_sendall(self.io, data)
+                # sock_sendall sends all data, so we're done
+                return
+
+            except BlockingIOError:
+                # Socket not ready, yield control
+                await asyncio.sleep(0.001)
+            except OSError as exc:
+                if exc.args[0] in error.block:
+                    log.debug(
+                        lambda exc=exc: f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(exc)}, trying to complete',
+                        self.session(),
+                    )
+                    await asyncio.sleep(0.001)
+                elif exc.errno == errno.EPIPE:
+                    # The TCP connection is gone
+                    self.close()
+                    raise NetworkError('Broken TCP connection') from None
+                elif exc.args[0] in error.fatal:
+                    self.close()
+                    log.critical(
+                        lambda exc=exc: f'{self.name()} {self.peer} problem sending message ({errstr(exc)})',
+                        self.session(),
+                    )
+                    raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None
+                else:
+                    log.critical(lambda: f'{self.name()} {self.peer} undefined error writing on socket', self.session())
+                    await asyncio.sleep(0.001)
+
     def reader(self) -> Iterator[tuple[int, int, bytes, bytes, Optional[NotifyError]]]:
         # _reader returns the whole number requested or nothing and then stops
         for header in self._reader(Message.HEADER_LEN):
@@ -265,3 +376,41 @@ class Connection:
                 yield 0, 0, b'', b'', None
 
         yield length, msg, header, body, None
+
+    async def reader_async(self) -> tuple[int, int, bytes, bytes, Optional[NotifyError]]:
+        """Read BGP message header and body (async version)
+
+        Uses asyncio for I/O operations.
+        Async version of reader() for hybrid event loop integration.
+
+        Returns: (length, msg_type, header, body, error)
+        """
+        # Read BGP header (19 bytes)
+        header = await self._reader_async(Message.HEADER_LEN)
+
+        if not header.startswith(Message.MARKER):
+            report = 'The packet received does not contain a BGP marker'
+            return 0, 0, header, b'', NotifyError(1, 1, report)
+
+        msg = header[18]
+        length = unpack('!H', header[16:18])[0]
+
+        if length < Message.HEADER_LEN or length > self.msg_size:
+            report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
+            return length, 0, header, b'', NotifyError(1, 2, report)
+
+        validator = Message.Length.get(msg, lambda _: _ >= MIN_BGP_MESSAGE_LENGTH)  # type: ignore[call-overload]
+        if not validator(length):
+            # MUST send the faulty length back
+            report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
+            return length, 0, header, b'', NotifyError(1, 2, report)
+
+        number = length - Message.HEADER_LEN
+
+        if not number:
+            return length, msg, header, b'', None
+
+        # Read body
+        body = await self._reader_async(number)
+
+        return length, msg, header, body, None
