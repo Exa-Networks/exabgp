@@ -1,9 +1,9 @@
 # AsyncIO Migration Progress
 
-**Current Status:** ⚠️ Phase B Part 2 Complete - Async Mode 50% Functional
+**Current Status:** ⚠️ I/O Optimizations Complete - Async Mode 50% Functional (Awaiting Decision)
 
 **Started:** 2025-11-16
-**Last Updated:** 2025-11-17
+**Last Updated:** 2025-11-17 (I/O Optimization Session)
 
 ---
 
@@ -93,6 +93,32 @@
 **Missing:** Socket I/O event integration, ACTION-based scheduling, rate limiting, API fd management
 
 **See:** ASYNC_MODE_COMPLETION_PLAN.md for complete analysis and roadmap
+
+---
+
+## I/O Optimization Session (2025-11-17)
+
+### ✅ What Was Done
+- **Optimized async I/O methods:** Removed busy-waiting from `_reader_async()` and `writer_async()`
+- **Event loop tuning:** Changed to `asyncio.sleep(0)` for minimal overhead
+- **Code quality:** -34 lines of unnecessary polling/exception handling
+- **Idiomatic asyncio:** Proper use of `loop.sock_recv()` and `loop.sock_sendall()`
+
+### 📊 Test Results After Optimization
+- **Sync mode:** 71/72 (98.6%) - 1 pre-existing failure, no regressions
+- **Async mode:** 36/72 (50%) - unchanged (as expected)
+- **Unit tests:** 1376/1376 (100%) in both modes
+
+### 🔍 Key Finding
+I/O busy-waiting was a **code quality issue**, not the root cause of test failures.
+The real problem is **architectural**: lack of event coordination between reactor and peer tasks.
+
+**Commits:**
+- `fdd6db7b` - Phase B Part 2 complete (async event loop)
+- `3a8f4a00` - I/O optimizations (cleaner asyncio code)
+
+**Documentation:**
+- `SESSION_SUMMARY_IO_OPTIMIZATION.md` - Full session analysis and recommendations
 
 ---
 
