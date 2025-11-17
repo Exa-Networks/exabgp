@@ -777,7 +777,6 @@ class Peer:
             except ProcessError:
                 raise Notify(6, 0, 'ExaBGP Internal error, sorry.') from None
 
-        routes_per_iteration = 1 if self.neighbor['rate-limit'] > 0 else 25
         send_eor = not self.neighbor['manual-eor']
         new_routes = None
 

@@ -697,11 +697,7 @@ class Protocol:
     async def new_eors_async(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> Update:
         """Async version of new_eors - send End-of-RIB markers for all families"""
         if self.negotiated.families:
-            families = (
-                self.negotiated.families
-                if (afi, safi) == (AFI.undefined, SAFI.undefined)
-                else [(afi, safi)]
-            )
+            families = self.negotiated.families if (afi, safi) == (AFI.undefined, SAFI.undefined) else [(afi, safi)]
             for eor_afi, eor_safi in families:
                 await self.new_eor_async(eor_afi, eor_safi)
         else:

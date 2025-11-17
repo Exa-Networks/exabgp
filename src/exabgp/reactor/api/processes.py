@@ -13,6 +13,8 @@ import time
 import subprocess
 import select
 import fcntl
+import asyncio
+import collections
 
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union, TYPE_CHECKING
 from threading import Thread
@@ -73,6 +75,11 @@ class Processes:
         self.terminate_on_error: bool = getenv().api.terminate
         self._default_ack: bool = getenv().api.ack
 
+        # Async mode support
+        self._async_mode: bool = False
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._command_queue: collections.deque = collections.deque()  # type: ignore[var-annotated]
+
     def number(self) -> int:
         return len(self._process)
 
@@ -99,6 +106,16 @@ class Processes:
     def _terminate(self, process_name: str) -> Thread:
         log.debug(lambda: f'terminating process {process_name}', 'process')
         process = self._process[process_name]
+
+        # Remove async reader if in async mode
+        if self._async_mode and self._loop and process.stdout:
+            try:
+                fd = process.stdout.fileno()
+                self._loop.remove_reader(fd)
+                log.debug(lambda: f'[ASYNC] Removed reader for process {process_name} (fd={fd})', 'process')
+            except Exception:
+                pass  # Reader might not be registered or FD already closed
+
         del self._process[process_name]
         self._update_fds()
         thread = Thread(target=self._terminate_run, args=(process, process_name))
@@ -175,6 +192,12 @@ class Processes:
                 )
                 self._update_fds()
                 fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)  # type: ignore[union-attr]
+
+                # Register async reader if in async mode
+                if self._async_mode and self._loop:
+                    fd = self._process[process].stdout.fileno()  # type: ignore[union-attr]
+                    self._loop.add_reader(fd, self._async_reader_callback, process)
+                    log.debug(lambda: f'[ASYNC] Registered reader for new process {process} (fd={fd})', 'process')
 
                 log.debug(lambda: 'forked process {}'.format(process), 'process')
 
@@ -309,6 +332,104 @@ class Processes:
                 pass
             except (subprocess.CalledProcessError, OSError, ValueError):
                 self._handle_problem(process)
+
+    def setup_async_readers(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Setup async readers for API process stdout using loop.add_reader()
+
+        This integrates API process communication with the asyncio event loop.
+        Instead of using select.poll() (which doesn't work with asyncio), we
+        register callbacks that are invoked when data is available.
+
+        Args:
+            loop: The asyncio event loop to register readers with
+        """
+        self._async_mode = True
+        self._loop = loop
+
+        # Register reader for each existing process
+        for process_name in self._process:
+            proc = self._process[process_name]
+            if proc.stdout:
+                fd = proc.stdout.fileno()
+                # Register callback to be called when stdout has data available
+                loop.add_reader(fd, self._async_reader_callback, process_name)
+                log.debug(lambda: f'[ASYNC] Registered reader for process {process_name} (fd={fd})', 'process')
+
+    def _async_reader_callback(self, process_name: str) -> None:
+        """Callback invoked by event loop when API process stdout has data
+
+        This is called automatically by asyncio when data is available.
+        It reads the data, buffers incomplete lines, and queues complete
+        commands for processing.
+
+        Args:
+            process_name: Name of the process with available data
+        """
+        if process_name not in self._process:
+            return
+
+        try:
+            proc = self._process[process_name]
+            poll = proc.poll()
+
+            # Read available data (non-blocking) - use os.read() directly on FD
+            # to avoid blocking even with O_NONBLOCK set on the descriptor
+            fd = proc.stdout.fileno()  # type: ignore[union-attr]
+            raw_data = os.read(fd, 16384)
+            buf = str(raw_data, 'ascii')
+
+            if buf == '' and poll is not None:
+                # Process exited
+                self._handle_problem(process_name)
+                return
+
+            # Buffer incomplete lines
+            raw = self._buffer.get(process_name, '') + buf
+
+            # Extract complete lines and queue as commands
+            while '\n' in raw:
+                line, raw = raw.split('\n', 1)
+                line = line.rstrip()
+
+                if line.startswith('debug '):
+                    log.warning(
+                        lambda line=line, process=process_name: f'debug info from {process_name} : {line[6:]} ', 'api'
+                    )
+                else:
+                    log.debug(
+                        lambda line=line, process=process_name: f'command from process {process_name} : {line} ',
+                        'process',
+                    )
+                    # Queue command for processing
+                    self._command_queue.append((process_name, formated(line)))
+
+            self._buffer[process_name] = raw
+
+            # Check if process exited
+            if poll is not None:
+                self._handle_problem(process_name)
+
+        except OSError as exc:
+            if not exc.errno or exc.errno in error.fatal:
+                self._handle_problem(process_name)
+            elif exc.errno not in error.block:
+                log.debug(lambda exc=exc: f'unexpected errno received from forked process ({errstr(exc)})', 'process')
+        except Exception as exc:
+            log.debug(lambda exc=exc: f'exception in async reader callback: {exc}', 'process')
+            self._handle_problem(process_name)
+
+    def received_async(self) -> Generator[Tuple[str, str], None, None]:
+        """Async-compatible version of received() that yields buffered commands
+
+        In async mode, commands are read by callbacks registered with the event
+        loop and buffered in _command_queue. This method just yields them.
+
+        Yields:
+            Tuple of (process_name, command) for each buffered command
+        """
+        # Yield all buffered commands
+        while self._command_queue:
+            yield self._command_queue.popleft()
 
     def write(self, process: str, string: Optional[str], neighbor: Optional['Neighbor'] = None) -> bool:
         if string is None:

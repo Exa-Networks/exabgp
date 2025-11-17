@@ -256,8 +256,8 @@ class Reactor:
                 # Run all peers concurrently
                 await self._run_async_peers()
 
-                # Process API commands
-                for service, command in self.processes.received():
+                # Process API commands (using async version with event loop integration)
+                for service, command in self.processes.received_async():
                     self.api.process(self, service, command)
 
                 # Run async scheduled tasks
@@ -690,6 +690,11 @@ class Reactor:
 
         if not self.daemon.savepid():
             return self.Exit.pid
+
+        # Setup async readers for API processes (after all processes are started)
+        loop = asyncio.get_running_loop()
+        self.processes.setup_async_readers(loop)
+        log.debug(lambda: '[ASYNC] API process readers configured', 'reactor')
 
         # Wait for initial delay if configured
         wait = getenv().tcp.delay
