@@ -1,9 +1,9 @@
 # AsyncIO Migration Progress
 
-**Current Status:** ⚠️ I/O Optimizations Complete - Async Mode 50% Functional (Awaiting Decision)
+**Current Status:** 🎯 ROOT CAUSE IDENTIFIED - Ready to Fix Connection Establishment
 
 **Started:** 2025-11-16
-**Last Updated:** 2025-11-17 (I/O Optimization Session)
+**Last Updated:** 2025-11-17 (Phase 1 Deep Dive - Root Cause Found)
 
 ---
 
@@ -119,6 +119,39 @@ The real problem is **architectural**: lack of event coordination between reacto
 
 **Documentation:**
 - `SESSION_SUMMARY_IO_OPTIMIZATION.md` - Full session analysis and recommendations
+
+---
+
+## Phase 1 Deep Dive (2025-11-17)
+
+### 🎯 ROOT CAUSE IDENTIFIED
+
+**Problem:** Generator bridging in connection establishment causes async mode failures
+
+**Evidence:**
+- `_establish_async()` bridges to generator-based `_connect()` (line 518)
+- `_connect()` internally calls `Protocol.connect()` (generator)
+- Blocking I/O operations during connection setup
+- Async loop spins without proper waiting
+
+**Impact:** 36/72 tests timeout during connection establishment
+
+**Solution:** Convert connection methods to proper async:
+1. Create `Protocol.connect_async()` using asyncio primitives
+2. Create `Peer._connect_async()` calling async version
+3. Remove generator bridging from `_establish_async()`
+
+**Expected Result:** 75% test pass rate after fix (up from 50%)
+
+**Effort Estimate:**
+- Critical fix (connection async): 8-12 hours
+- Full completion: 38-55 hours
+
+**Commits:**
+- `772deb50` - Deep dive findings documented
+
+**Documentation:**
+- `PHASE_1_DEEP_DIVE_FINDINGS.md` - Complete root cause analysis
 
 ---
 
