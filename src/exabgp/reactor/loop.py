@@ -200,9 +200,11 @@ class Reactor:
 
         This replaces the generator-based event loop in run() with
         async/await patterns while maintaining identical behavior.
-        """
-        ms_sleep = int(self._sleep_time * 1000)
 
+        NOTE: In async mode, we use minimal sleep (asyncio.sleep(0)) to yield
+        control to peer tasks while processing events as fast as possible.
+        The asyncio event loop handles I/O waiting automatically.
+        """
         while True:
             try:
                 # Handle signals
@@ -261,8 +263,9 @@ class Reactor:
                 # Run async scheduled tasks
                 self.asynchronous.run()
 
-                # Sleep to yield control
-                await asyncio.sleep(ms_sleep / 1000.0)
+                # Yield control to peer tasks (minimal sleep)
+                # asyncio event loop handles I/O waiting automatically
+                await asyncio.sleep(0)
 
                 # Check if stopping and no peers left
                 if self._stopping and not self._peers.keys():
