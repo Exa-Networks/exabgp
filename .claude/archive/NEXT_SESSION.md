@@ -93,7 +93,7 @@ class ParameterName:
     def __init__(self, value: int) -> None:
         self.value: int = value
 
-    def pack(self) -> bytes:
+    def pack(self, negotiated: Negotiated) -> bytes:
         return pack('!H', self.value)
 ```
 

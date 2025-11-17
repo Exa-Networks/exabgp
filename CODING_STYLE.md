@@ -19,9 +19,9 @@ def long_function_name(
 
 # Good
 message = self._message(
-    self.version.pack()
-    + self.asn.trans().pack()
-    + self.hold_time.pack()
+    self.version.pack_version()
+    + self.asn.trans().pack_asn()
+    + self.hold_time.pack_holdtime()
 )
 ```
 
@@ -328,3 +328,4 @@ The ExaBGP coding style prioritizes:
 5. **RFC compliance** in protocol implementation
 
 When in doubt, examine existing code in similar modules and follow the established patterns. The style has evolved to support the complex requirements of BGP protocol implementation while maintaining Python best practices.
+- `./qa/bin/parsing` - Configuration file parsing tests
