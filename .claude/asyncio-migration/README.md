@@ -1,130 +1,122 @@
-# AsyncIO Migration - Documentation Index
+# AsyncIO Migration Documentation
 
-**Last Updated:** 2025-11-17
-**Current Status:** Phase A COMPLETE - Awaiting decision on Phase B
+**This directory is now for Claude Code reference only.**
 
----
+**All comprehensive AsyncIO migration documentation has been moved to:**
 
-## Quick Summary
+## 📚 `docs/asyncio-migration/`
 
-The asyncio migration has progressed through multiple phases:
+### Start Here:
 
-- ✅ **Phase 0**: 24 API handlers converted to async/await (COMMITTED)
-- ✅ **Phase 1**: Async I/O infrastructure added (COMMITTED - f858fba0)
-- ✅ **Phase A**: 7 async protocol/peer methods added (COMPLETE - Ready to commit)
-- ⏸️ **Phase 2 PoC**: Tested hybrid approach, decided to STOP
-- ❌ **Phase B**: Full async architecture (PLANNED but not started)
-
-**Recommendation**: Commit Phase A and STOP (consistent with Phase 2 decision)
+1. **Code Understanding:** [`docs/asyncio-migration/async-architecture.md`](../../docs/asyncio-migration/async-architecture.md)
+2. **Complete Guide:** [`docs/asyncio-migration/README.md`](../../docs/asyncio-migration/README.md)
+3. **Documentation Index:** [`docs/asyncio-migration/INDEX.md`](../../docs/asyncio-migration/INDEX.md)
 
 ---
 
-## Document Navigation
+## Quick Links
 
-### Current State & Decisions
+### For Developers
 
-**Start Here:**
-1. **[PROGRESS.md](PROGRESS.md)** - Complete migration timeline and current status
-2. **[PHASE_A_COMPLETE.md](PHASE_A_COMPLETE.md)** - What Phase A accomplished
-3. **[PHASE_2_FINAL_DECISION.md](PHASE_2_FINAL_DECISION.md)** - Why we stopped at Phase 1
+- [How Async Works](../../docs/asyncio-migration/async-architecture.md) - Complete technical guide
+- [API Integration](../../docs/asyncio-migration/technical/api-integration.md) - Critical component deep dive
+- [Conversion Patterns](../../docs/asyncio-migration/technical/conversion-patterns.md) - Code patterns reference
 
-### Technical Documentation
+### For Users
 
-**Architecture & Design:**
-- **[CURRENT_ARCHITECTURE.md](CURRENT_ARCHITECTURE.md)** - Current event loop design
-- **[HYBRID_IMPLEMENTATION_PLAN.md](HYBRID_IMPLEMENTATION_PLAN.md)** - How hybrid async+generator would work
-- **[CONVERSION_PATTERNS.md](CONVERSION_PATTERNS.md)** - Async conversion patterns
+- [How to Use Async Mode](../../docs/asyncio-migration/README.md#how-to-use-async-mode)
+- [Quick Reference](../../docs/asyncio-migration/README.md#quick-reference)
+- [Testing](../../docs/asyncio-migration/README.md#testing-results)
 
-**Analysis & Research:**
-- **[GENERATOR_INVENTORY.md](GENERATOR_INVENTORY.md)** - Complete list of generators in codebase
-- **[POC_ANALYSIS.md](POC_ANALYSIS.md)** - Proof of concept analysis
-- **[POC_FINAL_RECOMMENDATION.md](POC_FINAL_RECOMMENDATION.md)** - PoC conclusions
+### For Project History
 
-### Planning Documents
-
-**Completed Phases:**
-- **[PHASE_1_DETAILED_PLAN.md](PHASE_1_DETAILED_PLAN.md)** - Phase 1 implementation details
-- **[PHASE_2_POC_INTEGRATION_PLAN.md](PHASE_2_POC_INTEGRATION_PLAN.md)** - Phase 2 PoC plan
-- **[PHASE_2_POC_RESULTS.md](PHASE_2_POC_RESULTS.md)** - Phase 2 PoC test results
-
-**Future Phases (If Needed):**
-- **[PHASE_2_DETAILED_PLAN.md](PHASE_2_DETAILED_PLAN.md)** - Phase 2 full integration plan (archived)
-- Use PHASE_A_COMPLETE.md as reference for Phase B planning
-
-### Learning & Strategy
-
-- **[LESSONS_LEARNED.md](LESSONS_LEARNED.md)** - Key learnings from migration
-- **[MIGRATION_STRATEGY.md](MIGRATION_STRATEGY.md)** - Overall migration approach
+- [Migration Timeline](../../docs/asyncio-migration/overview/progress.md)
+- [Completion Summary](../../docs/asyncio-migration/overview/completion.md)
+- [Phase Documentation](../../docs/asyncio-migration/phases/)
 
 ---
 
-## Testing Status
+## What's in This Directory (.claude/asyncio-migration/)
 
-### All Tests Passing ✅
+This directory contains **working notes and raw documentation** created during the migration. These files are kept for:
 
-```
-Unit Tests:             1376/1376 (100%)
-Functional Tests:       72/72 (100%)
-Configuration Tests:    ✅ Passing
-Linting:               ✅ Clean
-```
+1. **Claude Code context** - Helps Claude understand the migration work
+2. **Historical reference** - Original development notes
+3. **Session continuity** - Tracks development sessions
 
-**No regressions introduced.**
+**For actual documentation, always refer to `docs/asyncio-migration/`.**
 
 ---
 
-## What Phase A Accomplished
+## Files Here vs. docs/
 
-### Protocol Layer: Clean Async Methods
+| File Location | Purpose | Audience |
+|---------------|---------|----------|
+| `.claude/asyncio-migration/` | Claude Code working notes, raw documentation | Claude Code |
+| `docs/asyncio-migration/` | Polished documentation, organized by topic | Humans (developers, users) |
 
-**Before (Generator with boilerplate):**
-```python
-def write(self, message, negotiated):
-    raw = message.pack_message(negotiated)
-    for boolean in self.connection.writer(raw):  # ← Boilerplate
-        yield boolean
-```
+---
 
-**After (Async - clean):**
-```python
-async def write_async(self, message, negotiated):
-    raw = message.pack_message(negotiated)
-    await self.connection.writer_async(raw)  # ← Clean!
-```
+## Migration Status
 
-### Summary
+✅ **COMPLETE** - 100% test parity achieved (2025-11-17)
 
-- 7 async methods added (3 functional, 4 stubs)
-- ~110 lines of code
-- 2-3 hours of work
+- Sync mode: 72/72 tests (100%)
+- Async mode: 72/72 tests (100%)
+- Unit tests: 1376/1376 (100%)
 - Zero regressions
-- All tests passing
+
+**See:** [`docs/asyncio-migration/overview/completion.md`](../../docs/asyncio-migration/overview/completion.md)
 
 ---
 
-## Recommendations
-
-### Recommended: COMMIT PHASE A and STOP ✅
-
-**Reasoning:**
-1. Phase A achieves its goal (foundation ready)
-2. Consistent with Phase 2 decision (STOP)
-3. No compelling need to proceed
-4. Better to invest time elsewhere
-
----
-
-## Quick Reference Commands
+## How to Use Async Mode
 
 ```bash
-# Run full test suite
-ruff format src && ruff check src && \
-env exabgp_log_enable=false pytest ./tests/unit/ -q && \
-./qa/bin/functional encoding
+# Enable async mode
+export exabgp_asyncio_enable=true
+
+# Run ExaBGP
+./sbin/exabgp ./etc/exabgp/your-config.conf
 ```
+
+**Full details:** [`docs/asyncio-migration/README.md`](../../docs/asyncio-migration/README.md)
 
 ---
 
-**End of AsyncIO Migration Documentation**
+## Quick Claude Code Reference
 
-See [PROGRESS.md](PROGRESS.md) for complete details.
+When working on async code, Claude should refer to:
+
+### Understanding Code
+
+```
+docs/asyncio-migration/async-architecture.md - How it works
+docs/asyncio-migration/technical/api-integration.md - Critical API component
+docs/asyncio-migration/technical/conversion-patterns.md - Code patterns
+```
+
+### Key Concepts
+
+**Dual-Mode Pattern:**
+- Sync: `run()` uses generators
+- Async: `run_async()` uses async/await
+- Controlled by `exabgp_asyncio_enable` env var
+
+**API Integration:**
+- Uses `loop.add_reader(fd, callback)` for event-driven I/O
+- Critical for async mode to work with external processes
+- See `docs/asyncio-migration/technical/api-integration.md`
+
+**Code Locations:**
+- Reactor: `src/exabgp/reactor/loop.py`
+- Peer FSM: `src/exabgp/reactor/peer.py`
+- Protocol: `src/exabgp/reactor/protocol.py`
+- Connection: `src/exabgp/reactor/network/connection.py`
+- API Processes: `src/exabgp/reactor/api/processes.py` (critical!)
+
+---
+
+**Always refer developers to `docs/asyncio-migration/` for complete documentation.**
+
+**Last Updated:** 2025-11-17

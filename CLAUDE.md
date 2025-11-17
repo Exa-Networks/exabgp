@@ -242,10 +242,51 @@ Attribute (base with LRU caching)
 - Connection reset for protocol violations
 - Graceful restart mechanisms
 
+## AsyncIO Support
+
+**ExaBGP now supports dual-mode operation:** traditional generator-based event loop (default) and modern asyncio-based event loop (opt-in).
+
+### Using Async Mode
+
+```bash
+# Enable async mode via environment variable
+exabgp_asyncio_enable=true ./sbin/exabgp your-config.conf
+
+# Or export it
+export exabgp_asyncio_enable=true
+./sbin/exabgp your-config.conf
+```
+
+### Test Status
+
+Both modes achieve 100% test parity:
+- Sync mode: 72/72 functional tests (100%), 1376/1376 unit tests (100%)
+- Async mode: 72/72 functional tests (100%), 1376/1376 unit tests (100%)
+
+### Documentation
+
+**Complete AsyncIO documentation:** See `docs/asyncio-migration/`
+
+**Key documents:**
+- [`docs/asyncio-migration/async-architecture.md`](docs/asyncio-migration/async-architecture.md) - How async mode works
+- [`docs/asyncio-migration/README.md`](docs/asyncio-migration/README.md) - Complete migration guide
+- [`docs/asyncio-migration/technical/api-integration.md`](docs/asyncio-migration/technical/api-integration.md) - Critical API integration details
+- [`.claude/asyncio-migration/README.md`](.claude/asyncio-migration/README.md) - Quick reference for Claude Code
+
+**When to use async mode:**
+- Integrating with asyncio-based libraries
+- Need for modern async/await patterns
+- Potential performance benefits (to be benchmarked)
+
+**When to use sync mode (default):**
+- Production stability (battle-tested)
+- Simpler debugging
+- Current deployments (100% backward compatible)
+
 ## Development Notes
 
 - **Python 3.8.1+ required** - maintains compatibility with older Python versions
-- **No async/await** - uses custom reactor pattern predating asyncio adoption
+- **Dual-mode architecture** - supports both generator-based (sync) and async/await (async) event loops
 - **External Process Model** - communicates with external applications via JSON API
 - **Stateful BGP** - maintains full BGP state machine and RIB (unlike some route servers)
 - **Extensive RFC Support** - implements modern BGP extensions (ASN4, IPv6, MPLS, SRv6, etc.)
