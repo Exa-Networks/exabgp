@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import ClassVar, Iterator, Optional
 
@@ -110,3 +111,59 @@ class Outgoing(Connection):
         # nagle(self.io,self.peer)
         # # Not working after connect() at least on FreeBSD TTL(self.io,self.peer,self.ttl)
         # yield True
+
+    async def establish_async(self) -> bool:
+        """Async version of establish() - establishes connection using asyncio
+
+        Returns:
+            True if connection successful, False otherwise
+
+        Uses asyncio.sock_connect() which properly integrates with the event
+        loop instead of polling with select.poll().
+        """
+        loop = asyncio.get_event_loop()
+        last = time.time() - 2.0
+
+        while True:
+            notify = time.time() - last > 1.0
+            if notify:
+                last = time.time()
+                log.debug(lambda: 'attempting connection to %s:%d' % (self.peer, self.port), self.session())
+
+            # Setup socket if needed
+            setup_issue = self._setup()
+            if setup_issue:
+                if notify:
+                    log.debug(lambda: 'connection to %s:%d failed during setup' % (self.peer, self.port), self.session())
+                    log.debug(lambda setup_issue=setup_issue: str(setup_issue), self.session())
+                await asyncio.sleep(0.1)  # Brief delay before retry
+                continue
+
+            # Use asyncio to connect (non-blocking, event-driven)
+            try:
+                if self.afi == AFI.ipv4:
+                    await loop.sock_connect(self.io, (self.peer, self.port))  # type: ignore[arg-type]
+                elif self.afi == AFI.ipv6:
+                    await loop.sock_connect(self.io, (self.peer, self.port, 0, 0))  # type: ignore[arg-type]
+
+                # Connection successful
+                self.success()
+                if not self.local:
+                    self.local = self.io.getsockname()[0]  # type: ignore[union-attr]
+
+                log.debug(lambda: 'connection to %s:%d established' % (self.peer, self.port), self.session())
+                return True
+
+            except OSError as exc:
+                if notify:
+                    log.debug(lambda: 'connection to %s:%d failed' % (self.peer, self.port), self.session())
+                    log.debug(lambda exc=exc: str(exc), self.session())
+
+                # Close and cleanup for retry
+                if self.io:
+                    self.io.close()  # type: ignore[union-attr]
+                self.io = None
+
+                # Brief delay before retry
+                await asyncio.sleep(0.1)
+                continue

@@ -380,6 +380,36 @@ class Peer:
                 yield ACTION.NOW
                 raise Interrupted('connection failed') from None
 
+    async def _connect_async(self) -> None:
+        """Async version of _connect() - establishes connection using asyncio
+
+        Raises:
+            Interrupted: If connection fails or is interrupted
+
+        Uses Protocol.connect_async() which properly integrates with asyncio
+        instead of generator-based polling.
+        """
+        # Increment connection attempt counter
+        self.connection_attempts += 1
+
+        proto = Protocol(self)
+        try:
+            # Use async connect instead of generator
+            connected = await proto.connect_async()
+
+            if not connected:
+                if self.proto:
+                    self._close(f'connection to {self.neighbor["peer-address"]}:{self.neighbor["connect"]} failed')
+                raise Interrupted('connection failed')
+
+            self.proto = proto
+
+        except Stop:
+            # Connection failed
+            if self.proto:
+                self._close(f'connection to {self.neighbor["peer-address"]}:{self.neighbor["connect"]} failed')
+            raise Interrupted('connection failed') from None
+
     def _send_open(self) -> Generator[Union[int, Open, NOP], None, None]:
         message = Message.CODE.NOP
         for message in self.proto.new_open():
@@ -514,10 +544,8 @@ class Peer:
         self.fsm.change(FSM.IDLE)
 
         if not self.proto:
-            # Bridge to generator-based _connect() for now
-            for action in self._connect():
-                if action in ACTION.ALL:
-                    await asyncio.sleep(0)  # Yield control
+            # Use async connect (no generator bridging)
+            await self._connect_async()
         self.fsm.change(FSM.CONNECT)
 
         # normal sending of OPEN first ...
