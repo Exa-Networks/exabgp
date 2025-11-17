@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import time
+import asyncio  # noqa: F401 - Used by async methods (_send_open_async, _read_open_async, _send_ka_async, _read_ka_async)
 from collections import defaultdict
 from typing import Any, Dict, Generator, Iterator, Optional, Set, Tuple, Union, TYPE_CHECKING
 
@@ -385,6 +386,20 @@ class Peer:
                 yield ACTION.NOW
         yield message
 
+    async def _send_open_async(self) -> Open:
+        """Async version of _send_open() - sends OPEN message using async I/O
+
+        Note: This requires proto.new_open_async() which will be added in Phase B.
+        For Phase A, this method exists but is not called.
+        """
+        # This will be implemented in Phase B when protocol methods are converted
+        # For now, keeping the generator-based approach in a loop
+        message = Message.CODE.NOP
+        for message in self.proto.new_open():
+            if message.ID == Message.CODE.NOP:
+                await asyncio.sleep(0)  # Yield control like original
+        return message  # type: ignore[return-value]
+
     def _read_open(self) -> Generator[Union[int, Open, NOP], None, None]:
         wait = getenv().bgp.openwait
         opentimer = ReceiveTimer(
@@ -408,15 +423,60 @@ class Peer:
                 yield ACTION.LATER
         yield message
 
+    async def _read_open_async(self) -> Open:
+        """Async version of _read_open() - reads OPEN message using async I/O
+
+        Note: This requires proto.read_open_async() which will be added in Phase B.
+        For Phase A, this method exists but is not called.
+        """
+        wait = getenv().bgp.openwait
+        opentimer = ReceiveTimer(
+            self.proto.connection.session,
+            wait,
+            1,
+            1,
+            'waited for open too long, we do not like stuck in active',
+        )
+        # For Phase B, this will use async/await with timeout
+        # For now, keeping generator-based approach in a loop
+        for message in self.proto.read_open(self.neighbor['peer-address'].top()):
+            opentimer.check_ka(message)
+            if message.ID == Message.CODE.NOP:
+                await asyncio.sleep(0)  # Yield control like original ACTION.LATER
+        return message  # type: ignore[return-value]
+
     def _send_ka(self) -> Generator[int, None, None]:
         for message in self.proto.new_keepalive('OPENCONFIRM'):
             yield ACTION.NOW
+
+    async def _send_ka_async(self) -> None:
+        """Async version of _send_ka() - sends KEEPALIVE message using async I/O
+
+        Note: This requires proto.new_keepalive_async() which will be added in Phase B.
+        For Phase A, this method exists but is not called.
+        """
+        # For Phase B, this will use async/await
+        # For now, keeping generator-based approach in a loop
+        for message in self.proto.new_keepalive('OPENCONFIRM'):
+            await asyncio.sleep(0)  # Yield control like original ACTION.NOW
 
     def _read_ka(self) -> Generator[int, None, None]:
         # Start keeping keepalive timer
         for message in self.proto.read_keepalive():
             self.recv_timer.check_ka_timer(message)
             yield ACTION.NOW
+
+    async def _read_ka_async(self) -> None:
+        """Async version of _read_ka() - reads KEEPALIVE message using async I/O
+
+        Note: This requires proto.read_keepalive_async() which will be added in Phase B.
+        For Phase A, this method exists but is not called.
+        """
+        # For Phase B, this will use async/await
+        # For now, keeping generator-based approach in a loop
+        for message in self.proto.read_keepalive():
+            self.recv_timer.check_ka_timer(message)
+            await asyncio.sleep(0)  # Yield control like original ACTION.NOW
 
     def _establish(self) -> Generator[int, None, None]:
         # try to establish the outgoing connection
