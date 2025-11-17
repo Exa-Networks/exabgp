@@ -1,6 +1,6 @@
 # AsyncIO Migration Progress
 
-**Current Status:** ✅ Phase A Complete - Minimal Async Conversion
+**Current Status:** ⚠️ Phase B Part 2 Complete - Async Mode 50% Functional
 
 **Started:** 2025-11-16
 **Last Updated:** 2025-11-17
@@ -39,23 +39,60 @@
 - **Reason**: No compelling need, risk > reward
 - **Details**: See PHASE_2_FINAL_DECISION.md
 
-### 🚧 Phase B: Full Async Architecture (IN PROGRESS - 2025-11-17)
+### ⚠️ Phase B: Full Async Architecture (PARTIALLY COMPLETE - 2025-11-17)
 - **Goal**: Convert FSM methods and main loop to async/await
-- **Status**: 14/31 steps complete (45%) - Peer layer complete
-- **Estimated Effort**: 30-40 hours (13-17 hours remaining)
-- **Risk**: MEDIUM (will increase to HIGH at reactor integration)
+- **Status**: 30/31 steps complete (97%) - **Async mode 50% functional**
+- **Actual Effort**: ~8 hours (steps 15-30)
+- **Risk**: HIGH (async event loop needs I/O integration)
 - **Committed**: Not yet (work in progress)
-- **Details**: See PHASE_B_DETAILED_PLAN.md and PHASE_B_PROGRESS_CHECKPOINT.md
+- **Details**: See PHASE_B_DETAILED_PLAN.md and ASYNC_MODE_COMPLETION_PLAN.md
 - **Progress**:
-  - ✅ Steps 0-1: Pre-work and baseline (COMPLETE)
-  - ✅ Steps 2-5: Protocol async methods (COMPLETE)
-  - ✅ Steps 6-9: Peer async stubs updated (COMPLETE)
-  - ✅ Steps 10-12: Peer FSM async methods (COMPLETE)
-  - ✅ Steps 13-14: Peer async entry points (COMPLETE)
-  - ⏳ Steps 15-18: Reactor async event loop (PENDING)
-  - ⏳ Steps 19-26: Additional protocol methods (PENDING)
-  - ⏳ Steps 27-30: Integration testing (PENDING)
-  - ⏳ Step 31: Final pre-commit verification (PENDING)
+  - ✅ Steps 0-14: Pre-work, Protocol, and Peer layer (COMPLETE - from previous session)
+  - ✅ Steps 15-18: Reactor async event loop (COMPLETE - 2025-11-17)
+  - ✅ Steps 19-26: Additional protocol async methods (COMPLETE - 2025-11-17)
+  - ✅ Steps 27-30: Integration testing (COMPLETE - 2025-11-17)
+  - ⏳ Step 31: Final pre-commit verification (SKIPPED - async mode needs debugging)
+
+---
+
+## Phase B Part 2 Summary (Steps 15-30)
+
+### What Was Completed
+
+**Reactor Async Event Loop (Steps 15-18):**
+- `Reactor._run_async_peers()` - Manages concurrent peer tasks
+- `Reactor._async_main_loop()` - Async main event loop
+- `Reactor.run_async()` - Async entry point
+- Feature flag: `exabgp.reactor.asyncio` (default: false)
+
+**Additional Protocol Methods (Steps 19-23):**
+- `new_notification_async()` - Send NOTIFICATION
+- `new_update_async()` - Send UPDATE
+- `new_eor_async()` - Send End-of-RIB marker
+- `new_eors_async()` - Send all EORs
+- `new_operational_async()` - Send OPERATIONAL
+- `new_refresh_async()` - Send ROUTE-REFRESH
+
+**Peer _main_async() Updates (Steps 24-26):**
+- Converted all generator calls to async/await
+- Operational, refresh, update, EOR handling now async
+
+**Integration Testing (Steps 27-30):**
+- Sync mode: ✅ 72/72 functional tests (100%)
+- Async mode: ⚠️ 36/72 functional tests (50%)
+
+### Test Results
+
+| Mode | Unit Tests | Functional Tests | Status |
+|------|------------|------------------|--------|
+| Sync (default) | 1376/1376 (100%) | 72/72 (100%) | ✅ Production Ready |
+| Async (opt-in) | 1376/1376 (100%) | 36/72 (50%) | ⚠️ Experimental |
+
+### Why Async Mode is 50% Functional
+
+**Missing:** Socket I/O event integration, ACTION-based scheduling, rate limiting, API fd management
+
+**See:** ASYNC_MODE_COMPLETION_PLAN.md for complete analysis and roadmap
 
 ---
 

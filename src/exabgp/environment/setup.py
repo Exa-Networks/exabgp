@@ -306,6 +306,12 @@ CONFIGURATION: Dict[str, Dict[str, Dict[str, Any]]] = {
             'value': '1.0',
             'help': f'reactor loop time\n{_SPACE} use only if you understand the code.',
         },
+        'asyncio': {
+            'read': parsing.boolean,
+            'write': parsing.lower,
+            'value': 'false',
+            'help': 'use asyncio event loop instead of generator-based loop',
+        },
     },
     # Here for internal use
     'debug': {
