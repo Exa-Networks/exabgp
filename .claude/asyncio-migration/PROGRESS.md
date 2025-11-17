@@ -39,13 +39,23 @@
 - **Reason**: No compelling need, risk > reward
 - **Details**: See PHASE_2_FINAL_DECISION.md
 
-### ❌ Phase B: Full Async Architecture (NOT STARTED)
+### 🚧 Phase B: Full Async Architecture (IN PROGRESS - 2025-11-17)
 - **Goal**: Convert FSM methods and main loop to async/await
-- **Status**: Planned but not started
-- **Estimated Effort**: 30-40 hours
-- **Risk**: MEDIUM-HIGH
-- **Decision Point**: Awaiting user approval
-- **Details**: See PHASE_B_DETAILED_PLAN.md (in .claude/asyncio-migration/)
+- **Status**: 14/31 steps complete (45%) - Peer layer complete
+- **Estimated Effort**: 30-40 hours (13-17 hours remaining)
+- **Risk**: MEDIUM (will increase to HIGH at reactor integration)
+- **Committed**: Not yet (work in progress)
+- **Details**: See PHASE_B_DETAILED_PLAN.md and PHASE_B_PROGRESS_CHECKPOINT.md
+- **Progress**:
+  - ✅ Steps 0-1: Pre-work and baseline (COMPLETE)
+  - ✅ Steps 2-5: Protocol async methods (COMPLETE)
+  - ✅ Steps 6-9: Peer async stubs updated (COMPLETE)
+  - ✅ Steps 10-12: Peer FSM async methods (COMPLETE)
+  - ✅ Steps 13-14: Peer async entry points (COMPLETE)
+  - ⏳ Steps 15-18: Reactor async event loop (PENDING)
+  - ⏳ Steps 19-26: Additional protocol methods (PENDING)
+  - ⏳ Steps 27-30: Integration testing (PENDING)
+  - ⏳ Step 31: Final pre-commit verification (PENDING)
 
 ---
 
