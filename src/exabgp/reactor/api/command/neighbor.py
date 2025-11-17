@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 from exabgp.bgp.neighbor import NeighborTemplate
@@ -71,7 +72,7 @@ def show_neighbor(self, reactor, service, line, use_json):
 
     limit = words[-1] if words[-1] != 'neighbor' else ''
 
-    def callback_configuration():
+    async def callback_configuration():
         for neighbor_name in reactor.configuration.neighbors.keys():
             neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
             if not neighbor:
@@ -80,35 +81,35 @@ def show_neighbor(self, reactor, service, line, use_json):
                 continue
             for line in str(neighbor).split('\n'):
                 reactor.processes.write(service, line)
-                yield True
+                await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         reactor.processes.answer_done(service)
 
-    def callback_json():
+    async def callback_json():
         p = []
         for peer_name in reactor.peers():
             p.append(NeighborTemplate.as_dict(reactor.neighbor_cli_data(peer_name)))
         for line in json.dumps(p).split('\n'):
             reactor.processes.write(service, line)
-            yield True
+            await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         reactor.processes.answer_done(service)
 
-    def callback_extensive():
+    async def callback_extensive():
         for peer_name in reactor.peers():
             if limit and limit not in reactor.neighbor_name(peer_name):
                 continue
             for line in NeighborTemplate.extensive(reactor.neighbor_cli_data(peer_name)).split('\n'):
                 reactor.processes.write(service, line)
-                yield True
+                await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         reactor.processes.answer_done(service)
 
-    def callback_summary():
+    async def callback_summary():
         reactor.processes.write(service, NeighborTemplate.summary_header)
         for peer_name in reactor.peers():
             if limit and limit != reactor.neighbor_ip(peer_name):
                 continue
             for line in NeighborTemplate.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
                 reactor.processes.write(service, line)
-                yield True
+                await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         reactor.processes.answer_done(service)
 
     if use_json:
