@@ -14,7 +14,11 @@
       "Bash(done)",
       "Bash(sed:*)",
       "Bash(env PYTHONPATH=src exabgp_log_enable=false pytest ./tests/unit/ -x -q)",
-      "Bash(mypy:*)"
+      "Bash(mypy:*)",
+      "Bash(ruff format:*)",
+      "Bash(ruff check:*)",
+      "Bash(env exabgp_log_enable=false pytest ./tests/unit/ -q)",
+      "Bash(git add:*)"
     ],
     "deny": []
   },
