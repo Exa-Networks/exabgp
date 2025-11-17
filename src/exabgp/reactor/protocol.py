@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import os
+import asyncio  # noqa: F401 - Used by async methods (write_async, send_async, read_message_async)
 
 import traceback
 from typing import Any, Generator, Optional, Tuple, Union, TYPE_CHECKING
@@ -192,6 +193,17 @@ class Protocol:
         for boolean in self.connection.writer(raw):
             yield boolean
 
+    async def write_async(self, message: Any, negotiated: Negotiated) -> None:
+        """Async version of write() - sends BGP message using async I/O"""
+        raw: bytes = message.pack_message(negotiated)
+
+        code: str = 'send-{}'.format(Message.CODE.short(message.ID))
+        self.peer.stats[code] += 1
+        if self.neighbor.api.get(code, False):
+            self._to_api('send', message, raw)
+
+        await self.connection.writer_async(raw)
+
     def send(self, raw: bytes) -> Generator[bool, None, None]:
         code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
         self.peer.stats[code] += 1
@@ -201,6 +213,16 @@ class Protocol:
 
         for boolean in self.connection.writer(raw):
             yield boolean
+
+    async def send_async(self, raw: bytes) -> None:
+        """Async version of send() - sends raw BGP message using async I/O"""
+        code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
+        self.peer.stats[code] += 1
+        if self.neighbor.api.get(code, False):
+            message: Update = Update.unpack_message(raw[19:], self.negotiated)
+            self._to_api('send', message, raw)
+
+        await self.connection.writer_async(raw)
 
     # Read from network .......................................................
 
@@ -309,6 +331,108 @@ class Protocol:
                 yield _NOP
             else:
                 yield message
+
+    async def read_message_async(self) -> Union[Message, NOP]:
+        """Async version of read_message() - reads BGP message using async I/O"""
+        packets = self.neighbor.api['receive-packets']
+        consolidate = self.neighbor.api['receive-consolidate']
+        parsed = self.neighbor.api['receive-parsed']
+
+        # Read message using async I/O
+        length, msg_id, header, body, notify = await self.connection.reader_async()
+
+        # internal issue
+        if notify:
+            code = 'receive-{}'.format(Message.CODE.NOTIFICATION.SHORT)
+            if self.neighbor.api.get(code, False):
+                if consolidate:
+                    self.peer.reactor.processes.notification(
+                        self.peer.neighbor,
+                        'receive',
+                        notify.code,
+                        notify.subcode,
+                        str(notify),
+                        None,
+                        header,
+                        body,
+                    )
+                elif parsed:
+                    self.peer.reactor.processes.notification(
+                        self.peer.neighbor,
+                        'receive',
+                        notify.code,
+                        notify.subcode,
+                        str(notify),
+                        None,
+                        b'',
+                        b'',
+                    )
+                elif packets:
+                    self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)
+            # XXX: is notify not already Notify class ?
+            raise Notify(notify.code, notify.subcode, str(notify))
+
+        if msg_id not in Message.CODE.MESSAGES:
+            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
+
+        if not length:
+            return _NOP
+
+        log.debug(
+            lambda msg_id=msg_id: '<< message of type {}'.format(Message.CODE.name(msg_id)),
+            self.connection.session(),
+        )
+
+        code = 'receive-{}'.format(Message.CODE.short(msg_id))
+        self.peer.stats[code] += 1
+        for_api = self.neighbor.api.get(code, False)
+
+        if for_api and packets and not consolidate:
+            negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None
+            self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, negotiated, header, body)
+
+        if msg_id == Message.CODE.UPDATE:
+            if not self.neighbor['adj-rib-in'] and not (for_api or self.log_routes) and not (parsed or consolidate):
+                return _UPDATE
+
+        try:
+            message = Message.unpack(msg_id, body, self.negotiated)
+        except (KeyboardInterrupt, SystemExit, Notify):
+            raise
+        except Exception as exc:
+            log.debug(lambda msg_id=msg_id: 'could not decode message "%d"' % msg_id, self.connection.session())
+            log.debug(lambda exc=exc: '{}'.format(str(exc)), self.connection.session())
+            log.debug(lambda: traceback.format_exc(), self.connection.session())
+            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
+            # raise Notify(5,0,'unknown message received')
+
+        if message.TYPE == Update.TYPE:
+            if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in message.attributes:
+                for nlri in message.nlris:
+                    nlri.action = Action.WITHDRAW
+
+        if for_api:
+            negotiated = self.negotiated if self.neighbor.api.get('negotiated', False) else None
+            if consolidate:
+                self.peer.reactor.processes.message(
+                    msg_id,
+                    self.neighbor,
+                    'receive',
+                    message,
+                    negotiated,
+                    header,
+                    body,
+                )
+            elif parsed:
+                self.peer.reactor.processes.message(msg_id, self.neighbor, 'receive', message, negotiated, b'', b'')
+
+        if message.TYPE == Notification.TYPE:
+            raise message
+
+        if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in message.attributes:
+            return _NOP
+        else:
+            return message
 
     def validate_open(self) -> None:
         error: Optional[Tuple[int, int, str]] = self.negotiated.validate(self.neighbor)

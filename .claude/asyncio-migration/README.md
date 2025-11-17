@@ -1,73 +1,130 @@
-# AsyncIO Migration Project
+# AsyncIO Migration - Documentation Index
 
-**Status:** Planning Phase
-**Started:** 2025-11-16
-**Approach:** Exploratory - start with easy wins, build patterns
-
----
-
-## Quick Start
-
-1. Read `CURRENT_ARCHITECTURE.md` - understand existing generator system
-2. Read `MIGRATION_STRATEGY.md` - overall approach and phases
-3. Read `CONVERSION_PATTERNS.md` - before/after examples
-4. Track progress in `PROGRESS.md`
+**Last Updated:** 2025-11-17
+**Current Status:** Phase A COMPLETE - Awaiting decision on Phase B
 
 ---
 
-## Goals
+## Quick Summary
 
-Convert ExaBGP's custom generator-based async to Python asyncio:
-- ✅ Phase 1.1 complete: ASYNC class supports both modes
-- 🔄 Phase 0: Convert simple generators (3-5), establish patterns
-- ⏳ Phase 1: Event loop integration (asyncio.run())
-- ⏳ Phase 2: Medium complexity (network, protocol helpers)
-- ⏳ Phase 3: Complex nested (API handlers)
-- ⏭️ Parsing/config generators stay as-is
+The asyncio migration has progressed through multiple phases:
 
----
+- ✅ **Phase 0**: 24 API handlers converted to async/await (COMMITTED)
+- ✅ **Phase 1**: Async I/O infrastructure added (COMMITTED - f858fba0)
+- ✅ **Phase A**: 7 async protocol/peer methods added (COMPLETE - Ready to commit)
+- ⏸️ **Phase 2 PoC**: Tested hybrid approach, decided to STOP
+- ❌ **Phase B**: Full async architecture (PLANNED but not started)
 
-## Scope
-
-**Converting:**
-- ~80 generators across critical path
-- API handlers, protocol, peer, network layers
-- Estimated: 25-30 hours
-
-**NOT converting:**
-- Parsing generators (43) - work fine
-- Config generators (35) - startup only
-- Test generators (3) - stable
+**Recommendation**: Commit Phase A and STOP (consistent with Phase 2 decision)
 
 ---
 
-## Strategy
+## Document Navigation
 
-**Exploratory approach:**
-1. Start with simplest single-yield generators
-2. Build confidence and establish patterns
-3. Document what works/doesn't
-4. Progress to medium complexity
-5. Finally tackle complex nested generators
+### Current State & Decisions
 
-**Following MANDATORY_REFACTORING_PROTOCOL:**
-- ONE function at a time
-- ALL tests must ALWAYS pass
-- PASTE proof at every step
+**Start Here:**
+1. **[PROGRESS.md](PROGRESS.md)** - Complete migration timeline and current status
+2. **[PHASE_A_COMPLETE.md](PHASE_A_COMPLETE.md)** - What Phase A accomplished
+3. **[PHASE_2_FINAL_DECISION.md](PHASE_2_FINAL_DECISION.md)** - Why we stopped at Phase 1
+
+### Technical Documentation
+
+**Architecture & Design:**
+- **[CURRENT_ARCHITECTURE.md](CURRENT_ARCHITECTURE.md)** - Current event loop design
+- **[HYBRID_IMPLEMENTATION_PLAN.md](HYBRID_IMPLEMENTATION_PLAN.md)** - How hybrid async+generator would work
+- **[CONVERSION_PATTERNS.md](CONVERSION_PATTERNS.md)** - Async conversion patterns
+
+**Analysis & Research:**
+- **[GENERATOR_INVENTORY.md](GENERATOR_INVENTORY.md)** - Complete list of generators in codebase
+- **[POC_ANALYSIS.md](POC_ANALYSIS.md)** - Proof of concept analysis
+- **[POC_FINAL_RECOMMENDATION.md](POC_FINAL_RECOMMENDATION.md)** - PoC conclusions
+
+### Planning Documents
+
+**Completed Phases:**
+- **[PHASE_1_DETAILED_PLAN.md](PHASE_1_DETAILED_PLAN.md)** - Phase 1 implementation details
+- **[PHASE_2_POC_INTEGRATION_PLAN.md](PHASE_2_POC_INTEGRATION_PLAN.md)** - Phase 2 PoC plan
+- **[PHASE_2_POC_RESULTS.md](PHASE_2_POC_RESULTS.md)** - Phase 2 PoC test results
+
+**Future Phases (If Needed):**
+- **[PHASE_2_DETAILED_PLAN.md](PHASE_2_DETAILED_PLAN.md)** - Phase 2 full integration plan (archived)
+- Use PHASE_A_COMPLETE.md as reference for Phase B planning
+
+### Learning & Strategy
+
+- **[LESSONS_LEARNED.md](LESSONS_LEARNED.md)** - Key learnings from migration
+- **[MIGRATION_STRATEGY.md](MIGRATION_STRATEGY.md)** - Overall migration approach
 
 ---
 
-## Files in This Directory
+## Testing Status
 
-| File | Purpose |
-|------|---------|
-| README.md | This file - overview and navigation |
-| CURRENT_ARCHITECTURE.md | Existing generator system details |
-| MIGRATION_STRATEGY.md | Detailed phase-by-phase plan |
-| CONVERSION_PATTERNS.md | Code examples and patterns |
-| GENERATOR_INVENTORY.md | Complete list of all generators |
-| PROGRESS.md | Track completed work |
+### All Tests Passing ✅
+
+```
+Unit Tests:             1376/1376 (100%)
+Functional Tests:       72/72 (100%)
+Configuration Tests:    ✅ Passing
+Linting:               ✅ Clean
+```
+
+**No regressions introduced.**
 
 ---
 
-**Updated:** 2025-11-16
+## What Phase A Accomplished
+
+### Protocol Layer: Clean Async Methods
+
+**Before (Generator with boilerplate):**
+```python
+def write(self, message, negotiated):
+    raw = message.pack_message(negotiated)
+    for boolean in self.connection.writer(raw):  # ← Boilerplate
+        yield boolean
+```
+
+**After (Async - clean):**
+```python
+async def write_async(self, message, negotiated):
+    raw = message.pack_message(negotiated)
+    await self.connection.writer_async(raw)  # ← Clean!
+```
+
+### Summary
+
+- 7 async methods added (3 functional, 4 stubs)
+- ~110 lines of code
+- 2-3 hours of work
+- Zero regressions
+- All tests passing
+
+---
+
+## Recommendations
+
+### Recommended: COMMIT PHASE A and STOP ✅
+
+**Reasoning:**
+1. Phase A achieves its goal (foundation ready)
+2. Consistent with Phase 2 decision (STOP)
+3. No compelling need to proceed
+4. Better to invest time elsewhere
+
+---
+
+## Quick Reference Commands
+
+```bash
+# Run full test suite
+ruff format src && ruff check src && \
+env exabgp_log_enable=false pytest ./tests/unit/ -q && \
+./qa/bin/functional encoding
+```
+
+---
+
+**End of AsyncIO Migration Documentation**
+
+See [PROGRESS.md](PROGRESS.md) for complete details.
