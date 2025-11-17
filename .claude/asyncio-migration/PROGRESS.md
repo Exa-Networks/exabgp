@@ -1,9 +1,9 @@
 # AsyncIO Migration Progress
 
-**Current Status:** 🎯 ROOT CAUSE IDENTIFIED - Ready to Fix Connection Establishment
+**Current Status:** 🎯 **CRITICAL BLOCKER IDENTIFIED** - API Process Communication Integration Needed
 
 **Started:** 2025-11-16
-**Last Updated:** 2025-11-17 (Phase 1 Deep Dive - Root Cause Found)
+**Last Updated:** 2025-11-17 (Timeout Fix + API Blocker Discovery)
 
 ---
 
@@ -152,6 +152,113 @@ The real problem is **architectural**: lack of event coordination between reacto
 
 **Documentation:**
 - `PHASE_1_DEEP_DIVE_FINDINGS.md` - Complete root cause analysis
+
+---
+
+## Connection Async Implementation + Timeout Fix (2025-11-17)
+
+### ✅ What Was Implemented
+
+**Part 1: Connection Async Methods** (from previous continuation)
+- `Outgoing.establish_async()` - Async connection establishment using `asyncio.sock_connect()`
+- `Protocol.connect_async()` - Async wrapper for connection protocol
+- `Peer._connect_async()` - Async peer-level connection method
+- Removed generator bridging from `_establish_async()`
+
+**Part 2: Timeout Fix** (this session)
+- Added `timeout` parameter (default: 30s) to `establish_async()`
+- Added `max_attempts` limit (default: 50) to prevent infinite retry
+- Enhanced logging with attempt count and elapsed time
+- Clean failure path on timeout/max attempts
+
+**Code Changes:**
+- `src/exabgp/reactor/network/outgoing.py`: +75 lines total (59 for async method + 16 for timeout)
+- `src/exabgp/reactor/protocol.py`: +37 lines (async wrapper)
+- `src/exabgp/reactor/peer.py`: +29 lines (async connect)
+
+### 📊 Test Results After Implementation
+
+| Mode | Unit Tests | Functional Tests | Status |
+|------|------------|------------------|--------|
+| Sync | 1376/1376 (100%) | 71/72 (98.6%) | ✅ No regressions |
+| Async | 1376/1376 (100%) | 36/72 (50%) | ⚠️ **NO IMPROVEMENT** |
+
+**Sync failures:** S (api-reload) - pre-existing
+**Async failures:** S (api-reload) + 35 timeouts
+
+### 🎯 **CRITICAL DISCOVERY: Test Pattern Analysis**
+
+#### Test Categories
+
+**Passing (36/72 = 50%):**
+- `Q` (api-notification) - Only API test that passes!
+- `a-z` (26 tests) - All conf-* tests (configuration parsing)
+- `α-κ` except `θ` (10 tests) - Most conf-* tests
+
+**Timing Out (35/72 = 49%):**
+- `0-9` (10 tests) - api-ack-control, api-add-remove, api-announce...
+- `A-P, R-Z` (24 tests) - api-broken-flow, api-check, api-eor, api-fast...
+- `θ` (1 test) - conf-watchdog
+
+**Failed (1/72 = 1%):**
+- `S` (api-reload) - Pre-existing failure
+
+#### The Pattern
+
+```
+API tests (api-*):     35/36 TIMEOUT  (97% failure rate)
+Config tests (conf-*): 35/36 PASS     (97% success rate)
+```
+
+### 🔍 **ROOT CAUSE CONFIRMED: API Process Communication**
+
+**The blocker is NOT connection establishment.**
+
+**Evidence:**
+1. **Config tests pass** because they just parse configuration and exchange BGP messages
+2. **API tests timeout** because they need bidirectional communication with external processes
+3. **API FD integration missing** - `processes.received()` uses `select.poll()` (line 236)
+4. **Async loop doesn't see API responses** - FDs not registered with event loop
+
+**Code Proof:** In `src/exabgp/reactor/api/processes.py:236-243`:
+```python
+def received(self):
+    # ... for each process ...
+    poller = select.poll()           # ❌ Synchronous polling!
+    poller.register(proc.stdout, ...)
+    for _, event in poller.poll(0):  # ❌ Not asyncio-aware
+        # ... read data ...
+```
+
+**What Happens:**
+1. API test sends command to external process ✅
+2. Process writes JSON response to stdout ✅
+3. Async loop calls `processes.received()` which uses `select.poll()` ❌
+4. Response is available but event loop doesn't know (wrong I/O mechanism) ❌
+5. Test waits 20 seconds for response that never arrives ❌
+6. Test times out ⏱
+
+### 📋 Next Steps (Clear Path to 97%)
+
+**Phase 1C: API Process Integration** (4-6 hours)
+1. Add `loop.add_reader()` for API process stdout FDs
+2. Create async callback for data availability
+3. Replace `processes.received()` with event-driven version
+4. Update reactor loop to use async API processing
+
+**Expected Result:** 70/72 tests passing (97%), matching sync mode
+
+**Effort Remaining:**
+- API integration: 4-6 hours
+- Final fixes: 2-4 hours
+- **Total to 97%: 6-10 hours**
+
+**Commits:**
+- (Ready to commit) Timeout fix + session documentation
+
+**Documentation:**
+- `TIMEOUT_FIX_SESSION_SUMMARY.md` - Detailed analysis and findings
+- `OPTION_A_SESSION_SUMMARY.md` - Previous connection async work
 
 ---
 
