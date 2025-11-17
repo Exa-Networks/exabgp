@@ -134,6 +134,7 @@ class Peer:
         )
 
         self.generator: Optional[Generator[int, None, None]] = None
+        self._async_task: Optional[asyncio.Task] = None  # For async mode
 
         # The peer should restart after a stop
         self._restart: bool = True
@@ -387,18 +388,8 @@ class Peer:
         yield message
 
     async def _send_open_async(self) -> Open:
-        """Async version of _send_open() - sends OPEN message using async I/O
-
-        Note: This requires proto.new_open_async() which will be added in Phase B.
-        For Phase A, this method exists but is not called.
-        """
-        # This will be implemented in Phase B when protocol methods are converted
-        # For now, keeping the generator-based approach in a loop
-        message = Message.CODE.NOP
-        for message in self.proto.new_open():
-            if message.ID == Message.CODE.NOP:
-                await asyncio.sleep(0)  # Yield control like original
-        return message  # type: ignore[return-value]
+        """Async version of _send_open() - sends OPEN message using async I/O"""
+        return await self.proto.new_open_async()
 
     def _read_open(self) -> Generator[Union[int, Open, NOP], None, None]:
         wait = getenv().bgp.openwait
@@ -424,41 +415,24 @@ class Peer:
         yield message
 
     async def _read_open_async(self) -> Open:
-        """Async version of _read_open() - reads OPEN message using async I/O
-
-        Note: This requires proto.read_open_async() which will be added in Phase B.
-        For Phase A, this method exists but is not called.
-        """
+        """Async version of _read_open() - reads OPEN message using async I/O"""
         wait = getenv().bgp.openwait
-        opentimer = ReceiveTimer(
-            self.proto.connection.session,
-            wait,
-            1,
-            1,
-            'waited for open too long, we do not like stuck in active',
-        )
-        # For Phase B, this will use async/await with timeout
-        # For now, keeping generator-based approach in a loop
-        for message in self.proto.read_open(self.neighbor['peer-address'].top()):
-            opentimer.check_ka(message)
-            if message.ID == Message.CODE.NOP:
-                await asyncio.sleep(0)  # Yield control like original ACTION.LATER
-        return message  # type: ignore[return-value]
+        try:
+            # Use asyncio timeout instead of ReceiveTimer
+            message = await asyncio.wait_for(
+                self.proto.read_open_async(self.neighbor['peer-address'].top()), timeout=wait
+            )
+            return message
+        except asyncio.TimeoutError:
+            raise Notify(5, 1, 'waited for open too long, we do not like stuck in active') from None
 
     def _send_ka(self) -> Generator[int, None, None]:
         for message in self.proto.new_keepalive('OPENCONFIRM'):
             yield ACTION.NOW
 
     async def _send_ka_async(self) -> None:
-        """Async version of _send_ka() - sends KEEPALIVE message using async I/O
-
-        Note: This requires proto.new_keepalive_async() which will be added in Phase B.
-        For Phase A, this method exists but is not called.
-        """
-        # For Phase B, this will use async/await
-        # For now, keeping generator-based approach in a loop
-        for message in self.proto.new_keepalive('OPENCONFIRM'):
-            await asyncio.sleep(0)  # Yield control like original ACTION.NOW
+        """Async version of _send_ka() - sends KEEPALIVE message using async I/O"""
+        await self.proto.new_keepalive_async('OPENCONFIRM')
 
     def _read_ka(self) -> Generator[int, None, None]:
         # Start keeping keepalive timer
@@ -467,16 +441,9 @@ class Peer:
             yield ACTION.NOW
 
     async def _read_ka_async(self) -> None:
-        """Async version of _read_ka() - reads KEEPALIVE message using async I/O
-
-        Note: This requires proto.read_keepalive_async() which will be added in Phase B.
-        For Phase A, this method exists but is not called.
-        """
-        # For Phase B, this will use async/await
-        # For now, keeping generator-based approach in a loop
-        for message in self.proto.read_keepalive():
-            self.recv_timer.check_ka_timer(message)
-            await asyncio.sleep(0)  # Yield control like original ACTION.NOW
+        """Async version of _read_ka() - reads KEEPALIVE message using async I/O"""
+        message = await self.proto.read_keepalive_async()
+        self.recv_timer.check_ka_timer(message)
 
     def _establish(self) -> Generator[int, None, None]:
         # try to establish the outgoing connection
@@ -534,6 +501,57 @@ class Peer:
 
         # let the caller know that we were sucesfull
         yield ACTION.NOW
+
+    async def _establish_async(self) -> int:
+        """Async version of _establish() - establishes BGP connection using async I/O"""
+        # try to establish the outgoing connection
+        self.fsm.change(FSM.ACTIVE)
+
+        if getenv().bgp.passive:
+            while not self.proto:
+                await asyncio.sleep(0)  # Yield control like ACTION.LATER
+
+        self.fsm.change(FSM.IDLE)
+
+        if not self.proto:
+            # Bridge to generator-based _connect() for now
+            for action in self._connect():
+                if action in ACTION.ALL:
+                    await asyncio.sleep(0)  # Yield control
+        self.fsm.change(FSM.CONNECT)
+
+        # normal sending of OPEN first ...
+        if self.neighbor['local-as']:
+            sent_open = await self._send_open_async()
+            self.proto.negotiated.sent(sent_open)
+            self.proto.negotiated.sent(sent_open)
+            self.fsm.change(FSM.OPENSENT)
+
+        # read the peer's open
+        received_open = await self._read_open_async()
+        self.proto.negotiated.received(received_open)
+        self.proto.negotiated.received(received_open)
+
+        self.proto.connection.msg_size = self.proto.negotiated.msg_size
+
+        # if we mirror the ASN, we need to read first and send second
+        if not self.neighbor['local-as']:
+            sent_open = await self._send_open_async()
+            self.proto.negotiated.sent(sent_open)
+            self.proto.negotiated.sent(sent_open)
+            self.fsm.change(FSM.OPENSENT)
+
+        self.proto.validate_open()
+        self.fsm.change(FSM.OPENCONFIRM)
+
+        self.recv_timer = ReceiveTimer(self.proto.connection.session, self.proto.negotiated.holdtime, 4, 0)
+        await self._send_ka_async()
+        await self._read_ka_async()
+        self.fsm.change(FSM.ESTABLISHED)
+        self.stats['complete'] = time.time()
+
+        # let the caller know that we were sucesfull
+        return ACTION.NOW
 
     def _main(self) -> Generator[int, None, None]:
         """Yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
@@ -710,6 +728,179 @@ class Peer:
         # notify our peer of the shutdown
         raise Notify(6, self._teardown)
 
+    async def _main_async(self) -> int:
+        """Async version of _main() - main BGP message processing loop using async I/O"""
+        if self._teardown:
+            raise Notify(6, 3)
+
+        self.neighbor.rib.incoming.clear()
+
+        include_withdraw = False
+
+        # Announce to the process BGP is up
+        log.info(
+            lambda: f'connected to {self.id()} with {self.proto.connection.name()}',
+            'reactor',
+        )
+        self.stats['up'] += 1
+        if self.neighbor.api['neighbor-changes']:
+            try:
+                self.reactor.processes.up(self.neighbor)
+            except ProcessError:
+                raise Notify(6, 0, 'ExaBGP Internal error, sorry.') from None
+
+        routes_per_iteration = 1 if self.neighbor['rate-limit'] > 0 else 25
+        send_eor = not self.neighbor['manual-eor']
+        new_routes = None
+
+        # Every last asm message should be re-announced on restart
+        for family in self.neighbor.asm:
+            if family in self.neighbor.families():
+                self.neighbor.messages.appendleft(self.neighbor.asm[family])  # type: ignore[arg-type]
+
+        operational = None
+        refresh = None
+        command_eor = None
+        number = 0
+        refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED
+
+        send_ka = KA(self.proto.connection.session, self.proto)
+
+        # we need to make sure to send what was already issued by the api
+        # from the previous time
+        previous = self.neighbor.previous.changes if self.neighbor.previous else []
+        current = self.neighbor.changes
+        self.neighbor.rib.outgoing.replace_restart(previous, current)
+        self.neighbor.previous = None
+
+        self._delay.reset()
+        while not self._teardown:
+            # we are here following a configuration change
+            if self._neighbor:
+                # see what changed in the configuration
+                previous = self._neighbor.previous.changes
+                current = self._neighbor.changes
+                self.neighbor.rib.outgoing.replace_reload(previous, current)
+                # do not keep the previous routes in memory as they are not useful anymore
+                self._neighbor.previous = None
+                self._neighbor = None
+
+            # Read message using async I/O
+            message = await self.proto.read_message_async()
+            self.recv_timer.check_ka(message)
+
+            if send_ka() is not False:
+                # we need and will send a keepalive
+                while send_ka() is None:
+                    await asyncio.sleep(0)  # Yield control like ACTION.NOW
+            for counter_line in self.stats.changed_statistics():
+                log.info(lambda counter_line=counter_line: counter_line, 'statistics')
+
+            # Received update
+            if message.TYPE == Update.TYPE:
+                number += 1
+                log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())
+
+                for nlri in message.nlris:
+                    self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
+                    log.debug(
+                        lazyformat('   UPDATE #%d nlri ' % number, nlri, str),
+                        self.id(),
+                    )
+
+            elif message.TYPE == RouteRefresh.TYPE:
+                enhanced = message.reserved == RouteRefresh.request
+                enhanced = enhanced and refresh_enhanced
+                self.resend(enhanced, (message.afi, message.safi))
+
+            # SEND OPERATIONAL
+            if self.neighbor['capability']['operational']:
+                if not operational:
+                    new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
+                    if new_operational:
+                        operational = self.proto.new_operational(new_operational, self.proto.negotiated)  # type: ignore[union-attr,arg-type]
+
+                if operational:
+                    try:
+                        next(operational)
+                    except StopIteration:
+                        operational = None
+            # make sure that if some operational message are received via the API
+            # that we do not eat memory for nothing
+            elif self.neighbor.messages:
+                self.neighbor.messages.popleft()
+
+            # SEND REFRESH
+            if self.neighbor['capability']['route-refresh']:
+                if not refresh:
+                    new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
+                    if new_refresh:
+                        refresh = self.proto.new_refresh(new_refresh)  # type: ignore[union-attr,arg-type]
+
+                if refresh:
+                    try:
+                        next(refresh)
+                    except StopIteration:
+                        refresh = None
+
+            # Need to send update
+            if not new_routes and self.neighbor.rib.outgoing.pending():
+                # XXX: in proto really. hum to think about ?
+                new_routes = self.proto.new_update(include_withdraw)
+
+            if new_routes:
+                try:
+                    for _ in range(routes_per_iteration):
+                        # This can raise a NetworkError
+                        next(new_routes)
+                except StopIteration:
+                    new_routes = None
+                    include_withdraw = True
+
+            elif send_eor:
+                send_eor = False
+                for _ in self.proto.new_eors():
+                    await asyncio.sleep(0)  # Yield control like ACTION.NOW
+                log.debug(lambda: '>> all EOR(s) sent', self.id())
+
+            # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
+            elif not command_eor and self.neighbor.eor:
+                new_eor = self.neighbor.eor.popleft()
+                command_eor = self.proto.new_eors(new_eor.afi, new_eor.safi)
+
+            if command_eor:
+                try:
+                    next(command_eor)
+                except StopIteration:
+                    command_eor = None
+
+            if (
+                new_routes
+                or message.TYPE != NOP.TYPE
+                or self.neighbor.messages
+                or operational
+                or self.neighbor.eor
+                or command_eor
+            ):
+                await asyncio.sleep(0)  # Yield control like ACTION.NOW
+            else:
+                await asyncio.sleep(0.001)  # Slightly longer sleep for ACTION.LATER
+
+            # read_message will loop until new message arrives with NOP
+            if self._teardown:
+                break
+
+        # If graceful restart, silent shutdown
+        if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
+            Capability.CODE.GRACEFUL_RESTART,
+        ):
+            log.error(lambda: 'closing the session without notification', self.id())
+            self._close('graceful restarted negotiated, closing without sending any notification')
+            raise NetworkError('closing')
+
+        # notify our peer of the shutdown
+        raise Notify(6, self._teardown)
+
     def _run(self) -> Generator[int, None, None]:
         """Yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"""
         try:
@@ -741,6 +932,85 @@ class Peer:
                         while True:
                             next(generator)
                             yield ACTION.NOW
+                    except StopIteration:
+                        pass
+                except (NetworkError, ProcessError):
+                    log.error(lambda: 'Notification not sent', self.id())
+                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)  # type: ignore[arg-type]
+            else:
+                self._reset()
+
+            if not self.can_reconnect():
+                log.debug(
+                    lambda: 'maximum connection attempts reached, stopping the peer',
+                    self.id(),
+                )
+                self.stop()
+
+            return
+
+        # THE PEER NOTIFIED US OF AN ERROR
+        except Notification as notification:
+            # Check if maximum connection attempts reached
+            if not self.can_reconnect():
+                log.debug(
+                    lambda: 'maximum connection attempts reached, stopping the peer',
+                    self.id(),
+                )
+                self.stop()
+
+            self._reset(
+                f'notification received ({notification.code},{notification.subcode})',
+                notification,  # type: ignore[arg-type]
+            )
+            return
+
+        # PROBLEM WRITING TO OUR FORKED PROCESSES
+        except ProcessError as process:
+            self._reset('process problem', process)  # type: ignore[arg-type]
+            return
+
+        # ....
+        except Interrupted as interruption:
+            self._reset(f'connection received before we could fully establish one ({interruption})')
+            return
+
+        # UNHANDLED PROBLEMS
+        except Exception as exc:
+            # Those messages can not be filtered in purpose
+            log.error(lambda exc=exc: format_exception(exc), 'reactor')
+            self._reset()
+            return
+
+    async def _run_async(self) -> None:
+        """Async version of _run() - main peer loop using async/await"""
+        try:
+            await self._establish_async()
+            await self._main_async()
+
+        # CONNECTION FAILURE
+        except NetworkError as network:
+            # Check if maximum connection attempts reached
+            if not self.can_reconnect():
+                log.debug(
+                    lambda: 'maximum connection attempts reached, stopping the peer',
+                    self.id(),
+                )
+                self.stop()
+
+            self._reset('closing connection', network)  # type: ignore[arg-type]
+            return
+
+        # NOTIFY THE PEER OF AN ERROR
+        except Notify as notify:
+            if self.proto:
+                try:
+                    # Bridge to generator for notification sending (for now)
+                    generator = self.proto.new_notification(notify)
+                    try:
+                        while True:
+                            next(generator)
+                            await asyncio.sleep(0)  # Yield control
                     except StopIteration:
                         pass
                 except (NetworkError, ProcessError):
@@ -827,6 +1097,48 @@ class Peer:
                 self.generator = self._run()
                 return ACTION.LATER  # make sure we go through a clean loop
             return ACTION.CLOSE
+
+    async def run_async(self) -> None:
+        """Async entry point for peer - runs the peer FSM using async/await"""
+        if self.reactor.processes.broken(self.neighbor):
+            # XXX: we should perhaps try to restart the process ??
+            log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
+            if self.reactor.processes.terminate_on_error:
+                self.reactor.api_shutdown()
+            else:
+                self.stop()
+            return
+
+        # Wait for restart conditions
+        while True:
+            if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
+                log.debug(lambda: 'stopping, other connection is established', self.id())
+                await asyncio.sleep(0.1)  # Wait a bit before checking again
+                continue
+
+            if self._delay.backoff():
+                await asyncio.sleep(0.1)  # Backoff delay
+                continue
+
+            if self._restart:
+                log.debug(lambda: 'initialising connection to {}'.format(self.id()), 'reactor')
+                await self._run_async()
+                # After _run_async completes, check if we should restart
+                if not self._restart:
+                    break
+                await asyncio.sleep(0.1)  # Clean loop delay
+            else:
+                break
+
+    def start_async_task(self) -> None:
+        """Start the async peer task (for async mode)"""
+        if self._async_task is None or self._async_task.done():
+            self._async_task = asyncio.create_task(self.run_async())
+
+    def stop_async_task(self) -> None:
+        """Stop the async peer task (for async mode)"""
+        if self._async_task and not self._async_task.done():
+            self._async_task.cancel()
 
     def cli_data(self) -> Dict[str, Any]:
         def tri(value):

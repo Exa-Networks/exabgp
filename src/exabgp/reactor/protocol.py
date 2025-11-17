@@ -482,6 +482,23 @@ class Protocol:
         log.debug(lambda: '<< {}'.format(received_open), self.connection.session())
         yield received_open
 
+    async def read_open_async(self, ip: str) -> Open:
+        """Async version of read_open() - reads OPEN message using async I/O"""
+        while True:
+            received_open = await self.read_message_async()
+            if received_open.TYPE != NOP.TYPE:
+                break
+
+        if received_open.TYPE != Open.TYPE:
+            raise Notify(
+                5,
+                1,
+                'The first packet received is not an open message ({})'.format(received_open),
+            )
+
+        log.debug(lambda: '<< {}'.format(received_open), self.connection.session())
+        return received_open  # type: ignore[return-value]
+
     def read_keepalive(self) -> Generator[Union[KeepAlive, NOP], None, None]:
         for message in self.read_message():
             if message.TYPE == NOP.TYPE:
@@ -493,6 +510,18 @@ class Protocol:
             raise Notify(5, 2)
 
         yield message
+
+    async def read_keepalive_async(self) -> KeepAlive:
+        """Async version of read_keepalive() - reads KEEPALIVE message using async I/O"""
+        while True:
+            message = await self.read_message_async()
+            if message.TYPE != NOP.TYPE:
+                break
+
+        if message.TYPE != KeepAlive.TYPE:
+            raise Notify(5, 2)
+
+        return message  # type: ignore[return-value]
 
     #
     # Sending message to peer
@@ -521,6 +550,29 @@ class Protocol:
         log.debug(lambda: '>> {}'.format(sent_open), self.connection.session())
         yield sent_open
 
+    async def new_open_async(self) -> Open:
+        """Async version of new_open() - creates and sends OPEN message using async I/O"""
+        if self.neighbor['local-as']:
+            local_as = self.neighbor['local-as']
+        elif self.negotiated.received_open:
+            local_as = self.negotiated.received_open.asn
+        else:
+            raise RuntimeError('no ASN available for the OPEN message')
+
+        sent_open = Open(
+            Version(4),
+            local_as,
+            self.neighbor['hold-time'],
+            self.neighbor['router-id'],
+            Capabilities().new(self.neighbor, self.peer._restarted),
+        )
+
+        # we do not buffer open message in purpose
+        await self.write_async(sent_open, self.negotiated)
+
+        log.debug(lambda: '>> {}'.format(sent_open), self.connection.session())
+        return sent_open
+
     def new_keepalive(self, comment: str = '') -> Generator[Union[KeepAlive, NOP], None, None]:
         keepalive: KeepAlive = KeepAlive()
 
@@ -533,6 +585,19 @@ class Protocol:
         )
 
         yield keepalive
+
+    async def new_keepalive_async(self, comment: str = '') -> KeepAlive:
+        """Async version of new_keepalive() - creates and sends KEEPALIVE message using async I/O"""
+        keepalive: KeepAlive = KeepAlive()
+
+        await self.write_async(keepalive, self.negotiated)
+
+        log.debug(
+            lambda: f'>> KEEPALIVE{f" ({comment})" if comment else ""}',
+            self.connection.session(),
+        )
+
+        return keepalive
 
     def new_notification(self, notification: Notify) -> Generator[Union[Notify, NOP], None, None]:
         for _ in self.write(notification, self.negotiated):
