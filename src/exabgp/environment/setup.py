@@ -298,6 +298,12 @@ CONFIGURATION: Dict[str, Dict[str, Dict[str, Any]]] = {
             'value': 'exabgp',
             'help': 'name to be used for the exabgp pipe',
         },
+        'socketname': {
+            'read': parsing.unquote,
+            'write': parsing.quote,
+            'value': 'exabgp',
+            'help': 'name to be used for the exabgp Unix socket',
+        },
     },
     'reactor': {
         'speed': {

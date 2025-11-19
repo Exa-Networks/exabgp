@@ -12,7 +12,10 @@ import signal
 import sys
 import time
 
+import socket as sock
+
 from exabgp.application.pipe import check_fifo, named_pipe
+from exabgp.application.unixsocket import unix_socket
 from exabgp.environment import ROOT, getenv
 from exabgp.protocol.ip import IPv4
 from exabgp.reactor.api.response.answer import Answer
@@ -109,8 +112,88 @@ def open_writer(send):
 def setargs(sub):
     # fmt:off
     sub.add_argument('--pipename', dest='pipename', help='Name of the pipe', required=False)
+    transport_group = sub.add_mutually_exclusive_group()
+    transport_group.add_argument('--pipe', dest='use_pipe', action='store_true', help='Use named pipe transport (default: Unix socket)')
+    transport_group.add_argument('--socket', dest='use_socket', action='store_true', help='Use Unix socket transport (default)')
     sub.add_argument('command', nargs='*', help='command to run on the router')
     # fmt:on
+
+
+def send_command_socket(socket_path, command_str):
+    """Send command via Unix socket and receive response."""
+    try:
+        client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
+        client.settimeout(COMMAND_TIMEOUT)
+        client.connect(socket_path)
+    except sock.error as exc:
+        if exc.errno == errno.ENOENT:
+            sys.stdout.write('ExaBGP is not running / Unix socket not found\n')
+        elif exc.errno == errno.ECONNREFUSED:
+            sys.stdout.write('ExaBGP is not accepting connections on Unix socket\n')
+        else:
+            sys.stdout.write(f'could not connect to ExaBGP Unix socket ({exc})\n')
+        sys.stdout.flush()
+        sys.exit(1)
+
+    try:
+        # Send command
+        client.sendall(command_str.encode('utf-8') + b'\n')
+
+        # Receive response
+        client.settimeout(COMMAND_RESPONSE_TIMEOUT)
+        buf = b''
+        done = False
+
+        while not done:
+            try:
+                chunk = client.recv(4096)
+                if not chunk:
+                    # Connection closed by server
+                    break
+
+                buf += chunk
+                while b'\n' in buf:
+                    line, buf = buf.split(b'\n', 1)
+                    string = line.decode()
+
+                    if string == Answer.text_done or string == Answer.json_done:
+                        done = True
+                        break
+                    if string == Answer.text_shutdown or string == Answer.json_shutdown:
+                        sys.stderr.write('ExaBGP is shutting down, command aborted\n')
+                        sys.stderr.flush()
+                        done = True
+                        break
+                    if string == Answer.text_error or string == Answer.json_error:
+                        done = True
+                        sys.stderr.write("ExaBGP returns an error (see ExaBGP's logs for more information)\n")
+                        sys.stderr.write('use help for a list of available commands\n')
+                        sys.stderr.flush()
+                        break
+
+                    sys.stdout.write(f'{string}\n')
+                    sys.stdout.flush()
+
+            except sock.timeout:
+                sys.stderr.write('\n')
+                sys.stderr.write('warning: no end of command message received\n')
+                sys.stderr.write(
+                    'warning: normal if exabgp.api.ack is set to false otherwise some data may get stuck\n',
+                )
+                sys.stderr.flush()
+                break
+            except sock.error as exc:
+                if exc.errno in errno_block:
+                    continue
+                sys.stdout.write(f'could not read response from ExaBGP ({exc})\n')
+                sys.stdout.flush()
+                sys.exit(1)
+
+    finally:
+        try:
+            client.close()
+        except Exception:
+            pass
 
 
 def main():
@@ -120,7 +203,25 @@ def main():
 
 
 def cmdline(cmdarg):
+    # Determine transport: command-line flag > environment variable > default (socket)
+    # Priority: 1. Command-line flags, 2. Environment variable, 3. Default
+    if hasattr(cmdarg, 'use_pipe') and cmdarg.use_pipe:
+        use_pipe_transport = True
+    elif hasattr(cmdarg, 'use_socket') and cmdarg.use_socket:
+        use_pipe_transport = False
+    else:
+        # Check environment variable
+        env_transport = os.environ.get('exabgp_cli_transport', '').lower()
+        if env_transport == 'pipe':
+            use_pipe_transport = True
+        elif env_transport == 'socket':
+            use_pipe_transport = False
+        else:
+            # Default to socket transport
+            use_pipe_transport = False
+
     pipename = cmdarg.pipename if cmdarg.pipename else getenv().api.pipename
+    socketname = getenv().api.socketname
 
     command = cmdarg.command
 
@@ -129,6 +230,108 @@ def cmdline(cmdarg):
         sys.stdout.flush()
         command = ['help']
 
+    # Process command shortcuts/nicknames (common to both transports)
+    renamed = ['']
+
+    for pos, token in enumerate(command):
+        for nickname, name, match in (
+            ('a', 'announce', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
+            ('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+            ('c', 'configuration', lambda pos, pre: True),
+            ('e', 'eor', lambda pos, pre: pre[-1] == 'announce'),
+            ('e', 'extensive', lambda _, pre: 'show' in pre),
+            ('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+            ('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
+            ('h', 'help', lambda pos, pre: pos == 0),
+            ('i', 'in', lambda pos, pre: pre[-1] == 'adj-rib'),
+            ('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
+            ('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
+            ('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
+            ('s', 'show', lambda pos, pre: pos == 0),
+            ('t', 'teardown', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
+            ('s', 'summary', lambda pos, pre: pos != 0),
+            ('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+            ('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
+            ('o', 'out', lambda pos, pre: pre[-1] == 'adj-rib'),
+            ('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear', 'flush', 'show']),
+            ('w', 'withdraw', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
+            ('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+            ('neighbour', 'neighbor', lambda pos, pre: True),
+            ('neigbour', 'neighbor', lambda pos, pre: True),
+            ('neigbor', 'neighbor', lambda pos, pre: True),
+        ):
+            if (token == nickname or name.startswith(token)) and match(pos, renamed):
+                renamed.append(name)
+                break
+        else:
+            renamed.append(token)
+
+    sending = ' '.join(renamed).strip()
+
+    # This does not change the behaviour for well formed command
+    if sending != command:
+        sys.stdout.write(f'command: {sending}\n')
+
+    if command == 'reset':
+        # For reset command, just exit (no response expected)
+        if use_pipe_transport:
+            pipes = named_pipe(ROOT, pipename)
+            if len(pipes) == 1:
+                send = pipes[0] + pipename + '.in'
+                if check_fifo(send):
+                    writer = open_writer(send)
+                    try:
+                        os.write(writer, sending.encode('utf-8') + b'\n')
+                        os.close(writer)
+                    except Exception:
+                        pass
+        else:
+            sockets = unix_socket(ROOT, socketname)
+            if len(sockets) == 1:
+                socket_path = sockets[0] + socketname + '.sock'
+                try:
+                    client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
+                    client.settimeout(COMMAND_TIMEOUT)
+                    client.connect(socket_path)
+                    client.sendall(sending.encode('utf-8') + b'\n')
+                    client.close()
+                except Exception:
+                    pass
+        sys.exit(0)
+
+    # Route to appropriate transport
+    if use_pipe_transport:
+        # Use named pipe transport
+        cmdline_pipe(pipename, sending)
+    else:
+        # Use Unix socket transport
+        cmdline_socket(socketname, sending)
+
+
+def cmdline_socket(socketname, sending):
+    """Execute command via Unix socket transport."""
+    sockets = unix_socket(ROOT, socketname)
+    if len(sockets) != 1:
+        sys.stdout.write(f"could not find ExaBGP's Unix socket ({socketname}.sock) for the cli\n")
+        sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
+        sys.stdout.write('\n - '.join(sockets))
+        sys.stdout.flush()
+        sys.exit(1)
+
+    socket_path = sockets[0] + socketname + '.sock'
+
+    # Check if socket exists and is actually a socket
+    if not os.path.exists(socket_path):
+        sys.stdout.write(f'could not find Unix socket to connect to ExaBGP: {socket_path}\n')
+        sys.stdout.flush()
+        sys.exit(1)
+
+    send_command_socket(socket_path, sending)
+    sys.exit(0)
+
+
+def cmdline_pipe(pipename, sending):
+    """Execute command via named pipe transport."""
     pipes = named_pipe(ROOT, pipename)
     if len(pipes) != 1:
         sys.stdout.write(f"could not find ExaBGP's named pipes ({pipename}.in and {pipename}.out) for the cli\n")
@@ -199,47 +402,6 @@ def cmdline(cmdarg):
         if AnswerStream.json_shutdown.endswith(rbuffer.decode()[-len(AnswerStream.json_shutdown) :]):
             break
 
-    renamed = ['']
-
-    for pos, token in enumerate(command):
-        for nickname, name, match in (
-            ('a', 'announce', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-            ('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-            ('c', 'configuration', lambda pos, pre: True),
-            ('e', 'eor', lambda pos, pre: pre[-1] == 'announce'),
-            ('e', 'extensive', lambda _, pre: 'show' in pre),
-            ('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-            ('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-            ('h', 'help', lambda pos, pre: pos == 0),
-            ('i', 'in', lambda pos, pre: pre[-1] == 'adj-rib'),
-            ('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
-            ('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
-            ('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
-            ('s', 'show', lambda pos, pre: pos == 0),
-            ('t', 'teardown', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-            ('s', 'summary', lambda pos, pre: pos != 0),
-            ('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-            ('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
-            ('o', 'out', lambda pos, pre: pre[-1] == 'adj-rib'),
-            ('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear', 'flush', 'show']),
-            ('w', 'withdraw', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-            ('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-            ('neighbour', 'neighbor', lambda pos, pre: True),
-            ('neigbour', 'neighbor', lambda pos, pre: True),
-            ('neigbor', 'neighbor', lambda pos, pre: True),
-        ):
-            if (token == nickname or name.startswith(token)) and match(pos, renamed):
-                renamed.append(name)
-                break
-        else:
-            renamed.append(token)
-
-    sending = ' '.join(renamed).strip()
-
-    # This does not change the behaviour for well formed command
-    if sending != command:
-        sys.stdout.write(f'command: {sending}\n')
-
     writer = open_writer(send)
     try:
         os.write(writer, sending.encode('utf-8') + b'\n')
@@ -248,9 +410,6 @@ def cmdline(cmdarg):
         sys.stdout.write(f'could not send command to ExaBGP ({exc!s})')
         sys.stdout.flush()
         sys.exit(1)
-
-    if command == 'reset':
-        sys.exit(0)
 
     waited = 0.0
     buf = b''

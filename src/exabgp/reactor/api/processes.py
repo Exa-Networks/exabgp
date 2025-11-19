@@ -210,10 +210,16 @@ class Processes:
                 # Initialize per-process ACK state (process config overrides global default)
                 self._ack[process] = configuration.get('ack', self._default_ack)
 
+                # Prepare environment variables for child process
+                child_env = os.environ.copy()
+                if 'env' in configuration:
+                    child_env.update(configuration['env'])
+
                 self._process[process] = subprocess.Popen(
                     run,
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
+                    env=child_env,
                     preexec_fn=preexec_helper,
                     # This flags exists for python 2.7.3 in the documentation but on on my MAC
                     # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP

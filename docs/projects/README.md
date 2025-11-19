@@ -46,6 +46,11 @@ Completed and historical project documentation.
 
 ## Infrastructure Improvements
 
+### CLI Dual Transport
+**Location:** `cli-dual-transport/`
+**Status:** ✅ Complete
+**Summary:** Implemented dual transport support for CLI (named pipes + Unix sockets). Both transports can run simultaneously with socket as default.
+
 ### Testing Improvements
 **Location:** `testing-improvements/`
 **Status:** ✅ Complete

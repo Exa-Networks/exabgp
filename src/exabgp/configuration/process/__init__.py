@@ -71,16 +71,38 @@ class ParseProcess(Section):
         return True
 
     def add_api(self):
-        if not os.environ.get('exabgp_cli_pipe', ''):
-            return
-        name = '{}-{:x}'.format(API_PREFIX, uuid.uuid1().fields[0])
         prog = os.path.join(os.environ.get('PWD', ''), sys.argv[0])
-        api = {
-            name: {
-                'run': [sys.executable, prog],
-                'encoder': 'text',
-                'respawn': True,
-            },
-        }
-        self._processes.append(name)
-        self.processes.update(api)
+
+        # Add pipe-based process if enabled
+        cli_pipe = os.environ.get('exabgp_cli_pipe', '')
+        if cli_pipe:
+            name = '{}-pipe-{:x}'.format(API_PREFIX, uuid.uuid1().fields[0])
+            api = {
+                name: {
+                    'run': [sys.executable, prog],
+                    'encoder': 'text',
+                    'respawn': True,
+                    'env': {
+                        'exabgp_api_cli_mode': 'pipe',
+                    },
+                },
+            }
+            self._processes.append(name)
+            self.processes.update(api)
+
+        # Add socket-based process if enabled
+        cli_socket = os.environ.get('exabgp_cli_socket', '')
+        if cli_socket:
+            name = '{}-socket-{:x}'.format(API_PREFIX, uuid.uuid1().fields[0])
+            api = {
+                name: {
+                    'run': [sys.executable, prog],
+                    'encoder': 'text',
+                    'respawn': True,
+                    'env': {
+                        'exabgp_api_cli_mode': 'socket',
+                    },
+                },
+            }
+            self._processes.append(name)
+            self.processes.update(api)

@@ -24,6 +24,7 @@ This protocol is mandatory due to a critical failure where 95 files were refacto
 - `env exabgp_log_enable=false pytest ./tests/unit/` - Faster unit tests without coverage
 - `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation test
 - `./qa/bin/functional encoding` - Run all functional encoding tests (integration tests)
+- `./tests/quick-transport-test.sh` - Quick test for CLI transports (socket + pipe)
   - **What it does:** Spawns 72 pairs of ExaBGP client/server instances to test real BGP message exchange
   - **Output format:** Visual progress bar showing test status with letter identifiers (0-9, A-Z, a-z, α-κ)
   - **Success criteria:** All 72 tests should pass (100%), typically completes in <60 seconds
