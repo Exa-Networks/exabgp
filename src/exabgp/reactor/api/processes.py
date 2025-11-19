@@ -78,6 +78,8 @@ class Processes:
         # Async mode support
         self._async_mode: bool = False
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        # Write queue for async mode (process_name -> deque of strings to write)
+        self._write_queue: Dict[str, collections.deque] = {}
         self._command_queue: collections.deque = collections.deque()  # type: ignore[var-annotated]
 
     def number(self) -> int:
@@ -155,6 +157,32 @@ class Processes:
                 log.debug(lambda process=process: f'child process {process} was already dead', 'process')
         self.clean()
 
+    async def terminate_async(self) -> None:
+        """Async version of terminate() - sends shutdown signal and waits for processes
+
+        Critical: Must flush write queue after sending shutdown signal to ensure
+        API processes receive it before termination.
+        """
+        for process in list(self._process):
+            if not self.silence:
+                try:
+                    self.write(process, self._encoder[process].shutdown())
+                except ProcessError:
+                    pass
+        # Flush all queued shutdown messages
+        await self.flush_write_queue_async()
+        self.silence = True
+        # waiting a little to make sure IO is flushed to the pipes
+        await asyncio.sleep(0.1)
+        for process in list(self._process):
+            try:
+                t = self._terminate(process)
+                t.join()
+            except OSError:
+                # we most likely received a SIGTERM signal and our child is already dead
+                log.debug(lambda process=process: f'child process {process} was already dead', 'process')
+        self.clean()
+
     def _start(self, process: str) -> None:
         if not self._restart.get(process, True):
             return
@@ -191,7 +219,10 @@ class Processes:
                     # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
                 )
                 self._update_fds()
+                # Make stdout non-blocking for reading
                 fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)  # type: ignore[union-attr]
+                # Make stdin non-blocking for writing (prevents blocking asyncio event loop)
+                fcntl.fcntl(self._process[process].stdin.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)  # type: ignore[union-attr]
 
                 # Register async reader if in async mode
                 if self._async_mode and self._loop:
@@ -366,6 +397,14 @@ class Processes:
             process_name: Name of the process with available data
         """
         if process_name not in self._process:
+            # Process already removed - shouldn't happen but be defensive
+            # Try to remove reader anyway in case of race condition
+            try:
+                if self._async_mode and self._loop:
+                    # We don't have the FD anymore, but asyncio will handle cleanup
+                    pass
+            except Exception:
+                pass
             return
 
         try:
@@ -374,12 +413,23 @@ class Processes:
 
             # Read available data (non-blocking) - use os.read() directly on FD
             # to avoid blocking even with O_NONBLOCK set on the descriptor
+            # Note: We read in larger chunks for efficiency, but only process ONE
+            # command per reactor loop iteration via received_async() to match sync behavior
             fd = proc.stdout.fileno()  # type: ignore[union-attr]
             raw_data = os.read(fd, 16384)
             buf = str(raw_data, 'ascii')
 
             if buf == '' and poll is not None:
-                # Process exited
+                # Process exited - EOF received
+                # CRITICAL: Remove reader BEFORE calling _handle_problem to avoid race
+                if self._async_mode and self._loop:
+                    try:
+                        self._loop.remove_reader(fd)
+                        log.debug(
+                            lambda: f'[ASYNC] Removed reader for exited process {process_name} (fd={fd})', 'process'
+                        )
+                    except Exception:
+                        pass  # Already removed or FD closed
                 self._handle_problem(process_name)
                 return
 
@@ -387,6 +437,8 @@ class Processes:
             raw = self._buffer.get(process_name, '') + buf
 
             # Extract complete lines and queue as commands
+            # Note: We queue all available commands here, but received_async() will
+            # yield them ONE at a time to ensure proper interleaving with message sending
             while '\n' in raw:
                 line, raw = raw.split('\n', 1)
                 line = line.rstrip()
@@ -407,14 +459,41 @@ class Processes:
 
             # Check if process exited
             if poll is not None:
+                # CRITICAL: Remove reader BEFORE calling _handle_problem to avoid race
+                if self._async_mode and self._loop:
+                    try:
+                        self._loop.remove_reader(fd)
+                        log.debug(
+                            lambda: f'[ASYNC] Removed reader for exited process {process_name} (fd={fd})', 'process'
+                        )
+                    except Exception:
+                        pass  # Already removed or FD closed
                 self._handle_problem(process_name)
 
         except OSError as exc:
+            # On error, try to remove reader to prevent callback loop
+            try:
+                if self._async_mode and self._loop and process_name in self._process:
+                    fd = self._process[process_name].stdout.fileno()  # type: ignore[union-attr]
+                    self._loop.remove_reader(fd)
+                    log.debug(lambda: f'[ASYNC] Removed reader after OSError for {process_name}', 'process')
+            except Exception:
+                pass
+
             if not exc.errno or exc.errno in error.fatal:
                 self._handle_problem(process_name)
             elif exc.errno not in error.block:
                 log.debug(lambda exc=exc: f'unexpected errno received from forked process ({errstr(exc)})', 'process')
         except Exception as exc:
+            # On any exception, try to remove reader to prevent callback loop
+            try:
+                if self._async_mode and self._loop and process_name in self._process:
+                    fd = self._process[process_name].stdout.fileno()  # type: ignore[union-attr]
+                    self._loop.remove_reader(fd)
+                    log.debug(lambda: f'[ASYNC] Removed reader after exception for {process_name}', 'process')
+            except Exception:
+                pass
+
             log.debug(lambda exc=exc: f'exception in async reader callback: {exc}', 'process')
             self._handle_problem(process_name)
 
@@ -422,23 +501,42 @@ class Processes:
         """Async-compatible version of received() that yields buffered commands
 
         In async mode, commands are read by callbacks registered with the event
-        loop and buffered in _command_queue. This method just yields them.
+        loop and buffered in _command_queue. This method yields them one at a time
+        to match sync version behavior and ensure commands are interleaved with
+        message sending.
+
+        CRITICAL: Only yield ONE command per call to match sync version, which
+        polls and returns one command at a time. This ensures proper interleaving.
 
         Yields:
             Tuple of (process_name, command) for each buffered command
         """
-        # Yield all buffered commands
-        while self._command_queue:
+        # Yield only ONE buffered command (matches sync version behavior)
+        if self._command_queue:
             yield self._command_queue.popleft()
 
     def write(self, process: str, string: Optional[str], neighbor: Optional['Neighbor'] = None) -> bool:
         if string is None:
             return True
 
+        if process not in self._process:
+            return False
+
+        data = bytes(f'{string}\n', 'ascii')
+
+        # In async mode, queue the write instead of blocking
+        if self._async_mode:
+            if process not in self._write_queue:
+                self._write_queue[process] = collections.deque()
+            self._write_queue[process].append(data)
+            log.debug(lambda: f'[ASYNC] Queued write for {process} ({len(data)} bytes)', 'process')
+            return True
+
+        # Sync mode - use buffered write (original code)
         # XXX: FIXME: This is potentially blocking
         while True:
             try:
-                self._process[process].stdin.write(bytes(f'{string}\n', 'ascii'))  # type: ignore[union-attr]
+                self._process[process].stdin.write(data)  # type: ignore[union-attr]
             except OSError as exc:
                 self._broken.append(process)
                 if exc.errno == errno.EPIPE:
@@ -465,6 +563,118 @@ class Processes:
 
         return True
 
+    async def write_async(self, process: str, string: Optional[str], neighbor: Optional['Neighbor'] = None) -> bool:
+        """Async version of write() - non-blocking write to API process stdin
+
+        Uses asyncio.sock_sendall() to write without blocking the event loop.
+        This prevents deadlock in async mode where blocking write would prevent
+        reading from API process stdout.
+        """
+        if string is None:
+            return True
+
+        if process not in self._process:
+            return False
+
+        data = bytes(f'{string}\n', 'ascii')
+
+        # Get stdin file descriptor
+        stdin_fd = self._process[process].stdin.fileno()  # type: ignore[union-attr]
+
+        # Use asyncio's non-blocking socket write
+        loop = asyncio.get_running_loop()
+
+        try:
+            # sock_sendall handles partial writes and EAGAIN automatically
+            await loop.sock_sendall(stdin_fd, data)
+        except OSError as exc:
+            self._broken.append(process)
+            if exc.errno == errno.EPIPE:
+                log.debug(lambda: 'issue while sending data to our helper program', 'process')
+                raise ProcessError from None
+            else:
+                log.debug(
+                    lambda exc=exc: f'error received while sending data to helper program ({errstr(exc)})',
+                    'process',
+                )
+                # In async mode, don't retry - let caller handle
+                raise ProcessError from None
+
+        return True
+
+    async def flush_write_queue_async(self) -> None:
+        """Flush all queued writes to API processes (async mode only)
+
+        Called by main loop to drain the write queue without blocking.
+        """
+        if not self._async_mode:
+            return
+
+        # Debug: Log queue status
+        if self._write_queue:
+            for p, q in self._write_queue.items():
+                if q:
+                    log.debug(lambda p=p, n=len(q): f'[ASYNC] Flushing queue for {p} ({n} items)', 'process')
+
+        for process_name in list(self._write_queue.keys()):
+            if process_name not in self._process:
+                # Process terminated, clear its queue
+                del self._write_queue[process_name]
+                continue
+
+            queue = self._write_queue[process_name]
+            if not queue:
+                continue
+
+            # Get stdin FD
+            try:
+                stdin_fd = self._process[process_name].stdin.fileno()  # type: ignore[union-attr]
+            except (AttributeError, ValueError):
+                # Stdin closed or invalid
+                log.debug(lambda: f'[ASYNC] Cannot flush queue for {process_name}: stdin closed', 'process')
+                del self._write_queue[process_name]
+                continue
+
+            # Write all queued data using os.write (non-blocking)
+            while queue:
+                data = queue.popleft()
+                try:
+                    # Use os.write for non-blocking write
+                    log.debug(
+                        lambda: f'[ASYNC] Attempting write for {process_name} (fd={stdin_fd}, {len(data)} bytes)',
+                        'process',
+                    )
+                    written = os.write(stdin_fd, data)
+                    log.debug(lambda: f'[ASYNC] os.write returned {written} for {process_name}', 'process')
+                    if written < len(data):
+                        # Partial write - put remaining data back
+                        queue.appendleft(data[written:])
+                        log.debug(
+                            lambda: f'[ASYNC] Partial write for {process_name} ({written}/{len(data)} bytes)', 'process'
+                        )
+                        break
+                    log.debug(lambda: f'[ASYNC] Flushed write for {process_name} ({written} bytes)', 'process')
+                except OSError as exc:
+                    if exc.errno == errno.EAGAIN or exc.errno == errno.EWOULDBLOCK:
+                        # Buffer full, put data back and try next iteration
+                        queue.appendleft(data)
+                        log.debug(lambda: f'[ASYNC] Buffer full for {process_name}, deferring write', 'process')
+                        break
+                    elif exc.errno == errno.EPIPE:
+                        # Broken pipe - process died
+                        self._broken.append(process_name)
+                        log.debug(lambda: f'[ASYNC] Broken pipe for {process_name}', 'process')
+                        del self._write_queue[process_name]
+                        break
+                    else:
+                        # Other error
+                        self._broken.append(process_name)
+                        log.debug(
+                            lambda exc=exc: f'[ASYNC] Error flushing queue for {process_name}: {errstr(exc)}', 'process'
+                        )
+                        del self._write_queue[process_name]
+                        break
+
     def _answer(self, service: str, string: str, force: bool = False) -> None:
         # Check per-process ACK state
         process_ack = self._ack[service]
@@ -475,17 +685,64 @@ class Processes:
             log.debug(lambda: 'responding to {} : {}'.format(service, string.replace('\n', '\\n')), 'process')
             self.write(service, string)
 
+    async def _answer_async(self, service: str, string: str, force: bool = False) -> None:
+        """Async version of _answer() - non-blocking response to API process
+
+        Queues the write and flushes immediately to ensure response delivered
+        before callback returns (prevents race condition).
+        """
+        process_ack = self._ack[service]
+        if force or process_ack:
+            log.debug(lambda: 'responding to {} : {}'.format(service, string.replace('\n', '\\n')), 'process')
+            self.write(service, string)  # Queue write
+            await self.flush_write_queue_async()  # Flush immediately
+
     def answer_done(self, service: str, force: bool = False) -> None:
+        """Send ACK/done response to API process
+
+        In async mode, this returns a coroutine that must be awaited.
+        In sync mode, this blocks until write completes.
+        """
+        # In async mode, caller must use answer_done_async() instead
+        # This sync version will block and cause deadlock in async mode
+        if self._async_mode:
+            # This should not be called in async mode - caller should use answer_done_async()
+            # But for compatibility during migration, we can detect this
+            log.warning(lambda: 'answer_done() called in async mode - should use answer_done_async()', 'process')
+
         if self._ackjson[service]:
             self._answer(service, Answer.json_done, force=force)
         else:
             self._answer(service, Answer.text_done, force=force)
+
+    async def answer_done_async(self, service: str, force: bool = False) -> None:
+        """Async version of answer_done() - non-blocking ACK to API process
+
+        Queues the write and flushes immediately to ensure ACK delivered
+        before callback returns (prevents race condition).
+        """
+        log.debug(lambda: f'[ASYNC] answer_done_async() called for {service}', 'process')
+        if self._ackjson[service]:
+            self._answer(service, Answer.json_done, force=force)
+        else:
+            self._answer(service, Answer.text_done, force=force)
+        # Flush immediately to ensure ACK delivered before callback returns
+        log.debug(lambda: f'[ASYNC] Calling flush_write_queue_async() for {service}', 'process')
+        await self.flush_write_queue_async()
+        log.debug(lambda: f'[ASYNC] flush_write_queue_async() completed for {service}', 'process')
 
     def answer_error(self, service: str) -> None:
         if self._ackjson[service]:
             self._answer(service, Answer.json_error)
         else:
             self._answer(service, Answer.text_error)
+
+    async def answer_error_async(self, service: str) -> None:
+        """Async version of answer_error() - non-blocking error response to API process"""
+        if self._ackjson[service]:
+            await self._answer_async(service, Answer.json_error)
+        else:
+            await self._answer_async(service, Answer.text_error)
 
     def set_ack(self, service: str, enabled: bool) -> None:
         """Set ACK state for a specific service/process"""
