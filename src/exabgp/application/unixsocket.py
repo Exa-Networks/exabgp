@@ -159,15 +159,24 @@ class Control:
         signal.signal(signal.SIGTERM, self.terminate)
         return True
 
-    def cleanup(self):
-        """Clean up resources."""
+    def cleanup_client(self):
+        """Clean up client connection only (keep server listening).
+
+        Note: Only closes the socket, not clearing client_fd.
+        The main loop will detect this state and clean up data structures.
+        """
         if self.client_socket:
             try:
                 self.client_socket.close()
             except Exception:
                 pass
             self.client_socket = None
-            self.client_fd = None
+            # Do NOT clear client_fd here - main loop needs it to clean up dicts
+
+    def cleanup(self):
+        """Clean up all resources (server shutdown)."""
+        self.cleanup_client()
+        self.client_fd = None  # Full cleanup includes clearing fd
 
         if self.server_socket:
             try:
@@ -207,9 +216,9 @@ class Control:
             elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
                 # Connection closed or error
                 if io == self.client_fd:
-                    # Client disconnected
-                    self.cleanup()
-                    return []
+                    # Client disconnected - close socket but add to ready so main loop cleans up
+                    self.cleanup_client()
+                    ready.append(io)  # Add to ready so main loop can clean up data structures
                 else:
                     # stdin/server socket issue
                     sys.exit(1)
@@ -255,8 +264,6 @@ class Control:
         @monitor
         def std_writer(line):
             try:
-                sys.stderr.write(f'[DEBUG socket->exabgp] Writing to ExaBGP stdout: {line!r}\n')
-                sys.stderr.flush()
                 return os.write(standard_out, line)
             except OSError as exc:
                 if exc.errno in error.block:
@@ -269,15 +276,15 @@ class Control:
                 return b''
             try:
                 data = self.client_socket.recv(number)
-                if data:
-                    sys.stderr.write(f'[DEBUG socket_reader] Received from CLI socket: {data!r}\n')
-                    sys.stderr.flush()
+                if not data:
+                    # Empty read means client closed connection (EOF)
+                    self.cleanup_client()
                 return data
             except OSError as exc:
                 if exc.errno in error.block:
                     return b''
-                # Client disconnected
-                self.cleanup()
+                # Client disconnected with error
+                self.cleanup_client()
                 return b''
 
         @monitor
@@ -290,7 +297,7 @@ class Control:
                 if exc.errno in error.block:
                     return 0
                 # Client disconnected
-                self.cleanup()
+                self.cleanup_client()
                 return 0
 
         # File descriptors to monitor
@@ -352,7 +359,7 @@ class Control:
                 consume(self.client_fd)
                 # Check if client disconnected (empty read)
                 if self.client_fd and not self.client_socket:
-                    # Cleanup happened in socket_reader
+                    # Cleanup happened in socket_reader/socket_writer
                     # Remove client from data structures
                     if self.client_fd in read:
                         del read[self.client_fd]
@@ -363,6 +370,7 @@ class Control:
                     if self.client_fd in store:
                         del store[self.client_fd]
                     write[standard_in] = None
+                    self.client_fd = None  # Clear fd after cleanup
                     continue
 
             # Read from stdin (ExaBGP responses)
