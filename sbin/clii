@@ -1,0 +1,7 @@
+#!/bin/sh
+# ExaBGP Interactive CLI launcher
+# Launches the interactive REPL mode
+
+path="$(cd "$(dirname "$0")" ; pwd)"
+
+exec "$path"/exabgp cli "$@"
