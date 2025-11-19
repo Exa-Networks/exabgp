@@ -284,6 +284,10 @@ class Reactor:
                     self._termination('exiting on peer termination', self.Exit.normal)
                     break
 
+            except asyncio.CancelledError:
+                # Raised when asyncio.run() cancels tasks (e.g., on Ctrl+C)
+                self._termination('^C received', self.Exit.normal)
+                break
             except KeyboardInterrupt:
                 self._termination('^C received', self.Exit.normal)
                 break
