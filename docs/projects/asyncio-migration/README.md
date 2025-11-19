@@ -1,8 +1,9 @@
 # ExaBGP AsyncIO Migration - Complete Documentation
 
-**Migration Status:** ✅ **COMPLETE - 100% Test Parity Achieved**
-**Completion Date:** 2025-11-17
-**Total Duration:** 3 development sessions across 2 days
+**Migration Status:** ✅ **Phase 1 COMPLETE - Phase 2 IN PROGRESS**
+**Phase 1 Completion:** 2025-11-17
+**Phase 2 Started:** 2025-11-18
+**Total Duration:** 3 development sessions (Phase 1)
 
 ---
 
@@ -25,10 +26,10 @@
 
 ExaBGP now supports **dual-mode operation** - both traditional select-based event loop and modern asyncio-based event loop - with 100% feature parity and zero regressions.
 
-**Final Test Results:**
-- Sync mode: 72/72 encoding tests (100%) + 1376/1376 unit tests (100%)
-- Async mode: 72/72 encoding tests (100%) + 1376/1376 unit tests (100%)
-- Zero regressions in existing functionality
+**Final Test Results (Phase 1):**
+- Sync mode: 72/72 encoding tests (100%) + 1386/1386 unit tests (100%) ✅
+- Async mode: 72/72 encoding tests (100%) + 1386/1386 unit tests (100%) ✅
+- **Status:** 100% test parity achieved!
 
 ### The Journey
 
@@ -58,6 +59,7 @@ The migration successfully integrated external API process communication with as
 | 2025-11-17 | Phase 2 PoC | Test hybrid approach, decided to stop | ✅ Complete (Stopped) |
 | 2025-11-17 | Phase B | Full async event loop implementation | ✅ Complete |
 | 2025-11-17 | Completion | Root cause discovery, 100% parity | ✅ Complete |
+| 2025-11-18 | **Phase 2** | **Production validation** | 🔄 **IN PROGRESS** |
 
 ### What Was Built
 
@@ -385,6 +387,65 @@ All checks passed
 
 ---
 
+## Current Phase: Production Validation
+
+### Phase 2 Status
+
+**Started:** 2025-11-18
+**Objective:** Validate async mode stability and performance in production
+**Documentation:** `.claude/asyncio-migration/PHASE2_PRODUCTION_VALIDATION.md`
+
+**Key understanding:** Generator-based and async/await are functionally equivalent - both are async I/O, just different expressions. See `.claude/asyncio-migration/GENERATOR_VS_ASYNC_EQUIVALENCE.md` for detailed comparison.
+
+**Timeline:** 3-6 months across 4 validation stages
+- Stage 1: Development/QA (2-4 weeks)
+- Stage 2: Canary production (4-6 weeks)
+- Stage 3: Expanded production (6-8 weeks)
+- Stage 4: Full production (8-12 weeks)
+
+**After Phase 2:** Proceed to Phase 3 (switch default), Phase 4 (deprecation), Phase 5 (generator removal) - estimated 18-36 months total timeline.
+
+---
+
+## Known Issues
+
+### Test T (api-rib) Fails in Async Mode ⚠️
+
+**Status:** Identified 2025-11-19, Fix Designed
+**Impact:** Blocks async mode production use for API-driven route announcements
+**Affects:** Functional test T (api-rib) only - async mode sends BGP UPDATEs in wrong order
+
+**Symptom:**
+```bash
+env exabgp_reactor_asyncio=true ./qa/bin/functional encoding T
+# FAILS: Sends route 192.168.0.5 instead of 192.168.0.1 as first UPDATE
+```
+
+**Root Cause:**
+
+Asyncio event loop callbacks (`loop.add_reader()`) process ALL API commands with higher priority than coroutine `await` points. This causes:
+1. ALL API commands read into queue before peer loop runs
+2. RIB state reflects final state (all routes added/modified)
+3. When `rib.updates()` called, routes returned in wrong order
+
+Sync mode works because it manually polls API FDs one command at a time, ensuring proper interleaving of API command processing and BGP message sending.
+
+**Fix Designed:**
+
+Replace `loop.add_reader()` with manual `select.poll()` even in async mode to match sync version's interleaving behavior. See detailed analysis: `.claude/asyncio-migration/TEST_T_RIB_UPDATE_BUG.md`
+
+**Workaround:**
+
+Use sync mode (default) for production until fix implemented:
+```bash
+# Sync mode (works correctly)
+./sbin/exabgp your-config.conf
+```
+
+**Priority:** HIGH - Blocks Phase 2 completion and async mode becoming default
+
+---
+
 ## Future Work
 
 ### 1. Documentation
@@ -395,7 +456,7 @@ All checks passed
 - Create troubleshooting guide for common issues
 - Document performance characteristics
 
-### 2. Performance Benchmarking
+### 2. Performance Benchmarking (Phase 2 Stage 1)
 
 **Key Metrics to Measure:**
 - CPU usage: sync vs async under load
