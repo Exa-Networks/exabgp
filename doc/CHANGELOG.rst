@@ -3,6 +3,26 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.1:
+ * Fix: Critical RIB iterator crash in delete_cached_family() (cache.py:37)
+   Modified dictionary during iteration causing RuntimeError on configuration reload.
+   Fixed by adding list() wrapper to snapshot keys before iteration.
+   The list() wrapper prevents race condition when removing families from cache.
+ * Fix: Critical RIB iterator safety in cached_changes() (cache.py:51)
+   No snapshot of dictionary values during iteration could corrupt iterator state.
+   Fixed by wrapping values() with list() to create snapshot before iteration.
+   Prevents corruption when cache is modified during concurrent access.
+ * Fix: Critical race condition in RIB updates() generator (outgoing.py:220-270)
+   resend() could modify _refresh_changes and _refresh_families during iteration,
+   causing missing or duplicate route updates when API flush commands arrive
+   during peer sending. Fixed by snapshotting both lists at function start and
+   clearing immediately before yielding. The list() wrapper creates atomic snapshot,
+   preventing race conditions when resend() is called mid-iteration.
+ * Feature: Added comprehensive RIB stress test suite (tests/unit/test_rib_stress.py)
+   18 tests covering critical bugs, race conditions, edge cases, and performance.
+   Tests concurrent access patterns, empty/large RIBs, and validates that resend()
+   during updates() doesn't interfere with current iteration.
+
 Version 5.0.0:
  * Compatibility: The text encoding of AS-SEQUENCE in the AS-PATH has changed
  * Compatibility: The AS-PATH JSON format has changed
