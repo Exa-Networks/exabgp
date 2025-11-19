@@ -8,17 +8,17 @@ Copyright (c) 2013-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import argparse
+import glob
+import json
 import os
 import re
-import sys
-import json
-import glob
-import time
 import signal
-import argparse
 import subprocess
+import sys
+import time
 from enum import Enum
-
+from typing import Any, Dict, Generator, List, Optional, Type
 
 INTERPRETER = os.environ.get('INTERPRETER', '')
 if not INTERPRETER:
@@ -29,12 +29,12 @@ class Alarm(Exception):
     pass
 
 
-def flush(*args, **kwars):
+def flush(*args: Any, **kwars: Any) -> None:
     print(*args, **kwars)
     sys.stdout.flush()
 
 
-def check_ulimit(minimum=40000):
+def check_ulimit(minimum: int = 40000) -> None:
     """
     Check and set file descriptor limit (ulimit -n) to at least the minimum value.
 
@@ -73,22 +73,67 @@ def check_ulimit(minimum=40000):
         flush('[ulimit] Warning: Could not check file descriptor limit (resource module unavailable)')
 
 
-def alarm_handler(number, frame):  # pylint: disable=W0613
+def alarm_handler(number: int, frame: Any) -> None:  # pylint: disable=W0613
     raise Alarm()
 
 
-def color(prefix, suffix):
-    def code(value):
+def color(prefix: int, suffix: int) -> str:
+    def code(value: int) -> str:
         return f'\033[{value}m'
 
     return code(prefix) + code(suffix)
 
 
+# Color helper functions
+def reset() -> str:
+    return color(0, 0)  # NORMAL/RESET
+
+
+def black() -> str:
+    return color(0, 30)  # BLACK
+
+
+def gray() -> str:
+    return color(1, 30)  # GRAY (bold black)
+
+
+def dark_gray() -> str:
+    return color(0, 90)  # DARK GRAY
+
+
+def red() -> str:
+    return color(0, 31)  # RED
+
+
+def bright_red() -> str:
+    return color(0, 91)  # BRIGHT RED
+
+
+def green() -> str:
+    return color(0, 32)  # GREEN
+
+
+def bright_green() -> str:
+    return color(1, 92)  # BRIGHT GREEN (bold)
+
+
+def yellow() -> str:
+    return color(0, 33)  # YELLOW
+
+
+def bright_yellow() -> str:
+    return color(0, 93)  # BRIGHT YELLOW
+
+
+def cyan() -> str:
+    return color(0, 36)  # CYAN
+
+
 class Port:
-    base = 1790
+    base: int = 1790
 
     @classmethod
-    def get(cls):
+    def get(cls) -> int:
         current = cls.base
         cls.base += 1
         return current
@@ -113,15 +158,15 @@ class Path:
     ALL_ENCODING.sort()
 
     @staticmethod
-    def etc(fname):
+    def etc(fname: str) -> str:
         return os.path.abspath(os.path.join(Path.ETC, fname))
 
     @staticmethod
-    def ci(fname, ext):
+    def ci(fname: str, ext: str) -> str:
         return os.path.abspath(os.path.join(Path.ENCODING, fname) + '.' + ext)
 
     @classmethod
-    def validate(cls):
+    def validate(cls) -> None:
         if not os.path.isdir(cls.ETC):
             sys.exit('could not find etc folder')
 
@@ -139,15 +184,15 @@ class Path:
 
 
 class Exec(object):
-    def __init__(self):
-        self.code = -1
-        self.stdout = b''
-        self.stderr = b''
-        self.message = ''
-        self._process = None
-        self.command = []
+    def __init__(self) -> None:
+        self.code: int = -1
+        self.stdout: bytes = b''
+        self.stderr: bytes = b''
+        self.message: str = ''
+        self._process: Optional[subprocess.Popen] = None
+        self.command: str = ''
 
-    def run(self, command, env=None):
+    def run(self, command: List[str], env: Optional[Dict[str, str]] = None) -> 'Exec':
         self.command = ' '.join([_ if ' ' not in _ else f"'{_}'" for _ in command])
         # Set up environment to disable ExaBGP logging
         if env is None:
@@ -166,11 +211,11 @@ class Exec(object):
         )
         return self
 
-    def ready(self):
+    def ready(self) -> bool:
         signal.signal(signal.SIGALRM, alarm_handler)
         try:
             signal.alarm(1)
-            polled = self._process.poll()
+            polled = self._process.poll()  # type: ignore
             signal.alarm(0)
         except Alarm:
             return False
@@ -180,7 +225,7 @@ class Exec(object):
             return False
         return True
 
-    def report(self, reason='issue with exabgp'):
+    def report(self, reason: str = 'issue with exabgp') -> None:
         # Suppress all diagnostic output to keep test results clean
         # flush(reason)
         # flush(f'command> {self.command}')
@@ -190,7 +235,7 @@ class Exec(object):
         # flush(f'message: {self.message}')
         pass
 
-    def collect(self):
+    def collect(self) -> None:
         if self.stdout:
             return
         if self.stderr:
@@ -201,8 +246,8 @@ class Exec(object):
         signal.signal(signal.SIGALRM, alarm_handler)
         try:
             signal.alarm(15)
-            self.stdout, self.stderr = self._process.communicate()
-            self.code = self._process.returncode
+            self.stdout, self.stderr = self._process.communicate()  # type: ignore
+            self.code = self._process.returncode  # type: ignore
             signal.alarm(0)
         except ValueError as exc:  # I/O operation on closed file
             self.message = str(exc)
@@ -211,7 +256,7 @@ class Exec(object):
             self.message = str(exc)
             pass
 
-    def terminate(self, collect=True):
+    def terminate(self, collect: bool = True) -> None:
         if self._process is None:
             return
         try:
@@ -226,7 +271,7 @@ class Exec(object):
         except (OSError, ProcessLookupError, AttributeError):
             pass
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self._process is not None:
             self.terminate()
 
@@ -235,44 +280,46 @@ State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP TIMEOUT')
 
 
 class Record:
-    _index = 0
-    _listing = '0123456789' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + 'αβγδεζηθικλμνξοπρςστυφχψω'
+    _index: int = 0
+    _listing: str = (
+        '0123456789' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + 'αβγδεζηθικλμνξοπρςστυφχψω'
+    )
 
-    def __init__(self, nick, name):
-        self.nick = nick
-        self.name = name
-        self.conf = dict()
-        self.files = []
-        self.state = State.SKIP
-        self.start_time = None
-        self.timeout = 999999.0  # Effectively disable per-test timeout, use global timeout only
+    def __init__(self, nick: str, name: str) -> None:
+        self.nick: str = nick
+        self.name: str = name
+        self.conf: Dict[str, Any] = dict()
+        self.files: List[str] = []
+        self.state: Any = State.SKIP
+        self.start_time: Optional[float] = None
+        self.timeout: float = 999999.0  # Effectively disable per-test timeout, use global timeout only
 
     @classmethod
-    def new(cls, name):
+    def new(cls, name: str) -> 'Record':
         return cls(cls.next_nick(), name)
 
     @classmethod
-    def next_nick(cls):
+    def next_nick(cls) -> str:
         nick = cls._listing[cls._index]
         cls._index += 1
         return nick
 
-    def skip(self):
+    def skip(self) -> 'Record':
         self.state = State.SKIP
         return self
 
-    def fail(self):
+    def fail(self) -> 'Record':
         self.state = State.FAIL
         return self
 
-    def activate(self):
+    def activate(self) -> 'Record':
         self.state = State.NONE
         return self
 
-    def is_active(self):
+    def is_active(self) -> bool:
         return self.state not in (State.SKIP, State.FAIL, State.SUCCESS, State.TIMEOUT)
 
-    def setup(self):
+    def setup(self) -> None:
         if self.state == State.NONE:
             self.state = State.STARTING
             return
@@ -281,39 +328,23 @@ class Record:
             self.start_time = time.time()
             return
 
-    def running(self):
+    def running(self) -> None:
         self.state = State.RUNNING
         if self.start_time is None:
             self.start_time = time.time()
 
-    def has_timed_out(self):
+    def has_timed_out(self) -> bool:
         """Check if test has exceeded its individual timeout"""
         if self.start_time is None:
             return False
         return (time.time() - self.start_time) > self.timeout
 
-    def mark_timeout(self):
+    def mark_timeout(self) -> 'Record':
         """Mark test as timed out"""
         self.state = State.TIMEOUT
         return self
 
-    def colored(self):
-        if self.state == State.NONE:
-            return color(0, 30) + self.nick  # BLACK
-        if self.state == State.STARTING:
-            return color(1, 30) + self.nick  # GRAY
-        if self.state == State.RUNNING:
-            return color(0, 0) + self.nick  # NORMAL
-        if self.state == State.FAIL:
-            return color(0, 91) + '✖'  # RED - Failed test
-        if self.state == State.SUCCESS:
-            return color(1, 92) + '✓'  # GREEN - Successful test
-        if self.state == State.SKIP:
-            return color(0, 90) + '○'  # GRAY - Skipped test
-        if self.state == State.TIMEOUT:
-            return color(0, 93) + '⏱'  # YELLOW - Timed out test
-
-    def result(self, success):
+    def result(self, success: bool) -> bool:
         if success:
             self.state = State.SUCCESS
         else:
@@ -322,43 +353,43 @@ class Record:
 
 
 class Tests:
-    def __init__(self, klass):
-        self.klass = klass
-        self._by_nick = {}
-        self._ordered = []
-        self._nl = 3
-        self._start_time = None
-        self._max_timeout = 0
-        self._daemons_count = 0
-        self._clients_count = 0
+    def __init__(self, klass: Type[Record]) -> None:
+        self.klass: Type[Record] = klass
+        self._by_nick: Dict[str, Record] = {}
+        self._ordered: List[str] = []
+        self._nl: int = 3
+        self._start_time: Optional[float] = None
+        self._max_timeout: int = 0
+        self._daemons_count: int = 0
+        self._clients_count: int = 0
 
-    def new(self, name):
+    def new(self, name: str) -> Record:
         test = self.klass.new(name)
         self._by_nick[test.nick] = test
         self._ordered.append(test.nick)
         self._ordered.sort()
         return test
 
-    def enable_by_nick(self, nick):
+    def enable_by_nick(self, nick: str) -> bool:
         if nick in self._by_nick:
             self._by_nick[nick].activate()
             return True
         return False
 
-    def enable_all(self):
+    def enable_all(self) -> None:
         for nick in self._by_nick:
             self._by_nick[nick].activate()
 
-    def get_by_nick(self, nick):
+    def get_by_nick(self, nick: str) -> Record:
         return self._by_nick[nick]
 
-    def registered(self):
+    def registered(self) -> List[Record]:
         return [self._by_nick[nick] for nick in self._ordered]
 
-    def selected(self):
+    def selected(self) -> List[Record]:
         return [self._by_nick[nick] for nick in self._ordered if self._by_nick[nick].is_active()]
 
-    def _iterate(self):
+    def _iterate(self) -> Generator[List[Record], None, None]:
         number = len(self._ordered)
         lines = number // self._nl
 
@@ -372,7 +403,7 @@ class Tests:
                 tests.append(self._by_nick[nick])
             yield tests
 
-    def listing(self):
+    def listing(self) -> None:
         flush()
         flush('The available tests are:')
         flush()
@@ -383,19 +414,25 @@ class Tests:
             flush(''.join(parts))
         flush()
 
-    def short_list(self):
+    def short_list(self) -> None:
         flush(' '.join([test.nick for test in self.registered()]))
 
-    def display(self, daemons_started=None, clients_started=None):
+    def display(
+        self,
+        daemons_started: Optional[int] = None,
+        clients_started: Optional[int] = None,
+    ) -> None:
         # Show timer in setup phase with [0/max] format
         if daemons_started is not None and clients_started is not None:
             if self._max_timeout:
-                timer = (
-                    f'{color(0, 33)}timeout{color(0, 0)} [{0:2d}/{color(0, 33)}{self._max_timeout:2d}{color(0, 0)}]'
-                )
+                timer = f'{yellow()}timeout{reset()} [{0:2d}/{yellow()}{self._max_timeout:2d}{reset()}]'
             else:
                 timer = ''
-            status = f'{timer} {color(0, 36)}daemons{color(0, 0)} {daemons_started:2d} {color(0, 36)}clients{color(0, 0)} {clients_started:2d}' if timer else f'{color(0, 36)}daemons{color(0, 0)} {daemons_started:2d} {color(0, 36)}clients{color(0, 0)} {clients_started:2d}'
+            status = (
+                f'{timer} {cyan()}daemons{reset()} {daemons_started:2d} {cyan()}clients{reset()} {clients_started:2d}'
+                if timer
+                else f'{cyan()}daemons{reset()} {daemons_started:2d} {cyan()}clients{reset()} {clients_started:2d}'
+            )
             # Clear line before writing to prevent artifacts
             flush(f'\r\033[K{status}', end='')
             return
@@ -425,20 +462,20 @@ class Tests:
             elapsed = int(time.time() - self._start_time)
             # Cap elapsed time to max timeout to prevent timer overshoot
             elapsed = min(elapsed, self._max_timeout)
-            timer = (
-                f'{color(0, 33)}timeout{color(0, 0)} [{elapsed:2d}/{color(0, 33)}{self._max_timeout:2d}{color(0, 0)}]'
-            )
+            timer = f'{yellow()}timeout{reset()} [{elapsed:2d}/{yellow()}{self._max_timeout:2d}{reset()}]'
         else:
             timer = ''
 
         # Prepend daemon/client counts if they're set (for encoding tests) - cyan labels only
         daemon_client = ''
         if self._daemons_count > 0 or self._clients_count > 0:
-            daemon_client = f'{color(0, 36)}daemons{color(0, 0)} {self._daemons_count:2d} {color(0, 36)}clients{color(0, 0)} {self._clients_count:2d}'
+            daemon_client = (
+                f'{cyan()}daemons{reset()} {self._daemons_count:2d} {cyan()}clients{reset()} {self._clients_count:2d}'
+            )
 
         # Format with labels and colors
         # Order: timer, daemon/client, passed, failed (if > 0), remaining
-        passed_text = f'{color(0, 32)}passed{color(0, 0)} {passed:2d}'
+        passed_text = f'{green()}passed{reset()} {passed:2d}'
 
         # Build status line
         status_parts = [timer, daemon_client, passed_text]
@@ -447,7 +484,7 @@ class Tests:
         # "failed   " (9 chars) only for single test to match "remaining", otherwise "failed" (6 chars)
         if failed > 0:
             label = 'failed   ' if len(self.selected()) == 1 else 'failed'
-            failed_text = f'{color(0, 31)}{label}{color(0, 0)} {failed:2d}'
+            failed_text = f'{red()}{label}{reset()} {failed:2d}'
             if failed_tests:
                 failed_text += f' [{", ".join(failed_tests)}]'
             status_parts.append(failed_text)
@@ -464,26 +501,72 @@ class Tests:
         # This prevents "X] X] X]" artifacts when status text gets shorter
         flush(f'\r\033[K{status}', end='')
 
-    def legend(self):
-        flush('\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N remaining N passed N failed N [failed test IDs]\n')
+    def legend(self) -> None:
+        flush(
+            '\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N remaining N passed N failed N [failed test IDs]\n'
+        )
 
-    def summary(self):
-        """Print summary of test results"""
-        passed = []
-        failed = []
-        timed_out = []
-        skipped = []
+    def _print_debug_output(
+        self,
+        server: Optional['Exec'],
+        client: Optional['Exec'],
+        num_tests_selected: Optional[int],
+    ) -> None:
+        """Print detailed server/client output for single test debugging"""
+        if (not server and not client) or num_tests_selected != 1:
+            return
 
-        for test in self.registered():
-            if test.state == State.SUCCESS:
-                passed.append(test.nick)
-            elif test.state == State.FAIL:
-                failed.append(test.nick)
-            elif test.state == State.TIMEOUT:
-                timed_out.append(test.nick)
-            elif test.state == State.SKIP:
-                skipped.append(test.nick)
+        flush()
+        flush('=' * 60)
+        flush('DEBUG OUTPUT (Single Test Mode)')
+        flush('=' * 60)
 
+        if server:
+            flush()
+            flush('SERVER OUTPUT:')
+            flush('-' * 60)
+            flush(f'Command: {server.command}')
+            flush(f'Return code: {server.code}')
+            flush('STDOUT:')
+            if server.stdout:
+                flush(server.stdout.decode('utf-8', errors='replace'))
+            else:
+                flush('(empty)')
+            flush('STDERR:')
+            if server.stderr:
+                flush(server.stderr.decode('utf-8', errors='replace'))
+            else:
+                flush('(empty)')
+            if server.message:
+                flush(f'Message: {server.message}')
+
+        if client:
+            flush()
+            flush('CLIENT OUTPUT:')
+            flush('-' * 60)
+            flush(f'Command: {client.command}')
+            flush(f'Return code: {client.code}')
+            flush('STDOUT:')
+            if client.stdout:
+                flush(client.stdout.decode('utf-8', errors='replace'))
+            else:
+                flush('(empty)')
+            flush('STDERR:')
+            if client.stderr:
+                flush(client.stderr.decode('utf-8', errors='replace'))
+            else:
+                flush('(empty)')
+            if client.message:
+                flush(f'Message: {client.message}')
+
+    def _print_summary_results(
+        self,
+        passed: List[str],
+        failed: List[str],
+        timed_out: List[str],
+        skipped: List[str],
+    ) -> None:
+        """Print test result summary"""
         flush()
         flush('=' * 60)
         flush('TEST SUMMARY')
@@ -493,22 +576,22 @@ class Tests:
         # Only show test IDs for failed and timed out
         # Use fixed-width labels (9 chars) to align numbers
         if passed:
-            flush(f'{color(0, 32)}passed   {color(0, 0)} {len(passed):2d}')
+            flush(f'{green()}passed   {reset()} {len(passed):2d}')
         else:
-            flush(f'{color(0, 32)}passed   {color(0, 0)} {0:2d}')
+            flush(f'{green()}passed   {reset()} {0:2d}')
 
         if failed:
-            flush(f'{color(0, 31)}failed   {color(0, 0)} {len(failed):2d} [{", ".join(failed)}]')
+            flush(f'{red()}failed   {reset()} {len(failed):2d} [{", ".join(failed)}]')
         else:
             flush(f'failed    {0:2d}')
 
         if timed_out:
-            flush(f'{color(0, 33)}timed out{color(0, 0)} {len(timed_out):2d} [{", ".join(timed_out)}]')
+            flush(f'{yellow()}timed out{reset()} {len(timed_out):2d} [{", ".join(timed_out)}]')
         else:
             flush(f'timed out {0:2d}')
 
         if skipped:
-            flush(f'{color(0, 90)}skipped  {color(0, 0)} {len(skipped):2d}')
+            flush(f'{dark_gray()}skipped  {reset()} {len(skipped):2d}')
         else:
             flush(f'skipped   {0:2d}')
 
@@ -521,28 +604,65 @@ class Tests:
 
         flush()
 
+    def summary(
+        self,
+        server: Optional['Exec'] = None,
+        client: Optional['Exec'] = None,
+        num_tests_selected: Optional[int] = None,
+    ) -> None:
+        """Print summary of test results
 
-def parse_msg_options(msg_file):
-    """Parse option directives from .msg file"""
-    tcp_connections = None
+        Args:
+            server: Optional server Exec object for single test debugging
+            client: Optional client Exec object for single test debugging
+            num_tests_selected: Number of tests that were selected to run (before completion)
+        """
+        # Collect test results into categorized lists
+        passed: List[str] = []
+        failed: List[str] = []
+        timed_out: List[str] = []
+        skipped: List[str] = []
+
+        for test in self.registered():
+            if test.state == State.SUCCESS:
+                passed.append(test.nick)
+            elif test.state == State.FAIL:
+                failed.append(test.nick)
+            elif test.state == State.TIMEOUT:
+                timed_out.append(test.nick)
+            elif test.state == State.SKIP:
+                skipped.append(test.nick)
+
+        # Print debug output if in single test mode
+        self._print_debug_output(server, client, num_tests_selected)
+
+        # Print summary results
+        self._print_summary_results(passed, failed, timed_out, skipped)
+
+
+def parse_msg_options(msg_file: str) -> int:
+    """Parse option directives from .msg file
+
+    Returns:
+        TCP connections count from file, or 1 as default
+    """
     try:
         with open(msg_file, 'r') as f:
             for line in f:
                 line = line.strip()
                 if line.startswith('option:tcp_connections:'):
-                    tcp_connections = int(line.split(':')[-1])
-                    break
+                    return int(line.split(':')[-1])
     except Exception:
         pass
-    return tcp_connections
+    return 1
 
 
 class EncodingTests(Tests):
     class Test(Record, Exec):
-        def __init__(self, nick, name):
+        def __init__(self, nick: str, name: str) -> None:
             Record.__init__(self, nick, name)
             Exec.__init__(self)
-            self._check = b'successful'
+            self._check: bytes = b'successful'
 
         # def __eq__ (self, other):
         #     return self.nick.__eq__(other.nick)
@@ -553,7 +673,7 @@ class EncodingTests(Tests):
         # def __hash__ (self):
         #     return self.nick.__hash__()
 
-        def success(self):
+        def success(self) -> bool:
             self.collect()
             if self.code == 0:
                 if self._check in self.stdout:
@@ -568,9 +688,9 @@ class EncodingTests(Tests):
             self.report(f'failed with code {self.code}')
             return False
 
-    API = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
+    API: Any = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(self.Test)
 
         for filename in Path.ALL_ENCODING:
@@ -598,34 +718,13 @@ class EncodingTests(Tests):
                         if name not in test.files:
                             test.files.append(name)
 
-    def explain(self, nick):
-        template = '\n'
-        template += 'exabgp\n'
-        template += '-' * 55 + '\n\n'
-        template += '%(client)s\n\n\n'
-        template += 'bgp deamon\n'
-        template += '-' * 55 + '\n\n'
-        template += '%(server)s\n\n\n'
-        template += 'The following extra configuration options could be used\n'
-        template += '-' * 55 + '\n\n'
-        template += 'export exabgp_debug_rotate=true\n'
-        template += 'export exabgp_debug_defensive=true\n'
-
-        flush(
-            template
-            % {
-                'client': self.client(nick),
-                'server': self.server(nick),
-            }
-        )
-
-    def client(self, nick):
+    def client(self, nick: str) -> str:
         if not self.enable_by_nick(nick):
             sys.exit('no such test')
         test = self.get_by_nick(nick)
 
-        # Parse tcp_connections option from .msg file, default to 1 if not specified
-        tcp_connections = parse_msg_options(test.conf['msg']) or 1
+        # Parse tcp_connections option from .msg file (defaults to 1)
+        tcp_connections = parse_msg_options(test.conf['msg'])
 
         config = {
             'env': ' \\\n  '.join(
@@ -645,7 +744,7 @@ class EncodingTests(Tests):
         }
         return 'env \\\n  %(env)s \\\n   %(exabgp)s -d -p \\\n    %(confs)s' % config
 
-    def server(self, nick):
+    def server(self, nick: str) -> str:
         if not self.enable_by_nick(nick):
             sys.exit('no such test')
         test = self.get_by_nick(nick)
@@ -663,8 +762,8 @@ class EncodingTests(Tests):
 
         return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s --view \\\n    %(msg)s' % config
 
-    def dry(self):
-        result = []
+    def dry(self) -> str:
+        result: List[str] = []
         for test in self.selected():
             result.append(
                 ' '.join(
@@ -694,7 +793,7 @@ class EncodingTests(Tests):
             )
         return '\n'.join(result)
 
-    def run_selected(self, timeout):
+    def run_selected(self, timeout: int) -> bool:
         # Set max timeout before setup so it shows during initialization
         self._max_timeout = timeout
         self.legend()
@@ -702,6 +801,9 @@ class EncodingTests(Tests):
         check_ulimit()
         success = True
         client = dict()
+
+        # Remember how many tests we're running for single-test debug mode
+        num_tests_selected = len(self.selected())
 
         # Start daemons (servers) - timer shows [0/max] during setup
         daemons_started = 0
@@ -818,7 +920,31 @@ class EncodingTests(Tests):
         # Move to new line after final display
         flush()
 
-        self.summary()
+        # For single test mode, collect output and pass server and client debug info
+        server_exec = None
+        client_exec = None
+        if num_tests_selected == 1:
+            # Get all registered tests (including completed ones)
+            all_tests = self.registered()
+            # Find the one test that was selected (not skipped)
+            test = None
+            for t in all_tests:
+                if t.state != State.SKIP:
+                    test = t
+                    break
+
+            if test:
+                server_exec = test
+                client_exec = client.get(test.nick)
+                # Ensure output is collected for display
+                if client_exec and not client_exec.stdout and not client_exec.stderr:
+                    client_exec.collect()
+
+        self.summary(
+            server=server_exec,
+            client=client_exec,
+            num_tests_selected=num_tests_selected,
+        )
         return success
 
 
@@ -861,7 +987,7 @@ class DecodingTests(Tests):
                 return False
             return True
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(self.Test)
 
         for filename in Path.ALL_DECODING:
@@ -878,7 +1004,7 @@ class DecodingTests(Tests):
                 test.conf['json'] = test._cleanup(decoded)
             test.files.append(filename)
 
-    def listing(self):
+    def listing(self) -> None:
         flush()
         flush('The available tests are:')
         flush()
@@ -889,7 +1015,7 @@ class DecodingTests(Tests):
             flush(''.join(parts))
         flush()
 
-    def dry(self):
+    def dry(self) -> str:
         result = []
         for test in self.selected():
             result.append(
@@ -906,7 +1032,7 @@ class DecodingTests(Tests):
             )
         return '\n'.join(result)
 
-    def run_selected(self, timeout):
+    def run_selected(self, timeout: int) -> bool:
         self._start_time = time.time()
         self._max_timeout = timeout
         self.legend()
@@ -1009,7 +1135,7 @@ class ParsingTests(Tests):
 
             return self.code == 0
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(self.Test)
 
         for filename in Path.ALL_ETC:
@@ -1018,7 +1144,7 @@ class ParsingTests(Tests):
             test.conf['fname'] = filename
             test.files.append(filename)
 
-    def listing(self):
+    def listing(self) -> None:
         flush()
         flush('The available tests are:')
         flush()
@@ -1029,13 +1155,13 @@ class ParsingTests(Tests):
             flush(''.join(parts))
         flush()
 
-    def dry(self):
+    def dry(self) -> str:
         result = []
         for test in self.selected():
             result.append(' '.join(['>', Path.EXABGP, 'validate', '-nrv', test.conf['fname']]))
         return '\n'.join(result)
 
-    def run_selected(self, timeout):
+    def run_selected(self, timeout: int) -> bool:
         self._start_time = time.time()
         self._max_timeout = timeout
         self.legend()
@@ -1107,7 +1233,7 @@ class ParsingTests(Tests):
         return success
 
 
-def add_test(subparser, name, tests, extra):
+def add_test(subparser: Any, name: str, tests: Tests, extra: List[str]) -> None:
     sub = subparser.add_parser(name, help=f'run {name} test')
     if 'dry' in extra:
         sub.add_argument('--dry', help='show the action', action='store_true')
@@ -1118,16 +1244,25 @@ def add_test(subparser, name, tests, extra):
     if 'list' in extra:
         sub.add_argument('--list', help='list the files making a test', action='store_true')
     if 'short_list' in extra:
-        sub.add_argument('--short-list', help='list test codes only (space separated)', action='store_true')
+        sub.add_argument(
+            '--short-list',
+            help='list test codes only (space separated)',
+            action='store_true',
+        )
     if 'edit' in extra:
         sub.add_argument('--edit', help='edit the files making a test', action='store_true')
     if 'timeout' in extra:
-        sub.add_argument('--timeout', help='total timeout for all tests (seconds)', type=int, default=20)
+        sub.add_argument(
+            '--timeout',
+            help='total timeout for all tests (seconds)',
+            type=int,
+            default=20,
+        )
     if 'port' in extra:
         sub.add_argument('--port', help='base port to use', type=int, default=1790)
     sub.add_argument('test', help='name of the test(s) to run', nargs='*', default=None)
 
-    def func(parsed):
+    def func(parsed: Any) -> None:
         if 'edit' in extra and parsed.edit:
             if not parsed.test or len(parsed.test) != 1:
                 sys.exit('--edit requires exactly one test')
@@ -1198,7 +1333,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='The BGP swiss army knife of networking functional testing tool')
     subparser = parser.add_subparsers()
 
-    add_test(subparser, 'decoding', decoding, ['list', 'short_list', 'edit', 'dry', 'timeout', 'port'])
+    add_test(
+        subparser,
+        'decoding',
+        decoding,
+        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port'],
+    )
     add_test(
         subparser,
         'encoding',
