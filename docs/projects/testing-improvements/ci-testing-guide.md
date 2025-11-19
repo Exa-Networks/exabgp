@@ -195,15 +195,19 @@ Before declaring code "fixed", "ready", "working", or "complete", you MUST verif
 ### Encoding Test Failures
 If encoding tests fail:
 1. Check the test configuration: `./qa/bin/functional encoding --list`
-2. View test details: Run with `DEBUG=1` environment variable
-3. Run server and client separately:
+2. Run server and client separately to see actual output:
    ```bash
-   # In terminal 1:
+   # In terminal 1 (start FIRST):
    ./qa/bin/functional encoding --server <test_id>
 
-   # In terminal 2:
+   # In terminal 2 (start SECOND):
    ./qa/bin/functional encoding --client <test_id>
    ```
+3. **For systematic debugging:** See `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md`
+   - Step-by-step process
+   - Output interpretation
+   - Troubleshooting common issues
+   - Advanced techniques (packet capture, logging)
 
 ### Decoding Test Failures
 If decoding tests fail:

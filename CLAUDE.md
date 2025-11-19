@@ -42,6 +42,11 @@ This protocol is mandatory due to a critical failure where 95 files were refacto
   - Test runs both client and server components
 - `./qa/bin/functional encoding --server <letter>` - Run only server component of specific test
 - `./qa/bin/functional encoding --client <letter>` - Run only client component of specific test
+  - **For systematic debugging: See `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md`**
+- `./sbin/exabgp decode -c <config> "<hex>"` - Decode BGP message hex payload to JSON
+  - Use when server shows "unexpected message" to see what was received vs expected
+  - **IMPORTANT:** Use `-c` with same config file as test (from `qa/encoding/<test>.ci`)
+  - Example: `./sbin/exabgp decode -c etc/exabgp/api-rib.conf "FFFF..."`
 - `./qa/bin/functional decoding` - Message decoding tests
 - `./qa/bin/parsing` - Configuration file parsing tests
 - `python3 setup.py sdist bdist_wheel` - Build distribution packages
@@ -85,7 +90,8 @@ All CI tests must pass:
   - Before running: `killall -9 python` to clear leftover test processes and avoid port conflicts
   - Should complete in <20 seconds; if longer, remaining tests have failed
   - Use `--list` or `--short-list` to see available tests
-  - If one test fails, run it independently with `--server <letter>` and `--client <letter>`
+  - **If tests fail:** Run `--server <letter>` and `--client <letter>` in separate terminals to see actual output
+  - **See `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` for systematic debugging process**
 - When tests fail, investigate and fix - don't just re-run
 
 **Quick test commands:**
@@ -246,20 +252,41 @@ Attribute (base with LRU caching)
 
 ## AsyncIO Support
 
-**ExaBGP now supports dual-mode operation:** traditional generator-based event loop (default) and modern asyncio-based event loop (opt-in).
+**ExaBGP supports dual-mode operation:** traditional generator-based event loop (default) and modern asyncio-based event loop (opt-in).
+
+**IMPORTANT:** Both modes are fully async (non-blocking I/O) - they differ only in expression:
+- Generator mode: Uses `yield` + `select.poll()` + custom event loop
+- Async mode: Uses `await` + asyncio event loop
+
+See `.claude/asyncio-migration/GENERATOR_VS_ASYNC_EQUIVALENCE.md` for detailed comparison.
+
+### Current Status: Phase 2 - Production Validation
+
+**Phase 1 (COMPLETE):** Implementation + 100% test parity
+**Phase 2 (IN PROGRESS):** Production validation (started 2025-11-18)
+
+**Migration timeline:** 18-36 months total
+- Phase 2: Production validation (3-6 months)
+- Phase 3: Switch default to async
+- Phase 4: Deprecate generator mode
+- Phase 5: Remove generator code
+
+See `.claude/asyncio-migration/PHASE2_PRODUCTION_VALIDATION.md` for validation plan.
 
 ### Using Async Mode
 
+**Note:** Actual environment variable is `exabgp_reactor_asyncio` (not `exabgp_asyncio_enable`)
+
 ```bash
 # Enable async mode via environment variable
-exabgp_asyncio_enable=true ./sbin/exabgp your-config.conf
+exabgp_reactor_asyncio=true ./sbin/exabgp your-config.conf
 
 # Or export it
-export exabgp_asyncio_enable=true
+export exabgp_reactor_asyncio=true
 ./sbin/exabgp your-config.conf
 ```
 
-### Test Status
+### Test Status (Phase 1)
 
 Both modes achieve 100% test parity:
 - Sync mode: 72/72 functional tests (100%), 1376/1376 unit tests (100%)
@@ -267,23 +294,24 @@ Both modes achieve 100% test parity:
 
 ### Documentation
 
-**Complete AsyncIO documentation:** See `docs/asyncio-migration/`
+**Complete AsyncIO documentation:** See `docs/projects/asyncio-migration/`
 
 **Key documents:**
-- [`docs/asyncio-migration/async-architecture.md`](docs/asyncio-migration/async-architecture.md) - How async mode works
-- [`docs/asyncio-migration/README.md`](docs/asyncio-migration/README.md) - Complete migration guide
-- [`docs/asyncio-migration/technical/api-integration.md`](docs/asyncio-migration/technical/api-integration.md) - Critical API integration details
-- [`.claude/asyncio-migration/README.md`](.claude/asyncio-migration/README.md) - Quick reference for Claude Code
+- [`docs/projects/asyncio-migration/README.md`](docs/projects/asyncio-migration/README.md) - Complete migration guide
+- [`.claude/asyncio-migration/GENERATOR_VS_ASYNC_EQUIVALENCE.md`](.claude/asyncio-migration/GENERATOR_VS_ASYNC_EQUIVALENCE.md) - Why both exist
+- [`.claude/asyncio-migration/PHASE2_PRODUCTION_VALIDATION.md`](.claude/asyncio-migration/PHASE2_PRODUCTION_VALIDATION.md) - Current phase
 
 **When to use async mode:**
 - Integrating with asyncio-based libraries
 - Need for modern async/await patterns
-- Potential performance benefits (to be benchmarked)
+- Potential performance benefits (to be validated in Phase 2)
 
 **When to use sync mode (default):**
 - Production stability (battle-tested)
 - Simpler debugging
 - Current deployments (100% backward compatible)
+
+**Both are async I/O** - the difference is syntax and event loop implementation, not functionality.
 
 ## Development Notes
 
