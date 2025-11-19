@@ -43,8 +43,9 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 | **EMOJI_GUIDE.md** | Systematic emoji usage for clarity | 1.8 KB |
 | **PLANNING_GUIDE.md** | Standards for project planning docs | 1.5 KB |
 | **CI_TESTING.md** | Complete testing requirements and commands | 3.2 KB |
+| **FUNCTIONAL_TEST_DEBUGGING_GUIDE.md** | Systematic process for debugging encoding test failures | 4.8 KB |
 
-**Total core protocols: ~20 KB**
+**Total core protocols: ~25 KB**
 
 ---
 

@@ -83,11 +83,22 @@ done
 ## Debugging
 
 ### Encoding Test Failures
+
+**Quick fix:** Run server and client in separate terminals to see actual output:
+
 ```bash
-# Run server and client separately
+# Terminal 1 (start FIRST):
 ./qa/bin/functional encoding --server <test_id>
+
+# Terminal 2 (start SECOND):
 ./qa/bin/functional encoding --client <test_id>
 ```
+
+**Systematic debugging:** See `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` for:
+- Step-by-step process
+- Output interpretation
+- Troubleshooting common issues
+- Advanced techniques (packet capture, logging)
 
 ### Port Conflicts
 ```bash
