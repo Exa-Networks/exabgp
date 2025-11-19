@@ -22,9 +22,9 @@ async def test_cancelled_error_handling():
             await asyncio.sleep(0)
     except asyncio.CancelledError:
         caught_cancelled_error = True
-        print("✅ CancelledError caught successfully")
+        print('✅ CancelledError caught successfully')
     except Exception as e:
-        print(f"❌ Unexpected exception: {e}")
+        print(f'❌ Unexpected exception: {e}')
         return False
 
     return caught_cancelled_error
@@ -33,8 +33,8 @@ async def test_cancelled_error_handling():
 if __name__ == '__main__':
     result = asyncio.run(test_cancelled_error_handling())
     if result:
-        print("✅ Test PASSED: CancelledError handling works")
+        print('✅ Test PASSED: CancelledError handling works')
         sys.exit(0)
     else:
-        print("❌ Test FAILED: CancelledError not handled")
+        print('❌ Test FAILED: CancelledError not handled')
         sys.exit(1)

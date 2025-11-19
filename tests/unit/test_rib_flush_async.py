@@ -14,7 +14,7 @@ from collections import deque
 
 # Mock logger to avoid initialization issues
 import sys
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock
 
 # Mock the option module before importing ExaBGP components
 sys.modules['exabgp.logger'] = MagicMock()
@@ -45,7 +45,7 @@ class TestRibFlushFIFOOrdering:
             'announce route 192.168.0.2/32',
             'announce route 192.168.0.3/32',
             'announce route 192.168.0.4/32',
-        ], f"Expected FIFO order, got: {results}"
+        ], f'Expected FIFO order, got: {results}'
 
     @pytest.mark.asyncio
     async def test_command_queue_lifo_would_fail(self):
@@ -99,7 +99,7 @@ class TestRibFlushFIFOOrdering:
         await scheduler._run_async()
 
         # Verify FIFO execution order
-        assert execution_order == [1, 2, 3], f"Expected [1, 2, 3], got {execution_order}"
+        assert execution_order == [1, 2, 3], f'Expected [1, 2, 3], got {execution_order}'
 
 
 class TestRibClearThenAnnounce:
@@ -129,16 +129,18 @@ class TestRibClearThenAnnounce:
             'clear_start',
             'clear_complete',
             'announce',
-        ], f"Clear must complete before announce, got: {commands_executed}"
+        ], f'Clear must complete before announce, got: {commands_executed}'
 
     @pytest.mark.asyncio
     async def test_no_interleaving_with_one_command_per_iteration(self):
         """Verify one-command-per-iteration prevents interleaving"""
         # Simulate main loop processing one command at a time
-        commands = deque([
-            ('clear', lambda: ['clear_exec']),
-            ('announce', lambda: ['announce_exec']),
-        ])
+        commands = deque(
+            [
+                ('clear', lambda: ['clear_exec']),
+                ('announce', lambda: ['announce_exec']),
+            ]
+        )
 
         execution_log = []
 
@@ -157,8 +159,9 @@ class TestRibClearThenAnnounce:
             result = cmd_func()
             execution_log.extend(result)
 
-        assert execution_log == ['clear_exec', 'announce_exec'], \
-            f"Commands must execute sequentially, got: {execution_log}"
+        assert execution_log == ['clear_exec', 'announce_exec'], (
+            f'Commands must execute sequentially, got: {execution_log}'
+        )
 
 
 class TestRibMultipleFlushSequence:
@@ -279,7 +282,7 @@ class TestRibStateConsistency:
         pending_routes.clear()
 
         # Expected: Route 0.0 never sent (cleared before transmission)
-        assert len(pending_routes) == 0, "Route should be cancelled before send"
+        assert len(pending_routes) == 0, 'Route should be cancelled before send'
 
     @pytest.mark.asyncio
     async def test_announce_wait_then_clear(self):
