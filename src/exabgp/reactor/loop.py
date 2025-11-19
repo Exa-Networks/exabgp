@@ -167,10 +167,16 @@ class Reactor:
         - Monitors task completion/failure
         - Handles peer removal when tasks complete
         - Coordinates concurrent peer execution
+        - Applies rate limiting (matches sync mode line 565)
         """
         # Start all active peers as async tasks
         for key in self.active_peers():
             peer = self._peers[key]
+
+            # Limit the number of message handling per second (matches sync mode)
+            if self._rate_limited(key, peer.neighbor['rate-limit']):
+                continue
+
             if not hasattr(peer, '_async_task') or peer._async_task is None:
                 peer.start_async_task()
 
@@ -253,15 +259,21 @@ class Reactor:
                         self.listener.new_connections(),
                     )
 
-                # Run all peers concurrently
+                # Run all peers concurrently (matches sync mode line 563-597)
                 await self._run_async_peers()
 
-                # Process API commands (using async version with event loop integration)
+                # Process API commands (matches sync mode line 600-602)
+                # Read at least one message per process if there is some and parse it
                 for service, command in self.processes.received_async():
                     self.api.process(self, service, command)
 
-                # Run async scheduled tasks
-                self.asynchronous.run()
+                # Run async scheduled tasks (matches sync mode line 604)
+                # Must use _run_async() instead of run() since event loop is already running
+                if self.asynchronous._async:
+                    await self.asynchronous._run_async()
+
+                # Flush API process write queue (send ACKs and responses)
+                await self.processes.flush_write_queue_async()
 
                 # Yield control to peer tasks (minimal sleep)
                 # asyncio event loop handles I/O waiting automatically

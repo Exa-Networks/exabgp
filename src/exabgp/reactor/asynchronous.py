@@ -85,40 +85,79 @@ class ASYNC:
             return asyncio.run(self._run_async())
 
     async def _run_async(self) -> bool:
-        """Execute scheduled callbacks (supports both generators and coroutines)"""
+        """Execute scheduled callbacks (supports both generators and coroutines)
+
+        For generators: processes up to LIMIT iterations, then re-queues if not exhausted
+        For coroutines: executes ALL pending coroutines until queue is empty
+        """
         if not self._async:
             return False
 
-        # length = range(min(len(self._async),self.LIMIT))
-        length = range(self.LIMIT)
-        uid, callback = self._async.popleft()
+        # Check if we have a mix of generators and coroutines
+        first_uid, first_callback = self._async[0]
 
-        for _ in length:
-            try:
-                # Support both old (generator) and new (coroutine) style
-                if inspect.isgenerator(callback):
-                    # Old style: resume generator
-                    next(callback)
-                elif inspect.iscoroutine(callback):
-                    # New style: await coroutine
-                    await callback
-                elif inspect.iscoroutinefunction(callback):
-                    # Coroutine function that needs to be called first
-                    await callback()
-                else:
-                    # Fallback to generator behavior
-                    next(callback)
-            except StopIteration:
-                if not self._async:
-                    return False
+        if inspect.iscoroutine(first_callback) or inspect.iscoroutinefunction(first_callback):
+            # Process ALL coroutines in the queue atomically
+            # This ensures commands sent together (like "announce\nclear\n") are
+            # executed atomically before peers read the RIB
+            while self._async:
                 uid, callback = self._async.popleft()
-            except Exception as exc:
-                log.error(lambda uid=uid: f'async | {uid} | problem with function', 'reactor')
-                for line in str(exc).split('\n'):
-                    log.error(lambda line=line, uid=uid: f'async | {uid} | {line}', 'reactor')
-                if not self._async:
-                    return False
-                uid, callback = self._async.popleft()
+                try:
+                    if inspect.iscoroutine(callback):
+                        await callback
+                    elif inspect.iscoroutinefunction(callback):
+                        await callback()
+                    else:
+                        # Mixed queue - shouldn't happen, but handle gracefully
+                        # Put it back and switch to generator processing
+                        self._async.appendleft((uid, callback))
+                        break
+                except Exception as exc:
+                    log.error(lambda uid=uid: f'async | {uid} | problem with function', 'reactor')
+                    for line in str(exc).split('\n'):
+                        log.error(lambda line=line, uid=uid: f'async | {uid} | {line}', 'reactor')
+                    # Continue to next callback even if one fails
+            return False  # All coroutines processed
+        else:
+            # Original generator processing logic
+            # length = range(min(len(self._async),self.LIMIT))
+            length = range(self.LIMIT)
+            uid, callback = self._async.popleft()
 
-        self._async.appendleft((uid, callback))
-        return True
+            for _ in length:
+                try:
+                    # Check if current callback is a coroutine (mixed queue case)
+                    if inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback):
+                        # Found coroutine in generator processing - handle it
+                        if inspect.iscoroutine(callback):
+                            await callback
+                        elif inspect.iscoroutinefunction(callback):
+                            await callback()
+                        # Coroutine completed - pop next callback
+                        if not self._async:
+                            return False
+                        uid, callback = self._async.popleft()
+                    elif inspect.isgenerator(callback):
+                        # Old style: resume generator (may yield multiple times)
+                        next(callback)
+                    else:
+                        # Fallback to generator behavior
+                        next(callback)
+                except StopIteration:
+                    # Generator exhausted - pop next callback
+                    if not self._async:
+                        return False
+                    uid, callback = self._async.popleft()
+                except Exception as exc:
+                    log.error(lambda uid=uid: f'async | {uid} | problem with function', 'reactor')
+                    for line in str(exc).split('\n'):
+                        log.error(lambda line=line, uid=uid: f'async | {uid} | {line}', 'reactor')
+                    # Error occurred - pop next callback
+                    if not self._async:
+                        return False
+                    uid, callback = self._async.popleft()
+
+            # Only generators should be put back (they may not be exhausted)
+            if inspect.isgenerator(callback):
+                self._async.appendleft((uid, callback))
+            return True

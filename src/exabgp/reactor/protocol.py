@@ -668,16 +668,56 @@ class Protocol:
             log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())
         yield _UPDATE
 
-    async def new_update_async(self, include_withdraw: bool) -> Update:
-        """Async version of new_update - send BGP UPDATE messages"""
+    async def new_update_async_generator(self, include_withdraw: bool):
+        """Async generator version of new_update - yields control between sending messages
+
+        This matches the sync version's behavior where the generator is created once and
+        iterated over multiple event loop cycles, preserving RIB state correctly.
+
+        The sync version yields for each send() operation. We yield once per message sent.
+        """
+        log.debug(lambda: '[Protocol.new_update_async_generator] CALLED', self.connection.session())
         updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
         number: int = 0
         for update in updates:
             for message in update.messages(self.negotiated, include_withdraw):
                 number += 1
+                log.debug(
+                    lambda number=number,
+                    message=message: f'[Protocol.new_update_async_generator] Sending message #{number}: {message}',
+                    self.connection.session(),
+                )
+                # Send message using async I/O
+                await self.send_async(message)
+                # Yield control after each message (matches sync version yielding _NOP)
+                yield
+        if number:
+            log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())
+        log.debug(
+            lambda: f'[Protocol.new_update_async_generator] DONE - sent {number} messages', self.connection.session()
+        )
+
+    async def new_update_async(self, include_withdraw: bool) -> Update:
+        """Async version of new_update - send BGP UPDATE messages (legacy, runs to completion)"""
+        log.debug(lambda: '[Protocol.new_update_async] CALLED - calling rib.updates()', self.connection.session())
+        updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
+        log.debug(lambda: '[Protocol.new_update_async] GOT updates generator, iterating...', self.connection.session())
+        number: int = 0
+        for update in updates:
+            log.debug(
+                lambda update=update: f'[Protocol.new_update_async] Processing update: {update}',
+                self.connection.session(),
+            )
+            for message in update.messages(self.negotiated, include_withdraw):
+                number += 1
+                log.debug(
+                    lambda number=number: f'[Protocol.new_update_async] Sending message #{number}',
+                    self.connection.session(),
+                )
                 await self.send_async(message)
         if number:
             log.debug(lambda: '>> %d UPDATE(s)' % number, self.connection.session())
+        log.debug(lambda: f'[Protocol.new_update_async] DONE - sent {number} messages total', self.connection.session())
         return _UPDATE
 
     def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Union[EOR, NOP], None, None]:

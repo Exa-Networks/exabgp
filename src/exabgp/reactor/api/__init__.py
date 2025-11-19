@@ -57,6 +57,16 @@ class API(Command):
             use_json = True
         return self.response(reactor, service, command, use_json)
 
+    async def process_async(self, reactor: 'Reactor', service: str, command: str) -> bool:
+        """Async version of process() - handles API commands in async mode
+
+        Uses async write methods to prevent blocking the event loop.
+        """
+        use_json = False
+        if 'json' in command.split(' '):
+            use_json = True
+        return await self.response_async(reactor, service, command, use_json)
+
     def response(self, reactor: 'Reactor', service: str, command: str, use_json: bool) -> bool:
         api = 'json' if use_json else 'text'
         for registered in self.functions:
@@ -65,6 +75,30 @@ class API(Command):
                 return handler(self, reactor, service, command, use_json)  # type: ignore[no-any-return]
         reactor.processes.answer_error(service)
         log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')
+        return False
+
+    async def response_async(self, reactor: 'Reactor', service: str, command: str, use_json: bool) -> bool:
+        """Async version of response() - handles API commands without blocking
+
+        With non-blocking stdin, sync handlers won't block the event loop.
+        The write() method handles EAGAIN gracefully in async mode.
+        After calling the handler, flush any queued writes immediately.
+        """
+        api = 'json' if use_json else 'text'
+        for registered in self.functions:
+            if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
+                handler = cast(Callable, self.callback[api][registered])
+                # Call sync handler - with non-blocking stdin, write() won't block
+                result = handler(self, reactor, service, command, use_json)  # type: ignore[no-any-return]
+                # Flush any queued writes immediately (for commands like enable-ack/disable-ack
+                # that call answer_done() without scheduling async callbacks)
+                await reactor.processes.flush_write_queue_async()
+                return result
+        # Error case
+        reactor.processes.answer_error(service)
+        log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')
+        # Flush error response
+        await reactor.processes.flush_write_queue_async()
         return False
 
     def api_route(self, command: str) -> List[Change]:

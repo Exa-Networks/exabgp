@@ -797,106 +797,147 @@ class Peer:
         # from the previous time
         previous = self.neighbor.previous.changes if self.neighbor.previous else []
         current = self.neighbor.changes
+        routes_per_iteration = 1 if self.neighbor['rate-limit'] > 0 else 25
         self.neighbor.rib.outgoing.replace_restart(previous, current)
         self.neighbor.previous = None
 
         self._delay.reset()
-        while not self._teardown:
-            # we are here following a configuration change
-            if self._neighbor:
-                # see what changed in the configuration
-                previous = self._neighbor.previous.changes
-                current = self._neighbor.changes
-                self.neighbor.rib.outgoing.replace_reload(previous, current)
-                # do not keep the previous routes in memory as they are not useful anymore
-                self._neighbor.previous = None
-                self._neighbor = None
+        log.debug(lambda: '[ASYNC] Entering main loop', self.id())
+        try:
+            while not self._teardown:
+                # we are here following a configuration change
+                if self._neighbor:
+                    # see what changed in the configuration
+                    previous = self._neighbor.previous.changes
+                    current = self._neighbor.changes
+                    self.neighbor.rib.outgoing.replace_reload(previous, current)
+                    # do not keep the previous routes in memory as they are not useful anymore
+                    self._neighbor.previous = None
+                    self._neighbor = None
 
-            # Read message using async I/O
-            message = await self.proto.read_message_async()
-            self.recv_timer.check_ka(message)
+                # Read message using async I/O with timeout to yield control periodically
+                # This matches generator mode's behavior where read_message() yields NOP when blocked
+                try:
+                    message = await asyncio.wait_for(self.proto.read_message_async(), timeout=0.1)
+                except asyncio.TimeoutError:
+                    # No message within timeout - set to NOP and continue to outbound checks
+                    # This matches generator mode where loop body executes even for NOP
+                    message = NOP
+                    await asyncio.sleep(0)
 
-            if send_ka() is not False:
-                # we need and will send a keepalive
-                while send_ka() is None:
+                # NOP means no data - continue to outbound checks (matches generator mode)
+                # Generator mode executes loop body for NOP, so we must too
+
+                self.recv_timer.check_ka(message)
+
+                if send_ka() is not False:
+                    # we need and will send a keepalive
+                    while send_ka() is None:
+                        await asyncio.sleep(0)  # Yield control like ACTION.NOW
+                for counter_line in self.stats.changed_statistics():
+                    log.info(lambda counter_line=counter_line: counter_line, 'statistics')
+
+                # Received update
+                if message.TYPE == Update.TYPE:
+                    number += 1
+                    log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())
+
+                    for nlri in message.nlris:
+                        self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
+                        log.debug(
+                            lazyformat('   UPDATE #%d nlri ' % number, nlri, str),
+                            self.id(),
+                        )
+
+                elif message.TYPE == RouteRefresh.TYPE:
+                    enhanced = message.reserved == RouteRefresh.request
+                    enhanced = enhanced and refresh_enhanced
+                    self.resend(enhanced, (message.afi, message.safi))
+
+                # SEND OPERATIONAL
+                if self.neighbor['capability']['operational']:
+                    if not operational:
+                        new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
+                        if new_operational:
+                            # Use async version
+                            await self.proto.new_operational_async(new_operational, self.proto.negotiated)  # type: ignore[union-attr,arg-type]
+                            operational = None  # Mark as sent
+                # make sure that if some operational message are received via the API
+                # that we do not eat memory for nothing
+                elif self.neighbor.messages:
+                    self.neighbor.messages.popleft()
+
+                # SEND REFRESH
+                if self.neighbor['capability']['route-refresh']:
+                    if not refresh:
+                        new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
+                        if new_refresh:
+                            # Use async version
+                            await self.proto.new_refresh_async(new_refresh)  # type: ignore[union-attr,arg-type]
+                            refresh = None  # Mark as sent
+
+                # Need to send update
+                if not new_routes and self.neighbor.rib.outgoing.pending():
+                    # Create the updates generator ONCE (matches sync version behavior)
+                    log.debug(lambda: '[PEER] pending()=True, creating new_routes generator', self.id())
+                    new_routes = self.proto.new_update_async_generator(include_withdraw)
+
+                if new_routes:
+                    try:
+                        # Process routes_per_iteration messages from the generator (matches sync version)
+                        for _ in range(routes_per_iteration):
+                            await new_routes.__anext__()
+                            # Yield control to allow async API readers to process commands
+                            # This is critical - without this, all API commands get buffered
+                            # and processed together, causing wrong RIB state
+                            await asyncio.sleep(0)
+                    except StopAsyncIteration:
+                        log.debug(lambda: '[PEER] new_routes generator exhausted', self.id())
+                        new_routes = None
+                        include_withdraw = True
+
+                elif send_eor:
+                    send_eor = False
+                    await self.proto.new_eors_async()
+                    log.debug(lambda: '>> all EOR(s) sent', self.id())
+
+                # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
+                elif not command_eor and self.neighbor.eor:
+                    new_eor = self.neighbor.eor.popleft()
+                    await self.proto.new_eors_async(new_eor.afi, new_eor.safi)
+                    command_eor = None  # Mark as sent
+
+                if (
+                    new_routes
+                    or message.TYPE != NOP.TYPE
+                    or self.neighbor.messages
+                    or operational
+                    or self.neighbor.eor
+                    or command_eor
+                ):
                     await asyncio.sleep(0)  # Yield control like ACTION.NOW
-            for counter_line in self.stats.changed_statistics():
-                log.info(lambda counter_line=counter_line: counter_line, 'statistics')
+                else:
+                    await asyncio.sleep(0.001)  # Slightly longer sleep for ACTION.LATER
 
-            # Received update
-            if message.TYPE == Update.TYPE:
-                number += 1
-                log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())
+                    # read_message will loop until new message arrives with NOP
+                    if self._teardown:
+                        log.debug(lambda: f'[ASYNC] Loop exiting: _teardown={self._teardown}', self.id())
+                        break
 
-                for nlri in message.nlris:
-                    self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
-                    log.debug(
-                        lazyformat('   UPDATE #%d nlri ' % number, nlri, str),
-                        self.id(),
-                    )
-
-            elif message.TYPE == RouteRefresh.TYPE:
-                enhanced = message.reserved == RouteRefresh.request
-                enhanced = enhanced and refresh_enhanced
-                self.resend(enhanced, (message.afi, message.safi))
-
-            # SEND OPERATIONAL
-            if self.neighbor['capability']['operational']:
-                if not operational:
-                    new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
-                    if new_operational:
-                        # Use async version
-                        await self.proto.new_operational_async(new_operational, self.proto.negotiated)  # type: ignore[union-attr,arg-type]
-                        operational = None  # Mark as sent
-            # make sure that if some operational message are received via the API
-            # that we do not eat memory for nothing
-            elif self.neighbor.messages:
-                self.neighbor.messages.popleft()
-
-            # SEND REFRESH
-            if self.neighbor['capability']['route-refresh']:
-                if not refresh:
-                    new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
-                    if new_refresh:
-                        # Use async version
-                        await self.proto.new_refresh_async(new_refresh)  # type: ignore[union-attr,arg-type]
-                        refresh = None  # Mark as sent
-
-            # Need to send update
-            if not new_routes and self.neighbor.rib.outgoing.pending():
-                # Use async version
-                await self.proto.new_update_async(include_withdraw)
-                new_routes = None
-                include_withdraw = True
-
-            elif send_eor:
-                send_eor = False
-                await self.proto.new_eors_async()
-                log.debug(lambda: '>> all EOR(s) sent', self.id())
-
-            # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
-            elif not command_eor and self.neighbor.eor:
-                new_eor = self.neighbor.eor.popleft()
-                await self.proto.new_eors_async(new_eor.afi, new_eor.safi)
-                command_eor = None  # Mark as sent
-
-            if (
-                new_routes
-                or message.TYPE != NOP.TYPE
-                or self.neighbor.messages
-                or operational
-                or self.neighbor.eor
-                or command_eor
-            ):
-                await asyncio.sleep(0)  # Yield control like ACTION.NOW
-            else:
-                await asyncio.sleep(0.001)  # Slightly longer sleep for ACTION.LATER
-
-            # read_message will loop until new message arrives with NOP
-            if self._teardown:
-                break
+        except NetworkError as exc:
+            # Normal network errors (connection closed, etc.) - log message only, no traceback
+            log.debug(lambda exc=exc: f'[ASYNC] Network error: {exc}', self.id())
+            raise
+        except Exception as exc:
+            # Unexpected exceptions - log message only
+            log.error(lambda exc=exc: f'[ASYNC] Exception in main loop: {exc}', self.id())
+            raise
 
         # If graceful restart, silent shutdown
+        log.debug(
+            lambda: f'[ASYNC] After loop: graceful-restart={self.neighbor["capability"]["graceful-restart"]}, announced={self.proto.negotiated.sent_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART) if self.proto else None}',
+            self.id(),
+        )
         if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
             Capability.CODE.GRACEFUL_RESTART,
         ):
