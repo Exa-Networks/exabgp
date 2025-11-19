@@ -226,6 +226,13 @@ class OutgoingRIB(Cache):
         self._new_attr_af_nlri = {}
         self._new_attribute = {}
 
+        # Snapshot and clear refresh state to prevent race conditions
+        # (resend() can be called during iteration and would modify these)
+        refresh_families = self._refresh_families
+        refresh_changes = self._refresh_changes
+        self._refresh_families = set()
+        self._refresh_changes = []
+
         # generating Updates from what is in the RIB
         for attr_index, per_family in attr_af_nlri.items():
             for family, changes in per_family.items():
@@ -251,15 +258,13 @@ class OutgoingRIB(Cache):
                 for change in changes.values():
                     yield Update([change.nlri], attributes)
 
-        # Route Refresh
+        # Route Refresh - use snapshots to avoid modification during iteration
 
-        for afi, safi in self._refresh_families:
+        for afi, safi in refresh_families:
             yield RouteRefresh(afi, safi, RouteRefresh.start)
 
-        for change in self._refresh_changes:
+        for change in refresh_changes:
             yield Update([change.nlri], change.attributes)
-        self._refresh_changes = []
 
-        for afi, safi in self._refresh_families:
+        for afi, safi in refresh_families:
             yield RouteRefresh(afi, safi, RouteRefresh.end)
-        self._refresh_families = set()
