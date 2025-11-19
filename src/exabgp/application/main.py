@@ -41,7 +41,7 @@ def main():
 
     # compatibility with exabgp 4.x
     if len(sys.argv) > 1 and not ('-h' in sys.argv or '--help' in sys.argv):
-        if sys.argv[1] not in ('version', 'cli', 'healthcheck', 'decode', 'server', 'env', 'validate'):
+        if sys.argv[1] not in ('version', 'cli', 'clii', 'healthcheck', 'decode', 'server', 'env', 'validate'):
             sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
 
     formatter = argparse.RawDescriptionHelpFormatter
@@ -56,6 +56,17 @@ def main():
     sub = subparsers.add_parser('cli', help='control a running exabgp server instance', description=cli.__doc__)
     sub.set_defaults(func=cli.cmdline)
     cli.setargs(sub)
+
+    sub = subparsers.add_parser(
+        'clii', help='interactive CLI (same as cli with no arguments)', description='Interactive REPL mode'
+    )
+    sub.set_defaults(
+        func=lambda args: cli.cmdline_interactive(
+            args.pipename if hasattr(args, 'pipename') else 'exabgp', 'exabgp', False, args
+        )
+    )
+    sub.add_argument('--pipename', dest='pipename', metavar='NAME', help='Name of the pipe')
+    sub.add_argument('--no-color', dest='no_color', action='store_true', help='Disable colored output')
 
     sub = subparsers.add_parser(
         'healthcheck',
