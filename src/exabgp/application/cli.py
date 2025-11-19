@@ -115,25 +115,45 @@ def setargs(sub):
     transport_group = sub.add_mutually_exclusive_group()
     transport_group.add_argument('--pipe', dest='use_pipe', action='store_true', help='Use named pipe transport (default: Unix socket)')
     transport_group.add_argument('--socket', dest='use_socket', action='store_true', help='Use Unix socket transport (default)')
-    sub.add_argument('command', nargs='*', help='command to run on the router')
+    sub.add_argument('--batch', dest='batch_file', metavar='FILE', help='Execute commands from file (or stdin if "-")')
+    sub.add_argument('--no-color', dest='no_color', action='store_true', help='Disable colored output')
+    sub.add_argument('command', nargs='*', help='command to run (omit for interactive mode)')
     # fmt:on
 
 
-def send_command_socket(socket_path, command_str):
-    """Send command via Unix socket and receive response."""
+def send_command_socket(socket_path, command_str, return_output=False):
+    """
+    Send command via Unix socket and receive response.
+
+    Args:
+        socket_path: Path to Unix socket
+        command_str: Command to send
+        return_output: If True, return output as string instead of printing
+
+    Returns:
+        Output string if return_output=True, None otherwise
+    """
+    output_lines = []
+
     try:
         client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
         client.settimeout(COMMAND_TIMEOUT)
         client.connect(socket_path)
     except sock.error as exc:
+        error_msg = ''
         if exc.errno == errno.ENOENT:
-            sys.stdout.write('ExaBGP is not running / Unix socket not found\n')
+            error_msg = 'ExaBGP is not running / Unix socket not found\n'
         elif exc.errno == errno.ECONNREFUSED:
-            sys.stdout.write('ExaBGP is not accepting connections on Unix socket\n')
+            error_msg = 'ExaBGP is not accepting connections on Unix socket\n'
         else:
-            sys.stdout.write(f'could not connect to ExaBGP Unix socket ({exc})\n')
-        sys.stdout.flush()
-        sys.exit(1)
+            error_msg = f'could not connect to ExaBGP Unix socket ({exc})\n'
+
+        if return_output:
+            raise ConnectionError(error_msg.strip())
+        else:
+            sys.stdout.write(error_msg)
+            sys.stdout.flush()
+            sys.exit(1)
 
     try:
         # Send command
@@ -160,40 +180,59 @@ def send_command_socket(socket_path, command_str):
                         done = True
                         break
                     if string == Answer.text_shutdown or string == Answer.json_shutdown:
-                        sys.stderr.write('ExaBGP is shutting down, command aborted\n')
-                        sys.stderr.flush()
+                        error_msg = 'ExaBGP is shutting down, command aborted\n'
+                        if return_output:
+                            raise RuntimeError(error_msg.strip())
+                        else:
+                            sys.stderr.write(error_msg)
+                            sys.stderr.flush()
                         done = True
                         break
                     if string == Answer.text_error or string == Answer.json_error:
                         done = True
-                        sys.stderr.write("ExaBGP returns an error (see ExaBGP's logs for more information)\n")
-                        sys.stderr.write('use help for a list of available commands\n')
-                        sys.stderr.flush()
+                        error_msg = "ExaBGP returns an error (see ExaBGP's logs for more information)\n"
+                        if return_output:
+                            raise RuntimeError(error_msg.strip())
+                        else:
+                            sys.stderr.write(error_msg)
+                            sys.stderr.write('use help for a list of available commands\n')
+                            sys.stderr.flush()
                         break
 
-                    sys.stdout.write(f'{string}\n')
-                    sys.stdout.flush()
+                    if return_output:
+                        output_lines.append(string)
+                    else:
+                        sys.stdout.write(f'{string}\n')
+                        sys.stdout.flush()
 
             except sock.timeout:
-                sys.stderr.write('\n')
-                sys.stderr.write('warning: no end of command message received\n')
-                sys.stderr.write(
-                    'warning: normal if exabgp.api.ack is set to false otherwise some data may get stuck\n',
-                )
-                sys.stderr.flush()
+                warning_msg = '\nwarning: no end of command message received\nwarning: normal if exabgp.api.ack is set to false otherwise some data may get stuck\n'
+                if return_output:
+                    # Don't raise for timeout in interactive mode, just return what we got
+                    pass
+                else:
+                    sys.stderr.write(warning_msg)
+                    sys.stderr.flush()
                 break
             except sock.error as exc:
                 if exc.errno in errno_block:
                     continue
-                sys.stdout.write(f'could not read response from ExaBGP ({exc})\n')
-                sys.stdout.flush()
-                sys.exit(1)
+                error_msg = f'could not read response from ExaBGP ({exc})\n'
+                if return_output:
+                    raise IOError(error_msg.strip())
+                else:
+                    sys.stdout.write(error_msg)
+                    sys.stdout.flush()
+                    sys.exit(1)
 
     finally:
         try:
             client.close()
         except Exception:
             pass
+
+    if return_output:
+        return '\n'.join(output_lines)
 
 
 def main():
@@ -223,12 +262,18 @@ def cmdline(cmdarg):
     pipename = cmdarg.pipename if cmdarg.pipename else getenv().api.pipename
     socketname = getenv().api.socketname
 
+    # Check for batch mode (batch_file should be a string)
+    batch_file = getattr(cmdarg, 'batch_file', None)
+    if batch_file and isinstance(batch_file, str):
+        cmdline_batch(batch_file, pipename, socketname, use_pipe_transport, cmdarg)
+        sys.exit(0)
+
     command = cmdarg.command
 
+    # Check for interactive mode (no command provided)
     if command == []:
-        sys.stdout.write('no commmand provided, sending "help"\n')
-        sys.stdout.flush()
-        command = ['help']
+        cmdline_interactive(pipename, socketname, use_pipe_transport, cmdarg)
+        sys.exit(0)
 
     # Process command shortcuts/nicknames (common to both transports)
     renamed = ['']
@@ -308,7 +353,200 @@ def cmdline(cmdarg):
         cmdline_socket(socketname, sending)
 
 
-def cmdline_socket(socketname, sending):
+def cmdline_interactive(pipename, socketname, use_pipe_transport, cmdarg):
+    """Enter interactive REPL mode."""
+    # Import here to avoid overhead for one-shot commands
+    from exabgp.application.cli_interactive import InteractiveCLI
+
+    # Setup environment
+    if hasattr(cmdarg, 'no_color') and cmdarg.no_color:
+        os.environ['NO_COLOR'] = '1'
+
+    # Create command sender function
+    def send_command(command_str):
+        # Apply shortcut expansion (reuse existing logic)
+        renamed = ['']
+        tokens = command_str.split()
+
+        for pos, token in enumerate(tokens):
+            for nickname, name, match in (
+                ('a', 'announce', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
+                ('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+                ('c', 'configuration', lambda pos, pre: True),
+                ('e', 'eor', lambda pos, pre: pre[-1] == 'announce'),
+                ('e', 'extensive', lambda _, pre: 'show' in pre),
+                ('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+                ('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
+                ('h', 'help', lambda pos, pre: pos == 0),
+                ('i', 'in', lambda pos, pre: pre[-1] == 'adj-rib'),
+                ('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
+                ('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
+                ('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
+                ('s', 'show', lambda pos, pre: pos == 0),
+                ('t', 'teardown', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
+                ('s', 'summary', lambda pos, pre: pos != 0),
+                ('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+                ('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
+                ('o', 'out', lambda pos, pre: pre[-1] == 'adj-rib'),
+                ('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear', 'flush', 'show']),
+                ('w', 'withdraw', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
+                ('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+                ('neighbour', 'neighbor', lambda pos, pre: True),
+                ('neigbour', 'neighbor', lambda pos, pre: True),
+                ('neigbor', 'neighbor', lambda pos, pre: True),
+            ):
+                if (token == nickname or name.startswith(token)) and match(pos, renamed):
+                    renamed.append(name)
+                    break
+            else:
+                renamed.append(token)
+
+        expanded_command = ' '.join(renamed).strip()
+
+        # Send via appropriate transport
+        if use_pipe_transport:
+            # Not supported in interactive mode (pipes are blocking)
+            raise RuntimeError('Interactive mode not supported with pipe transport. Use --socket instead.')
+        else:
+            sockets = unix_socket(ROOT, socketname)
+            if len(sockets) != 1:
+                raise ConnectionError(f"Could not find ExaBGP's Unix socket ({socketname}.sock)")
+
+            socket_path = sockets[0] + socketname + '.sock'
+
+            if not os.path.exists(socket_path):
+                raise ConnectionError(f'Could not find Unix socket: {socket_path}')
+
+            return send_command_socket(socket_path, expanded_command, return_output=True)
+
+    # Run interactive CLI
+    try:
+        cli = InteractiveCLI(send_command)
+        cli.run()
+    except KeyboardInterrupt:
+        print()  # Newline after ^C
+    except Exception as exc:
+        sys.stderr.write(f'Interactive mode error: {exc}\n')
+        sys.exit(1)
+
+
+def cmdline_batch(batch_file, pipename, socketname, use_pipe_transport, cmdarg):
+    """Execute commands from file or stdin."""
+    # Read commands from file or stdin
+    if batch_file == '-':
+        # Read from stdin
+        command_source = sys.stdin
+        source_name = 'stdin'
+    else:
+        # Read from file
+        if not os.path.exists(batch_file):
+            sys.stderr.write(f'Batch file not found: {batch_file}\n')
+            sys.exit(1)
+        try:
+            command_source = open(batch_file, 'r')
+            source_name = batch_file
+        except IOError as exc:
+            sys.stderr.write(f'Could not open batch file: {exc}\n')
+            sys.exit(1)
+
+    sys.stdout.write(f'Executing commands from {source_name}...\n')
+    sys.stdout.flush()
+
+    # Process commands line by line
+    line_num = 0
+    errors = 0
+
+    try:
+        for line in command_source:
+            line_num += 1
+            command = line.strip()
+
+            # Skip empty lines and comments
+            if not command or command.startswith('#'):
+                continue
+
+            sys.stdout.write(f'\n[{line_num}] {command}\n')
+            sys.stdout.flush()
+
+            # Execute command (reuse one-shot logic)
+            # Process shortcuts
+            renamed = ['']
+            tokens = command.split()
+
+            for pos, token in enumerate(tokens):
+                for nickname, name, match in (
+                    (
+                        'a',
+                        'announce',
+                        lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0,
+                    ),
+                    ('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+                    ('c', 'configuration', lambda pos, pre: True),
+                    ('e', 'eor', lambda pos, pre: pre[-1] == 'announce'),
+                    ('e', 'extensive', lambda _, pre: 'show' in pre),
+                    ('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+                    (
+                        'f',
+                        'flush',
+                        lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0,
+                    ),
+                    ('h', 'help', lambda pos, pre: pos == 0),
+                    ('i', 'in', lambda pos, pre: pre[-1] == 'adj-rib'),
+                    ('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
+                    ('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
+                    ('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
+                    ('s', 'show', lambda pos, pre: pos == 0),
+                    (
+                        't',
+                        'teardown',
+                        lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0,
+                    ),
+                    ('s', 'summary', lambda pos, pre: pos != 0),
+                    ('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+                    ('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
+                    ('o', 'out', lambda pos, pre: pre[-1] == 'adj-rib'),
+                    ('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear', 'flush', 'show']),
+                    (
+                        'w',
+                        'withdraw',
+                        lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0,
+                    ),
+                    ('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
+                    ('neighbour', 'neighbor', lambda pos, pre: True),
+                    ('neigbour', 'neighbor', lambda pos, pre: True),
+                    ('neigbor', 'neighbor', lambda pos, pre: True),
+                ):
+                    if (token == nickname or name.startswith(token)) and match(pos, renamed):
+                        renamed.append(name)
+                        break
+                else:
+                    renamed.append(token)
+
+            sending = ' '.join(renamed).strip()
+
+            # Execute via transport (don't exit on error, continue with next command)
+            try:
+                if use_pipe_transport:
+                    cmdline_pipe(pipename, sending, exit_on_completion=False)
+                else:
+                    cmdline_socket(socketname, sending, exit_on_completion=False)
+            except Exception as exc:
+                sys.stderr.write(f'Error executing command: {exc}\n')
+                errors += 1
+
+    finally:
+        if batch_file != '-':
+            command_source.close()
+
+    # Summary
+    sys.stdout.write(f'\nBatch execution complete: {line_num} commands, {errors} errors\n')
+    sys.stdout.flush()
+
+    if errors > 0:
+        sys.exit(1)
+
+
+def cmdline_socket(socketname, sending, exit_on_completion=True):
     """Execute command via Unix socket transport."""
     sockets = unix_socket(ROOT, socketname)
     if len(sockets) != 1:
@@ -316,7 +554,10 @@ def cmdline_socket(socketname, sending):
         sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
         sys.stdout.write('\n - '.join(sockets))
         sys.stdout.flush()
-        sys.exit(1)
+        if exit_on_completion:
+            sys.exit(1)
+        else:
+            raise RuntimeError('Socket not found')
 
     socket_path = sockets[0] + socketname + '.sock'
 
@@ -324,13 +565,17 @@ def cmdline_socket(socketname, sending):
     if not os.path.exists(socket_path):
         sys.stdout.write(f'could not find Unix socket to connect to ExaBGP: {socket_path}\n')
         sys.stdout.flush()
-        sys.exit(1)
+        if exit_on_completion:
+            sys.exit(1)
+        else:
+            raise RuntimeError('Socket not found')
 
-    send_command_socket(socket_path, sending)
-    sys.exit(0)
+    send_command_socket(socket_path, sending, return_output=False)
+    if exit_on_completion:
+        sys.exit(0)
 
 
-def cmdline_pipe(pipename, sending):
+def cmdline_pipe(pipename, sending, exit_on_completion=True):
     """Execute command via named pipe transport."""
     pipes = named_pipe(ROOT, pipename)
     if len(pipes) != 1:
@@ -338,7 +583,10 @@ def cmdline_pipe(pipename, sending):
         sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
         sys.stdout.write('\n - '.join(pipes))
         sys.stdout.flush()
-        sys.exit(1)
+        if exit_on_completion:
+            sys.exit(1)
+        else:
+            raise RuntimeError('Pipe not found')
 
     send = pipes[0] + pipename + '.in'
     recv = pipes[0] + pipename + '.out'
@@ -493,7 +741,8 @@ def cmdline_pipe(pipename, sending):
     except Exception:
         pass
 
-    sys.exit(0)
+    if exit_on_completion:
+        sys.exit(0)
 
 
 if __name__ == '__main__':
