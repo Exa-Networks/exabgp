@@ -16,14 +16,15 @@ Covers:
 import sys
 import os
 import asyncio
-from typing import List, Set, Tuple
-from unittest.mock import Mock, patch
+from typing import List
+from unittest.mock import Mock
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
 # Mock logger before importing RIB classes (they import logger at module level)
 from exabgp.logger.option import option
+
 mock_logger = Mock()
 mock_logger.debug = Mock()
 mock_logger.info = Mock()
@@ -31,17 +32,17 @@ mock_logger.warning = Mock()
 mock_logger.error = Mock()
 option.logger = mock_logger
 
-import pytest
+import pytest  # noqa: E402
 
-from exabgp.rib.outgoing import OutgoingRIB
-from exabgp.rib.incoming import IncomingRIB
-from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message.update.nlri.inet import INET
-from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.attribute.attributes import Attributes
-from exabgp.rib.change import Change
-from exabgp.protocol.ip import IP
-from exabgp.bgp.message import Action
+from exabgp.rib.outgoing import OutgoingRIB  # noqa: E402
+from exabgp.rib.incoming import IncomingRIB  # noqa: E402
+from exabgp.protocol.family import AFI, SAFI  # noqa: E402
+from exabgp.bgp.message.update.nlri.inet import INET  # noqa: E402
+from exabgp.bgp.message.update.nlri.cidr import CIDR  # noqa: E402
+from exabgp.bgp.message.update.attribute.attributes import Attributes  # noqa: E402
+from exabgp.rib.change import Change  # noqa: E402
+from exabgp.protocol.ip import IP  # noqa: E402
+from exabgp.bgp.message import Action  # noqa: E402
 
 
 # ==============================================================================
@@ -104,8 +105,8 @@ def test_delete_cached_family_no_crash():
     rib = OutgoingRIB(cache=True, families=families)
 
     # Add routes to multiple families
-    add_route_to_rib(rib, "192.168.0.1/32", AFI.ipv4)
-    add_route_to_rib(rib, "2001:db8::1/128", AFI.ipv6)
+    add_route_to_rib(rib, '192.168.0.1/32', AFI.ipv4)
+    add_route_to_rib(rib, '2001:db8::1/128', AFI.ipv6)
 
     # Consume to cache them
     consume_updates(rib)
@@ -136,7 +137,7 @@ def test_cached_changes_iteration_safety():
 
     # Add and cache 10 routes
     for i in range(10):
-        add_route_to_rib(rib, f"192.168.0.{i}/32")
+        add_route_to_rib(rib, f'192.168.0.{i}/32')
     consume_updates(rib)
 
     # Start iterating cached routes
@@ -148,7 +149,7 @@ def test_cached_changes_iteration_safety():
         changes.append(next(changes_iter))
 
     # Modify cache mid-iteration (simulates concurrent add)
-    new_change = create_change("192.168.0.100/32")
+    new_change = create_change('192.168.0.100/32')
     rib.update_cache(new_change)
 
     # Should NOT crash - iterator has snapshot
@@ -176,7 +177,7 @@ async def test_resend_during_updates_iteration():
     rib = OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
     # Add and send initial route to cache it
-    add_route_to_rib(rib, "192.168.0.1/32")
+    add_route_to_rib(rib, '192.168.0.1/32')
     consume_updates(rib)
 
     # Verify route is cached
@@ -185,7 +186,7 @@ async def test_resend_during_updates_iteration():
 
     # Add more routes to pending queue
     for i in range(2, 5):
-        add_route_to_rib(rib, f"192.168.0.{i}/32")
+        add_route_to_rib(rib, f'192.168.0.{i}/32')
 
     # Verify pending (should have 3 new routes: .2, .3, .4)
     assert rib.pending()
@@ -252,11 +253,11 @@ async def test_reset_during_updates():
 
     # Add routes
     for i in range(5):
-        add_route_to_rib(rib, f"192.168.0.{i}/32")
+        add_route_to_rib(rib, f'192.168.0.{i}/32')
 
     # Start consuming updates
     updates_gen = rib.updates(grouped=False)
-    update1 = next(updates_gen)
+    _ = next(updates_gen)
 
     # Simulate connection drop -> reset() is called
     rib.reset()  # Calls updates() internally
@@ -289,7 +290,7 @@ async def test_concurrent_add_del_operations():
     """
     rib = OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
-    route_change = create_change("192.168.0.1/32")
+    route_change = create_change('192.168.0.1/32')
 
     # Add route
     rib.add_to_rib(route_change)
@@ -335,7 +336,7 @@ def test_exception_during_updates_recovery():
 
     # Add routes
     for i in range(5):
-        add_route_to_rib(rib, f"192.168.0.{i}/32")
+        add_route_to_rib(rib, f'192.168.0.{i}/32')
 
     # Start consuming
     updates_gen = rib.updates(grouped=False)
@@ -349,7 +350,7 @@ def test_exception_during_updates_recovery():
 
     # RIB state should be recoverable
     # New routes should still be addable
-    add_route_to_rib(rib, "192.168.0.100/32")
+    add_route_to_rib(rib, '192.168.0.100/32')
     assert rib.pending()
 
     # Should be able to create new updates generator
@@ -405,7 +406,7 @@ def test_single_route_rib():
     rib = OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
     # Add single route
-    change = add_route_to_rib(rib, "192.168.0.1/32")
+    change = add_route_to_rib(rib, '192.168.0.1/32')
 
     # Verify pending
     assert rib.pending()
@@ -453,7 +454,7 @@ def test_large_rib_stress():
         # Generate prefix: 10.0-39.0-255.0-255/32
         octet2 = i // 256
         octet3 = i % 256
-        add_route_to_rib(rib, f"10.{octet2}.{octet3}.1/32")
+        add_route_to_rib(rib, f'10.{octet2}.{octet3}.1/32')
     elapsed_add = time.time() - start
 
     # Should complete quickly
@@ -499,7 +500,7 @@ def test_rapid_add_remove_cycles():
     """
     rib = OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
-    change = create_change("192.168.0.1/32")
+    change = create_change('192.168.0.1/32')
 
     # Perform 100 rapid cycles
     for i in range(100):
@@ -543,7 +544,7 @@ async def test_multiple_peers_same_rib():
 
     # Add routes
     for i in range(20):
-        add_route_to_rib(rib, f"192.168.0.{i}/32")
+        add_route_to_rib(rib, f'192.168.0.{i}/32')
 
     update_counts = []
 
@@ -559,11 +560,7 @@ async def test_multiple_peers_same_rib():
         update_counts.append(count)
 
     # Run 3 peers concurrently
-    await asyncio.gather(
-        peer_task(1),
-        peer_task(2),
-        peer_task(3)
-    )
+    await asyncio.gather(peer_task(1), peer_task(2), peer_task(3))
 
     # RIB should be empty and consistent after all peers done
     assert not rib.pending()
@@ -586,12 +583,12 @@ async def test_api_commands_during_peer_sending():
 
     # Add and cache routes
     for i in range(10):
-        add_route_to_rib(rib, f"192.168.0.{i}/32")
+        add_route_to_rib(rib, f'192.168.0.{i}/32')
     consume_updates(rib)
 
     # Add new pending routes
     for i in range(10, 15):
-        add_route_to_rib(rib, f"192.168.0.{i}/32")
+        add_route_to_rib(rib, f'192.168.0.{i}/32')
 
     peer_updates = []
     api_completed = False
@@ -635,7 +632,7 @@ async def test_flush_interleaving():
 
     # Add and cache routes
     for i in range(5):
-        add_route_to_rib(rib, f"192.168.0.{i}/32")
+        add_route_to_rib(rib, f'192.168.0.{i}/32')
     consume_updates(rib)
 
     async def flush_task(task_id: int):
@@ -645,11 +642,7 @@ async def test_flush_interleaving():
             await asyncio.sleep(0.001)
 
     # Run 3 flush tasks concurrently
-    await asyncio.gather(
-        flush_task(1),
-        flush_task(2),
-        flush_task(3)
-    )
+    await asyncio.gather(flush_task(1), flush_task(2), flush_task(3))
 
     # RIB should be consistent
     # _refresh_changes may have multiple copies of routes
@@ -688,8 +681,8 @@ def test_watchdog_memory_behavior():
 
     # Add routes with different watchdog names
     for i in range(10):
-        change = create_change(f"192.168.0.{i}/32")
-        watchdog_name = f"dog_{i}"
+        change = create_change(f'192.168.0.{i}/32')
+        watchdog_name = f'dog_{i}'
 
         # Add to watchdog '-' (withdrawn state)
         rib._watchdog.setdefault(watchdog_name, {}).setdefault('-', {})[change.index()] = change
@@ -699,7 +692,7 @@ def test_watchdog_memory_behavior():
 
     # Announce each watchdog (moves to '+')
     for i in range(10):
-        watchdog_name = f"dog_{i}"
+        watchdog_name = f'dog_{i}'
         if watchdog_name in rib._watchdog:
             for change in list(rib._watchdog[watchdog_name].get('-', {}).values()):
                 change.nlri.action = Action.ANNOUNCE
@@ -711,7 +704,7 @@ def test_watchdog_memory_behavior():
 
     # Withdraw each watchdog (moves back to '-')
     for i in range(10):
-        watchdog_name = f"dog_{i}"
+        watchdog_name = f'dog_{i}'
         if watchdog_name in rib._watchdog:
             for change in list(rib._watchdog[watchdog_name].get('+', {}).values()):
                 change.nlri.action = Action.WITHDRAW
@@ -735,7 +728,7 @@ def test_deepcopy_usage():
     rib = OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
     # Add route
-    change = add_route_to_rib(rib, "192.168.0.1/32")
+    change = add_route_to_rib(rib, '192.168.0.1/32')
 
     # Delete route (internally uses deepcopy)
     rib.del_from_rib(change)
@@ -765,7 +758,7 @@ def test_rib_size_bounds():
 
     # Add many routes without limit
     for i in range(1000):
-        add_route_to_rib(rib, f"10.0.{i // 256}.{i % 256}/32")
+        add_route_to_rib(rib, f'10.0.{i // 256}.{i % 256}/32')
 
     # All routes accepted (no rejection)
     assert len(rib._new_nlri) == 1000
@@ -796,8 +789,8 @@ def test_incoming_rib_basic():
     rib = IncomingRIB(cache=True, families=families)
 
     # Add changes
-    change1 = create_change("192.168.0.1/32", AFI.ipv4)
-    change2 = create_change("2001:db8::1/128", AFI.ipv6)
+    change1 = create_change('192.168.0.1/32', AFI.ipv4)
+    change2 = create_change('2001:db8::1/128', AFI.ipv6)
 
     rib.update_cache(change1)
     rib.update_cache(change2)
@@ -820,7 +813,7 @@ def test_resend_with_enhanced_refresh():
     rib = OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
     # Add and cache a route
-    add_route_to_rib(rib, "192.168.0.1/32")
+    add_route_to_rib(rib, '192.168.0.1/32')
     consume_updates(rib)
 
     # Call resend with enhanced refresh
@@ -835,7 +828,7 @@ def test_resend_with_enhanced_refresh():
     updates_gen = rib.updates(grouped=False)
 
     # Consume first update (triggers generator execution)
-    update1 = next(updates_gen)
+    _ = next(updates_gen)
 
     # At this point (after first next()), both should be cleared (moved to snapshots)
     assert len(rib._refresh_families) == 0
