@@ -34,7 +34,7 @@ class Cache:
         self._seen = {}
 
     def delete_cached_family(self, families: Set[Tuple[AFI, SAFI]]) -> None:
-        for family in self._seen.keys():
+        for family in list(self._seen.keys()):
             if family not in families:
                 del self._seen[family]
 
@@ -48,7 +48,7 @@ class Cache:
 
         # we use list() to make a snapshot of the data at the time we run the command
         for family in requested_families:
-            for change in self._seen.get(family, {}).values():
+            for change in list(self._seen.get(family, {}).values()):
                 if change.nlri.action in actions:
                     yield change
 
