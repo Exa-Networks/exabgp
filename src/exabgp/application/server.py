@@ -25,6 +25,7 @@ from exabgp.environment import ENVFILE
 from exabgp.environment import ROOT
 
 from exabgp.application.pipe import named_pipe
+from exabgp.application.unixsocket import unix_socket
 from exabgp.version import version
 
 from exabgp.bgp.message.update.attribute import Attribute
@@ -170,13 +171,26 @@ def run(comment, configurations, pid=0):
     if warning:
         log.warning(lambda: warning, 'advice')
 
-    if env.api.cli:
+    # Check if socket will be available (check for explicit disable)
+    socket_disabled = os.environ.get('exabgp_cli_socket', None) == ''
+
+    # Only check for named pipes if socket is disabled
+    if env.api.cli and socket_disabled:
         pipename = 'exabgp' if env.api.pipename is None else env.api.pipename
         pipes = named_pipe(ROOT, pipename)
-        if len(pipes) != 1:
-            env.api.cli = False
+        if len(pipes) == 1:
+            # Pipes found - enable pipe-based CLI process
+            pipe = pipes[0]
+            os.environ['exabgp_cli_pipe'] = pipe
+            os.environ['exabgp_api_pipename'] = pipename
+
+            log.info(lambda: 'named pipes for the cli are:', 'cli control')
+            log.info(lambda: f'to send commands  {pipe}{pipename}.in', 'cli control')
+            log.info(lambda: f'to read responses {pipe}{pipename}.out', 'cli control')
+        else:
+            # Socket disabled AND no pipes - show pipe setup instructions
             log.error(
-                f'could not find the named pipes ({pipename}.in and {pipename}.out) required for the cli',
+                lambda: f'could not find the named pipes ({pipename}.in and {pipename}.out) required for the cli',
                 'cli',
             )
             log.error(lambda: 'we scanned the following folders (the number is your PID):', 'cli')
@@ -191,17 +205,37 @@ def run(comment, configurations, pid=0):
 
             if os.getuid() != 0:
                 log.error(
-                    f'> chown {os.getuid()}:{os.getgid()} {os.getcwd()}/run/{pipename}.{{in,out}}',
+                    lambda: f'> chown {os.getuid()}:{os.getgid()} {os.getcwd()}/run/{pipename}.{{in,out}}',
                     'cli control',
                 )
-        else:
+    elif env.api.cli:
+        # Socket enabled - also enable pipes silently if they exist (for dual transport)
+        pipename = 'exabgp' if env.api.pipename is None else env.api.pipename
+        pipes = named_pipe(ROOT, pipename)
+        if len(pipes) == 1:
             pipe = pipes[0]
             os.environ['exabgp_cli_pipe'] = pipe
             os.environ['exabgp_api_pipename'] = pipename
+            # Don't log - socket is primary, pipes are bonus
 
-            log.info(lambda: 'named pipes for the cli are:', 'cli control')
-            log.info(lambda: f'to send commands  {pipe}{pipename}.in', 'cli control')
-            log.info(lambda: f'to read responses {pipe}{pipename}.out', 'cli control')
+    # Enable Unix socket for CLI (auto-enabled unless explicitly disabled)
+    if env.api.cli and not socket_disabled:
+        socketname = 'exabgp' if env.api.socketname is None else env.api.socketname
+        sockets = unix_socket(ROOT, socketname)
+
+        # Socket is auto-enabled: use existing location if found, otherwise use default
+        if len(sockets) == 1:
+            # Found existing socket directory
+            socket_path = sockets[0]
+            log.info(lambda: 'Unix socket for the cli (existing directory):', 'cli control')
+        else:
+            # Use default location (will be auto-created by socket process)
+            socket_path = ROOT + '/run/'
+            log.info(lambda: 'Unix socket for the cli (will be auto-created):', 'cli control')
+
+        os.environ['exabgp_cli_socket'] = socket_path
+        os.environ['exabgp_api_socketname'] = socketname
+        log.info(lambda: f'socket path: {socket_path}{socketname}.sock', 'cli control')
 
     configuration = Configuration(configurations)
 

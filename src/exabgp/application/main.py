@@ -21,12 +21,23 @@ from exabgp.application import healthcheck
 
 
 def main():
-    cli_named_pipe = os.environ.get('exabgp_cli_pipe', '')
-    if cli_named_pipe:
-        from exabgp.application.pipe import main
+    # Check if this is a CLI subprocess (pipe or socket)
+    cli_mode = os.environ.get('exabgp_api_cli_mode', '')
 
-        main(cli_named_pipe)
-        sys.exit(0)
+    if cli_mode == 'pipe':
+        cli_named_pipe = os.environ.get('exabgp_cli_pipe', '')
+        if cli_named_pipe:
+            from exabgp.application.pipe import main
+
+            main(cli_named_pipe)
+            sys.exit(0)
+    elif cli_mode == 'socket':
+        cli_unix_socket = os.environ.get('exabgp_cli_socket', '')
+        if cli_unix_socket:
+            from exabgp.application.unixsocket import main
+
+            main(cli_unix_socket)
+            sys.exit(0)
 
     # compatibility with exabgp 4.x
     if len(sys.argv) > 1 and not ('-h' in sys.argv or '--help' in sys.argv):
