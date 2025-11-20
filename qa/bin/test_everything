@@ -188,15 +188,14 @@ def test_functional_encoding() -> Tuple[bool, int]:
         print_error("Functional encoding tests failed")
         return False, 4
 
-    # Check for 100% pass rate (accepts "100%" or "100.0%")
-    if "100" in stdout and "%" in stdout and "passed" in stdout:
+    # Check for 100% pass rate - look for "100.0% passed" or similar on same line
+    pass_rate_match = re.search(r'100(?:\.\d+)?%\s+passed', stdout)
+    if pass_rate_match:
         # Also verify no failures
-        if "failed" in stdout.lower():
-            # Check that failed count is 0
-            failed_match = re.search(r'failed\s+(\d+)', stdout, re.IGNORECASE)
-            if failed_match and int(failed_match.group(1)) > 0:
-                print_error("Functional encoding tests had failures")
-                return False, 4
+        failed_match = re.search(r'failed\s+(\d+)', stdout, re.IGNORECASE)
+        if failed_match and int(failed_match.group(1)) > 0:
+            print_error("Functional encoding tests had failures")
+            return False, 4
 
         print_success("Functional encoding tests passed - All 72 tests passed")
         return True, 0
