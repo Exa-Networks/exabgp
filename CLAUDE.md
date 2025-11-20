@@ -93,7 +93,14 @@ This protocol is mandatory due to a critical failure where 95 files were refacto
 
 **MANDATORY REQUIREMENTS - Before declaring code "fixed", "ready", "working", or "complete":**
 
-You MUST run ALL of these tests and they MUST all pass:
+```bash
+# Single command to run ALL required tests
+./qa/bin/test_everything
+```
+
+This runs all 6 test suites in sequence, exits on first failure with clear error messages.
+
+**Individual test commands (for reference or debugging):**
 1. ✅ `ruff format src && ruff check src` - MUST pass with no errors
 2. ✅ `./qa/bin/functional encoding` - **Run ALL 72 tests** (NOT individual tests unless debugging)
 3. ✅ `./qa/bin/functional decoding` - **Run ALL 18 tests** (NOT individual tests unless debugging)
@@ -107,7 +114,7 @@ You MUST run ALL of these tests and they MUST all pass:
 
 **DO NOT skip any tests. DO NOT claim success without verification.**
 
-See `.claude/docs/CI_TESTING_GUIDE.md` for complete pre-merge checklist.
+See `.claude/CI_TESTING.md` for complete pre-merge checklist.
 
 All CI tests must pass:
   - Linting (ruff format + ruff check)
@@ -126,9 +133,11 @@ All CI tests must pass:
 - When tests fail, investigate and fix - don't just re-run
 
 **Quick test commands:**
-- Unit tests: `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py`
+- All tests: `./qa/bin/test_everything` (recommended - runs all 6 test suites)
+- Unit tests: `env exabgp_log_enable=false pytest ./tests/unit/`
 - Configuration validation: `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf`
 - Encoding tests: `./qa/bin/functional encoding`
+- Decoding tests: `./qa/bin/functional decoding`
 - Linting: `ruff format src && ruff check src`
 
 ## Git Workflow

@@ -141,6 +141,29 @@ class CommandRegistry:
         'silence-ack': 'control',
     }
 
+    # Option descriptions for auto-completion help
+    OPTION_DESCRIPTIONS: ClassVar[Dict[str, str]] = {
+        'summary': 'Brief neighbor status',
+        'extensive': 'Detailed neighbor information',
+        'configuration': 'Show neighbor configuration',
+        'json': 'JSON-formatted output',
+        'neighbor': 'Target specific neighbor by IP',
+        'in': 'Adj-RIB-In (received routes)',
+        'out': 'Adj-RIB-Out (advertised routes)',
+        'ipv4': 'IPv4 address family',
+        'ipv6': 'IPv6 address family',
+        'unicast': 'Unicast SAFI',
+        'multicast': 'Multicast SAFI',
+        'vpn': 'VPN SAFI',
+        'flowspec': 'FlowSpec SAFI',
+        'route': 'Route prefix/NLRI',
+        'next-hop': 'Next-hop IP address',
+        'as-path': 'AS path attribute',
+        'local-preference': 'Local preference value',
+        'med': 'Multi-Exit Discriminator',
+        'community': 'BGP community',
+    }
+
     def __init__(self):
         """Initialize the command registry."""
         self._metadata_cache: Dict[str, CommandMetadata] = {}
@@ -281,6 +304,41 @@ class CommandRegistry:
     def get_all_metadata(self) -> List[CommandMetadata]:
         """Get metadata for all commands."""
         return [self.get_command_metadata(cmd) for cmd in self.get_all_commands() if self.get_command_metadata(cmd)]
+
+    def get_option_description(self, option: str) -> Optional[str]:
+        """Get description for a command option."""
+        return self.OPTION_DESCRIPTIONS.get(option)
+
+    def get_command_description(self, command: str) -> Optional[str]:
+        """Get description for a command (supports full or partial command paths)."""
+        metadata = self.get_command_metadata(command)
+        if metadata and metadata.description:
+            return metadata.description
+
+        # For base commands without full metadata, provide default descriptions
+        base_descriptions = {
+            'show': 'Display information about neighbors, routes, or configuration',
+            'announce': 'Announce a route to neighbors',
+            'withdraw': 'Withdraw a previously announced route',
+            'eor': 'Send End-of-RIB marker',
+            'route-refresh': 'Request route refresh from neighbor',
+            'shutdown': 'Gracefully shutdown neighbor connection',
+            'enable': 'Enable neighbor connection',
+            'disable': 'Disable neighbor connection',
+            'restart': 'Restart neighbor connection',
+            'clear': 'Clear routes or reset counters',
+            'reload': 'Reload configuration from file',
+            'silence-ack': 'Control silence acknowledgments',
+            'enable-ack': 'Enable acknowledgment responses',
+            'disable-ack': 'Disable acknowledgment responses',
+            'help': 'Show available commands and usage',
+            'version': 'Display ExaBGP version information',
+            'teardown': 'Tear down neighbor session',
+            'flush': 'Flush route information',
+            'reset': 'Reset connection or state',
+            'crash': 'Trigger controlled crash for debugging',
+        }
+        return base_descriptions.get(command)
 
 
 # Global registry instance

@@ -10,7 +10,9 @@ import re
 import sys
 import readline
 import atexit
-from typing import List, Optional, Callable
+import ctypes
+from dataclasses import dataclass
+from typing import List, Optional, Callable, Dict, Tuple
 
 from exabgp.application.shortcuts import CommandShortcuts
 from exabgp.application.pipe import named_pipe
@@ -66,6 +68,15 @@ class Colors:
         return True
 
 
+@dataclass
+class CompletionItem:
+    """Metadata for a single completion item"""
+
+    value: str  # The actual completion text
+    description: Optional[str] = None  # Human-readable description
+    item_type: str = 'option'  # Type: 'option', 'neighbor', 'command', 'keyword'
+
+
 class CommandCompleter:
     """Tab completion for ExaBGP commands using readline with dynamic command discovery"""
 
@@ -87,8 +98,10 @@ class CommandCompleter:
         # Build command tree dynamically from registry
         self.command_tree = self.registry.build_command_tree()
 
-        # Get base commands from registry
-        self.base_commands = self.registry.get_base_commands()
+        # Get base commands from registry (exclude internal/non-interactive commands)
+        all_commands = self.registry.get_base_commands()
+        # Filter out "#" (comment command - useful in scripts/API but not interactive CLI)
+        self.base_commands = [cmd for cmd in all_commands if cmd != '#']
 
         # Cache for neighbor IPs
         self._neighbor_cache: Optional[List[str]] = None
@@ -98,13 +111,54 @@ class CommandCompleter:
 
         # Track state for single-TAB display on macOS libedit
         self.matches: List[str] = []
+        self.match_metadata: Dict[str, CompletionItem] = {}  # Map completion value to metadata
         self.is_libedit = 'libedit' in readline.__doc__
         self.last_line = ''
         self.last_matches: List[str] = []
 
+        # Try to get access to readline's rl_replace_line for line editing
+        self._rl_replace_line = self._get_rl_replace_line()
+        self._rl_forced_update_display = self._get_rl_forced_update_display()
+
+    def _get_rl_replace_line(self) -> Optional[Callable]:
+        """Try to get rl_replace_line function from readline library via ctypes"""
+        try:
+            # Try to load the readline library
+            if sys.platform == 'darwin':
+                # macOS uses libedit by default
+                lib = ctypes.CDLL('/usr/lib/libedit.dylib')
+                # libedit calls it rl_replace_line
+                rl_replace_line = lib.rl_replace_line
+            else:
+                # Linux typically uses GNU readline
+                lib = ctypes.CDLL('libreadline.so')
+                rl_replace_line = lib.rl_replace_line
+
+            # Set argument and return types
+            rl_replace_line.argtypes = [ctypes.c_char_p, ctypes.c_int]
+            rl_replace_line.restype = None
+            return rl_replace_line
+        except (OSError, AttributeError):
+            return None
+
+    def _get_rl_forced_update_display(self) -> Optional[Callable]:
+        """Try to get rl_forced_update_display function from readline library via ctypes"""
+        try:
+            if sys.platform == 'darwin':
+                lib = ctypes.CDLL('/usr/lib/libedit.dylib')
+            else:
+                lib = ctypes.CDLL('libreadline.so')
+
+            rl_forced_update_display = lib.rl_forced_update_display
+            rl_forced_update_display.argtypes = []
+            rl_forced_update_display.restype = ctypes.c_int
+            return rl_forced_update_display
+        except (OSError, AttributeError):
+            return None
+
     def complete(self, text: str, state: int) -> Optional[str]:
         """
-        Readline completion function with single-TAB display on macOS
+        Readline completion function with auto-expansion of unambiguous tokens
 
         Args:
             text: Current word being completed
@@ -116,14 +170,55 @@ class CommandCompleter:
         # Get the full line buffer to understand context
         line = readline.get_line_buffer()
         begin = readline.get_begidx()
+        end = readline.get_endidx()
 
         # Parse the line into tokens
         tokens = line[:begin].split()
 
         # Generate matches based on context
         if state == 0:
-            # First call - generate all matches
-            self.matches = self._get_completions(tokens, text)
+            # First call - try to auto-expand any unambiguous tokens
+            expanded_prefix, expansions_made = self._try_auto_expand_tokens(tokens)
+
+            if expansions_made and self._rl_replace_line:
+                # We have expansions and can modify the line directly
+                suffix = line[end:]  # Everything after the current word
+
+                # Get completions for current word in expanded context
+                current_matches = self._get_completions(expanded_prefix, text)
+
+                # Build the full replacement
+                prefix_str = ' '.join(expanded_prefix) + (' ' if expanded_prefix else '')
+
+                if len(current_matches) == 1:
+                    # Single match - replace entire line with expanded version
+                    new_line = prefix_str + current_matches[0] + ' ' + suffix
+                    self._rl_replace_line(new_line.encode('utf-8'), 0)
+                    if self._rl_forced_update_display:
+                        self._rl_forced_update_display()
+                    # Return empty list to signal completion is done
+                    self.matches = []
+                    return None
+                elif len(current_matches) > 1:
+                    # Multiple matches - replace prefix but let user complete current word
+                    new_line = prefix_str + text + suffix
+                    self._rl_replace_line(new_line.encode('utf-8'), 0)
+                    if self._rl_forced_update_display:
+                        self._rl_forced_update_display()
+                    # Now return completions for the current word
+                    self.matches = current_matches
+                else:
+                    # No matches after expansion - just expand the prefix
+                    new_line = prefix_str + text + suffix
+                    self._rl_replace_line(new_line.encode('utf-8'), 0)
+                    if self._rl_forced_update_display:
+                        self._rl_forced_update_display()
+                    self.matches = []
+                    return None
+
+            # No expansion or can't modify line - generate matches for current token
+            if not expansions_made or not self._rl_replace_line:
+                self.matches = self._get_completions(tokens, text)
 
             # macOS libedit: Display all matches on first TAB press
             if self.is_libedit and len(self.matches) > 1:
@@ -139,52 +234,101 @@ class CommandCompleter:
         try:
             match = self.matches[state]
             # Add space suffix for unambiguous completion (single match only)
-            if len(self.matches) == 1 and state == 0:
+            if len(self.matches) == 1 and state == 0 and not match.startswith('\b'):
                 return match + ' '
             return match
         except IndexError:
             return None
 
-    def _display_matches_and_redraw(self, matches: List[str], current_line: str) -> None:
-        """Display completion matches in columns and redraw the prompt with current input"""
-        import shutil
+    def _try_auto_expand_tokens(self, tokens: List[str]) -> Tuple[List[str], bool]:
+        """
+        Auto-expand unambiguous partial tokens
 
+        Args:
+            tokens: List of tokens to potentially expand
+
+        Returns:
+            Tuple of (expanded_tokens, expansions_made)
+        """
+        if not tokens:
+            return ([], False)
+
+        # Build expanded tokens by checking each token for unambiguous completion
+        expanded_tokens = []
+        current_context = []  # Tokens we've processed so far
+        expansions_made = False
+
+        for token in tokens:
+            # Get completions for this token in the current context
+            completions = self._get_completions(current_context, token)
+
+            # If exactly one completion and it's different from the token, expand it
+            if len(completions) == 1 and completions[0] != token:
+                expanded_tokens.append(completions[0])
+                current_context.append(completions[0])
+                expansions_made = True
+            else:
+                # Multiple completions or exact match - keep as is
+                expanded_tokens.append(token)
+                current_context.append(token)
+
+        return (expanded_tokens, expansions_made)
+
+    def _display_matches_and_redraw(self, matches: List[str], current_line: str) -> None:
+        """Display completion matches with descriptions (one per line) and redraw the prompt"""
         if not matches:
             return
-
-        # Get terminal width
-        try:
-            term_width = shutil.get_terminal_size().columns
-        except Exception:
-            term_width = 80
 
         # Print newline before matches
         sys.stdout.write('\n')
 
-        # Calculate column width (longest match + padding)
+        # Calculate column width for value (longest match + padding)
         max_len = max(len(m) for m in matches)
-        col_width = max_len + 2
+        value_width = min(max_len + 2, 25)  # Cap at 25 chars to leave room for descriptions
 
-        # Calculate number of columns
-        num_cols = max(1, term_width // col_width)
+        # Print all matches one per line with descriptions
+        for match in matches:
+            metadata = self.match_metadata.get(match)
+            value_str = match.ljust(value_width)
 
-        # Print matches in columns
-        for i, match in enumerate(matches):
-            sys.stdout.write(match.ljust(col_width))
-            if (i + 1) % num_cols == 0:
-                sys.stdout.write('\n')
+            # Get description (always present due to _add_completion_metadata)
+            desc_str = metadata.description if metadata and metadata.description else ''
 
-        # Final newline if needed
-        if len(matches) % num_cols != 0:
-            sys.stdout.write('\n')
+            # Color formatting if enabled
+            if self.use_color and metadata:
+                if metadata.item_type == 'neighbor':
+                    # Cyan for neighbors
+                    sys.stdout.write(f'{Colors.CYAN}{value_str}{Colors.RESET}')
+                elif metadata.item_type == 'command':
+                    # Yellow for commands
+                    sys.stdout.write(f'{Colors.YELLOW}{value_str}{Colors.RESET}')
+                else:
+                    # Green for options/keywords
+                    sys.stdout.write(f'{Colors.GREEN}{value_str}{Colors.RESET}')
+
+                if desc_str:
+                    sys.stdout.write(f'{Colors.DIM}{desc_str}{Colors.RESET}\n')
+                else:
+                    sys.stdout.write('\n')
+            else:
+                # No color
+                if desc_str:
+                    sys.stdout.write(f'{value_str}{desc_str}\n')
+                else:
+                    sys.stdout.write(f'{match}\n')
 
         # Redraw the prompt and current input
-        # Get the prompt from InteractiveCLI if available, or use a default
         formatter = OutputFormatter()
         prompt = formatter.format_prompt()
 
         sys.stdout.write(prompt + current_line)
         sys.stdout.flush()
+
+    def _add_completion_metadata(
+        self, value: str, description: Optional[str] = None, item_type: str = 'option'
+    ) -> None:
+        """Add metadata for a completion item"""
+        self.match_metadata[value] = CompletionItem(value=value, description=description, item_type=item_type)
 
     def _get_completions(self, tokens: List[str], text: str) -> List[str]:
         """
@@ -197,9 +341,17 @@ class CommandCompleter:
         Returns:
             List of matching completions
         """
+        # Clear previous metadata
+        self.match_metadata.clear()
+
         # If no tokens yet, complete base commands
         if not tokens:
-            return sorted([cmd for cmd in self.base_commands if cmd.startswith(text)])
+            matches = sorted([cmd for cmd in self.base_commands if cmd.startswith(text)])
+            # Add metadata for base commands with descriptions
+            for match in matches:
+                desc = self.registry.get_command_description(match)
+                self._add_completion_metadata(match, desc, 'command')
+            return matches
 
         # Expand shortcuts in tokens using CommandShortcuts
         expanded_tokens = CommandShortcuts.expand_token_list(tokens.copy())
@@ -213,7 +365,7 @@ class CommandCompleter:
             # Special case: 'show neighbor' can filter by IP even though neighbor=False
             if expanded_tokens[0] == 'show' and expanded_tokens[1] == 'neighbor':
                 # After 'show neighbor', suggest options AND neighbor IPs
-                neighbor_ips = self._get_neighbor_ips()
+                neighbor_data = self._get_neighbor_data()
 
                 # Get command tree options (summary, extensive, configuration)
                 metadata = self.registry.get_command_metadata('show neighbor')
@@ -223,9 +375,20 @@ class CommandCompleter:
                 if metadata and metadata.json_support and 'json' not in options:
                     options.append('json')
 
-                # Combine options and neighbor IPs
-                matches = [opt for opt in options if opt.startswith(text)]
-                matches.extend([ip for ip in neighbor_ips if ip.startswith(text)])
+                # Add options with descriptions
+                matches = []
+                for opt in options:
+                    if opt.startswith(text):
+                        matches.append(opt)
+                        desc = self.registry.get_option_description(opt)
+                        self._add_completion_metadata(opt, desc, 'option')
+
+                # Add neighbor IPs with descriptions
+                for ip, info in neighbor_data.items():
+                    if ip.startswith(text):
+                        matches.append(ip)
+                        self._add_completion_metadata(ip, info, 'neighbor')
+
                 return sorted(matches)
 
             # AFI/SAFI completion for eor and route-refresh
@@ -251,33 +414,66 @@ class CommandCompleter:
                     # At a command with options
                     options = current_level['__options__']
                     if isinstance(options, list):
-                        matches = [opt for opt in options if opt.startswith(text)]
+                        matches = []
+                        for opt in options:
+                            if opt.startswith(text):
+                                matches.append(opt)
+                                desc = self.registry.get_option_description(opt)
+                                self._add_completion_metadata(opt, desc, 'option')
                         return sorted(matches)
                 else:
                     # Token not in tree, try partial match
                     matches = [cmd for cmd in current_level.keys() if cmd.startswith(token) and cmd != '__options__']
                     if matches and i == len(expanded_tokens) - 1:
-                        # Last token being completed
+                        # Last token being completed - these are subcommands
+                        # Build full command path for description lookup
+                        cmd_prefix = ' '.join(expanded_tokens[:i]) + ' ' if i > 0 else ''
+                        for match in matches:
+                            full_cmd = cmd_prefix + match
+                            desc = self.registry.get_command_description(full_cmd.strip())
+                            self._add_completion_metadata(match, desc, 'command')
                         return sorted(matches)
                     return []
             elif isinstance(current_level, list):
                 # At a leaf node (list of options)
-                matches = [opt for opt in current_level if opt.startswith(text)]
+                matches = []
+                for opt in current_level:
+                    if opt.startswith(text):
+                        matches.append(opt)
+                        desc = self.registry.get_option_description(opt)
+                        self._add_completion_metadata(opt, desc, 'option')
                 return sorted(matches)
 
         # After navigating, see what's available at current level
         if isinstance(current_level, dict):
             matches = [cmd for cmd in current_level.keys() if cmd.startswith(text) and cmd != '__options__']
 
+            # Add metadata for commands with descriptions
+            # Build full command path for description lookup
+            cmd_prefix = ' '.join(expanded_tokens) + ' ' if expanded_tokens else ''
+            for match in matches:
+                full_cmd = (cmd_prefix + match).strip()
+                desc = self.registry.get_command_description(full_cmd)
+                self._add_completion_metadata(match, desc, 'command')
+
             # Add options if available
             if '__options__' in current_level:
                 options = current_level['__options__']
                 if isinstance(options, list):
-                    matches.extend([opt for opt in options if opt.startswith(text)])
+                    for opt in options:
+                        if opt.startswith(text):
+                            matches.append(opt)
+                            desc = self.registry.get_option_description(opt)
+                            self._add_completion_metadata(opt, desc, 'option')
 
             return sorted(matches)
         elif isinstance(current_level, list):
-            matches = [opt for opt in current_level if opt.startswith(text)]
+            matches = []
+            for opt in current_level:
+                if opt.startswith(text):
+                    matches.append(opt)
+                    desc = self.registry.get_option_description(opt)
+                    self._add_completion_metadata(opt, desc, 'option')
             return sorted(matches)
 
         return []
@@ -310,15 +506,30 @@ class CommandCompleter:
 
         if metadata and metadata.neighbor_support:
             # We're at the end of a recognized neighbor-targeted command
-            matches = ['neighbor'] if 'neighbor'.startswith(text) else []
-            neighbor_ips = self._get_neighbor_ips()
-            matches.extend([ip for ip in neighbor_ips if ip.startswith(text)])
+            matches = []
+            if 'neighbor'.startswith(text):
+                matches.append('neighbor')
+                desc = self.registry.get_option_description('neighbor')
+                self._add_completion_metadata('neighbor', desc, 'keyword')
+
+            # Add neighbor IPs with descriptions
+            neighbor_data = self._get_neighbor_data()
+            for ip, info in neighbor_data.items():
+                if ip.startswith(text):
+                    matches.append(ip)
+                    self._add_completion_metadata(ip, info, 'neighbor')
+
             return sorted(matches)
 
         # If last token is 'neighbor', complete with IPs
         if last_token == 'neighbor':
-            neighbor_ips = self._get_neighbor_ips()
-            return sorted([ip for ip in neighbor_ips if ip.startswith(text)])
+            neighbor_data = self._get_neighbor_data()
+            matches = []
+            for ip, info in neighbor_data.items():
+                if ip.startswith(text):
+                    matches.append(ip)
+                    self._add_completion_metadata(ip, info, 'neighbor')
+            return sorted(matches)
 
         # If last token is an IP, suggest filters
         if self._is_ip_address(last_token):
@@ -329,7 +540,12 @@ class CommandCompleter:
     def _complete_neighbor_filters(self, text: str) -> List[str]:
         """Complete neighbor filter keywords"""
         filters = self.registry.get_neighbor_filters()
-        return sorted([f for f in filters if f.startswith(text)])
+        matches = sorted([f for f in filters if f.startswith(text)])
+        # Add descriptions for filter keywords
+        for match in matches:
+            desc = self.registry.get_option_description(match)
+            self._add_completion_metadata(match, desc, 'keyword')
+        return matches
 
     def _complete_afi_safi(self, tokens: List[str], text: str) -> List[str]:
         """Complete AFI/SAFI values for eor and route-refresh"""
@@ -342,15 +558,30 @@ class CommandCompleter:
         if potential_afi:
             # Complete SAFI for the given AFI
             safi_values = self.registry.get_safi_values(potential_afi)
-            return sorted([s for s in safi_values if s.startswith(text)])
+            matches = sorted([s for s in safi_values if s.startswith(text)])
+            # Add descriptions for SAFI values
+            for match in matches:
+                desc = f'SAFI for {potential_afi}'
+                self._add_completion_metadata(match, desc, 'keyword')
+            return matches
         else:
             # Complete AFI
-            return sorted([a for a in afi_values if a.startswith(text)])
+            matches = sorted([a for a in afi_values if a.startswith(text)])
+            # Add descriptions for AFI values
+            for match in matches:
+                desc = 'Address Family Identifier'
+                self._add_completion_metadata(match, desc, 'keyword')
+            return matches
 
     def _complete_route_spec(self, tokens: List[str], text: str) -> List[str]:
         """Complete route specification keywords"""
         keywords = self.registry.get_route_keywords()
-        return sorted([k for k in keywords if k.startswith(text)])
+        matches = sorted([k for k in keywords if k.startswith(text)])
+        # Add descriptions for route keywords
+        for match in matches:
+            desc = 'Route specification parameter'
+            self._add_completion_metadata(match, desc, 'keyword')
+        return matches
 
     def _is_ip_address(self, token: str) -> bool:
         """Check if token looks like an IP address"""
@@ -436,6 +667,57 @@ class CommandCompleter:
         finally:
             self._cache_in_progress = False
 
+    def _get_neighbor_data(self) -> Dict[str, str]:
+        """
+        Get neighbor IPs with descriptions (AS, state) for completion
+
+        Returns:
+            Dict mapping neighbor IP to description string
+        """
+        neighbor_data: Dict[str, str] = {}
+
+        # Try to fetch detailed neighbor information
+        try:
+            response = self.send_command('show neighbor json')
+            if response and response != 'Command sent' and not response.startswith('Error:'):
+                # Parse JSON response
+                json_text = response
+                if 'done' in json_text:
+                    json_text = json_text.split('done')[0].strip()
+
+                neighbors = json.loads(json_text)
+                if isinstance(neighbors, list):
+                    for neighbor in neighbors:
+                        if isinstance(neighbor, dict):
+                            # Extract peer address
+                            peer_addr = None
+                            if 'peer-address' in neighbor:
+                                peer_addr = neighbor['peer-address']
+                            elif 'remote-addr' in neighbor:
+                                peer_addr = neighbor['remote-addr']
+                            elif 'peer' in neighbor and isinstance(neighbor['peer'], dict):
+                                peer_obj = neighbor['peer']
+                                peer_addr = peer_obj.get('address') or peer_obj.get('ip')
+
+                            if peer_addr:
+                                # Build description from neighbor info
+                                peer_as = neighbor.get('peer-as', 'unknown')
+                                state = neighbor.get('state', 'unknown')
+
+                                # Format: (neighbor, AS65000, ESTABLISHED)
+                                desc = f'(neighbor, AS{peer_as}, {state})'
+                                neighbor_data[str(peer_addr)] = desc
+        except Exception:
+            # Silently fail - just return IPs without descriptions
+            pass
+
+        # If no data from JSON, fall back to IPs only
+        if not neighbor_data:
+            for ip in self._get_neighbor_ips():
+                neighbor_data[ip] = '(neighbor)'
+
+        return neighbor_data
+
     def invalidate_cache(self) -> None:
         """Invalidate neighbor IP cache (call after topology changes)"""
         self._neighbor_cache = None
@@ -479,15 +761,47 @@ class OutputFormatter:
         return f'Info: {message}'
 
     def format_command_output(self, output: str) -> str:
-        """Format command output with colors"""
-        if not self.use_color or not output:
+        """Format command output with colors and pretty-print JSON"""
+        if not output:
+            return output
+
+        # Strip common response markers
+        output_stripped = output.strip()
+
+        # Remove 'done' marker if present (ExaBGP API response suffix)
+        if output_stripped.endswith('done'):
+            output_stripped = output_stripped[:-4].strip()
+
+        # Try to parse and pretty-print as JSON
+        if output_stripped.startswith('{') or output_stripped.startswith('['):
+            try:
+                # Parse JSON
+                parsed = json.loads(output_stripped)
+                # Pretty-print with 2-space indent
+                pretty_json = json.dumps(parsed, indent=2, ensure_ascii=False)
+
+                # Apply color if enabled
+                if self.use_color:
+                    # Colorize the JSON output
+                    colored_lines = []
+                    for line in pretty_json.split('\n'):
+                        colored_lines.append(f'{Colors.CYAN}{line}{Colors.RESET}')
+                    return '\n'.join(colored_lines)
+                else:
+                    return pretty_json
+            except (json.JSONDecodeError, ValueError):
+                # Not valid JSON, fall through to regular formatting
+                pass
+
+        # Not JSON or parsing failed - use regular formatting
+        if not self.use_color:
             return output
 
         lines = output.split('\n')
         formatted = []
 
         for line in lines:
-            # Colorize JSON-like output
+            # Colorize JSON-like output (for partial/invalid JSON)
             if line.strip().startswith('{') or line.strip().startswith('['):
                 formatted.append(f'{Colors.CYAN}{line}{Colors.RESET}')
             # Colorize IP addresses
