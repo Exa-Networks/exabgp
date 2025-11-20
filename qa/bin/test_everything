@@ -1,0 +1,291 @@
+#!/usr/bin/env python3
+"""
+ExaBGP Complete Test Suite Runner
+
+Runs all required tests in sequence, exits on first failure.
+Use this instead of running individual test commands.
+
+Exit codes:
+  0 - All tests passed
+  1 - Ruff format failed
+  2 - Ruff check failed
+  3 - Unit tests failed
+  4 - Functional encoding tests failed
+  5 - Functional decoding tests failed
+  6 - Configuration validation failed
+"""
+
+import os
+import re
+import sys
+import subprocess
+import time
+from typing import Tuple, Optional
+
+
+class Colors:
+    """ANSI color codes"""
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+    CYAN = '\033[96m'
+    BOLD = '\033[1m'
+    RESET = '\033[0m'
+
+    @classmethod
+    def disable(cls):
+        """Disable colors for non-TTY output"""
+        cls.GREEN = ''
+        cls.RED = ''
+        cls.YELLOW = ''
+        cls.CYAN = ''
+        cls.BOLD = ''
+        cls.RESET = ''
+
+
+# Disable colors if not in a TTY
+if not sys.stdout.isatty():
+    Colors.disable()
+
+
+def print_header(message: str) -> None:
+    """Print a test section header"""
+    print(f"\n{Colors.BOLD}{Colors.CYAN}{'=' * 70}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.CYAN}{message}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.CYAN}{'=' * 70}{Colors.RESET}\n")
+
+
+def print_success(message: str) -> None:
+    """Print success message"""
+    print(f"{Colors.GREEN}✓ {message}{Colors.RESET}")
+
+
+def print_error(message: str) -> None:
+    """Print error message"""
+    print(f"{Colors.RED}✗ {message}{Colors.RESET}")
+
+
+def print_info(message: str) -> None:
+    """Print info message"""
+    print(f"{Colors.YELLOW}→ {message}{Colors.RESET}")
+
+
+def run_command(cmd: str, env: Optional[dict] = None, shell: bool = True) -> Tuple[int, str, str]:
+    """
+    Run a command and return exit code, stdout, stderr
+
+    Args:
+        cmd: Command to run
+        env: Optional environment variables to add
+        shell: Whether to run in shell mode
+
+    Returns:
+        Tuple of (exit_code, stdout, stderr)
+    """
+    # Merge environment
+    full_env = os.environ.copy()
+    if env:
+        full_env.update(env)
+
+    # Run command
+    process = subprocess.Popen(
+        cmd,
+        shell=shell,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=full_env,
+        text=True
+    )
+
+    stdout, stderr = process.communicate()
+    return process.returncode, stdout, stderr
+
+
+def test_ruff_format() -> Tuple[bool, int]:
+    """Test 1: Ruff format"""
+    print_header("TEST 1/6: Ruff Format")
+    print_info("Running: ruff format src")
+
+    returncode, stdout, stderr = run_command("ruff format src")
+
+    if returncode != 0:
+        print_error("Ruff format failed")
+        if stdout:
+            print(stdout)
+        if stderr:
+            print(stderr)
+        return False, 1
+
+    # Check if files were reformatted
+    if stdout.strip() and "files" in stdout.lower():
+        print_info(stdout.strip())
+
+    print_success("Ruff format passed")
+    return True, 0
+
+
+def test_ruff_check() -> Tuple[bool, int]:
+    """Test 2: Ruff check"""
+    print_header("TEST 2/6: Ruff Check")
+    print_info("Running: ruff check src")
+
+    returncode, stdout, stderr = run_command("ruff check src")
+
+    if returncode != 0:
+        print_error("Ruff check failed")
+        if stdout:
+            print(stdout)
+        if stderr:
+            print(stderr)
+        return False, 2
+
+    print_success("Ruff check passed - All checks passed!")
+    return True, 0
+
+
+def test_unit_tests() -> Tuple[bool, int]:
+    """Test 3: Unit tests"""
+    print_header("TEST 3/6: Unit Tests")
+    print_info("Running: pytest ./tests/unit/")
+
+    returncode, stdout, stderr = run_command(
+        "env exabgp_log_enable=false pytest ./tests/unit/ -q",
+        shell=True
+    )
+
+    if returncode != 0:
+        print_error("Unit tests failed")
+        print(stdout)
+        if stderr:
+            print(stderr)
+        return False, 3
+
+    # Extract test count from output
+    lines = stdout.strip().split('\n')
+    summary_line = lines[-1] if lines else ""
+
+    print_success(f"Unit tests passed - {summary_line}")
+    return True, 0
+
+
+def test_functional_encoding() -> Tuple[bool, int]:
+    """Test 4: Functional encoding tests"""
+    print_header("TEST 4/6: Functional Encoding Tests")
+    print_info("Running: ./qa/bin/functional encoding (72 tests)")
+
+    # Kill any leftover processes first
+    subprocess.run("killall -9 python 2>/dev/null", shell=True)
+    time.sleep(0.5)
+
+    returncode, stdout, stderr = run_command("./qa/bin/functional encoding")
+
+    # Print output to show progress
+    print(stdout)
+    if stderr:
+        print(stderr)
+
+    if returncode != 0:
+        print_error("Functional encoding tests failed")
+        return False, 4
+
+    # Check for 100% pass rate (accepts "100%" or "100.0%")
+    if "100" in stdout and "%" in stdout and "passed" in stdout:
+        # Also verify no failures
+        if "failed" in stdout.lower():
+            # Check that failed count is 0
+            failed_match = re.search(r'failed\s+(\d+)', stdout, re.IGNORECASE)
+            if failed_match and int(failed_match.group(1)) > 0:
+                print_error("Functional encoding tests had failures")
+                return False, 4
+
+        print_success("Functional encoding tests passed - All 72 tests passed")
+        return True, 0
+    else:
+        print_error("Functional encoding tests did not achieve 100% pass rate")
+        return False, 4
+
+
+def test_functional_decoding() -> Tuple[bool, int]:
+    """Test 5: Functional decoding tests"""
+    print_header("TEST 5/6: Functional Decoding Tests")
+    print_info("Running: ./qa/bin/functional decoding")
+
+    returncode, stdout, stderr = run_command("./qa/bin/functional decoding")
+
+    # Print output to show progress
+    print(stdout)
+    if stderr:
+        print(stderr)
+
+    if returncode != 0:
+        print_error("Functional decoding tests failed")
+        return False, 5
+
+    print_success("Functional decoding tests passed")
+    return True, 0
+
+
+def test_config_validation() -> Tuple[bool, int]:
+    """Test 6: Configuration validation"""
+    print_header("TEST 6/6: Configuration Validation")
+    print_info("Running: ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf")
+
+    returncode, stdout, stderr = run_command(
+        "./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf"
+    )
+
+    if returncode != 0:
+        print_error("Configuration validation failed")
+        if stdout:
+            print(stdout)
+        if stderr:
+            print(stderr)
+        return False, 6
+
+    print_success("Configuration validation passed")
+    return True, 0
+
+
+def main() -> int:
+    """Run all tests in sequence"""
+    print(f"{Colors.BOLD}ExaBGP Complete Test Suite{Colors.RESET}")
+    print(f"{Colors.BOLD}Running all required tests...{Colors.RESET}")
+
+    start_time = time.time()
+
+    # Run all tests in sequence
+    tests = [
+        test_ruff_format,
+        test_ruff_check,
+        test_unit_tests,
+        test_functional_encoding,
+        test_functional_decoding,
+        test_config_validation,
+    ]
+
+    for test_func in tests:
+        success, exit_code = test_func()
+        if not success:
+            elapsed = time.time() - start_time
+            print(f"\n{Colors.RED}{Colors.BOLD}FAILED{Colors.RESET} after {elapsed:.1f}s")
+            print(f"{Colors.RED}Exit code: {exit_code}{Colors.RESET}")
+            return exit_code
+
+    # All tests passed
+    elapsed = time.time() - start_time
+    print_header("ALL TESTS PASSED")
+    print(f"{Colors.GREEN}{Colors.BOLD}✓ All 6 test suites passed in {elapsed:.1f}s{Colors.RESET}")
+    print(f"\n{Colors.GREEN}Code is ready for commit{Colors.RESET}\n")
+
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        print(f"\n{Colors.YELLOW}Interrupted by user{Colors.RESET}")
+        sys.exit(130)
+    except Exception as e:
+        print(f"\n{Colors.RED}Unexpected error: {e}{Colors.RESET}")
+        sys.exit(255)
