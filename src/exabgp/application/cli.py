@@ -15,9 +15,9 @@ import time
 import socket as sock
 
 from exabgp.application.pipe import check_fifo, named_pipe
+from exabgp.application.shortcuts import CommandShortcuts
 from exabgp.application.unixsocket import unix_socket
 from exabgp.environment import ROOT, getenv
-from exabgp.protocol.ip import IPv4
 from exabgp.reactor.api.response.answer import Answer
 from exabgp.reactor.network.error import error
 
@@ -275,49 +275,15 @@ def cmdline(cmdarg):
         cmdline_interactive(pipename, socketname, use_pipe_transport, cmdarg)
         sys.exit(0)
 
-    # Process command shortcuts/nicknames (common to both transports)
-    renamed = ['']
+    # Process command shortcuts/nicknames using shared module
+    command_str = ' '.join(command)
+    sending = CommandShortcuts.expand_shortcuts(command_str)
 
-    for pos, token in enumerate(command):
-        for nickname, name, match in (
-            ('a', 'announce', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-            ('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-            ('c', 'configuration', lambda pos, pre: True),
-            ('e', 'eor', lambda pos, pre: pre[-1] == 'announce'),
-            ('e', 'extensive', lambda _, pre: 'show' in pre),
-            ('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-            ('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-            ('h', 'help', lambda pos, pre: pos == 0),
-            ('i', 'in', lambda pos, pre: pre[-1] == 'adj-rib'),
-            ('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
-            ('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
-            ('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
-            ('s', 'show', lambda pos, pre: pos == 0),
-            ('t', 'teardown', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-            ('s', 'summary', lambda pos, pre: pos != 0),
-            ('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-            ('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
-            ('o', 'out', lambda pos, pre: pre[-1] == 'adj-rib'),
-            ('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear', 'flush', 'show']),
-            ('w', 'withdraw', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-            ('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-            ('neighbour', 'neighbor', lambda pos, pre: True),
-            ('neigbour', 'neighbor', lambda pos, pre: True),
-            ('neigbor', 'neighbor', lambda pos, pre: True),
-        ):
-            if (token == nickname or name.startswith(token)) and match(pos, renamed):
-                renamed.append(name)
-                break
-        else:
-            renamed.append(token)
-
-    sending = ' '.join(renamed).strip()
-
-    # This does not change the behaviour for well formed command
-    if sending != command:
+    # Show expanded command if shortcuts were used
+    if sending != command_str:
         sys.stdout.write(f'command: {sending}\n')
 
-    if command == 'reset':
+    if sending == 'reset':
         # For reset command, just exit (no response expected)
         if use_pipe_transport:
             pipes = named_pipe(ROOT, pipename)
@@ -364,44 +330,8 @@ def cmdline_interactive(pipename, socketname, use_pipe_transport, cmdarg):
 
     # Create command sender function
     def send_command(command_str):
-        # Apply shortcut expansion (reuse existing logic)
-        renamed = ['']
-        tokens = command_str.split()
-
-        for pos, token in enumerate(tokens):
-            for nickname, name, match in (
-                ('a', 'announce', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-                ('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-                ('c', 'configuration', lambda pos, pre: True),
-                ('e', 'eor', lambda pos, pre: pre[-1] == 'announce'),
-                ('e', 'extensive', lambda _, pre: 'show' in pre),
-                ('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-                ('f', 'flush', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-                ('h', 'help', lambda pos, pre: pos == 0),
-                ('i', 'in', lambda pos, pre: pre[-1] == 'adj-rib'),
-                ('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
-                ('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
-                ('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
-                ('s', 'show', lambda pos, pre: pos == 0),
-                ('t', 'teardown', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-                ('s', 'summary', lambda pos, pre: pos != 0),
-                ('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-                ('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
-                ('o', 'out', lambda pos, pre: pre[-1] == 'adj-rib'),
-                ('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear', 'flush', 'show']),
-                ('w', 'withdraw', lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0),
-                ('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-                ('neighbour', 'neighbor', lambda pos, pre: True),
-                ('neigbour', 'neighbor', lambda pos, pre: True),
-                ('neigbor', 'neighbor', lambda pos, pre: True),
-            ):
-                if (token == nickname or name.startswith(token)) and match(pos, renamed):
-                    renamed.append(name)
-                    break
-            else:
-                renamed.append(token)
-
-        expanded_command = ' '.join(renamed).strip()
+        # Apply shortcut expansion using shared module
+        expanded_command = CommandShortcuts.expand_shortcuts(command_str)
 
         # Send via appropriate transport
         if use_pipe_transport:
@@ -468,61 +398,8 @@ def cmdline_batch(batch_file, pipename, socketname, use_pipe_transport, cmdarg):
             sys.stdout.write(f'\n[{line_num}] {command}\n')
             sys.stdout.flush()
 
-            # Execute command (reuse one-shot logic)
-            # Process shortcuts
-            renamed = ['']
-            tokens = command.split()
-
-            for pos, token in enumerate(tokens):
-                for nickname, name, match in (
-                    (
-                        'a',
-                        'announce',
-                        lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0,
-                    ),
-                    ('a', 'attributes', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-                    ('c', 'configuration', lambda pos, pre: True),
-                    ('e', 'eor', lambda pos, pre: pre[-1] == 'announce'),
-                    ('e', 'extensive', lambda _, pre: 'show' in pre),
-                    ('f', 'flow', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-                    (
-                        'f',
-                        'flush',
-                        lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0,
-                    ),
-                    ('h', 'help', lambda pos, pre: pos == 0),
-                    ('i', 'in', lambda pos, pre: pre[-1] == 'adj-rib'),
-                    ('n', 'neighbor', lambda pos, pre: pos == 0 or pre[-1] == 'show'),
-                    ('r', 'route', lambda pos, pre: pre == 'announce' or pre == 'withdraw'),
-                    ('rr', 'route-refresh', lambda _, pre: pre == 'announce'),
-                    ('s', 'show', lambda pos, pre: pos == 0),
-                    (
-                        't',
-                        'teardown',
-                        lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0,
-                    ),
-                    ('s', 'summary', lambda pos, pre: pos != 0),
-                    ('v', 'vps', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-                    ('o', 'operation', lambda pos, pre: pre[-1] == 'announce'),
-                    ('o', 'out', lambda pos, pre: pre[-1] == 'adj-rib'),
-                    ('a', 'adj-rib', lambda pos, pre: pre[-1] in ['clear', 'flush', 'show']),
-                    (
-                        'w',
-                        'withdraw',
-                        lambda pos, pre: pos == 0 or pre.count('.') == IPv4.DOT_COUNT or pre.count(':') != 0,
-                    ),
-                    ('w', 'watchdog', lambda pos, pre: pre[-1] == 'announce' or pre[-1] == 'withdraw'),
-                    ('neighbour', 'neighbor', lambda pos, pre: True),
-                    ('neigbour', 'neighbor', lambda pos, pre: True),
-                    ('neigbor', 'neighbor', lambda pos, pre: True),
-                ):
-                    if (token == nickname or name.startswith(token)) and match(pos, renamed):
-                        renamed.append(name)
-                        break
-                else:
-                    renamed.append(token)
-
-            sending = ' '.join(renamed).strip()
+            # Execute command - apply shortcut expansion using shared module
+            sending = CommandShortcuts.expand_shortcuts(command)
 
             # Execute via transport (don't exit on error, continue with next command)
             try:
