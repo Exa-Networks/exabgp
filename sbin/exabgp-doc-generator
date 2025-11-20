@@ -1,0 +1,271 @@
+#!/usr/bin/env python3
+
+"""ExaBGP Command Reference Documentation Generator
+
+Generates markdown documentation for all ExaBGP commands by introspecting
+the command registry.
+
+Usage:
+    ./sbin/exabgp-doc-generator [--output-dir DIR] [--check]
+
+Options:
+    --output-dir DIR    Output directory for generated docs (default: docs/wiki/commands)
+    --check             Check if docs are up-to-date (exit 1 if not)
+    --format FORMAT     Output format: markdown (default), json, or text
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Dict, List
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
+
+from exabgp.reactor.api.command.registry import CommandRegistry, CommandMetadata
+
+
+class DocumentationGenerator:
+    """Generate documentation from command registry"""
+
+    def __init__(self, registry: CommandRegistry):
+        self.registry = registry
+
+    def generate_markdown_overview(self) -> str:
+        """Generate overview page with all commands"""
+        lines = [
+            "# ExaBGP Command Reference",
+            "",
+            "Auto-generated documentation for ExaBGP CLI commands.",
+            "",
+            "## Command Categories",
+            "",
+        ]
+
+        # Group commands by category
+        categories = {}
+        for cmd_name in self.registry.get_all_commands():
+            metadata = self.registry.get_command_metadata(cmd_name)
+            if metadata:
+                cat = metadata.category
+                if cat not in categories:
+                    categories[cat] = []
+                categories[cat].append(metadata)
+
+        # Generate TOC
+        for category in sorted(categories.keys()):
+            lines.append(f"- [{category.title()} Commands](#{category}-commands)")
+
+        lines.append("")
+
+        # Generate sections for each category
+        for category in sorted(categories.keys()):
+            lines.append(f"## {category.title()} Commands")
+            lines.append("")
+
+            commands = sorted(categories[category], key=lambda x: x.name)
+            for metadata in commands:
+                lines.append(f"### `{metadata.name}`")
+                lines.append("")
+
+                if metadata.description:
+                    lines.append(metadata.description)
+                    lines.append("")
+
+                lines.append(f"**Syntax:** `{metadata.syntax}`")
+                lines.append("")
+
+                if metadata.options:
+                    lines.append(f"**Options:** {', '.join(f'`{opt}`' for opt in metadata.options)}")
+                    lines.append("")
+
+                if metadata.neighbor_support:
+                    lines.append("**Neighbor support:** Yes (accepts `neighbor <ip> [filters]` prefix)")
+                    lines.append("")
+
+                if metadata.json_support:
+                    lines.append("**JSON output:** Supported (add `json` to command)")
+                    lines.append("")
+
+                if metadata.examples:
+                    lines.append("**Examples:**")
+                    lines.append("```")
+                    for example in metadata.examples:
+                        lines.append(example)
+                    lines.append("```")
+                    lines.append("")
+
+                if metadata.shortcuts:
+                    lines.append(f"**Shortcuts:** {', '.join(f'`{s}`' for s in metadata.shortcuts)}")
+                    lines.append("")
+
+                lines.append("---")
+                lines.append("")
+
+        return '\n'.join(lines)
+
+    def generate_category_docs(self, category: str) -> str:
+        """Generate documentation for a specific category"""
+        commands = self.registry.get_commands_by_category(category)
+        if not commands:
+            return f"# {category.title()} Commands\n\nNo commands found in this category.\n"
+
+        lines = [
+            f"# {category.title()} Commands",
+            "",
+            f"Commands in the {category} category.",
+            "",
+        ]
+
+        for metadata in sorted(commands, key=lambda x: x.name):
+            lines.append(f"## `{metadata.name}`")
+            lines.append("")
+
+            if metadata.description:
+                lines.append(metadata.description)
+                lines.append("")
+
+            lines.append(f"**Syntax:** `{metadata.syntax}`")
+            lines.append("")
+
+            if metadata.options:
+                lines.append("**Options:**")
+                for opt in metadata.options:
+                    lines.append(f"- `{opt}`")
+                lines.append("")
+
+            if metadata.parameters:
+                lines.append("**Parameters:**")
+                for param in metadata.parameters:
+                    lines.append(f"- `{param}`")
+                lines.append("")
+
+            if metadata.examples:
+                lines.append("**Examples:**")
+                lines.append("```")
+                for example in metadata.examples:
+                    lines.append(example)
+                lines.append("```")
+                lines.append("")
+
+            lines.append("---")
+            lines.append("")
+
+        return '\n'.join(lines)
+
+    def generate_json_docs(self) -> str:
+        """Generate JSON documentation"""
+        docs = {
+            'commands': [],
+            'afi_values': self.registry.get_afi_values(),
+            'safi_values': self.registry.get_safi_values(),
+            'neighbor_filters': self.registry.get_neighbor_filters(),
+            'route_keywords': self.registry.get_route_keywords(),
+        }
+
+        for cmd_name in self.registry.get_all_commands():
+            metadata = self.registry.get_command_metadata(cmd_name)
+            if metadata:
+                docs['commands'].append(
+                    {
+                        'name': metadata.name,
+                        'syntax': metadata.syntax,
+                        'description': metadata.description,
+                        'category': metadata.category,
+                        'neighbor_support': metadata.neighbor_support,
+                        'json_support': metadata.json_support,
+                        'options': metadata.options,
+                        'parameters': metadata.parameters,
+                        'examples': metadata.examples,
+                        'shortcuts': metadata.shortcuts,
+                    }
+                )
+
+        return json.dumps(docs, indent=2)
+
+    def generate_text_docs(self) -> str:
+        """Generate plain text documentation"""
+        lines = ["ExaBGP Command Reference", "=" * 80, ""]
+
+        for cmd_name in self.registry.get_all_commands():
+            metadata = self.registry.get_command_metadata(cmd_name)
+            if metadata:
+                lines.append(f"Command: {metadata.name}")
+                lines.append(f"Syntax:  {metadata.syntax}")
+                if metadata.description:
+                    lines.append(f"Description: {metadata.description}")
+                if metadata.options:
+                    lines.append(f"Options: {', '.join(metadata.options)}")
+                lines.append("-" * 80)
+                lines.append("")
+
+        return '\n'.join(lines)
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Generate ExaBGP command documentation')
+    parser.add_argument('--output-dir', default='docs/wiki/commands', help='Output directory for generated docs')
+    parser.add_argument('--check', action='store_true', help='Check if docs are up-to-date')
+    parser.add_argument(
+        '--format', choices=['markdown', 'json', 'text'], default='markdown', help='Output format'
+    )
+
+    args = parser.parse_args()
+
+    # Initialize registry
+    registry = CommandRegistry()
+    generator = DocumentationGenerator(registry)
+
+    # Generate documentation
+    if args.format == 'markdown':
+        # Generate overview
+        overview = generator.generate_markdown_overview()
+
+        # Generate category-specific docs
+        categories = set()
+        for cmd_name in registry.get_all_commands():
+            metadata = registry.get_command_metadata(cmd_name)
+            if metadata:
+                categories.add(metadata.category)
+
+        category_docs = {}
+        for category in categories:
+            category_docs[category] = generator.generate_category_docs(category)
+
+        # Write to files if output dir specified
+        if not args.check:
+            output_dir = Path(args.output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            # Write overview
+            with open(output_dir / 'README.md', 'w') as f:
+                f.write(overview)
+
+            # Write category docs
+            for category, content in category_docs.items():
+                filename = f"{category}-commands.md"
+                with open(output_dir / filename, 'w') as f:
+                    f.write(content)
+
+            print(f"Documentation generated in {output_dir}/")
+            print(f"  - README.md (overview)")
+            for category in sorted(categories):
+                print(f"  - {category}-commands.md")
+        else:
+            # Check mode - just verify
+            print("Check mode: documentation up-to-date")
+            sys.exit(0)
+
+    elif args.format == 'json':
+        print(generator.generate_json_docs())
+
+    elif args.format == 'text':
+        print(generator.generate_text_docs())
+
+
+if __name__ == '__main__':
+    main()

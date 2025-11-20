@@ -4,11 +4,16 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import sys
 import readline
 import atexit
-from typing import List, Optional, Callable, Dict, Any
+from typing import List, Optional, Callable
+
+from exabgp.application.shortcuts import CommandShortcuts
+from exabgp.reactor.api.command.registry import CommandRegistry
 
 
 # ANSI color codes
@@ -59,7 +64,7 @@ class Colors:
 
 
 class CommandCompleter:
-    """Tab completion for ExaBGP commands using readline"""
+    """Tab completion for ExaBGP commands using readline with dynamic command discovery"""
 
     def __init__(self, send_command: Callable[[str], str], get_neighbors: Optional[Callable[[], List[str]]] = None):
         """
@@ -73,91 +78,36 @@ class CommandCompleter:
         self.get_neighbors = get_neighbors
         self.use_color = Colors.supports_color()
 
-        # Base command list - these are the top-level commands
-        self.base_commands = [
-            'help',
-            'show',
-            'announce',
-            'withdraw',
-            'flush',
-            'clear',
-            'teardown',
-            'shutdown',
-            'reload',
-            'restart',
-            'version',
-            'reset',
-            'enable-ack',
-            'disable-ack',
-            'silence-ack',
-        ]
+        # Initialize command registry
+        self.registry = CommandRegistry()
 
-        # Command tree for nested completion
-        self.command_tree: Dict[str, Any] = {
-            'show': {
-                'neighbor': ['summary', 'extensive', 'configuration', 'json'],
-                'adj-rib': ['in', 'out', 'extensive', 'json'],
-            },
-            'announce': {
-                'route': [],
-                'ipv4': [],
-                'ipv6': [],
-                'vpls': [],
-                'attribute': [],
-                'attributes': [],
-                'flow': [],
-                'eor': [],
-                'route-refresh': [],
-                'operational': [],
-                'watchdog': [],
-            },
-            'withdraw': {
-                'route': [],
-                'ipv4': [],
-                'ipv6': [],
-                'vpls': [],
-                'attribute': [],
-                'attributes': [],
-                'flow': [],
-                'watchdog': [],
-            },
-            'flush': {
-                'adj-rib': ['out'],
-            },
-            'clear': {
-                'adj-rib': ['in', 'out'],
-            },
-            'teardown': [],  # Followed by neighbor IP
-        }
+        # Build command tree dynamically from registry
+        self.command_tree = self.registry.build_command_tree()
 
-        # Command shortcuts for completion
-        self.shortcuts = {
-            'h': 'help',
-            's': 'show',
-            'a': 'announce',
-            'w': 'withdraw',
-            'f': 'flush',
-            'c': 'clear',
-            't': 'teardown',
-            'n': 'neighbor',
-            'e': 'eor',
-            'rr': 'route-refresh',
-            'o': 'operational',
-        }
+        # Get base commands from registry
+        self.base_commands = self.registry.get_base_commands()
 
         # Cache for neighbor IPs
         self._neighbor_cache: Optional[List[str]] = None
+        self._cache_timeout = 30  # Refresh cache every 30 seconds
+        self._cache_timestamp = 0
+
+        # Track state for single-TAB display on macOS libedit
+        self.matches: List[str] = []
+        self.is_libedit = 'libedit' in readline.__doc__
+        self.last_line = ''
+        self.last_matches: List[str] = []
 
     def complete(self, text: str, state: int) -> Optional[str]:
         """
-        Readline completion function
+        Readline completion function with single-TAB display on macOS
 
         Args:
             text: Current word being completed
             state: Iteration state (0 for first match, increments for subsequent)
 
         Returns:
-            Next matching completion or None
+            Next matching completion or None (with space suffix if unambiguous)
         """
         # Get the full line buffer to understand context
         line = readline.get_line_buffer()
@@ -171,11 +121,68 @@ class CommandCompleter:
             # First call - generate all matches
             self.matches = self._get_completions(tokens, text)
 
+            # macOS libedit: Display all matches on first TAB press
+            if self.is_libedit and len(self.matches) > 1:
+                # Check if this is a new completion (avoid repeating on subsequent TABs)
+                current_line = readline.get_line_buffer()
+                if current_line != self.last_line or self.matches != self.last_matches:
+                    # Display matches
+                    self._display_matches_and_redraw(self.matches, line)
+                    self.last_line = current_line
+                    self.last_matches = self.matches.copy()
+
         # Return the next match
         try:
-            return self.matches[state]
+            match = self.matches[state]
+            # Add space suffix for unambiguous completion (single match only)
+            if len(self.matches) == 1 and state == 0:
+                return match + ' '
+            return match
         except IndexError:
             return None
+
+    def _display_matches_and_redraw(self, matches: List[str], current_line: str) -> None:
+        """Display completion matches in columns and redraw the prompt with current input"""
+        import shutil
+
+        if not matches:
+            return
+
+        # Get terminal width
+        try:
+            term_width = shutil.get_terminal_size().columns
+        except Exception:
+            term_width = 80
+
+        # Print newline before matches
+        sys.stdout.write('\n')
+
+        # Calculate column width (longest match + padding)
+        max_len = max(len(m) for m in matches)
+        col_width = max_len + 2
+
+        # Calculate number of columns
+        num_cols = max(1, term_width // col_width)
+
+        # Print matches in columns
+        for i, match in enumerate(matches):
+            sys.stdout.write(match.ljust(col_width))
+            if (i + 1) % num_cols == 0:
+                sys.stdout.write('\n')
+
+        # Final newline if needed
+        if len(matches) % num_cols != 0:
+            sys.stdout.write('\n')
+
+        # Redraw the prompt and current input
+        # Get the prompt from InteractiveCLI if available, or use a default
+        from exabgp.application.cli_interactive import OutputFormatter
+
+        formatter = OutputFormatter()
+        prompt = formatter.format_prompt()
+
+        sys.stdout.write(prompt + current_line)
+        sys.stdout.flush()
 
     def _get_completions(self, tokens: List[str], text: str) -> List[str]:
         """
@@ -190,18 +197,28 @@ class CommandCompleter:
         """
         # If no tokens yet, complete base commands
         if not tokens:
-            matches = [cmd for cmd in self.base_commands if cmd.startswith(text)]
-            # Also include shortcuts
-            matches.extend([shortcut for shortcut in self.shortcuts if shortcut.startswith(text)])
-            return sorted(matches)
+            return sorted([cmd for cmd in self.base_commands if cmd.startswith(text)])
 
-        # Expand shortcuts in tokens
-        expanded_tokens = []
-        for token in tokens:
-            if token in self.shortcuts:
-                expanded_tokens.append(self.shortcuts[token])
-            else:
-                expanded_tokens.append(token)
+        # Expand shortcuts in tokens using CommandShortcuts
+        expanded_tokens = CommandShortcuts.expand_token_list(tokens.copy())
+
+        # Check if completing neighbor-targeted command
+        if self._is_neighbor_command(expanded_tokens):
+            return self._complete_neighbor_command(expanded_tokens, text)
+
+        # Check for specific command patterns
+        if len(expanded_tokens) >= 2:
+            # AFI/SAFI completion for eor and route-refresh
+            if expanded_tokens[-1] in ('eor', 'route-refresh'):
+                return self._complete_afi_safi(expanded_tokens, text)
+
+            # Route specification hints
+            if expanded_tokens[-1] in ('route', 'ipv4', 'ipv6'):
+                return self._complete_route_spec(expanded_tokens, text)
+
+            # Neighbor filter completion
+            if 'neighbor' in expanded_tokens and self._is_ip_address(expanded_tokens[-1]):
+                return self._complete_neighbor_filters(text)
 
         # Navigate command tree
         current_level = self.command_tree
@@ -210,32 +227,33 @@ class CommandCompleter:
             if isinstance(current_level, dict):
                 if token in current_level:
                     current_level = current_level[token]
+                elif '__options__' in current_level:
+                    # At a command with options
+                    options = current_level['__options__']
+                    if isinstance(options, list):
+                        matches = [opt for opt in options if opt.startswith(text)]
+                        return sorted(matches)
                 else:
-                    # Token not in tree, might be completing this level
-                    if i == len(expanded_tokens) - 1 and not text:
-                        # Last token, but user pressed TAB after space
-                        # No more completions at this level
-                        return []
-                    # Partial match at this level
-                    matches = [cmd for cmd in current_level.keys() if cmd.startswith(token)]
-                    return sorted(matches)
+                    # Token not in tree, try partial match
+                    matches = [cmd for cmd in current_level.keys() if cmd.startswith(token) and cmd != '__options__']
+                    if matches and i == len(expanded_tokens) - 1:
+                        # Last token being completed
+                        return sorted(matches)
+                    return []
             elif isinstance(current_level, list):
                 # At a leaf node (list of options)
                 matches = [opt for opt in current_level if opt.startswith(text)]
                 return sorted(matches)
-            else:
-                # Unknown structure
-                return []
 
         # After navigating, see what's available at current level
         if isinstance(current_level, dict):
-            matches = [cmd for cmd in current_level.keys() if cmd.startswith(text)]
+            matches = [cmd for cmd in current_level.keys() if cmd.startswith(text) and cmd != '__options__']
 
-            # Special cases for dynamic completions
-            if expanded_tokens and expanded_tokens[0] == 'teardown':
-                # Complete with neighbor IPs
-                neighbor_ips = self._get_neighbor_ips()
-                matches.extend([ip for ip in neighbor_ips if ip.startswith(text)])
+            # Add options if available
+            if '__options__' in current_level:
+                options = current_level['__options__']
+                if isinstance(options, list):
+                    matches.extend([opt for opt in options if opt.startswith(text)])
 
             return sorted(matches)
         elif isinstance(current_level, list):
@@ -244,28 +262,118 @@ class CommandCompleter:
 
         return []
 
+    def _is_neighbor_command(self, tokens: List[str]) -> bool:
+        """Check if command targets a specific neighbor"""
+        return tokens and (
+            tokens[0] in ('teardown', 'neighbor')
+            or (len(tokens) >= 2 and tokens[0] in ('announce', 'withdraw', 'flush', 'clear'))
+        )
+
+    def _complete_neighbor_command(self, tokens: List[str], text: str) -> List[str]:
+        """Complete neighbor-targeted commands"""
+        # Check if we should complete neighbor IP
+        last_token = tokens[-1] if tokens else ''
+
+        # If last token is a command keyword, suggest 'neighbor' or neighbor IPs
+        if last_token in ('announce', 'withdraw', 'flush', 'clear', 'teardown'):
+            matches = ['neighbor'] if 'neighbor'.startswith(text) else []
+            neighbor_ips = self._get_neighbor_ips()
+            matches.extend([ip for ip in neighbor_ips if ip.startswith(text)])
+            return sorted(matches)
+
+        # If last token is 'neighbor', complete with IPs
+        if last_token == 'neighbor':
+            neighbor_ips = self._get_neighbor_ips()
+            return sorted([ip for ip in neighbor_ips if ip.startswith(text)])
+
+        # If last token is an IP, suggest filters
+        if self._is_ip_address(last_token):
+            return self._complete_neighbor_filters(text)
+
+        return []
+
+    def _complete_neighbor_filters(self, text: str) -> List[str]:
+        """Complete neighbor filter keywords"""
+        filters = self.registry.get_neighbor_filters()
+        return sorted([f for f in filters if f.startswith(text)])
+
+    def _complete_afi_safi(self, tokens: List[str], text: str) -> List[str]:
+        """Complete AFI/SAFI values for eor and route-refresh"""
+        # Get AFI values first, then SAFI
+        afi_values = self.registry.get_afi_values()
+
+        # Check if we've already typed an AFI
+        potential_afi = tokens[-2] if len(tokens) >= 2 and tokens[-2] in afi_values else None
+
+        if potential_afi:
+            # Complete SAFI for the given AFI
+            safi_values = self.registry.get_safi_values(potential_afi)
+            return sorted([s for s in safi_values if s.startswith(text)])
+        else:
+            # Complete AFI
+            return sorted([a for a in afi_values if a.startswith(text)])
+
+    def _complete_route_spec(self, tokens: List[str], text: str) -> List[str]:
+        """Complete route specification keywords"""
+        keywords = self.registry.get_route_keywords()
+        return sorted([k for k in keywords if k.startswith(text)])
+
+    def _is_ip_address(self, token: str) -> bool:
+        """Check if token looks like an IP address"""
+        # Simple check for IPv4 or IPv6
+        ipv4_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+        ipv6_pattern = r'^[0-9a-fA-F:]+$'
+        return bool(re.match(ipv4_pattern, token) or (': ' in token or re.match(ipv6_pattern, token)))
+
     def _get_neighbor_ips(self) -> List[str]:
         """
-        Get list of neighbor IPs for completion
+        Get list of neighbor IPs for completion (with caching)
 
         Returns:
             List of neighbor IP addresses
         """
-        if self._neighbor_cache is not None:
+        import time
+
+        # Check if cache is still valid
+        current_time = time.time()
+        if self._neighbor_cache is not None and (current_time - self._cache_timestamp) < self._cache_timeout:
             return self._neighbor_cache
 
+        # Try to fetch neighbor IPs from ExaBGP
+        neighbor_ips = []
+
+        # Use provided get_neighbors callback if available
         if self.get_neighbors:
             try:
-                self._neighbor_cache = self.get_neighbors()
-                return self._neighbor_cache
+                neighbor_ips = self.get_neighbors()
+            except Exception:
+                pass
+        else:
+            # Try to query ExaBGP via 'show neighbor json'
+            try:
+                response = self.send_command('show neighbor json')
+                if response:
+                    # Parse JSON response
+                    neighbors = json.loads(response)
+                    if isinstance(neighbors, list):
+                        for neighbor in neighbors:
+                            if isinstance(neighbor, dict) and 'peer-address' in neighbor:
+                                neighbor_ips.append(neighbor['peer-address'])
+                            elif isinstance(neighbor, dict) and 'remote-addr' in neighbor:
+                                neighbor_ips.append(neighbor['remote-addr'])
             except Exception:
                 pass
 
-        return []
+        # Update cache
+        self._neighbor_cache = neighbor_ips
+        self._cache_timestamp = current_time
+
+        return neighbor_ips
 
     def invalidate_cache(self) -> None:
         """Invalidate neighbor IP cache (call after topology changes)"""
         self._neighbor_cache = None
+        self._cache_timestamp = 0
 
 
 class OutputFormatter:
@@ -391,7 +499,21 @@ class InteractiveCLI:
         """Configure readline for history and completion"""
         # Set up completion
         readline.set_completer(self.completer.complete)
-        readline.parse_and_bind('tab: complete')
+
+        # Configure TAB completion behavior
+        # Note: macOS uses libedit, Linux uses GNU readline - both supported
+        if 'libedit' in readline.__doc__:
+            # macOS libedit configuration
+            readline.parse_and_bind('bind ^I rl_complete')  # TAB key
+            # libedit doesn't support show-all-if-ambiguous, so we modify the completer
+            # to return all matches at once (handled in complete() method)
+        else:
+            # GNU readline configuration
+            readline.parse_and_bind('tab: complete')
+            # Show all completions immediately (don't require double-TAB)
+            readline.parse_and_bind('set show-all-if-ambiguous on')
+            # Show completions on first TAB even if there are many matches
+            readline.parse_and_bind('set completion-query-items -1')
 
         # Set up delimiters (what counts as word boundaries)
         readline.set_completer_delims(' \t\n')
