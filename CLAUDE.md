@@ -2,6 +2,36 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 SESSION START PROTOCOL - READ FIRST 🚨
+
+**BEFORE doing ANYTHING in this repository, you MUST read ALL of these files:**
+
+1. `.claude/COMMUNICATION_STYLE.md` - Communication requirements (terse, direct, emojis)
+2. `.claude/EMOJI_GUIDE.md` - Systematic emoji usage for clarity
+3. `.claude/GIT_VERIFICATION_PROTOCOL.md` - Git state verification before operations
+4. `.claude/MANDATORY_REFACTORING_PROTOCOL.md` - Step-by-step refactoring verification
+5. `.claude/ERROR_RECOVERY_PROTOCOL.md` - Slow down after mistakes
+6. `.claude/CODING_STANDARDS.md` - Python 3.8+, type annotations, BGP APIs
+7. `.claude/TESTING_DISCIPLINE.md` - Never claim success without testing
+8. `.claude/PLANNING_GUIDE.md` - Project planning standards
+9. `.claude/CI_TESTING.md` - Complete testing requirements
+10. `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` - Debugging encoding test failures
+
+**Total reading: ~25 KB - DO THIS EVERY SESSION (you have no memory between sessions)**
+
+After reading protocols, check git state:
+```bash
+git status
+git diff
+git diff --staged
+```
+
+If ANY files are modified/staged: ASK user how to handle before starting work.
+
+**These protocols are NOT optional. Read ALL of them BEFORE proceeding with any task.**
+
+---
+
 ## 🚨 MANDATORY REFACTORING PROTOCOL 🚨
 
 **For ANY refactoring work (renaming methods, restructuring code, etc.):**
