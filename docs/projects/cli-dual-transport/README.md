@@ -7,7 +7,7 @@
 
 ## Overview
 
-ExaBGP's CLI (Command Line Interface) supports two transport mechanisms for communication between the `exabgp cli` command and the running ExaBGP daemon:
+ExaBGP's CLI (Command Line Interface) supports two transport mechanisms for communication between the `exabgp run` command and the running ExaBGP daemon:
 
 1. **Named Pipes (FIFOs)** - Traditional approach using separate input/output pipes
 2. **Unix Domain Sockets** - Modern approach using bidirectional socket communication
@@ -27,8 +27,8 @@ Unix sockets are **auto-enabled by default** and require **zero manual setup**.
 ./sbin/exabgp etc/exabgp/api-rib.conf
 
 # Use CLI commands (defaults to socket)
-./sbin/exabgp cli "show neighbor"
-./sbin/exabgp cli "show routes"
+./sbin/exabgp run "show neighbor"
+./sbin/exabgp run "show routes"
 ```
 
 **That's it!** No `mkdir`, no `mkfifo`, no environment variables needed.
@@ -47,7 +47,7 @@ chmod 600 /tmp/exabgp/exabgp.*
 env exabgp_cli_pipe=/tmp/exabgp ./sbin/exabgp etc/exabgp/api-rib.conf
 
 # Use CLI with pipes
-./sbin/exabgp cli --pipe "show neighbor"
+./sbin/exabgp run --pipe "show neighbor"
 ```
 
 ---
@@ -103,7 +103,7 @@ Controls which transport the CLI uses:
 
 ### Command-Line Flags
 
-The `exabgp cli` command supports transport selection:
+The `exabgp run` command supports transport selection:
 
 - **`--socket`** - Use Unix socket transport (default, explicit)
 - **`--pipe`** - Use named pipe transport
@@ -140,7 +140,7 @@ This ensures explicit user choice always wins.
 **Example:**
 ```bash
 # Environment says pipe, but flag overrides to socket
-env exabgp_cli_transport=pipe ./sbin/exabgp cli --socket "show neighbor"
+env exabgp_cli_transport=pipe ./sbin/exabgp run --socket "show neighbor"
 # → Uses socket
 ```
 
@@ -172,16 +172,16 @@ Both transports search standard locations for their files:
 
 ```bash
 # Default (socket)
-./sbin/exabgp cli "show neighbor"
+./sbin/exabgp run "show neighbor"
 
 # Explicit socket
-./sbin/exabgp cli --socket "show neighbor"
+./sbin/exabgp run --socket "show neighbor"
 
 # Force pipe
-./sbin/exabgp cli --pipe "show neighbor"
+./sbin/exabgp run --pipe "show neighbor"
 
 # Environment override
-env exabgp_cli_transport=pipe ./sbin/exabgp cli "show neighbor"
+env exabgp_cli_transport=pipe ./sbin/exabgp run "show neighbor"
 ```
 
 ### Custom Names
@@ -191,7 +191,7 @@ env exabgp_cli_transport=pipe ./sbin/exabgp cli "show neighbor"
 env exabgp_api_socketname=mybgp ./sbin/exabgp etc/exabgp/api-rib.conf
 
 # Client: Match the custom name
-env exabgp_api_socketname=mybgp ./sbin/exabgp cli "show neighbor"
+env exabgp_api_socketname=mybgp ./sbin/exabgp run "show neighbor"
 ```
 
 ### Both Transports Simultaneously
@@ -208,8 +208,8 @@ env exabgp_cli_pipe=/tmp/exabgp \
     ./sbin/exabgp etc/exabgp/api-rib.conf
 
 # Use either transport
-./sbin/exabgp cli --socket "show neighbor"  # Uses socket
-./sbin/exabgp cli --pipe "show neighbor"    # Uses pipe
+./sbin/exabgp run --socket "show neighbor"  # Uses socket
+./sbin/exabgp run --pipe "show neighbor"    # Uses pipe
 ```
 
 ### Custom Locations
@@ -221,7 +221,7 @@ env exabgp_cli_socket=/opt/exabgp/run \
 
 # Client: Explicit socket file
 env exabgp_api_socketpath=/opt/exabgp/run/exabgp.sock \
-    ./sbin/exabgp cli "show neighbor"
+    ./sbin/exabgp run "show neighbor"
 ```
 
 ---
@@ -317,16 +317,16 @@ ExaBGP is not accepting connections on Unix socket
        ./sbin/exabgp etc/exabgp/api-rib.conf
 
    # Test socket CLI
-   ./sbin/exabgp cli --socket "show neighbor"
+   ./sbin/exabgp run --socket "show neighbor"
    ```
 
 2. **Update scripts** to remove `--pipe` flags:
    ```bash
    # Old
-   ./sbin/exabgp cli --pipe "show neighbor"
+   ./sbin/exabgp run --pipe "show neighbor"
 
    # New (socket is default)
-   ./sbin/exabgp cli "show neighbor"
+   ./sbin/exabgp run "show neighbor"
    ```
 
 3. **Remove pipe setup** from startup scripts:
@@ -347,7 +347,7 @@ ExaBGP is not accepting connections on Unix socket
 
 5. **Verify** socket is working:
    ```bash
-   ./sbin/exabgp cli "show neighbor"
+   ./sbin/exabgp run "show neighbor"
    # Should work without --pipe flag
    ```
 

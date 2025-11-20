@@ -124,7 +124,7 @@ class TestCLIArgumentParsing:
 
     def test_default_no_transport_flag(self) -> None:
         """Test argument parsing with no transport flags"""
-        from exabgp.application.cli import setargs
+        from exabgp.application.run import setargs
 
         parser = argparse.ArgumentParser()
         setargs(parser)
@@ -139,7 +139,7 @@ class TestCLIArgumentParsing:
 
     def test_pipe_flag(self) -> None:
         """Test argument parsing with --pipe flag"""
-        from exabgp.application.cli import setargs
+        from exabgp.application.run import setargs
 
         parser = argparse.ArgumentParser()
         setargs(parser)
@@ -151,7 +151,7 @@ class TestCLIArgumentParsing:
 
     def test_socket_flag(self) -> None:
         """Test argument parsing with --socket flag"""
-        from exabgp.application.cli import setargs
+        from exabgp.application.run import setargs
 
         parser = argparse.ArgumentParser()
         setargs(parser)
@@ -163,7 +163,7 @@ class TestCLIArgumentParsing:
 
     def test_mutually_exclusive_flags(self) -> None:
         """Test that --pipe and --socket are mutually exclusive"""
-        from exabgp.application.cli import setargs
+        from exabgp.application.run import setargs
 
         parser = argparse.ArgumentParser()
         setargs(parser)
@@ -174,7 +174,7 @@ class TestCLIArgumentParsing:
 
     def test_pipename_flag(self) -> None:
         """Test --pipename flag still works"""
-        from exabgp.application.cli import setargs
+        from exabgp.application.run import setargs
 
         parser = argparse.ArgumentParser()
         setargs(parser)
@@ -185,7 +185,7 @@ class TestCLIArgumentParsing:
 
     def test_pipename_with_pipe_flag(self) -> None:
         """Test --pipename works with --pipe flag"""
-        from exabgp.application.cli import setargs
+        from exabgp.application.run import setargs
 
         parser = argparse.ArgumentParser()
         setargs(parser)
@@ -209,15 +209,15 @@ class TestTransportSelection:
         mock_args.command = ['show', 'neighbor']
 
         with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.cli.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.cli.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.cli.getenv') as mock_getenv:
+            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
+                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
+                    with patch('exabgp.application.run.getenv') as mock_getenv:
                         mock_env = MagicMock()
                         mock_env.api.pipename = 'exabgp'
                         mock_env.api.socketname = 'exabgp'
                         mock_getenv.return_value = mock_env
 
-                        from exabgp.application.cli import cmdline
+                        from exabgp.application.run import cmdline
 
                         try:
                             cmdline(mock_args)
@@ -237,14 +237,14 @@ class TestTransportSelection:
         mock_args.command = ['show', 'neighbor']
 
         with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.cli.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.cli.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.cli.getenv') as mock_getenv:
+            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
+                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
+                    with patch('exabgp.application.run.getenv') as mock_getenv:
                         mock_env = MagicMock()
                         mock_env.api.pipename = 'exabgp'
                         mock_getenv.return_value = mock_env
 
-                        from exabgp.application.cli import cmdline
+                        from exabgp.application.run import cmdline
 
                         try:
                             cmdline(mock_args)
@@ -264,14 +264,14 @@ class TestTransportSelection:
         mock_args.command = ['show', 'neighbor']
 
         with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.cli.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.cli.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.cli.getenv') as mock_getenv:
+            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
+                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
+                    with patch('exabgp.application.run.getenv') as mock_getenv:
                         mock_env = MagicMock()
                         mock_env.api.socketname = 'exabgp'
                         mock_getenv.return_value = mock_env
 
-                        from exabgp.application.cli import cmdline
+                        from exabgp.application.run import cmdline
 
                         try:
                             cmdline(mock_args)
@@ -291,14 +291,14 @@ class TestTransportSelection:
         mock_args.command = ['show', 'neighbor']
 
         with patch.dict(os.environ, {'exabgp_cli_transport': 'pipe'}):
-            with patch('exabgp.application.cli.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.cli.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.cli.getenv') as mock_getenv:
+            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
+                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
+                    with patch('exabgp.application.run.getenv') as mock_getenv:
                         mock_env = MagicMock()
                         mock_env.api.pipename = 'exabgp'
                         mock_getenv.return_value = mock_env
 
-                        from exabgp.application.cli import cmdline
+                        from exabgp.application.run import cmdline
 
                         try:
                             cmdline(mock_args)
@@ -318,14 +318,14 @@ class TestTransportSelection:
         mock_args.command = ['show', 'neighbor']
 
         with patch.dict(os.environ, {'exabgp_cli_transport': 'socket'}):
-            with patch('exabgp.application.cli.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.cli.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.cli.getenv') as mock_getenv:
+            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
+                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
+                    with patch('exabgp.application.run.getenv') as mock_getenv:
                         mock_env = MagicMock()
                         mock_env.api.socketname = 'exabgp'
                         mock_getenv.return_value = mock_env
 
-                        from exabgp.application.cli import cmdline
+                        from exabgp.application.run import cmdline
 
                         try:
                             cmdline(mock_args)
@@ -346,14 +346,14 @@ class TestTransportSelection:
 
         # Environment says socket
         with patch.dict(os.environ, {'exabgp_cli_transport': 'socket'}):
-            with patch('exabgp.application.cli.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.cli.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.cli.getenv') as mock_getenv:
+            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
+                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
+                    with patch('exabgp.application.run.getenv') as mock_getenv:
                         mock_env = MagicMock()
                         mock_env.api.pipename = 'exabgp'
                         mock_getenv.return_value = mock_env
 
-                        from exabgp.application.cli import cmdline
+                        from exabgp.application.run import cmdline
 
                         try:
                             cmdline(mock_args)
@@ -377,13 +377,13 @@ class TestCommandShortcuts:
         mock_args.command = ['h']  # Should expand to 'help'
 
         with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.cli.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.cli.getenv') as mock_getenv:
+            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
+                with patch('exabgp.application.run.getenv') as mock_getenv:
                     mock_env = MagicMock()
                     mock_env.api.socketname = 'exabgp'
                     mock_getenv.return_value = mock_env
 
-                    from exabgp.application.cli import cmdline
+                    from exabgp.application.run import cmdline
 
                     try:
                         cmdline(mock_args)
@@ -405,13 +405,13 @@ class TestCommandShortcuts:
         mock_args.command = ['s', 'n']  # Should expand to 'show neighbor'
 
         with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.cli.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.cli.getenv') as mock_getenv:
+            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
+                with patch('exabgp.application.run.getenv') as mock_getenv:
                     mock_env = MagicMock()
                     mock_env.api.socketname = 'exabgp'
                     mock_getenv.return_value = mock_env
 
-                    from exabgp.application.cli import cmdline
+                    from exabgp.application.run import cmdline
 
                     try:
                         cmdline(mock_args)
