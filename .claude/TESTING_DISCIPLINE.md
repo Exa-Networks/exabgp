@@ -1,10 +1,10 @@
 # Testing Discipline
 
-**MANDATORY - NEVER claim success without testing.**
+**MANDATORY - NEVER claim success without testing AND regression prevention.**
 
 ---
 
-## Forbidden Phrases (without testing)
+## Forbidden Phrases (without testing + regression tests)
 
 ❌ "The tests pass"
 ❌ "All tests pass"
@@ -13,7 +13,9 @@
 ❌ "Everything works"
 ❌ "Ready for merge"
 
-✅ ONLY say after running ALL required tests.
+✅ ONLY say after:
+1. Running ALL required tests
+2. Ensuring appropriate regression tests exist
 
 ---
 
@@ -36,12 +38,65 @@ env exabgp_log_enable=false pytest ./tests/unit/
 
 ---
 
+## Regression Prevention
+
+**MANDATORY - ALL code changes MUST include appropriate tests.**
+
+### Bug Fixes
+✅ Add test that would have caught the bug
+✅ Verify test fails without fix, passes with fix
+✅ Place in tests/unit/ or qa/bin/functional as appropriate
+
+### New Features
+✅ Add unit tests for new logic
+✅ Add functional tests for protocol/API changes
+✅ Test both success and failure cases
+
+### Refactoring
+✅ Verify existing tests cover refactored code
+✅ Add missing tests before refactoring
+✅ All tests must pass at every step (see MANDATORY_REFACTORING_PROTOCOL.md)
+
+### Test Coverage Requirements
+
+**Unit tests (tests/unit/):**
+- Logic changes
+- Helper functions
+- Data structure manipulation
+- Error handling
+
+**Functional tests (qa/bin/functional):**
+- BGP protocol changes
+- Message encoding/decoding
+- API command changes
+- Configuration parsing
+
+**Both when applicable.**
+
+### Examples
+
+❌ WRONG:
+1. Fix encoding bug
+2. Run tests - all pass
+3. Declare "fixed"
+
+✅ CORRECT:
+1. Fix encoding bug
+2. Add functional test that would have caught it (qa/encoding/<test>.ci/.msg)
+3. Verify test fails without fix
+4. Apply fix
+5. Run ALL tests - all pass
+6. Declare "fixed"
+
+---
+
 ## Workflow
 
-1. Make code changes
-2. Run ALL tests
-3. Verify ALL pass
-4. THEN tell user
+1. Write/update regression tests
+2. Make code changes
+3. Run ALL tests
+4. Verify ALL pass
+5. THEN tell user
 
 ❌ NEVER:
 1. Make changes
@@ -49,12 +104,19 @@ env exabgp_log_enable=false pytest ./tests/unit/
 3. Run tests
 4. Discover failure
 
+❌ NEVER:
+1. Fix bug
+2. Tests pass
+3. Declare "complete"
+4. No regression test added
+
 ---
 
 ## Quick Reference
 
 **Before saying "fixed"/"ready"/"working"/"complete":**
 
+- [ ] Regression tests added/updated ✅
 - [ ] `ruff format src && ruff check src` ✅
 - [ ] `env exabgp_log_enable=false pytest ./tests/unit/` ✅
 - [ ] `./qa/bin/functional encoding <test_id>` ✅
@@ -63,4 +125,4 @@ env exabgp_log_enable=false pytest ./tests/unit/
 
 ---
 
-**Updated:** 2025-11-16
+**Updated:** 2025-11-20
