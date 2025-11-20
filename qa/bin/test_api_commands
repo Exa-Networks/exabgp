@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+
+# Test script for daemon health monitoring API commands (ping, status, get-daemon-identity)
+# Usage: ./qa/bin/test_api_commands
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+CONFIG_FILE="${ROOT_DIR}/etc/exabgp/api-simple.conf"
+EXABGP="${ROOT_DIR}/sbin/exabgp"
+SOCKET_PATH="/run/exabgp/exabgp.sock"
+
+# Cleanup function
+cleanup() {
+    if [ -n "$EXABGP_PID" ]; then
+        echo -e "${YELLOW}Cleaning up ExaBGP daemon (PID: $EXABGP_PID)${NC}"
+        kill $EXABGP_PID 2>/dev/null || true
+        wait $EXABGP_PID 2>/dev/null || true
+    fi
+    if [ -S "$SOCKET_PATH" ]; then
+        rm -f "$SOCKET_PATH"
+    fi
+}
+
+trap cleanup EXIT
+
+echo "======================================================================="
+echo "ExaBGP API Commands Test"
+echo "======================================================================="
+echo ""
+
+# Check if config file exists
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo -e "${RED}✗ Config file not found: $CONFIG_FILE${NC}"
+    exit 1
+fi
+
+# Start ExaBGP daemon in background
+echo -e "${YELLOW}→ Starting ExaBGP daemon...${NC}"
+env exabgp_cli_socket="/run/exabgp/" \
+    exabgp_log_enable=false \
+    "$EXABGP" "$CONFIG_FILE" > /dev/null 2>&1 &
+EXABGP_PID=$!
+
+# Wait for socket to be created
+echo -e "${YELLOW}→ Waiting for Unix socket to be ready...${NC}"
+RETRIES=0
+MAX_RETRIES=30
+while [ ! -S "$SOCKET_PATH" ] && [ $RETRIES -lt $MAX_RETRIES ]; do
+    sleep 0.5
+    RETRIES=$((RETRIES + 1))
+done
+
+if [ ! -S "$SOCKET_PATH" ]; then
+    echo -e "${RED}✗ Socket not created after ${MAX_RETRIES} retries${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ ExaBGP daemon started (PID: $EXABGP_PID)${NC}"
+echo ""
+
+# Test 1: ping command (text mode)
+echo "======================================================================="
+echo "TEST 1: ping command (text mode)"
+echo "======================================================================="
+echo -e "${YELLOW}→ Sending: ping${NC}"
+RESPONSE=$(echo "ping" | nc -U "$SOCKET_PATH" 2>/dev/null | head -2)
+echo "Response:"
+echo "$RESPONSE"
+if echo "$RESPONSE" | grep -q "^pong [0-9a-f-]\{36\}"; then
+    echo -e "${GREEN}✓ PASSED - ping returned valid UUID${NC}"
+    PING_UUID=$(echo "$RESPONSE" | grep "^pong" | awk '{print $2}')
+else
+    echo -e "${RED}✗ FAILED - ping did not return 'pong <UUID>'${NC}"
+    exit 1
+fi
+echo ""
+
+# Test 2: ping command (JSON mode)
+echo "======================================================================="
+echo "TEST 2: ping command (JSON mode)"
+echo "======================================================================="
+echo -e "${YELLOW}→ Sending: #json ping${NC}"
+RESPONSE=$(echo "#json ping" | nc -U "$SOCKET_PATH" 2>/dev/null | head -2)
+echo "Response:"
+echo "$RESPONSE"
+if echo "$RESPONSE" | grep -q '"pong"'; then
+    echo -e "${GREEN}✓ PASSED - ping returned JSON with 'pong' field${NC}"
+    PING_JSON_UUID=$(echo "$RESPONSE" | grep '"pong"' | sed -E 's/.*"pong": "([^"]+)".*/\1/')
+
+    # Verify UUID matches text mode
+    if [ "$PING_UUID" = "$PING_JSON_UUID" ]; then
+        echo -e "${GREEN}✓ UUID matches text mode: $PING_UUID${NC}"
+    else
+        echo -e "${RED}✗ FAILED - UUID mismatch: text=$PING_UUID json=$PING_JSON_UUID${NC}"
+        exit 1
+    fi
+else
+    echo -e "${RED}✗ FAILED - ping did not return JSON${NC}"
+    exit 1
+fi
+echo ""
+
+# Test 3: get-daemon-identity command
+echo "======================================================================="
+echo "TEST 3: get-daemon-identity command"
+echo "======================================================================="
+echo -e "${YELLOW}→ Sending: get-daemon-identity${NC}"
+RESPONSE=$(echo "get-daemon-identity" | nc -U "$SOCKET_PATH" 2>/dev/null | head -2)
+echo "Response:"
+echo "$RESPONSE"
+if echo "$RESPONSE" | grep -q '"uuid"' && echo "$RESPONSE" | grep -q '"pid"' && echo "$RESPONSE" | grep -q '"start_time"'; then
+    echo -e "${GREEN}✓ PASSED - get-daemon-identity returned complete JSON${NC}"
+
+    # Extract and verify UUID
+    IDENTITY_UUID=$(echo "$RESPONSE" | grep '"uuid"' | sed -E 's/.*"uuid": "([^"]+)".*/\1/')
+    if [ "$PING_UUID" = "$IDENTITY_UUID" ]; then
+        echo -e "${GREEN}✓ UUID matches ping command: $IDENTITY_UUID${NC}"
+    else
+        echo -e "${RED}✗ FAILED - UUID mismatch: ping=$PING_UUID identity=$IDENTITY_UUID${NC}"
+        exit 1
+    fi
+else
+    echo -e "${RED}✗ FAILED - get-daemon-identity did not return complete JSON${NC}"
+    exit 1
+fi
+echo ""
+
+# Test 4: status command (text mode)
+echo "======================================================================="
+echo "TEST 4: status command (text mode)"
+echo "======================================================================="
+echo -e "${YELLOW}→ Sending: status${NC}"
+RESPONSE=$(echo "status" | nc -U "$SOCKET_PATH" 2>/dev/null | head -10)
+echo "Response:"
+echo "$RESPONSE"
+if echo "$RESPONSE" | grep -q "UUID" && echo "$RESPONSE" | grep -q "PID" && echo "$RESPONSE" | grep -q "Uptime"; then
+    echo -e "${GREEN}✓ PASSED - status returned formatted text with expected fields${NC}"
+
+    # Verify UUID appears in output
+    if echo "$RESPONSE" | grep -q "$PING_UUID"; then
+        echo -e "${GREEN}✓ UUID present in status output${NC}"
+    else
+        echo -e "${RED}✗ FAILED - UUID not found in status output${NC}"
+        exit 1
+    fi
+else
+    echo -e "${RED}✗ FAILED - status did not return expected text format${NC}"
+    exit 1
+fi
+echo ""
+
+# Test 5: status command (JSON mode)
+echo "======================================================================="
+echo "TEST 5: status command (JSON mode)"
+echo "======================================================================="
+echo -e "${YELLOW}→ Sending: #json status${NC}"
+RESPONSE=$(echo "#json status" | nc -U "$SOCKET_PATH" 2>/dev/null | head -2)
+echo "Response:"
+echo "$RESPONSE"
+if echo "$RESPONSE" | grep -q '"uuid"' && echo "$RESPONSE" | grep -q '"pid"' && echo "$RESPONSE" | grep -q '"uptime"' && echo "$RESPONSE" | grep -q '"peers"'; then
+    echo -e "${GREEN}✓ PASSED - status returned complete JSON${NC}"
+
+    # Extract and verify UUID
+    STATUS_UUID=$(echo "$RESPONSE" | grep '"uuid"' | sed -E 's/.*"uuid": "([^"]+)".*/\1/')
+    if [ "$PING_UUID" = "$STATUS_UUID" ]; then
+        echo -e "${GREEN}✓ UUID matches ping command: $STATUS_UUID${NC}"
+    else
+        echo -e "${RED}✗ FAILED - UUID mismatch: ping=$PING_UUID status=$STATUS_UUID${NC}"
+        exit 1
+    fi
+else
+    echo -e "${RED}✗ FAILED - status did not return complete JSON${NC}"
+    exit 1
+fi
+echo ""
+
+# Summary
+echo "======================================================================="
+echo "ALL TESTS PASSED"
+echo "======================================================================="
+echo -e "${GREEN}✓ All 5 API command tests passed${NC}"
+echo -e "Daemon UUID: ${PING_UUID}"
+echo ""
+
+exit 0

@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import time
+
+# Wait for BGP session to establish
+time.sleep(2)
+
+# Test ping command
+sys.stdout.write('ping\n')
+sys.stdout.flush()
+
+# Read response
+response = sys.stdin.readline().strip()
+if not response.startswith('pong '):
+    sys.stderr.write(f'ERROR: ping failed, got: {response}\n')
+    sys.exit(1)
+
+uuid = response.split()[1]
+sys.stderr.write(f'OK: ping returned UUID {uuid}\n')
+
+# Read done
+done = sys.stdin.readline().strip()
+if done != 'done':
+    sys.stderr.write(f'ERROR: expected done, got: {done}\n')
+    sys.exit(1)
+
+# Test status command
+sys.stdout.write('status\n')
+sys.stdout.flush()
+
+# Read multi-line response
+status_lines = []
+while True:
+    line = sys.stdin.readline().strip()
+    if line == 'done':
+        break
+    status_lines.append(line)
+
+status_text = '\n'.join(status_lines)
+if 'UUID' not in status_text and uuid not in status_text:
+    sys.stderr.write(f'ERROR: status missing UUID, got: {status_text}\n')
+    sys.exit(1)
+
+if 'PID' not in status_text:
+    sys.stderr.write(f'ERROR: status missing PID\n')
+    sys.exit(1)
+
+sys.stderr.write(f'OK: status returned complete information\n')
+sys.stderr.write(f'SUCCESS: Health monitoring commands working\n')
+
+# Wait for shutdown signal (like other api-* tests)
+now = time.time()
+while os.getppid() != 1 and time.time() < now + 7:
+    line = sys.stdin.readline().strip()
+    if not line or 'shutdown' in line:
+        break
+    time.sleep(0.1)

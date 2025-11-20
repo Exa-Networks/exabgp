@@ -61,6 +61,14 @@ class Reactor:
         self._stopping: bool = getenv().tcp.attempts > 0
         self.exit_code: int = self.Exit.unknown
 
+        # Daemon identity for CLI health monitoring
+        self.daemon_uuid: str = str(uuid.uuid4())
+        self.daemon_start_time: float = time.time()
+
+        # Active CLI client tracking (for multi-client replacement detection)
+        self.active_client_uuid: Optional[str] = None
+        self.active_client_last_ping: float = 0.0
+
         self.max_loop_time: float = getenv().reactor.speed
         self._sleep_time: float = self.max_loop_time / 100
         self._busyspin: Dict[int, int] = {}
