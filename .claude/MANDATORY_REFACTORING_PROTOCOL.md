@@ -73,29 +73,23 @@ Result: PASS ✓
 
 **Before ANY git commit:**
 
-### 1. Full Unit Tests
+### 1. Run Complete Test Suite
 ```bash
-env exabgp_log_enable=false pytest ./tests/unit/ -q
+./qa/bin/test_everything
 ```
-**PASTE OUTPUT - Must show "1376 passed" with 0 failures**
+**PASTE OUTPUT - Must show all 6 test suites passed**
 
-### 2. Linting
-```bash
-ruff format src && ruff check src
-```
-**PASTE OUTPUT - Must show "All checks passed!"**
+This runs:
+- Ruff format
+- Ruff check
+- Unit tests (1376 tests)
+- Functional encoding tests (72 tests)
+- Functional decoding tests
+- Configuration validation
 
-### 3. Functional Tests (if applicable)
-```bash
-./qa/bin/functional encoding <test_id>
-```
-**PASTE OUTPUT**
+### 2. Checklist
 
-### 4. Checklist
-
-- [ ] 1376 unit tests passed (proof pasted)
-- [ ] Linting passed (proof pasted)
-- [ ] Functional tests passed (proof pasted)
+- [ ] `./qa/bin/test_everything` passed (proof pasted)
 - [ ] `git status` reviewed
 - [ ] User approval obtained
 

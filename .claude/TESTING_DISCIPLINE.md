@@ -24,14 +24,26 @@
 After ANY code change:
 
 ```bash
+# Single command - runs ALL tests, exits on first failure
+./qa/bin/test_everything
+```
+
+**Individual test commands (for reference):**
+```bash
 # 1. Linting
 ruff format src && ruff check src
 
 # 2. Unit tests
 env exabgp_log_enable=false pytest ./tests/unit/
 
-# 3. Functional tests (for affected functionality)
-./qa/bin/functional encoding <test_id>
+# 3. Functional encoding tests (all 72 tests)
+./qa/bin/functional encoding
+
+# 4. Functional decoding tests
+./qa/bin/functional decoding
+
+# 5. Configuration validation
+./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
 ```
 
 **ALL must pass before declaring success.**
@@ -117,9 +129,7 @@ env exabgp_log_enable=false pytest ./tests/unit/
 **Before saying "fixed"/"ready"/"working"/"complete":**
 
 - [ ] Regression tests added/updated ✅
-- [ ] `ruff format src && ruff check src` ✅
-- [ ] `env exabgp_log_enable=false pytest ./tests/unit/` ✅
-- [ ] `./qa/bin/functional encoding <test_id>` ✅
+- [ ] `./qa/bin/test_everything` passes all 6 test suites ✅
 
 **No shortcuts. No exceptions. Every time.**
 

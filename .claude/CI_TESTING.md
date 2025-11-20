@@ -7,14 +7,26 @@
 ## Required Test Sequence
 
 ```bash
+# Single command - runs ALL tests, exits on first failure
+./qa/bin/test_everything
+```
+
+**Individual commands (for reference or debugging):**
+```bash
 # 1. Linting
 ruff format src && ruff check src
 
 # 2. Unit tests
 env exabgp_log_enable=false pytest ./tests/unit/
 
-# 3. Functional tests
-./qa/bin/functional encoding <test_id>
+# 3. Functional encoding tests (all 72)
+./qa/bin/functional encoding
+
+# 4. Functional decoding tests
+./qa/bin/functional decoding
+
+# 5. Configuration validation
+./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
 ```
 
 ---
@@ -70,13 +82,18 @@ done
 
 ## Pre-Commit Checklist
 
-- [ ] `ruff format src && ruff check src` ✅
-- [ ] `pytest ./tests/unit/` - 1376 passed ✅
-- [ ] `./qa/bin/functional encoding <test>` ✅
+- [ ] `./qa/bin/test_everything` - all 6 test suites pass ✅
 - [ ] `git status` reviewed
 - [ ] User approval obtained
 
 **If ANY unchecked: DO NOT COMMIT**
+
+**Detailed checklist (what ./qa/bin/test_everything runs):**
+- [ ] `ruff format src && ruff check src` ✅
+- [ ] `pytest ./tests/unit/` - 1376 passed ✅
+- [ ] `./qa/bin/functional encoding` - 72/72 passed ✅
+- [ ] `./qa/bin/functional decoding` - all passed ✅
+- [ ] Config validation passed ✅
 
 ---
 
