@@ -442,7 +442,7 @@ socket_name = env.api.socketname # 'exabgp' (default)
 ### Command Execution Flow (Socket)
 
 ```
-1. User runs: ./sbin/exabgp cli "show neighbor"
+1. User runs: ./sbin/exabgp run "show neighbor"
    ↓
 2. CLI client (cli.py):
    - Parses args: command="show neighbor", transport=socket
@@ -479,7 +479,7 @@ socket_name = env.api.socketname # 'exabgp' (default)
 ### Command Execution Flow (Pipe)
 
 ```
-1. User runs: ./sbin/exabgp cli --pipe "show neighbor"
+1. User runs: ./sbin/exabgp run --pipe "show neighbor"
    ↓
 2. CLI client (cli.py):
    - Parses args: command="show neighbor", transport=pipe

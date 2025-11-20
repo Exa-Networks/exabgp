@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from exabgp.application.cli_interactive import CommandCompleter
+from exabgp.application.cli import CommandCompleter
 
 
 class TestCompleterBasics:

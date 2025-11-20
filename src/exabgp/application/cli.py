@@ -1,629 +1,774 @@
 #!/usr/bin/env python3
 
-"""exabgp command line interface"""
+"""Interactive REPL mode for ExaBGP CLI with readline support"""
 
 from __future__ import annotations
 
-import argparse
-import errno
+import json
 import os
-import select
-import signal
+import re
 import sys
-import time
+import readline
+import atexit
+from typing import List, Optional, Callable
 
-import socket as sock
-
-from exabgp.application.pipe import check_fifo, named_pipe
 from exabgp.application.shortcuts import CommandShortcuts
+from exabgp.application.pipe import named_pipe
 from exabgp.application.unixsocket import unix_socket
-from exabgp.environment import ROOT, getenv
-from exabgp.reactor.api.response.answer import Answer
-from exabgp.reactor.network.error import error
-
-# Timeout and buffer size constants
-PIPE_OPEN_TIMEOUT = 5  # Seconds to wait for pipe open
-COMMAND_TIMEOUT = 5  # Seconds to wait for command send
-PIPE_CLEAR_TIMEOUT = 1.5  # Seconds to clear pipe before command
-COMMAND_RESPONSE_TIMEOUT = 5.0  # Seconds to wait for command response
-DONE_TIME_DIFF = 0.5  # Time difference for done detection
-SELECT_TIMEOUT = 0.01  # Select timeout in seconds
-SELECT_WAIT_INCREMENT = 0.01  # Wait increment per select iteration
-
-errno_block = set(
-    (
-        errno.EINPROGRESS,
-        errno.EALREADY,
-        errno.EAGAIN,
-        errno.EWOULDBLOCK,
-        errno.EINTR,
-        errno.EDEADLK,
-        errno.EBUSY,
-        errno.ENOBUFS,
-        errno.ENOMEM,
-    ),
-)
+from exabgp.environment import ROOT
+from exabgp.reactor.api.command.registry import CommandRegistry
 
 
-class AnswerStream:
-    text_done = f'\n{Answer.text_done}\n'
-    text_error = f'\n{Answer.text_error}\n'
-    text_shutdown = f'\n{Answer.text_error}\n'
-    json_done = f'\n{Answer.json_done}\n'
-    json_error = f'\n{Answer.json_error}\n'
-    json_shutdown = f'\n{Answer.json_error}\n'
-    buffer_size = Answer.buffer_size + 2
+# ANSI color codes
+class Colors:
+    """ANSI color codes for terminal output"""
+
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+
+    # Foreground colors
+    BLACK = '\033[30m'
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN = '\033[36m'
+    WHITE = '\033[37m'
+
+    # Bright colors
+    BRIGHT_BLACK = '\033[90m'
+    BRIGHT_RED = '\033[91m'
+    BRIGHT_GREEN = '\033[92m'
+    BRIGHT_YELLOW = '\033[93m'
+    BRIGHT_BLUE = '\033[94m'
+    BRIGHT_MAGENTA = '\033[95m'
+    BRIGHT_CYAN = '\033[96m'
+    BRIGHT_WHITE = '\033[97m'
+
+    @classmethod
+    def supports_color(cls) -> bool:
+        """Check if terminal supports ANSI colors"""
+        # Check if stdout is a terminal
+        if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
+            return False
+
+        # Check TERM environment variable
+        term = os.environ.get('TERM', '')
+        if term in ('dumb', ''):
+            return False
+
+        # Check NO_COLOR environment variable (https://no-color.org/)
+        if os.environ.get('NO_COLOR'):
+            return False
+
+        return True
 
 
-def open_reader(recv):
-    def open_timeout(signum, frame):
-        sys.stderr.write('could not connect to read response from ExaBGP\n')
-        sys.stderr.flush()
-        sys.exit(1)
+class CommandCompleter:
+    """Tab completion for ExaBGP commands using readline with dynamic command discovery"""
 
-    signal.signal(signal.SIGALRM, open_timeout)
-    signal.alarm(PIPE_OPEN_TIMEOUT)
+    def __init__(self, send_command: Callable[[str], str], get_neighbors: Optional[Callable[[], List[str]]] = None):
+        """
+        Initialize completer
 
-    done = False
-    while not done:
+        Args:
+            send_command: Function to send commands to ExaBGP
+            get_neighbors: Optional function to fetch neighbor IPs for completion
+        """
+        self.send_command = send_command
+        self.get_neighbors = get_neighbors
+        self.use_color = Colors.supports_color()
+
+        # Initialize command registry
+        self.registry = CommandRegistry()
+
+        # Build command tree dynamically from registry
+        self.command_tree = self.registry.build_command_tree()
+
+        # Get base commands from registry
+        self.base_commands = self.registry.get_base_commands()
+
+        # Cache for neighbor IPs
+        self._neighbor_cache: Optional[List[str]] = None
+        self._cache_timeout = 30  # Refresh cache every 30 seconds
+        self._cache_timestamp = 0
+
+        # Track state for single-TAB display on macOS libedit
+        self.matches: List[str] = []
+        self.is_libedit = 'libedit' in readline.__doc__
+        self.last_line = ''
+        self.last_matches: List[str] = []
+
+    def complete(self, text: str, state: int) -> Optional[str]:
+        """
+        Readline completion function with single-TAB display on macOS
+
+        Args:
+            text: Current word being completed
+            state: Iteration state (0 for first match, increments for subsequent)
+
+        Returns:
+            Next matching completion or None (with space suffix if unambiguous)
+        """
+        # Get the full line buffer to understand context
+        line = readline.get_line_buffer()
+        begin = readline.get_begidx()
+
+        # Parse the line into tokens
+        tokens = line[:begin].split()
+
+        # Generate matches based on context
+        if state == 0:
+            # First call - generate all matches
+            self.matches = self._get_completions(tokens, text)
+
+            # macOS libedit: Display all matches on first TAB press
+            if self.is_libedit and len(self.matches) > 1:
+                # Check if this is a new completion (avoid repeating on subsequent TABs)
+                current_line = readline.get_line_buffer()
+                if current_line != self.last_line or self.matches != self.last_matches:
+                    # Display matches
+                    self._display_matches_and_redraw(self.matches, line)
+                    self.last_line = current_line
+                    self.last_matches = self.matches.copy()
+
+        # Return the next match
         try:
-            reader = os.open(recv, os.O_RDONLY | os.O_NONBLOCK)
-            done = True
-        except OSError as exc:
-            if exc.args[0] in errno_block:
-                signal.signal(signal.SIGALRM, open_timeout)
-                signal.alarm(PIPE_OPEN_TIMEOUT)
-                continue
-            sys.stdout.write('could not read answer from ExaBGP')
-            sys.stdout.flush()
-            sys.exit(1)
-    signal.alarm(0)
-    return reader
+            match = self.matches[state]
+            # Add space suffix for unambiguous completion (single match only)
+            if len(self.matches) == 1 and state == 0:
+                return match + ' '
+            return match
+        except IndexError:
+            return None
 
+    def _display_matches_and_redraw(self, matches: List[str], current_line: str) -> None:
+        """Display completion matches in columns and redraw the prompt with current input"""
+        import shutil
 
-def open_writer(send):
-    def write_timeout(signum, frame):
-        sys.stderr.write('could not send command to ExaBGP (command timeout)')
-        sys.stderr.flush()
-        sys.exit(1)
+        if not matches:
+            return
 
-    signal.signal(signal.SIGALRM, write_timeout)
-    signal.alarm(COMMAND_TIMEOUT)
+        # Get terminal width
+        try:
+            term_width = shutil.get_terminal_size().columns
+        except Exception:
+            term_width = 80
 
-    try:
-        writer = os.open(send, os.O_WRONLY)
-    except OSError as exc:
-        if exc.errno == errno.ENXIO:
-            sys.stdout.write('ExaBGP is not running / using the configured named pipe')
-            sys.stdout.flush()
-            sys.exit(1)
-        sys.stdout.write('could not communicate with ExaBGP')
+        # Print newline before matches
+        sys.stdout.write('\n')
+
+        # Calculate column width (longest match + padding)
+        max_len = max(len(m) for m in matches)
+        col_width = max_len + 2
+
+        # Calculate number of columns
+        num_cols = max(1, term_width // col_width)
+
+        # Print matches in columns
+        for i, match in enumerate(matches):
+            sys.stdout.write(match.ljust(col_width))
+            if (i + 1) % num_cols == 0:
+                sys.stdout.write('\n')
+
+        # Final newline if needed
+        if len(matches) % num_cols != 0:
+            sys.stdout.write('\n')
+
+        # Redraw the prompt and current input
+        # Get the prompt from InteractiveCLI if available, or use a default
+        formatter = OutputFormatter()
+        prompt = formatter.format_prompt()
+
+        sys.stdout.write(prompt + current_line)
         sys.stdout.flush()
-        sys.exit(1)
-    except OSError as exc:
-        sys.stdout.write(f'could not communicate with ExaBGP ({exc})')
-        sys.stdout.flush()
-        sys.exit(1)
 
-    signal.alarm(0)
-    return writer
+    def _get_completions(self, tokens: List[str], text: str) -> List[str]:
+        """
+        Get list of completions based on current context
 
+        Args:
+            tokens: Previously typed tokens
+            text: Current partial token
 
-def setargs(sub):
-    # fmt:off
-    sub.add_argument('--pipename', dest='pipename', help='Name of the pipe', required=False)
-    transport_group = sub.add_mutually_exclusive_group()
-    transport_group.add_argument('--pipe', dest='use_pipe', action='store_true', help='Use named pipe transport (default: Unix socket)')
-    transport_group.add_argument('--socket', dest='use_socket', action='store_true', help='Use Unix socket transport (default)')
-    sub.add_argument('--batch', dest='batch_file', metavar='FILE', help='Execute commands from file (or stdin if "-")')
-    sub.add_argument('--no-color', dest='no_color', action='store_true', help='Disable colored output')
-    sub.add_argument('command', nargs='*', help='command to run (omit for interactive mode)')
-    # fmt:on
+        Returns:
+            List of matching completions
+        """
+        # If no tokens yet, complete base commands
+        if not tokens:
+            return sorted([cmd for cmd in self.base_commands if cmd.startswith(text)])
 
+        # Expand shortcuts in tokens using CommandShortcuts
+        expanded_tokens = CommandShortcuts.expand_token_list(tokens.copy())
 
-def send_command_socket(socket_path, command_str, return_output=False):
-    """
-    Send command via Unix socket and receive response.
+        # Check if completing neighbor-targeted command
+        if self._is_neighbor_command(expanded_tokens):
+            return self._complete_neighbor_command(expanded_tokens, text)
 
-    Args:
-        socket_path: Path to Unix socket
-        command_str: Command to send
-        return_output: If True, return output as string instead of printing
+        # Check for specific command patterns
+        if len(expanded_tokens) >= 2:
+            # AFI/SAFI completion for eor and route-refresh
+            if expanded_tokens[-1] in ('eor', 'route-refresh'):
+                return self._complete_afi_safi(expanded_tokens, text)
 
-    Returns:
-        Output string if return_output=True, None otherwise
-    """
-    output_lines = []
+            # Route specification hints
+            if expanded_tokens[-1] in ('route', 'ipv4', 'ipv6'):
+                return self._complete_route_spec(expanded_tokens, text)
 
-    try:
-        client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
-        client.settimeout(COMMAND_TIMEOUT)
-        client.connect(socket_path)
-    except sock.error as exc:
-        error_msg = ''
-        if exc.errno == errno.ENOENT:
-            error_msg = 'ExaBGP is not running / Unix socket not found\n'
-        elif exc.errno == errno.ECONNREFUSED:
-            error_msg = 'ExaBGP is not accepting connections on Unix socket\n'
+            # Neighbor filter completion
+            if 'neighbor' in expanded_tokens and self._is_ip_address(expanded_tokens[-1]):
+                return self._complete_neighbor_filters(text)
+
+        # Navigate command tree
+        current_level = self.command_tree
+
+        for i, token in enumerate(expanded_tokens):
+            if isinstance(current_level, dict):
+                if token in current_level:
+                    current_level = current_level[token]
+                elif '__options__' in current_level:
+                    # At a command with options
+                    options = current_level['__options__']
+                    if isinstance(options, list):
+                        matches = [opt for opt in options if opt.startswith(text)]
+                        return sorted(matches)
+                else:
+                    # Token not in tree, try partial match
+                    matches = [cmd for cmd in current_level.keys() if cmd.startswith(token) and cmd != '__options__']
+                    if matches and i == len(expanded_tokens) - 1:
+                        # Last token being completed
+                        return sorted(matches)
+                    return []
+            elif isinstance(current_level, list):
+                # At a leaf node (list of options)
+                matches = [opt for opt in current_level if opt.startswith(text)]
+                return sorted(matches)
+
+        # After navigating, see what's available at current level
+        if isinstance(current_level, dict):
+            matches = [cmd for cmd in current_level.keys() if cmd.startswith(text) and cmd != '__options__']
+
+            # Add options if available
+            if '__options__' in current_level:
+                options = current_level['__options__']
+                if isinstance(options, list):
+                    matches.extend([opt for opt in options if opt.startswith(text)])
+
+            return sorted(matches)
+        elif isinstance(current_level, list):
+            matches = [opt for opt in current_level if opt.startswith(text)]
+            return sorted(matches)
+
+        return []
+
+    def _is_neighbor_command(self, tokens: List[str]) -> bool:
+        """Check if command targets a specific neighbor"""
+        return tokens and (
+            tokens[0] in ('teardown', 'neighbor')
+            or (len(tokens) >= 2 and tokens[0] in ('announce', 'withdraw', 'flush', 'clear'))
+        )
+
+    def _complete_neighbor_command(self, tokens: List[str], text: str) -> List[str]:
+        """Complete neighbor-targeted commands"""
+        # Check if we should complete neighbor IP
+        last_token = tokens[-1] if tokens else ''
+
+        # If last token is a command keyword, suggest 'neighbor' or neighbor IPs
+        if last_token in ('announce', 'withdraw', 'flush', 'clear', 'teardown'):
+            matches = ['neighbor'] if 'neighbor'.startswith(text) else []
+            neighbor_ips = self._get_neighbor_ips()
+            matches.extend([ip for ip in neighbor_ips if ip.startswith(text)])
+            return sorted(matches)
+
+        # If last token is 'neighbor', complete with IPs
+        if last_token == 'neighbor':
+            neighbor_ips = self._get_neighbor_ips()
+            return sorted([ip for ip in neighbor_ips if ip.startswith(text)])
+
+        # If last token is an IP, suggest filters
+        if self._is_ip_address(last_token):
+            return self._complete_neighbor_filters(text)
+
+        return []
+
+    def _complete_neighbor_filters(self, text: str) -> List[str]:
+        """Complete neighbor filter keywords"""
+        filters = self.registry.get_neighbor_filters()
+        return sorted([f for f in filters if f.startswith(text)])
+
+    def _complete_afi_safi(self, tokens: List[str], text: str) -> List[str]:
+        """Complete AFI/SAFI values for eor and route-refresh"""
+        # Get AFI values first, then SAFI
+        afi_values = self.registry.get_afi_values()
+
+        # Check if we've already typed an AFI
+        potential_afi = tokens[-2] if len(tokens) >= 2 and tokens[-2] in afi_values else None
+
+        if potential_afi:
+            # Complete SAFI for the given AFI
+            safi_values = self.registry.get_safi_values(potential_afi)
+            return sorted([s for s in safi_values if s.startswith(text)])
         else:
-            error_msg = f'could not connect to ExaBGP Unix socket ({exc})\n'
+            # Complete AFI
+            return sorted([a for a in afi_values if a.startswith(text)])
 
-        if return_output:
-            raise ConnectionError(error_msg.strip())
-        else:
-            sys.stdout.write(error_msg)
-            sys.stdout.flush()
-            sys.exit(1)
+    def _complete_route_spec(self, tokens: List[str], text: str) -> List[str]:
+        """Complete route specification keywords"""
+        keywords = self.registry.get_route_keywords()
+        return sorted([k for k in keywords if k.startswith(text)])
 
-    try:
-        # Send command
-        client.sendall(command_str.encode('utf-8') + b'\n')
+    def _is_ip_address(self, token: str) -> bool:
+        """Check if token looks like an IP address"""
+        # Simple check for IPv4 or IPv6
+        ipv4_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+        ipv6_pattern = r'^[0-9a-fA-F:]+$'
+        return bool(re.match(ipv4_pattern, token) or (': ' in token or re.match(ipv6_pattern, token)))
 
-        # Receive response
-        client.settimeout(COMMAND_RESPONSE_TIMEOUT)
-        buf = b''
-        done = False
+    def _get_neighbor_ips(self) -> List[str]:
+        """
+        Get list of neighbor IPs for completion (with caching)
 
-        while not done:
+        Returns:
+            List of neighbor IP addresses
+        """
+        import time
+
+        # Check if cache is still valid
+        current_time = time.time()
+        if self._neighbor_cache is not None and (current_time - self._cache_timestamp) < self._cache_timeout:
+            return self._neighbor_cache
+
+        # Try to fetch neighbor IPs from ExaBGP
+        neighbor_ips = []
+
+        # Use provided get_neighbors callback if available
+        if self.get_neighbors:
             try:
-                chunk = client.recv(4096)
-                if not chunk:
-                    # Connection closed by server
-                    break
+                neighbor_ips = self.get_neighbors()
+            except Exception:
+                pass
+        else:
+            # Try to query ExaBGP via 'show neighbor json'
+            try:
+                response = self.send_command('show neighbor json')
+                if response:
+                    # Parse JSON response
+                    neighbors = json.loads(response)
+                    if isinstance(neighbors, list):
+                        for neighbor in neighbors:
+                            if isinstance(neighbor, dict) and 'peer-address' in neighbor:
+                                neighbor_ips.append(neighbor['peer-address'])
+                            elif isinstance(neighbor, dict) and 'remote-addr' in neighbor:
+                                neighbor_ips.append(neighbor['remote-addr'])
+            except Exception:
+                pass
 
-                buf += chunk
-                while b'\n' in buf:
-                    line, buf = buf.split(b'\n', 1)
-                    string = line.decode()
+        # Update cache
+        self._neighbor_cache = neighbor_ips
+        self._cache_timestamp = current_time
 
-                    if string == Answer.text_done or string == Answer.json_done:
-                        done = True
-                        break
-                    if string == Answer.text_shutdown or string == Answer.json_shutdown:
-                        error_msg = 'ExaBGP is shutting down, command aborted\n'
-                        if return_output:
-                            raise RuntimeError(error_msg.strip())
-                        else:
-                            sys.stderr.write(error_msg)
-                            sys.stderr.flush()
-                        done = True
-                        break
-                    if string == Answer.text_error or string == Answer.json_error:
-                        done = True
-                        error_msg = "ExaBGP returns an error (see ExaBGP's logs for more information)\n"
-                        if return_output:
-                            raise RuntimeError(error_msg.strip())
-                        else:
-                            sys.stderr.write(error_msg)
-                            sys.stderr.write('use help for a list of available commands\n')
-                            sys.stderr.flush()
-                        break
+        return neighbor_ips
 
-                    if return_output:
-                        output_lines.append(string)
-                    else:
-                        sys.stdout.write(f'{string}\n')
-                        sys.stdout.flush()
+    def invalidate_cache(self) -> None:
+        """Invalidate neighbor IP cache (call after topology changes)"""
+        self._neighbor_cache = None
+        self._cache_timestamp = 0
 
-            except sock.timeout:
-                warning_msg = '\nwarning: no end of command message received\nwarning: normal if exabgp.api.ack is set to false otherwise some data may get stuck\n'
-                if return_output:
-                    # Don't raise for timeout in interactive mode, just return what we got
-                    pass
-                else:
-                    sys.stderr.write(warning_msg)
-                    sys.stderr.flush()
-                break
-            except sock.error as exc:
-                if exc.errno in errno_block:
-                    continue
-                error_msg = f'could not read response from ExaBGP ({exc})\n'
-                if return_output:
-                    raise IOError(error_msg.strip())
-                else:
-                    sys.stdout.write(error_msg)
-                    sys.stdout.flush()
-                    sys.exit(1)
 
-    finally:
+class OutputFormatter:
+    """Format and colorize output"""
+
+    def __init__(self, use_color: bool = True):
+        self.use_color = use_color and Colors.supports_color()
+
+    def format_prompt(self, hostname: str = 'exabgp') -> str:
+        """Format the interactive prompt"""
+        if self.use_color:
+            return f'{Colors.BOLD}{Colors.GREEN}{hostname}{Colors.RESET}{Colors.BOLD}>{Colors.RESET} '
+        return f'{hostname}> '
+
+    def format_error(self, message: str) -> str:
+        """Format error message"""
+        if self.use_color:
+            return f'{Colors.BOLD}{Colors.RED}Error:{Colors.RESET} {message}'
+        return f'Error: {message}'
+
+    def format_warning(self, message: str) -> str:
+        """Format warning message"""
+        if self.use_color:
+            return f'{Colors.BOLD}{Colors.YELLOW}Warning:{Colors.RESET} {message}'
+        return f'Warning: {message}'
+
+    def format_success(self, message: str) -> str:
+        """Format success message"""
+        if self.use_color:
+            return f'{Colors.BOLD}{Colors.GREEN}✓{Colors.RESET} {message}'
+        return f'✓ {message}'
+
+    def format_info(self, message: str) -> str:
+        """Format info message"""
+        if self.use_color:
+            return f'{Colors.BOLD}{Colors.CYAN}Info:{Colors.RESET} {message}'
+        return f'Info: {message}'
+
+    def format_command_output(self, output: str) -> str:
+        """Format command output with colors"""
+        if not self.use_color or not output:
+            return output
+
+        lines = output.split('\n')
+        formatted = []
+
+        for line in lines:
+            # Colorize JSON-like output
+            if line.strip().startswith('{') or line.strip().startswith('['):
+                formatted.append(f'{Colors.CYAN}{line}{Colors.RESET}')
+            # Colorize IP addresses
+            elif any(c in line for c in ['.', ':']):
+                # Simple IP highlighting (can be improved)
+                formatted.append(line)
+            else:
+                formatted.append(line)
+
+        return '\n'.join(formatted)
+
+    def format_table(self, headers: List[str], rows: List[List[str]]) -> str:
+        """Format data as a table"""
+        if not headers or not rows:
+            return ''
+
+        # Calculate column widths
+        col_widths = [len(h) for h in headers]
+        for row in rows:
+            for i, cell in enumerate(row):
+                if i < len(col_widths):
+                    col_widths[i] = max(col_widths[i], len(str(cell)))
+
+        # Build table
+        lines = []
+
+        # Header
+        if self.use_color:
+            header_line = ' │ '.join(f'{Colors.BOLD}{h.ljust(w)}{Colors.RESET}' for h, w in zip(headers, col_widths))
+        else:
+            header_line = ' | '.join(h.ljust(w) for h, w in zip(headers, col_widths))
+
+        lines.append(header_line)
+
+        # Separator
+        sep_char = '─' if self.use_color else '-'
+        lines.append(
+            '─┼─'.join(sep_char * w for w in col_widths) if self.use_color else '-+-'.join('-' * w for w in col_widths)
+        )
+
+        # Rows
+        for row in rows:
+            line = ' │ ' if self.use_color else ' | '
+            line = line.join(str(cell).ljust(w) for cell, w in zip(row, col_widths))
+            lines.append(line)
+
+        return '\n'.join(lines)
+
+
+class InteractiveCLI:
+    """Interactive REPL for ExaBGP commands"""
+
+    def __init__(self, send_command: Callable[[str], str], history_file: Optional[str] = None):
+        """
+        Initialize interactive CLI
+
+        Args:
+            send_command: Function to send commands to ExaBGP
+            history_file: Path to save command history
+        """
+        self.send_command = send_command
+        self.formatter = OutputFormatter()
+        self.completer = CommandCompleter(send_command)
+        self.running = True
+
+        # Setup history file
+        if history_file is None:
+            home = os.path.expanduser('~')
+            history_file = os.path.join(home, '.exabgp_history')
+
+        self.history_file = history_file
+        self._setup_readline()
+
+    def _setup_readline(self) -> None:
+        """Configure readline for history and completion"""
+        # Set up completion
+        readline.set_completer(self.completer.complete)
+
+        # Configure TAB completion behavior
+        # Note: macOS uses libedit, Linux uses GNU readline - both supported
+        if 'libedit' in readline.__doc__:
+            # macOS libedit configuration
+            readline.parse_and_bind('bind ^I rl_complete')  # TAB key
+            # libedit doesn't support show-all-if-ambiguous, so we modify the completer
+            # to return all matches at once (handled in complete() method)
+        else:
+            # GNU readline configuration
+            readline.parse_and_bind('tab: complete')
+            # Show all completions immediately (don't require double-TAB)
+            readline.parse_and_bind('set show-all-if-ambiguous on')
+            # Show completions on first TAB even if there are many matches
+            readline.parse_and_bind('set completion-query-items -1')
+
+        # Set up delimiters (what counts as word boundaries)
+        readline.set_completer_delims(' \t\n')
+
+        # Load history
+        if os.path.exists(self.history_file):
+            try:
+                readline.read_history_file(self.history_file)
+            except Exception:
+                pass
+
+        # Set history size
+        readline.set_history_length(1000)
+
+        # Save history on exit
+        atexit.register(self._save_history)
+
+    def _save_history(self) -> None:
+        """Save command history to file"""
         try:
-            client.close()
+            readline.write_history_file(self.history_file)
         except Exception:
             pass
 
-    if return_output:
-        return '\n'.join(output_lines)
+    def run(self) -> None:
+        """Run the interactive REPL"""
+        self._print_banner()
 
+        while self.running:
+            try:
+                # Display prompt and read command
+                prompt = self.formatter.format_prompt()
+                line = input(prompt).strip()
 
-def main():
-    parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
-    setargs(parser)
-    cmdline(parser.parse_args())
+                # Skip empty lines
+                if not line:
+                    continue
 
+                # Handle built-in REPL commands
+                if self._handle_builtin(line):
+                    continue
 
-def cmdline(cmdarg):
-    # Determine transport: command-line flag > environment variable > default (socket)
-    # Priority: 1. Command-line flags, 2. Environment variable, 3. Default
-    if hasattr(cmdarg, 'use_pipe') and cmdarg.use_pipe:
-        use_pipe_transport = True
-    elif hasattr(cmdarg, 'use_socket') and cmdarg.use_socket:
-        use_pipe_transport = False
-    else:
-        # Check environment variable
-        env_transport = os.environ.get('exabgp_cli_transport', '').lower()
-        if env_transport == 'pipe':
-            use_pipe_transport = True
-        elif env_transport == 'socket':
-            use_pipe_transport = False
+                # Send to ExaBGP
+                self._execute_command(line)
+
+            except EOFError:
+                # Ctrl+D pressed
+                print()  # Newline after ^D
+                self._quit()
+                break
+            except KeyboardInterrupt:
+                # Ctrl+C pressed
+                print()  # Newline after ^C
+                continue
+            except Exception as exc:
+                print(self.formatter.format_error(f'Unexpected error: {exc}'))
+
+    def _print_banner(self) -> None:
+        """Print welcome banner"""
+        banner = """
+╔══════════════════════════════════════════════════════════╗
+║          ExaBGP Interactive CLI                          ║
+╚══════════════════════════════════════════════════════════╝
+
+Type 'help' for available commands
+Type 'exit' or press Ctrl+D to quit
+Tab completion and command history enabled
+"""
+        if self.formatter.use_color:
+            print(f'{Colors.BOLD}{Colors.CYAN}{banner}{Colors.RESET}')
         else:
-            # Default to socket transport
-            use_pipe_transport = False
+            print(banner)
 
-    pipename = cmdarg.pipename if cmdarg.pipename else getenv().api.pipename
-    socketname = getenv().api.socketname
+    def _handle_builtin(self, line: str) -> bool:
+        """
+        Handle REPL built-in commands
 
-    # Check for batch mode (batch_file should be a string)
-    batch_file = getattr(cmdarg, 'batch_file', None)
-    if batch_file and isinstance(batch_file, str):
-        cmdline_batch(batch_file, pipename, socketname, use_pipe_transport, cmdarg)
-        sys.exit(0)
+        Args:
+            line: Command line
 
-    command = cmdarg.command
+        Returns:
+            True if command was handled, False otherwise
+        """
+        tokens = line.split()
+        if not tokens:
+            return True
 
-    # Check for interactive mode (no command provided)
-    if command == []:
-        cmdline_interactive(pipename, socketname, use_pipe_transport, cmdarg)
-        sys.exit(0)
+        cmd = tokens[0].lower()
 
-    # Process command shortcuts/nicknames using shared module
-    command_str = ' '.join(command)
-    sending = CommandShortcuts.expand_shortcuts(command_str)
+        if cmd in ('exit', 'quit', 'q'):
+            self._quit()
+            return True
 
-    # Show expanded command if shortcuts were used
-    if sending != command_str:
-        sys.stdout.write(f'command: {sending}\n')
+        if cmd == 'clear':
+            # Clear screen
+            os.system('clear' if os.name != 'nt' else 'cls')
+            return True
 
-    if sending == 'reset':
-        # For reset command, just exit (no response expected)
-        if use_pipe_transport:
-            pipes = named_pipe(ROOT, pipename)
-            if len(pipes) == 1:
-                send = pipes[0] + pipename + '.in'
-                if check_fifo(send):
-                    writer = open_writer(send)
-                    try:
-                        os.write(writer, sending.encode('utf-8') + b'\n')
-                        os.close(writer)
-                    except Exception:
-                        pass
-        else:
-            sockets = unix_socket(ROOT, socketname)
-            if len(sockets) == 1:
-                socket_path = sockets[0] + socketname + '.sock'
-                try:
-                    client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
-                    client.settimeout(COMMAND_TIMEOUT)
-                    client.connect(socket_path)
-                    client.sendall(sending.encode('utf-8') + b'\n')
-                    client.close()
-                except Exception:
-                    pass
-        sys.exit(0)
+        if cmd == 'history':
+            # Show command history
+            self._show_history()
+            return True
 
-    # Route to appropriate transport
+        # Not a builtin
+        return False
+
+    def _execute_command(self, command: str) -> None:
+        """
+        Execute a command and display the result
+
+        Args:
+            command: Command to execute
+        """
+        try:
+            result = self.send_command(command)
+
+            # Format and display output
+            if result:
+                formatted = self.formatter.format_command_output(result)
+                print(formatted)
+        except Exception as exc:
+            print(self.formatter.format_error(str(exc)))
+
+    def _quit(self) -> None:
+        """Exit the REPL"""
+        self.running = False
+        print(self.formatter.format_info('Goodbye!'))
+
+    def _show_history(self) -> None:
+        """Display command history"""
+        history_len = readline.get_current_history_length()
+
+        if history_len == 0:
+            print(self.formatter.format_info('No commands in history'))
+            return
+
+        print(self.formatter.format_info(f'Command history ({history_len} entries):'))
+
+        # Show last 20 commands
+        start = max(1, history_len - 19)
+        for i in range(start, history_len + 1):
+            item = readline.get_history_item(i)
+            if item:
+                if self.formatter.use_color:
+                    print(f'{Colors.DIM}{i:4d}{Colors.RESET}  {item}')
+                else:
+                    print(f'{i:4d}  {item}')
+
+
+def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool, cmdarg) -> int:
+    """
+    Entry point for interactive CLI mode
+
+    Args:
+        pipename: Name of the named pipe
+        socketname: Name of the Unix socket
+        use_pipe_transport: If True, use pipe; otherwise use socket
+        cmdarg: Command-line arguments
+
+    Returns:
+        Exit code (0 for success)
+    """
+    import socket as sock
+
+    # Determine transport method
     if use_pipe_transport:
         # Use named pipe transport
-        cmdline_pipe(pipename, sending)
+        pipes = named_pipe(ROOT, pipename)
+        if len(pipes) != 1:
+            sys.stderr.write(f"Could not find ExaBGP's named pipe ({pipename})\n")
+            sys.stderr.write('Available pipes:\n - ')
+            sys.stderr.write('\n - '.join(pipes))
+            sys.stderr.write('\n')
+            sys.stderr.flush()
+            return 1
+
+        pipe_path = pipes[0]
+
+        def send_command_pipe(command: str) -> str:
+            """Send command via named pipe and return response"""
+            try:
+                # Expand shortcuts
+                expanded = CommandShortcuts.expand_shortcuts(command)
+
+                # Open pipe and send command
+                with open(pipe_path, 'w') as writer:
+                    writer.write(expanded + '\n')
+                    writer.flush()
+
+                # Read response (simplified - real implementation needs proper response handling)
+                # For now, return acknowledgment
+                return 'Command sent'
+            except Exception as exc:
+                return f'Error: {exc}'
+
+        send_func = send_command_pipe
     else:
         # Use Unix socket transport
-        cmdline_socket(socketname, sending)
-
-
-def cmdline_interactive(pipename, socketname, use_pipe_transport, cmdarg):
-    """Enter interactive REPL mode."""
-    # Import here to avoid overhead for one-shot commands
-    from exabgp.application.cli_interactive import InteractiveCLI
-
-    # Setup environment
-    if hasattr(cmdarg, 'no_color') and cmdarg.no_color:
-        os.environ['NO_COLOR'] = '1'
-
-    # Create command sender function
-    def send_command(command_str):
-        # Apply shortcut expansion using shared module
-        expanded_command = CommandShortcuts.expand_shortcuts(command_str)
-
-        # Send via appropriate transport
-        if use_pipe_transport:
-            # Not supported in interactive mode (pipes are blocking)
-            raise RuntimeError('Interactive mode not supported with pipe transport. Use --socket instead.')
-        else:
-            sockets = unix_socket(ROOT, socketname)
-            if len(sockets) != 1:
-                raise ConnectionError(f"Could not find ExaBGP's Unix socket ({socketname}.sock)")
-
-            socket_path = sockets[0] + socketname + '.sock'
-
-            if not os.path.exists(socket_path):
-                raise ConnectionError(f'Could not find Unix socket: {socket_path}')
-
-            return send_command_socket(socket_path, expanded_command, return_output=True)
-
-    # Run interactive CLI
-    try:
-        cli = InteractiveCLI(send_command)
-        cli.run()
-    except KeyboardInterrupt:
-        print()  # Newline after ^C
-    except Exception as exc:
-        sys.stderr.write(f'Interactive mode error: {exc}\n')
-        sys.exit(1)
-
-
-def cmdline_batch(batch_file, pipename, socketname, use_pipe_transport, cmdarg):
-    """Execute commands from file or stdin."""
-    # Read commands from file or stdin
-    if batch_file == '-':
-        # Read from stdin
-        command_source = sys.stdin
-        source_name = 'stdin'
-    else:
-        # Read from file
-        if not os.path.exists(batch_file):
-            sys.stderr.write(f'Batch file not found: {batch_file}\n')
-            sys.exit(1)
-        try:
-            command_source = open(batch_file, 'r')
-            source_name = batch_file
-        except IOError as exc:
-            sys.stderr.write(f'Could not open batch file: {exc}\n')
-            sys.exit(1)
-
-    sys.stdout.write(f'Executing commands from {source_name}...\n')
-    sys.stdout.flush()
-
-    # Process commands line by line
-    line_num = 0
-    errors = 0
-
-    try:
-        for line in command_source:
-            line_num += 1
-            command = line.strip()
-
-            # Skip empty lines and comments
-            if not command or command.startswith('#'):
-                continue
-
-            sys.stdout.write(f'\n[{line_num}] {command}\n')
-            sys.stdout.flush()
-
-            # Execute command - apply shortcut expansion using shared module
-            sending = CommandShortcuts.expand_shortcuts(command)
-
-            # Execute via transport (don't exit on error, continue with next command)
-            try:
-                if use_pipe_transport:
-                    cmdline_pipe(pipename, sending, exit_on_completion=False)
-                else:
-                    cmdline_socket(socketname, sending, exit_on_completion=False)
-            except Exception as exc:
-                sys.stderr.write(f'Error executing command: {exc}\n')
-                errors += 1
-
-    finally:
-        if batch_file != '-':
-            command_source.close()
-
-    # Summary
-    sys.stdout.write(f'\nBatch execution complete: {line_num} commands, {errors} errors\n')
-    sys.stdout.flush()
-
-    if errors > 0:
-        sys.exit(1)
-
-
-def cmdline_socket(socketname, sending, exit_on_completion=True):
-    """Execute command via Unix socket transport."""
-    sockets = unix_socket(ROOT, socketname)
-    if len(sockets) != 1:
-        sys.stdout.write(f"could not find ExaBGP's Unix socket ({socketname}.sock) for the cli\n")
-        sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
-        sys.stdout.write('\n - '.join(sockets))
-        sys.stdout.flush()
-        if exit_on_completion:
-            sys.exit(1)
-        else:
-            raise RuntimeError('Socket not found')
-
-    socket_path = sockets[0] + socketname + '.sock'
-
-    # Check if socket exists and is actually a socket
-    if not os.path.exists(socket_path):
-        sys.stdout.write(f'could not find Unix socket to connect to ExaBGP: {socket_path}\n')
-        sys.stdout.flush()
-        if exit_on_completion:
-            sys.exit(1)
-        else:
-            raise RuntimeError('Socket not found')
-
-    send_command_socket(socket_path, sending, return_output=False)
-    if exit_on_completion:
-        sys.exit(0)
-
-
-def cmdline_pipe(pipename, sending, exit_on_completion=True):
-    """Execute command via named pipe transport."""
-    pipes = named_pipe(ROOT, pipename)
-    if len(pipes) != 1:
-        sys.stdout.write(f"could not find ExaBGP's named pipes ({pipename}.in and {pipename}.out) for the cli\n")
-        sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
-        sys.stdout.write('\n - '.join(pipes))
-        sys.stdout.flush()
-        if exit_on_completion:
-            sys.exit(1)
-        else:
-            raise RuntimeError('Pipe not found')
-
-    send = pipes[0] + pipename + '.in'
-    recv = pipes[0] + pipename + '.out'
-
-    if not check_fifo(send):
-        sys.stdout.write('could not find write named pipe to connect to ExaBGP')
-        sys.stdout.flush()
-        sys.exit(1)
-
-    if not check_fifo(recv):
-        sys.stdout.write('could not find read named pipe to connect to ExaBGP')
-        sys.stdout.flush()
-        sys.exit(1)
-
-    reader = open_reader(recv)
-
-    rbuffer = b''
-    start = time.time()
-    while True:
-        try:
-            while select.select([reader], [], [], 0) != ([], [], []):
-                rbuffer += os.read(reader, 4096)
-                rbuffer = rbuffer[-AnswerStream.buffer_size :]
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
-            sys.stdout.write(str(exc))
-            sys.stdout.flush()
-            sys.exit(1)
-
-        # we are not ack'ing the command and probably have read all there is
-        if time.time() > start + PIPE_CLEAR_TIMEOUT:
-            break
-
-        # we read nothing, nothing to do
-        if not rbuffer:
-            break
-
-        # we read some data but it is not ending by a new line (ie: not a command completion)
-        if rbuffer[-1] != ord('\n'):
-            continue
-
-        if AnswerStream.text_done.endswith(rbuffer.decode()[-len(AnswerStream.text_done) :]):
-            break
-        if AnswerStream.text_error.endswith(rbuffer.decode()[-len(AnswerStream.text_error) :]):
-            break
-        if AnswerStream.text_shutdown.endswith(rbuffer.decode()[-len(AnswerStream.text_shutdown) :]):
-            break
-
-        if AnswerStream.json_done.endswith(rbuffer.decode()[-len(AnswerStream.json_done) :]):
-            break
-        if AnswerStream.json_error.endswith(rbuffer.decode()[-len(AnswerStream.json_error) :]):
-            break
-        if AnswerStream.json_shutdown.endswith(rbuffer.decode()[-len(AnswerStream.json_shutdown) :]):
-            break
-
-    writer = open_writer(send)
-    try:
-        os.write(writer, sending.encode('utf-8') + b'\n')
-        os.close(writer)
-    except OSError as exc:
-        sys.stdout.write(f'could not send command to ExaBGP ({exc!s})')
-        sys.stdout.flush()
-        sys.exit(1)
-
-    waited = 0.0
-    buf = b''
-    done = False
-    done_time_diff = DONE_TIME_DIFF
-    while not done:
-        try:
-            r, _, _ = select.select([reader], [], [], SELECT_TIMEOUT)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not get answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not get answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
-
-        if waited > COMMAND_RESPONSE_TIMEOUT:
+        sockets = unix_socket(ROOT, socketname)
+        if len(sockets) != 1:
+            sys.stderr.write(f"Could not find ExaBGP's Unix socket ({socketname}.sock)\n")
+            sys.stderr.write('Available sockets:\n - ')
+            sys.stderr.write('\n - '.join(sockets))
             sys.stderr.write('\n')
-            sys.stderr.write('warning: no end of command message received\n')
-            sys.stderr.write(
-                'warning: normal if exabgp.api.ack is set to false otherwise some data may get stuck on the pipe\n',
-            )
-            sys.stderr.write('warning: otherwise it may cause exabgp reactor to block\n')
-            sys.exit(0)
-        elif not r:
-            waited += SELECT_WAIT_INCREMENT
-            continue
-        else:
-            waited = 0.0
+            sys.stderr.flush()
+            return 1
 
-        try:
-            raw = os.read(reader, 4096)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not read answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not read answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
+        socket_path = sockets[0]
 
-        buf += raw
-        while b'\n' in buf:
-            line, buf = buf.split(b'\n', 1)
-            string = line.decode()
-            if string == Answer.text_done or string == Answer.json_done:
-                done = True
-                break
-            if string == Answer.text_shutdown or string == Answer.json_shutdown:
-                sys.stderr.write('ExaBGP is shutting down, command aborted\n')
-                sys.stderr.flush()
-                done = True
-                break
-            if string == Answer.text_error or string == Answer.json_error:
-                done = True
-                sys.stderr.write("ExaBGP returns an error (see ExaBGP's logs for more information)\n")
-                sys.stderr.write('use help for a list of available commands\n')
-                sys.stderr.flush()
-                break
-            sys.stdout.write(f'{string}\n')
-            sys.stdout.flush()
+        def send_command_socket(command: str) -> str:
+            """Send command via Unix socket and return response"""
+            try:
+                # Expand shortcuts
+                expanded = CommandShortcuts.expand_shortcuts(command)
 
-        if not getenv().api.ack and not raw.decode():
-            this_moment = time.time()
-            recv_epoch_time = os.path.getmtime(recv)
-            time_diff = this_moment - recv_epoch_time
-            if time_diff >= done_time_diff:
-                done = True
+                # Connect to socket
+                s = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
+                s.settimeout(5.0)
+                s.connect(socket_path)
 
+                # Send command
+                s.sendall((expanded + '\n').encode('utf-8'))
+
+                # Receive response
+                response_parts = []
+                while True:
+                    try:
+                        data = s.recv(4096)
+                        if not data:
+                            break
+                        response_parts.append(data.decode('utf-8'))
+
+                        # Check for done marker
+                        response = ''.join(response_parts)
+                        if 'done' in response or 'error' in response:
+                            break
+                    except sock.timeout:
+                        break
+                    except Exception:
+                        break
+
+                s.close()
+                return ''.join(response_parts).strip()
+            except Exception as exc:
+                return f'Error: {exc}'
+
+        send_func = send_command_socket
+
+    # Create and run interactive CLI
     try:
-        os.close(reader)
-    except Exception:
-        pass
-
-    if exit_on_completion:
-        sys.exit(0)
-
-
-if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        pass
+        cli = InteractiveCLI(send_func)
+        cli.run()
+        return 0
+    except Exception as exc:
+        sys.stderr.write(f'CLI error: {exc}\n')
+        sys.stderr.flush()
+        return 1
