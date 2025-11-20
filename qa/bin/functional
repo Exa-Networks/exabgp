@@ -17,21 +17,69 @@ import signal
 import subprocess
 import sys
 import time
+from argparse import Namespace, _SubParsersAction
 from enum import Enum
-from typing import Any, Dict, Generator, List, Optional, Type
+from types import FrameType
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Pattern,
+    TextIO,
+    Type,
+    TypedDict,
+    Union,
+)
 
-INTERPRETER = os.environ.get('INTERPRETER', '')
-if not INTERPRETER:
-    INTERPRETER = os.environ.get('__PYVENV_LAUNCHER__', sys.executable)
+INTERPRETER: str = os.environ.get('INTERPRETER') or os.environ.get('__PYVENV_LAUNCHER__', sys.executable)
+
+
+# Configuration types for different test classes
+class EncodingConf(TypedDict):
+    """Configuration for encoding tests"""
+
+    confs: List[str]  # List of config file paths
+    ci: str  # Path to .ci file
+    msg: str  # Path to .msg file
+    port: int  # TCP port number
+
+
+class DecodingConf(TypedDict):
+    """Configuration for decoding tests"""
+
+    type: str  # Message type: 'open', 'update', 'nlri'
+    family: str  # Address family: 'ipv4 unicast', etc. (empty for 'open')
+    packet: str  # Hex packet data
+    json: Dict[str, Any]  # Expected decoded JSON
+
+
+class ParsingConf(TypedDict):
+    """Configuration for parsing tests"""
+
+    fname: str  # Configuration file path
+
+
+# Union of all possible configuration types
+TestConf = Union[EncodingConf, DecodingConf, ParsingConf]
 
 
 class Alarm(Exception):
     pass
 
 
-def flush(*args: Any, **kwars: Any) -> None:
-    print(*args, **kwars)
-    sys.stdout.flush()
+def flush(
+    *args: object,
+    sep: Optional[str] = ' ',
+    end: Optional[str] = '\n',
+    file: Optional[TextIO] = None,
+) -> None:
+    print(*args, sep=sep, end=end, file=file)
+    if file is None:
+        _ = sys.stdout.flush()
+    else:
+        file.flush()
 
 
 def check_ulimit(minimum: int = 40000) -> None:
@@ -73,7 +121,7 @@ def check_ulimit(minimum: int = 40000) -> None:
         flush('[ulimit] Warning: Could not check file descriptor limit (resource module unavailable)')
 
 
-def alarm_handler(number: int, frame: Any) -> None:  # pylint: disable=W0613
+def alarm_handler(_number: int, _frame: FrameType) -> None:
     raise Alarm()
 
 
@@ -140,21 +188,21 @@ class Port:
 
 
 class Path:
-    PROGRAM = os.path.realpath(__file__)
-    ROOT = os.path.abspath(os.path.join(os.path.dirname(PROGRAM), os.path.join('..', '..')))
-    SRC = os.path.join(ROOT, 'src')
+    PROGRAM: str = os.path.realpath(__file__)
+    ROOT: str = os.path.abspath(os.path.join(os.path.dirname(PROGRAM), os.path.join('..', '..')))
+    SRC: str = os.path.join(ROOT, 'src')
 
-    ETC = os.path.join(ROOT, 'etc', 'exabgp')
-    EXABGP = os.path.join(ROOT, 'sbin', 'exabgp')
-    BGP = os.path.join(ROOT, 'qa', 'sbin', 'bgp')
-    DECODING = os.path.join(os.path.join(ROOT, 'qa', 'decoding'))
-    ENCODING = os.path.join(os.path.join(ROOT, 'qa', 'encoding'))
+    ETC: str = os.path.join(ROOT, 'etc', 'exabgp')
+    EXABGP: str = os.path.join(ROOT, 'sbin', 'exabgp')
+    BGP: str = os.path.join(ROOT, 'qa', 'sbin', 'bgp')
+    DECODING: str = os.path.join(os.path.join(ROOT, 'qa', 'decoding'))
+    ENCODING: str = os.path.join(os.path.join(ROOT, 'qa', 'encoding'))
 
-    ALL_ETC = glob.glob(os.path.join(ETC, '*.conf'))
+    ALL_ETC: List[str] = glob.glob(os.path.join(ETC, '*.conf'))
     ALL_ETC.sort()
-    ALL_DECODING = glob.glob(os.path.join(DECODING, '*'))
+    ALL_DECODING: List[str] = glob.glob(os.path.join(DECODING, '*'))
     ALL_DECODING.sort()
-    ALL_ENCODING = glob.glob(os.path.join(ENCODING, '*.ci'))
+    ALL_ENCODING: List[str] = glob.glob(os.path.join(ENCODING, '*.ci'))
     ALL_ENCODING.sort()
 
     @staticmethod
@@ -183,7 +231,7 @@ class Path:
             sys.exit('could not find the sequence daemon')
 
 
-class Exec(object):
+class Exec:
     def __init__(self) -> None:
         self.code: int = -1
         self.stdout: bytes = b''
@@ -192,7 +240,7 @@ class Exec(object):
         self._process: Optional[subprocess.Popen] = None
         self.command: str = ''
 
-    def run(self, command: List[str], env: Optional[Dict[str, str]] = None) -> 'Exec':
+    def run(self, command: List[str], env: Optional[Dict[str, str]]) -> 'Exec':
         self.command = ' '.join([_ if ' ' not in _ else f"'{_}'" for _ in command])
         # Set up environment to disable ExaBGP logging
         if env is None:
@@ -212,11 +260,11 @@ class Exec(object):
         return self
 
     def ready(self) -> bool:
-        signal.signal(signal.SIGALRM, alarm_handler)
+        _ = signal.signal(signal.SIGALRM, alarm_handler)
         try:
-            signal.alarm(1)
+            _ = signal.alarm(1)
             polled = self._process.poll()  # type: ignore
-            signal.alarm(0)
+            _ = signal.alarm(0)
         except Alarm:
             return False
         except (OSError, ValueError):
@@ -225,7 +273,7 @@ class Exec(object):
             return False
         return True
 
-    def report(self, reason: str = 'issue with exabgp') -> None:
+    def report(self, _reason: str = 'issue with exabgp') -> None:
         # Suppress all diagnostic output to keep test results clean
         # flush(reason)
         # flush(f'command> {self.command}')
@@ -243,18 +291,16 @@ class Exec(object):
         if self.code != -1:
             return
 
-        signal.signal(signal.SIGALRM, alarm_handler)
+        _ = signal.signal(signal.SIGALRM, alarm_handler)
         try:
-            signal.alarm(15)
+            _ = signal.alarm(15)
             self.stdout, self.stderr = self._process.communicate()  # type: ignore
             self.code = self._process.returncode  # type: ignore
-            signal.alarm(0)
+            _ = signal.alarm(0)
         except ValueError as exc:  # I/O operation on closed file
             self.message = str(exc)
-            pass
         except Alarm as exc:
             self.message = str(exc)
-            pass
 
     def terminate(self, collect: bool = True) -> None:
         if self._process is None:
@@ -290,7 +336,7 @@ class Record:
         self.name: str = name
         self.conf: Dict[str, Any] = dict()
         self.files: List[str] = []
-        self.state: Any = State.SKIP
+        self.state: State = State.SKIP
         self.start_time: Optional[float] = None
         self.timeout: float = 999999.0  # Effectively disable per-test timeout, use global timeout only
 
@@ -372,13 +418,13 @@ class Tests:
 
     def enable_by_nick(self, nick: str) -> bool:
         if nick in self._by_nick:
-            self._by_nick[nick].activate()
+            _ = self._by_nick[nick].activate()
             return True
         return False
 
     def enable_all(self) -> None:
         for nick in self._by_nick:
-            self._by_nick[nick].activate()
+            _ = self._by_nick[nick].activate()
 
     def get_by_nick(self, nick: str) -> Record:
         return self._by_nick[nick]
@@ -441,8 +487,8 @@ class Tests:
         remaining = 0
         passed = 0
         failed = 0
-        failed_tests = []
-        remaining_tests = []
+        failed_tests: List[str] = []
+        remaining_tests: List[str] = []
 
         for test in self.registered():
             if test.state == State.SUCCESS:
@@ -606,9 +652,9 @@ class Tests:
 
     def summary(
         self,
-        server: Optional['Exec'] = None,
-        client: Optional['Exec'] = None,
-        num_tests_selected: Optional[int] = None,
+        server: Optional['Exec'],
+        client: Optional['Exec'],
+        num_tests_selected: Optional[int],
     ) -> None:
         """Print summary of test results
 
@@ -658,11 +704,21 @@ def parse_msg_options(msg_file: str) -> int:
 
 
 class EncodingTests(Tests):
-    class Test(Record, Exec):
+    class Test(Record, Exec):  # pyright: ignore[reportUnsafeMultipleInheritance]
+        """Test combining Record state with Exec process management.
+
+        Both __init__ methods are explicitly called to ensure proper initialization.
+        """
+
         def __init__(self, nick: str, name: str) -> None:
             Record.__init__(self, nick, name)
             Exec.__init__(self)
             self._check: bytes = b'successful'
+
+        @property
+        def encoding_conf(self) -> EncodingConf:
+            """Typed access to encoding configuration"""
+            return self.conf  # type: ignore[return-value]
 
         # def __eq__ (self, other):
         #     return self.nick.__eq__(other.nick)
@@ -688,7 +744,7 @@ class EncodingTests(Tests):
             self.report(f'failed with code {self.code}')
             return False
 
-    API: Any = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
+    API: Pattern[str] = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 
     def __init__(self) -> None:
         super().__init__(self.Test)
@@ -795,12 +851,12 @@ class EncodingTests(Tests):
 
     def run_selected(self, timeout: int) -> bool:
         # Set max timeout before setup so it shows during initialization
-        self._max_timeout = timeout
+        self._max_timeout: int = timeout
         self.legend()
         # Ensure sufficient file descriptors for tests that spawn many processes
         check_ulimit()
         success = True
-        client = dict()
+        client: Dict[str, Exec] = {}
 
         # Remember how many tests we're running for single-test debug mode
         num_tests_selected = len(self.selected())
@@ -818,7 +874,8 @@ class EncodingTests(Tests):
                     test.nick,
                     '--port',
                     f'{test.conf["port"]}',
-                ]
+                ],
+                env=None,
             )
             daemons_started += 1
             # Only display every 10th daemon and avoid duplicate displays
@@ -845,7 +902,8 @@ class EncodingTests(Tests):
                     test.nick,
                     '--port',
                     f'{test.conf["port"]}',
-                ]
+                ],
+                env=None,
             )
             clients_started += 1
             # Only display every 10th client and avoid duplicate displays
@@ -859,8 +917,8 @@ class EncodingTests(Tests):
             self.display(daemons_started=daemons_started, clients_started=clients_started)
 
         # Store daemon and client counts for display during test execution
-        self._daemons_count = daemons_started
-        self._clients_count = clients_started
+        self._daemons_count: int = daemons_started
+        self._clients_count: int = clients_started
 
         # Start timer AFTER setup is complete
         self._start_time = time.time()
@@ -949,12 +1007,22 @@ class EncodingTests(Tests):
 
 
 class DecodingTests(Tests):
-    class Test(Record, Exec):
-        def __init__(self, nick, name):
+    class Test(Record, Exec):  # pyright: ignore[reportUnsafeMultipleInheritance]
+        """Test combining Record state with Exec process management.
+
+        Both __init__ methods are explicitly called to ensure proper initialization.
+        """
+
+        def __init__(self, nick: str, name: str) -> None:
             Record.__init__(self, nick, name)
             Exec.__init__(self)
 
-        def _cleanup(self, decoded):
+        @property
+        def decoding_conf(self) -> DecodingConf:
+            """Typed access to decoding configuration"""
+            return self.conf  # type: ignore[return-value]
+
+        def _cleanup(self, decoded: Dict[str, Any]) -> Dict[str, Any]:
             decoded.pop('exabgp', None)
             decoded.pop('host', None)
             decoded.pop('pid', None)
@@ -963,7 +1031,7 @@ class DecodingTests(Tests):
             decoded.pop('version', None)
             return decoded
 
-        def success(self):
+        def success(self) -> bool:
             self.collect()
             if self.stderr:
                 self.report('stderr is \n' + self.stderr.decode())
@@ -974,7 +1042,7 @@ class DecodingTests(Tests):
             try:
                 decoded = json.loads(self.stdout)
                 self._cleanup(decoded)
-            except Exception:
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError):
                 self.report('issue, report to decode the JSON')
                 return False
             if decoded != self.conf['json']:
@@ -1016,7 +1084,7 @@ class DecodingTests(Tests):
         flush()
 
     def dry(self) -> str:
-        result = []
+        result: List[str] = []
         for test in self.selected():
             result.append(
                 ' '.join(
@@ -1061,7 +1129,7 @@ class DecodingTests(Tests):
                 ]
             else:
                 raise ValueError(f'invalid message type: {message}')
-            test.run(cmd)
+            test.run(cmd, env=None)
 
         for test in self.selected():
             self.display()
@@ -1117,17 +1185,27 @@ class DecodingTests(Tests):
         # Move to new line after final display
         flush()
 
-        self.summary()
+        self.summary(server=None, client=None, num_tests_selected=None)
         return success
 
 
 class ParsingTests(Tests):
-    class Test(Record, Exec):
-        def __init__(self, nick, name):
+    class Test(Record, Exec):  # pyright: ignore[reportUnsafeMultipleInheritance]
+        """Test combining Record state with Exec process management.
+
+        Both __init__ methods are explicitly called to ensure proper initialization.
+        """
+
+        def __init__(self, nick: str, name: str) -> None:
             Record.__init__(self, nick, name)
             Exec.__init__(self)
 
-        def success(self):
+        @property
+        def parsing_conf(self) -> ParsingConf:
+            """Typed access to parsing configuration"""
+            return self.conf  # type: ignore[return-value]
+
+        def success(self) -> bool:
             self.collect()
             if self.code != 0:
                 self.report('return code is not zero')
@@ -1156,7 +1234,7 @@ class ParsingTests(Tests):
         flush()
 
     def dry(self) -> str:
-        result = []
+        result: List[str] = []
         for test in self.selected():
             result.append(' '.join(['>', Path.EXABGP, 'validate', '-nrv', test.conf['fname']]))
         return '\n'.join(result)
@@ -1171,7 +1249,7 @@ class ParsingTests(Tests):
 
         for test in self.selected():
             test.running()
-            test.run([Path.EXABGP, 'validate', '-nrv', test.conf['fname']])
+            test.run([Path.EXABGP, 'validate', '-nrv', test.conf['fname']], env=None)
             time.sleep(0.005)
 
         time.sleep(0.02)
@@ -1229,11 +1307,16 @@ class ParsingTests(Tests):
         # Move to new line after final display
         flush()
 
-        self.summary()
+        self.summary(server=None, client=None, num_tests_selected=None)
         return success
 
 
-def add_test(subparser: Any, name: str, tests: Tests, extra: List[str]) -> None:
+def add_test(
+    subparser: '_SubParsersAction[argparse.ArgumentParser]',
+    name: str,
+    tests: Tests,
+    extra: List[str],
+) -> None:
     sub = subparser.add_parser(name, help=f'run {name} test')
     if 'dry' in extra:
         sub.add_argument('--dry', help='show the action', action='store_true')
@@ -1262,7 +1345,7 @@ def add_test(subparser: Any, name: str, tests: Tests, extra: List[str]) -> None:
         sub.add_argument('--port', help='base port to use', type=int, default=1790)
     sub.add_argument('test', help='name of the test(s) to run', nargs='*', default=None)
 
-    def func(parsed: Any) -> None:
+    def func(parsed: Namespace) -> None:
         if 'edit' in extra and parsed.edit:
             if not parsed.test or len(parsed.test) != 1:
                 sys.exit('--edit requires exactly one test')
@@ -1316,9 +1399,9 @@ def add_test(subparser: Any, name: str, tests: Tests, extra: List[str]) -> None:
             flush(command)
             sys.exit(0)
 
-        exit = tests.run_selected(parsed.timeout)
+        success_exit = tests.run_selected(parsed.timeout)
         flush()
-        sys.exit(0 if exit else 1)
+        sys.exit(0 if success_exit else 1)
 
     sub.set_defaults(func=func)
 
