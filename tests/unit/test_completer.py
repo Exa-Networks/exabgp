@@ -116,6 +116,18 @@ class TestNestedCommandCompletion:
         # Should include options
         assert 'summary' in matches or 'extensive' in matches or 'configuration' in matches
 
+    def test_complete_show_neighbor_with_ips(self):
+        """Test that show neighbor completion includes neighbor IPs"""
+        # Create completer with neighbor data
+        neighbor_json = json.dumps([{'peer-address': '192.168.1.1'}, {'peer-address': '10.0.0.1'}])
+        mock_send = Mock(return_value=neighbor_json)
+        completer = CommandCompleter(mock_send)
+
+        matches = completer._get_completions(['show', 'neighbor'], '')
+        # Should include both options AND neighbor IPs
+        assert 'summary' in matches or 'extensive' in matches  # Options
+        assert '192.168.1.1' in matches or '10.0.0.1' in matches  # IPs
+
     def test_complete_show_adj_rib(self):
         """Test completion for show adj-rib"""
         matches = self.completer._get_completions(['show', 'adj-rib'], '')
@@ -363,6 +375,21 @@ class TestNeighborCommandDetection:
         """Test empty tokens"""
         assert not self.completer._is_neighbor_command([])
 
+    def test_is_neighbor_command_flush_adj_rib_out(self):
+        """Test flush adj-rib out is neighbor command"""
+        assert self.completer._is_neighbor_command(['flush', 'adj-rib', 'out'])
+
+    def test_is_neighbor_command_clear_adj_rib(self):
+        """Test clear adj-rib is neighbor command"""
+        assert self.completer._is_neighbor_command(['clear', 'adj-rib', 'in'])
+        assert self.completer._is_neighbor_command(['clear', 'adj-rib', 'out'])
+
+    def test_is_neighbor_command_withdraw(self):
+        """Test withdraw commands are neighbor commands"""
+        assert self.completer._is_neighbor_command(['withdraw', 'route'])
+        assert self.completer._is_neighbor_command(['withdraw', 'vpls'])
+        assert self.completer._is_neighbor_command(['withdraw', 'flow'])
+
 
 class TestCompleteNeighborCommand:
     """Test completion for neighbor-targeted commands"""
@@ -379,8 +406,9 @@ class TestCompleteNeighborCommand:
         assert '192.168.1.1' in matches or len(matches) > 0
 
     def test_complete_after_announce(self):
-        """Test completion after announce"""
-        matches = self.completer._complete_neighbor_command(['announce'], '')
+        """Test completion after announce route"""
+        # Note: 'announce' alone is not a registered command, use 'announce route'
+        matches = self.completer._complete_neighbor_command(['announce', 'route'], '')
         # Should suggest 'neighbor' or IPs
         assert 'neighbor' in matches or len(matches) > 0
 
@@ -596,3 +624,104 @@ class TestCompletionConsistency:
         matches = self.completer._get_completions(['show'], '')
         # Should not have duplicates
         assert len(matches) == len(set(matches))
+
+
+class TestShowCommandCompletion:
+    """Test show command completion at different levels"""
+
+    def setup_method(self):
+        neighbor_json = json.dumps([{'peer-address': '192.168.1.1'}, {'peer-address': '10.0.0.1'}])
+        self.mock_send = Mock(return_value=neighbor_json)
+        self.completer = CommandCompleter(self.mock_send)
+
+    def test_show_completes_to_subcommands(self):
+        """Test that 'show' completes to 'neighbor' and 'adj-rib'"""
+        matches = self.completer._get_completions(['show'], '')
+        assert 'neighbor' in matches
+        assert 'adj-rib' in matches
+        assert len(matches) == 2
+
+    def test_show_n_completes_to_neighbor(self):
+        """Test that 'show n' completes to 'neighbor'"""
+        matches = self.completer._get_completions(['show'], 'n')
+        assert 'neighbor' in matches
+        assert 'adj-rib' not in matches
+
+    def test_show_a_completes_to_adj_rib(self):
+        """Test that 'show a' completes to 'adj-rib'"""
+        matches = self.completer._get_completions(['show'], 'a')
+        assert 'adj-rib' in matches
+        assert 'neighbor' not in matches
+
+    def test_show_neighbor_shows_all_completions(self):
+        """Test that 'show neighbor' shows options and IPs"""
+        matches = self.completer._get_completions(['show', 'neighbor'], '')
+        # Should have options
+        assert 'summary' in matches
+        assert 'extensive' in matches
+        assert 'configuration' in matches
+        assert 'json' in matches
+        # Should have neighbor IPs
+        assert '192.168.1.1' in matches
+        assert '10.0.0.1' in matches
+
+    def test_show_neighbor_s_filters_correctly(self):
+        """Test that 'show neighbor s' only shows 'summary'"""
+        matches = self.completer._get_completions(['show', 'neighbor'], 's')
+        assert 'summary' in matches
+        assert 'extensive' not in matches
+        assert 'configuration' not in matches
+
+    def test_show_adj_rib_shows_in_out(self):
+        """Test that 'show adj-rib' completes to 'in' and 'out'"""
+        matches = self.completer._get_completions(['show', 'adj-rib'], '')
+        assert 'in' in matches
+        assert 'out' in matches
+
+    def test_show_adj_rib_in_shows_options(self):
+        """Test that 'show adj-rib in' shows options"""
+        matches = self.completer._get_completions(['show', 'adj-rib', 'in'], '')
+        assert 'extensive' in matches
+
+
+class TestNeighborTargetedCommandCompletion:
+    """Test completion for neighbor-targeted commands"""
+
+    def setup_method(self):
+        neighbor_json = json.dumps([{'peer-address': '192.168.1.1'}, {'peer-address': '10.0.0.1'}])
+        self.mock_send = Mock(return_value=neighbor_json)
+        self.completer = CommandCompleter(self.mock_send)
+
+    def test_flush_adj_rib_out_suggests_neighbor_and_ips(self):
+        """Test that 'flush adj-rib out' suggests 'neighbor' and IPs"""
+        matches = self.completer._get_completions(['flush', 'adj-rib', 'out'], '')
+        assert 'neighbor' in matches
+        assert '192.168.1.1' in matches
+        assert '10.0.0.1' in matches
+
+    def test_clear_adj_rib_suggests_neighbor_and_ips(self):
+        """Test that 'clear adj-rib' suggests 'neighbor' and IPs"""
+        # Note: 'clear adj-rib' is the registered command, 'in'/'out' are parsed at runtime
+        matches = self.completer._get_completions(['clear', 'adj-rib'], '')
+        assert 'neighbor' in matches
+        assert '192.168.1.1' in matches
+
+    def test_announce_route_suggests_neighbor_and_ips(self):
+        """Test that 'announce route' suggests 'neighbor' and IPs"""
+        matches = self.completer._get_completions(['announce', 'route'], '')
+        # Should have 'neighbor' keyword
+        assert 'neighbor' in matches
+        # Should have neighbor IPs
+        assert '192.168.1.1' in matches
+
+    def test_withdraw_route_suggests_neighbor_and_ips(self):
+        """Test that 'withdraw route' suggests 'neighbor' and IPs"""
+        matches = self.completer._get_completions(['withdraw', 'route'], '')
+        assert 'neighbor' in matches
+        assert '192.168.1.1' in matches
+
+    def test_teardown_suggests_ips(self):
+        """Test that 'teardown' suggests neighbor IPs"""
+        matches = self.completer._get_completions(['teardown'], '')
+        assert '192.168.1.1' in matches
+        assert '10.0.0.1' in matches

@@ -92,8 +92,9 @@ class CommandCompleter:
 
         # Cache for neighbor IPs
         self._neighbor_cache: Optional[List[str]] = None
-        self._cache_timeout = 30  # Refresh cache every 30 seconds
+        self._cache_timeout = 300  # Refresh cache every 5 minutes (avoid repeated socket calls)
         self._cache_timestamp = 0
+        self._cache_in_progress = False  # Prevent concurrent queries
 
         # Track state for single-TAB display on macOS libedit
         self.matches: List[str] = []
@@ -209,6 +210,24 @@ class CommandCompleter:
 
         # Check for specific command patterns
         if len(expanded_tokens) >= 2:
+            # Special case: 'show neighbor' can filter by IP even though neighbor=False
+            if expanded_tokens[0] == 'show' and expanded_tokens[1] == 'neighbor':
+                # After 'show neighbor', suggest options AND neighbor IPs
+                neighbor_ips = self._get_neighbor_ips()
+
+                # Get command tree options (summary, extensive, configuration)
+                metadata = self.registry.get_command_metadata('show neighbor')
+                options = list(metadata.options) if metadata and metadata.options else []
+
+                # Add 'json' if command supports it
+                if metadata and metadata.json_support and 'json' not in options:
+                    options.append('json')
+
+                # Combine options and neighbor IPs
+                matches = [opt for opt in options if opt.startswith(text)]
+                matches.extend([ip for ip in neighbor_ips if ip.startswith(text)])
+                return sorted(matches)
+
             # AFI/SAFI completion for eor and route-refresh
             if expanded_tokens[-1] in ('eor', 'route-refresh'):
                 return self._complete_afi_safi(expanded_tokens, text)
@@ -264,19 +283,33 @@ class CommandCompleter:
         return []
 
     def _is_neighbor_command(self, tokens: List[str]) -> bool:
-        """Check if command targets a specific neighbor"""
-        return tokens and (
-            tokens[0] in ('teardown', 'neighbor')
-            or (len(tokens) >= 2 and tokens[0] in ('announce', 'withdraw', 'flush', 'clear'))
-        )
+        """Check if command targets a specific neighbor using registry metadata"""
+        if not tokens:
+            return False
+
+        # Try progressively longer command prefixes to find a match
+        # This handles multi-word commands like "flush adj-rib out"
+        for length in range(len(tokens), 0, -1):
+            potential_cmd = ' '.join(tokens[:length])
+            metadata = self.registry.get_command_metadata(potential_cmd)
+            if metadata and metadata.neighbor_support:
+                return True
+
+        # Fallback: check if first token suggests neighbor targeting
+        return tokens[0] in ('neighbor', 'teardown')
 
     def _complete_neighbor_command(self, tokens: List[str], text: str) -> List[str]:
         """Complete neighbor-targeted commands"""
         # Check if we should complete neighbor IP
         last_token = tokens[-1] if tokens else ''
 
-        # If last token is a command keyword, suggest 'neighbor' or neighbor IPs
-        if last_token in ('announce', 'withdraw', 'flush', 'clear', 'teardown'):
+        # Check if we're at the end of a complete command (ready for neighbor spec)
+        # This handles both simple commands (teardown) and multi-word commands (flush adj-rib out)
+        command_str = ' '.join(tokens)
+        metadata = self.registry.get_command_metadata(command_str)
+
+        if metadata and metadata.neighbor_support:
+            # We're at the end of a recognized neighbor-targeted command
             matches = ['neighbor'] if 'neighbor'.startswith(text) else []
             neighbor_ips = self._get_neighbor_ips()
             matches.extend([ip for ip in neighbor_ips if ip.startswith(text)])
@@ -340,36 +373,68 @@ class CommandCompleter:
         if self._neighbor_cache is not None and (current_time - self._cache_timestamp) < self._cache_timeout:
             return self._neighbor_cache
 
-        # Try to fetch neighbor IPs from ExaBGP
-        neighbor_ips = []
+        # Prevent concurrent queries (avoid socket connection issues)
+        if self._cache_in_progress:
+            return self._neighbor_cache if self._neighbor_cache is not None else []
 
-        # Use provided get_neighbors callback if available
-        if self.get_neighbors:
-            try:
-                neighbor_ips = self.get_neighbors()
-            except Exception:
-                pass
-        else:
-            # Try to query ExaBGP via 'show neighbor json'
-            try:
-                response = self.send_command('show neighbor json')
-                if response:
-                    # Parse JSON response
-                    neighbors = json.loads(response)
-                    if isinstance(neighbors, list):
-                        for neighbor in neighbors:
-                            if isinstance(neighbor, dict) and 'peer-address' in neighbor:
-                                neighbor_ips.append(neighbor['peer-address'])
-                            elif isinstance(neighbor, dict) and 'remote-addr' in neighbor:
-                                neighbor_ips.append(neighbor['remote-addr'])
-            except Exception:
-                pass
+        self._cache_in_progress = True
 
-        # Update cache
-        self._neighbor_cache = neighbor_ips
-        self._cache_timestamp = current_time
+        try:
+            # Try to fetch neighbor IPs from ExaBGP
+            neighbor_ips = []
 
-        return neighbor_ips
+            # Use provided get_neighbors callback if available
+            if self.get_neighbors:
+                try:
+                    neighbor_ips = self.get_neighbors()
+                except Exception:
+                    pass
+            else:
+                # Try to query ExaBGP via 'show neighbor json'
+                try:
+                    response = self.send_command('show neighbor json')
+                    if response and response != 'Command sent' and not response.startswith('Error:'):
+                        # Parse JSON response
+                        # Clean up response - remove 'done' marker if present
+                        json_text = response
+                        if 'done' in json_text:
+                            # Split by 'done' and take first part
+                            json_text = json_text.split('done')[0].strip()
+
+                        neighbors = json.loads(json_text)
+                        if isinstance(neighbors, list):
+                            for neighbor in neighbors:
+                                if isinstance(neighbor, dict):
+                                    # Try different possible locations for peer address
+                                    peer_addr = None
+
+                                    # Format 1: peer-address at top level
+                                    if 'peer-address' in neighbor:
+                                        peer_addr = neighbor['peer-address']
+                                    # Format 2: remote-addr at top level
+                                    elif 'remote-addr' in neighbor:
+                                        peer_addr = neighbor['remote-addr']
+                                    # Format 3: nested in 'peer' object (ExaBGP 5.x format)
+                                    elif 'peer' in neighbor and isinstance(neighbor['peer'], dict):
+                                        peer_obj = neighbor['peer']
+                                        if 'address' in peer_obj:
+                                            peer_addr = peer_obj['address']
+                                        elif 'ip' in peer_obj:
+                                            peer_addr = peer_obj['ip']
+
+                                    if peer_addr:
+                                        neighbor_ips.append(str(peer_addr))
+                except Exception:
+                    # Silently fail - neighbor completion is optional
+                    pass
+
+            # Update cache
+            self._neighbor_cache = neighbor_ips
+            self._cache_timestamp = current_time
+
+            return neighbor_ips
+        finally:
+            self._cache_in_progress = False
 
     def invalidate_cache(self) -> None:
         """Invalidate neighbor IP cache (call after topology changes)"""
@@ -568,7 +633,8 @@ class InteractiveCLI:
             except KeyboardInterrupt:
                 # Ctrl+C pressed
                 print()  # Newline after ^C
-                continue
+                self._quit()
+                break
             except Exception as exc:
                 print(self.formatter.format_error(f'Unexpected error: {exc}'))
 
@@ -580,7 +646,7 @@ class InteractiveCLI:
 ╚══════════════════════════════════════════════════════════╝
 
 Type 'help' for available commands
-Type 'exit' or press Ctrl+D to quit
+Type 'exit' or press Ctrl+D/Ctrl+C to quit
 Tab completion and command history enabled
 """
         if self.formatter.use_color:
@@ -726,6 +792,7 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
 
         def send_command_socket(command: str) -> str:
             """Send command via Unix socket and return response"""
+            s = None
             try:
                 # Expand shortcuts
                 expanded = CommandShortcuts.expand_shortcuts(command)
@@ -733,7 +800,10 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
                 # Connect to socket
                 s = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
                 s.settimeout(5.0)
-                s.connect(socket_path)
+
+                # Build full socket path
+                full_socket_path = socket_path if socket_path.endswith('.sock') else socket_path + 'exabgp.sock'
+                s.connect(full_socket_path)
 
                 # Send command
                 s.sendall((expanded + '\n').encode('utf-8'))
@@ -756,10 +826,15 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
                     except Exception:
                         break
 
-                s.close()
                 return ''.join(response_parts).strip()
             except Exception as exc:
                 return f'Error: {exc}'
+            finally:
+                if s:
+                    try:
+                        s.close()
+                    except Exception:
+                        pass
 
         send_func = send_command_socket
 

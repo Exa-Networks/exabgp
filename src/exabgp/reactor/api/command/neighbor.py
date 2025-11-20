@@ -86,8 +86,35 @@ def show_neighbor(self, reactor, service, line, use_json):
 
     async def callback_json():
         p = []
-        for peer_name in reactor.peers():
-            p.append(NeighborTemplate.as_dict(reactor.neighbor_cli_data(peer_name)))
+        # Include ALL configured neighbors (not just connected ones)
+        # This is useful for tooling/completion even when neighbors are down
+        try:
+            for neighbor_name in reactor.configuration.neighbors.keys():
+                neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
+                if not neighbor:
+                    continue
+
+                # Build minimal neighbor info from configuration
+                try:
+                    neighbor_data = {
+                        'peer-address': str(neighbor['peer-address']),
+                        'local-address': str(neighbor['local-address']) if neighbor.get('local-address') else None,
+                        'peer-as': neighbor.get('peer-as'),
+                        'local-as': neighbor.get('local-as'),
+                    }
+
+                    # If neighbor is also an active peer, get full runtime data
+                    if neighbor_name in reactor.peers():
+                        neighbor_data = NeighborTemplate.as_dict(reactor.neighbor_cli_data(neighbor_name))
+
+                    p.append(neighbor_data)
+                except Exception as e:
+                    # Log error but continue with other neighbors
+                    reactor.processes.write(service, f'# Error processing neighbor {neighbor_name}: {e}')
+        except Exception as e:
+            # Log error if configuration access fails
+            reactor.processes.write(service, f'# Error accessing neighbors: {e}')
+
         for line in json.dumps(p).split('\n'):
             reactor.processes.write(service, line)
             await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
