@@ -3,57 +3,111 @@
 import os
 import sys
 import time
+import select
+import json
 
-# Wait for BGP session to establish
-time.sleep(2)
 
-# Test ping command
-sys.stdout.write('ping\n')
-sys.stdout.flush()
+def wait_for_ack(expected_count=1, timeout=2):
+    """Wait for ACK responses from ExaBGP."""
+    received = 0
+    start_time = time.time()
 
-# Read response
-response = sys.stdin.readline().strip()
-if not response.startswith('pong '):
-    sys.stderr.write(f'ERROR: ping failed, got: {response}\n')
-    sys.exit(1)
+    while received < expected_count:
+        elapsed = time.time() - start_time
+        if elapsed >= timeout:
+            return False
 
-uuid = response.split()[1]
-sys.stderr.write(f'OK: ping returned UUID {uuid}\n')
+        ready, _, _ = select.select([sys.stdin], [], [], 0.1)
+        if ready:
+            line = sys.stdin.readline().strip()
+            answer = None
+            if line.startswith('{'):
+                try:
+                    data = json.loads(line)
+                    answer = data.get('answer')
+                except:
+                    pass
+            else:
+                answer = line
 
-# Read done
-done = sys.stdin.readline().strip()
-if done != 'done':
-    sys.stderr.write(f'ERROR: expected done, got: {done}\n')
-    sys.exit(1)
+            if answer == "done":
+                received += 1
+            elif answer == "error":
+                return False
+            elif answer == "shutdown":
+                raise SystemExit(0)
+        else:
+            time.sleep(0.1)
 
-# Test status command
-sys.stdout.write('status\n')
-sys.stdout.flush()
+    return True
 
-# Read multi-line response
-status_lines = []
-while True:
-    line = sys.stdin.readline().strip()
-    if line == 'done':
-        break
-    status_lines.append(line)
 
-status_text = '\n'.join(status_lines)
-if 'UUID' not in status_text and uuid not in status_text:
-    sys.stderr.write(f'ERROR: status missing UUID, got: {status_text}\n')
-    sys.exit(1)
+try:
+    # Wait for BGP session to establish
+    time.sleep(2)
 
-if 'PID' not in status_text:
-    sys.stderr.write(f'ERROR: status missing PID\n')
-    sys.exit(1)
+    # Test ping command
+    sys.stdout.write('ping\n')
+    sys.stdout.flush()
 
-sys.stderr.write(f'OK: status returned complete information\n')
-sys.stderr.write(f'SUCCESS: Health monitoring commands working\n')
+    # Read response
+    response = sys.stdin.readline().strip()
+    if not response.startswith('pong '):
+        sys.stderr.write(f'ERROR: ping failed, got: {response}\n')
+        sys.exit(1)
 
-# Wait for shutdown signal (like other api-* tests)
-now = time.time()
-while os.getppid() != 1 and time.time() < now + 7:
-    line = sys.stdin.readline().strip()
-    if not line or 'shutdown' in line:
-        break
+    uuid = response.split()[1]
+    sys.stderr.write(f'OK: ping returned UUID {uuid}\n')
+
+    # Read done
+    done = sys.stdin.readline().strip()
+    if done != 'done':
+        sys.stderr.write(f'ERROR: expected done, got: {done}\n')
+        sys.exit(1)
+
+    # Announce route after successful ping
+    sys.stdout.write('announce route 192.168.0.1/32 next-hop 10.0.0.1\n')
+    sys.stdout.flush()
+    wait_for_ack()
     time.sleep(0.1)
+
+    # Test status command
+    sys.stdout.write('status\n')
+    sys.stdout.flush()
+
+    # Read multi-line response
+    status_lines = []
+    while True:
+        line = sys.stdin.readline().strip()
+        if line == 'done':
+            break
+        status_lines.append(line)
+
+    status_text = '\n'.join(status_lines)
+    if 'UUID' not in status_text and uuid not in status_text:
+        sys.stderr.write(f'ERROR: status missing UUID, got: {status_text}\n')
+        sys.exit(1)
+
+    if 'PID' not in status_text:
+        sys.stderr.write(f'ERROR: status missing PID\n')
+        sys.exit(1)
+
+    sys.stderr.write(f'OK: status returned complete information\n')
+
+    # Announce route after successful status
+    sys.stdout.write('announce route 192.168.0.2/32 next-hop 10.0.0.2\n')
+    sys.stdout.flush()
+    wait_for_ack()
+    time.sleep(0.1)
+
+    sys.stderr.write(f'SUCCESS: Health monitoring commands working\n')
+
+    # Wait for shutdown signal (like other api-* tests)
+    now = time.time()
+    while os.getppid() != 1 and time.time() < now + 7:
+        line = sys.stdin.readline().strip()
+        if not line or 'shutdown' in line:
+            break
+        time.sleep(0.1)
+except IOError:
+    pass
