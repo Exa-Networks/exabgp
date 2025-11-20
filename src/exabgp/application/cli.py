@@ -629,6 +629,8 @@ class CommandCompleter:
         end = readline.get_endidx()
 
         # Parse the line into tokens
+        # Note: "?" key is bound to rl_complete (same as TAB) so it triggers
+        # completion without appearing in the line buffer
         tokens = line[:begin].split()
 
         # Generate matches based on context
@@ -676,12 +678,13 @@ class CommandCompleter:
             if not expansions_made or not self._rl_replace_line:
                 self.matches = self._get_completions(tokens, text)
 
-            # macOS libedit: Display all matches on first TAB press
+            # macOS libedit: Display all matches on first TAB/? press
+            # (GNU readline has built-in display via show-all-if-ambiguous)
             if self.is_libedit and len(self.matches) > 1:
                 # Check if this is a new completion (avoid repeating on subsequent TABs)
                 current_line = readline.get_line_buffer()
                 if current_line != self.last_line or self.matches != self.last_matches:
-                    # Display matches
+                    # Display matches with descriptions
                     self._display_matches_and_redraw(self.matches, line)
                     self.last_line = current_line
                     self.last_matches = self.matches.copy()
@@ -1348,11 +1351,13 @@ class InteractiveCLI:
         if 'libedit' in readline.__doc__:
             # macOS libedit configuration
             readline.parse_and_bind('bind ^I rl_complete')  # TAB key
+            readline.parse_and_bind('bind ? rl_complete')  # ? key (help completion)
             # libedit doesn't support show-all-if-ambiguous, so we modify the completer
             # to return all matches at once (handled in complete() method)
         else:
             # GNU readline configuration
             readline.parse_and_bind('tab: complete')
+            readline.parse_and_bind('?: complete')  # ? key (help completion)
             # Show all completions immediately (don't require double-TAB)
             readline.parse_and_bind('set show-all-if-ambiguous on')
             # Show completions on first TAB even if there are many matches
