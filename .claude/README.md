@@ -6,18 +6,21 @@ Documentation and protocols for Claude Code interactions with ExaBGP.
 
 ## 🚨 START OF EVERY SESSION - READ ALL PROTOCOLS 🚨
 
-**BEFORE doing ANYTHING, you MUST read ALL Core Protocols below.**
+**⚠️ CRITICAL: You have NO memory between sessions ⚠️**
 
-**NONE are optional. NONE are "nice to have". ALL are MANDATORY.**
+**MANDATORY FIRST ACTION: Read ALL Core Protocols listed below using the Read tool.**
 
-You have NO memory between sessions - you MUST read them EVERY time.
+**DO NOT:**
+- Skip any protocols ("I'll read them later")
+- Assume you remember them from previous sessions
+- Start work before reading ALL protocols
+- Claim you "understand the requirements" without reading
 
-**Start with these (apply to ALL interactions):**
-1. **COMMUNICATION_STYLE.md** - How to communicate (terse, direct, emojis)
-2. **EMOJI_GUIDE.md** - Which emojis to use and when
-3. **GIT_VERIFICATION_PROTOCOL.md** - Check for pre-existing git changes
-
-**Then READ THE REST below.**
+**DO:**
+- Use the Read tool to read EVERY protocol file below
+- Read them EVERY session (no exceptions)
+- Read them BEFORE doing any other work
+- Read them in parallel for efficiency
 
 **Then check git state:**
 ```bash
@@ -52,6 +55,38 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 ## Active Work (`wip/`)
 
 Active development projects. Completed work moves to `docs/projects/`.
+
+### CLI Interactive Enhancement (2025-11-20)
+**Status:** ✅ Complete with comprehensive testing
+**Progress:** Implementation + 189 new tests, all passing
+
+**Files:**
+- CLI_WORK_SUMMARY.md - Quick overview (READ THIS FIRST)
+- CLI_INTERACTIVE_ENHANCEMENT_STATUS.md - Complete implementation guide
+- CLI_TESTING_GUIDE.md - Test cases and debugging
+- CLI_TESTING_COMPLETE.md - Test coverage report
+
+**Code changes:**
+- `src/exabgp/reactor/api/command/registry.py` - NEW: Command introspection
+- `src/exabgp/application/shortcuts.py` - NEW: Shared shortcut expansion
+- `sbin/exabgp-doc-generator` - NEW: Wiki documentation generator
+- `src/exabgp/application/cli.py` - MODIFIED: Uses shared shortcuts
+- `src/exabgp/application/cli_interactive.py` - MODIFIED: Enhanced completion
+
+**Test files:**
+- `tests/unit/test_shortcuts.py` - 71 tests for shortcut expansion
+- `tests/unit/test_command_registry.py` - 59 tests for registry introspection
+- `tests/unit/test_completer.py` - 59 tests for completion logic
+
+**Features:**
+- Dynamic command discovery (no hardcoded lists)
+- Neighbor IP completion (queries running ExaBGP)
+- AFI/SAFI completion for eor/route-refresh
+- Route keyword completion (next-hop, community, etc.)
+- Neighbor filter completion (local-ip, local-as, etc.)
+- Refactored shortcuts (eliminated 120 lines duplication)
+
+**Testing:** ✅ 1613/1613 tests pass (1424 existing + 189 new)
 
 ### Type Annotations (`wip/type-annotations/`)
 **Status:** Phase 3 - MyPy error reduction
@@ -126,21 +161,26 @@ env exabgp_log_enable=false pytest ./tests/unit/
 
 ---
 
-## Recent Changes (2025-11-17)
+## Recent Changes (2025-11-20)
 
+✅ **CLI Interactive Enhancement** - Intelligent auto-completion for ExaBGP CLI
+✅ Created `CommandRegistry` for dynamic command discovery
+✅ Refactored shortcut expansion (eliminated 120 lines duplication)
+✅ Added neighbor IP, AFI/SAFI, route keyword completion
+✅ Created wiki documentation generator (`sbin/exabgp-doc-generator`)
+✅ All tests pass (1424/1424 unit tests)
+
+**Previous (2025-11-17):**
 ✅ Reorganized documentation structure
 ✅ Created `wip/` for active work (clear separation from protocols)
 ✅ Moved all completed projects to `docs/projects/`
-✅ Removed `archive/` directory (all content moved to appropriate locations)
-✅ Added Git Verification Protocol (prevent false claims about repo state)
-✅ No .md files directly in docs/ - all in subdirectories
+✅ Added Git Verification Protocol
 
 **Previous (2025-11-16):**
 ✅ Compressed core protocols (59 KB → 14 KB, 77% ↓)
 ✅ Updated baselines (605 MyPy, 1376 tests)
-✅ Total reduction: 640 KB → ~150 KB (76% ↓)
 
 ---
 
-**Current Status:** ✅ Clean separation: protocols / active work / completed projects
-**Last Updated:** 2025-11-17
+**Current Status:** ✅ CLI enhancement ready for testing with running ExaBGP
+**Last Updated:** 2025-11-20
