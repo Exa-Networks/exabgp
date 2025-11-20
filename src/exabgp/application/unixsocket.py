@@ -337,20 +337,39 @@ class Control:
                 continue
 
             # Accept new client connection
-            if self.server_socket and self.server_socket.fileno() in ready and not self.client_socket:
+            if self.server_socket and self.server_socket.fileno() in ready:
                 try:
-                    self.client_socket, _ = self.server_socket.accept()
-                    self.client_socket.setblocking(False)
-                    self.client_fd = self.client_socket.fileno()
+                    new_socket, _ = self.server_socket.accept()
 
-                    # Initialize data structures for client
-                    read[self.client_fd] = socket_reader
-                    write[self.client_fd] = std_writer  # Forward socket commands to ExaBGP stdout
-                    backlog[self.client_fd] = deque()
-                    store[self.client_fd] = b''
+                    if self.client_socket:
+                        # Already have a client - reject immediately
+                        try:
+                            new_socket.setblocking(True)
+                            new_socket.sendall(b'error: another CLI client is already connected\ndone\n')
+                            try:
+                                new_socket.shutdown(socket.SHUT_WR)
+                            except Exception:
+                                pass  # Ignore shutdown errors
+                            new_socket.close()
+                        except Exception:
+                            try:
+                                new_socket.close()
+                            except Exception:
+                                pass
+                    else:
+                        # No client - accept this connection
+                        self.client_socket = new_socket
+                        self.client_socket.setblocking(False)
+                        self.client_fd = self.client_socket.fileno()
 
-                    # Update write destinations
-                    write[standard_in] = socket_writer  # Forward ExaBGP responses to socket
+                        # Initialize data structures for client
+                        read[self.client_fd] = socket_reader
+                        write[self.client_fd] = std_writer  # Forward socket commands to ExaBGP stdout
+                        backlog[self.client_fd] = deque()
+                        store[self.client_fd] = b''
+
+                        # Update write destinations
+                        write[standard_in] = socket_writer  # Forward ExaBGP responses to socket
                 except OSError:
                     continue
 
@@ -360,6 +379,12 @@ class Control:
                 # Check if client disconnected (empty read)
                 if self.client_fd and not self.client_socket:
                     # Cleanup happened in socket_reader/socket_writer
+                    # Notify reactor that client disconnected (clears active_client_uuid)
+                    try:
+                        os.write(standard_out, b'bye\n')
+                    except Exception:
+                        pass
+
                     # Remove client from data structures
                     if self.client_fd in read:
                         del read[self.client_fd]

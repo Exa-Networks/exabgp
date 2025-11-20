@@ -125,3 +125,117 @@ def silence_ack(self, reactor, service, line, use_json):
     """Disable ACK responses immediately (no 'done' sent for this command)"""
     reactor.processes.set_ack(service, False)
     return True
+
+
+@Command.register('ping', False)
+def ping(self, reactor, service, line, use_json):
+    """Lightweight health check - responds with 'pong <UUID>' and active status"""
+    import json
+
+    # Parse client UUID and start time if provided
+    # Format: "ping <client_uuid> <client_start_time>"
+    parts = line.strip().split()
+    client_uuid = None
+    client_start_time = None
+
+    if len(parts) >= 3:
+        client_uuid = parts[1]
+        try:
+            client_start_time = float(parts[2])
+        except ValueError:
+            pass
+
+    # Determine if this client is the active one
+    is_active = True
+    if client_uuid and client_start_time is not None:
+        import time
+
+        current_time = time.time()
+        client_timeout = 15  # seconds - 10s ping interval + 5s grace
+
+        # Check if current active client has timed out (no ping received)
+        if reactor.active_client_uuid is not None:
+            time_since_last_ping = current_time - reactor.active_client_last_ping
+            if time_since_last_ping > client_timeout:
+                # Active client timed out - clear it
+                reactor.active_client_uuid = None
+                reactor.active_client_last_ping = 0.0
+
+        # Now determine active client (first-come-first-served)
+        if reactor.active_client_uuid is None:
+            # No active client - this one becomes active
+            reactor.active_client_uuid = client_uuid
+            reactor.active_client_last_ping = current_time
+        elif client_uuid == reactor.active_client_uuid:
+            # Same client - update last ping time
+            reactor.active_client_last_ping = current_time
+        else:
+            # Different client - not active (first client keeps connection)
+            is_active = False
+
+    if use_json:
+        response = {'pong': reactor.daemon_uuid, 'active': is_active}
+        reactor.processes.write(service, json.dumps(response))
+    else:
+        reactor.processes.write(service, f'pong {reactor.daemon_uuid} active={str(is_active).lower()}')
+    reactor.processes.answer_done(service)
+    return True
+
+
+@Command.register('status', False)
+def status(self, reactor, service, line, use_json):
+    """Display daemon status information (UUID, uptime, version, peers)"""
+    import os
+    import time
+    import json
+
+    uptime = int(time.time() - reactor.daemon_start_time)
+    hours = uptime // 3600
+    minutes = (uptime % 3600) // 60
+    seconds = uptime % 60
+
+    peers_dict = {}
+    for name, peer in reactor._peers.items():
+        state = peer.fsm.name()
+        peers_dict[name] = state
+
+    if use_json:
+        status_info = {
+            'version': _version,
+            'uuid': reactor.daemon_uuid,
+            'pid': os.getpid(),
+            'uptime': uptime,
+            'start_time': reactor.daemon_start_time,
+            'peers': peers_dict,
+        }
+        reactor.processes.write(service, json.dumps(status_info))
+    else:
+        lines = [
+            'ExaBGP Daemon Status',
+            '====================',
+            f'Version: {_version}',
+            f'UUID: {reactor.daemon_uuid}',
+            f'PID: {os.getpid()}',
+            f'Uptime: {hours}h {minutes}m {seconds}s',
+            f'Peers: {len(peers_dict)}',
+        ]
+
+        if peers_dict:
+            for name, state in peers_dict.items():
+                lines.append(f'  - {name}: {state}')
+
+        for line_text in lines:
+            reactor.processes.write(service, line_text, True)
+
+    reactor.processes.answer_done(service)
+    return True
+
+
+@Command.register('bye', False)
+def bye(self, reactor, service, line, use_json):
+    """Handle client disconnect - clear active client tracking"""
+    # Clear active client when CLI disconnects
+    reactor.active_client_uuid = None
+    reactor.active_client_last_ping = 0.0
+    # No response needed - this is an internal notification
+    return True

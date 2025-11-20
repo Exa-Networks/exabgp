@@ -11,7 +11,11 @@ import sys
 import readline
 import atexit
 import ctypes
+import socket as sock
+import threading
+import time
 from dataclasses import dataclass
+from queue import Queue, Empty
 from typing import List, Optional, Callable, Dict, Tuple
 
 from exabgp.application.shortcuts import CommandShortcuts
@@ -66,6 +70,458 @@ class Colors:
             return False
 
         return True
+
+
+class PersistentSocketConnection:
+    """Persistent Unix socket connection with background health monitoring"""
+
+    def __init__(self, socket_path: str):
+        self.socket_path = socket_path
+        self.socket = None
+        self.daemon_uuid = None
+        self.last_ping_time = 0
+        self.consecutive_failures = 0
+        self.max_failures = 3
+        self.health_interval = 10  # seconds
+        self.running = True
+        self.reconnecting = False
+        self.lock = threading.Lock()
+
+        # Client identity for connection tracking
+        import uuid as uuid_lib
+
+        self.client_uuid = str(uuid_lib.uuid4())
+        self.client_start_time = time.time()
+
+        # Response handling
+        self.pending_responses = Queue()
+        self.response_buffer = ''
+
+        # Connect
+        self._connect()
+
+        # Send initial synchronous ping to get daemon UUID (before showing prompt)
+        self._initial_ping()
+
+        # Start background threads
+        self.reader_thread = threading.Thread(target=self._read_loop, daemon=True)
+        self.reader_thread.start()
+
+        self.health_thread = threading.Thread(target=self._health_monitor, daemon=True)
+        self.health_thread.start()
+
+    def _connect(self):
+        """Establish socket connection"""
+        self.socket = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
+        full_path = self.socket_path if self.socket_path.endswith('.sock') else self.socket_path + 'exabgp.sock'
+        self.socket.connect(full_path)
+        self.socket.settimeout(0.5)  # Initial timeout for sync ping
+
+    def _initial_ping(self):
+        """Send initial synchronous ping to get daemon UUID before starting background threads"""
+        try:
+            # Send ping
+            ping_cmd = f'ping {self.client_uuid} {self.client_start_time}\n'
+            try:
+                self.socket.sendall(ping_cmd.encode('utf-8'))
+            except (BrokenPipeError, ConnectionResetError):
+                # Connection rejected before we could send
+                sys.stderr.write('\n')
+                sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+                sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
+                sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+                sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
+                sys.stderr.write('║  Please close the other client first.                  ║\n')
+                sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+                sys.stderr.write('\n')
+                sys.stderr.flush()
+                sys.exit(1)
+
+            # Read response synchronously
+            response_buffer = ''
+            while True:
+                data = self.socket.recv(4096)
+                if not data:
+                    # Connection closed - likely another client already connected
+                    sys.stderr.write('\n')
+                    sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+                    sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
+                    sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+                    sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
+                    sys.stderr.write('║  Please close the other client first.                  ║\n')
+                    sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+                    sys.stderr.write('\n')
+                    sys.stderr.flush()
+                    sys.exit(1)
+
+                response_buffer += data.decode('utf-8')
+
+                # Check if we have complete response (pong + done OR error + done)
+                if '\ndone\n' in response_buffer or response_buffer.endswith('done\n'):
+                    break
+
+            # Check for immediate rejection (another client already connected)
+            if response_buffer.startswith('error:') and 'already connected' in response_buffer:
+                sys.stderr.write('\n')
+                sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+                sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
+                sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+                sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
+                sys.stderr.write('║  Please close the other client first.                  ║\n')
+                sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+                sys.stderr.write('\n')
+                sys.stderr.flush()
+                sys.exit(1)
+
+            # Parse response
+            lines = response_buffer.split('\n')
+            for line in lines:
+                if line.startswith('pong '):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        self.daemon_uuid = parts[1]
+
+                        # Check if we're active
+                        is_active = True
+                        if len(parts) >= 3 and parts[2].startswith('active='):
+                            is_active = parts[2].split('=')[1].lower() == 'true'
+
+                        if not is_active:
+                            # Another client is already active
+                            sys.stderr.write('\n')
+                            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+                            sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
+                            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+                            sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
+                            sys.stderr.write('║  Please close the other client first, or wait for      ║\n')
+                            sys.stderr.write('║  the active client to disconnect.                      ║\n')
+                            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+                            sys.stderr.write('\n')
+                            sys.stderr.flush()
+                            sys.exit(1)
+
+                        # Connection successful - will be printed after banner
+                        break
+
+            # Switch to non-blocking for background threads
+            self.socket.settimeout(0.1)
+
+        except sock.timeout:
+            sys.stderr.write('\n')
+            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+            sys.stderr.write('║  ERROR: Connection timeout                             ║\n')
+            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+            sys.stderr.write('║  ExaBGP daemon is not responding to commands.          ║\n')
+            sys.stderr.write('║                                                        ║\n')
+            sys.stderr.write('║  Possible causes:                                      ║\n')
+            sys.stderr.write('║    • Another CLI client is already connected           ║\n')
+            sys.stderr.write('║    • The daemon crashed after accepting connection     ║\n')
+            sys.stderr.write('║                                                        ║\n')
+            sys.stderr.write('║  Try closing any other CLI clients first.              ║\n')
+            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+            sys.stderr.write('\n')
+            sys.stderr.flush()
+            sys.exit(1)
+        except Exception as exc:
+            sys.stderr.write('\n')
+            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+            sys.stderr.write('║  ERROR: Failed to communicate with ExaBGP daemon       ║\n')
+            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+            sys.stderr.write(f'║  {str(exc):<54} ║\n')
+            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+            sys.stderr.write('\n')
+            sys.stderr.flush()
+            sys.exit(1)
+
+    def _reconnect(self, max_attempts=3, retry_delay=2) -> bool:
+        """
+        Attempt to reconnect to ExaBGP daemon
+
+        Args:
+            max_attempts: Number of reconnection attempts
+            retry_delay: Seconds to wait between attempts
+
+        Returns:
+            True if reconnection successful, False otherwise
+        """
+        # Signal to health monitor to stop pinging during reconnection
+        self.reconnecting = True
+
+        sys.stderr.write('\n')
+        sys.stderr.write('⚠ Connection to ExaBGP daemon lost, attempting to reconnect...\n')
+        sys.stderr.flush()
+
+        # Close old socket
+        if self.socket:
+            try:
+                self.socket.close()
+            except Exception:
+                pass
+            self.socket = None
+
+        # Try to reconnect
+        for attempt in range(1, max_attempts + 1):
+            try:
+                sys.stderr.write(f'  Attempt {attempt}/{max_attempts}...')
+                sys.stderr.flush()
+
+                # Wait before retry (except first attempt)
+                if attempt > 1:
+                    time.sleep(retry_delay)
+
+                # Reconnect
+                self._connect()
+
+                # Send initial ping to verify connection and get new UUID
+                self._initial_ping()
+
+                # Success!
+                sys.stderr.write(' ✓ Reconnected successfully!\n')
+
+                # Print reconnection message in green
+                reconnect_msg = f'✓ Reconnected to ExaBGP daemon (UUID: {self.daemon_uuid})'
+                if Colors.supports_color():
+                    sys.stderr.write(f'{Colors.GREEN}{reconnect_msg}{Colors.RESET}\n\n')
+                else:
+                    sys.stderr.write(f'{reconnect_msg}\n\n')
+                sys.stderr.flush()
+
+                # Redraw prompt with preserved input
+                # readline.redisplay() from background thread doesn't work - must manually redraw
+                try:
+                    import readline
+
+                    # Get what user was typing
+                    buffer = readline.get_line_buffer()
+
+                    # Manually redraw using ANSI codes
+                    # \r - return to start of line
+                    # \033[K - clear from cursor to end of line
+                    sys.stdout.write('\r\033[K')
+
+                    # Write prompt with color
+                    if Colors.supports_color():
+                        prompt = f'{Colors.BOLD}{Colors.GREEN}exabgp{Colors.RESET}{Colors.BOLD}>{Colors.RESET} '
+                    else:
+                        prompt = 'exabgp> '
+                    sys.stdout.write(prompt)
+
+                    # Write the preserved input
+                    sys.stdout.write(buffer)
+
+                    # CRITICAL: Flush to make it appear immediately
+                    sys.stdout.flush()
+
+                except Exception:
+                    # Readline not available or failed, just write prompt manually
+                    sys.stdout.write('\r\033[K')
+                    if Colors.supports_color():
+                        prompt = f'{Colors.BOLD}{Colors.GREEN}exabgp{Colors.RESET}{Colors.BOLD}>{Colors.RESET} '
+                    else:
+                        prompt = 'exabgp> '
+                    sys.stdout.write(prompt)
+                    sys.stdout.flush()
+
+                # Success - resume health monitoring
+                self.reconnecting = False
+                return True
+
+            except SystemExit:
+                # _initial_ping raised SystemExit with user-friendly error (e.g., another client active)
+                # Stop all activity before exiting
+                self.reconnecting = False
+                self.running = False
+                raise
+            except Exception as exc:
+                sys.stderr.write(f' ✗ Failed: {exc}\n')
+                sys.stderr.flush()
+
+        # All attempts failed - stop all activity
+        self.reconnecting = False
+        self.running = False
+        sys.stderr.write('\n')
+        sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+        sys.stderr.write('║  ERROR: Could not reconnect to ExaBGP daemon           ║\n')
+        sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+        sys.stderr.write(f'║  Failed after {max_attempts} attempts.                              ║\n')
+        sys.stderr.write('║  Please check if ExaBGP is running.                    ║\n')
+        sys.stderr.write('║                                                        ║\n')
+        sys.stderr.write('║  Exiting CLI...                                        ║\n')
+        sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+        sys.stderr.write('\n')
+        sys.stderr.flush()
+        return False
+
+    def _read_loop(self):
+        """Background thread: continuously read from socket"""
+        while self.running:
+            try:
+                data = self.socket.recv(4096)
+                if not data:
+                    # Socket closed - attempt reconnection
+                    if not self._reconnect():
+                        # Force exit entire process (not just this thread)
+                        os._exit(1)
+                    # Reconnected successfully, reset buffer and continue
+                    self.response_buffer = ''
+                    continue
+
+                self.response_buffer += data.decode('utf-8')
+
+                # Parse complete responses (ending with 'done\n')
+                while '\ndone\n' in self.response_buffer or self.response_buffer.endswith('done\n'):
+                    if '\ndone\n' in self.response_buffer:
+                        response, self.response_buffer = self.response_buffer.split('\ndone\n', 1)
+                    else:
+                        response = self.response_buffer[:-5]  # Remove 'done\n'
+                        self.response_buffer = ''
+
+                    response = response.strip()
+
+                    # Check if this is a ping response
+                    if response.startswith('pong '):
+                        self._handle_ping_response(response)
+                    else:
+                        # User command response
+                        self.pending_responses.put(response)
+
+            except sock.timeout:
+                # No data available, continue
+                continue
+            except Exception as exc:
+                if self.running:
+                    sys.stderr.write(f'ERROR: Socket read error: {exc}\n')
+                    sys.stderr.flush()
+                    # Force exit entire process (not just this thread)
+                    os._exit(1)
+                break
+
+    def _health_monitor(self):
+        """Background thread: send periodic pings"""
+        # Initial sync ping already done in __init__, start periodic monitoring
+        while self.running:
+            # Skip health checks if reconnecting
+            if not self.reconnecting:
+                current_time = time.time()
+                if current_time - self.last_ping_time >= self.health_interval:
+                    self._send_ping()
+
+            time.sleep(1)  # Check every second
+
+    def _send_ping(self):
+        """Send ping command (internal, not user-initiated)"""
+        # Skip if reconnecting or no socket
+        if self.reconnecting or not self.socket:
+            return
+
+        with self.lock:
+            try:
+                # Include client UUID and start time to track active connection
+                ping_cmd = f'ping {self.client_uuid} {self.client_start_time}\n'
+                self.socket.sendall(ping_cmd.encode('utf-8'))
+                self.last_ping_time = time.time()
+            except Exception:
+                # Socket error - read loop will handle reconnection
+                # Don't print error or exit here
+                pass
+
+    def _handle_ping_response(self, response: str):
+        """Handle pong response from health check"""
+        parts = response.split()
+        if len(parts) >= 2:
+            new_uuid = parts[1]
+
+            # Check if we're the active client (format: "pong <daemon_uuid> active=true/false")
+            is_active = True  # Default for backward compatibility
+            if len(parts) >= 3 and parts[2].startswith('active='):
+                is_active = parts[2].split('=')[1].lower() == 'true'
+
+            if not is_active:
+                # Another CLI client connected and replaced us
+                warning = (
+                    '\n'
+                    '╔════════════════════════════════════════════════════════╗\n'
+                    '║  Another CLI client connected                          ║\n'
+                    '╠════════════════════════════════════════════════════════╣\n'
+                    '║  This session has been replaced by a newer connection  ║\n'
+                    '║  Exiting gracefully...                                 ║\n'
+                    '╚════════════════════════════════════════════════════════╝\n'
+                )
+                sys.stderr.write(warning)
+                sys.stderr.flush()
+                # Force exit entire process (not just this thread)
+                os._exit(0)
+
+            if self.daemon_uuid is None:
+                # First UUID discovery
+                self.daemon_uuid = new_uuid
+                sys.stderr.write(f'✓ Connected to ExaBGP daemon (UUID: {new_uuid})\n')
+                sys.stderr.flush()
+                self.consecutive_failures = 0
+            elif new_uuid != self.daemon_uuid:
+                # Daemon restarted!
+                old_uuid = self.daemon_uuid
+                self.daemon_uuid = new_uuid
+
+                warning = (
+                    '\n'
+                    '╔════════════════════════════════════════════════════════╗\n'
+                    '║  WARNING: ExaBGP daemon restarted                      ║\n'
+                    '╠════════════════════════════════════════════════════════╣\n'
+                    f'║  Previous UUID: {old_uuid:<38} ║\n'
+                    f'║  New UUID:      {new_uuid:<38} ║\n'
+                    '╚════════════════════════════════════════════════════════╝\n'
+                )
+                sys.stderr.write(warning)
+                sys.stderr.flush()
+                self.consecutive_failures = 0
+            else:
+                # Normal ping response
+                self.consecutive_failures = 0
+        else:
+            # Malformed response
+            self.consecutive_failures += 1
+            if self.consecutive_failures >= self.max_failures:
+                sys.stderr.write(f'ERROR: ExaBGP daemon not responding after {self.max_failures} attempts\n')
+                sys.stderr.flush()
+                # Force exit entire process (not just this thread)
+                os._exit(1)
+
+    def send_command(self, command: str) -> str:
+        """Send user command and wait for response"""
+        with self.lock:
+            try:
+                self.socket.sendall((command + '\n').encode('utf-8'))
+            except Exception as exc:
+                return f'Error: {exc}'
+
+        # Wait for response (with timeout)
+        try:
+            response = self.pending_responses.get(timeout=5.0)
+            return response
+        except Empty:
+            return 'Error: Timeout waiting for response'
+
+    def close(self):
+        """Close connection and stop threads"""
+        self.running = False
+
+        # Close socket (triggers read thread to exit)
+        if self.socket:
+            try:
+                # Shutdown socket first (stops I/O operations)
+                self.socket.shutdown(sock.SHUT_RDWR)
+            except Exception:
+                pass
+
+            try:
+                # Then close the socket
+                self.socket.close()
+            except Exception:
+                pass
+
+        # Give threads a moment to exit
+        time.sleep(0.2)
 
 
 @dataclass
@@ -854,18 +1310,25 @@ class OutputFormatter:
 class InteractiveCLI:
     """Interactive REPL for ExaBGP commands"""
 
-    def __init__(self, send_command: Callable[[str], str], history_file: Optional[str] = None):
+    def __init__(
+        self,
+        send_command: Callable[[str], str],
+        history_file: Optional[str] = None,
+        daemon_uuid: Optional[str] = None,
+    ):
         """
         Initialize interactive CLI
 
         Args:
             send_command: Function to send commands to ExaBGP
             history_file: Path to save command history
+            daemon_uuid: Optional daemon UUID for connection message
         """
         self.send_command = send_command
         self.formatter = OutputFormatter()
         self.completer = CommandCompleter(send_command)
         self.running = True
+        self.daemon_uuid = daemon_uuid
 
         # Setup history file
         if history_file is None:
@@ -953,20 +1416,43 @@ class InteractiveCLI:
                 print(self.formatter.format_error(f'Unexpected error: {exc}'))
 
     def _print_banner(self) -> None:
-        """Print welcome banner"""
-        banner = """
-╔══════════════════════════════════════════════════════════╗
-║          ExaBGP Interactive CLI                          ║
-╚══════════════════════════════════════════════════════════╝
+        """Print welcome banner with ASCII art and version"""
+        from exabgp.version import version as exabgp_version
 
-Type 'help' for available commands
+        banner = rf"""
+╔══════════════════════════════════════════════════════════╗
+║ ___________             __________  __________________   ║
+║ \_   _____/__  ________ \______   \/  _____/\______   \  ║
+║  |    __)_\  \/  /\__  \ |    |  _/   \  ___ |     ___/  ║
+║  |        \>    <  / __ \|    |   \    \_\  \|    |      ║
+║ /_________/__/\__\(______/________/\________/|____|      ║
+║                                                          ║
+║  Version: {exabgp_version:<46} ║
+╚══════════════════════════════════════════════════════════╝
+"""
+        if self.formatter.use_color:
+            print(f'{Colors.BOLD}{Colors.CYAN}{banner}{Colors.RESET}', end='')
+        else:
+            print(banner, end='')
+
+        # Print connection message if daemon UUID is available
+        if self.daemon_uuid:
+            conn_msg = f'✓ Connected to ExaBGP daemon (UUID: {self.daemon_uuid})'
+            if self.formatter.use_color:
+                print(f'{Colors.GREEN}{conn_msg}{Colors.RESET}')
+            else:
+                print(conn_msg)
+        print()
+
+        # Print usage instructions
+        help_text = """Type 'help' for available commands
 Type 'exit' or press Ctrl+D/Ctrl+C to quit
 Tab completion and command history enabled
 """
         if self.formatter.use_color:
-            print(f'{Colors.BOLD}{Colors.CYAN}{banner}{Colors.RESET}')
+            print(f'{Colors.DIM}{help_text}{Colors.RESET}')
         else:
-            print(banner)
+            print(help_text)
 
     def _handle_builtin(self, line: str) -> bool:
         """
@@ -1057,7 +1543,8 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
     Returns:
         Exit code (0 for success)
     """
-    import socket as sock
+    # Initialize connection variable for cleanup
+    connection = None
 
     # Determine transport method
     if use_pipe_transport:
@@ -1091,6 +1578,7 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
                 return f'Error: {exc}'
 
         send_func = send_command_pipe
+        daemon_uuid = None
     else:
         # Use Unix socket transport
         sockets = unix_socket(ROOT, socketname)
@@ -1104,60 +1592,55 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
 
         socket_path = sockets[0]
 
-        def send_command_socket(command: str) -> str:
-            """Send command via Unix socket and return response"""
-            s = None
-            try:
-                # Expand shortcuts
-                expanded = CommandShortcuts.expand_shortcuts(command)
+        # Create persistent connection with health monitoring
+        try:
+            connection = PersistentSocketConnection(socket_path)
+        except sock.error as exc:
+            # Socket connection errors
+            sys.stderr.write('\n')
+            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+            sys.stderr.write('║  ERROR: Could not connect to ExaBGP daemon             ║\n')
+            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+            sys.stderr.write(f'║  {str(exc):<54} ║\n')
+            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+            sys.stderr.write('\n')
+            sys.stderr.flush()
+            return 1
+        except SystemExit:
+            # Raised by _initial_ping() with user-friendly error already shown
+            raise
+        except Exception as exc:
+            sys.stderr.write('\n')
+            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+            sys.stderr.write('║  ERROR: Unexpected error connecting to ExaBGP          ║\n')
+            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+            sys.stderr.write(f'║  {str(exc):<54} ║\n')
+            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+            sys.stderr.write('\n')
+            sys.stderr.flush()
+            return 1
 
-                # Connect to socket
-                s = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
-                s.settimeout(5.0)
+        def send_command_persistent(command: str) -> str:
+            """Send command via persistent connection"""
+            expanded = CommandShortcuts.expand_shortcuts(command)
+            return connection.send_command(expanded)
 
-                # Build full socket path
-                full_socket_path = socket_path if socket_path.endswith('.sock') else socket_path + 'exabgp.sock'
-                s.connect(full_socket_path)
-
-                # Send command
-                s.sendall((expanded + '\n').encode('utf-8'))
-
-                # Receive response
-                response_parts = []
-                while True:
-                    try:
-                        data = s.recv(4096)
-                        if not data:
-                            break
-                        response_parts.append(data.decode('utf-8'))
-
-                        # Check for done marker
-                        response = ''.join(response_parts)
-                        if 'done' in response or 'error' in response:
-                            break
-                    except sock.timeout:
-                        break
-                    except Exception:
-                        break
-
-                return ''.join(response_parts).strip()
-            except Exception as exc:
-                return f'Error: {exc}'
-            finally:
-                if s:
-                    try:
-                        s.close()
-                    except Exception:
-                        pass
-
-        send_func = send_command_socket
+        send_func = send_command_persistent
+        daemon_uuid = connection.daemon_uuid
 
     # Create and run interactive CLI
     try:
-        cli = InteractiveCLI(send_func)
+        cli = InteractiveCLI(send_func, daemon_uuid=daemon_uuid)
         cli.run()
         return 0
     except Exception as exc:
         sys.stderr.write(f'CLI error: {exc}\n')
         sys.stderr.flush()
         return 1
+    finally:
+        # Clean up persistent connection if it exists
+        if connection is not None:
+            try:
+                connection.close()
+            except Exception:
+                pass
