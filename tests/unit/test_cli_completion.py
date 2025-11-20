@@ -13,7 +13,7 @@ class TestCLICompletion(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures"""
-        self.completer = CommandCompleter(send_command=lambda cmd: "")
+        self.completer = CommandCompleter(send_command=lambda cmd: '')
 
     def test_auto_expand_unambiguous_token(self):
         """Test that unambiguous tokens get auto-expanded"""
@@ -88,6 +88,19 @@ class TestCLICompletion(unittest.TestCase):
 
         self.assertEqual(expanded, ['show', 'neighbor'])
         self.assertFalse(changed)  # No changes since both are exact matches
+
+    def test_completion_metadata(self):
+        """Test that completions include metadata for displaying descriptions"""
+        # Get completions for base commands
+        completions = self.completer._get_completions([], 'sho')
+
+        # Should get completions matching 'sho'
+        self.assertIn('show', completions)
+
+        # Verify metadata was added (used for showing descriptions)
+        # This metadata is displayed when multiple matches exist
+        self.assertIn('show', self.completer.match_metadata)
+        self.assertIsNotNone(self.completer.match_metadata['show'].description)
 
 
 class TestOutputFormatter(unittest.TestCase):
