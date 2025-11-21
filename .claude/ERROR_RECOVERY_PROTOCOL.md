@@ -53,6 +53,15 @@ You: "You're right - I violated FILE_NAMING_CONVENTIONS.md.
 - Batch operations without verification → Verify each step
 - Skipping git verification → ALWAYS follow GIT_VERIFICATION_PROTOCOL.md
 
+**7. CRITICAL: Git operations with pre-existing changes**
+- NEVER run `git add -A` without explicit confirmation of which files to include
+- NEVER assume "commit" means "commit all files"
+- ALWAYS ask which files to include when multiple files are modified
+- Even if user says "commit", STOP and ask: "Which files? Only my changes or all modified files?"
+- List files clearly: "[my changes] + [pre-existing changes]"
+- WAIT for explicit answer before staging any files
+- Protocol violation: Committing pre-existing changes without asking user first
+
 ## Example: File Move Operations
 
 **WRONG (rushed after mistake):**
