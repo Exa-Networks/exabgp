@@ -129,9 +129,9 @@ def test_ruff_format() -> Tuple[bool, int]:
 def test_ruff_check() -> Tuple[bool, int]:
     """Test 2: Ruff check"""
     print_header("TEST 2/6: Ruff Check")
-    print_info("Running: ruff check src tests")
+    print_info("Running: ruff check src qa tests")
 
-    returncode, stdout, stderr = run_command("ruff check src tests")
+    returncode, stdout, stderr = run_command("ruff check src qa tests")
 
     if returncode != 0:
         print_error("Ruff check failed")

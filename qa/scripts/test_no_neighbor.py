@@ -15,7 +15,6 @@ import subprocess
 import sys
 import os
 import time
-import signal
 
 # Paths relative to repository root
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -109,7 +108,7 @@ def test_no_neighbor():
             try:
                 proc.kill()
                 proc.wait()
-            except:
+            except Exception:
                 pass
         return False
 

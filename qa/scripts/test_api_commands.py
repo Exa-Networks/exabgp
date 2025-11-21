@@ -101,7 +101,7 @@ def test_api_commands():
             try:
                 proc.kill()
                 proc.wait()
-            except:
+            except Exception:
                 pass
         return False
 
