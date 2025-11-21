@@ -17,12 +17,12 @@ class TestCLICompletion(unittest.TestCase):
 
     def test_auto_expand_unambiguous_token(self):
         """Test that unambiguous tokens get auto-expanded"""
-        # "n" after "show" should expand to "neighbor"
+        # "n" after "show" no longer expands (neighbor filtered from completions)
         tokens = ['show', 'n']
         expanded, changed = self.completer._try_auto_expand_tokens(tokens)
 
-        self.assertEqual(expanded, ['show', 'neighbor'])
-        self.assertTrue(changed)
+        self.assertEqual(expanded, ['show', 'n'])  # No expansion - neighbor filtered
+        self.assertFalse(changed)
 
     def test_no_expand_ambiguous_token(self):
         """Test that ambiguous tokens don't get auto-expanded"""
@@ -44,23 +44,24 @@ class TestCLICompletion(unittest.TestCase):
 
     def test_expand_multiple_tokens(self):
         """Test expanding multiple unambiguous tokens in context"""
-        # Both tokens might be unambiguous in context
+        # 'n' after 'show' no longer expands (neighbor filtered)
         tokens = ['show', 'n']
         expanded, changed = self.completer._try_auto_expand_tokens(tokens)
 
-        # At minimum, 'n' after 'show' should expand to 'neighbor'
+        # No expansion - neighbor filtered from 'show' completions
         self.assertEqual(len(expanded), 2)
         self.assertEqual(expanded[0], 'show')
-        self.assertEqual(expanded[1], 'neighbor')
-        self.assertTrue(changed)
+        self.assertEqual(expanded[1], 'n')
+        self.assertFalse(changed)
 
     def test_get_completions_base_commands(self):
         """Test getting completions for base commands"""
-        # Empty context, partial match 'sho'
-        completions = self.completer._get_completions([], 'sho')
+        # Empty context, partial match 'sh'
+        completions = self.completer._get_completions([], 'sh')
 
-        # Should contain 'show'
-        self.assertIn('show', completions)
+        # 'show' filtered out, should suggest 'shutdown'
+        self.assertNotIn('show', completions)
+        self.assertIn('shutdown', completions)
         # Should not contain unrelated commands
         self.assertNotIn('neighbor', completions)
 
@@ -69,16 +70,16 @@ class TestCLICompletion(unittest.TestCase):
         # After 'show', get completions for 'n'
         completions = self.completer._get_completions(['show'], 'n')
 
-        # Should contain 'neighbor'
-        self.assertIn('neighbor', completions)
+        # 'neighbor' filtered out - use 'neighbor <ip> show' syntax instead
+        self.assertNotIn('neighbor', completions)
 
     def test_get_completions_exact_match(self):
         """Test completions when token is exact match"""
-        # 'show' is exact match
-        completions = self.completer._get_completions([], 'show')
+        # 'announce' is exact match
+        completions = self.completer._get_completions([], 'announce')
 
-        # Should return 'show' as it's a valid command
-        self.assertIn('show', completions)
+        # Should return 'announce' as it's a valid command
+        self.assertIn('announce', completions)
 
     def test_expand_preserves_exact_matches(self):
         """Test that exact matches are preserved during expansion"""
@@ -92,25 +93,26 @@ class TestCLICompletion(unittest.TestCase):
     def test_completion_metadata(self):
         """Test that completions include metadata for displaying descriptions"""
         # Get completions for base commands
-        completions = self.completer._get_completions([], 'sho')
+        completions = self.completer._get_completions([], 'ann')
 
-        # Should get completions matching 'sho'
-        self.assertIn('show', completions)
+        # Should get completions matching 'ann'
+        self.assertIn('announce', completions)
 
         # Verify metadata was added (used for showing descriptions)
         # This metadata is displayed when multiple matches exist
-        self.assertIn('show', self.completer.match_metadata)
-        self.assertIsNotNone(self.completer.match_metadata['show'].description)
+        self.assertIn('announce', self.completer.match_metadata)
+        self.assertIsNotNone(self.completer.match_metadata['announce'].description)
 
     def test_neighbor_ip_only_shows_announce_withdraw_show(self):
-        """Test that after 'neighbor <ip>', only announce/withdraw/show are suggested"""
-        # After neighbor IP, should only get announce, withdraw, show
+        """Test that after 'neighbor <ip>', only announce/withdraw/show/adj-rib are suggested"""
+        # After neighbor IP, should only get announce, withdraw, show, adj-rib
         completions = self.completer._get_completions(['neighbor', '127.0.0.1'], '')
 
-        # Should contain these three
+        # Should contain these four
         self.assertIn('announce', completions)
         self.assertIn('withdraw', completions)
         self.assertIn('show', completions)
+        self.assertIn('adj-rib', completions)
 
         # Should NOT contain other commands (ping, help, reload, etc.)
         self.assertNotIn('ping', completions)
@@ -119,8 +121,8 @@ class TestCLICompletion(unittest.TestCase):
         self.assertNotIn('shutdown', completions)
         self.assertNotIn('crash', completions)
 
-        # Should be exactly 3 items
-        self.assertEqual(len(completions), 3)
+        # Should be exactly 4 items
+        self.assertEqual(len(completions), 4)
 
     def test_neighbor_ip_announce_completes_as_root_announce(self):
         """Test that 'neighbor <ip> announce' completes same as root 'announce'"""

@@ -715,13 +715,16 @@ class CommandCompleter:
 
         # Get base commands from registry (exclude internal/non-interactive commands)
         all_commands = self.registry.get_base_commands()
-        # Filter out "#" (comment command - useful in scripts/API but not interactive CLI)
-        self.base_commands = [cmd for cmd in all_commands if cmd != '#']
+        # Filter out commands not useful in interactive CLI:
+        # - "#" (comment command - useful in scripts/API but not interactive)
+        # - "show" (no subcommands after filtering neighbor/adj-rib - use new syntax)
+        self.base_commands = [cmd for cmd in all_commands if cmd not in ('#', 'show')]
         # Add builtin CLI commands (not in registry)
         self.base_commands.extend(['exit', 'quit', 'q', 'clear', 'history', 'set'])
-        # Add 'neighbor' keyword for discoverability (it's a prefix/filter, not a standalone command)
-        # Valid syntax: "neighbor <IP> announce route ..." (neighbor filtering before commands)
-        self.base_commands.append('neighbor')
+        # Add CLI-first keywords for discoverability:
+        # - 'neighbor' for "neighbor <IP> show/announce/withdraw" syntax
+        # - 'adj-rib' for "adj-rib <in|out> show" syntax
+        self.base_commands.extend(['neighbor', 'adj-rib'])
 
         # Cache for neighbor IPs
         self._neighbor_cache: Optional[List[str]] = None
@@ -973,14 +976,43 @@ class CommandCompleter:
         # Clear previous metadata
         self.match_metadata.clear()
 
-        # If no tokens yet, complete base commands
+        # If no tokens yet, complete base commands + display format prefix
         if not tokens:
-            matches = sorted([cmd for cmd in self.base_commands if cmd.startswith(text)])
-            # Add metadata for base commands with descriptions
-            for match in matches:
-                desc = self.registry.get_command_description(match)
-                self._add_completion_metadata(match, desc, 'command')
-            return matches
+            matches = []
+
+            # Add display format prefixes (json/text) first
+            if 'json'.startswith(text):
+                matches.append('json')
+                self._add_completion_metadata('json', 'Display output as JSON', 'option')
+            if 'text'.startswith(text):
+                matches.append('text')
+                self._add_completion_metadata('text', 'Display output as text tables', 'option')
+
+            # Add base commands
+            for cmd in self.base_commands:
+                if cmd.startswith(text):
+                    matches.append(cmd)
+                    desc = self.registry.get_command_description(cmd)
+                    self._add_completion_metadata(cmd, desc, 'command')
+
+            return sorted(matches)
+
+        # Check if first token is display format prefix - if so, strip it for completion
+        # Example: "json show" → complete as if tokens = ["show"]
+        if tokens and tokens[0].lower() in ('json', 'text'):
+            # Strip display prefix and complete normally
+            if len(tokens) == 1:
+                # Just "json " or "text " - suggest all base commands
+                matches = []
+                for cmd in self.base_commands:
+                    if cmd.startswith(text):
+                        matches.append(cmd)
+                        desc = self.registry.get_command_description(cmd)
+                        self._add_completion_metadata(cmd, desc, 'command')
+                return sorted(matches)
+            else:
+                # "json show ..." - strip prefix and continue with rest
+                tokens = tokens[1:]
 
         # Expand shortcuts in tokens using CommandShortcuts
         expanded_tokens = CommandShortcuts.expand_token_list(tokens.copy())
@@ -999,6 +1031,62 @@ class CommandCompleter:
             elif len(expanded_tokens) >= 3 and expanded_tokens[2] in ('announce', 'withdraw'):
                 # Strip "neighbor <ip>" and continue completion from that command
                 expanded_tokens = expanded_tokens[2:]
+
+        # Handle "adj-rib" completions (CLI-first syntax)
+        # Supports both: "adj-rib <in|out> show" and "neighbor <ip> adj-rib <in|out> show"
+        adj_rib_idx = -1
+        neighbor_ip = None
+
+        # Check for "neighbor <ip> adj-rib" pattern
+        if (
+            len(expanded_tokens) >= 3
+            and expanded_tokens[0] == 'neighbor'
+            and self._is_ip_address(expanded_tokens[1])
+            and expanded_tokens[2] == 'adj-rib'
+        ):
+            adj_rib_idx = 2
+            neighbor_ip = expanded_tokens[1]
+        # Check for "adj-rib" pattern
+        elif len(expanded_tokens) >= 1 and expanded_tokens[0] == 'adj-rib':
+            adj_rib_idx = 0
+
+        if adj_rib_idx >= 0:
+            tokens_after_adjrib = expanded_tokens[adj_rib_idx + 1 :]
+
+            # If exactly "adj-rib" or "neighbor <ip> adj-rib", suggest "in" and "out"
+            if len(tokens_after_adjrib) == 0:
+                matches = []
+                if 'in'.startswith(text):
+                    matches.append('in')
+                    self._add_completion_metadata('in', 'Adj-RIB-In (received routes)', 'option')
+                if 'out'.startswith(text):
+                    matches.append('out')
+                    self._add_completion_metadata('out', 'Adj-RIB-Out (advertised routes)', 'option')
+                return sorted(matches)
+
+            # If "adj-rib <in|out>" or "neighbor <ip> adj-rib <in|out>", suggest "show"
+            if len(tokens_after_adjrib) == 1 and tokens_after_adjrib[0] in ('in', 'out'):
+                if 'show'.startswith(text):
+                    self._add_completion_metadata('show', 'Show adj-rib information', 'command')
+                    return ['show']
+                return []
+
+            # For "adj-rib <in|out> show" or "neighbor <ip> adj-rib <in|out> show", transform to API syntax
+            if (
+                len(tokens_after_adjrib) >= 2
+                and tokens_after_adjrib[0] in ('in', 'out')
+                and tokens_after_adjrib[1] == 'show'
+            ):
+                direction = tokens_after_adjrib[0]
+                rest = tokens_after_adjrib[2:] if len(tokens_after_adjrib) > 2 else []
+
+                # Transform based on whether neighbor IP is present:
+                # "adj-rib in show ..." → "show adj-rib in ..."
+                # "neighbor <ip> adj-rib in show ..." → "show adj-rib in <ip> ..."
+                if neighbor_ip:
+                    expanded_tokens = ['show', 'adj-rib', direction, neighbor_ip] + rest
+                else:
+                    expanded_tokens = ['show', 'adj-rib', direction] + rest
 
         # Check if we have "announce route <ip-prefix>" or "withdraw route <ip-prefix>"
         # In this case, suggest route attributes (next-hop, as-path, etc.)
@@ -1155,6 +1243,10 @@ class CommandCompleter:
                     if 'announce' in expanded_tokens[:i]:
                         matches = [m for m in matches if m != 'route-refresh']
 
+                    # Filter out 'neighbor' and 'adj-rib' after 'show' - use new syntax instead
+                    if i == 1 and expanded_tokens[0] == 'show':
+                        matches = [m for m in matches if m not in ('neighbor', 'adj-rib')]
+
                     if matches and i == len(expanded_tokens) - 1:
                         # Last token being completed - these are subcommands
                         # Build full command path for description lookup
@@ -1188,6 +1280,9 @@ class CommandCompleter:
                     # Check if this is "route-refresh" - skip it
                     if match == 'route-refresh':
                         continue
+                # Filter out 'neighbor' and 'adj-rib' after 'show' - use new syntax instead
+                if match in ('neighbor', 'adj-rib') and len(expanded_tokens) == 1 and expanded_tokens[0] == 'show':
+                    continue
                 filtered_matches.append(match)
             matches = filtered_matches
 
@@ -1274,13 +1369,14 @@ class CommandCompleter:
                     self._add_completion_metadata(ip, info, 'neighbor')
             return sorted(matches)
 
-        # If last token is an IP, only suggest: announce, withdraw, show
+        # If last token is an IP, suggest: announce, withdraw, show, adj-rib
         # "show" will be rewritten to "show neighbor <ip>" before sending to API
+        # "adj-rib" allows "neighbor <ip> adj-rib <in|out> show" syntax
         if self._is_ip_address(last_token):
             matches = []
 
-            # Only these three commands are valid after "neighbor <ip>"
-            allowed_commands = ['announce', 'withdraw', 'show']
+            # Commands valid after "neighbor <ip>"
+            allowed_commands = ['announce', 'withdraw', 'show', 'adj-rib']
 
             for cmd in allowed_commands:
                 if cmd.startswith(text):
@@ -2093,6 +2189,11 @@ class InteractiveCLI:
         help_text = """Type 'help' for available commands
 Type 'exit' or press Ctrl+D/Ctrl+C to quit
 Tab completion and command history enabled
+
+Display Format (optional prefix):
+  json <command>  - Display output as JSON
+  text <command>  - Display output as text tables
+  Example: json show neighbor
 """
         if self.formatter.use_color:
             print(f'{Colors.DIM}{help_text}{Colors.RESET}')
@@ -2157,6 +2258,43 @@ Tab completion and command history enabled
         # Not a builtin
         return False
 
+    def _is_read_command(self, command: str) -> bool:
+        """
+        Determine if a command is read-only (returns data) or write (modifies state)
+
+        Args:
+            command: Command string (may have been partially parsed)
+
+        Returns:
+            True if read command, False if write command
+        """
+        # Read-only commands that support display format override
+        read_prefixes = ('show', 'list', 'help', 'version')
+        # Write commands that modify state (ignore display prefix)
+        write_prefixes = ('announce', 'withdraw', 'flush', 'clear', 'shutdown', 'reload', 'restart')
+
+        # Get first token of command
+        tokens = command.split()
+        if not tokens:
+            return False
+
+        first_token = tokens[0].lower()
+
+        # Check for read commands
+        if first_token in read_prefixes:
+            return True
+
+        # Check for write commands
+        if first_token in write_prefixes:
+            return False
+
+        # Builtin CLI commands are read-only
+        if first_token in ('exit', 'quit', 'q', 'clear', 'history', 'set'):
+            return True
+
+        # Default: treat unknown commands as read (safer - allows user to see output)
+        return True
+
     def _execute_command(self, command: str) -> None:
         """
         Execute a command and display the result
@@ -2165,14 +2303,45 @@ Tab completion and command history enabled
             command: Command to execute
         """
         try:
-            # Check if command has explicit encoding override (json/text at end)
             tokens = command.split()
+
+            # Check for display format prefix (json/text at START)
+            display_override = None
+            if tokens and tokens[0].lower() in ('json', 'text'):
+                display_override = tokens[0].lower()
+                # Strip display prefix from command
+                command = ' '.join(tokens[1:])
+                tokens = command.split()  # Re-tokenize
+
+            # Check if command has explicit encoding override (json/text at end)
             override_encoding = None
 
             if tokens and tokens[-1].lower() in ('json', 'text'):
                 override_encoding = tokens[-1].lower()
                 # Strip override keyword from command
                 command = ' '.join(tokens[:-1])
+                tokens = command.split()  # Re-tokenize after stripping
+
+            # Validate format combination
+            if display_override and override_encoding:
+                if display_override != override_encoding:
+                    # Conflicting formats - block execution
+                    error_msg = (
+                        f"Error: Conflicting formats - display='{display_override}' "
+                        f"but API encoding='{override_encoding}'\n"
+                        f'Use matching formats or omit one:\n'
+                        f"  '{command} {override_encoding}' (both {override_encoding})\n"
+                        f"  '{display_override} {command} {display_override}' (both {display_override})\n"
+                        f"  '{display_override} {command}' (display only)"
+                    )
+                    print(self.formatter.format_error(error_msg))
+                    return
+
+            # Check if this is a read command (write commands ignore display prefix)
+            is_read = self._is_read_command(command)
+            if display_override and not is_read:
+                # Ignore display prefix for write commands (no output to format)
+                display_override = None
 
             # Translate CLI-friendly syntax to API syntax
             # "announce route refresh" -> "announce route-refresh"
@@ -2249,7 +2418,27 @@ Tab completion and command history enabled
                 return
 
             # Not an error - format normally
-            formatted = self.formatter.format_command_output(result, display_mode=self.display_mode)
+            # Determine display mode (display_override takes precedence over session default)
+            display_to_use = display_override if display_override else self.display_mode
+
+            # Validate API response format matches display request
+            # If user requested JSON display but API returned text, fail loudly
+            if display_to_use == 'json' and encoding_to_use == 'text':
+                # This should be impossible - tests should catch this
+                error_obj = {
+                    'error': 'API returned text format when JSON was requested for display',
+                    'details': 'This is a bug - please report',
+                    'command': command,
+                    'api_encoding': encoding_to_use,
+                    'display_mode': display_to_use,
+                }
+                import json
+
+                error_json = json.dumps(error_obj, indent=2)
+                print(self.formatter.format_error(error_json))
+                return
+
+            formatted = self.formatter.format_command_output(result, display_mode=display_to_use)
 
             if formatted:
                 # Regular output - display as-is
