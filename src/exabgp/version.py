@@ -1,6 +1,17 @@
 import os
 import sys
 
+
+def get_zipapp():
+    return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-2]))
+
+
+def get_root():
+    if os.path.isfile(get_zipapp()):
+        return get_zipapp()
+    return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-1]))
+
+
 commit = "078e4ef2"
 release = "5.0.0"
 json = "5.0.0"
