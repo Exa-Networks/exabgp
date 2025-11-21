@@ -14,6 +14,7 @@ import ctypes
 import socket as sock
 import threading
 import time
+import signal
 from dataclasses import dataclass
 from queue import Queue, Empty
 from typing import List, Optional, Callable, Dict, Tuple, Union
@@ -104,6 +105,9 @@ class PersistentSocketConnection:
 
         # Send initial synchronous ping to get daemon UUID (before showing prompt)
         self._initial_ping()
+
+        # Setup signal handler for graceful shutdown
+        self._setup_signal_handler()
 
         # Start background threads
         self.reader_thread = threading.Thread(target=self._read_loop, daemon=True)
@@ -260,6 +264,26 @@ class PersistentSocketConnection:
             sys.stderr.flush()
             sys.exit(1)
 
+    def _setup_signal_handler(self) -> None:
+        """Setup signal handler for graceful shutdown from background threads"""
+
+        def signal_handler(signum, frame):
+            """Handle SIGUSR1 by setting running flag to False"""
+            self.running = False
+            # Re-raise KeyboardInterrupt to break out of input()
+            raise KeyboardInterrupt()
+
+        # Use SIGUSR1 for graceful shutdown signaling
+        signal.signal(signal.SIGUSR1, signal_handler)
+
+    def _signal_shutdown(self) -> None:
+        """Send shutdown signal to main thread (called from background thread)"""
+        try:
+            # Send SIGUSR1 to main thread to interrupt input()
+            os.kill(os.getpid(), signal.SIGUSR1)
+        except Exception:
+            pass
+
     def _reconnect(self, max_attempts=3, retry_delay=2) -> bool:
         """
         Attempt to reconnect to ExaBGP daemon
@@ -366,6 +390,7 @@ class PersistentSocketConnection:
         # All attempts failed - stop all activity
         self.reconnecting = False
         self.running = False
+
         sys.stderr.write('\n')
         sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
         sys.stderr.write('║  ERROR: Could not reconnect to ExaBGP daemon           ║\n')
@@ -387,8 +412,9 @@ class PersistentSocketConnection:
                 if not data:
                     # Socket closed - attempt reconnection
                     if not self._reconnect():
-                        # Force exit entire process (not just this thread)
-                        os._exit(1)
+                        # Reconnection failed - signal main thread to exit
+                        self._signal_shutdown()
+                        break
                     # Reconnected successfully, reset buffer and continue
                     self.response_buffer = ''
                     continue
@@ -552,8 +578,9 @@ class PersistentSocketConnection:
                 )
                 sys.stderr.write(warning)
                 sys.stderr.flush()
-                # Force exit entire process (not just this thread)
-                os._exit(0)
+                # Another client connected - signal main thread to exit
+                self._signal_shutdown()
+                return
 
             if self.daemon_uuid is None:
                 # First UUID discovery (shouldn't happen since _initial_ping sets it)
@@ -587,8 +614,9 @@ class PersistentSocketConnection:
             if self.consecutive_failures >= self.max_failures:
                 sys.stderr.write(f'ERROR: ExaBGP daemon not responding after {self.max_failures} attempts\n')
                 sys.stderr.flush()
-                # Force exit entire process (not just this thread)
-                os._exit(1)
+                # Daemon not responding - signal main thread to exit
+                self._signal_shutdown()
+                return
 
     def send_command(self, command: str) -> str:
         """Send user command and wait for response"""
@@ -1998,6 +2026,10 @@ class InteractiveCLI:
                 prompt = self.formatter.format_prompt()
                 line = input(prompt).strip()
 
+                # Check if background thread signaled shutdown
+                if not self.running:
+                    break
+
                 # Skip empty lines
                 if not line:
                     continue
@@ -2015,10 +2047,16 @@ class InteractiveCLI:
                 self._quit()
                 break
             except KeyboardInterrupt:
-                # Ctrl+C pressed
-                print()  # Newline after ^C
-                self._quit()
-                break
+                # Ctrl+C pressed OR signal from background thread
+                if not self.running:
+                    # Signal from background thread - exit gracefully
+                    print()  # Newline
+                    break
+                else:
+                    # User pressed Ctrl+C - quit normally
+                    print()  # Newline after ^C
+                    self._quit()
+                    break
             except Exception as exc:
                 print(self.formatter.format_error(f'Unexpected error: {exc}'))
 

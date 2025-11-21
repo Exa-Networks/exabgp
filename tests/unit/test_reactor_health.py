@@ -137,6 +137,7 @@ class TestStatusCommand:
         # Execute command in JSON mode for easy parsing
         result = status(None, reactor, service, 'status', use_json=True)
 
+        assert result is True
         output = reactor.processes.written_data[0]
         data = json.loads(output)
 

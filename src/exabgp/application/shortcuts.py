@@ -103,11 +103,7 @@ class CommandShortcuts:
                 # 2. Exact full_name match (e.g., 'route' == 'route')
                 # 3. Prefix match for short tokens only (e.g., 'ro' matches 'route')
                 #    This prevents 'route' from matching 'router-id'
-                is_match = (
-                    token == nickname or
-                    token == full_name or
-                    (len(token) <= 2 and full_name.startswith(token))
-                )
+                is_match = token == nickname or token == full_name or (len(token) <= 2 and full_name.startswith(token))
                 if is_match and match_condition(pos, expanded):
                     expanded.append(full_name)
                     matched = True
@@ -140,11 +136,7 @@ class CommandShortcuts:
             'announce'
         """
         for nickname, full_name, match_condition in cls.SHORTCUTS:
-            is_match = (
-                token == nickname or
-                token == full_name or
-                (len(token) <= 2 and full_name.startswith(token))
-            )
+            is_match = token == nickname or token == full_name or (len(token) <= 2 and full_name.startswith(token))
             if is_match and match_condition(position, previous_tokens):
                 return full_name
         return token
@@ -171,11 +163,7 @@ class CommandShortcuts:
         """
         expansions = []
         for nickname, full_name, match_condition in cls.SHORTCUTS:
-            is_match = (
-                token == nickname or
-                token == full_name or
-                (len(token) <= 2 and full_name.startswith(token))
-            )
+            is_match = token == nickname or token == full_name or (len(token) <= 2 and full_name.startswith(token))
             if is_match and match_condition(position, previous_tokens):
                 if full_name not in expansions:
                     expansions.append(full_name)

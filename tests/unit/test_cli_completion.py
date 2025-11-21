@@ -5,7 +5,6 @@ Test CLI tab completion and auto-expansion functionality
 
 import json
 import unittest
-from unittest.mock import Mock
 from exabgp.application.cli import CommandCompleter, OutputFormatter, InteractiveCLI
 
 
@@ -169,8 +168,9 @@ class TestCLICompletion(unittest.TestCase):
         # But should NOT suggest IP addresses again
         for completion in completions:
             # None of the completions should be IP addresses
-            self.assertFalse(self.completer._is_ip_address(completion),
-                           f"Completion '{completion}' should not be an IP address")
+            self.assertFalse(
+                self.completer._is_ip_address(completion), f"Completion '{completion}' should not be an IP address"
+            )
 
     def test_announce_route_prefix_suggests_attributes(self):
         """Test that 'announce route <prefix>' suggests BGP attributes"""
@@ -180,21 +180,17 @@ class TestCLICompletion(unittest.TestCase):
         # Should suggest BGP attributes
         expected_attributes = ['next-hop', 'as-path', 'community', 'local-preference', 'med']
         for attr in expected_attributes:
-            self.assertIn(attr, completions,
-                         f"Expected attribute '{attr}' not in completions: {completions}")
+            self.assertIn(attr, completions, f"Expected attribute '{attr}' not in completions: {completions}")
 
     def test_neighbor_announce_route_prefix_suggests_attributes(self):
         """Test that 'neighbor <ip> announce route <prefix>' suggests BGP attributes"""
         # Get completions after "neighbor 127.0.0.1 announce route 1.2.3.4/32"
-        completions = self.completer._get_completions(
-            ['neighbor', '127.0.0.1', 'announce', 'route', '1.2.3.4/32'], ''
-        )
+        completions = self.completer._get_completions(['neighbor', '127.0.0.1', 'announce', 'route', '1.2.3.4/32'], '')
 
         # Should suggest BGP attributes (same as without neighbor prefix)
         expected_attributes = ['next-hop', 'as-path', 'community', 'local-preference', 'med']
         for attr in expected_attributes:
-            self.assertIn(attr, completions,
-                         f"Expected attribute '{attr}' not in completions: {completions}")
+            self.assertIn(attr, completions, f"Expected attribute '{attr}' not in completions: {completions}")
 
 
 class TestOutputFormatter(unittest.TestCase):
