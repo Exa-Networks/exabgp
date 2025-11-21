@@ -8,7 +8,6 @@ typo correction, and multi-letter shortcuts.
 
 from __future__ import annotations
 
-import pytest
 
 from exabgp.application.shortcuts import CommandShortcuts
 
@@ -104,8 +103,9 @@ class TestMultiLetterShortcuts:
     """Test multi-character shortcuts"""
 
     def test_rr_as_route_refresh(self):
-        result = CommandShortcuts.expand_shortcuts('announce rr ipv4 unicast')
-        assert result == 'announce route-refresh ipv4 unicast'
+        # 'rr' shortcut removed - use 'announce r r' instead
+        result = CommandShortcuts.expand_shortcuts('announce r r ipv4 unicast')
+        assert result == 'announce route refresh ipv4 unicast'
 
     def test_rr_only_after_announce(self):
         # 'rr' should only expand after 'announce'
@@ -152,6 +152,16 @@ class TestIPAddressContext:
         # IPv6 detection (has colons)
         result = CommandShortcuts.expand_shortcuts('a 2001::1 route')
         assert result == 'announce 2001::1 route'
+
+    def test_id_expands_to_router_id_in_neighbor_context(self):
+        # 'id' should expand to 'router-id' when 'neighbor' is in context
+        result = CommandShortcuts.expand_shortcuts('neighbor 192.168.1.1 id 1.2.3.4')
+        assert result == 'neighbor 192.168.1.1 router-id 1.2.3.4'
+
+    def test_id_does_not_expand_without_neighbor(self):
+        # 'id' should NOT expand when 'neighbor' is not in context
+        result = CommandShortcuts.expand_shortcuts('show id')
+        assert result == 'show id'  # No expansion
 
 
 class TestTokenListExpansion:
@@ -358,8 +368,9 @@ class TestRealWorldScenarios:
         assert 'announce route' in result
 
     def test_announce_route_refresh(self):
-        result = CommandShortcuts.expand_shortcuts('a rr ipv6 unicast')
-        assert result == 'announce route-refresh ipv6 unicast'
+        # 'rr' shortcut removed - use 'a r r' instead
+        result = CommandShortcuts.expand_shortcuts('a r r ipv6 unicast')
+        assert result == 'announce route refresh ipv6 unicast'
 
 
 class TestConsistency:

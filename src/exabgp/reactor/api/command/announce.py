@@ -35,14 +35,22 @@ def announce_route(self, reactor, service, line, use_json):
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
-                self.log_failure(f'no neighbor matching the command : {command}')
-                reactor.processes.answer_error(service)
+                error_msg = f'No neighbor matching the command: {command}'
+                self.log_failure(error_msg)
+                reactor.processes.answer_error(service, error_msg)
                 return
+
+            # Strip trailing encoding keyword (json/text) that CLI appends
+            # Example: "announce route 1.2.3.4/32 next-hop 2.4.5.6 json" -> "announce route 1.2.3.4/32 next-hop 2.4.5.6"
+            command_parts = command.strip().split()
+            if command_parts and command_parts[-1] in ('json', 'text'):
+                command = ' '.join(command_parts[:-1])
 
             changes = self.api_route(command)
             if not changes:
-                self.log_failure(f'command could not parse route in : {command}')
-                reactor.processes.answer_error(service)
+                error_msg = f'Could not parse route: {command}'
+                self.log_failure(error_msg)
+                reactor.processes.answer_error(service, error_msg)
                 return
 
             for change in changes:
@@ -57,12 +65,18 @@ def announce_route(self, reactor, service, line, use_json):
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
-        except ValueError:
-            self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
-        except IndexError:
-            self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+        except ValueError as e:
+            error_msg = f'Failed to parse route: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
+        except IndexError as e:
+            error_msg = f'Invalid route syntax: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
+        except Exception as e:
+            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -75,14 +89,22 @@ def withdraw_route(self, reactor, service, line, use_json):
             descriptions, command = extract_neighbors(line)
             peers = match_neighbors(reactor.peers(service), descriptions)
             if not peers:
-                self.log_failure(f'no neighbor matching the command : {command}')
-                reactor.processes.answer_error(service)
+                error_msg = f'No neighbor matching the command: {command}'
+                self.log_failure(error_msg)
+                reactor.processes.answer_error(service, error_msg)
                 return
+
+            # Strip trailing encoding keyword (json/text) that CLI appends
+            # Example: "announce route 1.2.3.4/32 next-hop 2.4.5.6 json" -> "announce route 1.2.3.4/32 next-hop 2.4.5.6"
+            command_parts = command.strip().split()
+            if command_parts and command_parts[-1] in ('json', 'text'):
+                command = ' '.join(command_parts[:-1])
 
             changes = self.api_route(command)
             if not changes:
-                self.log_failure(f'command could not parse route in : {command}')
-                reactor.processes.answer_error(service)
+                error_msg = f'Could not parse route: {command}'
+                self.log_failure(error_msg)
+                reactor.processes.answer_error(service, error_msg)
                 return
 
             for change in changes:
@@ -105,12 +127,18 @@ def withdraw_route(self, reactor, service, line, use_json):
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False in both branches)
 
             reactor.processes.answer_done(service)
-        except ValueError:
-            self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
-        except IndexError:
-            self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+        except ValueError as e:
+            error_msg = f'Failed to parse route: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
+        except IndexError as e:
+            error_msg = f'Invalid route syntax: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
+        except Exception as e:
+            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -218,12 +246,18 @@ def announce_attributes(self, reactor, service, line, use_json):
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
-        except ValueError:
-            self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
-        except IndexError:
-            self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+        except ValueError as e:
+            error_msg = f'Failed to parse route: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
+        except IndexError as e:
+            error_msg = f'Invalid route syntax: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
+        except Exception as e:
+            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, line, callback())
     return True
@@ -259,12 +293,18 @@ def withdraw_attribute(self, reactor, service, line, use_json):
                     await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
 
             reactor.processes.answer_done(service)
-        except ValueError:
-            self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
-        except IndexError:
-            self.log_failure('issue parsing the route')
-            reactor.processes.answer_error(service)
+        except ValueError as e:
+            error_msg = f'Failed to parse route: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
+        except IndexError as e:
+            error_msg = f'Invalid route syntax: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
+        except Exception as e:
+            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            self.log_failure(error_msg)
+            reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, line, callback())
     return True

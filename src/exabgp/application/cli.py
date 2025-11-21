@@ -957,6 +957,21 @@ class CommandCompleter:
         # Expand shortcuts in tokens using CommandShortcuts
         expanded_tokens = CommandShortcuts.expand_token_list(tokens.copy())
 
+        # Handle "neighbor <ip> <command>" prefix transformations
+        if len(expanded_tokens) >= 2 and expanded_tokens[0] == 'neighbor' and self._is_ip_address(expanded_tokens[1]):
+            ip = expanded_tokens[1]
+
+            # For "show", transform to "show neighbor <ip>" before completion
+            if len(expanded_tokens) >= 3 and expanded_tokens[2] == 'show':
+                # Transform: "neighbor 127.0.0.1 show ..." → "show neighbor 127.0.0.1 ..."
+                rest = expanded_tokens[3:] if len(expanded_tokens) > 3 else []
+                expanded_tokens = ['show', 'neighbor', ip] + rest
+
+            # For "announce" and "withdraw", strip "neighbor <ip>" to complete at root level
+            elif len(expanded_tokens) >= 3 and expanded_tokens[2] in ('announce', 'withdraw'):
+                # Strip "neighbor <ip>" and continue completion from that command
+                expanded_tokens = expanded_tokens[2:]
+
         # Check if we have "announce route <ip-prefix>" or "withdraw route <ip-prefix>"
         # In this case, suggest route attributes (next-hop, as-path, etc.)
         # This must come BEFORE _is_neighbor_command check (which would return base commands)
@@ -1049,11 +1064,16 @@ class CommandCompleter:
                         desc = self.registry.get_option_description(opt)
                         self._add_completion_metadata(opt, desc, 'option')
 
-                # Add neighbor IPs with descriptions
-                for ip, info in neighbor_data.items():
-                    if ip.startswith(text):
-                        matches.append(ip)
-                        self._add_completion_metadata(ip, info, 'neighbor')
+                # Only add neighbor IPs if one isn't already specified
+                # Example: "show neighbor" → suggest IPs, but "show neighbor 127.0.0.1" → don't suggest IPs again
+                ip_already_specified = len(expanded_tokens) >= 3 and self._is_ip_address(expanded_tokens[2])
+
+                if not ip_already_specified:
+                    # Add neighbor IPs with descriptions
+                    for ip, info in neighbor_data.items():
+                        if ip.startswith(text):
+                            matches.append(ip)
+                            self._add_completion_metadata(ip, info, 'neighbor')
 
                 return sorted(matches)
 
@@ -1226,40 +1246,21 @@ class CommandCompleter:
                     self._add_completion_metadata(ip, info, 'neighbor')
             return sorted(matches)
 
-        # If last token is an IP, suggest both filters AND commands
-        # Filters are optional, so user can go directly to commands
+        # If last token is an IP, only suggest: announce, withdraw, show
+        # "show" will be rewritten to "show neighbor <ip>" before sending to API
         if self._is_ip_address(last_token):
             matches = []
 
-            # Add filter keywords (optional)
-            filters = self._complete_neighbor_filters(text)
-            matches.extend(filters)
+            # Only these three commands are valid after "neighbor <ip>"
+            allowed_commands = ['announce', 'withdraw', 'show']
 
-            # Add base commands that support neighbor filtering
-            # Commands like 'announce', 'withdraw' are multi-word (announce route, withdraw route)
-            # Commands like 'crash', 'teardown' are standalone with neighbor_support=True
-            for cmd in self.base_commands:
+            for cmd in allowed_commands:
                 if cmd.startswith(text):
-                    # Skip builtin CLI commands (exit, quit, clear, history, set)
-                    if cmd in ('exit', 'quit', 'q', 'clear', 'history', 'set'):
-                        continue
+                    matches.append(cmd)
+                    desc = self.registry.get_command_description(cmd)
+                    self._add_completion_metadata(cmd, desc if desc else '', 'command')
 
-                    metadata = self.registry.get_command_metadata(cmd)
-                    # Include if:
-                    # 1. It has metadata and neighbor_support=True (like crash, teardown)
-                    # 2. It's a command prefix that appears in command_tree (like announce, withdraw)
-                    if metadata and metadata.neighbor_support:
-                        # Standalone command with neighbor support
-                        matches.append(cmd)
-                        desc = self.registry.get_command_description(cmd)
-                        self._add_completion_metadata(cmd, desc if desc else '', 'command')
-                    elif cmd in self.command_tree:
-                        # Multi-word command prefix (announce, withdraw, flush, show)
-                        matches.append(cmd)
-                        desc = self.registry.get_command_description(cmd)
-                        self._add_completion_metadata(cmd, desc if desc else '', 'command')
-
-            return sorted(set(matches))
+            return sorted(matches)
 
         return []
 
@@ -2139,6 +2140,17 @@ Tab completion and command history enabled
             # "announce route refresh" -> "announce route-refresh"
             command = command.replace('route refresh', 'route-refresh')
 
+            # Transform "neighbor <ip> show ..." to "show neighbor <ip> ..."
+            # Pattern: neighbor <IP> show [options]
+            import re
+
+            neighbor_show_pattern = r'^neighbor\s+(\S+)\s+show\s*(.*)$'
+            match = re.match(neighbor_show_pattern, command)
+            if match:
+                ip = match.group(1)
+                rest = match.group(2).strip()
+                command = f'show neighbor {ip} {rest}'.strip()
+
             # Determine which encoding to use (override takes precedence)
             encoding_to_use = override_encoding if override_encoding else self.output_encoding
 
@@ -2147,9 +2159,62 @@ Tab completion and command history enabled
 
             result = self.send_command(command_with_encoding)
 
-            # Format and display output
-            if result:
-                formatted = self.formatter.format_command_output(result, display_mode=self.display_mode)
+            # Check for socket/timeout errors
+            if result and result.startswith('Error: '):
+                # Socket write failed or timeout - show error without "Command sent"
+                print(self.formatter.format_error(result[7:]))  # Strip "Error: " prefix
+                return
+
+            # Socket write succeeded - show immediate feedback
+            print(self.formatter.format_success('Command sent'))
+
+            # Format and display daemon response
+            result_stripped = result.strip()
+
+            # Check for success with no data FIRST (before formatting which may print "done")
+            # Empty response or "done" means command was accepted
+            if not result_stripped or result_stripped in ('done', 'done\nerror\n'):
+                # Command succeeded but no output - show success confirmation
+                print(self.formatter.format_success('Command accepted'))
+                return
+
+            # Check if response ends with API error marker
+            is_error = result_stripped.endswith('error')
+
+            if is_error:
+                # Split on rightmost 'error' marker to extract error details
+                parts = result_stripped.rsplit('error', 1)
+                error_content = parts[0].strip() if len(parts) > 1 else ''
+
+                if error_content:
+                    # Try to parse as JSON error
+                    try:
+                        import json
+
+                        error_data = json.loads(error_content)
+                        if isinstance(error_data, dict) and 'error' in error_data:
+                            # JSON error format: {"error": "message"}
+                            print(self.formatter.format_error(error_data['error']))
+                        else:
+                            # JSON but not error format - show as-is
+                            print(self.formatter.format_error(error_content))
+                    except (json.JSONDecodeError, ValueError):
+                        # Not JSON - treat as text error
+                        # Format: "error: message" or just "message"
+                        if error_content.startswith('error:'):
+                            print(self.formatter.format_error(error_content[6:].strip()))
+                        else:
+                            print(self.formatter.format_error(error_content))
+                else:
+                    # Just "error" with no details
+                    print(self.formatter.format_error('Command failed'))
+                return
+
+            # Not an error - format normally
+            formatted = self.formatter.format_command_output(result, display_mode=self.display_mode)
+
+            if formatted:
+                # Regular output - display as-is
                 print(formatted)
         except Exception as exc:
             print(self.formatter.format_error(str(exc)))

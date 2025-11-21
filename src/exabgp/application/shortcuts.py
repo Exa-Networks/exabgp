@@ -36,11 +36,12 @@ class CommandShortcuts:
         ('f', 'flush', lambda pos, pre: pos == 0 or pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]),
         ('h', 'help', lambda pos, pre: pos == 0),
         ('i', 'in', lambda pos, pre: pre and pre[-1] == 'adj-rib'),
+        ('id', 'router-id', lambda pos, pre: 'neighbor' in pre),  # CLI shortcut: id → router-id in neighbor context
         ('n', 'neighbor', lambda pos, pre: pos == 0 or (pre and pre[-1] == 'show')),
         ('o', 'operation', lambda pos, pre: pre and pre[-1] == 'announce'),
         ('o', 'out', lambda pos, pre: pre and pre[-1] == 'adj-rib'),
         ('r', 'route', lambda pos, pre: pre and (pre[-1] == 'announce' or pre[-1] == 'withdraw')),
-        ('rr', 'route-refresh', lambda pos, pre: pre and pre[-1] == 'announce'),
+        ('r', 'refresh', lambda pos, pre: len(pre) >= 2 and pre[-2] == 'announce' and pre[-1] == 'route'),
         ('s', 'show', lambda pos, pre: pos == 0),
         ('s', 'summary', lambda pos, pre: pos != 0),
         ('t', 'teardown', lambda pos, pre: pos == 0 or pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]),
@@ -48,7 +49,6 @@ class CommandShortcuts:
         ('w', 'withdraw', lambda pos, pre: pos == 0 or pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]),
         ('w', 'watchdog', lambda pos, pre: pre and (pre[-1] == 'announce' or pre[-1] == 'withdraw')),
         # Multi-letter shortcuts
-        ('rr', 'route-refresh', lambda pos, pre: pre and pre[-1] == 'announce'),
         # Common typos
         ('neighbour', 'neighbor', lambda pos, pre: True),
         ('neigbour', 'neighbor', lambda pos, pre: True),
@@ -98,8 +98,17 @@ class CommandShortcuts:
             # Try to match against shortcuts
             matched = False
             for nickname, full_name, match_condition in cls.SHORTCUTS:
-                # Check if token matches nickname exactly or starts with full_name
-                if (token == nickname or full_name.startswith(token)) and match_condition(pos, expanded):
+                # Check if token matches:
+                # 1. Exact nickname match (e.g., 'r' == 'r')
+                # 2. Exact full_name match (e.g., 'route' == 'route')
+                # 3. Prefix match for short tokens only (e.g., 'ro' matches 'route')
+                #    This prevents 'route' from matching 'router-id'
+                is_match = (
+                    token == nickname or
+                    token == full_name or
+                    (len(token) <= 2 and full_name.startswith(token))
+                )
+                if is_match and match_condition(pos, expanded):
                     expanded.append(full_name)
                     matched = True
                     break
@@ -131,7 +140,12 @@ class CommandShortcuts:
             'announce'
         """
         for nickname, full_name, match_condition in cls.SHORTCUTS:
-            if (token == nickname or full_name.startswith(token)) and match_condition(position, previous_tokens):
+            is_match = (
+                token == nickname or
+                token == full_name or
+                (len(token) <= 2 and full_name.startswith(token))
+            )
+            if is_match and match_condition(position, previous_tokens):
                 return full_name
         return token
 
@@ -157,7 +171,12 @@ class CommandShortcuts:
         """
         expansions = []
         for nickname, full_name, match_condition in cls.SHORTCUTS:
-            if (token == nickname or full_name.startswith(token)) and match_condition(position, previous_tokens):
+            is_match = (
+                token == nickname or
+                token == full_name or
+                (len(token) <= 2 and full_name.startswith(token))
+            )
+            if is_match and match_condition(position, previous_tokens):
                 if full_name not in expansions:
                     expansions.append(full_name)
         return expansions

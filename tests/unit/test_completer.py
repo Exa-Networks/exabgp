@@ -735,19 +735,23 @@ class TestNeighborTargetedCommandCompletion:
         assert '192.168.1.1' in matches
         assert '10.0.0.1' in matches
 
-    def test_neighbor_ip_suggests_filters_and_commands(self):
-        """Test that 'neighbor <IP>' suggests both filters AND commands"""
+    def test_neighbor_ip_suggests_only_announce_withdraw_show(self):
+        """Test that 'neighbor <IP>' suggests only announce, withdraw, show"""
         matches = self.completer._get_completions(['neighbor', '192.168.1.1'], '')
-        # Should have filter keywords (optional)
-        assert 'local-as' in matches
-        assert 'peer-as' in matches
-        assert 'family-allowed' in matches
-        assert 'id' in matches  # CLI keyword for router-id (router-id removed to avoid route clash)
-        assert 'router-id' not in matches  # Removed from autocomplete for fast completion
-        # Should have commands (filters are optional, can go directly to commands)
+        # Should ONLY have these three commands
         assert 'announce' in matches
         assert 'withdraw' in matches
-        assert 'flush' in matches
+        assert 'show' in matches
+        # Should NOT have other commands
+        assert 'flush' not in matches
+        assert 'ping' not in matches
+        assert 'help' not in matches
+        # Should NOT have filter keywords (filters removed from this context)
+        assert 'local-as' not in matches
+        assert 'peer-as' not in matches
+        assert 'id' not in matches
+        # Should be exactly 3 items
+        assert len(matches) == 3
 
 
 class TestCompleterExceptionHandling:

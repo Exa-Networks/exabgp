@@ -5,7 +5,8 @@ Test CLI tab completion and auto-expansion functionality
 
 import json
 import unittest
-from exabgp.application.cli import CommandCompleter, OutputFormatter
+from unittest.mock import Mock
+from exabgp.application.cli import CommandCompleter, OutputFormatter, InteractiveCLI
 
 
 class TestCLICompletion(unittest.TestCase):
@@ -101,6 +102,99 @@ class TestCLICompletion(unittest.TestCase):
         # This metadata is displayed when multiple matches exist
         self.assertIn('show', self.completer.match_metadata)
         self.assertIsNotNone(self.completer.match_metadata['show'].description)
+
+    def test_neighbor_ip_only_shows_announce_withdraw_show(self):
+        """Test that after 'neighbor <ip>', only announce/withdraw/show are suggested"""
+        # After neighbor IP, should only get announce, withdraw, show
+        completions = self.completer._get_completions(['neighbor', '127.0.0.1'], '')
+
+        # Should contain these three
+        self.assertIn('announce', completions)
+        self.assertIn('withdraw', completions)
+        self.assertIn('show', completions)
+
+        # Should NOT contain other commands (ping, help, reload, etc.)
+        self.assertNotIn('ping', completions)
+        self.assertNotIn('help', completions)
+        self.assertNotIn('reload', completions)
+        self.assertNotIn('shutdown', completions)
+        self.assertNotIn('crash', completions)
+
+        # Should be exactly 3 items
+        self.assertEqual(len(completions), 3)
+
+    def test_neighbor_ip_announce_completes_as_root_announce(self):
+        """Test that 'neighbor <ip> announce' completes same as root 'announce'"""
+        # Get completions after "neighbor 127.0.0.1 announce"
+        neighbor_completions = self.completer._get_completions(['neighbor', '127.0.0.1', 'announce'], '')
+
+        # Get completions after just "announce" (root level)
+        root_completions = self.completer._get_completions(['announce'], '')
+
+        # Should be identical
+        self.assertEqual(sorted(neighbor_completions), sorted(root_completions))
+
+    def test_neighbor_ip_show_completes_as_show_neighbor_ip(self):
+        """Test that 'neighbor <ip> show' completes as 'show neighbor <ip>'"""
+        # Get completions after "neighbor 127.0.0.1 show"
+        neighbor_completions = self.completer._get_completions(['neighbor', '127.0.0.1', 'show'], '')
+
+        # Get completions after "show neighbor 127.0.0.1" (transformed level)
+        show_neighbor_completions = self.completer._get_completions(['show', 'neighbor', '127.0.0.1'], '')
+
+        # Should be identical to "show neighbor <ip>" level
+        self.assertEqual(sorted(neighbor_completions), sorted(show_neighbor_completions))
+
+        # Should NOT be same as root "show" level
+        root_show_completions = self.completer._get_completions(['show'], '')
+        self.assertNotEqual(sorted(neighbor_completions), sorted(root_show_completions))
+
+    def test_neighbor_ip_withdraw_completes_as_root_withdraw(self):
+        """Test that 'neighbor <ip> withdraw' completes same as root 'withdraw'"""
+        # Get completions after "neighbor 127.0.0.1 withdraw"
+        neighbor_completions = self.completer._get_completions(['neighbor', '127.0.0.1', 'withdraw'], '')
+
+        # Get completions after just "withdraw" (root level)
+        root_completions = self.completer._get_completions(['withdraw'], '')
+
+        # Should be identical
+        self.assertEqual(sorted(neighbor_completions), sorted(root_completions))
+
+    def test_show_neighbor_ip_does_not_suggest_ip_again(self):
+        """Test that 'show neighbor <ip>' does not suggest the IP again"""
+        # Get completions after "show neighbor 127.0.0.1"
+        completions = self.completer._get_completions(['show', 'neighbor', '127.0.0.1'], '')
+
+        # Should suggest options (summary, extensive, configuration, json)
+        # But should NOT suggest IP addresses again
+        for completion in completions:
+            # None of the completions should be IP addresses
+            self.assertFalse(self.completer._is_ip_address(completion),
+                           f"Completion '{completion}' should not be an IP address")
+
+    def test_announce_route_prefix_suggests_attributes(self):
+        """Test that 'announce route <prefix>' suggests BGP attributes"""
+        # Test the basic case first (without neighbor prefix)
+        completions = self.completer._get_completions(['announce', 'route', '1.2.3.4/32'], '')
+
+        # Should suggest BGP attributes
+        expected_attributes = ['next-hop', 'as-path', 'community', 'local-preference', 'med']
+        for attr in expected_attributes:
+            self.assertIn(attr, completions,
+                         f"Expected attribute '{attr}' not in completions: {completions}")
+
+    def test_neighbor_announce_route_prefix_suggests_attributes(self):
+        """Test that 'neighbor <ip> announce route <prefix>' suggests BGP attributes"""
+        # Get completions after "neighbor 127.0.0.1 announce route 1.2.3.4/32"
+        completions = self.completer._get_completions(
+            ['neighbor', '127.0.0.1', 'announce', 'route', '1.2.3.4/32'], ''
+        )
+
+        # Should suggest BGP attributes (same as without neighbor prefix)
+        expected_attributes = ['next-hop', 'as-path', 'community', 'local-preference', 'med']
+        for attr in expected_attributes:
+            self.assertIn(attr, completions,
+                         f"Expected attribute '{attr}' not in completions: {completions}")
 
 
 class TestOutputFormatter(unittest.TestCase):
@@ -204,6 +298,64 @@ class TestOutputFormatter(unittest.TestCase):
         parsed = json.loads(clean_output)
         self.assertEqual(len(parsed), 1)
         self.assertEqual(parsed[0]['id'], 1)
+
+
+class TestNeighborShowTransformation(unittest.TestCase):
+    """Test cases for neighbor show command transformation"""
+
+    def setUp(self):
+        """Set up test fixtures"""
+        self.sent_commands = []
+
+        def mock_send_command(cmd: str) -> str:
+            self.sent_commands.append(cmd)
+            return 'done'
+
+        self.cli = InteractiveCLI(send_command=mock_send_command)
+
+    def test_neighbor_show_transforms_to_show_neighbor(self):
+        """Test that 'neighbor <ip> show' transforms to 'show neighbor <ip>'"""
+        # Execute "neighbor 127.0.0.1 show"
+        self.cli._execute_command('neighbor 127.0.0.1 show')
+
+        # Should have sent "show neighbor 127.0.0.1 text" (text is default encoding)
+        self.assertEqual(len(self.sent_commands), 1)
+        sent = self.sent_commands[0]
+        self.assertIn('show neighbor 127.0.0.1', sent)
+
+    def test_neighbor_show_with_options(self):
+        """Test that 'neighbor <ip> show <options>' preserves options"""
+        # Execute "neighbor 127.0.0.1 show summary"
+        self.cli._execute_command('neighbor 127.0.0.1 show summary')
+
+        # Should transform to "show neighbor 127.0.0.1 summary"
+        self.assertEqual(len(self.sent_commands), 1)
+        sent = self.sent_commands[0]
+        self.assertIn('show neighbor 127.0.0.1 summary', sent)
+
+    def test_neighbor_announce_not_transformed(self):
+        """Test that 'neighbor <ip> announce' is NOT transformed"""
+        # Execute "neighbor 127.0.0.1 announce route 1.2.3.0/24"
+        self.cli._execute_command('neighbor 127.0.0.1 announce route 1.2.3.0/24')
+
+        # Should send as-is (with encoding appended)
+        self.assertEqual(len(self.sent_commands), 1)
+        sent = self.sent_commands[0]
+        self.assertIn('neighbor 127.0.0.1 announce route 1.2.3.0/24', sent)
+        # Should NOT start with "show"
+        self.assertFalse(sent.startswith('show'))
+
+    def test_neighbor_withdraw_not_transformed(self):
+        """Test that 'neighbor <ip> withdraw' is NOT transformed"""
+        # Execute "neighbor 127.0.0.1 withdraw route 1.2.3.0/24"
+        self.cli._execute_command('neighbor 127.0.0.1 withdraw route 1.2.3.0/24')
+
+        # Should send as-is (with encoding appended)
+        self.assertEqual(len(self.sent_commands), 1)
+        sent = self.sent_commands[0]
+        self.assertIn('neighbor 127.0.0.1 withdraw route 1.2.3.0/24', sent)
+        # Should NOT start with "show"
+        self.assertFalse(sent.startswith('show'))
 
 
 if __name__ == '__main__':
