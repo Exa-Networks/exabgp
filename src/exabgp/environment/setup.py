@@ -312,11 +312,11 @@ CONFIGURATION: Dict[str, Dict[str, Dict[str, Any]]] = {
             'value': '1.0',
             'help': f'reactor loop time\n{_SPACE} use only if you understand the code.',
         },
-        'asyncio': {
+        'legacy': {
             'read': parsing.boolean,
             'write': parsing.lower,
             'value': 'false',
-            'help': 'use asyncio event loop instead of generator-based loop',
+            'help': 'use legacy generator-based event loop instead of asyncio (default: asyncio)',
         },
     },
     # Here for internal use

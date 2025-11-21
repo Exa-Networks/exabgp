@@ -447,12 +447,12 @@ class Reactor:
         return True
 
     def run(self) -> int:
-        # Check if asyncio mode is enabled
-        if getenv().reactor.asyncio:
-            # Use asyncio event loop
+        # Check if legacy mode is enabled (default: asyncio)
+        if not getenv().reactor.legacy:
+            # Use asyncio event loop (default)
             return asyncio.run(self.run_async())
 
-        # Otherwise use traditional generator-based event loop
+        # Use legacy generator-based event loop
         self.daemon.daemonise()
 
         # Make sure we create processes once we have closed file descriptor
