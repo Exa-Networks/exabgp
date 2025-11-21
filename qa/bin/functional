@@ -328,7 +328,7 @@ State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP TIMEOUT')
 class Record:
     _index: int = 0
     _listing: str = (
-        '0123456789' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + 'αβγδεζηθικλμνξοπρςστυφχψω'
+        '0123456789' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + 'αβγδεζηθικλμνξοπρςστυφχψω' + 'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ'
     )
 
     def __init__(self, nick: str, name: str) -> None:
