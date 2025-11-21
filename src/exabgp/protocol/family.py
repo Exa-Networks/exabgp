@@ -118,7 +118,7 @@ class AFI(Resource):
     @staticmethod
     def implemented_safi(afi: str) -> List[str]:
         if afi == 'ipv4':
-            return ['unicast', 'multicast', 'nlri-mpls', 'mcast-vpnmpls-vpn', 'flow', 'flow-vpn', 'mup']
+            return ['unicast', 'multicast', 'nlri-mpls', 'mcast-vpn', 'mpls-vpn', 'flow', 'flow-vpn', 'mup']
         if afi == 'ipv6':
             return ['unicast', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup']
         if afi == 'l2vpn':
