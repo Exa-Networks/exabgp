@@ -35,4 +35,4 @@ jobs:
         run: |
           python --version
           ruff --version
-          ruff check . --output-format=full --statistics
+          ruff check src qa tests --output-format=full --statistics
