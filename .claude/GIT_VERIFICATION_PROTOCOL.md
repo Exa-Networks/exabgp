@@ -44,3 +44,40 @@ git status && git log --oneline -3
 **6. Be precise**
 - ✓ "Commit created locally" / "Commit pushed to origin/main"
 - ✗ "Changes committed" / "Changes pushed" (ambiguous)
+
+**7. CRITICAL: When user says "commit" with pre-existing changes**
+
+NEVER proceed automatically. ALWAYS follow this process:
+
+1. **STOP** - Do NOT run `git add` or `git commit` immediately
+2. **Run** `git status` to see all modified files
+3. **Categorize** files:
+   - Files YOU modified during this session
+   - Files with pre-existing changes from before session started
+4. **Ask user explicitly:**
+   ```
+   "I see X modified files:
+   - My changes: [file1.py]
+   - Pre-existing: [file2.py, file3.py, ...]
+
+   Commit which files?
+   1. Only my changes (file1.py)
+   2. All files together
+   3. Let me review each file first"
+   ```
+5. **WAIT** for explicit answer
+6. **Stage** only the files user specified
+7. **Verify** with `git status` before committing
+
+**NEVER:**
+- Run `git add -A` without asking which files
+- Assume "commit" means "commit everything"
+- Include pre-existing changes without explicit permission
+- Skip the categorization step
+
+**Example violation:**
+```
+User: "commit"
+❌ Wrong: git add -A && git commit
+✅ Right: Stop, categorize files, ask which to include
+```
