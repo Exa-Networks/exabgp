@@ -19,6 +19,7 @@ from exabgp.application import environ
 from exabgp.application import version
 from exabgp.application import validate
 from exabgp.application import healthcheck
+from exabgp.application import shell
 
 
 def main():
@@ -42,7 +43,7 @@ def main():
 
     # compatibility with exabgp 4.x
     if len(sys.argv) > 1 and not ('-h' in sys.argv or '--help' in sys.argv):
-        if sys.argv[1] not in ('version', 'cli', 'run', 'healthcheck', 'decode', 'server', 'env', 'validate'):
+        if sys.argv[1] not in ('version', 'cli', 'run', 'healthcheck', 'decode', 'server', 'env', 'validate', 'shell'):
             sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
 
     formatter = argparse.RawDescriptionHelpFormatter
@@ -95,6 +96,12 @@ def main():
     sub = subparsers.add_parser('validate', help='validate configuration', description=validate.__doc__)
     sub.set_defaults(func=validate.cmdline)
     validate.setargs(sub)
+
+    sub = subparsers.add_parser(
+        'shell', help='manage shell completion', description='Install or uninstall shell completion scripts'
+    )
+    sub.set_defaults(func=shell.cmdline)
+    shell.setargs(sub)
 
     try:
         cmdarg = parser.parse_args()

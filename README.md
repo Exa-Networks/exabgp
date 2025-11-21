@@ -217,6 +217,61 @@ Feel free to use your preferred installation option, but should you encounter an
 
 Multiple versions can be used simultaneously without conflict when ExaBGP is run from extracted archives, docker, and/or local git repositories. If you are using `main`, you can use `exabgp version` to identify the location of your installation.
 
+### Shell Completion
+
+ExaBGP provides dynamic shell completion generation for Bash, Zsh, and Fish to autocomplete commands and options.
+
+**⚠️ Note:** This feature is newly implemented and not yet extensively tested. Feedback and bug reports are welcome.
+
+**Installation:**
+
+Install completion scripts for your shell using the built-in command:
+
+```sh
+# Install completion for current shell (auto-detects Bash/Zsh/Fish)
+./sbin/exabgp shell install
+
+# Or specify shell explicitly
+./sbin/exabgp shell install bash
+./sbin/exabgp shell install zsh
+./sbin/exabgp shell install fish
+
+# Uninstall completion (auto-detects shell)
+./sbin/exabgp shell uninstall
+
+# Or specify shell explicitly
+./sbin/exabgp shell uninstall bash
+```
+
+The completion script will be generated dynamically and installed to your user's completion directory (e.g., `~/.local/share/bash-completion/completions/`).
+
+**Verify completion is working:**
+
+```sh
+exabgp <TAB>
+# Should show: cli  decode  env  healthcheck  run  server  shell  validate  version
+```
+
+**Manual Generation (advanced):**
+
+Generate the completion script to stdout for manual installation:
+
+```sh
+# Generate bash completion
+./sbin/exabgp shell completion bash > ~/.local/share/bash-completion/completions/exabgp
+source ~/.local/share/bash-completion/completions/exabgp
+
+# Generate zsh completion
+mkdir -p ~/.zsh/completions
+./sbin/exabgp shell completion zsh > ~/.zsh/completions/_exabgp
+echo 'fpath=(~/.zsh/completions $fpath)' >> ~/.zshrc
+autoload -Uz compinit && compinit
+
+# Generate fish completion
+mkdir -p ~/.config/fish/completions
+./sbin/exabgp shell completion fish > ~/.config/fish/completions/exabgp.fish
+```
+
 ## Upgrade
 
 ExaBGP is self-contained and easy to upgrade/downgrade by:
