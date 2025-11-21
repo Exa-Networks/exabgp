@@ -171,8 +171,8 @@ python3 -m exabgp healthcheck --help
 It is also possible to download releases from GitHub:
 
 ```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.0.tar.gz | tar zx
-cd exabgp-5.0.0
+curl -L https://github.com/Exa-Networks/exabgp/archive/6.0.0.tar.gz | tar zx
+cd exabgp-6.0.0
 ./sbin/exabgp --version
 ./sbin/exabgp --help
 
@@ -196,10 +196,10 @@ env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
 
-It is then possible to change git to use any release (here 5.0.0):
+It is then possible to change git to use any release (here 6.0.0):
 
 ```sh
-git checkout 5.0.0
+git checkout 6.0.0
 ./sbin/exabgp --version
 ```
 
@@ -285,6 +285,20 @@ ExaBGP is self-contained and easy to upgrade/downgrade by:
 
 **ExaBGP 5.0.0 introduces new features** including the `silence-ack` API command. The acknowledgment feature caused issues with simple programs that did not expect ACK messages. The `silence-ack` command resolves this problem by allowing external processes to disable acknowledgment messages.
 
+**ExaBGP 6.0.0 (upcoming release) will introduce significant improvements** since 5.0.0:
+
+⚠️ **BREAKING CHANGE - Async Reactor Default:**
+- **Async mode is now the default** - Uses modern async/await-based event loop
+- **Legacy mode available** - Set `exabgp_reactor_legacy=true` to use the original generator-based reactor
+- **100% test parity** - Both modes pass all 72 functional tests and 1376 unit tests
+- **Why the change?** Modern event loop integration, potential performance benefits, production-ready after extensive validation
+
+🎯 **New Features:**
+- **Shell completion** - Install with `exabgp shell install [bash|zsh|fish]` for smart command completion
+- **Enhanced CLI** - Interactive mode with tab completion, JSON formatting, inline help (?)
+- **Health monitoring** - New API commands for ping and status checks
+- **Python 3.12+ support** - Updated compatibility and bug fixes
+
 The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://raw.githubusercontent.com/Exa-Networks/exabgp/main/CHANGELOG) and check their setup after any upgrade.
 
 ## Documentation
@@ -351,11 +365,11 @@ ExaBGP is nearly as old as Python 3. A lot has changed since 2009; the applicati
 ### Version Information
 
 - **Current stable**: 5.0.0 (recommended for production)
-- **Development**: main branch
+- **Development**: main branch (working towards 6.0.0 release)
   - **Breaking changes**: Command-line arguments changed from 4.x
   - **Note**: Due to recent async and mypy work, main may not be as stable as it used to be
 
-The main branch (previously the master branch) is ExaBGP 5.0.x. The program command line arguments have been changed and are no longer fully backwards compatible with versions 3 and 4. Version 5.0.0 is now the stable release recommended for production use. **We recommend using the 5.0.0 release for production deployments** rather than running from main.
+The main branch (previously the master branch) is working towards the ExaBGP 6.0.0 release. The program command line arguments have been changed and are no longer fully backwards compatible with versions 3 and 4. Version 5.0.0 is the recommended stable release for production use. **We recommend using the 5.0.0 release for production deployments.** The upcoming 6.0.0 release will introduce the async reactor as default - users should test thoroughly before production deployment.
 
 ### Testing
 

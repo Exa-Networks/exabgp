@@ -40,7 +40,7 @@ RUN echo "user = 'exa'" >> /opt/exabgp/etc/exabgp/exabgp.env
 RUN cd /tmp \
     && echo Building ${version} \
     && pip install -U setuptools \
-    && env exabgp_version=5.0.0-`date +%Y%m%d`+uncontrolled pip install git+https://github.com/Exa-Networks/exabgp.git@${version}
+    && env exabgp_version=6.0.0-`date +%Y%m%d`+uncontrolled pip install git+https://github.com/Exa-Networks/exabgp.git@${version}
 
 WORKDIR /etc/exabgp
 

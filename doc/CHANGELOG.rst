@@ -6,6 +6,28 @@ Version explained:
 Version 6.0.0:
  * Compatibility: Drop support for Python 3.7
  * Feature: Add type annotations to the codebase for better type safety
+ * Change: **BREAKING** - Async mode is now the default reactor implementation
+   - New async/await-based event loop replaces legacy generator-based reactor
+   - To use legacy reactor: Set environment variable `exabgp_reactor_legacy=true`
+   - Both modes achieve 100% test parity (72/72 functional tests, 1376 unit tests)
+   - Async mode provides modern event loop integration and potential performance benefits
+ * Feature: Dynamic shell completion generation for Bash, Zsh, and Fish
+   - Install with: `exabgp shell install [bash|zsh|fish]`
+   - Auto-detects current shell if not specified
+   - Complete subcommands, options, and .conf files
+ * Feature: Enhanced interactive CLI (exabgp-cli)
+   - Intelligent tab completion for commands and neighbors
+   - JSON pretty-printing for responses
+   - Command descriptions and help text
+   - Dual transport support (Unix sockets + named pipes)
+   - '?' key for inline help
+   - Graceful signal handling (Ctrl+C)
+ * Feature: Health monitoring API commands (ping and status)
+ * Fix: Python 3.12+ compatibility improvements
+ * Fix: Split concatenated SAFI values in AFI.implemented_safi()
+ * Fix: CLI graceful exit via signal-based shutdown
+ * Fix: RIB race conditions and iterator bugs in async mode
+ * Add: Complete test suite runner (qa/bin/test_everything)
 
 Version 5.0.0:
  * Compatibility: The text encoding of AS-SEQUENCE in the AS-PATH has changed
