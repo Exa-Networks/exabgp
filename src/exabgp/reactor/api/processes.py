@@ -528,6 +528,9 @@ class Processes:
         if process not in self._process:
             return False
 
+        # Debug log API command response
+        log.debug(lambda: f'API response to {process}: {string}', 'process')
+
         data = bytes(f'{string}\n', 'ascii')
 
         # In async mode, queue the write instead of blocking
@@ -581,6 +584,9 @@ class Processes:
 
         if process not in self._process:
             return False
+
+        # Debug log API command response
+        log.debug(lambda: f'API response to {process}: {string}', 'process')
 
         data = bytes(f'{string}\n', 'ascii')
 

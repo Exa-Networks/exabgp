@@ -121,12 +121,42 @@ def show_neighbor(self, reactor, service, line, use_json):
         reactor.processes.answer_done(service)
 
     async def callback_extensive():
-        for peer_name in reactor.peers():
-            if limit and limit not in reactor.neighbor_name(peer_name):
-                continue
-            for line in NeighborTemplate.extensive(reactor.neighbor_cli_data(peer_name)).split('\n'):
-                reactor.processes.write(service, line)
-                await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
+        # Show ALL configured neighbors (both connected and disconnected)
+        # This provides visibility into neighbors that are down/not connecting
+        try:
+            for neighbor_name in reactor.configuration.neighbors.keys():
+                neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
+                if not neighbor:
+                    continue
+
+                # Check if this neighbor matches the filter
+                if limit and limit not in neighbor_name:
+                    continue
+
+                # If neighbor is connected, show full extensive output
+                if neighbor_name in reactor.peers():
+                    for line in NeighborTemplate.extensive(reactor.neighbor_cli_data(neighbor_name)).split('\n'):
+                        reactor.processes.write(service, line)
+                        await asyncio.sleep(0)
+                else:
+                    # Neighbor is configured but not connected - show minimal info
+                    peer_addr = str(neighbor['peer-address'])
+                    local_addr = str(neighbor.get('local-address', 'not set'))
+                    peer_as = neighbor.get('peer-as', 'not set')
+                    local_as = neighbor.get('local-as', 'not set')
+
+                    reactor.processes.write(service, f'Neighbor {peer_addr}')
+                    reactor.processes.write(service, '')
+                    reactor.processes.write(service, '    Session                         Local')
+                    reactor.processes.write(service, f'    {"local-address":<20} {local_addr:>15}')
+                    reactor.processes.write(service, f'    {"state":<20} down (not connected)')
+                    reactor.processes.write(service, '')
+                    reactor.processes.write(service, '    Setup                           Local          Remote')
+                    reactor.processes.write(service, f'    {"AS":<20} {local_as:>15} {peer_as:>15}')
+                    reactor.processes.write(service, '')
+                    await asyncio.sleep(0)
+        except Exception as e:
+            reactor.processes.write(service, f'# Error: {e}')
         reactor.processes.answer_done(service)
 
     async def callback_summary():
