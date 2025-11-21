@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""Test ExaBGP API commands without any BGP neighbors configured.
+
+This test validates that ExaBGP reactor can start and accept API commands
+even when no neighbor blocks are defined in the configuration.
+"""
+
+import sys
+import time
+import json
+
+try:
+    # Wait for ExaBGP to initialize
+    time.sleep(1)
+
+    # Test 1: version command
+    sys.stderr.write('TEST: version command\n')
+    sys.stdout.write('version\n')
+    sys.stdout.flush()
+
+    response = sys.stdin.readline().strip()
+
+    # Response can be JSON or text format
+    version_ok = False
+    try:
+        data = json.loads(response)
+        if 'version' in data:
+            sys.stderr.write(f'  PASS: version={data["version"]}\n')
+            version_ok = True
+        else:
+            sys.stderr.write(f'  FAIL: JSON missing version field: {response}\n')
+    except (json.JSONDecodeError, ValueError):
+        # Text format fallback
+        if 'exabgp' in response.lower() or any(c.isdigit() for c in response):
+            sys.stderr.write(f'  PASS: {response}\n')
+            version_ok = True
+        else:
+            sys.stderr.write(f'  FAIL: unexpected response: {response}\n')
+
+    if not version_ok:
+        sys.exit(1)
+
+    # Read done acknowledgment
+    ack = sys.stdin.readline().strip()
+    if ack != 'done':
+        sys.stderr.write(f'  WARNING: expected done, got: {ack}\n')
+
+    # Test 2: shutdown command
+    sys.stderr.write('TEST: shutdown command\n')
+    sys.stdout.write('shutdown\n')
+    sys.stdout.flush()
+
+    response = sys.stdin.readline().strip()
+
+    # Validate shutdown acknowledgment
+    shutdown_ok = False
+    try:
+        data = json.loads(response)
+        if data.get('answer') == 'shutdown':
+            sys.stderr.write('  PASS: shutdown acknowledged (JSON)\n')
+            shutdown_ok = True
+        else:
+            sys.stderr.write(f'  FAIL: unexpected JSON: {response}\n')
+    except (json.JSONDecodeError, ValueError):
+        # Text format fallback
+        if 'shutdown' in response.lower():
+            sys.stderr.write(f'  PASS: {response}\n')
+            shutdown_ok = True
+        else:
+            sys.stderr.write(f'  FAIL: unexpected response: {response}\n')
+
+    if not shutdown_ok:
+        sys.exit(1)
+
+    sys.stderr.write('SUCCESS: API commands work without neighbors\n')
+    sys.exit(0)
+
+except (IOError, EOFError):
+    # Expected when ExaBGP shuts down
+    sys.stderr.write('Connection closed - shutdown successful\n')
+    sys.exit(0)
+except Exception as e:
+    sys.stderr.write(f'ERROR: Unexpected exception: {e}\n')
+    sys.exit(1)

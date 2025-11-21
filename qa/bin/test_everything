@@ -14,6 +14,7 @@ Exit codes:
   5 - Functional encoding tests (legacy) failed
   6 - Functional decoding tests failed
   7 - Configuration validation failed
+  8 - No-neighbor API test failed
 """
 
 import os
@@ -171,7 +172,7 @@ def test_unit_tests() -> Tuple[bool, int]:
 
 def test_functional_encoding() -> Tuple[bool, int]:
     """Test 4: Functional encoding tests (async mode - default)"""
-    print_header("TEST 4/7: Functional Encoding Tests (Async Mode - Default)")
+    print_header("TEST 4/8: Functional Encoding Tests (Async Mode - Default)")
     print_info("Running: ./qa/bin/functional encoding (72 tests)")
 
     # Kill any leftover processes first
@@ -207,7 +208,7 @@ def test_functional_encoding() -> Tuple[bool, int]:
 
 def test_functional_encoding_legacy() -> Tuple[bool, int]:
     """Test 5: Functional encoding tests (legacy/sync mode)"""
-    print_header("TEST 5/7: Functional Encoding Tests (Legacy Mode)")
+    print_header("TEST 5/8: Functional Encoding Tests (Legacy Mode)")
     print_info("Running: env exabgp_reactor_legacy=true ./qa/bin/functional encoding (72 tests)")
 
     # Kill any leftover processes first
@@ -246,7 +247,7 @@ def test_functional_encoding_legacy() -> Tuple[bool, int]:
 
 def test_functional_decoding() -> Tuple[bool, int]:
     """Test 6: Functional decoding tests"""
-    print_header("TEST 6/7: Functional Decoding Tests")
+    print_header("TEST 6/8: Functional Decoding Tests")
     print_info("Running: ./qa/bin/functional decoding")
 
     returncode, stdout, stderr = run_command("./qa/bin/functional decoding")
@@ -266,7 +267,7 @@ def test_functional_decoding() -> Tuple[bool, int]:
 
 def test_config_validation() -> Tuple[bool, int]:
     """Test 7: Configuration validation"""
-    print_header("TEST 7/7: Configuration Validation")
+    print_header("TEST 7/8: Configuration Validation")
     print_info("Running: ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf")
 
     returncode, stdout, stderr = run_command(
@@ -282,6 +283,26 @@ def test_config_validation() -> Tuple[bool, int]:
         return False, 7
 
     print_success("Configuration validation passed")
+    return True, 0
+
+
+def test_no_neighbor() -> Tuple[bool, int]:
+    """Test 8: No-neighbor API-only mode"""
+    print_header("TEST 8/8: No-Neighbor API Test")
+    print_info("Running: qa/scripts/test_no_neighbor.py")
+
+    returncode, stdout, stderr = run_command("./qa/scripts/test_no_neighbor.py")
+
+    # Print output
+    print(stdout)
+    if stderr:
+        print(stderr)
+
+    if returncode != 0:
+        print_error("No-neighbor test failed")
+        return False, 8
+
+    print_success("No-neighbor test passed - API works without BGP neighbors")
     return True, 0
 
 
@@ -301,6 +322,7 @@ def main() -> int:
         test_functional_encoding_legacy,
         test_functional_decoding,
         test_config_validation,
+        test_no_neighbor,
     ]
 
     for test_func in tests:
@@ -314,7 +336,7 @@ def main() -> int:
     # All tests passed
     elapsed = time.time() - start_time
     print_header("ALL TESTS PASSED")
-    print(f"{Colors.GREEN}{Colors.BOLD}✓ All 7 test suites passed in {elapsed:.1f}s{Colors.RESET}")
+    print(f"{Colors.GREEN}{Colors.BOLD}✓ All 8 test suites passed in {elapsed:.1f}s{Colors.RESET}")
     print(f"\n{Colors.GREEN}Async (default) and legacy modes both pass 100%{Colors.RESET}")
     print(f"{Colors.GREEN}Code is ready for commit{Colors.RESET}\n")
 
