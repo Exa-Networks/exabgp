@@ -8,22 +8,17 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
-
+from collections import Counter, deque
 from copy import deepcopy
-from collections import deque, Counter
 from datetime import timedelta
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, Union
 
-from exabgp.protocol.family import AFI, SAFI
 # from exabgp.util.dns import host, domain
-
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.open.holdtime import HoldTime
-
-from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute import NextHop
-
+from exabgp.bgp.message.update.attribute import Attribute, NextHop
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib import RIB
 
 if TYPE_CHECKING:
@@ -364,23 +359,23 @@ class NeighborTemplate:
     extensive_template: ClassVar[str] = """\
 Neighbor {peer-address}
 
-    Session                         Local
+    Session                        Local
 {local-address}
 {state}
 {duration}
 
-    Setup                           Local          Remote
+    Setup                          Local          Remote
 {as}
 {id}
 {hold}
 
-    Capability                      Local          Remote
+    Capability                     Local          Remote
 {capabilities}
 
-    Families                        Local          Remote        Add-Path
+    Families                        Local         Remote        Add-Path
 {families}
 
-    Message Statistic                Sent        Received
+    Message Statistic               Sent        Received
 {messages}
 """.replace('\t', '  ')
 
@@ -607,29 +602,29 @@ Neighbor {peer-address}
     def formated_dict(cls, answer: Dict[str, Any]) -> Dict[str, Any]:
         if answer['duration']:
             duration_value = timedelta(seconds=answer['duration'])
-            duration = f'   {"up for":<20} {duration_value:>15} {"":<15} {"":<15}'
+            duration = f'    {"up for":<20} {str(duration_value):>15} {"":<15} {"":<15}'
         else:
             down_value = timedelta(seconds=answer['down'])
-            duration = f'   {"down for":<20} {down_value:>15} {"":<15} {"":<15}'
+            duration = f'    {"down for":<20} {str(down_value):>15} {"":<15} {"":<15}'
 
         formated: Dict[str, Any] = {
             'peer-address': answer['peer-address'],
-            'local-address': f'   {"local":<20} {answer["local-address"]:>15} {"":<15} {"":<15}',
-            'state': f'   {"state":<20} {answer["state"]:>15} {"":<15} {"":<15}',
+            'local-address': f'    {"local":<20} {answer["local-address"]:>15} {"":<15} {"":<15}',
+            'state': f'    {"state":<20} {answer["state"]:>15} {"":<15} {"":<15}',
             'duration': duration,
-            'as': f'   {"AS":<20} {answer["local-as"]:>15} {_pr(answer["peer-as"]):>15} {"":<15}',
-            'id': f'   {"ID":<20} {answer["local-id"]:>15} {_pr(answer["peer-id"]):>15} {"":<15}',
-            'hold': f'   {"hold-time":<20} {answer["local-hold"]:>15} {_pr(answer["peer-hold"]):>15} {"":<15}',
+            'as': f'    {"AS":<20} {answer["local-as"]:>15} {_pr(answer["peer-as"]):>15} {"":<15}',
+            'id': f'    {"ID":<20} {answer["local-id"]:>15} {_pr(answer["peer-id"]):>15} {"":<15}',
+            'hold': f'    {"hold-time":<20} {answer["local-hold"]:>15} {_pr(answer["peer-hold"]):>15} {"":<15}',
             'capabilities': '\n'.join(
-                f'   {f"{k}:":<20} {_en(lc):>15} {_en(pc):>15} {"":<15}'
+                f'    {f"{k}:":<20} {_en(lc):>15} {_en(pc):>15} {"":<15}'
                 for k, (lc, pc) in answer['capabilities'].items()
             ),
             'families': '\n'.join(
-                f'   {f"{a} {s}:":<20} {_en(lf):>15} {_en(rf):>15} {_addpath(aps, apr):<15}'
+                f'    {f"{a} {s}:":<20} {_en(lf):>15} {_en(rf):>15} {_addpath(aps, apr):>15}'
                 for (a, s), (lf, rf, apr, aps) in answer['families'].items()
             ),
             'messages': '\n'.join(
-                f'   {f"{k}:":<20} {ms!s:>15} {mr!s:>15} {"":<15}' for k, (ms, mr) in answer['messages'].items()
+                f'    {f"{k}:":<20} {ms!s:>15} {mr!s:>15} {"":<15}' for k, (ms, mr) in answer['messages'].items()
             ),
         }
 
@@ -647,7 +642,11 @@ Neighbor {peer-address}
     def summary(cls, answer: Dict[str, Any]) -> str:
         peer_addr = str(answer['peer-address'])
         peer_as_str = _pr(answer['peer-as'])
-        duration_str = str(timedelta(seconds=answer['duration']) if answer['duration'] else 'down')
+        # Convert timedelta to string before formatting to support Python 3.12+
+        if answer['duration']:
+            duration_str = str(timedelta(seconds=answer['duration']))
+        else:
+            duration_str = 'down'
         state_str = answer['state'].lower()
         update_in = answer['messages']['update'][0]
         update_out = answer['messages']['update'][1]
