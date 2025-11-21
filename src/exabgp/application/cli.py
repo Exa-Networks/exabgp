@@ -2452,8 +2452,8 @@ Display Format (optional prefix):
         # Send bye command to server and wait for acknowledgment
         try:
             self.send_command('bye')
-        except Exception:
-            # Ignore errors during disconnect
+        except (Exception, KeyboardInterrupt):
+            # Ignore errors during disconnect (including impatient Ctrl+C)
             pass
         print(self.formatter.format_info('Goodbye!'))
 
