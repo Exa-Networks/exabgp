@@ -25,16 +25,16 @@ def wait_for_ack(expected_count=1, timeout=2):
                 try:
                     data = json.loads(line)
                     answer = data.get('answer')
-                except:
+                except (json.JSONDecodeError, ValueError):
                     pass
             else:
                 answer = line
 
-            if answer == "done":
+            if answer == 'done':
                 received += 1
-            elif answer == "error":
+            elif answer == 'error':
                 return False
-            elif answer == "shutdown":
+            elif answer == 'shutdown':
                 raise SystemExit(0)
         else:
             time.sleep(0.1)
@@ -50,14 +50,25 @@ try:
     sys.stdout.write('ping\n')
     sys.stdout.flush()
 
-    # Read response
+    # Read response (JSON format by default)
     response = sys.stdin.readline().strip()
-    if not response.startswith('pong '):
-        sys.stderr.write(f'ERROR: ping failed, got: {response}\n')
-        sys.exit(1)
 
-    uuid = response.split()[1]
-    sys.stderr.write(f'OK: ping returned UUID {uuid}\n')
+    # Try to parse as JSON first (new default format)
+    try:
+        data = json.loads(response)
+        if 'pong' not in data or 'active' not in data:
+            sys.stderr.write(f'ERROR: ping response missing required fields, got: {response}\n')
+            sys.exit(1)
+        uuid = data['pong']
+        active = data['active']
+        sys.stderr.write(f'OK: ping returned UUID {uuid} (active={active})\n')
+    except (json.JSONDecodeError, ValueError):
+        # Fallback to text format (legacy)
+        if not response.startswith('pong '):
+            sys.stderr.write(f'ERROR: ping failed, got: {response}\n')
+            sys.exit(1)
+        uuid = response.split()[1]
+        sys.stderr.write(f'OK: ping returned UUID {uuid}\n')
 
     # Read done
     done = sys.stdin.readline().strip()
@@ -89,10 +100,10 @@ try:
         sys.exit(1)
 
     if 'PID' not in status_text:
-        sys.stderr.write(f'ERROR: status missing PID\n')
+        sys.stderr.write('ERROR: status missing PID\n')
         sys.exit(1)
 
-    sys.stderr.write(f'OK: status returned complete information\n')
+    sys.stderr.write('OK: status returned complete information\n')
 
     # Announce route after successful status
     sys.stdout.write('announce route 192.168.0.2/32 next-hop 10.0.0.2\n')
@@ -100,7 +111,7 @@ try:
     wait_for_ack()
     time.sleep(0.1)
 
-    sys.stderr.write(f'SUCCESS: Health monitoring commands working\n')
+    sys.stderr.write('SUCCESS: Health monitoring commands working\n')
 
     # Wait for shutdown signal (like other api-* tests)
     now = time.time()
