@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 from unittest.mock import Mock, patch
 
-import pytest
 
 from exabgp.application.cli import CommandCompleter
 
@@ -62,6 +61,8 @@ class TestBaseCommandCompletion:
         # Should include base commands
         assert 'show' in matches
         assert 'announce' in matches
+        # Should include 'neighbor' keyword for filtering
+        assert 'neighbor' in matches
 
     def test_complete_partial_show(self):
         """Test completing 'sh'"""
@@ -108,7 +109,12 @@ class TestNestedCommandCompletion:
         matches = self.completer._get_completions(['announce'], '')
         assert 'route' in matches
         assert 'eor' in matches
-        assert 'route-refresh' in matches
+        # 'route-refresh' filtered out - use 'route refresh' instead
+        assert 'route-refresh' not in matches
+
+        # Test that 'refresh' completes after 'announce route'
+        matches = self.completer._get_completions(['announce', 'route'], '')
+        assert 'refresh' in matches
 
     def test_complete_show_neighbor_options(self):
         """Test completion for show neighbor options"""
@@ -285,7 +291,8 @@ class TestNeighborFilterCompletion:
         assert 'local-ip' in matches
         assert 'local-as' in matches
         assert 'peer-as' in matches
-        assert 'router-id' in matches
+        assert 'id' in matches  # CLI keyword (expands to 'router-id')
+        assert 'router-id' not in matches  # Removed to avoid clash with 'route'
 
     def test_filter_completion_partial(self):
         """Test partial filter completion"""
@@ -706,13 +713,15 @@ class TestNeighborTargetedCommandCompletion:
         assert 'neighbor' in matches
         assert '192.168.1.1' in matches
 
-    def test_announce_route_suggests_neighbor_and_ips(self):
-        """Test that 'announce route' suggests 'neighbor' and IPs"""
+    def test_announce_route_suggests_neighbor_and_refresh(self):
+        """Test that 'announce route' suggests 'neighbor' keyword and 'refresh' only"""
         matches = self.completer._get_completions(['announce', 'route'], '')
         # Should have 'neighbor' keyword
         assert 'neighbor' in matches
-        # Should have neighbor IPs
-        assert '192.168.1.1' in matches
+        # Should have 'refresh' keyword
+        assert 'refresh' in matches
+        # Should NOT have neighbor IPs (they are filters that go BEFORE announce)
+        assert '192.168.1.1' not in matches
 
     def test_withdraw_route_suggests_neighbor_and_ips(self):
         """Test that 'withdraw route' suggests 'neighbor' and IPs"""
@@ -725,3 +734,112 @@ class TestNeighborTargetedCommandCompletion:
         matches = self.completer._get_completions(['teardown'], '')
         assert '192.168.1.1' in matches
         assert '10.0.0.1' in matches
+
+    def test_neighbor_ip_suggests_filters_and_commands(self):
+        """Test that 'neighbor <IP>' suggests both filters AND commands"""
+        matches = self.completer._get_completions(['neighbor', '192.168.1.1'], '')
+        # Should have filter keywords (optional)
+        assert 'local-as' in matches
+        assert 'peer-as' in matches
+        assert 'family-allowed' in matches
+        assert 'id' in matches  # CLI keyword for router-id (router-id removed to avoid route clash)
+        assert 'router-id' not in matches  # Removed from autocomplete for fast completion
+        # Should have commands (filters are optional, can go directly to commands)
+        assert 'announce' in matches
+        assert 'withdraw' in matches
+        assert 'flush' in matches
+
+
+class TestCompleterExceptionHandling:
+    """Test that completer handles exceptions gracefully (regression test for readline breakage)"""
+
+    def test_complete_handles_send_command_exception(self):
+        """Test that complete() doesn't crash when send_command raises exception"""
+
+        # Create completer with send_command that always raises exception
+        def broken_send(cmd):
+            raise ConnectionError('Connection lost')
+
+        completer = CommandCompleter(broken_send)
+
+        # complete() should handle exception and return gracefully (not crash)
+        # This prevents readline from breaking after connection loss
+        result = completer.complete('show', 0)
+        # Should return valid completion (basic matches work) or None, not crash
+        assert result is None or isinstance(result, str)
+
+    def test_complete_handles_json_parse_error(self):
+        """Test that complete() handles JSON parse errors gracefully"""
+
+        def bad_json_send(cmd):
+            return 'invalid json {'
+
+        completer = CommandCompleter(bad_json_send)
+
+        # Should not crash on malformed JSON
+        result = completer.complete('show', 0)
+        assert result is None or isinstance(result, str)
+
+    def test_complete_handles_none_send_command(self):
+        """Test that complete() handles None return from send_command"""
+
+        def none_send(cmd):
+            return None
+
+        completer = CommandCompleter(none_send)
+
+        # Should handle None response gracefully
+        result = completer.complete('show', 0)
+        assert result is None or isinstance(result, str)
+
+    def test_get_completions_handles_exception(self):
+        """Test that _get_completions handles exceptions during neighbor fetch"""
+
+        def exception_send(cmd):
+            raise RuntimeError('Unexpected error')
+
+        completer = CommandCompleter(exception_send)
+
+        # Should return empty list or basic completions, not crash
+        matches = completer._get_completions(['show'], 'n')
+        assert isinstance(matches, list)
+        # Should still have basic matches (not fetched from server)
+        assert 'neighbor' in matches
+
+    def test_get_neighbor_ips_handles_socket_error(self):
+        """Test that neighbor IP fetching handles socket errors gracefully"""
+
+        def socket_error_send(cmd):
+            import socket
+
+            raise socket.error('Connection refused')
+
+        completer = CommandCompleter(socket_error_send)
+
+        # Should return empty list, not crash
+        ips = completer._get_neighbor_ips()
+        assert isinstance(ips, list)
+        # Empty is OK - neighbor completion is optional
+        assert ips == []
+
+    def test_complete_after_connection_loss(self):
+        """Test that autocomplete still works after connection is lost (regression test)"""
+        # Simulate connection working initially, then failing
+        call_count = [0]
+
+        def flaky_send(cmd):
+            call_count[0] += 1
+            if call_count[0] > 2:
+                raise ConnectionError('Connection lost')
+            return '[]'
+
+        completer = CommandCompleter(flaky_send)
+
+        # First completion should work
+        result1 = completer.complete('show', 0)
+        assert result1 is not None
+
+        # After connection loss, should still provide basic completions
+        result2 = completer.complete('announce', 0)
+        # Should return something (basic completion) or None, not crash
+        assert result2 is None or isinstance(result2, str)

@@ -16,7 +16,7 @@ import threading
 import time
 from dataclasses import dataclass
 from queue import Queue, Empty
-from typing import List, Optional, Callable, Dict, Tuple
+from typing import List, Optional, Callable, Dict, Tuple, Union
 
 from exabgp.application.shortcuts import CommandShortcuts
 from exabgp.application.pipe import named_pipe
@@ -85,6 +85,8 @@ class PersistentSocketConnection:
         self.health_interval = 10  # seconds
         self.running = True
         self.reconnecting = False
+        self.command_in_progress = False  # Track if user command is being executed
+        self.pending_user_command = False  # Track if waiting for user command response
         self.lock = threading.Lock()
 
         # Client identity for connection tracking
@@ -173,35 +175,60 @@ class PersistentSocketConnection:
                 sys.stderr.flush()
                 sys.exit(1)
 
-            # Parse response
+            # Parse response (handle both JSON and text formats)
             lines = response_buffer.split('\n')
+            uuid_found = False
+            is_active = True
+
             for line in lines:
+                line = line.strip()
+                if not line or line == 'done':
+                    continue
+
+                # Try JSON format first
+                if line.startswith('{'):
+                    try:
+                        import json
+
+                        parsed = json.loads(line)
+                        if isinstance(parsed, dict) and 'pong' in parsed:
+                            self.daemon_uuid = parsed['pong']
+                            is_active = parsed.get('active', True)
+                            uuid_found = True
+                            break
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+
+                # Try text format
                 if line.startswith('pong '):
                     parts = line.split()
                     if len(parts) >= 2:
                         self.daemon_uuid = parts[1]
+                        uuid_found = True
 
                         # Check if we're active
-                        is_active = True
                         if len(parts) >= 3 and parts[2].startswith('active='):
                             is_active = parts[2].split('=')[1].lower() == 'true'
-
-                        if not is_active:
-                            # Another client is already active
-                            sys.stderr.write('\n')
-                            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-                            sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
-                            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-                            sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
-                            sys.stderr.write('║  Please close the other client first, or wait for      ║\n')
-                            sys.stderr.write('║  the active client to disconnect.                      ║\n')
-                            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
-                            sys.stderr.write('\n')
-                            sys.stderr.flush()
-                            sys.exit(1)
-
-                        # Connection successful - will be printed after banner
                         break
+
+            if uuid_found:
+                if not is_active:
+                    # Another client is already active
+                    sys.stderr.write('\n')
+                    sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+                    sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
+                    sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+                    sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
+                    sys.stderr.write('║  Please close the other client first, or wait for      ║\n')
+                    sys.stderr.write('║  the active client to disconnect.                      ║\n')
+                    sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+                    sys.stderr.write('\n')
+                    sys.stderr.flush()
+                    sys.exit(1)
+
+                # Print connection message BEFORE returning (so it appears before banner)
+                sys.stderr.write(f'✓ Connected to ExaBGP daemon (UUID: {self.daemon_uuid})\n')
+                sys.stderr.flush()
 
             # Switch to non-blocking for background threads
             self.socket.settimeout(0.1)
@@ -368,21 +395,68 @@ class PersistentSocketConnection:
 
                 self.response_buffer += data.decode('utf-8')
 
-                # Parse complete responses (ending with 'done\n')
-                while '\ndone\n' in self.response_buffer or self.response_buffer.endswith('done\n'):
+                # Parse complete responses (ending with 'done\n' or 'error\n')
+                # 'done' marks successful completion, 'error' marks error completion
+                completion_found = (
+                    '\ndone\n' in self.response_buffer
+                    or self.response_buffer.endswith('done\n')
+                    or '\nerror\n' in self.response_buffer
+                    or self.response_buffer.endswith('error\n')
+                )
+
+                while completion_found:
+                    # Try 'done' first, then 'error'
                     if '\ndone\n' in self.response_buffer:
                         response, self.response_buffer = self.response_buffer.split('\ndone\n', 1)
-                    else:
+                    elif self.response_buffer.endswith('done\n'):
                         response = self.response_buffer[:-5]  # Remove 'done\n'
                         self.response_buffer = ''
+                    elif '\nerror\n' in self.response_buffer:
+                        response, self.response_buffer = self.response_buffer.split('\nerror\n', 1)
+                    elif self.response_buffer.endswith('error\n'):
+                        response = self.response_buffer[:-6]  # Remove 'error\n'
+                        self.response_buffer = ''
+                    else:
+                        break  # Should not reach here
 
                     response = response.strip()
 
-                    # Check if this is a ping response
+                    # Check for next completion marker
+                    completion_found = (
+                        '\ndone\n' in self.response_buffer
+                        or self.response_buffer.endswith('done\n')
+                        or '\nerror\n' in self.response_buffer
+                        or self.response_buffer.endswith('error\n')
+                    )
+
+                    # Determine if this is a ping response (health check)
+                    # Ping responses can be in two formats:
+                    # - Text: "pong <uuid> active=true"
+                    # - JSON: {"pong": "<uuid>", "active": true}
+                    is_ping_response = False
                     if response.startswith('pong '):
+                        # Text format ping response
+                        is_ping_response = True
+                    elif response.startswith('{') and '"pong"' in response and '"active"' in response:
+                        # JSON format ping response (check for both pong and active keys)
+                        try:
+                            import json
+
+                            parsed = json.loads(response)
+                            if isinstance(parsed, dict) and 'pong' in parsed and 'active' in parsed:
+                                is_ping_response = True
+                        except (json.JSONDecodeError, ValueError):
+                            pass
+
+                    # Route response based on whether we're waiting for user command
+                    with self.lock:
+                        waiting_for_user = self.pending_user_command
+
+                    if is_ping_response and not waiting_for_user:
+                        # Health check ping response - handle internally
                         self._handle_ping_response(response)
                     else:
-                        # User command response
+                        # User command response (or ping response during user command - route to user)
                         self.pending_responses.put(response)
 
             except sock.timeout:
@@ -390,10 +464,13 @@ class PersistentSocketConnection:
                 continue
             except Exception as exc:
                 if self.running:
-                    sys.stderr.write(f'ERROR: Socket read error: {exc}\n')
+                    sys.stderr.write(f'\n\nERROR: Connection to ExaBGP lost: {exc}\n')
+                    sys.stderr.write('Press Enter to exit...\n')
                     sys.stderr.flush()
-                    # Force exit entire process (not just this thread)
-                    os._exit(1)
+                    # Gracefully shut down the CLI (allows readline cleanup)
+                    # Note: Main thread is blocked in input(), so we set flag
+                    # and user must press Enter to trigger loop check
+                    self.running = False
                 break
 
     def _health_monitor(self):
@@ -415,6 +492,10 @@ class PersistentSocketConnection:
             return
 
         with self.lock:
+            # Skip ping if a user command is in progress or pending
+            if self.command_in_progress or self.pending_user_command:
+                return
+
             try:
                 # Include client UUID and start time to track active connection
                 ping_cmd = f'ping {self.client_uuid} {self.client_start_time}\n'
@@ -426,16 +507,38 @@ class PersistentSocketConnection:
                 pass
 
     def _handle_ping_response(self, response: str):
-        """Handle pong response from health check"""
-        parts = response.split()
-        if len(parts) >= 2:
-            new_uuid = parts[1]
+        """Handle pong response from health check
 
-            # Check if we're the active client (format: "pong <daemon_uuid> active=true/false")
-            is_active = True  # Default for backward compatibility
-            if len(parts) >= 3 and parts[2].startswith('active='):
-                is_active = parts[2].split('=')[1].lower() == 'true'
+        Supports both text and JSON formats:
+        - Text: "pong <uuid> active=true"
+        - JSON: {"pong": "<uuid>", "active": true}
+        """
+        new_uuid = None
+        is_active = True  # Default for backward compatibility
 
+        # Try JSON format first
+        if response.startswith('{'):
+            try:
+                import json
+
+                parsed = json.loads(response)
+                if isinstance(parsed, dict) and 'pong' in parsed:
+                    new_uuid = parsed['pong']
+                    is_active = parsed.get('active', True)
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        # Fallback to text format
+        if new_uuid is None:
+            parts = response.split()
+            if len(parts) >= 2:
+                new_uuid = parts[1]
+
+                # Check if we're the active client (format: "pong <daemon_uuid> active=true/false")
+                if len(parts) >= 3 and parts[2].startswith('active='):
+                    is_active = parts[2].split('=')[1].lower() == 'true'
+
+        if new_uuid:
             if not is_active:
                 # Another CLI client connected and replaced us
                 warning = (
@@ -453,10 +556,10 @@ class PersistentSocketConnection:
                 os._exit(0)
 
             if self.daemon_uuid is None:
-                # First UUID discovery
+                # First UUID discovery (shouldn't happen since _initial_ping sets it)
+                # But keep as fallback for robustness
                 self.daemon_uuid = new_uuid
-                sys.stderr.write(f'✓ Connected to ExaBGP daemon (UUID: {new_uuid})\n')
-                sys.stderr.flush()
+                # Don't print connection message here - already printed in _initial_ping()
                 self.consecutive_failures = 0
             elif new_uuid != self.daemon_uuid:
                 # Daemon restarted!
@@ -489,39 +592,67 @@ class PersistentSocketConnection:
 
     def send_command(self, command: str) -> str:
         """Send user command and wait for response"""
+        # Mark command in progress to prevent ping interference
         with self.lock:
+            self.command_in_progress = True
+            self.pending_user_command = True
+
+        try:
+            # Flush any stale responses from queue (e.g., pending ping responses)
+            # This ensures we only get the response to THIS command
+            while not self.pending_responses.empty():
+                try:
+                    self.pending_responses.get_nowait()
+                except Empty:
+                    break
+
+            # Send command
             try:
-                self.socket.sendall((command + '\n').encode('utf-8'))
+                with self.lock:
+                    self.socket.sendall((command + '\n').encode('utf-8'))
             except Exception as exc:
                 return f'Error: {exc}'
 
-        # Wait for response (with timeout)
-        try:
-            response = self.pending_responses.get(timeout=5.0)
-            return response
-        except Empty:
-            return 'Error: Timeout waiting for response'
+            # Wait for response (with timeout)
+            try:
+                response = self.pending_responses.get(timeout=5.0)
+                return response
+            except Empty:
+                return 'Error: Timeout waiting for response'
+        finally:
+            # Always clear the flags when done (even on error/timeout)
+            with self.lock:
+                self.command_in_progress = False
+                self.pending_user_command = False
 
     def close(self):
         """Close connection and stop threads"""
-        self.running = False
+        try:
+            self.running = False
 
-        # Close socket (triggers read thread to exit)
-        if self.socket:
+            # Close socket (triggers read thread to exit)
+            if self.socket:
+                try:
+                    # Shutdown socket first (stops I/O operations)
+                    self.socket.shutdown(sock.SHUT_RDWR)
+                except Exception:
+                    pass
+
+                try:
+                    # Then close the socket
+                    self.socket.close()
+                except Exception:
+                    pass
+
+            # Give threads a moment to exit
             try:
-                # Shutdown socket first (stops I/O operations)
-                self.socket.shutdown(sock.SHUT_RDWR)
-            except Exception:
+                time.sleep(0.2)
+            except KeyboardInterrupt:
+                # User is impatient, exit immediately
                 pass
-
-            try:
-                # Then close the socket
-                self.socket.close()
-            except Exception:
-                pass
-
-        # Give threads a moment to exit
-        time.sleep(0.2)
+        except KeyboardInterrupt:
+            # Ctrl+C during cleanup - exit immediately without error
+            pass
 
 
 @dataclass
@@ -558,6 +689,11 @@ class CommandCompleter:
         all_commands = self.registry.get_base_commands()
         # Filter out "#" (comment command - useful in scripts/API but not interactive CLI)
         self.base_commands = [cmd for cmd in all_commands if cmd != '#']
+        # Add builtin CLI commands (not in registry)
+        self.base_commands.extend(['exit', 'quit', 'q', 'clear', 'history', 'set'])
+        # Add 'neighbor' keyword for discoverability (it's a prefix/filter, not a standalone command)
+        # Valid syntax: "neighbor <IP> announce route ..." (neighbor filtering before commands)
+        self.base_commands.append('neighbor')
 
         # Cache for neighbor IPs
         self._neighbor_cache: Optional[List[str]] = None
@@ -623,80 +759,86 @@ class CommandCompleter:
         Returns:
             Next matching completion or None (with space suffix if unambiguous)
         """
-        # Get the full line buffer to understand context
-        line = readline.get_line_buffer()
-        begin = readline.get_begidx()
-        end = readline.get_endidx()
-
-        # Parse the line into tokens
-        # Note: "?" key is bound to rl_complete (same as TAB) so it triggers
-        # completion without appearing in the line buffer
-        tokens = line[:begin].split()
-
-        # Generate matches based on context
-        if state == 0:
-            # First call - try to auto-expand any unambiguous tokens
-            expanded_prefix, expansions_made = self._try_auto_expand_tokens(tokens)
-
-            if expansions_made and self._rl_replace_line:
-                # We have expansions and can modify the line directly
-                suffix = line[end:]  # Everything after the current word
-
-                # Get completions for current word in expanded context
-                current_matches = self._get_completions(expanded_prefix, text)
-
-                # Build the full replacement
-                prefix_str = ' '.join(expanded_prefix) + (' ' if expanded_prefix else '')
-
-                if len(current_matches) == 1:
-                    # Single match - replace entire line with expanded version
-                    new_line = prefix_str + current_matches[0] + ' ' + suffix
-                    self._rl_replace_line(new_line.encode('utf-8'), 0)
-                    if self._rl_forced_update_display:
-                        self._rl_forced_update_display()
-                    # Return empty list to signal completion is done
-                    self.matches = []
-                    return None
-                elif len(current_matches) > 1:
-                    # Multiple matches - replace prefix but let user complete current word
-                    new_line = prefix_str + text + suffix
-                    self._rl_replace_line(new_line.encode('utf-8'), 0)
-                    if self._rl_forced_update_display:
-                        self._rl_forced_update_display()
-                    # Now return completions for the current word
-                    self.matches = current_matches
-                else:
-                    # No matches after expansion - just expand the prefix
-                    new_line = prefix_str + text + suffix
-                    self._rl_replace_line(new_line.encode('utf-8'), 0)
-                    if self._rl_forced_update_display:
-                        self._rl_forced_update_display()
-                    self.matches = []
-                    return None
-
-            # No expansion or can't modify line - generate matches for current token
-            if not expansions_made or not self._rl_replace_line:
-                self.matches = self._get_completions(tokens, text)
-
-            # macOS libedit: Display all matches on first TAB/? press
-            # (GNU readline has built-in display via show-all-if-ambiguous)
-            if self.is_libedit and len(self.matches) > 1:
-                # Check if this is a new completion (avoid repeating on subsequent TABs)
-                current_line = readline.get_line_buffer()
-                if current_line != self.last_line or self.matches != self.last_matches:
-                    # Display matches with descriptions
-                    self._display_matches_and_redraw(self.matches, line)
-                    self.last_line = current_line
-                    self.last_matches = self.matches.copy()
-
-        # Return the next match
         try:
-            match = self.matches[state]
-            # Add space suffix for unambiguous completion (single match only)
-            if len(self.matches) == 1 and state == 0 and not match.startswith('\b'):
-                return match + ' '
-            return match
-        except IndexError:
+            # Get the full line buffer to understand context
+            line = readline.get_line_buffer()
+            begin = readline.get_begidx()
+            end = readline.get_endidx()
+
+            # Parse the line into tokens
+            # Note: "?" key is bound to rl_complete (same as TAB) so it triggers
+            # completion without appearing in the line buffer
+            tokens = line[:begin].split()
+
+            # Generate matches based on context
+            if state == 0:
+                # First call - try to auto-expand any unambiguous tokens
+                expanded_prefix, expansions_made = self._try_auto_expand_tokens(tokens)
+
+                if expansions_made and self._rl_replace_line:
+                    # We have expansions and can modify the line directly
+                    suffix = line[end:]  # Everything after the current word
+
+                    # Get completions for current word in expanded context
+                    current_matches = self._get_completions(expanded_prefix, text)
+
+                    # Build the full replacement
+                    prefix_str = ' '.join(expanded_prefix) + (' ' if expanded_prefix else '')
+
+                    if len(current_matches) == 1:
+                        # Single match - replace entire line with expanded version
+                        new_line = prefix_str + current_matches[0] + ' ' + suffix
+                        self._rl_replace_line(new_line.encode('utf-8'), 0)
+                        if self._rl_forced_update_display:
+                            self._rl_forced_update_display()
+                        # Return empty list to signal completion is done
+                        self.matches = []
+                        return None
+                    elif len(current_matches) > 1:
+                        # Multiple matches - replace prefix but let user complete current word
+                        new_line = prefix_str + text + suffix
+                        self._rl_replace_line(new_line.encode('utf-8'), 0)
+                        if self._rl_forced_update_display:
+                            self._rl_forced_update_display()
+                        # Now return completions for the current word
+                        self.matches = current_matches
+                    else:
+                        # No matches after expansion - just expand the prefix
+                        new_line = prefix_str + text + suffix
+                        self._rl_replace_line(new_line.encode('utf-8'), 0)
+                        if self._rl_forced_update_display:
+                            self._rl_forced_update_display()
+                        self.matches = []
+                        return None
+
+                # No expansion or can't modify line - generate matches for current token
+                if not expansions_made or not self._rl_replace_line:
+                    self.matches = self._get_completions(tokens, text)
+
+                # macOS libedit: Display all matches on first TAB/? press
+                # (GNU readline has built-in display via show-all-if-ambiguous)
+                if self.is_libedit and len(self.matches) > 1:
+                    # Check if this is a new completion (avoid repeating on subsequent TABs)
+                    current_line = readline.get_line_buffer()
+                    if current_line != self.last_line or self.matches != self.last_matches:
+                        # Display matches with descriptions
+                        self._display_matches_and_redraw(self.matches, line)
+                        self.last_line = current_line
+                        self.last_matches = self.matches.copy()
+
+            # Return the next match
+            try:
+                match = self.matches[state]
+                # Add space suffix for unambiguous completion (single match only)
+                if len(self.matches) == 1 and state == 0 and not match.startswith('\b'):
+                    return match + ' '
+                return match
+            except IndexError:
+                return None
+        except Exception:
+            # If any exception occurs during completion (e.g., socket errors, JSON parsing),
+            # silently fail and return no completions. This prevents readline from breaking.
+            # Completion is a nice-to-have feature - don't let it crash the CLI.
             return None
 
     def _try_auto_expand_tokens(self, tokens: List[str]) -> Tuple[List[str], bool]:
@@ -815,11 +957,76 @@ class CommandCompleter:
         # Expand shortcuts in tokens using CommandShortcuts
         expanded_tokens = CommandShortcuts.expand_token_list(tokens.copy())
 
+        # Check if we have "announce route <ip-prefix>" or "withdraw route <ip-prefix>"
+        # In this case, suggest route attributes (next-hop, as-path, etc.)
+        # This must come BEFORE _is_neighbor_command check (which would return base commands)
+        if len(expanded_tokens) >= 3 and 'route' in expanded_tokens:
+            try:
+                route_idx = expanded_tokens.index('route')
+                # Check if token after 'route' looks like IP/prefix
+                if route_idx < len(expanded_tokens) - 1:
+                    potential_prefix = expanded_tokens[route_idx + 1]
+                    if self._is_ip_or_prefix(potential_prefix):
+                        # We have "route <ip-prefix>", suggest route attributes
+                        return self._complete_route_spec(expanded_tokens, text)
+            except ValueError:
+                pass
+
+        # Special case: "announce route" - suggest "refresh" or "neighbor" keyword only
+        # This must come BEFORE _is_neighbor_command check
+        # Note: Do NOT suggest neighbor IPs here - they are for filtering and must come BEFORE "announce"
+        # Correct syntax: "neighbor <IP> announce route <route-prefix> ..." NOT "announce route <neighbor-IP> ..."
+        if len(expanded_tokens) >= 2 and expanded_tokens[-1] == 'route' and 'announce' in expanded_tokens:
+            matches = []
+
+            # Suggest "refresh" for "announce route refresh"
+            if 'refresh'.startswith(text):
+                matches.append('refresh')
+                self._add_completion_metadata('refresh', 'Send route refresh request', 'command')
+
+            # Suggest "neighbor" keyword for "neighbor <IP> announce route ..." filtering
+            if 'neighbor'.startswith(text):
+                matches.append('neighbor')
+                desc = self.registry.get_option_description('neighbor')
+                self._add_completion_metadata('neighbor', desc if desc else 'Target specific neighbor by IP', 'keyword')
+
+            return sorted(matches)
+
         # Check if completing neighbor-targeted command
         if self._is_neighbor_command(expanded_tokens):
             return self._complete_neighbor_command(expanded_tokens, text)
 
         # Check for specific command patterns
+        if len(expanded_tokens) >= 1:
+            # Builtin CLI command: 'set encoding' / 'set display'
+            if expanded_tokens[0] == 'set':
+                if len(expanded_tokens) == 1:
+                    # After 'set', suggest 'encoding' or 'display'
+                    matches = []
+                    if 'encoding'.startswith(text):
+                        matches.append('encoding')
+                        self._add_completion_metadata('encoding', 'Set API output encoding', 'option')
+                    if 'display'.startswith(text):
+                        matches.append('display')
+                        self._add_completion_metadata('display', 'Set display format', 'option')
+                    return matches
+                elif len(expanded_tokens) == 2:
+                    setting = expanded_tokens[1]
+                    if setting in ('encoding', 'display'):
+                        # After 'set encoding' or 'set display', suggest 'json' or 'text'
+                        matches = []
+                        if 'json'.startswith(text):
+                            matches.append('json')
+                            desc = 'JSON encoding' if setting == 'encoding' else 'Show raw JSON'
+                            self._add_completion_metadata('json', desc, 'option')
+                        if 'text'.startswith(text):
+                            matches.append('text')
+                            desc = 'Text encoding' if setting == 'encoding' else 'Format as tables'
+                            self._add_completion_metadata('text', desc, 'option')
+                        return matches
+                # 'set' with other tokens - no more completions
+                return []
+
         if len(expanded_tokens) >= 2:
             # Special case: 'show neighbor' can filter by IP even though neighbor=False
             if expanded_tokens[0] == 'show' and expanded_tokens[1] == 'neighbor':
@@ -850,12 +1057,24 @@ class CommandCompleter:
 
                 return sorted(matches)
 
-            # AFI/SAFI completion for eor and route-refresh
-            if expanded_tokens[-1] in ('eor', 'route-refresh'):
-                return self._complete_afi_safi(expanded_tokens, text)
+            # AFI/SAFI completion for eor and route refresh
+            if expanded_tokens[-1] in ('eor', 'refresh'):
+                # Check if this is "announce route refresh" or similar
+                if len(expanded_tokens) >= 2 and expanded_tokens[-2] == 'route':
+                    return self._complete_afi_safi(expanded_tokens, text)
+                elif expanded_tokens[-1] == 'eor':
+                    return self._complete_afi_safi(expanded_tokens, text)
 
-            # Route specification hints
+            # Route specification hints - but NOT for withdraw route
+            # (user needs to type IP/prefix first before any attributes)
             if expanded_tokens[-1] in ('route', 'ipv4', 'ipv6'):
+                # Check if this is "withdraw route" or "neighbor X withdraw route"
+                if expanded_tokens[-1] == 'route':
+                    # Look backwards for "withdraw" command (but not "announce" - handled above)
+                    if 'withdraw' in expanded_tokens:
+                        # Don't auto-complete after withdraw route commands
+                        # User must type IP/prefix first
+                        return []
                 return self._complete_route_spec(expanded_tokens, text)
 
             # Neighbor filter completion
@@ -883,6 +1102,11 @@ class CommandCompleter:
                 else:
                     # Token not in tree, try partial match
                     matches = [cmd for cmd in current_level.keys() if cmd.startswith(token) and cmd != '__options__']
+
+                    # Filter out legacy hyphenated commands
+                    if 'announce' in expanded_tokens[:i]:
+                        matches = [m for m in matches if m != 'route-refresh']
+
                     if matches and i == len(expanded_tokens) - 1:
                         # Last token being completed - these are subcommands
                         # Build full command path for description lookup
@@ -906,6 +1130,18 @@ class CommandCompleter:
         # After navigating, see what's available at current level
         if isinstance(current_level, dict):
             matches = [cmd for cmd in current_level.keys() if cmd.startswith(text) and cmd != '__options__']
+
+            # Filter out legacy hyphenated commands (e.g., "route-refresh" when "route" exists)
+            # This keeps CLI clean and user-friendly
+            filtered_matches = []
+            for match in matches:
+                # Skip if this is a hyphenated command and we have "announce route" in context
+                if '-' in match and 'announce' in expanded_tokens:
+                    # Check if this is "route-refresh" - skip it
+                    if match == 'route-refresh':
+                        continue
+                filtered_matches.append(match)
+            matches = filtered_matches
 
             # Add metadata for commands with descriptions
             # Build full command path for description lookup
@@ -990,9 +1226,40 @@ class CommandCompleter:
                     self._add_completion_metadata(ip, info, 'neighbor')
             return sorted(matches)
 
-        # If last token is an IP, suggest filters
+        # If last token is an IP, suggest both filters AND commands
+        # Filters are optional, so user can go directly to commands
         if self._is_ip_address(last_token):
-            return self._complete_neighbor_filters(text)
+            matches = []
+
+            # Add filter keywords (optional)
+            filters = self._complete_neighbor_filters(text)
+            matches.extend(filters)
+
+            # Add base commands that support neighbor filtering
+            # Commands like 'announce', 'withdraw' are multi-word (announce route, withdraw route)
+            # Commands like 'crash', 'teardown' are standalone with neighbor_support=True
+            for cmd in self.base_commands:
+                if cmd.startswith(text):
+                    # Skip builtin CLI commands (exit, quit, clear, history, set)
+                    if cmd in ('exit', 'quit', 'q', 'clear', 'history', 'set'):
+                        continue
+
+                    metadata = self.registry.get_command_metadata(cmd)
+                    # Include if:
+                    # 1. It has metadata and neighbor_support=True (like crash, teardown)
+                    # 2. It's a command prefix that appears in command_tree (like announce, withdraw)
+                    if metadata and metadata.neighbor_support:
+                        # Standalone command with neighbor support
+                        matches.append(cmd)
+                        desc = self.registry.get_command_description(cmd)
+                        self._add_completion_metadata(cmd, desc if desc else '', 'command')
+                    elif cmd in self.command_tree:
+                        # Multi-word command prefix (announce, withdraw, flush, show)
+                        matches.append(cmd)
+                        desc = self.registry.get_command_description(cmd)
+                        self._add_completion_metadata(cmd, desc if desc else '', 'command')
+
+            return sorted(set(matches))
 
         return []
 
@@ -1007,7 +1274,7 @@ class CommandCompleter:
         return matches
 
     def _complete_afi_safi(self, tokens: List[str], text: str) -> List[str]:
-        """Complete AFI/SAFI values for eor and route-refresh"""
+        """Complete AFI/SAFI values for eor and route refresh"""
         # Get AFI values first, then SAFI
         afi_values = self.registry.get_afi_values()
 
@@ -1048,6 +1315,14 @@ class CommandCompleter:
         ipv4_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
         ipv6_pattern = r'^[0-9a-fA-F:]+$'
         return bool(re.match(ipv4_pattern, token) or (': ' in token or re.match(ipv6_pattern, token)))
+
+    def _is_ip_or_prefix(self, token: str) -> bool:
+        """Check if token looks like an IP address or CIDR prefix"""
+        # Check for IPv4/prefix (e.g., 1.2.3.4 or 10.0.0.0/24)
+        ipv4_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(/\d{1,2})?$'
+        # Check for IPv6/prefix (e.g., 2001:db8::1 or 2001:db8::/32)
+        ipv6_pattern = r'^[0-9a-fA-F:]+(/\d{1,3})?$'
+        return bool(re.match(ipv4_pattern, token) or ((':' in token) and re.match(ipv6_pattern, token)))
 
     def _get_neighbor_ips(self) -> List[str]:
         """
@@ -1219,8 +1494,286 @@ class OutputFormatter:
             return f'{Colors.BOLD}{Colors.CYAN}Info:{Colors.RESET} {message}'
         return f'Info: {message}'
 
-    def format_command_output(self, output: str) -> str:
-        """Format command output with colors and pretty-print JSON"""
+    def _format_json_as_text(self, data: Union[Dict, List, str, int, bool, None]) -> str:
+        """Convert JSON data to human-readable text format with tables
+
+        Uses only standard library to format data as tables or key-value pairs.
+        """
+        if data is None:
+            return 'null'
+
+        if isinstance(data, bool):
+            return 'true' if data else 'false'
+
+        if isinstance(data, (str, int, float)):
+            return str(data)
+
+        # List of objects - format as table
+        if isinstance(data, list):
+            if not data:
+                return '(empty list)'
+
+            # Check if all items are dictionaries (tabular data)
+            if all(isinstance(item, dict) for item in data):
+                return self._format_table_from_list(data)
+
+            # List of simple values
+            if all(isinstance(item, (str, int, float, bool, type(None))) for item in data):
+                return '\n'.join(f'  - {item}' for item in data)
+
+            # Mixed list - format each item
+            lines = []
+            for i, item in enumerate(data):
+                lines.append(f'[{i}]:')
+                lines.append(self._indent(self._format_json_as_text(item), 2))
+            return '\n'.join(lines)
+
+        # Single object - format as key-value pairs
+        if isinstance(data, dict):
+            return self._format_dict(data)
+
+        return str(data)
+
+    def _format_table_from_list(self, data: List[Dict]) -> str:
+        """Format list of dictionaries as ASCII table or key-value pairs for complex data"""
+        if not data:
+            return '(empty)'
+
+        # Check if data has complex nested structures (dicts/lists in values)
+        has_complex_values = False
+        for item in data:
+            for value in item.values():
+                if isinstance(value, (dict, list)):
+                    # Check if dict/list has substantial content
+                    if isinstance(value, dict) and len(value) > 3:
+                        has_complex_values = True
+                        break
+                    if isinstance(value, list) and (len(value) > 3 or any(isinstance(v, dict) for v in value)):
+                        has_complex_values = True
+                        break
+            if has_complex_values:
+                break
+
+        # If data is complex, format as sections instead of table
+        if has_complex_values:
+            return self._format_list_as_sections(data)
+
+        # Collect all keys across all objects
+        all_keys = []
+        for item in data:
+            for key in item.keys():
+                if key not in all_keys:
+                    all_keys.append(key)
+
+        # Calculate column widths (with max width limit to prevent ultra-wide tables)
+        MAX_COL_WIDTH = 40
+        col_widths = {}
+        for key in all_keys:
+            # Start with header width
+            col_widths[key] = len(str(key))
+            # Check all values
+            for item in data:
+                if key in item:
+                    value_str = self._format_value(item[key])
+                    # Cap at max width to keep table readable
+                    col_widths[key] = min(max(col_widths[key], len(value_str)), MAX_COL_WIDTH)
+
+        # Build header
+        header_parts = []
+        separator_parts = []
+        for key in all_keys:
+            width = col_widths[key]
+            header_parts.append(str(key).ljust(width))
+            separator_parts.append('-' * width)
+
+        lines = []
+        lines.append('  '.join(header_parts))
+        lines.append('  '.join(separator_parts))
+
+        # Build rows
+        for item in data:
+            row_parts = []
+            for key in all_keys:
+                width = col_widths[key]
+                value = item.get(key, '')
+                value_str = self._format_value(value)
+                # Truncate if too long
+                if len(value_str) > MAX_COL_WIDTH:
+                    value_str = value_str[: MAX_COL_WIDTH - 3] + '...'
+                row_parts.append(value_str.ljust(width))
+            lines.append('  '.join(row_parts))
+
+        return '\n'.join(lines)
+
+    def _format_list_as_sections(self, data: List[Dict]) -> str:
+        """Format list of complex dictionaries as separate sections"""
+        lines = []
+        for i, item in enumerate(data):
+            if i > 0:
+                lines.append('')  # Blank line between sections
+
+            # Extract identifier from the data
+            identifier = self._extract_identifier(item)
+
+            if identifier:
+                lines.append(f'=== {identifier} ===')
+            else:
+                lines.append(f'=== Item {i + 1} ===')
+
+            lines.append(self._format_dict(item))
+
+        return '\n'.join(lines)
+
+    def _extract_identifier(self, item: Dict) -> Optional[str]:
+        """Extract a meaningful identifier from a dictionary
+
+        Tries various strategies to find a good identifier:
+        1. Nested keys for specific data types (e.g., neighbor data)
+        2. Common top-level keys
+        3. First string/number value found
+        """
+        # Strategy 1: Check for nested paths that commonly identify objects
+        nested_paths = [
+            ['peer', 'address'],  # Neighbor data
+            ['local', 'address'],  # Alternative neighbor identifier
+            ['neighbor', 'address'],  # Another neighbor pattern
+            ['address', 'peer'],  # Reversed pattern
+        ]
+
+        for path in nested_paths:
+            value = self._get_nested_value(item, path)
+            if value is not None:
+                return str(value)
+
+        # Strategy 2: Check common top-level identifier keys
+        top_level_keys = ['peer-address', 'address', 'name', 'id', 'neighbor', 'route', 'prefix', 'key']
+
+        for key in top_level_keys:
+            if key in item:
+                value = item[key]
+                if value is not None and not isinstance(value, (dict, list)):
+                    return str(value)
+
+        # Strategy 3: If item has 'peer' or 'local' dict, try to get address from it
+        for container_key in ['peer', 'local', 'remote']:
+            if container_key in item and isinstance(item[container_key], dict):
+                container = item[container_key]
+                for addr_key in ['address', 'ip', 'host', 'peer-address']:
+                    if addr_key in container:
+                        value = container[addr_key]
+                        if value is not None and not isinstance(value, (dict, list)):
+                            return str(value)
+
+        # Strategy 4: Find first non-complex value as fallback
+        for key, value in item.items():
+            if value is not None and not isinstance(value, (dict, list)):
+                # Skip internal/metadata keys
+                if not key.startswith('_') and key not in ['state', 'status', 'type', 'duration']:
+                    return f'{key}={value}'
+
+        return None
+
+    def _get_nested_value(self, data: Dict, path: List[str]) -> Optional[str]:
+        """Get value from nested dictionary using path list
+
+        Args:
+            data: Dictionary to search
+            path: List of keys to traverse (e.g., ['peer', 'address'])
+
+        Returns:
+            Value if found, None otherwise
+        """
+        current = data
+        for key in path:
+            if not isinstance(current, dict) or key not in current:
+                return None
+            current = current[key]
+
+        # Return only if it's a simple value (not dict/list)
+        if current is not None and not isinstance(current, (dict, list)):
+            return current
+        return None
+
+    def _format_dict(self, data: Dict) -> str:
+        """Format dictionary as key-value pairs"""
+        if not data:
+            return '(empty)'
+
+        # Separate simple keys from complex keys
+        simple_keys = []
+        complex_keys = []
+
+        for key, value in data.items():
+            if isinstance(value, (dict, list)):
+                complex_keys.append(key)
+            else:
+                simple_keys.append(key)
+
+        # Sort both groups alphabetically
+        simple_keys.sort()
+        complex_keys.sort()
+
+        # Combine: simple keys first, then complex keys
+        sorted_keys = simple_keys + complex_keys
+
+        # Calculate max key width for alignment
+        max_key_width = max(len(str(k)) for k in sorted_keys) if sorted_keys else 0
+
+        lines = []
+        for key in sorted_keys:
+            value = data[key]
+            key_str = str(key).ljust(max_key_width)
+
+            # Format value based on type
+            if isinstance(value, dict):
+                # Nested dict - indent on new lines
+                lines.append(f'{key_str}:')
+                lines.append(self._indent(self._format_dict(value), 2))
+            elif isinstance(value, list):
+                # List - format based on content
+                if not value:
+                    lines.append(f'{key_str}: (empty list)')
+                elif all(isinstance(item, (str, int, float, bool, type(None))) for item in value):
+                    # Simple list - show inline or multiline
+                    if len(value) <= 3:
+                        lines.append(f'{key_str}: [{", ".join(str(v) for v in value)}]')
+                    else:
+                        lines.append(f'{key_str}:')
+                        for item in value:
+                            lines.append(f'  - {item}')
+                else:
+                    # Complex list
+                    lines.append(f'{key_str}:')
+                    lines.append(self._indent(self._format_json_as_text(value), 2))
+            else:
+                # Simple value
+                lines.append(f'{key_str}: {self._format_value(value)}')
+
+        return '\n'.join(lines)
+
+    def _format_value(self, value: Union[str, int, float, bool, None, Dict, List]) -> str:
+        """Format a single value for display"""
+        if value is None:
+            return 'null'
+        if isinstance(value, bool):
+            return 'true' if value else 'false'
+        if isinstance(value, (dict, list)):
+            # Compact representation for nested structures in tables
+            return json.dumps(value, ensure_ascii=False)
+        return str(value)
+
+    def _indent(self, text: str, spaces: int) -> str:
+        """Indent all lines in text by given number of spaces"""
+        indent_str = ' ' * spaces
+        return '\n'.join(indent_str + line for line in text.split('\n'))
+
+    def format_command_output(self, output: str, display_mode: str = 'json') -> str:
+        """Format command output with colors and pretty-print JSON or convert to text tables
+
+        Args:
+            output: Raw output from command
+            display_mode: 'json' for pretty JSON, 'text' for human-readable tables
+        """
         if not output:
             return output
 
@@ -1231,11 +1784,17 @@ class OutputFormatter:
         if output_stripped.endswith('done'):
             output_stripped = output_stripped[:-4].strip()
 
-        # Try to parse and pretty-print as JSON
+        # Try to parse and pretty-print as JSON (single object/array)
         if output_stripped.startswith('{') or output_stripped.startswith('['):
             try:
                 # Parse JSON
                 parsed = json.loads(output_stripped)
+
+                # Display mode: text - convert JSON to human-readable tables
+                if display_mode == 'text':
+                    return self._format_json_as_text(parsed)
+
+                # Display mode: json - show pretty-printed JSON
                 # Pretty-print with 2-space indent
                 pretty_json = json.dumps(parsed, indent=2, ensure_ascii=False)
 
@@ -1249,8 +1808,40 @@ class OutputFormatter:
                 else:
                     return pretty_json
             except (json.JSONDecodeError, ValueError):
-                # Not valid JSON, fall through to regular formatting
+                # Not valid JSON, try line-by-line parsing for multiple JSON objects
                 pass
+
+        # Try line-by-line JSON parsing (for multiple JSON objects on separate lines)
+        lines = output_stripped.split('\n')
+        formatted_lines = []
+        all_json = True
+
+        for line in lines:
+            line_stripped = line.strip()
+            if not line_stripped:
+                formatted_lines.append('')
+                continue
+
+            if line_stripped.startswith('{') or line_stripped.startswith('['):
+                try:
+                    parsed = json.loads(line_stripped)
+                    pretty_json = json.dumps(parsed, indent=2, ensure_ascii=False)
+                    if self.use_color:
+                        colored = '\n'.join(
+                            f'{Colors.CYAN}{json_line}{Colors.RESET}' for json_line in pretty_json.split('\n')
+                        )
+                        formatted_lines.append(colored)
+                    else:
+                        formatted_lines.append(pretty_json)
+                except (json.JSONDecodeError, ValueError):
+                    all_json = False
+                    break
+            else:
+                all_json = False
+                break
+
+        if all_json and formatted_lines:
+            return '\n'.join(formatted_lines)
 
         # Not JSON or parsing failed - use regular formatting
         if not self.use_color:
@@ -1332,6 +1923,8 @@ class InteractiveCLI:
         self.completer = CommandCompleter(send_command)
         self.running = True
         self.daemon_uuid = daemon_uuid
+        self.output_encoding = 'json'  # API encoding format ('json' or 'text')
+        self.display_mode = 'text'  # Display mode ('json' or 'text')
 
         # Setup history file
         if history_file is None:
@@ -1350,6 +1943,14 @@ class InteractiveCLI:
         # Note: macOS uses libedit, Linux uses GNU readline - both supported
         if 'libedit' in readline.__doc__:
             # macOS libedit configuration
+            # First, enable emacs mode to ensure arrow keys work properly
+            readline.parse_and_bind('bind -e')  # Use emacs key bindings
+            # Explicitly bind arrow keys for history navigation
+            readline.parse_and_bind('bind ^[[A ed-prev-history')  # Up arrow
+            readline.parse_and_bind('bind ^[[B ed-next-history')  # Down arrow
+            readline.parse_and_bind('bind ^[[C ed-next-char')  # Right arrow
+            readline.parse_and_bind('bind ^[[D ed-prev-char')  # Left arrow
+            # Bind completion keys
             readline.parse_and_bind('bind ^I rl_complete')  # TAB key
             readline.parse_and_bind('bind ? rl_complete')  # ? key (help completion)
             # libedit doesn't support show-all-if-ambiguous, so we modify the completer
@@ -1489,6 +2090,31 @@ Tab completion and command history enabled
             self._show_history()
             return True
 
+        if cmd == 'set' and len(tokens) >= 3:
+            setting = tokens[1].lower()
+            value = tokens[2].lower()
+
+            if setting == 'encoding':
+                # Set API output encoding: 'set encoding json' or 'set encoding text'
+                if value in ('json', 'text'):
+                    self.output_encoding = value
+                    print(self.formatter.format_info(f'API output encoding set to {value}'))
+                else:
+                    print(self.formatter.format_error(f"Invalid encoding '{value}'. Use 'json' or 'text'."))
+                return True
+
+            elif setting == 'display':
+                # Set display mode: 'set display json' or 'set display text'
+                if value in ('json', 'text'):
+                    self.display_mode = value
+                    if value == 'text':
+                        print(self.formatter.format_info('Display mode set to text (JSON will be formatted as tables)'))
+                    else:
+                        print(self.formatter.format_info('Display mode set to json (raw JSON display)'))
+                else:
+                    print(self.formatter.format_error(f"Invalid display '{value}'. Use 'json' or 'text'."))
+                return True
+
         # Not a builtin
         return False
 
@@ -1500,11 +2126,30 @@ Tab completion and command history enabled
             command: Command to execute
         """
         try:
-            result = self.send_command(command)
+            # Check if command has explicit encoding override (json/text at end)
+            tokens = command.split()
+            override_encoding = None
+
+            if tokens and tokens[-1].lower() in ('json', 'text'):
+                override_encoding = tokens[-1].lower()
+                # Strip override keyword from command
+                command = ' '.join(tokens[:-1])
+
+            # Translate CLI-friendly syntax to API syntax
+            # "announce route refresh" -> "announce route-refresh"
+            command = command.replace('route refresh', 'route-refresh')
+
+            # Determine which encoding to use (override takes precedence)
+            encoding_to_use = override_encoding if override_encoding else self.output_encoding
+
+            # Append encoding keyword to command before sending to daemon
+            command_with_encoding = f'{command} {encoding_to_use}'
+
+            result = self.send_command(command_with_encoding)
 
             # Format and display output
             if result:
-                formatted = self.formatter.format_command_output(result)
+                formatted = self.formatter.format_command_output(result, display_mode=self.display_mode)
                 print(formatted)
         except Exception as exc:
             print(self.formatter.format_error(str(exc)))
@@ -1512,6 +2157,12 @@ Tab completion and command history enabled
     def _quit(self) -> None:
         """Exit the REPL"""
         self.running = False
+        # Send bye command to server and wait for acknowledgment
+        try:
+            self.send_command('bye')
+        except Exception:
+            # Ignore errors during disconnect
+            pass
         print(self.formatter.format_info('Goodbye!'))
 
     def _show_history(self) -> None:
@@ -1647,5 +2298,6 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
         if connection is not None:
             try:
                 connection.close()
-            except Exception:
+            except (Exception, KeyboardInterrupt):
+                # Ignore all errors during cleanup (including Ctrl+C)
                 pass
