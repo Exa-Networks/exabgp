@@ -22,6 +22,66 @@
 
 ---
 
+## NEVER Guess - ALWAYS Ask
+
+**MANDATORY: You MUST NOT GUESS. If unsure about user input, ASK FOR CLARIFICATION.**
+
+### When to Ask
+
+- ❓ User input is ambiguous (multiple valid interpretations)
+- ❓ Unclear which files/options user wants
+- ❓ Context missing for making correct decision
+- ❓ Unsure about user's intent or desired outcome
+
+### How to Ask
+
+Use thinking mode to identify what's unclear, then ask directly:
+
+✅ **Good:**
+```
+User input ambiguous. Need clarification:
+1. Option A (interpretation 1)
+2. Option B (interpretation 2)
+Which?
+```
+
+❌ **Bad:**
+- Guessing user intent without asking
+- Assuming meaning when multiple interpretations exist
+- Proceeding with "probably what they meant"
+
+### Examples
+
+**Ambiguous input:**
+```
+User: "commit"
+✗ Wrong: Assume all files, run git add -A
+✓ Right: "Commit which files? 1) My changes 2) All"
+```
+
+**Unclear context:**
+```
+User: "fix the test"
+✗ Wrong: Pick random failing test
+✓ Right: "Which test? I see 3 failing: test_A, test_B, test_C"
+```
+
+**Multiple valid options:**
+```
+User: "update the API"
+✗ Wrong: Guess which API change they mean
+✓ Right: "Update which aspect? 1) Endpoint 2) Response format 3) Auth"
+```
+
+### Remember
+
+- **Guessing wastes time** - wrong guess = redo work
+- **Asking saves time** - correct first time
+- **User prefers questions** - over wrong assumptions
+- **Use thinking mode** - identify ambiguity, formulate question
+
+---
+
 ## Use Agents Aggressively
 
 **For efficiency and lower token cost.**
@@ -76,4 +136,4 @@
 
 ---
 
-**Updated:** 2025-11-16
+**Updated:** 2025-11-21
