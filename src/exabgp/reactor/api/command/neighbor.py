@@ -22,7 +22,7 @@ def register_neighbor():
     pass
 
 
-@Command.register('teardown', True)
+@Command.register('teardown', neighbor=True, json_support=True)
 def teardown(self, reactor, service, line, use_json):
     try:
         descriptions, line = extract_neighbors(line)

@@ -16,7 +16,7 @@ def register_watchdog():
     pass
 
 
-@Command.register('announce watchdog')
+@Command.register('announce watchdog', json_support=True)
 def announce_watchdog(self, reactor, service, line, use_json):
     async def callback(name):
         # XXX: move into Action
@@ -37,7 +37,7 @@ def announce_watchdog(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('withdraw watchdog')
+@Command.register('withdraw watchdog', json_support=True)
 def withdraw_watchdog(self, reactor, service, line, use_json):
     async def callback(name):
         # XXX: move into Action

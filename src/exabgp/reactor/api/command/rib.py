@@ -145,7 +145,7 @@ def show_adj_rib(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('flush adj-rib out')
+@Command.register('flush adj-rib out', json_support=True)
 def flush_adj_rib_out(self, reactor, service, line, use_json):
     async def callback(self, peers):
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
@@ -175,7 +175,7 @@ def flush_adj_rib_out(self, reactor, service, line, use_json):
         return False
 
 
-@Command.register('clear adj-rib')
+@Command.register('clear adj-rib', json_support=True)
 def clear_adj_rib(self, reactor, service, line, use_json):
     async def callback(self, peers, direction):
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'

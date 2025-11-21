@@ -7,8 +7,6 @@ Tests command introspection, metadata generation, and helper methods.
 
 from __future__ import annotations
 
-import pytest
-
 from exabgp.reactor.api.command.registry import CommandRegistry, CommandMetadata
 
 
@@ -252,7 +250,8 @@ class TestNeighborFilters:
         assert 'local-ip' in filters
         assert 'local-as' in filters
         assert 'peer-as' in filters
-        assert 'router-id' in filters
+        assert 'id' in filters  # CLI keyword (expands to 'router-id')
+        assert 'router-id' not in filters  # Removed to avoid clash with 'route'
 
 
 class TestRouteKeywords:
@@ -512,6 +511,81 @@ class TestRegistrySingleton:
         registry2 = get_registry()
         # Should be same object
         assert registry1 is registry2
+
+
+class TestJsonSupport:
+    """Test JSON support for commands"""
+
+    def setup_method(self):
+        self.registry = CommandRegistry()
+
+    def test_announce_route_has_json_support(self):
+        """Test that announce route supports JSON (regression test for KeyError bug)"""
+        metadata = self.registry.get_command_metadata('announce route')
+        assert metadata is not None
+        assert metadata.json_support is True, 'announce route must support JSON to avoid KeyError'
+
+    def test_withdraw_route_has_json_support(self):
+        """Test that withdraw route supports JSON"""
+        metadata = self.registry.get_command_metadata('withdraw route')
+        assert metadata is not None
+        assert metadata.json_support is True
+
+    def test_announce_commands_have_json_support(self):
+        """Test that all announce commands support JSON"""
+        announce_commands = [
+            'announce route',
+            'announce vpls',
+            'announce attribute',
+            'announce attributes',
+            'announce flow',
+            'announce eor',
+            'announce operational',
+            'announce ipv4',
+            'announce ipv6',
+            'announce route-refresh',
+            'announce watchdog',
+        ]
+        for cmd in announce_commands:
+            metadata = self.registry.get_command_metadata(cmd)
+            if metadata:  # Some commands might not exist in all builds
+                assert metadata.json_support is True, f'{cmd} must support JSON'
+
+    def test_withdraw_commands_have_json_support(self):
+        """Test that all withdraw commands support JSON"""
+        withdraw_commands = [
+            'withdraw route',
+            'withdraw vpls',
+            'withdraw attribute',
+            'withdraw attributes',
+            'withdraw flow',
+            'withdraw ipv4',
+            'withdraw ipv6',
+            'withdraw watchdog',
+        ]
+        for cmd in withdraw_commands:
+            metadata = self.registry.get_command_metadata(cmd)
+            if metadata:
+                assert metadata.json_support is True, f'{cmd} must support JSON'
+
+    def test_rib_commands_have_json_support(self):
+        """Test that RIB commands support JSON"""
+        rib_commands = [
+            'show adj-rib in',
+            'show adj-rib out',
+            'flush adj-rib out',
+            'clear adj-rib',
+        ]
+        for cmd in rib_commands:
+            metadata = self.registry.get_command_metadata(cmd)
+            if metadata:
+                assert metadata.json_support is True, f'{cmd} must support JSON'
+
+    def test_teardown_has_json_support(self):
+        """Test that teardown supports JSON"""
+        metadata = self.registry.get_command_metadata('teardown')
+        assert metadata is not None
+        assert metadata.json_support is True
 
 
 class TestEdgeCases:

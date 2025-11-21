@@ -28,7 +28,7 @@ def register_announce():
 # the command debug is hardcoded in the process code
 
 
-@Command.register('announce route')
+@Command.register('announce route', json_support=True)
 def announce_route(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -68,7 +68,7 @@ def announce_route(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('withdraw route')
+@Command.register('withdraw route', json_support=True)
 def withdraw_route(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -116,7 +116,7 @@ def withdraw_route(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('announce vpls')
+@Command.register('announce vpls', json_support=True)
 def announce_vpls(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -152,7 +152,7 @@ def announce_vpls(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('withdraw vpls')
+@Command.register('withdraw vpls', json_support=True)
 def withdraw_vpls(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -192,8 +192,8 @@ def withdraw_vpls(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('announce attribute')
-@Command.register('announce attributes')
+@Command.register('announce attribute', json_support=True)
+@Command.register('announce attributes', json_support=True)
 def announce_attributes(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -229,8 +229,8 @@ def announce_attributes(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('withdraw attribute')
-@Command.register('withdraw attributes')
+@Command.register('withdraw attribute', json_support=True)
+@Command.register('withdraw attributes', json_support=True)
 def withdraw_attribute(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -270,7 +270,7 @@ def withdraw_attribute(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('announce flow')
+@Command.register('announce flow', json_support=True)
 def announce_flow(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -306,7 +306,7 @@ def announce_flow(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('withdraw flow')
+@Command.register('withdraw flow', json_support=True)
 def withdraw_flow(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -346,7 +346,7 @@ def withdraw_flow(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('announce eor')
+@Command.register('announce eor', json_support=True)
 def announce_eor(self, reactor, service, line, use_json):
     async def callback(self, command, peers):
         family = self.api_eor(command)
@@ -381,7 +381,7 @@ def announce_eor(self, reactor, service, line, use_json):
         return False
 
 
-@Command.register('announce route-refresh')
+@Command.register('announce route-refresh', json_support=True)
 def announce_refresh(self, reactor, service, line, use_json):
     async def callback(self, command, peers):
         refreshes = self.api_refresh(command)
@@ -417,7 +417,7 @@ def announce_refresh(self, reactor, service, line, use_json):
         return False
 
 
-@Command.register('announce operational')
+@Command.register('announce operational', json_support=True)
 def announce_operational(self, reactor, service, line, use_json):
     async def callback(self, command, peers):
         operational = self.api_operational(command)
@@ -464,7 +464,7 @@ def announce_operational(self, reactor, service, line, use_json):
         return False
 
 
-@Command.register('announce ipv4')
+@Command.register('announce ipv4', json_support=True)
 def announce_ipv4(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -500,7 +500,7 @@ def announce_ipv4(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('withdraw ipv4')
+@Command.register('withdraw ipv4', json_support=True)
 def withdraw_ipv4(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -540,7 +540,7 @@ def withdraw_ipv4(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('announce ipv6')
+@Command.register('announce ipv6', json_support=True)
 def announce_ipv6(self, reactor, service, line, use_json):
     async def callback():
         try:
@@ -576,7 +576,7 @@ def announce_ipv6(self, reactor, service, line, use_json):
     return True
 
 
-@Command.register('withdraw ipv6')
+@Command.register('withdraw ipv6', json_support=True)
 def withdraw_ipv6(self, reactor, service, line, use_json):
     async def callback():
         try:
