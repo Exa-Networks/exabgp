@@ -10,9 +10,10 @@ Exit codes:
   1 - Ruff format failed
   2 - Ruff check failed
   3 - Unit tests failed
-  4 - Functional encoding tests failed
-  5 - Functional decoding tests failed
-  6 - Configuration validation failed
+  4 - Functional encoding tests (async/default) failed
+  5 - Functional encoding tests (legacy) failed
+  6 - Functional decoding tests failed
+  7 - Configuration validation failed
 """
 
 import os
@@ -169,8 +170,8 @@ def test_unit_tests() -> Tuple[bool, int]:
 
 
 def test_functional_encoding() -> Tuple[bool, int]:
-    """Test 4: Functional encoding tests"""
-    print_header("TEST 4/6: Functional Encoding Tests")
+    """Test 4: Functional encoding tests (async mode - default)"""
+    print_header("TEST 4/7: Functional Encoding Tests (Async Mode - Default)")
     print_info("Running: ./qa/bin/functional encoding (72 tests)")
 
     # Kill any leftover processes first
@@ -185,7 +186,7 @@ def test_functional_encoding() -> Tuple[bool, int]:
         print(stderr)
 
     if returncode != 0:
-        print_error("Functional encoding tests failed")
+        print_error("Functional encoding tests (async) failed")
         return False, 4
 
     # Check for 100% pass rate - look for "100.0% passed" or similar on same line
@@ -194,19 +195,58 @@ def test_functional_encoding() -> Tuple[bool, int]:
         # Also verify no failures
         failed_match = re.search(r'failed\s+(\d+)', stdout, re.IGNORECASE)
         if failed_match and int(failed_match.group(1)) > 0:
-            print_error("Functional encoding tests had failures")
+            print_error("Functional encoding tests (async) had failures")
             return False, 4
 
-        print_success("Functional encoding tests passed - All 72 tests passed")
+        print_success("Functional encoding tests (async) passed - All 72 tests passed")
         return True, 0
     else:
-        print_error("Functional encoding tests did not achieve 100% pass rate")
+        print_error("Functional encoding tests (async) did not achieve 100% pass rate")
         return False, 4
 
 
+def test_functional_encoding_legacy() -> Tuple[bool, int]:
+    """Test 5: Functional encoding tests (legacy/sync mode)"""
+    print_header("TEST 5/7: Functional Encoding Tests (Legacy Mode)")
+    print_info("Running: env exabgp_reactor_legacy=true ./qa/bin/functional encoding (72 tests)")
+
+    # Kill any leftover processes first
+    subprocess.run("killall -9 python 2>/dev/null", shell=True)
+    time.sleep(0.5)
+
+    returncode, stdout, stderr = run_command(
+        "./qa/bin/functional encoding",
+        env={"exabgp_reactor_legacy": "true"}
+    )
+
+    # Print output to show progress
+    print(stdout)
+    if stderr:
+        print(stderr)
+
+    if returncode != 0:
+        print_error("Functional encoding tests (legacy) failed")
+        return False, 5
+
+    # Check for 100% pass rate - look for "100.0% passed" or similar on same line
+    pass_rate_match = re.search(r'100(?:\.\d+)?%\s+passed', stdout)
+    if pass_rate_match:
+        # Also verify no failures
+        failed_match = re.search(r'failed\s+(\d+)', stdout, re.IGNORECASE)
+        if failed_match and int(failed_match.group(1)) > 0:
+            print_error("Functional encoding tests (legacy) had failures")
+            return False, 5
+
+        print_success("Functional encoding tests (legacy) passed - All 72 tests passed")
+        return True, 0
+    else:
+        print_error("Functional encoding tests (legacy) did not achieve 100% pass rate")
+        return False, 5
+
+
 def test_functional_decoding() -> Tuple[bool, int]:
-    """Test 5: Functional decoding tests"""
-    print_header("TEST 5/6: Functional Decoding Tests")
+    """Test 6: Functional decoding tests"""
+    print_header("TEST 6/7: Functional Decoding Tests")
     print_info("Running: ./qa/bin/functional decoding")
 
     returncode, stdout, stderr = run_command("./qa/bin/functional decoding")
@@ -218,15 +258,15 @@ def test_functional_decoding() -> Tuple[bool, int]:
 
     if returncode != 0:
         print_error("Functional decoding tests failed")
-        return False, 5
+        return False, 6
 
     print_success("Functional decoding tests passed")
     return True, 0
 
 
 def test_config_validation() -> Tuple[bool, int]:
-    """Test 6: Configuration validation"""
-    print_header("TEST 6/6: Configuration Validation")
+    """Test 7: Configuration validation"""
+    print_header("TEST 7/7: Configuration Validation")
     print_info("Running: ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf")
 
     returncode, stdout, stderr = run_command(
@@ -239,7 +279,7 @@ def test_config_validation() -> Tuple[bool, int]:
             print(stdout)
         if stderr:
             print(stderr)
-        return False, 6
+        return False, 7
 
     print_success("Configuration validation passed")
     return True, 0
@@ -258,6 +298,7 @@ def main() -> int:
         test_ruff_check,
         test_unit_tests,
         test_functional_encoding,
+        test_functional_encoding_legacy,
         test_functional_decoding,
         test_config_validation,
     ]
@@ -273,8 +314,9 @@ def main() -> int:
     # All tests passed
     elapsed = time.time() - start_time
     print_header("ALL TESTS PASSED")
-    print(f"{Colors.GREEN}{Colors.BOLD}✓ All 6 test suites passed in {elapsed:.1f}s{Colors.RESET}")
-    print(f"\n{Colors.GREEN}Code is ready for commit{Colors.RESET}\n")
+    print(f"{Colors.GREEN}{Colors.BOLD}✓ All 7 test suites passed in {elapsed:.1f}s{Colors.RESET}")
+    print(f"\n{Colors.GREEN}Async (default) and legacy modes both pass 100%{Colors.RESET}")
+    print(f"{Colors.GREEN}Code is ready for commit{Colors.RESET}\n")
 
     return 0
 

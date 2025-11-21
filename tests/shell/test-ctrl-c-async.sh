@@ -1,10 +1,10 @@
 #!/bin/bash
-# Test that async mode handles Ctrl+C gracefully
+# Test that async mode (default) handles Ctrl+C gracefully
 
 set -e
 
-echo "Starting ExaBGP in async mode..."
-env exabgp_reactor_asyncio=true exabgp_log_enable=false ./sbin/exabgp etc/exabgp/api-rib.conf &
+echo "Starting ExaBGP in async mode (default)..."
+env exabgp_log_enable=false ./sbin/exabgp etc/exabgp/api-rib.conf &
 PID=$!
 
 echo "ExaBGP PID: $PID"
