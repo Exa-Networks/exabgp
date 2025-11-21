@@ -789,6 +789,7 @@ class Processes:
             # Send error details before the error marker
             if self._ackjson[service]:
                 import json
+
                 error_data = {'error': message}
                 self._answer(service, json.dumps(error_data))
             else:
@@ -808,6 +809,7 @@ class Processes:
             # Send error details before the error marker
             if self._ackjson[service]:
                 import json
+
                 error_data = {'error': message}
                 await self._answer_async(service, json.dumps(error_data))
             else:
