@@ -4,6 +4,10 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.1:
+ * Fix: ImportError when running exabgp commands (--help, version, etc.)
+   Missing get_root() and get_zipapp() functions in version.py that were
+   removed during 5.0.0 release but still imported by application/version.py.
+   This bug prevented the 5.0.0 container from starting.
  * Fix: Critical RIB iterator crash in delete_cached_family() (cache.py:37)
    Modified dictionary during iteration causing RuntimeError on configuration reload.
    Fixed by adding list() wrapper to snapshot keys before iteration.

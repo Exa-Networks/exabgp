@@ -11,10 +11,10 @@ if [ -z "$exabgp_version" ]; then
         if [ $GIT_TAG -eq 0 ]; then
             GIT_BRANCH=`git branch | grep "*" | awk '{ print $2}'`
             GIT_COMMIT=`git rev-parse --short=10 HEAD`
-            export exabgp_version="5.0.0-$(date +%Y%m%d)+${GIT_BRANCH}-${GIT_COMMIT}"
+            export exabgp_version="5.0.1-$(date +%Y%m%d)+${GIT_BRANCH}-${GIT_COMMIT}"
         fi
     else
-        export exabgp_version="5.0.0-$(date -r $0 +%Y%m%d)+uncontrolled"
+        export exabgp_version="5.0.1-$(date -r $0 +%Y%m%d)+uncontrolled"
     fi
 fi
 

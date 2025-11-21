@@ -1,6 +1,6 @@
 [project]
 name = 'exabgp'
-version = '5.0.0'
+version = '5.0.1'
 description = 'BGP swiss army knife'
 authors = [
 	{ name = "Thomas Mangin", email = "thomas.mangin@exa-networks.co.uk" },
