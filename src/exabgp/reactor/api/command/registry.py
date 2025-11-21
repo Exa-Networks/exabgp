@@ -78,7 +78,9 @@ class CommandRegistry:
     }
 
     # Neighbor filter keywords
-    NEIGHBOR_FILTERS: ClassVar[List[str]] = ['local-ip', 'local-as', 'peer-as', 'router-id', 'family-allowed']
+    # 'id' is the CLI keyword (expands to 'router-id' for API compatibility)
+    # 'router-id' removed from autocomplete to avoid clash with 'route' command
+    NEIGHBOR_FILTERS: ClassVar[List[str]] = ['local-ip', 'local-as', 'peer-as', 'id', 'family-allowed']
 
     # Route specification keywords
     ROUTE_KEYWORDS: ClassVar[List[str]] = [
@@ -162,6 +164,12 @@ class CommandRegistry:
         'local-preference': 'Local preference value',
         'med': 'Multi-Exit Discriminator',
         'community': 'BGP community',
+        'id': 'Router ID filter (shortcut for router-id)',
+        'router-id': 'Router ID filter',
+        'local-ip': 'Local IP filter',
+        'local-as': 'Local AS number filter',
+        'peer-as': 'Peer AS number filter',
+        'family-allowed': 'Address family filter',
     }
 
     def __init__(self):

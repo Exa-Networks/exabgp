@@ -528,8 +528,28 @@ class Processes:
         if process not in self._process:
             return False
 
-        # Debug log API command response
-        log.debug(lambda: f'API response to {process}: {string}', 'process')
+        # Log API command response
+        # Use warning level (like 'debug' commands from processes) to make it visible
+        # when debug logging is enabled, especially for JSON/content responses
+        from exabgp.reactor.api.response.answer import Answer
+
+        # Check if this is a simple acknowledgment (done/error/shutdown in text or JSON)
+        is_simple_ack = string in (
+            Answer.text_done,
+            Answer.text_error,
+            Answer.text_shutdown,
+            Answer.json_done,
+            Answer.json_error,
+            Answer.json_shutdown,
+        )
+
+        if is_simple_ack:
+            # Simple ACK - use debug level
+            log.debug(lambda: f'API response to {process}: {string}', 'process')
+        else:
+            # Content response (JSON, text data, etc.) - use warning level to match
+            # the visibility of 'debug' commands from external processes
+            log.warning(lambda: f'API response to {process}: {string}', 'api')
 
         data = bytes(f'{string}\n', 'ascii')
 
@@ -585,8 +605,28 @@ class Processes:
         if process not in self._process:
             return False
 
-        # Debug log API command response
-        log.debug(lambda: f'API response to {process}: {string}', 'process')
+        # Log API command response
+        # Use warning level (like 'debug' commands from processes) to make it visible
+        # when debug logging is enabled, especially for JSON/content responses
+        from exabgp.reactor.api.response.answer import Answer
+
+        # Check if this is a simple acknowledgment (done/error/shutdown in text or JSON)
+        is_simple_ack = string in (
+            Answer.text_done,
+            Answer.text_error,
+            Answer.text_shutdown,
+            Answer.json_done,
+            Answer.json_error,
+            Answer.json_shutdown,
+        )
+
+        if is_simple_ack:
+            # Simple ACK - use debug level
+            log.debug(lambda: f'API response to {process}: {string}', 'process')
+        else:
+            # Content response (JSON, text data, etc.) - use warning level to match
+            # the visibility of 'debug' commands from external processes
+            log.warning(lambda: f'API response to {process}: {string}', 'api')
 
         data = bytes(f'{string}\n', 'ascii')
 
@@ -743,16 +783,41 @@ class Processes:
         await self.flush_write_queue_async()
         log.debug(lambda: f'[ASYNC] flush_write_queue_async() completed for {service}', 'process')
 
-    def answer_error(self, service: str) -> None:
+    def answer_error(self, service: str, message: str = '') -> None:
+        """Send error response, optionally with descriptive message"""
+        if message:
+            # Send error details before the error marker
+            if self._ackjson[service]:
+                import json
+                error_data = {'error': message}
+                self._answer(service, json.dumps(error_data))
+            else:
+                self._answer(service, f'error: {message}')
+
+        # Send standard error markers
         if self._ackjson[service]:
             self._answer(service, Answer.json_error)
+            # Send error marker after JSON error for consistency with text API
+            self._answer(service, Answer.text_error, force=True)
         else:
             self._answer(service, Answer.text_error)
 
-    async def answer_error_async(self, service: str) -> None:
+    async def answer_error_async(self, service: str, message: str = '') -> None:
         """Async version of answer_error() - non-blocking error response to API process"""
+        if message:
+            # Send error details before the error marker
+            if self._ackjson[service]:
+                import json
+                error_data = {'error': message}
+                await self._answer_async(service, json.dumps(error_data))
+            else:
+                await self._answer_async(service, f'error: {message}')
+
+        # Send standard error markers
         if self._ackjson[service]:
             await self._answer_async(service, Answer.json_error)
+            # Send error marker after JSON error for consistency with text API
+            await self._answer_async(service, Answer.text_error, force=True)
         else:
             await self._answer_async(service, Answer.text_error)
 

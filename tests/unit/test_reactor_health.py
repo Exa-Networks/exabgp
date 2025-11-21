@@ -43,14 +43,14 @@ class TestPingCommand:
     """Test ping command"""
 
     def test_ping_text_format(self):
-        """Test ping command returns 'pong <UUID> active=true' in text format"""
+        """Test ping command returns 'pong <UUID> active=true' in text format when 'text' keyword used"""
         from exabgp.reactor.api.command.reactor import ping
 
         reactor = MockReactor()
         service = 'test-service'
 
-        # Execute command in text mode (no client UUID - defaults to active=true)
-        result = ping(None, reactor, service, 'ping', use_json=False)
+        # Execute command in text mode with explicit 'text' keyword
+        result = ping(None, reactor, service, 'ping text', use_json=False)
 
         assert result is True
         assert len(reactor.processes.written_data) >= 1
@@ -177,27 +177,27 @@ class TestCommandIntegration:
         reactor = MockReactor()
         service = 'test-service'
 
-        # Client 1 connects first
-        ping(None, reactor, service, 'ping client-1 1000.0', use_json=False)
+        # Client 1 connects first (using text mode for easier assertion)
+        ping(None, reactor, service, 'ping client-1 1000.0 text', use_json=False)
         client1_output = reactor.processes.written_data[0]
         assert 'active=true' in client1_output
         assert reactor.active_client_uuid == 'client-1'
 
         # Client 2 tries to connect - should get active=false (first client keeps connection)
         reactor.processes.written_data = []
-        ping(None, reactor, service, 'ping client-2 2000.0', use_json=False)
+        ping(None, reactor, service, 'ping client-2 2000.0 text', use_json=False)
         client2_output = reactor.processes.written_data[0]
         assert 'active=false' in client2_output
 
         # Client 1 still active
         reactor.processes.written_data = []
-        ping(None, reactor, service, 'ping client-1 1000.0', use_json=False)
+        ping(None, reactor, service, 'ping client-1 1000.0 text', use_json=False)
         client1_still_active = reactor.processes.written_data[0]
         assert 'active=true' in client1_still_active
 
         # Client 2 still gets rejected
         reactor.processes.written_data = []
-        ping(None, reactor, service, 'ping client-2 2000.0', use_json=False)
+        ping(None, reactor, service, 'ping client-2 2000.0 text', use_json=False)
         client2_still_rejected = reactor.processes.written_data[0]
         assert 'active=false' in client2_still_rejected
 
@@ -208,8 +208,8 @@ class TestCommandIntegration:
         reactor = MockReactor()
         service = 'test-service'
 
-        # Client 1 connects first
-        ping(None, reactor, service, 'ping client-1 1000.0', use_json=False)
+        # Client 1 connects first (using text mode for easier assertion)
+        ping(None, reactor, service, 'ping client-1 1000.0 text', use_json=False)
         assert 'active=true' in reactor.processes.written_data[0]
         assert reactor.active_client_uuid == 'client-1'
 
@@ -218,7 +218,7 @@ class TestCommandIntegration:
 
         # Client 2 tries to connect - should succeed since active client timed out
         reactor.processes.written_data = []
-        ping(None, reactor, service, 'ping client-2 2000.0', use_json=False)
+        ping(None, reactor, service, 'ping client-2 2000.0 text', use_json=False)
         output = reactor.processes.written_data[0]
         assert 'active=true' in output
         assert reactor.active_client_uuid == 'client-2'
