@@ -2,7 +2,7 @@ name: Testing (Python 3.8 to 3.13)
 
 on:
   push:
-    branches: [main, 4.2, 3.4]
+    branches: [main, 5.0, 4.2, 3.4]
   pull_request:
     branches: [main]
 
