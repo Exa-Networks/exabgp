@@ -2,7 +2,7 @@ name: Linting
 
 on:
   push:
-    branches: [main, 4.2, 3.4]
+    branches: [main, 5.0, 4.2, 3.4]
   pull_request:
     branches: [main]
 

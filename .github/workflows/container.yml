@@ -8,6 +8,7 @@ on:
       - "Testing (Python 3.8 to 3.12)"
     branches:
       - "main"
+      - "5.0"
     types:
       - completed
   release:
@@ -60,6 +61,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=5.0,enable=${{ github.ref == 'refs/heads/5.0' }}
+            type=raw,value=stable,enable=${{ github.ref == 'refs/heads/5.0' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
