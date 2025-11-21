@@ -42,7 +42,10 @@ class TestCompleterBasics:
         """Test that completer has base commands"""
         assert self.completer.base_commands is not None
         assert isinstance(self.completer.base_commands, list)
-        assert 'show' in self.completer.base_commands
+        assert 'show' not in self.completer.base_commands  # Filtered out
+        assert 'announce' in self.completer.base_commands
+        assert 'neighbor' in self.completer.base_commands
+        assert 'adj-rib' in self.completer.base_commands
         assert 'announce' in self.completer.base_commands
 
 
@@ -59,15 +62,17 @@ class TestBaseCommandCompletion:
         assert isinstance(matches, list)
         assert len(matches) > 0
         # Should include base commands
-        assert 'show' in matches
+        assert 'show' not in matches  # Filtered out - use 'neighbor <ip> show' or 'adj-rib <in|out> show'
         assert 'announce' in matches
-        # Should include 'neighbor' keyword for filtering
+        # Should include CLI-first keywords
         assert 'neighbor' in matches
+        assert 'adj-rib' in matches
 
     def test_complete_partial_show(self):
-        """Test completing 'sh'"""
+        """Test completing 'sh' - show filtered, should suggest shutdown"""
         matches = self.completer._get_completions([], 'sh')
-        assert 'show' in matches or 'shutdown' in matches
+        assert 'show' not in matches  # Filtered out
+        assert 'shutdown' in matches
 
     def test_complete_partial_announce(self):
         """Test completing 'ann'"""
@@ -93,16 +98,16 @@ class TestNestedCommandCompletion:
         self.completer = CommandCompleter(self.mock_send)
 
     def test_complete_after_show(self):
-        """Test completion after 'show'"""
+        """Test completion after 'show' - neighbor and adj-rib filtered out"""
         matches = self.completer._get_completions(['show'], '')
         assert isinstance(matches, list)
-        assert 'neighbor' in matches
-        assert 'adj-rib' in matches
+        assert 'neighbor' not in matches  # Filtered out - use 'neighbor <ip> show' syntax
+        assert 'adj-rib' not in matches  # Filtered out - use 'adj-rib <in|out> show' syntax
 
     def test_complete_after_show_partial(self):
-        """Test completion after 'show n'"""
+        """Test completion after 'show n' - neighbor filtered out"""
         matches = self.completer._get_completions(['show'], 'n')
-        assert 'neighbor' in matches
+        assert 'neighbor' not in matches  # Filtered out - use 'neighbor <ip> show' syntax
 
     def test_complete_after_announce(self):
         """Test completion after 'announce'"""
@@ -149,9 +154,9 @@ class TestShortcutExpansion:
         self.completer = CommandCompleter(self.mock_send)
 
     def test_shortcuts_expanded_in_completion(self):
-        """Test that 's n' expands to 'show neighbor'"""
-        matches = self.completer._get_completions(['s', 'n'], '')
-        # After expansion, should show neighbor options
+        """Test that 'n <ip> show' completion works"""
+        matches = self.completer._get_completions(['n', '192.168.1.1', 'show'], '')
+        # After transformation, should show neighbor options
         assert 'summary' in matches or 'extensive' in matches or len(matches) > 0
 
     def test_shortcuts_expanded_announce(self):
@@ -642,22 +647,22 @@ class TestShowCommandCompletion:
         self.completer = CommandCompleter(self.mock_send)
 
     def test_show_completes_to_subcommands(self):
-        """Test that 'show' completes to 'neighbor' and 'adj-rib'"""
+        """Test that 'show' has no completions (neighbor and adj-rib filtered out)"""
         matches = self.completer._get_completions(['show'], '')
-        assert 'neighbor' in matches
-        assert 'adj-rib' in matches
-        assert len(matches) == 2
+        assert 'neighbor' not in matches  # Filtered out - use 'neighbor <ip> show' syntax
+        assert 'adj-rib' not in matches  # Filtered out - use 'adj-rib <in|out> show' syntax
+        assert len(matches) == 0
 
     def test_show_n_completes_to_neighbor(self):
-        """Test that 'show n' completes to 'neighbor'"""
+        """Test that 'show n' no longer suggests 'neighbor' - use 'neighbor <ip> show' instead"""
         matches = self.completer._get_completions(['show'], 'n')
-        assert 'neighbor' in matches
+        assert 'neighbor' not in matches  # Filtered out - use 'neighbor <ip> show' syntax
         assert 'adj-rib' not in matches
 
     def test_show_a_completes_to_adj_rib(self):
-        """Test that 'show a' completes to 'adj-rib'"""
+        """Test that 'show a' no longer suggests 'adj-rib' - use 'adj-rib <in|out> show' instead"""
         matches = self.completer._get_completions(['show'], 'a')
-        assert 'adj-rib' in matches
+        assert 'adj-rib' not in matches  # Filtered out - use 'adj-rib <in|out> show' syntax
         assert 'neighbor' not in matches
 
     def test_show_neighbor_shows_all_completions(self):
@@ -736,12 +741,13 @@ class TestNeighborTargetedCommandCompletion:
         assert '10.0.0.1' in matches
 
     def test_neighbor_ip_suggests_only_announce_withdraw_show(self):
-        """Test that 'neighbor <IP>' suggests only announce, withdraw, show"""
+        """Test that 'neighbor <IP>' suggests only announce, withdraw, show, adj-rib"""
         matches = self.completer._get_completions(['neighbor', '192.168.1.1'], '')
-        # Should ONLY have these three commands
+        # Should ONLY have these four commands
         assert 'announce' in matches
         assert 'withdraw' in matches
         assert 'show' in matches
+        assert 'adj-rib' in matches
         # Should NOT have other commands
         assert 'flush' not in matches
         assert 'ping' not in matches
@@ -750,8 +756,8 @@ class TestNeighborTargetedCommandCompletion:
         assert 'local-as' not in matches
         assert 'peer-as' not in matches
         assert 'id' not in matches
-        # Should be exactly 3 items
-        assert len(matches) == 3
+        # Should be exactly 4 items
+        assert len(matches) == 4
 
 
 class TestCompleterExceptionHandling:
@@ -807,8 +813,8 @@ class TestCompleterExceptionHandling:
         # Should return empty list or basic completions, not crash
         matches = completer._get_completions(['show'], 'n')
         assert isinstance(matches, list)
-        # Should still have basic matches (not fetched from server)
-        assert 'neighbor' in matches
+        # 'neighbor' is filtered out after 'show' - no completions starting with 'n'
+        assert 'neighbor' not in matches
 
     def test_get_neighbor_ips_handles_socket_error(self):
         """Test that neighbor IP fetching handles socket errors gracefully"""
@@ -840,10 +846,10 @@ class TestCompleterExceptionHandling:
         completer = CommandCompleter(flaky_send)
 
         # First completion should work
-        result1 = completer.complete('show', 0)
+        result1 = completer.complete('announce', 0)
         assert result1 is not None
 
         # After connection loss, should still provide basic completions
-        result2 = completer.complete('announce', 0)
+        result2 = completer.complete('withdraw', 0)
         # Should return something (basic completion) or None, not crash
         assert result2 is None or isinstance(result2, str)

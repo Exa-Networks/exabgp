@@ -37,7 +37,7 @@ class CommandShortcuts:
         ('h', 'help', lambda pos, pre: pos == 0),
         ('i', 'in', lambda pos, pre: pre and pre[-1] == 'adj-rib'),
         ('id', 'router-id', lambda pos, pre: 'neighbor' in pre),  # CLI shortcut: id → router-id in neighbor context
-        ('n', 'neighbor', lambda pos, pre: pos == 0 or (pre and pre[-1] == 'show')),
+        ('n', 'neighbor', lambda pos, pre: pos == 0),  # Only at start - removed 'show n' → 'show neighbor' support
         ('o', 'operation', lambda pos, pre: pre and pre[-1] == 'announce'),
         ('o', 'out', lambda pos, pre: pre and pre[-1] == 'adj-rib'),
         ('r', 'route', lambda pos, pre: pre and (pre[-1] == 'announce' or pre[-1] == 'withdraw')),
@@ -57,26 +57,32 @@ class CommandShortcuts:
 
     @classmethod
     def expand_shortcuts(cls, command: str) -> str:
-        """Expand shortcuts in a command string.
+        """Expand shortcuts in a command string and apply CLI transformations.
 
         Args:
             command: The command string to process (e.g., "s n summary")
 
         Returns:
-            Expanded command string (e.g., "show neighbor summary")
+            Expanded and transformed command string (e.g., "show neighbor summary")
 
         Examples:
             >>> CommandShortcuts.expand_shortcuts('s n summary')
             'show neighbor summary'
             >>> CommandShortcuts.expand_shortcuts('a r 10.0.0.0/24 next-hop 192.168.1.1')
             'announce route 10.0.0.0/24 next-hop 192.168.1.1'
+            >>> CommandShortcuts.expand_shortcuts('n 192.168.1.1 show summary')
+            'show neighbor 192.168.1.1 summary'
         """
         tokens = command.split()
         if not tokens:
             return command
 
         expanded = cls.expand_token_list(tokens)
-        return ' '.join(expanded).strip()
+        expanded_str = ' '.join(expanded).strip()
+
+        # Apply CLI-to-API transformations
+        transformed = cls.transform_cli_to_api(expanded_str)
+        return transformed
 
     @classmethod
     def expand_token_list(cls, tokens: List[str]) -> List[str]:
@@ -168,6 +174,91 @@ class CommandShortcuts:
                 if full_name not in expansions:
                     expansions.append(full_name)
         return expansions
+
+    @classmethod
+    def transform_cli_to_api(cls, command: str) -> str:
+        """Transform CLI-friendly syntax to API-compatible syntax.
+
+        Transforms:
+        - 'neighbor <ip> show ...' → 'show neighbor <ip> ...'
+        - 'adj-rib <in|out> show ...' → 'show adj-rib <in|out> ...'
+
+        The CLI accepts more intuitive command-first syntax, but the API
+        expects 'show'-first syntax. This transformation maintains API compatibility
+        while improving CLI usability.
+
+        Args:
+            command: The command string after shortcut expansion
+
+        Returns:
+            Transformed command string
+
+        Examples:
+            >>> CommandShortcuts.transform_cli_to_api('neighbor 192.168.1.1 show summary')
+            'show neighbor 192.168.1.1 summary'
+            >>> CommandShortcuts.transform_cli_to_api('adj-rib in show extensive')
+            'show adj-rib in extensive'
+            >>> CommandShortcuts.transform_cli_to_api('show neighbor summary')
+            'show neighbor summary'
+        """
+        tokens = command.split()
+        if not tokens:
+            return command
+
+        # Pattern 1 (most specific): neighbor <ip> adj-rib <in|out> show [options...]
+        # Transform to: show adj-rib <in|out> <ip> [options...]
+        # Check this FIRST before general "neighbor <ip> show" pattern
+        if len(tokens) >= 5 and tokens[0] == 'neighbor' and tokens[2] == 'adj-rib' and tokens[3] in ('in', 'out'):
+            try:
+                show_idx = tokens.index('show')
+                if show_idx == 4:  # Must be 'neighbor <ip> adj-rib <in|out> show'
+                    # Extract parts: ['neighbor', <ip>, 'adj-rib', 'in'/'out', 'show', [options...]]
+                    neighbor_ip = tokens[1]
+                    direction = tokens[3]  # 'in' or 'out'
+                    options = tokens[show_idx + 1 :]  # Everything after 'show'
+
+                    # Rebuild: 'show adj-rib <in|out> <ip> [options...]'
+                    result = ['show', 'adj-rib', direction, neighbor_ip] + options
+                    return ' '.join(result)
+            except ValueError:
+                # 'show' not in tokens, return unchanged
+                pass
+
+        # Pattern 2: neighbor <ip> [filters...] show [options...]
+        # Transform to: show neighbor <ip> [filters...] [options...]
+        if len(tokens) >= 3 and tokens[0] == 'neighbor':
+            try:
+                show_idx = tokens.index('show')
+                if show_idx >= 2:  # Must have at least 'neighbor <ip> show'
+                    # Extract parts: ['neighbor', <ip>, [filters...], 'show', [options...]]
+                    neighbor_and_filters = tokens[1:show_idx]  # <ip> and any filters
+                    options = tokens[show_idx + 1 :]  # Everything after 'show'
+
+                    # Rebuild: 'show neighbor <ip> [filters...] [options...]'
+                    result = ['show', 'neighbor'] + neighbor_and_filters + options
+                    return ' '.join(result)
+            except ValueError:
+                # 'show' not in tokens, return unchanged
+                pass
+
+        # Pattern 3: adj-rib <in|out> show [options...]
+        # Transform to: show adj-rib <in|out> [options...]
+        if len(tokens) >= 3 and tokens[0] == 'adj-rib' and tokens[1] in ('in', 'out'):
+            try:
+                show_idx = tokens.index('show')
+                if show_idx == 2:  # Must be 'adj-rib <in|out> show'
+                    # Extract parts: ['adj-rib', 'in'/'out', 'show', [options...]]
+                    direction = tokens[1]  # 'in' or 'out'
+                    options = tokens[show_idx + 1 :]  # Everything after 'show'
+
+                    # Rebuild: 'show adj-rib <in|out> [options...]'
+                    result = ['show', 'adj-rib', direction] + options
+                    return ' '.join(result)
+            except ValueError:
+                # 'show' not in tokens, return unchanged
+                pass
+
+        return command
 
 
 # Convenience function for backward compatibility

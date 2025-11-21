@@ -18,8 +18,9 @@ class TestBasicShortcuts:
     def test_help_shortcut(self):
         assert CommandShortcuts.expand_shortcuts('h') == 'help'
 
-    def test_show_shortcut(self):
-        assert CommandShortcuts.expand_shortcuts('s n') == 'show neighbor'
+    def test_neighbor_show_shortcut(self):
+        # Test new syntax: 'n <ip> show' transforms to 'show neighbor <ip>'
+        assert CommandShortcuts.expand_shortcuts('n 192.168.1.1 show') == 'show neighbor 192.168.1.1'
 
     def test_announce_shortcut(self):
         assert CommandShortcuts.expand_shortcuts('a r') == 'announce route'
@@ -91,8 +92,10 @@ class TestContextAwareShortcuts:
         assert result == 'announce watchdog'
 
     def test_s_as_show_at_start(self):
-        result = CommandShortcuts.expand_shortcuts('s n')
-        assert result == 'show neighbor'
+        # 's' at start expands to 'show', but 'n' after 'show' no longer expands
+        # (use 'neighbor <ip> show' syntax instead)
+        result = CommandShortcuts.expand_shortcuts('s')
+        assert result == 'show'
 
     def test_s_as_summary_not_at_start(self):
         result = CommandShortcuts.expand_shortcuts('show neighbor s')
@@ -128,7 +131,8 @@ class TestTypoCorrection:
         assert CommandShortcuts.expand_shortcuts('show neigbor') == 'show neighbor'
 
     def test_typo_correction_with_shortcuts(self):
-        result = CommandShortcuts.expand_shortcuts('s neigbor summary')
+        # Typo correction works with explicit 'show neighbor' (not via shortcut)
+        result = CommandShortcuts.expand_shortcuts('show neigbor summary')
         assert result == 'show neighbor summary'
 
 
@@ -312,8 +316,8 @@ class TestEdgeCases:
         assert '65000:1' in result
 
     def test_very_long_command(self):
-        # Test with many tokens
-        cmd = 's n 192.168.1.1 e json'
+        # Test with many tokens using new neighbor show syntax
+        cmd = 'n 192.168.1.1 show e json'
         result = CommandShortcuts.expand_shortcuts(cmd)
         assert 'show' in result
         assert 'neighbor' in result
@@ -330,11 +334,13 @@ class TestRealWorldScenarios:
     """Test real-world command scenarios"""
 
     def test_show_neighbor_summary(self):
-        assert CommandShortcuts.expand_shortcuts('s n s') == 'show neighbor summary'
+        # Using new syntax: neighbor <ip> show
+        assert CommandShortcuts.expand_shortcuts('n 192.168.1.1 show s') == 'show neighbor 192.168.1.1 summary'
 
     def test_show_neighbor_extensive_json(self):
-        result = CommandShortcuts.expand_shortcuts('s n e json')
-        assert result == 'show neighbor extensive json'
+        # Using new syntax: neighbor <ip> show
+        result = CommandShortcuts.expand_shortcuts('n 192.168.1.1 show e json')
+        assert result == 'show neighbor 192.168.1.1 extensive json'
 
     def test_show_adj_rib_in(self):
         result = CommandShortcuts.expand_shortcuts('s a i')
@@ -383,14 +389,16 @@ class TestConsistency:
 
     def test_multiple_expansions_consistent(self):
         # Expanding multiple times should give same result
-        cmd = 's n s'
+        cmd = 'n 192.168.1.1 show s'
         result1 = CommandShortcuts.expand_shortcuts(cmd)
         result2 = CommandShortcuts.expand_shortcuts(cmd)
         assert result1 == result2
 
     def test_token_list_vs_string_consistent(self):
-        # Token list expansion should match string expansion
-        tokens = ['s', 'n', 's']
+        # Token list expansion should match string expansion (before transformation)
+        # Note: expand_shortcuts also applies transformations (neighbor show → show neighbor)
+        # while expand_token_list only expands shortcuts
+        tokens = ['a', 'r', '10.0.0.0/24']
         expanded_list = CommandShortcuts.expand_token_list(tokens)
         expanded_str = CommandShortcuts.expand_shortcuts(' '.join(tokens))
         assert ' '.join(expanded_list) == expanded_str
