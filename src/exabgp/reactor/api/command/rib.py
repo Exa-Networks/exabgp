@@ -81,7 +81,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
                 else:
                     to_text(key, changes)
                 await asyncio.sleep(0)  # Yield control after each chunk (matches original yield True)
-        reactor.processes.answer_done(service)
+        await reactor.processes.answer_done_async(service)
 
     return callback
 
@@ -154,7 +154,7 @@ def flush_adj_rib_out(self, reactor, service, line, use_json):
             reactor.neighbor_rib_resend(peer_name)
             await asyncio.sleep(0)  # Yield control after each peer (matches original yield False)
 
-        reactor.processes.answer_done(service)
+        await reactor.processes.answer_done_async(service)
 
     try:
         descriptions, command = extract_neighbors(line)
@@ -187,7 +187,7 @@ def clear_adj_rib(self, reactor, service, line, use_json):
                 reactor.neighbor_rib_in_clear(peer_name)
             await asyncio.sleep(0)  # Yield control after each peer (matches original yield False)
 
-        reactor.processes.answer_done(service)
+        await reactor.processes.answer_done_async(service)
 
     try:
         descriptions, command = extract_neighbors(line)

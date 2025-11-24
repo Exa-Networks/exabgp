@@ -82,7 +82,7 @@ def show_neighbor(self, reactor, service, line, use_json):
             for line in str(neighbor).split('\n'):
                 reactor.processes.write(service, line)
                 await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
-        reactor.processes.answer_done(service)
+        await reactor.processes.answer_done_async(service)
 
     async def callback_json():
         p = []
@@ -118,7 +118,7 @@ def show_neighbor(self, reactor, service, line, use_json):
         for line in json.dumps(p).split('\n'):
             reactor.processes.write(service, line)
             await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
-        reactor.processes.answer_done(service)
+        await reactor.processes.answer_done_async(service)
 
     async def callback_extensive():
         # Show ALL configured neighbors (both connected and disconnected)
@@ -157,7 +157,7 @@ def show_neighbor(self, reactor, service, line, use_json):
                     await asyncio.sleep(0)
         except Exception as e:
             reactor.processes.write(service, f'# Error: {e}')
-        reactor.processes.answer_done(service)
+        await reactor.processes.answer_done_async(service)
 
     async def callback_summary():
         reactor.processes.write(service, NeighborTemplate.summary_header)
@@ -167,7 +167,7 @@ def show_neighbor(self, reactor, service, line, use_json):
             for line in NeighborTemplate.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
                 reactor.processes.write(service, line)
                 await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
-        reactor.processes.answer_done(service)
+        await reactor.processes.answer_done_async(service)
 
     if use_json:
         reactor.asynchronous.schedule(service, line, callback_json())
