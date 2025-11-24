@@ -328,7 +328,11 @@ State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP TIMEOUT')
 class Record:
     _index: int = 0
     _listing: str = (
-        '0123456789' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + 'αβγδεζηθικλμνξοπρςστυφχψω' + 'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ'
+        '0123456789'
+        + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        + 'abcdefghijklmnopqrstuvwxyz'
+        + 'αβγδεζηθικλμνξοπρςστυφχψω'
+        + 'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ'
     )
 
     def __init__(self, nick: str, name: str) -> None:
@@ -484,11 +488,11 @@ class Tests:
             return
 
         # Count test states
-        remaining = 0
+        pending = 0
         passed = 0
         failed = 0
         failed_tests: List[str] = []
-        remaining_tests: List[str] = []
+        pending_tests: List[str] = []
 
         for test in self.registered():
             if test.state == State.SUCCESS:
@@ -500,8 +504,8 @@ class Tests:
                 failed += 1
                 failed_tests.append(test.nick)
             elif test.state in (State.NONE, State.STARTING, State.RUNNING):
-                remaining += 1
-                remaining_tests.append(test.nick)
+                pending += 1
+                pending_tests.append(test.nick)
 
         # Show timer: timeout [elapsed/max] - yellow label and max number
         if self._start_time and self._max_timeout:
@@ -520,26 +524,27 @@ class Tests:
             )
 
         # Format with labels and colors
-        # Order: timer, daemon/client, passed, failed (if > 0), remaining
-        passed_text = f'{green()}passed{reset()} {passed:2d}'
+        # Order: timer, daemon/client, passed, failed (if > 0), pending
 
         # Build status line
-        status_parts = [timer, daemon_client, passed_text]
+        status_parts = [timer, daemon_client]
+
+        # Add passed
+        passed_text = f'{green()}passed{reset()} {passed:2d}'
+        status_parts.append(passed_text)
 
         # Add failed section if there are failures
-        # "failed   " (9 chars) only for single test to match "remaining", otherwise "failed" (6 chars)
         if failed > 0:
-            label = 'failed   ' if len(self.selected()) == 1 else 'failed'
-            failed_text = f'{red()}{label}{reset()} {failed:2d}'
+            failed_text = f'{red()}failed{reset()} {failed:2d}'
             if failed_tests:
                 failed_text += f' [{", ".join(failed_tests)}]'
             status_parts.append(failed_text)
 
-        # Add remaining last, show test IDs if < 10
-        remaining_text = f'remaining {remaining:2d}'
-        if remaining > 0 and remaining < 10 and remaining_tests:
-            remaining_text += f' [{", ".join(remaining_tests)}]'
-        status_parts.append(remaining_text)
+        # Add pending last (show test IDs if < 10)
+        pending_text = f'{yellow()}pending{reset()} {pending:2d}'
+        if pending > 0 and pending < 10 and pending_tests:
+            pending_text += f' [{", ".join(pending_tests)}]'
+        status_parts.append(pending_text)
 
         status = ' '.join(status_parts)
 
@@ -549,7 +554,7 @@ class Tests:
 
     def legend(self) -> None:
         flush(
-            '\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N remaining N passed N failed N [failed test IDs]\n'
+            '\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N passed N failed N [failed test IDs] pending N [pending test IDs]\n'
         )
 
     def _print_debug_output(
