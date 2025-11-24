@@ -1,7 +1,7 @@
 # ExaBGP Quality Improvement TODO
 
 **Generated:** 2025-11-24
-**Updated:** 2025-11-24
+**Updated:** 2025-11-24 (peer.py XXX/FIXME resolved)
 **Stats:** 348 Python files, 54,991 LOC, 52 test files
 
 ---
@@ -54,10 +54,15 @@
   - [x] Extracted PersistentSocketConnection to `cli/persistent_connection.py` (609 lines)
   - [ ] Split command execution from REPL handling (future)
 
-- [ ] **peer.py (1,292 lines)** - `src/exabgp/reactor/peer.py`
-  - [ ] Address XXX/FIXME comments at lines 437, 604-605, 703, 1115, 1151
-  - [ ] Extract state transition logic
-  - [ ] Improve exception handling patterns
+- [ ] **peer.py (1,289 lines)** - `src/exabgp/reactor/peer.py` ✅ XXX/FIXME DONE
+  - [x] Address XXX/FIXME comments at lines 437, 604-605, 703, 1115, 1151
+    - Removed stale ord/chr comment (line 437) - migration complete
+    - Updated ProcessError comment (lines 604-606) - documented broken() handling
+    - Updated proto comment (line 703) - documented peer/protocol separation
+    - Updated process restart comments (lines 1115, 1151) - documented respawning
+    - Kept UnicodeDecodeError defensive code (lines 184-188) - needed for raw network data
+  - [ ] Extract state transition logic (future)
+  - [ ] Improve exception handling patterns (future)
 
 ### Type Safety (491 type ignores)
 
