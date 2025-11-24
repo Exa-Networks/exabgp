@@ -125,6 +125,80 @@ def alarm_handler(_number: int, _frame: FrameType) -> None:
     raise Alarm()
 
 
+def cleanup_test_processes() -> int:
+    """Emergency cleanup of test processes. Returns number killed."""
+    try:
+        import psutil
+
+        # Kill all test-related processes
+        patterns = ['qa/sbin/bgp', 'sbin/exabgp', 'src/exabgp/application/main', 'run/api-']
+        killed = 0
+        for proc in psutil.process_iter(['pid', 'cmdline']):
+            try:
+                cmdline = ' '.join(proc.info['cmdline'] or [])
+                if any(pattern in cmdline for pattern in patterns):
+                    if proc.pid != os.getpid():
+                        proc.terminate()
+                        killed += 1
+            except Exception:
+                continue
+
+        if killed > 0:
+            time.sleep(0.3)  # Brief wait for termination
+        return killed
+    except ImportError:
+        # No psutil, try killall
+        subprocess.run(['killall', '-TERM', 'bgp'], stderr=subprocess.DEVNULL, check=False)
+        subprocess.run(['killall', '-TERM', 'exabgp'], stderr=subprocess.DEVNULL, check=False)
+        return 0
+
+
+def sigterm_handler(_signum: int, _frame: FrameType) -> None:
+    """Handle SIGTERM - typically from another functional instance cleaning up"""
+    flush('')
+    flush('')
+    flush('=' * 60)
+    flush('TERMINATED: Functional test suite received SIGTERM')
+    flush('=' * 60)
+    flush('This usually means:')
+    flush('  - Another functional test instance cleaned up stale processes')
+    flush('  - This is NOT a code error')
+    flush('  - Check for concurrent test runs')
+    flush('')
+    flush('If you were intentionally running tests concurrently,')
+    flush('wait for the other instance to complete.')
+    flush('')
+    flush('Cleaning up test processes before exit...')
+
+    killed = cleanup_test_processes()
+    if killed > 0:
+        flush(f'Terminated {killed} test process(es)')
+
+    flush('=' * 60)
+    flush('')
+    sys.exit(143)  # 128 + 15 (SIGTERM)
+
+
+def sigint_handler(_signum: int, _frame: FrameType) -> None:
+    """Handle SIGINT - user pressed Ctrl+C"""
+    flush('')
+    flush('')
+    flush('=' * 60)
+    flush('INTERRUPTED: Functional test suite received SIGINT (Ctrl+C)')
+    flush('=' * 60)
+    flush('Test run interrupted by user.')
+    flush('')
+    flush('Cleaning up test processes before exit...')
+
+    killed = cleanup_test_processes()
+    if killed > 0:
+        flush(f'Terminated {killed} test process(es)')
+
+    flush('=' * 60)
+    flush('')
+    sys.exit(130)  # 128 + 2 (SIGINT)
+
+
 def color(prefix: int, suffix: int) -> str:
     def code(value: int) -> str:
         return f'\033[{value}m'
@@ -231,6 +305,144 @@ class Path:
             sys.exit('could not find the sequence daemon')
 
 
+def check_concurrent_functional() -> bool:
+    """
+    Check if another functional test runner is already running.
+
+    Returns: True if another functional process found, False otherwise
+    """
+    try:
+        import psutil
+
+        current_pid = os.getpid()
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline_list = proc.info['cmdline'] or []
+                if not cmdline_list:
+                    continue
+
+                cmdline = ' '.join(cmdline_list)
+
+                # Check for another functional test runner
+                if 'qa/bin/functional' in cmdline and proc.pid != current_pid:
+                    return True
+
+            except Exception:
+                continue
+
+        return False
+
+    except ImportError:
+        # Without psutil, can't detect concurrent runs
+        return False
+
+
+def cleanup_stale_processes(dry_run: bool = False) -> int:
+    """
+    Kill all Python processes related to ExaBGP tests before starting test suite.
+
+    Uses SIGTERM instead of SIGKILL so processes can detect being killed
+    and report this condition (helps distinguish from code errors).
+
+    IMPORTANT: Only kills processes that are NOT other running functional test instances.
+    This prevents killing processes from concurrent test runs.
+
+    Returns: Number of processes killed
+    """
+    killed = 0
+    patterns = [
+        'qa/sbin/bgp',                  # Leftover test servers
+        'sbin/exabgp',                  # Leftover ExaBGP instances (command line)
+        'src/exabgp/application/main',  # Leftover ExaBGP instances (Python module)
+        'run/api-',                     # API test scripts
+    ]
+
+    try:
+        import psutil
+
+        # Get PIDs of all functional test runners (don't kill these or their direct children)
+        functional_pids = set()
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline_list = proc.info['cmdline'] or []
+                if not cmdline_list:
+                    continue
+                cmdline = ' '.join(cmdline_list)
+                if 'qa/bin/functional' in cmdline:
+                    functional_pids.add(proc.pid)
+            except Exception:
+                continue
+
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'ppid']):
+            try:
+                cmdline_list = proc.info['cmdline'] or []
+                if not cmdline_list:
+                    continue
+
+                cmdline = ' '.join(cmdline_list)
+
+                # Skip current process
+                if proc.pid == os.getpid():
+                    continue
+
+                # Skip other functional test runners
+                if proc.pid in functional_pids:
+                    continue
+
+                # Skip direct children of ACTIVE functional test runners
+                ppid = proc.info.get('ppid')
+                if ppid and ppid in functional_pids:
+                    continue
+
+                # Check if process matches test patterns
+                if any(pattern in cmdline for pattern in patterns):
+                    # Additional check: is parent process still alive?
+                    # If parent is dead, this is definitely an orphan
+                    parent_alive = False
+                    if ppid:
+                        try:
+                            parent = psutil.Process(ppid)
+                            parent_alive = parent.is_running()
+                        except Exception:
+                            parent_alive = False
+
+                    if dry_run:
+                        orphan_status = " [ORPHAN]" if not parent_alive else ""
+                        flush(f"[cleanup] Would terminate: PID {proc.pid}{orphan_status} - {cmdline[:80]}")
+                    else:
+                        # Use SIGTERM (not SIGKILL) so process can detect and report being killed
+                        proc.terminate()  # SIGTERM
+                        try:
+                            proc.wait(timeout=2)
+                        except psutil.TimeoutExpired:
+                            # If SIGTERM didn't work after 2s, force kill
+                            proc.kill()  # SIGKILL
+                    killed += 1
+
+            except Exception:  # psutil.NoSuchProcess, psutil.AccessDenied, etc
+                continue
+
+    except ImportError:
+        # psutil not available, use killall fallback (less safe with concurrent runs)
+        # Use SIGTERM (-15) instead of SIGKILL (-9)
+        patterns_simple = ['bgp', 'exabgp']
+        for pattern in patterns_simple:
+            try:
+                # Try SIGTERM first
+                result = subprocess.run(
+                    ['killall', '-15', '-q', pattern], timeout=2, stderr=subprocess.DEVNULL, check=False
+                )
+                if result.returncode == 0:
+                    killed += 1
+                    time.sleep(0.5)
+                    # Force kill any survivors
+                    subprocess.run(['killall', '-9', '-q', pattern], timeout=1, stderr=subprocess.DEVNULL, check=False)
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+
+    return killed
+
+
 class Exec:
     def __init__(self) -> None:
         self.code: int = -1
@@ -302,20 +514,127 @@ class Exec:
         except Alarm as exc:
             self.message = str(exc)
 
+    def _get_process_tree(self) -> List[Any]:
+        """Get all descendant processes recursively using psutil if available"""
+        if self._process is None:
+            return []
+
+        try:
+            import psutil
+
+            parent = psutil.Process(self._process.pid)
+            children = parent.children(recursive=True)
+            return [parent] + children
+        except ImportError:
+            # psutil not available, return empty list
+            return []
+        except Exception:  # psutil.NoSuchProcess or others
+            return []
+
+    def _kill_process_tree(self, signal_type: int = signal.SIGTERM, timeout: float = 2.0) -> int:
+        """
+        Kill process and all descendants using psutil.
+
+        Uses SIGTERM by default (not SIGKILL) so processes can detect being killed
+        and report this condition. Falls back to SIGKILL for survivors.
+
+        Returns: Number of processes killed
+        """
+        if self._process is None:
+            return 0
+
+        processes = self._get_process_tree()
+        if not processes:
+            # psutil not available or process already gone
+            return 0
+
+        try:
+            import psutil
+        except ImportError:
+            return 0
+
+        killed = 0
+
+        # Send signal to all processes
+        for proc in processes:
+            try:
+                proc.send_signal(signal_type)
+                killed += 1
+            except Exception:  # psutil.NoSuchProcess, psutil.AccessDenied, etc
+                continue
+
+        # Wait for termination
+        start = time.time()
+        still_alive = processes.copy()
+
+        while still_alive and (time.time() - start) < timeout:
+            for proc in list(still_alive):
+                try:
+                    if not proc.is_running():
+                        still_alive.remove(proc)
+                except Exception:  # psutil.NoSuchProcess
+                    still_alive.remove(proc)
+            if still_alive:
+                time.sleep(0.1)
+
+        # Force kill any survivors with SIGKILL (only if we didn't already use it)
+        if still_alive and signal_type != signal.SIGKILL:
+            for proc in still_alive:
+                try:
+                    proc.kill()  # SIGKILL
+                except Exception:  # psutil.NoSuchProcess, psutil.AccessDenied
+                    continue
+
+            # Final wait
+            time.sleep(0.2)
+
+        return killed
+
     def terminate(self, collect: bool = True) -> None:
+        """Enhanced termination with process tree cleanup and retry logic"""
         if self._process is None:
             return
+
+        # Try psutil-based tree kill first (most thorough)
+        killed = self._kill_process_tree(signal.SIGTERM, timeout=0.5)
+        if killed > 0:
+            # Force kill any remaining processes
+            self._kill_process_tree(signal.SIGKILL, timeout=1.0)
+
+        # Fallback: Traditional SIGTERM then killpg approach
         try:
             self._process.send_signal(signal.SIGTERM)
-        except (OSError, ProcessLookupError):  # No such process, Errno 3
-            pass
+            self._process.wait(timeout=0.5)
+        except subprocess.TimeoutExpired:
+            pass  # Will use SIGKILL next
+        except (OSError, ProcessLookupError):
+            pass  # Already dead
+
         if collect:
             self.collect()
-        # After collect, try to kill any remaining child processes in the process group
-        try:
-            os.killpg(os.getpgid(self._process.pid), signal.SIGKILL)
-        except (OSError, ProcessLookupError, AttributeError):
-            pass
+
+        # killpg with retry for process groups (fallback or supplement to psutil)
+        for attempt in range(3):
+            try:
+                pgid = os.getpgid(self._process.pid)
+                os.killpg(pgid, signal.SIGKILL)
+
+                # Verify kill succeeded
+                time.sleep(0.1)
+                try:
+                    # Check if process group still exists
+                    os.killpg(pgid, 0)  # Signal 0 = check existence
+                    # If we get here, processes still exist
+                    if attempt < 2:
+                        time.sleep(0.2 * (attempt + 1))  # Exponential backoff
+                        continue
+                except (OSError, ProcessLookupError):
+                    # Process group is gone, success!
+                    break
+
+            except (OSError, ProcessLookupError, AttributeError):
+                # Process or group already gone
+                break
 
     def __del__(self) -> None:
         if self._process is not None:
@@ -854,12 +1173,121 @@ class EncodingTests(Tests):
             )
         return '\n'.join(result)
 
+    def _force_cleanup_all(self, tests: List[Any], clients: Dict[str, Exec]) -> None:
+        """
+        Final cleanup pass to ensure all test processes are dead.
+
+        Uses SIGTERM first (not SIGKILL) so processes can detect being killed.
+        """
+        try:
+            import psutil
+        except ImportError:
+            # Fallback to killall if psutil not available
+            # Try SIGTERM first
+            subprocess.run(['killall', '-15', '-q', 'bgp'], stderr=subprocess.DEVNULL, check=False)
+            subprocess.run(['killall', '-15', '-q', 'exabgp'], stderr=subprocess.DEVNULL, check=False)
+            time.sleep(0.5)
+            # Force kill survivors
+            subprocess.run(['killall', '-9', '-q', 'bgp'], stderr=subprocess.DEVNULL, check=False)
+            subprocess.run(['killall', '-9', '-q', 'exabgp'], stderr=subprocess.DEVNULL, check=False)
+            return
+
+        # Collect all known PIDs from test servers and clients
+        pids_to_kill = set()
+        for test in tests:
+            if hasattr(test, '_process') and test._process and test._process.pid:
+                pids_to_kill.add(test._process.pid)
+
+        for client_exec in clients.values():
+            if client_exec._process and client_exec._process.pid:
+                pids_to_kill.add(client_exec._process.pid)
+
+        # Find all descendants
+        all_to_kill = set()
+        for pid in pids_to_kill:
+            try:
+                parent = psutil.Process(pid)
+                all_to_kill.add(parent)
+                all_to_kill.update(parent.children(recursive=True))
+            except Exception:  # psutil.NoSuchProcess, etc
+                continue
+
+        # Try SIGTERM first (allows processes to detect and report being killed)
+        for proc in all_to_kill:
+            try:
+                proc.terminate()  # SIGTERM
+            except Exception:  # psutil.NoSuchProcess, psutil.AccessDenied
+                continue
+
+        # Wait for graceful termination
+        time.sleep(0.5)
+
+        # Force kill any survivors with SIGKILL
+        for proc in all_to_kill:
+            try:
+                if proc.is_running():
+                    proc.kill()  # SIGKILL
+            except Exception:
+                continue
+
+        # Verify they're dead (wait briefly)
+        time.sleep(0.3)
+
     def run_selected(self, timeout: int) -> bool:
         # Set max timeout before setup so it shows during initialization
         self._max_timeout: int = timeout
         self.legend()
+
+        # Install signal handlers to detect when we're killed by another instance
+        signal.signal(signal.SIGTERM, sigterm_handler)
+        signal.signal(signal.SIGINT, sigint_handler)
+
+        # Require psutil for reliable process cleanup
+        try:
+            import psutil  # noqa: F401
+        except ImportError:
+            flush('')
+            flush('=' * 60)
+            flush('ERROR: psutil is required for functional tests')
+            flush('=' * 60)
+            flush('The functional test suite requires psutil for:')
+            flush('  - Reliable process cleanup after test failures')
+            flush('  - Detection of orphaned processes from crashed tests')
+            flush('  - Concurrent test run detection')
+            flush('  - Full process tree termination')
+            flush('')
+            flush('Install with: pip install psutil')
+            flush('Or: pip install -r qa/requirements.txt')
+            flush('=' * 60)
+            flush('')
+            sys.exit(1)
+
         # Ensure sufficient file descriptors for tests that spawn many processes
         check_ulimit()
+
+        # Check for concurrent functional test runs
+        if check_concurrent_functional():
+            flush('')
+            flush('=' * 60)
+            flush('WARNING: Another functional test instance is running!')
+            flush('=' * 60)
+            flush('Running tests concurrently may cause failures due to:')
+            flush('  - Port conflicts (tests use same port numbers)')
+            flush('  - Process cleanup conflicts')
+            flush('  - Resource contention')
+            flush('')
+            flush('If you see unexpected test failures, this may be the cause.')
+            flush('Wait for other test run to complete, or use different ports.')
+            flush('=' * 60)
+            flush('')
+            time.sleep(2)  # Give user time to read warning
+
+        # Pre-flight cleanup: kill any stale processes from previous failed runs
+        stale_count = cleanup_stale_processes()
+        if stale_count > 0:
+            flush(f"[cleanup] Killed {stale_count} stale process(es) from previous run")
+            time.sleep(0.5)  # Give OS time to release resources
+
         success = True
         client: Dict[str, Exec] = {}
 
@@ -962,7 +1390,9 @@ class EncodingTests(Tests):
                 if not client[test.nick].ready():
                     continue
                 running.remove(test)
+                # Terminate BOTH client and server when test completes
                 client[test.nick].terminate(collect=False)  # Don't block on collect in hot loop
+                test.terminate(collect=False)  # Also terminate server
                 success = test.result(test.success()) and success
 
             # If no tests are still running, exit immediately
@@ -979,6 +1409,13 @@ class EncodingTests(Tests):
             test.terminate(collect=False)
             client[test.nick].terminate(collect=False)
             success = False
+
+        # Comprehensive cleanup pass to ensure all processes are dead
+        # Give time for graceful termination first
+        time.sleep(0.5)
+
+        # Force kill any remaining test processes
+        self._force_cleanup_all(list(self.selected()), client)
 
         # Move to new line after final display
         flush()
