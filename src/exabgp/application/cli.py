@@ -281,7 +281,7 @@ class PersistentSocketConnection:
         try:
             # Send SIGUSR1 to main thread to interrupt input()
             os.kill(os.getpid(), signal.SIGUSR1)
-        except Exception:
+        except OSError:
             pass
 
     def _reconnect(self, max_attempts=3, retry_delay=2) -> bool:
@@ -306,7 +306,7 @@ class PersistentSocketConnection:
         if self.socket:
             try:
                 self.socket.close()
-            except Exception:
+            except OSError:
                 pass
             self.socket = None
 
@@ -527,7 +527,7 @@ class PersistentSocketConnection:
                 ping_cmd = f'ping {self.client_uuid} {self.client_start_time}\n'
                 self.socket.sendall(ping_cmd.encode('utf-8'))
                 self.last_ping_time = time.time()
-            except Exception:
+            except OSError:
                 # Socket error - read loop will handle reconnection
                 # Don't print error or exit here
                 pass
@@ -638,7 +638,7 @@ class PersistentSocketConnection:
             try:
                 with self.lock:
                     self.socket.sendall((command + '\n').encode('utf-8'))
-            except Exception as exc:
+            except OSError as exc:
                 return f'Error: {exc}'
 
             # Wait for response (with timeout)
@@ -663,13 +663,13 @@ class PersistentSocketConnection:
                 try:
                     # Shutdown socket first (stops I/O operations)
                     self.socket.shutdown(sock.SHUT_RDWR)
-                except Exception:
+                except OSError:
                     pass
 
                 try:
                     # Then close the socket
                     self.socket.close()
-                except Exception:
+                except OSError:
                     pass
 
             # Give threads a moment to exit
@@ -1514,7 +1514,7 @@ class CommandCompleter:
 
                                     if peer_addr:
                                         neighbor_ips.append(str(peer_addr))
-                except Exception:
+                except (json.JSONDecodeError, ValueError, OSError):
                     # Silently fail - neighbor completion is optional
                     pass
 
@@ -1566,7 +1566,7 @@ class CommandCompleter:
                                 # Format: (neighbor, AS65000, ESTABLISHED)
                                 desc = f'(neighbor, AS{peer_as}, {state})'
                                 neighbor_data[str(peer_addr)] = desc
-        except Exception:
+        except (json.JSONDecodeError, ValueError, OSError):
             # Silently fail - just return IPs without descriptions
             pass
 
@@ -2096,7 +2096,7 @@ class InteractiveCLI:
         if os.path.exists(self.history_file):
             try:
                 readline.read_history_file(self.history_file)
-            except Exception:
+            except OSError:
                 pass
 
         # Set history size
@@ -2109,7 +2109,7 @@ class InteractiveCLI:
         """Save command history to file"""
         try:
             readline.write_history_file(self.history_file)
-        except Exception:
+        except OSError:
             pass
 
     def run(self) -> None:
@@ -2522,7 +2522,7 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
                 # Read response (simplified - real implementation needs proper response handling)
                 # For now, return acknowledgment
                 return 'Command sent'
-            except Exception as exc:
+            except OSError as exc:
                 return f'Error: {exc}'
 
         send_func = send_command_pipe

@@ -53,7 +53,7 @@ def unix_socket(root, socketname='exabgp'):
                 if stat.S_ISSOCK(os.stat(explicit_path).st_mode):
                     os.environ['exabgp_cli_socket'] = os.path.dirname(explicit_path) + '/'
                     return [os.path.dirname(explicit_path) + '/']
-            except Exception:
+            except OSError:
                 pass
 
     for location in locations:
@@ -62,7 +62,7 @@ def unix_socket(root, socketname='exabgp'):
             if stat.S_ISSOCK(os.stat(socket_path).st_mode):
                 os.environ['exabgp_cli_socket'] = location
                 return [location]
-        except Exception:
+        except OSError:
             continue
 
     return locations
@@ -168,7 +168,7 @@ class Control:
         if self.client_socket:
             try:
                 self.client_socket.close()
-            except Exception:
+            except OSError:
                 pass
             self.client_socket = None
             # Do NOT clear client_fd here - main loop needs it to clean up dicts
@@ -181,7 +181,7 @@ class Control:
         if self.server_socket:
             try:
                 self.server_socket.close()
-            except Exception:
+            except OSError:
                 pass
             self.server_socket = None
 
@@ -189,7 +189,7 @@ class Control:
         try:
             if os.path.exists(self.socket_path):
                 os.unlink(self.socket_path)
-        except Exception:
+        except OSError:
             pass
 
     def terminate(self, ignore=None, me=None):
@@ -348,13 +348,13 @@ class Control:
                             new_socket.sendall(b'error: another CLI client is already connected\ndone\n')
                             try:
                                 new_socket.shutdown(socket.SHUT_WR)
-                            except Exception:
+                            except OSError:
                                 pass  # Ignore shutdown errors
                             new_socket.close()
-                        except Exception:
+                        except OSError:
                             try:
                                 new_socket.close()
-                            except Exception:
+                            except OSError:
                                 pass
                     else:
                         # No client - accept this connection
@@ -382,7 +382,7 @@ class Control:
                     # Notify reactor that client disconnected (clears active_client_uuid)
                     try:
                         os.write(standard_out, b'bye\n')
-                    except Exception:
+                    except OSError:
                         pass
 
                     # Remove client from data structures

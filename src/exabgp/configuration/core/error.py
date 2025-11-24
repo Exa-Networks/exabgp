@@ -36,3 +36,21 @@ class Error(Exception):
 
     def __str__(self):
         return self.message
+
+
+class ParsingError(Error):
+    """Base parsing error for configuration."""
+
+    pass
+
+
+class AFISAFIParsingError(ParsingError):
+    """Failed to parse AFI/SAFI value."""
+
+    pass
+
+
+class IPAddressParsingError(ParsingError):
+    """Failed to parse IP address."""
+
+    pass

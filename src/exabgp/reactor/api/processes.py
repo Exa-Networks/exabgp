@@ -46,6 +46,38 @@ from exabgp.environment import getenv
 
 
 class ProcessError(Exception):
+    """Base exception for process-related errors."""
+
+    pass
+
+
+class ProcessStartError(ProcessError):
+    """Failed to start subprocess."""
+
+    pass
+
+
+class ProcessCommunicationError(ProcessError):
+    """Failed to communicate with subprocess."""
+
+    pass
+
+
+class ProcessWriteError(ProcessCommunicationError):
+    """Failed to write to process stdin (broken pipe)."""
+
+    pass
+
+
+class ProcessReadError(ProcessCommunicationError):
+    """Failed to read from process stdout."""
+
+    pass
+
+
+class ProcessRespawnError(ProcessError):
+    """Process respawned too many times."""
+
     pass
 
 
@@ -115,7 +147,7 @@ class Processes:
                 fd = process.stdout.fileno()
                 self._loop.remove_reader(fd)
                 log.debug(lambda: f'[ASYNC] Removed reader for process {process_name} (fd={fd})', 'process')
-            except Exception:
+            except (ValueError, OSError):
                 pass  # Reader might not be registered or FD already closed
 
         del self._process[process_name]
@@ -409,7 +441,7 @@ class Processes:
                 if self._async_mode and self._loop:
                     # We don't have the FD anymore, but asyncio will handle cleanup
                     pass
-            except Exception:
+            except (ValueError, OSError):
                 pass
             return
 
@@ -434,7 +466,7 @@ class Processes:
                         log.debug(
                             lambda: f'[ASYNC] Removed reader for exited process {process_name} (fd={fd})', 'process'
                         )
-                    except Exception:
+                    except (ValueError, OSError):
                         pass  # Already removed or FD closed
                 self._handle_problem(process_name)
                 return
@@ -472,7 +504,7 @@ class Processes:
                         log.debug(
                             lambda: f'[ASYNC] Removed reader for exited process {process_name} (fd={fd})', 'process'
                         )
-                    except Exception:
+                    except (ValueError, OSError):
                         pass  # Already removed or FD closed
                 self._handle_problem(process_name)
 
@@ -483,21 +515,21 @@ class Processes:
                     fd = self._process[process_name].stdout.fileno()  # type: ignore[union-attr]
                     self._loop.remove_reader(fd)
                     log.debug(lambda: f'[ASYNC] Removed reader after OSError for {process_name}', 'process')
-            except Exception:
+            except (ValueError, OSError, AttributeError):
                 pass
 
             if not exc.errno or exc.errno in error.fatal:
                 self._handle_problem(process_name)
             elif exc.errno not in error.block:
                 log.debug(lambda exc=exc: f'unexpected errno received from forked process ({errstr(exc)})', 'process')
-        except Exception as exc:
+        except (KeyError, AttributeError, UnicodeDecodeError) as exc:
             # On any exception, try to remove reader to prevent callback loop
             try:
                 if self._async_mode and self._loop and process_name in self._process:
                     fd = self._process[process_name].stdout.fileno()  # type: ignore[union-attr]
                     self._loop.remove_reader(fd)
                     log.debug(lambda: f'[ASYNC] Removed reader after exception for {process_name}', 'process')
-            except Exception:
+            except (ValueError, OSError, AttributeError):
                 pass
 
             log.debug(lambda exc=exc: f'exception in async reader callback: {exc}', 'process')

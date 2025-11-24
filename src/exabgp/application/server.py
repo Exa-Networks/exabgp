@@ -281,7 +281,7 @@ def run(comment, configurations, pid=0):
 
         try:
             profiler.dump_stats(destination)
-        except Exception:
+        except OSError:
             notice = 'could not save profiling in formation at: ' + destination
             log.debug(lambda: '-' * len(notice), 'reactor')
             log.debug(lambda: notice, 'reactor')

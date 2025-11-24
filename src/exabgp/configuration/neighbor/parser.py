@@ -75,7 +75,7 @@ def domainname(tokeniser) -> str:
 def description(tokeniser) -> str:
     try:
         return string(tokeniser)
-    except Exception:
+    except StopIteration:
         raise ValueError('bad neighbor description') from None
 
 
@@ -119,7 +119,7 @@ def local_address(tokeniser) -> Optional[IP]:
 def source_interface(tokeniser) -> str:
     try:
         return string(tokeniser)
-    except Exception:
+    except StopIteration:
         raise ValueError('bad source interface') from None
 
 

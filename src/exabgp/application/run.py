@@ -228,7 +228,7 @@ def send_command_socket(socket_path, command_str, return_output=False):
     finally:
         try:
             client.close()
-        except Exception:
+        except OSError:
             pass
 
     if return_output:
@@ -298,7 +298,7 @@ def cmdline(cmdarg):
                     try:
                         os.write(writer, sending.encode('utf-8') + b'\n')
                         os.close(writer)
-                    except Exception:
+                    except OSError:
                         pass
         else:
             sockets = unix_socket(ROOT, socketname)
@@ -310,7 +310,7 @@ def cmdline(cmdarg):
                     client.connect(socket_path)
                     client.sendall(sending.encode('utf-8') + b'\n')
                     client.close()
-                except Exception:
+                except OSError:
                     pass
         sys.exit(0)
 
@@ -578,7 +578,7 @@ def cmdline_pipe(pipename, sending, exit_on_completion=True):
 
     try:
         os.close(reader)
-    except Exception:
+    except OSError:
         pass
 
     if exit_on_completion:

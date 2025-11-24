@@ -132,7 +132,7 @@ class Reactor:
         except KeyboardInterrupt:
             self._termination('^C received', self.Exit.normal)
             return
-        except Exception:
+        except OSError:
             self._prevent_spin()
             return
 
@@ -163,7 +163,7 @@ class Reactor:
         except KeyboardInterrupt:
             self._termination('^C received', self.Exit.normal)
             return []
-        except Exception:
+        except (OSError, asyncio.CancelledError):
             self._prevent_spin()
             return []
 
