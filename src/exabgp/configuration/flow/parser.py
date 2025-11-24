@@ -356,7 +356,7 @@ def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, type], ExtendedCommuniti
             try:
                 ip: IP = IP.create(data)
                 return ip, ExtendedCommunities().add(TrafficNextHopSimpson(False))  # type: ignore[arg-type,return-value]
-            except Exception:
+            except (OSError, ValueError):
                 raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
 
         nn: str

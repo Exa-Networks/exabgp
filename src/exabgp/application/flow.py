@@ -49,7 +49,7 @@ class ACL:
             filename = cls._file(uid)
             if os.path.isfile(filename):
                 os.unlink(filename)
-        except Exception:
+        except OSError:
             pass
 
     @classmethod
@@ -63,7 +63,7 @@ class ACL:
                 stderr=subprocess.STDOUT,
                 stdout=subprocess.PIPE,
             ).communicate()[0]
-        except Exception:
+        except (OSError, subprocess.SubprocessError):
             pass
 
     @staticmethod
@@ -94,7 +94,7 @@ class ACL:
             with open(cls._file(uid), 'w') as f:
                 f.write(acl)
             cls._commit()
-        except Exception:
+        except OSError:
             cls.end()
 
     @classmethod

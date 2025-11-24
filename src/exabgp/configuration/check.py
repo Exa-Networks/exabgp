@@ -264,7 +264,7 @@ def _make_nlri(neighbor: Dict[str, Any], routes: str) -> List[NLRI]:
             log.debug(lambda announced=announced: 'parsing NLRI {}'.format(announced), 'parser')
             nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
             nlris.append(nlri)  # type: ignore[has-type]
-    except Exception as exc:
+    except (Notify, ValueError, IndexError, KeyError, struct.error) as exc:
         log.error(lambda: f'could not parse the nlri for afi={afi}, safi={safi}', 'parser')
         from exabgp.debug import string_exception
 
@@ -311,7 +311,7 @@ def check_open(neighbor: Dict[str, Any], raw: bytes) -> None:
         negotiated_in, _ = _negotiated(neighbor)
         o = Open.unpack_message(raw, negotiated_in)
         sys.stdout.write(f'{o}\n')
-    except Exception:
+    except (Notify, ValueError, IndexError, KeyError, struct.error):
         sys.stdout.write('\n')
         sys.stdout.write('we could not decode this open message\n')
         sys.stdout.write('here is the traceback to help to figure out why\n')
@@ -326,7 +326,7 @@ def display_open(neighbor: Dict[str, Any], raw: bytes) -> bool:
         sys.stdout.write(Response.JSON(json_version).open(neighbor, 'in', o, None, '', ''))
         sys.stdout.write('\n')
         return True
-    except Exception:
+    except (Notify, ValueError, IndexError, KeyError, struct.error):
         return False
 
 
@@ -365,7 +365,7 @@ def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
             if getenv().debug.pdb:
                 raise
             return None
-        except Exception:
+        except (ValueError, IndexError, KeyError, struct.error):
             import traceback
 
             log.error(lambda: 'could not parse the message', 'parser')
@@ -408,7 +408,7 @@ def _make_notification(neighbor: Dict[str, Any], raw: bytes) -> Optional[Notific
         if getenv().debug.pdb:
             raise
         return None
-    except Exception:
+    except (ValueError, IndexError, KeyError, struct.error):
         import traceback
 
         log.error(lambda: 'could not parse the message', 'parser')

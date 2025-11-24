@@ -47,7 +47,7 @@ def named_pipe(root, pipename='exabgp'):
                 continue
             if not stat.S_ISFIFO(os.stat(cli_out).st_mode):
                 continue
-        except Exception:
+        except OSError:
             continue
         os.environ['exabgp_cli_pipe'] = location
         return [location]
