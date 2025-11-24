@@ -434,9 +434,8 @@ class Peer:
         # which would be bad as we need to do the collission check without going to the other peer
         for message in self.proto.read_open(self.neighbor['peer-address'].top()):
             opentimer.check_ka(message)
-            # XXX: FIXME: change the whole code to use the ord and not the chr version
             # Only yield if we have not the open, otherwise the reactor can run the other connection
-            # which would be bad as we need to do the collission check
+            # which would be bad as we need to do the collision check
             if message.ID == Message.CODE.NOP:
                 # If a peer does not reply to OPEN message, or not enough bytes
                 # yielding ACTION.NOW can cause ExaBGP to busy spin trying to
@@ -600,9 +599,8 @@ class Peer:
             try:
                 self.reactor.processes.up(self.neighbor)
             except ProcessError:
-                # Can not find any better error code than 6,0 !
-                # XXX: We can not restart the program so this will come back again and again - FIX
-                # XXX: In the main loop we do exit on this kind of error
+                # Process error during neighbor-up notification.
+                # Note: broken() check in run() handles persistent process failures.
                 raise Notify(6, 0, 'ExaBGP Internal error, sorry.') from None
 
         routes_per_iteration = 1 if self.neighbor['rate-limit'] > 0 else 25
@@ -700,7 +698,7 @@ class Peer:
 
                 # Need to send update
                 if not new_routes and self.neighbor.rib.outgoing.pending():
-                    # XXX: in proto really. hum to think about ?
+                    # Note: Peer controls timing (rate limit, priorities); Protocol handles sending
                     new_routes = self.proto.new_update(include_withdraw)
 
                 if new_routes:
@@ -1112,7 +1110,8 @@ class Peer:
 
     def run(self) -> int:  # type: ignore[return]
         if self.reactor.processes.broken(self.neighbor):
-            # XXX: we should perhaps try to restart the process ??
+            # Process respawning handled by Processes._handle_problem().
+            # This branch handles cases where respawning failed or was disabled.
             log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
             if self.reactor.processes.terminate_on_error:
                 self.reactor.api_shutdown()
@@ -1148,7 +1147,8 @@ class Peer:
     async def run_async(self) -> None:
         """Async entry point for peer - runs the peer FSM using async/await"""
         if self.reactor.processes.broken(self.neighbor):
-            # XXX: we should perhaps try to restart the process ??
+            # Process respawning handled by Processes._handle_problem().
+            # This branch handles cases where respawning failed or was disabled.
             log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
             if self.reactor.processes.terminate_on_error:
                 self.reactor.api_shutdown()

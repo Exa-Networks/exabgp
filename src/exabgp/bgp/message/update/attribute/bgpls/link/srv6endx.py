@@ -84,9 +84,9 @@ class Srv6EndX(FlagLS):
                 )
                 subtlvs.append(subsubtlv.json())
             else:
-                subsubtlv = hexstring(data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE])
-                # BUG: To be fixed
-                subtlvs.append(subsubtlv.json())
+                # Unknown sub-TLV: format as JSON string with hex data
+                hex_data = hexstring(data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE])
+                subtlvs.append(f'"unknown-subtlv-{code}": "{hex_data}"')
             data = data[length + cls.BGPLS_SUBTLV_HEADER_SIZE :]
 
         content = {
