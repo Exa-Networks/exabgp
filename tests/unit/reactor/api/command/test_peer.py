@@ -476,7 +476,7 @@ class TestNeighborDeleteCommand:
     @pytest.fixture
     def mock_reactor_with_peers(self):
         """Create mock reactor with pre-existing peers."""
-        from unittest.mock import Mock, patch
+        from unittest.mock import Mock
         from exabgp.configuration.configuration import Configuration
         from exabgp.reactor.api.command.peer import neighbor_create
 
@@ -688,7 +688,7 @@ class TestNeighborDeleteCommand:
 
     def test_delete_graceful_shutdown_order(self, mock_reactor_with_peers):
         """Test that delete follows correct order: remove() BEFORE deleting from structures."""
-        from unittest.mock import patch, Mock, call
+        from unittest.mock import patch, Mock
         from exabgp.reactor.api.command.peer import neighbor_delete
 
         # Track operation order
