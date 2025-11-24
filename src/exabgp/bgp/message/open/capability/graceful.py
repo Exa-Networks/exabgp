@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import ClassVar, Dict, Iterable, List, Optional, Tuple
+from typing import ClassVar, Dict, Iterable, List, Optional, Tuple, Union
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -59,7 +59,7 @@ class Graceful(Capability, dict):
             f'"{afi}/{safi}": [{restart_str if family & 0x80 else ""} ] '
             for afi, safi, family in [(str(a), str(s), self[(a, s)]) for (a, s) in self.keys()]
         )
-        d: Dict[str, int | str] = {
+        d: Dict[str, Union[int, str]] = {
             'name': '"graceful restart"',
             'time': self.restart_time,
             'address-family-flags': f'{{ {families_json}}}',
