@@ -81,3 +81,31 @@ User: "commit"
 ❌ Wrong: git add -A && git commit
 ✅ Right: Stop, categorize files, ask which to include
 ```
+
+---
+
+## ENFORCEMENT
+
+Before ANY git operation:
+```bash
+git status && git log --oneline -3
+```
+- [ ] Command run: `<paste above>`
+- [ ] Output: `<paste full output>`
+- [ ] No unexpected changes OR user asked about them
+- [ ] Categorized: my changes vs pre-existing
+
+**If ANY unchecked: STOP. Don't run git command.**
+
+---
+
+## VIOLATION DETECTION
+
+**If I do these, I'm violating:**
+- `git add -A` without asking which files
+- `git commit` with pre-existing changes without explicit user approval
+- Any git operation without fresh `git status` pasted
+- Claiming "pushed" without `git log origin/main..HEAD` showing empty
+- Assuming repo state without verification
+
+**Auto-fix:** Stop. Run `git status`. Paste. Ask user.

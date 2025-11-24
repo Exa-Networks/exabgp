@@ -37,22 +37,80 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 
 | File | Purpose | Size |
 |------|---------|------|
-| **MANDATORY_REFACTORING_PROTOCOL.md** | Step-by-step verification for ALL refactoring | 3.7 KB |
-| **ERROR_RECOVERY_PROTOCOL.md** | NEVER rush after mistakes - slow down and follow protocols | 2.2 KB |
-| **GIT_VERIFICATION_PROTOCOL.md** | NEVER make git claims without fresh verification | 0.7 KB |
-| **CODING_STANDARDS.md** | Python 3.8+ compatibility, type annotations, BGP APIs | 3.5 KB |
-| **TESTING_DISCIPLINE.md** | NEVER claim success without testing ALL | 1.1 KB |
-| **COMMUNICATION_STYLE.md** | Terse, direct communication. Use agents. | 2.1 KB |
+| **VERIFICATION_DISCIPLINE.md** | NEVER claim success without pasting proof | 1.7 KB |
+| **MANDATORY_REFACTORING_PROTOCOL.md** | Step-by-step verification for ALL refactoring | 3.2 KB |
+| **ERROR_RECOVERY_PROTOCOL.md** | NEVER rush after mistakes - slow down and follow protocols | 2.9 KB |
+| **GIT_VERIFICATION_PROTOCOL.md** | NEVER make git claims without fresh verification | 3.1 KB |
+| **CODING_STANDARDS.md** | Python 3.8+ compatibility, type annotations, BGP APIs | 3.9 KB |
+| **TESTING_DISCIPLINE.md** | NEVER claim success without testing ALL | 2.1 KB |
+| **COMMUNICATION_STYLE.md** | Terse, direct communication. Use agents. | 3.9 KB |
 | **EMOJI_GUIDE.md** | Systematic emoji usage for clarity | 1.8 KB |
-| **PLANNING_GUIDE.md** | Standards for project planning docs | 1.5 KB |
-| **CI_TESTING.md** | Complete testing requirements and commands | 3.2 KB |
-| **FUNCTIONAL_TEST_DEBUGGING_GUIDE.md** | Systematic process for debugging encoding test failures | 4.8 KB |
+| **PLANNING_GUIDE.md** | Standards for project planning docs | 1.6 KB |
+| **CI_TESTING.md** | Complete testing requirements and commands | 1.1 KB |
+| **FUNCTIONAL_TEST_DEBUGGING_GUIDE.md** | Systematic process for debugging encoding test failures | 4.2 KB |
+| **PRE_FLIGHT_CHECKLIST.md** | Session start checklist | 0.9 KB |
+| **DOCUMENTATION_PLACEMENT_GUIDE.md** | Where to put docs (CRITICAL for creating docs) | 7.3 KB |
 
-**Total core protocols: ~25 KB**
+**Total core protocols: ~37 KB**
 
 ---
 
-## Active Work (`wip/`)
+## Directory Structure
+
+```
+.claude/
+├── # PROTOCOLS (how we work - READ EVERY SESSION)
+├── VERIFICATION_DISCIPLINE.md
+├── COMMUNICATION_STYLE.md
+├── GIT_VERIFICATION_PROTOCOL.md
+├── MANDATORY_REFACTORING_PROTOCOL.md
+├── ERROR_RECOVERY_PROTOCOL.md
+├── CODING_STANDARDS.md
+├── TESTING_DISCIPLINE.md
+├── PLANNING_GUIDE.md
+├── CI_TESTING.md
+├── FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
+├── PRE_FLIGHT_CHECKLIST.md
+├── EMOJI_GUIDE.md
+├── DOCUMENTATION_PLACEMENT_GUIDE.md    # ⚠️ READ BEFORE CREATING ANY DOC
+│
+├── # CODEBASE REFERENCE (how to use/modify codebase)
+├── exabgp/
+│   ├── CODEBASE_ARCHITECTURE.md        # Where everything is
+│   ├── DATA_FLOW_GUIDE.md              # How data flows
+│   ├── REGISTRY_AND_EXTENSION_PATTERNS.md  # How to extend
+│   ├── BGP_CONCEPTS_TO_CODE_MAP.md     # BGP concepts → code
+│   └── CRITICAL_FILES_REFERENCE.md     # Most important files
+│
+├── # DOCUMENTATION (all project docs)
+├── docs/
+│   ├── README.md
+│   ├── projects/               # Completed work
+│   │   ├── asyncio-migration/
+│   │   ├── type-annotations/
+│   │   ├── pack-method-standardization/
+│   │   └── ...
+│   ├── wip/                    # Active work in progress
+│   │   └── type-annotations/
+│   ├── reference/              # API reference
+│   │   └── NEIGHBOR_SELECTOR_SYNTAX.md
+│   ├── plans/                  # Future plans
+│   └── archive/                # Superseded experiments
+│
+├── # REFERENCE DOCS
+├── FUNCTIONAL_TEST_ARCHITECTURE.md
+├── FILE_NAMING_CONVENTIONS.md
+│
+└── # SPECIAL
+    ├── README.md                        # This file
+    └── settings.local.json
+```
+
+**⚠️ BEFORE CREATING ANY DOC:** Read `DOCUMENTATION_PLACEMENT_GUIDE.md`
+
+---
+
+## Active Work (`docs/wip/`)
 
 Active development projects. Completed work moves to `docs/projects/`.
 
@@ -88,7 +146,7 @@ Active development projects. Completed work moves to `docs/projects/`.
 
 **Testing:** ✅ 1613/1613 tests pass (1424 existing + 189 new)
 
-### Type Annotations (`wip/type-annotations/`)
+### Type Annotations (`docs/wip/type-annotations/`)
 **Status:** Phase 3 - MyPy error reduction
 **Progress:** 605 errors (47% ↓ from 1,149 baseline)
 
@@ -96,23 +154,24 @@ Active development projects. Completed work moves to `docs/projects/`.
 - README.md - Project overview
 - MYPY_STATUS.md - Current error analysis
 - PROGRESS.md - Phase tracking
-- See full structure in `wip/type-annotations/`
+- See full structure in `docs/wip/type-annotations/`
 
 **Historical docs:** `docs/projects/type-annotations/` (early planning)
 
 ---
 
-## Completed Projects
+## Completed Projects (`docs/projects/`)
 
-**All completed work moved to:** `docs/projects/`
+**All completed work is in:** `.claude/docs/projects/`
 
 Major completed projects:
 - AsyncIO Migration (100% test parity)
 - Pack Method Standardization
 - RFC Alignment
 - Testing Improvements
+- CLI Interactive Enhancement
 
-**See:** `docs/projects/README.md` for full project list
+**See:** `.claude/docs/projects/README.md` for full project list
 
 ---
 

@@ -1,69 +1,55 @@
 # MANDATORY REFACTORING PROTOCOL
 
-**Exists due to:** 2025-11-16 failure - 95 files refactored, 72 test failures, full revert, all work lost.
-
-**Root cause:** No verification between steps. Assumed tests passed without running them.
+**Exists due to:** 95 files refactored, 72 test failures, full revert. No verification between steps.
 
 ---
 
 ## PHASE 0: PLANNING
 
-### Write Numbered Steps
-
-Each step MUST have:
+Write numbered steps. Each MUST have:
 ```
 Step N: [Action] [What] in [Where]
   Files: [exact paths]
   Verification: [exact command]
-  Expected: [expected output - "0 failures"]
+  Expected: "0 failures"
 ```
 
-❌ Vague: "Rename methods" "Update files"
+❌ Vague: "Rename methods"
 ✅ Specific: "Rename ESI.pack() to pack_esi() in nlri/qualifier/esi.py"
 
-### Plan Requirements
-
+**Plan Requirements:**
 - [ ] Every step numbered
-- [ ] Every step has exact file paths
-- [ ] Every step has verification command
-- [ ] Every step has expected output
-- [ ] Steps ordered logically
+- [ ] Exact file paths
+- [ ] Verification command
+- [ ] Expected output
 - [ ] Final step: full test suite
-- [ ] No vague language ("various", "some", "multiple")
+- [ ] No vague language
 
-### Get User Approval
-
-Present complete plan. **DO NOT proceed without approval.**
+**Get user approval. DO NOT proceed without approval.**
 
 ---
 
 ## PHASE 1-N: EXECUTION
 
-### For Each Step
-
 ```
 === STEP N ===
-[Make changes for THIS step only]
-
+[Make changes]
 Verification: [run command]
 OUTPUT:
-[PASTE EXACT OUTPUT - DO NOT SUMMARIZE]
-
+[PASTE EXACT OUTPUT - NO SUMMARY]
 Result: PASS ✓
 === STEP N COMPLETE ===
 ```
 
-### Rules
-
-✅ Announce step before starting
+**Rules:**
+✅ Announce step
 ✅ Complete ONLY that step
 ✅ Run verification
-✅ **PASTE EXACT OUTPUT** (no summary)
-✅ Declare completion
-✅ Stop if ANY failures
+✅ PASTE EXACT OUTPUT
+✅ Stop if failures
 
 ❌ Skip verification
-❌ Batch multiple steps
+❌ Batch steps
 ❌ Summarize output
 ❌ Proceed with failures
 
@@ -71,97 +57,115 @@ Result: PASS ✓
 
 ## PHASE FINAL: PRE-COMMIT
 
-**Before ANY git commit:**
+**Before ANY commit:**
 
-### 1. Run Complete Test Suite
 ```bash
 ./qa/bin/test_everything
 ```
-**PASTE OUTPUT - Must show all 6 test suites passed**
+**PASTE OUTPUT - all 6 suites passed**
 
-This runs:
-- Ruff format
-- Ruff check
-- Unit tests (1376 tests)
-- Functional encoding tests (72 tests)
-- Functional decoding tests
-- Configuration validation
-
-### 2. Checklist
-
+**Checklist:**
 - [ ] `./qa/bin/test_everything` passed (proof pasted)
 - [ ] `git status` reviewed
-- [ ] User approval obtained
+- [ ] User approval
 
-**If ANY box unchecked: DO NOT COMMIT**
+**If ANY unchecked: DO NOT COMMIT**
 
 ---
 
 ## ONE FUNCTION AT A TIME
 
-**MANDATORY: Refactor ONE function per step, never batch.**
+**MANDATORY: ONE function per step. No batching.**
 
 **Why:**
-- ✅ Immediate feedback if THIS change works
-- ✅ Easy debugging - only one thing changed
-- ✅ Surgical rollback - revert just the broken change
-- ✅ Always working - codebase passes tests at every step
+- Immediate feedback
+- Easy debugging
+- Surgical rollback
+- Always working
 
-**Examples:**
-- ✅ "Step 1: ESI.pack() → pack_esi()" "Step 2: Labels.pack() → pack_labels()"
-- ❌ "Step 1: Rename all qualifier pack() methods"
+✅ "Step 1: ESI.pack() → pack_esi()" "Step 2: Labels.pack() → pack_labels()"
+❌ "Step 1: Rename all qualifier pack() methods"
 
-**No exceptions.** Even if functions are in same file, related, or "simple".
+**No exceptions.**
 
-### All Tests Must Always Pass
+### All Tests Always Pass
 
-**100% pass rate MANDATORY at every step.**
+**100% pass rate at every step.**
 
 If tests fail:
-1. STOP - no other functions
-2. ANALYZE - why THIS change failed
-3. FIX - correct the issue
-4. RETEST - full suite again
-5. ONLY PROCEED when all tests pass
-
-**No acceptable state with failing tests.**
+1. STOP
+2. ANALYZE why THIS change failed
+3. FIX it
+4. RETEST full suite
+5. PROCEED only when all pass
 
 ---
 
 ## GIT STRATEGY
 
-### Commit Messages
+**Commit messages:**
 ```
 Refactor: Rename <Class>.<old>() to <Class>.<new>()
 ```
 
-### When to Commit
-✅ Function renamed, all call sites updated, ALL tests pass, linting passes
+**When to commit:**
+✅ Function renamed + all call sites + ALL tests pass + linting passes
 ❌ Tests failing, partial work, "will fix next"
 
-### One Function = One Commit
-Every commit represents working, tested, verified code.
+**One function = one commit.**
 
 ---
 
 ## ENFORCEMENT
 
-**This protocol is MANDATORY.**
-
-Violating it:
-- Wastes time (reverts)
-- Loses work
-- Breaks trust
-
-**The forcing function:** Cannot proceed without pasting proof current step passed.
+Cannot proceed without pasting proof current step passed.
 
 ---
 
 ## REMEMBER
 
-1. **ONE FUNCTION AT A TIME**
-2. **ALL TESTS MUST ALWAYS PASS**
-3. **PASTE PROOF AT EVERY STEP**
-4. **COMMIT ONLY WHEN PASSING**
+1. ONE FUNCTION AT A TIME
+2. ALL TESTS MUST ALWAYS PASS
+3. PASTE PROOF AT EVERY STEP
+4. COMMIT ONLY WHEN PASSING
 
 **When in doubt: STOP and verify.**
+
+---
+
+## ENFORCEMENT
+
+For EACH step before proceeding to next:
+```
+=== STEP N ===
+Verification: <command>
+OUTPUT:
+<FULL OUTPUT PASTED - NO SUMMARY>
+Exit code: 0
+Result: PASS ✓
+```
+- [ ] Output pasted (not summarized)
+- [ ] Exit code 0
+- [ ] ALL tests passed (not "most tests")
+
+**If ANY unchecked: STOP. Fix current step.**
+
+Before ANY commit:
+- [ ] `./qa/bin/test_everything` run
+- [ ] Output pasted showing all 6 suites passed
+- [ ] User approval obtained
+
+**If ANY unchecked: DO NOT COMMIT.**
+
+---
+
+## VIOLATION DETECTION
+
+**If I do these, I'm violating:**
+- Batch multiple steps together
+- Summarize test output instead of pasting
+- Proceed with ANY test failures
+- Skip verification command
+- Commit without full test suite passing
+
+**Auto-fix:** Stop. Run verification. Paste output. Wait for pass before next step.
