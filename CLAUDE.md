@@ -103,12 +103,17 @@ env exabgp_log_enable=false pytest ./tests/unit/
 ./qa/bin/functional encoding --list  # List all tests
 ./qa/bin/functional encoding <letter>  # Run one test
 
+# Inspect test configuration (view all test files)
+env EDITOR=cat ./qa/bin/functional encoding --edit <letter>
+
 # Debug in separate terminals
 ./qa/bin/functional encoding --server <letter>  # Terminal 1
 ./qa/bin/functional encoding --client <letter>  # Terminal 2
 ```
 
-**See:** `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` for systematic debugging.
+**See:**
+- `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` for systematic debugging
+- `.claude/FUNCTIONAL_TEST_EDIT.md` for inspecting test configurations
 
 ### Decode BGP Messages
 
@@ -244,6 +249,10 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Working with neighbor-targeted commands
     - **Contains:** Selector syntax, matching algorithm, usage patterns
 
+11. **`.claude/exabgp/ENVIRONMENT_VARIABLES.md`** - Environment variables reference
+    - **Read when:** Working with configuration, environment variables, reactor/daemon/logging/API settings
+    - **Contains:** All exabgp_* variables, tcp.attempts, bgp.*, daemon.*, log.*, api.*, reactor.*, cache.*, debugging options
+
 **Quick reference:**
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2
@@ -252,6 +261,7 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
 - Working with CLI → Read #6, #7, #8
 - Adding CLI commands → Read #6, #8, #3
 - Understanding API protocol → Read #9, #10
+- Environment variables/configuration → Read #11
 
 ---
 
@@ -291,6 +301,9 @@ Unused `negotiated` parameters are OK and EXPECTED.
 
 **No asyncio introduction** - uses custom reactor
 **No FIB manipulation** - BGP protocol only
+
+**Environment Variables:**
+- See `.claude/exabgp/ENVIRONMENT_VARIABLES.md` for all configuration options (tcp.*, bgp.*, daemon.*, log.*, api.*, reactor.*, etc.)
 
 ---
 
