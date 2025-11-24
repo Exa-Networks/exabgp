@@ -44,15 +44,15 @@
 
 ### Large File Refactoring
 
-- [ ] **port.py (4,982 lines)** - `src/exabgp/protocol/ip/port.py`
-  - [ ] Extract port names dictionary to YAML/JSON data file
-  - [ ] Remove dead code at lines 4975-4982
-  - [ ] Split into Port class + loader module
+- [x] **port.py (4,982 → 89 lines)** - `src/exabgp/protocol/ip/port.py` ✅ DONE
+  - [x] Extracted port names dictionary to `port_data.json` (4,931 lines)
+  - [x] Removed dead code
+  - [x] Clean Port class with lazy loading
 
-- [ ] **cli.py (2,595 lines)** - `src/exabgp/application/cli.py`
-  - [ ] Extract Colors class to separate module
-  - [ ] Extract PersistentSocketConnection to network module
-  - [ ] Split command execution from REPL handling
+- [x] **cli.py (2,595 → 1,940 lines)** - `src/exabgp/application/cli.py` ✅ PARTIAL
+  - [x] Extracted Colors class to `cli/colors.py` (57 lines)
+  - [x] Extracted PersistentSocketConnection to `cli/persistent_connection.py` (609 lines)
+  - [ ] Split command execution from REPL handling (future)
 
 - [ ] **peer.py (1,292 lines)** - `src/exabgp/reactor/peer.py`
   - [ ] Address XXX/FIXME comments at lines 437, 604-605, 703, 1115, 1151
@@ -141,9 +141,9 @@
 | Priority | Issue | Files | Complexity | Impact | Status |
 |----------|-------|-------|-----------|--------|--------|
 | 1 | Exception handling | Across codebase | Low | High | **DONE** |
-| 2 | Refactor port.py (4982 lines) | `protocol/ip/port.py` | Low | High | TODO |
+| 2 | Refactor port.py (4982 → 89 lines) | `protocol/ip/port.py` | Low | High | **DONE** |
 | 3 | Add missing return type annotations | 140 files | Medium | High | TODO |
-| 4 | Split cli.py (2595 lines) | `application/cli.py` | High | High | TODO |
+| 4 | Split cli.py (2595 → 1940 lines) | `application/cli.py` | High | High | **PARTIAL** |
 | 5 | Eliminate circular dependencies | `bgp/fsm.py`, `reactor/api/` | High | Medium | TODO |
 | 6 | Add test coverage for reactor | `tests/unit/` | Medium | Medium | TODO |
 | 7 | Replace 90 print() calls | Across codebase | Low | Medium | TODO |
