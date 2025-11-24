@@ -1,99 +1,33 @@
-# CI Testing Guide
+# CI Testing
 
-**MANDATORY - Run ALL tests before declaring code ready.**
+Run ALL tests before declaring code ready.
 
 ---
 
 ## Required Test Sequence
 
 ```bash
-# Single command - runs ALL tests, exits on first failure
-./qa/bin/test_everything
+./qa/bin/test_everything  # ALL tests, exits on first failure
 ```
 
-**Individual commands (for reference or debugging):**
+**Individual commands (for debugging only):**
 ```bash
-# 1. Linting
 ruff format src && ruff check src
-
-# 2. Unit tests
 env exabgp_log_enable=false pytest ./tests/unit/
-
-# 3. Functional encoding tests (all 72)
 ./qa/bin/functional encoding
-
-# 4. Functional decoding tests
 ./qa/bin/functional decoding
-
-# 5. Configuration validation
 ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
-```
-
----
-
-## Test Details
-
-### Linting
-```bash
-ruff format src        # Format (single quotes, 120 char)
-ruff check src         # Check errors
-```
-**Must show:** "All checks passed!"
-
-### Unit Tests
-```bash
-env exabgp_log_enable=false pytest ./tests/unit/ -q
-```
-**Must show:** "1376 passed" with 0 failures
-
-### Functional Tests
-```bash
-# List available tests
-./qa/bin/functional encoding --short-list
-
-# Run specific test
-./qa/bin/functional encoding <letter>
-
-# Run all (sequential, not parallel)
-for test in $(./qa/bin/functional encoding --short-list); do
-  ./qa/bin/functional encoding "$test"
-done
-```
-
-**What it does:** Spawns 72 ExaBGP client/server pairs, tests real BGP message exchange
-**File descriptors:** Tool automatically sets ulimit if needed
-**Success:** All tests ✓, completes in <60s
-**Timeout:** 20s per test - timeouts indicate encoding/decoding bugs
-
-**Test results:**
-- ✓ Passed
-- ✖ Failed
-- ⏱ Timed out (encoding/decoding bug)
-- ○ Skipped
-
-### Other Tests
-```bash
-./qa/bin/functional parsing   # Config file parsing
-./qa/bin/functional decoding  # Message decoding
-./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf  # Config validation
 ```
 
 ---
 
 ## Pre-Commit Checklist
 
-- [ ] `./qa/bin/test_everything` - all 6 test suites pass ✅
+- [ ] `./qa/bin/test_everything` passes all 6 suites
 - [ ] `git status` reviewed
-- [ ] User approval obtained
+- [ ] User approval
 
 **If ANY unchecked: DO NOT COMMIT**
-
-**Detailed checklist (what ./qa/bin/test_everything runs):**
-- [ ] `ruff format src && ruff check src` ✅
-- [ ] `pytest ./tests/unit/` - 1376 passed ✅
-- [ ] `./qa/bin/functional encoding` - 72/72 passed ✅
-- [ ] `./qa/bin/functional decoding` - all passed ✅
-- [ ] Config validation passed ✅
 
 ---
 
@@ -101,38 +35,29 @@ done
 
 ### Encoding Test Failures
 
-**Quick fix:** Run server and client in separate terminals to see actual output:
+Run server + client in separate terminals:
 
 ```bash
-# Terminal 1 (start FIRST):
+# Terminal 1 (start FIRST)
 ./qa/bin/functional encoding --server <test_id>
 
-# Terminal 2 (start SECOND):
+# Terminal 2 (start SECOND)
 ./qa/bin/functional encoding --client <test_id>
 ```
 
-**Systematic debugging:** See `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` for:
-- Step-by-step process
-- Output interpretation
-- Troubleshooting common issues
-- Advanced techniques (packet capture, logging)
+**See:** `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` for complete process.
 
 ### Port Conflicts
+
 ```bash
-killall -9 python  # Clear leftover test processes
+killall -9 python
 ```
 
 ---
 
 ## CI Workflows
 
-**All must pass:**
+All must pass:
 - Linting (Python 3.12)
 - Unit tests (Python 3.8-3.12)
 - Functional tests (Python 3.8-3.12)
-- Legacy tests (Python 3.6)
-
----
-
-**Updated:** 2025-11-16
-**See:** `.claude/archive/docs/` for detailed guides

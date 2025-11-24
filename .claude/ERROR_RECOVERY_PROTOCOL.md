@@ -1,101 +1,109 @@
 # ERROR RECOVERY PROTOCOL
 
-**Why this exists:** After making mistakes, rushed to "fix" things faster, created more errors, violated protocols.
+After mistakes: rushed to fix faster, created more errors.
+
+---
 
 ## MANDATORY RULES
 
-**1. NEVER rush after making a mistake**
+**1. NEVER rush after mistake**
 - Slow down, not speed up
 - Mistakes compound when rushing
-- Take time to verify each step
 
-**2. ALWAYS follow existing protocols, especially after errors**
-- Read GIT_VERIFICATION_PROTOCOL.md before git operations
+**2. ALWAYS follow protocols after errors**
+- Read GIT_VERIFICATION_PROTOCOL.md before git ops
 - Read MANDATORY_REFACTORING_PROTOCOL.md before changes
-- Check file locations with `pwd` before operations
-- Verify with `ls` before and after moves
+- Check `pwd` before operations
+- Verify with `ls` before/after moves
 
-**3. NEVER fear upsetting the user**
-- User prefers slow and correct over fast and broken
-- Better to ask clarifying questions than make assumptions
-- User will tell you when to move faster
+**3. NEVER fear upsetting user**
+- User prefers slow + correct over fast + broken
+- Ask clarifying questions vs make assumptions
 - Quality > Speed
 
-**4. When you make a mistake:**
+**4. When you make mistake:**
 1. STOP
-2. Acknowledge the mistake clearly
-3. SLOW DOWN (do not speed up)
-4. Read relevant protocols
-5. Verify current state (`pwd`, `ls`, `git status`)
-6. Plan fix carefully
-7. Execute fix methodically
-8. Verify fix worked
+2. Acknowledge clearly
+3. SLOW DOWN
+4. Read relevant protocol
+5. Verify state (`pwd`, `ls`, `git status`)
+6. Plan fix
+7. Execute methodically
+8. Verify fix
 
-**5. CRITICAL: When user corrects you - ALWAYS offer to update protocols**
-- User correction = protocol gap that will cause same error in future sessions
-- IMMEDIATELY offer: "Should I update [PROTOCOL_NAME].md to prevent this error in future sessions?"
-- If yes: Update protocol with specific rule to prevent this exact error
-- This creates self-improving system that gets better over time
-- Do NOT just apologize and move on - FIX THE PROTOCOL
+**5. CRITICAL: When user corrects you**
+- User correction = protocol gap
+- IMMEDIATELY offer: "Should I update [PROTOCOL].md to prevent this?"
+- If yes: Update protocol with specific rule
+- Do NOT just apologize - FIX THE PROTOCOL
 
-**Example:**
-```
-User: "Files in .claude/ should be UPPERCASE"
-You: "You're right - I violated FILE_NAMING_CONVENTIONS.md.
-     Should I update FILE_NAMING_CONVENTIONS.md to explicitly
-     document that .claude/ protocol files use UPPERCASE?"
-```
+**6. Common mistake patterns:**
+- Working in wrong directory → check `pwd` first
+- Creating in wrong place → verify path before `mkdir`
+- Moving non-existent files → verify with `ls` first
+- Batch without verification → verify each step
 
-**6. Common mistake patterns to avoid:**
-- Working in wrong directory → Always check `pwd` first
-- Creating directories in wrong place → Verify path before `mkdir`
-- Moving files that don't exist → Verify with `ls` first
-- Batch operations without verification → Verify each step
-- Skipping git verification → ALWAYS follow GIT_VERIFICATION_PROTOCOL.md
-
-**7. CRITICAL: Git operations with pre-existing changes**
-- NEVER run `git add -A` without explicit confirmation of which files to include
+**7. Git with pre-existing changes:**
+- NEVER run `git add -A` without explicit confirmation
 - NEVER assume "commit" means "commit all files"
-- ALWAYS ask which files to include when multiple files are modified
-- Even if user says "commit", STOP and ask: "Which files? Only my changes or all modified files?"
-- List files clearly: "[my changes] + [pre-existing changes]"
-- WAIT for explicit answer before staging any files
-- Protocol violation: Committing pre-existing changes without asking user first
+- ALWAYS ask which files when multiple modified
+- Even if user says "commit", STOP and ask: "Which files?"
+- List: "[my changes] + [pre-existing]"
+- WAIT for explicit answer
 
-## Example: File Move Operations
-
-**WRONG (rushed after mistake):**
-```bash
-mkdir -p docs/projects/foo  # didn't check pwd
-mv file.md docs/...  # didn't verify file exists
-```
-
-**CORRECT (methodical):**
-```bash
-pwd  # verify location
-ls -la | grep file.md  # verify file exists
-mkdir -p docs/projects/foo  # create destination
-ls docs/projects/  # verify created
-mv file.md docs/projects/foo/  # move
-ls docs/projects/foo/  # verify moved
-```
+---
 
 ## Recovery Checklist
 
-After making ANY mistake:
+After ANY mistake:
 - [ ] Stop and breathe
-- [ ] Acknowledge mistake to user
-- [ ] Identify which protocol was violated
+- [ ] Acknowledge mistake
+- [ ] Identify protocol violated
 - [ ] Re-read that protocol
-- [ ] Verify current system state
+- [ ] Verify current state
 - [ ] Plan fix step-by-step
 - [ ] Execute methodically
 - [ ] Verify each step
 
-**After user corrects you:**
-- [ ] ALWAYS offer to update the protocol
-- [ ] Add specific rule to prevent this exact error
-- [ ] Verify protocol update captures the lesson
+After user corrects you:
+- [ ] ALWAYS offer to update protocol
+- [ ] Add rule to prevent exact error
+- [ ] Verify protocol captures lesson
 
 **User's patience > Your speed**
 **Protocol improvements > Apologies**
+
+---
+
+## ENFORCEMENT
+
+After making ANY mistake:
+- [ ] STOPPED immediately
+- [ ] Acknowledged mistake clearly
+- [ ] Identified which protocol violated
+- [ ] Re-read that protocol (paste name)
+- [ ] Verified current state: `<paste git status / pwd / ls output>`
+- [ ] Planned fix in numbered steps
+- [ ] Executed methodically (one step at a time)
+
+**If ANY unchecked: SLOW DOWN MORE.**
+
+After user corrects me:
+- [ ] Offered to update protocol
+- [ ] User said yes/no: `<paste response>`
+- [ ] If yes: Updated protocol with specific rule
+
+**If ANY unchecked: OFFER NOW.**
+
+---
+
+## VIOLATION DETECTION
+
+**If I do these after mistake, I'm violating:**
+- Speed up instead of slow down
+- Skip re-reading protocol
+- Batch multiple fixes together
+- Make assumptions without verification
+- Apologize without offering protocol update
+
+**Auto-fix:** Stop. Breathe. Re-read protocol. One step at a time.

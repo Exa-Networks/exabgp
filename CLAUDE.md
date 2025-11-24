@@ -1,373 +1,319 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## 🚨 SESSION START PROTOCOL - READ FIRST 🚨
-
-**BEFORE doing ANYTHING in this repository, you MUST read ALL of these files:**
-
-1. `.claude/COMMUNICATION_STYLE.md` - Communication requirements (terse, direct, emojis)
-2. `.claude/EMOJI_GUIDE.md` - Systematic emoji usage for clarity
-3. `.claude/GIT_VERIFICATION_PROTOCOL.md` - Git state verification before operations
-4. `.claude/MANDATORY_REFACTORING_PROTOCOL.md` - Step-by-step refactoring verification
-5. `.claude/ERROR_RECOVERY_PROTOCOL.md` - Slow down after mistakes
-6. `.claude/CODING_STANDARDS.md` - Python 3.8+, type annotations, BGP APIs
-7. `.claude/TESTING_DISCIPLINE.md` - Never claim success without testing
-8. `.claude/PLANNING_GUIDE.md` - Project planning standards
-9. `.claude/CI_TESTING.md` - Complete testing requirements
-10. `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` - Debugging encoding test failures
-
-**Total reading: ~25 KB - DO THIS EVERY SESSION (you have no memory between sessions)**
-
-After reading protocols, check git state:
-```bash
-git status
-git diff
-git diff --staged
-```
-
-If ANY files are modified/staged: ASK user how to handle before starting work.
-
-**These protocols are NOT optional. Read ALL of them BEFORE proceeding with any task.**
+Guidance for Claude Code (claude.ai/code) working with this repository.
 
 ---
 
-## 🚨 MANDATORY REFACTORING PROTOCOL 🚨
+## 🚨 SESSION START PROTOCOL - READ FIRST 🚨
 
-**For ANY refactoring work (renaming methods, restructuring code, etc.):**
+**CRITICAL: These are ACTIVE RULES, not reference docs. You MUST apply them to EVERY response.**
 
-**YOU MUST follow `.claude/MANDATORY_REFACTORING_PROTOCOL.md`**
+**Read these files as RULES you will FOLLOW, not just information to absorb:**
 
-This protocol is mandatory due to a critical failure where 95 files were refactored and committed with 72 test failures, requiring a full revert and loss of all work.
+1. `.claude/VERIFICATION_DISCIPLINE.md` - Verify before claiming (read FIRST)
+   - **Rule:** Never claim success without pasting command output
+   - **Apply:** Before ANY claim, run command, paste output
 
-**The protocol requires:**
-1. **Pre-work:** Write explicit numbered steps with verification for each
-2. **Execution:** Prove each step passes tests before proceeding (paste exact output)
-3. **Pre-commit:** Run full test suite and paste output showing 0 failures
+2. `.claude/COMMUNICATION_STYLE.md` - Terse, direct communication
+   - **Rule:** No politeness, no hedging, no verbosity
+   - **Apply:** Every response - check word count, cut explanations
 
-**READ THE PROTOCOL BEFORE ANY REFACTORING WORK.**
+3. `.claude/EMOJI_GUIDE.md` - Emoji usage
+   - **Rule:** Start EVERY line with emoji (✅/❌/📁/🧪/etc)
+   - **Apply:** Before sending response, verify every status line starts with emoji
+
+4. `.claude/GIT_VERIFICATION_PROTOCOL.md` - Git state verification
+   - **Rule:** Never git operation without fresh `git status` pasted
+   - **Apply:** Before ANY git command, run and paste verification
+
+5. `.claude/MANDATORY_REFACTORING_PROTOCOL.md` - Refactoring verification
+   - **Rule:** One function at a time, paste proof at every step
+   - **Apply:** When refactoring, stop after each function, paste test output
+
+6. `.claude/ERROR_RECOVERY_PROTOCOL.md` - Slow down after mistakes
+   - **Rule:** After mistake, SLOW DOWN, re-read protocol
+   - **Apply:** When corrected, stop, identify violated protocol, re-read
+
+7. `.claude/CODING_STANDARDS.md` - Python 3.8+, BGP APIs
+   - **Rule:** Union[int, str] NOT int | str, negotiated param required
+   - **Apply:** Before writing code, check syntax compatibility
+
+8. `.claude/TESTING_DISCIPLINE.md` - Never claim success without testing
+   - **Rule:** ./qa/bin/test_everything before "fixed"/"ready"/"complete"
+   - **Apply:** Before claiming done, run all tests, paste output
+
+9. `.claude/PLANNING_GUIDE.md` - Project planning
+10. `.claude/CI_TESTING.md` - Testing requirements
+11. `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` - Debug test failures
+
+**HOW TO READ: For each protocol, extract the SPECIFIC RULE you will apply to your NEXT response.**
+
+After reading, check git state:
+```bash
+git status && git diff && git diff --staged
+```
+
+If ANY files modified/staged: ASK user how to handle before starting.
+
+**Self-check after reading:**
+- [ ] Can I state the emoji rule? (Start every line with emoji)
+- [ ] Can I state the verification rule? (Paste command output before claiming)
+- [ ] Can I state the git rule? (Fresh git status before operations)
+- [ ] Will I APPLY these to my next response? (Not just "know" them)
+
+**THEN complete:** `.claude/PRE_FLIGHT_CHECKLIST.md` before starting work.
+
+**⚠️ BEFORE CREATING ANY DOCUMENTATION:** Read `.claude/DOCUMENTATION_PLACEMENT_GUIDE.md` to know where to put it.
+
+---
+
+## 🚨 CRITICAL TESTING REQUIREMENT 🚨
+
+**NEVER declare code "fixed"/"ready"/"working"/"complete" without running ALL tests:**
+
+```bash
+./qa/bin/test_everything  # ALL 6 test suites, exits on first failure
+```
+
+**DO NOT:**
+- Skip tests
+- Run partial tests and claim success
+- Claim "fixed" without verification
+
+**See:** `.claude/CI_TESTING.md` for complete checklist.
+
+---
 
 ## Development Commands
 
-**Testing:**
-- `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py` - Unit tests with coverage
-- `env exabgp_log_enable=false pytest ./tests/unit/` - Faster unit tests without coverage
-- `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation test
-- `./qa/bin/functional encoding` - Run all functional encoding tests (integration tests)
-- `./tests/quick-transport-test.sh` - Quick test for CLI transports (socket + pipe)
-  - **What it does:** Spawns 72 pairs of ExaBGP client/server instances to test real BGP message exchange
-  - **Output format:** Visual progress bar showing test status with letter identifiers (0-9, A-Z, a-z, α-κ)
-  - **Success criteria:** All 72 tests should pass (100%), typically completes in <60 seconds
-  - **Timeout:** Each test has 20 second timeout; timeouts indicate message encoding/decoding failures
-  - **Test results:**
-    - ✓ (passed) - Test completed successfully
-    - ✖ (failed) - Test failed with error
-    - ⏱ (timed out) - Test exceeded 20 second timeout (usually encoding/decoding bug)
-    - ○ (skipped) - Test was skipped
-  - **Summary output:** Shows counts and IDs of passed/failed/timed out/skipped tests
-  - **Pass percentage:** Total % of tests that passed (should be 100%)
-- `./qa/bin/functional encoding --list` - List all 72 tests with their letter identifiers and descriptions
-- `./qa/bin/functional encoding --short-list` - Compact list of test identifiers only
-- `./qa/bin/functional encoding <letter>` - Run specific test (e.g., `A`, `B`, `0`, `α`)
-  - Use this to debug individual test failures
-  - Test runs both client and server components
-- `./qa/bin/functional encoding --server <letter>` - Run only server component of specific test
-- `./qa/bin/functional encoding --client <letter>` - Run only client component of specific test
-  - **For systematic debugging: See `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md`**
-- `./sbin/exabgp decode -c <config> "<hex>"` - Decode BGP message hex payload to JSON
-  - Use when server shows "unexpected message" to see what was received vs expected
-  - **IMPORTANT:** Use `-c` with same config file as test (from `qa/encoding/<test>.ci`)
-  - Example: `./sbin/exabgp decode -c etc/exabgp/api-rib.conf "FFFF..."`
-- `./qa/bin/functional decoding` - Message decoding tests
-- `./qa/bin/parsing` - Configuration file parsing tests
-- `python3 setup.py sdist bdist_wheel` - Build distribution packages
-- `./release binary <target>` - Create self-contained zipapp binary
-
-**Linting:**
-- Uses `ruff` for linting and formatting (configured in pyproject.toml)
-- `ruff format` - Format code (single quotes, 120 char lines)
-
-## Testing Requirements
-
-⚠️ **CRITICAL: NEVER DECLARE CODE "FIXED" WITHOUT RUNNING ALL TESTS** ⚠️
-
-**MANDATORY REQUIREMENTS - Before declaring code "fixed", "ready", "working", or "complete":**
+### Testing
 
 ```bash
-# Single command to run ALL required tests
+# ALL tests (required before declaring success)
 ./qa/bin/test_everything
+
+# Individual (for debugging only)
+ruff format src && ruff check src
+env exabgp_log_enable=false pytest ./tests/unit/
+./qa/bin/functional encoding  # ALL 72 tests
+./qa/bin/functional decoding
+./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
+
+# Debug specific encoding test
+./qa/bin/functional encoding --list  # List all tests
+./qa/bin/functional encoding <letter>  # Run one test
+
+# Debug in separate terminals
+./qa/bin/functional encoding --server <letter>  # Terminal 1
+./qa/bin/functional encoding --client <letter>  # Terminal 2
 ```
 
-This runs all 6 test suites in sequence, exits on first failure with clear error messages.
+**See:** `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` for systematic debugging.
 
-**Individual test commands (for reference or debugging):**
-1. ✅ `ruff format src && ruff check src` - MUST pass with no errors
-2. ✅ `./qa/bin/functional encoding` - **Run ALL 72 tests** (NOT individual tests unless debugging)
-3. ✅ `./qa/bin/functional decoding` - **Run ALL 18 tests** (NOT individual tests unless debugging)
-4. ✅ `env exabgp_log_enable=false pytest ./tests/unit/` - ALL unit tests MUST pass
-5. ✅ `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf` - Configuration validation MUST pass
+### Decode BGP Messages
 
-**IMPORTANT:** When running functional encoding tests:
-- Default: `./qa/bin/functional encoding` runs ALL 72 tests - this is what you should use
-- Only specify test IDs (e.g., `./qa/bin/functional encoding A B C`) when debugging specific failures
-- NEVER run just 1-4 tests and claim success - you must verify all 72 tests pass
+```bash
+./sbin/exabgp decode -c <config> "<hex>"
+# Use when server shows "unexpected message"
+# IMPORTANT: Use -c with same config as test (from qa/encoding/<test>.ci)
+```
 
-**DO NOT skip any tests. DO NOT claim success without verification.**
+### Linting
 
-See `.claude/CI_TESTING.md` for complete pre-merge checklist.
+```bash
+ruff format src  # Single quotes, 120 char
+ruff check src   # Must pass
+```
 
-All CI tests must pass:
-  - Linting (ruff format + ruff check)
-  - Unit tests (Python 3.8-3.12)
-  - Functional tests (parsing, encoding, decoding)
-  - Note: ExaBGP 5.0 requires Python 3.8+ (3.6 no longer supported)
-- **File descriptor limit:** Automatically set to ≥40000 by functional tests
-  - The `./qa/bin/functional` tool automatically checks and increases ulimit if needed
-  - If tests fail with resource errors, manually run: `ulimit -n 64000`
-- **Encoding tests:** `./qa/bin/functional encoding` runs all tests in parallel (this is fine)
-  - Before running: `killall -9 python` to clear leftover test processes and avoid port conflicts
-  - Should complete in <20 seconds; if longer, remaining tests have failed
-  - Use `--list` or `--short-list` to see available tests
-  - **If tests fail:** Run `--server <letter>` and `--client <letter>` in separate terminals to see actual output
-  - **See `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` for systematic debugging process**
-- When tests fail, investigate and fix - don't just re-run
+### Port Conflicts
 
-**Quick test commands:**
-- All tests: `./qa/bin/test_everything` (recommended - runs all 6 test suites)
-- Unit tests: `env exabgp_log_enable=false pytest ./tests/unit/`
-- Configuration validation: `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf`
-- Encoding tests: `./qa/bin/functional encoding`
-- Decoding tests: `./qa/bin/functional decoding`
-- Linting: `ruff format src && ruff check src`
+```bash
+killall -9 python  # Clear leftover test processes
+```
+
+---
 
 ## Git Workflow
 
-**🚨 CRITICAL GIT RULES - NEVER VIOLATE THESE 🚨**
+**🚨 CRITICAL RULES 🚨**
 
-**NEVER COMMIT WITHOUT EXPLICIT USER REQUEST:**
-- DO NOT commit after completing work unless user explicitly says "commit"
-- DO NOT commit automatically after edits
-- WAIT for user to review changes first
-- User must explicitly say: "commit", "make a commit", "git commit", etc.
+**NEVER COMMIT without explicit user request:**
+- User must say: "commit", "make a commit", "git commit"
+- DO NOT commit after completing work
+- WAIT for user review
 
-**NEVER PUSH WITHOUT EXPLICIT USER REQUEST:**
-- DO NOT push automatically after committing
-- DO NOT push even if user said "commit and push" for a PREVIOUS task
-- EACH push requires explicit instruction for THAT SPECIFIC WORK
-- User must explicitly say: "push", "git push", "push now", etc.
+**NEVER PUSH without explicit user request:**
+- Each push requires explicit instruction for THAT work
+- User must say: "push", "git push", "push now"
 
-**When work is complete:**
-1. Stop and report what was done
+**When work complete:**
+1. Stop, report what was done
 2. WAIT for user instruction
-3. Only commit if user explicitly asks
-4. Only push if user explicitly asks for that specific commit
+3. Only commit if explicitly asked
+4. Only push if explicitly asked
 
-## Repository State Verification
+**Before ANY git operation:**
+```bash
+git status && git log --oneline -5
+```
 
-**CRITICAL: Always verify repository state before git operations**
+Verify no unexpected changes. If found: STOP and ask user.
 
-**READ `.claude/GIT_VERIFICATION_PROTOCOL.md` for complete requirements.**
+**See:** `.claude/GIT_VERIFICATION_PROTOCOL.md` for complete requirements.
 
-Before ANY git operations (commit, rebase, amend, reset, merge):
-1. **ALWAYS run `git status`** - Check for staged/unstaged changes
-2. **ALWAYS run `git log --oneline -5`** - Check recent commit history
-3. **ALWAYS verify user hasn't made manual changes** since last interaction
-4. **NEVER assume** the repository is in the state you last saw it
-5. **If unexpected changes detected:** STOP and ask user before proceeding
-6. **NEVER make claims about git state without fresh verification** - See protocol
-
-This prevents overwriting user's manual work and ensures awareness of repository state.
+---
 
 ## Architecture Overview
 
-**ExaBGP is a BGP implementation that does NOT manipulate the FIB (Forwarding Information Base).** Instead, it focuses on BGP protocol implementation and external process communication via JSON API.
+**ExaBGP:** BGP protocol implementation + JSON API. Does NOT manipulate FIB.
 
 **Core Components:**
 
-1. **BGP Protocol Stack** (`src/exabgp/bgp/`):
-   - `fsm.py` - BGP finite state machine (IDLE → ACTIVE → CONNECT → OPENSENT → OPENCONFIRM → ESTABLISHED)
-   - `message/` - BGP message types (OPEN, UPDATE, NOTIFICATION, KEEPALIVE)
-   - `message/open/capability/` - BGP capabilities (ASN4, MP-BGP, graceful restart, AddPath)
-   - `message/update/attribute/` - Path attributes (AS_PATH, communities, AIGP, BGP-LS, SR)
-   - `message/update/nlri/` - Network Layer Reachability Info for various address families
+1. **BGP Protocol** (`src/exabgp/bgp/`):
+   - `fsm.py` - State machine (IDLE → ESTABLISHED)
+   - `message/` - OPEN, UPDATE, NOTIFICATION, KEEPALIVE
+   - `message/update/` - Attributes, NLRI, address families
 
-2. **Reactor Pattern** (`src/exabgp/reactor/`):
-   - Event-driven architecture (NOT asyncio-based, custom implementation)
-   - `peer.py` - BGP peer state and protocol handling
-   - `network/` - TCP connection management
-   - `api/` - External process communication via JSON
+2. **Reactor** (`src/exabgp/reactor/`):
+   - Event-driven (custom, not asyncio)
+   - `peer.py` - BGP peer handling
+   - `api/` - External process communication
 
-3. **Configuration System** (`src/exabgp/configuration/`):
-   - Flexible parser supporting templates and neighbor inheritance
-   - Built-in validation
-   - YANG model support (`conf/yang/`)
+3. **Configuration** (`src/exabgp/configuration/`):
+   - Flexible parser, templates, validation
 
-4. **RIB Management** (`src/exabgp/rib/`):
-   - Maintains routing information base
-   - Tracks route changes and updates
+4. **RIB** (`src/exabgp/rib/`):
+   - Routing information base
 
-## Key NLRI Support
+**Supported Address Families:**
+IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
 
-ExaBGP supports extensive BGP address families:
-- IPv4/IPv6 Unicast and Multicast
-- VPNv4/VPNv6 (MPLS L3VPN)
-- EVPN (Ethernet VPN)
-- BGP-LS (Link State)
-- FlowSpec (Traffic filtering)
-- VPLS (Virtual Private LAN Service)
-- MUP (Mobile User Plane)
-- SRv6 (Segment Routing over IPv6)
+**Design Patterns:**
+- Registry/Factory: `@Message.register`, `@NLRI.register`
+- Template Method: `pack_nlri()`, `unpack_nlri()`
+- State Machine: BGP FSM
+- Observer: Reactor coordinates peers
 
-## Testing Strategy
+**Data Flow:**
+- Inbound: Network → Reactor → Message → NLRI/Attributes → API
+- Outbound: Config → RIB → Update → Protocol → Network
 
-**Functional Tests** (`qa/`):
-- Encoding/decoding validation using `.ci`/`.msg` file pairs
-- Tests BGP message construction and parsing
-- Configuration file validation against examples in `etc/exabgp/`
+---
 
-**Unit Tests** (`tests/`):
-- pytest-based with coverage reporting
-- Component-specific tests (BGP-LS, flow, NLRI parsing)
+## 📚 Essential Codebase References
 
-## Class Hierarchy and Architecture
+**MUST READ when starting work on new features or major changes:**
 
-**Core Design Patterns:**
+1. **`.claude/exabgp/CODEBASE_ARCHITECTURE.md`** - Complete directory structure, module purposes, file locations
+   - **Read when:** Need to find where specific functionality lives
+   - **Contains:** Directory tree, file sizes, core vs peripheral modules
 
-1. **Registry/Factory Pattern** - The most pervasive pattern enabling dynamic object creation:
-   - Messages: `@Message.register` with TYPE field identification
-   - NLRI: `@NLRI.register(AFI.ipv4, SAFI.unicast)` for address families
-   - Attributes: `@Attribute.register` with unique ID system
-   - Capabilities: `@Capability.register` for BGP capability negotiation
+2. **`.claude/exabgp/DATA_FLOW_GUIDE.md`** - How data moves through the system
+   - **Read when:** Adding features, debugging message flow
+   - **Contains:** Inbound/outbound pipelines, parsing/serialization, RIB operations
 
-2. **Template Method Pattern** - Base classes define algorithmic structure:
-   - `Message.message()` interface with specialized implementations
-   - `NLRI.pack_nlri()`/`unpack_nlri()` for route encoding/decoding
-   - `Attribute` processing with common flag handling
+3. **`.claude/exabgp/REGISTRY_AND_EXTENSION_PATTERNS.md`** - How to extend ExaBGP
+   - **Read when:** Adding NLRI types, attributes, capabilities, API commands
+   - **Contains:** Step-by-step patterns, required file changes, common pitfalls
 
-3. **State Machine Pattern** - `FSM` class implements BGP finite state machine:
-   - States: `IDLE → ACTIVE → CONNECT → OPENSENT → OPENCONFIRM → ESTABLISHED`
-   - Event-driven state transitions with API notifications
+4. **`.claude/exabgp/BGP_CONCEPTS_TO_CODE_MAP.md`** - BGP RFC concepts to code locations
+   - **Read when:** Implementing BGP features from RFCs
+   - **Contains:** AFI/SAFI mappings, message types, attribute codes, capability codes
 
-4. **Observer Pattern** - Reactor coordinates peer states and external processes
-5. **Strategy Pattern** - Different processing based on capabilities, address families, error types
+5. **`.claude/exabgp/CRITICAL_FILES_REFERENCE.md`** - Most frequently modified files
+   - **Read when:** Need quick navigation to important files
+   - **Contains:** Top 10 files, "change X update Y" table, stable interfaces
 
-**Key Class Hierarchies:**
+6. **`.claude/exabgp/CLI_COMMANDS.md`** - Complete CLI command reference
+   - **Read when:** Working with CLI, adding commands, understanding syntax
+   - **Contains:** All 43 commands, syntax, examples, neighbor selectors, display modes
 
-```
-Message (base, inherits from Exception)
-├── Open (session establishment)
-├── Update (route announcements/withdrawals)
-├── Notification/Notify (error handling)
-├── KeepAlive (session maintenance)
-└── Operational (ExaBGP extensions)
+7. **`.claude/exabgp/CLI_SHORTCUTS.md`** - CLI shortcut reference
+   - **Read when:** Working with CLI, understanding shortcuts
+   - **Contains:** Single/multi-letter shortcuts, context rules, expansion examples
 
-NLRI (base) ← Family ← AFI/SAFI handling
-├── INET (IPv4/IPv6 unicast/multicast)
-├── Flow (Flowspec traffic filtering)
-├── EVPN (Ethernet VPN)
-├── VPN/MVPN (L3VPN routes)
-└── BGPLS (Link State information)
+8. **`.claude/exabgp/CLI_IMPLEMENTATION.md`** - CLI internal architecture
+   - **Read when:** Modifying CLI code, adding completion features
+   - **Contains:** 4 main classes, command flow, tab completion, threading model
 
-Attribute (base with LRU caching)
-├── Well-known mandatory (Origin, ASPath, NextHop)
-├── Optional transitive (Community, ExtendedCommunity)
-└── Multiprotocol extensions (MPRNLRI, MPURNLRI)
-```
+9. **`.claude/exabgp/UNIX_SOCKET_API.md`** - Unix socket API protocol
+   - **Read when:** Working with API, socket communication
+   - **Contains:** Protocol spec, connection handshake, response parsing
 
-**Data Flow Architecture:**
-- **Inbound**: Network → Reactor → Protocol → Message → NLRI/Attributes → API Processes
-- **Outbound**: Configuration → RIB → Update Generation → Protocol → Network
+10. **`.claude/exabgp/NEIGHBOR_SELECTOR_SYNTAX.md`** - Neighbor selector grammar
+    - **Read when:** Working with neighbor-targeted commands
+    - **Contains:** Selector syntax, matching algorithm, usage patterns
 
-**Extensibility Points:**
-- New NLRI types: Inherit from `NLRI` and register with AFI/SAFI
-- New attributes: Inherit from `Attribute` with unique ID
-- New capabilities: Register with capability code
-- API extensions: External processes extend functionality
+**Quick reference:**
+- Adding NLRI type → Read #3, then #1
+- Understanding message flow → Read #2
+- Finding where BGP concept lives → Read #4
+- Starting new feature → Read #1, #3, #5
+- Working with CLI → Read #6, #7, #8
+- Adding CLI commands → Read #6, #8, #3
+- Understanding API protocol → Read #9, #10
 
-**Error Handling Strategy:**
-- `Message` inherits from `Exception` for error propagation
-- Treat-as-withdraw for invalid attributes
-- Connection reset for protocol violations
-- Graceful restart mechanisms
+---
 
 ## AsyncIO Support
 
-**ExaBGP supports dual-mode operation:** traditional generator-based event loop (default) and modern asyncio-based event loop (opt-in).
+**Dual-mode:** Generator (default) vs Async (opt-in)
 
-**IMPORTANT:** Both modes are fully async (non-blocking I/O) - they differ only in expression:
-- Generator mode: Uses `yield` + `select.poll()` + custom event loop
-- Async mode: Uses `await` + asyncio event loop
+**Both are async I/O** - differ in syntax only:
+- Generator: `yield` + `select.poll()`
+- Async: `await` + asyncio
 
-See `.claude/asyncio-migration/GENERATOR_VS_ASYNC_EQUIVALENCE.md` for detailed comparison.
+**Current:** Phase 2 (Production Validation)
 
-### Current Status: Phase 2 - Production Validation
-
-**Phase 1 (COMPLETE):** Implementation + 100% test parity
-**Phase 2 (IN PROGRESS):** Production validation (started 2025-11-18)
-
-**Migration timeline:** 18-36 months total
-- Phase 2: Production validation (3-6 months)
-- Phase 3: Switch default to async
-- Phase 4: Deprecate generator mode
-- Phase 5: Remove generator code
-
-See `.claude/asyncio-migration/PHASE2_PRODUCTION_VALIDATION.md` for validation plan.
-
-### Using Async Mode
-
-**Note:** Actual environment variable is `exabgp_reactor_asyncio` (not `exabgp_asyncio_enable`)
-
+**Enable async:**
 ```bash
-# Enable async mode via environment variable
-exabgp_reactor_asyncio=true ./sbin/exabgp your-config.conf
-
-# Or export it
-export exabgp_reactor_asyncio=true
-./sbin/exabgp your-config.conf
+exabgp_reactor_asyncio=true ./sbin/exabgp config.conf
 ```
 
-### Test Status (Phase 1)
+**Test parity:** 100% (72/72 functional, 1376/1376 unit)
 
-Both modes achieve 100% test parity:
-- Sync mode: 72/72 functional tests (100%), 1376/1376 unit tests (100%)
-- Async mode: 72/72 functional tests (100%), 1376/1376 unit tests (100%)
+**See:** `.claude/asyncio-migration/` for details.
 
-### Documentation
+---
 
-**Complete AsyncIO documentation:** See `docs/projects/asyncio-migration/`
+## Key Requirements
 
-**Key documents:**
-- [`docs/projects/asyncio-migration/README.md`](docs/projects/asyncio-migration/README.md) - Complete migration guide
-- [`.claude/asyncio-migration/GENERATOR_VS_ASYNC_EQUIVALENCE.md`](.claude/asyncio-migration/GENERATOR_VS_ASYNC_EQUIVALENCE.md) - Why both exist
-- [`.claude/asyncio-migration/PHASE2_PRODUCTION_VALIDATION.md`](.claude/asyncio-migration/PHASE2_PRODUCTION_VALIDATION.md) - Current phase
+**Python 3.8.1+ ONLY:**
+- Use `Union[int, str]` NOT `int | str`
+- Use `Optional[str]` NOT `str | None`
+- See `.claude/CODING_STANDARDS.md`
 
-**When to use async mode:**
-- Integrating with asyncio-based libraries
-- Need for modern async/await patterns
-- Potential performance benefits (to be validated in Phase 2)
+**BGP Method APIs (STABLE - DO NOT CHANGE):**
+```python
+def pack(self, negotiated: Negotiated) -> bytes: pass
+```
+Unused `negotiated` parameters are OK and EXPECTED.
 
-**When to use sync mode (default):**
-- Production stability (battle-tested)
-- Simpler debugging
-- Current deployments (100% backward compatible)
+**No asyncio introduction** - uses custom reactor
+**No FIB manipulation** - BGP protocol only
 
-**Both are async I/O** - the difference is syntax and event loop implementation, not functionality.
+---
 
-## Development Notes
+## Directory Structure
 
-- **Python 3.8+ required** - ExaBGP 5.0 minimum version (breaking change from 4.x which supported 3.6+)
-- **Dual-mode architecture** - supports both generator-based (sync) and async/await (async) event loops
-- **External Process Model** - communicates with external applications via JSON API
-- **Stateful BGP** - maintains full BGP state machine and RIB (unlike some route servers)
-- **Extensive RFC Support** - implements modern BGP extensions (ASN4, IPv6, MPLS, SRv6, etc.)
-- **Registry-based Plugin Architecture** - Clean extensibility through decorator registration
-- **Performance Optimized** - LRU caching, lazy loading, event-driven I/O
+`.claude/` - Core protocols and codebase documentation:
+- **Protocols:** 13 session-start files (VERIFICATION_DISCIPLINE.md, etc.)
+- **Codebase reference:** exabgp/ - architecture, patterns, BGP mappings
+- **Reference:** FUNCTIONAL_TEST_ARCHITECTURE.md, FILE_NAMING_CONVENTIONS.md
+- **Documentation:** docs/ - projects, reference, plans, wip, archive
 
-## Configuration Examples
+---
 
-Example configurations in `etc/exabgp/` demonstrate:
-- API integration (`api-*.conf`)
-- Protocol features (`conf-*.conf`)
-- Parsing validation (`parse-*.conf`)
+## Quick Checklist
 
-The QA functional tests use these configurations to validate both parsing and BGP message generation.
+Before declaring success:
+- [ ] Read all 11 protocol files
+- [ ] `./qa/bin/test_everything` passes
+- [ ] `git status` reviewed
+- [ ] User approval for commit/push
+- [ ] Python 3.8+ syntax only
+- [ ] No asyncio introduced
+
+---
+
+**Updated:** 2025-11-23

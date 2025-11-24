@@ -11,6 +11,9 @@
 ❌ Hedging when certain: "It appears that this could potentially..."
 ❌ Verbose explanations: "Testing is important because..."
 ❌ Restating user input: "I understand you'd like me to..."
+❌ Defensive justification: "The config is correct because..." when you haven't verified
+❌ False confidence: "Perfect!" "✅" when you haven't actually checked
+❌ Explaining what you think you did: Long summaries of changes without verification
 
 ## What to DO
 
@@ -19,6 +22,8 @@
 ✅ Facts, not feelings: "Tests failed. 3 errors in attribute.py:45, 67, 89"
 ✅ Emoji for structure: See EMOJI_GUIDE.md
 ✅ Direct questions: "Which approach? 1) Refactor 2) Add wrapper"
+✅ Verify before claiming: Check actual behavior, don't assume
+✅ Admit when wrong: "Wrong. Checking..." not "Actually it's correct because..."
 
 ---
 

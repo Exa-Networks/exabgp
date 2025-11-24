@@ -22,7 +22,8 @@
       "Bash(git commit:*)",
       "Bash(killall:*)",
       "Bash(env exabgp_log_enable=false pytest:*)",
-      "Bash(./sbin/exabgp validate:*)"
+      "Bash(./sbin/exabgp validate:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   },
