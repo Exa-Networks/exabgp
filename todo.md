@@ -1,7 +1,7 @@
 # ExaBGP Quality Improvement TODO
 
 **Generated:** 2025-11-24
-**Updated:** 2025-11-24 (peer.py XXX/FIXME resolved)
+**Updated:** 2025-11-24 (peer.py XXX/FIXME resolved, srv6endx.py BUG fixed)
 **Stats:** 348 Python files, 54,991 LOC, 52 test files
 
 ---
@@ -81,6 +81,70 @@
 - [ ] Replace with safer alternatives (ast.literal_eval)
 - [ ] Add input validation layer in configuration parsers
 - [ ] Sanitize error messages for external-facing APIs
+
+### XXX/TODO/BUG Comments (112 remaining)
+
+**Scanned:** 2025-11-24 | **Fixed this session:** srv6endx.py BUG, peer.py 5× XXX/FIXME
+
+#### 🔴 High Priority - Functional Issues
+
+- [ ] `reactor/api/processes.py:597` - `XXX: FIXME: This is potentially blocking`
+- [ ] `reactor/network/connection.py:237` - `XXX: FIXME: Make sure it does not hold cleanup during close`
+- [ ] `reactor/loop.py:808` - `XXX: FIXME: Could return False, config reload interference`
+- [ ] `configuration/configuration.py:389-390` - `XXX: This is a bug` - process change detection broken
+- [ ] `rib/change.py:32` - `XXX: the NLRI content is half missing !!`
+- [ ] `bgp/message/update/__init__.py:256` - `XXX: FIXME: can raise ValueError, IndexError, TypeError, struct.error`
+
+#### 🟡 Medium Priority - Validation/Correctness
+
+**Duplicate capability detection (8 locations):**
+- [ ] `capability/nexthop.py:56-57` - Should complain if twice same AFI/SAFI
+- [ ] `capability/addpath.py:70` - Should check not yet seen capability
+- [ ] `capability/refresh.py:65,110` - Should raise if instance seen twice (2×)
+- [ ] `capability/operational.py:38` - Should raise if instance seen twice
+- [ ] `capability/mp.py:44` - Should raise if twice same AFI/SAFI
+- [ ] `capability/ms.py:53` - Should raise if instance seen twice
+- [ ] `capability/graceful.py:76` - Should raise if instance already setup
+
+**AddPath support TODO (7 locations):**
+- [ ] `nlri/bgpls/nlri.py:107` - implement addpath support
+- [ ] `nlri/flow.py:652` - implement addpath support
+- [ ] `nlri/vpls.py:89` - implement addpath support
+- [ ] `nlri/evpn/nlri.py:84` - implement addpath support
+- [ ] `nlri/mvpn/nlri.py:76` - implement addpath support
+- [ ] `nlri/mup/nlri.py:79` - implement addpath support
+- [ ] `nlri/bgpls/srv6sid.py:129` - implement addpath support
+
+**Size/validation checks (4 locations):**
+- [ ] `configuration/check.py:208` - `XXX: FIXME: check size`
+- [ ] `configuration/check.py:233` - `XXX: FIXME: check size`
+- [ ] `configuration/check.py:464` - `XXX: FIXME: should be using logger here`
+- [ ] `bgp/message/update/__init__.py:109-111` - Calculate size progressively
+
+#### 🟢 Low Priority - Code Quality
+
+**Protocol/reactor (6):**
+- [ ] `reactor/protocol.py:88` - Could use neighbor directly
+- [ ] `reactor/protocol.py:306,410` - Check if notify already Notify class (2×)
+- [ ] `reactor/api/processes.py:240` - Add option to ack in JSON
+- [ ] `reactor/api/transcoder.py:118,186` - Use Notification class code (2×)
+
+**BGP message handling (10):**
+- [ ] `bgp/message/update/__init__.py:286` - NEXTHOP validation
+- [ ] `bgp/message/update/attribute/attributes.py:134,197,293,402,422,490` - Various (6×)
+- [ ] `bgp/message/update/attribute/mprnlri.py:67,167` - nlri.afi removal, cache (2×)
+- [ ] `bgp/message/update/attribute/nexthop.py:34` - Bad API
+
+**Data validation (7):**
+- [ ] `data/check.py:133,137` - ipv4/ipv6 improve (2×)
+- [ ] `data/check.py:214,270,282,345` - Various validators (4×)
+- [ ] `protocol/ip/__init__.py:20-21,74,116` - IP/Range/CIDR API broken (4×)
+
+**YANG parser (6):** `conf/yang/*.py` - Experimental, low priority
+
+**CLI experimental (5):** `cli/experimental/completer.py` - Experimental
+
+**Vendored (3):** `vendoring/*.py` - Third-party, ignore
 
 ---
 
