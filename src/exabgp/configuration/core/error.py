@@ -11,7 +11,7 @@ class Error(Exception):
         self.message = ''
         self.debug = getenv().debug.configuration
 
-    def set(self, message):
+    def set(self, message: str) -> bool:
         self.message = message
         if self.debug:
             error = False

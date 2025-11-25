@@ -177,7 +177,7 @@ class ParseStaticRoute(Section):
 
     def _check(self) -> bool:
         if not self.check(self.scope.get(self.name)):
-            return self.error.set(self.syntax)  # type: ignore[no-any-return]
+            return self.error.set(self.syntax)
         return True
 
     @staticmethod

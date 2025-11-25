@@ -58,10 +58,14 @@ class Negotiated:
             self._negotiate()
 
     def _negotiate(self) -> None:
-        sent_capa = self.sent_open.capabilities  # type: ignore[union-attr]
-        recv_capa = self.received_open.capabilities  # type: ignore[union-attr]
+        # Both opens are guaranteed to be set when _negotiate is called
+        assert self.sent_open is not None
+        assert self.received_open is not None
 
-        self.holdtime = HoldTime(min(self.sent_open.hold_time, self.received_open.hold_time))  # type: ignore[union-attr]
+        sent_capa = self.sent_open.capabilities
+        recv_capa = self.received_open.capabilities
+
+        self.holdtime = HoldTime(min(self.sent_open.hold_time, self.received_open.hold_time))
 
         self.addpath.setup(self.received_open, self.sent_open)
         self.asn4 = sent_capa.announced(Capability.CODE.FOUR_BYTES_ASN) and recv_capa.announced(
@@ -71,9 +75,9 @@ class Negotiated:
             Capability.CODE.OPERATIONAL,
         )
 
-        self.local_as = self.sent_open.asn  # type: ignore[union-attr]
-        self.peer_as = self.received_open.asn  # type: ignore[union-attr]
-        if self.received_open.asn == AS_TRANS and self.asn4:  # type: ignore[union-attr]
+        self.local_as = self.sent_open.asn
+        self.peer_as = self.received_open.asn
+        if self.received_open.asn == AS_TRANS and self.asn4:
             self.peer_as = recv_capa.get(Capability.CODE.FOUR_BYTES_ASN, self.peer_as)
 
         self.families = []
@@ -143,39 +147,42 @@ class Negotiated:
         # 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
     def validate(self, neighbor: Any) -> Optional[Tuple[int, int, str]]:
+        # Both opens must be set before validate is called
+        assert self.sent_open is not None
+        assert self.received_open is not None
+
         if neighbor['peer-as'] is not None and self.peer_as != neighbor['peer-as']:
             return (
                 2,
                 2,
-                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn, neighbor['peer-as']),  # type: ignore[union-attr]
+                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn, neighbor['peer-as']),
             )
 
         # RFC 6286 : https://tools.ietf.org/html/rfc6286
         # XXX: FIXME: check that router id is not self
-        if self.received_open.router_id == RouterID('0.0.0.0'):  # type: ignore[union-attr]
+        if self.received_open.router_id == RouterID('0.0.0.0'):
             return (2, 3, '0.0.0.0 is an invalid router_id')
 
-        if self.received_open.asn == neighbor['local-as']:  # type: ignore[union-attr]
+        if self.received_open.asn == neighbor['local-as']:
             # router-id must be unique within an ASN
-            if self.received_open.router_id == neighbor['router-id']:  # type: ignore[union-attr]
+            if self.received_open.router_id == neighbor['router-id']:
                 return (
                     2,
                     3,
                     'BGP Identifier collision, same router-id ({}) on both sides of this IBGP session'.format(
-                        self.received_open.router_id  # type: ignore[union-attr]
+                        self.received_open.router_id
                     ),
                 )
 
-        if self.received_open.hold_time and self.received_open.hold_time < HoldTime.MIN:  # type: ignore[union-attr]
-            return (2, 6, 'Hold Time is invalid (%d)' % self.received_open.hold_time)  # type: ignore[union-attr]
+        if self.received_open.hold_time and self.received_open.hold_time < HoldTime.MIN:
+            return (2, 6, 'Hold Time is invalid (%d)' % self.received_open.hold_time)
 
-        if self.multisession not in (True, False):
-            # XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
-            # XXX: FIXME: or should we use this trick in the other case ?
-            return self.multisession  # type: ignore[return-value]
+        if isinstance(self.multisession, tuple):
+            # multisession is an error tuple (code, subcode, message)
+            return self.multisession
 
-        s = set(self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))  # type: ignore[union-attr]
-        r = set(self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))  # type: ignore[union-attr]
+        s = set(self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))
+        r = set(self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))
         mismatch = s ^ r
 
         for family in mismatch:

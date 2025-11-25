@@ -559,9 +559,9 @@ def extended_community(tokeniser: 'Tokeniser') -> ExtendedCommunities:
             value = tokeniser()
             if value == ']':
                 break
-            communities.add(_extended_community(value))  # type: ignore[arg-type]
+            communities.add(_extended_community(value))
     else:
-        communities.add(_extended_community(value))  # type: ignore[arg-type]
+        communities.add(_extended_community(value))
 
     return communities
 

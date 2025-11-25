@@ -137,7 +137,7 @@ class ParseFamily(Section):
 
     def all(self, tokeniser) -> None:
         if self._all or self._seen:
-            return self.error.set('all can not be used with any other options')  # type: ignore[no-any-return]
+            return self.error.set('all can not be used with any other options')
         self._all = True
         for pair in NLRI.known_families():
             self._seen.append(pair)

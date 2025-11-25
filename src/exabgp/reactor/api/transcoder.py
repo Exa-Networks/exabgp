@@ -80,13 +80,13 @@ class Transcoder:
             sys.exit(1)
 
         if parsed.get('exabgp', '0.0.0') != json_version:
-            sys.stderr.write('invalid json version', json_string + '\n')  # type: ignore[call-arg]
+            sys.stderr.write('invalid json version: ' + json_string + '\n')
             sys.exit(1)
 
         content = parsed.get('type', '')
 
         if not content:
-            sys.stderr.write('invalid json content', json_string + '\n')  # type: ignore[call-arg]
+            sys.stderr.write('invalid json content: ' + json_string + '\n')
             sys.exit(1)
 
         neighbor = _FakeNeighbor(
@@ -174,7 +174,7 @@ class Transcoder:
             return self.encoder.notification(neighbor, direction, message, None, header, body)
 
         if not self.negotiated_in or not self.negotiated_out:
-            sys.stderr.write('invalid message sequence, open not exchange not complete', json_string + '\n')  # type: ignore[call-arg]
+            sys.stderr.write('invalid message sequence, open exchange not complete: ' + json_string + '\n')
             sys.exit(1)
 
         negotiated = self.negotiated_in if direction == 'receive' else self.negotiated_out

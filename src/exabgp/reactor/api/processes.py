@@ -16,7 +16,7 @@ import fcntl
 import asyncio
 import collections
 
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, TypeVar, Union, TYPE_CHECKING
 from threading import Thread
 
 if TYPE_CHECKING:
@@ -112,7 +112,7 @@ class Processes:
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         # Write queue for async mode (process_name -> deque of strings to write)
         self._write_queue: Dict[str, collections.deque] = {}
-        self._command_queue: collections.deque = collections.deque()  # type: ignore[var-annotated]
+        self._command_queue: collections.deque[Tuple[str, str]] = collections.deque()
 
     def number(self) -> int:
         return len(self._process)
@@ -890,46 +890,49 @@ class Processes:
     # do not do anything if silenced
     # no-self-argument
 
-    def silenced(function):
-        def closure(self, *args):
+    # TypeVar for silenced decorator - preserves function signature
+    _F = TypeVar('_F', bound=Callable[..., None])
+
+    def silenced(function: _F) -> _F:
+        def closure(self, *args):  # type: ignore[no-untyped-def]
             if self.silence:
                 return None
             return function(self, *args)
 
-        return closure
+        return closure  # type: ignore[return-value]
 
     # invalid-name
-    @silenced  # type: ignore[arg-type]
+    @silenced
     def up(self, neighbor: 'Neighbor') -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].up(neighbor), neighbor)
 
-    @silenced  # type: ignore[arg-type]
+    @silenced
     def connected(self, neighbor: 'Neighbor') -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].connected(neighbor), neighbor)
 
-    @silenced  # type: ignore[arg-type]
+    @silenced
     def down(self, neighbor: 'Neighbor', reason: str) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].down(neighbor, reason), neighbor)
 
-    @silenced  # type: ignore[arg-type]
+    @silenced
     def negotiated(self, neighbor: 'Neighbor', negotiated: Negotiated) -> None:
         for process in self._notify(neighbor, 'negotiated'):
             self.write(process, self._encoder[process].negotiated(neighbor, negotiated), neighbor)
 
-    @silenced  # type: ignore[arg-type]
+    @silenced
     def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> None:
         for process in self._notify(neighbor, 'fsm'):
             self.write(process, self._encoder[process].fsm(neighbor, fsm), neighbor)
 
-    @silenced  # type: ignore[arg-type]
+    @silenced
     def signal(self, neighbor: 'Neighbor', signal: str) -> None:
         for process in self._notify(neighbor, 'signal'):
             self.write(process, self._encoder[process].signal(neighbor, signal), neighbor)
 
-    @silenced  # type: ignore[arg-type]
+    @silenced
     def packets(
         self, neighbor: 'Neighbor', direction: str, category: int, negotiated: Negotiated, header: str, body: str
     ) -> None:
@@ -940,7 +943,7 @@ class Processes:
                 neighbor,
             )
 
-    @silenced  # type: ignore[arg-type]
+    @silenced
     def notification(
         self, neighbor: 'Neighbor', direction: str, code: int, subcode: int, data: str, header: str, body: str
     ) -> None:
@@ -951,7 +954,7 @@ class Processes:
                 neighbor,
             )
 
-    @silenced  # type: ignore[arg-type]
+    @silenced
     def message(
         self,
         message_id: int,

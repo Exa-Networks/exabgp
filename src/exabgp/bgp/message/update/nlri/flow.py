@@ -271,8 +271,9 @@ class IOperationByteShortLong(IOperation):
 
 class NumericString:
     OPERATION: ClassVar[str] = 'numeric'
-    operations: Optional[int] = None
-    value: Optional[Union[int, 'Protocol', 'ICMPType', 'ICMPCode']] = None
+    # Set by subclasses - always present when short() is called
+    operations: int
+    value: Union[int, 'Protocol', 'ICMPType', 'ICMPCode']
 
     _string: ClassVar[Dict[int, str]] = {
         NumericOperator.TRUE: 'true',
@@ -294,11 +295,11 @@ class NumericString:
     }
 
     def short(self) -> str:
-        op = self.operations & (CommonOperator.EOL ^ 0xFF)  # type: ignore[operator]
+        op = self.operations & (CommonOperator.EOL ^ 0xFF)
         if op in [NumericOperator.TRUE, NumericOperator.FALSE]:
             return self._string[op]
         # ugly hack as dynamic languages are what they are and use used __str__ in the past
-        value = self.value.short() if hasattr(self.value, 'short') else str(self.value)  # type: ignore[union-attr]
+        value = self.value.short() if hasattr(self.value, 'short') else str(self.value)
         return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), value)
 
     def __str__(self) -> str:
@@ -307,8 +308,9 @@ class NumericString:
 
 class BinaryString:
     OPERATION: ClassVar[str] = 'binary'
-    operations: Optional[int] = None
-    value: Optional[Union[int, 'TCPFlag', 'Fragment']] = None
+    # Set by subclasses - always present when short() is called
+    operations: int
+    value: Union[int, 'TCPFlag', 'Fragment']
 
     _string: ClassVar[Dict[int, str]] = {
         BinaryOperator.INCLUDE: '',
@@ -322,7 +324,7 @@ class BinaryString:
     }
 
     def short(self) -> str:
-        op = self.operations & (CommonOperator.EOL ^ 0xFF)  # type: ignore[operator]
+        op = self.operations & (CommonOperator.EOL ^ 0xFF)
         return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), self.value)
 
     def __str__(self) -> str:
