@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""
+Check for type:ignore regression in the codebase.
+
+This script counts type:ignore comments and fails if the count increases
+beyond the baseline. Run with --update to set a new baseline.
+
+Usage:
+    ./qa/bin/check_type_ignores          # Check against baseline
+    ./qa/bin/check_type_ignores --update # Update baseline
+    ./qa/bin/check_type_ignores --show   # Show all type:ignore locations
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+from pathlib import Path
+from typing import Dict, List, Tuple
+
+# Baseline file location
+BASELINE_FILE = Path(__file__).parent.parent / 'type_ignore_baseline.txt'
+SRC_DIR = Path(__file__).parent.parent.parent / 'src' / 'exabgp'
+
+# Pattern to match type: ignore comments
+TYPE_IGNORE_PATTERN = re.compile(r'#\s*type:\s*ignore')
+
+
+def find_type_ignores() -> Dict[str, List[Tuple[int, str]]]:
+    """Find all type:ignore comments in the codebase."""
+    results: Dict[str, List[Tuple[int, str]]] = {}
+
+    for py_file in SRC_DIR.rglob('*.py'):
+        # Skip vendored files
+        if 'vendoring' in str(py_file):
+            continue
+
+        rel_path = str(py_file.relative_to(SRC_DIR.parent.parent))
+        matches: List[Tuple[int, str]] = []
+
+        try:
+            with open(py_file, 'r', encoding='utf-8') as f:
+                for line_num, line in enumerate(f, 1):
+                    if TYPE_IGNORE_PATTERN.search(line):
+                        matches.append((line_num, line.rstrip()))
+        except Exception as e:
+            print(f'Error reading {py_file}: {e}', file=sys.stderr)
+            continue
+
+        if matches:
+            results[rel_path] = matches
+
+    return results
+
+
+def count_ignores(results: Dict[str, List[Tuple[int, str]]]) -> int:
+    """Count total number of type:ignore comments."""
+    return sum(len(matches) for matches in results.values())
+
+
+def read_baseline() -> int:
+    """Read the baseline count from file."""
+    if not BASELINE_FILE.exists():
+        return -1
+    try:
+        with open(BASELINE_FILE, 'r') as f:
+            return int(f.read().strip())
+    except (ValueError, IOError):
+        return -1
+
+
+def write_baseline(count: int) -> None:
+    """Write the baseline count to file."""
+    with open(BASELINE_FILE, 'w') as f:
+        f.write(f'{count}\n')
+    print(f'Baseline updated: {count} type:ignore comments')
+
+
+def show_ignores(results: Dict[str, List[Tuple[int, str]]]) -> None:
+    """Display all type:ignore locations."""
+    for filepath in sorted(results.keys()):
+        matches = results[filepath]
+        print(f'\n{filepath}:')
+        for line_num, line in matches:
+            print(f'  {line_num}: {line[:100]}')
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description='Check type:ignore regression')
+    parser.add_argument('--update', action='store_true', help='Update baseline')
+    parser.add_argument('--show', action='store_true', help='Show all locations')
+    args = parser.parse_args()
+
+    results = find_type_ignores()
+    current_count = count_ignores(results)
+
+    if args.show:
+        show_ignores(results)
+        print(f'\nTotal: {current_count} type:ignore comments in {len(results)} files')
+        return 0
+
+    if args.update:
+        write_baseline(current_count)
+        return 0
+
+    # Check mode
+    baseline = read_baseline()
+
+    if baseline < 0:
+        print(f'No baseline found. Current count: {current_count}')
+        print('Run with --update to create baseline')
+        return 1
+
+    print(f'type:ignore count: {current_count} (baseline: {baseline})')
+
+    if current_count > baseline:
+        print(f'FAIL: {current_count - baseline} new type:ignore comments added')
+        print('Run with --show to see all locations')
+        return 1
+    elif current_count < baseline:
+        print(f'IMPROVEMENT: {baseline - current_count} type:ignore comments removed')
+        print('Consider running --update to lower the baseline')
+        return 0
+    else:
+        print('OK: No regression')
+        return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

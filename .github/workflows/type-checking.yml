@@ -30,7 +30,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r qa/requirements.txt
 
-      - name: mypy type checking
+      - name: Strict modules type check (BLOCKING)
+        run: |
+          echo "Checking locked modules with strict settings..."
+          mypy src/exabgp/util src/exabgp/data src/exabgp/environment src/exabgp/logger
+
+      - name: Type ignore regression check (BLOCKING)
+        run: |
+          echo "Checking type:ignore count against baseline..."
+          ./qa/bin/check_type_ignores
+
+      - name: Full codebase type check (informational)
         run: |
           python --version
           mypy --version
@@ -39,5 +49,6 @@ jobs:
 
       - name: Type checking summary
         run: |
-          echo "Type checking completed (non-blocking during annotation rollout)"
-          echo "As modules are annotated, this check will become stricter"
+          echo "Strict modules: BLOCKING (util, data, environment, logger)"
+          echo "Type ignore regression: BLOCKING"
+          echo "Full codebase: informational (during annotation rollout)"
