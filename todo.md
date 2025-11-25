@@ -64,9 +64,9 @@
   - [ ] Extract state transition logic (future)
   - [ ] Improve exception handling patterns (future)
 
-### Type Safety (491 → ~460 type ignores)
+### Type Safety (491 → 330 type ignores)
 
-**Updated:** 2025-11-25 | **Phase 1 Complete:** 31 ignores removed
+**Updated:** 2025-11-25 | **Phase 1 Complete:** 31 ignores removed | **Phase 2 Progress:** 49 issues fixed
 
 #### Phase 1 - Quick Wins - COMPLETE
 
@@ -83,22 +83,19 @@
   - operational.py - use `.hex()` for data display
   - mup/t1st.py - use `isinstance(self.source_ip, IP)` for type narrowing
 
-- [ ] **logger/__init__.py** (18 ignores - SKIPPED)
-  - Architectural: method replacement pattern hard to type
-  - Requires refactoring, not quick fix
+- [x] **logger/__init__.py** - NOW CLEAN (0 errors)
 
-#### Phase 2 - High-Impact Modules (Future)
+#### Phase 2 - High-Impact Modules
 
 **Files with >20 ignores:**
-- [ ] `reactor/api/processes.py` (29) - subprocess typing, silenced decorator
-- [ ] `bgp/message/update/nlri/flow.py` (21) - Protocol patterns needed
+- [x] `reactor/api/processes.py` - 3 fixes (write_async bug, decorator typing)
+- [x] `bgp/message/update/nlri/flow.py` - 36 fixes (staticmethod removal, type corrections)
 
 **Files with 10-20 ignores:**
-- [ ] `logger/__init__.py` (18) - method replacement pattern
-- [ ] `reactor/peer.py` (18) - exception handling
-- [ ] `configuration/flow/parser.py` (17) - Communities.add() typing
-- [ ] `configuration/configuration.py` (16) - now 4 after Error.set() fix
-- [ ] `bgp/message/open/capability/negotiated.py` (16) - Optional[Open] guards
+- [x] `configuration/configuration.py` - 10 fixes + 1 bug fix (.afi_safi() on tuple)
+- [x] `bgp/message/open/capability/negotiated.py` - NOW CLEAN (0 errors)
+- [ ] `reactor/peer.py` (124 errors) - Optional[Protocol] guards needed
+- [ ] `configuration/flow/parser.py` (26 errors) - yield type mismatches
 
 #### Phase 3 - Infrastructure (Future)
 
