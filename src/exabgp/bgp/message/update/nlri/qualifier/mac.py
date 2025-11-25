@@ -55,9 +55,10 @@ class MAC:
     def __len__(self) -> int:
         return 6
 
-    # XXX: FIXME: improve for better performance ?
     def __hash__(self) -> int:
-        return hash(str(self))
+        # Using packed bytes is ~17x faster than hash(str(self))
+        # See lab/benchmark_mac_hash.py for benchmark
+        return hash(self._packed)
 
     @classmethod
     def unpack_mac(cls: Type[MAC], data: bytes) -> MAC:

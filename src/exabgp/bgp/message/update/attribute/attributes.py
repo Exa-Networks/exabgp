@@ -13,7 +13,6 @@ from typing import Any, ClassVar, Dict, Generator, Optional, Tuple, Union, TYPE_
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.environment import getenv
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
@@ -193,9 +192,7 @@ class Attributes(dict):
         self._json = ''
         # The parsed attributes have no mp routes and/or those are last
         self.cacheable = True
-
-        # XXX: FIXME: surely not the best place for this
-        Attribute.caching = getenv().cache.attributes
+        # Note: Attribute.caching is set in application/server.py at startup
 
     def has(self, k: int) -> bool:
         return k in self
@@ -290,7 +287,8 @@ class Attributes(dict):
         return self._str
 
     def index(self) -> str:
-        # XXX: something a little bit smaller memory wise ?
+        # Note: Using hash instead of string would save memory but risks collisions
+        # since index() is used for equality comparisons. See lab/benchmark_attr_index.py
         if not self._idx:
             idx = ''.join(self._generate_text())
             nexthop = str(self.get(Attribute.CODE.NEXT_HOP, 'missing'))
@@ -399,7 +397,9 @@ class Attributes(dict):
             self.add(decoded)
             return self.parse(left, negotiated)
 
-        # XXX: FIXME: we could use a fallback function here like capability
+        # Note: Unknown attributes are handled below via GenericAttribute for transitive
+        # attributes, or logged/discarded for others. This differs from capability's
+        # registered fallback pattern but achieves the same goal.
 
         # if we know the attribute but the flag is not what the RFC says.
         if aid in Attribute.attributes_known:
@@ -419,7 +419,8 @@ class Attributes(dict):
                     'parser',
                 )
                 return self.parse(left, negotiated)
-            # XXX: Check if we are missing any
+            # Attributes not in TREAT_AS_WITHDRAW or DISCARD fall through to this log
+            # This catches implementation gaps - if this fires, add aid to one of the lists
             log.debug(
                 lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) unspecified (should not happen)'.format(
                     Attribute.CODE.names.get(aid, 'unset'), flag, aid
