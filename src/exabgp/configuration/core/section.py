@@ -8,10 +8,64 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from typing import Union
+from typing import List
 from string import ascii_letters
 from string import digits
 
 from exabgp.configuration.core.error import Error
+
+
+def _levenshtein(s1: str, s2: str) -> int:
+    """Calculate Levenshtein (edit) distance between two strings.
+
+    Returns the minimum number of single-character edits (insertions,
+    deletions, substitutions) needed to transform s1 into s2.
+    """
+    if len(s1) < len(s2):
+        return _levenshtein(s2, s1)
+
+    if len(s2) == 0:
+        return len(s1)
+
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            # Cost is 0 if characters match, 1 otherwise
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+
+    return previous_row[-1]
+
+
+def _find_similar(target: str, candidates: List[str], max_distance: int = 2, max_results: int = 3) -> List[str]:
+    """Find similar strings using Levenshtein distance.
+
+    Args:
+        target: The string to find similar matches for
+        candidates: List of valid strings to compare against
+        max_distance: Maximum edit distance to consider a match (default: 2)
+        max_results: Maximum number of suggestions to return (default: 3)
+
+    Returns:
+        List of similar strings sorted by edit distance (closest first)
+    """
+    if not target or not candidates:
+        return []
+
+    scored = []
+    target_lower = target.lower()
+    for candidate in candidates:
+        dist = _levenshtein(target_lower, candidate.lower())
+        if dist <= max_distance:
+            scored.append((dist, candidate))
+
+    # Sort by distance (closest first), then alphabetically
+    scored.sort(key=lambda x: (x[0], x[1]))
+    return [s[1] for s in scored[:max_results]]
 
 
 class Section(Error):
@@ -61,10 +115,20 @@ class Section(Error):
     def parse(self, name, command):  # noqa: C901
         identifier = command if command in self.known else (self.name, command)
         if identifier not in self.known:
-            options = ', '.join([str(_) for _ in self.known])
-            return self.error.set(
-                f'unknown command {command} options are {options}',
-            )
+            # Get simple string options (filter out tuple identifiers like ('ipv4', 'unicast'))
+            simple_options = sorted([k for k in self.known if isinstance(k, str)])
+
+            # Find similar commands for "did you mean?" suggestions
+            suggestions = _find_similar(command, simple_options)
+
+            # Build error message
+            msg = f"unknown command '{command}'"
+            if suggestions:
+                msg += f'\n  Did you mean: {", ".join(suggestions)}?'
+            if simple_options:
+                msg += f'\n  Valid options: {", ".join(simple_options)}'
+
+            return self.error.set(msg)
 
         try:
             if command in self.default:

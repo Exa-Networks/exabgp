@@ -18,7 +18,7 @@ from exabgp.configuration.parser import string
 
 def addpath(tokeniser: object) -> int:
     if not tokeniser.tokens:
-        raise ValueError('add-path must be one of send, receive, send/receive, disable')
+        raise ValueError('add-path requires a value\n  Valid options: send, receive, send/receive, disable')
 
     ap = string(tokeniser).lower()
 
@@ -34,9 +34,9 @@ def addpath(tokeniser: object) -> int:
         return match[ap]
 
     if ap == 'receive/send':  # was allowed with the previous parser
-        raise ValueError('the option is send/receive')
+        raise ValueError("'receive/send' is not valid\n  Did you mean: send/receive")
 
-    raise ValueError('"{}" is an invalid add-path, options are: send, receive, send/receive'.format(ap))
+    raise ValueError(f"'{ap}' is not a valid add-path option\n  Valid options: send, receive, send/receive, disable")
 
 
 def gracefulrestart(tokeniser: object, default: Union[int, bool]) -> Union[int, bool]:
@@ -51,12 +51,14 @@ def gracefulrestart(tokeniser: object, default: Union[int, bool]) -> Union[int, 
     try:
         grace = int(state)
     except ValueError:
-        raise ValueError('"{}" is an invalid graceful-restart time'.format(state)) from None
+        raise ValueError(
+            f"'{state}' is not a valid graceful-restart time\n  Valid options: <seconds> (0-{Graceful.MAX}), disable"
+        ) from None
 
     if grace < 0:
-        raise ValueError('graceful-restart can not be negative')
+        raise ValueError(f"graceful-restart {grace} is invalid\n  Must be 0-{Graceful.MAX} seconds or 'disable'")
     if grace > Graceful.MAX:
-        raise ValueError('graceful-restart must be smaller or equal to %d' % Graceful.MAX)
+        raise ValueError(f'graceful-restart {grace} is invalid\n  Maximum is {Graceful.MAX} seconds')
 
     return grace
 

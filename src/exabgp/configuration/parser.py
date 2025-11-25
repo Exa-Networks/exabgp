@@ -26,7 +26,9 @@ def boolean(tokeniser: object, default: bool) -> bool:
         return True
     if status in ('false', 'disable', 'disabled'):
         return False
-    raise ValueError('invalid value ({}) for a boolean'.format(status))
+    raise ValueError(
+        f"'{status}' is not a valid boolean\n  Valid options: true, enable, enabled, false, disable, disabled"
+    )
 
 
 def auto_boolean(tokeniser: object, default: bool) -> Optional[bool]:
@@ -39,29 +41,29 @@ def auto_boolean(tokeniser: object, default: bool) -> Optional[bool]:
         return False
     if status in ('auto',):
         return None
-    raise ValueError('invalid value ({}) for a boolean'.format(status))
+    raise ValueError(f"'{status}' is not a valid boolean\n  Valid options: true, false, enable, disable, auto")
 
 
 def port(tokeniser: object) -> int:
     if not tokeniser.tokens:
-        raise ValueError('a port number is required')
+        raise ValueError('a port number is required (1-65535)')
 
     value = tokeniser()  # type: ignore[operator]
     try:
-        return int(value)
+        port_num = int(value)
     except ValueError:
-        raise ValueError('"{}" is an invalid port'.format(value)) from None
-    if value < 0:
-        raise ValueError('the port must be positive')
-    if value >= pow(2, 16):
-        raise ValueError('the port must be smaller than %d' % pow(2, 16))
-    return value
+        raise ValueError(f"'{value}' is not a valid port number (must be 1-65535)") from None
+    if port_num < 1:
+        raise ValueError(f'port {port_num} is invalid (must be 1-65535)')
+    if port_num > 65535:
+        raise ValueError(f'port {port_num} is invalid (must be 1-65535)')
+    return port_num
 
 
 def auto_asn(tokeniser: object, value: Optional[str] = None) -> Optional[ASN]:
     if value is None:
         if not tokeniser.tokens:
-            raise ValueError("an asn or 'auto' is required")
+            raise ValueError("an ASN or 'auto' is required (e.g., 65001, 1.1, auto)")
 
     if tokeniser.peek() == 'auto':
         tokeniser()  # type: ignore[operator]
@@ -73,7 +75,7 @@ def auto_asn(tokeniser: object, value: Optional[str] = None) -> Optional[ASN]:
 def asn(tokeniser: object, value: Optional[str] = None) -> ASN:
     if value is None:
         if not tokeniser.tokens:
-            raise ValueError('an asn is required')
+            raise ValueError('an ASN is required (e.g., 65001 or 1.1)')
 
     value = tokeniser()  # type: ignore[operator]
     try:
@@ -84,12 +86,14 @@ def asn(tokeniser: object, value: Optional[str] = None) -> ASN:
             as_number = int(value)
         return ASN(as_number)
     except ValueError:
-        raise ValueError('"{}" is an invalid ASN'.format(value)) from None
+        raise ValueError(
+            f"'{value}' is not a valid ASN\n  Format: <number> or <high>.<low> (e.g., 65001 or 1.1)"
+        ) from None
 
 
 def peer_ip(tokeniser: object) -> IPRange:
     if not tokeniser.tokens:
-        raise ValueError('an ip address is required')
+        raise ValueError('an IP address is required (e.g., 192.0.2.1 or 192.0.2.0/24)')
 
     value = tokeniser()  # type: ignore[operator]
     if '/' in value:
@@ -101,15 +105,17 @@ def peer_ip(tokeniser: object) -> IPRange:
     try:
         return IPRange.create(value, mask)
     except (OSError, IndexError, ValueError):
-        raise ValueError('"{}" is an invalid IP address'.format(value)) from None
+        raise ValueError(
+            f"'{value}' is not a valid IP address\n  Format: <ip> or <ip>/<prefix> (e.g., 192.0.2.1 or 2001:db8::1/64)"
+        ) from None
 
 
 def ip(tokeniser: object) -> IP:
     if not tokeniser.tokens:
-        raise ValueError('an ip address is required')
+        raise ValueError('an IP address is required (e.g., 192.0.2.1 or 2001:db8::1)')
 
     value = tokeniser()  # type: ignore[operator]
     try:
         return IP.create(value)
     except (OSError, IndexError, ValueError):
-        raise ValueError('"{}" is an invalid IP address'.format(value)) from None
+        raise ValueError(f"'{value}' is not a valid IP address (e.g., 192.0.2.1 or 2001:db8::1)") from None
