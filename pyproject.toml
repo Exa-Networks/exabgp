@@ -137,12 +137,33 @@ exclude = [
     "src/exabgp/vendoring/",
 ]
 
-# Per-module strictness (enabled as sprints complete)
-# Sprint 1: Foundation (40 files)
-# [[tool.mypy.overrides]]
-# module = "exabgp.util.*"
-# disallow_untyped_defs = true
+# Per-module strictness - locked modules (0 mypy errors as of 2025-11-25)
+# These modules are clean and should remain clean
 
-# [[tool.mypy.overrides]]
-# module = "exabgp.protocol.*"
-# disallow_untyped_defs = true
+[[tool.mypy.overrides]]
+module = "exabgp.util.*"
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+module = "exabgp.data.*"
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+module = "exabgp.environment.*"
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+module = "exabgp.logger.*"
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+warn_return_any = true

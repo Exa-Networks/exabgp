@@ -66,7 +66,7 @@
 
 ### Type Safety (660 → 436 errors)
 
-**Updated:** 2025-11-25 | **Phase 1 Complete:** 31 ignores removed | **Phase 2 Progress:** 328 issues fixed
+**Updated:** 2025-11-25 | **Phase 1-3 Complete:** 31 ignores removed, 328 issues fixed, CI enforcement added
 
 #### Phase 1 - Quick Wins - COMPLETE
 
@@ -103,21 +103,35 @@
 - [x] `configuration/static/mpls.py` (12 → 0 errors) - NOW CLEAN: Union types for IPv4/IPv6 variables
 - [x] `reactor/loop.py` - **Bugfix**: handle_connection now returns peer result
 
-#### Phase 3 - Infrastructure (Future)
+#### Phase 3 - Infrastructure - COMPLETE
 
-- [ ] Lock clean modules in pyproject.toml (util, data, environment, logger)
-- [ ] Add type:ignore regression check script
-- [ ] Add `py.typed` marker file for PEP 561 compliance
-- [ ] Make CI type checking blocking for strict modules
+- [x] Lock clean modules in pyproject.toml (util, data, environment, logger)
+  - Added strict mypy overrides: disallow_untyped_defs, disallow_untyped_calls, disallow_incomplete_defs
+  - 25 files now enforced strict (0 errors)
+- [x] Add type:ignore regression check script
+  - `qa/bin/check_type_ignores` - tracks baseline (370 comments)
+  - Fails CI if count increases
+- [x] Add `py.typed` marker file for PEP 561 compliance
+  - `src/exabgp/py.typed` created
+- [x] Make CI type checking blocking for strict modules
+  - `.github/workflows/type-checking.yml` updated
+  - Strict modules check: BLOCKING
+  - Type:ignore regression: BLOCKING
+  - Full codebase: informational
 
 ### Security
 
-- [ ] Audit `eval/exec/compile` usage in:
-  - [ ] `src/exabgp/configuration/neighbor/parser.py`
-  - [ ] `src/exabgp/cli/validator.py`
-  - [ ] `src/exabgp/cli/completer.py`
-  - [ ] `src/exabgp/environment/parsing.py`
-- [ ] Replace with safer alternatives (ast.literal_eval)
+#### eval/exec/compile Audit - COMPLETE (No Issues Found)
+
+Audited 2025-11-25. Files listed contained `re.compile()` only (safe regex):
+- [x] `neighbor/parser.py:181` - `re.compile(token)` for regex validation
+- [x] `cli/experimental/validator.py:74` - `re.compile(regex)` for caching
+- [x] `cli/experimental/completer.py` - No eval/exec (VyOS experimental)
+- [x] `environment/parsing.py` - No eval/exec (type converters only)
+
+**Vendored files** (`profiler.py`) contain eval/exec but are out of scope.
+
+#### Remaining Security Items
 - [ ] Add input validation layer in configuration parsers
 - [ ] Sanitize error messages for external-facing APIs
 
