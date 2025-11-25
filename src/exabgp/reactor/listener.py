@@ -1,4 +1,3 @@
-
 """listener.py
 
 Created by Thomas Mangin on 2013-07-11.
@@ -64,7 +63,8 @@ class Listener:
                 continue
             if local_port != port:
                 continue
-            md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
+            if use_md5:
+                md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
                 min_ttl(sock, peer_ip, ttl_in)
             return
@@ -72,7 +72,8 @@ class Listener:
         try:
             sock = self._new_socket(local_ip)
             # MD5 must match the peer side of the TCP, not the local one
-            md5(sock, peer_ip.top(), 0, md5, md5_base64)
+            if use_md5:
+                md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
                 min_ttl(sock, peer_ip, ttl_in)
             try:
@@ -85,7 +86,7 @@ class Listener:
             # s.settimeout(0.0)
             sock.bind((local_ip.top(), local_port))
             sock.listen(self._backlog)
-            self._sockets[sock] = (local_ip.top(), local_port, peer_ip.top(), md5)
+            self._sockets[sock] = (local_ip.top(), local_port, peer_ip.top(), use_md5)
         except OSError as exc:
             if exc.args[0] == errno.EADDRINUSE:
                 raise BindingError(
@@ -112,7 +113,8 @@ class Listener:
         except NetworkError as exc:
             if os.geteuid() != 0 and port <= MAX_PRIVILEGED_PORT:
                 log.critical(
-                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root', 'network',
+                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root',
+                    'network',
                 )
             else:
                 log.critical(lambda exc=exc: f'can not bind to {local_addr}:{port} ({exc})', 'network')
@@ -194,7 +196,10 @@ class Listener:
 
                 denied = reactor.handle_connection(key, connection)
                 if denied:
-                    log.debug(lambda connection=connection: f'refused connection from {connection.name()} due to the state machine', 'network')
+                    log.debug(
+                        lambda connection=connection: f'refused connection from {connection.name()} due to the state machine',
+                        'network',
+                    )
                     break
                 log.debug(lambda connection=connection: f'accepted connection from {connection.name()}', 'network')
                 break
@@ -232,7 +237,10 @@ class Listener:
                 new_peer = Peer(new_neighbor, reactor)
                 denied = new_peer.handle_connection(connection)
                 if denied:
-                    log.debug(lambda connection=connection: f'refused connection from {connection.name()} due to the state machine', 'network')
+                    log.debug(
+                        lambda connection=connection: f'refused connection from {connection.name()} due to the state machine',
+                        'network',
+                    )
                     return
 
                 reactor.register_peer(new_neighbor.name(), new_peer)
