@@ -253,7 +253,9 @@ class Update(Message):
             withdraws = b''
             announced = b''
 
-    # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
+    # Note: This method can raise ValueError, IndexError, TypeError, struct.error (from unpack).
+    # These exceptions are caught by the caller in reactor/protocol.py:read_message() which
+    # wraps them in a Notify(1, 0) to signal a malformed message to the peer.
     @classmethod
     def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Union[Update, EOR]:  # type: ignore[valid-type]
         log.debug(lazyformat('parsing UPDATE', data), 'parser')
