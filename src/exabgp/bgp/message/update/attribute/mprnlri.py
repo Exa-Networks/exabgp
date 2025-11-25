@@ -164,7 +164,8 @@ class MPRNLRI(Attribute, Family):
 
         size = len_nh - rd
 
-        # XXX: FIXME: GET IT FROM CACHE HERE ?
+        # Note: Caching nexthop slices was benchmarked but is slower than direct slicing
+        # (dict lookup overhead exceeds slice cost). See lab/benchmark_nexthop_cache.py
         nhs = data[offset + rd : offset + rd + size]
         nexthops = [nhs[pos : pos + 16] for pos in range(0, len(nhs), 16)]
 

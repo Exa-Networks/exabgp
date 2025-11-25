@@ -106,9 +106,6 @@ class Update(Message):
         return withdrawn, attributes, announced
 
     # The routes MUST have the same attributes ...
-    # XXX: FIXME: calculate size progressively to not have to do it every time
-    # XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
-    # XXX: FIXME: are emptied and therefore when we can save calculations
     def messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator[bytes, None, None]:
         # sort the nlris
 
@@ -184,13 +181,20 @@ class Update(Message):
 
         withdraws = b''
         announced = b''
+        # Track sizes progressively to avoid O(n) len() on concatenation
+        # See lab/benchmark_update_size.py for benchmark (1.3-1.5x speedup)
+        withdraws_size = 0
+        announced_size = 0
         for nlri in nlris:
             packed = nlri.pack_nlri(negotiated)
-            if len(announced + withdraws + packed) <= msg_size:
+            packed_size = len(packed)
+            if announced_size + withdraws_size + packed_size <= msg_size:
                 if nlri.action == Action.ANNOUNCE:
                     announced += packed
+                    announced_size += packed_size
                 elif include_withdraw:
                     withdraws += packed
+                    withdraws_size += packed_size
                 continue
 
             if not withdraws and not announced:
@@ -205,13 +209,19 @@ class Update(Message):
 
             if nlri.action == Action.ANNOUNCE:
                 announced = packed
+                announced_size = packed_size
                 withdraws = b''
+                withdraws_size = 0
             elif include_withdraw:
                 withdraws = packed
+                withdraws_size = packed_size
                 announced = b''
+                announced_size = 0
             else:
                 withdraws = b''
+                withdraws_size = 0
                 announced = b''
+                announced_size = 0
 
         if announced or withdraws:
             if announced:
@@ -285,7 +295,22 @@ class Update(Message):
         nexthop = attributes.get(Attribute.CODE.NEXT_HOP, NoNextHop)
         # nexthop = NextHop.unpack(_nexthop.ton())
 
-        # XXX: NEXTHOP MUST NOT be the IP address of the receiving speaker.
+        # RFC 4271 Section 5.1.3: NEXT_HOP MUST NOT be the IP address of the receiving speaker
+        # Log warning but don't kill session - peer may have misconfigured next-hop
+        if nexthop is not NoNextHop and hasattr(negotiated, 'neighbor'):
+            try:
+                local_address = negotiated.neighbor['local-address']
+                if local_address is not None and hasattr(nexthop, '_packed') and hasattr(local_address, '_packed'):
+                    if nexthop._packed == local_address._packed:
+                        log.warning(
+                            lambda: 'received NEXT_HOP {} equals our local address (RFC 4271 violation)'.format(
+                                nexthop
+                            ),
+                            'parser',
+                        )
+            except (TypeError, KeyError):
+                # negotiated.neighbor may be a mock or not support subscripting
+                pass
 
         nlris = []
         while withdrawn:
