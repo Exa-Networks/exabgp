@@ -108,7 +108,7 @@ class Neighbor(dict):
     changes: List[Change]
     previous: Optional[Change]
     eor: deque[Tuple[AFI, SAFI]]
-    asm: Dict[Tuple[AFI, SAFI], bool]
+    asm: Dict[Tuple[AFI, SAFI], Message]
     messages: deque[Message]
     refresh: deque[Tuple[AFI, SAFI]]
     counter: Counter[str]

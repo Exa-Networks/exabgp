@@ -296,7 +296,7 @@ class Peer:
                 lambda: 'we already have a peer in state established for {}'.format(connection.name()),
                 self.id(),
             )
-            return connection.notification(6, 7, 'could not accept the connection, already established')  # type: ignore[union-attr,arg-type]
+            return connection.notification(6, 7, b'could not accept the connection, already established')
 
         # 6.8 The convention is to compare the BGP Identifiers of the peers
         # involved in the collision and to retain only the connection initiated
@@ -319,7 +319,7 @@ class Peer:
                 return connection.notification(
                     6,
                     7,
-                    'could not accept the connection, as another connection is already in open-confirm and will go through',  # type: ignore[arg-type]
+                    b'could not accept the connection, as another connection is already in open-confirm and will go through',
                 )
 
         # accept the connection
@@ -610,7 +610,7 @@ class Peer:
         # Every last asm message should be re-announced on restart
         for family in self.neighbor.asm:
             if family in self.neighbor.families():
-                self.neighbor.messages.appendleft(self.neighbor.asm[family])  # type: ignore[arg-type]
+                self.neighbor.messages.appendleft(self.neighbor.asm[family])
 
         operational = None
         refresh = None
@@ -781,7 +781,7 @@ class Peer:
         # Every last asm message should be re-announced on restart
         for family in self.neighbor.asm:
             if family in self.neighbor.families():
-                self.neighbor.messages.appendleft(self.neighbor.asm[family])  # type: ignore[arg-type]
+                self.neighbor.messages.appendleft(self.neighbor.asm[family])
 
         operational = None
         refresh = None
@@ -1108,7 +1108,7 @@ class Peer:
 
     # loop
 
-    def run(self) -> int:  # type: ignore[return]
+    def run(self) -> int:
         if self.reactor.processes.broken(self.neighbor):
             # Process respawning handled by Processes._handle_problem().
             # This branch handles cases where respawning failed or was disabled.
@@ -1117,7 +1117,7 @@ class Peer:
                 self.reactor.api_shutdown()
             else:
                 self.stop()
-            return True
+            return ACTION.CLOSE
 
         if self.generator:
             try:
