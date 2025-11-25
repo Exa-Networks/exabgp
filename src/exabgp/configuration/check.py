@@ -205,8 +205,10 @@ def check_message(neighbor: Dict[str, Any], message: str) -> bool:
         return check_update(neighbor, raw)
 
     kind = raw[18]
-    # XXX: FIXME: check size
-    # size = (raw[16] << 16) + raw[17]
+    # Validate message size from header matches actual data length
+    header_size = (raw[16] << 8) + raw[17]
+    if header_size != len(raw):
+        sys.stdout.write(f'warning: BGP header size ({header_size}) does not match data length ({len(raw)})\n')
 
     if kind == BGP_MSG_OPEN:
         return check_open(neighbor, raw[19:])  # type: ignore[no-any-return,func-returns-value]
@@ -226,12 +228,14 @@ def display_message(neighbor: Dict[str, Any], message: str) -> bool:
         header = b'\xff' * 16
         header += struct.pack('!H', len(raw) + 19)
         header += struct.pack('!B', 2)
-        # XXX: should be calling message not update
+        # Note: calling display_update directly since we synthesized an UPDATE header
         return display_update(neighbor, header + raw)
 
     kind = raw[18]
-    # XXX: FIXME: check size
-    # size = (raw[16] << 16) + raw[17]
+    # Validate message size from header matches actual data length
+    header_size = (raw[16] << 8) + raw[17]
+    if header_size != len(raw):
+        sys.stdout.write(f'warning: BGP header size ({header_size}) does not match data length ({len(raw)})\n')
 
     if kind == BGP_MSG_OPEN:
         return display_open(neighbor, raw[19:])
@@ -461,6 +465,5 @@ def display_notification(neighbor: Dict[str, Any], raw: bytes) -> bool:
 
 def check_notification(raw: bytes) -> bool:
     notification = Notification.unpack_message(raw[18:], None, None)
-    # XXX: FIXME: should be using logger here
-    sys.stdout.write(f'{notification}\n')
+    log.info(lambda notification=notification: f'{notification}', 'parser')
     return True
