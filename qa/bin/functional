@@ -321,6 +321,11 @@ def check_concurrent_functional() -> bool:
                 if not cmdline_list:
                     continue
 
+                # Only match Python processes running the functional script directly
+                # Skip shell processes that might have the string in their command
+                if proc.info['name'] not in ('python', 'python3', 'Python'):
+                    continue
+
                 cmdline = ' '.join(cmdline_list)
 
                 # Check for another functional test runner
