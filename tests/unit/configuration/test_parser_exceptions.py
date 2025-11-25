@@ -42,7 +42,7 @@ class TestNeighborParserExceptions:
         mock_tokeniser.tokens = ['invalid']
         mock_tokeniser.return_value = 'not-an-ip'
 
-        with pytest.raises(ValueError, match='is an invalid IP address'):
+        with pytest.raises(ValueError, match='is not a valid IP address'):
             local_address(mock_tokeniser)
 
     def test_router_id_raises_value_error_for_invalid_id(self):
@@ -55,7 +55,7 @@ class TestNeighborParserExceptions:
         mock_tokeniser = MagicMock()
         mock_tokeniser.return_value = 'invalid'  # Single word, triggers ValueError
 
-        with pytest.raises(ValueError, match='is an invalid router-id'):
+        with pytest.raises(ValueError, match='is not a valid router-id'):
             router_id(mock_tokeniser)
 
     def test_hold_time_raises_value_error_for_invalid_time(self):
@@ -66,7 +66,7 @@ class TestNeighborParserExceptions:
         mock_tokeniser = MagicMock()
         mock_tokeniser.return_value = 'not-a-number'
 
-        with pytest.raises(ValueError, match='is an invalid hold-time'):
+        with pytest.raises(ValueError, match='is not a valid hold-time'):
             hold_time(mock_tokeniser)
 
 

@@ -35,22 +35,22 @@ def inherit(tokeniser) -> List[str]:
         or tokeniser.tokens[1] != '['
         or tokeniser.tokens[-1] != ']'
     ):
-        raise ValueError('invalid inherit list')
+        raise ValueError('invalid inherit list\n  Format: inherit <template> or inherit [ template1, template2, ... ]')
     return tokeniser.tokens[2:-1]  # type: ignore[no-any-return]
 
 
 def hostname(tokeniser) -> str:
     value = string(tokeniser)
     if not value[0].isalnum():
-        raise ValueError('bad host-name (alphanumeric)')
+        raise ValueError(f"'{value}' is not a valid hostname\n  Must start with alphanumeric character")
     if not value[-1].isalnum() or value[-1].isdigit():
-        raise ValueError('bad host-name (alphanumeric)')
+        raise ValueError(f"'{value}' is not a valid hostname\n  Must end with a letter")
     if '..' in value:
-        raise ValueError('bad host-name (double period)')
+        raise ValueError(f"'{value}' is not a valid hostname\n  Cannot contain consecutive periods (..)")
     if not all(c in ascii_letters + digits + '.-' for c in value):
-        raise ValueError('bad host-name (charset)')
+        raise ValueError(f"'{value}' is not a valid hostname\n  Allowed characters: a-z, A-Z, 0-9, '.', '-'")
     if len(value) > HOSTNAME_MAX_LENGTH:
-        raise ValueError('bad host-name (length)')
+        raise ValueError(f"'{value}' is not a valid hostname\n  Maximum length is {HOSTNAME_MAX_LENGTH} characters")
 
     return value
 
@@ -58,17 +58,17 @@ def hostname(tokeniser) -> str:
 def domainname(tokeniser) -> str:
     value = string(tokeniser)
     if not value:
-        raise ValueError('bad domain-name')
+        raise ValueError('a domain name is required')
     if not value[0].isalnum() or value[0].isdigit():
-        raise ValueError('bad domain-name')
+        raise ValueError(f"'{value}' is not a valid domain name\n  Must start with a letter")
     if not value[-1].isalnum() or value[-1].isdigit():
-        raise ValueError('bad domain-name')
+        raise ValueError(f"'{value}' is not a valid domain name\n  Must end with a letter")
     if '..' in value:
-        raise ValueError('bad domain-name')
+        raise ValueError(f"'{value}' is not a valid domain name\n  Cannot contain consecutive periods (..)")
     if not all(c in ascii_letters + digits + '.-' for c in value):
-        raise ValueError('bad domain-name')
+        raise ValueError(f"'{value}' is not a valid domain name\n  Allowed characters: a-z, A-Z, 0-9, '.', '-'")
     if len(value) > HOSTNAME_MAX_LENGTH:
-        raise ValueError('bad domain-name (length)')
+        raise ValueError(f"'{value}' is not a valid domain name\n  Maximum length is {HOSTNAME_MAX_LENGTH} characters")
     return value
 
 
@@ -95,17 +95,17 @@ def ttl(tokeniser) -> Optional[int]:
     except ValueError:
         if value in ('false', 'disable', 'disabled'):
             return None
-        raise ValueError(f'invalid ttl-security "{value}"') from None
+        raise ValueError(f"'{value}' is not a valid TTL\n  Valid options: 0-255, disable, disabled, false") from None
     if attl < 0:
-        raise ValueError('ttl-security can not be negative')
-    if attl > HOSTNAME_MAX_LENGTH:
-        raise ValueError(f'ttl must be smaller than {HOSTNAME_MAX_LENGTH + 1}')
+        raise ValueError(f'TTL {attl} is invalid\n  Must be 0-255')
+    if attl > 255:
+        raise ValueError(f'TTL {attl} is invalid\n  Must be 0-255')
     return attl
 
 
 def local_address(tokeniser) -> Optional[IP]:
     if not tokeniser.tokens:
-        raise ValueError("an ip address  or 'auto' is required")
+        raise ValueError("an IP address or 'auto' is required (e.g., 192.0.2.1 or auto)")
 
     value = tokeniser()
     if value == 'auto':
@@ -113,7 +113,9 @@ def local_address(tokeniser) -> Optional[IP]:
     try:
         return IP.create(value)
     except (OSError, IndexError, ValueError):
-        raise ValueError(f'"{value}" is an invalid IP address') from None
+        raise ValueError(
+            f"'{value}' is not a valid IP address\n  Format: <ip> or 'auto' (e.g., 192.0.2.1 or 2001:db8::1)"
+        ) from None
 
 
 def source_interface(tokeniser) -> str:
@@ -128,7 +130,7 @@ def router_id(tokeniser) -> RouterID:
     try:
         return RouterID(value)
     except ValueError:
-        raise ValueError(f'"{value}" is an invalid router-id') from None
+        raise ValueError(f"'{value}' is not a valid router-id\n  Format: IPv4 address (e.g., 192.0.2.1)") from None
 
 
 def hold_time(tokeniser) -> HoldTime:
@@ -136,11 +138,17 @@ def hold_time(tokeniser) -> HoldTime:
     try:
         holdtime = HoldTime(int(value))
     except ValueError:
-        raise ValueError(f'"{value}" is an invalid hold-time') from None
+        raise ValueError(
+            f"'{value}' is not a valid hold-time\n"
+            f'  Must be 0 (disabled) or {MIN_NONZERO_HOLDTIME}-{HoldTime.MAX} seconds'
+        ) from None
     if holdtime < MIN_NONZERO_HOLDTIME and holdtime != 0:
-        raise ValueError(f'holdtime must be zero or at least {MIN_NONZERO_HOLDTIME} seconds')
+        raise ValueError(
+            f'hold-time {holdtime} is invalid\n'
+            f'  Must be 0 (disabled) or at least {MIN_NONZERO_HOLDTIME} seconds (RFC 4271)'
+        )
     if holdtime > HoldTime.MAX:
-        raise ValueError(f'holdtime must be smaller or equal to {HoldTime.MAX}')
+        raise ValueError(f'hold-time {holdtime} is invalid\n  Maximum is {HoldTime.MAX} seconds')
     return holdtime
 
 
@@ -148,12 +156,12 @@ def processes(tokeniser) -> List[str]:
     result: List[str] = []
     token = tokeniser()
     if token != '[':
-        raise ValueError('invalid processes, does not start with [')
+        raise ValueError('invalid processes list\n  Format: [ process1, process2, ... ]')
 
     while True:
         token = tokeniser()
         if not token:
-            raise ValueError('invalid processes, does not end with ]')
+            raise ValueError("invalid processes list - missing closing ']'\n  Format: [ process1, process2, ... ]")
         if token == ']':
             break
         if token == ',':
@@ -167,20 +175,20 @@ def processes_match(tokeniser) -> List[str]:
     result: List[str] = []
     token = tokeniser()
     if token != '[':
-        raise ValueError('invalid processes-match, does not start with [')
+        raise ValueError('invalid processes-match list\n  Format: [ regex1, regex2, ... ]')
 
     while True:
         token = tokeniser()
         if not token:
-            raise ValueError('invalid processes-match, does not end with ]')
+            raise ValueError("invalid processes-match list - missing closing ']'\n  Format: [ regex1, regex2, ... ]")
         if token == ']':
             break
         if token == ',':
             continue
         try:
             re.compile(token)
-        except re.error:
-            raise ValueError(f'"{token}" is not a valid regex, "re" lib returns error {re.error}.') from None
+        except re.error as e:
+            raise ValueError(f"'{token}' is not a valid regular expression\n  Error: {e}") from None
         result.append(token)
 
     return result
@@ -193,7 +201,9 @@ def rate_limit(tokeniser) -> int:
     try:
         rate = int(value)
     except ValueError:
-        raise ValueError(f'"{value}" is an invalid rate-limit') from None
+        raise ValueError(
+            f"'{value}' is not a valid rate-limit\n  Valid options: <number> (messages/sec), disable, disabled"
+        ) from None
     if rate <= 0:
-        raise ValueError('rate must be zero or at 1 (per second)')
+        raise ValueError(f"rate-limit {rate} is invalid\n  Must be at least 1 (messages/sec) or use 'disable'")
     return rate

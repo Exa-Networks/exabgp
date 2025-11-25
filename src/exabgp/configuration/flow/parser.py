@@ -418,12 +418,12 @@ def mark(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     value: str = tokeniser()
 
     if not value.isdigit():
-        raise ValueError('dscp is not a number')
+        raise ValueError(f"'{value}' is not a valid DSCP mark value\n  Must be a number 0-{DSCP_MAX_VALUE}")
 
     dscp_value: int = int(value)
 
     if dscp_value < 0 or dscp_value > DSCP_MAX_VALUE:
-        raise ValueError('dscp is not a valid number')
+        raise ValueError(f'DSCP value {dscp_value} is out of range\n  Must be 0-{DSCP_MAX_VALUE}')
 
     return ExtendedCommunities().add(TrafficMark(dscp_value))
 
@@ -435,14 +435,17 @@ def action(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     terminal: bool = 'terminal' in value
 
     if not sample and not terminal:
-        raise ValueError('invalid flow action')
+        raise ValueError(f"'{value}' is not a valid flow action\n  Valid options: sample, terminal, sample-terminal")
 
     return ExtendedCommunities().add(TrafficAction(sample, terminal))
 
 
 def _interface_set(data: str) -> InterfaceSet:
     if data.count(':') != INTERFACE_SET_COLON_COUNT:
-        raise ValueError('not a valid format {}'.format(data))
+        raise ValueError(
+            f"'{data}' is not a valid interface-set\n"
+            f'  Format: <transitive|non-transitive>:<input|output|input-output>:<asn>:<group-id>'
+        )
 
     trans: str
     direction: str
@@ -456,9 +459,9 @@ def _interface_set(data: str) -> InterfaceSet:
     elif trans == 'non-transitive':
         trans_bool = False
     else:
-        raise ValueError('Bad transitivity type {}, should be transitive or non-transitive'.format(trans))
+        raise ValueError(f"'{trans}' is not a valid transitivity type\n  Valid options: transitive, non-transitive")
     if prefix.count('.'):
-        raise ValueError('a 32 bits number must be used, invalid value {}'.format(prefix))
+        raise ValueError(f"'{prefix}' is not a valid ASN\n  Must be a 32-bit integer (not dotted notation)")
     int_direction: int
     if direction == 'input':
         int_direction = DIRECTION_INPUT
@@ -467,13 +470,13 @@ def _interface_set(data: str) -> InterfaceSet:
     elif direction == 'input-output':
         int_direction = DIRECTION_INPUT_OUTPUT
     else:
-        raise ValueError('Bad direction {}, should be input, output or input-output'.format(direction))
+        raise ValueError(f"'{direction}' is not a valid direction\n  Valid options: input, output, input-output")
     asn: int = int(prefix)
     route_target: int = int(suffix)
     if asn >= pow(2, ASN32_MAX_BITS):
-        raise ValueError('asn can only be 32 bits, value too large {}'.format(asn))
+        raise ValueError(f'ASN {asn} is too large\n  Maximum is {pow(2, ASN32_MAX_BITS) - 1} (32 bits)')
     if route_target >= pow(2, GROUP_ID_BITS):
-        raise ValueError('group-id is a 14 bits number, value too large {}'.format(route_target))
+        raise ValueError(f'group-id {route_target} is too large\n  Maximum is {pow(2, GROUP_ID_BITS) - 1} (14 bits)')
     return InterfaceSet(trans_bool, ASN(asn), route_target, int_direction)
 
 
