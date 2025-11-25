@@ -74,10 +74,10 @@ class CIDR:
     def index(self):
         return str(self.mask) + str(self._packed[: CIDR.size(self.mask)])
 
-    def pack_ip(self):
+    def pack_ip(self) -> bytes:
         return self._packed[: CIDR.size(self.mask)]
 
-    def pack_nlri(self):
+    def pack_nlri(self) -> bytes:
         return bytes([self.mask]) + self._packed[: CIDR.size(self.mask)]
 
     @staticmethod

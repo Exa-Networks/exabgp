@@ -16,7 +16,7 @@ import fcntl
 import asyncio
 import collections
 
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, TypeVar, Union, TYPE_CHECKING
+from typing import Any, Callable, Dict, Generator, IO, List, Optional, Tuple, TypeVar, Union, TYPE_CHECKING
 from threading import Thread
 
 if TYPE_CHECKING:
@@ -259,13 +259,13 @@ class Processes:
                 )
                 self._update_fds()
                 # Make stdout non-blocking for reading
-                fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)  # type: ignore[union-attr]
+                fcntl.fcntl(self._get_stdout(process).fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
                 # Make stdin non-blocking for writing (prevents blocking asyncio event loop)
-                fcntl.fcntl(self._process[process].stdin.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)  # type: ignore[union-attr]
+                fcntl.fcntl(self._get_stdin(process).fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
                 # Register async reader if in async mode
                 if self._async_mode and self._loop:
-                    fd = self._process[process].stdout.fileno()  # type: ignore[union-attr]
+                    fd = self._get_stdout(process).fileno()
                     self._loop.add_reader(fd, self._async_reader_callback, process)
                     log.debug(lambda: f'[ASYNC] Registered reader for new process {process} (fd={fd})', 'process')
 
@@ -331,8 +331,26 @@ class Processes:
                     return True
         return False
 
+    def _get_stdout(self, process: str) -> IO[bytes]:
+        """Get stdout for a process, asserting it exists.
+
+        Safe to call because all processes are created with stdout=PIPE in _start().
+        """
+        stdout = self._process[process].stdout
+        assert stdout is not None, f'Process {process} has no stdout (should be impossible)'
+        return stdout
+
+    def _get_stdin(self, process: str) -> IO[bytes]:
+        """Get stdin for a process, asserting it exists.
+
+        Safe to call because all processes are created with stdin=PIPE in _start().
+        """
+        stdin = self._process[process].stdin
+        assert stdin is not None, f'Process {process} has no stdin (should be impossible)'
+        return stdin
+
     def _update_fds(self) -> None:
-        self.fds = [self._process[process].stdout.fileno() for process in self._process]  # type: ignore[union-attr]
+        self.fds = [self._get_stdout(process).fileno() for process in self._process]
 
     def received(self) -> Generator[Tuple[str, str], None, None]:
         consumed_data = False
@@ -343,8 +361,9 @@ class Processes:
                 poll = proc.poll()
 
                 poller = select.poll()
+                stdout = self._get_stdout(process)
                 poller.register(
-                    proc.stdout,  # type: ignore[arg-type]
+                    stdout,
                     select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
                 )
 
@@ -362,7 +381,7 @@ class Processes:
                     # Calling next() on Linux and OSX works perfectly well
                     # but not on OpenBSD where it always raise StopIteration
                     # and only read() works (not even readline)
-                    buf = str(proc.stdout.read(16384), 'ascii')  # type: ignore[union-attr]
+                    buf = str(stdout.read(16384), 'ascii')
                     if buf == '' and poll is not None:
                         # if proc.poll() is None then
                         # process is fine, we received an empty line because
@@ -470,7 +489,7 @@ class Processes:
             # to avoid blocking even with O_NONBLOCK set on the descriptor
             # Note: We read in larger chunks for efficiency, but only process ONE
             # command per reactor loop iteration via received_async() to match sync behavior
-            fd = proc.stdout.fileno()  # type: ignore[union-attr]
+            fd = self._get_stdout(process_name).fileno()
             raw_data = os.read(fd, 16384)
             buf = str(raw_data, 'ascii')
 
@@ -529,9 +548,10 @@ class Processes:
             # On error, try to remove reader to prevent callback loop
             try:
                 if self._async_mode and self._loop and process_name in self._process:
-                    fd = self._process[process_name].stdout.fileno()  # type: ignore[union-attr]
-                    self._loop.remove_reader(fd)
-                    log.debug(lambda: f'[ASYNC] Removed reader after OSError for {process_name}', 'process')
+                    proc_stdout = self._process[process_name].stdout
+                    if proc_stdout is not None:
+                        self._loop.remove_reader(proc_stdout.fileno())
+                        log.debug(lambda: f'[ASYNC] Removed reader after OSError for {process_name}', 'process')
             except (ValueError, OSError, AttributeError):
                 pass
 
@@ -543,9 +563,10 @@ class Processes:
             # On any exception, try to remove reader to prevent callback loop
             try:
                 if self._async_mode and self._loop and process_name in self._process:
-                    fd = self._process[process_name].stdout.fileno()  # type: ignore[union-attr]
-                    self._loop.remove_reader(fd)
-                    log.debug(lambda: f'[ASYNC] Removed reader after exception for {process_name}', 'process')
+                    proc_stdout = self._process[process_name].stdout
+                    if proc_stdout is not None:
+                        self._loop.remove_reader(proc_stdout.fileno())
+                        log.debug(lambda: f'[ASYNC] Removed reader after exception for {process_name}', 'process')
             except (ValueError, OSError, AttributeError):
                 pass
 
@@ -570,7 +591,9 @@ class Processes:
         if self._command_queue:
             yield self._command_queue.popleft()
 
-    def write(self, process: str, string: Optional[str], neighbor: Optional['Neighbor'] = None) -> bool:
+    def write(
+        self, process: str, string: Optional[str], peer_or_neighbor: Optional[Union['Neighbor', 'Peer']] = None
+    ) -> bool:
         if string is None:
             return True
 
@@ -614,9 +637,10 @@ class Processes:
         # Note: This can block if the pipe buffer is full and the subprocess isn't reading.
         # This is inherent to sync mode. Use async mode (exabgp_reactor_asyncio=true) for
         # non-blocking writes via the write queue mechanism above.
+        stdin = self._get_stdin(process)
         while True:
             try:
-                self._process[process].stdin.write(data)  # type: ignore[union-attr]
+                stdin.write(data)
             except OSError as exc:
                 self._broken.append(process)
                 if exc.errno == errno.EPIPE:
@@ -633,7 +657,7 @@ class Processes:
             break
 
         try:
-            self._process[process].stdin.flush()  # type: ignore[union-attr]
+            stdin.flush()
         except OSError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
             log.debug(
@@ -682,7 +706,7 @@ class Processes:
         data = bytes(f'{string}\n', 'ascii')
 
         # Get stdin file descriptor
-        stdin_fd = self._process[process].stdin.fileno()  # type: ignore[union-attr]
+        stdin_fd = self._get_stdin(process).fileno()
 
         # Use asyncio's non-blocking socket write
         loop = asyncio.get_running_loop()
@@ -731,7 +755,7 @@ class Processes:
 
             # Get stdin FD
             try:
-                stdin_fd = self._process[process_name].stdin.fileno()  # type: ignore[union-attr]
+                stdin_fd = self._get_stdin(process_name).fileno()
             except (AttributeError, ValueError):
                 # Stdin closed or invalid
                 log.debug(lambda: f'[ASYNC] Cannot flush queue for {process_name}: stdin closed', 'process')
@@ -883,8 +907,14 @@ class Processes:
         """Get ACK state for a specific service/process"""
         return self._ack[service]
 
-    def _notify(self, neighbor: 'Neighbor', event: str) -> Generator[str, None, None]:
-        for process in neighbor.api[event]:  # type: ignore[index]
+    def _notify(self, peer_or_neighbor: Union['Neighbor', 'Peer'], event: str) -> Generator[str, None, None]:
+        # Accept both Peer and Neighbor - Peer has .neighbor attribute
+        neighbor: 'Neighbor' = (
+            peer_or_neighbor.neighbor if hasattr(peer_or_neighbor, 'neighbor') else peer_or_neighbor  # type: ignore[assignment]
+        )
+        if neighbor.api is None:
+            return
+        for process in neighbor.api[event]:
             yield process
 
     # do not do anything if silenced
@@ -986,15 +1016,15 @@ class Processes:
     def _open(
         self, peer: 'Peer', direction: str, message: 'Open', negotiated: Negotiated, header: str, body: str
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.OPEN.SHORT}'):  # type: ignore[arg-type]
-            self.write(process, self._encoder[process].open(peer, direction, message, negotiated, header, body), peer)  # type: ignore[arg-type]
+        for process in self._notify(peer, f'{direction}-{Message.CODE.OPEN.SHORT}'):
+            self.write(process, self._encoder[process].open(peer, direction, message, negotiated, header, body), peer)
 
     @register_process(Message.CODE.UPDATE)
     def _update(
         self, peer: 'Peer', direction: str, update: 'Update', negotiated: Negotiated, header: str, body: str
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.UPDATE.SHORT}'):  # type: ignore[arg-type]
-            self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)  # type: ignore[arg-type]
+        for process in self._notify(peer, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
+            self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)
 
     @register_process(Message.CODE.NOTIFICATION)
     def _notification(
