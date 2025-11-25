@@ -41,6 +41,9 @@ from exabgp.version import text as text_version
 
 from exabgp.environment import getenv
 
+# TypeVar for silenced decorator - preserves function signature
+_F = TypeVar('_F', bound=Callable[..., None])
+
 
 # pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
 
@@ -670,9 +673,12 @@ class Processes:
     async def write_async(self, process: str, string: Optional[str], neighbor: Optional['Neighbor'] = None) -> bool:
         """Async version of write() - non-blocking write to API process stdin
 
-        Uses asyncio.sock_sendall() to write without blocking the event loop.
+        Uses os.write() on non-blocking fd to write without blocking the event loop.
         This prevents deadlock in async mode where blocking write would prevent
         reading from API process stdout.
+
+        Note: Currently unused - async writes go through write() + flush_write_queue_async().
+        Kept for potential future direct async write needs.
         """
         if string is None:
             return True
@@ -705,18 +711,25 @@ class Processes:
 
         data = bytes(f'{string}\n', 'ascii')
 
-        # Get stdin file descriptor
+        # Get stdin file descriptor (non-blocking, set in _start())
         stdin_fd = self._get_stdin(process).fileno()
 
-        # Use asyncio's non-blocking socket write
-        loop = asyncio.get_running_loop()
-
         try:
-            # sock_sendall handles partial writes and EAGAIN automatically
-            await loop.sock_sendall(stdin_fd, data)
+            # Use os.write for non-blocking write (same as flush_write_queue_async)
+            written = os.write(stdin_fd, data)
+            if written < len(data):
+                # Partial write - queue remainder for later flush
+                if process not in self._write_queue:
+                    self._write_queue[process] = collections.deque()
+                self._write_queue[process].append(data[written:])
         except OSError as exc:
             self._broken.append(process)
-            if exc.errno == errno.EPIPE:
+            if exc.errno == errno.EAGAIN or exc.errno == errno.EWOULDBLOCK:
+                # Buffer full - queue for later
+                if process not in self._write_queue:
+                    self._write_queue[process] = collections.deque()
+                self._write_queue[process].append(data)
+            elif exc.errno == errno.EPIPE:
                 log.debug(lambda: 'issue while sending data to our helper program', 'process')
                 raise ProcessError from None
             else:
@@ -724,7 +737,6 @@ class Processes:
                     lambda exc=exc: f'error received while sending data to helper program ({errstr(exc)})',
                     'process',
                 )
-                # In async mode, don't retry - let caller handle
                 raise ProcessError from None
 
         return True
@@ -910,9 +922,9 @@ class Processes:
     def _notify(self, peer_or_neighbor: Union['Neighbor', 'Peer'], event: str) -> Generator[str, None, None]:
         # Accept both Peer and Neighbor - Peer has .neighbor attribute
         neighbor: 'Neighbor' = (
-            cast('Neighbor', peer_or_neighbor.neighbor)
+            peer_or_neighbor.neighbor  # type: ignore[union-attr]
             if hasattr(peer_or_neighbor, 'neighbor')
-            else cast('Neighbor', peer_or_neighbor)
+            else peer_or_neighbor  # type: ignore[assignment]
         )
         if neighbor.api is None:
             return
@@ -922,16 +934,13 @@ class Processes:
     # do not do anything if silenced
     # no-self-argument
 
-    # TypeVar for silenced decorator - preserves function signature
-    _F = TypeVar('_F', bound=Callable[..., None])
-
-    def silenced(function: _F) -> _F:
-        def closure(self, *args):  # type: ignore[no-untyped-def]
+    def silenced(function: _F) -> _F:  # noqa: N805 - decorator, not method
+        def closure(self: 'Processes', *args: Any) -> None:
             if self.silence:
                 return None
             return function(self, *args)
 
-        return closure  # type: ignore[return-value]
+        return cast(_F, closure)
 
     # invalid-name
     @silenced
@@ -1002,9 +1011,11 @@ class Processes:
     # registering message functions
     # no-self-argument
 
-    def register_process(message_id: int, storage: Dict[int, Any] = _dispatch):
-        def closure(function):
-            def wrap(*args):
+    def register_process(
+        message_id: int, storage: Dict[int, Any] = _dispatch
+    ) -> Callable[[Callable[..., None]], Callable[..., None]]:  # noqa: N805 - decorator, not method
+        def closure(function: Callable[..., None]) -> Callable[..., None]:
+            def wrap(*args: Any) -> None:
                 function(*args)
 
             storage[message_id] = wrap
