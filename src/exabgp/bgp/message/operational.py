@@ -84,7 +84,7 @@ class Operational(Message):
     # XXX: FIXME: should be upper case
     name: ClassVar[str] = ''
     category: ClassVar[str] = ''
-    code: ClassVar[int] = CODE.NOP
+    code: ClassVar[int] = CODE.NOP  # type: ignore[assignment]  # shadows Message.code() method intentionally
 
     def __init__(self, what: int) -> None:
         Message.__init__(self)
@@ -100,7 +100,8 @@ class Operational(Message):
         return f'operational {self.name}'
 
     @staticmethod
-    def register(klass: TypingType[_T]) -> TypingType[_T]:
+    def register(klass: TypingType[_T]) -> TypingType[_T]:  # type: ignore[override]
+        # klass.code is an int, not Message.code() method - the attr shadows the parent method
         Operational.registered_operational[klass.code] = (klass.category, klass)
         return klass
 
@@ -115,20 +116,20 @@ class Operational(Message):
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             data = data[7 : length + 4]
-            return klass(afi, safi, data)  # type: ignore[misc,no-any-return,operator]
+            return klass(afi, safi, data)  # type: ignore[call-arg,misc]
         if decode == 'query':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack_routerid(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
-            return klass(afi, safi, routerid, sequence)  # type: ignore[misc,no-any-return,operator]
+            return klass(afi, safi, routerid, sequence)  # type: ignore[call-arg,misc]
         if decode == 'counter':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack_routerid(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
             counter = unpack('!L', data[15:19])[0]
-            return klass(afi, safi, routerid, sequence, counter)  # type: ignore[misc,no-any-return,operator]
+            return klass(afi, safi, routerid, sequence, counter)  # type: ignore[call-arg,misc]
         sys.stdout.write('ignoring ATM this kind of message\n')
         return None
 
@@ -256,7 +257,7 @@ class Advisory:
     @Operational.register
     class ADM(_Advisory):
         name: ClassVar[str] = 'ADM'
-        code: ClassVar[int] = Operational.CODE.ADM
+        code: ClassVar[int] = Operational.CODE.ADM  # type: ignore[assignment]
 
         def __init__(
             self,
@@ -277,7 +278,7 @@ class Advisory:
     @Operational.register
     class ASM(_Advisory):
         name: ClassVar[str] = 'ASM'
-        code: ClassVar[int] = Operational.CODE.ASM
+        code: ClassVar[int] = Operational.CODE.ASM  # type: ignore[assignment]
 
         def __init__(
             self,
@@ -303,7 +304,7 @@ class Advisory:
 class Query:
     class _Query(SequencedOperationalFamily):
         category: ClassVar[str] = 'query'
-        code: ClassVar[int]
+        code: ClassVar[int]  # type: ignore[assignment]
 
         def __init__(
             self, afi: Union[int, AFI], safi: Union[int, SAFI], routerid: Optional[RouterID], sequence: Optional[int]
@@ -338,7 +339,7 @@ class Query:
 class Response:
     class _Counter(SequencedOperationalFamily):
         category: ClassVar[str] = 'counter'
-        code: ClassVar[int]
+        code: ClassVar[int]  # type: ignore[assignment]
 
         def __init__(
             self,
