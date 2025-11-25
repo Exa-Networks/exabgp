@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Generator, Tuple, Union, TYPE_CHECKING
+from typing import Generator, Tuple, Union, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from exabgp.configuration.core.tokeniser import Tokeniser
 
-from exabgp.bgp.message.open.asn import (
-    ASN,
-)
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.update.attribute import Attributes, NextHop, NextHopSelf
 from exabgp.bgp.message.update.attribute.community.extended import (
     ExtendedCommunities,
@@ -51,7 +50,7 @@ from exabgp.logger import log
 from exabgp.protocol.family import (
     AFI,
 )
-from exabgp.protocol.ip import IP, IPv4, IPv6, NoNextHop
+from exabgp.protocol.ip import IP, IPv4, IPv6, NoNextHop, _NoNextHop
 from exabgp.rib.change import Change
 
 SINGLE_SLASH = 1  # Format with single slash (IP/prefix)
@@ -205,7 +204,7 @@ def _generic_condition(
     None,
     None,
 ]:
-    _operator = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric
+    _operator = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric  # type: ignore[attr-defined]
     data: str = tokeniser()
     AND: int = BinaryOperator.NOP
     if data == '[':
@@ -219,7 +218,7 @@ def _generic_condition(
             value: str
             value, data = _value(_)
             # XXX: should do a check that the rule is valid for the family
-            yield klass(AND | operator, klass.converter(value))
+            yield klass(AND | operator, klass.converter(value))  # type: ignore[attr-defined]
             if data:
                 if data[0] != '&':
                     raise ValueError('Unknown binary operator {}'.format(data[0]))
@@ -234,7 +233,7 @@ def _generic_condition(
         while data:
             operator, _ = _operator(data)
             value, data = _value(_)
-            yield klass(operator | AND, klass.converter(value))
+            yield klass(operator | AND, klass.converter(value))  # type: ignore[attr-defined]
             if data:
                 if data[0] != '&':
                     raise ValueError('Unknown binary operator {}'.format(data[0]))
@@ -244,67 +243,67 @@ def _generic_condition(
 
 def any_port(tokeniser: 'Tokeniser') -> Generator[FlowAnyPort, None, None]:
     for _ in _generic_condition(tokeniser, FlowAnyPort):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def source_port(tokeniser: 'Tokeniser') -> Generator[FlowSourcePort, None, None]:
     for _ in _generic_condition(tokeniser, FlowSourcePort):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def destination_port(tokeniser: 'Tokeniser') -> Generator[FlowDestinationPort, None, None]:
     for _ in _generic_condition(tokeniser, FlowDestinationPort):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def packet_length(tokeniser: 'Tokeniser') -> Generator[FlowPacketLength, None, None]:
     for _ in _generic_condition(tokeniser, FlowPacketLength):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def tcp_flags(tokeniser: 'Tokeniser') -> Generator[FlowTCPFlag, None, None]:
     for _ in _generic_condition(tokeniser, FlowTCPFlag):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def protocol(tokeniser: 'Tokeniser') -> Generator[FlowIPProtocol, None, None]:
     for _ in _generic_condition(tokeniser, FlowIPProtocol):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def next_header(tokeniser: 'Tokeniser') -> Generator[FlowNextHeader, None, None]:
     for _ in _generic_condition(tokeniser, FlowNextHeader):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def icmp_type(tokeniser: 'Tokeniser') -> Generator[FlowICMPType, None, None]:
     for _ in _generic_condition(tokeniser, FlowICMPType):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def icmp_code(tokeniser: 'Tokeniser') -> Generator[FlowICMPCode, None, None]:
     for _ in _generic_condition(tokeniser, FlowICMPCode):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def fragment(tokeniser: 'Tokeniser') -> Generator[FlowFragment, None, None]:
     for _ in _generic_condition(tokeniser, FlowFragment):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def dscp(tokeniser: 'Tokeniser') -> Generator[FlowDSCP, None, None]:
     for _ in _generic_condition(tokeniser, FlowDSCP):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def traffic_class(tokeniser: 'Tokeniser') -> Generator[FlowTrafficClass, None, None]:
     for _ in _generic_condition(tokeniser, FlowTrafficClass):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def flow_label(tokeniser: 'Tokeniser') -> Generator[FlowFlowLabel, None, None]:
     for _ in _generic_condition(tokeniser, FlowFlowLabel):
-        yield _
+        yield _  # type: ignore[misc]
 
 
 def next_hop(tokeniser: 'Tokeniser') -> Union[NextHopSelf, NextHop]:
@@ -338,7 +337,7 @@ def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 
-def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, type], ExtendedCommunities]:
+def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, _NoNextHop], ExtendedCommunities]:
     data: str = tokeniser()
     count: int = data.count(':')
 
@@ -360,12 +359,13 @@ def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, type], ExtendedCommuniti
                 raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
 
         nn: str
-        ip, nn = data.split(']:')
-        ip = ip.replace('[', '', 1)
+        ip_str: str
+        ip_str, nn = data.split(']:')
+        ip_str = ip_str.replace('[', '', 1)
 
         if int(nn) >= pow(2, LOCAL_ADMIN_16_BITS):
             raise ValueError('Local administrator field is a 16 bits number, value too large {}'.format(nn))
-        return IP.create(ip), ExtendedCommunities().add(TrafficRedirectIPv6(ip, int(nn)))
+        return IP.create(ip_str), ExtendedCommunities().add(TrafficRedirectIPv6(ip_str, int(nn)))
 
     # the redirect is an ASN:NN route-target
     if True:  # count == 1:
@@ -389,12 +389,12 @@ def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, type], ExtendedCommuniti
                 raise ValueError(
                     'asn is a 32 bits number, local administrator field can only be 16 bit {}'.format(nn_int)
                 )
-            return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(asn, nn_int))
+            return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(ASN4(asn), nn_int))
 
         if nn_int >= pow(2, LOCAL_ADMIN_32_BITS):
             raise ValueError('Local administrator field is a 32 bits number, value too large {}'.format(nn_int))
 
-        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(asn, nn_int))
+        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(ASN(asn), nn_int))
 
     raise ValueError('redirect format incorrect')
 
@@ -406,8 +406,8 @@ def redirect_next_hop(tokeniser: 'Tokeniser') -> ExtendedCommunities:
 def redirect_next_hop_ietf(tokeniser: 'Tokeniser') -> Union[ExtendedCommunities, ExtendedCommunitiesIPv6]:
     ip: IP = IP.create(tokeniser())
     if ip.ipv4():
-        return ExtendedCommunities().add(TrafficNextHopIPv4IETF(ip, False))
-    return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(ip, False))
+        return ExtendedCommunities().add(TrafficNextHopIPv4IETF(cast(IPv4, ip), False))
+    return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(cast(IPv6, ip), False))
 
 
 def copy(tokeniser: 'Tokeniser') -> Tuple[IP, ExtendedCommunities]:

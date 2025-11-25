@@ -132,7 +132,8 @@ class Peer:
             },
         )
 
-        self.generator: Optional[Generator[int, None, None]] = None
+        # None = needs initialization, False = closed/don't restart, Generator = running
+        self.generator: Union[Generator[int, None, None], bool, None] = None
         self._async_task: Optional[asyncio.Task] = None  # For async mode
 
         # The peer should restart after a stop
@@ -157,7 +158,7 @@ class Peer:
             except ProcessError:
                 log.debug(
                     lambda: 'could not send notification of neighbor close to API',
-                    self.connection.session(),
+                    self.id(),
                 )
         self.fsm.change(FSM.IDLE)
 
@@ -246,7 +247,8 @@ class Peer:
                 'send-keepalive': 0,
             },
         )
-        self.neighbor.rib.uncache()
+        if self.neighbor.rib:
+            self.neighbor.rib.uncache()
 
     def remove(self) -> None:
         self._stop('removed')
@@ -257,7 +259,8 @@ class Peer:
         self.stop()
 
     def resend(self, enhanced: bool, family: Optional[Tuple[AFI, SAFI]] = None) -> None:
-        self.neighbor.rib.outgoing.resend(enhanced, family)
+        if self.neighbor.rib:
+            self.neighbor.rib.outgoing.resend(enhanced, family)
         self._delay.reset()
 
     def reestablish(self, restart_neighbor: Optional['Neighbor'] = None) -> None:
@@ -305,6 +308,7 @@ class Peer:
         if self.fsm == FSM.OPENCONFIRM:
             # We cheat: we are not really reading the OPEN, we use the data we have instead
             # it does not matter as the open message will be the same anyway
+            assert self.proto is not None  # Must exist in OPENCONFIRM state
             local_id = self.neighbor['router-id'].pack_ip()
             remote_id = self.proto.negotiated.received_open.router_id.pack_ip()
 
@@ -410,6 +414,7 @@ class Peer:
             raise Interrupted('connection failed') from None
 
     def _send_open(self) -> Generator[Union[int, Open, NOP], None, None]:
+        assert self.proto is not None
         message = Message.CODE.NOP
         for message in self.proto.new_open():
             if message.ID == Message.CODE.NOP:
@@ -418,9 +423,12 @@ class Peer:
 
     async def _send_open_async(self) -> Open:
         """Async version of _send_open() - sends OPEN message using async I/O"""
+        assert self.proto is not None
         return await self.proto.new_open_async()
 
     def _read_open(self) -> Generator[Union[int, Open, NOP], None, None]:
+        assert self.proto is not None
+        assert self.proto.connection is not None
         wait = getenv().bgp.openwait
         opentimer = ReceiveTimer(
             self.proto.connection.session,
@@ -444,6 +452,7 @@ class Peer:
 
     async def _read_open_async(self) -> Open:
         """Async version of _read_open() - reads OPEN message using async I/O"""
+        assert self.proto is not None
         wait = getenv().bgp.openwait
         try:
             # Use asyncio timeout instead of ReceiveTimer
@@ -455,14 +464,18 @@ class Peer:
             raise Notify(5, 1, 'waited for open too long, we do not like stuck in active') from None
 
     def _send_ka(self) -> Generator[int, None, None]:
+        assert self.proto is not None
         for message in self.proto.new_keepalive('OPENCONFIRM'):
             yield ACTION.NOW
 
     async def _send_ka_async(self) -> None:
         """Async version of _send_ka() - sends KEEPALIVE message using async I/O"""
+        assert self.proto is not None
         await self.proto.new_keepalive_async('OPENCONFIRM')
 
     def _read_ka(self) -> Generator[int, None, None]:
+        assert self.proto is not None
+        assert self.recv_timer is not None
         # Start keeping keepalive timer
         for message in self.proto.read_keepalive():
             self.recv_timer.check_ka_timer(message)
@@ -470,6 +483,8 @@ class Peer:
 
     async def _read_ka_async(self) -> None:
         """Async version of _read_ka() - reads KEEPALIVE message using async I/O"""
+        assert self.proto is not None
+        assert self.recv_timer is not None
         message = await self.proto.read_keepalive_async()
         self.recv_timer.check_ka_timer(message)
 
@@ -488,6 +503,8 @@ class Peer:
                 if action in ACTION.ALL:
                     yield action
         self.fsm.change(FSM.CONNECT)
+        assert self.proto is not None  # Set by _connect() or handle_connection()
+        assert self.proto.connection is not None
 
         # normal sending of OPEN first ...
         if self.neighbor['local-as']:
@@ -545,6 +562,8 @@ class Peer:
             # Use async connect (no generator bridging)
             await self._connect_async()
         self.fsm.change(FSM.CONNECT)
+        assert self.proto is not None  # Set by _connect_async() or handle_connection()
+        assert self.proto.connection is not None
 
         # normal sending of OPEN first ...
         if self.neighbor['local-as']:
@@ -581,6 +600,11 @@ class Peer:
 
     def _main(self) -> Generator[int, None, None]:
         """Yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
+        assert self.proto is not None  # Set by _establish()
+        assert self.proto.connection is not None
+        assert self.recv_timer is not None  # Set by _establish()
+        assert self.neighbor.rib is not None  # Initialized by neighbor
+
         if self._teardown:
             raise Notify(6, 3)
 
@@ -670,7 +694,7 @@ class Peer:
                     if not operational:
                         new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                         if new_operational:
-                            operational = self.proto.new_operational(new_operational, self.proto.negotiated)  # type: ignore[union-attr,arg-type]
+                            operational = self.proto.new_operational(new_operational, self.proto.negotiated)  # type: ignore[arg-type]
 
                     if operational:
                         try:
@@ -687,7 +711,7 @@ class Peer:
                     if not refresh:
                         new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                         if new_refresh:
-                            refresh = self.proto.new_refresh(new_refresh)  # type: ignore[union-attr,arg-type]
+                            refresh = self.proto.new_refresh(new_refresh)  # type: ignore[arg-type]
 
                     if refresh:
                         try:
@@ -755,6 +779,11 @@ class Peer:
 
     async def _main_async(self) -> int:
         """Async version of _main() - main BGP message processing loop using async I/O"""
+        assert self.proto is not None  # Set by _establish_async()
+        assert self.proto.connection is not None
+        assert self.recv_timer is not None  # Set by _establish_async()
+        assert self.neighbor.rib is not None  # Initialized by neighbor
+
         if self._teardown:
             raise Notify(6, 3)
 
@@ -857,7 +886,7 @@ class Peer:
                         new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                         if new_operational:
                             # Use async version
-                            await self.proto.new_operational_async(new_operational, self.proto.negotiated)  # type: ignore[union-attr,arg-type]
+                            await self.proto.new_operational_async(new_operational, self.proto.negotiated)  # type: ignore[arg-type]
                             operational = None  # Mark as sent
                 # make sure that if some operational message are received via the API
                 # that we do not eat memory for nothing
@@ -870,7 +899,7 @@ class Peer:
                         new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                         if new_refresh:
                             # Use async version
-                            await self.proto.new_refresh_async(new_refresh)  # type: ignore[union-attr,arg-type]
+                            await self.proto.new_refresh_async(new_refresh)  # type: ignore[arg-type]
                             refresh = None  # Mark as sent
 
                 # Need to send update
@@ -1113,12 +1142,12 @@ class Peer:
             # This branch handles cases where respawning failed or was disabled.
             log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
             if self.reactor.processes.terminate_on_error:
-                self.reactor.api_shutdown()
+                self.reactor.shutdown()
             else:
                 self.stop()
             return ACTION.CLOSE
 
-        if self.generator:
+        if self.generator and self.generator is not False:
             try:
                 # This generator only stops when it raises
                 # otherwise return one of the ACTION
@@ -1143,6 +1172,9 @@ class Peer:
                 return ACTION.LATER  # make sure we go through a clean loop
             return ACTION.CLOSE
 
+        # generator is False - peer is closed and should not restart
+        return ACTION.CLOSE
+
     async def run_async(self) -> None:
         """Async entry point for peer - runs the peer FSM using async/await"""
         if self.reactor.processes.broken(self.neighbor):
@@ -1150,7 +1182,7 @@ class Peer:
             # This branch handles cases where respawning failed or was disabled.
             log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
             if self.reactor.processes.terminate_on_error:
-                self.reactor.api_shutdown()
+                self.reactor.shutdown()
             else:
                 self.stop()
             return
@@ -1198,6 +1230,7 @@ class Peer:
         have_open = self.proto and self.proto.negotiated.received_open
 
         if have_peer:
+            assert self.proto is not None  # Guarded by have_peer
             peer.update(
                 {
                     'multi-session': self.proto.negotiated.multisession,
@@ -1206,6 +1239,7 @@ class Peer:
             )
 
         if have_open:
+            assert self.proto is not None  # Guarded by have_open
             capa = self.proto.negotiated.received_open.capabilities
             peer.update(
                 {
@@ -1253,6 +1287,7 @@ class Peer:
         families = {}
         for family in self.neighbor.families():
             if have_open:
+                assert self.proto is not None  # Guarded by have_open
                 common = family in self.proto.negotiated.families
                 send_addpath = self.proto.negotiated.addpath.send(*family)
                 recv_addpath = self.proto.negotiated.addpath.receive(*family)

@@ -66,7 +66,7 @@
 
 ### Type Safety (491 → 330 type ignores)
 
-**Updated:** 2025-11-25 | **Phase 1 Complete:** 31 ignores removed | **Phase 2 Progress:** 49 issues fixed
+**Updated:** 2025-11-25 | **Phase 1 Complete:** 31 ignores removed | **Phase 2 Progress:** 145 issues fixed (peer.py 70, flow/parser.py 26, others 49)
 
 #### Phase 1 - Quick Wins - COMPLETE
 
@@ -94,8 +94,8 @@
 **Files with 10-20 ignores:**
 - [x] `configuration/configuration.py` - 10 fixes + 1 bug fix (.afi_safi() on tuple)
 - [x] `bgp/message/open/capability/negotiated.py` - NOW CLEAN (0 errors)
-- [ ] `reactor/peer.py` (124 errors) - Optional[Protocol] guards needed
-- [ ] `configuration/flow/parser.py` (26 errors) - yield type mismatches
+- [x] `reactor/peer.py` (124 → 54 errors) - 70 fixes: Optional guards, bug fixes (api_shutdown→shutdown, self.connection typo, missing return)
+- [x] `configuration/flow/parser.py` (26 → 0 errors) - NOW CLEAN: Fixed generic condition yields, IP casts, ASN wrapping
 
 #### Phase 3 - Infrastructure (Future)
 
