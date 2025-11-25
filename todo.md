@@ -82,7 +82,7 @@
 - [ ] Add input validation layer in configuration parsers
 - [ ] Sanitize error messages for external-facing APIs
 
-### XXX/TODO/BUG Comments (97 remaining)
+### XXX/TODO/BUG Comments (94 remaining)
 
 **Scanned:** 2025-11-25 | **Fixed this session:** 6 functional issues, 8 duplicate capability TODOs
 
@@ -117,10 +117,10 @@
 - [ ] `nlri/bgpls/srv6sid.py:129` - implement addpath support
 
 **Size/validation checks (4 locations) - VALIDATION:**
-- [ ] `configuration/check.py:208` - `XXX: FIXME: check size`
-- [ ] `configuration/check.py:233` - `XXX: FIXME: check size`
-- [ ] `configuration/check.py:464` - `XXX: FIXME: should be using logger here`
-- [ ] `bgp/message/update/__init__.py:109-111` - Calculate size progressively (PERFORMANCE)
+- [x] `configuration/check.py:208` - Added BGP header size validation
+- [x] `configuration/check.py:233` - Added BGP header size validation
+- [x] `configuration/check.py:464` - Replaced sys.stdout with log.info
+- [ ] `bgp/message/update/__init__.py:109-111` - Calculate size progressively (PERFORMANCE - complex refactor)
 
 #### 🟢 Low Priority - Code Quality
 
