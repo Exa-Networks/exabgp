@@ -11,6 +11,7 @@ from typing import Any, ClassVar, List, Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.logger import log
 
 # ================================================================= MultiSession
 #
@@ -20,6 +21,7 @@ from exabgp.bgp.message.open.capability.capability import CapabilityCode
 @Capability.register(Capability.CODE.MULTISESSION_CISCO)
 class MultiSession(Capability, list):
     ID: ClassVar[int] = Capability.CODE.MULTISESSION
+    _seen: bool = False
 
     def set(self, data: List[Any]) -> MultiSession:
         self.extend(data)
@@ -50,5 +52,7 @@ class MultiSession(Capability, list):
     def unpack_capability(
         instance: MultiSession, data: bytes, capability: Optional[CapabilityCode] = None
     ) -> MultiSession:  # pylint: disable=W0613
-        # XXX: FIXME: we should set that that instance was seen and raise if seen twice
+        if instance._seen:
+            log.debug(lambda: 'received duplicate MultiSession capability', 'parser')
+        instance._seen = True
         return instance

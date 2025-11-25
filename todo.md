@@ -1,7 +1,7 @@
 # ExaBGP Quality Improvement TODO
 
 **Generated:** 2025-11-24
-**Updated:** 2025-11-24 (peer.py XXX/FIXME resolved, srv6endx.py BUG fixed)
+**Updated:** 2025-11-25 (duplicate capability detection, functional issues resolved)
 **Stats:** 348 Python files, 54,991 LOC, 52 test files
 
 ---
@@ -82,29 +82,29 @@
 - [ ] Add input validation layer in configuration parsers
 - [ ] Sanitize error messages for external-facing APIs
 
-### XXX/TODO/BUG Comments (112 remaining)
+### XXX/TODO/BUG Comments (97 remaining)
 
-**Scanned:** 2025-11-24 | **Fixed this session:** srv6endx.py BUG, peer.py 5× XXX/FIXME
+**Scanned:** 2025-11-25 | **Fixed this session:** 6 functional issues, 8 duplicate capability TODOs
 
-#### 🔴 High Priority - Functional Issues
+#### 🔴 High Priority - Functional Issues - COMPLETE
 
-- [ ] `reactor/api/processes.py:597` - `XXX: FIXME: This is potentially blocking`
-- [ ] `reactor/network/connection.py:237` - `XXX: FIXME: Make sure it does not hold cleanup during close`
-- [ ] `reactor/loop.py:808` - `XXX: FIXME: Could return False, config reload interference`
-- [ ] `configuration/configuration.py:389-390` - `XXX: This is a bug` - process change detection broken
-- [ ] `rib/change.py:32` - `XXX: the NLRI content is half missing !!`
-- [ ] `bgp/message/update/__init__.py:256` - `XXX: FIXME: can raise ValueError, IndexError, TypeError, struct.error`
+- [x] `reactor/api/processes.py:597` - Blocking write documented, async mode added
+- [x] `reactor/network/connection.py:237` - Fixed with early return for closed connections
+- [x] `reactor/loop.py:808` - Resolved
+- [x] `configuration/configuration.py:389-390` - Process change detection fixed + documented
+- [x] `rib/change.py:32` - Resolved
+- [x] `bgp/message/update/__init__.py:256` - Documented (caller handles exceptions)
 
 #### 🟡 Medium Priority - Validation/Correctness
 
-**Duplicate capability detection (8 locations):**
-- [ ] `capability/nexthop.py:56-57` - Should complain if twice same AFI/SAFI
-- [ ] `capability/addpath.py:70` - Should check not yet seen capability
-- [ ] `capability/refresh.py:65,110` - Should raise if instance seen twice (2×)
-- [ ] `capability/operational.py:38` - Should raise if instance seen twice
-- [ ] `capability/mp.py:44` - Should raise if twice same AFI/SAFI
-- [ ] `capability/ms.py:53` - Should raise if instance seen twice
-- [ ] `capability/graceful.py:76` - Should raise if instance already setup
+**Duplicate capability detection - COMPLETE (8 locations):**
+- [x] `capability/nexthop.py` - Log + skip duplicate AFI/SAFI/NextHop entries
+- [x] `capability/addpath.py` - Log duplicate AFI/SAFI (overwrite allowed)
+- [x] `capability/refresh.py` - `_seen` flag, log on duplicate (2 classes)
+- [x] `capability/operational.py` - `_seen` flag, log on duplicate
+- [x] `capability/mp.py` - Log + skip duplicate AFI/SAFI entries
+- [x] `capability/ms.py` - `_seen` flag, log on duplicate
+- [x] `capability/graceful.py` - Log + clear on duplicate (replace)
 
 **AddPath support TODO (7 locations):**
 - [ ] `nlri/bgpls/nlri.py:107` - implement addpath support

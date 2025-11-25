@@ -14,6 +14,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.logger import log
 
 # ====================================================================== AddPath
 #
@@ -67,11 +68,17 @@ class AddPath(Capability, dict):
 
     @staticmethod
     def unpack_capability(instance: AddPath, data: bytes, capability: Optional[CapabilityCode] = None) -> AddPath:  # pylint: disable=W0613
-        # XXX: FIXME: should check that we have not yet seen the capability
+        # Check if this capability was already received (instance would have entries)
+        if len(instance) > 0:
+            log.debug(lambda: 'received duplicate AddPath capability, merging entries', 'parser')
         while data:
             afi = AFI.unpack_afi(data[:2])
             safi = SAFI.unpack_safi(data[2:3])
             sr = data[3]
+            if (afi, safi) in instance:
+                log.debug(
+                    lambda afi=afi, safi=safi: f'duplicate AFI/SAFI in AddPath capability: {afi}/{safi}', 'parser'
+                )
             instance.add_path(afi, safi, sr)
             data = data[4:]
         return instance
