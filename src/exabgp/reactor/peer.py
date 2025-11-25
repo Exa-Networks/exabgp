@@ -1,4 +1,3 @@
-
 """peer.py
 
 Created by Thomas Mangin on 2009-08-25.
@@ -146,7 +145,7 @@ class Peer:
             except ProcessError:
                 log.debug(
                     lambda: 'could not send notification of neighbor close to API',
-                    self.connection.session(),
+                    self.id(),
                 )
         self.fsm.change(FSM.IDLE)
 
@@ -202,7 +201,7 @@ class Peer:
     # logging
 
     def me(self, message):
-        return f"peer {self.neighbor['peer-address']} ASN {self.neighbor['peer-as']:<7} {message}"
+        return f'peer {self.neighbor["peer-address"]} ASN {self.neighbor["peer-as"]:<7} {message}'
 
     # control
 
@@ -299,7 +298,9 @@ class Peer:
 
             if remote_id < local_id:
                 log.debug(
-                    lambda: 'closing incoming connection as we have an outgoing connection with higher router-id for {}'.format(connection.name()),
+                    lambda: 'closing incoming connection as we have an outgoing connection with higher router-id for {}'.format(
+                        connection.name()
+                    ),
                     self.id(),
                 )
                 return connection.notification(
@@ -311,7 +312,9 @@ class Peer:
         # accept the connection
         if self.proto:
             log.debug(
-                lambda: 'closing outgoing connection as we have another incoming on with higher router-id for {}'.format(connection.name()),
+                lambda: 'closing outgoing connection as we have another incoming on with higher router-id for {}'.format(
+                    connection.name()
+                ),
                 self.id(),
             )
             self._close('closing outgoing connection as we have another incoming on with higher router-id')
@@ -357,7 +360,7 @@ class Peer:
         except Stop:
             # Connection failed
             if not connected and self.proto:
-                self._close(f"connection to {self.neighbor['peer-address']}:{self.neighbor['connect']} failed")
+                self._close(f'connection to {self.neighbor["peer-address"]}:{self.neighbor["connect"]} failed')
 
             # A connection arrived before we could establish !
             if not connected or self.proto:
@@ -606,7 +609,14 @@ class Peer:
                     except StopIteration:
                         command_eor = None
 
-                if new_routes or message.TYPE != NOP.TYPE or self.neighbor.messages or operational or self.neighbor.eor or command_eor:
+                if (
+                    new_routes
+                    or message.TYPE != NOP.TYPE
+                    or self.neighbor.messages
+                    or operational
+                    or self.neighbor.eor
+                    or command_eor
+                ):
                     yield ACTION.NOW
                 else:
                     yield ACTION.LATER
@@ -714,7 +724,7 @@ class Peer:
             # XXX: we should perhaps try to restart the process ??
             log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
             if self.reactor.processes.terminate_on_error:
-                self.reactor.api_shutdown()
+                self.reactor.shutdown()
             else:
                 self.stop()
             return True
