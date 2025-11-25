@@ -16,7 +16,7 @@ import fcntl
 import asyncio
 import collections
 
-from typing import Any, Callable, Dict, Generator, IO, List, Optional, Tuple, TypeVar, Union, TYPE_CHECKING
+from typing import Any, Callable, Dict, Generator, IO, List, Optional, Tuple, TypeVar, Union, cast, TYPE_CHECKING
 from threading import Thread
 
 if TYPE_CHECKING:
@@ -910,7 +910,9 @@ class Processes:
     def _notify(self, peer_or_neighbor: Union['Neighbor', 'Peer'], event: str) -> Generator[str, None, None]:
         # Accept both Peer and Neighbor - Peer has .neighbor attribute
         neighbor: 'Neighbor' = (
-            peer_or_neighbor.neighbor if hasattr(peer_or_neighbor, 'neighbor') else peer_or_neighbor  # type: ignore[assignment]
+            cast('Neighbor', peer_or_neighbor.neighbor)
+            if hasattr(peer_or_neighbor, 'neighbor')
+            else cast('Neighbor', peer_or_neighbor)
         )
         if neighbor.api is None:
             return

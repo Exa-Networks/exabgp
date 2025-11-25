@@ -11,6 +11,8 @@ import os
 import re
 from typing import Any, Dict, List, Union
 
+from exabgp.bgp.message.refresh import RouteRefresh
+
 from exabgp.logger import log
 
 from exabgp.configuration.core import Error
@@ -102,14 +104,14 @@ class _Configuration:
                     result = False
         return result
 
-    def inject_refresh(self, peers: List[str], refreshes: List[object]) -> bool:
+    def inject_refresh(self, peers: List[str], refreshes: List[RouteRefresh]) -> bool:
         result = True
         for neighbor in self.neighbors:
             if neighbor in peers:
                 for refresh in refreshes:
                     family = (refresh.afi, refresh.safi)
                     if family in self.neighbors[neighbor].families():
-                        self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi, refresh.safi))  # type: ignore[call-arg]
+                        self.neighbors[neighbor].refresh.append(RouteRefresh(refresh.afi, refresh.safi))
                     else:
                         log.error(
                             lambda family=family,
@@ -602,7 +604,8 @@ class Configuration(_Configuration):
             return False
 
         instance = self._structure[name].get('class', None)
-        instance.post()  # type: ignore[union-attr]
+        if instance is not None:
+            instance.post()
         return True
 
     def run(self, name: str, command: str) -> Union[bool, str]:
