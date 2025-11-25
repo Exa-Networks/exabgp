@@ -10,6 +10,7 @@ from typing import Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.logger import log
 
 # ================================================================= RouteRefresh
 #
@@ -44,6 +45,7 @@ class REFRESH:
 @Capability.register(Capability.CODE.ROUTE_REFRESH_CISCO)
 class RouteRefresh(Capability):
     ID = Capability.CODE.ROUTE_REFRESH
+    _seen: bool = False
 
     def __str__(self) -> str:
         if self.ID == Capability.CODE.ROUTE_REFRESH:
@@ -62,7 +64,9 @@ class RouteRefresh(Capability):
     def unpack_capability(
         instance: RouteRefresh, data: bytes, capability: Optional[CapabilityCode] = None
     ) -> RouteRefresh:  # pylint: disable=W0613
-        # XXX: FIXME: we should set that that instance was seen and raise if seen twice
+        if instance._seen:
+            log.debug(lambda: 'received duplicate RouteRefresh capability', 'parser')
+        instance._seen = True
         return instance
 
     def __eq__(self, other: object) -> bool:
@@ -93,6 +97,7 @@ class RouteRefresh(Capability):
 @Capability.register()
 class EnhancedRouteRefresh(Capability):
     ID = Capability.CODE.ENHANCED_ROUTE_REFRESH
+    _seen: bool = False
 
     def __str__(self) -> str:
         return 'Enhanced Route Refresh'
@@ -107,5 +112,7 @@ class EnhancedRouteRefresh(Capability):
     def unpack_capability(
         instance: EnhancedRouteRefresh, data: bytes, capability: Optional[CapabilityCode] = None
     ) -> EnhancedRouteRefresh:  # pylint: disable=W0613
-        # XXX: FIXME: we should set that that instance was seen and raise if seen twice
+        if instance._seen:
+            log.debug(lambda: 'received duplicate EnhancedRouteRefresh capability', 'parser')
+        instance._seen = True
         return instance

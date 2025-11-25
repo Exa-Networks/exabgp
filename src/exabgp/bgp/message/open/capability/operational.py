@@ -11,6 +11,7 @@ from typing import ClassVar, List, Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.logger import log
 
 # https://tools.ietf.org/html/draft-ietf-idr-operational-message-00
 # ================================================================== Operational
@@ -20,6 +21,7 @@ from exabgp.bgp.message.open.capability.capability import CapabilityCode
 @Capability.register()
 class Operational(Capability, list):
     ID: ClassVar[int] = Capability.CODE.OPERATIONAL
+    _seen: bool = False
 
     def __str__(self) -> str:
         # XXX: FIXME: could be more verbose
@@ -35,5 +37,7 @@ class Operational(Capability, list):
     def unpack_capability(
         instance: Operational, data: bytes, capability: Optional[CapabilityCode] = None
     ) -> Operational:  # pylint: disable=W0613
-        # XXX: FIXME: we should set that that instance was seen and raise if seen twice
+        if instance._seen:
+            log.debug(lambda: 'received duplicate Operational capability', 'parser')
+        instance._seen = True
         return instance
