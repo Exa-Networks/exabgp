@@ -246,7 +246,7 @@ class Advisory:
         category: ClassVar[str] = 'advisory'
 
         def extensive(self) -> str:
-            return f'operational {self.name} afi {self.afi} safi {self.safi} "{self.data}"'  # type: ignore[str-bytes-safe]
+            return f'operational {self.name} afi {self.afi} safi {self.safi} "{self.data.hex()}"'
 
     @Operational.register  # type: ignore[arg-type]
     class ADM(_Advisory):

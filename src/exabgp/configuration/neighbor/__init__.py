@@ -145,13 +145,13 @@ class ParseNeighbor(Section):
         self.neighbors = {}
 
     def pre(self) -> bool:
-        return self.parse(self.name, 'peer-address')  # type: ignore[no-any-return]
+        return self.parse(self.name, 'peer-address')
 
     def _post_get_scope(self) -> Dict[str, Any]:
         for inherited in self.scope.pop('inherit', []):
             data = self.scope.template('neighbor', inherited)
             self.scope.inherit(data)
-        return self.scope.get()  # type: ignore[no-any-return]
+        return self.scope.get()
 
     def _post_neighbor(self, local: Dict[str, Any], families: List[Tuple[AFI, SAFI]]) -> Neighbor:
         neighbor = Neighbor()
@@ -300,34 +300,34 @@ class ParseNeighbor(Section):
 
         missing = neighbor.missing()
         if missing:
-            return self.error.set('incomplete neighbor, missing {}'.format(missing))  # type: ignore[no-any-return]
+            return self.error.set('incomplete neighbor, missing {}'.format(missing))
         neighbor.infer()
 
         if not neighbor.auto_discovery and neighbor['local-address'].afi != neighbor['peer-address'].afi:
-            return self.error.set('local-address and peer-address must be of the same family')  # type: ignore[no-any-return]
+            return self.error.set('local-address and peer-address must be of the same family')
         neighbor.range_size = neighbor['peer-address'].mask.size()
 
         if neighbor.range_size > 1 and not (neighbor['passive'] or getenv().bgp.passive):
-            return self.error.set('can only use ip ranges for the peer address with passive neighbors')  # type: ignore[no-any-return]
+            return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
         if neighbor.index() in self._neighbors:
-            return self.error.set('duplicate peer definition {}'.format(neighbor['peer-address'].top()))  # type: ignore[no-any-return]
+            return self.error.set('duplicate peer definition {}'.format(neighbor['peer-address'].top()))
         self._neighbors.append(neighbor.index())
 
         if neighbor['md5-password']:
             try:
                 md5 = base64.b64decode(neighbor['md5-password']) if neighbor['md5-base64'] else neighbor['md5-password']
             except TypeError as e:
-                return self.error.set(f'Invalid base64 encoding of MD5 password ({e})')  # type: ignore[no-any-return]
+                return self.error.set(f'Invalid base64 encoding of MD5 password ({e})')
             else:
                 if len(md5) > MAX_MD5_PASSWORD_LENGTH:
-                    return self.error.set(f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters')  # type: ignore[no-any-return]
+                    return self.error.set(f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters')
 
         # check we are not trying to announce routes without the right MP announcement
         for change in neighbor.changes:
             family = change.nlri.family().afi_safi()
             if family not in families and family != (AFI.ipv4, SAFI.unicast):
-                return self.error.set(  # type: ignore[no-any-return]
+                return self.error.set(
                     'Trying to announce a route of type {},{} when we are not announcing the family to our peer'.format(
                         *change.nlri.family().afi_safi()
                     ),

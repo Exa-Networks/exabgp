@@ -37,7 +37,7 @@ class NLRI(Family):
         self.action = action
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri()))  # type: ignore[str-bytes-safe]
+        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri().hex()))
 
     def __eq__(self, other: Any) -> bool:
         return bool(self.index() == other.index())

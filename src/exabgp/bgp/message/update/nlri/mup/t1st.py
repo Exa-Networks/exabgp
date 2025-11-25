@@ -106,8 +106,8 @@ class Type1SessionTransformedRoute(MUP):
             '/%d' % self.prefix_ip_len,
         )
 
-        if self.source_ip_len != 0 and self.source_ip != b'':
-            s += ':%s/%d' % (self.source_ip, self.source_ip_len)  # type: ignore[str-bytes-safe]
+        if self.source_ip_len != 0 and isinstance(self.source_ip, IP):
+            s += ':%s/%d' % (self.source_ip, self.source_ip_len)
 
         return s
 

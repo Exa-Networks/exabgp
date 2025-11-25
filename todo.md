@@ -1,7 +1,7 @@
 # ExaBGP Quality Improvement TODO
 
 **Generated:** 2025-11-24
-**Updated:** 2025-11-25 (duplicate capability detection, functional issues resolved)
+**Updated:** 2025-11-25 (type safety Phase 1: 31 ignores removed)
 **Stats:** 348 Python files, 54,991 LOC, 52 test files
 
 ---
@@ -64,12 +64,48 @@
   - [ ] Extract state transition logic (future)
   - [ ] Improve exception handling patterns (future)
 
-### Type Safety (491 type ignores)
+### Type Safety (491 → ~460 type ignores)
 
-- [ ] Audit and fix type annotation issues instead of suppressing
-- [ ] Start with modules having >20 type ignore comments
-- [ ] Add mypy configuration for stricter typing
+**Updated:** 2025-11-25 | **Phase 1 Complete:** 31 ignores removed
+
+#### Phase 1 - Quick Wins - COMPLETE
+
+- [x] **Error.set() return type** (22 ignores removed)
+  - Added `-> bool` return type to `configuration/core/error.py`
+  - Removed `no-any-return` ignores from: configuration.py, neighbor/__init__.py, family.py, announce/__init__.py, static/route.py
+
+- [x] **transcoder.py bug fixes** (3 ignores removed)
+  - Fixed `sys.stderr.write()` called with 2 args (actual bug)
+  - Lines 83, 89, 177 - concatenated strings properly
+
+- [x] **str-bytes-safe hash functions** (6 ignores removed)
+  - nlri/nlri.py, mvpn/nlri.py, evpn/nlri.py, mup/nlri.py - use `.hex()` on bytes
+  - operational.py - use `.hex()` for data display
+  - mup/t1st.py - use `isinstance(self.source_ip, IP)` for type narrowing
+
+- [ ] **logger/__init__.py** (18 ignores - SKIPPED)
+  - Architectural: method replacement pattern hard to type
+  - Requires refactoring, not quick fix
+
+#### Phase 2 - High-Impact Modules (Future)
+
+**Files with >20 ignores:**
+- [ ] `reactor/api/processes.py` (29) - subprocess typing, silenced decorator
+- [ ] `bgp/message/update/nlri/flow.py` (21) - Protocol patterns needed
+
+**Files with 10-20 ignores:**
+- [ ] `logger/__init__.py` (18) - method replacement pattern
+- [ ] `reactor/peer.py` (18) - exception handling
+- [ ] `configuration/flow/parser.py` (17) - Communities.add() typing
+- [ ] `configuration/configuration.py` (16) - now 4 after Error.set() fix
+- [ ] `bgp/message/open/capability/negotiated.py` (16) - Optional[Open] guards
+
+#### Phase 3 - Infrastructure (Future)
+
+- [ ] Lock clean modules in pyproject.toml (util, data, environment, logger)
+- [ ] Add type:ignore regression check script
 - [ ] Add `py.typed` marker file for PEP 561 compliance
+- [ ] Make CI type checking blocking for strict modules
 
 ### Security
 

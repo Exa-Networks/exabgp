@@ -150,7 +150,7 @@ class Peer:
     def id(self) -> str:
         return 'peer-{}'.format(self.neighbor.uid)
 
-    def _close(self, message: str = '', error: str = '') -> None:
+    def _close(self, message: str = '', error: Union[str, Exception] = '') -> None:
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
             try:
                 if self.neighbor.api['neighbor-changes']:
@@ -190,7 +190,7 @@ class Peer:
 
         self.proto = None
 
-    def _reset(self, message: str = '', error: str = '') -> None:
+    def _reset(self, message: str = '', error: Union[str, Exception] = '') -> None:
         self._close(message, error)
 
         if not self._restart or self.neighbor.generated:
@@ -965,7 +965,7 @@ class Peer:
                 )
                 self.stop()
 
-            self._reset('closing connection', network)  # type: ignore[arg-type]
+            self._reset('closing connection', network)
             return
 
         # NOTIFY THE PEER OF AN ERROR
@@ -981,7 +981,7 @@ class Peer:
                         pass
                 except (NetworkError, ProcessError):
                     log.error(lambda: 'Notification not sent', self.id())
-                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)  # type: ignore[arg-type]
+                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
             else:
                 self._reset()
 
@@ -1006,13 +1006,13 @@ class Peer:
 
             self._reset(
                 f'notification received ({notification.code},{notification.subcode})',
-                notification,  # type: ignore[arg-type]
+                notification,
             )
             return
 
         # PROBLEM WRITING TO OUR FORKED PROCESSES
         except ProcessError as process:
-            self._reset('process problem', process)  # type: ignore[arg-type]
+            self._reset('process problem', process)
             return
 
         # ....
@@ -1043,7 +1043,7 @@ class Peer:
                 )
                 self.stop()
 
-            self._reset('closing connection', network)  # type: ignore[arg-type]
+            self._reset('closing connection', network)
             return
 
         # NOTIFY THE PEER OF AN ERROR
@@ -1060,7 +1060,7 @@ class Peer:
                         pass
                 except (NetworkError, ProcessError):
                     log.error(lambda: 'Notification not sent', self.id())
-                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)  # type: ignore[arg-type]
+                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
             else:
                 self._reset()
 
@@ -1085,13 +1085,13 @@ class Peer:
 
             self._reset(
                 f'notification received ({notification.code},{notification.subcode})',
-                notification,  # type: ignore[arg-type]
+                notification,
             )
             return
 
         # PROBLEM WRITING TO OUR FORKED PROCESSES
         except ProcessError as process:
-            self._reset('process problem', process)  # type: ignore[arg-type]
+            self._reset('process problem', process)
             return
 
         # ....
