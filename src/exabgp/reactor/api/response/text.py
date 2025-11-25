@@ -50,7 +50,7 @@ class Text:
     def signal(self, neighbor, signal):
         return None
 
-    def notification(self, neighbor, direction, message, negotiated, header, body):
+    def notification(self, neighbor, direction, message, header, body, negotiated=None):
         data_hex = hexstring(message.data)
         header_body = self._header_body(header, body)
         return f'neighbor {neighbor["peer-address"]} {direction} notification code {message.code} subcode {message.subcode} data {data_hex}{header_body}\n'

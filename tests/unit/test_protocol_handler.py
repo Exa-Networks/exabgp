@@ -757,12 +757,16 @@ def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) -> Non
     with pytest.raises(Notify):
         list(protocol.read_message())
 
-    # Verify API callback was made
+    # Verify API callback was made with Notify message object
+    # New signature: notification(neighbor, direction, message, header, body, negotiated=None)
     mock_peer.reactor.processes.notification.assert_called_once()
     args = mock_peer.reactor.processes.notification.call_args[0]
     assert args[1] == 'receive'
-    assert args[2] == 2  # code
-    assert args[3] == 1  # subcode
+    notify_obj = args[2]
+    assert notify_obj.code == 2
+    assert notify_obj.subcode == 1
+    assert args[3] == header
+    assert args[4] == body
 
 
 # ==============================================================================
@@ -1054,10 +1058,11 @@ def test_protocol_api_receive_parsed_mode(mock_peer: Any) -> None:
     list(protocol.read_message())
 
     # Should call message API with empty header/body
+    # New signature: message(id, neighbor, direction, msg, header, *body, negotiated=None)
     mock_peer.reactor.processes.message.assert_called()
     args = mock_peer.reactor.processes.message.call_args[0]
-    assert args[5] == b''  # empty header
-    assert args[6] == b''  # empty body
+    assert args[4] == b''  # empty header
+    assert args[5] == b''  # empty body
 
 
 def test_protocol_api_receive_consolidate_mode(mock_peer: Any) -> None:
@@ -1084,10 +1089,11 @@ def test_protocol_api_receive_consolidate_mode(mock_peer: Any) -> None:
     list(protocol.read_message())
 
     # Should call message API with actual header/body
+    # New signature: message(id, neighbor, direction, msg, header, *body, negotiated=None)
     mock_peer.reactor.processes.message.assert_called()
     args = mock_peer.reactor.processes.message.call_args[0]
-    assert args[5] == header
-    assert args[6] == body
+    assert args[4] == header
+    assert args[5] == body
 
 
 # ==============================================================================

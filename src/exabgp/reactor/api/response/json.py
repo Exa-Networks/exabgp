@@ -235,7 +235,7 @@ class JSON:
             message_type='signal',
         )
 
-    def notification(self, neighbor, direction, message, negotiated, header, body):
+    def notification(self, neighbor, direction, message, header, body, negotiated=None):
         kv_content = self._kv(
             {
                 'code': message.code,
