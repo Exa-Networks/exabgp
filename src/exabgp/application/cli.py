@@ -136,22 +136,22 @@ class InteractiveCLI:
 
             except EOFError:
                 # Ctrl+D pressed
-                print()  # Newline after ^D
+                sys.stdout.write('\n')  # Newline after ^D
                 self._quit()
                 break
             except KeyboardInterrupt:
                 # Ctrl+C pressed OR signal from background thread
                 if not self.running:
                     # Signal from background thread - exit gracefully
-                    print()  # Newline
+                    sys.stdout.write('\n')  # Newline
                     break
                 else:
                     # User pressed Ctrl+C - quit normally
-                    print()  # Newline after ^C
+                    sys.stdout.write('\n')  # Newline after ^C
                     self._quit()
                     break
             except Exception as exc:
-                print(self.formatter.format_error(f'Unexpected error: {exc}'))
+                sys.stdout.write(f'{self.formatter.format_error(f"Unexpected error: {exc}")}\n')
 
     def _print_banner(self) -> None:
         """Print welcome banner with ASCII art and version"""
@@ -169,18 +169,18 @@ class InteractiveCLI:
 ╚══════════════════════════════════════════════════════════╝
 """
         if self.formatter.use_color:
-            print(f'{Colors.BOLD}{Colors.CYAN}{banner}{Colors.RESET}', end='')
+            sys.stdout.write(f'{Colors.BOLD}{Colors.CYAN}{banner}{Colors.RESET}')
         else:
-            print(banner, end='')
+            sys.stdout.write(banner)
 
         # Print connection message if daemon UUID is available
         if self.daemon_uuid:
             conn_msg = f'✓ Connected to ExaBGP daemon (UUID: {self.daemon_uuid})'
             if self.formatter.use_color:
-                print(f'{Colors.GREEN}{conn_msg}{Colors.RESET}')
+                sys.stdout.write(f'{Colors.GREEN}{conn_msg}{Colors.RESET}\n')
             else:
-                print(conn_msg)
-        print()
+                sys.stdout.write(f'{conn_msg}\n')
+        sys.stdout.write('\n')
 
         # Print usage instructions
         help_text = """Type 'help' for available commands
@@ -193,9 +193,9 @@ Display Format (optional prefix):
   Example: json show neighbor
 """
         if self.formatter.use_color:
-            print(f'{Colors.DIM}{help_text}{Colors.RESET}')
+            sys.stdout.write(f'{Colors.DIM}{help_text}{Colors.RESET}\n')
         else:
-            print(help_text)
+            sys.stdout.write(f'{help_text}\n')
 
     def _handle_builtin(self, line: str) -> bool:
         """
@@ -235,9 +235,11 @@ Display Format (optional prefix):
                 # Set API output encoding: 'set encoding json' or 'set encoding text'
                 if value in ('json', 'text'):
                     self.output_encoding = value
-                    print(self.formatter.format_info(f'API output encoding set to {value}'))
+                    sys.stdout.write(f'{self.formatter.format_info(f"API output encoding set to {value}")}\n')
                 else:
-                    print(self.formatter.format_error(f"Invalid encoding '{value}'. Use 'json' or 'text'."))
+                    sys.stdout.write(
+                        f'{self.formatter.format_error(f"Invalid encoding {value!r}. Use json or text.")}\n'
+                    )
                 return True
 
             elif setting == 'display':
@@ -245,11 +247,17 @@ Display Format (optional prefix):
                 if value in ('json', 'text'):
                     self.display_mode = value
                     if value == 'text':
-                        print(self.formatter.format_info('Display mode set to text (JSON will be formatted as tables)'))
+                        sys.stdout.write(
+                            f'{self.formatter.format_info("Display mode set to text (JSON will be formatted as tables)")}\n'
+                        )
                     else:
-                        print(self.formatter.format_info('Display mode set to json (raw JSON display)'))
+                        sys.stdout.write(
+                            f'{self.formatter.format_info("Display mode set to json (raw JSON display)")}\n'
+                        )
                 else:
-                    print(self.formatter.format_error(f"Invalid display '{value}'. Use 'json' or 'text'."))
+                    sys.stdout.write(
+                        f'{self.formatter.format_error(f"Invalid display {value!r}. Use json or text.")}\n'
+                    )
                 return True
 
         # Not a builtin
@@ -331,7 +339,7 @@ Display Format (optional prefix):
                         f"  '{display_override} {command} {display_override}' (both {display_override})\n"
                         f"  '{display_override} {command}' (display only)"
                     )
-                    print(self.formatter.format_error(error_msg))
+                    sys.stdout.write(f'{self.formatter.format_error(error_msg)}\n')
                     return
 
             # Check if this is a read command (write commands ignore display prefix)
@@ -364,11 +372,11 @@ Display Format (optional prefix):
             # Check for socket/timeout errors
             if result and result.startswith('Error: '):
                 # Socket write failed or timeout - show error without "Command sent"
-                print(self.formatter.format_error(result[7:]))  # Strip "Error: " prefix
+                sys.stdout.write(f'{self.formatter.format_error(result[7:])}\n')  # Strip "Error: " prefix
                 return
 
             # Socket write succeeded - show immediate feedback
-            print(self.formatter.format_success('Command sent'))
+            sys.stdout.write(f'{self.formatter.format_success("Command sent")}\n')
 
             # Format and display daemon response
             result_stripped = result.strip()
@@ -377,7 +385,7 @@ Display Format (optional prefix):
             # Empty response or "done" means command was accepted
             if not result_stripped or result_stripped in ('done', 'done\nerror\n'):
                 # Command succeeded but no output - show success confirmation
-                print(self.formatter.format_success('Command accepted'))
+                sys.stdout.write(f'{self.formatter.format_success("Command accepted")}\n')
                 return
 
             # Check if response ends with API error marker
@@ -394,20 +402,20 @@ Display Format (optional prefix):
                         error_data = json.loads(error_content)
                         if isinstance(error_data, dict) and 'error' in error_data:
                             # JSON error format: {"error": "message"}
-                            print(self.formatter.format_error(error_data['error']))
+                            sys.stdout.write(f'{self.formatter.format_error(error_data["error"])}\n')
                         else:
                             # JSON but not error format - show as-is
-                            print(self.formatter.format_error(error_content))
+                            sys.stdout.write(f'{self.formatter.format_error(error_content)}\n')
                     except (json.JSONDecodeError, ValueError):
                         # Not JSON - treat as text error
                         # Format: "error: message" or just "message"
                         if error_content.startswith('error:'):
-                            print(self.formatter.format_error(error_content[6:].strip()))
+                            sys.stdout.write(f'{self.formatter.format_error(error_content[6:].strip())}\n')
                         else:
-                            print(self.formatter.format_error(error_content))
+                            sys.stdout.write(f'{self.formatter.format_error(error_content)}\n')
                 else:
                     # Just "error" with no details
-                    print(self.formatter.format_error('Command failed'))
+                    sys.stdout.write(f'{self.formatter.format_error("Command failed")}\n')
                 return
 
             # Not an error - format normally
@@ -426,16 +434,16 @@ Display Format (optional prefix):
                     'display_mode': display_to_use,
                 }
                 error_json = json.dumps(error_obj, indent=2)
-                print(self.formatter.format_error(error_json))
+                sys.stdout.write(f'{self.formatter.format_error(error_json)}\n')
                 return
 
             formatted = self.formatter.format_command_output(result, display_mode=display_to_use)
 
             if formatted:
                 # Regular output - display as-is
-                print(formatted)
+                sys.stdout.write(f'{formatted}\n')
         except Exception as exc:
-            print(self.formatter.format_error(str(exc)))
+            sys.stdout.write(f'{self.formatter.format_error(str(exc))}\n')
 
     def _quit(self) -> None:
         """Exit the REPL"""
@@ -446,17 +454,17 @@ Display Format (optional prefix):
         except (Exception, KeyboardInterrupt):
             # Ignore errors during disconnect (including impatient Ctrl+C)
             pass
-        print(self.formatter.format_info('Goodbye!'))
+        sys.stdout.write(f'{self.formatter.format_info("Goodbye!")}\n')
 
     def _show_history(self) -> None:
         """Display command history"""
         history_len = readline.get_current_history_length()
 
         if history_len == 0:
-            print(self.formatter.format_info('No commands in history'))
+            sys.stdout.write(f'{self.formatter.format_info("No commands in history")}\n')
             return
 
-        print(self.formatter.format_info(f'Command history ({history_len} entries):'))
+        sys.stdout.write(f'{self.formatter.format_info(f"Command history ({history_len} entries):")}\n')
 
         # Show last 20 commands
         start = max(1, history_len - 19)
@@ -464,9 +472,9 @@ Display Format (optional prefix):
             item = readline.get_history_item(i)
             if item:
                 if self.formatter.use_color:
-                    print(f'{Colors.DIM}{i:4d}{Colors.RESET}  {item}')
+                    sys.stdout.write(f'{Colors.DIM}{i:4d}{Colors.RESET}  {item}\n')
                 else:
-                    print(f'{i:4d}  {item}')
+                    sys.stdout.write(f'{i:4d}  {item}\n')
 
 
 def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool, cmdarg) -> int:
