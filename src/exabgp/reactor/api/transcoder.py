@@ -5,8 +5,9 @@ import sys
 import json
 import string
 
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, cast
 
+from exabgp.util import hexbytes
 from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
@@ -20,6 +21,23 @@ from exabgp.version import json as json_version
 from exabgp.reactor.api.response import Response
 
 from exabgp.protocol.ip import IPv4
+
+
+# Dummy negotiated for decoding OPEN/NOTIFICATION (parameter unused but required by API)
+_DUMMY_NEGOTIATED: Optional[Negotiated] = None
+
+
+def _get_dummy_negotiated() -> Negotiated:
+    """Get or create a dummy Negotiated instance for decoding OPEN/NOTIFICATION messages."""
+    global _DUMMY_NEGOTIATED
+    if _DUMMY_NEGOTIATED is None:
+        # Create minimal fake neighbor for Negotiated
+        fake_neighbor = {
+            'capability': {'aigp': False},
+        }
+        _DUMMY_NEGOTIATED = Negotiated(fake_neighbor, Direction.IN)
+    return _DUMMY_NEGOTIATED
+
 
 # BGP NOTIFICATION Shutdown Communication constants (RFC 8203)
 MAX_SHUTDOWN_COMM_LENGTH = 128  # Maximum length of shutdown communication message
@@ -58,8 +76,8 @@ class Transcoder:
     def _state(self) -> None:
         self.seen_open['send'] = None
         self.seen_open['receive'] = None
-        self.negotiated_in = None
-        self.negotiated_out = None
+        self.negotiated_in: Optional[Negotiated] = None
+        self.negotiated_out: Optional[Negotiated] = None
 
     def _open(self, direction: str, message: Open) -> None:
         self.seen_open[direction] = message
@@ -107,25 +125,28 @@ class Transcoder:
         data = b''.join(bytes([int(body[_ : _ + 2], 16)]) for _ in range(0, len(body), 2))
 
         if content == 'open':
-            message = Open.unpack_message(data)
-            self._open(direction, message)
-            return self.encoder.open(neighbor, direction, message, None, header, body)
+            open_msg = Open.unpack_message(data, _get_dummy_negotiated())
+            self._open(direction, open_msg)
+            return cast(str, self.encoder.open(neighbor, direction, open_msg, None, header, body))
 
         if content == 'keepalive':
-            return self.encoder.keepalive(neighbor, direction, None, header, body)
+            return cast(str, self.encoder.keepalive(neighbor, direction, None, header, body))
 
         if content == 'notification':
-            message = Notification.unpack_message(data)
+            notif_msg = Notification.unpack_message(data, _get_dummy_negotiated())
 
             # Check for CEASE/Administrative Shutdown (code 6, subcode 2) which has special handling
-            if (message.code, message.subcode) != (6, 2):
-                message.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)  # type: ignore[operator]
-                return self.encoder.notification(neighbor, direction, message, None, header, body)
+            if (notif_msg.code, notif_msg.subcode) != (6, 2):
+                # Use hexbytes for non-printable data (returns bytes, matching Notification.data type)
+                notif_msg.data = (
+                    data if not len([_ for _ in str(data) if _ not in string.printable]) else hexbytes(data)
+                )
+                return cast(str, self.encoder.notification(neighbor, direction, notif_msg, None, header, body))
 
             if len(data) == 0:
                 # shutdown without shutdown communication (the old fashioned way)
-                message.data = ''
-                return self.encoder.notification(neighbor, direction, message, None, header, body)
+                notif_msg.data = b''
+                return cast(str, self.encoder.notification(neighbor, direction, notif_msg, None, header, body))
 
             # draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
@@ -133,26 +154,26 @@ class Transcoder:
             data = data[1:]
 
             if shutdown_length == 0:
-                message.data = 'empty Shutdown Communication.'
+                notif_msg.data = b'empty Shutdown Communication.'
                 # move offset past length field
-                return self.encoder.notification(neighbor, direction, message, None, header, body)
+                return cast(str, self.encoder.notification(neighbor, direction, notif_msg, None, header, body))
 
             if len(data) < shutdown_length:
-                message.data = (
+                notif_msg.data = (
                     f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(data)}]'
-                )
-                return self.encoder.notification(neighbor, direction, message, None, header, body)
+                ).encode()
+                return cast(str, self.encoder.notification(neighbor, direction, notif_msg, None, header, body))
 
             if shutdown_length > MAX_SHUTDOWN_COMM_LENGTH:
-                message.data = (
+                notif_msg.data = (
                     f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'
-                )
-                return self.encoder.notification(neighbor, direction, message, None, header, body)
+                ).encode()
+                return cast(str, self.encoder.notification(neighbor, direction, notif_msg, None, header, body))
 
             try:
                 # NOTE: Do not convert to f-string! The chained method calls with multiline
                 # formatting is more readable with % formatting.
-                message.data = 'Shutdown Communication: "{}"'.format(
+                notif_msg.data = 'Shutdown Communication: "{}"'.format(
                     data[:shutdown_length]
                     .decode('utf-8')
                     .replace(
@@ -160,18 +181,18 @@ class Transcoder:
                         ' ',
                     )
                     .replace('\n', ' ')
-                )
+                ).encode()
             except UnicodeDecodeError:
-                message.data = (
+                notif_msg.data = (
                     f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(data)}]'
-                )
-                return self.encoder.notification(neighbor, direction, message, None, header, body)
+                ).encode()
+                return cast(str, self.encoder.notification(neighbor, direction, notif_msg, None, header, body))
 
             trailer = data[shutdown_length:]
             if trailer:
-                message.data += ', trailing data: ' + hexstring(trailer)
+                notif_msg.data += (', trailing data: ' + hexstring(trailer)).encode()
 
-            return self.encoder.notification(neighbor, direction, message, None, header, body)
+            return cast(str, self.encoder.notification(neighbor, direction, notif_msg, None, header, body))
 
         if not self.negotiated_in or not self.negotiated_out:
             sys.stderr.write('invalid message sequence, open exchange not complete: ' + json_string + '\n')
@@ -181,16 +202,16 @@ class Transcoder:
         message = Message.unpack(category, data, negotiated)
 
         if content == 'update':
-            return self.encoder.update(neighbor, direction, message, None, header, body)
+            return cast(str, self.encoder.update(neighbor, direction, message, None, header, body))
 
         if content == 'eor':
             # EOR (End of RIB) is encoded as a special UPDATE message
-            return self.encoder.update(neighbor, direction, message, None, header, body)
+            return cast(str, self.encoder.update(neighbor, direction, message, None, header, body))
 
         if content == 'refresh':
-            return self.json.refresh(neighbor, direction, message, None, header, body)
+            return cast(str, self.json.refresh(neighbor, direction, message, None, header, body))
 
         if content == 'operational':
-            return self.json.refresh(neighbor, direction, message, None, header, body)
+            return cast(str, self.json.refresh(neighbor, direction, message, None, header, body))
 
         raise RuntimeError('the programer is a monkey and forgot a JSON message type')

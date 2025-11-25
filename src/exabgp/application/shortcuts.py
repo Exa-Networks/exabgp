@@ -9,13 +9,83 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Union
 
 from exabgp.protocol.ip import IPv4
 
 
-# Type for shortcut matching function
-ShortcutMatcher = Callable[[int, List[str]], bool]
+# Type for shortcut matching function - can return bool or a truthy/falsy value
+ShortcutMatcher = Callable[[int, List[str]], Union[bool, List[str]]]
+
+
+def _announce_context(pos: int, pre: List[str]) -> bool:
+    """Match 'a' → 'announce' when at start or after IP address."""
+    return pos == 0 or (bool(pre) and (pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]))
+
+
+def _attributes_context(pos: int, pre: List[str]) -> bool:
+    """Match 'a' → 'attributes' after announce/withdraw."""
+    return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
+
+
+def _adj_rib_context(pos: int, pre: List[str]) -> bool:
+    """Match 'a' → 'adj-rib' after clear/flush/show."""
+    return bool(pre) and pre[-1] in ['clear', 'flush', 'show']
+
+
+def _eor_context(pos: int, pre: List[str]) -> bool:
+    """Match 'e' → 'eor' after announce."""
+    return bool(pre) and pre[-1] == 'announce'
+
+
+def _flow_context(pos: int, pre: List[str]) -> bool:
+    """Match 'f' → 'flow' after announce/withdraw."""
+    return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
+
+
+def _flush_context(pos: int, pre: List[str]) -> bool:
+    """Match 'f' → 'flush' at start or after IP address."""
+    return pos == 0 or (bool(pre) and (pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]))
+
+
+def _in_context(pos: int, pre: List[str]) -> bool:
+    """Match 'i' → 'in' after adj-rib."""
+    return bool(pre) and pre[-1] == 'adj-rib'
+
+
+def _operation_context(pos: int, pre: List[str]) -> bool:
+    """Match 'o' → 'operation' after announce."""
+    return bool(pre) and pre[-1] == 'announce'
+
+
+def _out_context(pos: int, pre: List[str]) -> bool:
+    """Match 'o' → 'out' after adj-rib."""
+    return bool(pre) and pre[-1] == 'adj-rib'
+
+
+def _route_context(pos: int, pre: List[str]) -> bool:
+    """Match 'r' → 'route' after announce/withdraw."""
+    return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
+
+
+def _teardown_context(pos: int, pre: List[str]) -> bool:
+    """Match 't' → 'teardown' at start or after IP address."""
+    return pos == 0 or (bool(pre) and (pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]))
+
+
+def _vps_context(pos: int, pre: List[str]) -> bool:
+    """Match 'v' → 'vps' after announce/withdraw."""
+    return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
+
+
+def _withdraw_context(pos: int, pre: List[str]) -> bool:
+    """Match 'w' → 'withdraw' at start or after IP address."""
+    return pos == 0 or (bool(pre) and (pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]))
+
+
+def _watchdog_context(pos: int, pre: List[str]) -> bool:
+    """Match 'w' → 'watchdog' after announce/withdraw."""
+    return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
 
 
 class CommandShortcuts:
@@ -25,29 +95,29 @@ class CommandShortcuts:
     # Match condition is a function: (position: int, previous_tokens: list) -> bool
     SHORTCUTS: List[Tuple[str, str, ShortcutMatcher]] = [
         # 'a' has multiple meanings based on context
-        ('a', 'announce', lambda pos, pre: pos == 0 or pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]),
-        ('a', 'attributes', lambda pos, pre: pre and (pre[-1] == 'announce' or pre[-1] == 'withdraw')),
-        ('a', 'adj-rib', lambda pos, pre: pre and pre[-1] in ['clear', 'flush', 'show']),
+        ('a', 'announce', _announce_context),
+        ('a', 'attributes', _attributes_context),
+        ('a', 'adj-rib', _adj_rib_context),
         # Other single-letter shortcuts
         ('c', 'configuration', lambda pos, pre: True),
-        ('e', 'eor', lambda pos, pre: pre and pre[-1] == 'announce'),
+        ('e', 'eor', _eor_context),
         ('e', 'extensive', lambda pos, pre: 'show' in pre),
-        ('f', 'flow', lambda pos, pre: pre and (pre[-1] == 'announce' or pre[-1] == 'withdraw')),
-        ('f', 'flush', lambda pos, pre: pos == 0 or pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]),
+        ('f', 'flow', _flow_context),
+        ('f', 'flush', _flush_context),
         ('h', 'help', lambda pos, pre: pos == 0),
-        ('i', 'in', lambda pos, pre: pre and pre[-1] == 'adj-rib'),
+        ('i', 'in', _in_context),
         ('id', 'router-id', lambda pos, pre: 'neighbor' in pre),  # CLI shortcut: id → router-id in neighbor context
         ('n', 'neighbor', lambda pos, pre: pos == 0),  # Only at start - removed 'show n' → 'show neighbor' support
-        ('o', 'operation', lambda pos, pre: pre and pre[-1] == 'announce'),
-        ('o', 'out', lambda pos, pre: pre and pre[-1] == 'adj-rib'),
-        ('r', 'route', lambda pos, pre: pre and (pre[-1] == 'announce' or pre[-1] == 'withdraw')),
+        ('o', 'operation', _operation_context),
+        ('o', 'out', _out_context),
+        ('r', 'route', _route_context),
         ('r', 'refresh', lambda pos, pre: len(pre) >= 2 and pre[-2] == 'announce' and pre[-1] == 'route'),
         ('s', 'show', lambda pos, pre: pos == 0),
         ('s', 'summary', lambda pos, pre: pos != 0),
-        ('t', 'teardown', lambda pos, pre: pos == 0 or pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]),
-        ('v', 'vps', lambda pos, pre: pre and (pre[-1] == 'announce' or pre[-1] == 'withdraw')),
-        ('w', 'withdraw', lambda pos, pre: pos == 0 or pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]),
-        ('w', 'watchdog', lambda pos, pre: pre and (pre[-1] == 'announce' or pre[-1] == 'withdraw')),
+        ('t', 'teardown', _teardown_context),
+        ('v', 'vps', _vps_context),
+        ('w', 'withdraw', _withdraw_context),
+        ('w', 'watchdog', _watchdog_context),
         # Multi-letter shortcuts
         # Common typos
         ('neighbour', 'neighbor', lambda pos, pre: True),
@@ -98,7 +168,7 @@ class CommandShortcuts:
             >>> CommandShortcuts.expand_token_list(['s', 'n', 'summary'])
             ['show', 'neighbor', 'summary']
         """
-        expanded = []
+        expanded: List[str] = []
 
         for pos, token in enumerate(tokens):
             # Try to match against shortcuts

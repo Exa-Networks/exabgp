@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 import copy
 import struct
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from exabgp.environment import getenv
 
@@ -51,6 +51,12 @@ from exabgp.bgp.message import Notification
 
 from exabgp.version import json as json_version
 
+if TYPE_CHECKING:
+    from exabgp.bgp.neighbor import Neighbor
+
+# Type alias for log message lambdas
+LogMsg = Callable[[], str]
+
 # BGP message type constants (RFC 4271)
 BGP_MSG_OPEN = 1  # BGP OPEN message type
 BGP_MSG_UPDATE = 2  # BGP UPDATE message type
@@ -63,13 +69,13 @@ def _hexa(data: str) -> bytes:
     return bytes([int(_, 16) for _ in hexa])
 
 
-def _negotiated(neighbor: Dict[str, Any]) -> Tuple[Negotiated, Negotiated]:
+def _negotiated(neighbor: Neighbor) -> Tuple[Negotiated, Negotiated]:
     path = {}
     for f in NLRI.known_families():
         if neighbor['capability']['add-path']:
             path[f] = neighbor['capability']['add-path']
 
-    capa = Capabilities().new(neighbor, False)  # type: ignore[arg-type]
+    capa = Capabilities().new(neighbor, False)
     capa[Capability.CODE.ADD_PATH] = path
     capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
     # capa[Capability.CODE.FOUR_BYTES_ASN] = True
@@ -93,7 +99,7 @@ def _negotiated(neighbor: Dict[str, Any]) -> Tuple[Negotiated, Negotiated]:
 # ...
 
 
-def check_generation(neighbors: Dict[str, Any]) -> bool:
+def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
     option.enabled['parser'] = True
 
     for name in neighbors.keys():
@@ -101,6 +107,8 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
         neighbor['local-as'] = neighbor['peer-as']
         negotiated_in, negotiated_out = _negotiated(neighbor)
 
+        if neighbor.rib is None:
+            continue
         for _ in neighbor.rib.outgoing.updates(False):
             pass
 
@@ -109,11 +117,14 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
             packed = list(Update([change1.nlri], change1.attributes).messages(negotiated_out))
             pack1 = packed[0]
 
-            log.debug(lambda packed=packed: 'parsed route requires %d updates' % len(packed), 'parser')
-            log.debug(lambda pack1=pack1: 'update size is %d' % len(pack1), 'parser')
+            _packed = packed  # type: List[bytes]
+            _pack1 = pack1  # type: bytes
+            log.debug(lambda _packed=_packed: 'parsed route requires %d updates' % len(_packed), 'parser')  # type: ignore[misc]
+            log.debug(lambda _pack1=_pack1: 'update size is %d' % len(_pack1), 'parser')  # type: ignore[misc]
 
-            log.debug(lambda str1=str1: 'parsed route {}'.format(str1), 'parser')
-            log.debug(lambda pack1=pack1: 'parsed hex   {}'.format(od(pack1)), 'parser')
+            _str1 = str1  # type: str
+            log.debug(lambda _str1=_str1: 'parsed route {}'.format(_str1), 'parser')  # type: ignore[misc]
+            log.debug(lambda _pack1=_pack1: 'parsed hex   {}'.format(od(_pack1)), 'parser')  # type: ignore[misc]
 
             # This does not take the BGP header - let's assume we will not break that :)
             try:
@@ -126,8 +137,10 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
                 str2 = change2.extensive()
                 pack2 = list(Update([update.nlris[0]], update.attributes).messages(negotiated_out))[0]
 
-                log.debug(lambda str2=str2: 'recoded route {}'.format(str2), 'parser')
-                log.debug(lambda pack2=pack2: 'recoded hex   {}'.format(od(pack2)), 'parser')
+                _str2 = str2  # type: str
+                _pack2 = pack2  # type: bytes
+                log.debug(lambda _str2=_str2: 'recoded route {}'.format(_str2), 'parser')  # type: ignore[misc]
+                log.debug(lambda _pack2=_pack2: 'recoded hex   {}'.format(od(_pack2)), 'parser')  # type: ignore[misc]
 
                 str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]', 'med 100')
                 str1r = (
@@ -164,8 +177,10 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
                         skip = True
                     else:
                         log.debug(lambda: 'strings are different:', 'parser')
-                        log.debug(lambda str1r=str1r: f'[{str1r}]', 'parser')
-                        log.debug(lambda str2r=str2r: f'[{str2r}]', 'parser')
+                        _str1r = str1r  # type: str
+                        _str2r = str2r  # type: str
+                        log.debug(lambda _str1r=_str1r: f'[{_str1r}]', 'parser')  # type: ignore[misc]
+                        log.debug(lambda _str2r=_str2r: f'[{_str2r}]', 'parser')  # type: ignore[misc]
                         return False
                 else:
                     log.debug(lambda: 'strings are fine', 'parser')
@@ -174,22 +189,31 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
                     log.debug(lambda: 'skipping encoding for update with non-transitive attribute(s)', 'parser')
                 elif pack1 != pack2:
                     log.debug(lambda: 'encoding are different', 'parser')
-                    log.debug(lambda pack1=pack1: f'[{od(pack1)}]', 'parser')
-                    log.debug(lambda pack2=pack2: f'[{od(pack2)}]', 'parser')
+                    _pack1_cmp = pack1  # type: bytes
+                    _pack2_cmp = pack2  # type: bytes
+                    log.debug(lambda _pack1_cmp=_pack1_cmp: f'[{od(_pack1_cmp)}]', 'parser')  # type: ignore[misc]
+                    log.debug(lambda _pack2_cmp=_pack2_cmp: f'[{od(_pack2_cmp)}]', 'parser')  # type: ignore[misc]
                     return False
                 else:
                     log.debug(lambda: 'encoding is fine', 'parser')
                     log.debug(lambda: '----------------------------------------', 'parser')
 
-                log.debug(lambda change1=change1: 'JSON nlri {}'.format(change1.nlri.json()), 'parser')
-                log.debug(lambda change1=change1: 'JSON attr {}'.format(change1.attributes.json()), 'parser')
+                _change1_json = change1  # type: Change
+                log.debug(
+                    lambda _change1_json=_change1_json: 'JSON nlri {}'.format(_change1_json.nlri.json()), 'parser'
+                )  # type: ignore[misc]
+                log.debug(
+                    lambda _change1_json=_change1_json: 'JSON attr {}'.format(_change1_json.attributes.json()), 'parser'
+                )  # type: ignore[misc]
 
             except Notify as exc:
                 log.debug(lambda: '----------------------------------------', 'parser')
-                log.debug(lambda exc=exc: str(exc), 'parser')
+                _exc = exc  # type: Notify
+                log.debug(lambda _exc=_exc: str(_exc), 'parser')  # type: ignore[misc]
                 log.debug(lambda: '----------------------------------------', 'parser')
                 return False
-        neighbor.rib.clear()
+        if neighbor.rib is not None:
+            neighbor.rib.clear()
 
     return True
 
@@ -198,7 +222,7 @@ def check_generation(neighbors: Dict[str, Any]) -> bool:
 #
 
 
-def check_message(neighbor: Dict[str, Any], message: str) -> bool:
+def check_message(neighbor: Neighbor, message: str) -> bool:
     raw = _hexa(message)
 
     if not raw.startswith(b'\xff' * 16):
@@ -221,7 +245,7 @@ def check_message(neighbor: Dict[str, Any], message: str) -> bool:
     return False
 
 
-def display_message(neighbor: Dict[str, Any], message: str) -> bool:
+def display_message(neighbor: Neighbor, message: str) -> bool:
     raw = _hexa(message)
 
     if not raw.startswith(b'\xff' * 16):
@@ -251,7 +275,7 @@ def display_message(neighbor: Dict[str, Any], message: str) -> bool:
 #
 
 
-def _make_nlri(neighbor: Dict[str, Any], routes: str) -> List[NLRI]:
+def _make_nlri(neighbor: Neighbor, routes: str) -> List[NLRI]:
     option.enabled['parser'] = True
 
     announced = _hexa(routes)
@@ -262,17 +286,22 @@ def _make_nlri(neighbor: Dict[str, Any], routes: str) -> List[NLRI]:
     # Is the peer going to send us some Path Information with the route (AddPath)
     addpath = negotiated_out.addpath.send(afi, safi)
 
-    nlris = []
+    nlris: List[NLRI] = []
     try:
         while announced:
-            log.debug(lambda announced=announced: 'parsing NLRI {}'.format(announced), 'parser')
-            nlri, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
-            nlris.append(nlri)  # type: ignore[has-type]
+            _announced = announced  # type: bytes
+            log.debug(lambda _announced=_announced: 'parsing NLRI {}'.format(_announced), 'parser')  # type: ignore[misc]
+            # Note: NLRI.unpack_nlri base class returns NLRI, but subclasses return Tuple[NLRI, bytes]
+            unpack_result = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
+            nlri_parsed: NLRI = unpack_result[0]  # type: ignore[index]
+            announced = unpack_result[1]  # type: ignore[index]
+            nlris.append(nlri_parsed)
     except (Notify, ValueError, IndexError, KeyError, struct.error) as exc:
         log.error(lambda: f'could not parse the nlri for afi={afi}, safi={safi}', 'parser')
         from exabgp.debug import string_exception
 
-        log.error(lambda exc=exc: string_exception(exc), 'parser')
+        _exc_nlri = exc  # type: BaseException
+        log.error(lambda _exc_nlri=_exc_nlri: string_exception(_exc_nlri), 'parser')  # type: ignore[misc]
         if getenv().debug.pdb:
             raise
         return []
@@ -280,24 +309,25 @@ def _make_nlri(neighbor: Dict[str, Any], routes: str) -> List[NLRI]:
     return nlris
 
 
-def check_nlri(neighbor: Dict[str, Any], routes: str) -> bool:
+def check_nlri(neighbor: Neighbor, routes: str) -> bool:
     nlris = _make_nlri(neighbor, routes)
     if not nlris:
         return False
 
     log.debug(lambda: '', 'parser')  # new line
     for nlri in nlris:
-        log.info(lambda nlri=nlri: 'nlri json {}'.format(nlri.json()), 'parser')
+        _nlri = nlri  # type: NLRI
+        log.info(lambda _nlri=_nlri: 'nlri json {}'.format(_nlri.json()), 'parser')  # type: ignore[misc]
     return True
 
 
-def display_nlri(neighbor: Dict[str, Any], routes: str) -> bool:
+def display_nlri(neighbor: Neighbor, routes: str) -> bool:
     nlris = _make_nlri(neighbor, routes)
     if not nlris:
         return False
 
     for nlri in nlris:
-        sys.stdout.write(f'{nlri.json()}\n')
+        sys.stdout.write(f'{nlri.json()}\n')  # type: ignore[attr-defined]
     return True
 
 
@@ -305,7 +335,7 @@ def display_nlri(neighbor: Dict[str, Any], routes: str) -> bool:
 #
 
 
-def check_open(neighbor: Dict[str, Any], raw: bytes) -> None:
+def check_open(neighbor: Neighbor, raw: bytes) -> None:
     import sys
     import traceback
 
@@ -323,7 +353,7 @@ def check_open(neighbor: Dict[str, Any], raw: bytes) -> None:
         raise
 
 
-def display_open(neighbor: Dict[str, Any], raw: bytes) -> bool:
+def display_open(neighbor: Neighbor, raw: bytes) -> bool:
     try:
         negotiated_in, _ = _negotiated(neighbor)
         o = Open.unpack_message(raw, negotiated_in)
@@ -338,7 +368,7 @@ def display_open(neighbor: Dict[str, Any], raw: bytes) -> bool:
 #
 
 
-def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
+def _make_update(neighbor: Neighbor, raw: bytes) -> Optional[Update]:
     option.enabled['parser'] = True
     negotiated_in, _ = _negotiated(neighbor)
 
@@ -352,7 +382,8 @@ def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
             if kind == BGP_MSG_UPDATE:
                 log.debug(lambda: 'the message is an update', 'parser')
             else:
-                log.debug(lambda kind=kind: 'the message is not an update (%d) - aborting' % kind, 'parser')
+                _kind = kind  # type: int
+                log.debug(lambda _kind=_kind: 'the message is not an update (%d) - aborting' % _kind, 'parser')  # type: ignore[misc]
                 return None
         else:
             log.debug(lambda: 'header missing, assuming this message is ONE update', 'parser')
@@ -383,7 +414,7 @@ def _make_update(neighbor: Dict[str, Any], raw: bytes) -> Optional[Update]:
     return None
 
 
-def _make_notification(neighbor: Dict[str, Any], raw: bytes) -> Optional[Notification]:
+def _make_notification(neighbor: Neighbor, raw: bytes) -> Optional[Notification]:
     option.enabled['parser'] = True
     negotiated_in, negotiated_out = _negotiated(neighbor)
 
@@ -403,7 +434,7 @@ def _make_notification(neighbor: Dict[str, Any], raw: bytes) -> Optional[Notific
 
     try:
         # This does not take the BGP header - let's assume we will not break that :)
-        notification = Notification.unpack_message(injected, Direction.IN, negotiated_in)  # type: ignore[arg-type]
+        notification = Notification.unpack_message(injected, negotiated_in)
     except Notify:
         import traceback
 
@@ -424,7 +455,7 @@ def _make_notification(neighbor: Dict[str, Any], raw: bytes) -> Optional[Notific
     return notification
 
 
-def check_update(neighbor: Dict[str, Any], raw: bytes) -> bool:
+def check_update(neighbor: Neighbor, raw: bytes) -> bool:
     update = _make_update(neighbor, raw)
     if not update:
         return False
@@ -432,14 +463,15 @@ def check_update(neighbor: Dict[str, Any], raw: bytes) -> bool:
     log.debug(lambda: '', 'parser')  # new line
     for number in range(len(update.nlris)):
         change = Change(update.nlris[number], update.attributes)
-        log.info(lambda change=change: f'decoded update {change.nlri.action} {change.extensive()}', 'parser')
+        _change = change  # type: Change
+        log.info(lambda _change=_change: f'decoded update {_change.nlri.action} {_change.extensive()}', 'parser')  # type: ignore[misc]
     json_update = Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')
     log.info(lambda: f'update json {json_update}', 'parser')
 
     return True
 
 
-def display_update(neighbor: Dict[str, Any], raw: bytes) -> bool:
+def display_update(neighbor: Neighbor, raw: bytes) -> bool:
     update = _make_update(neighbor, raw)
     if not update:
         return False
@@ -449,7 +481,7 @@ def display_update(neighbor: Dict[str, Any], raw: bytes) -> bool:
     return True
 
 
-def display_notification(neighbor: Dict[str, Any], raw: bytes) -> bool:
+def display_notification(neighbor: Neighbor, raw: bytes) -> bool:
     notification = _make_notification(neighbor, raw)
     if not notification:
         return False
@@ -459,11 +491,28 @@ def display_notification(neighbor: Dict[str, Any], raw: bytes) -> bool:
     return True
 
 
-# ================================================================= check_update
+# ============================================================ check_notification
 #
 
 
+# Dummy negotiated for decoding standalone notifications (parameter unused but required by API)
+_DUMMY_NEGOTIATED: Optional[Negotiated] = None
+
+
+def _get_dummy_negotiated() -> Negotiated:
+    """Get or create a dummy Negotiated instance for decoding notifications without neighbor context."""
+    global _DUMMY_NEGOTIATED
+    if _DUMMY_NEGOTIATED is None:
+        # Create minimal fake neighbor for Negotiated
+        fake_neighbor = {
+            'capability': {'aigp': False},
+        }
+        _DUMMY_NEGOTIATED = Negotiated(fake_neighbor, Direction.IN)
+    return _DUMMY_NEGOTIATED
+
+
 def check_notification(raw: bytes) -> bool:
-    notification = Notification.unpack_message(raw[18:], None, None)
-    log.info(lambda notification=notification: f'{notification}', 'parser')
+    notification = Notification.unpack_message(raw[18:], _get_dummy_negotiated())
+    _notification = notification  # type: Notification
+    log.info(lambda _notification=_notification: f'{_notification}', 'parser')  # type: ignore[misc]
     return True
