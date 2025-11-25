@@ -25,6 +25,8 @@ class AtomicAggregate(Attribute):
     ID = Attribute.CODE.ATOMIC_AGGREGATE
     FLAG = Attribute.Flag.TRANSITIVE
     CACHING = True
+    DISCARD = True
+    VALID_ZERO = True
 
     # Inherited from Attribute
     # def __eq__ (self, other):

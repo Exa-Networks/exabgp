@@ -23,6 +23,8 @@ class Origin(Attribute):
     ID = Attribute.CODE.ORIGIN
     FLAG = Attribute.Flag.TRANSITIVE
     CACHING = True
+    TREAT_AS_WITHDRAW = True
+    MANDATORY = True
 
     IGP: ClassVar[int] = 0x00
     EGP: ClassVar[int] = 0x01

@@ -25,6 +25,7 @@ class MED(Attribute):
     ID = Attribute.CODE.MED
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
+    TREAT_AS_WITHDRAW = True
 
     def __init__(self, med: int, packed: Optional[bytes] = None) -> None:
         self.med: int = med

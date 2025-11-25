@@ -30,6 +30,8 @@ class NextHop(Attribute, IP):
     FLAG = Attribute.Flag.TRANSITIVE
     CACHING = True
     SELF: ClassVar[bool] = False
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
+    NO_GENERATION: ClassVar[bool] = True
 
     # XXX: This is a bad API, as it works on non-raw data
     def __init__(self, string: str, packed: Optional[bytes] = None) -> None:

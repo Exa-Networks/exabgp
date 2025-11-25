@@ -68,6 +68,20 @@ class Attribute:
     # Generic Class or implementation
     GENERIC: ClassVar[bool] = False
 
+    # Attribute behavior flags (RFC-based defaults)
+    # RFC 7606: malformed attribute handling - treat UPDATE as withdraw
+    TREAT_AS_WITHDRAW: ClassVar[bool] = False
+    # RFC 7606: silently discard malformed attribute
+    DISCARD: ClassVar[bool] = False
+    # RFC 4271: required in UPDATE message
+    MANDATORY: ClassVar[bool] = False
+    # Only one instance of this attribute allowed per UPDATE
+    NO_DUPLICATE: ClassVar[bool] = False
+    # Zero-length value is valid for this attribute
+    VALID_ZERO: ClassVar[bool] = False
+    # Skip this attribute in text/JSON output generation
+    NO_GENERATION: ClassVar[bool] = False
+
     # Registered subclasses we know how to decode
     registered_attributes: ClassVar[Dict[Tuple[int, int], Type[Attribute]]] = dict()
 
@@ -280,6 +294,14 @@ class Attribute:
             return kls
 
         raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
+
+    @classmethod
+    def klass_by_id(cls, attribute_id: int) -> Optional[Type[Attribute]]:
+        """Get attribute class by ID, ignoring flag variations."""
+        for (registered_aid, _), klass in cls.registered_attributes.items():
+            if registered_aid == attribute_id:
+                return klass
+        return None
 
     @classmethod
     def unpack(cls, attribute_id: int, flag: int, data: bytes, negotiated: Negotiated) -> Attribute:

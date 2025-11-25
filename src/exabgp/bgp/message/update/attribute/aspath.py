@@ -69,6 +69,9 @@ class ASPath(Attribute):
 
     ID = Attribute.CODE.AS_PATH
     FLAG = Attribute.Flag.TRANSITIVE
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
+    MANDATORY: ClassVar[bool] = True
+    VALID_ZERO: ClassVar[bool] = True
 
     Empty: ClassVar[Optional[ASPath]] = None
 

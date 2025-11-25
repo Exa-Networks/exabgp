@@ -25,6 +25,7 @@ LARGE_COMMUNITY_SIZE = (
 @Attribute.register()
 class LargeCommunities(Communities):
     ID = Attribute.CODE.LARGE_COMMUNITY
+    TREAT_AS_WITHDRAW = True
 
     @staticmethod
     def unpack_attribute(data: bytes, negotiated: Negotiated) -> LargeCommunities:

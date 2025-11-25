@@ -54,41 +54,12 @@ NOTHING: _NOTHING = _NOTHING()
 
 
 class Attributes(dict):
+    # Internal pseudo-attributes (no dedicated classes exist for these)
     INTERNAL: ClassVar[Tuple[int, ...]] = (
         Attribute.CODE.INTERNAL_SPLIT,
         Attribute.CODE.INTERNAL_WATCHDOG,
         Attribute.CODE.INTERNAL_NAME,
         Attribute.CODE.INTERNAL_WITHDRAW,
-        # Attribute.CODE.INTERNAL_DISCARD,
-        # Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW,
-    )
-
-    NO_GENERATION: ClassVar[Tuple[int, ...]] = (Attribute.CODE.NEXT_HOP,) + INTERNAL
-
-    TREAT_AS_WITHDRAW: ClassVar[Tuple[int, ...]] = (
-        Attribute.CODE.ORIGIN,
-        Attribute.CODE.AS_PATH,
-        Attribute.CODE.NEXT_HOP,
-        Attribute.CODE.MED,
-        Attribute.CODE.LOCAL_PREF,
-        Attribute.CODE.LARGE_COMMUNITY,
-    )
-
-    DISCARD: ClassVar[Tuple[int, ...]] = (
-        Attribute.CODE.ATOMIC_AGGREGATE,
-        Attribute.CODE.AGGREGATOR,
-    )
-
-    MANDATORY: ClassVar[Tuple[int, ...]] = (Attribute.CODE.ORIGIN, Attribute.CODE.AS_PATH, Attribute.CODE.LOCAL_PREF)
-
-    NO_DUPLICATE: ClassVar[Tuple[int, ...]] = (
-        Attribute.CODE.MP_REACH_NLRI,
-        Attribute.CODE.MP_UNREACH_NLRI,
-    )
-
-    VALID_ZERO: ClassVar[Tuple[int, ...]] = (
-        Attribute.CODE.ATOMIC_AGGREGATE,
-        Attribute.CODE.AS_PATH,
     )
 
     # A cache of parsed attributes
@@ -130,11 +101,15 @@ class Attributes(dict):
 
     def _generate_text(self) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
-            # XXX: FIXME: really we should have a INTERNAL attribute in the classes
-            if code in Attributes.NO_GENERATION:
+            # Skip internal pseudo-attributes
+            if code in Attributes.INTERNAL:
                 continue
 
             attribute = self[code]
+
+            # Skip attributes marked as NO_GENERATION
+            if attribute.NO_GENERATION:
+                continue
 
             if code not in self.representation:
                 yield ' attribute [ 0x{:02X} 0x{:02X} {} ]'.format(code, attribute.FLAG, str(attribute))
@@ -156,11 +131,15 @@ class Attributes(dict):
 
     def _generate_json(self) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
-            # remove the next-hop from the attribute as it is define with the NLRI
-            if code in Attributes.NO_GENERATION:
+            # Skip internal pseudo-attributes
+            if code in Attributes.INTERNAL:
                 continue
 
             attribute = self[code]
+
+            # Skip attributes marked as NO_GENERATION (next-hop is defined with the NLRI)
+            if attribute.NO_GENERATION:
+                continue
 
             if code not in self.representation:
                 yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, str(attribute))
@@ -362,8 +341,11 @@ class Attributes(dict):
             flag &= Attribute.Flag.MASK_PARTIAL & 0xFF
             # flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
 
+        # Get the attribute class to check its behavior flags
+        kls = Attribute.klass_by_id(aid)
+
         if aid in self:
-            if aid in self.NO_DUPLICATE:
+            if kls and kls.NO_DUPLICATE:
                 raise Notify(3, 1, 'multiple attribute for {}'.format(str(Attribute.CODE(attribute.ID))))
 
             log.debug(
@@ -376,21 +358,21 @@ class Attributes(dict):
 
         # handle the attribute if we know it
         if Attribute.registered(aid, flag):
-            if length == 0 and aid not in self.VALID_ZERO:
+            if length == 0 and kls and not kls.VALID_ZERO:
                 self.add(TreatAsWithdraw(aid))
                 return self.parse(left, negotiated)
 
             try:
                 decoded = Attribute.unpack(aid, flag, attribute, negotiated)
             except IndexError as exc:
-                if aid in self.TREAT_AS_WITHDRAW:
+                if kls and kls.TREAT_AS_WITHDRAW:
                     decoded = TreatAsWithdraw(aid)
                 else:
                     raise exc
             except Notify as exc:
-                if aid in self.TREAT_AS_WITHDRAW:
+                if kls and kls.TREAT_AS_WITHDRAW:
                     decoded = TreatAsWithdraw()
-                elif aid in self.DISCARD:
+                elif kls and kls.DISCARD:
                     decoded = Discard()
                 else:
                     raise exc
@@ -403,7 +385,7 @@ class Attributes(dict):
 
         # if we know the attribute but the flag is not what the RFC says.
         if aid in Attribute.attributes_known:
-            if aid in self.TREAT_AS_WITHDRAW:
+            if kls and kls.TREAT_AS_WITHDRAW:
                 log.debug(
                     lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) treat as withdraw'.format(
                         Attribute.CODE.names.get(aid, 'unset'), flag, aid
@@ -411,7 +393,7 @@ class Attributes(dict):
                     'parser',
                 )
                 self.add(TreatAsWithdraw())
-            if aid in self.DISCARD:
+            if kls and kls.DISCARD:
                 log.debug(
                     lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) discard'.format(
                         Attribute.CODE.names.get(aid, 'unset'), flag, aid
