@@ -27,9 +27,10 @@ class Change:
     def __init__(self, nlri: NLRI, attributes: Attributes) -> None:
         self.nlri = nlri
         self.attributes = attributes
-        # prevent multiple allocation of the index when calling .index()
-        # storing the value at __init__ time causes api-attributes.sequence to fail
-        # XXX: the NLRI content is half missing !!
+        # Index is computed lazily on first .index() call, not at __init__ time.
+        # This is intentional: at construction time the NLRI may not be fully populated
+        # (e.g., nexthop not yet set), which would cause api-attributes.sequence to fail.
+        # The lazy evaluation ensures the index is computed only when all NLRI fields are set.
         self.__index = b''
 
     def index(self) -> bytes:

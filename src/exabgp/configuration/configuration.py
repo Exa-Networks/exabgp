@@ -386,8 +386,8 @@ class Configuration(_Configuration):
 
     def _commit_reload(self) -> None:
         self.neighbors = self.neighbor.neighbors
-        # XXX: Yes, we do not detect changes in processes and restart anything ..
-        # XXX: This is a bug ..
+        # Process change detection is handled in Processes.start() which compares
+        # old vs new config and only restarts processes that actually changed.
         self.processes = self.process.processes
         self._neighbors = {}
 

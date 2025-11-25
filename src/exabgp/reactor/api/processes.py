@@ -295,13 +295,29 @@ class Processes:
             log.debug(lambda exc=exc: 'reason: {}'.format(str(exc)), 'process')
 
     def start(self, configuration: Dict[str, Dict[str, Any]], restart: bool = False) -> None:
+        # Terminate processes that are no longer in configuration
         for process in list(self._process):
             if process not in configuration:
                 self._terminate(process)
+
+        # Identify which processes need restart (compare before updating self._configuration)
+        processes_to_restart = set()
+        if restart:
+            for process in configuration:
+                if process in self._process:
+                    if self._configuration.get(process, {}) != configuration[process]:
+                        log.debug(lambda: f'process {process} configuration changed, will restart', 'process')
+                        processes_to_restart.add(process)
+                    else:
+                        log.debug(lambda: f'process {process} unchanged, keeping running', 'process')
+
+        # Update configuration (needed by _start())
         self._configuration = configuration
+
+        # Start/restart processes
         for process in configuration:
             if process in list(self._process):
-                if restart:
+                if process in processes_to_restart:
                     self._terminate(process)
                     self._start(process)
                 continue
@@ -593,8 +609,10 @@ class Processes:
             log.debug(lambda: f'[ASYNC] Queued write for {process} ({len(data)} bytes)', 'process')
             return True
 
-        # Sync mode - use buffered write (original code)
-        # XXX: FIXME: This is potentially blocking
+        # Sync mode - blocking write to subprocess stdin
+        # Note: This can block if the pipe buffer is full and the subprocess isn't reading.
+        # This is inherent to sync mode. Use async mode (exabgp_reactor_asyncio=true) for
+        # non-blocking writes via the write queue mechanism above.
         while True:
             try:
                 self._process[process].stdin.write(data)  # type: ignore[union-attr]

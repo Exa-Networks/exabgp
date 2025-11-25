@@ -234,7 +234,8 @@ class Connection:
 
     def writer(self, data: bytes) -> Iterator[bool]:
         if not self.io:
-            # XXX: FIXME: Make sure it does not hold the cleanup during the closing of the peering session
+            # Connection already closed - nothing to write. Return True to signal
+            # completion immediately, allowing the caller to proceed with cleanup.
             yield True
             return
         while not self.writing():

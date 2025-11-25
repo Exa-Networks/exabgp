@@ -804,9 +804,11 @@ class Reactor:
 
         reloaded = self.configuration.reload()
 
-        if not reloaded:
-            # XXX: FIXME: Could return False, in case there is interference with old config...
-            pass
+        if reloaded is not True:
+            # Configuration reload failed - do not proceed with stale/invalid config
+            error_msg = reloaded if isinstance(reloaded, str) else 'unknown error'
+            log.warning(lambda: f'configuration reload failed, keeping previous config: {error_msg}', 'reactor')
+            return
 
         for key in self._peers.keys():
             if key not in self.configuration.neighbors.keys():
