@@ -15,7 +15,6 @@ from typing import Any, Dict, Generator, Iterator, Optional, Set, Tuple, Union, 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
     from exabgp.reactor.network.incoming import Incoming
-    from exabgp.reactor.network.outgoing import Outgoing
     from exabgp.bgp.neighbor import Neighbor
 
 # import traceback
@@ -287,7 +286,7 @@ class Peer:
             return self.proto.fd()
         return -1
 
-    def handle_connection(self, connection: Union['Incoming', 'Outgoing']) -> Optional[Iterator[bool]]:
+    def handle_connection(self, connection: 'Incoming') -> Optional[Iterator[bool]]:
         log.debug(lambda: 'state machine for the peer is {}'.format(self.fsm.name()), self.id())
 
         # if the other side fails, we go back to idle
@@ -332,7 +331,7 @@ class Peer:
             )
             self._close('closing outgoing connection as we have another incoming on with higher router-id')
 
-        self.proto = Protocol(self).accept(connection)  # type: ignore[arg-type]
+        self.proto = Protocol(self).accept(connection)
         self.generator = None
         # Let's make sure we do some work with this connection
         self._delay.reset()
