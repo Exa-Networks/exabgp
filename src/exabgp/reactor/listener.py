@@ -76,7 +76,8 @@ class Listener:
                 continue
             if local_port != port:
                 continue
-            md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
+            if use_md5:
+                md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
                 min_ttl(sock, peer_ip.top(), ttl_in)
             return
@@ -84,7 +85,8 @@ class Listener:
         try:
             sock = self._new_socket(local_ip)
             # MD5 must match the peer side of the TCP, not the local one
-            md5(sock, peer_ip.top(), 0, md5, md5_base64)
+            if use_md5:
+                md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
                 min_ttl(sock, peer_ip.top(), ttl_in)
             try:
@@ -97,7 +99,7 @@ class Listener:
             # s.settimeout(0.0)
             sock.bind((local_ip.top(), local_port))
             sock.listen(self._backlog)
-            self._sockets[sock] = (local_ip.top(), local_port, peer_ip.top(), md5)
+            self._sockets[sock] = (local_ip.top(), local_port, peer_ip.top(), use_md5)
         except OSError as exc:
             if exc.args[0] == errno.EADDRINUSE:
                 raise BindingError(

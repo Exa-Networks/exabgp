@@ -350,11 +350,11 @@ class Reactor:
 
         return matching
 
-    def handle_connection(self, peer_name: str, connection: Any) -> None:
+    def handle_connection(self, peer_name: str, connection: Any) -> Any:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
-            return
-        peer.handle_connection(connection)
+            return None
+        return peer.handle_connection(connection)
 
     def neighbor(self, peer_name: str) -> Optional['Neighbor']:
         if not (peer := self._peers.get(peer_name, None)):

@@ -64,9 +64,9 @@
   - [ ] Extract state transition logic (future)
   - [ ] Improve exception handling patterns (future)
 
-### Type Safety (491 → 330 type ignores)
+### Type Safety (660 → 436 errors)
 
-**Updated:** 2025-11-25 | **Phase 1 Complete:** 31 ignores removed | **Phase 2 Progress:** 145 issues fixed (peer.py 70, flow/parser.py 26, others 49)
+**Updated:** 2025-11-25 | **Phase 1 Complete:** 31 ignores removed | **Phase 2 Progress:** 328 issues fixed
 
 #### Phase 1 - Quick Wins - COMPLETE
 
@@ -96,6 +96,12 @@
 - [x] `bgp/message/open/capability/negotiated.py` - NOW CLEAN (0 errors)
 - [x] `reactor/peer.py` (124 → 54 errors) - 70 fixes: Optional guards, bug fixes (api_shutdown→shutdown, self.connection typo, missing return)
 - [x] `configuration/flow/parser.py` (26 → 0 errors) - NOW CLEAN: Fixed generic condition yields, IP casts, ASN wrapping
+- [x] `reactor/protocol.py` (142 → 35 errors) - 107 fixes: Added _session()/_api helpers, Processes signature fixes (bytes/str), Optional guards
+- [x] `reactor/api/processes.py` (19 → 16 errors) - Lambda variable capture fixes, @staticmethod decorators
+- [x] `configuration/static/route.py` (16 → 0 errors) - NOW CLEAN: Union types for NLRI, Any for dynamic attributes
+- [x] `reactor/listener.py` (14 → 10 errors) - **Bugfix**: handle_connection return value, md5 parameter confusion
+- [x] `configuration/static/mpls.py` (12 → 0 errors) - NOW CLEAN: Union types for IPv4/IPv6 variables
+- [x] `reactor/loop.py` - **Bugfix**: handle_connection now returns peer result
 
 #### Phase 3 - Infrastructure (Future)
 
