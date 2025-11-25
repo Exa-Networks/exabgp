@@ -25,6 +25,8 @@ class LocalPreference(Attribute):
     ID = Attribute.CODE.LOCAL_PREF
     FLAG = Attribute.Flag.TRANSITIVE
     CACHING = True
+    TREAT_AS_WITHDRAW = True
+    MANDATORY = True
 
     def __init__(self, localpref: int, packed: Optional[bytes] = None) -> None:
         self.localpref: int = localpref

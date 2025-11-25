@@ -26,6 +26,7 @@ class Aggregator(Attribute):
     ID = Attribute.CODE.AGGREGATOR
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     CACHING = True
+    DISCARD = True
 
     def __init__(self, asn: ASN, speaker: IPv4) -> None:
         self.asn: ASN = asn

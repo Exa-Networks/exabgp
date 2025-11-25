@@ -31,6 +31,7 @@ from exabgp.protocol.ip import NoNextHop
 class MPRNLRI(Attribute, Family):
     FLAG = Attribute.Flag.OPTIONAL
     ID = Attribute.CODE.MP_REACH_NLRI
+    NO_DUPLICATE = True
 
     def __init__(self, afi: Union[int, AFI], safi: Union[int, SAFI], nlris: List[NLRI]) -> None:
         Family.__init__(self, afi, safi)
