@@ -822,12 +822,13 @@ async def main(options, checker, queue):
         sys.exit(1)
 
     sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
     try:
         host = '::1' if options['ipv6'] else '::FFFF:127.0.0.1'
         port = options['port']
         sock.bind((host, port))
-    except PermissionError as exc:
+    except (PermissionError, OSError) as exc:
         flushed(f'could not bind to {host}:{port}')
         flushed(exc)
         sys.exit(1)
