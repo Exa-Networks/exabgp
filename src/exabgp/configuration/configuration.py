@@ -9,9 +9,13 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, cast, TYPE_CHECKING
 
 from exabgp.bgp.message.refresh import RouteRefresh
+
+if TYPE_CHECKING:
+    from exabgp.rib.change import Change
+    from exabgp.bgp.message.operational import OperationalFamily
 
 from exabgp.logger import log
 
@@ -64,7 +68,7 @@ class _Configuration:
         self.processes: Dict[str, Any] = {}
         self.neighbors: Dict[str, Any] = {}
 
-    def inject_change(self, peers: List[str], change: object) -> bool:
+    def inject_change(self, peers: List[str], change: 'Change') -> bool:
         result = False
         for neighbor_name in self.neighbors:
             if neighbor_name in peers:
@@ -88,17 +92,19 @@ class _Configuration:
                 self.neighbors[neighbor].eor.append(family)
         return result
 
-    def inject_operational(self, peers: List[str], operational: object) -> bool:
+    def inject_operational(self, peers: List[str], operational: 'OperationalFamily') -> bool:
         result = True
         for neighbor in self.neighbors:
             if neighbor in peers:
-                if operational.family().afi_safi() in self.neighbors[neighbor].families():
+                family = operational.family()
+                if family in self.neighbors[neighbor].families():
                     if operational.name == 'ASM':
-                        self.neighbors[neighbor].asm[operational.family().afi_safi()] = operational
+                        self.neighbors[neighbor].asm[family] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:
                     log.error(
-                        lambda neighbor=neighbor: f'the route family {operational.family().afi_safi()} is not configured on neighbor {neighbor}',
+                        lambda neighbor=neighbor,
+                        family=family: f'the route family {family} is not configured on neighbor {neighbor}',
                         'configuration',
                     )
                     result = False
@@ -457,7 +463,7 @@ class Configuration(_Configuration):
 
         return True
 
-    def validate(self) -> str:
+    def validate(self) -> Union[bool, str]:
         for neighbor in self.neighbors.values():
             has_procs = 'processes' in neighbor.api and neighbor.api['processes']
             has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']
@@ -615,4 +621,4 @@ class Configuration(_Configuration):
         if command not in self._structure[name]['commands']:
             return self.error.set('invalid keyword "{}"'.format(command))
 
-        return self._structure[name]['class'].parse(name, command)
+        return cast(Union[bool, str], self._structure[name]['class'].parse(name, command))
