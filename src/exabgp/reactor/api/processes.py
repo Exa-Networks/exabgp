@@ -22,7 +22,7 @@ from threading import Thread
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.reactor.peer import Peer
-    from exabgp.bgp.message import Open, Update
+    from exabgp.bgp.message import Open, Update, Notify
     from exabgp.bgp.fsm import FSM
 
 from exabgp.util.errstr import errstr
@@ -935,10 +935,10 @@ class Processes:
     # no-self-argument
 
     def silenced(function: _F) -> _F:  # noqa: N805 - decorator, not method
-        def closure(self: 'Processes', *args: Any) -> None:
+        def closure(self: 'Processes', *args: Any, **kwargs: Any) -> None:
             if self.silence:
                 return None
-            return function(self, *args)
+            return function(self, *args, **kwargs)
 
         return cast(_F, closure)
 
@@ -975,7 +975,13 @@ class Processes:
 
     @silenced
     def packets(
-        self, neighbor: 'Neighbor', direction: str, category: int, negotiated: Negotiated, header: str, body: str
+        self,
+        neighbor: 'Neighbor',
+        direction: str,
+        category: int,
+        header: Union[bytes, str],
+        body: Union[bytes, str],
+        negotiated: Optional[Negotiated] = None,
     ) -> None:
         for process in self._notify(neighbor, '{}-packets'.format(direction)):
             self.write(
@@ -986,12 +992,18 @@ class Processes:
 
     @silenced
     def notification(
-        self, neighbor: 'Neighbor', direction: str, code: int, subcode: int, data: str, header: str, body: str
+        self,
+        neighbor: 'Neighbor',
+        direction: str,
+        message: 'Notify',
+        header: Union[bytes, str],
+        body: Union[bytes, str],
+        negotiated: Optional[Negotiated] = None,
     ) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(
                 process,
-                self._encoder[process].notification(neighbor, direction, code, subcode, data, header, body),  # type: ignore[call-arg]
+                self._encoder[process].notification(neighbor, direction, message, header, body, negotiated),
                 neighbor,
             )
 
@@ -1002,9 +1014,9 @@ class Processes:
         neighbor: 'Neighbor',
         direction: str,
         message: Message,
-        negotiated: Negotiated,
-        header: str,
-        *body: str,
+        header: Union[bytes, str],
+        *body: Union[bytes, str],
+        negotiated: Optional[Negotiated] = None,
     ) -> None:
         self._dispatch[message_id](self, neighbor, direction, message, negotiated, header, *body)
 
