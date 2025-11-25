@@ -85,7 +85,8 @@ class Protocol:
             return -1
         return self.connection.fd()
 
-    # XXX: we use self.peer.neighbor['peer-address'] when we could use self.neighbor['peer-address']
+    # Note: We use self.peer.neighbor for consistency - both reference the same object
+    # but self.peer.neighbor is used throughout to maintain clear ownership semantics.
 
     def me(self, message: str) -> str:
         return f'{self.peer.neighbor["peer-address"]}/{self.peer.neighbor["peer-as"]} {message}'
@@ -303,7 +304,7 @@ class Protocol:
                         )
                     elif packets:
                         self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)
-                # XXX: is notify not already Notify class ?
+                # notify is NotifyError (from connection.reader), convert to Notify BGP exception
                 raise Notify(notify.code, notify.subcode, str(notify))
 
             if msg_id not in Message.CODE.MESSAGES:
@@ -407,7 +408,7 @@ class Protocol:
                     )
                 elif packets:
                     self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)
-            # XXX: is notify not already Notify class ?
+            # notify is NotifyError (from connection.reader_async), convert to Notify BGP exception
             raise Notify(notify.code, notify.subcode, str(notify))
 
         if msg_id not in Message.CODE.MESSAGES:

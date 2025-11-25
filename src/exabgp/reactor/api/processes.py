@@ -237,7 +237,8 @@ class Processes:
             if run:
                 use_json = configuration.get('encoder', 'text') == 'json'
                 self._encoder[process] = Response.JSON(json_version) if use_json else Response.Text(text_version)
-                # XXX: add an option to ack in JSON (do not break backward compatibility)
+                # TODO: Future enhancement - add 'ack-format' config option for JSON ACKs
+                # Would allow: ack-format json; to send {"status": "ok"} instead of "done"
                 self._ackjson[process] = False
                 # Initialize per-process ACK state (process config overrides global default)
                 self._ack[process] = configuration.get('ack', self._default_ack)

@@ -82,7 +82,7 @@
 - [ ] Add input validation layer in configuration parsers
 - [ ] Sanitize error messages for external-facing APIs
 
-### XXX/TODO/BUG Comments (94 remaining)
+### XXX/TODO/BUG Comments (88 remaining)
 
 **Scanned:** 2025-11-25 | **Fixed this session:** 6 functional issues, 8 duplicate capability TODOs
 
@@ -125,10 +125,10 @@
 #### 🟢 Low Priority - Code Quality
 
 **Protocol/reactor (6) - CODE STYLE:**
-- [ ] `reactor/protocol.py:88` - Could use neighbor directly
-- [ ] `reactor/protocol.py:306,410` - Check if notify already Notify class (2×)
-- [ ] `reactor/api/processes.py:240` - Add option to ack in JSON
-- [ ] `reactor/api/transcoder.py:118,186` - Use Notification class code (2×)
+- [x] `reactor/protocol.py:88` - Documented: uses self.peer.neighbor for consistency
+- [x] `reactor/protocol.py:306,410` - Documented: NotifyError → Notify conversion is correct
+- [x] `reactor/api/processes.py:240` - Converted to TODO: Future 'ack-format' config option
+- [x] `reactor/api/transcoder.py:118,186` - Documented: CEASE/Shutdown and EOR handling
 
 **BGP message handling (10) - VALIDATION/CODE STYLE:**
 - [ ] `bgp/message/update/__init__.py:288` - NEXTHOP validation
