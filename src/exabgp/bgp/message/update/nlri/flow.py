@@ -8,7 +8,19 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Protocol as TypingProtocol,
+    Tuple,
+    Type,
+    Union,
+)
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -33,6 +45,24 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 # =================================================================== Flow Components
+
+
+class FlowRule(TypingProtocol):
+    """Protocol defining the common interface for flow rules (IPrefix and IOperation subclasses).
+
+    Both IPrefix4/IPrefix6 and IOperation subclasses implement these attributes,
+    allowing them to be used interchangeably in Flow NLRI rules collections.
+    """
+
+    ID: ClassVar[int]
+    NAME: ClassVar[str]
+    operations: int
+    afi: ClassVar[AFI]
+
+    def pack(self) -> bytes: ...
+
+    def short(self) -> str: ...
+
 
 # Flow validation constants
 MAX_PACKET_LENGTH: int = 0xFFFF  # Maximum packet length (16-bit value)
@@ -164,7 +194,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
     def pack_prefix(self) -> bytes:
         raw = self.cidr.pack_nlri()
         # ID is defined in subclasses
-        return bytes([self.ID]) + raw  # type: ignore[no-any-return]  # pylint: disable=E1101
+        return bytes([self.ID]) + raw
 
     def short(self) -> str:
         return str(self.cidr)
@@ -195,7 +225,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 
     def pack_prefix(self) -> bytes:
         # ID is defined in subclasses
-        return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()  # type: ignore[no-any-return]  # pylint: disable=E1101
+        return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()
 
     def short(self) -> str:
         return '{}/{}'.format(self.cidr, self.offset)
@@ -583,7 +613,7 @@ for content in dir():
 @NLRI.register(AFI.ipv4, SAFI.flow_vpn)
 @NLRI.register(AFI.ipv6, SAFI.flow_vpn)
 class Flow(NLRI):
-    rules: Dict[int, List[Union[IPrefix, IOperation]]]
+    rules: Dict[int, List[FlowRule]]
     nexthop: Any
     rd: RouteDistinguisher
 
@@ -601,8 +631,8 @@ class Flow(NLRI):
     def __len__(self) -> int:
         return len(self._pack_nlri_simple())
 
-    def add(self, rule: Union[IPrefix, IOperation]) -> bool:
-        ID = rule.ID  # type: ignore[union-attr]
+    def add(self, rule: FlowRule) -> bool:
+        ID = rule.ID
         if ID in (FlowDestination.ID, FlowSource.ID):
             # re-enabled multiple source/destination as it is allowed by some vendor
             # if ID in self.rules:
@@ -612,10 +642,10 @@ class Flow(NLRI):
             else:
                 pair = self.rules.get(FlowDestination.ID, [])
             if pair:
-                if rule.afi != pair[0].afi:  # type: ignore[union-attr]
+                if rule.afi != pair[0].afi:
                     return False
             # TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
-            if rule.NAME.endswith('ipv6'):  # type: ignore[union-attr]
+            if rule.NAME.endswith('ipv6'):
                 self.afi = AFI.ipv6
         self.rules.setdefault(ID, []).append(rule)
         return True
@@ -629,12 +659,12 @@ class Flow(NLRI):
             # for each component get all the operation to do
             # the format use does not prevent two opposing rules meaning that no packet can ever match
             for rule in rules:
-                rule.operations &= CommonOperator.EOL ^ 0xFF  # type: ignore[union-attr]
-            rules[-1].operations |= CommonOperator.EOL  # type: ignore[union-attr]
+                rule.operations &= CommonOperator.EOL ^ 0xFF
+            rules[-1].operations |= CommonOperator.EOL
             # and add it to the last rule
             if ID not in (FlowDestination.ID, FlowSource.ID):
                 ordered_rules.append(bytes([ID]))
-            ordered_rules.append(b''.join(rule.pack() for rule in rules))  # type: ignore[union-attr]
+            ordered_rules.append(b''.join(rule.pack() for rule in rules))
 
         components = self.rd.pack_rd() + b''.join(ordered_rules)
 
@@ -664,14 +694,14 @@ class Flow(NLRI):
             r_str: List[str] = []
             for idx, rule in enumerate(rules):
                 # only add ' ' after the first element
-                if idx and not rule.operations & NumericOperator.AND:  # type: ignore[union-attr]
+                if idx and not rule.operations & NumericOperator.AND:
                     r_str.append(' ')
                 # ugly hack as dynamic languages are what they are and use used __str__ in the past
                 r_str.append(rule.short() if hasattr(rule, 'short') else str(rule))
             line = ''.join(r_str)
             if len(r_str) > 1:
                 line = '[ {} ]'.format(line)
-            string.append(' {} {}'.format(rules[0].NAME, line))  # type: ignore[union-attr]
+            string.append(' {} {}'.format(rules[0].NAME, line))
         return ''.join(string)
 
     def extensive(self) -> str:
@@ -689,10 +719,10 @@ class Flow(NLRI):
             s: List[str] = []
             for idx, rule in enumerate(rules):
                 # only add ' ' after the first element
-                if idx and not rule.operations & NumericOperator.AND:  # type: ignore[union-attr]
+                if idx and not rule.operations & NumericOperator.AND:
                     s.append(', ')
                 s.append('"{}"'.format(rule))
-            string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))  # type: ignore[union-attr]
+            string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
         nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not NoNextHop else ''
         rd = '' if self.rd is RouteDistinguisher.NORD else ', {}'.format(self.rd.json())
         compatibility = ', "string": "{}"'.format(self.extensive())
