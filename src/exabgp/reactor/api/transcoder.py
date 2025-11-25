@@ -115,9 +115,9 @@ class Transcoder:
             return self.encoder.keepalive(neighbor, direction, None, header, body)
 
         if content == 'notification':
-            # XXX: Use the code of the Notifcation class here ..
             message = Notification.unpack_message(data)
 
+            # Check for CEASE/Administrative Shutdown (code 6, subcode 2) which has special handling
             if (message.code, message.subcode) != (6, 2):
                 message.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)  # type: ignore[operator]
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
@@ -183,7 +183,8 @@ class Transcoder:
         if content == 'update':
             return self.encoder.update(neighbor, direction, message, None, header, body)
 
-        if content == 'eor':  # XXX: Should not be required
+        if content == 'eor':
+            # EOR (End of RIB) is encoded as a special UPDATE message
             return self.encoder.update(neighbor, direction, message, None, header, body)
 
         if content == 'refresh':
