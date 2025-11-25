@@ -9,7 +9,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Iterator
+from typing import Any, Iterator, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.update.nlri.inet import INET
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
@@ -176,17 +179,21 @@ class ParseStaticRoute(Section):
         return True
 
     def _check(self) -> bool:
-        if not self.check(self.scope.get(self.name)):
-            return self.error.set(self.syntax)
+        change = self.scope.get(self.name)
+        if not self.check(change):
+            self.error.set(self.syntax)
+            return False
         return True
 
     @staticmethod
     def check(change: Change) -> bool:
+        # The NLRI is actually an INET subclass with nexthop attribute
+        nlri: INET = change.nlri  # type: ignore[assignment]  # runtime: subclass of NLRI
         if (
-            change.nlri.nexthop is NoNextHop
-            and change.nlri.action == Action.ANNOUNCE
-            and change.nlri.afi == AFI.ipv4
-            and change.nlri.safi in (SAFI.unicast, SAFI.multicast)
+            nlri.nexthop is NoNextHop
+            and nlri.action == Action.ANNOUNCE
+            and nlri.afi == AFI.ipv4
+            and nlri.safi in (SAFI.unicast, SAFI.multicast)
         ):
             return False
         return True
@@ -197,56 +204,57 @@ class ParseStaticRoute(Section):
             yield last
             return
 
+        # The NLRI is an Inet subclass with cidr, nexthop, etc. attributes
+        # Use Any to access dynamically since the actual type depends on AFI/SAFI
+        nlri: Any = last.nlri
+
         # ignore if the request is for an aggregate, or the same size
-        mask = last.nlri.cidr.mask
+        mask = nlri.cidr.mask
         cut = last.attributes[Attribute.CODE.INTERNAL_SPLIT]
         if mask >= cut:
             yield last
             return
 
         # calculate the number of IP in the /<size> of the new route
-        increment = pow(2, last.nlri.afi.mask() - cut)
+        increment = pow(2, nlri.afi.mask() - cut)
         # how many new routes are we going to create from the initial one
-        number = pow(2, cut - last.nlri.cidr.mask)
+        number = pow(2, cut - nlri.cidr.mask)
 
         # convert the IP into a integer/long
         ip = 0
-        for c in last.nlri.cidr.ton():
+        for c in nlri.cidr.ton():
             ip <<= 8
             ip += c
 
-        afi = last.nlri.afi
-        safi = last.nlri.safi
+        afi = nlri.afi
+        safi = nlri.safi
 
         # Really ugly
-        klass = last.nlri.__class__
-        nexthop = last.nlri.nexthop
-        if safi.has_path():
-            path_info = last.nlri.path_info
-        if safi.has_label():
-            labels = last.nlri.labels
-        if safi.has_rd():
-            rd = last.nlri.rd
+        klass = nlri.__class__
+        nexthop = nlri.nexthop
+        path_info = nlri.path_info if safi.has_path() else None
+        labels = nlri.labels if safi.has_label() else None
+        rd = nlri.rd if safi.has_rd() else None
 
         # XXX: Looks weird to set and then set to None, check
-        last.nlri.cidr.mask = cut
-        last.nlri = None
+        nlri.cidr.mask = cut
+        last.nlri = None  # type: ignore[assignment]  # intentionally clearing reference
 
         # generate the new routes
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
-            nlri = klass(afi, safi, Action.ANNOUNCE)
-            nlri.cidr = CIDR(pack_int(afi, ip), cut)
-            nlri.nexthop = nexthop  # nexthop can be NextHopSelf
-            if safi.has_path():
-                nlri.path_info = path_info
-            if safi.has_label():
-                nlri.labels = labels
-            if safi.has_rd():
-                nlri.rd = rd
+            new_nlri: Any = klass(afi, safi, Action.ANNOUNCE)
+            new_nlri.cidr = CIDR(pack_int(afi, ip), cut)
+            new_nlri.nexthop = nexthop  # nexthop can be NextHopSelf
+            if path_info is not None:
+                new_nlri.path_info = path_info
+            if labels is not None:
+                new_nlri.labels = labels
+            if rd is not None:
+                new_nlri.rd = rd
             # next ip
             ip += increment
-            yield Change(nlri, last.attributes)
+            yield Change(new_nlri, last.attributes)
 
     def _split(self) -> None:
         for route in self.scope.pop_routes():

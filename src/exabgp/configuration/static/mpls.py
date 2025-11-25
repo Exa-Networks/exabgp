@@ -7,32 +7,27 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from ipaddress import IPv4Address, IPv6Address, ip_address
+from struct import pack
 from typing import Any, List, Tuple, Union
 
-from struct import pack
-from ipaddress import ip_address
-from ipaddress import IPv4Address
-from ipaddress import IPv6Address
-from exabgp.protocol.ip import IPv4
-from exabgp.protocol.ip import IPv6
-from exabgp.protocol.family import AFI
-
-from exabgp.bgp.message.update.nlri.qualifier import Labels
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
+from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
-from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
 from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
+from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
 from exabgp.bgp.message.update.attribute.sr.srv6.sidstructure import Srv6SidStructure
-from exabgp.bgp.message.update.nlri.mup import InterworkSegmentDiscoveryRoute
-from exabgp.bgp.message.update.nlri.mup import DirectSegmentDiscoveryRoute
-from exabgp.bgp.message.update.nlri.mup import Type1SessionTransformedRoute
-from exabgp.bgp.message.update.nlri.mup import Type2SessionTransformedRoute
-from exabgp.bgp.message.update.nlri.mvpn import SourceAD
-from exabgp.bgp.message.update.nlri.mvpn import SourceJoin
-from exabgp.bgp.message.update.nlri.mvpn import SharedJoin
+from exabgp.bgp.message.update.nlri.mup import (
+    DirectSegmentDiscoveryRoute,
+    InterworkSegmentDiscoveryRoute,
+    Type1SessionTransformedRoute,
+    Type2SessionTransformedRoute,
+)
+from exabgp.bgp.message.update.nlri.mvpn import SharedJoin, SourceAD, SourceJoin
+from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
+from exabgp.protocol.family import AFI
+from exabgp.protocol.ip import IPv4, IPv6
 
 # MPLS/SR configuration constants
 SRGB_TUPLE_SIZE = 2  # SRGB tuple consists of (start, range)
@@ -212,18 +207,20 @@ def parse_ip_prefix(tokeninser: str) -> Tuple[Union[IPv4, IPv6], int]:
         raise Exception(f"unexpect prefix format '{tokeninser}'")
 
     addr = ip_address(addrstr)
+    ip: Union[IPv4, IPv6]
     if isinstance(addr, IPv4Address):
         ip = IPv4.unpack_ipv4(IPv4.pton(addrstr))
     elif isinstance(addr, IPv6Address):
         ip = IPv6.unpack_ipv6(IPv6.pton(addrstr))
     else:
         raise Exception(f"unexpect ipaddress format '{addrstr}'")
-
     return ip, int(length)
 
 
 # shared-join rp <ip> group <ip> rd <rd> source-as <source-as>
 def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
+    sourceip: Union[IPv4, IPv6]
+    groupip: Union[IPv4, IPv6]
     if afi == AFI.ipv4:
         tokeniser.consume('rp')
         sourceip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
@@ -253,6 +250,8 @@ def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
 
 # source-join source <ip> group <ip> rd <rd> source-as <source-as>
 def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
+    sourceip: Union[IPv4, IPv6]
+    groupip: Union[IPv4, IPv6]
     if afi == AFI.ipv4:
         tokeniser.consume('source')
         sourceip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
@@ -282,6 +281,8 @@ def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
 
 #'source-ad source <ip address> group <ip address> rd <rd>'
 def mvpn_sourcead(tokeniser: Any, afi: AFI, action: Any) -> SourceAD:
+    sourceip: Union[IPv4, IPv6]
+    groupip: Union[IPv4, IPv6]
     if afi == AFI.ipv4:
         tokeniser.consume('source')
         sourceip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
@@ -320,6 +321,7 @@ def srv6_mup_isd(tokeniser: Any, afi: AFI) -> InterworkSegmentDiscoveryRoute:
 
 # 'mup-dsd <ip address> rd <rd>',
 def srv6_mup_dsd(tokeniser: Any, afi: AFI) -> DirectSegmentDiscoveryRoute:
+    ip: Union[IPv4, IPv6]
     if afi == AFI.ipv4:
         ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
@@ -359,6 +361,7 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
     qfi = int(value)
 
     tokeniser.consume('endpoint')
+    endpoint_ip: Union[IPv4, IPv6]
     if afi == AFI.ipv4:
         endpoint_ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
@@ -367,7 +370,7 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
         raise Exception(f'unexpect afi: {afi}')
 
     source_ip_len = 0
-    source_ip = b''
+    source_ip: Union[bytes, IPv4, IPv6] = b''
 
     if tokeniser.consume_if_match('source'):
         if afi == AFI.ipv4:
@@ -395,6 +398,7 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
 
 # 'mup-t2st <endpoint address> rd <rd> teid <teid>',
 def srv6_mup_t2st(tokeniser: Any, afi: AFI) -> Type2SessionTransformedRoute:
+    endpoint_ip: Union[IPv4, IPv6]
     if afi == AFI.ipv4:
         endpoint_ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:

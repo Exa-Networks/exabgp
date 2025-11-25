@@ -189,7 +189,7 @@ class Processes:
                 t.join()
             except OSError:
                 # we most likely received a SIGTERM signal and our child is already dead
-                log.debug(lambda process=process: f'child process {process} was already dead', 'process')
+                log.debug(lambda p=process: f'child process {p} was already dead', 'process')
         self.clean()
 
     async def terminate_async(self) -> None:
@@ -215,7 +215,7 @@ class Processes:
                 t.join()
             except OSError:
                 # we most likely received a SIGTERM signal and our child is already dead
-                log.debug(lambda process=process: f'child process {process} was already dead', 'process')
+                log.debug(lambda p=process: f'child process {p} was already dead', 'process')
         self.clean()
 
     def _start(self, process: str) -> None:
@@ -295,8 +295,8 @@ class Processes:
 
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)
-            log.debug(lambda: 'could not start process {}'.format(process), 'process')
-            log.debug(lambda exc=exc: 'reason: {}'.format(str(exc)), 'process')
+            log.debug(lambda p=process: f'could not start process {p}', 'process')
+            log.debug(lambda e=exc: f'reason: {e}', 'process')
 
     def start(self, configuration: Dict[str, Dict[str, Any]], restart: bool = False) -> None:
         # Terminate processes that are no longer in configuration
@@ -400,12 +400,10 @@ class Processes:
                         line = line.rstrip()
                         consumed_data = True
                         if line.startswith('debug '):
-                            log.warning(
-                                lambda line=line, process=process: f'debug info from {process} : {line[6:]} ', 'api'
-                            )
+                            log.warning(lambda ln=line, pr=process: f'debug info from {pr} : {ln[6:]} ', 'api')
                         else:
                             log.debug(
-                                lambda line=line, process=process: f'command from process {process} : {line} ',
+                                lambda ln=line, pr=process: f'command from process {pr} : {ln} ',
                                 'process',
                             )
                             yield (process, formated(line))
@@ -422,7 +420,7 @@ class Processes:
                         pass
                     else:
                         log.debug(
-                            lambda exc=exc: f'unexpected errno received from forked process ({errstr(exc)})', 'process'
+                            lambda e=exc: f'unexpected errno received from forked process ({errstr(e)})', 'process'
                         )
                     continue
                 except StopIteration:
@@ -521,12 +519,10 @@ class Processes:
                 line = line.rstrip()
 
                 if line.startswith('debug '):
-                    log.warning(
-                        lambda line=line, process=process_name: f'debug info from {process_name} : {line[6:]} ', 'api'
-                    )
+                    log.warning(lambda ln=line, pn=process_name: f'debug info from {pn} : {ln[6:]} ', 'api')
                 else:
                     log.debug(
-                        lambda line=line, process=process_name: f'command from process {process_name} : {line} ',
+                        lambda ln=line, pn=process_name: f'command from process {pn} : {ln} ',
                         'process',
                     )
                     # Queue command for processing
@@ -561,7 +557,7 @@ class Processes:
             if not exc.errno or exc.errno in error.fatal:
                 self._handle_problem(process_name)
             elif exc.errno not in error.block:
-                log.debug(lambda exc=exc: f'unexpected errno received from forked process ({errstr(exc)})', 'process')
+                log.debug(lambda e=exc: f'unexpected errno received from forked process ({errstr(e)})', 'process')
         except (KeyError, AttributeError, UnicodeDecodeError) as exc:
             # On any exception, try to remove reader to prevent callback loop
             try:
@@ -573,7 +569,7 @@ class Processes:
             except (ValueError, OSError, AttributeError):
                 pass
 
-            log.debug(lambda exc=exc: f'exception in async reader callback: {exc}', 'process')
+            log.debug(lambda e=exc: f'exception in async reader callback: {e}', 'process')
             self._handle_problem(process_name)
 
     def received_async(self) -> Generator[Tuple[str, str], None, None]:
@@ -653,7 +649,7 @@ class Processes:
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
-                        lambda exc=exc: f'error received while sending data to helper program, retrying ({errstr(exc)})',
+                        lambda e=exc: f'error received while sending data to helper program, retrying ({errstr(e)})',
                         'process',
                     )
                     continue
@@ -664,7 +660,7 @@ class Processes:
         except OSError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
             log.debug(
-                lambda exc=exc: f'error received while FLUSHING data to helper program, retrying ({errstr(exc)})',
+                lambda e=exc: f'error received while FLUSHING data to helper program, retrying ({errstr(e)})',
                 'process',
             )
 
@@ -734,7 +730,7 @@ class Processes:
                 raise ProcessError from None
             else:
                 log.debug(
-                    lambda exc=exc: f'error received while sending data to helper program ({errstr(exc)})',
+                    lambda e=exc: f'error received while sending data to helper program ({errstr(e)})',
                     'process',
                 )
                 raise ProcessError from None
@@ -753,7 +749,7 @@ class Processes:
         if self._write_queue:
             for p, q in self._write_queue.items():
                 if q:
-                    log.debug(lambda p=p, n=len(q): f'[ASYNC] Flushing queue for {p} ({n} items)', 'process')
+                    log.debug(lambda pn=p, cnt=len(q): f'[ASYNC] Flushing queue for {pn} ({cnt} items)', 'process')
 
         for process_name in list(self._write_queue.keys()):
             if process_name not in self._process:
@@ -809,7 +805,8 @@ class Processes:
                         # Other error
                         self._broken.append(process_name)
                         log.debug(
-                            lambda exc=exc: f'[ASYNC] Error flushing queue for {process_name}: {errstr(exc)}', 'process'
+                            lambda e=exc, pn=process_name: f'[ASYNC] Error flushing queue for {pn}: {errstr(e)}',
+                            'process',
                         )
                         del self._write_queue[process_name]
                         break
@@ -921,11 +918,8 @@ class Processes:
 
     def _notify(self, peer_or_neighbor: Union['Neighbor', 'Peer'], event: str) -> Generator[str, None, None]:
         # Accept both Peer and Neighbor - Peer has .neighbor attribute
-        neighbor: 'Neighbor' = (
-            peer_or_neighbor.neighbor  # type: ignore[union-attr]
-            if hasattr(peer_or_neighbor, 'neighbor')
-            else peer_or_neighbor  # type: ignore[assignment]
-        )
+        # Use getattr with default to handle both types safely
+        neighbor: 'Neighbor' = getattr(peer_or_neighbor, 'neighbor', peer_or_neighbor)  # type: ignore[arg-type,assignment]
         if neighbor.api is None:
             return
         for process in neighbor.api[event]:
@@ -934,7 +928,8 @@ class Processes:
     # do not do anything if silenced
     # no-self-argument
 
-    def silenced(function: _F) -> _F:  # noqa: N805 - decorator, not method
+    @staticmethod
+    def silenced(function: _F) -> _F:
         def closure(self: 'Processes', *args: Any, **kwargs: Any) -> None:
             if self.silence:
                 return None
@@ -1023,9 +1018,10 @@ class Processes:
     # registering message functions
     # no-self-argument
 
+    @staticmethod
     def register_process(
         message_id: int, storage: Dict[int, Any] = _dispatch
-    ) -> Callable[[Callable[..., None]], Callable[..., None]]:  # noqa: N805 - decorator, not method
+    ) -> Callable[[Callable[..., None]], Callable[..., None]]:
         def closure(function: Callable[..., None]) -> Callable[..., None]:
             def wrap(*args: Any) -> None:
                 function(*args)
