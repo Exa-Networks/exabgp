@@ -224,7 +224,7 @@ class TestPeerCollisionDetection:
         result = peer.handle_connection(connection)
 
         assert result is not None
-        connection.notification.assert_called_once_with(6, 7, 'could not accept the connection, already established')
+        connection.notification.assert_called_once_with(6, 7, b'could not accept the connection, already established')
 
     def test_collision_detection_openconfirm_higher_router_id(self) -> None:
         """Test collision detection in OPENCONFIRM with higher local router-id"""
