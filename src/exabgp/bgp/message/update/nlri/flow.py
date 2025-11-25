@@ -84,9 +84,9 @@ class IComponent:
         """
         # Check which specific pack method exists and call it
         if hasattr(self, 'pack_prefix'):
-            return self.pack_prefix()  # type: ignore[attr-defined,no-any-return]
+            return self.pack_prefix()  # type: ignore[no-any-return]
         elif hasattr(self, 'pack_operation'):
-            return self.pack_operation()  # type: ignore[attr-defined,no-any-return]
+            return self.pack_operation()  # type: ignore[no-any-return]
         else:
             raise NotImplementedError(f'{self.__class__.__name__} must implement pack_prefix() or pack_operation()')
 
@@ -464,81 +464,81 @@ class Flow6Source(IPrefix6, FlowSource):
 class FlowIPProtocol(IOperationByte, NumericString, IPv4):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'protocol'
-    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = staticmethod(converter(Protocol.named, Protocol))
-    decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = staticmethod(decoder(ord, Protocol))
+    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = converter(Protocol.named, Protocol)
+    decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = decoder(ord, Protocol)
 
 
 class FlowNextHeader(IOperationByte, NumericString, IPv6):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'next-header'
-    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = staticmethod(converter(Protocol.named, Protocol))
-    decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = staticmethod(decoder(ord, Protocol))
+    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = converter(Protocol.named, Protocol)
+    decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = decoder(ord, Protocol)
 
 
 class FlowAnyPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'port'
-    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(port_value))
-    decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
+    converter: ClassVar[Callable[[str], int]] = converter(port_value)
+    decoder: ClassVar[Callable[[bytes], int]] = _number
 
 
 class FlowDestinationPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x05
     NAME: ClassVar[str] = 'destination-port'
-    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(port_value))
-    decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
+    converter: ClassVar[Callable[[str], int]] = converter(port_value)
+    decoder: ClassVar[Callable[[bytes], int]] = _number
 
 
 class FlowSourcePort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x06
     NAME: ClassVar[str] = 'source-port'
-    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(port_value))
-    decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
+    converter: ClassVar[Callable[[str], int]] = converter(port_value)
+    decoder: ClassVar[Callable[[bytes], int]] = _number
 
 
 class FlowICMPType(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x07
     NAME: ClassVar[str] = 'icmp-type'
-    converter: ClassVar[Callable[[str], Union[int, ICMPType]]] = staticmethod(converter(ICMPType.named, ICMPType))
-    decoder: ClassVar[Callable[[bytes], Union[int, ICMPType]]] = staticmethod(decoder(_number, ICMPType))
+    converter: ClassVar[Callable[[str], Union[int, ICMPType]]] = converter(ICMPType.named, ICMPType)
+    decoder: ClassVar[Callable[[bytes], Union[int, ICMPType]]] = decoder(_number, ICMPType)
 
 
 class FlowICMPCode(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x08
     NAME: ClassVar[str] = 'icmp-code'
-    converter: ClassVar[Callable[[str], Union[int, ICMPCode]]] = staticmethod(converter(ICMPCode.named, ICMPCode))
-    decoder: ClassVar[Callable[[bytes], Union[int, ICMPCode]]] = staticmethod(decoder(_number, ICMPCode))
+    converter: ClassVar[Callable[[str], Union[int, ICMPCode]]] = converter(ICMPCode.named, ICMPCode)
+    decoder: ClassVar[Callable[[bytes], Union[int, ICMPCode]]] = decoder(_number, ICMPCode)
 
 
 class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x09
     NAME: ClassVar[str] = 'tcp-flags'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], Union[int, TCPFlag]]] = staticmethod(converter(TCPFlag.named))
-    decoder: ClassVar[Callable[[bytes], Union[int, TCPFlag]]] = staticmethod(decoder(_number, TCPFlag))
+    converter: ClassVar[Callable[[str], Union[int, TCPFlag]]] = converter(TCPFlag.named)
+    decoder: ClassVar[Callable[[bytes], Union[int, TCPFlag]]] = decoder(_number, TCPFlag)
 
 
 class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x0A
     NAME: ClassVar[str] = 'packet-length'
-    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(packet_length))
-    decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
+    converter: ClassVar[Callable[[str], int]] = converter(packet_length)
+    decoder: ClassVar[Callable[[bytes], int]] = _number
 
 
 # RFC2474
 class FlowDSCP(IOperationByte, NumericString, IPv4):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'dscp'
-    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(dscp_value))
-    decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
+    converter: ClassVar[Callable[[str], int]] = converter(dscp_value)
+    decoder: ClassVar[Callable[[bytes], int]] = _number
 
 
 # RFC2460
 class FlowTrafficClass(IOperationByte, NumericString, IPv6):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'traffic-class'
-    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(class_value))
-    decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
+    converter: ClassVar[Callable[[str], int]] = converter(class_value)
+    decoder: ClassVar[Callable[[bytes], int]] = _number
 
 
 # BinaryOperator
@@ -546,16 +546,16 @@ class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], Union[int, Fragment]]] = staticmethod(converter(Fragment.named))
-    decoder: ClassVar[Callable[[bytes], Union[int, Fragment]]] = staticmethod(decoder(ord, Fragment))
+    converter: ClassVar[Callable[[str], Union[int, Fragment]]] = converter(Fragment.named)
+    decoder: ClassVar[Callable[[bytes], Union[int, Fragment]]] = decoder(ord, Fragment)
 
 
 # draft-raszuk-idr-flow-spec-v6-01
 class FlowFlowLabel(IOperationByteShortLong, NumericString, IPv6):
     ID: ClassVar[int] = 0x0D
     NAME: ClassVar[str] = 'flow-label'
-    converter: ClassVar[Callable[[str], int]] = staticmethod(converter(label_value))
-    decoder: ClassVar[Callable[[bytes], int]] = staticmethod(_number)
+    converter: ClassVar[Callable[[str], int]] = converter(label_value)
+    decoder: ClassVar[Callable[[bytes], int]] = _number
 
 
 # ..........................................................
@@ -621,9 +621,10 @@ class Flow(NLRI):
         NLRI.__init__(self, afi, safi, action)
         self.rules = {}
         self.nexthop = NoNextHop
-        self.rd = RouteDistinguisher.NORD
+        # NORD is typed Optional but always set at module load (rd.py:115)
+        self.rd = RouteDistinguisher.NORD  # type: ignore[assignment]
 
-    def feedback(self, action: Action) -> str:
+    def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'flow nlri next-hop missing'
         return ''
@@ -679,7 +680,7 @@ class Flow(NLRI):
             'my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can',
         )
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         # RFC 7911 ADD-PATH is possible for FlowSpec but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(self.afi, self.safi)
         return self._pack_nlri_simple()
@@ -729,7 +730,7 @@ class Flow(NLRI):
         return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
 
     @classmethod
-    def unpack_nlri(
+    def unpack_nlri(  # type: ignore[override]
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> Tuple[Optional[Flow], bytes]:
         length, bgp = bgp[0], bgp[1:]
@@ -767,7 +768,7 @@ class Flow(NLRI):
                 klass = factory[afi][what]
 
                 if decoded == 'prefix':
-                    adding, bgp = klass.make(bgp)
+                    adding, bgp = klass.make(bgp)  # type: ignore[attr-defined]
                     if not nlri.add(adding):
                         raise Notify(
                             3,
@@ -777,14 +778,14 @@ class Flow(NLRI):
                             ),
                         )
                 else:
-                    end = False
+                    end: int = 0
                     while not end:
                         byte, bgp = bgp[0], bgp[1:]
                         end = CommonOperator.eol(byte)
                         operator = CommonOperator.operator(byte)
                         length = CommonOperator.length(byte)
                         value, bgp = bgp[:length], bgp[length:]
-                        adding = klass.decoder(value)
+                        adding = klass.decoder(value)  # type: ignore[attr-defined]
                         nlri.add(klass(operator, adding))  # type: ignore[arg-type,call-arg]
 
             return nlri, bgp + over
