@@ -10,18 +10,18 @@ from __future__ import annotations
 import sys
 from struct import pack
 from struct import unpack
-from typing import ClassVar, Dict, Optional, Tuple, Union, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
-if TYPE_CHECKING:
-    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from typing import ClassVar, Dict, Optional, Tuple, Type as TypingType, TypeVar, Union, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.message import Message
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+# TypeVar for register decorator - preserves the specific subclass type
+_T = TypeVar('_T', bound='Operational')
 
 # ========================================================================= Type
 #
@@ -39,8 +39,8 @@ class Type(int):
     def __len__(self) -> int:
         return 2
 
-    def __str__(self) -> str:  # type: ignore[empty-body]
-        pass
+    def __str__(self) -> str:
+        raise NotImplementedError('Type.__str__ must be implemented by subclasses')
 
 
 # ================================================================== Operational
@@ -52,7 +52,7 @@ class Operational(Message):
     ID = Message.CODE.OPERATIONAL
     TYPE = bytes([Message.CODE.OPERATIONAL])
 
-    registered_operational: ClassVar[Dict[int, Tuple[str, Type[Operational]]]] = dict()  # type: ignore[type-arg]
+    registered_operational: ClassVar[Dict[int, Tuple[str, TypingType['Operational']]]] = dict()
 
     has_family: ClassVar[bool] = False
     has_routerid: ClassVar[bool] = False
@@ -100,7 +100,7 @@ class Operational(Message):
         return f'operational {self.name}'
 
     @staticmethod
-    def register(klass: Type[Operational]) -> Type[Operational]:  # type: ignore[type-arg]
+    def register(klass: TypingType[_T]) -> TypingType[_T]:
         Operational.registered_operational[klass.code] = (klass.category, klass)
         return klass
 
@@ -180,7 +180,12 @@ class SequencedOperationalFamily(OperationalFamily):
         self._routerid: Optional[RouterID] = self.routerid
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
-        self.sent_routerid: RouterID = self.routerid if self.routerid else negotiated.sent_open.router_id  # type: ignore[union-attr]
+        if self.routerid:
+            self.sent_routerid: RouterID = self.routerid
+        elif negotiated.sent_open is not None:
+            self.sent_routerid = negotiated.sent_open.router_id
+        else:
+            raise ValueError('Cannot pack operational message: no routerid and negotiated.sent_open is None')
         if self.sequence is None:
             self.sent_sequence: int = (self.__sequence_number.setdefault(self.routerid, 0) + 1) % 0xFFFFFFFF
             self.__sequence_number[self.sent_routerid] = self.sent_sequence
@@ -248,7 +253,7 @@ class Advisory:
         def extensive(self) -> str:
             return f'operational {self.name} afi {self.afi} safi {self.safi} "{self.data.hex()}"'
 
-    @Operational.register  # type: ignore[arg-type]
+    @Operational.register
     class ADM(_Advisory):
         name: ClassVar[str] = 'ADM'
         code: ClassVar[int] = Operational.CODE.ADM
@@ -269,7 +274,7 @@ class Advisory:
                 utf8 = utf8[: MAX_ADVISORY - 3] + b'...'
             Advisory._Advisory.__init__(self, Operational.CODE.ADM, afi, safi, utf8)
 
-    @Operational.register  # type: ignore[arg-type]
+    @Operational.register
     class ASM(_Advisory):
         name: ClassVar[str] = 'ASM'
         code: ClassVar[int] = Operational.CODE.ASM
@@ -310,17 +315,17 @@ class Query:
                 return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence}'
             return f'operational {self.name} afi {self.afi} safi {self.safi}'
 
-    @Operational.register  # type: ignore[arg-type]
+    @Operational.register
     class RPCQ(_Query):
         name: ClassVar[str] = 'RPCQ'
         code: ClassVar[int] = Operational.CODE.RPCQ
 
-    @Operational.register  # type: ignore[arg-type]
+    @Operational.register
     class APCQ(_Query):
         name: ClassVar[str] = 'APCQ'
         code: ClassVar[int] = Operational.CODE.APCQ
 
-    @Operational.register  # type: ignore[arg-type]
+    @Operational.register
     class LPCQ(_Query):
         name: ClassVar[str] = 'LPCQ'
         code: ClassVar[int] = Operational.CODE.LPCQ
@@ -351,17 +356,17 @@ class Response:
                 return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence} counter {self.counter}'
             return f'operational {self.name} afi {self.afi} safi {self.safi} counter {self.counter}'
 
-    @Operational.register  # type: ignore[arg-type]
+    @Operational.register
     class RPCP(_Counter):
         name: ClassVar[str] = 'RPCP'
         code: ClassVar[int] = Operational.CODE.RPCP
 
-    @Operational.register  # type: ignore[arg-type]
+    @Operational.register
     class APCP(_Counter):
         name: ClassVar[str] = 'APCP'
         code: ClassVar[int] = Operational.CODE.APCP
 
-    @Operational.register  # type: ignore[arg-type]
+    @Operational.register
     class LPCP(_Counter):
         name: ClassVar[str] = 'LPCP'
         code: ClassVar[int] = Operational.CODE.LPCP
