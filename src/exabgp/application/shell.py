@@ -589,15 +589,15 @@ def generate_completion(shell: str) -> str:
 def completion_command(shell: str) -> int:
     """Output completion script to stdout."""
     if shell not in ('bash', 'zsh', 'fish'):
-        print(f"Error: Unknown shell '{shell}'. Supported: bash, zsh, fish", file=sys.stderr)
+        sys.stderr.write(f"Error: Unknown shell '{shell}'. Supported: bash, zsh, fish\n")
         return 1
 
     try:
         script = generate_completion(shell)
-        print(script, end='')
+        sys.stdout.write(script)
         return 0
     except Exception as e:
-        print(f'Error generating completion: {e}', file=sys.stderr)
+        sys.stderr.write(f'Error generating completion: {e}\n')
         return 1
 
 
@@ -609,7 +609,7 @@ def install_completion(shell: str) -> int:
     try:
         script = generate_completion(shell)
     except Exception as e:
-        print(f'Error generating completion: {e}', file=sys.stderr)
+        sys.stderr.write(f'Error generating completion: {e}\n')
         return 1
 
     # Create destination directory if it doesn't exist
@@ -618,18 +618,18 @@ def install_completion(shell: str) -> int:
     # Write the file
     try:
         dest_path.write_text(script)
-        print(f'✓ Installed {shell} completion to: {dest_path}')
+        sys.stdout.write(f'✓ Installed {shell} completion to: {dest_path}\n')
     except Exception as e:
-        print(f'Error installing completion: {e}', file=sys.stderr)
+        sys.stderr.write(f'Error installing completion: {e}\n')
         return 1
 
     # Print activation instructions
     activation = get_activation_message(shell)
-    print(f'\nTo activate completion, {activation}')
+    sys.stdout.write(f'\nTo activate completion, {activation}\n')
 
     # Verify completion works
-    print('\nVerify by running: exabgp <TAB>')
-    print('You should see: cli  decode  env  healthcheck  run  server  shell  validate  version')
+    sys.stdout.write('\nVerify by running: exabgp <TAB>\n')
+    sys.stdout.write('You should see: cli  decode  env  healthcheck  run  server  shell  validate  version\n')
 
     return 0
 
@@ -639,40 +639,40 @@ def uninstall_completion(shell: str) -> int:
     dest_path = get_completion_dest(shell)
 
     if not dest_path.exists():
-        print(f'✓ {shell.capitalize()} completion is not installed at: {dest_path}')
+        sys.stdout.write(f'✓ {shell.capitalize()} completion is not installed at: {dest_path}\n')
         return 0
 
     # Remove the file
     try:
         dest_path.unlink()
-        print(f'✓ Removed {shell} completion from: {dest_path}')
+        sys.stdout.write(f'✓ Removed {shell} completion from: {dest_path}\n')
 
         # Check if parent directory is now empty and remove it
         if dest_path.parent.exists() and not any(dest_path.parent.iterdir()):
             dest_path.parent.rmdir()
-            print(f'✓ Removed empty directory: {dest_path.parent}')
+            sys.stdout.write(f'✓ Removed empty directory: {dest_path.parent}\n')
 
     except Exception as e:
-        print(f'Error removing completion: {e}', file=sys.stderr)
+        sys.stderr.write(f'Error removing completion: {e}\n')
         return 1
 
-    print('\nCompletion removed. Restart your shell for changes to take effect.')
+    sys.stdout.write('\nCompletion removed. Restart your shell for changes to take effect.\n')
     return 0
 
 
 def cmdline(args):
     """Handle 'exabgp shell' subcommands."""
     if not hasattr(args, 'shell_command') or args.shell_command is None:
-        print('Error: Please specify a subcommand (install, uninstall, or completion)', file=sys.stderr)
-        print('Usage: exabgp shell install [bash|zsh|fish]', file=sys.stderr)
-        print('       exabgp shell uninstall [bash|zsh|fish]', file=sys.stderr)
-        print('       exabgp shell completion <bash|zsh|fish>', file=sys.stderr)
+        sys.stderr.write('Error: Please specify a subcommand (install, uninstall, or completion)\n')
+        sys.stderr.write('Usage: exabgp shell install [bash|zsh|fish]\n')
+        sys.stderr.write('       exabgp shell uninstall [bash|zsh|fish]\n')
+        sys.stderr.write('       exabgp shell completion <bash|zsh|fish>\n')
         return 1
 
     shell = args.shell if hasattr(args, 'shell') and args.shell else detect_shell()
 
     if shell not in ('bash', 'zsh', 'fish'):
-        print(f"Error: Unknown shell '{shell}'. Supported: bash, zsh, fish", file=sys.stderr)
+        sys.stderr.write(f"Error: Unknown shell '{shell}'. Supported: bash, zsh, fish\n")
         return 1
 
     if args.shell_command == 'install':
@@ -682,12 +682,12 @@ def cmdline(args):
     elif args.shell_command == 'completion':
         # For 'completion' command, shell argument is required
         if not hasattr(args, 'shell') or not args.shell:
-            print('Error: Shell argument required for completion command', file=sys.stderr)
-            print('Usage: exabgp shell completion <bash|zsh|fish>', file=sys.stderr)
+            sys.stderr.write('Error: Shell argument required for completion command\n')
+            sys.stderr.write('Usage: exabgp shell completion <bash|zsh|fish>\n')
             return 1
         return completion_command(args.shell)
     else:
-        print(f"Error: Unknown command '{args.shell_command}'", file=sys.stderr)
+        sys.stderr.write(f"Error: Unknown command '{args.shell_command}'\n")
         return 1
 
 

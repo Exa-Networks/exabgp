@@ -106,7 +106,8 @@
 - [x] `capability/ms.py` - `_seen` flag, log on duplicate
 - [x] `capability/graceful.py` - Log + clear on duplicate (replace)
 
-**AddPath support TODO (7 locations):**
+**AddPath support TODO (7 locations) - FEATURE REQUESTS:**
+*Note: These are feature enhancements, not bugs. AddPath already works for inet, label, ipvpn.*
 - [ ] `nlri/bgpls/nlri.py:107` - implement addpath support
 - [ ] `nlri/flow.py:652` - implement addpath support
 - [ ] `nlri/vpls.py:89` - implement addpath support
@@ -115,27 +116,27 @@
 - [ ] `nlri/mup/nlri.py:79` - implement addpath support
 - [ ] `nlri/bgpls/srv6sid.py:129` - implement addpath support
 
-**Size/validation checks (4 locations):**
+**Size/validation checks (4 locations) - VALIDATION:**
 - [ ] `configuration/check.py:208` - `XXX: FIXME: check size`
 - [ ] `configuration/check.py:233` - `XXX: FIXME: check size`
 - [ ] `configuration/check.py:464` - `XXX: FIXME: should be using logger here`
-- [ ] `bgp/message/update/__init__.py:109-111` - Calculate size progressively
+- [ ] `bgp/message/update/__init__.py:109-111` - Calculate size progressively (PERFORMANCE)
 
 #### 🟢 Low Priority - Code Quality
 
-**Protocol/reactor (6):**
+**Protocol/reactor (6) - CODE STYLE:**
 - [ ] `reactor/protocol.py:88` - Could use neighbor directly
 - [ ] `reactor/protocol.py:306,410` - Check if notify already Notify class (2×)
 - [ ] `reactor/api/processes.py:240` - Add option to ack in JSON
 - [ ] `reactor/api/transcoder.py:118,186` - Use Notification class code (2×)
 
-**BGP message handling (10):**
-- [ ] `bgp/message/update/__init__.py:286` - NEXTHOP validation
+**BGP message handling (10) - VALIDATION/CODE STYLE:**
+- [ ] `bgp/message/update/__init__.py:288` - NEXTHOP validation
 - [ ] `bgp/message/update/attribute/attributes.py:134,197,293,402,422,490` - Various (6×)
 - [ ] `bgp/message/update/attribute/mprnlri.py:67,167` - nlri.afi removal, cache (2×)
 - [ ] `bgp/message/update/attribute/nexthop.py:34` - Bad API
 
-**Data validation (7):**
+**Data validation (7) - VALIDATION:**
 - [ ] `data/check.py:133,137` - ipv4/ipv6 improve (2×)
 - [ ] `data/check.py:214,270,282,345` - Various validators (4×)
 - [ ] `protocol/ip/__init__.py:20-21,74,116` - IP/Range/CIDR API broken (4×)
@@ -193,7 +194,7 @@
 
 ### Code Cleanup
 
-- [ ] Replace 90 `print()` calls with logger calls
+- [x] Replace 90 `print()` calls with logger calls - **DONE**: cli.py/shell.py converted to sys.stdout/stderr.write (yang/*.py experimental, kept as-is)
 - [ ] Standardize string formatting to f-strings
 - [ ] Remove commented-out code
 - [ ] Add named constants for magic numbers
@@ -215,7 +216,7 @@
 | 4 | Split cli.py (2595 → 1940 lines) | `application/cli.py` | High | High | **PARTIAL** |
 | 5 | Eliminate circular dependencies | `bgp/fsm.py`, `reactor/api/` | High | Medium | TODO |
 | 6 | Add test coverage for reactor | `tests/unit/` | Medium | Medium | TODO |
-| 7 | Replace 90 print() calls | Across codebase | Low | Medium | TODO |
+| 7 | Replace 90 print() calls | Across codebase | Low | Medium | **DONE** |
 | 8 | Add module docstrings | 200 files | Low | Medium | TODO |
 | 9 | Add input validation layer | `configuration/` | Medium | High | TODO |
 
