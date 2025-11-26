@@ -17,6 +17,7 @@ import threading
 import signal
 import asyncio
 import argparse
+import hashlib
 
 from struct import unpack, pack
 from enum import Enum
@@ -27,6 +28,33 @@ VERBOSE = True
 
 # Session start time for elapsed timing
 SESSION_START = None
+
+# Message counter for tracking sequence
+MSG_COUNTER = 0
+
+
+def msg_hash(data):
+    """Return short hash (6 chars) of message data"""
+    if isinstance(data, str):
+        data = data.encode()
+    elif isinstance(data, (bytes, bytearray)):
+        pass
+    else:
+        data = str(data).encode()
+    return hashlib.md5(data).hexdigest()[:6]
+
+
+def next_msg_num():
+    """Return next message number"""
+    global MSG_COUNTER
+    MSG_COUNTER += 1
+    return MSG_COUNTER
+
+
+def reset_msg_counter():
+    """Reset message counter for new session"""
+    global MSG_COUNTER
+    MSG_COUNTER = 0
 
 
 class Color:
@@ -150,6 +178,96 @@ class OutputBuffer:
             else:
                 flushed(line)
         self.lines = []
+
+
+# Global run logger - set when --save is used
+RUN_LOGGER = None
+
+
+class RunLogger:
+    """Log run data to file for later comparison"""
+
+    def __init__(self, save_dir, test_name, config_path):
+        self.save_dir = save_dir
+        self.test_name = test_name
+        self.config_path = config_path
+        self.start_time = time.time()
+        self.entries = []
+
+        # Create directory if needed
+        os.makedirs(save_dir, exist_ok=True)
+
+        # Generate filename with timestamp
+        timestamp = time.strftime('%Y%m%d-%H%M%S')
+        self.filename = os.path.join(save_dir, f'{test_name}-{timestamp}.log')
+
+    def log(self, event_type, msg_num=None, hash_val=None, msg_len=None, status=None, extra=None):
+        """Log an event"""
+        elapsed = time.time() - self.start_time
+        entry = {
+            'elapsed': elapsed,
+            'type': event_type,
+        }
+        if msg_num is not None:
+            entry['msg_num'] = msg_num
+        if hash_val is not None:
+            entry['hash'] = hash_val
+        if msg_len is not None:
+            entry['len'] = msg_len
+        if status is not None:
+            entry['status'] = status
+        if extra is not None:
+            entry['extra'] = extra
+        self.entries.append(entry)
+
+    def save(self, final_status):
+        """Save log to file"""
+        with open(self.filename, 'w') as f:
+            f.write(f'# Test: {self.test_name}\n')
+            f.write(f'# Date: {time.strftime("%Y-%m-%d %H:%M:%S")}\n')
+            f.write(f'# Config: {self.config_path}\n')
+            f.write(f'# Status: {final_status}\n')
+            f.write('#\n')
+
+            for entry in self.entries:
+                elapsed = entry['elapsed']
+                etype = entry['type']
+
+                if etype == 'SESSION_START':
+                    f.write(f'[{elapsed:7.3f}s] SESSION_START\n')
+                elif etype == 'OPEN_RECV':
+                    f.write(f'[{elapsed:7.3f}s] OPEN_RECV hash={entry.get("hash", "?")} len={entry.get("len", "?")}\n')
+                elif etype == 'OPEN_SENT':
+                    f.write(f'[{elapsed:7.3f}s] OPEN_SENT hash={entry.get("hash", "?")} len={entry.get("len", "?")}\n')
+                elif etype == 'MSG':
+                    status = entry.get('status', '?')
+                    f.write(f'[{elapsed:7.3f}s] MSG #{entry.get("msg_num", "?")} hash={entry.get("hash", "?")} len={entry.get("len", "?")} {status}\n')
+                elif etype == 'SESSION_END':
+                    f.write(f'[{elapsed:7.3f}s] SESSION_END status={entry.get("status", "?")}\n')
+                else:
+                    f.write(f'[{elapsed:7.3f}s] {etype}\n')
+
+        return self.filename
+
+
+def init_run_logger(save_dir, test_name, config_path):
+    """Initialize the global run logger"""
+    global RUN_LOGGER
+    if save_dir:
+        RUN_LOGGER = RunLogger(save_dir, test_name, config_path)
+
+
+def log_event(event_type, **kwargs):
+    """Log an event if logger is active"""
+    if RUN_LOGGER:
+        RUN_LOGGER.log(event_type, **kwargs)
+
+
+def save_run_log(final_status):
+    """Save the run log and return filename"""
+    if RUN_LOGGER:
+        return RUN_LOGGER.save(final_status)
+    return None
 
 
 def format_hex_block(data, bytes_per_line=16):
@@ -1000,10 +1118,20 @@ class Checker(object):
                 if msg.is_update() and not msg.is_eor():
                     self.updates_seen.append((msg.header, msg.body))
 
+                # Get message number and hash
+                msg_num = next_msg_num()
+                received_hex = bytestream(msg.header) + bytestream(msg.body)
+                hash_val = msg_hash(received_hex)
+                msg_len = len(msg.header) + len(msg.body)
+
+                # Log the match
+                log_event('MSG', msg_num=msg_num, hash_val=hash_val, msg_len=msg_len, status='MATCH')
+
                 # Show expected and received together on match
                 flushed('')
                 ts = timestamp()
-                flushed(f'{ts} {Color.green("─" * 50)}' if ts else Color.green('─' * 60))
+                header_line = f'msg #{msg_num} (hash: {hash_val})'
+                flushed(f'{ts} {Color.green("─" * 20)} {header_line} {Color.green("─" * 20)}' if ts else f'{Color.green("─" * 20)} {header_line} {Color.green("─" * 20)}')
 
                 if num_options == 1:
                     # Single expected - show it
@@ -1027,9 +1155,17 @@ class Checker(object):
         nb_options = len(self.messages)
         received_hex = bytestream(msg.header) + bytestream(msg.body)
 
+        # Get message number and hash for mismatch
+        msg_num = next_msg_num()
+        hash_val = msg_hash(received_hex)
+        msg_len = len(msg.header) + len(msg.body)
+
+        # Log the mismatch
+        log_event('MSG', msg_num=msg_num, hash_val=hash_val, msg_len=msg_len, status='MISMATCH')
+
         buffer.add('')
         buffer.add(Color.red('=' * 60))
-        buffer.add(Color.red('MESSAGE MISMATCH'))
+        buffer.add(Color.red(f'MESSAGE MISMATCH - msg #{msg_num} (hash: {hash_val})'))
         buffer.add(Color.red('=' * 60))
 
         # Received message - detailed view
@@ -1157,8 +1293,15 @@ class BGPProtocol(asyncio.Protocol):
             msg = Message(header, body)
 
             if state == FSM.OPEN:
+                reset_msg_counter()  # Reset message counter for new session
+                log_event('SESSION_START')
                 ts = timestamp()
                 flushed(f'\n{ts} new session:' if ts else '\nnew session:')
+
+                # Log OPEN received
+                open_hex = bytestream(header) + bytestream(body)
+                log_event('OPEN_RECV', hash_val=msg_hash(open_hex), msg_len=len(header) + len(body))
+
                 print_payload('open recv', header, body)
                 state = self.handle_open(msg)
                 continue
@@ -1180,6 +1323,8 @@ class BGPProtocol(asyncio.Protocol):
         option_unknown = self.service.options['send-unknown-message']
 
         open = msg.open(option_asn, option_capa66)
+        # Log OPEN sent
+        log_event('OPEN_SENT', hash_val=msg_hash(open), msg_len=len(open))
         print_payload('open sent', open[:19], open[19:])
         self.writer.write(open)
         self.writer.write(Message.keepalive())
@@ -1260,6 +1405,7 @@ def parse_cmdline():
     parser.add_argument('--port', help='port to bind to', type=int, default=port)
     parser.add_argument('--view', help='look at the expected packets', action='store_true')
     parser.add_argument('--terse', help='disable colors and timing info', action='store_true')
+    parser.add_argument('--save', help='save run log to directory', type=str, default=None)
     parser.add_argument('--ipv6', help='bind using ipv6', action='store_true')
     parser.add_argument(
         'checks',
@@ -1302,6 +1448,7 @@ def parse_cmdline():
         'ipv6': cmdarg.ipv6,
         'view': cmdarg.view,
         'terse': cmdarg.terse,
+        'save': cmdarg.save,
     })
     # fmt: on
 
@@ -1400,6 +1547,12 @@ if __name__ == '__main__':
     # Use --terse to disable colors and timing
     set_verbose(not options.get('terse', False))
 
+    # Initialize run logger if --save is specified
+    if options.get('save'):
+        test_name = os.environ.get('EXABGP_TEST_NAME', 'unknown')
+        config_path = os.environ.get('EXABGP_TEST_CONFIG', 'unknown')
+        init_run_logger(options['save'], test_name, config_path)
+
     checker = Checker(options['expect'])
 
     if options['view']:
@@ -1416,12 +1569,21 @@ if __name__ == '__main__':
 
     if queue.empty():
         flushed('failed with no code')
+        log_file = save_run_log('FAILED_NO_CODE')
+        if log_file:
+            flushed(f'Run log saved to: {log_file}')
         sys.exit(1)
 
     code = queue.get()
     if code != 0:
         flushed(f'failed with code {code}')
+        log_file = save_run_log(f'FAILED_{code}')
+        if log_file:
+            flushed(f'Run log saved to: {log_file}')
         sys.exit(code)
 
+    log_file = save_run_log('SUCCESS')
+    if log_file:
+        flushed(f'Run log saved to: {log_file}')
     flushed('successful')
     sys.exit(0)
