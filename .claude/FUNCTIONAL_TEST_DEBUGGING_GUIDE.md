@@ -34,6 +34,35 @@ Use `--save` to capture run logs with timing and message hashes:
 # - Missing messages
 ```
 
+### Stress Testing
+
+Run a test multiple times to reproduce intermittent failures:
+
+```bash
+# Run test 10 times
+./qa/bin/functional encoding A --stress 10
+
+# Output:
+# === STRESS TEST: 10 runs of test A ===
+# Run   1: ✓ PASS (3.54s)
+# Run   2: ✓ PASS (3.57s)
+# ...
+# Run   7: ✗ FAIL (20.00s)
+# ...
+# ==================================================
+# SUMMARY
+# ==================================================
+# Passed: 9/10 (90.0%)
+# Failed: 1 (runs 7)
+#
+# Timing (all runs):
+#   min: 3.54s  avg: 5.18s  max: 20.00s
+#   stddev: 5.12s
+
+# Combine with --save to capture logs for analysis
+./qa/bin/functional encoding A --stress 10 --save /tmp/runs/
+```
+
 ---
 
 ## Debug Process
