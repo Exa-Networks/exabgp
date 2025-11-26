@@ -12,4 +12,7 @@ from __future__ import annotations
 from exabgp.configuration.core.error import Error
 from exabgp.configuration.core.scope import Scope
 from exabgp.configuration.core.section import Section
-from exabgp.configuration.core.tokeniser import Tokeniser
+from exabgp.configuration.core.parser import Parser
+
+# Backward compatibility alias
+Tokeniser = Parser

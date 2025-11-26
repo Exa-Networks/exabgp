@@ -64,7 +64,7 @@ class Iterator:
         return False
 
 
-class Tokeniser:
+class Parser:
     @staticmethod
     def _off():
         return iter([])
@@ -82,7 +82,7 @@ class Tokeniser:
         self.fname = ''
         self.type = 'unset'
 
-        self._tokens = Tokeniser._off
+        self._tokens = Parser._off
         self._next = None
         self._data = None
 
@@ -126,11 +126,11 @@ class Tokeniser:
                 self.error.set(error.split(']')[1].strip())
             else:
                 self.error.set(error)
-            self._tokens = Tokeniser._off
+            self._tokens = Parser._off
             self._next = []
             return self.error.set('issue setting the configuration parser')
         except StopIteration:
-            self._tokens = Tokeniser._off
+            self._tokens = Parser._off
             self._next = []
             return self.error.set('issue setting the configuration parser, no data')
         return True
