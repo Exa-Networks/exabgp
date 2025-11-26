@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, ClassVar, Dict, Generator, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, ClassVar, Dict, Generator, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -66,11 +66,11 @@ class Attributes(dict):
     cache: ClassVar[Dict[str, Attributes]] = {}
 
     # The previously parsed Attributes
-    cached: ClassVar[Optional[Attributes]] = None
+    cached: ClassVar[Attributes | None] = None
     # previously parsed attribute, from which cached was made of
     previous: ClassVar[bytes] = b''
 
-    representation: ClassVar[Dict[int, Tuple[str, str, Union[str, Tuple[str, ...]], str, str]]] = {
+    representation: ClassVar[Dict[int, Tuple[str, str, str | Tuple[str, ...], str, str]]] = {
         # key:  (how, default, name, text_presentation, json_presentation),
         Attribute.CODE.ORIGIN: ('string', '', 'origin', '%s', '%s'),
         Attribute.CODE.AS_PATH: ('list', '', 'as-path', '%s', '%s'),
@@ -176,7 +176,7 @@ class Attributes(dict):
     def has(self, k: int) -> bool:
         return k in self
 
-    def add(self, attribute: Optional[Union[Attribute, TreatAsWithdraw, Discard]], _: Any = None) -> None:
+    def add(self, attribute: Attribute | TreatAsWithdraw | Discard | None, _: Any = None) -> None:
         # we return None as attribute if the unpack code must not generate them
         if attribute is None:
             return
@@ -200,7 +200,7 @@ class Attributes(dict):
     def remove(self, attrid: int) -> None:
         self.pop(attrid)
 
-    def watchdog(self) -> Optional[Attribute]:
+    def watchdog(self) -> Attribute | None:
         return self.pop(Attribute.CODE.INTERNAL_WATCHDOG, None)  # type: ignore[no-any-return]
 
     def withdraw(self) -> bool:

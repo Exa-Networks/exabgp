@@ -16,7 +16,7 @@ import fcntl
 import asyncio
 import collections
 
-from typing import Any, Callable, Dict, Generator, IO, List, Optional, Tuple, TypeVar, Union, cast, TYPE_CHECKING
+from typing import Any, Callable, Dict, Generator, IO, List, Tuple, TypeVar, cast, TYPE_CHECKING
 from threading import Thread
 
 if TYPE_CHECKING:
@@ -112,7 +112,7 @@ class Processes:
 
         # Async mode support
         self._async_mode: bool = False
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         # Write queue for async mode (process_name -> deque of strings to write)
         self._write_queue: Dict[str, collections.deque] = {}
         self._command_queue: collections.deque[Tuple[str, str]] = collections.deque()
@@ -123,7 +123,7 @@ class Processes:
     def clean(self) -> None:
         self.fds: List[int] = []
         self._process: Dict[str, subprocess.Popen[bytes]] = {}
-        self._encoder: Dict[str, Union[Response.JSON, Response.Text]] = {}
+        self._encoder: Dict[str, Response.JSON | Response.Text] = {}
         self._ackjson: Dict[str, bool] = {}
         self._ack: Dict[str, bool] = {}
         self._broken: List[str] = []
@@ -590,9 +590,7 @@ class Processes:
         if self._command_queue:
             yield self._command_queue.popleft()
 
-    def write(
-        self, process: str, string: Optional[str], peer_or_neighbor: Optional[Union['Neighbor', 'Peer']] = None
-    ) -> bool:
+    def write(self, process: str, string: str | None, peer_or_neighbor: 'Neighbor' | 'Peer' | None = None) -> bool:
         if string is None:
             return True
 
@@ -666,7 +664,7 @@ class Processes:
 
         return True
 
-    async def write_async(self, process: str, string: Optional[str], neighbor: Optional['Neighbor'] = None) -> bool:
+    async def write_async(self, process: str, string: str | None, neighbor: 'Neighbor' | None = None) -> bool:
         """Async version of write() - non-blocking write to API process stdin
 
         Uses os.write() on non-blocking fd to write without blocking the event loop.
@@ -916,7 +914,7 @@ class Processes:
         """Get ACK state for a specific service/process"""
         return self._ack[service]
 
-    def _notify(self, peer_or_neighbor: Union['Neighbor', 'Peer'], event: str) -> Generator[str, None, None]:
+    def _notify(self, peer_or_neighbor: 'Neighbor' | 'Peer', event: str) -> Generator[str, None, None]:
         # Accept both Peer and Neighbor - Peer has .neighbor attribute
         # Use getattr with default to handle both types safely
         neighbor: 'Neighbor' = getattr(peer_or_neighbor, 'neighbor', peer_or_neighbor)  # type: ignore[arg-type,assignment]
@@ -974,9 +972,9 @@ class Processes:
         neighbor: 'Neighbor',
         direction: str,
         category: int,
-        header: Union[bytes, str],
-        body: Union[bytes, str],
-        negotiated: Optional[Negotiated] = None,
+        header: bytes | str,
+        body: bytes | str,
+        negotiated: Negotiated | None = None,
     ) -> None:
         for process in self._notify(neighbor, '{}-packets'.format(direction)):
             self.write(
@@ -991,9 +989,9 @@ class Processes:
         neighbor: 'Neighbor',
         direction: str,
         message: 'Notify',
-        header: Union[bytes, str],
-        body: Union[bytes, str],
-        negotiated: Optional[Negotiated] = None,
+        header: bytes | str,
+        body: bytes | str,
+        negotiated: Negotiated | None = None,
     ) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(
@@ -1009,9 +1007,9 @@ class Processes:
         neighbor: 'Neighbor',
         direction: str,
         message: Message,
-        header: Union[bytes, str],
-        *body: Union[bytes, str],
-        negotiated: Optional[Negotiated] = None,
+        header: bytes | str,
+        *body: bytes | str,
+        negotiated: Negotiated | None = None,
     ) -> None:
         self._dispatch[message_id](self, neighbor, direction, message, negotiated, header, *body)
 

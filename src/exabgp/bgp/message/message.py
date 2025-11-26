@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import Callable, ClassVar, Dict, List, Optional, Type, TYPE_CHECKING
+from typing import Callable, ClassVar, Dict, List, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -23,7 +23,7 @@ class _MessageCode(int):
     ROUTE_REFRESH: ClassVar[int] = 0x05  # . 5
     OPERATIONAL: ClassVar[int] = 0x06  # .   6  # Not IANA assigned yet
 
-    names: ClassVar[Dict[Optional[int], str]] = {
+    names: ClassVar[Dict[int | None, str]] = {
         None: 'INVALID',
         NOP: 'NOP',
         OPEN: 'OPEN',
@@ -34,7 +34,7 @@ class _MessageCode(int):
         OPERATIONAL: 'OPERATIONAL',
     }
 
-    short_names: ClassVar[Dict[Optional[int], str]] = {
+    short_names: ClassVar[Dict[int | None, str]] = {
         None: 'invalid',
         NOP: 'nop',
         OPEN: 'open',
@@ -45,7 +45,7 @@ class _MessageCode(int):
         OPERATIONAL: 'operational',
     }
 
-    long_names: ClassVar[Dict[Optional[int], str]] = {
+    long_names: ClassVar[Dict[int | None, str]] = {
         None: 'invalid',
         NOP: 'nop',
         OPEN: 'open',
@@ -136,13 +136,13 @@ class Message:
         ]
 
         @staticmethod
-        def name(message_id: Optional[int]) -> str:
+        def name(message_id: int | None) -> str:
             if message_id is None:
                 return _MessageCode.names.get(message_id, 'unknown message')
             return _MessageCode.names.get(message_id, 'unknown message {}'.format(hex(message_id)))
 
         @staticmethod
-        def short(message_id: Optional[int]) -> str:
+        def short(message_id: int | None) -> str:
             if message_id is None:
                 return _MessageCode.short_names.get(message_id, 'unknown message')
             return _MessageCode.short_names.get(message_id, 'unknown message {}'.format(hex(message_id)))
@@ -164,7 +164,7 @@ class Message:
     }
 
     @staticmethod
-    def string(code: Optional[int]) -> str:
+    def string(code: int | None) -> str:
         return _MessageCode.long_names.get(code, 'unknown')
 
     def _message(self, message: bytes) -> bytes:

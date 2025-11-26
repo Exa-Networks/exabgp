@@ -7,12 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Iterator, Optional
+from typing import Iterator
 
 
 def od(value: bytes) -> str:
     def spaced(value: bytes) -> Iterator[str]:
-        even: Optional[bool] = None
+        even: bool | None = None
         for v in value:
             if even is False:
                 yield ' '

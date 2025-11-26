@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import ClassVar, Dict, Iterable, List, Optional, Tuple, Union
+from typing import ClassVar, Dict, Iterable, List, Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -60,7 +60,7 @@ class Graceful(Capability, dict):
             f'"{afi}/{safi}": [{restart_str if family & 0x80 else ""} ] '
             for afi, safi, family in [(str(a), str(s), self[(a, s)]) for (a, s) in self.keys()]
         )
-        d: Dict[str, Union[int, str]] = {
+        d: Dict[str, int | str] = {
             'name': '"graceful restart"',
             'time': self.restart_time,
             'address-family-flags': f'{{ {families_json}}}',
@@ -73,7 +73,7 @@ class Graceful(Capability, dict):
         return self.keys()
 
     @staticmethod
-    def unpack_capability(instance: Graceful, data: bytes, capability: Optional[CapabilityCode] = None) -> Graceful:  # pylint: disable=W0613
+    def unpack_capability(instance: Graceful, data: bytes, capability: CapabilityCode | None = None) -> Graceful:  # pylint: disable=W0613
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
             log.debug(lambda: 'received duplicate Graceful Restart capability, replacing', 'parser')

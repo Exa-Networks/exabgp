@@ -136,7 +136,8 @@ def show_neighbor(self, reactor, service, line, use_json):
                 # If neighbor is connected, show full extensive output
                 if neighbor_name in reactor.peers():
                     for line in NeighborTemplate.extensive(reactor.neighbor_cli_data(neighbor_name)).split('\n'):
-                        reactor.processes.write(service, line)
+                        if line:
+                            reactor.processes.write(service, line)
                         await asyncio.sleep(0)
                 else:
                     # Neighbor is configured but not connected - show minimal info
@@ -165,7 +166,8 @@ def show_neighbor(self, reactor, service, line, use_json):
             if limit and limit != reactor.neighbor_ip(peer_name):
                 continue
             for line in NeighborTemplate.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
-                reactor.processes.write(service, line)
+                if line:
+                    reactor.processes.write(service, line)
                 await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         await reactor.processes.answer_done_async(service)
 

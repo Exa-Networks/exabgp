@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -45,7 +45,7 @@ class IPVPN(Label):
         mask: int,
         labels: Labels,
         rd: RouteDistinguisher,
-        nexthop: Optional[str] = None,
+        nexthop: str | None = None,
         action: Action = Action.UNSET,
     ) -> IPVPN:
         instance = cls(afi, safi, action)

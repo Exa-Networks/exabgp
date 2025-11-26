@@ -6,7 +6,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, ClassVar
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
@@ -59,9 +59,9 @@ class Type1SessionTransformedRoute(MUP):
         endpoint_ip_len: int,
         endpoint_ip: IP,
         source_ip_len: int,
-        source_ip: Union[IP, bytes],
+        source_ip: IP | bytes,
         afi: AFI,
-        packed: Optional[bytes] = None,
+        packed: bytes | None = None,
     ) -> None:
         MUP.__init__(self, afi)
         self.rd: RouteDistinguisher = rd
@@ -72,7 +72,7 @@ class Type1SessionTransformedRoute(MUP):
         self.endpoint_ip_len: int = endpoint_ip_len
         self.endpoint_ip: IP = endpoint_ip
         self.source_ip_len: int = source_ip_len
-        self.source_ip: Union[IP, bytes] = source_ip
+        self.source_ip: IP | bytes = source_ip
         self._pack(packed)
 
     def __eq__(self, other: Any) -> bool:
@@ -134,7 +134,7 @@ class Type1SessionTransformedRoute(MUP):
             ),
         )
 
-    def _pack(self, packed: Optional[bytes] = None) -> bytes:
+    def _pack(self, packed: bytes | None = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -202,7 +202,7 @@ class Type1SessionTransformedRoute(MUP):
         source_ip_size = datasize - size
 
         source_ip_len = 0
-        source_ip: Union[IP, bytes] = b''
+        source_ip: IP | bytes = b''
 
         if source_ip_size > 0:
             source_ip_len = data[size]
@@ -215,7 +215,7 @@ class Type1SessionTransformedRoute(MUP):
 
         return cls(rd, prefix_ip_len, prefix_ip, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE

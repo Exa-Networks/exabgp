@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar, Dict, Iterable, List, Optional, Tuple
+from typing import ClassVar, Dict, Iterable, List, Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -67,7 +67,7 @@ class AddPath(Capability, dict):
         ]
 
     @staticmethod
-    def unpack_capability(instance: AddPath, data: bytes, capability: Optional[CapabilityCode] = None) -> AddPath:  # pylint: disable=W0613
+    def unpack_capability(instance: AddPath, data: bytes, capability: CapabilityCode | None = None) -> AddPath:  # pylint: disable=W0613
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
             log.debug(lambda: 'received duplicate AddPath capability, merging entries', 'parser')

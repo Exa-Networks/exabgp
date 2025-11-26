@@ -21,7 +21,7 @@ import random
 import socket
 import select
 from struct import unpack
-from typing import ClassVar, Dict, Iterator, Optional
+from typing import ClassVar, Dict, Iterator
 
 from exabgp.environment import getenv
 
@@ -62,7 +62,7 @@ class Connection:
         self.peer: str = peer
         self.local: str = local
 
-        self.io: Optional[socket.socket] = None
+        self.io: socket.socket | None = None
         self.established: bool = False
         self._rpoller: Dict[socket.socket, select.poll] = {}
         self._wpoller: Dict[socket.socket, select.poll] = {}
@@ -319,7 +319,7 @@ class Connection:
                 log.critical(lambda: f'{self.name()} {self.peer} undefined error writing on socket', self.session())
                 raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None
 
-    def reader(self) -> Iterator[tuple[int, int, bytes, bytes, Optional[NotifyError]]]:
+    def reader(self) -> Iterator[tuple[int, int, bytes, bytes, NotifyError | None]]:
         # _reader returns the whole number requested or nothing and then stops
         for header in self._reader(Message.HEADER_LEN):
             if not header:
@@ -357,7 +357,7 @@ class Connection:
 
         yield length, msg, header, body, None
 
-    async def reader_async(self) -> tuple[int, int, bytes, bytes, Optional[NotifyError]]:
+    async def reader_async(self) -> tuple[int, int, bytes, bytes, NotifyError | None]:
         """Read BGP message header and body (async version)
 
         Uses asyncio for I/O operations.

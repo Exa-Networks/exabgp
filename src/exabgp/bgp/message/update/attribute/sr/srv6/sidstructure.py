@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from struct import pack
-from typing import ClassVar, Dict, Optional
+from typing import ClassVar, Dict
 
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
 
@@ -45,7 +45,7 @@ class Srv6SidStructure:  # type: ignore[type-var]
         arg_len: int,
         tpose_len: int,
         tpose_offset: int,
-        packed: Optional[bytes] = None,
+        packed: bytes | None = None,
     ) -> None:
         self.loc_block_len: int = loc_block_len
         self.loc_node_len: int = loc_node_len
@@ -95,7 +95,7 @@ class Srv6SidStructure:  # type: ignore[type-var]
             self.tpose_offset,
         )
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         pairs: Dict[str, int] = {
             'locator-block-length': self.loc_block_len,
             'locator-node-length': self.loc_node_len,

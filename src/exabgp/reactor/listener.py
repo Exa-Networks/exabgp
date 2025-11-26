@@ -11,7 +11,7 @@ import os
 import uuid
 import copy
 import socket
-from typing import ClassVar, Dict, Generator, List, Optional, Tuple, TYPE_CHECKING
+from typing import ClassVar, Dict, Generator, List, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -50,7 +50,7 @@ class Listener:
 
         self._reactor: 'Reactor' = reactor
         self._backlog: int = backlog
-        self._sockets: Dict[socket.socket, Tuple[str, int, str, Optional[str]]] = {}
+        self._sockets: Dict[socket.socket, Tuple[str, int, str, str | None]] = {}
         self._accepted: Dict[socket.socket, socket.socket] = {}
 
     def _new_socket(self, ip: IP) -> socket.socket:
@@ -65,9 +65,9 @@ class Listener:
         local_ip: IP,
         peer_ip: IP,
         local_port: int,
-        use_md5: Optional[str],
+        use_md5: str | None,
         md5_base64: bool,
-        ttl_in: Optional[int],
+        ttl_in: int | None,
     ) -> None:
         self.serving = True
 
@@ -115,11 +115,11 @@ class Listener:
     def listen_on(
         self,
         local_addr: IP,
-        remote_addr: Optional[IP],
+        remote_addr: IP | None,
         port: int,
-        md5_password: Optional[str],
+        md5_password: str | None,
         md5_base64: bool,
-        ttl_in: Optional[int],
+        ttl_in: int | None,
     ) -> bool:
         try:
             if not remote_addr:

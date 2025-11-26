@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from exabgp.rib.change import Change
 
@@ -60,7 +60,7 @@ class AnnouncePath(AnnounceIP):
     )
 
     name = 'path'
-    afi: Optional[AFI] = None
+    afi: AFI | None = None
 
     def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         AnnounceIP.__init__(self, tokeniser, scope, error)
@@ -69,7 +69,7 @@ class AnnouncePath(AnnounceIP):
         return True
 
     @staticmethod
-    def check(change: Change, afi: Optional[AFI]) -> bool:
+    def check(change: Change, afi: AFI | None) -> bool:
         if not AnnounceIP.check(change, afi):
             return False
 

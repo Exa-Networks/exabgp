@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 
 def _(key: str) -> str:
@@ -29,7 +29,7 @@ class HashTable(dict):
 
 
 class GlobalHashTable(HashTable):
-    _instance: Optional[GlobalHashTable] = None
+    _instance: GlobalHashTable | None = None
 
     def __new__(cls) -> GlobalHashTable:
         if cls._instance is None:

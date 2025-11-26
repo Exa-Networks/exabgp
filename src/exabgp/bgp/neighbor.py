@@ -11,7 +11,7 @@ import json
 from collections import Counter, deque
 from copy import deepcopy
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Tuple
 
 # from exabgp.util.dns import host, domain
 from exabgp.bgp.message import Message
@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 # The definition of a neighbor (from reading the configuration)
 class Neighbor(dict):
     class Capability(dict):
-        defaults: ClassVar[Dict[str, Union[bool, int, None, str]]] = {
+        defaults: ClassVar[Dict[str, bool | int, None, str]] = {
             'asn4': True,
             'extended-message': True,
             'graceful-restart': False,
@@ -97,16 +97,16 @@ class Neighbor(dict):
     _GLOBAL: ClassVar[Dict[str, int]] = {'uid': 1}
 
     # Instance attributes
-    api: Optional[Dict[str, Any]]  # XXX: not scriptable - is replaced outside the class
+    api: Dict[str, Any] | None  # XXX: not scriptable - is replaced outside the class
     auto_discovery: bool
     range_size: int
     generated: bool
     _families: List[Tuple[AFI, SAFI]]
     _nexthop: List[Tuple[AFI, SAFI, AFI]]
     _addpath: List[Tuple[AFI, SAFI]]
-    rib: Optional[RIB]
+    rib: RIB | None
     changes: List[Change]
-    previous: Optional[Change]
+    previous: Change | None
     eor: deque[Tuple[AFI, SAFI]]
     asm: Dict[Tuple[AFI, SAFI], Message]
     messages: deque[Message]
@@ -332,7 +332,7 @@ class Neighbor(dict):
         return NeighborTemplate.configuration(self, False)
 
 
-def _en(value: Optional[bool]) -> str:
+def _en(value: bool | None) -> str:
     if value is None:
         return 'n/a'
     return 'enabled' if value else 'disabled'

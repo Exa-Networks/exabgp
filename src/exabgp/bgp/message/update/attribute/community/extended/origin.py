@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -50,7 +50,7 @@ class OriginASNIP(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
-    def __init__(self, asn: ASN, ip: str, transitive: bool, community: Optional[bytes] = None) -> None:
+    def __init__(self, asn: ASN, ip: str, transitive: bool, community: bytes | None = None) -> None:
         self.asn: ASN = asn
         self.ip: str = ip
         Origin.__init__(self, community if community else pack('!2sH4s', self._subtype(), asn, IPv4.pton(ip)))
@@ -59,7 +59,7 @@ class OriginASNIP(Origin):
         return 'origin:{}:{}'.format(self.asn, self.ip)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> OriginASNIP:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> OriginASNIP:
         asn, ip = unpack('!H4s', data[2:8])
         return cls(ASN(asn), IPv4.ntop(ip), False, data[:8])
 
@@ -73,7 +73,7 @@ class OriginIPASN(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, ip: str, asn: ASN, transitive: bool, community: Optional[bytes] = None) -> None:
+    def __init__(self, ip: str, asn: ASN, transitive: bool, community: bytes | None = None) -> None:
         self.ip: str = ip
         self.asn: ASN = asn
         Origin.__init__(self, community if community else pack('!2s4sH', self._subtype(), IPv4.pton(ip), asn))
@@ -82,7 +82,7 @@ class OriginIPASN(Origin):
         return 'origin:{}:{}'.format(self.ip, self.asn)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> OriginIPASN:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> OriginIPASN:
         ip, asn = unpack('!4sH', data[2:8])
         return cls(IPv4.ntop(ip), ASN(asn), False, data[:8])
 
@@ -96,7 +96,7 @@ class OriginASN4Number(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x02
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, asn: ASN, number: int, transitive: bool, community: Optional[bytes] = None) -> None:
+    def __init__(self, asn: ASN, number: int, transitive: bool, community: bytes | None = None) -> None:
         self.asn: ASN = asn
         self.number: int = number
         Origin.__init__(self, community if community else pack('!2sLH', self._subtype(), asn, number))
@@ -105,6 +105,6 @@ class OriginASN4Number(Origin):
         return 'origin:{}:{}'.format(self.asn, self.number)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> OriginASN4Number:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> OriginASN4Number:
         asn, number = unpack('!LH', data[2:8])
         return cls(ASN(asn), number, False, data[:8])

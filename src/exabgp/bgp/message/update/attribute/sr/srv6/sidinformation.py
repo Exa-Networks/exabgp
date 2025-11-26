@@ -7,7 +7,7 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Callable, ClassVar, Dict, List, Optional, Type, TypeVar
+from typing import Callable, ClassVar, Dict, List, Type, TypeVar
 
 from exabgp.protocol.ip import IPv6
 
@@ -51,7 +51,7 @@ class Srv6SidInformation:  # type: ignore[type-var]
         sid: IPv6,
         behavior: int,
         subsubtlvs: List[GenericSrv6ServiceDataSubSubTlv],
-        packed: Optional[bytes] = None,
+        packed: bytes | None = None,
     ) -> None:
         self.sid: IPv6 = sid
         self.behavior: int = behavior
@@ -114,7 +114,7 @@ class Srv6SidInformation:  # type: ignore[type-var]
         s + ' ]'
         return s
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         s: str = '{ "sid": "%s", "flags": 0, "endpoint_behavior": %d'
         content: str = ', '.join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
         if content:

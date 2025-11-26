@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -29,7 +29,7 @@ T = TypeVar('T', bound='RTC')
 class RTC(NLRI):
     # XXX: FIXME: no support yet for RTC variable length with prefixing
 
-    def __init__(self, afi: AFI, safi: SAFI, action: Action, origin: ASN, rt: Optional[RouteTarget]) -> None:
+    def __init__(self, afi: AFI, safi: SAFI, action: Action, origin: ASN, rt: RouteTarget | None) -> None:
         NLRI.__init__(self, afi, safi)
         self.action = action
         self.origin = origin

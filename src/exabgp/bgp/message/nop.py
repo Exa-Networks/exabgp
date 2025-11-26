@@ -23,7 +23,7 @@ class NOP(Message):
     TYPE = bytes([Message.CODE.NOP])
     IS_NOP = True
 
-    def pack_message(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_message(self, negotiated: Negotiated) -> bytes:
         raise RuntimeError('NOP messages can not be sent on the wire')
 
     def __str__(self) -> str:

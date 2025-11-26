@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -34,7 +34,7 @@ class NextHop(Attribute, IP):
     NO_GENERATION: ClassVar[bool] = True
 
     # XXX: This is a bad API, as it works on non-raw data
-    def __init__(self, string: str, packed: Optional[bytes] = None) -> None:
+    def __init__(self, string: str, packed: bytes | None = None) -> None:
         self.init(string, packed)
 
     def __eq__(self, other: object) -> bool:

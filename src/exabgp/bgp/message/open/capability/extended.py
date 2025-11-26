@@ -6,7 +6,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -29,7 +28,7 @@ class ExtendedMessage(Capability):
 
     @staticmethod
     def unpack_capability(
-        instance: ExtendedMessage, data: bytes, capability: Optional[CapabilityCode] = None
+        instance: ExtendedMessage, data: bytes, capability: CapabilityCode | None = None
     ) -> ExtendedMessage:  # pylint: disable=W0613
         return ExtendedMessage()
 

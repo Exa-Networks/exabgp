@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Tuple, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -28,9 +28,9 @@ class TreatAsWithdraw:
     ID: ClassVar[int] = 0xFFFF
     GENERIC: ClassVar[bool] = False
 
-    aid: Optional[int]
+    aid: int | None
 
-    def __init__(self, aid: Optional[int] = None) -> None:
+    def __init__(self, aid: int | None = None) -> None:
         self.aid = aid
 
     def __str__(self) -> str:
@@ -43,9 +43,9 @@ class Discard:
     ID: ClassVar[int] = 0xFFFE
     GENERIC: ClassVar[bool] = False
 
-    aid: Optional[int]
+    aid: int | None
 
-    def __init__(self, aid: Optional[int] = None) -> None:
+    def __init__(self, aid: int | None = None) -> None:
         self.aid = aid
 
     def __str__(self) -> str:
@@ -262,7 +262,7 @@ class Attribute:
 
     @classmethod
     def register(
-        cls, attribute_id: Optional[int] = None, flag: Optional[int] = None
+        cls, attribute_id: int | None = None, flag: int | None = None
     ) -> Callable[[Type[Attribute]], Type[Attribute]]:
         def register_attribute(klass: Type[Attribute]) -> Type[Attribute]:
             aid: int = klass.ID if attribute_id is None else attribute_id
@@ -296,7 +296,7 @@ class Attribute:
         raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
 
     @classmethod
-    def klass_by_id(cls, attribute_id: int) -> Optional[Type[Attribute]]:
+    def klass_by_id(cls, attribute_id: int) -> Type[Attribute] | None:
         """Get attribute class by ID, ignoring flag variations."""
         for (registered_aid, _), klass in cls.registered_attributes.items():
             if registered_aid == attribute_id:

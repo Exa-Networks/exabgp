@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, List, Optional, Union
+from typing import TYPE_CHECKING, ClassVar, List
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -82,17 +82,17 @@ class LINK(BGPLS):
         self,
         domain: int,
         proto_id: int,
-        local_node: Optional[List[NodeDescriptor]],
-        remote_node: Optional[List[NodeDescriptor]],
-        neigh_addrs: Optional[List[NeighAddr]] = None,
-        iface_addrs: Optional[List[IfaceAddr]] = None,
-        topology_ids: Optional[List[MTID]] = None,
-        link_ids: Optional[List[LinkIdentifier]] = None,
-        nexthop: Optional[Union[IP, _NoNextHop]] = None,
+        local_node: List[NodeDescriptor] | None,
+        remote_node: List[NodeDescriptor] | None,
+        neigh_addrs: List[NeighAddr] | None = None,
+        iface_addrs: List[IfaceAddr] | None = None,
+        topology_ids: List[MTID] | None = None,
+        link_ids: List[LinkIdentifier] | None = None,
+        nexthop: IP | _NoNextHop | None = None,
         action: Action = Action.UNSET,
-        route_d: Optional[RouteDistinguisher] = None,
-        addpath: Optional[PathInfo] = None,
-        packed: Optional[bytes] = None,
+        route_d: RouteDistinguisher | None = None,
+        addpath: PathInfo | None = None,
+        packed: bytes | None = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
         self.domain: int = domain
@@ -103,12 +103,12 @@ class LINK(BGPLS):
         self.iface_addrs: List[IfaceAddr] = iface_addrs if iface_addrs else []
         self.link_ids: List[LinkIdentifier] = link_ids if link_ids else []
         self.topology_ids: List[MTID] = topology_ids if topology_ids else []
-        self.nexthop: Optional[Union[IP, _NoNextHop]] = nexthop
-        self.route_d: Optional[RouteDistinguisher] = route_d
-        self._packed: Optional[bytes] = packed
+        self.nexthop: IP | _NoNextHop | None = nexthop
+        self.route_d: RouteDistinguisher | None = route_d
+        self._packed: bytes | None = packed
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: Optional[RouteDistinguisher]) -> LINK:
+    def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> LINK:
         proto_id = unpack('!B', data[0:1])[0]
         # FIXME: all these list should probably be defined in the objects
         iface_addrs: List[IfaceAddr] = []

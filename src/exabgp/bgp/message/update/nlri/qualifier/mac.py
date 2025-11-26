@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Optional, Type
+from typing import Type
 
 
 # ========================================================================== MAC
@@ -15,8 +15,8 @@ from typing import Optional, Type
 
 
 class MAC:
-    def __init__(self, mac: Optional[str] = None, packed: Optional[bytes] = None) -> None:
-        self.mac: Optional[str] = mac
+    def __init__(self, mac: str | None = None, packed: bytes | None = None) -> None:
+        self.mac: str | None = mac
         self._packed: bytes = packed if packed else b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))  # type: ignore[union-attr]
 
     def __eq__(self, other: object) -> bool:

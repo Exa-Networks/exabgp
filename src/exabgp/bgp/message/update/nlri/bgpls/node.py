@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar, List, Optional, Union
+from typing import TYPE_CHECKING, ClassVar, List
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -55,19 +55,19 @@ class NODE(BGPLS):
         domain: int,
         proto_id: int,
         node_ids: List[NodeDescriptor],
-        packed: Optional[bytes] = None,
-        nexthop: Optional[Union[IP, _NoNextHop]] = None,
+        packed: bytes | None = None,
+        nexthop: IP | _NoNextHop | None = None,
         action: Action = Action.UNSET,
-        route_d: Optional[RouteDistinguisher] = None,
-        addpath: Optional[PathInfo] = None,
+        route_d: RouteDistinguisher | None = None,
+        addpath: PathInfo | None = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
         self.domain: int = domain
         self.proto_id: int = proto_id
         self.node_ids: List[NodeDescriptor] = node_ids
-        self.nexthop: Optional[Union[IP, _NoNextHop]] = nexthop
-        self._pack: Optional[bytes] = packed
-        self.route_d: Optional[RouteDistinguisher] = route_d
+        self.nexthop: IP | _NoNextHop | None = nexthop
+        self._pack: bytes | None = packed
+        self.route_d: RouteDistinguisher | None = route_d
 
     def json(self, compact: bool = False) -> str:
         nodes = ', '.join(d.json() for d in self.node_ids)
@@ -85,7 +85,7 @@ class NODE(BGPLS):
         return f'{{ {content} }}'
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: Optional[RouteDistinguisher]) -> NODE:
+    def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> NODE:
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')

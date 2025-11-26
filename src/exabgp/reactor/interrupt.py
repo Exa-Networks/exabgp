@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import signal
-from typing import ClassVar, Dict, Optional
+from typing import ClassVar, Dict
 from types import FrameType
 
 from exabgp.logger import log
@@ -54,7 +54,7 @@ class Signal:
         signal.signal(signal.SIGUSR1, self.sigusr1)
         signal.signal(signal.SIGUSR2, self.sigusr2)
 
-    def sigterm(self, signum: int, frame: Optional[FrameType]) -> None:
+    def sigterm(self, signum: int, frame: FrameType | None) -> None:
         log.critical(lambda: 'SIGTERM received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
@@ -63,7 +63,7 @@ class Signal:
         self.received = self.SHUTDOWN
         self.number = signum
 
-    def sighup(self, signum: int, frame: Optional[FrameType]) -> None:
+    def sighup(self, signum: int, frame: FrameType | None) -> None:
         log.critical(lambda: 'SIGHUP received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
@@ -72,7 +72,7 @@ class Signal:
         self.received = self.SHUTDOWN
         self.number = signum
 
-    def sigalrm(self, signum: int, frame: Optional[FrameType]) -> None:
+    def sigalrm(self, signum: int, frame: FrameType | None) -> None:
         log.critical(lambda: 'SIGALRM received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
@@ -81,7 +81,7 @@ class Signal:
         self.received = self.RESTART
         self.number = signum
 
-    def sigusr1(self, signum: int, frame: Optional[FrameType]) -> None:
+    def sigusr1(self, signum: int, frame: FrameType | None) -> None:
         log.critical(lambda: 'SIGUSR1 received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
@@ -90,7 +90,7 @@ class Signal:
         self.received = self.RELOAD
         self.number = signum
 
-    def sigusr2(self, signum: int, frame: Optional[FrameType]) -> None:
+    def sigusr2(self, signum: int, frame: FrameType | None) -> None:
         log.critical(lambda: 'SIGUSR2 received', 'reactor')
         if self.received:
             log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')

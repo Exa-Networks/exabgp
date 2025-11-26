@@ -16,7 +16,7 @@ import readline
 import sys
 import time
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from exabgp.application.shortcuts import CommandShortcuts
 from exabgp.cli.colors import Colors
@@ -29,14 +29,14 @@ class CompletionItem:
     """Metadata for a single completion item"""
 
     value: str  # The actual completion text
-    description: Optional[str] = None  # Human-readable description
+    description: str | None = None  # Human-readable description
     item_type: str = 'option'  # Type: 'option', 'neighbor', 'command', 'keyword'
 
 
 class CommandCompleter:
     """Tab completion for ExaBGP commands using readline with dynamic command discovery"""
 
-    def __init__(self, send_command: Callable[[str], str], get_neighbors: Optional[Callable[[], List[str]]] = None):
+    def __init__(self, send_command: Callable[[str], str], get_neighbors: Callable[[], List[str]] | None = None):
         """
         Initialize completer
 
@@ -68,7 +68,7 @@ class CommandCompleter:
         self.base_commands.extend(['neighbor', 'adj-rib'])
 
         # Cache for neighbor IPs
-        self._neighbor_cache: Optional[List[str]] = None
+        self._neighbor_cache: List[str] | None = None
         self._cache_timeout = 300  # Refresh cache every 5 minutes (avoid repeated socket calls)
         self._cache_timestamp = 0
         self._cache_in_progress = False  # Prevent concurrent queries
@@ -84,7 +84,7 @@ class CommandCompleter:
         self._rl_replace_line = self._get_rl_replace_line()
         self._rl_forced_update_display = self._get_rl_forced_update_display()
 
-    def _get_rl_replace_line(self) -> Optional[Callable]:
+    def _get_rl_replace_line(self) -> Callable | None:
         """Try to get rl_replace_line function from readline library via ctypes"""
         try:
             # Try to load the readline library
@@ -105,7 +105,7 @@ class CommandCompleter:
         except (OSError, AttributeError):
             return None
 
-    def _get_rl_forced_update_display(self) -> Optional[Callable]:
+    def _get_rl_forced_update_display(self) -> Callable | None:
         """Try to get rl_forced_update_display function from readline library via ctypes"""
         try:
             if sys.platform == 'darwin':
@@ -120,7 +120,7 @@ class CommandCompleter:
         except (OSError, AttributeError):
             return None
 
-    def complete(self, text: str, state: int) -> Optional[str]:
+    def complete(self, text: str, state: int) -> str | None:
         """
         Readline completion function with auto-expansion of unambiguous tokens
 
@@ -297,9 +297,7 @@ class CommandCompleter:
         sys.stdout.write(prompt + current_line)
         sys.stdout.flush()
 
-    def _add_completion_metadata(
-        self, value: str, description: Optional[str] = None, item_type: str = 'option'
-    ) -> None:
+    def _add_completion_metadata(self, value: str, description: str | None = None, item_type: str = 'option') -> None:
         """Add metadata for a completion item"""
         self.match_metadata[value] = CompletionItem(value=value, description=description, item_type=item_type)
 

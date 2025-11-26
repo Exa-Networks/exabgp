@@ -6,8 +6,6 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Optional
-
 
 class GenericSrv6ServiceSubTlv:
     def __init__(self, code: int, packed: bytes) -> None:
@@ -17,7 +15,7 @@ class GenericSrv6ServiceSubTlv:
     def __repr__(self) -> str:
         return 'SRv6 Service Sub-TLV type %d not implemented' % self.code
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         # TODO:
         return ''
 
@@ -33,7 +31,7 @@ class GenericSrv6ServiceDataSubSubTlv:
     def __repr__(self) -> str:
         return 'SRv6 Service Data Sub-Sub-TLV type %d not implemented' % self.code
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         # TODO:
         return ''
 

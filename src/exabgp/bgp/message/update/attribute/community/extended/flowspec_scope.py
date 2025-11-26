@@ -5,7 +5,7 @@ Created by Stephane Litkowski on 2017-02-24.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict, Optional
+from typing import TYPE_CHECKING, ClassVar, Dict
 
 from struct import pack
 from struct import unpack
@@ -32,7 +32,7 @@ class InterfaceSet(ExtendedCommunity):
         3: 'input-output',
     }
 
-    def __init__(self, trans: bool, asn: ASN, target: int, direction: int, community: Optional[bytes] = None) -> None:
+    def __init__(self, trans: bool, asn: ASN, target: int, direction: int, community: bytes | None = None) -> None:
         self.asn: ASN = asn
         self.target: int = target
         self.direction: int = direction
@@ -48,7 +48,7 @@ class InterfaceSet(ExtendedCommunity):
         return 'interface-set:{}:{}:{}'.format(str_direction, str(self.asn), str(self.target))
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> InterfaceSet:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> InterfaceSet:
         asn, target = unpack('!LH', data[2:8])
         direction = target >> 14
         target = target & 0x1FFF

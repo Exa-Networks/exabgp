@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 import copy
 import struct
-from typing import Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Callable, Dict, List, Tuple, TYPE_CHECKING
 
 from exabgp.environment import getenv
 
@@ -368,7 +368,7 @@ def display_open(neighbor: Neighbor, raw: bytes) -> bool:
 #
 
 
-def _make_update(neighbor: Neighbor, raw: bytes) -> Optional[Update]:
+def _make_update(neighbor: Neighbor, raw: bytes) -> Update | None:
     option.enabled['parser'] = True
     negotiated_in, _ = _negotiated(neighbor)
 
@@ -414,7 +414,7 @@ def _make_update(neighbor: Neighbor, raw: bytes) -> Optional[Update]:
     return None
 
 
-def _make_notification(neighbor: Neighbor, raw: bytes) -> Optional[Notification]:
+def _make_notification(neighbor: Neighbor, raw: bytes) -> Notification | None:
     option.enabled['parser'] = True
     negotiated_in, negotiated_out = _negotiated(neighbor)
 
@@ -496,7 +496,7 @@ def display_notification(neighbor: Neighbor, raw: bytes) -> bool:
 
 
 # Dummy negotiated for decoding standalone notifications (parameter unused but required by API)
-_DUMMY_NEGOTIATED: Optional[Negotiated] = None
+_DUMMY_NEGOTIATED: Negotiated | None = None
 
 
 def _get_dummy_negotiated() -> Negotiated:

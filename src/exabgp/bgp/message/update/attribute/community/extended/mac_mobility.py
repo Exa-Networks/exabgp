@@ -5,7 +5,7 @@ Created by Anton Aksola on 2018-11-03
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 from struct import pack
 from struct import unpack
@@ -25,7 +25,7 @@ class MacMobility(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
     DESCRIPTION: ClassVar[str] = 'mac-mobility'
 
-    def __init__(self, sequence: int, sticky: bool = False, community: Optional[bytes] = None) -> None:
+    def __init__(self, sequence: int, sticky: bool = False, community: bytes | None = None) -> None:
         self.sequence: int = sequence
         self.sticky: bool = sticky
         ExtendedCommunity.__init__(

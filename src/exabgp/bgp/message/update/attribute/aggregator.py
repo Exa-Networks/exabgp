@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -31,7 +31,7 @@ class Aggregator(Attribute):
     def __init__(self, asn: ASN, speaker: IPv4) -> None:
         self.asn: ASN = asn
         self.speaker: IPv4 = speaker
-        self._str: Optional[str] = None
+        self._str: str | None = None
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Aggregator):

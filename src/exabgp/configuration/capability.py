@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Union
 
 from exabgp.bgp.message.open.capability.graceful import Graceful
 
@@ -39,7 +38,7 @@ def addpath(tokeniser: object) -> int:
     raise ValueError(f"'{ap}' is not a valid add-path option\n  Valid options: send, receive, send/receive, disable")
 
 
-def gracefulrestart(tokeniser: object, default: Union[int, bool]) -> Union[int, bool]:
+def gracefulrestart(tokeniser: object, default: int | bool) -> int | bool:
     if len(tokeniser.tokens) == 1:
         return default
 

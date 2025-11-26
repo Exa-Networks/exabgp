@@ -6,7 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Optional, Type
+from typing import Type
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IPv4
@@ -16,7 +16,7 @@ from exabgp.protocol.ip import IPv4
 
 
 class RouterID(IPv4):
-    def __init__(self, ip: str, packed: Optional[bytes] = None) -> None:
+    def __init__(self, ip: str, packed: bytes | None = None) -> None:
         if IPv4.toafi(ip) != AFI.ipv4:
             raise ValueError('wrong address family')
         IPv4.__init__(self, ip, packed)

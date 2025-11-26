@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Generator, List, Union
+from typing import Generator, List
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
@@ -26,7 +26,7 @@ class MPURNLRI(Attribute, Family):
     ID = Attribute.CODE.MP_UNREACH_NLRI
     NO_DUPLICATE = True
 
-    def __init__(self, afi: Union[int, AFI], safi: Union[int, SAFI], nlris: List[NLRI]) -> None:
+    def __init__(self, afi: int | AFI, safi: int | SAFI, nlris: List[NLRI]) -> None:
         Family.__init__(self, afi, safi)
         self.nlris: List[NLRI] = nlris
 

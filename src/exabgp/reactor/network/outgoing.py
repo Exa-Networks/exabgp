@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import ClassVar, Iterator, Optional
+from typing import ClassVar, Iterator
 
 from exabgp.protocol.family import AFI
 from .connection import Connection
@@ -31,19 +31,19 @@ class Outgoing(Connection):
         port: int = 179,
         md5: str = '',
         md5_base64: bool = False,
-        ttl: Optional[int] = None,
-        itf: Optional[str] = None,
+        ttl: int | None = None,
+        itf: str | None = None,
     ) -> None:
         Connection.__init__(self, afi, peer, local)
 
-        self.ttl: Optional[int] = ttl
+        self.ttl: int | None = ttl
         self.afi: AFI = afi
         self.md5: str = md5
         self.md5_base64: bool = md5_base64
         self.port: int = port
-        self.interface: Optional[str] = itf
+        self.interface: str | None = itf
 
-    def _setup(self) -> Optional[Exception]:
+    def _setup(self) -> Exception | None:
         try:
             self.io = create(self.afi, self.interface)
             md5(self.io, self.peer, self.port, self.md5, self.md5_base64)
@@ -60,7 +60,7 @@ class Outgoing(Connection):
             self.io = None
             return exc
 
-    def _connect(self) -> Optional[Exception]:
+    def _connect(self) -> Exception | None:
         if not self.io:
             setup_issue = self._setup()
             if setup_issue:

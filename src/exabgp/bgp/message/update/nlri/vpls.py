@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from struct import unpack
 from struct import pack
-from typing import Any, Iterator, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Iterator, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -94,7 +94,7 @@ class VPLS(NLRI):
 
     # XXX: FIXME: we need an unique key here.
     # XXX: What can we use as unique key ?
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content = ', '.join(
             [
                 self.rd.json(),

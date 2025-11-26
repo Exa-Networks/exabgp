@@ -6,8 +6,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Optional
-
 
 # =========================================================================== ISO
 #
@@ -15,13 +13,11 @@ from typing import Optional
 
 class ISO:
     sysid: str
-    area_id: Optional[str]
-    selector: Optional[str]
+    area_id: str | None
+    selector: str | None
     afi: int
 
-    def __init__(
-        self, sysid: str, selector: Optional[str] = None, area_id: Optional[str] = None, afi: int = 49
-    ) -> None:
+    def __init__(self, sysid: str, selector: str | None = None, area_id: str | None = None, afi: int = 49) -> None:
         self.sysid = sysid
         self.area_id = area_id
         self.selector = selector
@@ -31,5 +27,5 @@ class ISO:
     def unpack_sysid(cls, data: bytes) -> str:
         return data.hex()
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         return self.sysid

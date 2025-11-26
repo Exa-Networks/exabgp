@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from exabgp.rib.change import Change
 
@@ -55,7 +55,7 @@ class AnnounceLabel(AnnouncePath):
     )
 
     name = 'vpn'
-    afi: Optional[AFI] = None
+    afi: AFI | None = None
 
     def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         AnnouncePath.__init__(self, tokeniser, scope, error)
@@ -64,7 +64,7 @@ class AnnounceLabel(AnnouncePath):
         return True
 
     @staticmethod
-    def check(change: Change, afi: Optional[AFI]) -> bool:
+    def check(change: Change, afi: AFI | None) -> bool:
         if not AnnouncePath.check(change, afi):
             return False
 

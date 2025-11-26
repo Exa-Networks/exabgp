@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 import asyncio  # noqa: F401 - Used by async methods (_send_open_async, _read_open_async, _send_ka_async, _read_ka_async)
 from collections import defaultdict
-from typing import Any, Dict, Generator, Iterator, Optional, Set, Tuple, Union, cast, TYPE_CHECKING
+from typing import Any, Dict, Generator, Iterator, Set, Tuple, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -106,9 +106,9 @@ class Peer:
         self.reactor: 'Reactor' = reactor
         self.neighbor: 'Neighbor' = neighbor
         # The next restart neighbor definition
-        self._neighbor: Optional['Neighbor'] = None
+        self._neighbor: 'Neighbor' | None = None
 
-        self.proto: Optional[Protocol] = None
+        self.proto: Protocol | None = None
         self.fsm: FSM = FSM(self, FSM.IDLE)
         self.stats: Stats = Stats()
         self.stats.update(
@@ -133,8 +133,8 @@ class Peer:
         )
 
         # None = needs initialization, False = closed/don't restart, Generator = running
-        self.generator: Union[Generator[int, None, None], bool, None] = None
-        self._async_task: Optional[asyncio.Task] = None  # For async mode
+        self.generator: Generator[int, None, None] | bool | None = None
+        self._async_task: asyncio.Task | None = None  # For async mode
 
         # The peer should restart after a stop
         self._restart: bool = True
@@ -142,15 +142,15 @@ class Peer:
         self._restarted: bool = FORCE_GRACEFUL
 
         # We have been asked to teardown the session with this code
-        self._teardown: Optional[int] = None
+        self._teardown: int | None = None
 
         self._delay: Delay = Delay()
-        self.recv_timer: Optional[ReceiveTimer] = None
+        self.recv_timer: ReceiveTimer | None = None
 
     def id(self) -> str:
         return 'peer-{}'.format(self.neighbor.uid)
 
-    def _close(self, message: str = '', error: Union[str, Exception] = '') -> None:
+    def _close(self, message: str = '', error: str | Exception = '') -> None:
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
             try:
                 if self.neighbor.api['neighbor-changes']:
@@ -190,7 +190,7 @@ class Peer:
 
         self.proto = None
 
-    def _reset(self, message: str = '', error: Union[str, Exception] = '') -> None:
+    def _reset(self, message: str = '', error: str | Exception = '') -> None:
         self._close(message, error)
 
         if not self._restart or self.neighbor.generated:
@@ -258,12 +258,12 @@ class Peer:
         self._stop('shutting down')
         self.stop()
 
-    def resend(self, enhanced: bool, family: Optional[Tuple[AFI, SAFI]] = None) -> None:
+    def resend(self, enhanced: bool, family: Tuple[AFI, SAFI] | None = None) -> None:
         if self.neighbor.rib:
             self.neighbor.rib.outgoing.resend(enhanced, family)
         self._delay.reset()
 
-    def reestablish(self, restart_neighbor: Optional['Neighbor'] = None) -> None:
+    def reestablish(self, restart_neighbor: 'Neighbor' | None = None) -> None:
         # we want to tear down the session and re-establish it
         self._teardown = 3
         self._restart = True
@@ -271,7 +271,7 @@ class Peer:
         self._neighbor = restart_neighbor
         self._delay.reset()
 
-    def reconfigure(self, restart_neighbor: Optional['Neighbor'] = None) -> None:
+    def reconfigure(self, restart_neighbor: 'Neighbor' | None = None) -> None:
         # we want to update the route which were in the configuration file
         self._neighbor = restart_neighbor
         # Update self.neighbor immediately so API processes see the new configuration
@@ -289,7 +289,7 @@ class Peer:
             return self.proto.fd()
         return -1
 
-    def handle_connection(self, connection: 'Incoming') -> Optional[Iterator[bool]]:
+    def handle_connection(self, connection: 'Incoming') -> Iterator[bool] | None:
         log.debug(lambda: 'state machine for the peer is {}'.format(self.fsm.name()), self.id())
 
         # if the other side fails, we go back to idle
@@ -413,7 +413,7 @@ class Peer:
                 self._close(f'connection to {self.neighbor["peer-address"]}:{self.neighbor["connect"]} failed')
             raise Interrupted('connection failed') from None
 
-    def _send_open(self) -> Generator[Union[int, Open, NOP], None, None]:
+    def _send_open(self) -> Generator[int | Open, NOP, None, None]:
         assert self.proto is not None
         message = Message.CODE.NOP
         for message in self.proto.new_open():
@@ -426,7 +426,7 @@ class Peer:
         assert self.proto is not None
         return await self.proto.new_open_async()
 
-    def _read_open(self) -> Generator[Union[int, Open, NOP], None, None]:
+    def _read_open(self) -> Generator[int | Open, NOP, None, None]:
         assert self.proto is not None
         assert self.proto.connection is not None
         wait = getenv().bgp.openwait

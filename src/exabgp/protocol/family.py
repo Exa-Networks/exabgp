@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Dict, ClassVar, Optional, List, Tuple
+from typing import Dict, ClassVar, List, Tuple
 
 from exabgp.protocol.resource import Resource
 
@@ -49,7 +49,7 @@ class _AFI(int):
     def name(self) -> str:
         return self._names.get(self, f'unknown-afi-{hex(self)}')
 
-    def mask(self) -> Optional[int]:
+    def mask(self) -> int | None:
         return self._masks.get(self, None)
 
     def address_length(self) -> int:
@@ -85,7 +85,7 @@ class AFI(Resource):
     def pack_afi(self) -> bytes:
         return pack('!H', self)
 
-    def mask(self) -> Optional[int]:
+    def mask(self) -> int | None:
         return _AFI._masks.get(self, None)
 
     def address_length(self) -> int:
@@ -112,7 +112,7 @@ class AFI(Resource):
         return AFI.common.get(data, AFI(unpack('!H', data)[0]))
 
     @classmethod
-    def value(cls, name: str) -> Optional[AFI]:
+    def value(cls, name: str) -> AFI | None:
         return cls.codes.get(name, None)
 
     @staticmethod
@@ -290,7 +290,7 @@ class SAFI(Resource):
         return SAFI.common.get(data, SAFI(data[0] if data else 0))
 
     @classmethod
-    def value(cls, name: str) -> Optional[SAFI]:
+    def value(cls, name: str) -> SAFI | None:
         return cls.codes.get(name, None)
 
     @classmethod

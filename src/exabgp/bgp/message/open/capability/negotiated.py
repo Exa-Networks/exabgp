@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, ClassVar, Dict, List, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message import Open
@@ -30,8 +30,8 @@ class Negotiated:
         self.neighbor: Any = neighbor
         self.direction: 'Direction' = direction
 
-        self.sent_open: Optional['Open'] = None  # Open message
-        self.received_open: Optional['Open'] = None  # Open message
+        self.sent_open: 'Open' | None = None  # Open message
+        self.received_open: 'Open' | None = None  # Open message
 
         self.holdtime: HoldTime = HoldTime(0)
         self.local_as: ASN = ASN(0)
@@ -40,7 +40,7 @@ class Negotiated:
         self.nexthop: List[Tuple[AFI, SAFI]] = []
         self.asn4: bool = False
         self.addpath: RequirePath = RequirePath()
-        self.multisession: Union[bool, Tuple[int, int, str]] = False
+        self.multisession: bool | Tuple[int, int, str] = False
         self.msg_size: int = ExtendedMessage.INITIAL_SIZE
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
@@ -146,7 +146,7 @@ class Negotiated:
         # 	if self.peer.bgp.received_open_size:
         # 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
-    def validate(self, neighbor: Any) -> Optional[Tuple[int, int, str]]:
+    def validate(self, neighbor: Any) -> Tuple[int, int, str] | None:
         # Both opens must be set before validate is called
         assert self.sent_open is not None
         assert self.received_open is not None

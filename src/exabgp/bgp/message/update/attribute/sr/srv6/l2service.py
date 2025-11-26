@@ -7,7 +7,7 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Callable, ClassVar, Dict, List, Optional, Type, TypeVar
+from typing import Callable, ClassVar, Dict, List, Type, TypeVar
 
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceSubTlv
@@ -36,7 +36,7 @@ class Srv6L2Service:
     # Registry maps TLV codes to Sub-TLV classes
     registered_subtlvs: ClassVar[Dict[int, Type[GenericSrv6ServiceSubTlv]]] = dict()
 
-    def __init__(self, subtlvs: List[GenericSrv6ServiceSubTlv], packed: Optional[bytes] = None) -> None:
+    def __init__(self, subtlvs: List[GenericSrv6ServiceSubTlv], packed: bytes | None = None) -> None:
         self.subtlvs: List[GenericSrv6ServiceSubTlv] = subtlvs
         self.packed: bytes = self.pack_tlv()
 
@@ -81,6 +81,6 @@ class Srv6L2Service:
     def __str__(self) -> str:
         return 'l2-service [ ' + ', '.join([str(subtlv) for subtlv in self.subtlvs]) + ' ]'
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content: str = '[ ' + ', '.join(subtlv.json() for subtlv in self.subtlvs) + ' ]'
         return '"l2-service": {}'.format(content)

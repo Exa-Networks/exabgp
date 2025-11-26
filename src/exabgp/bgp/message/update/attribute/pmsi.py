@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, Dict, Optional, Type
+from typing import TYPE_CHECKING, ClassVar, Dict, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -56,9 +56,9 @@ class PMSI(Attribute):
         7: 'mLDP MP2MP LSP',
     }
 
-    def __init__(self, tunnel: bytes, label: int, flags: int, raw_label: Optional[int] = None) -> None:
+    def __init__(self, tunnel: bytes, label: int, flags: int, raw_label: int | None = None) -> None:
         self.label: int = label  # integer
-        self.raw_label: Optional[int] = raw_label  # integer
+        self.raw_label: int | None = raw_label  # integer
         self.flags: int = flags  # integer
         self.tunnel: bytes = tunnel  # tunnel id, packed data
 
@@ -114,7 +114,7 @@ class PMSI(Attribute):
         return klass
 
     @staticmethod
-    def pmsi_unknown(subtype: int, tunnel: bytes, label: int, flags: int, raw_label: Optional[int]) -> PMSI:
+    def pmsi_unknown(subtype: int, tunnel: bytes, label: int, flags: int, raw_label: int | None) -> PMSI:
         pmsi = PMSI(tunnel, label, flags)
         pmsi.TUNNEL_TYPE = subtype  # type: ignore[misc]
         return pmsi
@@ -138,14 +138,14 @@ class PMSI(Attribute):
 class PMSINoTunnel(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 0
 
-    def __init__(self, label: int = 0, flags: int = 0, raw_label: Optional[int] = None) -> None:
+    def __init__(self, label: int = 0, flags: int = 0, raw_label: int | None = None) -> None:
         PMSI.__init__(self, b'', label, flags, raw_label=None)
 
     def prettytunnel(self) -> str:
         return ''
 
     @classmethod
-    def unpack_pmsi(cls, tunnel: bytes, label: int, flags: int, raw_label: Optional[int] = None) -> PMSINoTunnel:
+    def unpack_pmsi(cls, tunnel: bytes, label: int, flags: int, raw_label: int | None = None) -> PMSINoTunnel:
         return cls(label, flags, raw_label)
 
 
@@ -158,7 +158,7 @@ class PMSIIngressReplication(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 6
 
     def __init__(
-        self, ip: str, label: int = 0, flags: int = 0, tunnel: Optional[bytes] = None, raw_label: Optional[int] = None
+        self, ip: str, label: int = 0, flags: int = 0, tunnel: bytes | None = None, raw_label: int | None = None
     ) -> None:
         self.ip: str = ip  # looks like a bad name
         PMSI.__init__(self, tunnel if tunnel else IPv4.pton(ip), label, flags, raw_label)
@@ -167,6 +167,6 @@ class PMSIIngressReplication(PMSI):
         return self.ip
 
     @classmethod
-    def unpack_pmsi(cls, tunnel: bytes, label: int, flags: int, raw_label: Optional[int]) -> PMSIIngressReplication:
+    def unpack_pmsi(cls, tunnel: bytes, label: int, flags: int, raw_label: int | None) -> PMSIIngressReplication:
         ip = IPv4.ntop(tunnel)
         return cls(ip, label, flags, tunnel, raw_label)

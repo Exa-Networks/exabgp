@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
@@ -42,9 +42,9 @@ class SourceJoin(MVPN):
         source: IP,
         group: IP,
         source_as: int,
-        packed: Optional[bytes] = None,
-        action: Optional[Action] = None,
-        addpath: Optional[int] = None,
+        packed: bytes | None = None,
+        action: Action | None = None,
+        addpath: int | None = None,
     ) -> None:
         MVPN.__init__(self, afi=afi, action=action, addpath=addpath)  # type: ignore[arg-type]
         self.rd: RouteDistinguisher = rd
@@ -71,7 +71,7 @@ class SourceJoin(MVPN):
     def __hash__(self) -> int:
         return hash((self.rd, self.source, self.group, self.source_as))
 
-    def _pack(self, packed: Optional[bytes] = None) -> bytes:
+    def _pack(self, packed: bytes | None = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -119,7 +119,7 @@ class SourceJoin(MVPN):
         groupip = IP.unpack_ip(data[cursor : cursor + groupiplen])
         return cls(afi=afi, rd=rd, source=sourceip, group=groupip, source_as=source_as, packed=data)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

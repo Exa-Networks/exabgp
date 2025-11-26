@@ -6,7 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Type
 
 from struct import pack, unpack
 
@@ -28,7 +28,7 @@ class ASN(Resource):
     def asn4(self) -> bool:
         return self > self.MAX
 
-    def pack_asn(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_asn(self, negotiated: Negotiated | None = None) -> bytes:
         asn4 = negotiated if negotiated is not None else self.asn4()
         return pack('!L' if asn4 else '!H', self)
 

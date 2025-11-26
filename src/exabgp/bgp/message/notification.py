@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import string
-from typing import ClassVar, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import ClassVar, Dict, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -168,7 +168,7 @@ class Notification(Message, Exception):
 
 
 class Notify(Notification):
-    def __init__(self, code: int, subcode: int, data: Optional[str] = None) -> None:
+    def __init__(self, code: int, subcode: int, data: str | None = None) -> None:
         if data is None:
             data = self._str_subcode.get((code, subcode), 'unknown notification type')
         if (code, subcode) in [(6, 2), (6, 4)]:

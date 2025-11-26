@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from exabgp.protocol.ip import NoNextHop
 
@@ -135,7 +135,7 @@ class AnnounceIP(ParseAnnounce):
         return ParseAnnounce.post(self) and self._check()
 
     @staticmethod
-    def check(change: Change, afi: Optional[AFI]) -> bool:
+    def check(change: Change, afi: AFI | None) -> bool:
         if (
             change.nlri.action == Action.ANNOUNCE
             and change.nlri.nexthop is NoNextHop

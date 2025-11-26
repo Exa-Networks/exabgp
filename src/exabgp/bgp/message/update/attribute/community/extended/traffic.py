@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import socket
 
-from typing import TYPE_CHECKING, ClassVar, Dict, Optional
+from typing import TYPE_CHECKING, ClassVar, Dict
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -34,7 +34,7 @@ class TrafficRate(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x06
 
-    def __init__(self, asn: ASN, rate: float, community: Optional[bytes] = None) -> None:
+    def __init__(self, asn: ASN, rate: float, community: bytes | None = None) -> None:
         self.asn: ASN = asn
         self.rate: float = rate
         ExtendedCommunity.__init__(
@@ -46,7 +46,7 @@ class TrafficRate(ExtendedCommunity):
         return 'rate-limit:%d' % self.rate
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficRate:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficRate:
         asn, rate = unpack('!Hf', data[2:8])
         return cls(ASN(asn), rate, data[:8])
 
@@ -70,7 +70,7 @@ class TrafficAction(ExtendedCommunity):
         True: 0x1,
     }
 
-    def __init__(self, sample: bool, terminal: bool, community: Optional[bytes] = None) -> None:
+    def __init__(self, sample: bool, terminal: bool, community: bytes | None = None) -> None:
         self.sample: bool = sample
         self.terminal: bool = terminal
         bitmask = self._sample[sample] | self._terminal[terminal]
@@ -88,7 +88,7 @@ class TrafficAction(ExtendedCommunity):
         return 'action {}'.format('-'.join(s))
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficAction:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficAction:
         (bit,) = unpack('!B', data[7:8])
         sample = bool(bit & 0x02)
         terminal = bool(bit & 0x01)
@@ -104,7 +104,7 @@ class TrafficRedirect(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x08
 
-    def __init__(self, asn: ASN, target: int, community: Optional[bytes] = None) -> None:
+    def __init__(self, asn: ASN, target: int, community: bytes | None = None) -> None:
         self.asn: ASN = asn
         self.target: int = target
         ExtendedCommunity.__init__(
@@ -116,7 +116,7 @@ class TrafficRedirect(ExtendedCommunity):
         return 'redirect:{}:{}'.format(self.asn, self.target)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficRedirect:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficRedirect:
         asn, target = unpack('!HL', data[2:8])
         return cls(ASN(asn), target, data[:8])
 
@@ -126,7 +126,7 @@ class TrafficRedirectASN4(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x82
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x08
 
-    def __init__(self, asn: ASN4, target: int, community: Optional[bytes] = None) -> None:
+    def __init__(self, asn: ASN4, target: int, community: bytes | None = None) -> None:
         self.asn: ASN4 = asn
         self.target: int = target
         ExtendedCommunity.__init__(
@@ -138,7 +138,7 @@ class TrafficRedirectASN4(ExtendedCommunity):
         return 'redirect:{}:{}'.format(self.asn, self.target)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficRedirectASN4:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficRedirectASN4:
         asn, target = unpack('!LH', data[2:8])
         return cls(ASN4(asn), target, data[:8])
 
@@ -152,7 +152,7 @@ class TrafficMark(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x09
 
-    def __init__(self, dscp: int, community: Optional[bytes] = None) -> None:
+    def __init__(self, dscp: int, community: bytes | None = None) -> None:
         self.dscp: int = dscp
         ExtendedCommunity.__init__(
             self,
@@ -163,7 +163,7 @@ class TrafficMark(ExtendedCommunity):
         return 'mark %d' % self.dscp
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficMark:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficMark:
         (dscp,) = unpack('!B', data[7:8])
         return cls(dscp, data[:8])
 
@@ -178,7 +178,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
-    def __init__(self, ip: IPv4, copy: bool, community: Optional[bytes] = None) -> None:
+    def __init__(self, ip: IPv4, copy: bool, community: bytes | None = None) -> None:
         self.ip: IPv4 = ip
         self.copy: bool = copy
         ExtendedCommunity.__init__(
@@ -194,7 +194,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
         )
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficNextHopIPv4IETF:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficNextHopIPv4IETF:
         ip, bit = unpack('!4sH', data[2:8])
         return cls(IPv4.ntop(ip), bool(bit & 0x01), data[:8])  # type: ignore[arg-type]
 
@@ -209,7 +209,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
-    def __init__(self, ip: IPv6, copy: bool, community: Optional[bytes] = None) -> None:
+    def __init__(self, ip: IPv6, copy: bool, community: bytes | None = None) -> None:
         self.ip: IPv6 = ip
         self.copy: bool = copy
         ExtendedCommunityIPv6.__init__(
@@ -225,7 +225,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
         )
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficNextHopIPv6IETF:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficNextHopIPv6IETF:
         ip, bit = unpack('!16sH', data[2:20])
         return cls(IPv6.ntop(ip), bool(bit & 0x01), data[:20])  # type: ignore[arg-type]
 
@@ -241,7 +241,7 @@ class TrafficNextHopSimpson(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x08
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
 
-    def __init__(self, copy: bool, community: Optional[bytes] = None) -> None:
+    def __init__(self, copy: bool, community: bytes | None = None) -> None:
         self.copy: bool = copy
         ExtendedCommunity.__init__(
             self,
@@ -252,7 +252,7 @@ class TrafficNextHopSimpson(ExtendedCommunity):
         return 'copy-to-nexthop' if self.copy else 'redirect-to-nexthop'
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficNextHopSimpson:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficNextHopSimpson:
         (bit,) = unpack('!B', data[7:8])
         return cls(bool(bit & 0x01), data[:8])
 
@@ -266,7 +266,7 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0B
 
-    def __init__(self, ip: str, asn: int, community: Optional[bytes] = None) -> None:
+    def __init__(self, ip: str, asn: int, community: bytes | None = None) -> None:
         self.ip: str = ip
         self.asn: int = asn
         ExtendedCommunityIPv6.__init__(
@@ -282,7 +282,7 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
         return 'redirect %s:%d' % (self.ip, self.asn)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> TrafficRedirectIPv6:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficRedirectIPv6:
         ip, asn = unpack('!16sH', data[2:11])
         return cls(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:11])
 

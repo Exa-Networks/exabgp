@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -28,7 +28,7 @@ class LocalPreference(Attribute):
     TREAT_AS_WITHDRAW = True
     MANDATORY = True
 
-    def __init__(self, localpref: int, packed: Optional[bytes] = None) -> None:
+    def __init__(self, localpref: int, packed: bytes | None = None) -> None:
         self.localpref: int = localpref
         self._packed: bytes = self._attribute(packed if packed is not None else pack('!L', localpref))
 
@@ -40,7 +40,7 @@ class LocalPreference(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack_attribute(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
         return self._packed
 
     def __len__(self) -> int:

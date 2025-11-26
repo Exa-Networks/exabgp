@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, List, Optional
+from typing import ClassVar, List
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -34,9 +34,7 @@ class Operational(Capability, list):
         return [b'']
 
     @staticmethod
-    def unpack_capability(
-        instance: Operational, data: bytes, capability: Optional[CapabilityCode] = None
-    ) -> Operational:  # pylint: disable=W0613
+    def unpack_capability(instance: Operational, data: bytes, capability: CapabilityCode | None = None) -> Operational:  # pylint: disable=W0613
         if instance._seen:
             log.debug(lambda: 'received duplicate Operational capability', 'parser')
         instance._seen = True

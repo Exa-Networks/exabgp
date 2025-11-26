@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Union
 from typing import List
 from string import ascii_letters
 from string import digits
@@ -70,11 +69,9 @@ def _find_similar(target: str, candidates: List[str], max_distance: int = 2, max
 
 class Section(Error):
     name = 'undefined'
-    known: dict[Union[str, tuple], object] = dict()  # command/section and code to handle it
-    default: dict[Union[str, tuple], object] = (
-        dict()
-    )  # command/section has a a defult value, use it if no data was provided
-    action: dict[Union[str, tuple], str] = {}  # how to handle this command ( append, add, assign, route )
+    known: dict[str | tuple, object] = dict()  # command/section and code to handle it
+    default: dict[str | tuple, object] = dict()  # command/section has a a defult value, use it if no data was provided
+    action: dict[str | tuple, str] = {}  # how to handle this command ( append, add, assign, route )
     assign: dict[str, str] = {}  # configuration to class variable lookup for setattr
 
     def __init__(self, tokerniser, scope, error):

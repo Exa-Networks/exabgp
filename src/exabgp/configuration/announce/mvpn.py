@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from exabgp.rib.change import Change
 
@@ -43,7 +43,7 @@ class AnnounceMVPN(ParseAnnounce):
     )
 
     name = 'mvpn'
-    afi: Optional[AFI] = None
+    afi: AFI | None = None
 
     def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, tokeniser, scope, error)
@@ -59,7 +59,7 @@ class AnnounceMVPN(ParseAnnounce):
         return ParseAnnounce.post(self) and self._check()
 
     @staticmethod
-    def check(change: Change, afi: Optional[AFI]) -> bool:
+    def check(change: Change, afi: AFI | None) -> bool:
         if not AnnounceIP.check(change, afi):
             return False
 

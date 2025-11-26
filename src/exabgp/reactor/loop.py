@@ -10,31 +10,26 @@ from __future__ import annotations
 import asyncio  # noqa: F401 - Used by async event loop wrapper in Step 9
 import errno
 import re
+import select
 import time
 import uuid
-import select
-from typing import Any, Dict, Generator, List, Optional, Set, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Set
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
 
-from exabgp.reactor.daemon import Daemon
-from exabgp.reactor.listener import Listener
-from exabgp.reactor.api.processes import Processes
-from exabgp.reactor.api.processes import ProcessError
-from exabgp.reactor.peer import Peer
-from exabgp.reactor.peer import ACTION
-from exabgp.reactor.asynchronous import ASYNC
-from exabgp.reactor.interrupt import Signal
-
-from exabgp.reactor.api import API
+from exabgp.bgp.fsm import FSM
 from exabgp.configuration.process import API_PREFIX
 from exabgp.environment import getenv
-
-from exabgp.bgp.fsm import FSM
-
-from exabgp.version import version
 from exabgp.logger import log
+from exabgp.reactor.api import API
+from exabgp.reactor.api.processes import ProcessError, Processes
+from exabgp.reactor.asynchronous import ASYNC
+from exabgp.reactor.daemon import Daemon
+from exabgp.reactor.interrupt import Signal
+from exabgp.reactor.listener import Listener
+from exabgp.reactor.peer import ACTION, Peer
+from exabgp.version import version
 
 
 class Reactor:
@@ -66,7 +61,7 @@ class Reactor:
         self.daemon_start_time: float = time.time()
 
         # Active CLI client tracking (for multi-client replacement detection)
-        self.active_client_uuid: Optional[str] = None
+        self.active_client_uuid: str | None = None
         self.active_client_last_ping: float = 0.0
 
         self.max_loop_time: float = getenv().reactor.speed
@@ -356,7 +351,7 @@ class Reactor:
             return None
         return peer.handle_connection(connection)
 
-    def neighbor(self, peer_name: str) -> Optional['Neighbor']:
+    def neighbor(self, peer_name: str) -> 'Neighbor' | None:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return None
@@ -374,17 +369,17 @@ class Reactor:
             return ''
         return str(peer.neighbor['peer-address'])
 
-    def neighbor_cli_data(self, peer_name: str) -> Union[Dict[str, Any], str]:
+    def neighbor_cli_data(self, peer_name: str) -> Dict[str, Any] | None:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
-            return ''
+            return None
         return peer.cli_data()
 
     def neighor_rib(self, peer_name: str, rib_name: str, advertised: bool = False) -> List[Any]:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lambda: f'could not find referenced peer {peer_name}', 'reactor')
             return []
-        families: Optional[List[Any]] = None
+        families: List[Any] | None = None
         if advertised:
             families = peer.proto.negotiated.families if peer.proto else []
         rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming  # type: ignore[union-attr]
@@ -417,8 +412,7 @@ class Reactor:
         return False
 
     def check(self, route: str, nlri_only: bool = False) -> bool:
-        from exabgp.configuration.check import check_message
-        from exabgp.configuration.check import check_nlri
+        from exabgp.configuration.check import check_message, check_nlri
 
         if not self.reload():
             return False
@@ -432,8 +426,7 @@ class Reactor:
         return True
 
     def display(self, route: str, nlri_only: bool = False) -> bool:
-        from exabgp.configuration.check import display_message
-        from exabgp.configuration.check import display_nlri
+        from exabgp.configuration.check import display_message, display_nlri
 
         if not self.reload():
             return False

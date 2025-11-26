@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, ClassVar, Dict, Optional, Tuple, Type
+from typing import TYPE_CHECKING, ClassVar, Dict, Tuple, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -45,7 +45,7 @@ class EVPN(NLRI):
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
 
-    def __init__(self, action: Action = Action.UNSET, addpath: Optional[PathInfo] = None) -> None:
+    def __init__(self, action: Action = Action.UNSET, addpath: PathInfo | None = None) -> None:
         NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
         self._packed: bytes = b''
 
@@ -96,7 +96,7 @@ class EVPN(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Optional[PathInfo], negotiated: Negotiated
+        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: PathInfo | None, negotiated: Negotiated
     ) -> Tuple[EVPN, bytes]:
         code = bgp[0]
         length = bgp[1]
@@ -121,7 +121,7 @@ class GenericEVPN(EVPN):
         self.CODE = code
         self._pack(packed)
 
-    def _pack(self, packed: Optional[bytes] = None) -> bytes:
+    def _pack(self, packed: bytes | None = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -130,5 +130,5 @@ class GenericEVPN(EVPN):
             return packed
         return b''
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())

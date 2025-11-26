@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional, Union
+from typing import ClassVar
 
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP, _NoNextHop
@@ -42,10 +42,10 @@ class Multicast(EVPN):
         rd: RouteDistinguisher,
         etag: EthernetTag,
         ip: IP,
-        packed: Optional[bytes] = None,
-        nexthop: Optional[Union[IP, _NoNextHop]] = None,
-        action: Optional[Action] = None,
-        addpath: Optional[PathInfo] = None,
+        packed: bytes | None = None,
+        nexthop: IP | _NoNextHop | None = None,
+        action: Action | None = None,
+        addpath: PathInfo | None = None,
     ) -> None:
         EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
         self.nexthop = nexthop
@@ -68,7 +68,7 @@ class Multicast(EVPN):
     def __hash__(self) -> int:
         return hash((self.afi, self.safi, self.CODE, self.rd, self.etag, self.ip))
 
-    def _pack(self, packed: Optional[bytes] = None) -> bytes:
+    def _pack(self, packed: bytes | None = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -89,7 +89,7 @@ class Multicast(EVPN):
         ip = IP.unpack_ip(data[13 : 13 + iplen // 8])
         return cls(rd, etag, ip, data)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

@@ -6,7 +6,7 @@ Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, Generator, Optional, Union
+from typing import Any, Generator
 
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Notify
@@ -27,7 +27,7 @@ class KA:
 
     def _keepalive(self, proto: Any) -> Generator[bool, None, None]:
         need_ka: bool = False
-        generator: Optional[Generator[Union[KeepAlive, NOP], None, None]] = None
+        generator: Generator[KeepAlive | NOP, None, None] | None = None
 
         while True:
             # SEND KEEPALIVES

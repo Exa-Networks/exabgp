@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any, ClassVar
+from typing import List, Dict, Any, ClassVar
 
 from exabgp.reactor.api.command.command import Command
 
@@ -22,7 +22,7 @@ class CommandMetadata:
     name: str
     neighbor_support: bool
     json_support: bool
-    options: Optional[List[str]] = None
+    options: List[str] | None = None
     description: str = ''
     syntax: str = ''
     parameters: List[str] = field(default_factory=list)
@@ -180,7 +180,7 @@ class CommandRegistry:
         """Return list of all registered command names."""
         return list(Command.functions)
 
-    def get_command_metadata(self, command_name: str) -> Optional[CommandMetadata]:
+    def get_command_metadata(self, command_name: str) -> CommandMetadata | None:
         """Get metadata for a specific command."""
         if command_name in self._metadata_cache:
             return self._metadata_cache[command_name]
@@ -235,7 +235,7 @@ class CommandRegistry:
         """Get all valid AFI values for completion."""
         return self.AFI_NAMES.copy()
 
-    def get_safi_values(self, afi: Optional[str] = None) -> List[str]:
+    def get_safi_values(self, afi: str | None = None) -> List[str]:
         """Get all valid SAFI values, optionally filtered by AFI."""
         if afi and afi in self.AFI_SAFI_MAP:
             return self.AFI_SAFI_MAP[afi].copy()
@@ -313,11 +313,11 @@ class CommandRegistry:
         """Get metadata for all commands."""
         return [self.get_command_metadata(cmd) for cmd in self.get_all_commands() if self.get_command_metadata(cmd)]
 
-    def get_option_description(self, option: str) -> Optional[str]:
+    def get_option_description(self, option: str) -> str | None:
         """Get description for a command option."""
         return self.OPTION_DESCRIPTIONS.get(option)
 
-    def get_command_description(self, command: str) -> Optional[str]:
+    def get_command_description(self, command: str) -> str | None:
         """Get description for a command (supports full or partial command paths)."""
         metadata = self.get_command_metadata(command)
         if metadata and metadata.description:
