@@ -6,7 +6,7 @@ authors = [
 	{ name = "Thomas Mangin", email = "thomas.mangin@exa-networks.co.uk" },
 ]
 dynamic = ['license']
-requires-python = ">=3.8.1,<3.14"
+requires-python = ">=3.10,<3.14"
 keywords = [
 	'bgp',
 	'ddos-protection',
@@ -24,7 +24,10 @@ classifiers = [
 	'Operating System :: POSIX',
 	'Operating System :: MacOS :: MacOS X',
 	'Programming Language :: Python',
-	'Programming Language :: Python :: 3.8',
+	'Programming Language :: Python :: 3.10',
+	'Programming Language :: Python :: 3.11',
+	'Programming Language :: Python :: 3.12',
+	'Programming Language :: Python :: 3.13',
 	'Topic :: Internet',
 ]
 readme = 'README.md'
@@ -116,8 +119,8 @@ docstring-code-format = true
 [tool.mypy]
 # Type annotation project started: 2025-11-12
 # Target: Full codebase type coverage over 14 weeks (6 sprints)
-# Note: Using 3.9 for mypy (requires 3.9+), but code remains 3.8+ compatible
-python_version = "3.9"
+# Note: Using 3.10 for mypy to match minimum supported version
+python_version = "3.10"
 warn_unused_configs = true
 warn_return_any = true
 warn_redundant_casts = true

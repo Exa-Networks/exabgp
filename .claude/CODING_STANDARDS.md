@@ -31,42 +31,26 @@
 
 ---
 
-## Python 3.8.1+ Compatibility (MANDATORY)
+## Python 3.10+ Compatibility (MANDATORY)
 
 ### Type Annotations
 
-| Feature | Python 3.8 ✅ | Python 3.10+ ❌ (DON'T USE) |
-|---------|-------------|---------------------------|
-| Union | `Union[int, str]` | `int \| str` |
-| Optional | `Optional[str]` | `str \| None` |
-| Dict (with `__future__`) | `dict[str, int]` | N/A |
-| List (with `__future__`) | `list[int]` | N/A |
+ExaBGP 6.0 requires Python 3.10+, enabling modern type annotation syntax:
 
-✅ **CORRECT:**
+✅ **CORRECT (Python 3.10+ style - preferred):**
 ```python
-from typing import Union, Optional, Dict, List
+def func(x: int | str) -> bool | None:
+    data: dict[str, list[int]] = {}
+```
+
+✅ **ALSO CORRECT (legacy style - still works):**
+```python
+from typing import Union, Optional
 def func(x: Union[int, str]) -> Optional[bool]:
-    data: Dict[str, List[int]] = {}
+    data: dict[str, list[int]] = {}
 ```
 
-❌ **WRONG:**
-```python
-def func(x: int | str) -> bool | None:  # NO - requires 3.10+
-    data: dict[str, list[int]] = {}      # NO - requires 3.9+ without __future__
-```
-
-### With `from __future__ import annotations`
-
-Most ExaBGP files have this. When present:
-```python
-from __future__ import annotations
-
-# ✅ OK - lowercase generics in annotations
-def func(x: dict[str, int]) -> list[str]: pass
-
-# ❌ STILL WRONG - pipe requires 3.10+
-def func(x: int | str) -> None: pass  # NO
-```
+**Prefer modern syntax** (`int | str`) for new code, but don't refactor existing code just for style.
 
 ---
 
@@ -145,7 +129,7 @@ Use `pack_X()` / `unpack_X()` - NO negotiated parameter.
 
 ## Quick Checklist
 
-- [ ] Python 3.8.1+ syntax (`Union`, not `|`)
+- [ ] Python 3.10+ syntax (prefer `int | str` over `Union[int, str]`)
 - [ ] `ruff format src && ruff check src` passes
 - [ ] `./qa/bin/test_everything` passes
 - [ ] No asyncio introduced

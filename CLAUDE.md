@@ -288,9 +288,9 @@ exabgp_reactor_asyncio=true ./sbin/exabgp config.conf
 
 ## Key Requirements
 
-**Python 3.8.1+ ONLY:**
-- Use `Union[int, str]` NOT `int | str`
-- Use `Optional[str]` NOT `str | None`
+**Python 3.10+ ONLY:**
+- Prefer `int | str` over `Union[int, str]`
+- Prefer `str | None` over `Optional[str]`
 - See `.claude/CODING_STANDARDS.md`
 
 **BGP Method APIs (STABLE - DO NOT CHANGE):**
@@ -324,9 +324,9 @@ Before declaring success:
 - [ ] `./qa/bin/test_everything` passes
 - [ ] `git status` reviewed
 - [ ] User approval for commit/push
-- [ ] Python 3.8+ syntax only
+- [ ] Python 3.10+ syntax
 - [ ] No asyncio introduced
 
 ---
 
-**Updated:** 2025-11-23
+**Updated:** 2025-11-26
