@@ -11,6 +11,7 @@ import time
 
 from exabgp.logger import log
 from exabgp.bgp.message import _NOP
+from exabgp.bgp.message import Message
 from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message import Notify
 
@@ -31,11 +32,11 @@ class ReceiveTimer:
         self.message = message
         self.single = False
 
-    def check_ka_timer(self, message=_NOP, ignore=_NOP.TYPE):
+    def check_ka_timer(self, message: Message = _NOP):
         if self.holdtime == 0:
             return message.TYPE != KeepAlive.TYPE
         now = int(time.time())
-        if ignore != message.TYPE:
+        if not message.IS_NOP:
             self.last_read = now
         elapsed = now - self.last_read
         if elapsed > self.holdtime:
@@ -46,8 +47,8 @@ class ReceiveTimer:
             self.last_print = now
         return True
 
-    def check_ka(self, message=_NOP, ignore=_NOP.TYPE):
-        if self.check_ka_timer(message, ignore):
+    def check_ka(self, message: Message = _NOP):
+        if self.check_ka_timer(message):
             return
         if self.single:
             raise Notify(2, 6, 'Negotiated holdtime was zero, it was invalid to send us a keepalive messages')

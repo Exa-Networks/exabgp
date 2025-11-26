@@ -21,6 +21,7 @@ from exabgp.bgp.message.message import Message
 class NOP(Message):
     ID = Message.CODE.NOP
     TYPE = bytes([Message.CODE.NOP])
+    IS_NOP = True
 
     def pack_message(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
         raise RuntimeError('NOP messages can not be sent on the wire')

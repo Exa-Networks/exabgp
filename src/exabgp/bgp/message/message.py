@@ -113,6 +113,9 @@ class Message:
     TYPE: bytes
     ID: int
 
+    # NOP indicator - True for NOP messages used as placeholders
+    IS_NOP: bool = False
+
     class CODE:
         NOP: ClassVar[_MessageCode] = _MessageCode(_MessageCode.NOP)
         OPEN: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPEN)

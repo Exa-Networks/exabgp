@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 import asyncio  # noqa: F401 - Used by async methods (_send_open_async, _read_open_async, _send_ka_async, _read_ka_async)
 from collections import defaultdict
-from typing import Any, Dict, Generator, Iterator, Optional, Set, Tuple, Union, TYPE_CHECKING
+from typing import Any, Dict, Generator, Iterator, Optional, Set, Tuple, Union, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -29,7 +29,7 @@ from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Notification
 from exabgp.bgp.message import Notify
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.reactor.protocol import Protocol
 from exabgp.reactor.delay import Delay
 from exabgp.reactor.keepalive import KA
@@ -674,20 +674,22 @@ class Peer:
 
                 # Received update
                 if message.TYPE == Update.TYPE:
+                    update = cast(Update, message)
                     number += 1
                     log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())
 
-                    for nlri in message.nlris:
-                        self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
+                    for nlri in update.nlris:
+                        self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
                         log.debug(
                             lazyformat('   UPDATE #%d nlri ' % number, nlri, str),
                             self.id(),
                         )
 
                 elif message.TYPE == RouteRefresh.TYPE:
-                    enhanced = message.reserved == RouteRefresh.request
+                    rr = cast(RouteRefresh, message)
+                    enhanced = rr.reserved == RouteRefresh.request
                     enhanced = enhanced and refresh_enhanced
-                    self.resend(enhanced, (message.afi, message.safi))
+                    self.resend(enhanced, (rr.afi, rr.safi))
 
                 # SEND OPERATIONAL
                 if self.neighbor['capability']['operational']:
@@ -741,7 +743,7 @@ class Peer:
 
                 # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
                 elif not command_eor and self.neighbor.eor:
-                    new_eor = self.neighbor.eor.popleft()
+                    new_eor = cast(Family, self.neighbor.eor.popleft())
                     command_eor = self.proto.new_eors(new_eor.afi, new_eor.safi)
 
                 if command_eor:
@@ -752,7 +754,7 @@ class Peer:
 
                 if (
                     new_routes
-                    or message.TYPE != NOP.TYPE
+                    or not message.IS_NOP
                     or self.neighbor.messages
                     or operational
                     or self.neighbor.eor
@@ -865,20 +867,22 @@ class Peer:
 
                 # Received update
                 if message.TYPE == Update.TYPE:
+                    update = cast(Update, message)
                     number += 1
                     log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())
 
-                    for nlri in message.nlris:
-                        self.neighbor.rib.incoming.update_cache(Change(nlri, message.attributes))
+                    for nlri in update.nlris:
+                        self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
                         log.debug(
                             lazyformat('   UPDATE #%d nlri ' % number, nlri, str),
                             self.id(),
                         )
 
                 elif message.TYPE == RouteRefresh.TYPE:
-                    enhanced = message.reserved == RouteRefresh.request
+                    rr = cast(RouteRefresh, message)
+                    enhanced = rr.reserved == RouteRefresh.request
                     enhanced = enhanced and refresh_enhanced
-                    self.resend(enhanced, (message.afi, message.safi))
+                    self.resend(enhanced, (rr.afi, rr.safi))
 
                 # SEND OPERATIONAL
                 if self.neighbor['capability']['operational']:
@@ -929,13 +933,13 @@ class Peer:
 
                 # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
                 elif not command_eor and self.neighbor.eor:
-                    new_eor = self.neighbor.eor.popleft()
+                    new_eor = cast(Family, self.neighbor.eor.popleft())
                     await self.proto.new_eors_async(new_eor.afi, new_eor.safi)
                     command_eor = None  # Mark as sent
 
                 if (
                     new_routes
-                    or message.TYPE != NOP.TYPE
+                    or not message.IS_NOP
                     or self.neighbor.messages
                     or operational
                     or self.neighbor.eor
