@@ -547,7 +547,34 @@ class Checker(object):
                 return True
 
         nb_options = len(self.messages)
+        received_hex = bytestream(msg.header) + bytestream(msg.body)
+
+        # Structured failure output for easier debugging
         flushed('')
+        flushed('=== MESSAGE_MISMATCH ===')
+        flushed(f'received: {received_hex}')
+        flushed(f'expected_options: {nb_options}')
+
+        idx = 0
+        for message in self.messages:
+            idx += 1
+            flushed(f'  option_{idx}: {message}')
+
+        # Get config path from environment if available
+        config_path = os.environ.get('EXABGP_TEST_CONFIG', '<config>')
+
+        flushed('')
+        flushed('Decode commands:')
+        flushed('  # Decode received message:')
+        flushed(f'  ./sbin/exabgp decode -c {config_path} "{received_hex}"')
+        if self.messages:
+            flushed('  # Decode expected option 1:')
+            flushed(f'  ./sbin/exabgp decode -c {config_path} "{self.messages[0]}"')
+
+        flushed('=== END_MISMATCH ===')
+        flushed('')
+
+        # Also show the original detailed output
         flushed('unexpected message:')
         print_payload('received', msg.header, msg.body)
 
@@ -555,8 +582,8 @@ class Checker(object):
         idx = 0
         for message in self.messages:
             idx += 1
-            msg = msg_bytes(message)
-            print_payload(f'option {idx:02}', msg[:19], msg[19:])
+            msg_data = msg_bytes(message)
+            print_payload(f'option {idx:02}', msg_data[:19], msg_data[19:])
         flushed('')
         self.rules()
         return False
