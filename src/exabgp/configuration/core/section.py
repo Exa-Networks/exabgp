@@ -13,7 +13,7 @@ from string import digits
 
 from exabgp.configuration.core.error import Error
 from exabgp.configuration.core.scope import Scope
-from exabgp.configuration.core.tokeniser import Tokeniser
+from exabgp.configuration.core.parser import Parser
 
 
 def _levenshtein(s1: str, s2: str) -> int:
@@ -78,7 +78,7 @@ class Section(Error):
     action: dict[str | tuple[Any, ...], str] = {}  # how to handle this command ( append, add, assign, route )
     assign: dict[str, str] = {}  # configuration to class variable lookup for setattr
 
-    def __init__(self, tokerniser: Tokeniser, scope: Scope, error: Error) -> None:
+    def __init__(self, tokerniser: Parser, scope: Scope, error: Error) -> None:
         Error.__init__(self)
         self.tokeniser = tokerniser
         self.scope = scope
