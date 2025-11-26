@@ -127,6 +127,16 @@ Use `pack_X()` / `unpack_X()` - NO negotiated parameter.
 
 ---
 
+## Backport Tracking (MANDATORY for Bug Fixes)
+
+After fixing ANY bug:
+1. Add entry to `.claude/BACKPORT.md`
+2. Include: date, commit hash, description, target branch
+
+**Why:** Bug fixes often need backporting to stable branches. Track them immediately.
+
+---
+
 ## Quick Checklist
 
 - [ ] Python 3.10+ syntax (prefer `int | str` over `Union[int, str]`)
@@ -135,3 +145,4 @@ Use `pack_X()` / `unpack_X()` - NO negotiated parameter.
 - [ ] No asyncio introduced
 - [ ] No FIB manipulation
 - [ ] User explicitly requested commit/push
+- [ ] Bug fix? Added to `.claude/BACKPORT.md`
