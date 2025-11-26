@@ -33,6 +33,16 @@ from typing import (
     Union,
 )
 
+try:
+    import psutil
+
+    HAVE_PSUTIL = True
+except ImportError:
+    HAVE_PSUTIL = False
+    psutil = None  # type: ignore[assignment]
+    sys.stderr.write('Warning: psutil not installed, process cleanup may be unreliable\n')
+    sys.stderr.write('Install with: pip install psutil\n')
+
 INTERPRETER: str = os.environ.get('INTERPRETER') or os.environ.get('__PYVENV_LAUNCHER__', sys.executable)
 
 
@@ -127,30 +137,28 @@ def alarm_handler(_number: int, _frame: FrameType) -> None:
 
 def cleanup_test_processes() -> int:
     """Emergency cleanup of test processes. Returns number killed."""
-    try:
-        import psutil
-
-        # Kill all test-related processes
-        patterns = ['qa/sbin/bgp', 'sbin/exabgp', 'src/exabgp/application/main', 'run/api-']
-        killed = 0
-        for proc in psutil.process_iter(['pid', 'cmdline']):
-            try:
-                cmdline = ' '.join(proc.info['cmdline'] or [])
-                if any(pattern in cmdline for pattern in patterns):
-                    if proc.pid != os.getpid():
-                        proc.terminate()
-                        killed += 1
-            except Exception:
-                continue
-
-        if killed > 0:
-            time.sleep(0.3)  # Brief wait for termination
-        return killed
-    except ImportError:
+    if not HAVE_PSUTIL:
         # No psutil, try killall
         subprocess.run(['killall', '-TERM', 'bgp'], stderr=subprocess.DEVNULL, check=False)
         subprocess.run(['killall', '-TERM', 'exabgp'], stderr=subprocess.DEVNULL, check=False)
         return 0
+
+    # Kill all test-related processes
+    patterns = ['qa/sbin/bgp', 'sbin/exabgp', 'src/exabgp/application/main', 'run/api-']
+    killed = 0
+    for proc in psutil.process_iter(['pid', 'cmdline']):
+        try:
+            cmdline = ' '.join(proc.info['cmdline'] or [])
+            if any(pattern in cmdline for pattern in patterns):
+                if proc.pid != os.getpid():
+                    proc.terminate()
+                    killed += 1
+        except Exception:
+            continue
+
+    if killed > 0:
+        time.sleep(0.3)  # Brief wait for termination
+    return killed
 
 
 def sigterm_handler(_signum: int, _frame: FrameType) -> None:
@@ -305,41 +313,54 @@ class Path:
             sys.exit('could not find the sequence daemon')
 
 
+def get_python_process_names() -> tuple:
+    """Get possible Python process names for the current interpreter."""
+    # Base names that are always checked
+    names = ['python', 'python3', 'Python']
+
+    # Add the actual interpreter name from sys.executable
+    if sys.executable:
+        exe_name = os.path.basename(sys.executable)
+        if exe_name and exe_name not in names:
+            names.append(exe_name)
+
+    return tuple(names)
+
+
 def check_concurrent_functional() -> bool:
     """
     Check if another functional test runner is already running.
 
     Returns: True if another functional process found, False otherwise
     """
-    try:
-        import psutil
-
-        current_pid = os.getpid()
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-            try:
-                cmdline_list = proc.info['cmdline'] or []
-                if not cmdline_list:
-                    continue
-
-                # Only match Python processes running the functional script directly
-                # Skip shell processes that might have the string in their command
-                if proc.info['name'] not in ('python', 'python3', 'Python'):
-                    continue
-
-                cmdline = ' '.join(cmdline_list)
-
-                # Check for another functional test runner
-                if 'qa/bin/functional' in cmdline and proc.pid != current_pid:
-                    return True
-
-            except Exception:
-                continue
-
-        return False
-
-    except ImportError:
+    if not HAVE_PSUTIL:
         # Without psutil, can't detect concurrent runs
         return False
+
+    current_pid = os.getpid()
+    python_names = get_python_process_names()
+
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            cmdline_list = proc.info['cmdline'] or []
+            if not cmdline_list:
+                continue
+
+            # Only match Python processes running the functional script directly
+            # Skip shell processes that might have the string in their command
+            if proc.info['name'] not in python_names:
+                continue
+
+            cmdline = ' '.join(cmdline_list)
+
+            # Check for another functional test runner
+            if 'qa/bin/functional' in cmdline and proc.pid != current_pid:
+                return True
+
+        except Exception:
+            continue
+
+    return False
 
 
 def cleanup_stale_processes(dry_run: bool = False) -> int:
@@ -362,72 +383,7 @@ def cleanup_stale_processes(dry_run: bool = False) -> int:
         'run/api-',  # API test scripts
     ]
 
-    try:
-        import psutil
-
-        # Get PIDs of all functional test runners (don't kill these or their direct children)
-        functional_pids = set()
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-            try:
-                cmdline_list = proc.info['cmdline'] or []
-                if not cmdline_list:
-                    continue
-                cmdline = ' '.join(cmdline_list)
-                if 'qa/bin/functional' in cmdline:
-                    functional_pids.add(proc.pid)
-            except Exception:
-                continue
-
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'ppid']):
-            try:
-                cmdline_list = proc.info['cmdline'] or []
-                if not cmdline_list:
-                    continue
-
-                cmdline = ' '.join(cmdline_list)
-
-                # Skip current process
-                if proc.pid == os.getpid():
-                    continue
-
-                # Skip other functional test runners
-                if proc.pid in functional_pids:
-                    continue
-
-                # Skip direct children of ACTIVE functional test runners
-                ppid = proc.info.get('ppid')
-                if ppid and ppid in functional_pids:
-                    continue
-
-                # Check if process matches test patterns
-                if any(pattern in cmdline for pattern in patterns):
-                    # Additional check: is parent process still alive?
-                    # If parent is dead, this is definitely an orphan
-                    parent_alive = False
-                    if ppid:
-                        try:
-                            parent = psutil.Process(ppid)
-                            parent_alive = parent.is_running()
-                        except Exception:
-                            parent_alive = False
-
-                    if dry_run:
-                        orphan_status = ' [ORPHAN]' if not parent_alive else ''
-                        flush(f'[cleanup] Would terminate: PID {proc.pid}{orphan_status} - {cmdline[:80]}')
-                    else:
-                        # Use SIGTERM (not SIGKILL) so process can detect and report being killed
-                        proc.terminate()  # SIGTERM
-                        try:
-                            proc.wait(timeout=2)
-                        except psutil.TimeoutExpired:
-                            # If SIGTERM didn't work after 2s, force kill
-                            proc.kill()  # SIGKILL
-                    killed += 1
-
-            except Exception:  # psutil.NoSuchProcess, psutil.AccessDenied, etc
-                continue
-
-    except ImportError:
+    if not HAVE_PSUTIL:
         # psutil not available, use killall fallback (less safe with concurrent runs)
         # Use SIGTERM (-15) instead of SIGKILL (-9)
         patterns_simple = ['bgp', 'exabgp']
@@ -444,6 +400,69 @@ def cleanup_stale_processes(dry_run: bool = False) -> int:
                     subprocess.run(['killall', '-9', '-q', pattern], timeout=1, stderr=subprocess.DEVNULL, check=False)
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 pass
+        return killed
+
+    # Get PIDs of all functional test runners (don't kill these or their direct children)
+    functional_pids = set()
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            cmdline_list = proc.info['cmdline'] or []
+            if not cmdline_list:
+                continue
+            cmdline = ' '.join(cmdline_list)
+            if 'qa/bin/functional' in cmdline:
+                functional_pids.add(proc.pid)
+        except Exception:
+            continue
+
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'ppid']):
+        try:
+            cmdline_list = proc.info['cmdline'] or []
+            if not cmdline_list:
+                continue
+
+            cmdline = ' '.join(cmdline_list)
+
+            # Skip current process
+            if proc.pid == os.getpid():
+                continue
+
+            # Skip other functional test runners
+            if proc.pid in functional_pids:
+                continue
+
+            # Skip direct children of ACTIVE functional test runners
+            ppid = proc.info.get('ppid')
+            if ppid and ppid in functional_pids:
+                continue
+
+            # Check if process matches test patterns
+            if any(pattern in cmdline for pattern in patterns):
+                # Additional check: is parent process still alive?
+                # If parent is dead, this is definitely an orphan
+                parent_alive = False
+                if ppid:
+                    try:
+                        parent = psutil.Process(ppid)
+                        parent_alive = parent.is_running()
+                    except Exception:
+                        parent_alive = False
+
+                if dry_run:
+                    orphan_status = ' [ORPHAN]' if not parent_alive else ''
+                    flush(f'[cleanup] Would terminate: PID {proc.pid}{orphan_status} - {cmdline[:80]}')
+                else:
+                    # Use SIGTERM (not SIGKILL) so process can detect and report being killed
+                    proc.terminate()  # SIGTERM
+                    try:
+                        proc.wait(timeout=2)
+                    except psutil.TimeoutExpired:
+                        # If SIGTERM didn't work after 2s, force kill
+                        proc.kill()  # SIGKILL
+                killed += 1
+
+        except Exception:  # psutil.NoSuchProcess, psutil.AccessDenied, etc
+            continue
 
     return killed
 
@@ -524,15 +543,13 @@ class Exec:
         if self._process is None:
             return []
 
-        try:
-            import psutil
+        if not HAVE_PSUTIL:
+            return []
 
+        try:
             parent = psutil.Process(self._process.pid)
             children = parent.children(recursive=True)
             return [parent] + children
-        except ImportError:
-            # psutil not available, return empty list
-            return []
         except Exception:  # psutil.NoSuchProcess or others
             return []
 
@@ -548,14 +565,12 @@ class Exec:
         if self._process is None:
             return 0
 
-        processes = self._get_process_tree()
-        if not processes:
-            # psutil not available or process already gone
+        if not HAVE_PSUTIL:
             return 0
 
-        try:
-            import psutil
-        except ImportError:
+        processes = self._get_process_tree()
+        if not processes:
+            # Process already gone
             return 0
 
         killed = 0
@@ -1324,9 +1339,7 @@ class EncodingTests(Tests):
 
         Uses SIGTERM first (not SIGKILL) so processes can detect being killed.
         """
-        try:
-            import psutil
-        except ImportError:
+        if not HAVE_PSUTIL:
             # Fallback to killall if psutil not available
             # Try SIGTERM first
             subprocess.run(['killall', '-15', '-q', 'bgp'], stderr=subprocess.DEVNULL, check=False)
@@ -1389,9 +1402,7 @@ class EncodingTests(Tests):
         signal.signal(signal.SIGINT, sigint_handler)
 
         # Require psutil for reliable process cleanup
-        try:
-            import psutil  # noqa: F401
-        except ImportError:
+        if not HAVE_PSUTIL:
             flush('')
             flush('=' * 60)
             flush('ERROR: psutil is required for functional tests')
@@ -1962,7 +1973,7 @@ def run_stress_test(
     flush('=' * 50)
     flush('SUMMARY')
     flush('=' * 50)
-    flush(f'Passed: {passed}/{count} ({100*passed/count:.1f}%)')
+    flush(f'Passed: {passed}/{count} ({100 * passed / count:.1f}%)')
     if failed > 0:
         flush(f'\033[31mFailed\033[0m: {failed} (runs {", ".join(map(str, failed_runs))})')
 
@@ -2014,7 +2025,9 @@ def add_test(
     if 'port' in extra:
         sub.add_argument('--port', help='base port to use', type=int, default=1790)
     if 'save' in extra:
-        sub.add_argument('--save', help='save run logs to directory (for debugging intermittent failures)', type=str, default=None)
+        sub.add_argument(
+            '--save', help='save run logs to directory (for debugging intermittent failures)', type=str, default=None
+        )
     if 'stress' in extra:
         sub.add_argument('--stress', help='run test N times and report statistics', type=int, default=None)
     sub.add_argument('test', help='name of the test(s) to run', nargs='*', default=None)
