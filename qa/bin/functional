@@ -356,10 +356,10 @@ def cleanup_stale_processes(dry_run: bool = False) -> int:
     """
     killed = 0
     patterns = [
-        'qa/sbin/bgp',                  # Leftover test servers
-        'sbin/exabgp',                  # Leftover ExaBGP instances (command line)
+        'qa/sbin/bgp',  # Leftover test servers
+        'sbin/exabgp',  # Leftover ExaBGP instances (command line)
         'src/exabgp/application/main',  # Leftover ExaBGP instances (Python module)
-        'run/api-',                     # API test scripts
+        'run/api-',  # API test scripts
     ]
 
     try:
@@ -412,8 +412,8 @@ def cleanup_stale_processes(dry_run: bool = False) -> int:
                             parent_alive = False
 
                     if dry_run:
-                        orphan_status = " [ORPHAN]" if not parent_alive else ""
-                        flush(f"[cleanup] Would terminate: PID {proc.pid}{orphan_status} - {cmdline[:80]}")
+                        orphan_status = ' [ORPHAN]' if not parent_alive else ''
+                        flush(f'[cleanup] Would terminate: PID {proc.pid}{orphan_status} - {cmdline[:80]}')
                     else:
                         # Use SIGTERM (not SIGKILL) so process can detect and report being killed
                         proc.terminate()  # SIGTERM
@@ -881,6 +881,51 @@ class Tests:
             '\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N passed N failed N [failed test IDs] pending N [pending test IDs]\n'
         )
 
+    def _extract_sent_messages(self, client_stderr: str) -> List[str]:
+        """Extract BGP messages sent by client from stderr log"""
+        sent = []
+        for line in client_stderr.split('\n'):
+            if 'sending TCP payload' in line:
+                # Format: "sending TCP payload ( 110) FFFF FFFF..."
+                # Extract hex after the size
+                parts = line.split(')')
+                if len(parts) > 1:
+                    hex_part = parts[1].strip().replace(' ', '')
+                    if hex_part:
+                        sent.append(hex_part)
+        return sent
+
+    def _read_expected_messages(self, msg_file: str) -> List[str]:
+        """Read expected messages from .msg file"""
+        messages = []
+        try:
+            with open(msg_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and not line.startswith('option:'):
+                        # Extract the hex part: "1:raw:FFFF...:0017:02:..." -> full hex
+                        parts = line.split(':', 2)
+                        if len(parts) >= 3 and parts[1] == 'raw':
+                            hex_msg = parts[2].replace(':', '')
+                            messages.append(hex_msg)
+        except Exception:
+            pass
+        return messages
+
+    def _classify_failure(self, server: Optional['Exec'], client: Optional['Exec']) -> str:
+        """Classify the type of failure for clearer debugging"""
+        if server and server.code == -1:
+            return 'TIMEOUT (server never received messages or crashed)'
+        if server and server.stdout:
+            stdout = server.stdout.decode('utf-8', errors='replace')
+            if 'unexpected message' in stdout:
+                return 'MESSAGE_MISMATCH (received message differs from expected)'
+            if 'received extra message' in stdout:
+                return 'EXTRA_MESSAGE (more messages received than expected)'
+        if client and client.code != 0:
+            return f'CLIENT_ERROR (client exited with code {client.code})'
+        return 'UNKNOWN (check server/client output below)'
+
     def _print_debug_output(
         self,
         server: Optional['Exec'],
@@ -891,48 +936,114 @@ class Tests:
         if (not server and not client) or num_tests_selected != 1:
             return
 
+        # Find the test that was run (the one that's not skipped)
+        test = None
+        for t in self.registered():
+            if t.state != State.SKIP:
+                test = t
+                break
+
         flush()
         flush('=' * 60)
-        flush('DEBUG OUTPUT (Single Test Mode)')
+        flush('FAILURE ANALYSIS (Single Test Mode)')
         flush('=' * 60)
 
-        if server:
+        # Classify failure type
+        failure_type = self._classify_failure(server, client)
+        flush(f'Failure type: {failure_type}')
+        flush()
+
+        # Show test files if we have test info
+        if test and hasattr(test, 'conf'):
+            flush('Test files:')
+            if 'confs' in test.conf:
+                for conf in test.conf['confs']:
+                    flush(f'  config: {conf}')
+            if 'msg' in test.conf:
+                flush(f'  expected: {test.conf["msg"]}')
             flush()
+
+            # Show expected messages
+            if 'msg' in test.conf:
+                expected = self._read_expected_messages(test.conf['msg'])
+                if expected:
+                    flush(f'Expected messages ({len(expected)} total):')
+                    for i, msg in enumerate(expected, 1):
+                        # Truncate long messages but show enough to identify
+                        display_msg = msg if len(msg) <= 100 else msg[:100] + '...'
+                        flush(f'  {i}: {display_msg}')
+                    flush()
+
+        # Show server/client status
+        flush('Process status:')
+        if server:
+            flush(f'  Server: return_code={server.code}')
+        if client:
+            flush(f'  Client: return_code={client.code}')
+        flush()
+
+        # Extract and show what client sent
+        if client and client.stderr:
+            client_stderr = client.stderr.decode('utf-8', errors='replace')
+            sent = self._extract_sent_messages(client_stderr)
+            if sent:
+                flush(f'Client sent ({len(sent)} messages):')
+                for i, msg in enumerate(sent, 1):
+                    display_msg = msg if len(msg) <= 100 else msg[:100] + '...'
+                    flush(f'  {i}: {display_msg}')
+                flush()
+
+        # Generate decode commands
+        if test and hasattr(test, 'conf') and 'confs' in test.conf:
+            config_file = test.conf['confs'][0] if test.conf['confs'] else None
+            if config_file:
+                flush('Decode commands (copy-paste to compare messages):')
+                flush('  # Decode a received/sent message:')
+                flush(f'  ./sbin/exabgp decode -c {config_file} "<hex>"')
+                flush()
+
+        # Manual debug commands
+        if test:
+            flush('Manual debug (run in separate terminals):')
+            flush('  # Terminal 1 - Start server first:')
+            flush(f'  ./qa/bin/functional encoding --server {test.nick}')
+            flush('  # Terminal 2 - Then start client:')
+            flush(f'  ./qa/bin/functional encoding --client {test.nick}')
+            flush()
+
+        # Show raw server output if it has useful info
+        if server:
+            flush('-' * 60)
             flush('SERVER OUTPUT:')
             flush('-' * 60)
             flush(f'Command: {server.command}')
             flush(f'Return code: {server.code}')
-            flush('STDOUT:')
             if server.stdout:
-                flush(server.stdout.decode('utf-8', errors='replace'))
+                stdout = server.stdout.decode('utf-8', errors='replace')
+                flush('STDOUT:')
+                flush(stdout)
             else:
-                flush('(empty)')
-            flush('STDERR:')
+                flush('STDOUT: (empty)')
             if server.stderr:
+                flush('STDERR:')
                 flush(server.stderr.decode('utf-8', errors='replace'))
-            else:
-                flush('(empty)')
-            if server.message:
-                flush(f'Message: {server.message}')
 
+        # Show filtered client output (skip keepalive timer spam)
         if client:
-            flush()
-            flush('CLIENT OUTPUT:')
+            flush('-' * 60)
+            flush('CLIENT OUTPUT (filtered):')
             flush('-' * 60)
             flush(f'Command: {client.command}')
             flush(f'Return code: {client.code}')
-            flush('STDOUT:')
-            if client.stdout:
-                flush(client.stdout.decode('utf-8', errors='replace'))
-            else:
-                flush('(empty)')
-            flush('STDERR:')
             if client.stderr:
-                flush(client.stderr.decode('utf-8', errors='replace'))
-            else:
-                flush('(empty)')
-            if client.message:
-                flush(f'Message: {client.message}')
+                stderr = client.stderr.decode('utf-8', errors='replace')
+                # Filter out keepalive timer lines for cleaner output
+                filtered_lines = []
+                for line in stderr.split('\n'):
+                    if 'receive-timer' in line or 'send-timer' in line:
+                        continue
+                    filtered_lines.append(line)
+                flush('\n'.join(filtered_lines))
 
     def _print_summary_results(
         self,
@@ -976,6 +1087,14 @@ class Tests:
         if total_run > 0:
             success_rate = (len(passed) / total_run) * 100 if total_run > 0 else 0
             flush(f'Total: {total_run} test(s) run, {success_rate:.1f}% passed')
+
+        # Add hint to debug failed tests individually
+        all_failed = failed + timed_out
+        if all_failed and total_run > 1:
+            flush()
+            flush('To debug failed tests, run individually:')
+            for nick in all_failed:
+                flush(f'  ./qa/bin/functional encoding {nick}')
 
         flush()
 
@@ -1134,10 +1253,14 @@ class EncodingTests(Tests):
             sys.exit('no such test')
         test = self.get_by_nick(nick)
 
+        # Pass config file path for decode commands in mismatch output
+        config_file = test.conf['confs'][0] if test.conf.get('confs') else ''
+
         config = {
             'env': ' \\\n  '.join(
                 [
                     'exabgp_tcp_port=%d' % test.conf['port'],
+                    f'EXABGP_TEST_CONFIG={config_file}',
                 ]
             ),
             'interpreter': INTERPRETER,
@@ -1290,7 +1413,7 @@ class EncodingTests(Tests):
         # Pre-flight cleanup: kill any stale processes from previous failed runs
         stale_count = cleanup_stale_processes()
         if stale_count > 0:
-            flush(f"[cleanup] Killed {stale_count} stale process(es) from previous run")
+            flush(f'[cleanup] Killed {stale_count} stale process(es) from previous run')
             time.sleep(0.5)  # Give OS time to release resources
 
         success = True
