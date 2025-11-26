@@ -110,7 +110,7 @@ cat qa/encoding/test.ci  # Get config path
 ./qa/bin/functional encoding --short-list  # List tests
 ./qa/bin/functional encoding               # Run all
 ./qa/bin/functional encoding A             # Run test A
-killall -9 python                          # Clean up ports
+killall -9 Python                          # Clean up ports (macOS uses capital P)
 ```
 
 ---

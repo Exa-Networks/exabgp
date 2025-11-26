@@ -22,6 +22,377 @@ from struct import unpack, pack
 from enum import Enum
 
 
+# Global verbose flag - default True, set False by --terse
+VERBOSE = True
+
+# Session start time for elapsed timing
+SESSION_START = None
+
+
+class Color:
+    """ANSI color codes for terminal output (only used when --verbose)"""
+
+    RESET = '\033[0m'
+    CYAN = '\033[36m'
+    GREEN = '\033[32m'
+    RED = '\033[31m'
+    YELLOW = '\033[33m'
+    MAGENTA = '\033[35m'
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+
+    @classmethod
+    def cyan(cls, text):
+        return f'{cls.CYAN}{text}{cls.RESET}' if VERBOSE else text
+
+    @classmethod
+    def green(cls, text):
+        return f'{cls.GREEN}{text}{cls.RESET}' if VERBOSE else text
+
+    @classmethod
+    def red(cls, text):
+        return f'{cls.RED}{text}{cls.RESET}' if VERBOSE else text
+
+    @classmethod
+    def yellow(cls, text):
+        return f'{cls.YELLOW}{text}{cls.RESET}' if VERBOSE else text
+
+    @classmethod
+    def magenta(cls, text):
+        return f'{cls.MAGENTA}{text}{cls.RESET}' if VERBOSE else text
+
+    @classmethod
+    def bold(cls, text):
+        return f'{cls.BOLD}{text}{cls.RESET}' if VERBOSE else text
+
+    @classmethod
+    def dim(cls, text):
+        return f'{cls.DIM}{text}{cls.RESET}' if VERBOSE else text
+
+
+def get_elapsed():
+    """Return elapsed time since session start"""
+    global SESSION_START
+    if SESSION_START is None:
+        SESSION_START = time.time()
+    return time.time() - SESSION_START
+
+
+def timestamp():
+    """Return formatted timestamp string"""
+    return f'[{get_elapsed():7.3f}s]' if VERBOSE else ''
+
+
+# BGP Message type names
+MSG_TYPES = {
+    1: 'OPEN',
+    2: 'UPDATE',
+    3: 'NOTIFICATION',
+    4: 'KEEPALIVE',
+    5: 'ROUTE-REFRESH',
+}
+
+# BGP Path Attribute names
+ATTR_NAMES = {
+    1: 'ORIGIN',
+    2: 'AS_PATH',
+    3: 'NEXT_HOP',
+    4: 'MED',
+    5: 'LOCAL_PREF',
+    6: 'ATOMIC_AGGR',
+    7: 'AGGREGATOR',
+    8: 'COMMUNITY',
+    9: 'ORIGINATOR_ID',
+    10: 'CLUSTER_LIST',
+    14: 'MP_REACH_NLRI',
+    15: 'MP_UNREACH_NLRI',
+    16: 'EXT_COMMUNITY',
+    17: 'AS4_PATH',
+    18: 'AS4_AGGREGATOR',
+    22: 'PMSI_TUNNEL',
+    23: 'TUNNEL_ENCAP',
+    25: 'TRAFFIC_ENG',
+    26: 'IPV6_EXT_COMMUNITY',
+    29: 'AIGP',
+    32: 'LARGE_COMMUNITY',
+    35: 'BGP_PREFIX_SID',
+    40: 'ATTR_SET',
+}
+
+# Notification error codes
+NOTIFY_CODES = {
+    1: 'Message Header Error',
+    2: 'OPEN Message Error',
+    3: 'UPDATE Message Error',
+    4: 'Hold Timer Expired',
+    5: 'FSM Error',
+    6: 'Cease',
+}
+
+
+class OutputBuffer:
+    """Buffer output and print all at once to avoid interfering with asyncio"""
+
+    def __init__(self):
+        self.lines = []
+        self.start_time = None
+
+    def add(self, line):
+        if self.start_time is None:
+            self.start_time = time.time()
+        elapsed = time.time() - self.start_time
+        self.lines.append((elapsed, line))
+
+    def flush(self):
+        for elapsed, line in self.lines:
+            if VERBOSE:
+                flushed(f'[{elapsed:7.3f}s] {line}')
+            else:
+                flushed(line)
+        self.lines = []
+
+
+def format_hex_block(data, bytes_per_line=16):
+    """Format hex data in a nice block with offset and ASCII"""
+    if isinstance(data, str):
+        # Convert hex string to bytes
+        data = bytes.fromhex(data)
+
+    lines = []
+    for offset in range(0, len(data), bytes_per_line):
+        chunk = data[offset : offset + bytes_per_line]
+        hex_part = ' '.join(f'{b:02X}' for b in chunk)
+        # Pad hex part to fixed width
+        hex_part = hex_part.ljust(bytes_per_line * 3 - 1)
+        # ASCII representation
+        ascii_part = ''.join(chr(b) if 32 <= b < 127 else '.' for b in chunk)
+        lines.append(f'  {offset:04X}  {hex_part}  |{ascii_part}|')
+    return lines
+
+
+def parse_bgp_message(header, body):
+    """Parse BGP message and return structured info"""
+    if isinstance(header, (bytes, bytearray)):
+        header = bytestream(header)
+    if isinstance(body, (bytes, bytearray)):
+        body = bytestream(body)
+
+    full_msg = header + body
+    msg_bytes = bytes.fromhex(full_msg)
+
+    # Header: 16 marker + 2 length + 1 type
+    length = int(header[32:36], 16)
+    msg_type = int(header[36:38], 16)
+    type_name = MSG_TYPES.get(msg_type, f'UNKNOWN({msg_type})')
+
+    result = {
+        'type': msg_type,
+        'type_name': type_name,
+        'length': length,
+        'raw': full_msg,
+        'raw_bytes': msg_bytes,
+        'details': [],
+    }
+
+    body_bytes = bytes.fromhex(body) if body else b''
+
+    if msg_type == 1:  # OPEN
+        result['details'] = parse_open(body_bytes)
+    elif msg_type == 2:  # UPDATE
+        result['details'] = parse_update(body_bytes)
+    elif msg_type == 3:  # NOTIFICATION
+        result['details'] = parse_notification(body_bytes)
+    elif msg_type == 4:  # KEEPALIVE
+        result['details'] = ['(no body)']
+
+    return result
+
+
+def parse_open(body):
+    """Parse OPEN message body"""
+    if len(body) < 10:
+        return [f'Invalid OPEN (too short: {len(body)} bytes)']
+
+    version = body[0]
+    asn = (body[1] << 8) | body[2]
+    hold_time = (body[3] << 8) | body[4]
+    router_id = '.'.join(str(b) for b in body[5:9])
+    opt_len = body[9]
+
+    details = [
+        f'Version: {version}',
+        f'ASN: {asn}',
+        f'Hold Time: {hold_time}s',
+        f'Router ID: {router_id}',
+        f'Opt Params: {opt_len} bytes',
+    ]
+    return details
+
+
+def parse_update(body):
+    """Parse UPDATE message body"""
+    if len(body) < 4:
+        if len(body) == 0:
+            return ['(empty - EOR marker)']
+        return [f'Invalid UPDATE (too short: {len(body)} bytes)']
+
+    details = []
+    offset = 0
+
+    # Withdrawn routes length
+    withdrawn_len = (body[0] << 8) | body[1]
+    offset = 2
+    details.append(f'Withdrawn: {withdrawn_len} bytes')
+
+    if withdrawn_len > 0:
+        withdrawn_data = body[offset : offset + withdrawn_len]
+        routes = parse_nlri(withdrawn_data)
+        for r in routes:
+            details.append(f'  -{r}')
+    offset += withdrawn_len
+
+    # Path attributes length
+    if offset + 2 > len(body):
+        return details + ['(truncated)']
+
+    attr_len = (body[offset] << 8) | body[offset + 1]
+    offset += 2
+    details.append(f'Path Attrs: {attr_len} bytes')
+
+    if attr_len > 0:
+        attr_data = body[offset : offset + attr_len]
+        attrs = parse_attributes(attr_data)
+        for a in attrs:
+            details.append(f'  {a}')
+    offset += attr_len
+
+    # NLRI
+    nlri_len = len(body) - offset
+    if nlri_len > 0:
+        details.append(f'NLRI: {nlri_len} bytes')
+        nlri_data = body[offset:]
+        routes = parse_nlri(nlri_data)
+        for r in routes:
+            details.append(f'  +{r}')
+    elif nlri_len == 0 and withdrawn_len == 0 and attr_len == 0:
+        details = ['EOR: IPv4 Unicast']
+
+    return details
+
+
+def parse_nlri(data):
+    """Parse NLRI (prefix list)"""
+    routes = []
+    offset = 0
+    while offset < len(data):
+        prefix_len = data[offset]
+        offset += 1
+        prefix_bytes = (prefix_len + 7) // 8
+        if offset + prefix_bytes > len(data):
+            routes.append('(truncated)')
+            break
+        prefix_data = data[offset : offset + prefix_bytes]
+        offset += prefix_bytes
+        # Pad to 4 bytes for IPv4
+        prefix_padded = prefix_data + b'\x00' * (4 - len(prefix_data))
+        prefix = '.'.join(str(b) for b in prefix_padded[:4])
+        routes.append(f'{prefix}/{prefix_len}')
+    return routes
+
+
+def parse_attributes(data):
+    """Parse path attributes - just name, size, payload hex"""
+    attrs = []
+    offset = 0
+    while offset < len(data):
+        if offset + 2 > len(data):
+            attrs.append('(truncated)')
+            break
+
+        flags = data[offset]
+        type_code = data[offset + 1]
+        offset += 2
+
+        # Extended length?
+        if flags & 0x10:
+            if offset + 2 > len(data):
+                attrs.append('(truncated)')
+                break
+            attr_len = (data[offset] << 8) | data[offset + 1]
+            offset += 2
+        else:
+            if offset + 1 > len(data):
+                attrs.append('(truncated)')
+                break
+            attr_len = data[offset]
+            offset += 1
+
+        attr_name = ATTR_NAMES.get(type_code, f'ATTR_{type_code}')
+
+        if offset + attr_len > len(data):
+            attrs.append(f'{attr_name}: {attr_len} bytes (truncated)')
+            break
+
+        payload = data[offset : offset + attr_len]
+        payload_hex = ' '.join(f'{b:02X}' for b in payload[:16])
+        if len(payload) > 16:
+            payload_hex += '...'
+
+        attrs.append(f'{attr_name}: {attr_len} bytes [{payload_hex}]')
+        offset += attr_len
+
+    return attrs
+
+
+def parse_notification(body):
+    """Parse NOTIFICATION message"""
+    if len(body) < 2:
+        return [f'Invalid NOTIFICATION (too short: {len(body)} bytes)']
+
+    error_code = body[0]
+    error_subcode = body[1]
+    error_name = NOTIFY_CODES.get(error_code, f'Unknown({error_code})')
+
+    details = [
+        f'Error: {error_name}',
+        f'Subcode: {error_subcode}',
+    ]
+
+    if len(body) > 2:
+        data = body[2:]
+        data_hex = ' '.join(f'{b:02X}' for b in data[:32])
+        if len(data) > 32:
+            data_hex += '...'
+        details.append(f'Data: {len(data)} bytes [{data_hex}]')
+
+    return details
+
+
+def format_message_detailed(header, body, prefix=''):
+    """Format a BGP message with full details - returns list of lines"""
+    parsed = parse_bgp_message(header, body)
+    lines = []
+
+    # Header line with type and length
+    type_colored = Color.cyan(parsed['type_name'])
+    lines.append(f'{prefix}{type_colored} ({parsed["length"]} bytes)')
+
+    # Details with tree structure
+    details = parsed['details']
+    for i, detail in enumerate(details):
+        is_last = i == len(details) - 1
+        prefix_char = '└─' if is_last else '├─'
+        lines.append(f'{prefix}  {prefix_char} {detail}')
+
+    # Raw hex block
+    lines.append(f'{prefix}  Raw:')
+    hex_lines = format_hex_block(parsed['raw_bytes'])
+    for hl in hex_lines:
+        lines.append(f'{prefix}  {hl}')
+
+    return lines
+
+
 class FSM(Enum):
     BUG = 0
     OPEN = 1
@@ -64,7 +435,52 @@ def format_message(header, body):
 
 
 def print_payload(prefix, header, body):
-    print_rule(prefix, bytestream(header) + bytestream(body))
+    """Print BGP message with nice formatting"""
+    if isinstance(header, (bytes, bytearray)):
+        header_hex = bytestream(header)
+    else:
+        header_hex = header
+    if isinstance(body, (bytes, bytearray)):
+        body_hex = bytestream(body)
+    else:
+        body_hex = body
+
+    full_hex = header_hex + body_hex
+
+    # Parse message type and length from header
+    msg_type = int(header_hex[36:38], 16) if len(header_hex) >= 38 else 0
+    msg_len = int(header_hex[32:36], 16) if len(header_hex) >= 36 else 0
+    type_name = MSG_TYPES.get(msg_type, f'TYPE_{msg_type}')
+
+    # Header line: prefix + type + length
+    type_colored = Color.cyan(type_name)
+    flushed(f'{prefix:12}{type_colored} ({msg_len} bytes)')
+
+    # Parse and show details based on message type
+    body_bytes = bytes.fromhex(body_hex) if body_hex else b''
+
+    if msg_type == 1:  # OPEN
+        details = parse_open(body_bytes)
+    elif msg_type == 2:  # UPDATE
+        details = parse_update(body_bytes)
+    elif msg_type == 3:  # NOTIFICATION
+        details = parse_notification(body_bytes)
+    elif msg_type == 4:  # KEEPALIVE
+        details = []
+    else:
+        details = [f'{len(body_bytes)} bytes payload']
+
+    # Print details with tree structure
+    for i, detail in enumerate(details):
+        is_last = i == len(details) - 1
+        prefix_char = '└─' if is_last else '├─'
+        flushed(f'{"":12}  {prefix_char} {detail}')
+
+    # Print raw hex nicely
+    raw_bytes = bytes.fromhex(full_hex)
+    hex_lines = format_hex_block(raw_bytes)
+    for hl in hex_lines:
+        flushed(f'{"":12}{hl}')
 
 
 def print_rule(prefix, rule):
@@ -85,6 +501,54 @@ def dump(value):
             even = not even
 
     return ''.join(spaced(value))
+
+
+def hex_diff(received, expected):
+    """Show hex diff between received and expected messages (only in verbose mode)"""
+    if not VERBOSE:
+        return
+
+    # Normalize to uppercase
+    received = received.upper()
+    expected = expected.upper()
+
+    # Find first difference
+    first_diff = -1
+    for i in range(min(len(received), len(expected))):
+        if received[i] != expected[i]:
+            first_diff = i
+            break
+
+    if first_diff == -1 and len(received) != len(expected):
+        first_diff = min(len(received), len(expected))
+
+    if first_diff == -1:
+        flushed(f'{timestamp()} {Color.green("Messages match")}')
+        return
+
+    # Format output showing difference location
+    flushed(f'{timestamp()} {Color.red("First difference at byte offset")} {first_diff // 2}')
+
+    # Show context around the difference (16 bytes before and after)
+    ctx_start = max(0, (first_diff // 2 - 8) * 2)
+    ctx_end = min(max(len(received), len(expected)), (first_diff // 2 + 8) * 2)
+
+    # Build colored diff output
+    recv_part = ''
+    exp_part = ''
+    for i in range(ctx_start, ctx_end, 2):
+        r_byte = received[i : i + 2] if i + 2 <= len(received) else '--'
+        e_byte = expected[i : i + 2] if i + 2 <= len(expected) else '--'
+
+        if r_byte != e_byte:
+            recv_part += Color.red(r_byte) + ' '
+            exp_part += Color.green(e_byte) + ' '
+        else:
+            recv_part += Color.dim(r_byte) + ' '
+            exp_part += Color.dim(e_byte) + ' '
+
+    flushed(f'  received: {recv_part.strip()}')
+    flushed(f'  expected: {exp_part.strip()}')
 
 
 def cdr_to_length(cidr):
@@ -405,17 +869,9 @@ class Checker(object):
             indent(message)
 
     def rules(self):
-        flushed('rules:')
-        idx = 0
-        for messages in self.sequences:
-            if idx:
-                flushed('')
-            idx += 1
-            for message in messages:
-                if message.startswith('F' * 32):
-                    print_rule(f'       {idx:02}', f'{message}')
-                    continue
-                print_prefixed(f'       {idx:02}', f'{message}')
+        """Show summary of expected messages"""
+        total = sum(len(msgs) for msgs in self.sequences)
+        flushed(f'expecting {total} message(s) in {len(self.sequences)} sequence(s)')
 
     # split all the messages and group them with the provided index
     # 1:raw:<raw bgp>
@@ -539,53 +995,108 @@ class Checker(object):
                 received = received[32:]
 
             if check == received:
+                num_options = len(self.messages)
                 self.messages.remove(check)
                 if msg.is_update() and not msg.is_eor():
                     self.updates_seen.append((msg.header, msg.body))
 
+                # Show expected and received together on match
+                flushed('')
+                ts = timestamp()
+                flushed(f'{ts} {Color.green("─" * 50)}' if ts else Color.green('─' * 60))
+
+                if num_options == 1:
+                    # Single expected - show it
+                    check_bytes = msg_bytes(check)
+                    flushed(f'{ts} {Color.dim("expected:")}' if ts else Color.dim('expected:'))
+                    print_payload('', check_bytes[:19], check_bytes[19:])
+                else:
+                    # Multiple options - just show count
+                    msg_text = Color.dim(f'expected: (matched 1 of {num_options} options)')
+                    flushed(f'{ts} {msg_text}' if ts else msg_text)
+
+                match_text = Color.green('received:') + ' ' + Color.green('✓ MATCH')
+                flushed(f'{ts} {match_text}' if ts else match_text)
+                print_payload('', msg.header, msg.body)
+
                 self.perform_actions_if_required(writer, msg)
                 return True
 
+        # Mismatch - buffer all output and print at once
+        buffer = OutputBuffer()
         nb_options = len(self.messages)
         received_hex = bytestream(msg.header) + bytestream(msg.body)
 
-        # Structured failure output for easier debugging
-        flushed('')
-        flushed('=== MESSAGE_MISMATCH ===')
-        flushed(f'received: {received_hex}')
-        flushed(f'expected_options: {nb_options}')
+        buffer.add('')
+        buffer.add(Color.red('=' * 60))
+        buffer.add(Color.red('MESSAGE MISMATCH'))
+        buffer.add(Color.red('=' * 60))
 
-        idx = 0
-        for message in self.messages:
-            idx += 1
-            flushed(f'  option_{idx}: {message}')
+        # Received message - detailed view
+        buffer.add('')
+        buffer.add(Color.cyan('RECEIVED MESSAGE:'))
+        for line in format_message_detailed(msg.header, msg.body, prefix='  '):
+            buffer.add(line)
 
-        # Get config path from environment if available
-        config_path = os.environ.get('EXABGP_TEST_CONFIG', '<config>')
-
-        flushed('')
-        flushed('Decode commands:')
-        flushed('  # Decode received message:')
-        flushed(f'  ./sbin/exabgp decode -c {config_path} "{received_hex}"')
-        if self.messages:
-            flushed('  # Decode expected option 1:')
-            flushed(f'  ./sbin/exabgp decode -c {config_path} "{self.messages[0]}"')
-
-        flushed('=== END_MISMATCH ===')
-        flushed('')
-
-        # Also show the original detailed output
-        flushed('unexpected message:')
-        print_payload('received', msg.header, msg.body)
-
-        flushed(f'\ncounting {nb_options} valid option(s):')
-        idx = 0
-        for message in self.messages:
-            idx += 1
+        # Expected options - detailed view
+        buffer.add('')
+        buffer.add(Color.green(f'EXPECTED OPTIONS ({nb_options}):'))
+        for idx, message in enumerate(self.messages, 1):
+            buffer.add(f'  Option {idx}:')
             msg_data = msg_bytes(message)
-            print_payload(f'option {idx:02}', msg_data[:19], msg_data[19:])
-        flushed('')
-        self.rules()
+            for line in format_message_detailed(msg_data[:19], msg_data[19:], prefix='    '):
+                buffer.add(line)
+
+        # Hex diff for first option
+        if self.messages:
+            buffer.add('')
+            buffer.add(Color.yellow('DIFFERENCE:'))
+            # Inline hex_diff output to buffer
+            expected_hex = self.messages[0].upper()
+            received_upper = received_hex.upper()
+
+            first_diff = -1
+            for i in range(min(len(received_upper), len(expected_hex))):
+                if received_upper[i] != expected_hex[i]:
+                    first_diff = i
+                    break
+            if first_diff == -1 and len(received_upper) != len(expected_hex):
+                first_diff = min(len(received_upper), len(expected_hex))
+
+            if first_diff >= 0:
+                buffer.add(f'  First difference at byte offset {first_diff // 2}')
+                ctx_start = max(0, (first_diff // 2 - 8) * 2)
+                ctx_end = min(max(len(received_upper), len(expected_hex)), (first_diff // 2 + 8) * 2)
+
+                recv_part = ''
+                exp_part = ''
+                for i in range(ctx_start, ctx_end, 2):
+                    r_byte = received_upper[i : i + 2] if i + 2 <= len(received_upper) else '--'
+                    e_byte = expected_hex[i : i + 2] if i + 2 <= len(expected_hex) else '--'
+                    if r_byte != e_byte:
+                        recv_part += Color.red(r_byte) + ' '
+                        exp_part += Color.green(e_byte) + ' '
+                    else:
+                        recv_part += Color.dim(r_byte) + ' '
+                        exp_part += Color.dim(e_byte) + ' '
+                buffer.add(f'  received: {recv_part.strip()}')
+                buffer.add(f'  expected: {exp_part.strip()}')
+
+        # Decode commands
+        config_path = os.environ.get('EXABGP_TEST_CONFIG', '<config>')
+        buffer.add('')
+        buffer.add(Color.magenta('DECODE COMMANDS:'))
+        buffer.add('  # Decode received:')
+        buffer.add(f'  ./sbin/exabgp decode -c {config_path} "{received_hex}"')
+        if self.messages:
+            buffer.add('  # Decode expected option 1:')
+            buffer.add(f'  ./sbin/exabgp decode -c {config_path} "{self.messages[0]}"')
+
+        buffer.add('')
+        buffer.add(Color.red('=' * 60))
+
+        # Flush all buffered output at once
+        buffer.flush()
         return False
 
     def completed(self):
@@ -646,13 +1157,14 @@ class BGPProtocol(asyncio.Protocol):
             msg = Message(header, body)
 
             if state == FSM.OPEN:
-                flushed('\nnew session:')
+                ts = timestamp()
+                flushed(f'\n{ts} new session:' if ts else '\nnew session:')
                 print_payload('open recv', header, body)
                 state = self.handle_open(msg)
                 continue
 
             if state == FSM.MSG:
-                print_payload('msg  recv', header, body)
+                # Don't print here - expected() will show expected vs received
                 state = self.handle_message(msg)
                 continue
 
@@ -747,6 +1259,7 @@ def parse_cmdline():
     )
     parser.add_argument('--port', help='port to bind to', type=int, default=port)
     parser.add_argument('--view', help='look at the expected packets', action='store_true')
+    parser.add_argument('--terse', help='disable colors and timing info', action='store_true')
     parser.add_argument('--ipv6', help='bind using ipv6', action='store_true')
     parser.add_argument(
         'checks',
@@ -788,6 +1301,7 @@ def parse_cmdline():
         'asn': cmdarg.asn,
         'ipv6': cmdarg.ipv6,
         'view': cmdarg.view,
+        'terse': cmdarg.terse,
     })
     # fmt: on
 
@@ -873,8 +1387,19 @@ async def main(options, checker, queue):
         await server.serve_forever()
 
 
+def set_verbose(value):
+    """Set global VERBOSE flag"""
+    global VERBOSE
+    VERBOSE = value
+
+
 if __name__ == '__main__':
     options = parse_cmdline()
+
+    # Set global verbose flag for color and timing output (default: True)
+    # Use --terse to disable colors and timing
+    set_verbose(not options.get('terse', False))
+
     checker = Checker(options['expect'])
 
     if options['view']:

@@ -94,8 +94,8 @@ cat qa/encoding/<test>.ci  # Shows: etc/exabgp/api-rib.conf
 ### Port Conflicts
 
 ```bash
-killall -9 python
-lsof -i :1790  # Check specific port
+killall -9 Python  # macOS uses capital P
+lsof -i :1790      # Check specific port
 ```
 
 ### Test Timeouts
@@ -168,7 +168,7 @@ cat etc/exabgp/run/<test>.run  # API commands (api-* tests)
 Before claiming test broken:
 
 - [ ] Ran multiple times
-- [ ] Killed leftover processes (`killall -9 python`)
+- [ ] Killed leftover processes (`killall -9 Python` on macOS)
 - [ ] Ran --server and --client in separate terminals
 - [ ] Observed both simultaneously
 - [ ] Checked for exceptions in client
@@ -200,7 +200,7 @@ If still failing:
 ./qa/bin/functional encoding --client <test_id>
 
 # Clean up
-killall -9 python
+killall -9 Python  # macOS uses capital P
 ```
 
 **Test IDs:** 0-9, A-Z, a-z, α-κ (72 total)

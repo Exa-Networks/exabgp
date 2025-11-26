@@ -145,7 +145,7 @@ ruff check src   # Must pass
 ### Port Conflicts
 
 ```bash
-killall -9 python  # Clear leftover test processes
+killall -9 Python  # macOS uses capital P
 ```
 
 ---

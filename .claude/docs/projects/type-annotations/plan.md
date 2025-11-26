@@ -608,7 +608,7 @@ mypy src/exabgp/
 
 # Encoding tests (IMPORTANT: ensure ulimit -n 64000)
 ulimit -n 64000
-killall -9 python3  # Clear leftover processes
+killall -9 Python  # macOS uses capital P
 ./qa/bin/functional encoding
 ```
 
