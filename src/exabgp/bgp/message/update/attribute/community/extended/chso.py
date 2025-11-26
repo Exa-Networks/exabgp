@@ -5,7 +5,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from struct import pack
 from struct import unpack
@@ -21,7 +21,7 @@ class ConsistentHashSortOrder(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x14
     DESCRIPTION: ClassVar[str] = 'consistentHashSortOrder'
 
-    def __init__(self, order: int, reserved: int = 0, community: Optional[bytes] = None) -> None:
+    def __init__(self, order: int, reserved: int = 0, community: bytes | None = None) -> None:
         self.order: int = order
         self.reserved: int = reserved
 

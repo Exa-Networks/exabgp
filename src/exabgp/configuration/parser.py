@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Optional
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IP
@@ -31,7 +30,7 @@ def boolean(tokeniser: object, default: bool) -> bool:
     )
 
 
-def auto_boolean(tokeniser: object, default: bool) -> Optional[bool]:
+def auto_boolean(tokeniser: object, default: bool) -> bool | None:
     status = tokeniser().lower()  # type: ignore[operator]
     if not status:
         return default
@@ -60,7 +59,7 @@ def port(tokeniser: object) -> int:
     return port_num
 
 
-def auto_asn(tokeniser: object, value: Optional[str] = None) -> Optional[ASN]:
+def auto_asn(tokeniser: object, value: str | None = None) -> ASN | None:
     if value is None:
         if not tokeniser.tokens:
             raise ValueError("an ASN or 'auto' is required (e.g., 65001, 1.1, auto)")
@@ -72,7 +71,7 @@ def auto_asn(tokeniser: object, value: Optional[str] = None) -> Optional[ASN]:
     return asn(tokeniser)
 
 
-def asn(tokeniser: object, value: Optional[str] = None) -> ASN:
+def asn(tokeniser: object, value: str | None = None) -> ASN:
     if value is None:
         if not tokeniser.tokens:
             raise ValueError('an ASN is required (e.g., 65001 or 1.1)')

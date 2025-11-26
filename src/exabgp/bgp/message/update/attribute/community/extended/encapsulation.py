@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Dict, Optional
+from typing import ClassVar, Dict
 
 from struct import pack
 from struct import unpack
@@ -48,7 +48,7 @@ class Encapsulation(ExtendedCommunity):
         Type.MPLS_UDP: 'MPLS-in-UDP',
     }
 
-    def __init__(self, tunnel_type: int, community: Optional[bytes] = None) -> None:
+    def __init__(self, tunnel_type: int, community: bytes | None = None) -> None:
         self.tunnel_type: int = tunnel_type
         ExtendedCommunity.__init__(
             self,

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Dict, List, Union, cast, TYPE_CHECKING
+from typing import Any, Dict, List, cast, TYPE_CHECKING
 
 from exabgp.bgp.message.refresh import RouteRefresh
 
@@ -407,7 +407,7 @@ class Configuration(_Configuration):
         self._previous_neighbors = {}
         self._cleanup()
 
-    def reload(self) -> Union[bool, str]:
+    def reload(self) -> bool | str:
         try:
             return self._reload()
         except KeyboardInterrupt:
@@ -425,7 +425,7 @@ class Configuration(_Configuration):
                 f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}',
             )
 
-    def _reload(self) -> Union[bool, str]:
+    def _reload(self) -> bool | str:
         # taking the first configuration available (FIFO buffer)
         fname = self._configurations.pop(0)
         self._configurations.append(fname)
@@ -463,7 +463,7 @@ class Configuration(_Configuration):
 
         return True
 
-    def validate(self) -> Union[bool, str]:
+    def validate(self) -> bool | str:
         for neighbor in self.neighbors.values():
             has_procs = 'processes' in neighbor.api and neighbor.api['processes']
             has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']
@@ -539,7 +539,7 @@ class Configuration(_Configuration):
             return False
         return True
 
-    def _enter(self, name: str) -> Union[bool, str]:
+    def _enter(self, name: str) -> bool | str:
         location = self.tokeniser.iterate()
         log.debug(lambda: f'> {location:<16} | {self.tokeniser.params()}', 'configuration')
 
@@ -579,7 +579,7 @@ class Configuration(_Configuration):
             return False
         return True
 
-    def dispatch(self, name: str) -> Union[bool, str]:
+    def dispatch(self, name: str) -> bool | str:
         while True:
             self.tokeniser()
 
@@ -602,7 +602,7 @@ class Configuration(_Configuration):
             return self.error.set('invalid syntax line %d' % self.tokeniser.index_line)
         return False
 
-    def parse_section(self, name: str) -> Union[bool, str]:
+    def parse_section(self, name: str) -> bool | str:
         if name not in self._structure:
             return self.error.set('option {} is not allowed here'.format(name))
 
@@ -614,11 +614,11 @@ class Configuration(_Configuration):
             instance.post()
         return True
 
-    def run(self, name: str, command: str) -> Union[bool, str]:
+    def run(self, name: str, command: str) -> bool | str:
         # restore 'anounce attribute' to provide backward 3.4 compatibility
         if name == 'static' and command == 'attribute':
             command = 'attributes'
         if command not in self._structure[name]['commands']:
             return self.error.set('invalid keyword "{}"'.format(command))
 
-        return cast(Union[bool, str], self._structure[name]['class'].parse(name, command))
+        return cast(bool | str, self._structure[name]['class'].parse(name, command))

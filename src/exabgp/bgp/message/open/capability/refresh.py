@@ -6,7 +6,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -62,7 +61,7 @@ class RouteRefresh(Capability):
 
     @staticmethod
     def unpack_capability(
-        instance: RouteRefresh, data: bytes, capability: Optional[CapabilityCode] = None
+        instance: RouteRefresh, data: bytes, capability: CapabilityCode | None = None
     ) -> RouteRefresh:  # pylint: disable=W0613
         if instance._seen:
             log.debug(lambda: 'received duplicate RouteRefresh capability', 'parser')
@@ -110,7 +109,7 @@ class EnhancedRouteRefresh(Capability):
 
     @staticmethod
     def unpack_capability(
-        instance: EnhancedRouteRefresh, data: bytes, capability: Optional[CapabilityCode] = None
+        instance: EnhancedRouteRefresh, data: bytes, capability: CapabilityCode | None = None
     ) -> EnhancedRouteRefresh:  # pylint: disable=W0613
         if instance._seen:
             log.debug(lambda: 'received duplicate EnhancedRouteRefresh capability', 'parser')

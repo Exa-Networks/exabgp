@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, Tuple, List, Optional, Union, TYPE_CHECKING
+from typing import Any, Tuple, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -46,9 +46,9 @@ class INET(NLRI):
         NLRI.__init__(self, afi, safi, action)
         self.path_info = PathInfo.NOPATH
         self.cidr = CIDR.NOCIDR
-        self.nexthop: Union[IP, _NoNextHop] = NoNextHop
-        self.labels: Optional[Labels] = None
-        self.rd: Optional[RouteDistinguisher] = None
+        self.nexthop: IP | _NoNextHop = NoNextHop
+        self.labels: Labels | None = None
+        self.rd: RouteDistinguisher | None = None
 
     def __len__(self) -> int:
         return len(self.cidr) + len(self.path_info)  # type: ignore[arg-type]

@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
 
 from __future__ import annotations
-from typing import Optional
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -35,7 +34,7 @@ class Software(Capability):
         return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]
 
     @staticmethod
-    def unpack_capability(instance: Software, data: bytes, capability: Optional[CapabilityCode] = None) -> Software:  # pylint: disable=W0613
+    def unpack_capability(instance: Software, data: bytes, capability: CapabilityCode | None = None) -> Software:  # pylint: disable=W0613
         l1 = data[0]
         instance.software_version = data[1 : l1 + 1].decode('utf-8')
         return instance

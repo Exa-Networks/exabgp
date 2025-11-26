@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Union, cast, TYPE_CHECKING
+from typing import Callable, List, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -184,17 +184,17 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes  # type: ignore[no-any-return]
 
-    def api_refresh(self, command: str) -> Union[bool, List[RouteRefresh]]:
+    def api_refresh(self, command: str) -> List[RouteRefresh] | None:
         tokens = formated(command).split(' ')[2:]
         if len(tokens) != API_REFRESH_TOKEN_COUNT:
-            return False
+            return None
         afi = AFI.value(tokens.pop(0))
         safi = SAFI.value(tokens.pop(0))
         if afi is None or safi is None:
-            return False
+            return None
         return [RouteRefresh(afi, safi)]
 
-    def api_eor(self, command: str) -> Union[bool, Family]:
+    def api_eor(self, command: str) -> bool | Family:
         tokens = formated(command).split(' ')[2:]
         number = len(tokens)
 
@@ -214,7 +214,7 @@ class API(Command):
 
         return Family(afi, safi)
 
-    def api_operational(self, command: str) -> Union[bool, Optional[Operational]]:
+    def api_operational(self, command: str) -> bool | Operational | None:
         tokens = formated(command).split(' ')
 
         op = tokens[1].lower()

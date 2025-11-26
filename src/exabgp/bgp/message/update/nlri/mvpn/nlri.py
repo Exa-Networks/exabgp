@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Tuple, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -37,7 +37,7 @@ class MVPN(NLRI):
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
 
-    def __init__(self, afi: AFI, action: Action = Action.UNSET, addpath: Optional[int] = None) -> None:
+    def __init__(self, afi: AFI, action: Action = Action.UNSET, addpath: int | None = None) -> None:
         NLRI.__init__(self, afi=afi, safi=SAFI.mcast_vpn, action=action)
         self._packed: bytes = b''
 
@@ -113,7 +113,7 @@ class GenericMVPN(MVPN):
         self.CODE = code
         self._pack(packed)
 
-    def _pack(self, packed: Optional[bytes] = None) -> bytes:
+    def _pack(self, packed: bytes | None = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -122,5 +122,5 @@ class GenericMVPN(MVPN):
             return packed
         return b''
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())

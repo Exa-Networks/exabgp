@@ -5,7 +5,7 @@ import sys
 import json
 import string
 
-from typing import Callable, Dict, Optional, cast
+from typing import Callable, Dict, cast
 
 from exabgp.util import hexbytes
 from exabgp.util import hexstring
@@ -24,7 +24,7 @@ from exabgp.protocol.ip import IPv4
 
 
 # Dummy negotiated for decoding OPEN/NOTIFICATION (parameter unused but required by API)
-_DUMMY_NEGOTIATED: Optional[Negotiated] = None
+_DUMMY_NEGOTIATED: Negotiated | None = None
 
 
 def _get_dummy_negotiated() -> Negotiated:
@@ -55,11 +55,11 @@ class _FakeNeighbor(dict):
 
 
 class Transcoder:
-    seen_open: Dict[str, Optional[Open]] = {
+    seen_open: Dict[str, Open | None] = {
         'send': None,
         'receive': None,
     }
-    negotiated: Optional[Negotiated] = None
+    negotiated: Negotiated | None = None
 
     json: Response.JSON = Response.JSON(json_version)
 
@@ -70,14 +70,14 @@ class Transcoder:
         if dst != 'json':
             raise RuntimeError('left as an exercise to the reader')
 
-        self.convert: Callable[[str, str], Optional[str]] = self._from_json
+        self.convert: Callable[[str, str], str | None] = self._from_json
         self.encoder: Response.JSON = self.json
 
     def _state(self) -> None:
         self.seen_open['send'] = None
         self.seen_open['receive'] = None
-        self.negotiated_in: Optional[Negotiated] = None
-        self.negotiated_out: Optional[Negotiated] = None
+        self.negotiated_in: Negotiated | None = None
+        self.negotiated_out: Negotiated | None = None
 
     def _open(self, direction: str, message: Open) -> None:
         self.seen_open[direction] = message
@@ -90,7 +90,7 @@ class Transcoder:
             self.negotiated_out.sent(self.seen_open['send'])
             self.negotiated_out.received(self.seen_open['receive'])
 
-    def _from_json(self, direction: str, json_string: str) -> Optional[str]:
+    def _from_json(self, direction: str, json_string: str) -> str | None:
         try:
             parsed = json.loads(json_string)
         except ValueError:

@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Dict, Any, Tuple, List, Set, Union
+from typing import Dict, Any, Tuple, List, Set
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
@@ -188,7 +188,7 @@ def _parse_neighbor_params(line: str) -> Tuple[Dict[str, Any], List[str]]:
     return params, api_processes
 
 
-def _build_neighbor(params: Dict[str, Any], api_processes: Union[List[str], None] = None) -> Neighbor:
+def _build_neighbor(params: Dict[str, Any], api_processes: List[str] | None = None) -> Neighbor:
     """Build Neighbor object from parsed parameters.
 
     Args:

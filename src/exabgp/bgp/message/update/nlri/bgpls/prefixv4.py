@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar, List, Optional, Union
+from typing import TYPE_CHECKING, ClassVar, List
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -57,29 +57,29 @@ class PREFIXv4(BGPLS):
         domain: int,
         proto_id: int,
         local_node: List[NodeDescriptor],
-        packed: Optional[bytes] = None,
-        ospf_type: Optional[OspfRoute] = None,
-        prefix: Optional[IpReach] = None,
-        nexthop: Optional[Union[IP, _NoNextHop]] = None,
-        route_d: Optional[RouteDistinguisher] = None,
+        packed: bytes | None = None,
+        ospf_type: OspfRoute | None = None,
+        prefix: IpReach | None = None,
+        nexthop: IP | _NoNextHop | None = None,
+        route_d: RouteDistinguisher | None = None,
         action: Action = Action.UNSET,
-        addpath: Optional[PathInfo] = None,
+        addpath: PathInfo | None = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
         self.domain: int = domain
-        self.ospf_type: Optional[OspfRoute] = ospf_type
+        self.ospf_type: OspfRoute | None = ospf_type
         self.proto_id: int = proto_id
         self.local_node: List[NodeDescriptor] = local_node
-        self.prefix: Optional[IpReach] = prefix
-        self.nexthop: Optional[Union[IP, _NoNextHop]] = nexthop
-        self._pack: Optional[bytes] = packed
-        self.route_d: Optional[RouteDistinguisher] = route_d
+        self.prefix: IpReach | None = prefix
+        self.nexthop: IP | _NoNextHop | None = nexthop
+        self._pack: bytes | None = packed
+        self.route_d: RouteDistinguisher | None = route_d
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: Optional[RouteDistinguisher]) -> PREFIXv4:
-        ospf_type: Optional[OspfRoute] = None
+    def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> PREFIXv4:
+        ospf_type: OspfRoute | None = None
         local_node: List[NodeDescriptor] = []
-        prefix: Optional[IpReach] = None
+        prefix: IpReach | None = None
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')

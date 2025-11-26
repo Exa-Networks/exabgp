@@ -7,7 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -37,12 +37,12 @@ class PrefixSid(Attribute):
     # Registered subclasses we know how to decode
     registered_srids: ClassVar[Dict[int, Type[Any]]] = dict()
 
-    def __init__(self, sr_attrs: List[Any], packed: Optional[bytes] = None) -> None:
+    def __init__(self, sr_attrs: List[Any], packed: bytes | None = None) -> None:
         self.sr_attrs: List[Any] = sr_attrs
         self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack_tlv() for _ in sr_attrs))
 
     @classmethod
-    def register(cls, srid: Optional[int] = None, flag: Optional[int] = None) -> Callable[[Type[Any]], Type[Any]]:
+    def register(cls, srid: int | None = None, flag: int | None = None) -> Callable[[Type[Any]], Type[Any]]:
         def register_srid(klass: Type[Any]) -> Type[Any]:
             scode: int = klass.TLV if srid is None else srid
             if scode in cls.registered_srids:
@@ -69,15 +69,15 @@ class PrefixSid(Attribute):
             data = data[length + 3 :]
         return cls(sr_attrs=sr_attrs)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content: str = ', '.join(d.json() for d in self.sr_attrs)
         return f'{{ {content} }}'
 
     def __str__(self) -> str:
         # First, we try to decode path attribute for SR-MPLS
-        label_index: Optional[Any] = next((i for i in self.sr_attrs if i.TLV == 1), None)
+        label_index: Any | None = next((i for i in self.sr_attrs if i.TLV == 1), None)
         if label_index is not None:
-            srgb: Optional[Any] = next((i for i in self.sr_attrs if i.TLV == SR_TLV_SRGB), None)
+            srgb: Any | None = next((i for i in self.sr_attrs if i.TLV == SR_TLV_SRGB), None)
             if srgb is not None:
                 return f'[ {label_index!s}, {srgb!s} ]'
             return f'[ {label_index!s} ]'
@@ -103,5 +103,5 @@ class GenericSRId:
     def unpack_attribute(cls, scode: int, data: bytes) -> GenericSRId:
         return cls(code=scode, rep=data)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         return '"attribute-not-implemented-{}": "{}"'.format(self.code, hexstring(self.rep))

@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Dict, Optional, Type
+from typing import Any, Callable, ClassVar, Dict, Type
 
 from exabgp.bgp.message.notification import Notify
 
@@ -123,7 +123,7 @@ class Capability:
         reserved: ClassVar[range] = range(128, 256)
 
         def __str__(self) -> str:
-            name: Optional[str] = CapabilityCode.names.get(self, None)
+            name: str | None = CapabilityCode.names.get(self, None)
             if name is None:
                 if self in Capability.CODE.unassigned:
                     return 'unassigned-{}'.format(hex(self))
@@ -137,8 +137,8 @@ class Capability:
 
         # XXX: Could use cls instead of CapabilityCode and other tidy up
         @classmethod
-        def name(cls, self: int) -> Optional[str]:
-            name: Optional[str] = CapabilityCode.names.get(self, None)
+        def name(cls, self: int) -> str | None:
+            name: str | None = CapabilityCode.names.get(self, None)
             if name is None:
                 if self in Capability.CODE.unassigned:
                     return 'unassigned-{}'.format(hex(self))
@@ -147,7 +147,7 @@ class Capability:
             return name
 
     registered_capability: ClassVar[Dict[int, Type[Capability]]] = dict()
-    unknown_capability: ClassVar[Optional[Type[Capability]]] = None
+    unknown_capability: ClassVar[Type[Capability] | None] = None
 
     # ID attribute set by subclasses
     ID: int
@@ -163,7 +163,7 @@ class Capability:
         cls.unknown_capability = klass
 
     @classmethod
-    def register(cls, capability: Optional[int] = None) -> Callable[[Type[Capability]], Type[Capability]]:
+    def register(cls, capability: int | None = None) -> Callable[[Type[Capability]], Type[Capability]]:
         def register_capability(klass: Type[Capability]) -> Type[Capability]:
             # ID is defined by all the subclasses - otherwise they do not work :)
             what: int = klass.ID if capability is None else capability  # pylint: disable=E1101

@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import deque
-from typing import Any, Deque, Optional, Tuple
+from typing import Any, Deque, Tuple
 
 from exabgp.logger import log
 
@@ -39,7 +39,7 @@ class ASYNC:
         log.debug(lambda: f'async | {uid} | {command}', 'reactor')
         self._async.append((uid, callback))
 
-    def clear(self, deluid: Optional[str] = None) -> None:
+    def clear(self, deluid: str | None = None) -> None:
         if not self._async:
             return
         if deluid is None:

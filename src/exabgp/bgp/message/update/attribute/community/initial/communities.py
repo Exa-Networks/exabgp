@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator, List, Optional
+from typing import TYPE_CHECKING, Iterator, List
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -28,7 +28,7 @@ class Communities(Attribute):
     ID = Attribute.CODE.COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    def __init__(self, communities: Optional[List[Community]] = None) -> None:
+    def __init__(self, communities: List[Community] | None = None) -> None:
         # Must be None as = param is only evaluated once
         if communities:
             self.communities: List[Community] = communities

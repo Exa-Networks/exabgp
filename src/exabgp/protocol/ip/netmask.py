@@ -6,7 +6,7 @@ Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar, Dict, Union
+from typing import ClassVar, Dict
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.resource import Resource
@@ -72,7 +72,7 @@ class NetMask(Resource):
     codes: ClassVar[Dict[str, int]] = dict([(inst, name) for (name, inst) in names.items()])
 
     @classmethod
-    def create(cls, string: Union[str, int], afi: AFI) -> NetMask:
+    def create(cls, string: str | int, afi: AFI) -> NetMask:
         if afi == AFI.ipv4:
             if isinstance(string, str) and string in cls.codes:
                 klass = cls(cls.codes[string])

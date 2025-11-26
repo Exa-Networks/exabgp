@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from exabgp.protocol.ip import IP
 
@@ -44,9 +44,9 @@ class EthernetSegment(EVPN):
         rd: RouteDistinguisher,
         esi: ESI,
         ip: IP,
-        packed: Optional[bytes] = None,
+        packed: bytes | None = None,
         nexthop: Any = None,
-        action: Optional[Action] = None,
+        action: Action | None = None,
         addpath: Any = None,
     ) -> None:
         EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
@@ -75,7 +75,7 @@ class EthernetSegment(EVPN):
         # esi and label MUST *NOT* be part of the hash
         return hash((self.rd, self.ip))
 
-    def _pack(self, packed: Optional[bytes] = None) -> bytes:
+    def _pack(self, packed: bytes | None = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -110,7 +110,7 @@ class EthernetSegment(EVPN):
 
         return cls(rd, esi, ip, data)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

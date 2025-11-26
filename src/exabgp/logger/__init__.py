@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Callable, ClassVar, Optional, Type, Union, TYPE_CHECKING
+from typing import Callable, ClassVar, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.environment.environment import Env
@@ -18,12 +18,12 @@ from exabgp.logger.history import history  # noqa: F401,E261,E501
 from exabgp.logger.history import record  # noqa: F401,E261,E501
 
 # Type for log messages - can be string or callable returning string
-LogMessage = Union[str, Callable[[], str]]
+LogMessage = str | Callable[[], str]
 
 
 class _log:
     # Logger function that writes formatted log messages
-    logger: ClassVar[Optional[Callable[[Callable[[str], None], LogMessage, str, str], None]]] = None
+    logger: ClassVar[Callable[[Callable[[str], None], LogMessage, str, str], None] | None] = None
 
     @staticmethod
     def init(env: 'Env') -> None:

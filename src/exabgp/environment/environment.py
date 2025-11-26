@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import os
-from typing import Any, ClassVar, Dict, Iterator, List, Optional
+from typing import Any, ClassVar, Dict, Iterator, List
 
 import configparser as ConfigParser
 
@@ -83,7 +83,7 @@ class Env:
                 yield f'{base.APPLICATION}.{section}.{k}={cls.definition[section][k]["write"](v)}'
 
     @classmethod
-    def setup(cls, configuration: Dict[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def setup(cls, configuration: Dict[str, Dict[str, Any]]) -> Dict[str, Any] | None:
         if cls._setup:
             return {}
         cls._setup = True
@@ -109,7 +109,7 @@ class Env:
                     env_name: str = f'{proxy_section}.{option}'
                     rep_name: str = env_name.replace('.', '_')
 
-                    conf: Optional[str]
+                    conf: str | None
                     if env_name in os.environ:
                         conf = os.environ.get(env_name)
                     elif rep_name in os.environ:
@@ -129,15 +129,15 @@ class Env:
         # Backward compatibility and alias handling
         if 'tcp' in cls._env:
             # Handle exabgp_tcp_connections as an alias for exabgp_tcp_attempts
-            connections_env: Optional[str] = os.environ.get('exabgp.tcp.connections') or os.environ.get(
+            connections_env: str | None = os.environ.get('exabgp.tcp.connections') or os.environ.get(
                 'exabgp_tcp_connections'
             )
             if connections_env:
                 cls._env['tcp']['attempts'] = int(connections_env)
 
             # Backward compatibility: convert tcp.once to tcp.attempts if tcp.attempts not explicitly set
-            once_env: Optional[str] = os.environ.get('exabgp.tcp.once') or os.environ.get('exabgp_tcp_once')
-            attempts_env: Optional[str] = os.environ.get('exabgp.tcp.attempts') or os.environ.get('exabgp_tcp_attempts')
+            once_env: str | None = os.environ.get('exabgp.tcp.once') or os.environ.get('exabgp_tcp_once')
+            attempts_env: str | None = os.environ.get('exabgp.tcp.attempts') or os.environ.get('exabgp_tcp_attempts')
 
             # Only apply backward compatibility if tcp.attempts wasn't explicitly set
             if once_env and not attempts_env and not connections_env:

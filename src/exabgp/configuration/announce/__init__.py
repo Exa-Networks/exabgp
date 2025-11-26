@@ -6,7 +6,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Iterator as TypingIterator, Optional
+from typing import Iterator as TypingIterator
 
 from exabgp.protocol.ip import IP
 
@@ -30,7 +30,7 @@ def pack_int(afi: AFI, integer: int) -> bytes:
 
 class ParseAnnounce(Section):
     syntax: str = ''
-    afi: Optional[AFI] = None
+    afi: AFI | None = None
 
     def post(self) -> bool:
         self._split()
@@ -97,7 +97,7 @@ class ParseAnnounce(Section):
         return True
 
     @staticmethod
-    def check(change: Change, afi: Optional[AFI]) -> bool:
+    def check(change: Change, afi: AFI | None) -> bool:
         raise RuntimeError('need to be implemented by subclasses')
 
 

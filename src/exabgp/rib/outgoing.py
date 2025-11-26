@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Iterator, List, Set, Tuple
 
 from exabgp.logger import log
 
@@ -84,7 +84,7 @@ class OutgoingRIB(Cache):
     def pending(self) -> bool:
         return len(self._new_nlri) != 0 or len(self._refresh_changes) != 0
 
-    def resend(self, enhanced_refresh: bool, family: Optional[Tuple[AFI, SAFI]] = None) -> None:
+    def resend(self, enhanced_refresh: bool, family: Tuple[AFI, SAFI] | None = None) -> None:
         requested_families = set(self.families)
 
         if family is not None:
@@ -97,7 +97,7 @@ class OutgoingRIB(Cache):
         for change in self.cached_changes(list(requested_families)):
             self._refresh_changes.append(change)
 
-    def withdraw(self, families: Optional[Set[Tuple[AFI, SAFI]]] = None) -> None:
+    def withdraw(self, families: Set[Tuple[AFI, SAFI] | None] = None) -> None:
         if not families:
             families = self.families
         requested_families = set(families).intersection(self.families)
@@ -217,7 +217,7 @@ class OutgoingRIB(Cache):
         new_attr[change_attr_index] = change.attributes  # type: ignore[index]
         self.update_cache(change)
 
-    def updates(self, grouped: bool) -> Iterator[Union[Update, RouteRefresh]]:
+    def updates(self, grouped: bool) -> Iterator[Update | RouteRefresh]:
         attr_af_nlri = self._new_attr_af_nlri
         new_attr = self._new_attribute
 

@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional, Union
+from typing import ClassVar
 
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP, _NoNextHop
@@ -44,11 +44,11 @@ class EthernetAD(EVPN):
         rd: RouteDistinguisher,
         esi: ESI,
         etag: EthernetTag,
-        label: Optional[Labels],
-        packed: Optional[bytes] = None,
-        nexthop: Optional[Union[IP, _NoNextHop]] = None,
-        action: Optional[Action] = None,
-        addpath: Optional[PathInfo] = None,
+        label: Labels | None,
+        packed: bytes | None = None,
+        nexthop: IP | _NoNextHop | None = None,
+        action: Action | None = None,
+        addpath: PathInfo | None = None,
     ) -> None:
         EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
         self.nexthop = nexthop
@@ -77,7 +77,7 @@ class EthernetAD(EVPN):
         # esi and label MUST *NOT* be part of the hash
         return hash((self.rd, self.etag))
 
-    def _pack(self, packed: Optional[bytes] = None) -> bytes:
+    def _pack(self, packed: bytes | None = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -97,7 +97,7 @@ class EthernetAD(EVPN):
 
         return cls(rd, esi, etag, label, data)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

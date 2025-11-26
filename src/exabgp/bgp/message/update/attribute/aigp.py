@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, Generator, List, Optional
+from typing import TYPE_CHECKING, ClassVar, Generator, List
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -68,7 +68,7 @@ class AIGP(Attribute):
         1,
     ]
 
-    def __init__(self, aigp: bytes, packed: Optional[bytes] = None) -> None:
+    def __init__(self, aigp: bytes, packed: bytes | None = None) -> None:
         self.aigp: bytes = aigp
         if packed:
             self._packed = packed
@@ -94,7 +94,7 @@ class AIGP(Attribute):
         return '0x' + ''.join('{:02x}'.format(_) for _ in self.aigp[-8:])
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Optional[AIGP]:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> AIGP | None:
         if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
             return None

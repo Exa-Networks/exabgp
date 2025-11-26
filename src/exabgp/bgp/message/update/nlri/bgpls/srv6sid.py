@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -61,7 +61,7 @@ class SRv6SID(BGPLS):
         local_node_descriptors: List[NodeDescriptor],
         srv6_sid_descriptors: Dict[str, Any],
         action: Action = Action.UNSET,
-        addpath: Optional[PathInfo] = None,
+        addpath: PathInfo | None = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
         self.proto_id: int = protocol_id

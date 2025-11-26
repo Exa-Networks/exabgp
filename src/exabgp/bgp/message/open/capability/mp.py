@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar, List, Optional
+from typing import ClassVar, List
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -40,7 +40,7 @@ class MultiProtocol(Capability, list):
 
     @staticmethod
     def unpack_capability(
-        instance: MultiProtocol, data: bytes, capability: Optional[CapabilityCode] = None
+        instance: MultiProtocol, data: bytes, capability: CapabilityCode | None = None
     ) -> MultiProtocol:  # pylint: disable=W0613
         afi: AFI = AFI.unpack_afi(data[:2])
         safi: SAFI = SAFI.unpack_safi(data[3:4])

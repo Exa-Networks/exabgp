@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -54,7 +54,7 @@ class RouteTargetASN2Number(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
-    def __init__(self, asn: ASN, number: int, transitive: bool = True, community: Optional[bytes] = None) -> None:
+    def __init__(self, asn: ASN, number: int, transitive: bool = True, community: bytes | None = None) -> None:
         self.asn: ASN = asn
         self.number: int = number
         # assert(number < pow(2,32))
@@ -67,7 +67,7 @@ class RouteTargetASN2Number(RouteTarget):
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> RouteTargetASN2Number:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> RouteTargetASN2Number:
         asn, number = unpack('!HL', data[2:8])
         return cls(ASN(asn), number, False, data[:8])
 
@@ -81,7 +81,7 @@ class RouteTargetIPNumber(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, ip: str, number: int, transitive: bool = True, community: Optional[bytes] = None) -> None:
+    def __init__(self, ip: str, number: int, transitive: bool = True, community: bytes | None = None) -> None:
         self.ip: str = ip
         self.number: int = number
         # assert(number < pow(2,16))
@@ -98,7 +98,7 @@ class RouteTargetIPNumber(RouteTarget):
         return '%s:%s:%d' % (self.DESCRIPTION, self.ip, self.number)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> RouteTargetIPNumber:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> RouteTargetIPNumber:
         ip, number = unpack('!4sH', data[2:8])
         return cls(IPv4.ntop(ip), number, False, data[:8])
 
@@ -112,7 +112,7 @@ class RouteTargetASN4Number(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x02
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, asn: ASN, number: int, transitive: bool = True, community: Optional[bytes] = None) -> None:
+    def __init__(self, asn: ASN, number: int, transitive: bool = True, community: bytes | None = None) -> None:
         self.asn: ASN = asn
         self.number: int = number
         # assert(number < pow(2,16))
@@ -126,6 +126,6 @@ class RouteTargetASN4Number(RouteTarget):
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> RouteTargetASN4Number:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> RouteTargetASN4Number:
         asn, number = unpack('!LH', data[2:8])
         return cls(ASN(asn), number, False, data[:8])

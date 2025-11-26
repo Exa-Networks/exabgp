@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Dict, Iterator, List, Set, Tuple
 
 from exabgp.bgp.message import Action
 
@@ -40,7 +40,7 @@ class Cache:
 
     def cached_changes(
         self,
-        families: Optional[List[Tuple[AFI, SAFI]]] = None,
+        families: List[Tuple[AFI, SAFI] | None] = None,
         actions: Tuple[int, ...] = (Action.ANNOUNCE,),
     ) -> Iterator[Change]:
         # families can be None or []

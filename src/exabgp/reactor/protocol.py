@@ -11,7 +11,7 @@ import os
 import asyncio  # noqa: F401 - Used by async methods (write_async, send_async, read_message_async)
 
 import traceback
-from typing import Any, Generator, Optional, Tuple, Union, cast, TYPE_CHECKING
+from typing import Any, Generator, Tuple, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.peer import Peer
@@ -65,7 +65,7 @@ class Protocol:
         self.peer: 'Peer' = peer
         self.neighbor: 'Neighbor' = peer.neighbor
         self.negotiated: Negotiated = Negotiated(self.neighbor, Direction.IN)
-        self.connection: Optional[Union['Incoming', Outgoing]] = None
+        self.connection: 'Incoming' | Outgoing | None = None
 
         if self.neighbor['connect']:
             self.port: int = self.neighbor['connect']
@@ -435,7 +435,7 @@ class Protocol:
 
     def validate_open(self) -> None:
         assert self.neighbor.api is not None
-        error: Optional[Tuple[int, int, str]] = self.negotiated.validate(self.neighbor)
+        error: Tuple[int, int, str] | None = self.negotiated.validate(self.neighbor)
         if error is not None:
             raise Notify(*error)
 
@@ -527,7 +527,7 @@ class Protocol:
     # Sending message to peer
     #
 
-    def new_open(self) -> Generator[Union[Open, NOP], None, None]:
+    def new_open(self) -> Generator[Open | NOP, None, None]:
         assert self.connection is not None
         if self.neighbor['local-as']:
             local_as = self.neighbor['local-as']
@@ -575,7 +575,7 @@ class Protocol:
         log.debug(lambda: '>> {}'.format(sent_open), self._session())
         return sent_open
 
-    def new_keepalive(self, comment: str = '') -> Generator[Union[KeepAlive, NOP], None, None]:
+    def new_keepalive(self, comment: str = '') -> Generator[KeepAlive | NOP, None, None]:
         assert self.connection is not None
         keepalive: KeepAlive = KeepAlive()
 
@@ -603,7 +603,7 @@ class Protocol:
 
         return keepalive
 
-    def new_notification(self, notification: Notify) -> Generator[Union[Notify, NOP], None, None]:
+    def new_notification(self, notification: Notify) -> Generator[Notify | NOP, None, None]:
         assert self.connection is not None
         for _ in self.write(notification, self.negotiated):
             yield _NOP
@@ -623,7 +623,7 @@ class Protocol:
         )
         return notification
 
-    def new_update(self, include_withdraw: bool) -> Generator[Union[Update, NOP], None, None]:
+    def new_update(self, include_withdraw: bool) -> Generator[Update | NOP, None, None]:
         assert self.connection is not None
         updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
         number: int = 0
@@ -739,7 +739,7 @@ class Protocol:
 
     def new_operational(
         self, operational: Operational, negotiated: Negotiated
-    ) -> Generator[Union[Operational, NOP], None, None]:
+    ) -> Generator[Operational | NOP, None, None]:
         assert self.connection is not None
         for _ in self.write(operational, negotiated):
             yield _NOP
@@ -753,7 +753,7 @@ class Protocol:
         log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self._session())
         return operational
 
-    def new_refresh(self, refresh: RouteRefresh) -> Generator[Union[RouteRefresh, NOP], None, None]:
+    def new_refresh(self, refresh: RouteRefresh) -> Generator[RouteRefresh | NOP, None, None]:
         assert self.connection is not None
         for _ in self.write(refresh, self.negotiated):
             yield _NOP

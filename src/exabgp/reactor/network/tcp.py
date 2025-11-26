@@ -14,7 +14,7 @@ import select
 import platform
 
 from struct import pack, calcsize
-from typing import Iterator, Optional
+from typing import Iterator
 
 from exabgp.util.errstr import errstr
 
@@ -31,7 +31,7 @@ from exabgp.reactor.network.error import TTLError
 from exabgp.reactor.network.error import AsyncError
 
 
-def create(afi: AFI, interface: Optional[str] = None) -> socket.socket:
+def create(afi: AFI, interface: str | None = None) -> socket.socket:
     try:
         if afi == AFI.ipv4:
             io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
@@ -113,7 +113,7 @@ def connect(io: socket.socket, ip: str, port: int, afi: AFI, md5: str) -> None:
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
 
-def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: Optional[bool]) -> None:
+def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool | None) -> None:
     platform_os = platform.system()
     if platform_os == 'FreeBSD':
         if md5:
@@ -202,7 +202,7 @@ def nagle(io: socket.socket, ip: str) -> None:
         raise NagleError("Could not disable nagle's algorithm for {}".format(ip)) from None
 
 
-def ttl(io: socket.socket, ip: str, ttl: Optional[int]) -> None:
+def ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
         try:
@@ -211,7 +211,7 @@ def ttl(io: socket.socket, ip: str, ttl: Optional[int]) -> None:
             raise TTLError(f'This OS does not support IP_TTL (ttl-security) for {ip} ({errstr(exc)})') from None
 
 
-def ttlv6(io: socket.socket, ip: str, ttl: Optional[int]) -> None:
+def ttlv6(io: socket.socket, ip: str, ttl: int | None) -> None:
     if ttl:
         try:
             io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
@@ -221,7 +221,7 @@ def ttlv6(io: socket.socket, ip: str, ttl: Optional[int]) -> None:
             ) from None
 
 
-def min_ttl(io: socket.socket, ip: str, ttl: Optional[int]) -> None:
+def min_ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
         try:

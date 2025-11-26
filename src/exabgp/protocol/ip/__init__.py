@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import Dict, Optional, Set, Type, ClassVar, Iterator, Any, TYPE_CHECKING
+from typing import Dict, Set, Type, ClassVar, Iterator, Any, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
@@ -70,7 +70,7 @@ class IP:
     def __init__(self) -> None:
         raise RuntimeError('You should use IP.create() to use IP')
 
-    def init(self, string: str, packed: Optional[bytes] = None) -> IP:
+    def init(self, string: str, packed: bytes | None = None) -> IP:
         # XXX: the str should not be needed
         self._string = string
         self._packed = IP.pton(string) if packed is None else packed
@@ -89,7 +89,7 @@ class IP:
     def ntop(data: bytes) -> str:
         return socket.inet_ntop(socket.AF_INET if len(data) == IPv4.BYTES else socket.AF_INET6, data)
 
-    def top(self, negotiated: Optional[Negotiated] = None, afi: AFI = AFI.undefined) -> str:
+    def top(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
         return self._string
 
     @staticmethod
@@ -145,7 +145,7 @@ class IP:
     def pack_ip(self) -> bytes:
         return self._packed
 
-    def ton(self, negotiated: Optional[Negotiated] = None, afi: AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> bytes:
         return self._packed
 
     def __repr__(self) -> str:
@@ -179,9 +179,9 @@ class IP:
         return hash((self.__class__.__name__, self._packed))
 
     @classmethod
-    def klass(cls, ip: str) -> Optional[Type[IP]]:
+    def klass(cls, ip: str) -> Type[IP] | None:
         # the orders matters as ::FFFF:<ipv4> is an IPv6 address
-        afi: Optional[AFI]
+        afi: AFI | None
         if ':' in ip:
             afi = IPv6.afi
         elif '.' in ip:
@@ -193,7 +193,7 @@ class IP:
         return None
 
     @classmethod
-    def create(cls, string: str, packed: Optional[bytes] = None, klass: Optional[Type[IP]] = None) -> IP:
+    def create(cls, string: str, packed: bytes | None = None, klass: Type[IP] | None = None) -> IP:
         if klass:
             return klass(string, packed)  # type: ignore[call-arg]
         return cls.klass(string)(string, packed)  # type: ignore[call-arg,misc]
@@ -203,7 +203,7 @@ class IP:
         cls._known[cls.afi] = cls
 
     @classmethod
-    def unpack_ip(cls, data: bytes, klass: Optional[Type[IP]] = None) -> IP:
+    def unpack_ip(cls, data: bytes, klass: Type[IP] | None = None) -> IP:
         return cls.create(IP.ntop(data), data, klass)
 
 
@@ -240,13 +240,13 @@ class _NoNextHop:
     afi: ClassVar[AFI] = AFI.undefined
     safi: ClassVar[SAFI] = SAFI.undefined
 
-    def pack(self, data: Any, negotiated: Optional[Negotiated] = None) -> str:
+    def pack(self, data: Any, negotiated: Negotiated | None = None) -> str:
         return ''
 
     def index(self) -> str:
         return ''
 
-    def ton(self, negotiated: Optional[Negotiated] = None, afi: AFI = AFI.undefined) -> str:
+    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
         return ''
 
     def __str__(self) -> str:
@@ -280,7 +280,7 @@ class IPv4(IP):
     DOT_COUNT: ClassVar[int] = 3  # Number of dots in IPv4 address format (e.g., 192.168.1.1)
     HOST_MASK: ClassVar[int] = 32  # IPv4 host prefix length (/32)
 
-    def __init__(self, string: str, packed: Optional[builtins.bytes] = None) -> None:
+    def __init__(self, string: str, packed: builtins.bytes | None = None) -> None:
         self.init(string, packed if packed else IP.pton(string))
 
     def __len__(self) -> int:
@@ -308,7 +308,7 @@ class IPv4(IP):
 
     # klass is a trick for subclasses of IP/IPv4 such as NextHop / OriginatorID
     @classmethod
-    def unpack_ipv4(cls, data: builtins.bytes, klass: Optional[Type[IPv4]] = None) -> IPv4:
+    def unpack_ipv4(cls, data: builtins.bytes, klass: Type[IPv4] | None = None) -> IPv4:
         ip = socket.inet_ntop(socket.AF_INET, data)
         if klass:
             return klass(ip, data)
@@ -336,7 +336,7 @@ class IPv6(IP):
     COLON_MIN: ClassVar[int] = 2  # Minimum number of colons in IPv6 address format
     HOST_MASK: ClassVar[int] = 128  # IPv6 host prefix length (/128)
 
-    def __init__(self, string: str, packed: Optional[builtins.bytes] = None) -> None:
+    def __init__(self, string: str, packed: builtins.bytes | None = None) -> None:
         self.init(string, packed if packed else socket.inet_pton(socket.AF_INET6, string))
 
     def __len__(self) -> int:
@@ -363,7 +363,7 @@ class IPv6(IP):
         return socket.inet_ntop(socket.AF_INET6, data)
 
     @classmethod
-    def unpack_ipv6(cls, data: builtins.bytes, klass: Optional[Type[IPv6]] = None) -> IPv6:
+    def unpack_ipv6(cls, data: builtins.bytes, klass: Type[IPv6] | None = None) -> IPv6:
         ip6 = socket.inet_ntop(socket.AF_INET6, data)
         if klass:
             return klass(ip6)

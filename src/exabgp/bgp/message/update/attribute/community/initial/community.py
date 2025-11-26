@@ -80,7 +80,7 @@ class Community:
     def json(self) -> str:
         return '[ %d, %d ]' % unpack('!HH', self.community)
 
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self.community
 
     def __repr__(self) -> str:

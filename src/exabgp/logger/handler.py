@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 import logging
 import logging.handlers as handlers
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 TIMED: str = '%(asctime)s: %(message)s'
 SHORT: str = '%(filename)s: %(message)s'
@@ -22,10 +22,10 @@ levels: Dict[str, int] = {
 }
 
 # prevent recreation of already created logger
-_created: Dict[Optional[str], logging.Logger] = {}
+_created: Dict[str | None, logging.Logger] = {}
 
 
-def get_logger(name: Optional[str] = None, **kwargs: Any) -> logging.Logger:
+def get_logger(name: str | None = None, **kwargs: Any) -> logging.Logger:
     if name in _created:
         if len(kwargs) == 0:
             return _created[name]

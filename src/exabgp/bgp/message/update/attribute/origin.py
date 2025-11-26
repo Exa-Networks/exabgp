@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -30,7 +30,7 @@ class Origin(Attribute):
     EGP: ClassVar[int] = 0x01
     INCOMPLETE: ClassVar[int] = 0x02
 
-    def __init__(self, origin: int, packed: Optional[bytes] = None) -> None:
+    def __init__(self, origin: int, packed: bytes | None = None) -> None:
         self.origin: int = origin
         self._packed: bytes = self._attribute(packed if packed else bytes([origin]))
 
@@ -42,7 +42,7 @@ class Origin(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack_attribute(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
         return self._packed
 
     def __len__(self) -> int:

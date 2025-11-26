@@ -6,7 +6,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Optional
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -28,7 +27,7 @@ class ASN4(Capability, ASN):
         return 'ASN4(%d)' % int(self)
 
     @staticmethod
-    def unpack_capability(instance: ASN, data: bytes, capability: Optional[CapabilityCode] = None) -> ASN:  # pylint: disable=W0613
+    def unpack_capability(instance: ASN, data: bytes, capability: CapabilityCode | None = None) -> ASN:  # pylint: disable=W0613
         # XXX: FIXME: if instance is not ASN(0) we have two ASN - raise
         instance = ASN.unpack_asn(data, ASN4)
         return instance

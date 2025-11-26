@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from typing import Callable, ClassVar, Dict, Optional, Union, TYPE_CHECKING
+from typing import Callable, ClassVar, Dict, TYPE_CHECKING
 import logging
 
 if TYPE_CHECKING:
@@ -18,9 +18,9 @@ def echo(_: str) -> str:
 
 
 class option:
-    logger: ClassVar[Optional[logging.Logger]] = None
+    logger: ClassVar[logging.Logger | None] = None
     # Formatter can be echo function or a proper FormatterFunc
-    formater: ClassVar[Union[Callable[[str], str], FormatterFunc]] = echo
+    formater: ClassVar[Callable[[str], str] | FormatterFunc] = echo
 
     short: ClassVar[bool] = False
     level: ClassVar[str] = 'WARNING'

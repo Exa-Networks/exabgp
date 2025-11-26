@@ -6,7 +6,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from struct import pack, unpack
 
@@ -30,7 +30,7 @@ class SrLabelIndex:
     TLV: ClassVar[int] = 1
     LENGTH: ClassVar[int] = 7
 
-    def __init__(self, labelindex: int, packed: Optional[bytes] = None) -> None:
+    def __init__(self, labelindex: int, packed: bytes | None = None) -> None:
         self.labelindex: int = labelindex
         self.packed: bytes = self.pack_tlv()
 

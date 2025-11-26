@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar, Generator, List, Tuple, Union
+from typing import TYPE_CHECKING, ClassVar, Generator, List, Tuple
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -267,7 +267,7 @@ class Update(Message):
     # These exceptions are caught by the caller in reactor/protocol.py:read_message() which
     # wraps them in a Notify(1, 0) to signal a malformed message to the peer.
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Union[Update, EOR]:  # type: ignore[valid-type]
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Update | EOR:  # type: ignore[valid-type]
         log.debug(lazyformat('parsing UPDATE', data), 'parser')
 
         length = len(data)

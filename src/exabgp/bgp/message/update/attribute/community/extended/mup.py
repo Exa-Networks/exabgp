@@ -6,7 +6,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 from struct import pack
 from struct import unpack
@@ -33,7 +33,7 @@ class MUPExtendedCommunity(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
-    def __init__(self, sgid2: int, sgid4: int, transitive: bool = True, community: Optional[bytes] = None) -> None:
+    def __init__(self, sgid2: int, sgid4: int, transitive: bool = True, community: bytes | None = None) -> None:
         self.sgid2: int = sgid2
         self.sgid4: int = sgid4
         ExtendedCommunity.__init__(

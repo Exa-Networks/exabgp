@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar, List, Optional, Tuple
+from typing import ClassVar, List, Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -53,7 +53,7 @@ class NextHop(Capability, list):
         ]
 
     @staticmethod
-    def unpack_capability(instance: NextHop, data: bytes, capability: Optional[CapabilityCode] = None) -> NextHop:  # pylint: disable=W0613
+    def unpack_capability(instance: NextHop, data: bytes, capability: CapabilityCode | None = None) -> NextHop:  # pylint: disable=W0613
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
             log.debug(lambda: 'received duplicate NextHop capability, merging entries', 'parser')

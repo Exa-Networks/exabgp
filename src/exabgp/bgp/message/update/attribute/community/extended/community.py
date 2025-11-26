@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict, Optional, Tuple, Type
+from typing import TYPE_CHECKING, ClassVar, Dict, Tuple, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -26,7 +26,7 @@ class ExtendedCommunityBase(Attribute):
     NON_TRANSITIVE: ClassVar[int] = 0x40
 
     # Need to be overwritten by sub-classes
-    registered_extended: ClassVar[Optional[Dict[Tuple[int, int], Type[ExtendedCommunityBase]]]] = None
+    registered_extended: ClassVar[Dict[Tuple[int, int], Type[ExtendedCommunityBase]] | None] = None
 
     @classmethod
     def register(cls, klass: Type[ExtendedCommunityBase]) -> Type[ExtendedCommunityBase]:
@@ -40,7 +40,7 @@ class ExtendedCommunityBase(Attribute):
     def __init__(self, community: bytes) -> None:
         # Two top bits are iana and transitive bits
         self.community: bytes = community
-        self.klass: Optional[Type[ExtendedCommunityBase]] = None
+        self.klass: Type[ExtendedCommunityBase] | None = None
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
@@ -113,7 +113,7 @@ class ExtendedCommunityBase(Attribute):
         return hash(self.community)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> ExtendedCommunityBase:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> ExtendedCommunityBase:
         # 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
         community = (data[0] & 0x0F, data[1])
         if community in cls.registered_extended:  # type: ignore[operator]

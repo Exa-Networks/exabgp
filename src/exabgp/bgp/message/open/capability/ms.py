@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, List, Optional
+from typing import Any, ClassVar, List
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -50,7 +50,7 @@ class MultiSession(Capability, list):
 
     @staticmethod
     def unpack_capability(
-        instance: MultiSession, data: bytes, capability: Optional[CapabilityCode] = None
+        instance: MultiSession, data: bytes, capability: CapabilityCode | None = None
     ) -> MultiSession:  # pylint: disable=W0613
         if instance._seen:
             log.debug(lambda: 'received duplicate MultiSession capability', 'parser')

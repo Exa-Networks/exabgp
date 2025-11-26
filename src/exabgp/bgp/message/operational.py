@@ -10,7 +10,7 @@ from __future__ import annotations
 import sys
 from struct import pack
 from struct import unpack
-from typing import ClassVar, Dict, Optional, Tuple, Type as TypingType, TypeVar, Union, TYPE_CHECKING
+from typing import ClassVar, Dict, Tuple, Type as TypingType, TypeVar, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -106,7 +106,7 @@ class Operational(Message):
         return klass
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Optional[Operational]:  # pylint: disable=W0613
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Operational | None:  # pylint: disable=W0613
         what = Type(unpack('!H', data[0:2])[0])
         length = unpack('!H', data[2:4])[0]
 
@@ -141,7 +141,7 @@ class Operational(Message):
 class OperationalFamily(Operational):
     has_family: ClassVar[bool] = True
 
-    def __init__(self, what: int, afi: Union[int, AFI], safi: Union[int, SAFI], data: bytes = b'') -> None:
+    def __init__(self, what: int, afi: int | AFI, safi: int | SAFI, data: bytes = b'') -> None:
         Operational.__init__(self, what)
         self.afi: AFI = AFI.create(afi)
         self.safi: SAFI = SAFI.create(safi)
@@ -162,23 +162,23 @@ class OperationalFamily(Operational):
 
 
 class SequencedOperationalFamily(OperationalFamily):
-    __sequence_number: ClassVar[Dict[Optional[RouterID], int]] = {}
+    __sequence_number: ClassVar[Dict[RouterID | None, int]] = {}
     has_routerid: ClassVar[bool] = True
 
     def __init__(
         self,
         what: int,
-        afi: Union[int, AFI],
-        safi: Union[int, SAFI],
-        routerid: Optional[RouterID],
-        sequence: Optional[int],
+        afi: int | AFI,
+        safi: int | SAFI,
+        routerid: RouterID | None,
+        sequence: int | None,
         data: bytes = b'',
     ) -> None:
         OperationalFamily.__init__(self, what, afi, safi, data)
-        self.routerid: Optional[RouterID] = routerid if routerid else None
-        self.sequence: Optional[int] = sequence if sequence else None
-        self._sequence: Optional[int] = self.sequence
-        self._routerid: Optional[RouterID] = self.routerid
+        self.routerid: RouterID | None = routerid if routerid else None
+        self.sequence: int | None = sequence if sequence else None
+        self._sequence: int | None = self.sequence
+        self._routerid: RouterID | None = self.routerid
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
         if self.routerid:
@@ -212,7 +212,7 @@ class NS:
         is_fault: ClassVar[bool] = True
         ERROR_SUBCODE: ClassVar[bytes]
 
-        def __init__(self, afi: Union[int, AFI], safi: Union[int, SAFI], sequence: bytes) -> None:
+        def __init__(self, afi: int | AFI, safi: int | SAFI, sequence: bytes) -> None:
             OperationalFamily.__init__(self, Operational.CODE.NS, afi, safi, sequence + self.ERROR_SUBCODE)
 
         def extensive(self) -> str:
@@ -261,10 +261,10 @@ class Advisory:
 
         def __init__(
             self,
-            afi: Union[int, AFI],
-            safi: Union[int, SAFI],
-            advisory: Union[str, bytes],
-            routerid: Optional[RouterID] = None,
+            afi: int | AFI,
+            safi: int | SAFI,
+            advisory: str | bytes,
+            routerid: RouterID | None = None,
         ) -> None:
             # Handle both string and bytes input
             if isinstance(advisory, bytes):
@@ -282,10 +282,10 @@ class Advisory:
 
         def __init__(
             self,
-            afi: Union[int, AFI],
-            safi: Union[int, SAFI],
-            advisory: Union[str, bytes],
-            routerid: Optional[RouterID] = None,
+            afi: int | AFI,
+            safi: int | SAFI,
+            advisory: str | bytes,
+            routerid: RouterID | None = None,
         ) -> None:
             # Handle both string and bytes input
             if isinstance(advisory, bytes):
@@ -306,9 +306,7 @@ class Query:
         category: ClassVar[str] = 'query'
         code: ClassVar[int]  # type: ignore[assignment]
 
-        def __init__(
-            self, afi: Union[int, AFI], safi: Union[int, SAFI], routerid: Optional[RouterID], sequence: Optional[int]
-        ) -> None:
+        def __init__(self, afi: int | AFI, safi: int | SAFI, routerid: RouterID | None, sequence: int | None) -> None:
             SequencedOperationalFamily.__init__(self, self.code, afi, safi, routerid, sequence)
 
         def extensive(self) -> str:
@@ -343,10 +341,10 @@ class Response:
 
         def __init__(
             self,
-            afi: Union[int, AFI],
-            safi: Union[int, SAFI],
-            routerid: Optional[RouterID],
-            sequence: Optional[int],
+            afi: int | AFI,
+            safi: int | SAFI,
+            routerid: RouterID | None,
+            sequence: int | None,
             counter: int,
         ) -> None:
             self.counter: int = counter

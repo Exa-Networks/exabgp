@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 from struct import pack
 from struct import unpack
@@ -26,7 +26,7 @@ class Bandwidth(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x40
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x04
 
-    def __init__(self, asn: int, speed: float, community: Optional[bytes] = None) -> None:
+    def __init__(self, asn: int, speed: float, community: bytes | None = None) -> None:
         self.asn: int = asn
         self.speed: float = speed
         ExtendedCommunity.__init__(self, community if community is not None else pack('!Hf', asn, speed))

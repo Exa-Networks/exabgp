@@ -11,7 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional, Union
+from typing import ClassVar
 
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP, _NoNextHop
@@ -64,14 +64,14 @@ class Prefix(EVPN):
         rd: RouteDistinguisher,
         esi: ESI,
         etag: EthernetTag,
-        label: Optional[Labels],
+        label: Labels | None,
         ip: IP,
         iplen: int,
         gwip: IP,
-        packed: Optional[bytes] = None,
-        nexthop: Optional[Union[IP, _NoNextHop]] = None,
-        action: Optional[Action] = None,
-        addpath: Optional[PathInfo] = None,
+        packed: bytes | None = None,
+        nexthop: IP | _NoNextHop | None = None,
+        action: Action | None = None,
+        addpath: PathInfo | None = None,
     ) -> None:
         """rd: a RouteDistinguisher
         esi: an EthernetSegmentIdentifier
@@ -124,7 +124,7 @@ class Prefix(EVPN):
         # esi, and label, gwip must *not* be part of the hash
         return hash('{}:{}:{}:{}'.format(self.rd, self.etag, self.ip, self.iplen))
 
-    def _pack(self, packed: Optional[bytes] = None) -> bytes:
+    def _pack(self, packed: bytes | None = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -184,7 +184,7 @@ class Prefix(EVPN):
 
         return cls(rd, esi, etag, label, ip, iplen, gwip, exdata)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

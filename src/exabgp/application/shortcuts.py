@@ -9,13 +9,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, Tuple, Callable, Union
+from typing import List, Tuple, Callable
 
 from exabgp.protocol.ip import IPv4
 
 
 # Type for shortcut matching function - can return bool or a truthy/falsy value
-ShortcutMatcher = Callable[[int, List[str]], Union[bool, List[str]]]
+ShortcutMatcher = Callable[[int, List[str]], bool | List[str]]
 
 
 def _announce_context(pos: int, pre: List[str]) -> bool:

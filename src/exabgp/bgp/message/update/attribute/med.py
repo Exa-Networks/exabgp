@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -27,7 +27,7 @@ class MED(Attribute):
     CACHING = True
     TREAT_AS_WITHDRAW = True
 
-    def __init__(self, med: int, packed: Optional[bytes] = None) -> None:
+    def __init__(self, med: int, packed: bytes | None = None) -> None:
         self.med: int = med
         self._packed: bytes = self._attribute(packed if packed is not None else pack('!L', med))
 
@@ -39,7 +39,7 @@ class MED(Attribute):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def pack_attribute(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
         return self._packed
 
     def __len__(self) -> int:

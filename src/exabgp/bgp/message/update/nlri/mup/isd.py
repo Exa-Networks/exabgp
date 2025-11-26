@@ -6,7 +6,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
@@ -33,7 +33,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
     SHORT_NAME: ClassVar[str] = 'ISD'
 
     def __init__(
-        self, rd: RouteDistinguisher, prefix_ip_len: int, prefix_ip: IP, afi: AFI, packed: Optional[bytes] = None
+        self, rd: RouteDistinguisher, prefix_ip_len: int, prefix_ip: IP, afi: AFI, packed: bytes | None = None
     ) -> None:
         MUP.__init__(self, afi)
         self.rd: RouteDistinguisher = rd
@@ -61,7 +61,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
     def __hash__(self) -> int:
         return hash((self.rd, self.prefix_ip_len, self.prefix_ip))
 
-    def _pack(self, packed: Optional[bytes] = None) -> bytes:
+    def _pack(self, packed: bytes | None = None) -> bytes:
         if self._packed:
             return self._packed
 
@@ -97,7 +97,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
 
         return cls(rd, prefix_ip_len, prefix_ip, afi)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE

@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 from struct import pack
 from struct import unpack
@@ -27,7 +27,7 @@ class L2Info(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0A
 
-    def __init__(self, encaps: int, control: int, mtu: int, reserved: int, community: Optional[bytes] = None) -> None:
+    def __init__(self, encaps: int, control: int, mtu: int, reserved: int, community: bytes | None = None) -> None:
         self.encaps: int = encaps
         self.control: int = control
         self.mtu: int = mtu

@@ -11,7 +11,6 @@ import re
 from string import ascii_letters
 from string import digits
 from typing import List
-from typing import Optional
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -88,7 +87,7 @@ def md5(tokeniser) -> str:
     return value  # type: ignore[no-any-return]
 
 
-def ttl(tokeniser) -> Optional[int]:
+def ttl(tokeniser) -> int | None:
     value = tokeniser()
     try:
         attl = int(value)
@@ -103,7 +102,7 @@ def ttl(tokeniser) -> Optional[int]:
     return attl
 
 
-def local_address(tokeniser) -> Optional[IP]:
+def local_address(tokeniser) -> IP | None:
     if not tokeniser.tokens:
         raise ValueError("an IP address or 'auto' is required (e.g., 192.0.2.1 or auto)")
 

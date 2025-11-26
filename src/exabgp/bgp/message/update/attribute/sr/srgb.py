@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from struct import pack
 from struct import unpack
-from typing import ClassVar, List, Optional, Tuple
+from typing import ClassVar, List, Tuple
 
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
@@ -42,7 +42,7 @@ class SrGb:
     # multiple of 6.
     LENGTH: ClassVar[int] = -1
 
-    def __init__(self, srgbs: List[Tuple[int, int]], packed: Optional[bytes] = None) -> None:
+    def __init__(self, srgbs: List[Tuple[int, int]], packed: bytes | None = None) -> None:
         self.srgbs: List[Tuple[int, int]] = srgbs
         self.packed: bytes = self.pack_tlv()
 
@@ -76,5 +76,5 @@ class SrGb:
             data = data[6:]
         return cls(srgbs=srgbs)
 
-    def json(self, compact: Optional[bool] = None) -> str:
+    def json(self, compact: bool | None = None) -> str:
         return f'"sr-srgbs": {json.dumps(self.srgbs)}'
