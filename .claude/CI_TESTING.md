@@ -50,7 +50,7 @@ Run server + client in separate terminals:
 ### Port Conflicts
 
 ```bash
-killall -9 python
+killall -9 Python  # macOS uses capital P
 ```
 
 ---
