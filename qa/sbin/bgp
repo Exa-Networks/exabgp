@@ -973,7 +973,7 @@ class Message:
 
 
 class Checker(object):
-    updates_seen = []
+    updates_seen: list[str] = []
 
     def __init__(self, expected):
         self.raw = False
@@ -1559,22 +1559,22 @@ if __name__ == '__main__':
         flushed('')
         checker.rules()
 
-    queue = queue.Queue()
+    result_queue: queue.Queue[int] = queue.Queue()
     try:
-        asyncio.run(main(options, checker, queue))
+        asyncio.run(main(options, checker, result_queue))
     except RuntimeError:
         pass
 
     flushed('\n')
 
-    if queue.empty():
+    if result_queue.empty():
         flushed('failed with no code')
         log_file = save_run_log('FAILED_NO_CODE')
         if log_file:
             flushed(f'Run log saved to: {log_file}')
         sys.exit(1)
 
-    code = queue.get()
+    code = result_queue.get()
     if code != 0:
         flushed(f'failed with code {code}')
         log_file = save_run_log(f'FAILED_{code}')
