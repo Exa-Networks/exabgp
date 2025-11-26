@@ -48,17 +48,27 @@ Guidance for Claude Code (claude.ai/code) working with this repository.
 
 **HOW TO READ: For each protocol, extract the SPECIFIC RULE you will apply to your NEXT response.**
 
-After reading, check git state:
+**IMMEDIATELY AFTER reading protocols, EXECUTE these commands (not later - NOW):**
+
 ```bash
+# 1. Git state check
 git status && git diff && git diff --staged
+
+# 2. Backport review - MANDATORY AT SESSION START
+LAST_HASH=$(grep "Last reviewed commit" .claude/BACKPORT.md | awk '{print $NF}')
+echo "=== Commits since last backport review ($LAST_HASH) ==="
+git log $LAST_HASH..HEAD --oneline
 ```
 
-If ANY files modified/staged: ASK user how to handle before starting.
+**STOP and report:**
+- If modified/staged files: ASK user how to handle
+- If new commits since backport review: Report them, note if any are bug fixes
 
 **Self-check after reading:**
 - [ ] Can I state the emoji rule? (Start every line with emoji)
 - [ ] Can I state the verification rule? (Paste command output before claiming)
 - [ ] Can I state the git rule? (Fresh git status before operations)
+- [ ] Did I RUN the backport check above? (Not just read about it)
 - [ ] Will I APPLY these to my next response? (Not just "know" them)
 
 **THEN complete:** `.claude/PRE_FLIGHT_CHECKLIST.md` before starting work.
