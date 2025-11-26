@@ -82,6 +82,19 @@ User: "commit"
 ✅ Right: Stop, categorize files, ask which to include
 ```
 
+**8. Backport review check**
+
+At session start:
+1. Check `.claude/BACKPORT.md` for last reviewed commit hash
+2. Run `git log <last_hash>..HEAD --oneline` to see new commits
+3. If new commits exist and appear to be bug fixes, ask: "Do any of these commits need backport review?"
+4. Skip if commits are clearly refactoring/typing/style only
+5. After review, update last reviewed hash in BACKPORT.md
+
+When session starts with modified (uncommitted) files:
+- If changes appear to be bug fixes, ask: "Do any of these changes need backport review?"
+- Skip if changes are clearly refactoring/typing/style only
+
 ---
 
 ## ENFORCEMENT

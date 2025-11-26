@@ -34,7 +34,7 @@ Guidance for Claude Code (claude.ai/code) working with this repository.
    - **Rule:** After mistake, SLOW DOWN, re-read protocol
    - **Apply:** When corrected, stop, identify violated protocol, re-read
 
-7. `.claude/CODING_STANDARDS.md` - Python 3.8+, BGP APIs
+7. `.claude/CODING_STANDARDS.md` - Python 3.10+, BGP APIs
    - **Rule:** Union[int, str] NOT int | str, negotiated param required
    - **Apply:** Before writing code, check syntax compatibility
 
@@ -62,6 +62,8 @@ If ANY files modified/staged: ASK user how to handle before starting.
 - [ ] Will I APPLY these to my next response? (Not just "know" them)
 
 **THEN complete:** `.claude/PRE_FLIGHT_CHECKLIST.md` before starting work.
+
+**🐛 BACKPORT CHECK:** After fixing ANY bug, check `.claude/BACKPORT.md` and add entry if the fix applies to stable branches (5.0). Ask user if unsure whether a fix needs backporting.
 
 **⚠️ BEFORE CREATING ANY DOCUMENTATION:** Read `.claude/DOCUMENTATION_PLACEMENT_GUIDE.md` to know where to put it.
 

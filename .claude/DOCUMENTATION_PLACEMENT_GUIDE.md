@@ -114,12 +114,15 @@ Examples:
 
 ### 5. Is this about a SPECIFIC IMPLEMENTATION PLAN?
 
-**YES** → Goes in `.claude/docs/wip/{feature-name}/` or `.claude/docs/plans/{feature-name}.md`
+**YES** → Goes in `plan/` (project root)
 
 Examples:
 - "Plan to add new NLRI type"
 - "Health monitoring implementation plan"
 - "API improvement proposal"
+- "Refactoring plan"
+
+**Location:** `plan/{feature-name}.md`
 
 **Format:**
 ```markdown
@@ -178,6 +181,13 @@ Examples:
 ## 📁 Complete Directory Structure
 
 ```
+# PROJECT ROOT
+plan/                              # Implementation plans (USER PREFERENCE)
+├── {feature-name}.md              # e.g., notification-code-rename.md
+├── configuration.md
+├── coverage.md
+└── todo.md
+
 .claude/
 ├── # PROTOCOLS (how we work)
 ├── VERIFICATION_DISCIPLINE.md
@@ -221,8 +231,6 @@ Examples:
 │   │   └── {project-name}/
 │   ├── reference/             # API & reference docs
 │   │   └── {topic}.md
-│   ├── plans/                 # Future plans (mostly empty, use wip/)
-│   │   └── {feature-name}.md
 │   └── archive/               # Superseded experiments
 │       └── {old-project}/
 ├──
@@ -236,11 +244,11 @@ Examples:
 
 | Doc Type | Location | Example | When to Update |
 |----------|----------|---------|----------------|
+| **Implementation plans** | `plan/` | "Refactoring plan" | Plan changes |
 | **Codebase structure** | `.claude/exabgp/` | "Where is NLRI code?" | Structure changes |
 | **Work protocols** | `.claude/` | "How to verify?" | Protocol violations |
 | **Completed projects** | `.claude/docs/projects/` | "AsyncIO migration" | Project completes |
 | **Active work** | `.claude/docs/wip/` | "Type annotation progress" | Work progresses |
-| **Implementation plans** | `.claude/docs/wip/` or `.claude/docs/plans/` | "Add new NLRI plan" | Plan changes |
 | **API reference** | `.claude/docs/reference/` | "Neighbor selector syntax" | API changes |
 | **Test architecture** | `.claude/` | "Functional test guide" | Test changes |
 | **Archive** | `.claude/archive/` | "Superseded plans" | When obsolete |
@@ -281,8 +289,8 @@ Examples:
 
 **Decision:**
 - Is it an IMPLEMENTATION PLAN? **YES**
-- **Location:** `.claude/docs/wip/health-monitoring/PLAN.md`
-- **Why:** It's active planning work
+- **Location:** `plan/health-monitoring.md`
+- **Why:** Implementation plans go in the `plan/` folder at project root
 
 ### Example 6: "I want to explain neighbor selector syntax"
 
@@ -349,8 +357,8 @@ Idea
    - YES → `.claude/docs/wip/`
    - NO → Continue
 
-5. **Does this doc plan future work?**
-   - YES → `.claude/docs/wip/` (or `.claude/docs/plans/` if standalone)
+5. **Does this doc plan future work (implementation plan)?**
+   - YES → `plan/` (project root)
    - NO → Continue
 
 6. **Does this doc provide API/reference info?**
@@ -373,12 +381,12 @@ Idea
    - How it WAS done
    - Decisions made
 
-3. **FUTURE** (`.claude/docs/wip/`, `.claude/docs/plans/`)
-   - What's IN PROGRESS
-   - What's PLANNED
+3. **FUTURE** (`plan/`, `.claude/docs/wip/`)
+   - Implementation plans → `plan/`
+   - Active work progress → `.claude/docs/wip/`
 
 **Golden rule:** If you can't decide, ask the user.
 
 ---
 
-**Updated:** 2025-11-24
+**Updated:** 2025-11-26
