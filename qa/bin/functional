@@ -1010,6 +1010,10 @@ class Tests:
             flush('  # Terminal 2 - Then start client:')
             flush(f'  ./qa/bin/functional encoding --client {test.nick}')
             flush()
+            flush('For intermittent failures, use --save to capture run logs:')
+            flush(f'  ./qa/bin/functional encoding --server {test.nick} --save /tmp/runs/')
+            flush('  # Logs saved with timing, message hashes for comparison')
+            flush()
 
         # Show raw server output if it has useful info
         if server:
@@ -1095,6 +1099,9 @@ class Tests:
             flush('To debug failed tests, run individually:')
             for nick in all_failed:
                 flush(f'  ./qa/bin/functional encoding {nick}')
+            flush()
+            flush('For intermittent failures, use --save to capture run logs:')
+            flush(f'  ./qa/bin/functional encoding {all_failed[0]} --save /tmp/runs/')
 
         flush()
 
@@ -1248,7 +1255,7 @@ class EncodingTests(Tests):
         }
         return 'env \\\n  %(env)s \\\n   %(exabgp)s -d -p \\\n    %(confs)s' % config
 
-    def server(self, nick: str) -> str:
+    def server(self, nick: str, save_dir: Optional[str] = None) -> str:
         if not self.enable_by_nick(nick):
             sys.exit('no such test')
         test = self.get_by_nick(nick)
@@ -1256,19 +1263,21 @@ class EncodingTests(Tests):
         # Pass config file path for decode commands in mismatch output
         config_file = test.conf['confs'][0] if test.conf.get('confs') else ''
 
+        env_vars = [
+            'exabgp_tcp_port=%d' % test.conf['port'],
+            f'EXABGP_TEST_CONFIG={config_file}',
+            f'EXABGP_TEST_NAME={nick}',
+        ]
+
         config = {
-            'env': ' \\\n  '.join(
-                [
-                    'exabgp_tcp_port=%d' % test.conf['port'],
-                    f'EXABGP_TEST_CONFIG={config_file}',
-                ]
-            ),
+            'env': ' \\\n  '.join(env_vars),
             'interpreter': INTERPRETER,
             'bgp': Path.BGP,
             'msg': test.conf['msg'],
+            'save_opt': f'--save {save_dir}' if save_dir else '',
         }
 
-        return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s --view \\\n    %(msg)s' % config
+        return 'env \\\n  %(env)s \\\n  %(interpreter)s %(bgp)s --view %(save_opt)s \\\n    %(msg)s' % config
 
     def dry(self) -> str:
         result: List[str] = []
@@ -1361,9 +1370,10 @@ class EncodingTests(Tests):
         # Verify they're dead (wait briefly)
         time.sleep(0.3)
 
-    def run_selected(self, timeout: int) -> bool:
+    def run_selected(self, timeout: int, save_dir: Optional[str] = None) -> bool:
         # Set max timeout before setup so it shows during initialization
         self._max_timeout: int = timeout
+        self._save_dir = save_dir  # Store for use in server startup
         self.legend()
 
         # Install signal handlers to detect when we're killed by another instance
@@ -1427,17 +1437,17 @@ class EncodingTests(Tests):
         last_daemon_display = -1  # Track last displayed count to avoid duplicates
         for test in self.selected():
             test.setup()
-            test.run(
-                [
-                    sys.argv[0],
-                    'encoding',
-                    '--server',
-                    test.nick,
-                    '--port',
-                    f'{test.conf["port"]}',
-                ],
-                env=None,
-            )
+            cmd = [
+                sys.argv[0],
+                'encoding',
+                '--server',
+                test.nick,
+                '--port',
+                f'{test.conf["port"]}',
+            ]
+            if self._save_dir:
+                cmd.extend(['--save', self._save_dir])
+            test.run(cmd, env=None)
             daemons_started += 1
             # Only display every 10th daemon and avoid duplicate displays
             if daemons_started % 10 == 0 and daemons_started != last_daemon_display:
@@ -1913,6 +1923,8 @@ def add_test(
         )
     if 'port' in extra:
         sub.add_argument('--port', help='base port to use', type=int, default=1790)
+    if 'save' in extra:
+        sub.add_argument('--save', help='save run logs to directory (for debugging intermittent failures)', type=str, default=None)
     sub.add_argument('test', help='name of the test(s) to run', nargs='*', default=None)
 
     def func(parsed: Namespace) -> None:
@@ -1947,7 +1959,8 @@ def add_test(
             return
 
         if 'server' in extra and parsed.server:
-            command = tests.server(parsed.server)
+            save_dir = getattr(parsed, 'save', None)
+            command = tests.server(parsed.server, save_dir=save_dir)
             flush(f'server> {command}')
             if not parsed.dry:
                 sys.exit(os.system(command))
@@ -1969,7 +1982,12 @@ def add_test(
             flush(command)
             sys.exit(0)
 
-        success_exit = tests.run_selected(parsed.timeout)
+        # Pass save_dir only if the test class supports it (encoding tests only)
+        save_dir = getattr(parsed, 'save', None)
+        if hasattr(tests, '_save_dir') or isinstance(tests, EncodingTests):
+            success_exit = tests.run_selected(parsed.timeout, save_dir=save_dir)
+        else:
+            success_exit = tests.run_selected(parsed.timeout)
         flush()
         sys.exit(0 if success_exit else 1)
 
@@ -1996,7 +2014,7 @@ if __name__ == '__main__':
         subparser,
         'encoding',
         encoding,
-        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'server', 'client'],
+        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'server', 'client', 'save'],
     )
     add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit'])
 

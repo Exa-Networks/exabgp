@@ -9,6 +9,30 @@ Systematic debug process for encoding test failures.
 - Test fails or times out
 - Need to see WHY (not just that it failed)
 - Investigating sync vs async differences
+- Debugging intermittent failures
+
+---
+
+## Debugging Intermittent Failures
+
+Use `--save` to capture run logs with timing and message hashes:
+
+```bash
+# Run test multiple times, saving logs
+./qa/bin/functional encoding A --save /tmp/runs/
+
+# Logs are saved as: /tmp/runs/<test>-<timestamp>.log
+# Format:
+#   [  0.222s] SESSION_START
+#   [  0.222s] OPEN_RECV hash=90f464 len=55
+#   [  0.223s] MSG #1 hash=7dffeb len=23 MATCH
+#   ...
+
+# Compare logs from passing vs failing runs to find:
+# - Timing differences (message delays)
+# - Message order differences (by hash)
+# - Missing messages
+```
 
 ---
 

@@ -121,6 +121,11 @@ env EDITOR=cat ./qa/bin/functional encoding --edit <letter>
 # Debug in separate terminals
 ./qa/bin/functional encoding --server <letter>  # Terminal 1
 ./qa/bin/functional encoding --client <letter>  # Terminal 2
+
+# Capture run logs for intermittent failures
+./qa/bin/functional encoding <letter> --save /tmp/runs/
+# Logs include: timing, message hashes, match/mismatch status
+# Compare logs from multiple runs to diagnose intermittent issues
 ```
 
 **See:**
