@@ -96,6 +96,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = Update.TYPE
+        message.IS_NOP = False
 
         result = timer.check_ka_timer(message)
         assert result is True
@@ -107,6 +108,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = KeepAlive.TYPE
+        message.IS_NOP = False
 
         result = timer.check_ka_timer(message)
         assert result is False
@@ -121,6 +123,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = Update.TYPE
+        message.IS_NOP = False
 
         old_last_read = timer.last_read
         timer.check_ka_timer(message)
@@ -139,11 +142,12 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
+        message.IS_NOP = True
 
         time.sleep(1)
-        timer.check_ka_timer(message, ignore=_NOP.TYPE)
+        timer.check_ka_timer(message)
 
-        # last_read should NOT be updated for ignored message
+        # last_read should NOT be updated for ignored message (NOP)
         assert timer.last_read == old_last_read
 
     def test_check_ka_timer_raises_notify_on_expiry(self) -> None:
@@ -156,9 +160,10 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
+        message.IS_NOP = True
 
         with pytest.raises(Notify) as exc_info:
-            timer.check_ka_timer(message, ignore=_NOP.TYPE)
+            timer.check_ka_timer(message)
 
         assert exc_info.value.code == 4
         assert exc_info.value.subcode == 0
@@ -170,6 +175,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = Update.TYPE
+        message.IS_NOP = False
 
         # Should not raise
         result = timer.check_ka_timer(message)
@@ -186,6 +192,7 @@ class TestReceiveTimerCheckKa:
 
         message = Mock()
         message.TYPE = Update.TYPE
+        message.IS_NOP = False
 
         # Should not raise
         timer.check_ka(message)
@@ -197,6 +204,7 @@ class TestReceiveTimerCheckKa:
 
         message = Mock()
         message.TYPE = KeepAlive.TYPE
+        message.IS_NOP = False
 
         # First keepalive should set single flag but not raise
         timer.check_ka(message)
@@ -216,6 +224,7 @@ class TestReceiveTimerCheckKa:
 
         message = Mock()
         message.TYPE = KeepAlive.TYPE
+        message.IS_NOP = False
 
         # First keepalive
         try:
@@ -241,9 +250,10 @@ class TestReceiveTimerElapsedTime:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
+        message.IS_NOP = True
 
         # Should calculate elapsed time
-        timer.check_ka_timer(message, ignore=_NOP.TYPE)
+        timer.check_ka_timer(message)
 
         # If elapsed > holdtime, would have raised Notify
         # Since it didn't raise, elapsed < holdtime
@@ -259,9 +269,10 @@ class TestReceiveTimerElapsedTime:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
+        message.IS_NOP = True
 
         with pytest.raises(Notify):
-            timer.check_ka_timer(message, ignore=_NOP.TYPE)
+            timer.check_ka_timer(message)
 
 
 class TestSendTimerInitialization:
@@ -443,9 +454,10 @@ class TestReceiveTimerIntegration:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
+        message.IS_NOP = True
 
         with pytest.raises(Notify) as exc_info:
-            timer.check_ka_timer(message, ignore=_NOP.TYPE)
+            timer.check_ka_timer(message)
 
         assert 'hold timer expired' in str(exc_info.value.data)
 
@@ -535,9 +547,10 @@ class TestTimerNotifyMessages:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
+        message.IS_NOP = True
 
         with pytest.raises(Notify) as exc_info:
-            timer.check_ka_timer(message, ignore=_NOP.TYPE)
+            timer.check_ka_timer(message)
 
         assert exc_info.value.code == 4
         assert exc_info.value.subcode == 5
@@ -551,9 +564,10 @@ class TestTimerNotifyMessages:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
+        message.IS_NOP = True
 
         with pytest.raises(Notify) as exc_info:
-            timer.check_ka_timer(message, ignore=_NOP.TYPE)
+            timer.check_ka_timer(message)
 
         # Message should be in the notification
         assert exc_info.value.data == b'custom error message'
@@ -569,6 +583,7 @@ class TestTimerConcurrentBehavior:
 
         message = Mock()
         message.TYPE = Update.TYPE
+        message.IS_NOP = False
 
         # Rapid fire messages
         for _ in range(10):

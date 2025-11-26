@@ -11,7 +11,7 @@ import os
 import asyncio  # noqa: F401 - Used by async methods (write_async, send_async, read_message_async)
 
 import traceback
-from typing import Any, Generator, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, Generator, Optional, Tuple, Union, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.peer import Peer
@@ -261,7 +261,7 @@ class Protocol:
 
     # Read from network .......................................................
 
-    def read_message(self) -> Generator[Union[Message, NOP], None, None]:
+    def read_message(self) -> Generator[Message, None, None]:
         assert self.connection is not None
         assert self.neighbor.api is not None
         # This will always be defined by the loop but scope leaking upset scrutinizer/pylint
@@ -327,8 +327,9 @@ class Protocol:
                 # raise Notify(5,0,'unknown message received')
 
             if message.TYPE == Update.TYPE:
-                if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in message.attributes:
-                    for nlri in message.nlris:
+                update = cast(Update, message)
+                if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in update.attributes:
+                    for nlri in update.nlris:
                         nlri.action = Action.WITHDRAW
 
             if for_api:
@@ -343,14 +344,14 @@ class Protocol:
                     )
 
             if message.TYPE == Notification.TYPE:
-                raise message
+                raise cast(Notification, message)
 
-            if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in message.attributes:
+            if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in cast(Update, message).attributes:
                 yield _NOP
             else:
                 yield message
 
-    async def read_message_async(self) -> Union[Message, NOP]:
+    async def read_message_async(self) -> Message:
         """Async version of read_message() - reads BGP message using async I/O"""
         assert self.connection is not None
         assert self.neighbor.api is not None
@@ -410,8 +411,9 @@ class Protocol:
             # raise Notify(5,0,'unknown message received')
 
         if message.TYPE == Update.TYPE:
-            if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in message.attributes:
-                for nlri in message.nlris:
+            update = cast(Update, message)
+            if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in update.attributes:
+                for nlri in update.nlris:
                     nlri.action = Action.WITHDRAW
 
         if for_api:
@@ -424,9 +426,9 @@ class Protocol:
                 self.peer.reactor.processes.message(msg_id, self.neighbor, 'receive', message, b'', b'', negotiated=neg)
 
         if message.TYPE == Notification.TYPE:
-            raise message
+            raise cast(Notification, message)
 
-        if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in message.attributes:
+        if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in cast(Update, message).attributes:
             return _NOP
         else:
             return message
@@ -463,9 +465,9 @@ class Protocol:
                 self._session(),
             )
 
-    def read_open(self, ip: str) -> Generator[Union[Open, NOP], None, None]:
+    def read_open(self, ip: str) -> Generator[Message, None, None]:
         for received_open in self.read_message():
-            if received_open.TYPE == NOP.TYPE:
+            if received_open.IS_NOP:
                 yield received_open
             else:
                 break
@@ -484,7 +486,7 @@ class Protocol:
         """Async version of read_open() - reads OPEN message using async I/O"""
         while True:
             received_open = await self.read_message_async()
-            if received_open.TYPE != NOP.TYPE:
+            if not received_open.IS_NOP:
                 break
 
         if received_open.TYPE != Open.TYPE:
@@ -497,9 +499,9 @@ class Protocol:
         log.debug(lambda: '<< {}'.format(received_open), self._session())
         return received_open  # type: ignore[return-value]
 
-    def read_keepalive(self) -> Generator[Union[KeepAlive, NOP], None, None]:
+    def read_keepalive(self) -> Generator[Message, None, None]:
         for message in self.read_message():
-            if message.TYPE == NOP.TYPE:
+            if message.IS_NOP:
                 yield message
             else:
                 break
@@ -513,7 +515,7 @@ class Protocol:
         """Async version of read_keepalive() - reads KEEPALIVE message using async I/O"""
         while True:
             message = await self.read_message_async()
-            if message.TYPE != NOP.TYPE:
+            if not message.IS_NOP:
                 break
 
         if message.TYPE != KeepAlive.TYPE:
@@ -687,7 +689,7 @@ class Protocol:
         log.debug(lambda: f'[Protocol.new_update_async] DONE - sent {number} messages total', self._session())
         return _UPDATE
 
-    def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Union[EOR, NOP], None, None]:
+    def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Message, None, None]:
         assert self.connection is not None
         eor: EOR = EOR(afi, safi)
         for _ in self.write(eor, self.negotiated):
@@ -714,9 +716,7 @@ class Protocol:
             await self.new_keepalive_async('EOR')
         return _UPDATE
 
-    def new_eors(
-        self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined
-    ) -> Generator[Union[Update, NOP], None, None]:
+    def new_eors(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> Generator[Message, None, None]:
         # Send EOR to let our peer know he can perform a RIB update
         if self.negotiated.families:
             families = (
