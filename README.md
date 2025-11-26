@@ -354,11 +354,11 @@ Documentation contributions are genuinely welcomed! Even small improvements help
 
 ### Requirements
 
-- **Python 3.8+** required for ExaBGP 5.0 (supports versions 3.8 through 3.12+)
+- **Python 3.10+** required for ExaBGP 6.0 (supports versions 3.10 through 3.13)
 - **No asyncio**: Uses custom reactor pattern predating asyncio adoption
 - **Compatibility**: Focus on reliability over adopting latest Python features
 
-**Version 3.x** supported Python 2 only. **Version 4.x** introduced Python 3 support while maintaining Python 2 compatibility (minimum: Python 3.6). **Version 5.0** requires Python 3.8 or later, dropping Python 2 and older Python 3 versions. The minimum was increased to Python 3.8 for better tooling support (ruff, type checking) and to leverage modern Python features.
+**Version 3.x** supported Python 2 only. **Version 4.x** introduced Python 3 support while maintaining Python 2 compatibility (minimum: Python 3.6). **Version 5.0** requires Python 3.8 or later. **Version 6.0** requires Python 3.10 or later, enabling use of modern type annotation syntax (`int | str` unions) and other language improvements.
 
 ExaBGP is nearly as old as Python 3. A lot has changed since 2009; the application does not use Python 3's async-io (as we run a homemade async core engine). It may never do as development slowed, and our primary goal is ensuring reliability for current and new users.
 
