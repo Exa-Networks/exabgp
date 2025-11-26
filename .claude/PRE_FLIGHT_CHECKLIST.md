@@ -32,7 +32,25 @@ git status && git diff && git diff --staged
 
 ---
 
-## 3. Codebase References (For New Features/Refactoring)
+## 3. Backport Review Check
+
+```bash
+# 1. Get last reviewed hash from BACKPORT.md
+cat .claude/BACKPORT.md | grep "Last reviewed commit"
+
+# 2. Check new commits since then
+git log <hash>..HEAD --oneline
+```
+
+**For each new commit:**
+- Bug fix? → Ask user if backport needed
+- QA/docs/refactoring only? → No backport needed
+
+**Update BACKPORT.md with new "Last reviewed commit" hash after review.**
+
+---
+
+## 4. Codebase References (For New Features/Refactoring)
 
 **If task involves new features, major changes, or unfamiliar areas:**
 
@@ -46,10 +64,11 @@ git status && git diff && git diff --staged
 
 ---
 
-## 4. Ready to Work
+## 5. Ready to Work
 
 - [ ] All protocols read
 - [ ] Git state checked
+- [ ] Backport review completed
 - [ ] User informed of any pre-existing changes
 - [ ] No assumptions made
 - [ ] Relevant codebase references reviewed (if applicable)

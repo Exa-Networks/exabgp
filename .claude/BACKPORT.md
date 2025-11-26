@@ -2,7 +2,7 @@
 
 Bug fixes that need backporting to stable branches.
 
-**Last reviewed commit:** 520698ed
+**Last reviewed commit:** ba22a1d8
 
 ---
 
