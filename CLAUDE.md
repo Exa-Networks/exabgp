@@ -126,6 +126,10 @@ env EDITOR=cat ./qa/bin/functional encoding --edit <letter>
 ./qa/bin/functional encoding <letter> --save /tmp/runs/
 # Logs include: timing, message hashes, match/mismatch status
 # Compare logs from multiple runs to diagnose intermittent issues
+
+# Stress test - run N times and report statistics
+./qa/bin/functional encoding <letter> --stress 10
+# Shows pass/fail per run, timing stats (min/avg/max/stddev)
 ```
 
 **See:**

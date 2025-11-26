@@ -690,6 +690,10 @@ class Record:
         self.state = State.NONE
         return self
 
+    def deactivate(self) -> 'Record':
+        self.state = State.SKIP
+        return self
+
     def is_active(self) -> bool:
         return self.state not in (State.SKIP, State.FAIL, State.SUCCESS, State.TIMEOUT)
 
@@ -753,6 +757,10 @@ class Tests:
     def enable_all(self) -> None:
         for nick in self._by_nick:
             _ = self._by_nick[nick].activate()
+
+    def disable_all(self) -> None:
+        for nick in self._by_nick:
+            _ = self._by_nick[nick].deactivate()
 
     def get_by_nick(self, nick: str) -> Record:
         return self._by_nick[nick]
@@ -1891,6 +1899,88 @@ class ParsingTests(Tests):
         return success
 
 
+def run_stress_test(
+    tests: 'EncodingTests',
+    test_nick: str,
+    count: int,
+    timeout: int,
+    save_dir: Optional[str] = None,
+) -> None:
+    """Run a single test N times and report statistics."""
+    import statistics
+    import io
+    import contextlib
+
+    if not tests.enable_by_nick(test_nick):
+        sys.exit(f'could not find test {test_nick}')
+
+    flush(f'=== STRESS TEST: {count} runs of test {test_nick} ===')
+    flush()
+
+    results: List[Dict[str, Any]] = []
+    passed = 0
+    failed = 0
+    failed_runs: List[int] = []
+
+    for run_num in range(1, count + 1):
+        start_time = time.time()
+
+        # Create fresh test instance for each run
+        tests.disable_all()
+        tests.enable_by_nick(test_nick)
+
+        # Run the test, suppressing detailed output
+        # Capture stdout to suppress the per-run output
+        with contextlib.redirect_stdout(io.StringIO()):
+            success = tests.run_selected(timeout, save_dir=save_dir)
+        elapsed = time.time() - start_time
+
+        result = {
+            'run': run_num,
+            'success': success,
+            'elapsed': elapsed,
+        }
+        results.append(result)
+
+        status = '\033[32m✓ PASS\033[0m' if success else '\033[31m✗ FAIL\033[0m'
+        flush(f'Run {run_num:3d}: {status} ({elapsed:.2f}s)')
+
+        if success:
+            passed += 1
+        else:
+            failed += 1
+            failed_runs.append(run_num)
+
+        # Brief pause between runs
+        time.sleep(0.5)
+
+    # Calculate statistics
+    times = [r['elapsed'] for r in results]
+    pass_times = [r['elapsed'] for r in results if r['success']]
+
+    flush()
+    flush('=' * 50)
+    flush('SUMMARY')
+    flush('=' * 50)
+    flush(f'Passed: {passed}/{count} ({100*passed/count:.1f}%)')
+    if failed > 0:
+        flush(f'\033[31mFailed\033[0m: {failed} (runs {", ".join(map(str, failed_runs))})')
+
+    flush()
+    flush('Timing (all runs):')
+    flush(f'  min: {min(times):.2f}s  avg: {statistics.mean(times):.2f}s  max: {max(times):.2f}s')
+    if len(times) > 1:
+        flush(f'  stddev: {statistics.stdev(times):.2f}s')
+
+    if pass_times and len(pass_times) != len(times):
+        flush()
+        flush('Timing (passed runs only):')
+        flush(f'  min: {min(pass_times):.2f}s  avg: {statistics.mean(pass_times):.2f}s  max: {max(pass_times):.2f}s')
+
+    flush()
+    sys.exit(0 if failed == 0 else 1)
+
+
 def add_test(
     subparser: '_SubParsersAction[argparse.ArgumentParser]',
     name: str,
@@ -1925,6 +2015,8 @@ def add_test(
         sub.add_argument('--port', help='base port to use', type=int, default=1790)
     if 'save' in extra:
         sub.add_argument('--save', help='save run logs to directory (for debugging intermittent failures)', type=str, default=None)
+    if 'stress' in extra:
+        sub.add_argument('--stress', help='run test N times and report statistics', type=int, default=None)
     sub.add_argument('test', help='name of the test(s) to run', nargs='*', default=None)
 
     def func(parsed: Namespace) -> None:
@@ -1982,6 +2074,16 @@ def add_test(
             flush(command)
             sys.exit(0)
 
+        # Handle --stress N: run test N times and report statistics
+        stress_count = getattr(parsed, 'stress', None)
+        if stress_count and isinstance(tests, EncodingTests):
+            if not parsed.test or len(parsed.test) != 1:
+                sys.exit('--stress requires exactly one test')
+            test_nick = parsed.test[0]
+            save_dir = getattr(parsed, 'save', None)
+            run_stress_test(tests, test_nick, stress_count, parsed.timeout, save_dir)
+            return
+
         # Pass save_dir only if the test class supports it (encoding tests only)
         save_dir = getattr(parsed, 'save', None)
         if hasattr(tests, '_save_dir') or isinstance(tests, EncodingTests):
@@ -2014,7 +2116,7 @@ if __name__ == '__main__':
         subparser,
         'encoding',
         encoding,
-        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'server', 'client', 'save'],
+        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'server', 'client', 'save', 'stress'],
     )
     add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit'])
 
