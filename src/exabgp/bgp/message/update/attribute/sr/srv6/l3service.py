@@ -43,7 +43,7 @@ class Srv6L3Service:
     @classmethod
     def register(cls) -> Callable[[Type[SubTlvType]], Type[SubTlvType]]:
         def register_subtlv(klass: Type[SubTlvType]) -> Type[SubTlvType]:
-            scode: int = klass.TLV
+            scode: int = klass.TLV  # type: ignore[attr-defined]
             if scode in cls.registered_subtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Service Sub-TLV type')
             cls.registered_subtlvs[scode] = klass
@@ -61,7 +61,9 @@ class Srv6L3Service:
             code: int = data[0]
             length = unpack('!H', data[1:3])[0]
             if code in cls.registered_subtlvs:
-                subtlv: GenericSrv6ServiceSubTlv = cls.registered_subtlvs[code].unpack_attribute(
+                subtlv: GenericSrv6ServiceSubTlv = cls.registered_subtlvs[
+                    code
+                ].unpack_attribute(  # type: ignore[attr-defined]
                     data[3 : length + 3], length
                 )
             else:

@@ -63,14 +63,14 @@ class INET(NLRI):
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
         return hash(addpath + self._pack_nlri_simple())
 
-    def feedback(self, action: Action) -> str:
+    def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'inet nlri next-hop missing'
         return ''
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return self.cidr.pack_nlri()  # type: ignore[no-any-return,union-attr]
+        return self.cidr.pack_nlri()  # type: ignore[union-attr]
 
     def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
         addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
@@ -78,7 +78,7 @@ class INET(NLRI):
 
     def index(self) -> bytes:
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
-        return Family.index(self) + addpath + self.cidr.pack_nlri()  # type: ignore[no-any-return,union-attr]
+        return Family.index(self) + addpath + self.cidr.pack_nlri()  # type: ignore[union-attr]
 
     def prefix(self) -> str:
         return '{}{}'.format(self.cidr.prefix(), str(self.path_info))  # type: ignore[union-attr]
@@ -113,7 +113,7 @@ class INET(NLRI):
     # 	return nlri,data
 
     @classmethod
-    def unpack_nlri(
+    def unpack_nlri(  # type: ignore[override]
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> Tuple[INET, bytes]:
         nlri = cls(afi, safi, action)

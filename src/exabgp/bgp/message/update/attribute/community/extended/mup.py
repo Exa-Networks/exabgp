@@ -58,6 +58,6 @@ class MUPExtendedCommunity(ExtendedCommunity):
         return '%s:%d:%d' % ('mup', self.sgid2, self.sgid4)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> MUPExtendedCommunity:
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> MUPExtendedCommunity:
         sgid2, sgid4 = unpack('!HL', data[2:8])
         return MUPExtendedCommunity(sgid2, sgid4, False, data[:8])

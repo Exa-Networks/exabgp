@@ -97,7 +97,7 @@ class OutgoingRIB(Cache):
         for change in self.cached_changes(list(requested_families)):
             self._refresh_changes.append(change)
 
-    def withdraw(self, families: Set[Tuple[AFI, SAFI] | None] = None) -> None:
+    def withdraw(self, families: Set[Tuple[AFI, SAFI]] | None = None) -> None:
         if not families:
             families = self.families
         requested_families = set(families).intersection(self.families)

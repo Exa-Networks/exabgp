@@ -153,7 +153,7 @@ class Peer:
     def _close(self, message: str = '', error: str | Exception = '') -> None:
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
             try:
-                if self.neighbor.api['neighbor-changes']:
+                if self.neighbor.api['neighbor-changes']:  # type: ignore[index]
                     self.reactor.processes.down(self.neighbor, message)
             except ProcessError:
                 log.debug(
@@ -310,7 +310,7 @@ class Peer:
             # it does not matter as the open message will be the same anyway
             assert self.proto is not None  # Must exist in OPENCONFIRM state
             local_id = self.neighbor['router-id'].pack_ip()
-            remote_id = self.proto.negotiated.received_open.router_id.pack_ip()
+            remote_id = self.proto.negotiated.received_open.router_id.pack_ip()  # type: ignore[union-attr]
 
             if remote_id < local_id:
                 log.debug(
@@ -413,11 +413,11 @@ class Peer:
                 self._close(f'connection to {self.neighbor["peer-address"]}:{self.neighbor["connect"]} failed')
             raise Interrupted('connection failed') from None
 
-    def _send_open(self) -> Generator[int | Open, NOP, None, None]:
+    def _send_open(self) -> Generator[int | Open, NOP, None, None]:  # type: ignore[type-arg]
         assert self.proto is not None
         message = Message.CODE.NOP
-        for message in self.proto.new_open():
-            if message.ID == Message.CODE.NOP:
+        for message in self.proto.new_open():  # type: ignore[assignment]
+            if message.ID == Message.CODE.NOP:  # type: ignore[attr-defined]
                 yield ACTION.NOW
         yield message
 
@@ -426,7 +426,7 @@ class Peer:
         assert self.proto is not None
         return await self.proto.new_open_async()
 
-    def _read_open(self) -> Generator[int | Open, NOP, None, None]:
+    def _read_open(self) -> Generator[int | Open, NOP, None, None]:  # type: ignore[type-arg]
         assert self.proto is not None
         assert self.proto.connection is not None
         wait = getenv().bgp.openwait
@@ -614,11 +614,11 @@ class Peer:
 
         # Announce to the process BGP is up
         log.info(
-            lambda: f'connected to {self.id()} with {self.proto.connection.name()}',
+            lambda: f'connected to {self.id()} with {self.proto.connection.name()}',  # type: ignore[union-attr]
             'reactor',
         )
         self.stats['up'] += 1
-        if self.neighbor.api['neighbor-changes']:
+        if self.neighbor.api['neighbor-changes']:  # type: ignore[index]
             try:
                 self.reactor.processes.up(self.neighbor)
             except ProcessError:
@@ -645,7 +645,7 @@ class Peer:
 
         # we need to make sure to send what was already issued by the api
         # from the previous time
-        previous = self.neighbor.previous.changes if self.neighbor.previous else []
+        previous = self.neighbor.previous.changes if self.neighbor.previous else []  # type: ignore[attr-defined]
         current = self.neighbor.changes
         self.neighbor.rib.outgoing.replace_restart(previous, current)
         self.neighbor.previous = None
@@ -655,7 +655,7 @@ class Peer:
             # we are here following a configuration change
             if self._neighbor:
                 # see what changed in the configuration
-                previous = self._neighbor.previous.changes
+                previous = self._neighbor.previous.changes  # type: ignore[union-attr]
                 current = self._neighbor.changes
                 self.neighbor.rib.outgoing.replace_reload(previous, current)
                 # do not keep the previous routes in memory as they are not useful anymore
@@ -670,18 +670,18 @@ class Peer:
                     while send_ka() is None:
                         yield ACTION.NOW
                 for counter_line in self.stats.changed_statistics():
-                    log.info(lambda counter_line=counter_line: counter_line, 'statistics')
+                    log.info(lambda counter_line=counter_line: counter_line, 'statistics')  # type: ignore[misc]
 
                 # Received update
                 if message.TYPE == Update.TYPE:
                     update = cast(Update, message)
                     number += 1
-                    log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())
+                    log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())  # type: ignore[misc]
 
                     for nlri in update.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
                         log.debug(
-                            lazyformat('   UPDATE #%d nlri ' % number, nlri, str),
+                            lazyformat('   UPDATE #%d nlri ' % number, nlri, str),  # type: ignore[arg-type]
                             self.id(),
                         )
 
@@ -795,11 +795,11 @@ class Peer:
 
         # Announce to the process BGP is up
         log.info(
-            lambda: f'connected to {self.id()} with {self.proto.connection.name()}',
+            lambda: f'connected to {self.id()} with {self.proto.connection.name()}',  # type: ignore[union-attr]
             'reactor',
         )
         self.stats['up'] += 1
-        if self.neighbor.api['neighbor-changes']:
+        if self.neighbor.api['neighbor-changes']:  # type: ignore[index]
             try:
                 self.reactor.processes.up(self.neighbor)
             except ProcessError:
@@ -823,7 +823,7 @@ class Peer:
 
         # we need to make sure to send what was already issued by the api
         # from the previous time
-        previous = self.neighbor.previous.changes if self.neighbor.previous else []
+        previous = self.neighbor.previous.changes if self.neighbor.previous else []  # type: ignore[attr-defined]
         current = self.neighbor.changes
         routes_per_iteration = 1 if self.neighbor['rate-limit'] > 0 else 25
         self.neighbor.rib.outgoing.replace_restart(previous, current)
@@ -836,7 +836,7 @@ class Peer:
                 # we are here following a configuration change
                 if self._neighbor:
                     # see what changed in the configuration
-                    previous = self._neighbor.previous.changes
+                    previous = self._neighbor.previous.changes  # type: ignore[union-attr]
                     current = self._neighbor.changes
                     self.neighbor.rib.outgoing.replace_reload(previous, current)
                     # do not keep the previous routes in memory as they are not useful anymore
@@ -850,7 +850,7 @@ class Peer:
                 except asyncio.TimeoutError:
                     # No message within timeout - set to NOP and continue to outbound checks
                     # This matches generator mode where loop body executes even for NOP
-                    message = NOP
+                    message = NOP  # type: ignore[assignment]
                     await asyncio.sleep(0)
 
                 # NOP means no data - continue to outbound checks (matches generator mode)
@@ -863,18 +863,18 @@ class Peer:
                     while send_ka() is None:
                         await asyncio.sleep(0)  # Yield control like ACTION.NOW
                 for counter_line in self.stats.changed_statistics():
-                    log.info(lambda counter_line=counter_line: counter_line, 'statistics')
+                    log.info(lambda counter_line=counter_line: counter_line, 'statistics')  # type: ignore[misc]
 
                 # Received update
                 if message.TYPE == Update.TYPE:
                     update = cast(Update, message)
                     number += 1
-                    log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())
+                    log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())  # type: ignore[misc]
 
                     for nlri in update.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
                         log.debug(
-                            lazyformat('   UPDATE #%d nlri ' % number, nlri, str),
+                            lazyformat('   UPDATE #%d nlri ' % number, nlri, str),  # type: ignore[arg-type]
                             self.id(),
                         )
 
@@ -956,11 +956,11 @@ class Peer:
 
         except NetworkError as exc:
             # Normal network errors (connection closed, etc.) - log message only, no traceback
-            log.debug(lambda exc=exc: f'[ASYNC] Network error: {exc}', self.id())
+            log.debug(lambda exc=exc: f'[ASYNC] Network error: {exc}', self.id())  # type: ignore[misc]
             raise
         except Exception as exc:
             # Unexpected exceptions - log message only
-            log.error(lambda exc=exc: f'[ASYNC] Exception in main loop: {exc}', self.id())
+            log.error(lambda exc=exc: f'[ASYNC] Exception in main loop: {exc}', self.id())  # type: ignore[misc]
             raise
 
         # If graceful restart, silent shutdown
@@ -1055,7 +1055,7 @@ class Peer:
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            log.error(lambda exc=exc: format_exception(exc), 'reactor')
+            log.error(lambda exc=exc: format_exception(exc), 'reactor')  # type: ignore[misc]
             self._reset()
             return
 
@@ -1134,7 +1134,7 @@ class Peer:
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            log.error(lambda exc=exc: format_exception(exc), 'reactor')
+            log.error(lambda exc=exc: format_exception(exc), 'reactor')  # type: ignore[misc]
             self._reset()
             return
 
@@ -1155,7 +1155,7 @@ class Peer:
             try:
                 # This generator only stops when it raises
                 # otherwise return one of the ACTION
-                return next(self.generator)
+                return next(self.generator)  # type: ignore[arg-type]
             except StopIteration:
                 # Trying to run a closed loop, no point continuing
                 self.generator = None
@@ -1244,12 +1244,12 @@ class Peer:
 
         if have_open:
             assert self.proto is not None  # Guarded by have_open
-            capa = self.proto.negotiated.received_open.capabilities
+            capa = self.proto.negotiated.received_open.capabilities  # type: ignore[union-attr]
             peer.update(
                 {
-                    'router-id': self.proto.negotiated.sent_open.router_id,
-                    'peer-id': self.proto.negotiated.received_open.router_id,
-                    'hold-time': self.proto.negotiated.received_open.hold_time,
+                    'router-id': self.proto.negotiated.sent_open.router_id,  # type: ignore[union-attr]
+                    'peer-id': self.proto.negotiated.received_open.router_id,  # type: ignore[union-attr]
+                    'hold-time': self.proto.negotiated.received_open.hold_time,  # type: ignore[union-attr]
                     'asn4': self.proto.negotiated.asn4,
                     'route-refresh': capa.announced(Capability.CODE.ROUTE_REFRESH),
                     'multi-session': capa.announced(Capability.CODE.MULTISESSION)
@@ -1297,8 +1297,8 @@ class Peer:
                 recv_addpath = self.proto.negotiated.addpath.receive(*family)
             else:
                 common = None
-                send_addpath = None if family in self.neighbor.addpaths() else False
-                recv_addpath = None if family in self.neighbor.addpaths() else False
+                send_addpath = None if family in self.neighbor.addpaths() else False  # type: ignore[assignment]
+                recv_addpath = None if family in self.neighbor.addpaths() else False  # type: ignore[assignment]
             families[family] = (True, common, send_addpath, recv_addpath)
 
         messages = {}

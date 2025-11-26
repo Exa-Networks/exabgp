@@ -40,7 +40,7 @@ class Communities(Attribute):
         self.communities.sort()
         return self
 
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         if len(self.communities):
             return self._attribute(b''.join(c.pack_attribute(negotiated) for c in self.communities))
         return b''

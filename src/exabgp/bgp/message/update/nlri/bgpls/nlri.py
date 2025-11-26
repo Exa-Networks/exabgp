@@ -102,7 +102,7 @@ class BGPLS(NLRI):
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, self.safi)
         return self._pack_nlri_simple()
@@ -123,14 +123,14 @@ class BGPLS(NLRI):
         )
 
     @classmethod
-    def register(cls, klass: Type[BGPLS]) -> Type[BGPLS]:
+    def register(cls, klass: Type[BGPLS]) -> Type[BGPLS]:  # type: ignore[override]
         if klass.CODE in cls.registered_bgpls:
             raise RuntimeError('only one BGP LINK_STATE registration allowed')
         cls.registered_bgpls[klass.CODE] = klass
         return klass
 
     @classmethod
-    def unpack_nlri(
+    def unpack_nlri(  # type: ignore[override]
         cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: PathInfo | None, negotiated
     ) -> Tuple[T, bytes]:
         code, length = unpack('!HH', bgp[:4])
@@ -138,10 +138,10 @@ class BGPLS(NLRI):
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher
                 rd: RouteDistinguisher | None = RouteDistinguisher.unpack_routedistinguisher(bgp[4:12])
-                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bgp[12 : length + 4], rd)
+                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bgp[12 : length + 4], rd)  # type: ignore[attr-defined]
             else:
                 rd = None
-                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bgp[4 : length + 4], rd)
+                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bgp[4 : length + 4], rd)  # type: ignore[attr-defined]
         else:
             klass = GenericBGPLS(code, bgp[4 : length + 4])
         klass.CODE = code
@@ -157,7 +157,7 @@ class BGPLS(NLRI):
 class GenericBGPLS(BGPLS):
     def __init__(self, code: int, packed: bytes) -> None:
         BGPLS.__init__(self)
-        self.CODE = code
+        self.CODE = code  # type: ignore[misc]
         self._pack(packed)
 
     def _pack(self, packed: bytes | None = None) -> bytes | None:

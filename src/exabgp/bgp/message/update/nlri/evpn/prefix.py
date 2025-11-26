@@ -95,6 +95,8 @@ class Prefix(EVPN):
         self._pack(packed)
 
     def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Prefix):
+            return False
         return (
             NLRI.__eq__(self, other)
             and self.CODE == other.CODE

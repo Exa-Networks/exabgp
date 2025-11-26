@@ -76,9 +76,11 @@ class AddPath(Capability, dict):
             safi = SAFI.unpack_safi(data[2:3])
             sr = data[3]
             if (afi, safi) in instance:
-                log.debug(
-                    lambda afi=afi, safi=safi: f'duplicate AFI/SAFI in AddPath capability: {afi}/{safi}', 'parser'
-                )
+
+                def _log_dup(afi: AFI = afi, safi: SAFI = safi) -> str:
+                    return f'duplicate AFI/SAFI in AddPath capability: {afi}/{safi}'
+
+                log.debug(_log_dup, 'parser')
             instance.add_path(afi, safi, sr)
             data = data[4:]
         return instance

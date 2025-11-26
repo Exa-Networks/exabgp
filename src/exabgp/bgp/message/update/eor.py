@@ -45,7 +45,7 @@ class EOR(Message):
                 return b'\x00\x00\x00\x00'
             return self.PREFIX + self.afi.pack_afi() + self.safi.pack_safi()
 
-        def pack_nlri(self, negotiated: 'Negotiated') -> bytes:  # type: ignore[override]
+        def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
             # EOR (End-of-RIB) marker - addpath not applicable
             return self._pack_nlri_simple()
 

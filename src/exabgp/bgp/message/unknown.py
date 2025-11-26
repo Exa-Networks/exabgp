@@ -37,4 +37,4 @@ class UnknownMessage(Message):
         raise RuntimeError('should not have been used')
 
 
-UnknownMessage.klass_unknown = UnknownMessage
+UnknownMessage.klass_unknown = UnknownMessage  # type: ignore[assignment]

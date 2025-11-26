@@ -83,7 +83,7 @@ class NetLinkRoute:
 
     format = namedtuple('format', 'type flags seq pid data')
     pid = os.getpid()
-    netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)
+    netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)  # type: ignore[attr-defined]
 
     class Header:
         # linux/netlink.h

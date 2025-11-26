@@ -37,7 +37,7 @@ class NLRI(Family):
         self.action = action
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri().hex()))
+        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri().hex()))  # type: ignore[call-arg]
 
     def __eq__(self, other: Any) -> bool:
         return bool(self.index() == other.index())
@@ -67,9 +67,9 @@ class NLRI(Family):
         setattr(self, name, value)
 
     def index(self) -> bytes:
-        return Family.index(self) + self.pack_nlri()
+        return Family.index(self) + self.pack_nlri()  # type: ignore[call-arg]
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         raise Exception('unimplemented in NLRI children class')
 
     @classmethod

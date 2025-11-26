@@ -29,7 +29,7 @@ class ExtendedCommunityBase(Attribute):
     registered_extended: ClassVar[Dict[Tuple[int, int], Type[ExtendedCommunityBase]] | None] = None
 
     @classmethod
-    def register(cls, klass: Type[ExtendedCommunityBase]) -> Type[ExtendedCommunityBase]:
+    def register(cls, klass: Type[ExtendedCommunityBase]) -> Type[ExtendedCommunityBase]:  # type: ignore[override]
         cls.registered_extended[(klass.COMMUNITY_TYPE & 0x0F, klass.COMMUNITY_SUBTYPE)] = klass  # type: ignore[index]
         return klass
 
@@ -40,7 +40,7 @@ class ExtendedCommunityBase(Attribute):
     def __init__(self, community: bytes) -> None:
         # Two top bits are iana and transitive bits
         self.community: bytes = community
-        self.klass: Type[ExtendedCommunityBase] | None = None
+        self.klass: Type[ExtendedCommunityBase] | None = None  # type: ignore[assignment]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
@@ -81,7 +81,7 @@ class ExtendedCommunityBase(Attribute):
         #     Value 1: The community is non-transitive across ASes
         return not (self.community[0] & 0x40)
 
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self.community
 
     def _subtype(self, transitive: bool = True) -> bytes:

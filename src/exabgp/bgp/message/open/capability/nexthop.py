@@ -62,12 +62,11 @@ class NextHop(Capability, list):
             safi = SAFI.unpack_safi(data[3:4])
             nexthop = AFI.unpack_afi(data[4:6])
             if (afi, safi, nexthop) in instance:
-                log.debug(
-                    lambda afi=afi,
-                    safi=safi,
-                    nexthop=nexthop: f'duplicate AFI/SAFI/NextHop in capability: {afi}/{safi}/{nexthop}',
-                    'parser',
-                )
+
+                def _log_dup(afi: AFI = afi, safi: SAFI = safi, nexthop: AFI = nexthop) -> str:
+                    return f'duplicate AFI/SAFI/NextHop in capability: {afi}/{safi}/{nexthop}'
+
+                log.debug(_log_dup, 'parser')
             else:
                 instance.add_nexthop(afi, safi, nexthop)
             data = data[6:]

@@ -25,10 +25,10 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
 @Attribute.register()
-class NextHop(Attribute, IP):
-    ID = Attribute.CODE.NEXT_HOP
-    FLAG = Attribute.Flag.TRANSITIVE
-    CACHING = True
+class NextHop(Attribute, IP):  # type: ignore[misc]
+    ID: ClassVar[int] = Attribute.CODE.NEXT_HOP
+    FLAG: ClassVar[int] = Attribute.Flag.TRANSITIVE
+    CACHING: ClassVar[bool] = True
     SELF: ClassVar[bool] = False
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
     NO_GENERATION: ClassVar[bool] = True

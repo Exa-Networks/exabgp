@@ -46,7 +46,7 @@ class ParseAnnounce(Section):
             return
 
         # ignore if the request is for an aggregate, or the same size
-        mask = last.nlri.cidr.mask
+        mask = last.nlri.cidr.mask  # type: ignore[attr-defined]
         cut = last.attributes[Attribute.CODE.INTERNAL_SPLIT]
         if mask >= cut:
             yield last
@@ -55,11 +55,11 @@ class ParseAnnounce(Section):
         # calculate the number of IP in the /<size> of the new route
         increment = pow(2, last.nlri.afi.mask() - cut)
         # how many new routes are we going to create from the initial one
-        number = pow(2, cut - last.nlri.cidr.mask)
+        number = pow(2, cut - last.nlri.cidr.mask)  # type: ignore[attr-defined]
 
         # convert the IP into a integer/long
         ip = 0
-        for c in last.nlri.cidr.ton():
+        for c in last.nlri.cidr.ton():  # type: ignore[attr-defined]
             ip <<= 8
             ip += c
 
@@ -68,20 +68,20 @@ class ParseAnnounce(Section):
 
         # Really ugly
         klass = last.nlri.__class__
-        path_info = last.nlri.path_info
-        nexthop = last.nlri.nexthop
+        path_info = last.nlri.path_info  # type: ignore[attr-defined]
+        nexthop = last.nlri.nexthop  # type: ignore[attr-defined]
 
         # XXX: Looks weird to set and then set to None, check
-        last.nlri.cidr.mask = cut
-        last.nlri = None
+        last.nlri.cidr.mask = cut  # type: ignore[attr-defined]
+        last.nlri = None  # type: ignore[assignment]
 
         # generate the new routes
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
             nlri = klass(afi, safi, Action.ANNOUNCE)
-            nlri.cidr = CIDR(pack_int(afi, ip), cut)
-            nlri.nexthop = nexthop  # nexthop can be NextHopSelf
-            nlri.path_info = path_info
+            nlri.cidr = CIDR(pack_int(afi, ip), cut)  # type: ignore[attr-defined]
+            nlri.nexthop = nexthop  # type: ignore[attr-defined]  # nexthop can be NextHopSelf
+            nlri.path_info = path_info  # type: ignore[attr-defined]
             # next ip
             ip += increment
             yield Change(nlri, last.attributes)

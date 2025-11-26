@@ -36,7 +36,7 @@ class RTC(NLRI):
         self.rt = rt
         self.nexthop = NoNextHop
 
-    def feedback(self, action: Action) -> str:
+    def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'rtc nlri next-hop missing'
         return ''
@@ -65,7 +65,7 @@ class RTC(NLRI):
     def resetFlags(char: int) -> int:
         return char & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL)
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         # RFC 7911 ADD-PATH is possible for RTC but not yet implemented
         # We reset ext com flag bits from the first byte in the packed RT
         # because in an RTC route these flags never appear.
@@ -78,12 +78,12 @@ class RTC(NLRI):
         # RTC uses negotiated in pack_nlri, so we can't use _pack_nlri_simple
         # Index should be stable regardless of negotiated, so build it directly
         if self.rt:
-            packedRT = self.rt._pack()  # Use internal pack without negotiated
-            return Family.index(self) + pack('!BLB', len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]
+            packedRT = self.rt._pack()  # type: ignore[attr-defined]  # Use internal pack without negotiated
+            return Family.index(self) + pack('!BLB', len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]  # type: ignore[no-any-return]
         return Family.index(self) + pack('!B', 0)
 
     @classmethod
-    def unpack_nlri(
+    def unpack_nlri(  # type: ignore[override]
         cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> Tuple[T, bytes]:
         length = bgp[0]

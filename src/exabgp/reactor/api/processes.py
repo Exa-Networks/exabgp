@@ -189,7 +189,7 @@ class Processes:
                 t.join()
             except OSError:
                 # we most likely received a SIGTERM signal and our child is already dead
-                log.debug(lambda p=process: f'child process {p} was already dead', 'process')
+                log.debug(lambda p=process: f'child process {p} was already dead', 'process')  # type: ignore[misc]
         self.clean()
 
     async def terminate_async(self) -> None:
@@ -215,7 +215,7 @@ class Processes:
                 t.join()
             except OSError:
                 # we most likely received a SIGTERM signal and our child is already dead
-                log.debug(lambda p=process: f'child process {p} was already dead', 'process')
+                log.debug(lambda p=process: f'child process {p} was already dead', 'process')  # type: ignore[misc]
         self.clean()
 
     def _start(self, process: str) -> None:
@@ -295,8 +295,8 @@ class Processes:
 
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)
-            log.debug(lambda p=process: f'could not start process {p}', 'process')
-            log.debug(lambda e=exc: f'reason: {e}', 'process')
+            log.debug(lambda p=process: f'could not start process {p}', 'process')  # type: ignore[misc]
+            log.debug(lambda e=exc: f'reason: {e}', 'process')  # type: ignore[misc]
 
     def start(self, configuration: Dict[str, Dict[str, Any]], restart: bool = False) -> None:
         # Terminate processes that are no longer in configuration
@@ -400,10 +400,10 @@ class Processes:
                         line = line.rstrip()
                         consumed_data = True
                         if line.startswith('debug '):
-                            log.warning(lambda ln=line, pr=process: f'debug info from {pr} : {ln[6:]} ', 'api')
+                            log.warning(lambda ln=line, pr=process: f'debug info from {pr} : {ln[6:]} ', 'api')  # type: ignore[misc]
                         else:
                             log.debug(
-                                lambda ln=line, pr=process: f'command from process {pr} : {ln} ',
+                                lambda ln=line, pr=process: f'command from process {pr} : {ln} ',  # type: ignore[misc]
                                 'process',
                             )
                             yield (process, formated(line))
@@ -420,7 +420,8 @@ class Processes:
                         pass
                     else:
                         log.debug(
-                            lambda e=exc: f'unexpected errno received from forked process ({errstr(e)})', 'process'
+                            lambda e=exc: f'unexpected errno received from forked process ({errstr(e)})',  # type: ignore[misc]
+                            'process',
                         )
                     continue
                 except StopIteration:
@@ -519,10 +520,10 @@ class Processes:
                 line = line.rstrip()
 
                 if line.startswith('debug '):
-                    log.warning(lambda ln=line, pn=process_name: f'debug info from {pn} : {ln[6:]} ', 'api')
+                    log.warning(lambda ln=line, pn=process_name: f'debug info from {pn} : {ln[6:]} ', 'api')  # type: ignore[misc]
                 else:
                     log.debug(
-                        lambda ln=line, pn=process_name: f'command from process {pn} : {ln} ',
+                        lambda ln=line, pn=process_name: f'command from process {pn} : {ln} ',  # type: ignore[misc]
                         'process',
                     )
                     # Queue command for processing
@@ -557,7 +558,7 @@ class Processes:
             if not exc.errno or exc.errno in error.fatal:
                 self._handle_problem(process_name)
             elif exc.errno not in error.block:
-                log.debug(lambda e=exc: f'unexpected errno received from forked process ({errstr(e)})', 'process')
+                log.debug(lambda e=exc: f'unexpected errno received from forked process ({errstr(e)})', 'process')  # type: ignore[misc]
         except (KeyError, AttributeError, UnicodeDecodeError) as exc:
             # On any exception, try to remove reader to prevent callback loop
             try:
@@ -569,7 +570,7 @@ class Processes:
             except (ValueError, OSError, AttributeError):
                 pass
 
-            log.debug(lambda e=exc: f'exception in async reader callback: {e}', 'process')
+            log.debug(lambda e=exc: f'exception in async reader callback: {e}', 'process')  # type: ignore[misc]
             self._handle_problem(process_name)
 
     def received_async(self) -> Generator[Tuple[str, str], None, None]:
@@ -647,7 +648,7 @@ class Processes:
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
-                        lambda e=exc: f'error received while sending data to helper program, retrying ({errstr(e)})',
+                        lambda e=exc: f'error received while sending data to helper program, retrying ({errstr(e)})',  # type: ignore[misc]
                         'process',
                     )
                     continue
@@ -658,7 +659,7 @@ class Processes:
         except OSError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
             log.debug(
-                lambda e=exc: f'error received while FLUSHING data to helper program, retrying ({errstr(e)})',
+                lambda e=exc: f'error received while FLUSHING data to helper program, retrying ({errstr(e)})',  # type: ignore[misc]
                 'process',
             )
 
@@ -728,7 +729,7 @@ class Processes:
                 raise ProcessError from None
             else:
                 log.debug(
-                    lambda e=exc: f'error received while sending data to helper program ({errstr(e)})',
+                    lambda e=exc: f'error received while sending data to helper program ({errstr(e)})',  # type: ignore[misc]
                     'process',
                 )
                 raise ProcessError from None
@@ -747,7 +748,7 @@ class Processes:
         if self._write_queue:
             for p, q in self._write_queue.items():
                 if q:
-                    log.debug(lambda pn=p, cnt=len(q): f'[ASYNC] Flushing queue for {pn} ({cnt} items)', 'process')
+                    log.debug(lambda pn=p, cnt=len(q): f'[ASYNC] Flushing queue for {pn} ({cnt} items)', 'process')  # type: ignore[misc]
 
         for process_name in list(self._write_queue.keys()):
             if process_name not in self._process:
@@ -803,7 +804,7 @@ class Processes:
                         # Other error
                         self._broken.append(process_name)
                         log.debug(
-                            lambda e=exc, pn=process_name: f'[ASYNC] Error flushing queue for {pn}: {errstr(e)}',
+                            lambda e=exc, pn=process_name: f'[ASYNC] Error flushing queue for {pn}: {errstr(e)}',  # type: ignore[misc]
                             'process',
                         )
                         del self._write_queue[process_name]

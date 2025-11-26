@@ -114,9 +114,9 @@ class NODE(BGPLS):
         return (
             isinstance(other, BGPLS)
             and self.CODE == other.CODE
-            and self.domain == other.domain
-            and self.proto_id == other.proto_id
-            and self.route_d == other.route_d
+            and self.domain == other.domain  # type: ignore[attr-defined]
+            and self.proto_id == other.proto_id  # type: ignore[attr-defined]
+            and self.route_d == other.route_d  # type: ignore[attr-defined]
         )
 
     def __ne__(self, other: object) -> bool:
@@ -128,7 +128,7 @@ class NODE(BGPLS):
     def __hash__(self) -> int:
         return hash((self.proto_id, tuple(self.node_ids)))
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         if self._pack:
             return self._pack
 

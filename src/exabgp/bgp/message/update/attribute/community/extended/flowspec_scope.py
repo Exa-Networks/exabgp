@@ -36,11 +36,11 @@ class InterfaceSet(ExtendedCommunity):
         self.asn: ASN = asn
         self.target: int = target
         self.direction: int = direction
-        self.transitive: bool = trans
+        self._transitive: bool = trans
         new_target = (direction << 14) + target
         ExtendedCommunity.__init__(
             self,
-            community if community is not None else pack('!2sLH', self._subtype(self.transitive), asn, new_target),
+            community if community is not None else pack('!2sLH', self._subtype(self._transitive), asn, new_target),
         )
 
     def __repr__(self) -> str:

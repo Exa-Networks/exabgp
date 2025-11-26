@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 # The definition of a neighbor (from reading the configuration)
 class Neighbor(dict):
     class Capability(dict):
-        defaults: ClassVar[Dict[str, bool | int, None, str]] = {
+        defaults: ClassVar[Dict[str, bool | int | None | str]] = {
             'asn4': True,
             'extended-message': True,
             'graceful-restart': False,
@@ -320,10 +320,10 @@ class Neighbor(dict):
 
     def remove_self(self, changes: Change) -> Change:
         change = deepcopy(changes)
-        if not change.nlri.nexthop.SELF:
+        if not change.nlri.nexthop.SELF:  # type: ignore[attr-defined]
             return change
         neighbor_self = self.ip_self(change.nlri.afi)
-        change.nlri.nexthop = neighbor_self
+        change.nlri.nexthop = neighbor_self  # type: ignore[attr-defined]
         if Attribute.CODE.NEXT_HOP in change.attributes:
             change.attributes[Attribute.CODE.NEXT_HOP] = NextHop(str(neighbor_self), neighbor_self.pack_ip())
         return change

@@ -23,12 +23,12 @@ from prompt_toolkit.key_binding import KeyBindings
 # from prompt_toolkit import prompt
 
 from exabgp.conf.yang.tree import Tree
-from exabgp.cli.completer import VyOSCompleter
+from exabgp.cli.completer import VyOSCompleter  # type: ignore[attr-defined]
 from exabgp.cli.validator import VyOSValidator
 from exabgp.cli.command import run
 from exabgp.cli import msg
 
-from exabgp.conf import Config
+from exabgp.conf import Config  # type: ignore[attr-defined]
 
 corrections = {
     'neighbour': 'neighbor',

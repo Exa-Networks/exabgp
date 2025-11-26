@@ -44,13 +44,13 @@ class ParseFlowRoute(Section):
         )
     )
 
-    known: Dict[str, Callable[[Any], Any]] = {
+    known: Dict[str | tuple[Any, ...], Callable[[Any], Any]] = {
         'rd': route_distinguisher,
         'route-distinguisher': route_distinguisher,
         'next-hop': next_hop,
     }
 
-    action: Dict[str, str] = {
+    action: Dict[str | tuple[Any, ...], str] = {
         'rd': 'nlri-set',
         'route-distinguisher': 'nlri-set',
         'next-hop': 'nlri-nexthop',

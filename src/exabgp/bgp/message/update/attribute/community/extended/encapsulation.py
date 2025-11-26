@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Dict
+from typing import TYPE_CHECKING, ClassVar, Dict
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from struct import pack
 from struct import unpack
@@ -58,8 +61,8 @@ class Encapsulation(ExtendedCommunity):
     def __repr__(self) -> str:
         return 'encap:{}'.format(Encapsulation._string.get(self.tunnel_type, 'encap:UNKNOWN-%d' % self.tunnel_type))
 
-    @staticmethod
-    def unpack_attribute(data: bytes) -> Encapsulation:
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> Encapsulation:
         (tunnel,) = unpack('!H', data[6:8])
         return Encapsulation(tunnel, data[:8])
 

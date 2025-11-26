@@ -30,7 +30,7 @@ class Label(INET):
         INET.__init__(self, afi, safi, action)
         self.labels = Labels.NOLABEL
 
-    def feedback(self, action: Action) -> str:
+    def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'labelled nlri next-hop missing'
         return ''
@@ -60,16 +60,16 @@ class Label(INET):
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         mask = bytes([len(self.labels) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
-        return mask + self.labels.pack_labels() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
+        return mask + self.labels.pack_labels() + self.cidr.pack_ip()  # type: ignore[union-attr]
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
         return addpath + self._pack_nlri_simple()
 
-    def index(self) -> bytes:  # type: ignore[assignment]
+    def index(self) -> bytes:
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
         mask = bytes([self.cidr.mask])  # type: ignore[union-attr]
-        return Family.index(self) + addpath + mask + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
+        return Family.index(self) + addpath + mask + self.cidr.pack_ip()  # type: ignore[union-attr]
 
     def _internal(self, announced: bool = True) -> List[str]:
         r = INET._internal(self, announced)

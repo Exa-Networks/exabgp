@@ -13,6 +13,6 @@ from typing import ClassVar, Dict
 class Sequence(int):
     _instance: ClassVar[Dict[str, int]] = dict()
 
-    def __new__(cls) -> int:
+    def __new__(cls):
         cls._instance['next'] = cls._instance.get('next', 0) + 1
         return cls._instance['next']

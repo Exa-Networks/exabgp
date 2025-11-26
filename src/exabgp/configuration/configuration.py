@@ -12,6 +12,7 @@ import re
 from typing import Any, Dict, List, cast, TYPE_CHECKING
 
 from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.protocol.family import AFI, SAFI
 
 if TYPE_CHECKING:
     from exabgp.rib.change import Change
@@ -102,11 +103,13 @@ class _Configuration:
                         self.neighbors[neighbor].asm[family] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:
-                    log.error(
-                        lambda neighbor=neighbor,
-                        family=family: f'the route family {family} is not configured on neighbor {neighbor}',
-                        'configuration',
-                    )
+                    neighbor_err: str = neighbor
+                    family_err = family
+
+                    def _log_err(neighbor: str = neighbor_err, family: tuple[AFI, SAFI] = family_err) -> str:
+                        return f'the route family {family} is not configured on neighbor {neighbor}'
+
+                    log.error(_log_err, 'configuration')
                     result = False
         return result
 
@@ -119,11 +122,15 @@ class _Configuration:
                     if family in self.neighbors[neighbor].families():
                         self.neighbors[neighbor].refresh.append(RouteRefresh(refresh.afi, refresh.safi))
                     else:
-                        log.error(
-                            lambda family=family,
-                            neighbor=neighbor: f'the route family {family} is not configured on neighbor {neighbor}',
-                            'configuration',
-                        )
+                        family_err = family
+                        neighbor_err: str = neighbor
+
+                        def _log_refresh_err(
+                            family: tuple[AFI, SAFI] = family_err, neighbor: str = neighbor_err
+                        ) -> str:
+                            return f'the route family {family} is not configured on neighbor {neighbor}'
+
+                        log.error(_log_refresh_err, 'configuration')
                         result = False
         return result
 

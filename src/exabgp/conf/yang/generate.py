@@ -8,8 +8,8 @@ import astunparse
 
 import pprint
 
-from exabgp.conf.yang import Parser
-from exabgp.conf.yang import Code
+from exabgp.conf.yang import Parser  # type: ignore[attr-defined]
+from exabgp.conf.yang import Code  # type: ignore[attr-defined]
 
 
 class Generate:

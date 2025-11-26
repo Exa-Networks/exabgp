@@ -198,13 +198,16 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
                     log.debug(lambda: 'encoding is fine', 'parser')
                     log.debug(lambda: '----------------------------------------', 'parser')
 
-                _change1_json = change1  # type: Change
-                log.debug(
-                    lambda _change1_json=_change1_json: 'JSON nlri {}'.format(_change1_json.nlri.json()), 'parser'
-                )  # type: ignore[misc]
-                log.debug(
-                    lambda _change1_json=_change1_json: 'JSON attr {}'.format(_change1_json.attributes.json()), 'parser'
-                )  # type: ignore[misc]
+                _change1_json: Change = change1
+
+                def _log_nlri(_change1_json: Change = _change1_json) -> str:
+                    return 'JSON nlri {}'.format(_change1_json.nlri.json())  # type: ignore[attr-defined]
+
+                def _log_attr(_change1_json: Change = _change1_json) -> str:
+                    return 'JSON attr {}'.format(_change1_json.attributes.json())
+
+                log.debug(_log_nlri, 'parser')
+                log.debug(_log_attr, 'parser')
 
             except Notify as exc:
                 log.debug(lambda: '----------------------------------------', 'parser')
@@ -235,7 +238,7 @@ def check_message(neighbor: Neighbor, message: str) -> bool:
         sys.stdout.write(f'warning: BGP header size ({header_size}) does not match data length ({len(raw)})\n')
 
     if kind == BGP_MSG_OPEN:
-        return check_open(neighbor, raw[19:])  # type: ignore[no-any-return,func-returns-value]
+        return check_open(neighbor, raw[19:])  # type: ignore[func-returns-value,no-any-return]
     if kind == BGP_MSG_UPDATE:
         return check_update(neighbor, raw)
     if kind == BGP_MSG_NOTIFICATION:

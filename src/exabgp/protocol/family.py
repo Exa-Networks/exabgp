@@ -77,8 +77,8 @@ class AFI(Resource):
     bgpls: ClassVar[AFI]
 
     common: ClassVar[Dict[bytes, AFI]] = {}
-    codes: ClassVar[Dict[str, AFI]] = {}
-    cache: ClassVar[Dict[int, AFI]] = {}
+    codes: ClassVar[Dict[str, AFI]] = {}  # type: ignore[assignment]
+    cache: ClassVar[Dict[int, AFI]] = {}  # type: ignore[assignment]
     names: ClassVar[Dict[int, str]] = {}
     inet_names: ClassVar[Dict[int, str]] = {}
 
@@ -258,8 +258,8 @@ class SAFI(Resource):
     flow_vpn: ClassVar[SAFI]
 
     common: ClassVar[Dict[bytes, SAFI]] = {}
-    codes: ClassVar[Dict[str, SAFI]] = {}
-    cache: ClassVar[Dict[int, SAFI]] = {}
+    codes: ClassVar[Dict[str, SAFI]] = {}  # type: ignore[assignment]
+    cache: ClassVar[Dict[int, SAFI]] = {}  # type: ignore[assignment]
     names: ClassVar[Dict[int, str]] = {}
 
     def pack_safi(self) -> bytes:

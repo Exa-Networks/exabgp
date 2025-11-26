@@ -5,7 +5,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from struct import pack
 from struct import unpack
@@ -33,7 +36,7 @@ class ConsistentHashSortOrder(ExtendedCommunity):
     def __repr__(self) -> str:
         return '%s:%d' % (self.DESCRIPTION, self.order)
 
-    @staticmethod
-    def unpack_attribute(data: bytes) -> ConsistentHashSortOrder:
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> ConsistentHashSortOrder:
         order, reserved = unpack('!IH', data[2:8])
         return ConsistentHashSortOrder(order, reserved, data[:8])

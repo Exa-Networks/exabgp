@@ -151,7 +151,7 @@ class ParseNeighbor(Section):
         for inherited in self.scope.pop('inherit', []):
             data = self.scope.template('neighbor', inherited)
             self.scope.inherit(data)
-        return self.scope.get()
+        return self.scope.get()  # type: ignore[no-any-return]
 
     def _post_neighbor(self, local: Dict[str, Any], families: List[Tuple[AFI, SAFI]]) -> Neighbor:
         neighbor = Neighbor()
@@ -200,13 +200,15 @@ class ParseNeighbor(Section):
                 neighbor.add_addpath(family)
             return
 
-        for family in ParseAddPath.convert:
+        for family in ParseAddPath.convert:  # type: ignore[assignment]
             for pair in add_path.get(family, []):
                 if pair not in families:
-                    log.debug(
-                        lambda pair=pair: 'skipping add-path family ' + str(pair) + ' as it is not negotiated',
-                        'configuration',
-                    )
+                    pair_log = pair
+
+                    def _log_skip(pair_arg: tuple[AFI, SAFI] = pair_log) -> str:
+                        return 'skipping add-path family ' + str(pair_arg) + ' as it is not negotiated'
+
+                    log.debug(_log_skip, 'configuration')
                     continue
                 neighbor.add_addpath(pair)
 

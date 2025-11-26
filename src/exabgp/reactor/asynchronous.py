@@ -113,9 +113,11 @@ class ASYNC:
                         self._async.appendleft((uid, callback))
                         break
                 except Exception as exc:
-                    log.error(lambda uid=uid: f'async | {uid} | problem with function', 'reactor')
+                    current_uid = uid
+                    log.error(lambda: f'async | {current_uid} | problem with function', 'reactor')
                     for line in str(exc).split('\n'):
-                        log.error(lambda line=line, uid=uid: f'async | {uid} | {line}', 'reactor')
+                        current_line = line
+                        log.error(lambda: f'async | {current_uid} | {current_line}', 'reactor')
                     # Continue to next callback even if one fails
             return False  # All coroutines processed
         else:
@@ -149,9 +151,11 @@ class ASYNC:
                         return False
                     uid, callback = self._async.popleft()
                 except Exception as exc:
-                    log.error(lambda uid=uid: f'async | {uid} | problem with function', 'reactor')
+                    current_uid = uid
+                    log.error(lambda: f'async | {current_uid} | problem with function', 'reactor')
                     for line in str(exc).split('\n'):
-                        log.error(lambda line=line, uid=uid: f'async | {uid} | {line}', 'reactor')
+                        current_line = line
+                        log.error(lambda: f'async | {current_uid} | {current_line}', 'reactor')
                     # Error occurred - pop next callback
                     if not self._async:
                         return False

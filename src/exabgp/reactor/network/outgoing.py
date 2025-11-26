@@ -88,7 +88,8 @@ class Outgoing(Connection):
             if connect_issue:
                 if notify:
                     log.debug(lambda: 'connection to %s:%d failed' % (self.peer, self.port), self.session())
-                    log.debug(lambda connect_issue=connect_issue: str(connect_issue), self.session())
+                    current_issue = connect_issue
+                    log.debug(lambda: str(current_issue), self.session())
                 yield False
                 continue
 
@@ -148,7 +149,8 @@ class Outgoing(Connection):
                     log.debug(
                         lambda: 'connection to %s:%d failed during setup' % (self.peer, self.port), self.session()
                     )
-                    log.debug(lambda setup_issue=setup_issue: str(setup_issue), self.session())
+                    current_issue = setup_issue
+                    log.debug(lambda: str(current_issue), self.session())
                 await asyncio.sleep(0.1)  # Brief delay before retry
                 continue
 
@@ -170,11 +172,12 @@ class Outgoing(Connection):
             except OSError as exc:
                 if notify:
                     log.debug(lambda: 'connection to %s:%d failed' % (self.peer, self.port), self.session())
-                    log.debug(lambda exc=exc: str(exc), self.session())
+                    current_exc = exc
+                    log.debug(lambda: str(current_exc), self.session())
 
                 # Close and cleanup for retry
                 if self.io:
-                    self.io.close()  # type: ignore[union-attr]
+                    self.io.close()
                 self.io = None
 
                 # Brief delay before retry
@@ -191,7 +194,7 @@ class Outgoing(Connection):
 
         # Cleanup if socket is still open
         if self.io:
-            self.io.close()  # type: ignore[union-attr]
+            self.io.close()
         self.io = None
 
         return False

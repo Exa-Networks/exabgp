@@ -124,7 +124,7 @@ class SRv6SID(BGPLS):
             nlri += self.srv6_sid_descriptors
         return nlri
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[override]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, SAFI.bgp_ls)
         return self._pack_nlri_simple()
