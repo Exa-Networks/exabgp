@@ -177,7 +177,8 @@ class Connection:
                     message = f'{self.name()} {self.peer} blocking io problem mid-way through reading a message {errstr(exc)}, trying to complete'
                     if message != reported:
                         reported = message
-                        log.debug(lambda message=message: message, self.session())
+                        current_message = message
+                        log.debug(lambda: current_message, self.session())
                     yield b''
                 elif exc.args[0] in error.fatal:
                     self.close()
@@ -263,8 +264,9 @@ class Connection:
                     yield False
             except OSError as exc:
                 if exc.args[0] in error.block:
+                    current_exc = exc
                     log.debug(
-                        lambda exc=exc: f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(exc)}, trying to complete',
+                        lambda: f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(current_exc)}, trying to complete',
                         self.session(),
                     )
                     yield False
@@ -274,8 +276,9 @@ class Connection:
                     raise NetworkError('Broken TCP connection') from None
                 elif exc.args[0] in error.fatal:
                     self.close()
+                    current_exc = exc
                     log.critical(
-                        lambda exc=exc: f'{self.name()} {self.peer} problem sending message ({errstr(exc)})',
+                        lambda: f'{self.name()} {self.peer} problem sending message ({errstr(current_exc)})',
                         self.session(),
                     )
                     raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None
@@ -310,8 +313,9 @@ class Connection:
                 raise NetworkError('Broken TCP connection') from None
             elif exc.args[0] in error.fatal:
                 self.close()
+                current_exc = exc
                 log.critical(
-                    lambda exc=exc: f'{self.name()} {self.peer} problem sending message ({errstr(exc)})',
+                    lambda: f'{self.name()} {self.peer} problem sending message ({errstr(current_exc)})',
                     self.session(),
                 )
                 raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None

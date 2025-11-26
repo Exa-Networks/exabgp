@@ -110,7 +110,7 @@ class Update(Message):
         # sort the nlris
 
         nlris: list = []
-        mp_nlris: dict[tuple, list] = {}
+        mp_nlris: dict[tuple, dict] = {}
 
         for nlri in sorted(self.nlris):
             if nlri.family().afi_safi() not in negotiated.families:
@@ -126,18 +126,18 @@ class Update(Message):
                 continue
 
             add_v4 = add_v4 and nlri.action == Action.ANNOUNCE
-            add_v4 = add_v4 and nlri.nexthop.afi == AFI.ipv4
+            add_v4 = add_v4 and nlri.nexthop.afi == AFI.ipv4  # type: ignore[attr-defined]
 
             if add_v4:
                 nlris.append(nlri)
                 continue
 
-            if nlri.nexthop.afi != AFI.undefined:
-                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)  # type: ignore[arg-type]
+            if nlri.nexthop.afi != AFI.undefined:  # type: ignore[attr-defined]
+                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
 
             if nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn):
-                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)  # type: ignore[arg-type]
+                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
 
             raise ValueError('unexpected nlri definition ({})'.format(nlri))
@@ -314,15 +314,15 @@ class Update(Message):
 
         nlris = []
         while withdrawn:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath, negotiated)
-            log.debug(lambda nlri=nlri: 'withdrawn NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type]
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath, negotiated)  # type: ignore[misc]
+            log.debug(lambda nlri=nlri: 'withdrawn NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type,misc]
             withdrawn = left  # type: ignore[has-type]
             nlris.append(nlri)  # type: ignore[has-type]
 
         while announced:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath, negotiated)
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath, negotiated)  # type: ignore[misc]
             nlri.nexthop = nexthop  # type: ignore[has-type]
-            log.debug(lambda nlri=nlri: 'announced NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type]
+            log.debug(lambda nlri=nlri: 'announced NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type,misc]
             announced = left  # type: ignore[has-type]
             nlris.append(nlri)  # type: ignore[has-type]
 

@@ -32,8 +32,8 @@ from exabgp.bgp.message.message import Message
 
 @Message.register
 class Notification(Message, Exception):
-    ID: ClassVar[int] = Message.CODE.NOTIFICATION
-    TYPE: ClassVar[bytes] = bytes([Message.CODE.NOTIFICATION])
+    ID: ClassVar[int] = Message.CODE.NOTIFICATION  # type: ignore[misc]
+    TYPE: ClassVar[bytes] = bytes([Message.CODE.NOTIFICATION])  # type: ignore[misc]
 
     # RFC 8203 / RFC 9003 - Shutdown Communication
     SHUTDOWN_COMM_MAX_LEGACY: ClassVar[int] = 128  # RFC 8203 - legacy max length
@@ -99,13 +99,9 @@ class Notification(Message, Exception):
         (7, 2): 'Malformed Message Subtype',
     }
 
-    code: int
-    subcode: int
-    data: bytes
-
     def __init__(self, code: int, subcode: int, data: bytes = b'', parse_data: bool = True) -> None:
         Exception.__init__(self)
-        self.code = code
+        self.code = code  # type: ignore[assignment,method-assign]
         self.subcode = subcode
 
         if not parse_data:
@@ -153,8 +149,8 @@ class Notification(Message, Exception):
             self.data += (', trailing data: ' + hexstring(trailer)).encode('utf-8')
 
     def __str__(self) -> str:
-        code_str = self._str_code.get(self.code, 'unknown error')
-        subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')
+        code_str = self._str_code.get(self.code, 'unknown error')  # type: ignore[call-overload]
+        subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')  # type: ignore[arg-type]
         data_str = f' / {self.data.decode("ascii")}' if self.data else ''
         return f'{code_str} / {subcode_str}{data_str}'
 
@@ -176,4 +172,4 @@ class Notify(Notification):
         Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(bytes([self.code, self.subcode]) + self.data)
+        return self._message(bytes([self.code, self.subcode]) + self.data)  # type: ignore[list-item]

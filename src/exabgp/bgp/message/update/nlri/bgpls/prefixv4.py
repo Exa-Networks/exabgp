@@ -111,7 +111,7 @@ class PREFIXv4(BGPLS):
                 prefix = IpReach.unpack_ipreachability(value, 3)
                 continue
 
-            log.critical(lambda tlv_type=tlv_type: f'unknown prefix v4 TLV {tlv_type}')
+            log.critical(lambda tlv_type=tlv_type: f'unknown prefix v4 TLV {tlv_type}')  # type: ignore[misc]
 
         return cls(
             domain=domain,
@@ -161,7 +161,7 @@ class PREFIXv4(BGPLS):
 
         return f'{{ {content} }}'
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         if self._pack:
             return self._pack
 

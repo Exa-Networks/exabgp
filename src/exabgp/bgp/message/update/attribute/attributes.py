@@ -8,28 +8,22 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, ClassVar, Dict, Generator, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generator, Tuple
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
-from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
-from exabgp.bgp.message.update.attribute.attribute import Discard
-from exabgp.bgp.message.update.attribute.generic import GenericAttribute
-from exabgp.bgp.message.update.attribute.origin import Origin
-from exabgp.bgp.message.update.attribute.aspath import SEQUENCE
-from exabgp.bgp.message.update.attribute.aspath import ASPath
-from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
+from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard, TreatAsWithdraw
 
 # For bagpipe
 from exabgp.bgp.message.update.attribute.community import Communities
-
-from exabgp.bgp.message.notification import Notify
-
-from exabgp.logger import log
-from exabgp.logger import lazyattribute
+from exabgp.bgp.message.update.attribute.generic import GenericAttribute
+from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+from exabgp.bgp.message.update.attribute.origin import Origin
+from exabgp.logger import lazyattribute, log
 
 
 class _NOTHING:
@@ -338,7 +332,7 @@ class Attributes(dict):
 
         # remove the PARTIAL bit before comparaison if the attribute is optional
         if aid in Attribute.attributes_optional:
-            flag &= Attribute.Flag.MASK_PARTIAL & 0xFF
+            flag = Attribute.Flag(flag & Attribute.Flag.MASK_PARTIAL & 0xFF)
             # flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
 
         # Get the attribute class to check its behavior flags
@@ -346,7 +340,7 @@ class Attributes(dict):
 
         if aid in self:
             if kls and kls.NO_DUPLICATE:
-                raise Notify(3, 1, 'multiple attribute for {}'.format(str(Attribute.CODE(attribute.ID))))
+                raise Notify(3, 1, 'multiple attribute for {}'.format(str(Attribute.CODE(aid))))
 
             log.debug(
                 lambda: 'duplicate attribute {} (flag 0x{:02X}, aid 0x{:02X}) skipping'.format(
@@ -363,19 +357,21 @@ class Attributes(dict):
                 return self.parse(left, negotiated)
 
             try:
-                decoded = Attribute.unpack(aid, flag, attribute, negotiated)
+                decoded: Attribute = Attribute.unpack(aid, flag, attribute, negotiated)
             except IndexError as exc:
                 if kls and kls.TREAT_AS_WITHDRAW:
-                    decoded = TreatAsWithdraw(aid)
-                else:
-                    raise exc
+                    self.add(TreatAsWithdraw(aid))
+                    return self.parse(left, negotiated)
+                raise exc
             except Notify as exc:
                 if kls and kls.TREAT_AS_WITHDRAW:
-                    decoded = TreatAsWithdraw()
-                elif kls and kls.DISCARD:
-                    decoded = Discard()
-                else:
-                    raise exc
+                    self.add(TreatAsWithdraw())
+                    return self.parse(left, negotiated)
+                if kls and kls.DISCARD:
+                    self.add(Discard())
+                    return self.parse(left, negotiated)
+                raise exc
+
             self.add(decoded)
             return self.parse(left, negotiated)
 
@@ -415,10 +411,11 @@ class Attributes(dict):
         if flag & Attribute.Flag.TRANSITIVE:
             log.debug(lambda: 'unknown transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid), 'parser')
             try:
-                decoded = GenericAttribute(aid, flag | Attribute.Flag.PARTIAL, attribute)
+                decoded_generic: Attribute = GenericAttribute(aid, flag | Attribute.Flag.PARTIAL, attribute)
             except IndexError:
-                decoded = TreatAsWithdraw(aid)
-            self.add(decoded, attribute)
+                self.add(TreatAsWithdraw(aid), attribute)
+                return self.parse(left, negotiated)
+            self.add(decoded_generic, attribute)
             return self.parse(left, negotiated)
 
         # it is an unknown non-transitive attribute we can ignore.
@@ -469,7 +466,7 @@ class Attributes(dict):
         aspath = ASPath(as_seq, as_set)
         self.add(aspath, key)
 
-    def __hash__(self) -> int:
+    def __hash__(self) -> int:  # type: ignore[override]
         # FIXME: two routes with distinct nh but other attributes equal
         # will hash to the same value until repr represents the nh (??)
         return hash(repr(self))

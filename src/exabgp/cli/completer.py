@@ -70,7 +70,7 @@ class CommandCompleter:
         # Cache for neighbor IPs
         self._neighbor_cache: List[str] | None = None
         self._cache_timeout = 300  # Refresh cache every 5 minutes (avoid repeated socket calls)
-        self._cache_timestamp = 0
+        self._cache_timestamp: float = 0
         self._cache_in_progress = False  # Prevent concurrent queries
 
         # Track state for single-TAB display on macOS libedit
@@ -228,7 +228,7 @@ class CommandCompleter:
 
         # Build expanded tokens by checking each token for unambiguous completion
         expanded_tokens = []
-        current_context = []  # Tokens we've processed so far
+        current_context: list[str] = []  # Tokens we've processed so far
         expansions_made = False
 
         for token in tokens:

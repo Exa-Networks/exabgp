@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import pprint
+from typing import Any
 
 # from copy import deepcopy
 from exabgp.protocol.ip import IP
@@ -153,7 +154,7 @@ class Scope(Error):
                     f'can not copy "{key}" (as it is of type {type(source[key])}) and it exists in both the source and destination',
                 )
 
-    def get(self, name='', default=None):
+    def get(self, name: str = '', default: object = None) -> Any:
         if name:
             return self._current.get(name, default)
         return self._current

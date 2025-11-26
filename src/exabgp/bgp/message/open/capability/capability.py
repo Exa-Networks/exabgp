@@ -150,7 +150,7 @@ class Capability:
     unknown_capability: ClassVar[Type[Capability] | None] = None
 
     # ID attribute set by subclasses
-    ID: int
+    ID: ClassVar[int]
 
     @staticmethod
     def hex(data: bytes) -> str:

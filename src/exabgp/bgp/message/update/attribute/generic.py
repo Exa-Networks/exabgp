@@ -26,14 +26,12 @@ MAX_SINGLE_OCTET_LENGTH: int = 0xFF  # Maximum value that fits in a single byte 
 class GenericAttribute(Attribute):
     GENERIC: ClassVar[bool] = True
 
-    ID: int
-    FLAG: int
     data: bytes
     index: str
 
     def __init__(self, code: int, flag: int, data: bytes) -> None:
-        self.ID = code
-        self.FLAG = flag
+        self.ID = code  # type: ignore[misc]
+        self.FLAG = flag  # type: ignore[misc]
         self.data = data
         self.index = ''
 

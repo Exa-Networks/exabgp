@@ -33,11 +33,11 @@ class ParseFlow(Section):
 
     name: str = 'flow'
 
-    known: Dict[str, Any] = dict(ParseFlowMatch.known)
+    known: Dict[str | tuple[Any, ...], object] = dict(ParseFlowMatch.known)
     known.update(ParseFlowThen.known)
     known.update(ParseFlowScope.known)
 
-    action: Dict[str, str] = dict(ParseFlowMatch.action)
+    action: Dict[str | tuple[Any, ...], str] = dict(ParseFlowMatch.action)
     action.update(ParseFlowThen.action)
     action.update(ParseFlowScope.action)
 
@@ -71,22 +71,22 @@ def route(tokeniser: Any) -> List[Change]:
         action: str = ParseFlow.action[command]
 
         if action == 'nlri-add':
-            for adding in ParseFlow.known[command](tokeniser):
-                change.nlri.add(adding)
+            for adding in ParseFlow.known[command](tokeniser):  # type: ignore[operator]
+                change.nlri.add(adding)  # type: ignore[attr-defined]
         elif action == 'attribute-add':
-            change.attributes.add(ParseFlow.known[command](tokeniser))
+            change.attributes.add(ParseFlow.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
             nexthop: Any
             attribute: Any
-            nexthop, attribute = ParseFlow.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
+            nexthop, attribute = ParseFlow.known[command](tokeniser)  # type: ignore[operator]
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         elif action == 'nop':
             pass  # yes nothing to do !
         else:
             raise ValueError(f'flow: unknown command "{command}"')
 
-    if change.nlri.rd is not RouteDistinguisher.NORD:
+    if change.nlri.rd is not RouteDistinguisher.NORD:  # type: ignore[attr-defined]
         change.nlri.safi = SAFI.flow_vpn
 
     return [change]

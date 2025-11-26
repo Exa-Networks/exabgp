@@ -58,7 +58,7 @@ class MPRNLRI(Attribute, Family):
         for nlri in self.nlris:
             if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
                 continue
-            if nlri.nexthop is NoNextHop:
+            if nlri.nexthop is NoNextHop:  # type: ignore[attr-defined]
                 # EOR and Flow may not have any next_hop
                 nexthop = b''
             else:
@@ -66,7 +66,7 @@ class MPRNLRI(Attribute, Family):
                 nh_rd = bytes([0]) * rd_size if rd_size else b''
                 try:
                     # TODO: remove nlri.afi as it should be in the nexthop already
-                    nexthop = nh_rd + nlri.nexthop.ton(negotiated, nlri.afi)
+                    nexthop = nh_rd + nlri.nexthop.ton(negotiated, nlri.afi)  # type: ignore[attr-defined]
                 except TypeError:
                     # we could not match "next-hop self" with the BGP AFI of the BGP sesion
                     # attempting invalid IPv4 next-hop (0.0.0.0) to try to not kill the session
@@ -192,21 +192,21 @@ class MPRNLRI(Attribute, Family):
         while data:
             if nexthops:
                 for nexthop in nexthops:
-                    nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)
+                    nlri_result, left_result = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)  # type: ignore[misc]
                     # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
-                    if nlri:  # type: ignore[has-type]
-                        nlri.nexthop = NextHop.unpack_attribute(nexthop, negotiated)  # type: ignore[has-type]
-                        nlris.append(nlri)  # type: ignore[has-type]
+                    if nlri_result:  # type: ignore[has-type]
+                        nlri_result.nexthop = NextHop.unpack_attribute(nexthop, negotiated)  # type: ignore[has-type]
+                        nlris.append(nlri_result)  # type: ignore[has-type]
             else:
-                nlri, left = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)
+                nlri_result, left_result = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)  # type: ignore[misc]
                 # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
-                if nlri:  # type: ignore[has-type]
-                    nlris.append(nlri)  # type: ignore[has-type]
+                if nlri_result:  # type: ignore[has-type]
+                    nlris.append(nlri_result)  # type: ignore[has-type]
 
-            if left == data:  # type: ignore[has-type]
+            if left_result == data:  # type: ignore[has-type]
                 raise RuntimeError('sub-calls should consume data')
 
-            data = left  # type: ignore[has-type]
+            data = left_result  # type: ignore[has-type]
         return cls(afi, safi, nlris)
 
 

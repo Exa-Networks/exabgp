@@ -34,22 +34,22 @@ class _log:
         def eat(cls: Type['_log'], message: LogMessage, source: str = '', level: str = '') -> None:
             pass
 
-        cls.debug = eat  # type: ignore[assignment]
-        cls.info = eat  # type: ignore[assignment]
-        cls.warning = eat  # type: ignore[assignment]
-        cls.error = eat  # type: ignore[assignment]
-        cls.critical = eat  # type: ignore[assignment]
-        cls.fatal = eat  # type: ignore[assignment]
+        cls.debug = eat  # type: ignore[assignment,method-assign]
+        cls.info = eat  # type: ignore[assignment,method-assign]
+        cls.warning = eat  # type: ignore[assignment,method-assign]
+        cls.error = eat  # type: ignore[assignment,method-assign]
+        cls.critical = eat  # type: ignore[assignment,method-assign]
+        cls.fatal = eat  # type: ignore[assignment,method-assign]
 
     @classmethod
     def silence(cls) -> None:
         def eat(cls: Type['_log'], message: LogMessage, source: str = '', level: str = '') -> None:
             pass
 
-        cls.debug = eat  # type: ignore[assignment]
-        cls.info = eat  # type: ignore[assignment]
-        cls.warning = eat  # type: ignore[assignment]
-        cls.error = eat  # type: ignore[assignment]
+        cls.debug = eat  # type: ignore[assignment,method-assign]
+        cls.info = eat  # type: ignore[assignment,method-assign]
+        cls.warning = eat  # type: ignore[assignment,method-assign]
+        cls.error = eat  # type: ignore[assignment,method-assign]
 
     @classmethod
     def debug(cls, message: LogMessage, source: str = '', level: str = 'DEBUG') -> None:

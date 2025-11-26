@@ -45,9 +45,11 @@ class MultiProtocol(Capability, list):
         afi: AFI = AFI.unpack_afi(data[:2])
         safi: SAFI = SAFI.unpack_safi(data[3:4])
         if (afi, safi) in instance:
-            log.debug(
-                lambda afi=afi, safi=safi: f'duplicate AFI/SAFI in MultiProtocol capability: {afi}/{safi}', 'parser'
-            )
+
+            def _log_dup(afi: AFI = afi, safi: SAFI = safi) -> str:
+                return f'duplicate AFI/SAFI in MultiProtocol capability: {afi}/{safi}'
+
+            log.debug(_log_dup, 'parser')
         else:
             instance.append((afi, safi))
         return instance

@@ -19,7 +19,7 @@ class Command:
     # - 'text' and 'json': store command handler functions
     # - 'neighbor': stores bool flags
     # - 'options': stores optional configuration (could be None, dict, list, etc.)
-    callback: ClassVar[Dict[str, Dict[str, Callable | bool, None, Dict, List]]] = {
+    callback: ClassVar[dict[str, dict[str, Callable | bool | None | dict | list]]] = {
         'text': {},
         'json': {},
         'neighbor': {},

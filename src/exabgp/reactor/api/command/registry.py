@@ -190,11 +190,21 @@ class CommandRegistry:
             return None
 
         # Build metadata from Command.callback
+        neighbor_val = Command.callback['neighbor'].get(command_name, True)
+        neighbor_support = bool(neighbor_val) if not isinstance(neighbor_val, bool) else neighbor_val
+
+        options_val = Command.callback['options'].get(command_name)
+        options: List[str] | None = None
+        if isinstance(options_val, list):
+            options = [str(opt) for opt in options_val]
+        elif isinstance(options_val, dict):
+            options = list(options_val.keys())
+
         metadata = CommandMetadata(
             name=command_name,
-            neighbor_support=Command.callback['neighbor'].get(command_name, True),
+            neighbor_support=neighbor_support,
             json_support=command_name in Command.callback['json'],
-            options=Command.callback['options'].get(command_name),
+            options=options,
             category=self.CATEGORIES.get(command_name, 'general'),
         )
 
@@ -311,7 +321,12 @@ class CommandRegistry:
 
     def get_all_metadata(self) -> List[CommandMetadata]:
         """Get metadata for all commands."""
-        return [self.get_command_metadata(cmd) for cmd in self.get_all_commands() if self.get_command_metadata(cmd)]
+        result = []
+        for cmd in self.get_all_commands():
+            metadata = self.get_command_metadata(cmd)
+            if metadata:
+                result.append(metadata)
+        return result
 
     def get_option_description(self, option: str) -> str | None:
         """Get description for a command option."""

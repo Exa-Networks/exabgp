@@ -48,10 +48,8 @@ def create(afi: AFI, interface: str | None = None) -> socket.socket:
 
         if interface is not None:
             try:
-                if not hasattr(socket, 'SO_BINDTODEVICE'):
-                    socket.SO_BINDTODEVICE = 25
-
-                io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, str(interface + '\0').encode('utf-8'))
+                SO_BINDTODEVICE = getattr(socket, 'SO_BINDTODEVICE', 25)
+                io.setsockopt(socket.SOL_SOCKET, SO_BINDTODEVICE, str(interface + '\0').encode('utf-8'))
             except OSError:
                 raise NotConnected(f'Could not bind to device {interface}') from None
     except OSError:
@@ -225,7 +223,11 @@ def min_ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
         try:
-            io.setsockopt(socket.IPPROTO_IP, socket.IP_MINTTL, ttl)
+            IP_MINTTL = getattr(socket, 'IP_MINTTL', None)
+            if IP_MINTTL is not None:
+                io.setsockopt(socket.IPPROTO_IP, IP_MINTTL, ttl)
+            else:
+                raise AttributeError('IP_MINTTL not available')
         except OSError as exc:
             raise TTLError(
                 'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))

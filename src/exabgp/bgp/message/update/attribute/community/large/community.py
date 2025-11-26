@@ -20,7 +20,7 @@ from struct import unpack
 class LargeCommunity(Attribute):
     MAX: ClassVar[int] = 0xFFFFFFFFFFFFFFFFFFFFFFFF
 
-    cache: ClassVar[Dict[bytes, LargeCommunity]] = {}
+    cache: ClassVar[Dict[bytes, LargeCommunity]] = {}  # type: ignore[assignment]
     caching: ClassVar[bool] = True
 
     def __init__(self, large_community: bytes) -> None:
@@ -60,7 +60,7 @@ class LargeCommunity(Attribute):
     def json(self) -> str:
         return '[ %d, %d , %d ]' % unpack('!LLL', self.large_community)
 
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self.large_community
 
     def __repr__(self) -> str:

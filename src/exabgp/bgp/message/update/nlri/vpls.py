@@ -51,11 +51,11 @@ class VPLS(NLRI):
         self.rd = rd
         self.base = base
         self.offset = offset
-        self.size = size
+        self.size = size  # type: ignore[assignment,misc]
         self.endpoint = endpoint
         self.unique = next(unique)
 
-    def feedback(self, action: Action) -> str:
+    def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'vpls nlri next-hop missing'
         if self.endpoint is None:
@@ -84,7 +84,7 @@ class VPLS(NLRI):
             + pack('!L', (self.base << 4) | 0x1)[1:]  # setting the bottom of stack, should we ?
         )
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         # RFC 7911 ADD-PATH is possible for VPLS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.l2vpn, SAFI.vpls)
         return self._pack_nlri_simple()
@@ -120,7 +120,7 @@ class VPLS(NLRI):
         return self.extensive()
 
     @classmethod
-    def unpack_nlri(
+    def unpack_nlri(  # type: ignore[override]
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> Tuple[VPLS, bytes]:
         # label is 20bits, stored using 3 bytes, 24 bits

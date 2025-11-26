@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -21,10 +21,10 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
 @Attribute.register()
-class OriginatorID(Attribute, IPv4):
-    ID = Attribute.CODE.ORIGINATOR_ID
-    FLAG = Attribute.Flag.OPTIONAL
-    CACHING = True
+class OriginatorID(Attribute, IPv4):  # type: ignore[misc]
+    ID: ClassVar[int] = Attribute.CODE.ORIGINATOR_ID
+    FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL
+    CACHING: ClassVar[bool] = True
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, OriginatorID):

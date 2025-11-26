@@ -40,7 +40,7 @@ class Cache:
 
     def cached_changes(
         self,
-        families: List[Tuple[AFI, SAFI] | None] = None,
+        families: List[Tuple[AFI, SAFI]] | None = None,
         actions: Tuple[int, ...] = (Action.ANNOUNCE,),
     ) -> Iterator[Change]:
         # families can be None or []
@@ -66,7 +66,7 @@ class Cache:
         if cached.attributes.index() != change.attributes.index():
             return False
 
-        if cached.nlri.nexthop.index() != change.nlri.nexthop.index():
+        if cached.nlri.nexthop.index() != change.nlri.nexthop.index():  # type: ignore[attr-defined]
             return False
 
         return True

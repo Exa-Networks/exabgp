@@ -105,7 +105,7 @@ class LINK(BGPLS):
         self.topology_ids: List[MTID] = topology_ids if topology_ids else []
         self.nexthop: IP | _NoNextHop | None = nexthop
         self.route_d: RouteDistinguisher | None = route_d
-        self._packed: bytes | None = packed
+        self._packed: bytes | None = packed  # type: ignore[assignment]
 
     @classmethod
     def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> LINK:
@@ -170,7 +170,7 @@ class LINK(BGPLS):
                 topology_ids.append(MTID.unpack_mtid(value))
                 continue
 
-            log.critical(lambda tlv_type=tlv_type: f'unknown link TLV {tlv_type}')
+            log.critical(lambda tlv_type=tlv_type: f'unknown link TLV {tlv_type}')  # type: ignore[misc]
 
         return cls(
             domain=domain,
@@ -204,7 +204,7 @@ class LINK(BGPLS):
     def __hash__(self) -> int:
         return hash((self.CODE, self.domain, self.proto_id, tuple(self.topology_ids), self.route_d))
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         if self._packed:
             return self._packed
         raise RuntimeError('Not implemented')

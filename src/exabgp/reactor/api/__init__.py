@@ -89,11 +89,11 @@ class API(Command):
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
                 handler = cast(Callable, self.callback[api][registered])
                 # Call sync handler - with non-blocking stdin, write() won't block
-                result = handler(self, reactor, service, command, use_json)  # type: ignore[no-any-return]
+                result = handler(self, reactor, service, command, use_json)
                 # Flush any queued writes immediately (for commands like enable-ack/disable-ack
                 # that call answer_done() without scheduling async callbacks)
                 await reactor.processes.flush_write_queue_async()
-                return result
+                return bool(result)
         # Error case
         reactor.processes.answer_error(service)
         log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')

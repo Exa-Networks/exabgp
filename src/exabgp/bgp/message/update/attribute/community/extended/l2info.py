@@ -41,7 +41,7 @@ class L2Info(ExtendedCommunity):
     def __repr__(self) -> str:
         return 'l2info:{}:{}:{}:{}'.format(self.encaps, self.control, self.mtu, self.reserved)
 
-    @staticmethod
-    def unpack_attribute(data: bytes, negotiated: Negotiated) -> L2Info:
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> L2Info:
         encaps, control, mtu, reserved = unpack('!BBHH', data[2:8])
         return L2Info(encaps, control, mtu, reserved, data[:8])

@@ -42,7 +42,7 @@ class MacMobility(ExtendedCommunity):
             s += ':sticky'
         return s
 
-    @staticmethod
-    def unpack_attribute(data: bytes, negotiated: Negotiated) -> MacMobility:
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> MacMobility:
         flags, seq = unpack('!BxI', data[2:8])
         return MacMobility(seq, flags == 1)

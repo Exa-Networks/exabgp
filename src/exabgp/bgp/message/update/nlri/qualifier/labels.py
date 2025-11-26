@@ -44,7 +44,7 @@ class Labels:
             if packed and bos:
                 packed.pop()
                 packed.append(pack('!L', (label << 4) | 1)[1:])
-            self.raw_labels = [None for _ in self.labels]
+            self.raw_labels = [0 for _ in self.labels]
         self.packed: bytes = b''.join(packed)
         self._len: int = len(self.packed)
 

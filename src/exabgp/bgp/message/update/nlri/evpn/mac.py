@@ -80,8 +80,8 @@ class MAC(EVPN):
         self._pack(packed)
 
     # XXX: we have to ignore a part of the route
-    def index(self) -> str:
-        return EVPN.index(self)  # type: ignore[return-value]
+    def index(self) -> bytes:
+        return EVPN.index(self)
 
     def __eq__(self, other: object) -> bool:
         return (
@@ -129,7 +129,7 @@ class MAC(EVPN):
             + self.etag.pack_etag()
             + bytes([self.maclen])
             + self.mac.pack_mac()
-            + bytes([len(self.ip) * 8 if self.ip else 0]) # type: ignore[arg-type]
+            + bytes([len(self.ip) * 8 if self.ip else 0])  # type: ignore[arg-type]
             + (self.ip.pack_ip() + self.label.pack_labels() if self.ip else self.label.pack_labels())  # type: ignore[union-attr]
         )
         # fmt: on

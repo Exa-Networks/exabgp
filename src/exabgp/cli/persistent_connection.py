@@ -27,7 +27,7 @@ class PersistentSocketConnection:
     def __init__(self, socket_path: str):
         self.socket_path = socket_path
         self.socket = None
-        self.daemon_uuid = None
+        self.daemon_uuid: str | None = None
         self.last_ping_time = 0
         self.consecutive_failures = 0
         self.max_failures = 3
@@ -45,7 +45,7 @@ class PersistentSocketConnection:
         self.client_start_time = time.time()
 
         # Response handling
-        self.pending_responses = Queue()
+        self.pending_responses: Queue[str] = Queue()
         self.response_buffer = ''
 
         # Connect
@@ -579,13 +579,16 @@ class PersistentSocketConnection:
             # Send command
             try:
                 with self.lock:
-                    self.socket.sendall((command + '\n').encode('utf-8'))
+                    if self.socket is not None:
+                        self.socket.sendall((command + '\n').encode('utf-8'))
+                    else:
+                        return 'Error: Not connected'
             except OSError as exc:
                 return f'Error: {exc}'
 
             # Wait for response (with timeout)
             try:
-                response = self.pending_responses.get(timeout=5.0)
+                response: str = self.pending_responses.get(timeout=5.0)
                 return response
             except Empty:
                 return 'Error: Timeout waiting for response'

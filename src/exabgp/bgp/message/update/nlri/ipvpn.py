@@ -31,7 +31,7 @@ class IPVPN(Label):
         Label.__init__(self, afi, safi, action)
         self.rd = RouteDistinguisher.NORD
 
-    def feedback(self, action: Action) -> str:
+    def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is None and action == Action.ANNOUNCE:
             return 'ip-vpn nlri next-hop missing'
         return ''
@@ -85,16 +85,16 @@ class IPVPN(Label):
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         mask = bytes([len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
-        return mask + self.labels.pack_labels() + self.rd.pack_rd() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
+        return mask + self.labels.pack_labels() + self.rd.pack_rd() + self.cidr.pack_ip()  # type: ignore[union-attr]
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
         return addpath + self._pack_nlri_simple()
 
-    def index(self) -> bytes:  # type: ignore[assignment]
+    def index(self) -> bytes:
         addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
         mask = bytes([len(self.rd) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
-        return Family.index(self) + addpath + mask + self.rd.pack_rd() + self.cidr.pack_ip()  # type: ignore[no-any-return,union-attr]
+        return Family.index(self) + addpath + mask + self.rd.pack_rd() + self.cidr.pack_ip()  # type: ignore[union-attr]
 
     def _internal(self, announced: bool = True) -> List[str]:
         r = Label._internal(self, announced)

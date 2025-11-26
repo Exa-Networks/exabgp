@@ -14,10 +14,8 @@ class Error(Exception):
     def set(self, message: str) -> bool:
         self.message = message
         if self.debug:
-            error = False
             sys.stdout.write('\n{}\n'.format(self.message))
             pdb.set_trace()  # noqa: T100
-            return error
         return False
 
     def throw(self, message):

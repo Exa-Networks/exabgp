@@ -62,7 +62,7 @@ class NetLink:
     NETLINK_ROUTE = 0
 
     format = namedtuple('format', 'format_type control_flags sequence pid data')
-    netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)
+    netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)  # type: ignore[attr-defined]
 
     class Header:
         # linux/netlink.h

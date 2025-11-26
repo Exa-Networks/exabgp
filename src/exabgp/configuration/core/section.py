@@ -7,11 +7,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
+from typing import Any, List
 from string import ascii_letters
 from string import digits
 
 from exabgp.configuration.core.error import Error
+from exabgp.configuration.core.scope import Scope
+from exabgp.configuration.core.tokeniser import Tokeniser
 
 
 def _levenshtein(s1: str, s2: str) -> int:
@@ -26,7 +28,7 @@ def _levenshtein(s1: str, s2: str) -> int:
     if len(s2) == 0:
         return len(s1)
 
-    previous_row = range(len(s2) + 1)
+    previous_row = list(range(len(s2) + 1))
     for i, c1 in enumerate(s1):
         current_row = [i + 1]
         for j, c2 in enumerate(s2):
@@ -69,17 +71,19 @@ def _find_similar(target: str, candidates: List[str], max_distance: int = 2, max
 
 class Section(Error):
     name = 'undefined'
-    known: dict[str | tuple, object] = dict()  # command/section and code to handle it
-    default: dict[str | tuple, object] = dict()  # command/section has a a defult value, use it if no data was provided
-    action: dict[str | tuple, str] = {}  # how to handle this command ( append, add, assign, route )
+    known: dict[str | tuple[Any, ...], Any] = {}  # command/section and code to handle it
+    default: dict[
+        str | tuple[Any, ...], Any
+    ] = {}  # command/section has a a defult value, use it if no data was provided
+    action: dict[str | tuple[Any, ...], str] = {}  # how to handle this command ( append, add, assign, route )
     assign: dict[str, str] = {}  # configuration to class variable lookup for setattr
 
-    def __init__(self, tokerniser, scope, error):
+    def __init__(self, tokerniser: Tokeniser, scope: Scope, error: Error) -> None:
         Error.__init__(self)
         self.tokeniser = tokerniser
         self.scope = scope
         self.error = error
-        self._names = []
+        self._names: list[str] = []
 
     def clear(self):
         self._names = []
@@ -109,7 +113,7 @@ class Section(Error):
     def post(self):
         return True
 
-    def parse(self, name, command):  # noqa: C901
+    def parse(self, name: str, command: str) -> bool:  # noqa: C901
         identifier = command if command in self.known else (self.name, command)
         if identifier not in self.known:
             # Get simple string options (filter out tuple identifiers like ('ipv4', 'unicast'))

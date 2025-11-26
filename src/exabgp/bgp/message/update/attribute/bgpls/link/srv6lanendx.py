@@ -57,7 +57,7 @@ class Srv6(FlagLS):
         if protocol_type == ISIS:
             neighbor_id = ISO.unpack_sysid(data[6:12])
         else:
-            neighbor_id = IP.unpack_ip(data[6:10])
+            neighbor_id = str(IP.unpack_ip(data[6:10]))
         start_offset = 12 if protocol_type == ISIS else 6
         sid = IPv6.ntop(data[start_offset : start_offset + 16])
         data = data[start_offset + 16 :]
@@ -67,10 +67,10 @@ class Srv6(FlagLS):
             code = unpack('!H', data[0:2])[0]
             length = unpack('!H', data[2:4])[0]
 
-            if code in cls.registered_subsubtlvs:
-                subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
-                    data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE]
-                )
+            if code in cls.registered_subsubtlvs:  # type: ignore[attr-defined]
+                subsubtlv = cls.registered_subsubtlvs[  # type: ignore[attr-defined]
+                    code
+                ].unpack_bgpls(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
                 subtlvs.append(subsubtlv.json())
             else:
                 subsubtlv = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])

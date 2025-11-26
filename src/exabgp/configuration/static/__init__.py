@@ -69,10 +69,10 @@ def route(tokeniser: Any) -> List[Change]:
         nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
         check = AnnounceVPN.check
     elif 'label' in tokeniser.tokens:
-        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)
+        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)  # type: ignore[assignment]
         check = AnnounceLabel.check
     else:
-        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
+        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)  # type: ignore[assignment]
         check = AnnouncePath.check
 
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
@@ -105,7 +105,7 @@ def route(tokeniser: Any) -> List[Change]:
             change.nlri.assign(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
         elif action == 'nexthop-and-attribute':
             nexthop, attribute = ParseStatic.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))
@@ -125,9 +125,9 @@ def attributes(tokeniser: Any) -> List[Change]:
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
         nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
     elif 'label' in tokeniser.tokens:
-        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)
+        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)  # type: ignore[assignment]
     else:
-        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
+        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)  # type: ignore[assignment]
 
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
     attr = Attributes()
@@ -181,14 +181,14 @@ def attributes(tokeniser: Any) -> List[Change]:
 
         ipmask = prefix(tokeniser)
         new = Change(nlri.__class__(nlri.afi, nlri.safi, Action.UNSET), attr)
-        new.nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+        new.nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)  # type: ignore[attr-defined]
         if labels:
-            new.nlri.labels = labels
+            new.nlri.labels = labels  # type: ignore[attr-defined]
         if rd:
-            new.nlri.rd = rd
+            new.nlri.rd = rd  # type: ignore[attr-defined]
         if path_info:
-            new.nlri.path_info = path_info
-        new.nlri.nexthop = nlri.nexthop
+            new.nlri.path_info = path_info  # type: ignore[attr-defined]
+        new.nlri.nexthop = nlri.nexthop  # type: ignore[attr-defined]
         changes.append(new)
 
     return changes

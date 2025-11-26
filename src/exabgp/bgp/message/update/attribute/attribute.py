@@ -27,6 +27,7 @@ ATTR_LENGTH_EXTENDED_MAX: int = 0xFF  # Maximum length for non-extended encoding
 class TreatAsWithdraw:
     ID: ClassVar[int] = 0xFFFF
     GENERIC: ClassVar[bool] = False
+    NO_GENERATION: ClassVar[bool] = True
 
     aid: int | None
 
@@ -42,6 +43,7 @@ class TreatAsWithdraw:
 class Discard:
     ID: ClassVar[int] = 0xFFFE
     GENERIC: ClassVar[bool] = False
+    NO_GENERATION: ClassVar[bool] = True
 
     aid: int | None
 

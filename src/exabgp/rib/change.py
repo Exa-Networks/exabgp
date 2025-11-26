@@ -69,5 +69,5 @@ class Change:
 
     def feedback(self) -> str:
         if self.nlri is not None:
-            return self.nlri.feedback(self.nlri.action)  # type: ignore[no-any-return,func-returns-value]
+            return self.nlri.feedback(self.nlri.action)  # type: ignore[func-returns-value,no-any-return]
         return 'no check implemented for the family {} {}'.format(*self.nlri.family().afi_safi())

@@ -64,8 +64,8 @@ class MUP(NLRI):
     def __repr__(self) -> str:
         return str(self)
 
-    def feedback(self, action: Action) -> str:
-        return ''
+    def feedback(self, action: int) -> None:
+        return None
 
     def _prefix(self) -> str:
         return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())  # type: ignore[call-overload]
@@ -74,7 +74,7 @@ class MUP(NLRI):
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:  # type: ignore[assignment]
+    def pack_nlri(self, negotiated: Negotiated) -> bytes:
         # RFC 7911 ADD-PATH is possible for MUP but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(self.afi, SAFI.mup)
         return self._pack_nlri_simple()
@@ -83,7 +83,7 @@ class MUP(NLRI):
         return Family.index(self) + self._pack_nlri_simple()
 
     @classmethod
-    def register(cls, klass: Type[MUP]) -> Type[MUP]:
+    def register(cls, klass: Type[MUP]) -> Type[MUP]:  # type: ignore[override]
         key = '{}:{}'.format(klass.ARCHTYPE, klass.CODE)
         if key in cls.registered:
             raise RuntimeError('only one Mup registration allowed')
@@ -91,7 +91,7 @@ class MUP(NLRI):
         return klass
 
     @classmethod
-    def unpack_nlri(
+    def unpack_nlri(  # type: ignore[override]
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[MUP, bytes]:
         arch = bgp[0]
@@ -102,7 +102,7 @@ class MUP(NLRI):
         end = length + 4
         key = '{}:{}'.format(arch, code)
         if key in cls.registered:
-            klass = cls.registered[key].unpack_mup_route(bgp[4:end], afi)
+            klass = cls.registered[key].unpack_mup_route(bgp[4:end], afi)  # type: ignore[attr-defined]
         else:
             klass = GenericMUP(arch, afi, code, bgp[4:end])  # type: ignore[arg-type]
         klass.CODE = code
@@ -118,8 +118,8 @@ class MUP(NLRI):
 class GenericMUP(MUP):
     def __init__(self, afi: AFI, arch: int, code: int, packed: bytes) -> None:
         MUP.__init__(self, afi)
-        self.ARCHTYPE = arch
-        self.CODE = code
+        self.ARCHTYPE = arch  # type: ignore[misc]
+        self.CODE = code  # type: ignore[misc]
         self._pack(packed)
 
     def _pack(self, packed: bytes | None = None) -> bytes:
