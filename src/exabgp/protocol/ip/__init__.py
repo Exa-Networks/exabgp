@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import Dict, Set, Type, ClassVar, Iterator, TYPE_CHECKING
+from typing import Any, Dict, Set, Type, ClassVar, Iterator, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
@@ -214,6 +214,27 @@ class IP:
         instance._string = 'no-nexthop'
         instance.afi = AFI.undefined
         return instance
+
+    def __copy__(self) -> 'IP':
+        """Preserve singleton identity for NoNextHop."""
+        if self is IP.NoNextHop:
+            return self
+        # For subclasses that may not have all attributes (e.g., NextHopSelf),
+        # use default copy behavior
+        new = IP.__new__(type(self))
+        new.__dict__.update(self.__dict__)
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'IP':
+        """Preserve singleton identity for NoNextHop."""
+        if self is IP.NoNextHop:
+            return self
+        # For subclasses that may not have all attributes (e.g., NextHopSelf),
+        # use default copy behavior
+        new = IP.__new__(type(self))
+        new.__dict__.update(self.__dict__)
+        memo[id(self)] = new
+        return new
 
     @classmethod
     def unpack_ip(cls, data: bytes, klass: Type[IP] | None = None) -> IP:

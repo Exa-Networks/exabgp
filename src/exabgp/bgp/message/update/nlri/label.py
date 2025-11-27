@@ -51,7 +51,12 @@ class Label(INET):
         return self.labels == other.labels and INET.__eq__(self, other)
 
     def __hash__(self) -> int:
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()
+        if self.path_info is PathInfo.NOPATH:
+            addpath = b'no-pi'
+        elif self.path_info is PathInfo.DISABLED:
+            addpath = b'disabled'
+        else:
+            addpath = self.path_info.pack_path()
         return hash(addpath + self._pack_nlri_simple())
 
     def prefix(self) -> str:
@@ -64,11 +69,23 @@ class Label(INET):
         return mask + self.labels.pack_labels() + self.cidr.pack_ip()
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
-        addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''
+        if negotiated.addpath.send(self.afi, self.safi):
+            # ADD-PATH negotiated: MUST send 4-byte path ID
+            if self.path_info is PathInfo.DISABLED:
+                addpath = PathInfo.NOPATH.pack_path()
+            else:
+                addpath = self.path_info.pack_path()
+        else:
+            addpath = b''
         return addpath + self._pack_nlri_simple()
 
     def index(self) -> bytes:
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()
+        if self.path_info is PathInfo.NOPATH:
+            addpath = b'no-pi'
+        elif self.path_info is PathInfo.DISABLED:
+            addpath = b'disabled'
+        else:
+            addpath = self.path_info.pack_path()
         mask = bytes([self.cidr.mask])
         return Family.index(self) + addpath + mask + self.cidr.pack_ip()
 

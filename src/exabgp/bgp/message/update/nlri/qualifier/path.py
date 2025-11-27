@@ -6,7 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import ClassVar
+from typing import Any, ClassVar
 
 
 # ===================================================================== PathInfo
@@ -55,14 +55,20 @@ class PathInfo:
         return len(self.path_info)
 
     def json(self) -> str:
+        if self._disabled:
+            return ''
         if self.path_info:
             return '"path-information": "{}"'.format('.'.join([str(_) for _ in self.path_info]))
-        return ''
+        # NOPATH: ADD-PATH enabled but no specific ID set - wire format is 0.0.0.0
+        return '"path-information": "0.0.0.0"'
 
     def __repr__(self) -> str:
+        if self._disabled:
+            return ''
         if self.path_info:
             return ' path-information {}'.format('.'.join([str(_) for _ in self.path_info]))
-        return ''
+        # NOPATH: ADD-PATH enabled but no specific ID set - wire format is 0.0.0.0
+        return ' path-information 0.0.0.0'
 
     def pack_path(self) -> bytes:
         if self._disabled:
@@ -70,6 +76,28 @@ class PathInfo:
         if self.path_info:
             return self.path_info
         return b'\x00\x00\x00\x00'
+
+    def __copy__(self) -> 'PathInfo':
+        """Preserve singleton identity for NOPATH and DISABLED."""
+        if self is PathInfo.NOPATH or self is PathInfo.DISABLED:
+            return self
+        # Regular PathInfo: create a new instance with same data
+        new = PathInfo.__new__(PathInfo)
+        new._disabled = self._disabled
+        new.path_info = self.path_info
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'PathInfo':
+        """Preserve singleton identity for NOPATH and DISABLED."""
+        if self is PathInfo.NOPATH or self is PathInfo.DISABLED:
+            return self
+        # Regular PathInfo: create a new instance with same data
+        # path_info is bytes (immutable), so no need to deepcopy it
+        new = PathInfo.__new__(PathInfo)
+        new._disabled = self._disabled
+        new.path_info = self.path_info
+        memo[id(self)] = new
+        return new
 
     @classmethod
     def _create_nopath(cls) -> 'PathInfo':
