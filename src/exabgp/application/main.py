@@ -15,6 +15,7 @@ from exabgp.application import cli
 from exabgp.application import run
 from exabgp.application import server
 from exabgp.application import decode
+from exabgp.application import encode
 from exabgp.application import environ
 from exabgp.application import version
 from exabgp.application import validate
@@ -43,7 +44,18 @@ def main():
 
     # compatibility with exabgp 4.x
     if len(sys.argv) > 1 and not ('-h' in sys.argv or '--help' in sys.argv):
-        if sys.argv[1] not in ('version', 'cli', 'run', 'healthcheck', 'decode', 'server', 'env', 'validate', 'shell'):
+        if sys.argv[1] not in (
+            'version',
+            'cli',
+            'run',
+            'healthcheck',
+            'decode',
+            'encode',
+            'server',
+            'env',
+            'validate',
+            'shell',
+        ):
             sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
 
     formatter = argparse.RawDescriptionHelpFormatter
@@ -88,6 +100,12 @@ def main():
     sub = subparsers.add_parser('decode', help='decode hex-encoded bgp packets', description=decode.__doc__)
     sub.set_defaults(func=decode.cmdline)
     decode.setargs(sub)
+
+    sub = subparsers.add_parser(
+        'encode', help='encode route config to hex-encoded bgp packets', description=encode.__doc__
+    )
+    sub.set_defaults(func=encode.cmdline)
+    encode.setargs(sub)
 
     sub = subparsers.add_parser('server', help='start exabgp', description=server.__doc__)
     sub.set_defaults(func=server.cmdline)

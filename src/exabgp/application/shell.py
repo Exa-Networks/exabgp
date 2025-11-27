@@ -65,7 +65,7 @@ _exabgp() {
     local cur prev words cword
     _init_completion || return
 
-    local subcommands="version cli run healthcheck server env validate decode shell"
+    local subcommands="version cli run healthcheck server env validate decode encode shell"
     local config_dirs="etc/exabgp /etc/exabgp"
 
     # If we're at the first argument position
@@ -235,6 +235,39 @@ _exabgp() {
             esac
             ;;
 
+        encode)
+            case "$prev" in
+                -c|--configuration)
+                    for dir in . $config_dirs; do
+                        if [[ -d "$dir" ]]; then
+                            COMPREPLY+=($(compgen -W "$(find "$dir" -maxdepth 1 -name "*.conf" -exec basename {} \\; 2>/dev/null)" -- "$cur"))
+                        fi
+                    done
+                    _filedir conf
+                    return 0
+                    ;;
+                -f|--family)
+                    local families=(
+                        "ipv4 unicast" "ipv4 multicast" "ipv4 mpls-vpn" "ipv4 flow"
+                        "ipv6 unicast" "ipv6 mpls-vpn" "ipv6 flow"
+                        "l2vpn vpls" "l2vpn evpn"
+                        "bgp-ls bgp-ls" "bgp-ls bgp-ls-vpn"
+                    )
+                    COMPREPLY=($(compgen -W "$(printf '"%s" ' "${families[@]}")" -- "$cur"))
+                    return 0
+                    ;;
+                -a|--local-as|-z|--peer-as)
+                    # AS numbers - no completion
+                    ;;
+                *)
+                    if [[ "$cur" == -* ]]; then
+                        COMPREPLY=($(compgen -W "-f --family -a --local-as -z --peer-as -i --path-information -n --nlri-only --no-header -c --configuration -d --debug -p --pdb -h --help" -- "$cur"))
+                    fi
+                    # Otherwise, user is entering route config - no completion
+                    ;;
+            esac
+            ;;
+
         shell)
             # After 'shell', suggest subcommands
             if [[ $cword -eq 2 ]]; then
@@ -280,6 +313,7 @@ _exabgp() {
         'env:Show ExaBGP configuration information'
         'validate:Validate configuration file'
         'decode:Decode hex-encoded BGP packets'
+        'encode:Encode route config to BGP packets'
         'shell:Manage shell completion'
     )
 
@@ -296,7 +330,7 @@ _exabgp() {
     local subcommand="${words[2]}"
 
     # If not a known subcommand, treat as 'server' (4.x compatibility)
-    if [[ ! " version cli run healthcheck server env validate decode shell " =~ " $subcommand " ]]; then
+    if [[ ! " version cli run healthcheck server env validate decode encode shell " =~ " $subcommand " ]]; then
         subcommand="server"
     fi
 
@@ -415,6 +449,35 @@ _exabgp() {
                 ':hex payload:'
             ;;
 
+        encode)
+            local -a families
+            families=(
+                'ipv4\\ unicast:IPv4 unicast'
+                'ipv4\\ multicast:IPv4 multicast'
+                'ipv4\\ mpls-vpn:IPv4 MPLS VPN'
+                'ipv4\\ flow:IPv4 FlowSpec'
+                'ipv6\\ unicast:IPv6 unicast'
+                'ipv6\\ mpls-vpn:IPv6 MPLS VPN'
+                'ipv6\\ flow:IPv6 FlowSpec'
+                'l2vpn\\ vpls:L2VPN VPLS'
+                'l2vpn\\ evpn:L2VPN EVPN'
+                'bgp-ls\\ bgp-ls:BGP Link State'
+            )
+
+            _arguments \\
+                '(- *)'{-h,--help}'[Show help message]' \\
+                '(-f --family)'{-f,--family}'[Address family]:family:compadd -d families ${families%%:*}' \\
+                '(-a --local-as)'{-a,--local-as}'[Local AS number]:as number' \\
+                '(-z --peer-as)'{-z,--peer-as}'[Peer AS number]:as number' \\
+                '(-i --path-information)'{-i,--path-information}'[Enable add-path]' \\
+                '(-n --nlri-only)'{-n,--nlri-only}'[Output only NLRI bytes]' \\
+                '--no-header[Exclude BGP 19-byte header]' \\
+                '(-c --configuration)'{-c,--configuration}'[Configuration file]:file:_alternative "configs:configuration file:compadd ${config_files}" "files:configuration file:_files -g \\"*.conf\\""' \\
+                '(-d --debug)'{-d,--debug}'[Enable debug logging]' \\
+                '(-p --pdb)'{-p,--pdb}'[Enable debugger on error]' \\
+                ':route config:'
+            ;;
+
         shell)
             local -a shell_cmds
             shell_cmds=(
@@ -443,7 +506,7 @@ def generate_fish_completion() -> str:
 # Helper function to check if a subcommand has been given
 function __fish_exabgp_using_subcommand
     set -l cmd (commandline -opc)
-    set -l subcommands version cli run healthcheck server env validate decode shell
+    set -l subcommands version cli run healthcheck server env validate decode encode shell
 
     if set -q cmd[2]
         if contains -- $cmd[2] $subcommands
@@ -480,6 +543,7 @@ complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'server' -d 'Start
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'env' -d 'Show ExaBGP configuration information'
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'validate' -d 'Validate configuration file'
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'decode' -d 'Decode hex-encoded BGP packets'
+complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'encode' -d 'Encode route config to BGP packets'
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'shell' -d 'Manage shell completion'
 
 # Backward compatibility: suggest .conf files as first argument
@@ -560,6 +624,17 @@ complete -c exabgp -n '__fish_seen_subcommand_from decode' -s p -l pdb -d 'Fire 
 complete -c exabgp -n '__fish_seen_subcommand_from decode' -s c -l configuration -d 'Configuration file' -r -a '(__fish_exabgp_conf_files)'
 complete -c exabgp -n '__fish_seen_subcommand_from decode' -s f -l family -d 'Address family' -r -a 'ipv4\\ unicast ipv4\\ multicast ipv4\\ mpls-vpn ipv4\\ flow ipv6\\ unicast ipv6\\ mpls-vpn ipv6\\ flow l2vpn\\ vpls l2vpn\\ evpn bgp-ls\\ bgp-ls'
 complete -c exabgp -n '__fish_seen_subcommand_from decode' -s i -l path-information -d 'Decode path-information'
+
+# encode subcommand
+complete -c exabgp -n '__fish_seen_subcommand_from encode' -s f -l family -d 'Address family' -r -a 'ipv4\\ unicast ipv4\\ multicast ipv4\\ mpls-vpn ipv4\\ flow ipv6\\ unicast ipv6\\ mpls-vpn ipv6\\ flow l2vpn\\ vpls l2vpn\\ evpn bgp-ls\\ bgp-ls'
+complete -c exabgp -n '__fish_seen_subcommand_from encode' -s a -l local-as -d 'Local AS number' -r
+complete -c exabgp -n '__fish_seen_subcommand_from encode' -s z -l peer-as -d 'Peer AS number' -r
+complete -c exabgp -n '__fish_seen_subcommand_from encode' -s i -l path-information -d 'Enable add-path'
+complete -c exabgp -n '__fish_seen_subcommand_from encode' -s n -l nlri-only -d 'Output only NLRI bytes'
+complete -c exabgp -n '__fish_seen_subcommand_from encode' -l no-header -d 'Exclude BGP 19-byte header'
+complete -c exabgp -n '__fish_seen_subcommand_from encode' -s c -l configuration -d 'Configuration file' -r -a '(__fish_exabgp_conf_files)'
+complete -c exabgp -n '__fish_seen_subcommand_from encode' -s d -l debug -d 'Enable debug logging'
+complete -c exabgp -n '__fish_seen_subcommand_from encode' -s p -l pdb -d 'Enable debugger on error'
 
 # shell subcommand
 complete -c exabgp -n '__fish_seen_subcommand_from shell' -a 'install' -d 'Install shell completion'
