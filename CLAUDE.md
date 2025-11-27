@@ -136,11 +136,22 @@ env EDITOR=cat ./qa/bin/functional encoding --edit <letter>
 - `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` for systematic debugging
 - `.claude/FUNCTIONAL_TEST_EDIT.md` for inspecting test configurations
 
-### Decode BGP Messages
+### Encode/Decode BGP Messages
 
 ```bash
-./sbin/exabgp decode -c <config> "<hex>"
-# Use when server shows "unexpected message"
+# ENCODE: Convert route config to hex UPDATE message
+./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4"
+./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4 as-path [65000 65001]"
+./sbin/exabgp encode -f "ipv6 unicast" "route 2001:db8::/32 next-hop 2001:db8::1"
+./sbin/exabgp encode -n "route 10.0.0.0/24 next-hop 1.2.3.4"  # NLRI only
+
+# DECODE: Parse hex message to JSON
+./sbin/exabgp decode "<hex>"                    # Decode UPDATE
+./sbin/exabgp decode -c <config> "<hex>"        # With config context
+echo "<hex>" | ./sbin/exabgp decode             # From stdin
+./sbin/exabgp encode "route ..." | ./sbin/exabgp decode  # Round-trip
+
+# Use decode when server shows "unexpected message"
 # IMPORTANT: Use -c with same config as test (from qa/encoding/<test>.ci)
 ```
 
