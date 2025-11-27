@@ -34,23 +34,21 @@ class NLRI(Family):
     action: int
     nexthop: 'IP'
 
-    # Cached invalid NLRI singleton
-    _invalid: ClassVar['NLRI | None'] = None
+    # Singleton invalid NLRI (initialized after class definition)
+    INVALID: ClassVar['NLRI']
 
     @classmethod
-    def invalid(cls) -> 'NLRI':
-        """Get singleton NLRI representing an invalid/malformed NLRI.
+    def _create_invalid(cls) -> 'NLRI':
+        """Create the invalid NLRI singleton. Called once at module load.
 
         Used for "treat as withdraw" semantics when parsing fails.
         """
-        if cls._invalid is None:
-            # Bypass normal __init__
-            instance = object.__new__(cls)
-            instance.afi = AFI.undefined
-            instance.safi = SAFI.undefined
-            instance.action = Action.UNSET
-            cls._invalid = instance
-        return cls._invalid
+        # Bypass normal __init__
+        instance = object.__new__(cls)
+        instance.afi = AFI.undefined
+        instance.safi = SAFI.undefined
+        instance.action = Action.UNSET
+        return instance
 
     def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET) -> None:
         Family.__init__(self, afi, safi)
@@ -129,3 +127,7 @@ class NLRI(Family):
         if key in cls.registered_nlri:
             return cls.registered_nlri[key].unpack_nlri(a, s, data, action, addpath, negotiated)
         raise Notify(3, 0, 'trying to decode unknown family {}/{}'.format(a, s))
+
+
+# Initialize the invalid NLRI singleton
+NLRI.INVALID = NLRI._create_invalid()

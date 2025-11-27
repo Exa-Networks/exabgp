@@ -41,7 +41,7 @@ class Incoming(Connection):
         try:
             # Notify.pack_message() doesn't use negotiated, but it's required by the signature
             # Create a minimal Negotiated object for this early connection stage
-            negotiated = Negotiated(Neighbor.empty(), Direction.IN)
+            negotiated = Negotiated(Neighbor.EMPTY, Direction.IN)
             notification = Notify(code, subcode, message.decode('ascii')).pack_message(negotiated)
             for boolean in self.writer(notification):
                 yield False

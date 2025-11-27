@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import List
 
-from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import IP
 
 from exabgp.rib.change import Change
 
@@ -139,7 +139,7 @@ class AnnounceIP(ParseAnnounce):
     def check(change: Change, afi: AFI | None) -> bool:
         if (
             change.nlri.action == Action.ANNOUNCE
-            and change.nlri.nexthop is NoNextHop  # type: ignore[attr-defined]
+            and change.nlri.nexthop is IP.NoNextHop
             and change.nlri.afi == afi
             and change.nlri.safi in (SAFI.unicast, SAFI.multicast)
         ):
@@ -171,7 +171,7 @@ def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
             change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))
         elif command_action == 'nexthop-and-attribute':
             nexthop, attribute = AnnounceIP.known[command](tokeniser)
-            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
+            change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))
@@ -205,7 +205,7 @@ def ip_multicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
             change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))
         elif command_action == 'nexthop-and-attribute':
             nexthop, attribute = AnnounceIP.known[command](tokeniser)
-            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
+            change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))

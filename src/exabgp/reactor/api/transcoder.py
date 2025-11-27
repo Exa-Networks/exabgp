@@ -32,7 +32,7 @@ def _get_dummy_negotiated() -> Negotiated:
     """Get or create a dummy Negotiated instance for decoding OPEN/NOTIFICATION messages."""
     global _DUMMY_NEGOTIATED
     if _DUMMY_NEGOTIATED is None:
-        _DUMMY_NEGOTIATED = Negotiated(Neighbor.empty(), Direction.IN)
+        _DUMMY_NEGOTIATED = Negotiated(Neighbor.EMPTY, Direction.IN)
     return _DUMMY_NEGOTIATED
 
 
@@ -80,8 +80,8 @@ class Transcoder:
         self.seen_open[direction] = message
 
         if all(self.seen_open.values()):
-            self.negotiated_in = Negotiated(Neighbor.empty(), Direction.IN)
-            self.negotiated_out = Negotiated(Neighbor.empty(), Direction.OUT)
+            self.negotiated_in = Negotiated(Neighbor.EMPTY, Direction.IN)
+            self.negotiated_out = Negotiated(Neighbor.EMPTY, Direction.OUT)
             self.negotiated_in.sent(self.seen_open['send'])
             self.negotiated_in.received(self.seen_open['receive'])
             self.negotiated_out.sent(self.seen_open['send'])

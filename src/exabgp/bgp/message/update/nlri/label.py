@@ -17,7 +17,7 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import IP
 
 # ====================================================== MPLS
 # RFC 3107
@@ -31,12 +31,12 @@ class Label(INET):
         self.labels = Labels.NOLABEL
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
+        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'labelled nlri next-hop missing'
         return ''
 
     def extensive(self) -> str:
-        return '{}{}'.format(self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop {}'.format(self.nexthop))
+        return '{}{}'.format(self.prefix(), '' if self.nexthop is IP.NoNextHop else ' next-hop {}'.format(self.nexthop))
 
     def __str__(self) -> str:
         return self.extensive()

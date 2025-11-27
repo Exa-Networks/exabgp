@@ -97,7 +97,7 @@ def mvpn_route(tokeniser: Tokeniser, afi: AFI) -> List[Change]:
             change.nlri.assign(AnnounceMVPN.assign[command], AnnounceMVPN.known[command](tokeniser))
         elif command_action == 'nexthop-and-attribute':
             nexthop, attribute = AnnounceMVPN.known[command](tokeniser)
-            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
+            change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))

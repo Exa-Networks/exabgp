@@ -204,7 +204,7 @@ def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
             change.attributes.add(AnnounceFlow.known[command](tokeniser))
         elif command_action == 'nexthop-and-attribute':
             nexthop, attribute = AnnounceFlow.known[command](tokeniser)
-            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
+            change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         elif command_action == 'nop':
             pass  # yes nothing to do !

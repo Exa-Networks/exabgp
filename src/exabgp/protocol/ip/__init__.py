@@ -202,23 +202,18 @@ class IP:
     def register(cls) -> None:
         cls._known[cls.afi] = cls
 
-    # Cached no-nexthop singleton
-    _no_nexthop: ClassVar[IP | None] = None
+    # Singleton for no next-hop (initialized after class definition)
+    NoNextHop: ClassVar[IP]
 
     @classmethod
-    def no_nexthop(cls) -> IP:
-        """Get singleton IP instance representing no next-hop.
-
-        Used when NLRI has no next-hop (e.g., withdrawals, certain address families).
-        """
-        if cls._no_nexthop is None:
-            # Bypass __init__ which raises RuntimeError
-            instance = object.__new__(cls)
-            instance._packed = b''
-            instance._string = 'no-nexthop'
-            instance.afi = AFI.undefined
-            cls._no_nexthop = instance
-        return cls._no_nexthop
+    def _create_no_nexthop(cls) -> IP:
+        """Create the no-nexthop singleton. Called once at module load."""
+        # Bypass __init__ which raises RuntimeError
+        instance = object.__new__(cls)
+        instance._packed = b''
+        instance._string = 'no-nexthop'
+        instance.afi = AFI.undefined
+        return instance
 
     @classmethod
     def unpack_ip(cls, data: bytes, klass: Type[IP] | None = None) -> IP:
@@ -247,9 +242,8 @@ class IPRange(IP):
 
 
 # ==================================================================== NoNextHop
-# Singleton representing absence of next-hop (see IP.no_nexthop())
-
-NoNextHop: IP = IP.no_nexthop()
+# Initialize the class-level singleton
+IP.NoNextHop = IP._create_no_nexthop()
 
 
 # ========================================================================= IPv4

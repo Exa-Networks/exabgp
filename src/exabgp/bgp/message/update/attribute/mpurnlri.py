@@ -92,8 +92,8 @@ class MPURNLRI(Attribute, Family):
 
         while data:
             nlri_result, data_result = NLRI.unpack_nlri(afi, safi, data, Action.WITHDRAW, addpath, negotiated)
-            # allow unpack_nlri to return NLRI.invalid() for "treat as withdraw"
-            if nlri_result is not NLRI.invalid():
+            # allow unpack_nlri to return NLRI.INVALID for "treat as withdraw"
+            if nlri_result is not NLRI.INVALID:
                 nlris.append(nlri_result)
             data = data_result
 

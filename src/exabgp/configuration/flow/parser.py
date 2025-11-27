@@ -50,7 +50,7 @@ from exabgp.logger import log, lazymsg
 from exabgp.protocol.family import (
     AFI,
 )
-from exabgp.protocol.ip import IP, IPv4, IPv6, NoNextHop
+from exabgp.protocol.ip import IP, IPv4, IPv6
 from exabgp.rib.change import Change
 
 SINGLE_SLASH = 1  # Format with single slash (IP/prefix)
@@ -397,12 +397,12 @@ def redirect(tokeniser: 'Tokeniser') -> Tuple[IP, ExtendedCommunities]:
                 raise ValueError(
                     'asn is a 32 bits number, local administrator field can only be 16 bit {}'.format(nn_int)
                 )
-            return NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(ASN4(asn), nn_int))
+            return IP.NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(ASN4(asn), nn_int))
 
         if nn_int >= pow(2, LOCAL_ADMIN_32_BITS):
             raise ValueError('Local administrator field is a 32 bits number, value too large {}'.format(nn_int))
 
-        return NoNextHop, ExtendedCommunities().add(TrafficRedirect(ASN(asn), nn_int))
+        return IP.NoNextHop, ExtendedCommunities().add(TrafficRedirect(ASN(asn), nn_int))
 
     raise ValueError('redirect format incorrect')
 

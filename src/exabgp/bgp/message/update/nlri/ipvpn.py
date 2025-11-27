@@ -18,7 +18,7 @@ from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import IP
 
 # ====================================================== IPVPN
 # RFC 4364
@@ -32,7 +32,7 @@ class IPVPN(Label):
         self.rd = RouteDistinguisher.NORD
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
+        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'ip-vpn nlri next-hop missing'
         return ''
 
@@ -52,7 +52,7 @@ class IPVPN(Label):
         instance.cidr = CIDR(packed, mask)
         instance.labels = labels
         instance.rd = rd
-        instance.nexthop = IP.create(nexthop) if nexthop else NoNextHop
+        instance.nexthop = IP.create(nexthop) if nexthop else IP.NoNextHop
         instance.action = action
         return instance
 

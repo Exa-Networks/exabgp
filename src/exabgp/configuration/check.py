@@ -292,7 +292,7 @@ def _make_nlri(neighbor: Neighbor, routes: str) -> List[NLRI]:
             _announced = announced  # type: bytes
             log.debug(lazymsg('parsing NLRI {announced}', announced=_announced), 'parser')
             nlri_parsed, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
-            if nlri_parsed is not NLRI.invalid():
+            if nlri_parsed is not NLRI.INVALID:
                 nlris.append(nlri_parsed)
     except (Notify, ValueError, IndexError, KeyError, struct.error) as exc:
         log.error(lazymsg('nlri.parse.failed afi={a} safi={s}', a=afi, s=safi), 'parser')
@@ -508,7 +508,7 @@ def _get_dummy_negotiated() -> Negotiated:
     """Get or create a dummy Negotiated instance for decoding notifications without neighbor context."""
     global _DUMMY_NEGOTIATED
     if _DUMMY_NEGOTIATED is None:
-        _DUMMY_NEGOTIATED = Negotiated(Neighbor.empty(), Direction.IN)
+        _DUMMY_NEGOTIATED = Negotiated(Neighbor.EMPTY, Direction.IN)
     return _DUMMY_NEGOTIATED
 
 

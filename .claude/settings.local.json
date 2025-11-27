@@ -107,7 +107,9 @@
       "Bash(npm view:*)",
       "Bash(npm info:*)",
       "Bash(poetry show:*)",
-      "Bash(poetry check:*)"
+      "Bash(poetry check:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   },

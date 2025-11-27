@@ -105,7 +105,7 @@ def route(tokeniser: Any) -> List[Change]:
             change.nlri.assign(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
         elif action == 'nexthop-and-attribute':
             nexthop, attribute = ParseStatic.known[command](tokeniser)
-            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
+            change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))
@@ -188,7 +188,7 @@ def attributes(tokeniser: Any) -> List[Change]:
             new.nlri.rd = rd  # type: ignore[attr-defined]
         if path_info:
             new.nlri.path_info = path_info  # type: ignore[attr-defined]
-        new.nlri.nexthop = nlri.nexthop  # type: ignore[attr-defined]
+        new.nlri.nexthop = nlri.nexthop
         changes.append(new)
 
     return changes

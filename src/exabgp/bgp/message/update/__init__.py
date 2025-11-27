@@ -21,7 +21,7 @@ from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import IP
 
 # Update message header offsets and constants
 UPDATE_WITHDRAWN_LENGTH_OFFSET = 2  # Offset to start of withdrawn routes
@@ -291,13 +291,13 @@ class Update(Message):
         # Is the peer going to send us some Path Information with the route (AddPath)
         addpath = negotiated.required(AFI.ipv4, SAFI.unicast)
 
-        # empty string for NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
-        nexthop = attributes.get(Attribute.CODE.NEXT_HOP, NoNextHop)
+        # empty string for IP.NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
+        nexthop = attributes.get(Attribute.CODE.NEXT_HOP, IP.NoNextHop)
         # nexthop = NextHop.unpack(_nexthop.ton())
 
         # RFC 4271 Section 5.1.3: NEXT_HOP MUST NOT be the IP address of the receiving speaker
         # Log warning but don't kill session - peer may have misconfigured next-hop
-        if nexthop is not NoNextHop and hasattr(negotiated, 'neighbor'):
+        if nexthop is not IP.NoNextHop and hasattr(negotiated, 'neighbor'):
             try:
                 local_address = negotiated.neighbor['local-address']
                 if local_address is not None and hasattr(nexthop, '_packed') and hasattr(local_address, '_packed'):
@@ -317,12 +317,12 @@ class Update(Message):
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath, negotiated)
             log.debug(lazymsg('withdrawn NLRI {nlri}', nlri=nlri), 'routes')
             withdrawn = left
-            if nlri is not NLRI.invalid():
+            if nlri is not NLRI.INVALID:
                 nlris.append(nlri)
 
         while announced:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath, negotiated)
-            if nlri is not NLRI.invalid():
+            if nlri is not NLRI.INVALID:
                 nlri.nexthop = nexthop
                 log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')
                 nlris.append(nlri)

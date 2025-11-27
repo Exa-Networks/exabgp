@@ -87,7 +87,7 @@ def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
             change.nlri.assign(AnnounceVPN.assign[command], AnnounceVPN.known[command](tokeniser))
         elif command_action == 'nexthop-and-attribute':
             nexthop, attribute = AnnounceVPN.known[command](tokeniser)
-            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
+            change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))

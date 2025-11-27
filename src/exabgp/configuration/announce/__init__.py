@@ -69,7 +69,7 @@ class ParseAnnounce(Section):
         # Really ugly
         klass = last.nlri.__class__
         path_info = last.nlri.path_info  # type: ignore[attr-defined]
-        nexthop = last.nlri.nexthop  # type: ignore[attr-defined]
+        nexthop = last.nlri.nexthop
 
         # XXX: Looks weird to set and then set to None, check
         last.nlri.cidr.mask = cut  # type: ignore[attr-defined]
@@ -80,7 +80,7 @@ class ParseAnnounce(Section):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
             nlri = klass(afi, safi, Action.ANNOUNCE)
             nlri.cidr = CIDR(pack_int(afi, ip), cut)  # type: ignore[attr-defined]
-            nlri.nexthop = nexthop  # type: ignore[attr-defined]  # nexthop can be NextHopSelf
+            nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             nlri.path_info = path_info  # type: ignore[attr-defined]
             # next ip
             ip += increment
