@@ -110,8 +110,9 @@ class Application:
         while self.running or len(self.Q):
             try:
                 line: str = self.Q.popleft()
-                result: Any = self.transcoder.convert(line)  # type: ignore[call-arg]
-                self.sub.stdin.write(result)
+                result: str | None = self.transcoder.convert(line)
+                if result is not None:
+                    self.sub.stdin.write(result.encode())
                 self.sub.stdin.flush()
             except IndexError:
                 # no data on the Q to read

@@ -37,5 +37,5 @@ class KeepAlive(Message):
         # This can not happen at decode time as we check the length of the KEEPALIVE message
         # But could happen when calling the function programmatically
         if data:
-            raise Notify('Keepalive can not have any payload but contains %s', hexstring(data))  # type: ignore[arg-type]
+            raise Notify(1, 2, 'Keepalive can not have any payload but contains %s' % hexstring(data))
         return cls()

@@ -143,7 +143,7 @@ class Peer:
     def _close(self, message: str = '', error: str | Exception = '') -> None:
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
             try:
-                if self.neighbor.api['neighbor-changes']:  # type: ignore[index]
+                if self.neighbor.api and self.neighbor.api['neighbor-changes']:
                     self.reactor.processes.down(self.neighbor, message)
             except ProcessError:
                 log.debug(
@@ -608,7 +608,7 @@ class Peer:
             'reactor',
         )
         self.stats['up'] += 1
-        if self.neighbor.api['neighbor-changes']:  # type: ignore[index]
+        if self.neighbor.api and self.neighbor.api['neighbor-changes']:
             try:
                 self.reactor.processes.up(self.neighbor)
             except ProcessError:
@@ -789,7 +789,7 @@ class Peer:
             'reactor',
         )
         self.stats['up'] += 1
-        if self.neighbor.api['neighbor-changes']:  # type: ignore[index]
+        if self.neighbor.api and self.neighbor.api['neighbor-changes']:
             try:
                 self.reactor.processes.up(self.neighbor)
             except ProcessError:

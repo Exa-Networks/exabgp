@@ -119,7 +119,7 @@ class Neighbor(dict):
         self.update(self.defaults)
 
         # Those are subconf
-        self.api = None  # XXX: not scriptable - is replaced outside the class
+        self.api: Dict[str, Any] | None = None  # XXX: not scriptable - is replaced outside the class
 
         # internal or calculated field
         self['capability'] = self.Capability.defaults.copy()
@@ -451,7 +451,7 @@ Neighbor {peer-address}
                     [
                         f'\t\t{name};\n',
                     ]
-                    if process in neighbor.api[api]  # type: ignore[index]
+                    if neighbor.api and process in neighbor.api[api]
                     else [],
                 )
 
@@ -460,7 +460,7 @@ Neighbor {peer-address}
                     [
                         f'\t\t\t{name};\n',
                     ]
-                    if process in neighbor.api[api]  # type: ignore[index]
+                    if neighbor.api and process in neighbor.api[api]
                     else [],
                 )
 
@@ -469,7 +469,7 @@ Neighbor {peer-address}
                     [
                         f'\t\t\t{name};\n',
                     ]
-                    if process in neighbor.api[api]  # type: ignore[index]
+                    if neighbor.api and process in neighbor.api[api]
                     else [],
                 )
 

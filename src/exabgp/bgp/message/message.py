@@ -107,7 +107,7 @@ class Message:
     HEADER_LEN: ClassVar[int] = 19
 
     registered_message: ClassVar[Dict[int, Type[Message]]] = {}
-    klass_unknown: ClassVar[Type[Exception]] = Exception
+    klass_unknown: ClassVar[Callable[[int, bytes, Negotiated], Message]]
 
     # TYPE attribute set by subclasses
     TYPE: bytes
@@ -193,7 +193,7 @@ class Message:
     def unpack(cls, message: int, data: bytes, negotiated: Negotiated) -> Message:
         if message in cls.registered_message:
             return cls.klass(message).unpack_message(data, negotiated)  # type: ignore[attr-defined,no-any-return]
-        return cls.klass_unknown(message, data, negotiated)  # type: ignore[return-value]
+        return cls.klass_unknown(message, data, negotiated)
 
     @classmethod
     def code(cls, name: str) -> _MessageCode:

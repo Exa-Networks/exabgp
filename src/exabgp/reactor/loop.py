@@ -222,10 +222,9 @@ class Reactor:
 
                     # Report signal to peers
                     for key in self._peers:
-                        if self._peers[key].neighbor.api['signal']:  # type: ignore[index]
-                            self._peers[key].reactor.processes.signal(
-                                self._peers[key].neighbor, Signal.name(self.signal.number)
-                            )
+                        peer = self._peers[key]
+                        if peer.neighbor.api and peer.neighbor.api['signal']:
+                            peer.reactor.processes.signal(peer.neighbor, Signal.name(self.signal.number))
 
                     self.signal.rearm()
 
@@ -338,10 +337,10 @@ class Reactor:
             if service.startswith(API_PREFIX):
                 matching.append(peer_name)
                 continue
-            if service in peer.neighbor.api['processes']:  # type: ignore[index]
+            if peer.neighbor.api and service in peer.neighbor.api['processes']:
                 matching.append(peer_name)
                 continue
-            if any(True for r in peer.neighbor.api['processes-match'] if re.match(r, service)):  # type: ignore[index]
+            if peer.neighbor.api and any(True for r in peer.neighbor.api['processes-match'] if re.match(r, service)):
                 matching.append(peer_name)
                 continue
 
@@ -524,10 +523,9 @@ class Reactor:
 
                     # report that we received a signal
                     for key in self._peers:
-                        if self._peers[key].neighbor.api['signal']:  # type: ignore[index]
-                            self._peers[key].reactor.processes.signal(
-                                self._peers[key].neighbor, Signal.name(self.signal.number)
-                            )
+                        peer = self._peers[key]
+                        if peer.neighbor.api and peer.neighbor.api['signal']:
+                            peer.reactor.processes.signal(peer.neighbor, Signal.name(self.signal.number))
 
                     self.signal.rearm()
 
