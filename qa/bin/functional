@@ -1066,14 +1066,31 @@ class Tests:
                     flush(f'  {i}: {display_msg}')
                 flush()
 
-        # Generate decode commands
+        # Generate encode/decode commands for debugging
+        flush('=' * 60)
+        flush('ENCODE/DECODE TOOLS FOR DEBUGGING:')
+        flush('=' * 60)
         if test and hasattr(test, 'conf') and 'confs' in test.conf:
             config_file = test.conf['confs'][0] if test.conf['confs'] else None
             if config_file:
-                flush('Decode commands (copy-paste to compare messages):')
-                flush('  # Decode a received/sent message:')
+                flush('  # Decode a hex message using test config:')
                 flush(f'  ./sbin/exabgp decode -c {config_file} "<hex>"')
                 flush()
+        flush('  # Decode any hex UPDATE message:')
+        flush('  ./sbin/exabgp decode "<hex>"')
+        flush()
+        flush('  # Encode a route to hex (for creating test cases):')
+        flush('  ./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4"')
+        flush()
+        flush('  # Round-trip verify (encode then decode):')
+        flush('  ./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4" | ./sbin/exabgp decode')
+        flush()
+        flush('  # Encode with attributes:')
+        flush('  ./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4 as-path [65000 65001] community [65000:100]"')
+        flush()
+        flush('  # Encode IPv6:')
+        flush('  ./sbin/exabgp encode -f "ipv6 unicast" "route 2001:db8::/32 next-hop 2001:db8::1"')
+        flush()
 
         # Manual debug commands
         if test:
@@ -1183,6 +1200,9 @@ class Tests:
             flush()
             flush('For intermittent failures, use --save to capture run logs:')
             flush(f'  ./qa/bin/functional encoding {all_failed[0]} --save /tmp/runs/')
+            flush()
+            flush('To decode/analyze hex packets from test output:')
+            flush('  ./sbin/exabgp decode "<hex>"')
 
         flush()
 
@@ -1327,7 +1347,7 @@ class EncodingTests(Tests):
             'exabgp_debug_configuration=true',
         ]
         confs = ' '.join(test.conf['confs'])
-        return f"env {' '.join(env_parts)} {Path.EXABGP} -d -p {confs}"
+        return f'env {" ".join(env_parts)} {Path.EXABGP} -d -p {confs}'
 
     def client(self, nick: str) -> str:
         if not self.enable_by_nick(nick):
