@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri import NLRI as _NLRI
@@ -32,7 +32,7 @@ class EOR(Message):
         MP_LENGTH = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
         EOR = True
 
-        nexthop = NoNextHop
+        nexthop = IP.NoNextHop
 
         def __init__(self, afi, safi, action):
             _NLRI.__init__(self, afi, safi, action)

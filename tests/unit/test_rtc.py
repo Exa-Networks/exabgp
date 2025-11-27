@@ -17,7 +17,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number as RouteTarget
 from exabgp.bgp.message.update.nlri.rtc import RTC
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.protocol.ip import NoNextHop, IP
+from exabgp.protocol.ip import IP
 
 
 def create_negotiated() -> Negotiated:
@@ -39,7 +39,7 @@ class TestRTCCreation:
         assert nlri.safi == SAFI.rtc
         assert nlri.origin == 65000
         assert nlri.rt == rt
-        assert nlri.nexthop == NoNextHop
+        assert nlri.nexthop == IP.NoNextHop
 
     def test_create_rtc_wildcard(self) -> None:
         """Test creating wildcard RTC route"""
@@ -49,7 +49,7 @@ class TestRTCCreation:
         assert nlri.safi == SAFI.rtc
         assert nlri.origin == 0
         assert nlri.rt is None
-        assert nlri.nexthop == NoNextHop
+        assert nlri.nexthop == IP.NoNextHop
 
     def test_create_rtc_with_action(self) -> None:
         """Test creating RTC with specific action"""
@@ -259,10 +259,10 @@ class TestRTCFeedback:
         assert feedback == ''
 
     def test_feedback_without_nexthop_announce(self) -> None:
-        """Test feedback when nexthop is missing (NoNextHop) for ANNOUNCE"""
+        """Test feedback when nexthop is missing (IP.NoNextHop) for ANNOUNCE"""
         rt = RouteTarget(64512, 100)
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
-        # nexthop defaults to NoNextHop
+        # nexthop defaults to IP.NoNextHop
 
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert 'rtc nlri next-hop missing' in feedback
@@ -271,7 +271,7 @@ class TestRTCFeedback:
         """Test feedback for WITHDRAW action (doesn't require nexthop)"""
         rt = RouteTarget(64512, 100)
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
-        # nexthop defaults to NoNextHop
+        # nexthop defaults to IP.NoNextHop
 
         # WITHDRAW doesn't require nexthop validation
         feedback = nlri.feedback(Action.WITHDRAW)
@@ -281,7 +281,7 @@ class TestRTCFeedback:
     def test_feedback_wildcard(self) -> None:
         """Test feedback for wildcard RTC"""
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None)
-        # nexthop defaults to NoNextHop
+        # nexthop defaults to IP.NoNextHop
 
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert 'rtc nlri next-hop missing' in feedback

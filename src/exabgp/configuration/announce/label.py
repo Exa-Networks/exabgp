@@ -87,7 +87,7 @@ def ip_label(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
             change.nlri.assign(AnnounceLabel.assign[command], AnnounceLabel.known[command](tokeniser))
         elif command_action == 'nexthop-and-attribute':
             nexthop, attribute = AnnounceLabel.known[command](tokeniser)
-            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
+            change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))

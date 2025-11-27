@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
@@ -45,7 +44,7 @@ class INET(NLRI):
         NLRI.__init__(self, afi, safi, action)
         self.path_info = PathInfo.NOPATH
         self.cidr = CIDR.NOCIDR
-        self.nexthop = NoNextHop
+        self.nexthop = IP.NoNextHop
         self.labels: Labels | None = None
         self.rd: RouteDistinguisher | None = None
 
@@ -63,7 +62,7 @@ class INET(NLRI):
         return hash(addpath + self._pack_nlri_simple())
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
+        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'inet nlri next-hop missing'
         return ''
 
@@ -83,7 +82,7 @@ class INET(NLRI):
         return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
 
     def extensive(self) -> str:
-        return '{}{}'.format(self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop {}'.format(self.nexthop))
+        return '{}{}'.format(self.prefix(), '' if self.nexthop is IP.NoNextHop else ' next-hop {}'.format(self.nexthop))
 
     def _internal(self, announced: bool = True) -> List[str]:
         return [self.path_info.json()]

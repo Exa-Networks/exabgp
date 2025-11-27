@@ -25,7 +25,7 @@ from typing import (
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import IP
 from exabgp.protocol.ip.port import Port
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -620,12 +620,12 @@ class Flow(NLRI):
     def __init__(self, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.flow_ip, action: Action = Action.UNSET) -> None:
         NLRI.__init__(self, afi, safi, action)
         self.rules = {}
-        self.nexthop = NoNextHop
+        self.nexthop = IP.NoNextHop
         # NORD is typed Optional but always set at module load (rd.py:115)
         self.rd = RouteDistinguisher.NORD
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
+        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'flow nlri next-hop missing'
         return ''
 
@@ -706,7 +706,7 @@ class Flow(NLRI):
         return ''.join(string)
 
     def extensive(self) -> str:
-        nexthop = ' next-hop {}'.format(self.nexthop) if self.nexthop is not NoNextHop else ''
+        nexthop = ' next-hop {}'.format(self.nexthop) if self.nexthop is not IP.NoNextHop else ''
         rd = '' if self.rd is RouteDistinguisher.NORD else str(self.rd)
         return 'flow' + self._rules() + rd + nexthop
 
@@ -724,7 +724,7 @@ class Flow(NLRI):
                     s.append(', ')
                 s.append('"{}"'.format(rule))
             string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
-        nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not NoNextHop else ''
+        nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not IP.NoNextHop else ''
         rd = '' if self.rd is RouteDistinguisher.NORD else ', {}'.format(self.rd.json())
         compatibility = ', "string": "{}"'.format(self.extensive())
         return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
@@ -790,8 +790,8 @@ class Flow(NLRI):
 
             return nlri, bgp + over
         except Notify:
-            return NLRI.invalid(), over
+            return NLRI.INVALID, over
         except ValueError:
-            return NLRI.invalid(), over
+            return NLRI.INVALID, over
         except IndexError:
-            return NLRI.invalid(), over
+            return NLRI.INVALID, over

@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
@@ -69,7 +69,7 @@ class Prefix(EVPN):
         iplen: int,
         gwip: IP,
         packed: bytes | None = None,
-        nexthop: IP = NoNextHop,
+        nexthop: IP = IP.NoNextHop,
         action: Action | None = None,
         addpath: PathInfo | None = None,
     ) -> None:

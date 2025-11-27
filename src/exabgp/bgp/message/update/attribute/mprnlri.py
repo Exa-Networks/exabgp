@@ -21,7 +21,7 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import IP
 
 # ==================================================== MP Unreacheable NLRI (15)
 #
@@ -58,7 +58,7 @@ class MPRNLRI(Attribute, Family):
         for nlri in self.nlris:
             if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
                 continue
-            if nlri.nexthop is NoNextHop:
+            if nlri.nexthop is IP.NoNextHop:
                 # EOR and Flow may not have any next_hop
                 nexthop = b''
             else:
@@ -193,14 +193,14 @@ class MPRNLRI(Attribute, Family):
             if nexthops:
                 for nexthop in nexthops:
                     nlri_result, left_result = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)
-                    # allow unpack_nlri to return NLRI.invalid() for "treat as withdraw"
-                    if nlri_result is not NLRI.invalid():
+                    # allow unpack_nlri to return NLRI.INVALID for "treat as withdraw"
+                    if nlri_result is not NLRI.INVALID:
                         nlri_result.nexthop = NextHop.unpack_attribute(nexthop, negotiated)
                         nlris.append(nlri_result)
             else:
                 nlri_result, left_result = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)
-                # allow unpack_nlri to return NLRI.invalid() for "treat as withdraw"
-                if nlri_result is not NLRI.invalid():
+                # allow unpack_nlri to return NLRI.INVALID for "treat as withdraw"
+                if nlri_result is not NLRI.INVALID:
                     nlris.append(nlri_result)
 
             if left_result == data:

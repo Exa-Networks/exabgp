@@ -16,7 +16,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import IP
 
 
 def create_negotiated() -> Negotiated:
@@ -42,7 +42,7 @@ class TestVPLSCreation:
         assert vpls.offset == 1
         assert vpls.size == 8
         assert vpls.action == Action.ANNOUNCE
-        assert vpls.nexthop is NoNextHop
+        assert vpls.nexthop is IP.NoNextHop
 
     def test_create_vpls_various_values(self) -> None:
         """Test creating VPLS with various parameter values"""
@@ -268,10 +268,10 @@ class TestVPLSFeedback:
         assert feedback == ''
 
     def test_feedback_missing_nexthop(self) -> None:
-        """Test feedback when nexthop is missing (NoNextHop)"""
+        """Test feedback when nexthop is missing (IP.NoNextHop)"""
         rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
-        # nexthop defaults to NoNextHop
+        # nexthop defaults to IP.NoNextHop
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert 'vpls nlri next-hop missing' in feedback

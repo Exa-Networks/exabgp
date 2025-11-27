@@ -155,12 +155,12 @@ class Neighbor(dict):
         self.uid = f'{self._GLOBAL["uid"]}'
         self._GLOBAL['uid'] += 1
 
-    # Cached empty neighbor instance for decode-only contexts
-    _empty: ClassVar['Neighbor | None'] = None
+    # Singleton empty neighbor (initialized after class definition)
+    EMPTY: ClassVar['Neighbor']
 
     @classmethod
-    def empty(cls) -> 'Neighbor':
-        """Get a minimal Neighbor for contexts that don't need full neighbor.
+    def _create_empty(cls) -> 'Neighbor':
+        """Create the empty neighbor singleton. Called once at module load.
 
         Used for:
         - Decoding messages (transcoder)
@@ -168,9 +168,7 @@ class Neighbor(dict):
 
         Does NOT support ip_self() - will fail if called.
         """
-        if cls._empty is None:
-            cls._empty = cls()
-        return cls._empty
+        return cls()
 
     def infer(self) -> None:
         if self['md5-ip'] is None:
@@ -671,3 +669,7 @@ Neighbor {peer-address}
         update_in = answer['messages']['update'][0]
         update_out = answer['messages']['update'][1]
         return f'{peer_addr:<15} {peer_as_str:<7} {duration_str:>9} {state_str:<12} {update_in:>10} {update_out:>10}'
+
+
+# Initialize the empty neighbor singleton
+Neighbor.EMPTY = Neighbor._create_empty()

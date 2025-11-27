@@ -79,7 +79,7 @@ def route(tokeniser: Any) -> List[Change]:
             nexthop: Any
             attribute: Any
             nexthop, attribute = ParseFlow.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
+            change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         elif action == 'nop':
             pass  # yes nothing to do !

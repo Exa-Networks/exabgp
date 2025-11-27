@@ -37,7 +37,7 @@ from exabgp.bgp.message.update.nlri.flow import (
     BinaryOperator,
 )
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.ip import IPv4, IP, NoNextHop
+from exabgp.protocol.ip import IPv4, IP
 from exabgp.protocol.ip.tcp.flag import TCPFlag
 from exabgp.protocol.ip.fragment import Fragment
 from exabgp.protocol.family import AFI, SAFI
@@ -396,7 +396,7 @@ class TestFlowNLRI:
 
         assert flow.afi == AFI.ipv4
         assert flow.safi == SAFI.flow_ip
-        assert flow.nexthop == NoNextHop
+        assert flow.nexthop == IP.NoNextHop
         assert len(flow.rules) == 0
 
     def test_flow_add_components(self) -> None:
@@ -828,7 +828,7 @@ class TestFlowUnpack:
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
-        # flow.nexthop defaults to NoNextHop
+        # flow.nexthop defaults to IP.NoNextHop
 
         # When announcing, should complain about missing nexthop
         feedback = flow.feedback(Action.ANNOUNCE)

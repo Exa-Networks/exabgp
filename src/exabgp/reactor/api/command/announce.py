@@ -13,7 +13,7 @@ from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import match_neighbors
 from exabgp.reactor.api.command.limit import extract_neighbors
 
-from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute import NextHop
 
@@ -111,7 +111,7 @@ def withdraw_route(self, reactor, service, line, use_json):
                 # Change the action to withdraw before checking the route
                 change.nlri.action = Action.WITHDRAW
                 # NextHop is a mandatory field (but we do not require in)
-                if change.nlri.nexthop is NoNextHop:
+                if change.nlri.nexthop is IP.NoNextHop:
                     change.nlri.nexthop = NextHop('0.0.0.0')
 
                 if not ParseStaticRoute.check(change):

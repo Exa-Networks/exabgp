@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri.inet import INET
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
 
 from exabgp.bgp.message import Action
 
@@ -171,9 +170,9 @@ class ParseStaticRoute(Section):
         routes = self.scope.pop_routes()
         if routes:
             for route in routes:
-                if route.nlri.has_rd() and route.nlri.rd is not RouteDistinguisher.NORD:
+                if route.nlri.has_rd() and route.nlri.rd is not RouteDistinguisher.NORD:  # type: ignore[attr-defined]
                     route.nlri.safi = SAFI.mpls_vpn
-                elif route.nlri.has_label() and route.nlri.labels is not Labels.NOLABEL:
+                elif route.nlri.has_label() and route.nlri.labels is not Labels.NOLABEL:  # type: ignore[attr-defined]
                     route.nlri.safi = SAFI.nlri_mpls
                 self.scope.append_route(route)
         return True
@@ -190,7 +189,7 @@ class ParseStaticRoute(Section):
         # The NLRI is actually an INET subclass with nexthop attribute
         nlri: INET = change.nlri  # type: ignore[assignment]  # runtime: subclass of NLRI
         if (
-            nlri.nexthop is NoNextHop
+            nlri.nexthop is IP.NoNextHop
             and nlri.action == Action.ANNOUNCE
             and nlri.afi == AFI.ipv4
             and nlri.safi in (SAFI.unicast, SAFI.multicast)

@@ -169,7 +169,7 @@ def l2vpn_vpls(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
             change.attributes.add(AnnounceVPLS.known[command](tokeniser))
         elif command_action == 'nexthop-and-attribute':
             nexthop, attribute = AnnounceVPLS.known[command](tokeniser)
-            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
+            change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
         else:
             raise ValueError('vpls: unknown command "{}"'.format(command))

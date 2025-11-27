@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import ESI
@@ -45,7 +45,7 @@ class EthernetSegment(EVPN):
         esi: ESI,
         ip: IP,
         packed: bytes | None = None,
-        nexthop: IP = NoNextHop,
+        nexthop: IP = IP.NoNextHop,
         action: Action | None = None,
         addpath: Any = None,
     ) -> None:

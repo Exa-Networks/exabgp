@@ -17,7 +17,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
@@ -88,7 +88,7 @@ class LINK(BGPLS):
         iface_addrs: List[IfaceAddr] | None = None,
         topology_ids: List[MTID] | None = None,
         link_ids: List[LinkIdentifier] | None = None,
-        nexthop: IP = NoNextHop,
+        nexthop: IP = IP.NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,

@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -54,7 +53,7 @@ class NextHop(Attribute, IP):  # type: ignore[misc]
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> IP:
         if not data:
-            return NoNextHop  # type: ignore[return-value]
+            return IP.NoNextHop
         return IP.unpack_ip(data, NextHop)
 
     def __repr__(self) -> str:
