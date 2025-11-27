@@ -935,19 +935,55 @@ class Tests:
             pass
         return messages
 
-    def _classify_failure(self, server: Optional['Exec'], client: Optional['Exec']) -> str:
-        """Classify the type of failure for clearer debugging"""
+    def _classify_failure(
+        self, server: Optional['Exec'], client: Optional['Exec'], test_state: Optional[State]
+    ) -> tuple[str, Optional[str]]:
+        """Classify the type of failure for clearer debugging.
+
+        Returns:
+            Tuple of (failure_type, traceback_if_crash)
+        """
+        traceback = None
+
+        # Check for Python crash in client (most common debugging scenario)
+        if client and client.stderr:
+            stderr = client.stderr.decode('utf-8', errors='replace')
+            if 'Traceback (most recent call last):' in stderr:
+                # Extract the traceback
+                lines = stderr.split('\n')
+                tb_start = None
+                tb_end = None
+                for i, line in enumerate(lines):
+                    if 'Traceback (most recent call last):' in line:
+                        tb_start = i
+                    elif tb_start is not None and line and not line.startswith(' ') and not line.startswith('File'):
+                        # Found the error line (e.g., "AttributeError: ...")
+                        tb_end = i + 1
+                        break
+                if tb_start is not None:
+                    if tb_end is None:
+                        tb_end = len(lines)
+                    traceback = '\n'.join(lines[tb_start:tb_end])
+                    # Extract error type from last line
+                    error_line = lines[tb_end - 1] if tb_end > 0 else ''
+                    if ':' in error_line:
+                        error_type = error_line.split(':')[0]
+                        return f'CRASH ({error_type})', traceback
+                    return 'CRASH (Python exception)', traceback
+
         if server and server.code == -1:
-            return 'TIMEOUT (server never received messages or crashed)'
+            return 'TIMEOUT (server never received messages or crashed)', None
         if server and server.stdout:
             stdout = server.stdout.decode('utf-8', errors='replace')
             if 'unexpected message' in stdout:
-                return 'MESSAGE_MISMATCH (received message differs from expected)'
+                return 'MESSAGE_MISMATCH (received message differs from expected)', None
             if 'received extra message' in stdout:
-                return 'EXTRA_MESSAGE (more messages received than expected)'
+                return 'EXTRA_MESSAGE (more messages received than expected)', None
         if client and client.code != 0:
-            return f'CLIENT_ERROR (client exited with code {client.code})'
-        return 'UNKNOWN (check server/client output below)'
+            return f'CLIENT_ERROR (client exited with code {client.code})', None
+        if test_state == State.SUCCESS:
+            return 'SUCCESS', None
+        return 'UNKNOWN (check server/client output below)', None
 
     def _print_debug_output(
         self,
@@ -966,15 +1002,29 @@ class Tests:
                 test = t
                 break
 
+        # Classify failure type (also detects success)
+        test_state = test.state if test else None
+        failure_type, traceback = self._classify_failure(server, client, test_state)
+
+        # Only show detailed debug output on failure
+        if test_state == State.SUCCESS:
+            return
+
         flush()
         flush('=' * 60)
         flush('FAILURE ANALYSIS (Single Test Mode)')
         flush('=' * 60)
 
-        # Classify failure type
-        failure_type = self._classify_failure(server, client)
         flush(f'Failure type: {failure_type}')
         flush()
+
+        # Show traceback prominently if there was a crash
+        if traceback:
+            flush(f'{red()}PYTHON TRACEBACK:{reset()}')
+            flush('-' * 60)
+            flush(traceback)
+            flush('-' * 60)
+            flush()
 
         # Show test files if we have test info
         if test and hasattr(test, 'conf'):
@@ -1033,6 +1083,14 @@ class Tests:
             flush('  # Terminal 2 - Then start client:')
             flush(f'  ./qa/bin/functional encoding --client {test.nick}')
             flush()
+
+            # Show copy-pasteable exabgp command for direct debugging
+            flush('Direct exabgp command (copy-paste to run manually):')
+            client_cmd = self.client_cmd(test.nick)
+            if client_cmd:
+                flush(f'  {client_cmd}')
+            flush()
+
             flush('For intermittent failures, use --save to capture run logs:')
             flush(f'  ./qa/bin/functional encoding --server {test.nick} --save /tmp/runs/')
             flush('  # Logs saved with timing, message hashes for comparison')
@@ -1251,6 +1309,25 @@ class EncodingTests(Tests):
                             name = Path.etc(name)
                         if name not in test.files:
                             test.files.append(name)
+
+    def client_cmd(self, nick: str, port: Optional[int] = None) -> str:
+        """Generate a single-line copy-pasteable client command."""
+        test = self._by_nick.get(nick)
+        if not test:
+            return ''
+
+        tcp_connections = parse_msg_options(test.conf['msg'])
+        actual_port = port if port is not None else test.conf['port']
+
+        env_parts = [
+            'exabgp_tcp_port=%d' % actual_port,
+            f'exabgp_tcp_connections={tcp_connections}',
+            'exabgp_api_cli=false',
+            'exabgp_debug_rotate=true',
+            'exabgp_debug_configuration=true',
+        ]
+        confs = ' '.join(test.conf['confs'])
+        return f"env {' '.join(env_parts)} {Path.EXABGP} -d -p {confs}"
 
     def client(self, nick: str) -> str:
         if not self.enable_by_nick(nick):
