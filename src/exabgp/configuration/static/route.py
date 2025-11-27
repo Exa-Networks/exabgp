@@ -9,10 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Iterator, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from exabgp.bgp.message.update.nlri.inet import INET
+from typing import Any, Iterator, cast
 
 from exabgp.protocol.ip import IP
 
@@ -22,6 +19,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.attribute import Attribute
@@ -170,9 +168,11 @@ class ParseStaticRoute(Section):
         routes = self.scope.pop_routes()
         if routes:
             for route in routes:
-                if route.nlri.has_rd() and route.nlri.rd is not RouteDistinguisher.NORD:  # type: ignore[attr-defined]
+                # Cast to INET to access rd/labels attributes (verified by has_rd/has_label)
+                inet_nlri = cast(INET, route.nlri)
+                if route.nlri.has_rd() and inet_nlri.rd is not RouteDistinguisher.NORD:
                     route.nlri.safi = SAFI.mpls_vpn
-                elif route.nlri.has_label() and route.nlri.labels is not Labels.NOLABEL:  # type: ignore[attr-defined]
+                elif route.nlri.has_label() and inet_nlri.labels is not Labels.NOLABEL:
                     route.nlri.safi = SAFI.nlri_mpls
                 self.scope.append_route(route)
         return True

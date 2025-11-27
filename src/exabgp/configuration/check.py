@@ -201,7 +201,7 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
                 _change1_json: Change = change1
 
                 def _log_nlri(_change1_json: Change = _change1_json) -> str:
-                    return 'JSON nlri {}'.format(_change1_json.nlri.json())  # type: ignore[attr-defined]
+                    return 'JSON nlri {}'.format(_change1_json.nlri.json())
 
                 def _log_attr(_change1_json: Change = _change1_json) -> str:
                     return 'JSON attr {}'.format(_change1_json.attributes.json())
@@ -314,8 +314,7 @@ def check_nlri(neighbor: Neighbor, routes: str) -> bool:
 
     log.debug(lazymsg('nlri.check.complete'), 'parser')  # separator
     for nlri in nlris:
-        # Concrete NLRI subclasses (INET, Flow, etc.) all define json()
-        log.info(lazymsg('nlri.json json={json}', json=nlri.json()), 'parser')  # type: ignore[attr-defined]
+        log.info(lazymsg('nlri.json json={json}', json=nlri.json()), 'parser')
     return True
 
 
@@ -325,7 +324,7 @@ def display_nlri(neighbor: Neighbor, routes: str) -> bool:
         return False
 
     for nlri in nlris:
-        sys.stdout.write(f'{nlri.json()}\n')  # type: ignore[attr-defined]
+        sys.stdout.write(f'{nlri.json()}\n')
     return True
 
 

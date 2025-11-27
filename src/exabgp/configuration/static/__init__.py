@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, List
+from typing import Any, Callable, List, cast
 
 from exabgp.configuration.static.route import ParseStaticRoute
 from exabgp.configuration.static.parser import prefix
@@ -180,15 +180,16 @@ def attributes(tokeniser: Any) -> List[Change]:
             break
 
         ipmask = prefix(tokeniser)
-        new = Change(nlri.__class__(nlri.afi, nlri.safi, Action.UNSET), attr)
-        new.nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)  # type: ignore[attr-defined]
+        # Create new NLRI of same type and cast to INET for attribute access
+        new_nlri = cast(INET, nlri.__class__(nlri.afi, nlri.safi, Action.UNSET))
+        new_nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
         if labels:
-            new.nlri.labels = labels  # type: ignore[attr-defined]
+            new_nlri.labels = labels
         if rd:
-            new.nlri.rd = rd  # type: ignore[attr-defined]
+            new_nlri.rd = rd
         if path_info:
-            new.nlri.path_info = path_info  # type: ignore[attr-defined]
-        new.nlri.nexthop = nlri.nexthop
-        changes.append(new)
+            new_nlri.path_info = path_info
+        new_nlri.nexthop = nlri.nexthop
+        changes.append(Change(new_nlri, attr))
 
     return changes

@@ -187,7 +187,8 @@ class AnnounceFlow(ParseAnnounce):
 
 
 def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
-    change = Change(Flow(afi, safi, Action.ANNOUNCE), Attributes())
+    flow_nlri = Flow(afi, safi, Action.ANNOUNCE)
+    change = Change(flow_nlri, Attributes())
 
     while True:
         command = tokeniser()
@@ -199,12 +200,12 @@ def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
         if command_action == 'nlri-add':
             for adding in AnnounceFlow.known[command](tokeniser):
-                change.nlri.add(adding)  # type: ignore[attr-defined]
+                flow_nlri.add(adding)
         elif command_action == 'attribute-add':
             change.attributes.add(AnnounceFlow.known[command](tokeniser))
         elif command_action == 'nexthop-and-attribute':
             nexthop, attribute = AnnounceFlow.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
+            flow_nlri.nexthop = nexthop
             change.attributes.add(attribute)
         elif command_action == 'nop':
             pass  # yes nothing to do !

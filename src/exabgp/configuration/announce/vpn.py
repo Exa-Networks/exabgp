@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, cast
 
 from exabgp.rib.change import Change
 
@@ -58,8 +58,10 @@ class AnnounceVPN(ParseAnnounce):
         if not AnnounceLabel.check(change, afi):
             return False
 
-        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_rd() and change.nlri.rd is RouteDistinguisher.NORD:  # type: ignore[attr-defined]
-            return False
+        # has_rd() confirms the NLRI type has an rd attribute
+        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_rd():
+            if cast(IPVPN, change.nlri).rd is RouteDistinguisher.NORD:
+                return False
 
         return True
 

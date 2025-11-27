@@ -90,6 +90,10 @@ class NLRI(Family):
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
         raise Exception('unimplemented in NLRI children class')
 
+    def json(self, compact: bool = False) -> str:
+        """Serialize NLRI to JSON format. Must be implemented by subclasses."""
+        raise NotImplementedError('json() must be implemented by NLRI subclasses')
+
     @classmethod
     def register(cls, afi: int, safi: int, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
         def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:
