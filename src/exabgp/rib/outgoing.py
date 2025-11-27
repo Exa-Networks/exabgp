@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import asyncio
 from copy import deepcopy
 from typing import TYPE_CHECKING, Dict, Iterator, List, Set, Tuple
 
@@ -63,6 +64,9 @@ class OutgoingRIB(Cache):
         self._refresh_families = set()
         self._refresh_changes = []
 
+        # Flush callbacks for sync mode - fire when updates() exhausts
+        self._flush_callbacks: List[asyncio.Event] = []
+
         self.reset()
 
     # will resend all the routes once we reconnect
@@ -83,6 +87,29 @@ class OutgoingRIB(Cache):
 
     def pending(self) -> bool:
         return len(self._new_nlri) != 0 or len(self._refresh_changes) != 0
+
+    def register_flush_callback(self) -> asyncio.Event:
+        """Register callback to be fired when RIB is flushed to wire.
+
+        Returns an asyncio.Event that will be set when updates() generator exhausts.
+        Used by sync mode API commands to wait for routes to be sent on wire.
+        """
+        event = asyncio.Event()
+        self._flush_callbacks.append(event)
+        log.debug(lazymsg('rib.flush.callback.registered total={n}', n=len(self._flush_callbacks)), 'rib')
+        return event
+
+    def fire_flush_callbacks(self) -> None:
+        """Fire all registered flush callbacks.
+
+        Called when updates() generator exhausts (all routes sent to wire).
+        Sets all registered events and clears the callback list.
+        """
+        if self._flush_callbacks:
+            log.debug(lazymsg('rib.flush.callbacks.firing count={n}', n=len(self._flush_callbacks)), 'rib')
+            for event in self._flush_callbacks:
+                event.set()
+            self._flush_callbacks.clear()
 
     def resend(self, enhanced_refresh: bool, family: Tuple[AFI, SAFI] | None = None) -> None:
         requested_families = set(self.families)
