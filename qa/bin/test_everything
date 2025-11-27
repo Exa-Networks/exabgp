@@ -7,15 +7,7 @@ Use this instead of running individual test commands.
 
 Exit codes:
   0 - All tests passed
-  1 - Ruff format failed
-  2 - Ruff check failed
-  3 - Unit tests failed
-  4 - Functional encoding tests (async/default) failed
-  5 - Functional encoding tests (legacy) failed
-  6 - Functional decoding tests failed
-  7 - Configuration validation failed
-  8 - No-neighbor API test failed
-  9 - Type ignore regression check failed
+  N - Test N failed (position in test list)
 """
 
 import os
@@ -23,7 +15,7 @@ import re
 import sys
 import subprocess
 import time
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Callable
 
 
 class Colors:
@@ -51,10 +43,10 @@ if not sys.stdout.isatty():
     Colors.disable()
 
 
-def print_header(message: str) -> None:
+def print_header(test_num: int, total: int, message: str) -> None:
     """Print a test section header"""
     print(f"\n{Colors.BOLD}{Colors.CYAN}{'=' * 70}{Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.CYAN}{message}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.CYAN}TEST {test_num}/{total}: {message}{Colors.RESET}")
     print(f"{Colors.BOLD}{Colors.CYAN}{'=' * 70}{Colors.RESET}\n")
 
 
@@ -104,9 +96,9 @@ def run_command(cmd: str, env: Optional[dict] = None, shell: bool = True) -> Tup
     return process.returncode, stdout, stderr
 
 
-def test_ruff_format() -> Tuple[bool, int]:
-    """Test 1: Ruff format"""
-    print_header("TEST 1/9: Ruff Format")
+def test_ruff_format(test_num: int, total: int) -> bool:
+    """Ruff format check"""
+    print_header(test_num, total, "Ruff Format")
     print_info("Running: ruff format src tests")
 
     returncode, stdout, stderr = run_command("ruff format src tests")
@@ -117,19 +109,19 @@ def test_ruff_format() -> Tuple[bool, int]:
             print(stdout)
         if stderr:
             print(stderr)
-        return False, 1
+        return False
 
     # Check if files were reformatted
     if stdout.strip() and "files" in stdout.lower():
         print_info(stdout.strip())
 
     print_success("Ruff format passed")
-    return True, 0
+    return True
 
 
-def test_ruff_check() -> Tuple[bool, int]:
-    """Test 2: Ruff check"""
-    print_header("TEST 2/9: Ruff Check")
+def test_ruff_check(test_num: int, total: int) -> bool:
+    """Ruff check"""
+    print_header(test_num, total, "Ruff Check")
     print_info("Running: ruff check src qa tests")
 
     returncode, stdout, stderr = run_command("ruff check src qa tests")
@@ -140,15 +132,15 @@ def test_ruff_check() -> Tuple[bool, int]:
             print(stdout)
         if stderr:
             print(stderr)
-        return False, 2
+        return False
 
     print_success("Ruff check passed - All checks passed!")
-    return True, 0
+    return True
 
 
-def test_unit_tests() -> Tuple[bool, int]:
-    """Test 3: Unit tests"""
-    print_header("TEST 3/9: Unit Tests")
+def test_unit_tests(test_num: int, total: int) -> bool:
+    """Unit tests"""
+    print_header(test_num, total, "Unit Tests")
     print_info("Running: pytest ./tests/unit/")
 
     returncode, stdout, stderr = run_command(
@@ -161,19 +153,80 @@ def test_unit_tests() -> Tuple[bool, int]:
         print(stdout)
         if stderr:
             print(stderr)
-        return False, 3
+        return False
 
     # Extract test count from output
     lines = stdout.strip().split('\n')
     summary_line = lines[-1] if lines else ""
 
     print_success(f"Unit tests passed - {summary_line}")
-    return True, 0
+    return True
 
 
-def test_functional_encoding() -> Tuple[bool, int]:
-    """Test 4: Functional encoding tests (async mode - default)"""
-    print_header("TEST 4/9: Functional Encoding Tests (Async Mode - Default)")
+def test_config_validation(test_num: int, total: int) -> bool:
+    """Configuration validation"""
+    print_header(test_num, total, "Configuration Validation")
+    print_info("Running: ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf")
+
+    returncode, stdout, stderr = run_command(
+        "./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf"
+    )
+
+    if returncode != 0:
+        print_error("Configuration validation failed")
+        if stdout:
+            print(stdout)
+        if stderr:
+            print(stderr)
+        return False
+
+    print_success("Configuration validation passed")
+    return True
+
+
+def test_no_neighbor(test_num: int, total: int) -> bool:
+    """No-neighbor API-only mode"""
+    print_header(test_num, total, "No-Neighbor API Test")
+    print_info("Running: qa/scripts/test_no_neighbor.py")
+
+    returncode, stdout, stderr = run_command("./qa/scripts/test_no_neighbor.py")
+
+    # Print output
+    print(stdout)
+    if stderr:
+        print(stderr)
+
+    if returncode != 0:
+        print_error("No-neighbor test failed")
+        return False
+
+    print_success("No-neighbor test passed - API works without BGP neighbors")
+    return True
+
+
+def test_type_ignore_regression(test_num: int, total: int) -> bool:
+    """Type ignore regression check"""
+    print_header(test_num, total, "Type Ignore Regression Check")
+    print_info("Running: ./qa/bin/check_type_ignores")
+
+    returncode, stdout, stderr = run_command("./qa/bin/check_type_ignores")
+
+    # Print output
+    print(stdout)
+    if stderr:
+        print(stderr)
+
+    if returncode != 0:
+        print_error("Type ignore regression check failed - count increased above baseline")
+        return False
+
+    print_success("Type ignore regression check passed")
+    return True
+
+
+def test_functional_encoding(test_num: int, total: int) -> bool:
+    """Functional encoding tests (async mode - default)"""
+    print_header(test_num, total, "Functional Encoding Tests (Async Mode - Default)")
     print_info("Running: ./qa/bin/functional encoding (72 tests)")
 
     # Kill any leftover processes first
@@ -189,7 +242,7 @@ def test_functional_encoding() -> Tuple[bool, int]:
 
     if returncode != 0:
         print_error("Functional encoding tests (async) failed")
-        return False, 4
+        return False
 
     # Check for 100% pass rate - look for "100.0% passed" or similar on same line
     pass_rate_match = re.search(r'100(?:\.\d+)?%\s+passed', stdout)
@@ -198,18 +251,18 @@ def test_functional_encoding() -> Tuple[bool, int]:
         failed_match = re.search(r'failed\s+(\d+)', stdout, re.IGNORECASE)
         if failed_match and int(failed_match.group(1)) > 0:
             print_error("Functional encoding tests (async) had failures")
-            return False, 4
+            return False
 
         print_success("Functional encoding tests (async) passed - All 72 tests passed")
-        return True, 0
+        return True
     else:
         print_error("Functional encoding tests (async) did not achieve 100% pass rate")
-        return False, 4
+        return False
 
 
-def test_functional_encoding_legacy() -> Tuple[bool, int]:
-    """Test 5: Functional encoding tests (legacy/sync mode)"""
-    print_header("TEST 5/9: Functional Encoding Tests (Legacy Mode)")
+def test_functional_encoding_legacy(test_num: int, total: int) -> bool:
+    """Functional encoding tests (legacy/sync mode)"""
+    print_header(test_num, total, "Functional Encoding Tests (Legacy Mode)")
     print_info("Running: env exabgp_reactor_legacy=true ./qa/bin/functional encoding (72 tests)")
 
     # Kill any leftover processes first
@@ -228,7 +281,7 @@ def test_functional_encoding_legacy() -> Tuple[bool, int]:
 
     if returncode != 0:
         print_error("Functional encoding tests (legacy) failed")
-        return False, 5
+        return False
 
     # Check for 100% pass rate - look for "100.0% passed" or similar on same line
     pass_rate_match = re.search(r'100(?:\.\d+)?%\s+passed', stdout)
@@ -237,18 +290,18 @@ def test_functional_encoding_legacy() -> Tuple[bool, int]:
         failed_match = re.search(r'failed\s+(\d+)', stdout, re.IGNORECASE)
         if failed_match and int(failed_match.group(1)) > 0:
             print_error("Functional encoding tests (legacy) had failures")
-            return False, 5
+            return False
 
         print_success("Functional encoding tests (legacy) passed - All 72 tests passed")
-        return True, 0
+        return True
     else:
         print_error("Functional encoding tests (legacy) did not achieve 100% pass rate")
-        return False, 5
+        return False
 
 
-def test_functional_decoding() -> Tuple[bool, int]:
-    """Test 6: Functional decoding tests"""
-    print_header("TEST 6/9: Functional Decoding Tests")
+def test_functional_decoding(test_num: int, total: int) -> bool:
+    """Functional decoding tests"""
+    print_header(test_num, total, "Functional Decoding Tests")
     print_info("Running: ./qa/bin/functional decoding")
 
     returncode, stdout, stderr = run_command("./qa/bin/functional decoding")
@@ -260,71 +313,10 @@ def test_functional_decoding() -> Tuple[bool, int]:
 
     if returncode != 0:
         print_error("Functional decoding tests failed")
-        return False, 6
+        return False
 
     print_success("Functional decoding tests passed")
-    return True, 0
-
-
-def test_config_validation() -> Tuple[bool, int]:
-    """Test 7: Configuration validation"""
-    print_header("TEST 7/9: Configuration Validation")
-    print_info("Running: ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf")
-
-    returncode, stdout, stderr = run_command(
-        "./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf"
-    )
-
-    if returncode != 0:
-        print_error("Configuration validation failed")
-        if stdout:
-            print(stdout)
-        if stderr:
-            print(stderr)
-        return False, 7
-
-    print_success("Configuration validation passed")
-    return True, 0
-
-
-def test_no_neighbor() -> Tuple[bool, int]:
-    """Test 8: No-neighbor API-only mode"""
-    print_header("TEST 8/9: No-Neighbor API Test")
-    print_info("Running: qa/scripts/test_no_neighbor.py")
-
-    returncode, stdout, stderr = run_command("./qa/scripts/test_no_neighbor.py")
-
-    # Print output
-    print(stdout)
-    if stderr:
-        print(stderr)
-
-    if returncode != 0:
-        print_error("No-neighbor test failed")
-        return False, 8
-
-    print_success("No-neighbor test passed - API works without BGP neighbors")
-    return True, 0
-
-
-def test_type_ignore_regression() -> Tuple[bool, int]:
-    """Test 9: Type ignore regression check"""
-    print_header("TEST 9/9: Type Ignore Regression Check")
-    print_info("Running: ./qa/bin/check_type_ignores")
-
-    returncode, stdout, stderr = run_command("./qa/bin/check_type_ignores")
-
-    # Print output
-    print(stdout)
-    if stderr:
-        print(stderr)
-
-    if returncode != 0:
-        print_error("Type ignore regression check failed - count increased above baseline")
-        return False, 9
-
-    print_success("Type ignore regression check passed")
-    return True, 0
+    return True
 
 
 def main() -> int:
@@ -334,31 +326,32 @@ def main() -> int:
 
     start_time = time.time()
 
-    # Run all tests in sequence
-    tests = [
+    # Run all tests in sequence - functional tests last
+    tests: list[Callable[[int, int], bool]] = [
         test_ruff_format,
         test_ruff_check,
         test_unit_tests,
-        test_functional_encoding,
-        test_functional_encoding_legacy,
-        test_functional_decoding,
         test_config_validation,
         test_no_neighbor,
+        test_functional_decoding,
+        test_functional_encoding,
+        test_functional_encoding_legacy,
         test_type_ignore_regression,
     ]
 
-    for test_func in tests:
-        success, exit_code = test_func()
+    total = len(tests)
+    for i, test_func in enumerate(tests, start=1):
+        success = test_func(i, total)
         if not success:
             elapsed = time.time() - start_time
             print(f"\n{Colors.RED}{Colors.BOLD}FAILED{Colors.RESET} after {elapsed:.1f}s")
-            print(f"{Colors.RED}Exit code: {exit_code}{Colors.RESET}")
-            return exit_code
+            print(f"{Colors.RED}Exit code: {i}{Colors.RESET}")
+            return i
 
     # All tests passed
     elapsed = time.time() - start_time
-    print_header("ALL TESTS PASSED")
-    print(f"{Colors.GREEN}{Colors.BOLD}✓ All 9 test suites passed in {elapsed:.1f}s{Colors.RESET}")
+    print_header(total, total, "ALL TESTS PASSED")
+    print(f"{Colors.GREEN}{Colors.BOLD}✓ All {total} test suites passed in {elapsed:.1f}s{Colors.RESET}")
     print(f"\n{Colors.GREEN}Async (default) and legacy modes both pass 100%{Colors.RESET}")
     print(f"{Colors.GREEN}Code is ready for commit{Colors.RESET}\n")
 
