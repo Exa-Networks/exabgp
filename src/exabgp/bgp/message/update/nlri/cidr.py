@@ -6,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+from typing import ClassVar
 
 import math
 
@@ -23,7 +24,7 @@ class CIDR:
 
     _mask_to_bytes: dict[int, int] = {}
 
-    NOCIDR: CIDR | None = None
+    NOCIDR: ClassVar['CIDR']
 
     def __init__(self, packed, mask):
         self._packed = packed

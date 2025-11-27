@@ -141,7 +141,7 @@ class Prefix(EVPN):
             + bytes([self.iplen])
             + self.ip.pack_ip()
             + self.gwip.pack_ip()
-            + self.label.pack_labels()  # type: ignore[union-attr]
+            + self.label.pack_labels()
         )
         return self._packed
 
@@ -194,7 +194,7 @@ class Prefix(EVPN):
         content += '{}, '.format(self.rd.json())
         content += '{}, '.format(self.esi.json())
         content += '{}, '.format(self.etag.json())
-        content += '{}, '.format(self.label.json())  # type: ignore[union-attr]
+        content += '{}, '.format(self.label.json())
         content += '"ip": "{}", '.format(str(self.ip))
         content += '"iplen": %d, ' % self.iplen
         content += '"gateway": "{}" '.format(str(self.gwip))

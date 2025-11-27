@@ -51,7 +51,7 @@ class Label(INET):
         return self.labels == other.labels and INET.__eq__(self, other)
 
     def __hash__(self) -> int:
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()
         return hash(addpath + self._pack_nlri_simple())
 
     def prefix(self) -> str:
@@ -59,17 +59,17 @@ class Label(INET):
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
-        mask = bytes([len(self.labels) * 8 + self.cidr.mask])  # type: ignore[union-attr,arg-type]
-        return mask + self.labels.pack_labels() + self.cidr.pack_ip()  # type: ignore[union-attr]
+        mask = bytes([len(self.labels) * 8 + self.cidr.mask])  # type: ignore[arg-type]
+        return mask + self.labels.pack_labels() + self.cidr.pack_ip()
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
-        addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
+        addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''
         return addpath + self._pack_nlri_simple()
 
     def index(self) -> bytes:
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
-        mask = bytes([self.cidr.mask])  # type: ignore[union-attr]
-        return Family.index(self) + addpath + mask + self.cidr.pack_ip()  # type: ignore[union-attr]
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()
+        mask = bytes([self.cidr.mask])
+        return Family.index(self) + addpath + mask + self.cidr.pack_ip()
 
     def _internal(self, announced: bool = True) -> List[str]:
         r = INET._internal(self, announced)

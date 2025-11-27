@@ -6,6 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+from typing import ClassVar
 
 
 # ===================================================================== PathInfo
@@ -13,7 +14,7 @@ from __future__ import annotations
 
 
 class PathInfo:
-    NOPATH: 'PathInfo' | None = None
+    NOPATH: ClassVar['PathInfo']
 
     def __init__(self, packed: bytes | None = None, integer: int | None = None, ip: str | None = None) -> None:
         if packed:
