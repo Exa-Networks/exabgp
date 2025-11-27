@@ -121,7 +121,7 @@ class Parser:
     def _set(self, function):
         try:
             self._tokens = function
-            self._next = next(self._tokens)  # type: ignore[call-overload]
+            self._next = next(self._tokens)
         except OSError as exc:
             error = str(exc)
             if error.count(']'):
@@ -129,11 +129,11 @@ class Parser:
             else:
                 self.error.set(error)
             self._tokens = Parser._off
-            self._next = []  # type: ignore[assignment]
+            self._next = []
             return self.error.set('issue setting the configuration parser')
         except StopIteration:
             self._tokens = Parser._off
-            self._next = []  # type: ignore[assignment]
+            self._next = []
             return self.error.set('issue setting the configuration parser, no data')
         return True
 
@@ -183,12 +183,12 @@ class Parser:
     def __call__(self):
         self.number += 1
         try:
-            self.line, self._next = self._next, next(self._tokens)  # type: ignore[call-overload, assignment]
+            self.line, self._next = self._next, next(self._tokens)
             self.end = self.line[-1]
         except StopIteration:
             if not self.finished:
                 self.finished = True
-                self.line, self._next = self._next, []  # type: ignore[assignment]
+                self.line, self._next = self._next, []
                 self.end = self.line[-1]
             else:
                 self.line = []

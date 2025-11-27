@@ -38,19 +38,19 @@ def cmdline(cmdarg):
     if cmdarg.pdb:
         env.debug.pdb = True
 
-    log.init(env)  # type: ignore[arg-type]
+    log.init(env)
     trace_interceptor(env.debug.pdb)
 
     if cmdarg.verbose:
         env.log.parser = True
 
     for configuration in cmdarg.configuration:
-        log.info(lambda configuration=configuration: f'loading {configuration}', 'configuration')  # type: ignore[misc]
+        log.info(lambda configuration=configuration: f'loading {configuration}', 'configuration')
         location = getconf(configuration)
         if not location:
             log.critical(
                 lambda configuration=configuration: f'{configuration} is not an exabgp config file',
-                'configuration',  # type: ignore[misc]
+                'configuration',
             )
             sys.exit(1)
 
@@ -59,7 +59,7 @@ def cmdline(cmdarg):
         if not config.reload():
             log.critical(
                 lambda configuration=configuration: f'{configuration} is not a valid config file',
-                'configuration',  # type: ignore[misc]
+                'configuration',
             )
             sys.exit(1)
         log.info(lambda: '\u2713 loading', 'configuration')
@@ -68,15 +68,15 @@ def cmdline(cmdarg):
             log.warning(lambda: 'checking neighbors', 'configuration')
             for name, neighbor in config.neighbors.items():
                 reparsed = NeighborTemplate.configuration(neighbor)
-                log.debug(lambda reparsed=reparsed: reparsed, configuration)  # type: ignore[misc]
-                log.info(lambda name=name: f'\u2713 neighbor  {name.split()[1]}', 'configuration')  # type: ignore[misc]
+                log.debug(lambda reparsed=reparsed: reparsed, configuration)
+                log.info(lambda name=name: f'\u2713 neighbor  {name.split()[1]}', 'configuration')
 
         if cmdarg.route:
             log.warning(lambda: 'checking routes', 'configuration')
             if not check_generation(config.neighbors):
                 log.critical(
                     lambda configuration=configuration: f'{configuration} has an invalid route',
-                    'configuration',  # type: ignore[misc]
+                    'configuration',
                 )
                 sys.exit(1)
             log.info(lambda: '\u2713 routes', 'configuration')
