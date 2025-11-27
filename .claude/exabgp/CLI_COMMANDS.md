@@ -131,9 +131,9 @@ teardown neighbor 10.0.0.1 peer-as 65000
 
 ---
 
-## All Commands (43 Total)
+## All Commands (47 Total)
 
-### Control Commands (14)
+### Control Commands (16)
 
 Commands for daemon control and management.
 
@@ -403,6 +403,46 @@ exabgp> silence-ack
 ```
 
 **Note:** Disables acknowledgments immediately. Use `enable-ack` to re-enable.
+
+---
+
+#### enable-sync
+
+Enable sync mode - wait for routes to be flushed to wire before ACK.
+
+**Syntax:**
+```bash
+enable-sync
+```
+
+**Returns:** Confirmation
+
+**Example:**
+```bash
+exabgp> enable-sync
+```
+
+**Note:** When sync mode is enabled, `announce`/`withdraw` commands wait until the routes have been sent on the wire to the BGP peer before returning the "done" response. This allows API processes to know when routes have actually been transmitted.
+
+---
+
+#### disable-sync
+
+Disable sync mode - ACK immediately after RIB update (default).
+
+**Syntax:**
+```bash
+disable-sync
+```
+
+**Returns:** Confirmation
+
+**Example:**
+```bash
+exabgp> disable-sync
+```
+
+**Note:** When sync mode is disabled (default), `announce`/`withdraw` commands return "done" immediately after the route is added to the RIB, without waiting for it to be sent on the wire.
 
 ---
 
@@ -1110,17 +1150,65 @@ exabgp> set display text
 
 ---
 
+#### set sync
+
+Set sync mode for announce/withdraw commands.
+
+```bash
+set sync [on|off]
+```
+
+**Default:** `off`
+
+**Examples:**
+```bash
+exabgp> set sync on     # Wait for routes to be sent on wire before ACK
+exabgp> set sync off    # Return ACK immediately (default)
+```
+
+**Behavior:**
+
+- **`off` (default):** `announce`/`withdraw` commands return "done" immediately after the route is added to the RIB, without waiting for it to be transmitted to the BGP peer.
+
+- **`on`:** `announce`/`withdraw` commands wait until the route has actually been sent on the wire to the BGP peer before returning "done". This is useful when you need to synchronize external actions with actual route transmission.
+
+**Per-command override:**
+
+You can override the session sync mode for individual commands by adding `sync` or `async` keyword at the end:
+
+```bash
+# Force sync for this command (regardless of session setting)
+exabgp> announce route 10.0.0.0/24 next-hop 1.2.3.4 sync
+
+# Force async for this command (regardless of session setting)
+exabgp> announce route 10.0.0.0/24 next-hop 1.2.3.4 async
+
+# Works with json/text too (order doesn't matter)
+exabgp> announce route 10.0.0.0/24 next-hop 1.2.3.4 sync json
+exabgp> announce route 10.0.0.0/24 next-hop 1.2.3.4 json sync
+```
+
+**Use cases:**
+
+1. **Route verification:** Wait for route to be sent before checking peer's RIB
+2. **Scripted deployments:** Ensure routes are transmitted before proceeding
+3. **Testing:** Confirm exact timing of route advertisements
+
+**API commands:** `enable-sync`, `disable-sync` (sent automatically by `set sync`)
+
+---
+
 ## Command Categories Summary
 
 | Category | Count | File |
 |----------|-------|------|
-| Control | 14 | reactor.py |
+| Control | 16 | reactor.py |
 | Neighbor | 4 | neighbor.py, peer.py |
 | Route Announcements | 10 | announce.py, watchdog.py |
 | Route Withdrawals | 7 | announce.py, watchdog.py |
 | RIB Operations | 4 | rib.py |
-| Built-in CLI | 5 | cli.py |
-| **Total** | **44** | |
+| Built-in CLI | 6 | cli.py |
+| **Total** | **47** | |
 
 ---
 
@@ -1224,4 +1312,4 @@ exabgp> neighbor 192.168.1.1 announce route-refresh ipv4 unicast
 
 ---
 
-**Updated:** 2025-11-24
+**Updated:** 2025-11-27

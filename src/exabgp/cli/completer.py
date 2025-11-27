@@ -468,10 +468,10 @@ class CommandCompleter:
 
         # Check for specific command patterns
         if len(expanded_tokens) >= 1:
-            # Builtin CLI command: 'set encoding' / 'set display'
+            # Builtin CLI command: 'set encoding' / 'set display' / 'set sync'
             if expanded_tokens[0] == 'set':
                 if len(expanded_tokens) == 1:
-                    # After 'set', suggest 'encoding' or 'display'
+                    # After 'set', suggest 'encoding', 'display', or 'sync'
                     matches = []
                     if 'encoding'.startswith(text):
                         matches.append('encoding')
@@ -479,6 +479,9 @@ class CommandCompleter:
                     if 'display'.startswith(text):
                         matches.append('display')
                         self._add_completion_metadata('display', 'Set display format', 'option')
+                    if 'sync'.startswith(text):
+                        matches.append('sync')
+                        self._add_completion_metadata('sync', 'Set sync mode for announce/withdraw', 'option')
                     return matches
                 elif len(expanded_tokens) == 2:
                     setting = expanded_tokens[1]
@@ -493,6 +496,16 @@ class CommandCompleter:
                             matches.append('text')
                             desc = 'Text encoding' if setting == 'encoding' else 'Format as tables'
                             self._add_completion_metadata('text', desc, 'option')
+                        return matches
+                    elif setting == 'sync':
+                        # After 'set sync', suggest 'on' or 'off'
+                        matches = []
+                        if 'on'.startswith(text):
+                            matches.append('on')
+                            self._add_completion_metadata('on', 'Wait for routes on wire before ACK', 'option')
+                        if 'off'.startswith(text):
+                            matches.append('off')
+                            self._add_completion_metadata('off', 'Return ACK immediately (default)', 'option')
                         return matches
                 # 'set' with other tokens - no more completions
                 return []

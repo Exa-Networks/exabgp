@@ -18,10 +18,71 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute import NextHop
 
 from exabgp.configuration.static import ParseStaticRoute
+from exabgp.logger import log, lazymsg
 
 
 def register_announce():
     pass
+
+
+def parse_sync_mode(command: str, reactor, service: str) -> tuple:
+    """Parse sync/async keyword from command and determine sync mode.
+
+    Handles keywords in any order at end of command:
+    - "route 10.0.0.0/24 next-hop 1.2.3.4 sync json"
+    - "route 10.0.0.0/24 next-hop 1.2.3.4 json sync"
+    - "route 10.0.0.0/24 next-hop 1.2.3.4 sync"
+    - "route 10.0.0.0/24 next-hop 1.2.3.4 json"
+
+    Returns:
+        (command_stripped, sync_mode) tuple where:
+        - command_stripped: command with sync/async/json/text keywords removed
+        - sync_mode: True for sync, False for immediate, based on override or service default
+    """
+    command_parts = command.strip().split()
+    sync_override = None
+
+    # Strip trailing keywords in any order (up to 2: encoding + sync mode)
+    for _ in range(2):
+        if not command_parts:
+            break
+        last = command_parts[-1]
+        if last == 'sync':
+            sync_override = True
+            command_parts = command_parts[:-1]
+        elif last == 'async':
+            sync_override = False
+            command_parts = command_parts[:-1]
+        elif last in ('json', 'text'):
+            command_parts = command_parts[:-1]
+        else:
+            break
+
+    command_stripped = ' '.join(command_parts)
+
+    # Determine sync mode: override if specified, else use service default
+    sync_mode = sync_override if sync_override is not None else reactor.processes.get_sync(service)
+
+    return command_stripped, sync_mode
+
+
+def register_flush_callbacks(peers, reactor, sync_mode: bool) -> list:
+    """Register flush callbacks for all connected peers if sync mode enabled.
+
+    Returns:
+        List of asyncio.Event objects to await (empty if not sync mode)
+    """
+    flush_events = []
+    if sync_mode:
+        for peer_key in peers:
+            peer = reactor._peers.get(peer_key)
+            # Only wait for peers with active session and RIB
+            if peer and peer.proto and peer.proto.connection and peer.neighbor.rib:
+                event = peer.neighbor.rib.outgoing.register_flush_callback()
+                flush_events.append(event)
+                log.debug(lazymsg('sync.callback.registered peer={p}', p=peer_key), 'api')
+            # Skip peers with session down - don't wait for them
+    return flush_events
 
 
 # @Command.register('debug')
@@ -40,11 +101,8 @@ def announce_route(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service, error_msg)
                 return
 
-            # Strip trailing encoding keyword (json/text) that CLI appends
-            # Example: "announce route 1.2.3.4/32 next-hop 2.4.5.6 json" -> "announce route 1.2.3.4/32 next-hop 2.4.5.6"
-            command_parts = command.strip().split()
-            if command_parts and command_parts[-1] in ('json', 'text'):
-                command = ' '.join(command_parts[:-1])
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
 
             changes = self.api_route(command)
             if not changes:
@@ -52,6 +110,9 @@ def announce_route(self, reactor, service, line, use_json):
                 self.log_failure(error_msg)
                 await reactor.processes.answer_error_async(service, error_msg)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 if not ParseStaticRoute.check(change):
@@ -63,6 +124,10 @@ def announce_route(self, reactor, service, line, use_json):
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError as e:
@@ -94,11 +159,8 @@ def withdraw_route(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service, error_msg)
                 return
 
-            # Strip trailing encoding keyword (json/text) that CLI appends
-            # Example: "announce route 1.2.3.4/32 next-hop 2.4.5.6 json" -> "announce route 1.2.3.4/32 next-hop 2.4.5.6"
-            command_parts = command.strip().split()
-            if command_parts and command_parts[-1] in ('json', 'text'):
-                command = ' '.join(command_parts[:-1])
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
 
             changes = self.api_route(command)
             if not changes:
@@ -106,6 +168,9 @@ def withdraw_route(self, reactor, service, line, use_json):
                 self.log_failure(error_msg)
                 await reactor.processes.answer_error_async(service, error_msg)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 # Change the action to withdraw before checking the route
@@ -125,6 +190,10 @@ def withdraw_route(self, reactor, service, line, use_json):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'route not found on {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False in both branches)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError as e:
@@ -155,11 +224,17 @@ def announce_vpls(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_vpls(command)
             if not changes:
                 self.log_failure(f'command could not parse vpls in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.ANNOUNCE
@@ -167,6 +242,10 @@ def announce_vpls(self, reactor, service, line, use_json):
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'vpls added to {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError:
@@ -191,12 +270,18 @@ def withdraw_vpls(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_vpls(command)
 
             if not changes:
                 self.log_failure(f'command could not parse vpls in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.WITHDRAW
@@ -207,6 +292,10 @@ def withdraw_vpls(self, reactor, service, line, use_json):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'vpls not found on {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False in both branches)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError:
@@ -232,11 +321,17 @@ def announce_attributes(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_attributes(command, peers)
             if not changes:
                 self.log_failure(f'command could not parse route in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.ANNOUNCE
@@ -244,6 +339,10 @@ def announce_attributes(self, reactor, service, line, use_json):
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError as e:
@@ -275,11 +374,17 @@ def withdraw_attribute(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_attributes(command, peers)
             if not changes:
                 self.log_failure(f'command could not parse route in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.WITHDRAW
@@ -291,6 +396,10 @@ def withdraw_attribute(self, reactor, service, line, use_json):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'route not found on {peer_list} : {change.extensive()}')
                     await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError as e:
@@ -321,11 +430,17 @@ def announce_flow(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_flow(command)
             if not changes:
                 self.log_failure(f'command could not parse flow in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.ANNOUNCE
@@ -333,6 +448,10 @@ def announce_flow(self, reactor, service, line, use_json):
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'flow added to {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each flow (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError:
@@ -357,12 +476,18 @@ def withdraw_flow(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_flow(command)
 
             if not changes:
                 self.log_failure(f'command could not parse flow in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.WITHDRAW
@@ -373,6 +498,10 @@ def withdraw_flow(self, reactor, service, line, use_json):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'flow not found on {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each flow (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError:
@@ -515,11 +644,17 @@ def announce_ipv4(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_announce_v4(command)
             if not changes:
                 self.log_failure(f'command could not parse ipv4 in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.ANNOUNCE
@@ -527,6 +662,10 @@ def announce_ipv4(self, reactor, service, line, use_json):
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'ipv4 added to {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError:
@@ -551,12 +690,18 @@ def withdraw_ipv4(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_announce_v4(command)
 
             if not changes:
                 self.log_failure(f'command could not parse ipv4 in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.WITHDRAW
@@ -567,6 +712,10 @@ def withdraw_ipv4(self, reactor, service, line, use_json):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'ipv4 not found on {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError:
@@ -591,11 +740,17 @@ def announce_ipv6(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_announce_v6(command)
             if not changes:
                 self.log_failure(f'command could not parse ipv6 in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.ANNOUNCE
@@ -603,6 +758,10 @@ def announce_ipv6(self, reactor, service, line, use_json):
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'ipv6 added to {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError:
@@ -627,12 +786,18 @@ def withdraw_ipv6(self, reactor, service, line, use_json):
                 await reactor.processes.answer_error_async(service)
                 return
 
+            # Parse sync mode and strip keywords
+            command, sync_mode = parse_sync_mode(command, reactor, service)
+
             changes = self.api_announce_v6(command)
 
             if not changes:
                 self.log_failure(f'command could not parse ipv6 in : {command}')
                 await reactor.processes.answer_error_async(service)
                 return
+
+            # Register flush callbacks for connected peers (if sync mode)
+            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for change in changes:
                 change.nlri.action = Action.WITHDRAW
@@ -643,6 +808,10 @@ def withdraw_ipv6(self, reactor, service, line, use_json):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'ipv6 not found on {peer_list} : {change.extensive()}')
                 await asyncio.sleep(0)  # Yield control after each route (matches original yield False)
+
+            # Wait for all peers to flush to wire (if sync mode)
+            if flush_events:
+                await asyncio.gather(*[e.wait() for e in flush_events])
 
             await reactor.processes.answer_done_async(service)
         except ValueError:

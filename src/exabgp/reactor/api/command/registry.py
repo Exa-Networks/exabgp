@@ -102,6 +102,8 @@ class CommandRegistry:
         'split',
         'watchdog',
         'withdraw',
+        'sync',
+        'async',
     ]
 
     # Command categories for organization

@@ -126,6 +126,7 @@ class Processes:
         self._encoder: Dict[str, Response.JSON | Response.Text] = {}
         self._ackjson: Dict[str, bool] = {}
         self._ack: Dict[str, bool] = {}
+        self._sync: Dict[str, bool] = {}  # Per-service sync mode (default: False)
         self._broken: List[str] = []
         self._respawning: Dict[str, Dict[int, int]] = {}
 
@@ -956,6 +957,19 @@ class Processes:
     def get_ack(self, service: str) -> bool:
         """Get ACK state for a specific service/process"""
         return self._ack[service]
+
+    def set_sync(self, service: str, enabled: bool) -> None:
+        """Set sync mode for a specific service/process.
+
+        When sync mode is enabled, API commands wait for routes to be
+        flushed to wire before sending ACK response.
+        """
+        self._sync[service] = enabled
+        log.debug(lazymsg('api.sync.set service={s} enabled={e}', s=service, e=enabled), 'processes')
+
+    def get_sync(self, service: str) -> bool:
+        """Get sync mode for a specific service/process (default: False)"""
+        return self._sync.get(service, False)
 
     def _notify(self, peer_or_neighbor: 'Neighbor' | 'Peer', event: str) -> Generator[str, None, None]:
         # Accept both Peer and Neighbor - Peer has .neighbor attribute

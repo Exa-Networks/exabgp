@@ -180,6 +180,33 @@ def silence_ack(self, reactor, service, line, use_json):
     return True
 
 
+@Command.register('enable-sync', False, json_support=True)
+def enable_sync(self, reactor, service, line, use_json):
+    """Enable sync mode - wait for routes to be flushed to wire before ACK.
+
+    When sync mode is enabled, announce/withdraw commands will wait until
+    the routes have been sent on the wire to the BGP peer before returning
+    the ACK response. This allows API processes to know when routes have
+    actually been transmitted.
+    """
+    reactor.processes.set_sync(service, True)
+    reactor.processes.answer_done(service)
+    return True
+
+
+@Command.register('disable-sync', False, json_support=True)
+def disable_sync(self, reactor, service, line, use_json):
+    """Disable sync mode - ACK immediately after RIB update (default).
+
+    When sync mode is disabled (default), announce/withdraw commands return
+    ACK immediately after the route is added to the RIB, without waiting
+    for it to be sent on the wire.
+    """
+    reactor.processes.set_sync(service, False)
+    reactor.processes.answer_done(service)
+    return True
+
+
 @Command.register('ping', False, json_support=True)
 def ping(self, reactor, service, line, use_json):
     """Lightweight health check - responds with 'pong <UUID>' and active status

@@ -47,6 +47,7 @@ class InteractiveCLI:
         self.daemon_uuid = daemon_uuid
         self.output_encoding = 'json'  # API encoding format ('json' or 'text')
         self.display_mode = 'text'  # Display mode ('json' or 'text')
+        self.sync_mode = False  # Sync mode: wait for routes on wire before ACK (default: off)
 
         # Setup history file
         if history_file is None:
@@ -257,6 +258,32 @@ Display Format (optional prefix):
                 else:
                     sys.stdout.write(
                         f'{self.formatter.format_error(f"Invalid display {value!r}. Use json or text.")}\n'
+                    )
+                return True
+
+            elif setting == 'sync':
+                # Set sync mode: 'set sync on' or 'set sync off'
+                if value in ('on', 'off'):
+                    new_sync = value == 'on'
+                    if new_sync != self.sync_mode:
+                        # Send enable-sync or disable-sync to daemon
+                        cmd = 'enable-sync' if new_sync else 'disable-sync'
+                        result = self.send_command(cmd)
+                        if result and result.startswith('Error:'):
+                            sys.stdout.write(f'{self.formatter.format_error(result[7:])}\n')
+                            return True
+                        self.sync_mode = new_sync
+                    if new_sync:
+                        sys.stdout.write(
+                            f'{self.formatter.format_info("Sync mode ON: announce/withdraw will wait for routes to be sent on wire")}\n'
+                        )
+                    else:
+                        sys.stdout.write(
+                            f'{self.formatter.format_info("Sync mode OFF: announce/withdraw return immediately (default)")}\n'
+                        )
+                else:
+                    sys.stdout.write(
+                        f'{self.formatter.format_error(f"Invalid sync value {value!r}. Use on or off.")}\n'
                     )
                 return True
 

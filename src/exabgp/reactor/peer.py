@@ -724,6 +724,8 @@ class Peer:
                     except StopIteration:
                         new_routes = None
                         include_withdraw = True
+                        # Fire flush callbacks - routes have been sent to wire
+                        self.neighbor.rib.outgoing.fire_flush_callbacks()
 
                 elif send_eor:
                     send_eor = False
@@ -915,6 +917,8 @@ class Peer:
                         log.debug(lazymsg('peer.update.generator.exhausted'), self.id())
                         new_routes = None
                         include_withdraw = True
+                        # Fire flush callbacks - routes have been sent to wire
+                        self.neighbor.rib.outgoing.fire_flush_callbacks()
 
                 elif send_eor:
                     send_eor = False
