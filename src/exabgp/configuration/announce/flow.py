@@ -160,8 +160,8 @@ class AnnounceFlow(ParseAnnounce):
         'interface-set': 'attribute-add',
     }
 
-    assign: dict[str, str] = dict()
-    default: dict[str, object] = dict()
+    assign = {}
+    default = {}
 
     name = 'flow'
 
@@ -181,7 +181,8 @@ class AnnounceFlow(ParseAnnounce):
         self.scope.extend('routes', self.scope.pop('flow', []))
         return True
 
-    def check(self) -> bool:
+    @staticmethod
+    def check(change: Change, afi: AFI | None) -> bool:
         return True
 
 
@@ -194,18 +195,18 @@ def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         if not command:
             break
 
-        action = AnnounceFlow.action[command]
+        command_action = AnnounceFlow.action[command]
 
-        if action == 'nlri-add':
-            for adding in AnnounceFlow.known[command](tokeniser):  # type: ignore[operator]
-                change.nlri.add(adding)
-        elif action == 'attribute-add':
-            change.attributes.add(AnnounceFlow.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceFlow.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+        if command_action == 'nlri-add':
+            for adding in AnnounceFlow.known[command](tokeniser):
+                change.nlri.add(adding)  # type: ignore[attr-defined]
+        elif command_action == 'attribute-add':
+            change.attributes.add(AnnounceFlow.known[command](tokeniser))
+        elif command_action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceFlow.known[command](tokeniser)
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
-        elif action == 'nop':
+        elif command_action == 'nop':
             pass  # yes nothing to do !
         else:
             raise ValueError('flow: unknown command "{}"'.format(command))

@@ -161,15 +161,15 @@ def l2vpn_vpls(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         if not command:
             break
 
-        action = AnnounceVPLS.action[command]
+        command_action = AnnounceVPLS.action[command]
 
-        if 'nlri-set' in action:
-            change.nlri.assign(AnnounceVPLS.assign[command], AnnounceVPLS.known[command](tokeniser))  # type: ignore[operator]
-        elif 'attribute-add' in action:
-            change.attributes.add(AnnounceVPLS.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceVPLS.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+        if 'nlri-set' in command_action:
+            change.nlri.assign(AnnounceVPLS.assign[command], AnnounceVPLS.known[command](tokeniser))
+        elif 'attribute-add' in command_action:
+            change.attributes.add(AnnounceVPLS.known[command](tokeniser))
+        elif command_action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceVPLS.known[command](tokeniser)
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         else:
             raise ValueError('vpls: unknown command "{}"'.format(command))

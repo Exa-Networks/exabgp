@@ -40,20 +40,9 @@ class AnnounceLabel(AnnouncePath):
 
     syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known = dict(
-        AnnouncePath.known,  # type: ignore[arg-type]
-        label=label,
-    )
-
-    action = dict(
-        AnnouncePath.action,  # type: ignore[arg-type]
-        label='nlri-set',
-    )
-
-    assign = dict(
-        AnnouncePath.assign,
-        label='labels',
-    )
+    known = {**AnnouncePath.known, 'label': label}
+    action = {**AnnouncePath.action, 'label': 'nlri-set'}
+    assign = {**AnnouncePath.assign, 'label': 'labels'}
 
     name = 'vpn'
     afi: AFI | None = None
@@ -69,17 +58,17 @@ class AnnounceLabel(AnnouncePath):
         if not AnnouncePath.check(change, afi):
             return False
 
-        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_label() and change.nlri.labels is Labels.NOLABEL:
+        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_label() and change.nlri.labels is Labels.NOLABEL:  # type: ignore[attr-defined]
             return False
 
         return True
 
 
 def ip_label(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
-    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
+    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
-    nlri = Label(afi, safi, action)
+    nlri = Label(afi, safi, nlri_action)
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
 
     change = Change(nlri, Attributes())
@@ -90,15 +79,15 @@ def ip_label(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         if not command:
             break
 
-        action = AnnounceLabel.action.get(command, '')
+        command_action = AnnounceLabel.action.get(command, '')
 
-        if action == 'attribute-add':
-            change.attributes.add(AnnounceLabel.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nlri-set':
-            change.nlri.assign(AnnounceLabel.assign[command], AnnounceLabel.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceLabel.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+        if command_action == 'attribute-add':
+            change.attributes.add(AnnounceLabel.known[command](tokeniser))
+        elif command_action == 'nlri-set':
+            change.nlri.assign(AnnounceLabel.assign[command], AnnounceLabel.known[command](tokeniser))
+        elif command_action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceLabel.known[command](tokeniser)
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))

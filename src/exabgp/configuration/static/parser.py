@@ -68,11 +68,12 @@ def prefix(tokeniser: 'Tokeniser') -> IPRange:
     # XXX: could raise
     ip = tokeniser()
     try:
-        ip, mask = ip.split('/')
+        ip, mask_str = ip.split('/')
+        mask = int(mask_str)
     except ValueError:
-        mask = '32'
+        mask = 32
         if ':' in ip:
-            mask = '128'
+            mask = 128
 
     tokeniser.afi = IP.toafi(ip)
     iprange = IPRange.create(ip, mask)
@@ -537,7 +538,7 @@ def _extended_community_hex(value: str) -> ExtendedCommunity:
     if len(value) % 2:
         raise ValueError('invalid extended community {}'.format(value))
     raw = b''.join(bytes([int(value[_ : _ + 2], 16)]) for _ in range(2, len(value), 2))
-    return ExtendedCommunity.unpack_attribute(raw, None)
+    return ExtendedCommunity.unpack_attribute(raw, None)  # type: ignore[return-value]
 
 
 def _extended_community(value: str) -> ExtendedCommunity:
@@ -556,7 +557,7 @@ def _extended_community(value: str) -> ExtendedCommunity:
     components = [_integer(_) if _digit(_) else _ip(_, value) for _ in parts]
     header, packed = _encode(command, components, parts)
 
-    return ExtendedCommunity.unpack_attribute(header + pack(packed, *components), None)
+    return ExtendedCommunity.unpack_attribute(header + pack(packed, *components), None)  # type: ignore[return-value]
 
 
 def extended_community(tokeniser: 'Tokeniser') -> ExtendedCommunities:

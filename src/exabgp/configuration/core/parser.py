@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections import deque
+from typing import Iterator, List
 
 from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
@@ -17,11 +18,11 @@ MIN_LINE_LENGTH_FOR_PARAMS = 2  # Minimum line tokens needed to have parameters
 
 
 class Tokeniser:
-    def __init__(self):
-        self.next = deque()
-        self.tokens = []
-        self.generator = iter([])
-        self.announce = True
+    def __init__(self) -> None:
+        self.next: deque[str] = deque()
+        self.tokens: List[str] = []
+        self.generator: Iterator[str] = iter([])
+        self.announce: bool = True
         self.afi = AFI.undefined
 
     def replenish(self, content):
@@ -34,7 +35,7 @@ class Tokeniser:
         self.replenish([])
         self.announce = True
 
-    def __call__(self):
+    def __call__(self) -> str:
         if self.next:
             return self.next.popleft()
 
@@ -43,7 +44,7 @@ class Tokeniser:
         except StopIteration:
             return ''
 
-    def peek(self):
+    def peek(self) -> str:
         try:
             peaked = next(self.generator)
             self.next.append(peaked)
@@ -69,13 +70,13 @@ class Parser:
     def _off():
         return iter([])
 
-    def __init__(self, scope, error):
+    def __init__(self, scope, error) -> None:
         self.scope = scope
         self.error = error
         self.finished = False
         self.number = 0
-        self.line = []
-        self.tokeniser = Tokeniser()
+        self.line: List[str] = []
+        self.tokeniser: Tokeniser = Tokeniser()
         self.end = ''
         self.index_column = 0
         self.index_line = 0

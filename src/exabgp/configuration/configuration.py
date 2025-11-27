@@ -23,6 +23,7 @@ from exabgp.logger import log
 from exabgp.configuration.core import Error
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Parser
+from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Section
 
 from exabgp.configuration.process import ParseProcess
@@ -356,6 +357,11 @@ class Configuration(_Configuration):
 
         self._neighbors: Dict[str, Any] = {}
         self._previous_neighbors: Dict[str, Any] = {}
+
+    @property
+    def tokeniser(self) -> Tokeniser:
+        """Convenience accessor for parser.tokeniser"""
+        return self.parser.tokeniser
 
     def _clear(self) -> None:
         self.processes = {}

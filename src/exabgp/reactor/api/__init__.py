@@ -44,7 +44,7 @@ class API(Command):
         log.info(lambda: message, 'processes', level)
 
     def log_failure(self, message: str, level: str = 'ERR') -> None:
-        error = str(self.configuration.tokeniser.error)
+        error = str(self.configuration.error)
         report = '{}\nreason: {}'.format(message, error) if error else message
         log.error(lambda: report, 'processes', level)
 
@@ -223,6 +223,6 @@ class API(Command):
         if op != 'operational':
             return False
 
-        self.configuration.tokeniser.iterate.replenish(tokens[3:])
+        self.configuration.tokeniser.replenish(tokens[3:])
         # None or a class
-        return operational(what, self.configuration.tokeniser.iterate)  # type: ignore[no-any-return]
+        return operational(what, self.configuration.tokeniser)  # type: ignore[no-any-return]
