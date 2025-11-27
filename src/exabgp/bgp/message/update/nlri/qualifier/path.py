@@ -15,8 +15,10 @@ from typing import ClassVar
 
 class PathInfo:
     NOPATH: ClassVar['PathInfo']
+    DISABLED: ClassVar['PathInfo']
 
     def __init__(self, packed: bytes | None = None, integer: int | None = None, ip: str | None = None) -> None:
+        self._disabled = False
         if packed:
             self.path_info: bytes = packed
         elif ip:
@@ -63,9 +65,35 @@ class PathInfo:
         return ''
 
     def pack_path(self) -> bytes:
+        if self._disabled:
+            return b''
         if self.path_info:
             return self.path_info
         return b'\x00\x00\x00\x00'
 
+    @classmethod
+    def _create_nopath(cls) -> 'PathInfo':
+        """Create the NOPATH sentinel. Called once at module load.
 
-PathInfo.NOPATH = PathInfo()
+        Used when ADD-PATH is enabled but no specific path ID is set.
+        pack_path() returns 4 zero bytes, but json()/repr() return empty.
+        """
+        instance = object.__new__(cls)
+        instance._disabled = False
+        instance.path_info = b''
+        return instance
+
+    @classmethod
+    def _create_disabled(cls) -> 'PathInfo':
+        """Create the DISABLED sentinel. Called once at module load.
+
+        Used when ADD-PATH capability is not negotiated.
+        """
+        instance = object.__new__(cls)
+        instance._disabled = True
+        instance.path_info = b''
+        return instance
+
+
+PathInfo.NOPATH = PathInfo._create_nopath()
+PathInfo.DISABLED = PathInfo._create_disabled()

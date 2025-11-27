@@ -48,7 +48,9 @@ class MVPN(NLRI):
         return len(self._packed) + 2
 
     def __eq__(self, other: object) -> bool:
-        return NLRI.__eq__(self, other) and self.CODE == other.CODE  # type: ignore[attr-defined]
+        if not isinstance(other, MVPN):
+            return NotImplemented
+        return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self) -> str:
         return 'mvpn:{}:{}'.format(
@@ -87,6 +89,11 @@ class MVPN(NLRI):
         return klass
 
     @classmethod
+    def unpack_mvpn_route(cls, data: bytes, afi: AFI) -> 'MVPN':
+        """Unpack MVPN route from bytes. Must be implemented by subclasses."""
+        raise NotImplementedError('unpack_mvpn_route must be implemented by subclasses')
+
+    @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> Tuple[MVPN, bytes]:
@@ -94,10 +101,10 @@ class MVPN(NLRI):
         length = bgp[1]
 
         if code in cls.registered_mvpn:
-            klass = cls.registered_mvpn[code].unpack_mvpn_route(bgp[2 : length + 2], afi)  # type: ignore[attr-defined]
+            klass = cls.registered_mvpn[code].unpack_mvpn_route(bgp[2 : length + 2], afi)
         else:
             klass = GenericMVPN(afi, code, bgp[2 : length + 2])
-        klass.CODE = code
+        klass.CODE = code  # type: ignore[misc]  # dynamic CODE assignment
         klass.action = action
         klass.addpath = addpath
 
