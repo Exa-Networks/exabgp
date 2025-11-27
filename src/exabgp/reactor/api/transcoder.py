@@ -70,7 +70,7 @@ class Transcoder:
         if dst != 'json':
             raise RuntimeError('left as an exercise to the reader')
 
-        self.convert: Callable[[str, str], str | None] = self._from_json
+        self.convert: Callable[[str], str | None] = self._from_json
         self.encoder: Response.JSON = self.json
 
     def _state(self) -> None:
@@ -90,7 +90,7 @@ class Transcoder:
             self.negotiated_out.sent(self.seen_open['send'])
             self.negotiated_out.received(self.seen_open['receive'])
 
-    def _from_json(self, direction: str, json_string: str) -> str | None:
+    def _from_json(self, json_string: str, direction: str = '') -> str | None:
         try:
             parsed = json.loads(json_string)
         except ValueError:

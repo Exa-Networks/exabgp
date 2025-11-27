@@ -1,31 +1,31 @@
 # MyPy Type Checking Status
 
-**Date:** 2025-11-16 (Updated)
+**Date:** 2025-11-27 (Updated)
 **MyPy Version:** 1.18.2+
-**Python Target:** 3.9 (code compatible with 3.8.1+)
+**Python Target:** 3.10 (code compatible with 3.10+)
 
 ## Current Status
 
-**Total Errors:** 605 across 137 files (47% reduction from baseline)
-**Baseline (2025-11-15):** 1,149 errors
-**Previous (with type: ignore):** 354 errors
-**Type: ignore comments removed:** 698
-**Improvements:** 544 errors fixed through recent type annotation work
+**Total Errors:** 0 (mypy passes with type: ignore comments)
+**Type: ignore comments:** 340 (down from 502 baseline)
+**Baseline (2025-11-15):** 1,149 errors → Now 0 with suppressions
+**Goal:** Remove all type: ignore comments by fixing underlying issues
 
-## Error Distribution by Category
+## Type: ignore Distribution by Category
 
 | Rank | Error Code | Count | Description |
 |------|------------|-------|-------------|
-| 1 | union-attr | 216 | Accessing attributes on Optional types without guards |
-| 2 | attr-defined | 167 | Attribute doesn't exist on type |
-| 3 | arg-type | 159 | Argument type mismatches |
-| 4 | misc | 152 | Lambda type inference, misc issues |
-| 5 | assignment | 146 | Type mismatches in assignments |
-| 6 | no-any-return | 74 | Functions returning Any instead of specific types |
-| 7 | override | 54 | Incompatible method overrides |
-| 8 | operator | 50 | Unsupported operand types |
-| 9 | return-value | 24 | Incorrect return types |
-| 10 | index | 24 | Indexing Optional dicts without guards |
+| 1 | attr-defined | 78 | Attribute doesn't exist on type |
+| 2 | arg-type | 78 | Argument type mismatches |
+| 3 | misc | 32 | Lambda type inference issues |
+| 4 | override | 27 | Incompatible method overrides |
+| 5 | no-any-return | 27 | Functions returning Any |
+| 6 | assignment | 24 | Type mismatches in assignments |
+| 7 | has-type | 17 | Missing type annotations |
+| 8 | index | 16 | Indexing issues |
+| 9 | return-value | 9 | Return type mismatches |
+| 10 | operator | 7 | Unsupported operand types |
+| - | Other | 25 | Various other issues |
 
 ## Most Problematic Files
 
@@ -159,20 +159,28 @@ def encode(self, value: Any) -> Tuple[int, bytes]:
 **Phase 3 (In Progress):** Systematic fixes by category - 🔄 544 errors fixed (47% reduction)
 **Phase 4 (Pending):** Architectural refactoring
 
-### Recent Improvements (2025-11-15 to 2025-11-16)
-- ✅ Fixed peer: Any → peer: Peer in message handlers
-- ✅ Replaced Any annotations in BGP-LS and EVPN NLRI
-- ✅ Standardized json() method signatures
-- ✅ Fixed call-arg and arg-type errors in multiple files
-- ✅ Fixed assignment errors with proper type annotations
-- **Result:** 1,149 → 605 errors (544 errors eliminated)
+### Recent Improvements (2025-11-27)
+- ✅ Fixed keepalive.py: Corrected Notify call signature (was a bug!)
+- ✅ Fixed flow.py: ACL.end signal handler signature
+- ✅ Fixed unknown.py: UnknownMessage.__init__ accepts negotiated parameter
+- ✅ Fixed message.py: klass_unknown typed as Callable instead of Type[Exception]
+- ✅ Fixed fsm.py: Added guard for neighbor.api access
+- ✅ Fixed cache.py: Added hasattr guard for nlri.nexthop
+- ✅ Fixed tojson.py/transcoder.py: Made direction parameter optional
+- ✅ Fixed netlink.py: Renamed shadowed variable, narrowed type
+- ✅ Fixed neighbor.py: Properly typed api as Dict[str, Any] | None
+- ✅ Fixed peer.py: Added guards for neighbor.api access (3 locations)
+- ✅ Fixed loop.py: Added guards for neighbor.api access (4 locations)
+- **Result:** 502 → 340 type: ignore comments (162 removed)
 
 ## Testing Status
 
-All tests pass with current type errors (mypy errors don't affect runtime):
-- ✅ Unit tests: 1,376 passed
+All tests pass:
+- ✅ Unit tests: 1,900 passed
 - ✅ Linting: ruff format + ruff check pass
-- ✅ Functional tests: (not run in this session)
+- ✅ Functional encoding: 74 passed (async and legacy)
+- ✅ Functional decoding: 18 passed
+- ✅ Configuration validation: passed
 
 ## Configuration
 
@@ -205,5 +213,5 @@ exclude = ["src/exabgp/vendoring/"]
 
 ---
 
-*Generated: 2025-11-15*
-*Mypy errors: 1,149 / Files: 137 / Lines of code: ~50,000*
+*Last Updated: 2025-11-27*
+*Mypy: 0 errors (340 type: ignore) / Files: 350 / Lines of code: ~50,000*

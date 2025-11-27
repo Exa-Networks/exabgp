@@ -16,6 +16,7 @@ import json
 import re
 import subprocess
 import signal
+from types import FrameType
 
 
 class ACL:
@@ -112,7 +113,7 @@ class ACL:
         cls._commit()
 
     @classmethod
-    def end(cls):
+    def end(cls, signum: int = 0, frame: FrameType | None = None) -> None:
         cls.clear()
         sys.exit(1)
 
@@ -125,7 +126,7 @@ class ACL:
         sys.stderr.flush()
 
 
-signal.signal(signal.SIGTERM, ACL.end)  # type: ignore[arg-type]
+signal.signal(signal.SIGTERM, ACL.end)
 
 
 opened = 0
