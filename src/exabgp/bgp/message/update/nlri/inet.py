@@ -51,7 +51,7 @@ class INET(NLRI):
         self.rd: RouteDistinguisher | None = None
 
     def __len__(self) -> int:
-        return len(self.cidr) + len(self.path_info)  # type: ignore[arg-type]
+        return len(self.cidr) + len(self.path_info)
 
     def __str__(self) -> str:
         return self.extensive()
@@ -103,7 +103,7 @@ class INET(NLRI):
     def _pathinfo(cls, data: bytes, addpath: Any) -> Tuple[PathInfo, bytes]:
         if addpath:
             return PathInfo(data[:4]), data[4:]
-        return PathInfo.NOPATH, data  # type: ignore[return-value]
+        return PathInfo.NOPATH, data
 
     # @classmethod
     # def unpack_inet (cls, afi, safi, data, action, addpath):

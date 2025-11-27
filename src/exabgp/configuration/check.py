@@ -315,8 +315,8 @@ def check_nlri(neighbor: Neighbor, routes: str) -> bool:
 
     log.debug(lazymsg('nlri.check.complete'), 'parser')  # separator
     for nlri in nlris:
-        _nlri = nlri  # type: NLRI
-        log.info(lazymsg('nlri.json json={json}', json=_nlri.json()), 'parser')
+        # Concrete NLRI subclasses (INET, Flow, etc.) all define json()
+        log.info(lazymsg('nlri.json json={json}', json=nlri.json()), 'parser')  # type: ignore[attr-defined]
     return True
 
 

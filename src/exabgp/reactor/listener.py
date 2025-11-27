@@ -125,21 +125,23 @@ class Listener:
             if not remote_addr:
                 remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
             self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
-            md5_suffix: str = ' with MD5' if md5_password else ''
+            md5_enabled: str = 'true' if md5_password else 'false'
             log.debug(
-                f'listening for BGP session(s) on {local_addr}:{port}{md5_suffix}',
+                lazymsg(
+                    'listener.started ip={addr} port={port} md5={md5}', addr=local_addr, port=port, md5=md5_enabled
+                ),
                 'network',
             )
             return True
         except NetworkError as exc:
             if os.geteuid() != 0 and port <= MAX_PRIVILEGED_PORT:
                 log.critical(
-                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root',
+                    lazymsg('bind.failed ip={addr} port={port} hint=run_as_root', addr=local_addr, port=port),
                     'network',
                 )
             else:
                 log.critical(
-                    lazymsg('can not bind to {local_addr}:{port} ({exc})', local_addr=local_addr, port=port, exc=exc),
+                    lazymsg('bind.failed ip={addr} port={port} reason={exc}', addr=local_addr, port=port, exc=exc),
                     'network',
                 )
             log.critical(lazymsg('listener.bind.hint action=unset_tcp_bind'), 'network')
@@ -234,7 +236,9 @@ class Listener:
                 matched = len(ranged_neighbor)
                 if matched > 1:
                     log.debug(
-                        f'could not accept connection from {connection.name()} (more than one neighbor match)',
+                        lazymsg(
+                            'connection.rejected name={name} reason=multiple_neighbor_match', name=connection.name()
+                        ),
                         'network',
                     )
                     reactor.asynchronous.schedule(

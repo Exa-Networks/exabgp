@@ -59,7 +59,8 @@ class Label(INET):
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
-        mask = bytes([len(self.labels) * 8 + self.cidr.mask])  # type: ignore[arg-type]
+        assert self.labels is not None  # Always set in Label.__init__
+        mask = bytes([len(self.labels) * 8 + self.cidr.mask])
         return mask + self.labels.pack_labels() + self.cidr.pack_ip()
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
