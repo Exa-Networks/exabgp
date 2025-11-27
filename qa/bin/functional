@@ -1163,22 +1163,26 @@ class Tests:
         if client_exec:
             client_exec.collect()
 
-        # Server output (filtered)
+        # Server/daemon output (from qa/sbin/bgp - outputs to stdout and stderr)
+        server_output = []
+        if test.stdout:
+            stdout = test.stdout.decode('utf-8', errors='replace')
+            server_output.extend([ln for ln in stdout.split('\n') if ln.strip()])
         if test.stderr:
             stderr = test.stderr.decode('utf-8', errors='replace')
-            filtered = [ln for ln in stderr.split('\n') if ln.strip() and 'receive-timer' not in ln and 'send-timer' not in ln]
-            if filtered:
-                flush(f'  {cyan()}server{reset()} ({len(filtered)} lines):')
-                for line in filtered[-15:]:  # Last 15 lines
-                    flush(f'    {line}')
+            server_output.extend([ln for ln in stderr.split('\n') if ln.strip()])
+        if server_output:
+            flush(f'  {cyan()}daemon{reset()} ({len(server_output)} lines):')
+            for line in server_output:
+                flush(f'    {line}')
 
-        # Client output (filtered)
+        # Client output (filtered - exabgp outputs to stderr)
         if client_exec and client_exec.stderr:
             stderr = client_exec.stderr.decode('utf-8', errors='replace')
             filtered = [ln for ln in stderr.split('\n') if ln.strip() and 'receive-timer' not in ln and 'send-timer' not in ln]
             if filtered:
                 flush(f'  {cyan()}client{reset()} ({len(filtered)} lines):')
-                for line in filtered[-15:]:
+                for line in filtered:
                     flush(f'    {line}')
 
         # Add debug hints on failure
@@ -1534,11 +1538,12 @@ class EncodingTests(Tests):
         # Verify they're dead (wait briefly)
         time.sleep(0.3)
 
-    def run_selected(self, timeout: int, save_dir: Optional[str] = None, verbose: bool = False) -> bool:
+    def run_selected(self, timeout: int, save_dir: Optional[str] = None, verbose: bool = False, debug_tests: Optional[List[str]] = None) -> bool:
         # Set max timeout before setup so it shows during initialization
         self._max_timeout: int = timeout
         self._save_dir = save_dir  # Store for use in server startup
         self._verbose = verbose  # Store for per-test output display
+        self._debug_tests = set(debug_tests) if debug_tests else set()  # Tests to show verbose output for
         self.legend()
 
         # Install signal handlers to detect when we're killed by another instance
@@ -1684,8 +1689,8 @@ class EncodingTests(Tests):
                     test.terminate(collect=False)  # Don't block on collect in hot loop
                     client[test.nick].terminate(collect=False)
                     success = False
-                    # Show per-test output in verbose mode for timed out tests
-                    if self._verbose:
+                    # Show per-test output in verbose mode or if test is in debug list
+                    if self._verbose or test.nick in self._debug_tests:
                         self._print_test_output(test, client[test.nick])
                     continue
 
@@ -1699,8 +1704,8 @@ class EncodingTests(Tests):
                 test.terminate(collect=False)  # Also terminate server
                 success = test.result(test.success()) and success
 
-                # Show per-test output in verbose mode
-                if self._verbose:
+                # Show per-test output in verbose mode or if test is in debug list
+                if self._verbose or test.nick in self._debug_tests:
                     self._print_test_output(test, client[test.nick])
 
             # If no tests are still running, exit immediately
@@ -2183,6 +2188,8 @@ def add_test(
         sub.add_argument('--stress', help='run test N times and report statistics', type=int, default=None)
     if 'verbose' in extra:
         sub.add_argument('--verbose', '-v', help='show output for each test', action='store_true')
+    if 'debug' in extra:
+        sub.add_argument('--debug', '-d', help='run all tests but only show verbose output for specified test(s)', nargs='+', default=None)
     sub.add_argument('test', help='name of the test(s) to run', nargs='*', default=None)
 
     def func(parsed: Namespace) -> None:
@@ -2250,11 +2257,21 @@ def add_test(
             run_stress_test(tests, test_nick, stress_count, parsed.timeout, save_dir)
             return
 
-        # Pass save_dir and verbose only if the test class supports it (encoding tests only)
+        # Pass save_dir, verbose, and debug_tests only if the test class supports it (encoding tests only)
         save_dir = getattr(parsed, 'save', None)
         verbose = getattr(parsed, 'verbose', False)
+        debug_tests = getattr(parsed, 'debug', None)
+
+        # Handle --debug: run all tests but only show verbose output for specified tests
+        if debug_tests and isinstance(tests, EncodingTests):
+            # Validate debug test nicks
+            for nick in debug_tests:
+                if nick not in tests._by_nick:
+                    sys.exit(f'could not find test {nick}')
+            tests.enable_all()
+
         if hasattr(tests, '_save_dir') or isinstance(tests, EncodingTests):
-            success_exit = tests.run_selected(parsed.timeout, save_dir=save_dir, verbose=verbose)
+            success_exit = tests.run_selected(parsed.timeout, save_dir=save_dir, verbose=verbose, debug_tests=debug_tests)
         else:
             success_exit = tests.run_selected(parsed.timeout)
         flush()
@@ -2283,7 +2300,7 @@ if __name__ == '__main__':
         subparser,
         'encoding',
         encoding,
-        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'server', 'client', 'save', 'stress', 'verbose'],
+        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'server', 'client', 'save', 'stress', 'verbose', 'debug'],
     )
     add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit'])
 

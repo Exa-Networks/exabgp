@@ -76,21 +76,21 @@ Use `--verbose` / `-v` to see output for each test during batch runs:
 ./qa/bin/functional encoding -v A         # Single test with full output (useful for debugging)
 ```
 
-**Tip:** `-v <test>` is particularly useful for debugging - it shows full server/client output for a specific test without needing two terminals.
+**Tip:** `-v <test>` is particularly useful for debugging - it shows full daemon/client output for a specific test without needing two terminals.
 
 **Output format:**
 ```
 ✓ 1 api-add-remove (0.94s)
-  server (12 lines):
-    [last 15 lines of server stderr]
+  daemon (122 lines):
+    [all daemon output - message matching, hex dumps]
   client (53 lines):
-    [last 15 lines of client stderr]
+    [all client output - BGP session, API commands]
 ```
 
 **On failure, shows debug hints:**
 ```
 ✗ A some-test (20.00s)
-  server (5 lines):
+  daemon (5 lines):
     ...
   client (10 lines):
     ...
@@ -103,6 +103,44 @@ Use `--verbose` / `-v` to see output for each test during batch runs:
                        ./qa/bin/functional encoding --client A
     - decode packets:  ./sbin/exabgp decode "<hex>"
 ```
+
+---
+
+## Debug Mode
+
+Use `--debug` / `-d` to run ALL tests but only show verbose output for specific tests:
+
+```bash
+./qa/bin/functional encoding -d D         # Run all 74 tests, show output only for D
+./qa/bin/functional encoding -d D 1 2     # Run all tests, show output for D, 1, and 2
+./qa/bin/functional encoding --debug A B  # Same, long form
+```
+
+**Use case:** Debug a specific test while ensuring it doesn't break other tests.
+
+**Output:**
+```
+[progress display for all 74 tests]
+
+✓ D api-fast (2.99s)
+  daemon (122 lines):
+    [all daemon output]
+  client (60 lines):
+    [all client output]
+
+[continues running remaining tests without verbose output]
+
+============================================================
+TEST SUMMARY
+============================================================
+passed    74
+failed     0
+...
+```
+
+**Key difference from `-v`:**
+- `-v` shows output for ALL tests run
+- `-d <tests>` runs ALL tests but only shows output for specified tests
 
 ---
 
