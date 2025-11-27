@@ -142,6 +142,7 @@ class PREFIXv4(BGPLS):
         return hash((self.CODE, self.domain, self.proto_id, self.route_d))
 
     def json(self, compact: bool = False) -> str:
+        assert self.prefix is not None  # Set during unpack_bgpls_nlri
         nodes = ', '.join(d.json() for d in self.local_node)
         content = ', '.join(
             [
@@ -149,7 +150,7 @@ class PREFIXv4(BGPLS):
                 f'"l3-routing-topology": {int(self.domain)}',
                 f'"protocol-id": {int(self.proto_id)}',
                 f'"node-descriptors": [ {nodes} ]',
-                self.prefix.json(),  # type: ignore[union-attr]
+                self.prefix.json(),
                 f'"nexthop": "{self.nexthop}"',
             ],
         )

@@ -7,42 +7,32 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import time
 import asyncio  # noqa: F401 - Used by async methods (_send_open_async, _read_open_async, _send_ka_async, _read_ka_async)
+import time
 from collections import defaultdict
-from typing import Any, Dict, Generator, Iterator, Set, Tuple, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, Set, Tuple, cast
 
 if TYPE_CHECKING:
+    from exabgp.bgp.neighbor import Neighbor
     from exabgp.reactor.loop import Reactor
     from exabgp.reactor.network.incoming import Incoming
-    from exabgp.bgp.neighbor import Neighbor
 
 # import traceback
-from exabgp.bgp.timer import ReceiveTimer
-from exabgp.bgp.message import Message
 from exabgp.bgp.fsm import FSM
-from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability import REFRESH
-from exabgp.bgp.message import NOP
-from exabgp.bgp.message import Open
-from exabgp.bgp.message import Update
+from exabgp.bgp.message import NOP, Message, Notification, Notify, Open, Update
+from exabgp.bgp.message.open.capability import REFRESH, Capability
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message import Notification
-from exabgp.bgp.message import Notify
+from exabgp.bgp.timer import ReceiveTimer
+from exabgp.debug.report import format_exception
+from exabgp.environment import getenv
+from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.reactor.protocol import Protocol
+from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.delay import Delay
 from exabgp.reactor.keepalive import KA
 from exabgp.reactor.network.error import NetworkError
-from exabgp.reactor.api.processes import ProcessError
-
+from exabgp.reactor.protocol import Protocol
 from exabgp.rib.change import Change
-
-from exabgp.environment import getenv
-from exabgp.logger import log, lazymsg
-from exabgp.logger import lazyformat
-
-from exabgp.debug.report import format_exception
 
 
 class ACTION:
@@ -309,8 +299,9 @@ class Peer:
             # We cheat: we are not really reading the OPEN, we use the data we have instead
             # it does not matter as the open message will be the same anyway
             assert self.proto is not None  # Must exist in OPENCONFIRM state
+            assert self.proto.negotiated.received_open is not None  # Must exist in OPENCONFIRM
             local_id = self.neighbor['router-id'].pack_ip()
-            remote_id = self.proto.negotiated.received_open.router_id.pack_ip()  # type: ignore[union-attr]
+            remote_id = self.proto.negotiated.received_open.router_id.pack_ip()
 
             if remote_id < local_id:
                 log.debug(
@@ -611,8 +602,9 @@ class Peer:
         include_withdraw = False
 
         # Announce to the process BGP is up
+        assert self.proto.connection is not None  # Must exist in established state
         log.info(
-            lazymsg('peer.connected peer={p} connection={c}', p=self.id(), c=self.proto.connection.name()),  # type: ignore[union-attr]
+            lazymsg('peer.connected peer={p} connection={c}', p=self.id(), c=self.proto.connection.name()),
             'reactor',
         )
         self.stats['up'] += 1
@@ -653,7 +645,7 @@ class Peer:
             # we are here following a configuration change
             if self._neighbor:
                 # see what changed in the configuration
-                previous = self._neighbor.previous.changes  # type: ignore[union-attr]
+                previous = self._neighbor.previous.changes if self._neighbor.previous else []
                 current = self._neighbor.changes
                 self.neighbor.rib.outgoing.replace_reload(previous, current)
                 # do not keep the previous routes in memory as they are not useful anymore
@@ -780,7 +772,7 @@ class Peer:
     async def _main_async(self) -> int:
         """Async version of _main() - main BGP message processing loop using async I/O"""
         assert self.proto is not None  # Set by _establish_async()
-        assert self.proto.connection is not None
+        assert self.proto.connection is not None  # Must exist in established state
         assert self.recv_timer is not None  # Set by _establish_async()
         assert self.neighbor.rib is not None  # Initialized by neighbor
 
@@ -793,7 +785,7 @@ class Peer:
 
         # Announce to the process BGP is up
         log.info(
-            lazymsg('peer.connected peer={p} connection={c}', p=self.id(), c=self.proto.connection.name()),  # type: ignore[union-attr]
+            lazymsg('peer.connected peer={p} connection={c}', p=self.id(), c=self.proto.connection.name()),
             'reactor',
         )
         self.stats['up'] += 1
@@ -834,7 +826,7 @@ class Peer:
                 # we are here following a configuration change
                 if self._neighbor:
                     # see what changed in the configuration
-                    previous = self._neighbor.previous.changes  # type: ignore[union-attr]
+                    previous = self._neighbor.previous.changes if self._neighbor.previous else []
                     current = self._neighbor.changes
                     self.neighbor.rib.outgoing.replace_reload(previous, current)
                     # do not keep the previous routes in memory as they are not useful anymore
@@ -1242,12 +1234,14 @@ class Peer:
 
         if have_open:
             assert self.proto is not None  # Guarded by have_open
-            capa = self.proto.negotiated.received_open.capabilities  # type: ignore[union-attr]
+            assert self.proto.negotiated.received_open is not None
+            assert self.proto.negotiated.sent_open is not None
+            capa = self.proto.negotiated.received_open.capabilities
             peer.update(
                 {
-                    'router-id': self.proto.negotiated.sent_open.router_id,  # type: ignore[union-attr]
-                    'peer-id': self.proto.negotiated.received_open.router_id,  # type: ignore[union-attr]
-                    'hold-time': self.proto.negotiated.received_open.hold_time,  # type: ignore[union-attr]
+                    'router-id': self.proto.negotiated.sent_open.router_id,
+                    'peer-id': self.proto.negotiated.received_open.router_id,
+                    'hold-time': self.proto.negotiated.received_open.hold_time,
                     'asn4': self.proto.negotiated.asn4,
                     'route-refresh': capa.announced(Capability.CODE.ROUTE_REFRESH),
                     'multi-session': capa.announced(Capability.CODE.MULTISESSION)

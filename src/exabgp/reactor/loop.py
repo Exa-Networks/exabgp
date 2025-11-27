@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.fsm import FSM
 from exabgp.configuration.process import API_PREFIX
 from exabgp.environment import getenv
-from exabgp.logger import log, lazymsg
+from exabgp.logger import lazymsg, log
 from exabgp.reactor.api import API
 from exabgp.reactor.api.processes import ProcessError, Processes
 from exabgp.reactor.asynchronous import ASYNC
@@ -381,10 +381,11 @@ class Reactor:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=rib_lookup', p=peer_name), 'reactor')
             return []
+        assert peer.neighbor.rib is not None, 'RIB not initialized'
         families: List[Any] | None = None
         if advertised:
             families = peer.proto.negotiated.families if peer.proto else []
-        rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming  # type: ignore[union-attr]
+        rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming
         return list(rib.cached_changes(families))
 
     def neighbor_rib_resend(self, peer_name: str) -> None:
@@ -397,19 +398,24 @@ class Reactor:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=outgoing_withdraw', p=peer_name), 'reactor')
             return
-        peer.neighbor.rib.outgoing.withdraw()  # type: ignore[union-attr]
+        assert peer.neighbor.rib is not None, 'RIB not initialized'
+        peer.neighbor.rib.outgoing.withdraw()
 
     def neighbor_rib_in_clear(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=incoming_clear', p=peer_name), 'reactor')
             return
-        peer.neighbor.rib.incoming.clear()  # type: ignore[union-attr]
+        assert peer.neighbor.rib is not None, 'RIB not initialized'
+        peer.neighbor.rib.incoming.clear()
 
     # ...
 
     def _pending_adjribout(self) -> bool:
         for peer in self.active_peers():
-            if self._peers[peer].neighbor.rib.outgoing.pending():  # type: ignore[union-attr]
+            rib = self._peers[peer].neighbor.rib
+            if rib is None:
+                continue
+            if rib.outgoing.pending():
                 return True
         return False
 
