@@ -24,6 +24,7 @@ class Tokeniser:
         self.generator: Iterator[str] = iter([])
         self.announce: bool = True
         self.afi = AFI.undefined
+        self.fname: str = ''
 
     def replenish(self, content):
         self.next.clear()
@@ -112,7 +113,7 @@ class Parser:
     def _tokenise(self, iterator):
         for parsed in tokens(iterator):
             words = [word for y, x, word in parsed]
-            self.line = ''.join(words)
+            self.line = words  # Store the word list, not a joined string
             # ignore # lines
             # set Location information
             yield words
@@ -120,7 +121,7 @@ class Parser:
     def _set(self, function):
         try:
             self._tokens = function
-            self._next = next(self._tokens)
+            self._next = next(self._tokens)  # type: ignore[call-overload]
         except OSError as exc:
             error = str(exc)
             if error.count(']'):
@@ -128,11 +129,11 @@ class Parser:
             else:
                 self.error.set(error)
             self._tokens = Parser._off
-            self._next = []
+            self._next = []  # type: ignore[assignment]
             return self.error.set('issue setting the configuration parser')
         except StopIteration:
             self._tokens = Parser._off
-            self._next = []
+            self._next = []  # type: ignore[assignment]
             return self.error.set('issue setting the configuration parser, no data')
         return True
 
@@ -160,6 +161,7 @@ class Parser:
                     yield _
 
         self.type = 'file'
+        self.fname = data
         self.tokeniser.fname = data
         return self._set(_source(data))
 
@@ -181,12 +183,12 @@ class Parser:
     def __call__(self):
         self.number += 1
         try:
-            self.line, self._next = self._next, next(self._tokens)
+            self.line, self._next = self._next, next(self._tokens)  # type: ignore[call-overload, assignment]
             self.end = self.line[-1]
         except StopIteration:
             if not self.finished:
                 self.finished = True
-                self.line, self._next = self._next, []
+                self.line, self._next = self._next, []  # type: ignore[assignment]
                 self.end = self.line[-1]
             else:
                 self.line = []

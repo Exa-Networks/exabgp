@@ -278,7 +278,7 @@ class ParseNeighbor(Section):
             change = neighbor.remove_self(change)
             if change.nlri.family().afi_safi() in families:
                 # This add the family to neighbor.families()
-                neighbor.rib.outgoing.add_to_rib_watchdog(change)  # type: ignore[union-attr]
+                neighbor.rib.outgoing.add_to_rib_watchdog(change)
 
         for message in local.get('operational', {}).get('routes', []):
             if message.family().afi_safi() in families:
@@ -341,7 +341,7 @@ class ParseNeighbor(Section):
                 # XXX: FIXME: Ok, it works but it takes LOTS of memory ..
                 m_neighbor = deepcopy(neighbor)
                 m_neighbor.make_rib()
-                m_neighbor.rib.outgoing.families = [family]  # type: ignore[union-attr]
+                m_neighbor.rib.outgoing.families = [family]
                 self._init_neighbor(m_neighbor, local)
         else:
             neighbor.make_rib()

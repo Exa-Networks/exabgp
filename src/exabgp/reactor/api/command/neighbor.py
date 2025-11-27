@@ -141,8 +141,8 @@ def show_neighbor(self, reactor, service, line, use_json):
                         await asyncio.sleep(0)
                 else:
                     # Neighbor is configured but not connected - show minimal info
-                    peer_addr = str(neighbor['peer-address'])
-                    local_addr = str(neighbor.get('local-address', 'not set'))
+                    peer_addr = str(neighbor['peer-address']) if neighbor['peer-address'] else 'not set'
+                    local_addr = str(neighbor.get('local-address')) if neighbor.get('local-address') else 'not set'
                     peer_as = neighbor.get('peer-as', 'not set')
                     local_as = neighbor.get('local-as', 'not set')
 
@@ -163,7 +163,7 @@ def show_neighbor(self, reactor, service, line, use_json):
     async def callback_summary():
         reactor.processes.write(service, NeighborTemplate.summary_header)
         for peer_name in reactor.peers():
-            if limit and limit != reactor.neighbor_ip(peer_name):
+            if limit and limit != str(reactor.neighbor_ip(peer_name)):
                 continue
             for line in NeighborTemplate.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
                 if line:

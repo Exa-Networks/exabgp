@@ -301,12 +301,13 @@ class Control:
                 return 0
 
         # File descriptors to monitor
-        reading = [standard_in, self.server_socket.fileno()]
+        server_fd = self.server_socket.fileno() if self.server_socket else None
+        reading: list[int | None] = [standard_in, server_fd]
 
         # Data structures for buffering
         read = {standard_in: std_reader}
         write = {standard_in: None}  # Will be set to socket_writer when client connects
-        backlog = {standard_in: deque()}
+        backlog: dict[int, deque[bytes]] = {standard_in: deque()}
         store = {standard_in: b''}
 
         def consume(source):

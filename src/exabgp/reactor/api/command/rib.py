@@ -9,20 +9,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import Any
 
-from exabgp.bgp.neighbor import NeighborTemplate
-
-from exabgp.reactor.api.command.command import Command
-from exabgp.reactor.api.command.limit import match_neighbors
-from exabgp.reactor.api.command.limit import extract_neighbors
-
-from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.inet import INET
-from exabgp.bgp.message.update.nlri.flow import Flow
-from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
-
+from exabgp.bgp.message.update.nlri.flow import Flow
+from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.vpls import VPLS
+from exabgp.bgp.neighbor import NeighborTemplate
 from exabgp.environment import getenv
+from exabgp.reactor.api.command.command import Command
+from exabgp.reactor.api.command.limit import extract_neighbors, match_neighbors
 
 
 def register_rib():
@@ -43,7 +40,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
             reactor.processes.write(service, msg)
 
     def to_json(key, changes):
-        jason = {}
+        jason: dict[str, dict[str, Any]] = {}
         neighbor = reactor.neighbor(key)
         neighbor_ip = reactor.neighbor_ip(key)
         routes = jason.setdefault(neighbor_ip, {'routes': []})['routes']
@@ -123,12 +120,12 @@ def show_adj_rib(self, reactor, service, line, use_json):
         reactor.processes.answer_error(service)
         return False
 
-    klass = NLRI
+    klass: tuple[type[NLRI], ...] = (NLRI,)
 
     if 'inet' in words:
-        klass = INET
+        klass = (INET,)
     elif 'flow' in words:
-        klass = Flow
+        klass = (Flow,)
     elif 'l2vpn' in words:
         klass = (VPLS, EVPN)
 

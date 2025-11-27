@@ -204,6 +204,8 @@ class Control:
 
         @monitor
         def fifo_reader(number):
+            if self.r_pipe is None:
+                return b''
             try:
                 return os.read(self.r_pipe, number)
             except OSError as exc:
@@ -241,7 +243,7 @@ class Control:
             self.r_pipe: std_writer,
         }
 
-        backlog = {
+        backlog: dict[int | None, deque[bytes]] = {
             standard_in: deque(),
             self.r_pipe: deque(),
         }
