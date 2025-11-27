@@ -828,7 +828,7 @@ class TestFlowUnpack:
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
-        flow.nexthop = None  # Explicitly set to None
+        # flow.nexthop defaults to NoNextHop
 
         # When announcing, should complain about missing nexthop
         feedback = flow.feedback(Action.ANNOUNCE)

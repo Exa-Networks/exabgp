@@ -126,13 +126,13 @@ class Update(Message):
                 continue
 
             add_v4 = add_v4 and nlri.action == Action.ANNOUNCE
-            add_v4 = add_v4 and nlri.nexthop.afi == AFI.ipv4  # type: ignore[attr-defined]
+            add_v4 = add_v4 and nlri.nexthop.afi == AFI.ipv4
 
             if add_v4:
                 nlris.append(nlri)
                 continue
 
-            if nlri.nexthop.afi != AFI.undefined:  # type: ignore[attr-defined]
+            if nlri.nexthop.afi != AFI.undefined:
                 mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
 
@@ -276,7 +276,7 @@ class Update(Message):
         if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
             return EOR(AFI.ipv4, SAFI.unicast)  # pylint: disable=E1101
         if length == EOR_WITH_PREFIX_LENGTH and data.startswith(EOR.NLRI.PREFIX):
-            return EOR.unpack_message(data, negotiated)  # type: ignore[no-any-return]
+            return EOR.unpack_message(data, negotiated)
 
         withdrawn, _attributes, announced = cls.split(data)
 
@@ -312,19 +312,21 @@ class Update(Message):
                 # negotiated.neighbor may be a mock or not support subscripting
                 pass
 
-        nlris = []
+        nlris: List[NLRI] = []
         while withdrawn:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath, negotiated)  # type: ignore[misc]
-            log.debug(lazymsg('withdrawn NLRI {nlri}', nlri=nlri), 'routes')  # type: ignore[has-type]
-            withdrawn = left  # type: ignore[has-type]
-            nlris.append(nlri)  # type: ignore[has-type]
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath, negotiated)
+            log.debug(lazymsg('withdrawn NLRI {nlri}', nlri=nlri), 'routes')
+            withdrawn = left
+            if nlri is not NLRI.invalid():
+                nlris.append(nlri)
 
         while announced:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath, negotiated)  # type: ignore[misc]
-            nlri.nexthop = nexthop  # type: ignore[has-type]
-            log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')  # type: ignore[has-type]
-            announced = left  # type: ignore[has-type]
-            nlris.append(nlri)  # type: ignore[has-type]
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath, negotiated)
+            if nlri is not NLRI.invalid():
+                nlri.nexthop = nexthop
+                log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')
+                nlris.append(nlri)
+            announced = left
 
         unreach = attributes.pop(MPURNLRI.ID, None)
         reach = attributes.pop(MPRNLRI.ID, None)

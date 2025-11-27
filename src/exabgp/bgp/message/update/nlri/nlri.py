@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Tuple, Ty
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.protocol.ip import IP
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -31,6 +32,25 @@ class NLRI(Family):
     registered_families: ClassVar[List[Tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
 
     action: int
+    nexthop: 'IP'
+
+    # Cached invalid NLRI singleton
+    _invalid: ClassVar['NLRI | None'] = None
+
+    @classmethod
+    def invalid(cls) -> 'NLRI':
+        """Get singleton NLRI representing an invalid/malformed NLRI.
+
+        Used for "treat as withdraw" semantics when parsing fails.
+        """
+        if cls._invalid is None:
+            # Bypass normal __init__
+            instance = object.__new__(cls)
+            instance.afi = AFI.undefined
+            instance.safi = SAFI.undefined
+            instance.action = Action.UNSET
+            cls._invalid = instance
+        return cls._invalid
 
     def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET) -> None:
         Family.__init__(self, afi, safi)
@@ -99,7 +119,7 @@ class NLRI(Family):
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> NLRI:
+    ) -> Tuple[NLRI, bytes]:
         a: AFI
         s: SAFI
         a, s = AFI.create(afi), SAFI.create(safi)

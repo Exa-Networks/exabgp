@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import Dict, Set, Type, ClassVar, Iterator, Any, TYPE_CHECKING
+from typing import Dict, Set, Type, ClassVar, Iterator, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
@@ -36,13 +36,13 @@ class IPSelf:
         return 'self'
 
     def top(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> str:
-        return negotiated.nexthopself(afi).top()  # type: ignore[no-any-return]
+        return negotiated.nexthopself(afi).top()
 
     def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:
-        return negotiated.nexthopself(afi).ton()  # type: ignore[no-any-return]
+        return negotiated.nexthopself(afi).ton()
 
     def pack(self, negotiated: Negotiated) -> bytes:
-        return negotiated.nexthopself(self.afi).ton()  # type: ignore[no-any-return]
+        return negotiated.nexthopself(self.afi).ton()
 
     def index(self) -> str:
         return 'self-' + AFI.names[self.afi]
@@ -202,6 +202,24 @@ class IP:
     def register(cls) -> None:
         cls._known[cls.afi] = cls
 
+    # Cached no-nexthop singleton
+    _no_nexthop: ClassVar[IP | None] = None
+
+    @classmethod
+    def no_nexthop(cls) -> IP:
+        """Get singleton IP instance representing no next-hop.
+
+        Used when NLRI has no next-hop (e.g., withdrawals, certain address families).
+        """
+        if cls._no_nexthop is None:
+            # Bypass __init__ which raises RuntimeError
+            instance = object.__new__(cls)
+            instance._packed = b''
+            instance._string = 'no-nexthop'
+            instance.afi = AFI.undefined
+            cls._no_nexthop = instance
+        return cls._no_nexthop
+
     @classmethod
     def unpack_ip(cls, data: bytes, klass: Type[IP] | None = None) -> IP:
         return cls.create(IP.ntop(data), data, klass)
@@ -229,37 +247,9 @@ class IPRange(IP):
 
 
 # ==================================================================== NoNextHop
-#
+# Singleton representing absence of next-hop (see IP.no_nexthop())
 
-
-class _NoNextHop:
-    SELF: ClassVar[bool] = False
-
-    packed: ClassVar[str] = ''
-
-    afi: ClassVar[AFI] = AFI.undefined
-    safi: ClassVar[SAFI] = SAFI.undefined
-
-    def pack(self, data: Any, negotiated: Negotiated | None = None) -> str:
-        return ''
-
-    def index(self) -> str:
-        return ''
-
-    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
-        return ''
-
-    def __str__(self) -> str:
-        return 'no-nexthop'
-
-    def __deepcopy__(self, _: Any) -> _NoNextHop:
-        return self
-
-    def __copy__(self, _: Any) -> _NoNextHop:
-        return self
-
-
-NoNextHop: _NoNextHop = _NoNextHop()
+NoNextHop: IP = IP.no_nexthop()
 
 
 # ========================================================================= IPv4

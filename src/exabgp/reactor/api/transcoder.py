@@ -16,6 +16,7 @@ from exabgp.bgp.message import Notification
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Negotiated
+from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.version import json as json_version
 from exabgp.reactor.api.response import Response
@@ -31,11 +32,7 @@ def _get_dummy_negotiated() -> Negotiated:
     """Get or create a dummy Negotiated instance for decoding OPEN/NOTIFICATION messages."""
     global _DUMMY_NEGOTIATED
     if _DUMMY_NEGOTIATED is None:
-        # Create minimal fake neighbor for Negotiated
-        fake_neighbor = {
-            'capability': {'aigp': False},
-        }
-        _DUMMY_NEGOTIATED = Negotiated(fake_neighbor, Direction.IN)
+        _DUMMY_NEGOTIATED = Negotiated(Neighbor.empty(), Direction.IN)
     return _DUMMY_NEGOTIATED
 
 
@@ -83,8 +80,8 @@ class Transcoder:
         self.seen_open[direction] = message
 
         if all(self.seen_open.values()):
-            self.negotiated_in = Negotiated(None, Direction.IN)
-            self.negotiated_out = Negotiated(None, Direction.OUT)
+            self.negotiated_in = Negotiated(Neighbor.empty(), Direction.IN)
+            self.negotiated_out = Negotiated(Neighbor.empty(), Direction.OUT)
             self.negotiated_in.sent(self.seen_open['send'])
             self.negotiated_in.received(self.seen_open['receive'])
             self.negotiated_out.sent(self.seen_open['send'])

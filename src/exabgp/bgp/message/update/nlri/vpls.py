@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
+from exabgp.protocol.ip import NoNextHop
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -47,7 +48,7 @@ class VPLS(NLRI):
     ) -> None:
         NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
         self.action = Action.ANNOUNCE
-        self.nexthop = None
+        self.nexthop = NoNextHop
         self.rd = rd
         self.base = base
         self.offset = offset
@@ -56,7 +57,7 @@ class VPLS(NLRI):
         self.unique = next(unique)
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is None and action == Action.ANNOUNCE:
+        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
             return 'vpls nlri next-hop missing'
         if self.endpoint is None:
             return 'vpls nlri endpoint missing'
@@ -113,14 +114,14 @@ class VPLS(NLRI):
             self.base,
             self.offset,
             self.size,
-            '' if self.nexthop is None else 'next-hop {}'.format(self.nexthop),
+            '' if self.nexthop is NoNextHop else 'next-hop {}'.format(self.nexthop),
         )
 
     def __str__(self) -> str:
         return self.extensive()
 
     @classmethod
-    def unpack_nlri(  # type: ignore[override]
+    def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> Tuple[VPLS, bytes]:
         # label is 20bits, stored using 3 bytes, 24 bits

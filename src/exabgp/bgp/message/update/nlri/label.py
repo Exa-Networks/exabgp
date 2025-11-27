@@ -31,7 +31,7 @@ class Label(INET):
         self.labels = Labels.NOLABEL
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is None and action == Action.ANNOUNCE:
+        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
             return 'labelled nlri next-hop missing'
         return ''
 

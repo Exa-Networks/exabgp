@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.ip import NoNextHop
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri import NLRI as _NLRI
@@ -31,7 +32,7 @@ class EOR(Message):
         MP_LENGTH = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
         EOR = True
 
-        nexthop = None
+        nexthop = NoNextHop
 
         def __init__(self, afi, safi, action):
             _NLRI.__init__(self, afi, safi, action)
@@ -78,6 +79,9 @@ class EOR(Message):
         return 'EOR'
 
     @classmethod
-    def unpack_message(cls, data, negotiated):
+    def unpack_message(cls, data: bytes, negotiated: 'Negotiated') -> 'EOR':
         header_length = len(EOR.NLRI.PREFIX)
-        return cls(AFI.unpack_afi(data[header_length : header_length + 2]), SAFI.unpack_safi(data[header_length + 2]))
+        return cls(
+            AFI.unpack_afi(data[header_length : header_length + 2]),
+            SAFI.unpack_safi(data[header_length + 2 : header_length + 3]),
+        )

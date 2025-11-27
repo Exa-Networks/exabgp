@@ -12,6 +12,8 @@ from typing import Any, ClassVar, Dict, List, Tuple, TYPE_CHECKING
 if TYPE_CHECKING:
     from exabgp.bgp.message import Open
     from exabgp.bgp.message.direction import Direction
+    from exabgp.bgp.neighbor import Neighbor
+    from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -26,8 +28,8 @@ from exabgp.protocol.family import SAFI
 class Negotiated:
     FREE_SIZE: ClassVar[int] = ExtendedMessage.INITIAL_SIZE - 19 - 2 - 2
 
-    def __init__(self, neighbor: Any, direction: 'Direction') -> None:
-        self.neighbor: Any = neighbor
+    def __init__(self, neighbor: 'Neighbor', direction: 'Direction') -> None:
+        self.neighbor: 'Neighbor' = neighbor
         self.direction: 'Direction' = direction
 
         self.sent_open: 'Open' | None = None  # Open message
@@ -190,7 +192,7 @@ class Negotiated:
 
         return None
 
-    def nexthopself(self, afi: AFI) -> Any:
+    def nexthopself(self, afi: AFI) -> 'IP':
         return self.neighbor.ip_self(afi)
 
     def required(self, afi: AFI, safi: SAFI) -> bool:

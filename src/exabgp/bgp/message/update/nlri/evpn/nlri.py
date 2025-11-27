@@ -97,7 +97,7 @@ class EVPN(NLRI):
         return klass
 
     @classmethod
-    def unpack_nlri(  # type: ignore[override]
+    def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: PathInfo | None, negotiated: Negotiated
     ) -> Tuple[EVPN, bytes]:
         code = bgp[0]

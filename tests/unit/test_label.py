@@ -199,11 +199,11 @@ class TestLabelFeedback:
         assert feedback == ''
 
     def test_feedback_without_nexthop_announce(self) -> None:
-        """Test feedback when nexthop is missing for ANNOUNCE"""
+        """Test feedback when nexthop is missing (NoNextHop) for ANNOUNCE"""
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
         label.labels = Labels([100], True)
-        label.nexthop = None
+        # nexthop defaults to NoNextHop
 
         feedback = label.feedback(Action.ANNOUNCE)
         assert 'labelled nlri next-hop missing' in feedback
@@ -213,7 +213,7 @@ class TestLabelFeedback:
         label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.WITHDRAW)
         label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
         label.labels = Labels([100], True)
-        label.nexthop = None
+        # nexthop defaults to NoNextHop
 
         feedback = label.feedback(Action.WITHDRAW)
         # WITHDRAW should pass even without nexthop

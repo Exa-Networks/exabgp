@@ -91,11 +91,11 @@ class MPURNLRI(Attribute, Family):
         addpath = negotiated.required(afi, safi)
 
         while data:
-            nlri_result, data_result = NLRI.unpack_nlri(afi, safi, data, Action.WITHDRAW, addpath, negotiated)  # type: ignore[misc]
-            # allow unpack_nlri to return none for "treat as withdraw" controlled by NLRI.unpack_nlri
-            if nlri_result:  # type: ignore[has-type]
-                nlris.append(nlri_result)  # type: ignore[has-type]
-            data = data_result  # type: ignore[has-type]
+            nlri_result, data_result = NLRI.unpack_nlri(afi, safi, data, Action.WITHDRAW, addpath, negotiated)
+            # allow unpack_nlri to return NLRI.invalid() for "treat as withdraw"
+            if nlri_result is not NLRI.invalid():
+                nlris.append(nlri_result)
+            data = data_result
 
         return cls(afi, safi, nlris)
 

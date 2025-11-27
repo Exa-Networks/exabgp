@@ -9,22 +9,29 @@ from __future__ import annotations
 
 import pprint
 from typing import Any
+from typing import List
+from typing import TYPE_CHECKING
 
 # from copy import deepcopy
 from exabgp.protocol.ip import IP
 from exabgp.configuration.core.error import Error
 
+if TYPE_CHECKING:
+    from exabgp.rib.change import Change
+
 
 class Scope(Error):
-    def __init__(self):
+    _routes: List[Change]
+
+    def __init__(self) -> None:
         Error.__init__(self)
-        self._location = []
-        self._added = set()
-        self._all = {
+        self._location: List[str] = []
+        self._added: set[str] = set()
+        self._all: dict[str, Any] = {
             'template': {},
         }
         self._routes = []
-        self._current = self._all
+        self._current: dict[str, Any] = self._all
 
     def __repr__(self):
         return pprint.pformat(self.__dict__, indent=3)
@@ -40,26 +47,26 @@ class Scope(Error):
 
     # building route list
 
-    def get_routes(self):
+    def get_routes(self) -> List[Change]:
         return self._routes
 
-    def pop_routes(self):
+    def pop_routes(self) -> List[Change]:
         routes = self._routes
         self._routes = []
         return routes
 
-    def extend_routes(self, value):
+    def extend_routes(self, value: List[Change]) -> None:
         self._routes.extend(value)
 
     # building nlri
 
-    def append_route(self, value):
-        return self._routes.append(value)
+    def append_route(self, value: Change) -> None:
+        self._routes.append(value)
 
-    def get_route(self):
+    def get_route(self) -> Change:
         return self._routes[-1]
 
-    def pop_route(self):
+    def pop_route(self) -> Change:
         return self._routes.pop()
 
     # context

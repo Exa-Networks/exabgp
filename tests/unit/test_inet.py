@@ -34,7 +34,7 @@ class TestINETFeedback:
         """Test feedback when nexthop is missing for ANNOUNCE"""
         nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
         nlri.cidr = CIDR(IP.pton('192.168.1.0'), 24)
-        nlri.nexthop = None
+        # nexthop defaults to NoNextHop
 
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert 'inet nlri next-hop missing' in feedback
@@ -52,7 +52,7 @@ class TestINETFeedback:
         """Test feedback for WITHDRAW doesn't require nexthop"""
         nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
         nlri.cidr = CIDR(IP.pton('192.168.1.0'), 24)
-        nlri.nexthop = None
+        # nexthop defaults to NoNextHop
 
         feedback = nlri.feedback(Action.WITHDRAW)
         assert feedback == ''
