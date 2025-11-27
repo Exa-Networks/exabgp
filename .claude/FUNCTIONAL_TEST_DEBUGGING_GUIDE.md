@@ -104,7 +104,9 @@ Shows: ExaBGP startup, BGP session, API commands, exceptions.
 
 ---
 
-## Decode BGP Messages
+## Encode/Decode BGP Messages
+
+### Decode (hex → JSON)
 
 When server shows "unexpected message" with hex:
 
@@ -119,6 +121,10 @@ cat qa/encoding/<test>.ci  # Shows: etc/exabgp/api-rib.conf
 ./sbin/exabgp decode -c etc/exabgp/api-rib.conf "<option_01_hex>"
 
 # 4. Compare JSON outputs to find difference
+
+# Can also pipe from stdin:
+echo "<hex>" | ./sbin/exabgp decode
+cat messages.txt | ./sbin/exabgp decode  # Multiple lines
 ```
 
 **CRITICAL:** Use `-c <config>` to match test's BGP capabilities.
@@ -128,6 +134,39 @@ cat qa/encoding/<test>.ci  # Shows: etc/exabgp/api-rib.conf
 - `-f "ipv4 unicast"` - Specify address family
 - `-i` or `--path-information` - Enable AddPath
 - `-d` or `--debug` - Verbose output
+
+### Encode (route config → hex)
+
+Generate hex UPDATE messages from route configuration:
+
+```bash
+# Basic IPv4 route
+./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4"
+
+# With attributes
+./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4 as-path [65000 65001] community [65000:100]"
+
+# IPv6 route
+./sbin/exabgp encode -f "ipv6 unicast" "route 2001:db8::/32 next-hop 2001:db8::1"
+
+# NLRI bytes only (no UPDATE wrapper)
+./sbin/exabgp encode -n "route 10.0.0.0/24 next-hop 1.2.3.4"
+
+# Without BGP header
+./sbin/exabgp encode --no-header "route 10.0.0.0/24 next-hop 1.2.3.4"
+
+# Round-trip verification
+./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4" | ./sbin/exabgp decode
+```
+
+**Encode options:**
+- `-f <family>` - Address family (default: "ipv4 unicast")
+- `-a <asn>` - Local AS (default: 65533)
+- `-z <asn>` - Peer AS (default: 65533)
+- `-i` - Enable add-path
+- `-n` - NLRI only (no UPDATE wrapper)
+- `--no-header` - Exclude 19-byte BGP header
+- `-c <config>` - Use config file instead of route argument
 
 ---
 
