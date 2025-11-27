@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import time
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 from exabgp.bgp.message import _NOP
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import KeepAlive
@@ -43,7 +43,7 @@ class ReceiveTimer:
             raise Notify(self.code, self.subcode, self.message)
         if self.last_print != now:
             left = self.holdtime - elapsed
-            log.debug(lambda: 'receive-timer %d second(s) left' % left, source='ka-' + self.session())
+            log.debug(lazymsg('timer.receive seconds_left={left}', left=left), source='ka-' + self.session())
             self.last_print = now
         return True
 
@@ -71,7 +71,7 @@ class SendTimer:
         left = self.last_sent + self.keepalive - now
 
         if now != self.last_print:
-            log.debug(lambda: 'send-timer %d second(s) left' % left, source='ka-' + self.session())
+            log.debug(lazymsg('timer.send seconds_left={left}', left=left), source='ka-' + self.session())
             self.last_print = now
 
         if left <= 0:

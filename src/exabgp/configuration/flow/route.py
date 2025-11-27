@@ -26,7 +26,7 @@ from exabgp.configuration.static.mpls import route_distinguisher
 from exabgp.configuration.flow.parser import flow
 from exabgp.configuration.flow.parser import next_hop
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 
 class ParseFlowRoute(Section):
@@ -80,5 +80,5 @@ class ParseFlowRoute(Section):
         return True
 
     def _check(self, change: Any) -> bool:
-        log.debug(lambda: 'warning: no check on flows are implemented', 'configuration')
+        log.debug(lazymsg('flow.check status=not_implemented'), 'configuration')
         return True

@@ -10,7 +10,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import TYPE_CHECKING, Dict, Iterator, List, Set, Tuple
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -168,7 +168,7 @@ class OutgoingRIB(Cache):
                 self._watchdog[watchdog]['+'].pop(change.index())
 
     def del_from_rib(self, change: Change) -> None:
-        log.debug(lambda: 'remove {}'.format(change), 'rib')
+        log.debug(lazymsg('rib.remove change={change}', change=change), 'rib')
 
         change_index = change.index()
         change_family = change.nlri.family().afi_safi()
@@ -194,7 +194,7 @@ class OutgoingRIB(Cache):
         self._refresh_changes.append(change)
 
     def add_to_rib(self, change: Change, force: bool = False) -> None:
-        log.debug(lambda: 'insert {}'.format(change), 'rib')
+        log.debug(lazymsg('rib.insert change={change}', change=change), 'rib')
 
         if not force and self.in_cache(change):
             return

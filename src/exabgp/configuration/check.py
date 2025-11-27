@@ -128,7 +128,7 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
 
             # This does not take the BGP header - let's assume we will not break that :)
             try:
-                log.debug(lambda: '')  # new line
+                log.debug(lazymsg('check.update.processing'), 'parser')  # separator
 
                 pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
                 update = Update.unpack_message(pack1s, negotiated_in)
@@ -170,33 +170,32 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
                 if str1r != str2r:
                     if 'attribute [' in str1r and ' 0x00 ' in str1r:
                         # we do not decode non-transitive attributes
-                        log.debug(lambda: 'skipping string check on update with non-transitive attribute(s)', 'parser')
+                        log.debug(lazymsg('check.skip reason=non_transitive_attributes'), 'parser')
                         skip = True
                     elif '=http' in str1r or '=ndl-aas' in str1r:
-                        log.debug(lambda: 'skipping string check on update with named flow attribute(s)', 'parser')
+                        log.debug(lazymsg('check.skip reason=named_flow_attributes'), 'parser')
                         skip = True
                     else:
-                        log.debug(lambda: 'strings are different:', 'parser')
+                        log.debug(lazymsg('check.strings.different'), 'parser')
                         _str1r = str1r  # type: str
                         _str2r = str2r  # type: str
                         log.debug(lazymsg('[{s}]', s=_str1r), 'parser')
                         log.debug(lazymsg('[{s}]', s=_str2r), 'parser')
                         return False
                 else:
-                    log.debug(lambda: 'strings are fine', 'parser')
+                    log.debug(lazymsg('check.strings.ok'), 'parser')
 
                 if skip:
-                    log.debug(lambda: 'skipping encoding for update with non-transitive attribute(s)', 'parser')
+                    log.debug(lazymsg('check.encoding.skip reason=non_transitive_attributes'), 'parser')
                 elif pack1 != pack2:
-                    log.debug(lambda: 'encoding are different', 'parser')
+                    log.debug(lazymsg('check.encoding.different'), 'parser')
                     _pack1_cmp = pack1  # type: bytes
                     _pack2_cmp = pack2  # type: bytes
                     log.debug(lazymsg('[{hex}]', hex=od(_pack1_cmp)), 'parser')
                     log.debug(lazymsg('[{hex}]', hex=od(_pack2_cmp)), 'parser')
                     return False
                 else:
-                    log.debug(lambda: 'encoding is fine', 'parser')
-                    log.debug(lambda: '----------------------------------------', 'parser')
+                    log.debug(lazymsg('encoding.verified status=ok'), 'parser')
 
                 _change1_json: Change = change1
 
@@ -210,10 +209,7 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
                 log.debug(_log_attr, 'parser')
 
             except Notify as exc:
-                log.debug(lambda: '----------------------------------------', 'parser')
-                _exc = exc  # type: Notify
-                log.debug(lazymsg('{exc}', exc=str(_exc)), 'parser')
-                log.debug(lambda: '----------------------------------------', 'parser')
+                log.debug(lazymsg('encoding.failed error={err}', err=str(exc)), 'parser')
                 return False
         if neighbor.rib is not None:
             neighbor.rib.clear()
@@ -300,11 +296,11 @@ def _make_nlri(neighbor: Neighbor, routes: str) -> List[NLRI]:
             announced = unpack_result[1]  # type: ignore[index]
             nlris.append(nlri_parsed)
     except (Notify, ValueError, IndexError, KeyError, struct.error) as exc:
-        log.error(lambda: f'could not parse the nlri for afi={afi}, safi={safi}', 'parser')
+        log.error(lazymsg('nlri.parse.failed afi={a} safi={s}', a=afi, s=safi), 'parser')
         from exabgp.debug import string_exception
 
         _exc_nlri = exc  # type: BaseException
-        log.error(lazymsg('{msg}', msg=string_exception(_exc_nlri)), 'parser')
+        log.error(lazymsg('nlri.parse.error error={msg}', msg=string_exception(_exc_nlri)), 'parser')
         if getenv().debug.pdb:
             raise
         return []
@@ -317,10 +313,10 @@ def check_nlri(neighbor: Neighbor, routes: str) -> bool:
     if not nlris:
         return False
 
-    log.debug(lambda: '', 'parser')  # new line
+    log.debug(lazymsg('nlri.check.complete'), 'parser')  # separator
     for nlri in nlris:
         _nlri = nlri  # type: NLRI
-        log.info(lazymsg('nlri json {json}', json=_nlri.json()), 'parser')
+        log.info(lazymsg('nlri.json json={json}', json=_nlri.json()), 'parser')
     return True
 
 
@@ -383,13 +379,13 @@ def _make_update(neighbor: Neighbor, raw: bytes) -> Update | None:
             injected, raw = raw[19:size], raw[size:]
 
             if kind == BGP_MSG_UPDATE:
-                log.debug(lambda: 'the message is an update', 'parser')
+                log.debug(lazymsg('message.type type=update'), 'parser')
             else:
                 _kind = kind  # type: int
-                log.debug(lazymsg('the message is not an update ({kind}) - aborting', kind=_kind), 'parser')
+                log.debug(lazymsg('message.type.abort type={kind} expected=update', kind=_kind), 'parser')
                 return None
         else:
-            log.debug(lambda: 'header missing, assuming this message is ONE update', 'parser')
+            log.debug(lazymsg('message.header.missing assuming=update'), 'parser')
             injected, raw = raw, b''
 
         try:
@@ -398,16 +394,16 @@ def _make_update(neighbor: Neighbor, raw: bytes) -> Update | None:
         except Notify:
             import traceback
 
-            log.error(lambda: 'could not parse the message', 'parser')
-            log.error(lambda: traceback.format_exc(), 'parser')
+            log.error(lazymsg('message.parse.failed'), 'parser')
+            log.error(lazymsg('message.parse.traceback trace={t}', t=traceback.format_exc()), 'parser')
             if getenv().debug.pdb:
                 raise
             return None
         except (ValueError, IndexError, KeyError, struct.error):
             import traceback
 
-            log.error(lambda: 'could not parse the message', 'parser')
-            log.error(lambda: traceback.format_exc(), 'parser')
+            log.error(lazymsg('message.parse.failed'), 'parser')
+            log.error(lazymsg('message.parse.traceback trace={t}', t=traceback.format_exc()), 'parser')
             if getenv().debug.pdb:
                 raise
             return None
@@ -428,11 +424,11 @@ def _make_notification(neighbor: Neighbor, raw: bytes) -> Notification | None:
         injected, raw = raw[19:size], raw[size:]
 
         if kind != BGP_MSG_NOTIFICATION:
-            log.debug(lambda: 'the message is not an notification (%d) - aborting' % kind, 'parser')
+            log.debug(lazymsg('message.type.abort type={kind} expected=notification', kind=kind), 'parser')
             return None
-        log.debug(lambda: 'the message is an notification', 'parser')
+        log.debug(lazymsg('message.type type=notification'), 'parser')
     else:
-        log.debug(lambda: 'header missing, assuming this message is ONE notification', 'parser')
+        log.debug(lazymsg('message.header.missing assuming=notification'), 'parser')
         injected, raw = raw, b''
 
     try:
@@ -441,16 +437,16 @@ def _make_notification(neighbor: Neighbor, raw: bytes) -> Notification | None:
     except Notify:
         import traceback
 
-        log.error(lambda: 'could not parse the message', 'parser')
-        log.error(lambda: traceback.format_exc(), 'parser')
+        log.error(lazymsg('message.parse.failed'), 'parser')
+        log.error(lazymsg('message.parse.traceback trace={t}', t=traceback.format_exc()), 'parser')
         if getenv().debug.pdb:
             raise
         return None
     except (ValueError, IndexError, KeyError, struct.error):
         import traceback
 
-        log.error(lambda: 'could not parse the message', 'parser')
-        log.error(lambda: traceback.format_exc(), 'parser')
+        log.error(lazymsg('message.parse.failed'), 'parser')
+        log.error(lazymsg('message.parse.traceback trace={t}', t=traceback.format_exc()), 'parser')
         if getenv().debug.pdb:
             raise
         return None
@@ -463,16 +459,20 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
     if not update:
         return False
 
-    log.debug(lambda: '', 'parser')  # new line
+    log.debug(lazymsg('update.check.complete'), 'parser')  # separator
     for number in range(len(update.nlris)):
         change = Change(update.nlris[number], update.attributes)
         _change = change  # type: Change
         log.info(
-            lazymsg('decoded update {action} {extensive}', action=_change.nlri.action, extensive=_change.extensive()),
+            lazymsg(
+                'update.decoded action={action} extensive={extensive}',
+                action=_change.nlri.action,
+                extensive=_change.extensive(),
+            ),
             'parser',
         )
     json_update = Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')
-    log.info(lambda: f'update json {json_update}', 'parser')
+    log.info(lazymsg('update.json json={json_update}', json_update=json_update), 'parser')
 
     return True
 
@@ -520,5 +520,5 @@ def _get_dummy_negotiated() -> Negotiated:
 def check_notification(raw: bytes) -> bool:
     notification = Notification.unpack_message(raw[18:], _get_dummy_negotiated())
     _notification = notification  # type: Notification
-    log.info(lazymsg('{notification}', notification=_notification), 'parser')
+    log.info(lazymsg('notification.decoded notification={notification}', notification=_notification), 'parser')
     return True

@@ -60,23 +60,23 @@ def cmdline(cmdarg):
                 lazymsg('{configuration} is not a valid config file', configuration=configuration), 'configuration'
             )
             sys.exit(1)
-        log.info(lambda: '\u2713 loading', 'configuration')
+        log.info(lazymsg('validate.loading status=success'), 'configuration')
 
         if cmdarg.neighbor:
-            log.warning(lambda: 'checking neighbors', 'configuration')
+            log.warning(lazymsg('validate.checking type=neighbors'), 'configuration')
             for name, neighbor in config.neighbors.items():
                 reparsed = NeighborTemplate.configuration(neighbor)
                 log.debug(lazymsg('{reparsed}', reparsed=reparsed), configuration)
                 log.info(lazymsg('\u2713 neighbor  {neighbor_name}', neighbor_name=name.split()[1]), 'configuration')
 
         if cmdarg.route:
-            log.warning(lambda: 'checking routes', 'configuration')
+            log.warning(lazymsg('validate.checking type=routes'), 'configuration')
             if not check_generation(config.neighbors):
                 log.critical(
                     lazymsg('{configuration} has an invalid route', configuration=configuration), 'configuration'
                 )
                 sys.exit(1)
-            log.info(lambda: '\u2713 routes', 'configuration')
+            log.info(lazymsg('validate.routes status=success'), 'configuration')
 
 
 def main():

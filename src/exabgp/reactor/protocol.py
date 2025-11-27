@@ -50,7 +50,7 @@ from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.protocol.ip import IP
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
@@ -179,7 +179,7 @@ class Protocol:
 
     def close(self, reason: str = 'protocol closed, reason unspecified') -> None:
         if self.connection:
-            log.debug(lambda: reason, self._session())
+            log.debug(lazymsg('protocol.close reason={r}', r=reason), self._session())
             self.peer.stats['down'] += 1
 
             self.connection.close()
@@ -295,7 +295,7 @@ class Protocol:
 
             current_msg_id = msg_id
             log.debug(
-                lambda: '<< message of type {}'.format(Message.CODE.name(current_msg_id)),
+                lazymsg('message.received type={t}', t=Message.CODE.name(current_msg_id)),
                 self._session(),
             )
 
@@ -318,10 +318,10 @@ class Protocol:
                 raise
             except Exception as exc:
                 current_msg_id = msg_id
-                log.debug(lambda: 'could not decode message "%d"' % current_msg_id, self._session())
+                log.debug(lazymsg('message.decode.failed type={t}', t=current_msg_id), self._session())
                 current_exc = exc
-                log.debug(lambda: '{}'.format(str(current_exc)), self._session())
-                log.debug(lambda: traceback.format_exc(), self._session())
+                log.debug(lazymsg('message.decode.error error={e}', e=str(current_exc)), self._session())
+                log.debug(lazymsg('message.decode.traceback trace={t}', t=traceback.format_exc()), self._session())
                 raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
                 # raise Notify(5,0,'unknown message received')
 
@@ -382,7 +382,7 @@ class Protocol:
 
         current_msg_id = msg_id
         log.debug(
-            lambda: '<< message of type {}'.format(Message.CODE.name(current_msg_id)),
+            lazymsg('message.received type={t}', t=Message.CODE.name(current_msg_id)),
             self._session(),
         )
 
@@ -404,10 +404,10 @@ class Protocol:
             raise
         except Exception as exc:
             current_msg_id = msg_id
-            log.debug(lambda: 'could not decode message "%d"' % current_msg_id, self._session())
+            log.debug(lazymsg('message.decode.failed type={t}', t=current_msg_id), self._session())
             current_exc = exc
-            log.debug(lambda: '{}'.format(str(current_exc)), self._session())
-            log.debug(lambda: traceback.format_exc(), self._session())
+            log.debug(lazymsg('message.decode.error error={e}', e=str(current_exc)), self._session())
+            log.debug(lazymsg('message.decode.traceback trace={t}', t=traceback.format_exc()), self._session())
             raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
             # raise Notify(5,0,'unknown message received')
 
@@ -444,27 +444,20 @@ class Protocol:
 
         if self.negotiated.mismatch and self.connection is not None:
             log.warning(
-                lambda: '--------------------------------------------------------------------',
-                self._session(),
-            )
-            log.warning(
-                lambda: 'the connection can not carry the following family/families',
+                lazymsg('negotiation.family.mismatch count={c}', c=len(self.negotiated.mismatch)),
                 self._session(),
             )
             for reason, (afi, safi) in self.negotiated.mismatch:
                 current_afi, current_reason, current_safi = afi, reason, safi
                 log.warning(
-                    lambda: f' - {current_reason} is not configured for {current_afi}/{current_safi}',
+                    lazymsg(
+                        'negotiation.family.unconfigured reason={r} afi={a} safi={s}',
+                        r=current_reason,
+                        a=current_afi,
+                        s=current_safi,
+                    ),
                     self._session(),
                 )
-            log.warning(
-                lambda: 'therefore no routes of this kind can be announced on the connection',
-                self._session(),
-            )
-            log.warning(
-                lambda: '--------------------------------------------------------------------',
-                self._session(),
-            )
 
     def read_open(self, ip: str) -> Generator[Message, None, None]:
         for received_open in self.read_message():
@@ -480,7 +473,7 @@ class Protocol:
                 'The first packet received is not an open message ({})'.format(received_open),
             )
 
-        log.debug(lambda: '<< {}'.format(received_open), self._session())
+        log.debug(lazymsg('open.received message={m}', m=received_open), self._session())
         yield received_open
 
     async def read_open_async(self, ip: str) -> Open:
@@ -497,7 +490,7 @@ class Protocol:
                 'The first packet received is not an open message ({})'.format(received_open),
             )
 
-        log.debug(lambda: '<< {}'.format(received_open), self._session())
+        log.debug(lazymsg('open.received message={m}', m=received_open), self._session())
         return received_open  # type: ignore[return-value]
 
     def read_keepalive(self) -> Generator[Message, None, None]:
@@ -549,7 +542,7 @@ class Protocol:
         for _ in self.write(sent_open, self.negotiated):
             yield _NOP
 
-        log.debug(lambda: '>> {}'.format(sent_open), self._session())
+        log.debug(lazymsg('open.sent message={m}', m=sent_open), self._session())
         yield sent_open
 
     async def new_open_async(self) -> Open:
@@ -573,7 +566,7 @@ class Protocol:
         # we do not buffer open message in purpose
         await self.write_async(sent_open, self.negotiated)
 
-        log.debug(lambda: '>> {}'.format(sent_open), self._session())
+        log.debug(lazymsg('open.sent message={m}', m=sent_open), self._session())
         return sent_open
 
     def new_keepalive(self, comment: str = '') -> Generator[KeepAlive | NOP, None, None]:
@@ -584,7 +577,7 @@ class Protocol:
             yield _NOP
 
         log.debug(
-            lambda: f'>> KEEPALIVE{f" ({comment})" if comment else ""}',
+            lazymsg('keepalive.sent comment={c}', c=comment if comment else 'none'),
             self._session(),
         )
 
@@ -598,7 +591,7 @@ class Protocol:
         await self.write_async(keepalive, self.negotiated)
 
         log.debug(
-            lambda: f'>> KEEPALIVE{f" ({comment})" if comment else ""}',
+            lazymsg('keepalive.sent comment={c}', c=comment if comment else 'none'),
             self._session(),
         )
 
@@ -609,7 +602,12 @@ class Protocol:
         for _ in self.write(notification, self.negotiated):
             yield _NOP
         log.debug(
-            lambda: f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
+            lazymsg(
+                'notification.sent code={c} subcode={sc} data={d}',
+                c=notification.code,
+                sc=notification.subcode,
+                d=notification.data.decode('utf-8'),
+            ),
             self._session(),
         )
         yield notification
@@ -619,7 +617,12 @@ class Protocol:
         assert self.connection is not None
         await self.write_async(notification, self.negotiated)
         log.debug(
-            lambda: f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
+            lazymsg(
+                'notification.sent code={c} subcode={sc} data={d}',
+                c=notification.code,
+                sc=notification.subcode,
+                d=notification.data.decode('utf-8'),
+            ),
             self._session(),
         )
         return notification
@@ -636,7 +639,7 @@ class Protocol:
                     # boolean is a transient network error we already announced
                     yield _NOP
         if number:
-            log.debug(lambda: '>> %d UPDATE(s)' % number, self._session())
+            log.debug(lazymsg('update.sent count={n}', n=number), self._session())
         yield _UPDATE
 
     async def new_update_async_generator(self, include_withdraw: bool):
@@ -649,16 +652,15 @@ class Protocol:
         """
         assert self.connection is not None
         assert self.neighbor.rib is not None
-        log.debug(lambda: '[Protocol.new_update_async_generator] CALLED', self._session())
+        log.debug(lazymsg('update.async.generator.started'), self._session())
         updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
         number: int = 0
         for update in updates:
             for message in update.messages(self.negotiated, include_withdraw):
                 number += 1
-                current_number = number
-                current_message = message
+                current_msg = message
                 log.debug(
-                    lambda: f'[Protocol.new_update_async_generator] Sending message #{current_number}: {current_message!r}',
+                    lazymsg('update.message.sending num={num} msg={msg}', num=number, msg=repr(current_msg)),
                     self._session(),
                 )
                 # Send message using async I/O
@@ -667,35 +669,35 @@ class Protocol:
                 yield
         if number:
             final_number = number
-            log.debug(lambda: '>> %d UPDATE(s)' % final_number, self._session())
+            log.debug(lazymsg('update.sent count={n}', n=final_number), self._session())
         final_count = number
-        log.debug(lambda: f'[Protocol.new_update_async_generator] DONE - sent {final_count} messages', self._session())
+        log.debug(lazymsg('update.async.generator.completed count={count}', count=final_count), self._session())
 
     async def new_update_async(self, include_withdraw: bool) -> Update:
         """Async version of new_update - send BGP UPDATE messages (legacy, runs to completion)"""
         assert self.connection is not None
         assert self.neighbor.rib is not None
-        log.debug(lambda: '[Protocol.new_update_async] CALLED - calling rib.updates()', self._session())
+        log.debug(lazymsg('update.async.started'), self._session())
         updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
-        log.debug(lambda: '[Protocol.new_update_async] GOT updates generator, iterating...', self._session())
+        log.debug(lazymsg('update.async.iterating'), self._session())
         number: int = 0
         for update in updates:
             current_update = update
             log.debug(
-                lambda: f'[Protocol.new_update_async] Processing update: {current_update}',
+                lazymsg('update.async.processing update={upd}', upd=current_update),
                 self._session(),
             )
             for message in update.messages(self.negotiated, include_withdraw):
                 number += 1
-                current_number = number
+                current_msg = message
                 log.debug(
-                    lambda: f'[Protocol.new_update_async] Sending message #{current_number}',
+                    lazymsg('update.message.sending num={num} msg={msg}', num=number, msg=repr(current_msg)),
                     self._session(),
                 )
                 await self.send_async(message)
         if number:
-            log.debug(lambda: '>> %d UPDATE(s)' % number, self._session())
-        log.debug(lambda: f'[Protocol.new_update_async] DONE - sent {number} messages total', self._session())
+            log.debug(lazymsg('update.sent count={n}', n=number), self._session())
+        log.debug(lazymsg('update.async.completed count={count}', count=number), self._session())
         return _UPDATE
 
     def new_eor(self, afi: AFI, safi: SAFI) -> Generator[Message, None, None]:
@@ -703,7 +705,7 @@ class Protocol:
         eor: EOR = EOR(afi, safi)
         for _ in self.write(eor, self.negotiated):
             yield _NOP
-        log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self._session())
+        log.debug(lazymsg('eor.sent afi={a} safi={s}', a=afi, s=safi), self._session())
         yield eor
 
     async def new_eor_async(self, afi: AFI, safi: SAFI) -> EOR:
@@ -711,7 +713,7 @@ class Protocol:
         assert self.connection is not None
         eor: EOR = EOR(afi, safi)
         await self.write_async(eor, self.negotiated)
-        log.debug(lambda: '>> EOR {} {}'.format(afi, safi), self._session())
+        log.debug(lazymsg('eor.sent afi={a} safi={s}', a=afi, s=safi), self._session())
         return eor
 
     async def new_eors_async(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> Update:
@@ -752,26 +754,26 @@ class Protocol:
         assert self.connection is not None
         for _ in self.write(operational, negotiated):
             yield _NOP
-        log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self._session())
+        log.debug(lazymsg('operational.sent message={m}', m=str(operational)), self._session())
         yield operational
 
     async def new_operational_async(self, operational: Operational, negotiated: Negotiated) -> Operational:
         """Async version of new_operational - send BGP OPERATIONAL message"""
         assert self.connection is not None
         await self.write_async(operational, negotiated)
-        log.debug(lambda: '>> OPERATIONAL {}'.format(str(operational)), self._session())
+        log.debug(lazymsg('operational.sent message={m}', m=str(operational)), self._session())
         return operational
 
     def new_refresh(self, refresh: RouteRefresh) -> Generator[RouteRefresh | NOP, None, None]:
         assert self.connection is not None
         for _ in self.write(refresh, self.negotiated):
             yield _NOP
-        log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self._session())
+        log.debug(lazymsg('refresh.sent message={m}', m=str(refresh)), self._session())
         yield refresh
 
     async def new_refresh_async(self, refresh: RouteRefresh) -> RouteRefresh:
         """Async version of new_refresh - send BGP ROUTE-REFRESH message"""
         assert self.connection is not None
         await self.write_async(refresh, self.negotiated)
-        log.debug(lambda: '>> REFRESH {}'.format(str(refresh)), self._session())
+        log.debug(lazymsg('refresh.sent message={m}', m=str(refresh)), self._session())
         return refresh

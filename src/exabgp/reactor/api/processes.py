@@ -133,15 +133,15 @@ class Processes:
         if process not in self._process:
             return
         if self.respawn_number and self._restart[process]:
-            log.debug(lambda: f'process {process} ended, restarting it', 'processes')
+            log.debug(lazymsg('process.ended.restarting process={p}', p=process), 'processes')
             self._terminate(process)
             self._start(process)
         else:
-            log.debug(lambda: f'process {process} ended', 'processes')
+            log.debug(lazymsg('process.ended process={p}', p=process), 'processes')
             self._terminate(process)
 
     def _terminate(self, process_name: str) -> Thread:
-        log.debug(lambda: f'terminating process {process_name}', 'processes')
+        log.debug(lazymsg('process.terminating process={p}', p=process_name), 'processes')
         process = self._process[process_name]
 
         # Remove async reader if in async mode
@@ -149,7 +149,7 @@ class Processes:
             try:
                 fd = process.stdout.fileno()
                 self._loop.remove_reader(fd)
-                log.debug(lambda: f'[ASYNC] Removed reader for process {process_name} (fd={fd})', 'processes')
+                log.debug(lazymsg('async.reader.removed process={p} fd={fd}', p=process_name, fd=fd), 'processes')
             except (ValueError, OSError):
                 pass  # Reader might not be registered or FD already closed
 
@@ -165,7 +165,7 @@ class Processes:
             try:
                 process.wait(timeout=2)
             except subprocess.TimeoutExpired:
-                log.debug(lambda: f'force kill unresponsive {process_name}', 'processes')
+                log.debug(lazymsg('process.kill.forced process={p}', p=process_name), 'processes')
                 process.kill()
                 process.wait(timeout=1)
         except (OSError, KeyError, subprocess.TimeoutExpired):
@@ -224,11 +224,11 @@ class Processes:
 
         try:
             if process in self._process:
-                log.debug(lambda: 'process already running', 'processes')
+                log.debug(lazymsg('process.start.skipped process={p} reason=already_running', p=process), 'processes')
                 return
 
             if process not in self._configuration:
-                log.debug(lambda: 'can not start process, no configuration for it', 'processes')
+                log.debug(lazymsg('process.start.skipped process={p} reason=no_configuration', p=process), 'processes')
                 return
             # Prevent some weird termcap data to be created at the start of the PIPE
             # \x1b[?1034h (no-eol) (esc)
@@ -270,9 +270,9 @@ class Processes:
                 if self._async_mode and self._loop:
                     fd = self._get_stdout(process).fileno()
                     self._loop.add_reader(fd, self._async_reader_callback, process)
-                    log.debug(lambda: f'[ASYNC] Registered reader for new process {process} (fd={fd})', 'processes')
+                    log.debug(lazymsg('async.reader.registered process={p} fd={fd}', p=process, fd=fd), 'processes')
 
-                log.debug(lambda: 'forked process {}'.format(process), 'processes')
+                log.debug(lazymsg('process.forked process={p}', p=process), 'processes')
 
                 self._restart[process] = self._configuration[process]['respawn']
                 around_now = int(time.time()) & self.respawn_timemask
@@ -282,8 +282,12 @@ class Processes:
                         # we are respawning too fast
                         if self._respawning[process][around_now] > self.respawn_number:
                             log.critical(
-                                lambda: f'Too many death for {process} ({self.respawn_number}) terminating program',
-                                'process',
+                                lazymsg(
+                                    'process.respawn.exceeded process={p} limit={limit}',
+                                    p=process,
+                                    limit=self.respawn_number,
+                                ),
+                                'processes',
                             )
                             raise ProcessError
                     else:
@@ -310,10 +314,10 @@ class Processes:
             for process in configuration:
                 if process in self._process:
                     if self._configuration.get(process, {}) != configuration[process]:
-                        log.debug(lambda: f'process {process} configuration changed, will restart', 'processes')
+                        log.debug(lazymsg('process.config.changed process={p} action=restart', p=process), 'processes')
                         processes_to_restart.add(process)
                     else:
-                        log.debug(lambda: f'process {process} unchanged, keeping running', 'processes')
+                        log.debug(lazymsg('process.config.unchanged process={p} action=keep', p=process), 'processes')
 
         # Update configuration (needed by _start())
         self._configuration = configuration
@@ -400,9 +404,14 @@ class Processes:
                         line = line.rstrip()
                         consumed_data = True
                         if line.startswith('debug '):
-                            log.warning(lazymsg('debug info from {pr} : {info} ', pr=process, info=line[6:]), 'api')
+                            log.warning(
+                                lazymsg('api.debug.received process={pr} info={info}', pr=process, info=line[6:]), 'api'
+                            )
                         else:
-                            log.debug(lazymsg('command from process {pr} : {ln} ', pr=process, ln=line), 'processes')
+                            log.debug(
+                                lazymsg('api.command.received process={pr} command={ln}', pr=process, ln=line),
+                                'processes',
+                            )
                             yield (process, formated(line))
 
                     self._buffer[process] = raw
@@ -417,8 +426,8 @@ class Processes:
                         pass
                     else:
                         log.debug(
-                            lazymsg('unexpected errno received from forked process ({errstr})', errstr=errstr(exc)),
-                            'process',
+                            lazymsg('process.error.unexpected errno={errstr}', errstr=errstr(exc)),
+                            'processes',
                         )
                     continue
                 except StopIteration:
@@ -457,7 +466,7 @@ class Processes:
                 fd = proc.stdout.fileno()
                 # Register callback to be called when stdout has data available
                 loop.add_reader(fd, self._async_reader_callback, process_name)
-                log.debug(lambda: f'[ASYNC] Registered reader for process {process_name} (fd={fd})', 'processes')
+                log.debug(lazymsg('async.reader.registered process={p} fd={fd}', p=process_name, fd=fd), 'processes')
 
     def _async_reader_callback(self, process_name: str) -> None:
         """Callback invoked by event loop when API process stdout has data
@@ -499,7 +508,7 @@ class Processes:
                     try:
                         self._loop.remove_reader(fd)
                         log.debug(
-                            lambda: f'[ASYNC] Removed reader for exited process {process_name} (fd={fd})', 'process'
+                            lazymsg('async.reader.removed.exit process={p} fd={fd}', p=process_name, fd=fd), 'processes'
                         )
                     except (ValueError, OSError):
                         pass  # Already removed or FD closed
@@ -517,9 +526,13 @@ class Processes:
                 line = line.rstrip()
 
                 if line.startswith('debug '):
-                    log.warning(lazymsg('debug info from {pn} : {info} ', pn=process_name, info=line[6:]), 'api')
+                    log.warning(
+                        lazymsg('api.debug.received process={pn} info={info}', pn=process_name, info=line[6:]), 'api'
+                    )
                 else:
-                    log.debug(lazymsg('command from process {pn} : {ln} ', pn=process_name, ln=line), 'processes')
+                    log.debug(
+                        lazymsg('api.command.received process={pn} command={ln}', pn=process_name, ln=line), 'processes'
+                    )
                     # Queue command for processing
                     self._command_queue.append((process_name, formated(line)))
 
@@ -532,7 +545,7 @@ class Processes:
                     try:
                         self._loop.remove_reader(fd)
                         log.debug(
-                            lambda: f'[ASYNC] Removed reader for exited process {process_name} (fd={fd})', 'process'
+                            lazymsg('async.reader.removed.exit process={p} fd={fd}', p=process_name, fd=fd), 'processes'
                         )
                     except (ValueError, OSError):
                         pass  # Already removed or FD closed
@@ -545,16 +558,17 @@ class Processes:
                     proc_stdout = self._process[process_name].stdout
                     if proc_stdout is not None:
                         self._loop.remove_reader(proc_stdout.fileno())
-                        log.debug(lambda: f'[ASYNC] Removed reader after OSError for {process_name}', 'processes')
+                        log.debug(
+                            lazymsg('async.reader.removed.error process={p} reason=oserror', p=process_name),
+                            'processes',
+                        )
             except (ValueError, OSError, AttributeError):
                 pass
 
             if not exc.errno or exc.errno in error.fatal:
                 self._handle_problem(process_name)
             elif exc.errno not in error.block:
-                log.debug(
-                    lazymsg('unexpected errno received from forked process ({errstr})', errstr=errstr(exc)), 'process'
-                )
+                log.debug(lazymsg('process.error.unexpected errno={errstr}', errstr=errstr(exc)), 'processes')
         except (KeyError, AttributeError, UnicodeDecodeError) as exc:
             # On any exception, try to remove reader to prevent callback loop
             try:
@@ -562,11 +576,14 @@ class Processes:
                     proc_stdout = self._process[process_name].stdout
                     if proc_stdout is not None:
                         self._loop.remove_reader(proc_stdout.fileno())
-                        log.debug(lambda: f'[ASYNC] Removed reader after exception for {process_name}', 'processes')
+                        log.debug(
+                            lazymsg('async.reader.removed.error process={p} reason=exception', p=process_name),
+                            'processes',
+                        )
             except (ValueError, OSError, AttributeError):
                 pass
 
-            log.debug(lazymsg('exception in async reader callback: {e}', e=exc), 'processes')
+            log.debug(lazymsg('async.reader.exception process={p} error={e}', p=process_name, e=exc), 'processes')
             self._handle_problem(process_name)
 
     def received_async(self) -> Generator[Tuple[str, str], None, None]:
@@ -611,11 +628,11 @@ class Processes:
 
         if is_simple_ack:
             # Simple ACK - use debug level
-            log.debug(lambda: f'API response to {process}: {string}', 'processes')
+            log.debug(lazymsg('api.response.ack process={p} response={r}', p=process, r=string), 'processes')
         else:
             # Content response (JSON, text data, etc.) - use warning level to match
             # the visibility of 'debug' commands from external processes
-            log.warning(lambda: f'API response to {process}: {string}', 'api')
+            log.warning(lazymsg('api.response.content process={p} response={r}', p=process, r=string), 'api')
 
         data = bytes(f'{string}\n', 'ascii')
 
@@ -624,7 +641,7 @@ class Processes:
             if process not in self._write_queue:
                 self._write_queue[process] = collections.deque()
             self._write_queue[process].append(data)
-            log.debug(lambda: f'[ASYNC] Queued write for {process} ({len(data)} bytes)', 'processes')
+            log.debug(lazymsg('async.write.queued process={p} bytes={b}', p=process, b=len(data)), 'processes')
             return True
 
         # Sync mode - blocking write to subprocess stdin
@@ -639,13 +656,13 @@ class Processes:
                 self._broken.append(process)
                 if exc.errno == errno.EPIPE:
                     self._broken.append(process)
-                    log.debug(lambda: 'issue while sending data to our helper program', 'processes')
+                    log.debug(lazymsg('process.write.failed reason=broken_pipe'), 'processes')
                     raise ProcessError from None
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
-                        lambda e=exc: f'error received while sending data to helper program, retrying ({errstr(e)})',
-                        'process',
+                        lazymsg('process.write.error error={e} action=retry', e=errstr(exc)),
+                        'processes',
                     )
                     continue
             break
@@ -655,8 +672,8 @@ class Processes:
         except OSError as exc:
             # AFAIK, the buffer should be flushed at the next attempt.
             log.debug(
-                lambda e=exc: f'error received while FLUSHING data to helper program, retrying ({errstr(e)})',
-                'process',
+                lazymsg('process.flush.error error={e} action=retry', e=errstr(exc)),
+                'processes',
             )
 
         return True
@@ -694,11 +711,11 @@ class Processes:
 
         if is_simple_ack:
             # Simple ACK - use debug level
-            log.debug(lambda: f'API response to {process}: {string}', 'processes')
+            log.debug(lazymsg('api.response.ack process={p} response={r}', p=process, r=string), 'processes')
         else:
             # Content response (JSON, text data, etc.) - use warning level to match
             # the visibility of 'debug' commands from external processes
-            log.warning(lambda: f'API response to {process}: {string}', 'api')
+            log.warning(lazymsg('api.response.content process={p} response={r}', p=process, r=string), 'api')
 
         data = bytes(f'{string}\n', 'ascii')
 
@@ -721,12 +738,12 @@ class Processes:
                     self._write_queue[process] = collections.deque()
                 self._write_queue[process].append(data)
             elif exc.errno == errno.EPIPE:
-                log.debug(lambda: 'issue while sending data to our helper program', 'processes')
+                log.debug(lazymsg('process.write.failed reason=broken_pipe'), 'processes')
                 raise ProcessError from None
             else:
                 log.debug(
-                    lambda e=exc: f'error received while sending data to helper program ({errstr(e)})',
-                    'process',
+                    lazymsg('process.write.error error={e}', e=errstr(exc)),
+                    'processes',
                 )
                 raise ProcessError from None
 
@@ -744,7 +761,7 @@ class Processes:
         if self._write_queue:
             for p, q in self._write_queue.items():
                 if q:
-                    log.debug(lazymsg('[ASYNC] Flushing queue for {pn} ({cnt} items)', pn=p, cnt=len(q)), 'processes')
+                    log.debug(lazymsg('async.queue.flushing process={pn} items={cnt}', pn=p, cnt=len(q)), 'processes')
 
         for process_name in list(self._write_queue.keys()):
             if process_name not in self._process:
@@ -761,7 +778,9 @@ class Processes:
                 stdin_fd = self._get_stdin(process_name).fileno()
             except (AttributeError, ValueError):
                 # Stdin closed or invalid
-                log.debug(lambda: f'[ASYNC] Cannot flush queue for {process_name}: stdin closed', 'processes')
+                log.debug(
+                    lazymsg('async.queue.flush.failed process={p} reason=stdin_closed', p=process_name), 'processes'
+                )
                 del self._write_queue[process_name]
                 continue
 
@@ -771,37 +790,56 @@ class Processes:
                 try:
                     # Use os.write for non-blocking write
                     log.debug(
-                        lambda: f'[ASYNC] Attempting write for {process_name} (fd={stdin_fd}, {len(data)} bytes)',
-                        'process',
+                        lazymsg(
+                            'async.write.attempt process={p} fd={fd} bytes={b}',
+                            p=process_name,
+                            fd=stdin_fd,
+                            b=len(data),
+                        ),
+                        'processes',
                     )
                     written = os.write(stdin_fd, data)
-                    log.debug(lambda: f'[ASYNC] os.write returned {written} for {process_name}', 'processes')
+                    log.debug(
+                        lazymsg('async.write.result process={p} written={w}', p=process_name, w=written), 'processes'
+                    )
                     if written < len(data):
                         # Partial write - put remaining data back
                         queue.appendleft(data[written:])
                         log.debug(
-                            lambda: f'[ASYNC] Partial write for {process_name} ({written}/{len(data)} bytes)', 'process'
+                            lazymsg(
+                                'async.write.partial process={p} written={w} total={t}',
+                                p=process_name,
+                                w=written,
+                                t=len(data),
+                            ),
+                            'processes',
                         )
                         break
-                    log.debug(lambda: f'[ASYNC] Flushed write for {process_name} ({written} bytes)', 'processes')
+                    log.debug(
+                        lazymsg('async.write.flushed process={p} bytes={b}', p=process_name, b=written), 'processes'
+                    )
                 except OSError as exc:
                     if exc.errno == errno.EAGAIN or exc.errno == errno.EWOULDBLOCK:
                         # Buffer full, put data back and try next iteration
                         queue.appendleft(data)
-                        log.debug(lambda: f'[ASYNC] Buffer full for {process_name}, deferring write', 'processes')
+                        log.debug(
+                            lazymsg('async.write.deferred process={p} reason=buffer_full', p=process_name), 'processes'
+                        )
                         break
                     elif exc.errno == errno.EPIPE:
                         # Broken pipe - process died
                         self._broken.append(process_name)
-                        log.debug(lambda: f'[ASYNC] Broken pipe for {process_name}', 'processes')
+                        log.debug(
+                            lazymsg('async.write.failed process={p} reason=broken_pipe', p=process_name), 'processes'
+                        )
                         del self._write_queue[process_name]
                         break
                     else:
                         # Other error
                         self._broken.append(process_name)
                         log.debug(
-                            lambda e=exc, pn=process_name: f'[ASYNC] Error flushing queue for {pn}: {errstr(e)}',
-                            'process',
+                            lazymsg('async.queue.flush.error process={pn} error={e}', pn=process_name, e=errstr(exc)),
+                            'processes',
                         )
                         del self._write_queue[process_name]
                         break
@@ -813,7 +851,9 @@ class Processes:
             # NOTE: Do not convert to f-string! F-strings with backslash escapes in
             # expressions (like \n in .replace()) require Python 3.12+.
             # This project supports Python 3.8+, so we must use % formatting.
-            log.debug(lambda: 'responding to {} : {}'.format(service, string.replace('\n', '\\n')), 'processes')
+            log.debug(
+                lazymsg('api.answer service={s} response={r}', s=service, r=string.replace('\n', '\\n')), 'processes'
+            )
             self.write(service, string)
 
     async def _answer_async(self, service: str, string: str, force: bool = False) -> None:
@@ -824,7 +864,10 @@ class Processes:
         """
         process_ack = self._ack[service]
         if force or process_ack:
-            log.debug(lambda: 'responding to {} : {}'.format(service, string.replace('\n', '\\n')), 'processes')
+            log.debug(
+                lazymsg('api.answer.async service={s} response={r}', s=service, r=string.replace('\n', '\\n')),
+                'processes',
+            )
             self.write(service, string)  # Queue write
             await self.flush_write_queue_async()  # Flush immediately
 
@@ -839,7 +882,10 @@ class Processes:
         if self._async_mode:
             # This should not be called in async mode - caller should use answer_done_async()
             # But for compatibility during migration, we can detect this
-            log.warning(lambda: 'answer_done() called in async mode - should use answer_done_async()', 'processes')
+            log.warning(
+                lazymsg('api.answer.mode.mismatch service={s} mode=async expected=answer_done_async', s=service),
+                'processes',
+            )
 
         if self._ackjson[service]:
             self._answer(service, Answer.json_done, force=force)
@@ -852,15 +898,15 @@ class Processes:
         Queues the write and flushes immediately to ensure ACK delivered
         before callback returns (prevents race condition).
         """
-        log.debug(lambda: f'[ASYNC] answer_done_async() called for {service}', 'processes')
+        log.debug(lazymsg('api.answer.done.async service={s}', s=service), 'processes')
         if self._ackjson[service]:
             self._answer(service, Answer.json_done, force=force)
         else:
             self._answer(service, Answer.text_done, force=force)
         # Flush immediately to ensure ACK delivered before callback returns
-        log.debug(lambda: f'[ASYNC] Calling flush_write_queue_async() for {service}', 'processes')
+        log.debug(lazymsg('api.flush.async.start service={s}', s=service), 'processes')
         await self.flush_write_queue_async()
-        log.debug(lambda: f'[ASYNC] flush_write_queue_async() completed for {service}', 'processes')
+        log.debug(lazymsg('api.flush.async.complete service={s}', s=service), 'processes')
 
     def answer_error(self, service: str, message: str = '') -> None:
         """Send error response, optionally with descriptive message"""
@@ -905,7 +951,7 @@ class Processes:
     def set_ack(self, service: str, enabled: bool) -> None:
         """Set ACK state for a specific service/process"""
         self._ack[service] = enabled
-        log.debug(lambda: 'ACK {} for {}'.format('enabled' if enabled else 'disabled', service), 'processes')
+        log.debug(lazymsg('api.ack.set service={s} enabled={e}', s=service, e=enabled), 'processes')
 
     def get_ack(self, service: str) -> bool:
         """Get ACK state for a specific service/process"""

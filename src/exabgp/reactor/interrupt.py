@@ -11,7 +11,7 @@ import signal
 from typing import ClassVar, Dict
 from types import FrameType
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 
 class Signal:
@@ -55,46 +55,46 @@ class Signal:
         signal.signal(signal.SIGUSR2, self.sigusr2)
 
     def sigterm(self, signum: int, frame: FrameType | None) -> None:
-        log.critical(lambda: 'SIGTERM received', 'reactor')
+        log.critical(lazymsg('signal.received signal=SIGTERM'), 'reactor')
         if self.received:
-            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
+            log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
             return
-        log.critical(lambda: 'scheduling shutdown', 'reactor')
+        log.critical(lazymsg('signal.scheduling action=shutdown'), 'reactor')
         self.received = self.SHUTDOWN
         self.number = signum
 
     def sighup(self, signum: int, frame: FrameType | None) -> None:
-        log.critical(lambda: 'SIGHUP received', 'reactor')
+        log.critical(lazymsg('signal.received signal=SIGHUP'), 'reactor')
         if self.received:
-            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
+            log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
             return
-        log.critical(lambda: 'scheduling shutdown', 'reactor')
+        log.critical(lazymsg('signal.scheduling action=shutdown'), 'reactor')
         self.received = self.SHUTDOWN
         self.number = signum
 
     def sigalrm(self, signum: int, frame: FrameType | None) -> None:
-        log.critical(lambda: 'SIGALRM received', 'reactor')
+        log.critical(lazymsg('signal.received signal=SIGALRM'), 'reactor')
         if self.received:
-            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
+            log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
             return
-        log.critical(lambda: 'scheduling restart', 'reactor')
+        log.critical(lazymsg('signal.scheduling action=restart'), 'reactor')
         self.received = self.RESTART
         self.number = signum
 
     def sigusr1(self, signum: int, frame: FrameType | None) -> None:
-        log.critical(lambda: 'SIGUSR1 received', 'reactor')
+        log.critical(lazymsg('signal.received signal=SIGUSR1'), 'reactor')
         if self.received:
-            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
+            log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
             return
-        log.critical(lambda: 'scheduling reload of configuration', 'reactor')
+        log.critical(lazymsg('signal.scheduling action=reload_config'), 'reactor')
         self.received = self.RELOAD
         self.number = signum
 
     def sigusr2(self, signum: int, frame: FrameType | None) -> None:
-        log.critical(lambda: 'SIGUSR2 received', 'reactor')
+        log.critical(lazymsg('signal.received signal=SIGUSR2'), 'reactor')
         if self.received:
-            log.critical(lambda: 'ignoring - still handling previous signal', 'reactor')
+            log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
             return
-        log.critical(lambda: 'scheduling reload of configuration and processes', 'reactor')
+        log.critical(lazymsg('signal.scheduling action=full_reload'), 'reactor')
         self.received = self.FULL_RELOAD
         self.number = signum

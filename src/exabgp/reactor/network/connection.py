@@ -27,7 +27,7 @@ from exabgp.environment import getenv
 
 from exabgp.util.errstr import errstr
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 from exabgp.logger import lazyformat
 
 from exabgp.bgp.message import Message
@@ -93,15 +93,13 @@ class Connection:
     def close(self) -> None:
         if not self.io:
             return
-        message = f'{self.name()}, closing connection'
-        log.warning(lambda: message, source=self.session())
+        log.warning(lazymsg('connection.closing name={n}', n=self.name()), source=self.session())
         try:
             self.io.close()
-            message = f'connection to {self.peer} closed'
+            log.warning(lazymsg('connection.closed peer={p}', p=self.peer), source=self.session())
         except Exception as exc:
-            message = f'error while closing connection: {exc}'
+            log.warning(lazymsg('connection.close.error error={e}', e=exc), source=self.session())
         self.io = None
-        log.warning(lambda: message, source=self.session())
 
     def reading(self) -> bool:
         poller = self._rpoller.get(self.io, None)  # type: ignore[arg-type]
@@ -157,7 +155,9 @@ class Connection:
                     read = self.io.recv(number)
                     if not read:
                         self.close()
-                        log.warning(lambda: f'{self.name()} {self.peer} lost TCP session with peer', self.session())
+                        log.warning(
+                            lazymsg('tcp.session.lost name={n} peer={p}', n=self.name(), p=self.peer), self.session()
+                        )
                         raise LostConnection('the TCP connection was closed by the remote end')
                     data += read
 
@@ -170,22 +170,31 @@ class Connection:
                     yield b''
             except socket.timeout as exc:
                 self.close()
-                log.warning(lambda: f'{self.name()} {self.peer} peer is too slow', self.session())
+                log.warning(lazymsg('tcp.timeout name={n} peer={p}', n=self.name(), p=self.peer), self.session())
                 raise TooSlowError(f'Timeout while reading data from the network ({errstr(exc)})') from None
             except OSError as exc:
                 if exc.args[0] in error.block:
                     message = f'{self.name()} {self.peer} blocking io problem mid-way through reading a message {errstr(exc)}, trying to complete'
                     if message != reported:
                         reported = message
-                        current_message = message
-                        log.debug(lambda: current_message, self.session())
+                        log.debug(
+                            lazymsg(
+                                'tcp.blocking.read name={n} peer={p} error={e}',
+                                n=self.name(),
+                                p=self.peer,
+                                e=errstr(exc),
+                            ),
+                            self.session(),
+                        )
                     yield b''
                 elif exc.args[0] in error.fatal:
                     self.close()
                     raise LostConnection(f'issue reading on the socket: {errstr(exc)}') from None
                 # what error could it be !
                 else:
-                    log.critical(lambda: f'{self.name()} {self.peer} undefined error reading on socket', self.session())
+                    log.critical(
+                        lazymsg('tcp.read.error name={n} peer={p}', n=self.name(), p=self.peer), self.session()
+                    )
                     raise NetworkError(f'Problem while reading data from the network ({errstr(exc)})') from None
 
     async def _reader_async(self, number: int) -> bytes:
@@ -212,7 +221,9 @@ class Connection:
                 read = await loop.sock_recv(self.io, number)
                 if not read:
                     self.close()
-                    log.warning(lambda: f'{self.name()} {self.peer} lost TCP session with peer', self.session())
+                    log.warning(
+                        lazymsg('tcp.session.lost name={n} peer={p}', n=self.name(), p=self.peer), self.session()
+                    )
                     raise LostConnection('the TCP connection was closed by the remote end')
 
                 data += read
@@ -220,14 +231,16 @@ class Connection:
 
             except socket.timeout as exc:
                 self.close()
-                log.warning(lambda: f'{self.name()} {self.peer} peer is too slow', self.session())
+                log.warning(lazymsg('tcp.timeout name={n} peer={p}', n=self.name(), p=self.peer), self.session())
                 raise TooSlowError(f'Timeout while reading data from the network ({errstr(exc)})') from None
             except OSError as exc:
                 if exc.args[0] in error.fatal:
                     self.close()
                     raise LostConnection(f'issue reading on the socket: {errstr(exc)}') from None
                 else:
-                    log.critical(lambda: f'{self.name()} {self.peer} undefined error reading on socket', self.session())
+                    log.critical(
+                        lazymsg('tcp.read.error name={n} peer={p}', n=self.name(), p=self.peer), self.session()
+                    )
                     raise NetworkError(f'Problem while reading data from the network ({errstr(exc)})') from None
 
         log.debug(lazyformat('received TCP payload', data), self.session())
@@ -254,7 +267,9 @@ class Connection:
                     number = self.io.send(data)
                     if not number:
                         self.close()
-                        log.warning(lambda: f'{self.name()} {self.peer} lost TCP connection with peer', self.session())
+                        log.warning(
+                            lazymsg('tcp.connection.lost name={n} peer={p}', n=self.name(), p=self.peer), self.session()
+                        )
                         raise LostConnection('lost the TCP connection')
 
                     data = data[number:]
@@ -264,9 +279,10 @@ class Connection:
                     yield False
             except OSError as exc:
                 if exc.args[0] in error.block:
-                    current_exc = exc
                     log.debug(
-                        lambda: f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(current_exc)}, trying to complete',
+                        lazymsg(
+                            'tcp.blocking.write name={n} peer={p} error={e}', n=self.name(), p=self.peer, e=errstr(exc)
+                        ),
                         self.session(),
                     )
                     yield False
@@ -276,15 +292,18 @@ class Connection:
                     raise NetworkError('Broken TCP connection') from None
                 elif exc.args[0] in error.fatal:
                     self.close()
-                    current_exc = exc
                     log.critical(
-                        lambda: f'{self.name()} {self.peer} problem sending message ({errstr(current_exc)})',
+                        lazymsg(
+                            'tcp.send.error name={n} peer={p} error={e}', n=self.name(), p=self.peer, e=errstr(exc)
+                        ),
                         self.session(),
                     )
                     raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None
                 # what error could it be !
                 else:
-                    log.critical(lambda: f'{self.name()} {self.peer} undefined error writing on socket', self.session())
+                    log.critical(
+                        lazymsg('tcp.write.error name={n} peer={p}', n=self.name(), p=self.peer), self.session()
+                    )
                     yield False
 
     async def writer_async(self, data: bytes) -> None:
@@ -313,14 +332,13 @@ class Connection:
                 raise NetworkError('Broken TCP connection') from None
             elif exc.args[0] in error.fatal:
                 self.close()
-                current_exc = exc
                 log.critical(
-                    lambda: f'{self.name()} {self.peer} problem sending message ({errstr(current_exc)})',
+                    lazymsg('tcp.send.error name={n} peer={p} error={e}', n=self.name(), p=self.peer, e=errstr(exc)),
                     self.session(),
                 )
                 raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None
             else:
-                log.critical(lambda: f'{self.name()} {self.peer} undefined error writing on socket', self.session())
+                log.critical(lazymsg('tcp.write.error name={n} peer={p}', n=self.name(), p=self.peer), self.session())
                 raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None
 
     def reader(self) -> Iterator[tuple[int, int, bytes, bytes, NotifyError | None]]:

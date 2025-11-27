@@ -17,7 +17,7 @@ from .tcp import asynchronous
 from .tcp import ready
 # from .error import NetworkError
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 
 class Outgoing(Connection):
@@ -82,14 +82,17 @@ class Outgoing(Connection):
                 last = time.time()
 
             if notify:
-                log.debug(lambda: 'attempting connection to %s:%d' % (self.peer, self.port), self.session())
+                log.debug(
+                    lazymsg('connection.attempting peer={p} port={pt}', p=self.peer, pt=self.port), self.session()
+                )
 
             connect_issue = self._connect()
             if connect_issue:
                 if notify:
-                    log.debug(lambda: 'connection to %s:%d failed' % (self.peer, self.port), self.session())
-                    current_issue = connect_issue
-                    log.debug(lambda: str(current_issue), self.session())
+                    log.debug(
+                        lazymsg('connection.failed peer={p} port={pt}', p=self.peer, pt=self.port), self.session()
+                    )
+                    log.debug(lazymsg('connection.error error={e}', e=str(connect_issue)), self.session())
                 yield False
                 continue
 
@@ -137,8 +140,14 @@ class Outgoing(Connection):
             if notify:
                 last = time.time()
                 log.debug(
-                    lambda: '[ASYNC] connection attempt %d/%d to %s:%d (%.1fs elapsed)'
-                    % (attempts, max_attempts, self.peer, self.port, time.time() - start_time),
+                    lazymsg(
+                        'async.connection.attempt attempt={a} max={m} peer={p} port={pt} elapsed={e:.1f}s',
+                        a=attempts,
+                        m=max_attempts,
+                        p=self.peer,
+                        pt=self.port,
+                        e=time.time() - start_time,
+                    ),
                     self.session(),
                 )
 
@@ -147,10 +156,9 @@ class Outgoing(Connection):
             if setup_issue:
                 if notify:
                     log.debug(
-                        lambda: 'connection to %s:%d failed during setup' % (self.peer, self.port), self.session()
+                        lazymsg('connection.setup.failed peer={p} port={pt}', p=self.peer, pt=self.port), self.session()
                     )
-                    current_issue = setup_issue
-                    log.debug(lambda: str(current_issue), self.session())
+                    log.debug(lazymsg('connection.error error={e}', e=str(setup_issue)), self.session())
                 await asyncio.sleep(0.1)  # Brief delay before retry
                 continue
 
@@ -166,14 +174,17 @@ class Outgoing(Connection):
                 if not self.local:
                     self.local = self.io.getsockname()[0]  # type: ignore[union-attr]
 
-                log.debug(lambda: 'connection to %s:%d established' % (self.peer, self.port), self.session())
+                log.debug(
+                    lazymsg('connection.established peer={p} port={pt}', p=self.peer, pt=self.port), self.session()
+                )
                 return True
 
             except OSError as exc:
                 if notify:
-                    log.debug(lambda: 'connection to %s:%d failed' % (self.peer, self.port), self.session())
-                    current_exc = exc
-                    log.debug(lambda: str(current_exc), self.session())
+                    log.debug(
+                        lazymsg('connection.failed peer={p} port={pt}', p=self.peer, pt=self.port), self.session()
+                    )
+                    log.debug(lazymsg('connection.error error={e}', e=str(exc)), self.session())
 
                 # Close and cleanup for retry
                 if self.io:

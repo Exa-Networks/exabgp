@@ -23,7 +23,7 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Operational
 from exabgp.rib.change import Change
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 from exabgp.reactor.api.command import Command
 from exabgp.configuration.configuration import Configuration
 
@@ -41,12 +41,12 @@ class API(Command):
         self.configuration: Configuration = Configuration([])
 
     def log_message(self, message: str, level: str = 'INFO') -> None:
-        log.info(lambda: message, 'processes', level)
+        log.info(lazymsg('api.message content={message}', message=message), 'processes', level)
 
     def log_failure(self, message: str, level: str = 'ERR') -> None:
         error = str(self.configuration.error)
         report = '{}\nreason: {}'.format(message, error) if error else message
-        log.error(lambda: report, 'processes', level)
+        log.error(lazymsg('api.failure report={report}', report=report), 'processes', level)
 
     def process(self, reactor: 'Reactor', service: str, command: str) -> bool:
         use_json = False
@@ -74,7 +74,7 @@ class API(Command):
                 handler = cast(Callable, self.callback[api][registered])
                 return handler(self, reactor, service, command, use_json)  # type: ignore[no-any-return]
         reactor.processes.answer_error(service)
-        log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')
+        log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
         return False
 
     async def response_async(self, reactor: 'Reactor', service: str, command: str, use_json: bool) -> bool:
@@ -96,7 +96,7 @@ class API(Command):
                 return bool(result)
         # Error case
         reactor.processes.answer_error(service)
-        log.warning(lambda: 'command from process not understood : {}'.format(command), 'api')
+        log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
         # Flush error response
         await reactor.processes.flush_write_queue_async()
         return False

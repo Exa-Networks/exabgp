@@ -142,8 +142,8 @@ class Listener:
                     lazymsg('can not bind to {local_addr}:{port} ({exc})', local_addr=local_addr, port=port, exc=exc),
                     'network',
                 )
-            log.critical(lambda: 'unset exabgp.tcp.bind if you do not want listen for incoming connections', 'network')
-            log.critical(lambda: f'and check that no other daemon is already binding to port {port}', 'network')
+            log.critical(lazymsg('listener.bind.hint action=unset_tcp_bind'), 'network')
+            log.critical(lazymsg('listener.bind.hint action=check_port port={port}', port=port), 'network')
             return False
 
     def incoming(self) -> bool:

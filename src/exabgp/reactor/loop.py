@@ -87,7 +87,7 @@ class Reactor:
     def _termination(self, reason: str, exit_code: int) -> None:
         self.exit_code = exit_code
         self.signal.received = Signal.SHUTDOWN
-        log.critical(lambda: reason, 'reactor')
+        log.critical(lazymsg('reactor.termination reason={r}', r=reason), 'reactor')
 
     def _prevent_spin(self) -> bool:
         second: int = int(time.time())
@@ -196,7 +196,7 @@ class Reactor:
                         # Check if task raised an exception
                         peer._async_task.result()
                     except Exception as exc:
-                        log.error(lazymsg('peer {key} task failed: {exc}', key=key, exc=exc), 'reactor')
+                        log.error(lazymsg('peer.task.failed peer={key} error={exc}', key=key, exc=exc), 'reactor')
                     completed_peers.append(key)
 
         # Remove completed peers
@@ -349,37 +349,37 @@ class Reactor:
 
     def handle_connection(self, peer_name: str, connection: Any) -> Any:
         if not (peer := self._peers.get(peer_name, None)):
-            log.critical(lambda: f'could not find peer {peer_name} for incoming connection', 'reactor')
+            log.critical(lazymsg('peer.notfound peer={p} operation=incoming_connection', p=peer_name), 'reactor')
             return None
         return peer.handle_connection(connection)
 
     def neighbor(self, peer_name: str) -> 'Neighbor' | None:
         if not (peer := self._peers.get(peer_name, None)):
-            log.critical(lambda: f'could not find peer {peer_name} for neighbor lookup', 'reactor')
+            log.critical(lazymsg('peer.notfound peer={p} operation=neighbor_lookup', p=peer_name), 'reactor')
             return None
         return peer.neighbor
 
     def neighbor_name(self, peer_name: str) -> str:
         if not (peer := self._peers.get(peer_name, None)):
-            log.critical(lambda: f'could not find peer {peer_name} for name lookup', 'reactor')
+            log.critical(lazymsg('peer.notfound peer={p} operation=name_lookup', p=peer_name), 'reactor')
             return ''
         return peer.neighbor.name()
 
     def neighbor_ip(self, peer_name: str) -> str:
         if not (peer := self._peers.get(peer_name, None)):
-            log.critical(lambda: f'could not find peer {peer_name} for IP lookup', 'reactor')
+            log.critical(lazymsg('peer.notfound peer={p} operation=ip_lookup', p=peer_name), 'reactor')
             return ''
         return str(peer.neighbor['peer-address'])
 
     def neighbor_cli_data(self, peer_name: str) -> Dict[str, Any] | None:
         if not (peer := self._peers.get(peer_name, None)):
-            log.critical(lambda: f'could not find peer {peer_name} for CLI data', 'reactor')
+            log.critical(lazymsg('peer.notfound peer={p} operation=cli_data', p=peer_name), 'reactor')
             return None
         return peer.cli_data()
 
     def neighor_rib(self, peer_name: str, rib_name: str, advertised: bool = False) -> List[Any]:
         if not (peer := self._peers.get(peer_name, None)):
-            log.critical(lambda: f'could not find peer {peer_name} for RIB lookup', 'reactor')
+            log.critical(lazymsg('peer.notfound peer={p} operation=rib_lookup', p=peer_name), 'reactor')
             return []
         families: List[Any] | None = None
         if advertised:
@@ -389,19 +389,19 @@ class Reactor:
 
     def neighbor_rib_resend(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):
-            log.critical(lambda: f'could not find peer {peer_name} for RIB resend', 'reactor')
+            log.critical(lazymsg('peer.notfound peer={p} operation=rib_resend', p=peer_name), 'reactor')
             return
         peer.resend(peer.neighbor['capability']['route-refresh'])
 
     def neighbor_rib_out_withdraw(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):
-            log.critical(lambda: f'could not find peer {peer_name} for outgoing withdraw', 'reactor')
+            log.critical(lazymsg('peer.notfound peer={p} operation=outgoing_withdraw', p=peer_name), 'reactor')
             return
         peer.neighbor.rib.outgoing.withdraw()  # type: ignore[union-attr]
 
     def neighbor_rib_in_clear(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):
-            log.critical(lambda: f'could not find peer {peer_name} for incoming clear', 'reactor')
+            log.critical(lazymsg('peer.notfound peer={p} operation=incoming_clear', p=peer_name), 'reactor')
             return
         peer.neighbor.rib.incoming.clear()  # type: ignore[union-attr]
 
@@ -487,12 +487,8 @@ class Reactor:
             self.processes.start(self.configuration.processes)
 
         if not self.daemon.drop_privileges():
-            log.critical(
-                lambda: f"could not drop privileges to '{self.daemon.user}' refusing to run as root", 'reactor'
-            )
-            log.critical(
-                lambda: 'set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor'
-            )
+            log.critical(lazymsg('daemon.privileges.drop.failed user={u}', u=self.daemon.user), 'reactor')
+            log.critical(lazymsg('daemon.privileges.help env=exabgp.daemon.user'), 'reactor')
             return self.Exit.privileges
 
         if self.early_drop:
@@ -507,7 +503,7 @@ class Reactor:
         wait = getenv().tcp.delay
         if wait:
             sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
-            log.debug(lambda: f'waiting for {sleeptime} seconds before connecting', 'reactor')
+            log.debug(lazymsg('reactor.waiting seconds={s}', s=sleeptime), 'reactor')
             time.sleep(float(sleeptime))
 
         workers: dict = {}
@@ -695,12 +691,8 @@ class Reactor:
 
         # Drop privileges
         if not self.daemon.drop_privileges():
-            log.critical(
-                lambda: f"could not drop privileges to '{self.daemon.user}' refusing to run as root", 'reactor'
-            )
-            log.critical(
-                lambda: 'set the environmemnt value exabgp.daemon.user to change the unprivileged user', 'reactor'
-            )
+            log.critical(lazymsg('daemon.privileges.drop.failed user={u}', u=self.daemon.user), 'reactor')
+            log.critical(lazymsg('daemon.privileges.help env=exabgp.daemon.user'), 'reactor')
             return self.Exit.privileges
 
         if self.early_drop:
@@ -715,13 +707,13 @@ class Reactor:
         # Setup async readers for API processes (after all processes are started)
         loop = asyncio.get_running_loop()
         self.processes.setup_async_readers(loop)
-        log.debug(lambda: '[ASYNC] API process readers configured', 'reactor')
+        log.debug(lazymsg('async.api.readers.configured'), 'reactor')
 
         # Wait for initial delay if configured
         wait = getenv().tcp.delay
         if wait:
             sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
-            log.debug(lambda: f'waiting for {sleeptime} seconds before connecting', 'reactor')
+            log.debug(lazymsg('reactor.waiting seconds={s}', s=sleeptime), 'reactor')
             await asyncio.sleep(float(sleeptime))
 
         # Run the async main event loop
@@ -737,7 +729,7 @@ class Reactor:
 
     def shutdown(self) -> None:
         """Terminate all the current BGP connections"""
-        log.critical(lambda: 'performing shutdown', 'reactor')
+        log.critical(lazymsg('reactor.shutdown'), 'reactor')
         if self.listener:
             self.listener.stop()
             self.listener = None  # type: ignore[assignment]
@@ -750,38 +742,34 @@ class Reactor:
 
     def reload(self) -> bool:
         """Reload the configuration and send to the peer the route which changed"""
-        log.info(lambda: f'performing reload of exabgp {version}', 'configuration')
+        log.info(lazymsg('config.reload version={v}', v=version), 'configuration')
 
         reloaded = self.configuration.reload()
 
         if not reloaded:
-            log.error(lambda: 'could not load/reload configuration', 'configuration')
-            log.error(lambda: str(self.configuration.error), 'configuration')
+            log.error(lazymsg('config.reload.failed'), 'configuration')
+            log.error(lazymsg('config.reload.error error={e}', e=str(self.configuration.error)), 'configuration')
             return False
 
         for key, peer in self._peers.items():
             if key not in self.configuration.neighbors:
-                log.debug(lazymsg('removing peer: {name}', name=peer.neighbor.name()), 'reactor')
+                log.debug(lazymsg('peer.removing name={name}', name=peer.neighbor.name()), 'reactor')
                 peer.remove()
 
         for key, neighbor in self.configuration.neighbors.items():
             # new peer
             if key not in self._peers:
-                log.debug(lazymsg('new peer: {name}', name=neighbor.name()), 'reactor')
+                log.debug(lazymsg('peer.adding name={name}', name=neighbor.name()), 'reactor')
                 peer = Peer(neighbor, self)
                 self._peers[key] = peer
             # modified peer
             elif self._peers[key].neighbor != neighbor:
-                log.debug(
-                    lazymsg('peer definition change, establishing a new connection for {key}', key=key), 'reactor'
-                )
+                log.debug(lazymsg('peer.modified key={key} action=reestablish', key=key), 'reactor')
                 self._peers[key].reestablish(neighbor)
             # same peer but perhaps not the routes
             else:
                 # finding what route changed and sending the delta is not obvious
-                log.debug(
-                    lazymsg('peer definition identical, updating peer routes if required for {key}', key=key), 'reactor'
-                )
+                log.debug(lazymsg('peer.unchanged key={key} action=reconfigure', key=key), 'reactor')
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
                 if ip.afi == neighbor['peer-address'].afi:
@@ -793,26 +781,26 @@ class Reactor:
                         neighbor['md5-base64'],
                         None,
                     )
-        log.info(lambda: 'loaded new configuration successfully', 'reactor')
+        log.info(lazymsg('config.loaded'), 'reactor')
 
         return True
 
     def restart(self) -> None:
         """Kill the BGP session and restart it"""
-        log.info(lambda: f'performing restart of exabgp {version}', 'reactor')
+        log.info(lazymsg('reactor.restart version={v}', v=version), 'reactor')
 
         reloaded = self.configuration.reload()
 
         if reloaded is not True:
             # Configuration reload failed - do not proceed with stale/invalid config
             error_msg = reloaded if isinstance(reloaded, str) else 'unknown error'
-            log.warning(lambda: f'configuration reload failed, keeping previous config: {error_msg}', 'reactor')
+            log.warning(lazymsg('config.reload.failed error={e}', e=error_msg), 'reactor')
             return
 
         for key in self._peers.keys():
             if key not in self.configuration.neighbors.keys():
                 peer = self._peers[key]
-                log.debug(lazymsg('removing peer {name}', name=peer.neighbor.name()), 'reactor')
+                log.debug(lazymsg('peer.removing name={name}', name=peer.neighbor.name()), 'reactor')
                 self._peers[key].remove()
             else:
                 self._peers[key].reestablish()

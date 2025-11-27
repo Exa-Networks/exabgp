@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from exabgp.rib.change import Change
     from exabgp.bgp.message.operational import OperationalFamily
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 from exabgp.configuration.core import Error
 from exabgp.configuration.core import Scope
@@ -548,13 +548,20 @@ class Configuration(_Configuration):
                 f'line {self.parser.number}: {line_str}\n'
                 f'\n{self.error}'
             )
-            log.debug(lambda: error_msg, 'configuration')
+            log.debug(lazymsg('configuration.parse.error message={error_msg}', error_msg=error_msg), 'configuration')
             return False
         return True
 
     def _enter(self, name: str) -> bool | str:
         location = self.parser.tokeniser()
-        log.debug(lambda: f'> {location:<16} | {self.parser.params()}', 'configuration')
+        log.debug(
+            lazymsg(
+                'configuration.enter location={location} params={params}',
+                location=location,
+                params=self.parser.params(),
+            ),
+            'configuration',
+        )
 
         if location not in self._structure[name]['sections']:
             return self.error.set(f'section {location} is invalid in {name}, {self.scope.location()}')
@@ -581,12 +588,20 @@ class Configuration(_Configuration):
             return self.error.set('closing too many parenthesis')
         self.scope.to_context()
 
-        log.debug(lambda: f'< {left:<16} | {self.parser.params()}', 'configuration')
+        log.debug(
+            lazymsg('configuration.leave section={left} params={params}', left=left, params=self.parser.params()),
+            'configuration',
+        )
         return True
 
     def _run(self, name: str) -> bool:
         command = self.parser.tokeniser()
-        log.debug(lambda: f'. {command:<16} | {self.parser.params()}', 'configuration')
+        log.debug(
+            lazymsg(
+                'configuration.run command={command} params={params}', command=command, params=self.parser.params()
+            ),
+            'configuration',
+        )
 
         if not self.run(name, command):
             return False
