@@ -20,7 +20,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-from exabgp.protocol.ip import IP, _NoNextHop
+from exabgp.protocol.ip import IP, NoNextHop
 from exabgp.logger import log, lazymsg
 
 # BGP-LS Prefix TLV type codes (RFC 7752)
@@ -59,7 +59,7 @@ class PREFIXv6(BGPLS):
         packed: bytes | None = None,
         ospf_type: OspfRoute | None = None,
         prefix: IpReach | None = None,
-        nexthop: IP | _NoNextHop | None = None,
+        nexthop: IP = NoNextHop,
         route_d: RouteDistinguisher | None = None,
         action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
@@ -70,7 +70,7 @@ class PREFIXv6(BGPLS):
         self.proto_id: int = proto_id
         self.local_node: List[NodeDescriptor] = local_node
         self.prefix: IpReach | None = prefix
-        self.nexthop: IP | _NoNextHop | None = nexthop
+        self.nexthop = nexthop
         self._pack: bytes | None = packed
         self.route_d: RouteDistinguisher | None = route_d
 

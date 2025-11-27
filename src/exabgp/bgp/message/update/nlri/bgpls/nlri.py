@@ -130,7 +130,7 @@ class BGPLS(NLRI):
         return klass
 
     @classmethod
-    def unpack_nlri(  # type: ignore[override]
+    def unpack_nlri(
         cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: PathInfo | None, negotiated
     ) -> Tuple[T, bytes]:
         code, length = unpack('!HH', bgp[:4])

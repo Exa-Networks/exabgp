@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
-from exabgp.protocol.ip import _NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
@@ -46,7 +45,7 @@ class INET(NLRI):
         NLRI.__init__(self, afi, safi, action)
         self.path_info = PathInfo.NOPATH
         self.cidr = CIDR.NOCIDR
-        self.nexthop: IP | _NoNextHop = NoNextHop
+        self.nexthop = NoNextHop
         self.labels: Labels | None = None
         self.rd: RouteDistinguisher | None = None
 
@@ -64,7 +63,7 @@ class INET(NLRI):
         return hash(addpath + self._pack_nlri_simple())
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is None and action == Action.ANNOUNCE:
+        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
             return 'inet nlri next-hop missing'
         return ''
 
@@ -113,7 +112,7 @@ class INET(NLRI):
     # 	return nlri,data
 
     @classmethod
-    def unpack_nlri(  # type: ignore[override]
+    def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> Tuple[INET, bytes]:
         nlri = cls(afi, safi, action)

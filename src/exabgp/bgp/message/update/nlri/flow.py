@@ -625,7 +625,7 @@ class Flow(NLRI):
         self.rd = RouteDistinguisher.NORD
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is None and action == Action.ANNOUNCE:
+        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
             return 'flow nlri next-hop missing'
         return ''
 
@@ -730,9 +730,9 @@ class Flow(NLRI):
         return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
 
     @classmethod
-    def unpack_nlri(  # type: ignore[override]
+    def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> Tuple[Optional[Flow], bytes]:
+    ) -> Tuple[Flow | NLRI, bytes]:
         length, bgp = bgp[0], bgp[1:]
 
         if length & FLOW_LENGTH_EXTENDED_MASK == FLOW_LENGTH_EXTENDED_VALUE:  # bigger than 240
@@ -790,8 +790,8 @@ class Flow(NLRI):
 
             return nlri, bgp + over
         except Notify:
-            return None, over
+            return NLRI.invalid(), over
         except ValueError:
-            return None, over
+            return NLRI.invalid(), over
         except IndexError:
-            return None, over
+            return NLRI.invalid(), over

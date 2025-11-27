@@ -50,7 +50,7 @@ from exabgp.logger import log, lazymsg
 from exabgp.protocol.family import (
     AFI,
 )
-from exabgp.protocol.ip import IP, IPv4, IPv6, NoNextHop, _NoNextHop
+from exabgp.protocol.ip import IP, IPv4, IPv6, NoNextHop
 from exabgp.rib.change import Change
 
 SINGLE_SLASH = 1  # Format with single slash (IP/prefix)
@@ -345,7 +345,7 @@ def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 
-def redirect(tokeniser: 'Tokeniser') -> Tuple[Union[IP, _NoNextHop], ExtendedCommunities]:
+def redirect(tokeniser: 'Tokeniser') -> Tuple[IP, ExtendedCommunities]:
     data: str = tokeniser()
     count: int = data.count(':')
 

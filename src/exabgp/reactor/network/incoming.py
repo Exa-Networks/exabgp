@@ -14,6 +14,7 @@ from .error import NotConnected
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.logger import log, lazymsg
 
 from exabgp.protocol.family import AFI
@@ -38,9 +39,9 @@ class Incoming(Connection):
 
     def notification(self, code: int, subcode: int, message: bytes) -> Iterator[bool]:
         try:
-            # Notify.message() doesn't use negotiated, but it's required by the signature
+            # Notify.pack_message() doesn't use negotiated, but it's required by the signature
             # Create a minimal Negotiated object for this early connection stage
-            negotiated = Negotiated(None, Direction.IN)
+            negotiated = Negotiated(Neighbor.empty(), Direction.IN)
             notification = Notify(code, subcode, message.decode('ascii')).pack_message(negotiated)
             for boolean in self.writer(notification):
                 yield False

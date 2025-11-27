@@ -259,13 +259,11 @@ class TestRTCFeedback:
         assert feedback == ''
 
     def test_feedback_without_nexthop_announce(self) -> None:
-        """Test feedback when nexthop is missing for ANNOUNCE"""
+        """Test feedback when nexthop is missing (NoNextHop) for ANNOUNCE"""
         rt = RouteTarget(64512, 100)
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        # nexthop defaults to NoNextHop
 
-        # nexthop defaults to NoNextHop, which is None-like
-        # Set nexthop to None explicitly
-        nlri.nexthop = None
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert 'rtc nlri next-hop missing' in feedback
 
@@ -273,7 +271,7 @@ class TestRTCFeedback:
         """Test feedback for WITHDRAW action (doesn't require nexthop)"""
         rt = RouteTarget(64512, 100)
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
-        nlri.nexthop = None
+        # nexthop defaults to NoNextHop
 
         # WITHDRAW doesn't require nexthop validation
         feedback = nlri.feedback(Action.WITHDRAW)
@@ -283,7 +281,7 @@ class TestRTCFeedback:
     def test_feedback_wildcard(self) -> None:
         """Test feedback for wildcard RTC"""
         nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None)
-        nlri.nexthop = None
+        # nexthop defaults to NoNextHop
 
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert 'rtc nlri next-hop missing' in feedback

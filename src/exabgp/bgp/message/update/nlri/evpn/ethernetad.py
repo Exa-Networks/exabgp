@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-from exabgp.protocol.ip import IP, _NoNextHop
+from exabgp.protocol.ip import IP, NoNextHop
 
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
@@ -46,7 +46,7 @@ class EthernetAD(EVPN):
         etag: EthernetTag,
         label: Labels | None,
         packed: bytes | None = None,
-        nexthop: IP | _NoNextHop | None = None,
+        nexthop: IP = NoNextHop,
         action: Action | None = None,
         addpath: PathInfo | None = None,
     ) -> None:

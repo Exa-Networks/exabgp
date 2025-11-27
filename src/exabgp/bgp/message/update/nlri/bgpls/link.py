@@ -17,7 +17,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-from exabgp.protocol.ip import IP, _NoNextHop
+from exabgp.protocol.ip import IP, NoNextHop
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
@@ -88,7 +88,7 @@ class LINK(BGPLS):
         iface_addrs: List[IfaceAddr] | None = None,
         topology_ids: List[MTID] | None = None,
         link_ids: List[LinkIdentifier] | None = None,
-        nexthop: IP | _NoNextHop | None = None,
+        nexthop: IP = NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,
@@ -103,7 +103,7 @@ class LINK(BGPLS):
         self.iface_addrs: List[IfaceAddr] = iface_addrs if iface_addrs else []
         self.link_ids: List[LinkIdentifier] = link_ids if link_ids else []
         self.topology_ids: List[MTID] = topology_ids if topology_ids else []
-        self.nexthop: IP | _NoNextHop | None = nexthop
+        self.nexthop = nexthop
         self.route_d: RouteDistinguisher | None = route_d
         self._packed: bytes | None = packed  # type: ignore[assignment]
 

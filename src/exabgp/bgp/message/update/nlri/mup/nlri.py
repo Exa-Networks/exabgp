@@ -91,7 +91,7 @@ class MUP(NLRI):
         return klass
 
     @classmethod
-    def unpack_nlri(  # type: ignore[override]
+    def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[MUP, bytes]:
         arch = bgp[0]

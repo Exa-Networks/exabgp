@@ -32,7 +32,7 @@ class IPVPN(Label):
         self.rd = RouteDistinguisher.NORD
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is None and action == Action.ANNOUNCE:
+        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
             return 'ip-vpn nlri next-hop missing'
         return ''
 

@@ -77,7 +77,7 @@ class NextHopSelf(NextHop):
         return self._attribute(negotiated.nexthopself(self.afi).ton())
 
     def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
-        return negotiated.nexthopself(afi).ton()  # type: ignore[no-any-return]
+        return negotiated.nexthopself(afi).ton()
 
     def __eq__(self, other: object) -> bool:
         raise RuntimeError('do not use __eq__ with NextHop')

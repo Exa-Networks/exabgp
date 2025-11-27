@@ -37,7 +37,7 @@ class RTC(NLRI):
         self.nexthop = NoNextHop
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is None and action == Action.ANNOUNCE:
+        if self.nexthop is NoNextHop and action == Action.ANNOUNCE:
             return 'rtc nlri next-hop missing'
         return ''
 
@@ -83,7 +83,7 @@ class RTC(NLRI):
         return Family.index(self) + pack('!B', 0)
 
     @classmethod
-    def unpack_nlri(  # type: ignore[override]
+    def unpack_nlri(
         cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> Tuple[T, bytes]:
         length = bgp[0]

@@ -155,6 +155,23 @@ class Neighbor(dict):
         self.uid = f'{self._GLOBAL["uid"]}'
         self._GLOBAL['uid'] += 1
 
+    # Cached empty neighbor instance for decode-only contexts
+    _empty: ClassVar['Neighbor | None'] = None
+
+    @classmethod
+    def empty(cls) -> 'Neighbor':
+        """Get a minimal Neighbor for contexts that don't need full neighbor.
+
+        Used for:
+        - Decoding messages (transcoder)
+        - Early connection rejection (incoming.py)
+
+        Does NOT support ip_self() - will fail if called.
+        """
+        if cls._empty is None:
+            cls._empty = cls()
+        return cls._empty
+
     def infer(self) -> None:
         if self['md5-ip'] is None:
             self['md5-ip'] = self['local-address']
@@ -322,10 +339,10 @@ class Neighbor(dict):
 
     def remove_self(self, changes: Change) -> Change:
         change = deepcopy(changes)
-        if not change.nlri.nexthop.SELF:  # type: ignore[attr-defined]
+        if not change.nlri.nexthop.SELF:
             return change
         neighbor_self = self.ip_self(change.nlri.afi)
-        change.nlri.nexthop = neighbor_self  # type: ignore[attr-defined]
+        change.nlri.nexthop = neighbor_self
         if Attribute.CODE.NEXT_HOP in change.attributes:
             change.attributes[Attribute.CODE.NEXT_HOP] = NextHop(str(neighbor_self), neighbor_self.pack_ip())
         return change

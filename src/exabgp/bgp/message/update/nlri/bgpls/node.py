@@ -19,7 +19,7 @@ from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-from exabgp.protocol.ip import IP, _NoNextHop
+from exabgp.protocol.ip import IP, NoNextHop
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -56,7 +56,7 @@ class NODE(BGPLS):
         proto_id: int,
         node_ids: List[NodeDescriptor],
         packed: bytes | None = None,
-        nexthop: IP | _NoNextHop | None = None,
+        nexthop: IP = NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,
@@ -65,7 +65,7 @@ class NODE(BGPLS):
         self.domain: int = domain
         self.proto_id: int = proto_id
         self.node_ids: List[NodeDescriptor] = node_ids
-        self.nexthop: IP | _NoNextHop | None = nexthop
+        self.nexthop = nexthop
         self._pack: bytes | None = packed
         self.route_d: RouteDistinguisher | None = route_d
 

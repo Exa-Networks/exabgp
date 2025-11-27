@@ -27,6 +27,7 @@ from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
@@ -290,11 +291,9 @@ def _make_nlri(neighbor: Neighbor, routes: str) -> List[NLRI]:
         while announced:
             _announced = announced  # type: bytes
             log.debug(lazymsg('parsing NLRI {announced}', announced=_announced), 'parser')
-            # Note: NLRI.unpack_nlri base class returns NLRI, but subclasses return Tuple[NLRI, bytes]
-            unpack_result = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
-            nlri_parsed: NLRI = unpack_result[0]  # type: ignore[index]
-            announced = unpack_result[1]  # type: ignore[index]
-            nlris.append(nlri_parsed)
+            nlri_parsed, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
+            if nlri_parsed is not NLRI.invalid():
+                nlris.append(nlri_parsed)
     except (Notify, ValueError, IndexError, KeyError, struct.error) as exc:
         log.error(lazymsg('nlri.parse.failed afi={a} safi={s}', a=afi, s=safi), 'parser')
         from exabgp.debug import string_exception
@@ -509,11 +508,7 @@ def _get_dummy_negotiated() -> Negotiated:
     """Get or create a dummy Negotiated instance for decoding notifications without neighbor context."""
     global _DUMMY_NEGOTIATED
     if _DUMMY_NEGOTIATED is None:
-        # Create minimal fake neighbor for Negotiated
-        fake_neighbor = {
-            'capability': {'aigp': False},
-        }
-        _DUMMY_NEGOTIATED = Negotiated(fake_neighbor, Direction.IN)
+        _DUMMY_NEGOTIATED = Negotiated(Neighbor.empty(), Direction.IN)
     return _DUMMY_NEGOTIATED
 
 

@@ -113,7 +113,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes  # type: ignore[no-any-return]
+        return changes
 
     def api_announce_v4(self, command: str) -> List[Change]:
         action, line = command.split(' ', 1)
@@ -128,7 +128,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes  # type: ignore[no-any-return]
+        return changes
 
     def api_announce_v6(self, command: str) -> List[Change]:
         action, line = command.split(' ', 1)
@@ -143,7 +143,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes  # type: ignore[no-any-return]
+        return changes
 
     def api_flow(self, command: str) -> List[Change]:
         action, flow, line = command.split(' ', 2)
@@ -157,7 +157,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes  # type: ignore[no-any-return]
+        return changes
 
     def api_vpls(self, command: str) -> List[Change]:
         action, line = command.split(' ', 1)
@@ -168,7 +168,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes  # type: ignore[no-any-return]
+        return changes
 
     def api_attributes(self, command: str, peers: List[str]) -> List[Change]:
         action, line = command.split(' ', 1)
@@ -182,7 +182,7 @@ class API(Command):
 
         self.configuration.scope.to_context()
         changes = self.configuration.scope.pop_routes()
-        return changes  # type: ignore[no-any-return]
+        return changes
 
     def api_refresh(self, command: str) -> List[RouteRefresh] | None:
         tokens = formated(command).split(' ')[2:]

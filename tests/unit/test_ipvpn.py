@@ -385,7 +385,7 @@ class TestIPVPNFeedback:
         assert feedback == ''
 
     def test_feedback_without_nexthop(self) -> None:
-        """Test feedback when nexthop is missing"""
+        """Test feedback when nexthop is missing (NoNextHop)"""
         nlri = IPVPN.new(
             AFI.ipv4,
             SAFI.mpls_vpn,
@@ -394,7 +394,7 @@ class TestIPVPNFeedback:
             Labels([42], True),
             RouteDistinguisher.fromElements('10.0.0.1', 100),
         )
-        nlri.nexthop = None
+        # nexthop defaults to NoNextHop when not provided
 
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert 'ip-vpn nlri next-hop missing' in feedback
@@ -409,7 +409,7 @@ class TestIPVPNFeedback:
             Labels([42], True),
             RouteDistinguisher.fromElements('10.0.0.1', 100),
         )
-        nlri.nexthop = None
+        # nexthop defaults to NoNextHop when not provided
 
         feedback = nlri.feedback(Action.WITHDRAW)
         # WITHDRAW validation should pass even without nexthop
