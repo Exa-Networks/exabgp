@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from exabgp.configuration.core import Section
-from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
 
@@ -101,8 +101,8 @@ class ParseFlowMatch(Section):
 
     name: str = 'flow/match'
 
-    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
-        Section.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
+        Section.__init__(self, parser, scope, error)
 
     def clear(self) -> None:
         pass

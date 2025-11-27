@@ -122,14 +122,14 @@ class ParseVPLS(Section):
 
     name = 'l2vpn/vpls'
 
-    def __init__(self, tokeniser, scope, error):
-        Section.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser, scope, error):
+        Section.__init__(self, parser, scope, error)
 
     def clear(self):
         pass
 
     def pre(self):
-        self.scope.append_route(vpls(self.tokeniser.iterate))
+        self.scope.append_route(vpls(self.parser.tokeniser))
         return True
 
     def post(self):

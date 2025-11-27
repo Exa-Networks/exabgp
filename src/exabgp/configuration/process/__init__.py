@@ -41,8 +41,8 @@ class ParseProcess(Section):
 
     name = 'process'
 
-    def __init__(self, tokeniser, scope, error):
-        Section.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser, scope, error):
+        Section.__init__(self, parser, scope, error)
         self.processes = {}
         self._processes = []
         self.named = ''
@@ -52,7 +52,7 @@ class ParseProcess(Section):
         self._processes = []
 
     def pre(self):
-        self.named = self.tokeniser.line[1]
+        self.named = self.parser.line[1]
         if self.named in self._processes:
             return self.error.set('a process section called "{}" already exists'.format(self.named))
         self._processes.append(self.named)

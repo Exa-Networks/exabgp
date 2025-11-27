@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from exabgp.configuration.core.tokeniser import Tokeniser
+    from exabgp.configuration.core.parser import Tokeniser
 
 from struct import pack
 

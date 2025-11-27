@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from exabgp.configuration.core.tokeniser import Iterator
+    from exabgp.configuration.core.parser import Tokeniser
 
 from exabgp.bgp.message.open.capability.graceful import Graceful
 
@@ -19,7 +19,7 @@ from exabgp.configuration.parser import boolean
 from exabgp.configuration.parser import string
 
 
-def addpath(tokeniser: 'Iterator') -> int:
+def addpath(tokeniser: 'Tokeniser') -> int:
     if not tokeniser.tokens:
         raise ValueError('add-path requires a value\n  Valid options: send, receive, send/receive, disable')
 
@@ -42,7 +42,7 @@ def addpath(tokeniser: 'Iterator') -> int:
     raise ValueError(f"'{ap}' is not a valid add-path option\n  Valid options: send, receive, send/receive, disable")
 
 
-def gracefulrestart(tokeniser: 'Iterator', default: int | bool) -> int | bool:
+def gracefulrestart(tokeniser: 'Tokeniser', default: int | bool) -> int | bool:
     if len(tokeniser.tokens) == 1:
         return default
 
@@ -122,8 +122,8 @@ class ParseCapability(Section):
 
     name = 'capability'
 
-    def __init__(self, tokeniser, scope, error) -> None:
-        Section.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser, scope, error) -> None:
+        Section.__init__(self, parser, scope, error)
 
     def pre(self) -> bool:
         return True

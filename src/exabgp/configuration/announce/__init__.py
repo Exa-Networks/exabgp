@@ -15,7 +15,7 @@ from exabgp.rib.change import Change
 
 from exabgp.protocol.family import AFI
 from exabgp.configuration.core import Section
-from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
 
@@ -104,8 +104,8 @@ class ParseAnnounce(Section):
 class SectionAnnounce(ParseAnnounce):
     name = 'announce'
 
-    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
-        ParseAnnounce.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
+        ParseAnnounce.__init__(self, parser, scope, error)
 
     def clear(self) -> bool:
         return True

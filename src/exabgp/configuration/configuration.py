@@ -22,7 +22,7 @@ from exabgp.logger import log
 
 from exabgp.configuration.core import Error
 from exabgp.configuration.core import Scope
-from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Section
 
 from exabgp.configuration.process import ParseProcess
@@ -146,9 +146,9 @@ class Configuration(_Configuration):
         self.error: Error = Error()
         self.scope: Scope = Scope()
 
-        self.tokeniser: Tokeniser = Tokeniser(self.scope, self.error)
+        self.parser: Parser = Parser(self.scope, self.error)
 
-        params = (self.tokeniser, self.scope, self.error)
+        params = (self.parser, self.scope, self.error)
         self.section = Section(*params)
         self.process = ParseProcess(*params)
         self.template = ParseTemplate(*params)
@@ -366,7 +366,7 @@ class Configuration(_Configuration):
     # clear the parser data (ie: free memory)
     def _cleanup(self) -> None:
         self.error.clear()
-        self.tokeniser.clear()
+        self.parser.clear()
         self.scope.clear()
 
         self.process.clear()
@@ -423,13 +423,13 @@ class Configuration(_Configuration):
             if getenv().debug.configuration:
                 raise
             return self.error.set(
-                f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}',
+                f'problem parsing configuration file line {self.parser.index_line}\nerror message: {exc}',
             )
         except Exception as exc:
             if getenv().debug.configuration:
                 raise
             return self.error.set(
-                f'problem parsing configuration file line {self.tokeniser.index_line}\nerror message: {exc}',
+                f'problem parsing configuration file line {self.parser.index_line}\nerror message: {exc}',
             )
 
     def _reload(self) -> bool | str:
@@ -441,14 +441,14 @@ class Configuration(_Configuration):
         self._clear()
 
         if self._text:
-            if not self.tokeniser.set_text(fname):
+            if not self.parser.set_text(fname):
                 return False
         else:
             # resolve any potential symlink, and check it is a file
             target = os.path.realpath(fname)
             if not os.path.isfile(target):
                 return False
-            if not self.tokeniser.set_file(target):
+            if not self.parser.set_file(target):
                 return False
 
         # XXX: Should it be in neighbor ?
@@ -456,9 +456,9 @@ class Configuration(_Configuration):
 
         if self.parse_section('root') is not True:
             self._rollback_reload()
-            line_str = ' '.join(self.tokeniser.line)
+            line_str = ' '.join(self.parser.line)
             return self.error.set(
-                f'\nsyntax error in section {self.scope.location()}\nline {self.tokeniser.number}: {line_str}\n\n{self.error!s}',
+                f'\nsyntax error in section {self.scope.location()}\nline {self.parser.number}: {line_str}\n\n{self.error!s}',
             )
 
         self._commit_reload()
@@ -530,16 +530,16 @@ class Configuration(_Configuration):
     def partial(self, section: str, text: str, action: str = 'announce') -> bool:
         self._cleanup()  # this perform a big cleanup (may be able to be smarter)
         self._clear()
-        self.tokeniser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
-        self.tokeniser.set_action(action)
+        self.parser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
+        self.parser.set_action(action)
 
         if self.parse_section(section) is not True:
             self._rollback_reload()
-            line_str = ' '.join(self.tokeniser.line)
+            line_str = ' '.join(self.parser.line)
             error_msg = (
                 f'\n'
                 f'syntax error in api command {self.scope.location()}\n'
-                f'line {self.tokeniser.number}: {line_str}\n'
+                f'line {self.parser.number}: {line_str}\n'
                 f'\n{self.error}'
             )
             log.debug(lambda: error_msg, 'configuration')
@@ -547,8 +547,8 @@ class Configuration(_Configuration):
         return True
 
     def _enter(self, name: str) -> bool | str:
-        location = self.tokeniser.iterate()
-        log.debug(lambda: f'> {location:<16} | {self.tokeniser.params()}', 'configuration')
+        location = self.parser.tokeniser()
+        log.debug(lambda: f'> {location:<16} | {self.parser.params()}', 'configuration')
 
         if location not in self._structure[name]['sections']:
             return self.error.set(f'section {location} is invalid in {name}, {self.scope.location()}')
@@ -575,12 +575,12 @@ class Configuration(_Configuration):
             return self.error.set('closing too many parenthesis')
         self.scope.to_context()
 
-        log.debug(lambda: f'< {left:<16} | {self.tokeniser.params()}', 'configuration')
+        log.debug(lambda: f'< {left:<16} | {self.parser.params()}', 'configuration')
         return True
 
     def _run(self, name: str) -> bool:
-        command = self.tokeniser.iterate()
-        log.debug(lambda: f'. {command:<16} | {self.tokeniser.params()}', 'configuration')
+        command = self.parser.tokeniser()
+        log.debug(lambda: f'. {command:<16} | {self.parser.params()}', 'configuration')
 
         if not self.run(name, command):
             return False
@@ -588,25 +588,25 @@ class Configuration(_Configuration):
 
     def dispatch(self, name: str) -> bool | str:
         while True:
-            self.tokeniser()
+            self.parser()
 
-            if self.tokeniser.end == ';':
+            if self.parser.end == ';':
                 if self._run(name):
                     continue
                 return False
 
-            if self.tokeniser.end == '{':
+            if self.parser.end == '{':
                 if self._enter(name):
                     continue
                 return False
 
-            if self.tokeniser.end == '}':
+            if self.parser.end == '}':
                 return True
 
-            if not self.tokeniser.end:  # finished
+            if not self.parser.end:  # finished
                 return True
 
-            return self.error.set('invalid syntax line %d' % self.tokeniser.index_line)
+            return self.error.set('invalid syntax line %d' % self.parser.index_line)
         return False
 
     def parse_section(self, name: str) -> bool | str:

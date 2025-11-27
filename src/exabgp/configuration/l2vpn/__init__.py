@@ -21,8 +21,8 @@ class ParseL2VPN(ParseVPLS):
 
     name = 'L2VPN'
 
-    def __init__(self, tokeniser, scope, error):
-        ParseVPLS.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser, scope, error):
+        ParseVPLS.__init__(self, parser, scope, error)
 
     def clear(self):
         return True

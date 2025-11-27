@@ -23,22 +23,22 @@ pytestmark = pytest.mark.fuzz
 @pytest.mark.fuzz
 @given(text=st.text(alphabet=st.characters(blacklist_categories=('Cs',)), max_size=500))
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
-def test_tokeniser_robustness(text: str) -> None:
-    """Test configuration tokeniser doesn't crash on random text."""
-    from exabgp.configuration.core.tokeniser import Tokeniser
+def test_parser_robustness(text: str) -> None:
+    """Test configuration parser doesn't crash on random text."""
+    from exabgp.configuration.core.parser import Parser
     from exabgp.configuration.core.error import Error
     from exabgp.configuration.core.scope import Scope
 
     scope = Scope()
     error = Error()
-    tokeniser = Tokeniser(scope, error)
+    parser = Parser(scope, error)
 
     try:
-        tokeniser.set_text(text)
+        parser.set_text(text)
 
         # Try to consume some tokens without crashing
         for _ in range(10):
-            line = tokeniser()
+            line = parser()
             if not line:
                 break
     except Exception as e:
@@ -106,7 +106,7 @@ def test_asn_number_range(asn: int) -> None:
 @settings(deadline=None, max_examples=20)
 def test_nested_config_blocks(nesting_level: int) -> None:
     """Test configuration parser handles nested blocks."""
-    from exabgp.configuration.core.tokeniser import Tokeniser
+    from exabgp.configuration.core.parser import Parser
     from exabgp.configuration.core.error import Error
     from exabgp.configuration.core.scope import Scope
 
@@ -120,16 +120,16 @@ def test_nested_config_blocks(nesting_level: int) -> None:
 
     scope = Scope()
     error = Error()
-    tokeniser = Tokeniser(scope, error)
+    parser = Parser(scope, error)
 
     try:
-        tokeniser.set_text(config_text)
+        parser.set_text(config_text)
 
         # Parse all tokens
         token_count = 0
         max_iterations = nesting_level * 4 + 10
         for _ in range(max_iterations):
-            line = tokeniser()
+            line = parser()
             if not line:
                 break
             token_count += 1
@@ -333,19 +333,19 @@ def test_update_message_robustness(data: bytes) -> None:
 @pytest.mark.fuzz
 def test_empty_configuration() -> None:
     """Test parser handles empty configuration."""
-    from exabgp.configuration.core.tokeniser import Tokeniser
+    from exabgp.configuration.core.parser import Parser
     from exabgp.configuration.core.error import Error
     from exabgp.configuration.core.scope import Scope
 
     scope = Scope()
     error = Error()
-    tokeniser = Tokeniser(scope, error)
+    parser = Parser(scope, error)
 
     try:
-        tokeniser.set_text('')
+        parser.set_text('')
 
         # Should not crash
-        tokeniser()
+        parser()
         # Empty config should return empty line or no data
     except Exception as e:
         # May fail due to iterator setup
@@ -357,20 +357,20 @@ def test_empty_configuration() -> None:
 @settings(deadline=None, max_examples=30)
 def test_whitespace_only_config(whitespace: str) -> None:
     """Test parser handles whitespace-only configuration."""
-    from exabgp.configuration.core.tokeniser import Tokeniser
+    from exabgp.configuration.core.parser import Parser
     from exabgp.configuration.core.error import Error
     from exabgp.configuration.core.scope import Scope
 
     scope = Scope()
     error = Error()
-    tokeniser = Tokeniser(scope, error)
+    parser = Parser(scope, error)
 
     try:
-        tokeniser.set_text(whitespace)
+        parser.set_text(whitespace)
 
         # Should handle gracefully
         for _ in range(5):
-            line = tokeniser()
+            line = parser()
             if not line:
                 break
     except Exception as e:

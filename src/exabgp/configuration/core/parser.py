@@ -16,7 +16,7 @@ from exabgp.protocol.family import AFI
 MIN_LINE_LENGTH_FOR_PARAMS = 2  # Minimum line tokens needed to have parameters
 
 
-class Iterator:
+class Tokeniser:
     def __init__(self):
         self.next = deque()
         self.tokens = []
@@ -75,7 +75,7 @@ class Parser:
         self.finished = False
         self.number = 0
         self.line = []
-        self.iterate = Iterator()
+        self.tokeniser = Tokeniser()
         self.end = ''
         self.index_column = 0
         self.index_line = 0
@@ -90,7 +90,7 @@ class Parser:
         self.finished = False
         self.number = 0
         self.line = []
-        self.iterate.clear()
+        self.tokeniser.clear()
         self.end = ''
         self.index_column = 0
         self.index_line = 0
@@ -159,7 +159,7 @@ class Parser:
                     yield _
 
         self.type = 'file'
-        self.iterate.fname = data
+        self.tokeniser.fname = data
         return self._set(_source(data))
 
     def set_text(self, data):
@@ -175,7 +175,7 @@ class Parser:
 
     def set_action(self, command):
         if command != 'announce':
-            self.iterate.announce = False
+            self.tokeniser.announce = False
 
     def __call__(self):
         self.number += 1
@@ -192,6 +192,6 @@ class Parser:
                 self.end = ''
 
         # should we raise a Location if called with no more data ?
-        self.iterate.replenish(self.line[:-1])
+        self.tokeniser.replenish(self.line[:-1])
 
         return self.line

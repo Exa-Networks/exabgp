@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Generator, Tuple, Union, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from exabgp.configuration.core.tokeniser import Tokeniser
+    from exabgp.configuration.core.parser import Tokeniser
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
