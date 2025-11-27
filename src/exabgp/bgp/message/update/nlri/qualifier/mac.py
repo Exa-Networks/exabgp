@@ -17,7 +17,11 @@ from typing import Type
 class MAC:
     def __init__(self, mac: str | None = None, packed: bytes | None = None) -> None:
         self.mac: str | None = mac
-        self._packed: bytes = packed if packed else b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))  # type: ignore[union-attr]
+        if packed:
+            self._packed: bytes = packed
+        else:
+            assert mac is not None, 'Either mac or packed must be provided'
+            self._packed = b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))
 
     def __eq__(self, other: object) -> bool:
         # Compare packed representation to handle case-insensitive MAC addresses

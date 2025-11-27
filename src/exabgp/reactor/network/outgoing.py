@@ -56,7 +56,8 @@ class Outgoing(Connection):
             asynchronous(self.io, self.peer)
             return None
         except Exception as exc:
-            self.io.close()  # type: ignore[union-attr]
+            if self.io:
+                self.io.close()
             self.io = None
             return exc
 
@@ -69,7 +70,8 @@ class Outgoing(Connection):
             connect(self.io, self.peer, self.port, self.afi, self.md5)  # type: ignore[arg-type]
             return None
         except Exception as exc:
-            self.io.close()  # type: ignore[union-attr]
+            if self.io:
+                self.io.close()
             self.io = None
             return exc
 
@@ -106,7 +108,8 @@ class Outgoing(Connection):
             if connected:
                 self.success()
                 if not self.local:
-                    self.local = self.io.getsockname()[0]  # type: ignore[union-attr]
+                    assert self.io is not None  # Must exist after successful connection
+                    self.local = self.io.getsockname()[0]
                 yield True
                 return
 
@@ -172,7 +175,8 @@ class Outgoing(Connection):
                 # Connection successful
                 self.success()
                 if not self.local:
-                    self.local = self.io.getsockname()[0]  # type: ignore[union-attr]
+                    assert self.io is not None  # Must exist after successful connection
+                    self.local = self.io.getsockname()[0]
 
                 log.debug(
                     lazymsg('connection.established peer={p} port={pt}', p=self.peer, pt=self.port), self.session()

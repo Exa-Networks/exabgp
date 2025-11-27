@@ -190,7 +190,9 @@ class Daemon:
                 )
 
         # do not detach if we are already supervised or run by init like process
-        if self._is_socket(sys.__stdin__.fileno()) or os.getppid() == 1:  # type: ignore[union-attr]
+        if sys.__stdin__ is not None and self._is_socket(sys.__stdin__.fileno()):
+            return
+        if os.getppid() == 1:
             return
 
         fork_exit()

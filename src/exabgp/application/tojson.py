@@ -106,12 +106,13 @@ class Application:
         os.kill(myself, signal.SIGTERM)
 
     def main(self) -> None:
+        assert self.sub.stdin is not None  # Created with stdin=PIPE
         while self.running or len(self.Q):
             try:
                 line: str = self.Q.popleft()
                 result: Any = self.transcoder.convert(line)  # type: ignore[call-arg]
-                self.sub.stdin.write(result)  # type: ignore[union-attr]
-                self.sub.stdin.flush()  # type: ignore[union-attr]
+                self.sub.stdin.write(result)
+                self.sub.stdin.flush()
             except IndexError:
                 # no data on the Q to read
                 time.sleep(0.1)

@@ -181,13 +181,15 @@ class Neighbor(dict):
 
     # will resend all the routes once we reconnect
     def reset_rib(self) -> None:
-        self.rib.reset()  # type: ignore[union-attr]
+        assert self.rib is not None, 'RIB not initialized - call make_rib() first'
+        self.rib.reset()
         self.messages = deque()
         self.refresh = deque()
 
     # back to square one, all the routes are removed
     def clear_rib(self) -> None:
-        self.rib.clear()  # type: ignore[union-attr]
+        assert self.rib is not None, 'RIB not initialized - call make_rib() first'
+        self.rib.clear()
         self.messages = deque()
         self.refresh = deque()
 
@@ -386,8 +388,9 @@ Neighbor {peer-address}
     def configuration(cls, neighbor: Neighbor, with_changes: bool = True) -> str:
         changes = ''
         if with_changes:
+            assert neighbor.rib is not None, 'RIB not initialized'
             changes += '\nstatic { '
-            for change in neighbor.rib.outgoing.queued_changes():  # type: ignore[union-attr]
+            for change in neighbor.rib.outgoing.queued_changes():
                 changes += f'\n\t\t{change.extensive()}'
             changes += '\n}'
 
@@ -438,7 +441,7 @@ Neighbor {peer-address}
 
         apis = ''
 
-        for process in neighbor.api.get('processes', []):  # type: ignore[union-attr]
+        for process in neighbor.api.get('processes', []) if neighbor.api else []:
             _global = []
             _receive = []
             _send = []

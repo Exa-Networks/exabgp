@@ -183,7 +183,9 @@ class Attributes(dict):
             self._str = ''
             self._json = ''
 
-            for community in attribute.communities:  # type: ignore[union-attr]
+            # attribute.ID is EXTENDED_COMMUNITY, so attribute has .communities
+            assert hasattr(attribute, 'communities')
+            for community in attribute.communities:
                 self[attribute.ID].add(community)
             return
 
@@ -237,7 +239,9 @@ class Attributes(dict):
                 continue
 
             if code not in keys and code in default:
-                message += default[code](local_asn, peer_asn).pack_attribute(negotiated)  # type: ignore[union-attr]
+                attr = default[code](local_asn, peer_asn)
+                if attr is not NOTHING:
+                    message += attr.pack_attribute(negotiated)
                 continue
 
             attribute = self[code]
