@@ -42,9 +42,11 @@ class MUPExtendedCommunity(ExtendedCommunity):
         )
 
     def __eq__(self, other: object) -> bool:
+        if not isinstance(other, MUPExtendedCommunity):
+            return NotImplemented
         return (
-            self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE  # type: ignore[attr-defined]
-            and self.COMMUNITY_TYPE == other.COMMUNITY_TYPE  # type: ignore[attr-defined]
+            self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE
+            and self.COMMUNITY_TYPE == other.COMMUNITY_TYPE
             and ExtendedCommunity.__eq__(self, other)
         )
 

@@ -39,7 +39,9 @@ class RouteTarget(ExtendedCommunity):
         return self.community[self.LIMIT : 8]
 
     def __eq__(self, other: object) -> bool:
-        return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)  # type: ignore[attr-defined]
+        if not isinstance(other, RouteTarget):
+            return NotImplemented
+        return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
