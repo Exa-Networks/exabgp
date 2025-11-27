@@ -171,12 +171,12 @@ class Update(Message):
 
         if msg_size < 0:
             # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-            log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
+            log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
             return
 
         if msg_size == 0 and (nlris or mp_nlris):
             # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-            log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
+            log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
             return
 
         withdraws = b''
@@ -199,7 +199,7 @@ class Update(Message):
 
             if not withdraws and not announced:
                 # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-                log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
+                log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
                 return
 
             if announced:
@@ -281,12 +281,12 @@ class Update(Message):
         withdrawn, _attributes, announced = cls.split(data)
 
         if not withdrawn:
-            log.debug(lambda: 'withdrawn NLRI none', 'routes')
+            log.debug(lazymsg('update.withdrawn status=none'), 'routes')
 
         attributes = Attributes.unpack(_attributes, negotiated)
 
         if not announced:
-            log.debug(lambda: 'announced NLRI none', 'routes')
+            log.debug(lazymsg('update.announced status=none'), 'routes')
 
         # Is the peer going to send us some Path Information with the route (AddPath)
         addpath = negotiated.required(AFI.ipv4, SAFI.unicast)

@@ -157,7 +157,7 @@ class Peer:
                     self.reactor.processes.down(self.neighbor, message)
             except ProcessError:
                 log.debug(
-                    lambda: 'could not send notification of neighbor close to API',
+                    lazymsg('peer.close.api.failed reason=process_error'),
                     self.id(),
                 )
         self.fsm.change(FSM.IDLE)
@@ -290,12 +290,12 @@ class Peer:
         return -1
 
     def handle_connection(self, connection: 'Incoming') -> Iterator[bool] | None:
-        log.debug(lambda: 'state machine for the peer is {}'.format(self.fsm.name()), self.id())
+        log.debug(lazymsg('peer.fsm.state state={s}', s=self.fsm.name()), self.id())
 
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:
             log.debug(
-                lambda: 'we already have a peer in state established for {}'.format(connection.name()),
+                lazymsg('peer.connection.rejected connection={c} reason=already_established', c=connection.name()),
                 self.id(),
             )
             return connection.notification(6, 7, b'could not accept the connection, already established')
@@ -314,8 +314,8 @@ class Peer:
 
             if remote_id < local_id:
                 log.debug(
-                    lambda: 'closing incoming connection as we have an outgoing connection with higher router-id for {}'.format(
-                        connection.name()
+                    lazymsg(
+                        'peer.connection.rejected connection={c} reason=higher_router_id_outgoing', c=connection.name()
                     ),
                     self.id(),
                 )
@@ -328,9 +328,7 @@ class Peer:
         # accept the connection
         if self.proto:
             log.debug(
-                lambda: 'closing outgoing connection as we have another incoming on with higher router-id for {}'.format(
-                    connection.name()
-                ),
+                lazymsg('peer.connection.closing connection={c} reason=higher_router_id_incoming', c=connection.name()),
                 self.id(),
             )
             self._close('closing outgoing connection as we have another incoming on with higher router-id')
@@ -614,7 +612,7 @@ class Peer:
 
         # Announce to the process BGP is up
         log.info(
-            lambda: f'connected to {self.id()} with {self.proto.connection.name()}',  # type: ignore[union-attr]
+            lazymsg('peer.connected peer={p} connection={c}', p=self.id(), c=self.proto.connection.name()),  # type: ignore[union-attr]
             'reactor',
         )
         self.stats['up'] += 1
@@ -670,18 +668,18 @@ class Peer:
                     while send_ka() is None:
                         yield ACTION.NOW
                 for counter_line in self.stats.changed_statistics():
-                    log.info(lazymsg('{counter_line}', counter_line=counter_line), 'statistics')
+                    log.info(lazymsg('statistics.changed info={counter_line}', counter_line=counter_line), 'statistics')
 
                 # Received update
                 if message.TYPE == Update.TYPE:
                     update = cast(Update, message)
                     number += 1
-                    log.debug(lazymsg('<< UPDATE #{number}', number=number), self.id())
+                    log.debug(lazymsg('update.received number={number}', number=number), self.id())
 
                     for nlri in update.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
                         log.debug(
-                            lazyformat('   UPDATE #%d nlri ' % number, nlri, str),  # type: ignore[arg-type]
+                            lazyformat('update.nlri number=%d nlri=' % number, nlri, str),  # type: ignore[arg-type]
                             self.id(),
                         )
 
@@ -739,7 +737,7 @@ class Peer:
                     send_eor = False
                     for _ in self.proto.new_eors():
                         yield ACTION.NOW
-                    log.debug(lambda: '>> all EOR(s) sent', self.id())
+                    log.debug(lazymsg('eor.sent.all'), self.id())
 
                 # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
                 elif not command_eor and self.neighbor.eor:
@@ -772,7 +770,7 @@ class Peer:
         if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
             Capability.CODE.GRACEFUL_RESTART,
         ):
-            log.error(lambda: 'closing the session without notification', self.id())
+            log.error(lazymsg('session.closing reason=graceful_restart'), self.id())
             self._close('graceful restarted negotiated, closing without sending any notification')
             raise NetworkError('closing')
 
@@ -795,7 +793,7 @@ class Peer:
 
         # Announce to the process BGP is up
         log.info(
-            lambda: f'connected to {self.id()} with {self.proto.connection.name()}',  # type: ignore[union-attr]
+            lazymsg('peer.connected peer={p} connection={c}', p=self.id(), c=self.proto.connection.name()),  # type: ignore[union-attr]
             'reactor',
         )
         self.stats['up'] += 1
@@ -830,7 +828,7 @@ class Peer:
         self.neighbor.previous = None
 
         self._delay.reset()
-        log.debug(lambda: '[ASYNC] Entering main loop', self.id())
+        log.debug(lazymsg('async.mainloop.started'), self.id())
         try:
             while not self._teardown:
                 # we are here following a configuration change
@@ -863,18 +861,18 @@ class Peer:
                     while send_ka() is None:
                         await asyncio.sleep(0)  # Yield control like ACTION.NOW
                 for counter_line in self.stats.changed_statistics():
-                    log.info(lazymsg('{counter_line}', counter_line=counter_line), 'statistics')
+                    log.info(lazymsg('statistics.changed info={counter_line}', counter_line=counter_line), 'statistics')
 
                 # Received update
                 if message.TYPE == Update.TYPE:
                     update = cast(Update, message)
                     number += 1
-                    log.debug(lazymsg('<< UPDATE #{number}', number=number), self.id())
+                    log.debug(lazymsg('update.received number={number}', number=number), self.id())
 
                     for nlri in update.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
                         log.debug(
-                            lazyformat('   UPDATE #%d nlri ' % number, nlri, str),  # type: ignore[arg-type]
+                            lazyformat('update.nlri number=%d nlri=' % number, nlri, str),  # type: ignore[arg-type]
                             self.id(),
                         )
 
@@ -909,7 +907,7 @@ class Peer:
                 # Need to send update
                 if not new_routes and self.neighbor.rib.outgoing.pending():
                     # Create the updates generator ONCE (matches sync version behavior)
-                    log.debug(lambda: '[PEER] pending()=True, creating new_routes generator', self.id())
+                    log.debug(lazymsg('peer.update.generator.creating'), self.id())
                     new_routes = self.proto.new_update_async_generator(include_withdraw)
 
                 if new_routes:
@@ -922,14 +920,14 @@ class Peer:
                             # and processed together, causing wrong RIB state
                             await asyncio.sleep(0)
                     except StopAsyncIteration:
-                        log.debug(lambda: '[PEER] new_routes generator exhausted', self.id())
+                        log.debug(lazymsg('peer.update.generator.exhausted'), self.id())
                         new_routes = None
                         include_withdraw = True
 
                 elif send_eor:
                     send_eor = False
                     await self.proto.new_eors_async()
-                    log.debug(lambda: '>> all EOR(s) sent', self.id())
+                    log.debug(lazymsg('eor.sent.all'), self.id())
 
                 # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
                 elif not command_eor and self.neighbor.eor:
@@ -951,27 +949,27 @@ class Peer:
 
                     # read_message will loop until new message arrives with NOP
                     if self._teardown:
-                        log.debug(lambda: f'[ASYNC] Loop exiting: _teardown={self._teardown}', self.id())
+                        log.debug(lazymsg('async.mainloop.exiting teardown={td}', td=self._teardown), self.id())
                         break
 
         except NetworkError as exc:
             # Normal network errors (connection closed, etc.) - log message only, no traceback
-            log.debug(lazymsg('[ASYNC] Network error: {exc}', exc=exc), self.id())
+            log.debug(lazymsg('async.network.error error={exc}', exc=exc), self.id())
             raise
         except Exception as exc:
             # Unexpected exceptions - log message only
-            log.error(lazymsg('[ASYNC] Exception in main loop: {exc}', exc=exc), self.id())
+            log.error(lazymsg('async.mainloop.exception error={exc}', exc=exc), self.id())
             raise
 
         # If graceful restart, silent shutdown
         log.debug(
-            lambda: f'[ASYNC] After loop: graceful-restart={self.neighbor["capability"]["graceful-restart"]}, announced={self.proto.negotiated.sent_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART) if self.proto else None}',
+            lazymsg('async.mainloop.ended graceful_restart={gr}', gr=self.neighbor['capability']['graceful-restart']),
             self.id(),
         )
         if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
             Capability.CODE.GRACEFUL_RESTART,
         ):
-            log.error(lambda: 'closing the session without notification', self.id())
+            log.error(lazymsg('session.closing reason=graceful_restart'), self.id())
             self._close('graceful restarted negotiated, closing without sending any notification')
             raise NetworkError('closing')
 
@@ -992,7 +990,7 @@ class Peer:
             # Check if maximum connection attempts reached
             if not self.can_reconnect():
                 log.debug(
-                    lambda: 'maximum connection attempts reached, stopping the peer',
+                    lazymsg('peer.connection.max_attempts_reached'),
                     self.id(),
                 )
                 self.stop()
@@ -1012,14 +1010,14 @@ class Peer:
                     except StopIteration:
                         pass
                 except (NetworkError, ProcessError):
-                    log.error(lambda: 'Notification not sent', self.id())
+                    log.error(lazymsg('notification.send.failed'), self.id())
                 self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
             else:
                 self._reset()
 
             if not self.can_reconnect():
                 log.debug(
-                    lambda: 'maximum connection attempts reached, stopping the peer',
+                    lazymsg('peer.connection.max_attempts_reached'),
                     self.id(),
                 )
                 self.stop()
@@ -1031,7 +1029,7 @@ class Peer:
             # Check if maximum connection attempts reached
             if not self.can_reconnect():
                 log.debug(
-                    lambda: 'maximum connection attempts reached, stopping the peer',
+                    lazymsg('peer.connection.max_attempts_reached'),
                     self.id(),
                 )
                 self.stop()
@@ -1055,7 +1053,7 @@ class Peer:
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            log.error(lazymsg('{msg}', msg=format_exception(exc)), 'reactor')
+            log.error(lazymsg('peer.exception.unhandled error={msg}', msg=format_exception(exc)), 'reactor')
             self._reset()
             return
 
@@ -1070,7 +1068,7 @@ class Peer:
             # Check if maximum connection attempts reached
             if not self.can_reconnect():
                 log.debug(
-                    lambda: 'maximum connection attempts reached, stopping the peer',
+                    lazymsg('peer.connection.max_attempts_reached'),
                     self.id(),
                 )
                 self.stop()
@@ -1091,14 +1089,14 @@ class Peer:
                     except StopIteration:
                         pass
                 except (NetworkError, ProcessError):
-                    log.error(lambda: 'Notification not sent', self.id())
+                    log.error(lazymsg('notification.send.failed'), self.id())
                 self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
             else:
                 self._reset()
 
             if not self.can_reconnect():
                 log.debug(
-                    lambda: 'maximum connection attempts reached, stopping the peer',
+                    lazymsg('peer.connection.max_attempts_reached'),
                     self.id(),
                 )
                 self.stop()
@@ -1110,7 +1108,7 @@ class Peer:
             # Check if maximum connection attempts reached
             if not self.can_reconnect():
                 log.debug(
-                    lambda: 'maximum connection attempts reached, stopping the peer',
+                    lazymsg('peer.connection.max_attempts_reached'),
                     self.id(),
                 )
                 self.stop()
@@ -1134,7 +1132,7 @@ class Peer:
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            log.error(lazymsg('{msg}', msg=format_exception(exc)), 'reactor')
+            log.error(lazymsg('peer.exception.unhandled error={msg}', msg=format_exception(exc)), 'reactor')
             self._reset()
             return
 
@@ -1144,7 +1142,7 @@ class Peer:
         if self.reactor.processes.broken(self.neighbor):
             # Process respawning handled by Processes._handle_problem().
             # This branch handles cases where respawning failed or was disabled.
-            log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'processes')
+            log.error(lazymsg('process.lost action=stopping'), 'processes')
             if self.reactor.processes.terminate_on_error:
                 self.reactor.shutdown()
             else:
@@ -1165,13 +1163,13 @@ class Peer:
 
         elif self.generator is None:
             if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
-                log.debug(lambda: 'stopping, other connection is established', self.id())
+                log.debug(lazymsg('peer.stopping reason=other_connection_established'), self.id())
                 self.generator = False
                 return ACTION.LATER
             if self._delay.backoff():
                 return ACTION.LATER
             if self._restart:
-                log.debug(lambda: 'initialising connection to {}'.format(self.id()), 'reactor')
+                log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
                 self.generator = self._run()
                 return ACTION.LATER  # make sure we go through a clean loop
             return ACTION.CLOSE
@@ -1184,7 +1182,7 @@ class Peer:
         if self.reactor.processes.broken(self.neighbor):
             # Process respawning handled by Processes._handle_problem().
             # This branch handles cases where respawning failed or was disabled.
-            log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'processes')
+            log.error(lazymsg('process.lost action=stopping'), 'processes')
             if self.reactor.processes.terminate_on_error:
                 self.reactor.shutdown()
             else:
@@ -1194,7 +1192,7 @@ class Peer:
         # Wait for restart conditions
         while True:
             if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
-                log.debug(lambda: 'stopping, other connection is established', self.id())
+                log.debug(lazymsg('peer.stopping reason=other_connection_established'), self.id())
                 await asyncio.sleep(0.1)  # Wait a bit before checking again
                 continue
 
@@ -1203,7 +1201,7 @@ class Peer:
                 continue
 
             if self._restart:
-                log.debug(lambda: 'initialising connection to {}'.format(self.id()), 'reactor')
+                log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
                 await self._run_async()
                 # After _run_async completes, check if we should restart
                 if not self._restart:

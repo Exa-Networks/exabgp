@@ -15,7 +15,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # ================================================================ NextHop
 #
@@ -56,7 +56,7 @@ class NextHop(Capability, list):
     def unpack_capability(instance: NextHop, data: bytes, capability: CapabilityCode | None = None) -> NextHop:  # pylint: disable=W0613
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
-            log.debug(lambda: 'received duplicate NextHop capability, merging entries', 'parser')
+            log.debug(lazymsg('capability.nexthop.duplicate action=merge'), 'parser')
         while data:
             afi = AFI.unpack_afi(data[:2])
             safi = SAFI.unpack_safi(data[3:4])

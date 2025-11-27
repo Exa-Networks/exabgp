@@ -117,7 +117,7 @@ def cmdline(cmdarg):
         location = getconf(configuration)
         if not location:
             log.critical(
-                lambda configuration=configuration: f'{configuration} is not an exabgp config file',
+                lazymsg('config.invalid file={f}', f=configuration),
                 'configuration',
             )
             sys.exit(1)
@@ -130,7 +130,7 @@ def cmdline(cmdarg):
         run(comment, configurations)
 
     if not (env.log.destination in ('syslog', 'stdout', 'stderr') or env.log.destination.startswith('host:')):
-        log.error(lambda: 'can not log to files when running multiple configuration (as we fork)', 'configuration')
+        log.error(lazymsg('config.error reason=multiple_configs_file_log'), 'configuration')
         sys.exit(1)
 
     try:
@@ -159,20 +159,20 @@ def cmdline(cmdarg):
 def run(comment, configurations, pid=0):
     env = getenv()
 
-    log.info(lambda: 'Thank you for using ExaBGP', 'startup')
-    log.debug(lambda: version, 'startup')
-    log.debug(lambda: ROOT, 'startup')
+    log.info(lazymsg('startup.banner message=thank_you_for_using_exabgp'), 'startup')
+    log.debug(lazymsg('startup.version version={v}', v=version), 'startup')
+    log.debug(lazymsg('startup.root path={r}', r=ROOT), 'startup')
     python_version = sys.version.replace('\n', ' ')
-    log.debug(lambda: python_version, 'startup')
+    log.debug(lazymsg('startup.python version={v}', v=python_version), 'startup')
     platform_info = ' '.join(platform.uname()[:5])
-    log.debug(lambda: platform_info, 'startup')
+    log.debug(lazymsg('startup.platform info={p}', p=platform_info), 'startup')
 
     if comment:
-        log.error(lambda: comment, 'startup')
+        log.error(lazymsg('startup.comment message={c}', c=comment), 'startup')
 
     warning = warn()
     if warning:
-        log.warning(lambda: warning, 'startup')
+        log.warning(lazymsg('startup.warning message={w}', w=warning), 'startup')
 
     # Check if socket will be available (check for explicit disable)
     socket_disabled = os.environ.get('exabgp_cli_socket', None) == ''
@@ -187,28 +187,33 @@ def run(comment, configurations, pid=0):
             os.environ['exabgp_cli_pipe'] = pipe
             os.environ['exabgp_api_pipename'] = pipename
 
-            log.info(lambda: 'named pipes for the cli are:', 'cli')
-            log.info(lambda: f'to send commands  {pipe}{pipename}.in', 'cli')
-            log.info(lambda: f'to read responses {pipe}{pipename}.out', 'cli')
+            log.info(lazymsg('cli.pipes.found'), 'cli')
+            log.info(lazymsg('cli.pipes.input path={p}', p=f'{pipe}{pipename}.in'), 'cli')
+            log.info(lazymsg('cli.pipes.output path={p}', p=f'{pipe}{pipename}.out'), 'cli')
         else:
             # Socket disabled AND no pipes - show pipe setup instructions
             log.error(
-                lambda: f'could not find the named pipes ({pipename}.in and {pipename}.out) required for the cli',
+                lazymsg('cli.pipes.missing name={n}', n=pipename),
                 'cli',
             )
-            log.error(lambda: 'we scanned the following folders (the number is your PID):', 'cli')
+            log.error(lazymsg('cli.pipes.scanned.folders'), 'cli')
             for location in pipes:
-                log.error(lazymsg(' - {location}', location=location), 'cli')
-            log.error(lambda: 'please make them in one of the folder with the following commands:', 'cli')
+                log.error(lazymsg('cli.pipes.folder path={location}', location=location), 'cli')
+            log.error(lazymsg('cli.pipes.create.instructions'), 'cli')
 
             # NOTE: Logging full paths (os.getcwd()) is intentional for user guidance
             # Security review: Accepted as necessary for troubleshooting
-            log.error(lambda: f'> mkfifo {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli')
-            log.error(lambda: f'> chmod 600 {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli')
+            log.error(lazymsg('cli.pipes.mkfifo path={p}', p=f'{os.getcwd()}/run/{pipename}.{{in,out}}'), 'cli')
+            log.error(lazymsg('cli.pipes.chmod path={p}', p=f'{os.getcwd()}/run/{pipename}.{{in,out}}'), 'cli')
 
             if os.getuid() != 0:
                 log.error(
-                    lambda: f'> chown {os.getuid()}:{os.getgid()} {os.getcwd()}/run/{pipename}.{{in,out}}',
+                    lazymsg(
+                        'cli.pipes.chown uid={u} gid={g} path={p}',
+                        u=os.getuid(),
+                        g=os.getgid(),
+                        p=f'{os.getcwd()}/run/{pipename}.{{in,out}}',
+                    ),
                     'cli',
                 )
     elif env.api.cli:
@@ -230,15 +235,15 @@ def run(comment, configurations, pid=0):
         if len(sockets) == 1:
             # Found existing socket directory
             socket_path = sockets[0]
-            log.info(lambda: 'Unix socket for the cli (existing directory):', 'cli')
+            log.info(lazymsg('cli.socket.found.existing'), 'cli')
         else:
             # Use default location (will be auto-created by socket process)
             socket_path = ROOT + '/run/'
-            log.info(lambda: 'Unix socket for the cli (will be auto-created):', 'cli')
+            log.info(lazymsg('cli.socket.autocreate'), 'cli')
 
         os.environ['exabgp_cli_socket'] = socket_path
         os.environ['exabgp_api_socketname'] = socketname
-        log.info(lambda: f'socket path: {socket_path}{socketname}.sock', 'cli')
+        log.info(lazymsg('cli.socket.path path={p}', p=f'{socket_path}{socketname}.sock'), 'cli')
 
     configuration = Configuration(configurations)
 
@@ -265,12 +270,10 @@ def run(comment, configurations, pid=0):
         notice = f'profile can not use this filename as output, it already exists ({profile_name})'
 
     if notice:
-        log.debug(lambda: '-' * len(notice), 'reactor')
-        log.debug(lambda: notice, 'reactor')
-        log.debug(lambda: '-' * len(notice), 'reactor')
+        log.debug(lazymsg('profile.error message={m}', m=notice), 'reactor')
 
     cwd = os.getcwd()
-    log.debug(lambda: 'profiling ....', 'reactor')
+    log.debug(lazymsg('profile.starting'), 'reactor')
 
     destination = profile_name if profile_name.startswith('/') else os.path.join(cwd, profile_name)
 
@@ -280,15 +283,12 @@ def run(comment, configurations, pid=0):
             exit_code = Reactor(configuration).run()
         except Exception as e:
             exit_code = Reactor.Exit.unknown
-            log.critical(lazymsg('{error}', error=str(e)))
+            log.critical(lazymsg('profile.exception error={error}', error=str(e)))
 
         try:
             profiler.dump_stats(destination)
         except OSError:
-            notice = 'could not save profiling in formation at: ' + destination
-            log.debug(lambda: '-' * len(notice), 'reactor')
-            log.debug(lambda: notice, 'reactor')
-            log.debug(lambda: '-' * len(notice), 'reactor')
+            log.debug(lazymsg('profile.save.failed destination={d}', d=destination), 'reactor')
 
         __exit(env.debug.memory, exit_code)
 

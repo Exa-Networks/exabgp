@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.community import Communities
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.origin import Origin
-from exabgp.logger import lazyattribute, log
+from exabgp.logger import lazyattribute, lazymsg, log
 
 
 class _NOTHING:
@@ -343,8 +343,11 @@ class Attributes(dict):
                 raise Notify(3, 1, 'multiple attribute for {}'.format(str(Attribute.CODE(aid))))
 
             log.debug(
-                lambda: 'duplicate attribute {} (flag 0x{:02X}, aid 0x{:02X}) skipping'.format(
-                    Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                lazymsg(
+                    'attribute.duplicate name={name} flag=0x{flag:02X} aid=0x{aid:02X} action=skip',
+                    name=Attribute.CODE.names.get(aid, 'unset'),
+                    flag=flag,
+                    aid=aid,
                 ),
                 'parser',
             )
@@ -409,7 +412,10 @@ class Attributes(dict):
 
         # it is an unknown transitive attribute we need to pass on
         if flag & Attribute.Flag.TRANSITIVE:
-            log.debug(lambda: 'unknown transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid), 'parser')
+            log.debug(
+                lazymsg('attribute.unknown type=transitive flag=0x{flag:02X} aid=0x{aid:02X}', flag=flag, aid=aid),
+                'parser',
+            )
             try:
                 decoded_generic: Attribute = GenericAttribute(aid, flag | Attribute.Flag.PARTIAL, attribute)
             except IndexError:

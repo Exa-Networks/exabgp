@@ -71,14 +71,12 @@ class Daemon:
             try:
                 pid = open(self.pid, 'r').readline().strip()
                 if self.check_pid(int(pid)):
-                    log.debug(lambda: f'PIDfile already exists and program still running {self.pid}', 'daemon')
+                    log.debug(lazymsg('pid.exists.running path={p}', p=self.pid), 'daemon')
                     return False
                 # If pid is not running, reopen file without O_EXCL
                 fd = os.open(self.pid, flags ^ os.O_EXCL, mode)
             except (OSError, ValueError):
-                log.debug(
-                    lambda: f'issue accessing PID file {self.pid} (most likely permission or ownership)', 'daemon'
-                )
+                log.debug(lazymsg('pid.access.error path={p} reason=permission_or_ownership', p=self.pid), 'daemon')
                 return False
 
         try:
@@ -88,9 +86,9 @@ class Daemon:
             f.close()
             self._saved_pid = True
         except OSError:
-            log.warning(lambda: f'Can not create PIDfile {self.pid}', 'daemon')
+            log.warning(lazymsg('pid.create.failed path={p}', p=self.pid), 'daemon')
             return False
-        log.warning(lambda: f'Created PIDfile {self.pid} with value {ownid}', 'daemon')
+        log.warning(lazymsg('pid.created path={p} value={v}', p=self.pid, v=ownid), 'daemon')
         return True
 
     def removepid(self) -> None:
@@ -102,9 +100,9 @@ class Daemon:
             if exc.errno == errno.ENOENT:
                 pass
             else:
-                log.error(lambda: f'Can not remove PIDfile {self.pid}', 'daemon')
+                log.error(lazymsg('pid.remove.failed path={p}', p=self.pid), 'daemon')
                 return
-        log.debug(lambda: f'Removed PIDfile {self.pid}', 'daemon')
+        log.debug(lazymsg('pid.removed path={p}', p=self.pid), 'daemon')
 
     def drop_privileges(self) -> bool:
         """Return true if we are left with insecure privileges"""
@@ -177,7 +175,7 @@ class Daemon:
 
         logging = getenv().log
         if logging.enable and logging.destination.lower() in ('stdout', 'stderr'):
-            log.critical(lambda: f'ExaBGP can not fork when logs are going to {logging.destination.lower()}', 'daemon')
+            log.critical(lazymsg('daemon.fork.disabled destination={d}', d=logging.destination.lower()), 'daemon')
             return
 
         def fork_exit() -> None:

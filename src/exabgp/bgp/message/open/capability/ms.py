@@ -11,7 +11,7 @@ from typing import Any, ClassVar, List
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # ================================================================= MultiSession
 #
@@ -53,6 +53,6 @@ class MultiSession(Capability, list):
         instance: MultiSession, data: bytes, capability: CapabilityCode | None = None
     ) -> MultiSession:  # pylint: disable=W0613
         if instance._seen:
-            log.debug(lambda: 'received duplicate MultiSession capability', 'parser')
+            log.debug(lazymsg('capability.multisession.duplicate'), 'parser')
         instance._seen = True
         return instance

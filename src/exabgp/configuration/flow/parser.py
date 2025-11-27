@@ -46,7 +46,7 @@ from exabgp.bgp.message.update.nlri.flow import (
     FlowTrafficClass,
     NumericOperator,
 )
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 from exabgp.protocol.family import (
     AFI,
 )
@@ -329,11 +329,19 @@ def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     speed: int = int(tokeniser())
     if speed < MIN_RATE_LIMIT_BPS and speed != 0:
         log.warning(
-            lambda: f'rate-limiting flow under {MIN_RATE_LIMIT_BPS} bytes per seconds may not work', 'configuration'
+            lazymsg('flow.rate_limit.warning reason=too_low min_bps={min_bps}', min_bps=MIN_RATE_LIMIT_BPS),
+            'configuration',
         )
     if speed > MAX_RATE_LIMIT_BPS:
         speed = MAX_RATE_LIMIT_BPS
-        log.warning(lambda: f'rate-limiting changed for {MAX_RATE_LIMIT_BPS} bytes from {speed}', 'configuration')
+        log.warning(
+            lazymsg(
+                'flow.rate_limit.warning reason=too_high max_bps={max_bps} requested={speed}',
+                max_bps=MAX_RATE_LIMIT_BPS,
+                speed=speed,
+            ),
+            'configuration',
+        )
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 

@@ -11,7 +11,7 @@ from typing import ClassVar, List
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # https://tools.ietf.org/html/draft-ietf-idr-operational-message-00
 # ================================================================== Operational
@@ -36,6 +36,6 @@ class Operational(Capability, list):
     @staticmethod
     def unpack_capability(instance: Operational, data: bytes, capability: CapabilityCode | None = None) -> Operational:  # pylint: disable=W0613
         if instance._seen:
-            log.debug(lambda: 'received duplicate Operational capability', 'parser')
+            log.debug(lazymsg('capability.operational.duplicate'), 'parser')
         instance._seen = True
         return instance

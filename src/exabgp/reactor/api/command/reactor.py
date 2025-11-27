@@ -13,7 +13,7 @@ import json
 from exabgp.version import version as _version
 from exabgp.reactor.api.command.command import Command
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 
 def register_reactor():
@@ -127,7 +127,7 @@ def version(self, reactor, service, line, use_json):
 
 @Command.register('#', False, json_support=True)
 def comment(self, reactor, service, line, use_json):
-    log.debug(lambda: line.lstrip().lstrip('#').strip(), 'processes')
+    log.debug(lazymsg('api.comment text={text}', text=line.lstrip().lstrip('#').strip()), 'processes')
     reactor.processes.answer_done(service)
     return True
 

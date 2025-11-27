@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # ================================================================= RouteRefresh
 #
@@ -64,7 +64,7 @@ class RouteRefresh(Capability):
         instance: RouteRefresh, data: bytes, capability: CapabilityCode | None = None
     ) -> RouteRefresh:  # pylint: disable=W0613
         if instance._seen:
-            log.debug(lambda: 'received duplicate RouteRefresh capability', 'parser')
+            log.debug(lazymsg('capability.route_refresh.duplicate'), 'parser')
         instance._seen = True
         return instance
 
@@ -112,6 +112,6 @@ class EnhancedRouteRefresh(Capability):
         instance: EnhancedRouteRefresh, data: bytes, capability: CapabilityCode | None = None
     ) -> EnhancedRouteRefresh:  # pylint: disable=W0613
         if instance._seen:
-            log.debug(lambda: 'received duplicate EnhancedRouteRefresh capability', 'parser')
+            log.debug(lazymsg('capability.enhanced_route_refresh.duplicate'), 'parser')
         instance._seen = True
         return instance

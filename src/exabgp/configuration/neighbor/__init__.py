@@ -55,7 +55,7 @@ from exabgp.configuration.neighbor.parser import rate_limit
 
 from exabgp.environment import getenv
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # MD5 password length constraint (RFC 2385)
 MAX_MD5_PASSWORD_LENGTH = 80  # Maximum length for TCP MD5 signature password
@@ -247,7 +247,7 @@ class ParseNeighbor(Section):
     def _post_capa_rr(self, neighbor: Neighbor) -> None:
         if neighbor['capability']['route-refresh']:
             if neighbor['adj-rib-out']:
-                log.debug(lambda: 'route-refresh requested, enabling adj-rib-out', 'configuration')
+                log.debug(lazymsg('neighbor.capability.route_refresh action=enable_adj_rib_out'), 'configuration')
 
     def _post_routes(self, neighbor: Neighbor, local: Dict[str, Any]) -> None:
         # NOTE: this may modify change but does not matter as want to modified

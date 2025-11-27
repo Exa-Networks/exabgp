@@ -14,7 +14,7 @@ from .error import NotConnected
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 from exabgp.protocol.family import AFI
 
@@ -25,7 +25,7 @@ class Incoming(Connection):
     def __init__(self, afi: AFI, peer: str, local: str, io: socket.socket) -> None:
         Connection.__init__(self, afi, peer, local)
 
-        log.debug(lambda: 'connection from {}'.format(self.peer), 'network')
+        log.debug(lazymsg('incoming.connection peer={peer}', peer=self.peer), 'network')
 
         try:
             self.io = io

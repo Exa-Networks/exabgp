@@ -12,7 +12,7 @@ import inspect
 from collections import deque
 from typing import Any, Deque, Tuple
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 
 class ASYNC:
@@ -36,7 +36,7 @@ class ASYNC:
             command: Command string
             callback: Generator or coroutine to execute
         """
-        log.debug(lambda: f'async | {uid} | {command}', 'reactor')
+        log.debug(lazymsg('async.schedule uid={uid} command={cmd}', uid=uid, cmd=command), 'reactor')
         self._async.append((uid, callback))
 
     def clear(self, deluid: str | None = None) -> None:
@@ -74,7 +74,7 @@ class ASYNC:
                 if loop.is_running():
                     # If loop is already running, we can't use run_until_complete
                     # This shouldn't happen in normal operation
-                    log.warning(lambda: 'async | Cannot run coroutines: event loop already running', 'reactor')
+                    log.warning(lazymsg('async.loop.running reason=cannot_run_coroutines'), 'reactor')
                     return False
                 return loop.run_until_complete(self._run_async())
             except RuntimeError:
@@ -113,11 +113,11 @@ class ASYNC:
                         self._async.appendleft((uid, callback))
                         break
                 except Exception as exc:
-                    current_uid = uid
-                    log.error(lambda: f'async | {current_uid} | problem with function', 'reactor')
+                    log.error(lazymsg('async.callback.error uid={uid}', uid=uid), 'reactor')
                     for line in str(exc).split('\n'):
-                        current_line = line
-                        log.error(lambda: f'async | {current_uid} | {current_line}', 'reactor')
+                        log.error(
+                            lazymsg('async.callback.traceback uid={uid} line={line}', uid=uid, line=line), 'reactor'
+                        )
                     # Continue to next callback even if one fails
             return False  # All coroutines processed
         else:
@@ -151,11 +151,11 @@ class ASYNC:
                         return False
                     uid, callback = self._async.popleft()
                 except Exception as exc:
-                    current_uid = uid
-                    log.error(lambda: f'async | {current_uid} | problem with function', 'reactor')
+                    log.error(lazymsg('async.callback.error uid={uid}', uid=uid), 'reactor')
                     for line in str(exc).split('\n'):
-                        current_line = line
-                        log.error(lambda: f'async | {current_uid} | {current_line}', 'reactor')
+                        log.error(
+                            lazymsg('async.callback.traceback uid={uid} line={line}', uid=uid, line=line), 'reactor'
+                        )
                     # Error occurred - pop next callback
                     if not self._async:
                         return False

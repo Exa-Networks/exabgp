@@ -15,7 +15,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # =========================================================== Graceful (Restart)
 # RFC 4727 - https://tools.ietf.org/html/rfc4727
@@ -76,7 +76,7 @@ class Graceful(Capability, dict):
     def unpack_capability(instance: Graceful, data: bytes, capability: CapabilityCode | None = None) -> Graceful:  # pylint: disable=W0613
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
-            log.debug(lambda: 'received duplicate Graceful Restart capability, replacing', 'parser')
+            log.debug(lazymsg('capability.graceful_restart.duplicate action=replace'), 'parser')
             instance.clear()
         restart = unpack('!H', data[:2])[0]
         restart_flag = restart >> 12
