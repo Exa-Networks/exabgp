@@ -15,6 +15,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.bgp.message.update.nlri.mup import MUP
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.core import Parser
@@ -58,8 +59,8 @@ class AnnounceMup(ParseAnnounce):
         'extended-community': 'attribute-add',
     }
 
-    assign: dict[str, str] = dict()
-    default: dict[str, object] = dict()
+    assign = {}
+    default = {}
 
     name = 'mup'
 
@@ -76,12 +77,14 @@ class AnnounceMup(ParseAnnounce):
     def post(self) -> bool:
         return ParseAnnounce.post(self) and self._check()
 
-    def check(self) -> bool:
+    @staticmethod
+    def check(change: Change, afi: AFI | None) -> bool:
         return True
 
 
 def mup(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     muptype = tokeniser()
+    mup_nlri: MUP
     if muptype == 'mup-isd':
         mup_nlri = srv6_mup_isd(tokeniser, afi)
     elif muptype == 'mup-dsd':
@@ -100,17 +103,17 @@ def mup(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         if not command:
             break
 
-        action = AnnounceMup.action[command]
-        if action == 'nlri-add':
-            for adding in AnnounceMup.known[command](tokeniser):  # type: ignore[operator]
-                change.nlri.add(adding)
-        elif action == 'attribute-add':
-            change.attributes.add(AnnounceMup.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceMup.known[command](tokeniser, afi)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+        command_action = AnnounceMup.action[command]
+        if command_action == 'nlri-add':
+            for adding in AnnounceMup.known[command](tokeniser):
+                change.nlri.add(adding)  # type: ignore[attr-defined]
+        elif command_action == 'attribute-add':
+            change.attributes.add(AnnounceMup.known[command](tokeniser))
+        elif command_action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceMup.known[command](tokeniser, afi)
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
-        elif action == 'nop':
+        elif command_action == 'nop':
             pass  # yes nothing to do !
         else:
             raise ValueError('mup: unknown command "{}"'.format(command))

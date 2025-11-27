@@ -7,18 +7,22 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPRange
 
+if TYPE_CHECKING:
+    from exabgp.configuration.core import Tokeniser
 
-def string(tokeniser: object) -> str:
-    return tokeniser()  # type: ignore[no-any-return,operator]
+
+def string(tokeniser: Tokeniser) -> str:
+    return tokeniser()
 
 
-def boolean(tokeniser: object, default: bool) -> bool:
-    status = tokeniser().lower()  # type: ignore[operator]
+def boolean(tokeniser: Tokeniser, default: bool) -> bool:
+    status = tokeniser().lower()
     if not status:
         return default
     if status in ('true', 'enable', 'enabled'):
@@ -30,8 +34,8 @@ def boolean(tokeniser: object, default: bool) -> bool:
     )
 
 
-def auto_boolean(tokeniser: object, default: bool) -> bool | None:
-    status = tokeniser().lower()  # type: ignore[operator]
+def auto_boolean(tokeniser: Tokeniser, default: bool) -> bool | None:
+    status = tokeniser().lower()
     if not status:
         return default
     if status in ('true', 'enable', 'enabled'):
@@ -43,11 +47,11 @@ def auto_boolean(tokeniser: object, default: bool) -> bool | None:
     raise ValueError(f"'{status}' is not a valid boolean\n  Valid options: true, false, enable, disable, auto")
 
 
-def port(tokeniser: object) -> int:
+def port(tokeniser: Tokeniser) -> int:
     if not tokeniser.tokens:
         raise ValueError('a port number is required (1-65535)')
 
-    value = tokeniser()  # type: ignore[operator]
+    value = tokeniser()
     try:
         port_num = int(value)
     except ValueError:
@@ -59,24 +63,24 @@ def port(tokeniser: object) -> int:
     return port_num
 
 
-def auto_asn(tokeniser: object, value: str | None = None) -> ASN | None:
+def auto_asn(tokeniser: Tokeniser, value: str | None = None) -> ASN | None:
     if value is None:
         if not tokeniser.tokens:
             raise ValueError("an ASN or 'auto' is required (e.g., 65001, 1.1, auto)")
 
     if tokeniser.peek() == 'auto':
-        tokeniser()  # type: ignore[operator]
+        tokeniser()
         return None
 
     return asn(tokeniser)
 
 
-def asn(tokeniser: object, value: str | None = None) -> ASN:
+def asn(tokeniser: Tokeniser, value: str | None = None) -> ASN:
     if value is None:
         if not tokeniser.tokens:
             raise ValueError('an ASN is required (e.g., 65001 or 1.1)')
 
-    value = tokeniser()  # type: ignore[operator]
+    value = tokeniser()
     try:
         if value.count('.'):
             high, low = value.split('.', 1)
@@ -90,16 +94,17 @@ def asn(tokeniser: object, value: str | None = None) -> ASN:
         ) from None
 
 
-def peer_ip(tokeniser: object) -> IPRange:
+def peer_ip(tokeniser: Tokeniser) -> IPRange:
     if not tokeniser.tokens:
         raise ValueError('an IP address is required (e.g., 192.0.2.1 or 192.0.2.0/24)')
 
-    value = tokeniser()  # type: ignore[operator]
+    value = tokeniser()
     if '/' in value:
-        value, mask = value.split('/', 1)
+        value, mask_str = value.split('/', 1)
+        mask = int(mask_str)
     else:
         # XXX: This only works as no port are allowed, improve
-        mask = '128' if ':' in value else '32'
+        mask = 128 if ':' in value else 32
 
     try:
         return IPRange.create(value, mask)
@@ -109,11 +114,11 @@ def peer_ip(tokeniser: object) -> IPRange:
         ) from None
 
 
-def ip(tokeniser: object) -> IP:
+def ip(tokeniser: Tokeniser) -> IP:
     if not tokeniser.tokens:
         raise ValueError('an IP address is required (e.g., 192.0.2.1 or 2001:db8::1)')
 
-    value = tokeniser()  # type: ignore[operator]
+    value = tokeniser()
     try:
         return IP.create(value)
     except (OSError, IndexError, ValueError):

@@ -9,6 +9,7 @@ from exabgp.bgp.message import Action
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.bgp.message.update.nlri.mvpn import MVPN
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.ip import AnnounceIP
@@ -68,14 +69,15 @@ class AnnounceMVPN(ParseAnnounce):
 
 
 def mvpn_route(tokeniser: Tokeniser, afi: AFI) -> List[Change]:
-    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
+    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     route_type = tokeniser()
+    mvpn_nlri: MVPN
     if route_type == 'source-ad':
-        mvpn_nlri = mvpn_sourcead(tokeniser, afi, action)
+        mvpn_nlri = mvpn_sourcead(tokeniser, afi, nlri_action)
     elif route_type == 'source-join':
-        mvpn_nlri = mvpn_sourcejoin(tokeniser, afi, action)
+        mvpn_nlri = mvpn_sourcejoin(tokeniser, afi, nlri_action)
     elif route_type == 'shared-join':
-        mvpn_nlri = mvpn_sharedjoin(tokeniser, afi, action)
+        mvpn_nlri = mvpn_sharedjoin(tokeniser, afi, nlri_action)
     else:
         raise ValueError('mup: unknown/unsupported mvpn route type: {}'.format(route_type))
 
@@ -87,15 +89,15 @@ def mvpn_route(tokeniser: Tokeniser, afi: AFI) -> List[Change]:
         if not command:
             break
 
-        action = AnnounceMVPN.action.get(command, '')
+        command_action = AnnounceMVPN.action.get(command, '')
 
-        if action == 'attribute-add':
-            change.attributes.add(AnnounceMVPN.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nlri-set':
-            change.nlri.assign(AnnounceMVPN.assign[command], AnnounceMVPN.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceMVPN.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+        if command_action == 'attribute-add':
+            change.attributes.add(AnnounceMVPN.known[command](tokeniser))
+        elif command_action == 'nlri-set':
+            change.nlri.assign(AnnounceMVPN.assign[command], AnnounceMVPN.known[command](tokeniser))
+        elif command_action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceMVPN.known[command](tokeniser)
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))

@@ -40,20 +40,9 @@ class AnnounceVPN(ParseAnnounce):
 
     syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known = dict(
-        AnnounceLabel.known,
-        rd=route_distinguisher,
-    )
-
-    action = dict(
-        AnnounceLabel.action,
-        rd='nlri-set',
-    )
-
-    assign = dict(
-        AnnounceLabel.assign,
-        rd='rd',
-    )
+    known = {**AnnounceLabel.known, 'rd': route_distinguisher}
+    action = {**AnnounceLabel.action, 'rd': 'nlri-set'}
+    assign = {**AnnounceLabel.assign, 'rd': 'rd'}
 
     name = 'vpn'
     afi: AFI | None = None
@@ -69,17 +58,17 @@ class AnnounceVPN(ParseAnnounce):
         if not AnnounceLabel.check(change, afi):
             return False
 
-        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_rd() and change.nlri.rd is RouteDistinguisher.NORD:
+        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_rd() and change.nlri.rd is RouteDistinguisher.NORD:  # type: ignore[attr-defined]
             return False
 
         return True
 
 
 def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
-    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
+    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
-    nlri = IPVPN(afi, safi, action)
+    nlri = IPVPN(afi, safi, nlri_action)
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
 
     change = Change(nlri, Attributes())
@@ -90,15 +79,15 @@ def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         if not command:
             break
 
-        action = AnnounceVPN.action.get(command, '')
+        command_action = AnnounceVPN.action.get(command, '')
 
-        if action == 'attribute-add':
-            change.attributes.add(AnnounceVPN.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nlri-set':
-            change.nlri.assign(AnnounceVPN.assign[command], AnnounceVPN.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceVPN.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+        if command_action == 'attribute-add':
+            change.attributes.add(AnnounceVPN.known[command](tokeniser))
+        elif command_action == 'nlri-set':
+            change.nlri.assign(AnnounceVPN.assign[command], AnnounceVPN.known[command](tokeniser))
+        elif command_action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceVPN.known[command](tokeniser)
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))

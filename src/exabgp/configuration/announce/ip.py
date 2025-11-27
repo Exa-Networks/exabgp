@@ -139,7 +139,7 @@ class AnnounceIP(ParseAnnounce):
     def check(change: Change, afi: AFI | None) -> bool:
         if (
             change.nlri.action == Action.ANNOUNCE
-            and change.nlri.nexthop is NoNextHop
+            and change.nlri.nexthop is NoNextHop  # type: ignore[attr-defined]
             and change.nlri.afi == afi
             and change.nlri.safi in (SAFI.unicast, SAFI.multicast)
         ):
@@ -149,10 +149,10 @@ class AnnounceIP(ParseAnnounce):
 
 
 def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
-    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
+    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
-    nlri = INET(afi, safi, action)
+    nlri = INET(afi, safi, nlri_action)
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
 
     change = Change(nlri, Attributes())
@@ -163,15 +163,15 @@ def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         if not command:
             break
 
-        action = AnnounceIP.action.get(command, '')
+        command_action = AnnounceIP.action.get(command, '')
 
-        if action == 'attribute-add':
-            change.attributes.add(AnnounceIP.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nlri-set':
-            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceIP.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+        if command_action == 'attribute-add':
+            change.attributes.add(AnnounceIP.known[command](tokeniser))
+        elif command_action == 'nlri-set':
+            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))
+        elif command_action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceIP.known[command](tokeniser)
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))
@@ -183,10 +183,10 @@ def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
 
 def ip_multicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
-    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
+    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
-    nlri = INET(afi, safi, action)
+    nlri = INET(afi, safi, nlri_action)
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
 
     change = Change(nlri, Attributes())
@@ -197,15 +197,15 @@ def ip_multicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         if not command:
             break
 
-        action = AnnounceIP.action.get(command, '')
+        command_action = AnnounceIP.action.get(command, '')
 
-        if action == 'attribute-add':
-            change.attributes.add(AnnounceIP.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nlri-set':
-            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceIP.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+        if command_action == 'attribute-add':
+            change.attributes.add(AnnounceIP.known[command](tokeniser))
+        elif command_action == 'nlri-set':
+            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))
+        elif command_action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnounceIP.known[command](tokeniser)
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))

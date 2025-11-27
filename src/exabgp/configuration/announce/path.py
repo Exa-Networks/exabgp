@@ -78,10 +78,10 @@ class AnnouncePath(AnnounceIP):
 
 
 def ip_unicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
-    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
+    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
-    nlri = INET(afi, safi, action)
+    nlri = INET(afi, safi, nlri_action)
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
 
     change = Change(nlri, Attributes())
@@ -92,15 +92,15 @@ def ip_unicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
         if not command:
             break
 
-        action = AnnouncePath.action.get(command, '')
+        command_action = AnnouncePath.action.get(command, '')
 
-        if action == 'attribute-add':
-            change.attributes.add(AnnouncePath.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nlri-set':
-            change.nlri.assign(AnnouncePath.assign[command], AnnouncePath.known[command](tokeniser))  # type: ignore[operator]
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnouncePath.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+        if command_action == 'attribute-add':
+            change.attributes.add(AnnouncePath.known[command](tokeniser))
+        elif command_action == 'nlri-set':
+            change.nlri.assign(AnnouncePath.assign[command], AnnouncePath.known[command](tokeniser))
+        elif command_action == 'nexthop-and-attribute':
+            nexthop, attribute = AnnouncePath.known[command](tokeniser)
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))
