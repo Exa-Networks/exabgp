@@ -93,7 +93,7 @@ def cmdline(cmdarg):
     if cmdarg.debug or cmdarg.pdb:
         env.debug.pdb = True
 
-    log.init(env)  # type: ignore[arg-type]
+    log.init(env)
     trace_interceptor(env.debug.pdb)
 
     if cmdarg.profile:
@@ -118,7 +118,7 @@ def cmdline(cmdarg):
         if not location:
             log.critical(
                 lambda configuration=configuration: f'{configuration} is not an exabgp config file',
-                'configuration',  # type: ignore[misc]
+                'configuration',
             )
             sys.exit(1)
         configurations.append(location)
@@ -150,7 +150,7 @@ def cmdline(cmdarg):
         for pid in pids:
             os.waitpid(pid, 0)
     except OSError as exc:
-        log.critical(lambda exc=exc: f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')  # type: ignore[misc]
+        log.critical(lambda exc=exc: f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')
         sys.exit(1)
 
 
@@ -278,7 +278,7 @@ def run(comment, configurations, pid=0):
             exit_code = Reactor(configuration).run()
         except Exception as e:
             exit_code = Reactor.Exit.unknown
-            log.critical(lambda e=e: str(e))  # type: ignore[misc]
+            log.critical(lambda e=e: str(e))
 
         try:
             profiler.dump_stats(destination)

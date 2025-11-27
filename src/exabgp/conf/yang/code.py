@@ -279,7 +279,7 @@ class Code:
             If(
                 test=BoolOp(
                     op=And(),
-                    values=values,  # type: ignore[arg-type]
+                    values=values,
                 ),
                 body=[
                     Return(

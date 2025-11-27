@@ -88,7 +88,7 @@ def cmdline(cmdarg):
     if cmdarg.pdb:
         env.debug.pdb = True
 
-    log.init(env)  # type: ignore[arg-type]
+    log.init(env)
     trace_interceptor(env.debug.pdb)
 
     conf = conf_template.replace('[path-information]', 'add-path send/receive;' if cmdarg.path_information else '')
