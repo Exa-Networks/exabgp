@@ -355,7 +355,7 @@ class Attributes(dict):
 
         if aid in self:
             if aid in self.NO_DUPLICATE:
-                raise Notify(3, 1, 'multiple attribute for {}'.format(str(Attribute.CODE(attribute.ID))))
+                raise Notify(3, 1, 'multiple attribute for {}'.format(str(Attribute.CODE(aid))))
 
             log.debug(
                 lambda: 'duplicate attribute {} (flag 0x{:02X}, aid 0x{:02X}) skipping'.format(Attribute.CODE.names.get(aid, 'unset'), flag, aid),
