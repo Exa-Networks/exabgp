@@ -65,13 +65,55 @@ Run a test multiple times to reproduce intermittent failures:
 
 ---
 
+## Verbose Mode
+
+Use `--verbose` / `-v` to see output for each test during batch runs:
+
+```bash
+./qa/bin/functional encoding -v           # All tests with output
+./qa/bin/functional encoding --verbose    # Same, long form
+./qa/bin/functional encoding -v A B C     # Specific tests with output
+./qa/bin/functional encoding -v A         # Single test with full output (useful for debugging)
+```
+
+**Tip:** `-v <test>` is particularly useful for debugging - it shows full server/client output for a specific test without needing two terminals.
+
+**Output format:**
+```
+✓ 1 api-add-remove (0.94s)
+  server (12 lines):
+    [last 15 lines of server stderr]
+  client (53 lines):
+    [last 15 lines of client stderr]
+```
+
+**On failure, shows debug hints:**
+```
+✗ A some-test (20.00s)
+  server (5 lines):
+    ...
+  client (10 lines):
+    ...
+
+  debug hints:
+    - test timed out after 20.0s
+    - try increasing --timeout or check for hangs
+    - run single test: ./qa/bin/functional encoding A
+    - manual debug:    ./qa/bin/functional encoding --server A
+                       ./qa/bin/functional encoding --client A
+    - decode packets:  ./sbin/exabgp decode "<hex>"
+```
+
+---
+
 ## Debug Process
 
 ### 1. Identify Failing Test
 
 ```bash
-./qa/bin/functional encoding  # Note which fail
-./qa/bin/functional encoding T  # Run specific test
+./qa/bin/functional encoding        # Note which fail
+./qa/bin/functional encoding -v     # See output for all tests
+./qa/bin/functional encoding T      # Run specific test
 ```
 
 ### 2. Open Two Terminals Side-by-Side
@@ -286,6 +328,9 @@ If still failing:
 
 # Run test
 ./qa/bin/functional encoding <test_id>
+
+# Run all with output
+./qa/bin/functional encoding -v
 
 # Debug (2 terminals)
 ./qa/bin/functional encoding --server <test_id>
