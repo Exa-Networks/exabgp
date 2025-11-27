@@ -31,7 +31,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 from exabgp.logger import option
 
 # check_neighbor
@@ -119,12 +119,12 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
 
             _packed = packed  # type: List[bytes]
             _pack1 = pack1  # type: bytes
-            log.debug(lambda _packed=_packed: 'parsed route requires %d updates' % len(_packed), 'parser')  # type: ignore[misc]
-            log.debug(lambda _pack1=_pack1: 'update size is %d' % len(_pack1), 'parser')  # type: ignore[misc]
+            log.debug(lazymsg('parsed route requires {count} updates', count=len(_packed)), 'parser')
+            log.debug(lazymsg('update size is {size}', size=len(_pack1)), 'parser')
 
             _str1 = str1  # type: str
-            log.debug(lambda _str1=_str1: 'parsed route {}'.format(_str1), 'parser')  # type: ignore[misc]
-            log.debug(lambda _pack1=_pack1: 'parsed hex   {}'.format(od(_pack1)), 'parser')  # type: ignore[misc]
+            log.debug(lazymsg('parsed route {route}', route=_str1), 'parser')
+            log.debug(lazymsg('parsed hex   {hex}', hex=od(_pack1)), 'parser')
 
             # This does not take the BGP header - let's assume we will not break that :)
             try:
@@ -139,8 +139,8 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
 
                 _str2 = str2  # type: str
                 _pack2 = pack2  # type: bytes
-                log.debug(lambda _str2=_str2: 'recoded route {}'.format(_str2), 'parser')  # type: ignore[misc]
-                log.debug(lambda _pack2=_pack2: 'recoded hex   {}'.format(od(_pack2)), 'parser')  # type: ignore[misc]
+                log.debug(lazymsg('recoded route {route}', route=_str2), 'parser')
+                log.debug(lazymsg('recoded hex   {hex}', hex=od(_pack2)), 'parser')
 
                 str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]', 'med 100')
                 str1r = (
@@ -179,8 +179,8 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
                         log.debug(lambda: 'strings are different:', 'parser')
                         _str1r = str1r  # type: str
                         _str2r = str2r  # type: str
-                        log.debug(lambda _str1r=_str1r: f'[{_str1r}]', 'parser')  # type: ignore[misc]
-                        log.debug(lambda _str2r=_str2r: f'[{_str2r}]', 'parser')  # type: ignore[misc]
+                        log.debug(lazymsg('[{s}]', s=_str1r), 'parser')
+                        log.debug(lazymsg('[{s}]', s=_str2r), 'parser')
                         return False
                 else:
                     log.debug(lambda: 'strings are fine', 'parser')
@@ -191,8 +191,8 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
                     log.debug(lambda: 'encoding are different', 'parser')
                     _pack1_cmp = pack1  # type: bytes
                     _pack2_cmp = pack2  # type: bytes
-                    log.debug(lambda _pack1_cmp=_pack1_cmp: f'[{od(_pack1_cmp)}]', 'parser')  # type: ignore[misc]
-                    log.debug(lambda _pack2_cmp=_pack2_cmp: f'[{od(_pack2_cmp)}]', 'parser')  # type: ignore[misc]
+                    log.debug(lazymsg('[{hex}]', hex=od(_pack1_cmp)), 'parser')
+                    log.debug(lazymsg('[{hex}]', hex=od(_pack2_cmp)), 'parser')
                     return False
                 else:
                     log.debug(lambda: 'encoding is fine', 'parser')
@@ -212,7 +212,7 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
             except Notify as exc:
                 log.debug(lambda: '----------------------------------------', 'parser')
                 _exc = exc  # type: Notify
-                log.debug(lambda _exc=_exc: str(_exc), 'parser')  # type: ignore[misc]
+                log.debug(lazymsg('{exc}', exc=str(_exc)), 'parser')
                 log.debug(lambda: '----------------------------------------', 'parser')
                 return False
         if neighbor.rib is not None:
@@ -293,7 +293,7 @@ def _make_nlri(neighbor: Neighbor, routes: str) -> List[NLRI]:
     try:
         while announced:
             _announced = announced  # type: bytes
-            log.debug(lambda _announced=_announced: 'parsing NLRI {}'.format(_announced), 'parser')  # type: ignore[misc]
+            log.debug(lazymsg('parsing NLRI {announced}', announced=_announced), 'parser')
             # Note: NLRI.unpack_nlri base class returns NLRI, but subclasses return Tuple[NLRI, bytes]
             unpack_result = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
             nlri_parsed: NLRI = unpack_result[0]  # type: ignore[index]
@@ -304,7 +304,7 @@ def _make_nlri(neighbor: Neighbor, routes: str) -> List[NLRI]:
         from exabgp.debug import string_exception
 
         _exc_nlri = exc  # type: BaseException
-        log.error(lambda _exc_nlri=_exc_nlri: string_exception(_exc_nlri), 'parser')  # type: ignore[misc]
+        log.error(lazymsg('{msg}', msg=string_exception(_exc_nlri)), 'parser')
         if getenv().debug.pdb:
             raise
         return []
@@ -320,7 +320,7 @@ def check_nlri(neighbor: Neighbor, routes: str) -> bool:
     log.debug(lambda: '', 'parser')  # new line
     for nlri in nlris:
         _nlri = nlri  # type: NLRI
-        log.info(lambda _nlri=_nlri: 'nlri json {}'.format(_nlri.json()), 'parser')  # type: ignore[misc]
+        log.info(lazymsg('nlri json {json}', json=_nlri.json()), 'parser')
     return True
 
 
@@ -386,7 +386,7 @@ def _make_update(neighbor: Neighbor, raw: bytes) -> Update | None:
                 log.debug(lambda: 'the message is an update', 'parser')
             else:
                 _kind = kind  # type: int
-                log.debug(lambda _kind=_kind: 'the message is not an update (%d) - aborting' % _kind, 'parser')  # type: ignore[misc]
+                log.debug(lazymsg('the message is not an update ({kind}) - aborting', kind=_kind), 'parser')
                 return None
         else:
             log.debug(lambda: 'header missing, assuming this message is ONE update', 'parser')
@@ -467,7 +467,10 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
     for number in range(len(update.nlris)):
         change = Change(update.nlris[number], update.attributes)
         _change = change  # type: Change
-        log.info(lambda _change=_change: f'decoded update {_change.nlri.action} {_change.extensive()}', 'parser')  # type: ignore[misc]
+        log.info(
+            lazymsg('decoded update {action} {extensive}', action=_change.nlri.action, extensive=_change.extensive()),
+            'parser',
+        )
     json_update = Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')
     log.info(lambda: f'update json {json_update}', 'parser')
 
@@ -517,5 +520,5 @@ def _get_dummy_negotiated() -> Negotiated:
 def check_notification(raw: bytes) -> bool:
     notification = Notification.unpack_message(raw[18:], _get_dummy_negotiated())
     _notification = notification  # type: Notification
-    log.info(lambda _notification=_notification: f'{_notification}', 'parser')  # type: ignore[misc]
+    log.info(lazymsg('{notification}', notification=_notification), 'parser')
     return True

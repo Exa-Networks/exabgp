@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from typing import Callable, ClassVar, Dict, TYPE_CHECKING
+from typing import ClassVar, Dict, TYPE_CHECKING
 import logging
 
 if TYPE_CHECKING:
@@ -13,14 +13,15 @@ from exabgp.logger.handler import get_logger
 from exabgp.logger.format import formater as get_formater, FormatterFunc
 
 
-def echo(_: str) -> str:
-    return _
+def echo(message: str, source: str, level: str, timestamp: time.struct_time) -> str:
+    """Fallback formatter that just returns the message unchanged"""
+    return message
 
 
 class option:
     logger: ClassVar[logging.Logger | None] = None
-    # Formatter can be echo function or a proper FormatterFunc
-    formater: ClassVar[Callable[[str], str] | FormatterFunc] = echo
+    # Formatter function - either a proper formatter or the echo fallback
+    formater: ClassVar[FormatterFunc] = echo
 
     short: ClassVar[bool] = False
     level: ClassVar[str] = 'WARNING'

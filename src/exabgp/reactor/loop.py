@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.fsm import FSM
 from exabgp.configuration.process import API_PREFIX
 from exabgp.environment import getenv
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 from exabgp.reactor.api import API
 from exabgp.reactor.api.processes import ProcessError, Processes
 from exabgp.reactor.asynchronous import ASYNC
@@ -196,7 +196,7 @@ class Reactor:
                         # Check if task raised an exception
                         peer._async_task.result()
                     except Exception as exc:
-                        log.error(lambda exc=exc: f'peer {key} task failed: {exc}', 'reactor')  # type: ignore[misc]
+                        log.error(lazymsg('peer {key} task failed: {exc}', key=key, exc=exc), 'reactor')
                     completed_peers.append(key)
 
         # Remove completed peers
@@ -761,25 +761,26 @@ class Reactor:
 
         for key, peer in self._peers.items():
             if key not in self.configuration.neighbors:
-                log.debug(lambda peer=peer: f'removing peer: {peer.neighbor.name()}', 'reactor')  # type: ignore[misc]
+                log.debug(lazymsg('removing peer: {name}', name=peer.neighbor.name()), 'reactor')
                 peer.remove()
 
         for key, neighbor in self.configuration.neighbors.items():
             # new peer
             if key not in self._peers:
-                log.debug(lambda neighbor=neighbor: f'new peer: {neighbor.name()}', 'reactor')  # type: ignore[misc]
+                log.debug(lazymsg('new peer: {name}', name=neighbor.name()), 'reactor')
                 peer = Peer(neighbor, self)
                 self._peers[key] = peer
             # modified peer
             elif self._peers[key].neighbor != neighbor:
-                log.debug(lambda key=key: f'peer definition change, establishing a new connection for {key}', 'reactor')  # type: ignore[misc]
+                log.debug(
+                    lazymsg('peer definition change, establishing a new connection for {key}', key=key), 'reactor'
+                )
                 self._peers[key].reestablish(neighbor)
             # same peer but perhaps not the routes
             else:
                 # finding what route changed and sending the delta is not obvious
                 log.debug(
-                    lambda key=key: f'peer definition identical, updating peer routes if required for {key}',  # type: ignore[misc]
-                    'reactor',
+                    lazymsg('peer definition identical, updating peer routes if required for {key}', key=key), 'reactor'
                 )
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
@@ -811,7 +812,7 @@ class Reactor:
         for key in self._peers.keys():
             if key not in self.configuration.neighbors.keys():
                 peer = self._peers[key]
-                log.debug(lambda peer=peer: f'removing peer {peer.neighbor.name()}', 'reactor')  # type: ignore[misc]
+                log.debug(lazymsg('removing peer {name}', name=peer.neighbor.name()), 'reactor')
                 self._peers[key].remove()
             else:
                 self._peers[key].reestablish()

@@ -19,7 +19,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, Attributes
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.update.nlri import NLRI
-from exabgp.logger import lazyformat, log
+from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import NoNextHop
 
@@ -315,14 +315,14 @@ class Update(Message):
         nlris = []
         while withdrawn:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath, negotiated)  # type: ignore[misc]
-            log.debug(lambda nlri=nlri: 'withdrawn NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type,misc]
+            log.debug(lazymsg('withdrawn NLRI {nlri}', nlri=nlri), 'routes')  # type: ignore[has-type]
             withdrawn = left  # type: ignore[has-type]
             nlris.append(nlri)  # type: ignore[has-type]
 
         while announced:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath, negotiated)  # type: ignore[misc]
             nlri.nexthop = nexthop  # type: ignore[has-type]
-            log.debug(lambda nlri=nlri: 'announced NLRI {}'.format(nlri), 'routes')  # type: ignore[has-type,misc]
+            log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')  # type: ignore[has-type]
             announced = left  # type: ignore[has-type]
             nlris.append(nlri)  # type: ignore[has-type]
 

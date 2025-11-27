@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 from exabgp.environment import getenv
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 MAXFD: int = 2048
 
@@ -186,7 +186,10 @@ class Daemon:
                 if pid > 0:
                     os._exit(0)
             except OSError as exc:
-                log.critical(lambda exc=exc: f'can not fork, errno {exc.errno} : {exc.strerror}', 'daemon')  # type: ignore[misc]
+                log.critical(
+                    lazymsg('can not fork, errno {errno} : {strerror}', errno=exc.errno, strerror=exc.strerror),
+                    'daemon',
+                )
 
         # do not detach if we are already supervised or run by init like process
         if self._is_socket(sys.__stdin__.fileno()) or os.getppid() == 1:  # type: ignore[union-attr]

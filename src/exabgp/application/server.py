@@ -16,7 +16,7 @@ from exabgp.reactor.loop import Reactor
 from exabgp.configuration.configuration import Configuration
 
 from exabgp.util.dns import warn
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # this is imported from configuration.setup to make sure it was initialised
 from exabgp.environment import getenv
@@ -150,7 +150,9 @@ def cmdline(cmdarg):
         for pid in pids:
             os.waitpid(pid, 0)
     except OSError as exc:
-        log.critical(lambda exc=exc: f'can not fork, errno {exc.errno} : {exc.strerror}', 'reactor')
+        log.critical(
+            lazymsg('can not fork, errno {errno} : {strerror}', errno=exc.errno, strerror=exc.strerror), 'reactor'
+        )
         sys.exit(1)
 
 
@@ -196,7 +198,7 @@ def run(comment, configurations, pid=0):
             )
             log.error(lambda: 'we scanned the following folders (the number is your PID):', 'cli')
             for location in pipes:
-                log.error(lambda location=location: f' - {location}', 'cli control')
+                log.error(lazymsg(' - {location}', location=location), 'cli control')
             log.error(lambda: 'please make them in one of the folder with the following commands:', 'cli control')
 
             # NOTE: Logging full paths (os.getcwd()) is intentional for user guidance
@@ -278,7 +280,7 @@ def run(comment, configurations, pid=0):
             exit_code = Reactor(configuration).run()
         except Exception as e:
             exit_code = Reactor.Exit.unknown
-            log.critical(lambda e=e: str(e))
+            log.critical(lazymsg('{error}', error=str(e)))
 
         try:
             profiler.dump_stats(destination)
