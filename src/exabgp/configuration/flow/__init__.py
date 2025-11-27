@@ -60,7 +60,8 @@ class ParseFlow(Section):
 
 @ParseFlow.register('route', 'append-route')
 def route(tokeniser: Any) -> List[Change]:
-    change: Change = Change(Flow(), Attributes())
+    flow_nlri = Flow()
+    change: Change = Change(flow_nlri, Attributes())
 
     while True:
         command: str = tokeniser()
@@ -72,21 +73,21 @@ def route(tokeniser: Any) -> List[Change]:
 
         if action == 'nlri-add':
             for adding in ParseFlow.known[command](tokeniser):  # type: ignore[operator]
-                change.nlri.add(adding)  # type: ignore[attr-defined]
+                flow_nlri.add(adding)
         elif action == 'attribute-add':
             change.attributes.add(ParseFlow.known[command](tokeniser))  # type: ignore[operator]
         elif action == 'nexthop-and-attribute':
             nexthop: Any
             attribute: Any
             nexthop, attribute = ParseFlow.known[command](tokeniser)  # type: ignore[operator]
-            change.nlri.nexthop = nexthop
+            flow_nlri.nexthop = nexthop
             change.attributes.add(attribute)
         elif action == 'nop':
             pass  # yes nothing to do !
         else:
             raise ValueError(f'flow: unknown command "{command}"')
 
-    if change.nlri.rd is not RouteDistinguisher.NORD:  # type: ignore[attr-defined]
-        change.nlri.safi = SAFI.flow_vpn
+    if flow_nlri.rd is not RouteDistinguisher.NORD:
+        flow_nlri.safi = SAFI.flow_vpn
 
     return [change]

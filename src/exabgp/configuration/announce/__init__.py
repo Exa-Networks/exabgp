@@ -6,7 +6,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Iterator as TypingIterator
+from typing import Iterator as TypingIterator, cast
 
 from exabgp.protocol.ip import IP
 
@@ -20,6 +20,7 @@ from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.attribute import Attribute
 
 
@@ -45,43 +46,46 @@ class ParseAnnounce(Section):
             yield last
             return
 
+        # Cast to INET - split only works on INET-like NLRIs with cidr/path_info
+        inet_nlri = cast(INET, last.nlri)
+
         # ignore if the request is for an aggregate, or the same size
-        mask = last.nlri.cidr.mask  # type: ignore[attr-defined]
+        mask = inet_nlri.cidr.mask
         cut = last.attributes[Attribute.CODE.INTERNAL_SPLIT]
         if mask >= cut:
             yield last
             return
 
         # calculate the number of IP in the /<size> of the new route
-        increment = pow(2, last.nlri.afi.mask() - cut)
+        increment = pow(2, inet_nlri.afi.mask() - cut)
         # how many new routes are we going to create from the initial one
-        number = pow(2, cut - last.nlri.cidr.mask)  # type: ignore[attr-defined]
+        number = pow(2, cut - inet_nlri.cidr.mask)
 
         # convert the IP into a integer/long
         ip = 0
-        for c in last.nlri.cidr.ton():  # type: ignore[attr-defined]
+        for c in inet_nlri.cidr.ton():
             ip <<= 8
             ip += c
 
-        afi = last.nlri.afi
-        safi = last.nlri.safi
+        afi = inet_nlri.afi
+        safi = inet_nlri.safi
 
         # Really ugly
-        klass = last.nlri.__class__
-        path_info = last.nlri.path_info  # type: ignore[attr-defined]
-        nexthop = last.nlri.nexthop
+        klass = inet_nlri.__class__
+        path_info = inet_nlri.path_info
+        nexthop = inet_nlri.nexthop
 
         # XXX: Looks weird to set and then set to None, check
-        last.nlri.cidr.mask = cut  # type: ignore[attr-defined]
+        inet_nlri.cidr.mask = cut
         last.nlri = None  # type: ignore[assignment]
 
         # generate the new routes
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
             nlri = klass(afi, safi, Action.ANNOUNCE)
-            nlri.cidr = CIDR(pack_int(afi, ip), cut)  # type: ignore[attr-defined]
+            nlri.cidr = CIDR(pack_int(afi, ip), cut)
             nlri.nexthop = nexthop  # nexthop can be NextHopSelf
-            nlri.path_info = path_info  # type: ignore[attr-defined]
+            nlri.path_info = path_info
             # next ip
             ip += increment
             yield Change(nlri, last.attributes)
