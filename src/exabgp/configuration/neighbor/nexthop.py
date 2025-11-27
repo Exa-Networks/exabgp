@@ -14,7 +14,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.configuration.core import Section
-from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
 from exabgp.configuration.neighbor.family import ParseFamily
@@ -43,8 +43,8 @@ class ParseNextHop(Section):
 
     name = 'nexthop'
 
-    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
-        Section.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
+        Section.__init__(self, parser, scope, error)
         self.known = {
             'ipv4': self.ipv4,
             'ipv6': self.ipv6,

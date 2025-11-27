@@ -46,8 +46,8 @@ class ParseStatic(ParseStaticRoute):
 
     name: str = 'static'
 
-    def __init__(self, tokeniser: Any, scope: Any, error: Any) -> None:
-        ParseStaticRoute.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser: Any, scope: Any, error: Any) -> None:
+        ParseStaticRoute.__init__(self, parser, scope, error)
 
     def clear(self) -> bool:
         return True

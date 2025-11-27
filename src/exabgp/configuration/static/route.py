@@ -156,14 +156,14 @@ class ParseStaticRoute(Section):
 
     name: str = 'static/route'
 
-    def __init__(self, tokeniser: Any, scope: Any, error: Any) -> None:
-        Section.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser: Any, scope: Any, error: Any) -> None:
+        Section.__init__(self, parser, scope, error)
 
     def clear(self) -> bool:
         return True
 
     def pre(self) -> bool:
-        self.scope.append_route(mpls(self.tokeniser.iterate))
+        self.scope.append_route(mpls(self.parser.tokeniser))
         return True
 
     def post(self) -> bool:

@@ -25,7 +25,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.configuration.core import Section
-from exabgp.configuration.core import Tokeniser
+from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
 
@@ -135,8 +135,8 @@ class ParseNeighbor(Section):
 
     name = 'neighbor'
 
-    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
-        Section.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
+        Section.__init__(self, parser, scope, error)
         self._neighbors: List[str] = []
         self.neighbors: Dict[str, Neighbor] = {}
 

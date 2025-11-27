@@ -46,8 +46,8 @@ class ParseOperational(Section):
 
     name = 'operational'
 
-    def __init__(self, tokeniser, scope, error):
-        Section.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser, scope, error):
+        Section.__init__(self, parser, scope, error)
 
     def clear(self):
         pass

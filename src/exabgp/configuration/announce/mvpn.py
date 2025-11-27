@@ -12,6 +12,7 @@ from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.ip import AnnounceIP
+from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
@@ -45,8 +46,8 @@ class AnnounceMVPN(ParseAnnounce):
     name = 'mvpn'
     afi: AFI | None = None
 
-    def __init__(self, tokeniser: Tokeniser, scope: Scope, error: Error) -> None:
-        ParseAnnounce.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
+        ParseAnnounce.__init__(self, parser, scope, error)
 
     def clear(self) -> None:
         pass

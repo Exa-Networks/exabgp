@@ -20,14 +20,14 @@ class ParseTemplateNeighbor(Section):
 
     name = 'template-neighbor'
 
-    def __init__(self, tokeniser, scope, error):
-        Section.__init__(self, tokeniser, scope, error)
+    def __init__(self, parser, scope, error):
+        Section.__init__(self, parser, scope, error)
 
     def clear(self):
         self._names = []
 
     def pre(self):
-        named = self.tokeniser.line[1]
+        named = self.parser.line[1]
         self.check_name(named)
         self.scope.enter(named)
         self.scope.to_context()

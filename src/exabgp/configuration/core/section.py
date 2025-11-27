@@ -78,9 +78,9 @@ class Section(Error):
     action: dict[str | tuple[Any, ...], str] = {}  # how to handle this command ( append, add, assign, route )
     assign: dict[str, str] = {}  # configuration to class variable lookup for setattr
 
-    def __init__(self, tokerniser: Parser, scope: Scope, error: Error) -> None:
+    def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         Error.__init__(self)
-        self.tokeniser = tokerniser
+        self.parser = parser
         self.scope = scope
         self.error = error
         self._names: list[str] = []
@@ -133,9 +133,9 @@ class Section(Error):
 
         try:
             if command in self.default:
-                insert = self.known[identifier](self.tokeniser.iterate, self.default[command])
+                insert = self.known[identifier](self.parser.tokeniser, self.default[command])
             else:
-                insert = self.known[identifier](self.tokeniser.iterate)
+                insert = self.known[identifier](self.parser.tokeniser)
 
             action = self.action.get(identifier, '')
 
