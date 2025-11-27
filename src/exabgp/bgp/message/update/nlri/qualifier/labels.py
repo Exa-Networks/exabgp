@@ -6,7 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import List, Type
+from typing import ClassVar, List, Type
 
 from struct import pack
 from struct import unpack
@@ -23,7 +23,7 @@ def opt_raw_label(label: int | None, format: str = ' (%d)') -> str:
 class Labels:
     MAX = pow(2, 20) - 1
 
-    NOLABEL: Labels | None = None
+    NOLABEL: ClassVar['Labels']
 
     def __init__(self, labels: List[int], bos: bool = True, raw_labels: List[int] | None = None) -> None:
         self.labels: List[int] = labels

@@ -60,7 +60,7 @@ class INET(NLRI):
         return self.extensive()
 
     def __hash__(self) -> int:
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()
         return hash(addpath + self._pack_nlri_simple())
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
@@ -70,34 +70,34 @@ class INET(NLRI):
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return self.cidr.pack_nlri()  # type: ignore[union-attr]
+        return self.cidr.pack_nlri()
 
     def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
-        addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''  # type: ignore[union-attr]
+        addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''
         return addpath + self._pack_nlri_simple()
 
     def index(self) -> bytes:
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()  # type: ignore[union-attr]
-        return Family.index(self) + addpath + self.cidr.pack_nlri()  # type: ignore[union-attr]
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()
+        return Family.index(self) + addpath + self.cidr.pack_nlri()
 
     def prefix(self) -> str:
-        return '{}{}'.format(self.cidr.prefix(), str(self.path_info))  # type: ignore[union-attr]
+        return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
 
     def extensive(self) -> str:
         return '{}{}'.format(self.prefix(), '' if self.nexthop is NoNextHop else ' next-hop {}'.format(self.nexthop))
 
     def _internal(self, announced: bool = True) -> List[str]:
-        return [self.path_info.json()]  # type: ignore[union-attr]
+        return [self.path_info.json()]
 
     # The announced feature is not used by ExaBGP, is it by BAGPIPE ?
 
     def json(self, announced: bool = True, compact: bool = False) -> str:
         internal = ', '.join([_ for _ in self._internal(announced) if _])
         if internal:
-            return '{{ "nlri": "{}", {} }}'.format(self.cidr.prefix(), internal)  # type: ignore[union-attr]
+            return '{{ "nlri": "{}", {} }}'.format(self.cidr.prefix(), internal)
         if compact:
-            return '"{}"'.format(self.cidr.prefix())  # type: ignore[union-attr]
-        return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())  # type: ignore[union-attr]
+            return '"{}"'.format(self.cidr.prefix())
+        return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
 
     @classmethod
     def _pathinfo(cls, data: bytes, addpath: Any) -> Tuple[PathInfo, bytes]:
