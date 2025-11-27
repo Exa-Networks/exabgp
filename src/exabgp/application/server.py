@@ -159,20 +159,20 @@ def cmdline(cmdarg):
 def run(comment, configurations, pid=0):
     env = getenv()
 
-    log.info(lambda: 'Thank you for using ExaBGP', 'welcome')
-    log.debug(lambda: version, 'version')
-    log.debug(lambda: ROOT, 'location')
+    log.info(lambda: 'Thank you for using ExaBGP', 'startup')
+    log.debug(lambda: version, 'startup')
+    log.debug(lambda: ROOT, 'startup')
     python_version = sys.version.replace('\n', ' ')
-    log.debug(lambda: python_version, 'python')
+    log.debug(lambda: python_version, 'startup')
     platform_info = ' '.join(platform.uname()[:5])
-    log.debug(lambda: platform_info, 'platform')
+    log.debug(lambda: platform_info, 'startup')
 
     if comment:
-        log.error(lambda: comment, 'advice')
+        log.error(lambda: comment, 'startup')
 
     warning = warn()
     if warning:
-        log.warning(lambda: warning, 'advice')
+        log.warning(lambda: warning, 'startup')
 
     # Check if socket will be available (check for explicit disable)
     socket_disabled = os.environ.get('exabgp_cli_socket', None) == ''
@@ -187,9 +187,9 @@ def run(comment, configurations, pid=0):
             os.environ['exabgp_cli_pipe'] = pipe
             os.environ['exabgp_api_pipename'] = pipename
 
-            log.info(lambda: 'named pipes for the cli are:', 'cli control')
-            log.info(lambda: f'to send commands  {pipe}{pipename}.in', 'cli control')
-            log.info(lambda: f'to read responses {pipe}{pipename}.out', 'cli control')
+            log.info(lambda: 'named pipes for the cli are:', 'cli')
+            log.info(lambda: f'to send commands  {pipe}{pipename}.in', 'cli')
+            log.info(lambda: f'to read responses {pipe}{pipename}.out', 'cli')
         else:
             # Socket disabled AND no pipes - show pipe setup instructions
             log.error(
@@ -198,18 +198,18 @@ def run(comment, configurations, pid=0):
             )
             log.error(lambda: 'we scanned the following folders (the number is your PID):', 'cli')
             for location in pipes:
-                log.error(lazymsg(' - {location}', location=location), 'cli control')
-            log.error(lambda: 'please make them in one of the folder with the following commands:', 'cli control')
+                log.error(lazymsg(' - {location}', location=location), 'cli')
+            log.error(lambda: 'please make them in one of the folder with the following commands:', 'cli')
 
             # NOTE: Logging full paths (os.getcwd()) is intentional for user guidance
             # Security review: Accepted as necessary for troubleshooting
-            log.error(lambda: f'> mkfifo {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
-            log.error(lambda: f'> chmod 600 {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli control')
+            log.error(lambda: f'> mkfifo {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli')
+            log.error(lambda: f'> chmod 600 {os.getcwd()}/run/{pipename}.{{in,out}}', 'cli')
 
             if os.getuid() != 0:
                 log.error(
                     lambda: f'> chown {os.getuid()}:{os.getgid()} {os.getcwd()}/run/{pipename}.{{in,out}}',
-                    'cli control',
+                    'cli',
                 )
     elif env.api.cli:
         # Socket enabled - also enable pipes silently if they exist (for dual transport)
@@ -230,15 +230,15 @@ def run(comment, configurations, pid=0):
         if len(sockets) == 1:
             # Found existing socket directory
             socket_path = sockets[0]
-            log.info(lambda: 'Unix socket for the cli (existing directory):', 'cli control')
+            log.info(lambda: 'Unix socket for the cli (existing directory):', 'cli')
         else:
             # Use default location (will be auto-created by socket process)
             socket_path = ROOT + '/run/'
-            log.info(lambda: 'Unix socket for the cli (will be auto-created):', 'cli control')
+            log.info(lambda: 'Unix socket for the cli (will be auto-created):', 'cli')
 
         os.environ['exabgp_cli_socket'] = socket_path
         os.environ['exabgp_api_socketname'] = socketname
-        log.info(lambda: f'socket path: {socket_path}{socketname}.sock', 'cli control')
+        log.info(lambda: f'socket path: {socket_path}{socketname}.sock', 'cli')
 
     configuration = Configuration(configurations)
 

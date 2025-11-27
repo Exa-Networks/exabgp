@@ -49,6 +49,10 @@ class option:
         'timer': False,
         'routes': False,
         'parser': False,
+        # Additional categories
+        'startup': False,
+        'cli': False,
+        'api': False,
     }
 
     @classmethod
@@ -87,6 +91,10 @@ class option:
             'timer': env.log.enable and (env.log.all or env.log.timers),
             'routes': env.log.enable and (env.log.all or env.log.routes),
             'parser': env.log.enable and (env.log.all or env.log.parser),
+            # Additional categories - always enabled when logging enabled
+            'startup': env.log.enable,
+            'cli': env.log.enable,
+            'api': env.log.enable,
         }
 
         destination = env.log.destination

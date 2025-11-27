@@ -1144,7 +1144,7 @@ class Peer:
         if self.reactor.processes.broken(self.neighbor):
             # Process respawning handled by Processes._handle_problem().
             # This branch handles cases where respawning failed or was disabled.
-            log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
+            log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'processes')
             if self.reactor.processes.terminate_on_error:
                 self.reactor.shutdown()
             else:
@@ -1184,7 +1184,7 @@ class Peer:
         if self.reactor.processes.broken(self.neighbor):
             # Process respawning handled by Processes._handle_problem().
             # This branch handles cases where respawning failed or was disabled.
-            log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'process')
+            log.error(lambda: 'ExaBGP lost the helper process for this peer - stopping', 'processes')
             if self.reactor.processes.terminate_on_error:
                 self.reactor.shutdown()
             else:
