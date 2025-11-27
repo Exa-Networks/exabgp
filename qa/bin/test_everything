@@ -204,6 +204,26 @@ def test_no_neighbor(test_num: int, total: int) -> bool:
     return True
 
 
+def test_encode_decode(test_num: int, total: int) -> bool:
+    """Encode/decode CLI commands"""
+    print_header(test_num, total, "Encode/Decode CLI Test")
+    print_info("Running: qa/scripts/test_encode_decode.py")
+
+    returncode, stdout, stderr = run_command("./qa/scripts/test_encode_decode.py")
+
+    # Print output
+    print(stdout)
+    if stderr:
+        print(stderr)
+
+    if returncode != 0:
+        print_error("Encode/decode test failed")
+        return False
+
+    print_success("Encode/decode test passed - CLI encode|decode round-trip works")
+    return True
+
+
 def test_type_ignore_regression(test_num: int, total: int) -> bool:
     """Type ignore regression check"""
     print_header(test_num, total, "Type Ignore Regression Check")
@@ -333,6 +353,7 @@ def main() -> int:
         test_unit_tests,
         test_config_validation,
         test_no_neighbor,
+        test_encode_decode,
         test_functional_decoding,
         test_functional_encoding,
         test_functional_encoding_legacy,
