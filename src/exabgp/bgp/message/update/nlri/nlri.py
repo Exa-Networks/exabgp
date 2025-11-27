@@ -18,6 +18,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 from exabgp.logger import log
 from exabgp.logger import lazynlri
@@ -33,6 +34,7 @@ class NLRI(Family):
 
     action: int
     nexthop: 'IP'
+    addpath: 'PathInfo'
 
     # Singleton invalid NLRI (initialized after class definition)
     INVALID: ClassVar['NLRI']
@@ -48,11 +50,13 @@ class NLRI(Family):
         instance.afi = AFI.undefined
         instance.safi = SAFI.undefined
         instance.action = Action.UNSET
+        instance.addpath = PathInfo.DISABLED
         return instance
 
-    def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET) -> None:
+    def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET, addpath: PathInfo = PathInfo.DISABLED) -> None:
         Family.__init__(self, afi, safi)
         self.action = action
+        self.addpath = addpath
 
     def __hash__(self) -> int:
         return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri().hex()))  # type: ignore[call-arg]

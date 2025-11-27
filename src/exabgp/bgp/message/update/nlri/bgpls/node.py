@@ -111,12 +111,13 @@ class NODE(BGPLS):
         return cls(domain=domain, proto_id=proto_id, node_ids=node_ids, route_d=rd, packed=data)
 
     def __eq__(self, other: object) -> bool:
+        if not isinstance(other, NODE):
+            return NotImplemented
         return (
-            isinstance(other, BGPLS)
-            and self.CODE == other.CODE
-            and self.domain == other.domain  # type: ignore[attr-defined]
-            and self.proto_id == other.proto_id  # type: ignore[attr-defined]
-            and self.route_d == other.route_d  # type: ignore[attr-defined]
+            self.CODE == other.CODE
+            and self.domain == other.domain
+            and self.proto_id == other.proto_id
+            and self.route_d == other.route_d
         )
 
     def __ne__(self, other: object) -> bool:
