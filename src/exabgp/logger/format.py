@@ -98,3 +98,16 @@ def lazynlri(afi: 'AFI', safi: 'SAFI', addpath: bool, data: bytes) -> Callable[[
         return 'NLRI      %-18s %-28s payload %s' % (family, path, payload)
 
     return _lazy
+
+
+def lazymsg(template: str, **kwargs: object) -> Callable[[], str]:
+    """Create a lazy log message from a format string template.
+
+    Usage:
+        log.debug(lazymsg('duplicate AFI/SAFI: {afi}/{safi}', afi=afi, safi=safi), 'parser')
+    """
+
+    def _format() -> str:
+        return template.format(**kwargs)
+
+    return _format

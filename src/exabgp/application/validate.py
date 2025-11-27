@@ -12,7 +12,7 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.bgp.neighbor import NeighborTemplate
 
 from exabgp.debug.intercept import trace_interceptor
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 from exabgp.configuration.check import check_generation
 
@@ -45,12 +45,11 @@ def cmdline(cmdarg):
         env.log.parser = True
 
     for configuration in cmdarg.configuration:
-        log.info(lambda configuration=configuration: f'loading {configuration}', 'configuration')
+        log.info(lazymsg('loading {configuration}', configuration=configuration), 'configuration')
         location = getconf(configuration)
         if not location:
             log.critical(
-                lambda configuration=configuration: f'{configuration} is not an exabgp config file',
-                'configuration',
+                lazymsg('{configuration} is not an exabgp config file', configuration=configuration), 'configuration'
             )
             sys.exit(1)
 
@@ -58,8 +57,7 @@ def cmdline(cmdarg):
 
         if not config.reload():
             log.critical(
-                lambda configuration=configuration: f'{configuration} is not a valid config file',
-                'configuration',
+                lazymsg('{configuration} is not a valid config file', configuration=configuration), 'configuration'
             )
             sys.exit(1)
         log.info(lambda: '\u2713 loading', 'configuration')
@@ -68,15 +66,14 @@ def cmdline(cmdarg):
             log.warning(lambda: 'checking neighbors', 'configuration')
             for name, neighbor in config.neighbors.items():
                 reparsed = NeighborTemplate.configuration(neighbor)
-                log.debug(lambda reparsed=reparsed: reparsed, configuration)
-                log.info(lambda name=name: f'\u2713 neighbor  {name.split()[1]}', 'configuration')
+                log.debug(lazymsg('{reparsed}', reparsed=reparsed), configuration)
+                log.info(lazymsg('\u2713 neighbor  {neighbor_name}', neighbor_name=name.split()[1]), 'configuration')
 
         if cmdarg.route:
             log.warning(lambda: 'checking routes', 'configuration')
             if not check_generation(config.neighbors):
                 log.critical(
-                    lambda configuration=configuration: f'{configuration} has an invalid route',
-                    'configuration',
+                    lazymsg('{configuration} has an invalid route', configuration=configuration), 'configuration'
                 )
                 sys.exit(1)
             log.info(lambda: '\u2713 routes', 'configuration')

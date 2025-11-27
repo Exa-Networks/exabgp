@@ -25,7 +25,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.neighaddr import NeighAddr
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # BGP-LS Link TLV type codes (RFC 7752)
 TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
@@ -170,7 +170,7 @@ class LINK(BGPLS):
                 topology_ids.append(MTID.unpack_mtid(value))
                 continue
 
-            log.critical(lambda tlv_type=tlv_type: f'unknown link TLV {tlv_type}')  # type: ignore[misc]
+            log.critical(lazymsg('unknown link TLV {tlv_type}', tlv_type=tlv_type))
 
         return cls(
             domain=domain,

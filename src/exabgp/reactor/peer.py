@@ -39,7 +39,7 @@ from exabgp.reactor.api.processes import ProcessError
 from exabgp.rib.change import Change
 
 from exabgp.environment import getenv
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 from exabgp.logger import lazyformat
 
 from exabgp.debug.report import format_exception
@@ -670,13 +670,13 @@ class Peer:
                     while send_ka() is None:
                         yield ACTION.NOW
                 for counter_line in self.stats.changed_statistics():
-                    log.info(lambda counter_line=counter_line: counter_line, 'statistics')  # type: ignore[misc]
+                    log.info(lazymsg('{counter_line}', counter_line=counter_line), 'statistics')
 
                 # Received update
                 if message.TYPE == Update.TYPE:
                     update = cast(Update, message)
                     number += 1
-                    log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())  # type: ignore[misc]
+                    log.debug(lazymsg('<< UPDATE #{number}', number=number), self.id())
 
                     for nlri in update.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
@@ -863,13 +863,13 @@ class Peer:
                     while send_ka() is None:
                         await asyncio.sleep(0)  # Yield control like ACTION.NOW
                 for counter_line in self.stats.changed_statistics():
-                    log.info(lambda counter_line=counter_line: counter_line, 'statistics')  # type: ignore[misc]
+                    log.info(lazymsg('{counter_line}', counter_line=counter_line), 'statistics')
 
                 # Received update
                 if message.TYPE == Update.TYPE:
                     update = cast(Update, message)
                     number += 1
-                    log.debug(lambda number=number: '<< UPDATE #%d' % number, self.id())  # type: ignore[misc]
+                    log.debug(lazymsg('<< UPDATE #{number}', number=number), self.id())
 
                     for nlri in update.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
@@ -956,11 +956,11 @@ class Peer:
 
         except NetworkError as exc:
             # Normal network errors (connection closed, etc.) - log message only, no traceback
-            log.debug(lambda exc=exc: f'[ASYNC] Network error: {exc}', self.id())  # type: ignore[misc]
+            log.debug(lazymsg('[ASYNC] Network error: {exc}', exc=exc), self.id())
             raise
         except Exception as exc:
             # Unexpected exceptions - log message only
-            log.error(lambda exc=exc: f'[ASYNC] Exception in main loop: {exc}', self.id())  # type: ignore[misc]
+            log.error(lazymsg('[ASYNC] Exception in main loop: {exc}', exc=exc), self.id())
             raise
 
         # If graceful restart, silent shutdown
@@ -1055,7 +1055,7 @@ class Peer:
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            log.error(lambda exc=exc: format_exception(exc), 'reactor')  # type: ignore[misc]
+            log.error(lazymsg('{msg}', msg=format_exception(exc)), 'reactor')
             self._reset()
             return
 
@@ -1134,7 +1134,7 @@ class Peer:
         # UNHANDLED PROBLEMS
         except Exception as exc:
             # Those messages can not be filtered in purpose
-            log.error(lambda exc=exc: format_exception(exc), 'reactor')  # type: ignore[misc]
+            log.error(lazymsg('{msg}', msg=format_exception(exc)), 'reactor')
             self._reset()
             return
 

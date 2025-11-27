@@ -33,7 +33,7 @@ from exabgp.reactor.network.incoming import Incoming
 
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # Network port constants
 MAX_PRIVILEGED_PORT: int = 1024  # Highest privileged port number (requires root on Unix)
@@ -109,7 +109,7 @@ class Listener:
                 raise BindingError(f'could not listen on {local_ip}:{local_port}, this is an invalid address') from None
             raise NetworkError(str(exc)) from None
         except NetworkError as exc:
-            log.critical(lambda exc=exc: str(exc), 'network')  # type: ignore[misc]
+            log.critical(lazymsg('{exc}', exc=str(exc)), 'network')
             raise exc
 
     def listen_on(
@@ -138,7 +138,10 @@ class Listener:
                     'network',
                 )
             else:
-                log.critical(lambda exc=exc: f'can not bind to {local_addr}:{port} ({exc})', 'network')  # type: ignore[misc]
+                log.critical(
+                    lazymsg('can not bind to {local_addr}:{port} ({exc})', local_addr=local_addr, port=port, exc=exc),
+                    'network',
+                )
             log.critical(lambda: 'unset exabgp.tcp.bind if you do not want listen for incoming connections', 'network')
             log.critical(lambda: f'and check that no other daemon is already binding to port {port}', 'network')
             return False
@@ -159,7 +162,7 @@ class Listener:
             except OSError as exc:
                 if exc.errno in error.block:
                     continue
-                log.critical(lambda exc=exc: str(exc), 'network')  # type: ignore[misc]
+                log.critical(lazymsg('{exc}', exc=str(exc)), 'network')
 
         return peer_connected
 
@@ -178,7 +181,7 @@ class Listener:
                 fam = self._family_AFI_map[sock.family]
                 yield Incoming(fam, remote_ip, local_ip, io)
         except NetworkError as exc:
-            log.critical(lambda exc=exc: str(exc), 'network')  # type: ignore[misc]
+            log.critical(lazymsg('{exc}', exc=str(exc)), 'network')
 
     def new_connections(self) -> Generator[None, None, None]:
         if not self.serving:
@@ -189,7 +192,7 @@ class Listener:
         ranged_neighbor: List[Neighbor] = []
 
         for connection in self._connected():
-            log.debug(lambda connection=connection: f'new connection received {connection.name()}', 'network')  # type: ignore[misc]
+            log.debug(lazymsg('new connection received {name}', name=connection.name()), 'network')
             for key in reactor.peers():
                 neighbor = reactor.neighbor(key)
                 if neighbor is None:
@@ -220,11 +223,11 @@ class Listener:
                 denied = reactor.handle_connection(key, connection)
                 if denied:
                     log.debug(
-                        lambda connection=connection: f'refused connection from {connection.name()} due to the state machine',  # type: ignore[misc]
+                        lazymsg('refused connection from {name} due to the state machine', name=connection.name()),
                         'network',
                     )
                     break
-                log.debug(lambda connection=connection: f'accepted connection from {connection.name()}', 'network')  # type: ignore[misc]
+                log.debug(lazymsg('accepted connection from {name}', name=connection.name()), 'network')
                 break
             else:
                 # we did not break (and nothign was found/done or we have group match)
@@ -243,7 +246,7 @@ class Listener:
                     )
                     return
                 if not matched:
-                    log.debug(lambda connection=connection: f'no session configured for {connection.name()}', 'network')  # type: ignore[misc]
+                    log.debug(lazymsg('no session configured for {name}', name=connection.name()), 'network')
                     reactor.asynchronous.schedule(
                         str(uuid.uuid1()),
                         'sending notification (6,3)',
@@ -263,7 +266,7 @@ class Listener:
                 denied = new_peer.handle_connection(connection)
                 if denied:
                     log.debug(
-                        lambda connection=connection: f'refused connection from {connection.name()} due to the state machine',  # type: ignore[misc]
+                        lazymsg('refused connection from {name} due to the state machine', name=connection.name()),
                         'network',
                     )
                     return
@@ -277,7 +280,7 @@ class Listener:
 
         for sock, (ip, port, _, _) in self._sockets.items():
             sock.close()
-            log.info(lambda ip=ip, port=port: f'stopped listening on {ip}:{port}', 'network')  # type: ignore[misc]
+            log.info(lazymsg('stopped listening on {ip}:{port}', ip=ip, port=port), 'network')
 
         self._sockets = {}
         self.serving = False

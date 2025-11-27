@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP, _NoNextHop
-from exabgp.logger import log
+from exabgp.logger import log, lazymsg
 
 # BGP-LS Prefix TLV type codes (RFC 7752)
 TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
@@ -111,7 +111,7 @@ class PREFIXv4(BGPLS):
                 prefix = IpReach.unpack_ipreachability(value, 3)
                 continue
 
-            log.critical(lambda tlv_type=tlv_type: f'unknown prefix v4 TLV {tlv_type}')  # type: ignore[misc]
+            log.critical(lazymsg('unknown prefix v4 TLV {tlv_type}', tlv_type=tlv_type))
 
         return cls(
             domain=domain,
