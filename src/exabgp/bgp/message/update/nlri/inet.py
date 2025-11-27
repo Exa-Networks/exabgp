@@ -42,7 +42,7 @@ PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
 class INET(NLRI):
     def __init__(self, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
         NLRI.__init__(self, afi, safi, action)
-        self.path_info = PathInfo.NOPATH
+        self.path_info = PathInfo.DISABLED
         self.cidr = CIDR.NOCIDR
         self.nexthop = IP.NoNextHop
         self.labels: Labels | None = None
@@ -58,7 +58,12 @@ class INET(NLRI):
         return self.extensive()
 
     def __hash__(self) -> int:
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()
+        if self.path_info is PathInfo.NOPATH:
+            addpath = b'no-pi'
+        elif self.path_info is PathInfo.DISABLED:
+            addpath = b'disabled'
+        else:
+            addpath = self.path_info.pack_path()
         return hash(addpath + self._pack_nlri_simple())
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
@@ -71,11 +76,23 @@ class INET(NLRI):
         return self.cidr.pack_nlri()
 
     def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
-        addpath = self.path_info.pack_path() if negotiated.addpath.send(self.afi, self.safi) else b''
+        if negotiated.addpath.send(self.afi, self.safi):
+            # ADD-PATH negotiated: MUST send 4-byte path ID
+            if self.path_info is PathInfo.DISABLED:
+                addpath = PathInfo.NOPATH.pack_path()
+            else:
+                addpath = self.path_info.pack_path()
+        else:
+            addpath = b''
         return addpath + self._pack_nlri_simple()
 
     def index(self) -> bytes:
-        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack_path()
+        if self.path_info is PathInfo.NOPATH:
+            addpath = b'no-pi'
+        elif self.path_info is PathInfo.DISABLED:
+            addpath = b'disabled'
+        else:
+            addpath = self.path_info.pack_path()
         return Family.index(self) + addpath + self.cidr.pack_nlri()
 
     def prefix(self) -> str:
@@ -101,7 +118,7 @@ class INET(NLRI):
     def _pathinfo(cls, data: bytes, addpath: Any) -> Tuple[PathInfo, bytes]:
         if addpath:
             return PathInfo(data[:4]), data[4:]
-        return PathInfo.NOPATH, data
+        return PathInfo.DISABLED, data
 
     # @classmethod
     # def unpack_inet (cls, afi, safi, data, action, addpath):
@@ -121,6 +138,8 @@ class INET(NLRI):
                 raise ValueError('Trying to extract path-information but we do not have enough data')
             nlri.path_info = PathInfo(bgp[:PATH_INFO_SIZE])
             bgp = bgp[PATH_INFO_SIZE:]
+        else:
+            nlri.path_info = PathInfo.DISABLED
 
         mask = bgp[0]
         bgp = bgp[1:]
