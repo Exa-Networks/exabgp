@@ -48,7 +48,7 @@ def setargs(sub):
     sub.add_argument('-c', '--configuration', help='configuration file(s)', type=str)
     sub.add_argument('-f', '--family', help='family expected (format like "ipv4 unicast")', type=str)
     sub.add_argument('-i', '--path-information', help='decode path-information', action='store_true')
-    sub.add_argument('payload', help='the BGP payload in hexadecimal', type=str)
+    sub.add_argument('payload', help='the BGP payload in hexadecimal (reads from stdin if not provided)', type=str, nargs='?')
     # fmt:on
 
 
@@ -59,20 +59,21 @@ def main():
 
 
 def cmdline(cmdarg):
-    route = ''.join(cmdarg.payload).replace(' ', '').strip()
-
-    if not is_bgp(route):
-        # parser.print_usage()
-        sys.stdout.write('Environment values are:\n{}\n\n'.format('\n'.join(' - {}'.format(_) for _ in Env.default())))
-        sys.stdout.write('The BGP message must be an hexadecimal string.\n\n')
-        sys.stdout.write('All colons or spaces are ignored, for example:\n\n')
-        sys.stdout.write('  001E0200000007900F0003000101\n')
-        sys.stdout.write('  001E:02:0000:0007:900F:0003:0001:01\n')
-        sys.stdout.write('  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101\n')
-        sys.stdout.write('  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01\n')
-        sys.stdout.write('  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101\n')
-        sys.stdout.flush()
-        sys.exit(1)
+    # Read from stdin if no payload provided
+    if cmdarg.payload is None:
+        if sys.stdin.isatty():
+            sys.stdout.write(
+                'Environment values are:\n{}\n\n'.format('\n'.join(' - {}'.format(_) for _ in Env.default()))
+            )
+            sys.stdout.write('Usage: exabgp decode <hex>\n')
+            sys.stdout.write('       exabgp encode "route ..." | exabgp decode\n')
+            sys.stdout.write('       echo "<hex>" | exabgp decode\n\n')
+            sys.stdout.write('The BGP message must be an hexadecimal string.\n')
+            sys.stdout.flush()
+            sys.exit(1)
+        payloads = [line.strip() for line in sys.stdin if line.strip()]
+    else:
+        payloads = [cmdarg.payload]
 
     env = getenv()
     env.bgp.passive = True
@@ -93,7 +94,6 @@ def cmdline(cmdarg):
 
     conf = conf_template.replace('[path-information]', 'add-path send/receive;' if cmdarg.path_information else '')
 
-    sanitized = ''.join(cmdarg.payload).replace(':', '').replace(' ', '')
     if cmdarg.configuration:
         configuration = Configuration([getconf(cmdarg.configuration)])
 
@@ -112,11 +112,22 @@ def cmdline(cmdarg):
         conf = conf.replace('[families]', 'all')
         configuration = Configuration([conf], text=True)
 
-    valid_nlri = Reactor(configuration).display(sanitized, cmdarg.nlri)
-    if valid_nlri:
-        return 0
-    sys.stdout.write('invalid payload\n')
-    return 1
+    reactor = Reactor(configuration)
+    all_valid = True
+
+    for payload in payloads:
+        route = payload.replace(' ', '').replace(':', '').strip()
+
+        if not is_bgp(route):
+            sys.stdout.write(f'invalid hexadecimal: {payload[:50]}{"..." if len(payload) > 50 else ""}\n')
+            all_valid = False
+            continue
+
+        if not reactor.display(route, cmdarg.nlri):
+            sys.stdout.write('invalid payload\n')
+            all_valid = False
+
+    return 0 if all_valid else 1
 
 
 if __name__ == '__main__':
