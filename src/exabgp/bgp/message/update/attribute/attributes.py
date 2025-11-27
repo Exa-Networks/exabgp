@@ -241,6 +241,8 @@ class Attributes(dict):
             if code not in keys and code in default:
                 attr = default[code](local_asn, peer_asn)
                 if attr is not NOTHING:
+                    # attr is Origin, ASPath, or LocalPreference - all have pack_attribute
+                    assert hasattr(attr, 'pack_attribute')
                     message += attr.pack_attribute(negotiated)
                 continue
 

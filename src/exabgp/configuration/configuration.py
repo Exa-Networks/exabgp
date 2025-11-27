@@ -81,7 +81,11 @@ class _Configuration:
                     result = True
                 else:
                     log.error(
-                        f'the route family ({change.nlri.short()}) is not configured on neighbor {neighbor_name}',
+                        lazymsg(
+                            'route.family.unconfigured family={family} neighbor={neighbor}',
+                            family=change.nlri.short(),
+                            neighbor=neighbor_name,
+                        ),
                         'configuration',
                     )
         return result

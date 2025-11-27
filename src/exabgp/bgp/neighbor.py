@@ -106,7 +106,7 @@ class Neighbor(dict):
     _addpath: List[Tuple[AFI, SAFI]]
     rib: RIB | None
     changes: List[Change]
-    previous: Change | None
+    previous: 'Neighbor' | None
     eor: deque[Tuple[AFI, SAFI]]
     asm: Dict[Tuple[AFI, SAFI], Message]
     messages: deque[Message]

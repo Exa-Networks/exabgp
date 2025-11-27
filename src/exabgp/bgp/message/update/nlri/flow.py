@@ -622,7 +622,7 @@ class Flow(NLRI):
         self.rules = {}
         self.nexthop = NoNextHop
         # NORD is typed Optional but always set at module load (rd.py:115)
-        self.rd = RouteDistinguisher.NORD  # type: ignore[assignment]
+        self.rd = RouteDistinguisher.NORD
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is None and action == Action.ANNOUNCE:

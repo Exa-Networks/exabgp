@@ -134,6 +134,7 @@ class Prefix(EVPN):
             self._packed = packed
             return packed
 
+        assert self.label is not None  # Always set in __init__
         self._packed = (
             self.rd.pack_rd()
             + self.esi.pack_esi()
@@ -186,7 +187,8 @@ class Prefix(EVPN):
 
         return cls(rd, esi, etag, label, ip, iplen, gwip, exdata)
 
-    def json(self, compact: bool | None = None) -> str:
+    def json(self, compact: bool = False) -> str:
+        assert self.label is not None  # Always set in __init__
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

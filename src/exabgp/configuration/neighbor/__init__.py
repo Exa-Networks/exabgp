@@ -232,13 +232,13 @@ class ParseNeighbor(Section):
         for afi, safi, nhafi in nexthops:
             if (afi, safi) not in neighbor.families():
                 log.debug(
-                    'skipping nexthop afi,safi ' + str(afi) + '/' + str(safi) + ' as it is not negotiated',
+                    lazymsg('nexthop.skipped afi={afi} safi={safi} reason=not_negotiated', afi=afi, safi=safi),
                     'configuration',
                 )
                 continue
             if (nhafi, safi) not in neighbor.families():
                 log.debug(
-                    'skipping nexthop afi ' + str(nhafi) + '/' + str(safi) + ' as it is not negotiated',
+                    lazymsg('nexthop.skipped afi={nhafi} safi={safi} reason=not_negotiated', nhafi=nhafi, safi=safi),
                     'configuration',
                 )
                 continue

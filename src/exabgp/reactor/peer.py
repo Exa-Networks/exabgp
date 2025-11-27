@@ -635,7 +635,7 @@ class Peer:
 
         # we need to make sure to send what was already issued by the api
         # from the previous time
-        previous = self.neighbor.previous.changes if self.neighbor.previous else []  # type: ignore[attr-defined]
+        previous = self.neighbor.previous.changes if self.neighbor.previous else []
         current = self.neighbor.changes
         self.neighbor.rib.outgoing.replace_restart(previous, current)
         self.neighbor.previous = None
@@ -813,7 +813,7 @@ class Peer:
 
         # we need to make sure to send what was already issued by the api
         # from the previous time
-        previous = self.neighbor.previous.changes if self.neighbor.previous else []  # type: ignore[attr-defined]
+        previous = self.neighbor.previous.changes if self.neighbor.previous else []
         current = self.neighbor.changes
         routes_per_iteration = 1 if self.neighbor['rate-limit'] > 0 else 25
         self.neighbor.rib.outgoing.replace_restart(previous, current)
