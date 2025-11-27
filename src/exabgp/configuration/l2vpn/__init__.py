@@ -39,7 +39,7 @@ class ParseL2VPN(ParseVPLS):
 
 @ParseL2VPN.register('vpls', 'append-route')
 def vpls(tokeniser):
-    change = Change(VPLS(None, None, None, None, None), Attributes())
+    change = Change(VPLS(None, None, None, None, None), Attributes())  # type: ignore[arg-type]
 
     while True:
         command = tokeniser()
@@ -55,7 +55,7 @@ def vpls(tokeniser):
             change.attributes.add(ParseL2VPN.known[command](tokeniser))
         elif action == 'nexthop-and-attribute':
             nexthop, attribute = ParseVPLS.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
+            change.nlri.nexthop = nexthop  # type: ignore[attr-defined]
             change.attributes.add(attribute)
         else:
             raise ValueError('vpls: unknown command "{}"'.format(command))

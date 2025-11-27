@@ -66,7 +66,7 @@ class ParseProcess(Section):
                 self.scope.set(default, self.default[default])
         difference = set(known).difference(configured)
         if difference:
-            return self.error.set('unset process sections: {}'.format(', '.join(difference)))
+            return self.error.set('unset process sections: {}'.format(', '.join(str(d) for d in difference)))
         self.processes.update({self.named: self.scope.pop()})
         return True
 

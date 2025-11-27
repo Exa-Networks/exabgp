@@ -182,7 +182,7 @@ class Code:
     @staticmethod
     def _if_lt(value):
         if value >= 0:
-            comparators = [Constant(value=value, kind=None)]
+            comparators: list = [Constant(value=value, kind=None)]
         else:
             comparators = [
                 UnaryOp(
@@ -201,7 +201,6 @@ class Code:
                     ),
                     ops=[Lt()],
                     comparators=comparators,
-                    keywords=[],
                 ),
                 body=[
                     Return(
@@ -215,7 +214,7 @@ class Code:
     @staticmethod
     def _if_gt(value):
         if value >= 0:
-            comparators = [Constant(value=value, kind=None)]
+            comparators: list = [Constant(value=value, kind=None)]
         else:
             comparators = [
                 UnaryOp(
@@ -265,7 +264,7 @@ class Code:
                     name = self._unique(what)
                     yield self._function(name, self._type(what, what, sub))
 
-                values += [
+                values.append(
                     UnaryOp(
                         op=Not(),
                         operand=Call(
@@ -274,13 +273,13 @@ class Code:
                             keywords=[],
                         ),
                     ),
-                ]
+                )
 
         yield [
             If(
                 test=BoolOp(
                     op=And(),
-                    values=values,
+                    values=values,  # type: ignore[arg-type]
                 ),
                 body=[
                     Return(
@@ -362,5 +361,6 @@ class Code:
         body = list(self._module(module))
         ast = Module(
             body=list(self._imported()) + body,
+            type_ignores=[],
         )
         return ast

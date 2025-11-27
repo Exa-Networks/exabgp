@@ -62,20 +62,20 @@ class IpReach:
                 # So we add an empty octet.
                 data += bytearray.fromhex('00')
                 octet += 1
-            prefix_list = unpack('!%dH' % (octet / 2), data[1 : octet + 1])
-            prefix_list = [str(format(x, 'x')) for x in prefix_list]
+            prefix_tuple = unpack('!%dH' % (octet / 2), data[1 : octet + 1])
+            prefix_parts = [str(format(x, 'x')) for x in prefix_tuple]
             # fill out to a complete 128-bit address
-            prefix_list = prefix_list + ['0'] * (8 - len(prefix_list))
-            prefix = ':'.join(prefix_list)
+            prefix_parts = prefix_parts + ['0'] * (8 - len(prefix_parts))
+            prefix = ':'.join(prefix_parts)
             prefix = ip_address(prefix).compressed
         else:
             # IPv4
-            prefix_list = unpack('!%dB' % octet, data[1 : octet + 1])
-            prefix_list = [str(x) for x in prefix_list]
+            prefix_tuple = unpack('!%dB' % octet, data[1 : octet + 1])
+            prefix_parts = [str(x) for x in prefix_tuple]
             # fill the rest of the octets with 0 to construct
             # a 4 octet IP prefix
-            prefix_list = prefix_list + ['0'] * (4 - len(prefix_list))
-            prefix = '.'.join(prefix_list)
+            prefix_parts = prefix_parts + ['0'] * (4 - len(prefix_parts))
+            prefix = '.'.join(prefix_parts)
 
         return cls(prefix=prefix, plength=plength)
 
