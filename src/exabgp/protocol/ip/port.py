@@ -83,6 +83,7 @@ class Port(Resource):
         return super()._value(string)
 
     @classmethod
-    def named(cls, string: str) -> Resource:
+    def from_string(cls, string: str) -> Port:
+        """Parse a port name or number to a Port instance."""
         cls._ensure_loaded()
-        return super().named(string)
+        return cls(cls._value(string))

@@ -398,7 +398,7 @@ def packet_length(data: str) -> int:
 def port_value(data: str) -> int:
     _str_bad_port = 'you tried to set an invalid port number ..'
     try:
-        number = Port.named(data)
+        number = Port.from_string(data)
     except ValueError:
         raise ValueError(_str_bad_port) from None
     return number
@@ -464,14 +464,14 @@ class Flow6Source(IPrefix6, FlowSource):
 class FlowIPProtocol(IOperationByte, NumericString, IPv4):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'protocol'
-    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = converter(Protocol.named, Protocol)
+    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = converter(Protocol.from_string, Protocol)
     decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = decoder(ord, Protocol)
 
 
 class FlowNextHeader(IOperationByte, NumericString, IPv6):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'next-header'
-    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = converter(Protocol.named, Protocol)
+    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = converter(Protocol.from_string, Protocol)
     decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = decoder(ord, Protocol)
 
 
@@ -499,14 +499,14 @@ class FlowSourcePort(IOperationByteShort, NumericString, IPv4, IPv6):
 class FlowICMPType(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x07
     NAME: ClassVar[str] = 'icmp-type'
-    converter: ClassVar[Callable[[str], Union[int, ICMPType]]] = converter(ICMPType.named, ICMPType)
+    converter: ClassVar[Callable[[str], Union[int, ICMPType]]] = converter(ICMPType.from_string, ICMPType)
     decoder: ClassVar[Callable[[bytes], Union[int, ICMPType]]] = decoder(_number, ICMPType)
 
 
 class FlowICMPCode(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x08
     NAME: ClassVar[str] = 'icmp-code'
-    converter: ClassVar[Callable[[str], Union[int, ICMPCode]]] = converter(ICMPCode.named, ICMPCode)
+    converter: ClassVar[Callable[[str], Union[int, ICMPCode]]] = converter(ICMPCode.from_string, ICMPCode)
     decoder: ClassVar[Callable[[bytes], Union[int, ICMPCode]]] = decoder(_number, ICMPCode)
 
 

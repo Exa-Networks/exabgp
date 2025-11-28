@@ -53,14 +53,23 @@ class Resource(int):
         raise ValueError(f'unknown {cls.NAME} {name}')
 
     @classmethod
-    def named(cls, string: str) -> Resource:
+    def from_string(cls, string: str) -> Resource:
+        """Parse a single name/number/hex string to a Resource instance."""
+        return cls(cls._value(string))
+
+
+class BitResource(Resource):
+    @classmethod
+    def named(cls, string: str) -> BitResource:
+        """Parse a '+'-separated string of names/values and combine them.
+
+        Used for bitmask values like TCP flags: "syn+ack" → 0x12
+        """
         value = 0
         for name in string.split('+'):
             value += cls._value(name)
         return cls(value)
 
-
-class BitResource(Resource):
     def named_bits(self) -> Iterator[str]:
         value = int(self)
         for bit in self.names.keys():
