@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generator, Tuple, Union, TYPE_CHECKING, cast
+from typing import Generator, Tuple, Type, TypeVar, Union, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from exabgp.configuration.core.parser import Tokeniser
@@ -52,6 +52,24 @@ from exabgp.protocol.family import (
 )
 from exabgp.protocol.ip import IP, IPv4, IPv6
 from exabgp.rib.change import Change
+
+# TypeVar for flow condition classes
+FlowConditionT = TypeVar(
+    'FlowConditionT',
+    FlowIPProtocol,
+    FlowNextHeader,
+    FlowAnyPort,
+    FlowSourcePort,
+    FlowDestinationPort,
+    FlowICMPType,
+    FlowICMPCode,
+    FlowTCPFlag,
+    FlowPacketLength,
+    FlowDSCP,
+    FlowTrafficClass,
+    FlowFragment,
+    FlowFlowLabel,
+)
 
 SINGLE_SLASH = 1  # Format with single slash (IP/prefix)
 DOUBLE_SLASH = 2  # IPv6 format with offset (IP/prefix/offset)
@@ -183,28 +201,8 @@ def _value(string: str) -> Tuple[str, str]:
 
 # parse [ content1 content2 content3 ]
 # parse =80 or >80 or <25 or &>10<20
-def _generic_condition(
-    tokeniser: 'Tokeniser', klass: type
-) -> Generator[
-    Union[
-        FlowIPProtocol,
-        FlowNextHeader,
-        FlowAnyPort,
-        FlowSourcePort,
-        FlowDestinationPort,
-        FlowICMPType,
-        FlowICMPCode,
-        FlowTCPFlag,
-        FlowPacketLength,
-        FlowDSCP,
-        FlowTrafficClass,
-        FlowFragment,
-        FlowFlowLabel,
-    ],
-    None,
-    None,
-]:
-    _operator = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric  # type: ignore[attr-defined]
+def _generic_condition(tokeniser: 'Tokeniser', klass: Type[FlowConditionT]) -> Generator[FlowConditionT, None, None]:
+    _operator = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric
     data: str = tokeniser()
     AND: int = BinaryOperator.NOP
     if data == '[':
@@ -218,7 +216,7 @@ def _generic_condition(
             value: str
             value, data = _value(_)
             # XXX: should do a check that the rule is valid for the family
-            yield klass(AND | operator, klass.converter(value))  # type: ignore[attr-defined]
+            yield klass(AND | operator, klass.converter(value))
             if data:
                 if data[0] != '&':
                     raise ValueError('Unknown binary operator {}'.format(data[0]))
@@ -233,7 +231,7 @@ def _generic_condition(
         while data:
             operator, _ = _operator(data)
             value, data = _value(_)
-            yield klass(operator | AND, klass.converter(value))  # type: ignore[attr-defined]
+            yield klass(operator | AND, klass.converter(value))
             if data:
                 if data[0] != '&':
                     raise ValueError('Unknown binary operator {}'.format(data[0]))
@@ -242,68 +240,55 @@ def _generic_condition(
 
 
 def any_port(tokeniser: 'Tokeniser') -> Generator[FlowAnyPort, None, None]:
-    for _ in _generic_condition(tokeniser, FlowAnyPort):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowAnyPort)
 
 
 def source_port(tokeniser: 'Tokeniser') -> Generator[FlowSourcePort, None, None]:
-    for _ in _generic_condition(tokeniser, FlowSourcePort):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowSourcePort)
 
 
 def destination_port(tokeniser: 'Tokeniser') -> Generator[FlowDestinationPort, None, None]:
-    for _ in _generic_condition(tokeniser, FlowDestinationPort):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowDestinationPort)
 
 
 def packet_length(tokeniser: 'Tokeniser') -> Generator[FlowPacketLength, None, None]:
-    for _ in _generic_condition(tokeniser, FlowPacketLength):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowPacketLength)
 
 
 def tcp_flags(tokeniser: 'Tokeniser') -> Generator[FlowTCPFlag, None, None]:
-    for _ in _generic_condition(tokeniser, FlowTCPFlag):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowTCPFlag)
 
 
 def protocol(tokeniser: 'Tokeniser') -> Generator[FlowIPProtocol, None, None]:
-    for _ in _generic_condition(tokeniser, FlowIPProtocol):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowIPProtocol)
 
 
 def next_header(tokeniser: 'Tokeniser') -> Generator[FlowNextHeader, None, None]:
-    for _ in _generic_condition(tokeniser, FlowNextHeader):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowNextHeader)
 
 
 def icmp_type(tokeniser: 'Tokeniser') -> Generator[FlowICMPType, None, None]:
-    for _ in _generic_condition(tokeniser, FlowICMPType):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowICMPType)
 
 
 def icmp_code(tokeniser: 'Tokeniser') -> Generator[FlowICMPCode, None, None]:
-    for _ in _generic_condition(tokeniser, FlowICMPCode):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowICMPCode)
 
 
 def fragment(tokeniser: 'Tokeniser') -> Generator[FlowFragment, None, None]:
-    for _ in _generic_condition(tokeniser, FlowFragment):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowFragment)
 
 
 def dscp(tokeniser: 'Tokeniser') -> Generator[FlowDSCP, None, None]:
-    for _ in _generic_condition(tokeniser, FlowDSCP):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowDSCP)
 
 
 def traffic_class(tokeniser: 'Tokeniser') -> Generator[FlowTrafficClass, None, None]:
-    for _ in _generic_condition(tokeniser, FlowTrafficClass):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowTrafficClass)
 
 
 def flow_label(tokeniser: 'Tokeniser') -> Generator[FlowFlowLabel, None, None]:
-    for _ in _generic_condition(tokeniser, FlowFlowLabel):
-        yield _  # type: ignore[misc]
+    yield from _generic_condition(tokeniser, FlowFlowLabel)
 
 
 def next_hop(tokeniser: 'Tokeniser') -> Union[NextHopSelf, NextHop]:
