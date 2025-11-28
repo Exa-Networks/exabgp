@@ -28,7 +28,8 @@ from exabgp.reactor.asynchronous import ASYNC
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.listener import Listener
-from exabgp.reactor.peer import ACTION, Peer
+from exabgp.bgp.message import Scheduling
+from exabgp.reactor.peer import Peer
 from exabgp.version import version
 
 
@@ -584,16 +585,16 @@ class Reactor:
                     # handle the peer
                     action = peer.run()
 
-                    # .run() returns an ACTION enum:
-                    # * immediate if it wants to be called again
-                    # * later if it should be called again but has no work atm
-                    # * close if it is finished and is closing down, or restarting
-                    if action == ACTION.CLOSE:
+                    # .run() returns a scheduling Message:
+                    # * NOW/AWAKE if it wants to be called again immediately
+                    # * LATER/NOP if it should be called again but has no work atm
+                    # * CLOSE/DONE if it is finished and is closing down, or restarting
+                    if action.SCHEDULING == Scheduling.CLOSE:
                         if key in self._peers:
                             del self._peers[key]
                         peers.discard(key)
                     # we are loosing this peer, not point to schedule more process work
-                    elif action == ACTION.LATER:
+                    elif action.SCHEDULING == Scheduling.LATER:
                         io = peer.socket()
                         if io != -1:
                             self._poller.register(
@@ -603,7 +604,7 @@ class Reactor:
                             workers[io] = key
                         # no need to come back to it before a a full cycle
                         peers.discard(key)
-                    elif action == ACTION.NOW:
+                    elif action.SCHEDULING == Scheduling.NOW:
                         sleep = 0
 
                     if not peers:

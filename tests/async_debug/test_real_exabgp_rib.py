@@ -15,7 +15,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 from exabgp.rib.outgoing import OutgoingRIB
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute.attributes import Attributes
+from exabgp.bgp.message.action import Action
 from exabgp.rib.change import Change
 from exabgp.protocol.ip import IPv4
 
@@ -39,7 +41,8 @@ def test_real_rib_resend():
 
     # Create a change (route)
     print('\n[STEP 2] Create and cache a route')
-    nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, packed=IPv4.pton('192.168.0.1'), action=1)
+    nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, action=Action.ANNOUNCE)
+    nlri.cidr = CIDR(IPv4.pton('192.168.0.1'), 32)
     attrs = Attributes()
     change = Change(nlri, attrs)
 
@@ -102,7 +105,8 @@ def test_real_rib_concurrent_operations():
     # Add multiple routes
     print('\n[SETUP] Adding 3 routes to cache')
     for i in range(3):
-        nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, packed=IPv4.pton(f'192.168.0.{i}'), action=1)
+        nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, action=Action.ANNOUNCE)
+        nlri.cidr = CIDR(IPv4.pton(f'192.168.0.{i}'), 32)
         attrs = Attributes()
         change = Change(nlri, attrs)
         rib.update_cache(change)
@@ -121,7 +125,8 @@ def test_real_rib_concurrent_operations():
 
     # Add new route while cache exists
     print('\n[STEP 3] Add new route + flush again')
-    nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, packed=IPv4.pton('192.168.0.100'), action=1)
+    nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, action=Action.ANNOUNCE)
+    nlri.cidr = CIDR(IPv4.pton('192.168.0.100'), 32)
     attrs = Attributes()
     change = Change(nlri, attrs)
     rib.update_cache(change)

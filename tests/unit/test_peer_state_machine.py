@@ -21,7 +21,8 @@ os.environ['exabgp_tcp_bind'] = '127.0.0.1'
 os.environ['exabgp_tcp_attempts'] = '0'
 
 from exabgp.bgp.fsm import FSM  # noqa: E402
-from exabgp.reactor.peer import ACTION, Peer, Stats  # noqa: E402
+from exabgp.bgp.message import Scheduling  # noqa: E402
+from exabgp.reactor.peer import Peer, Stats  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -722,21 +723,24 @@ class TestPeerNegotiatedFamilies:
         assert ']' in result
 
 
-class TestACTIONConstants:
-    """Test ACTION constants"""
+class TestSchedulingConstants:
+    """Test Scheduling enum constants"""
 
-    def test_action_constants_defined(self) -> None:
-        """Test ACTION constants are defined"""
-        assert ACTION.CLOSE == 0x01
-        assert ACTION.LATER == 0x02
-        assert ACTION.NOW == 0x03
+    def test_scheduling_constants_defined(self) -> None:
+        """Test Scheduling constants are defined"""
+        # Values are: MESSAGE=0, NOW=1, LATER=2, CLOSE=3
+        assert Scheduling.MESSAGE == 0x00
+        assert Scheduling.NOW == 0x01
+        assert Scheduling.LATER == 0x02
+        assert Scheduling.CLOSE == 0x03
 
-    def test_action_all_list(self) -> None:
-        """Test ACTION.ALL contains all actions"""
-        assert ACTION.CLOSE in ACTION.ALL
-        assert ACTION.LATER in ACTION.ALL
-        assert ACTION.NOW in ACTION.ALL
-        assert len(ACTION.ALL) == 3
+    def test_scheduling_all_values(self) -> None:
+        """Test Scheduling contains all expected values"""
+        assert Scheduling.MESSAGE in list(Scheduling)
+        assert Scheduling.CLOSE in list(Scheduling)
+        assert Scheduling.LATER in list(Scheduling)
+        assert Scheduling.NOW in list(Scheduling)
+        assert len(list(Scheduling)) == 4
 
 
 class TestPeerRun:
@@ -793,8 +797,8 @@ class TestPeerRun:
         # Should check backoff delay
         result = peer.run()
 
-        # Should return ACTION.LATER or ACTION.CLOSE
-        assert result in [ACTION.LATER, ACTION.CLOSE, None]
+        # Should return _NOP or _DONE (scheduling messages)
+        assert result.SCHEDULING in [Scheduling.LATER, Scheduling.CLOSE] or result is None
 
 
 class TestPeerRemoveShutdown:

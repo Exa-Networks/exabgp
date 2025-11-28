@@ -19,7 +19,7 @@ import pytest
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp.message import KeepAlive, Notify, Update, _NOP  # noqa: E402
+from exabgp.bgp.message import KeepAlive, Notify, Update, _NOP, Scheduling  # noqa: E402
 from exabgp.bgp.message.open.holdtime import HoldTime  # noqa: E402
 from exabgp.bgp.timer import ReceiveTimer, SendTimer  # noqa: E402
 
@@ -96,7 +96,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = Update.TYPE
-        message.IS_NOP = False
+        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
 
         result = timer.check_ka_timer(message)
         assert result is True
@@ -108,7 +108,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = KeepAlive.TYPE
-        message.IS_NOP = False
+        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
 
         result = timer.check_ka_timer(message)
         assert result is False
@@ -123,7 +123,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = Update.TYPE
-        message.IS_NOP = False
+        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
 
         old_last_read = timer.last_read
         timer.check_ka_timer(message)
@@ -142,7 +142,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
-        message.IS_NOP = True
+        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
 
         time.sleep(1)
         timer.check_ka_timer(message)
@@ -160,7 +160,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
-        message.IS_NOP = True
+        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
 
         with pytest.raises(Notify) as exc_info:
             timer.check_ka_timer(message)
@@ -175,7 +175,7 @@ class TestReceiveTimerKeepaliveCheck:
 
         message = Mock()
         message.TYPE = Update.TYPE
-        message.IS_NOP = False
+        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
 
         # Should not raise
         result = timer.check_ka_timer(message)
@@ -192,7 +192,7 @@ class TestReceiveTimerCheckKa:
 
         message = Mock()
         message.TYPE = Update.TYPE
-        message.IS_NOP = False
+        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
 
         # Should not raise
         timer.check_ka(message)
@@ -204,7 +204,7 @@ class TestReceiveTimerCheckKa:
 
         message = Mock()
         message.TYPE = KeepAlive.TYPE
-        message.IS_NOP = False
+        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
 
         # First keepalive should set single flag but not raise
         timer.check_ka(message)
@@ -224,7 +224,7 @@ class TestReceiveTimerCheckKa:
 
         message = Mock()
         message.TYPE = KeepAlive.TYPE
-        message.IS_NOP = False
+        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
 
         # First keepalive
         try:
@@ -250,7 +250,7 @@ class TestReceiveTimerElapsedTime:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
-        message.IS_NOP = True
+        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
 
         # Should calculate elapsed time
         timer.check_ka_timer(message)
@@ -269,7 +269,7 @@ class TestReceiveTimerElapsedTime:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
-        message.IS_NOP = True
+        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
 
         with pytest.raises(Notify):
             timer.check_ka_timer(message)
@@ -454,7 +454,7 @@ class TestReceiveTimerIntegration:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
-        message.IS_NOP = True
+        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
 
         with pytest.raises(Notify) as exc_info:
             timer.check_ka_timer(message)
@@ -547,7 +547,7 @@ class TestTimerNotifyMessages:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
-        message.IS_NOP = True
+        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
 
         with pytest.raises(Notify) as exc_info:
             timer.check_ka_timer(message)
@@ -564,7 +564,7 @@ class TestTimerNotifyMessages:
 
         message = Mock()
         message.TYPE = _NOP.TYPE
-        message.IS_NOP = True
+        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
 
         with pytest.raises(Notify) as exc_info:
             timer.check_ka_timer(message)
@@ -583,7 +583,7 @@ class TestTimerConcurrentBehavior:
 
         message = Mock()
         message.TYPE = Update.TYPE
-        message.IS_NOP = False
+        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
 
         # Rapid fire messages
         for _ in range(10):

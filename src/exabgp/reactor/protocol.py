@@ -268,12 +268,12 @@ class Protocol:
                         self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, header, body)
                 raise notify_msg
 
-            if msg_id not in Message.CODE.MESSAGES:
-                raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
-
             if not length:
                 yield cast(Message, _NOP)
                 continue
+
+            if msg_id not in Message.CODE.MESSAGES:
+                raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
 
             current_msg_id = msg_id
             log.debug(
@@ -443,7 +443,7 @@ class Protocol:
 
     def read_open(self, ip: str) -> Generator[Message, None, None]:
         for received_open in self.read_message():
-            if received_open.IS_NOP:
+            if received_open.SCHEDULING:  # NOP - keep waiting
                 yield cast(Message, received_open)
             else:
                 break
@@ -462,7 +462,7 @@ class Protocol:
         """Async version of read_open() - reads OPEN message using async I/O"""
         while True:
             received_open = await self.read_message_async()
-            if not received_open.IS_NOP:
+            if not received_open.SCHEDULING:  # Real message (not NOP)
                 break
 
         if received_open.TYPE != Open.TYPE:
@@ -477,7 +477,7 @@ class Protocol:
 
     def read_keepalive(self) -> Generator[Message, None, None]:
         for message in self.read_message():
-            if message.IS_NOP:
+            if message.SCHEDULING:  # NOP - keep waiting
                 yield cast(Message, message)
             else:
                 break
@@ -491,7 +491,7 @@ class Protocol:
         """Async version of read_keepalive() - reads KEEPALIVE message using async I/O"""
         while True:
             message = await self.read_message_async()
-            if not message.IS_NOP:
+            if not message.SCHEDULING:  # Real message (not NOP)
                 break
 
         if message.TYPE != KeepAlive.TYPE:
