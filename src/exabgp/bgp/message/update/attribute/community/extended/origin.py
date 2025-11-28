@@ -39,7 +39,7 @@ class Origin(ExtendedCommunity):
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Origin):
-            return NotImplemented
+            return False
         return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)
 
 

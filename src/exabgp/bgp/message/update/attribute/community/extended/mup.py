@@ -43,15 +43,12 @@ class MUPExtendedCommunity(ExtendedCommunity):
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MUPExtendedCommunity):
-            return NotImplemented
+            return False
         return (
             self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE
             and self.COMMUNITY_TYPE == other.COMMUNITY_TYPE
             and ExtendedCommunity.__eq__(self, other)
         )
-
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
 
     def __hash__(self) -> int:
         return hash((self.sgid2, self.sgid4))

@@ -47,27 +47,32 @@ class ExtendedCommunityBase(Attribute):
             return False
         return self.ID == other.ID and self.FLAG == other.FLAG and self.community == other.community
 
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
-
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
-            return NotImplemented
+            raise TypeError(
+                f"'<' not supported between instances of 'ExtendedCommunityBase' and '{type(other).__name__}'"
+            )
         return self.community < other.community
 
     def __le__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
-            return NotImplemented
+            raise TypeError(
+                f"'<=' not supported between instances of 'ExtendedCommunityBase' and '{type(other).__name__}'"
+            )
         return self.community <= other.community
 
     def __gt__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
-            return NotImplemented
+            raise TypeError(
+                f"'>' not supported between instances of 'ExtendedCommunityBase' and '{type(other).__name__}'"
+            )
         return self.community > other.community
 
     def __ge__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
-            return NotImplemented
+            raise TypeError(
+                f"'>=' not supported between instances of 'ExtendedCommunityBase' and '{type(other).__name__}'"
+            )
         return self.community >= other.community
 
     def iana(self) -> bool:

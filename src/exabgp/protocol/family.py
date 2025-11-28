@@ -352,13 +352,13 @@ class Family:
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Family):
-            return NotImplemented
+            return False
         return self.afi == other.afi and self.safi == other.safi
 
-    def __neq__(self, other: object) -> bool:
+    def __ne__(self, other: object) -> bool:
         if not isinstance(other, Family):
-            return NotImplemented  # type: ignore[no-any-return]
-        return bool(self.afi != other.afi or self.safi != other.safi)
+            return True
+        return self.afi != other.afi or self.safi != other.safi
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing Family for ordering does not make sense')

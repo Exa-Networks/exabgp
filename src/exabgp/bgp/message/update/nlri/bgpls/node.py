@@ -112,16 +112,13 @@ class NODE(BGPLS):
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NODE):
-            return NotImplemented
+            return False
         return (
             self.CODE == other.CODE
             and self.domain == other.domain
             and self.proto_id == other.proto_id
             and self.route_d == other.route_d
         )
-
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
 
     def __str__(self) -> str:
         return self.json()
