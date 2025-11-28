@@ -888,16 +888,18 @@ class Tests:
             status_parts.append(failed_text)
 
         # Add pending last (show test IDs if < 10)
-        pending_text = f'{yellow()}pending{reset()} {pending:2d}'
+        # Trailing space ensures last character renders in some terminals
+        pending_text = f'{yellow()}pending{reset()} {pending:2d} '
         if pending > 0 and pending < 10 and pending_tests:
-            pending_text += f' [{", ".join(pending_tests)}]'
+            pending_text += f'[{", ".join(pending_tests)}] '
         status_parts.append(pending_text)
 
         status = ' '.join(status_parts)
 
         # Clear entire line first, then write status, then return to start
         # This prevents "X] X] X]" artifacts when status text gets shorter
-        flush(f'\r\033[K{status}', end='')
+        # Reset escape sequence at end forces terminal to process all characters
+        flush(f'\r\033[K{status}\033[0m', end='')
 
     def legend(self) -> None:
         flush(
@@ -1179,7 +1181,9 @@ class Tests:
         # Client output (filtered - exabgp outputs to stderr)
         if client_exec and client_exec.stderr:
             stderr = client_exec.stderr.decode('utf-8', errors='replace')
-            filtered = [ln for ln in stderr.split('\n') if ln.strip() and 'receive-timer' not in ln and 'send-timer' not in ln]
+            filtered = [
+                ln for ln in stderr.split('\n') if ln.strip() and 'receive-timer' not in ln and 'send-timer' not in ln
+            ]
             if filtered:
                 flush(f'  {cyan()}client{reset()} ({len(filtered)} lines):')
                 for line in filtered:
@@ -1538,7 +1542,13 @@ class EncodingTests(Tests):
         # Verify they're dead (wait briefly)
         time.sleep(0.3)
 
-    def run_selected(self, timeout: int, save_dir: Optional[str] = None, verbose: bool = False, debug_tests: Optional[List[str]] = None) -> bool:
+    def run_selected(
+        self,
+        timeout: int,
+        save_dir: Optional[str] = None,
+        verbose: bool = False,
+        debug_tests: Optional[List[str]] = None,
+    ) -> bool:
         # Set max timeout before setup so it shows during initialization
         self._max_timeout: int = timeout
         self._save_dir = save_dir  # Store for use in server startup
@@ -2074,9 +2084,9 @@ def run_stress_test(
     save_dir: Optional[str] = None,
 ) -> None:
     """Run a single test N times and report statistics."""
-    import statistics
-    import io
     import contextlib
+    import io
+    import statistics
 
     if not tests.enable_by_nick(test_nick):
         sys.exit(f'could not find test {test_nick}')
@@ -2109,7 +2119,7 @@ def run_stress_test(
         }
         results.append(result)
 
-        status = '\033[32m✓ PASS\033[0m' if success else '\033[31m✗ FAIL\033[0m'
+        status = '\033[32m✓ PASS\033[0m' if success else ' \033[31m✗ FAIL\033[0m'
         flush(f'Run {run_num:3d}: {status} ({elapsed:.2f}s)')
 
         if success:
@@ -2189,7 +2199,13 @@ def add_test(
     if 'verbose' in extra:
         sub.add_argument('--verbose', '-v', help='show output for each test', action='store_true')
     if 'debug' in extra:
-        sub.add_argument('--debug', '-d', help='run all tests but only show verbose output for specified test(s)', nargs='+', default=None)
+        sub.add_argument(
+            '--debug',
+            '-d',
+            help='run all tests but only show verbose output for specified test(s)',
+            nargs='+',
+            default=None,
+        )
     sub.add_argument('test', help='name of the test(s) to run', nargs='*', default=None)
 
     def func(parsed: Namespace) -> None:
@@ -2271,7 +2287,9 @@ def add_test(
             tests.enable_all()
 
         if hasattr(tests, '_save_dir') or isinstance(tests, EncodingTests):
-            success_exit = tests.run_selected(parsed.timeout, save_dir=save_dir, verbose=verbose, debug_tests=debug_tests)
+            success_exit = tests.run_selected(
+                parsed.timeout, save_dir=save_dir, verbose=verbose, debug_tests=debug_tests
+            )
         else:
             success_exit = tests.run_selected(parsed.timeout)
         flush()
@@ -2300,7 +2318,20 @@ if __name__ == '__main__':
         subparser,
         'encoding',
         encoding,
-        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'server', 'client', 'save', 'stress', 'verbose', 'debug'],
+        [
+            'list',
+            'short_list',
+            'edit',
+            'dry',
+            'timeout',
+            'port',
+            'server',
+            'client',
+            'save',
+            'stress',
+            'verbose',
+            'debug',
+        ],
     )
     add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit'])
 
