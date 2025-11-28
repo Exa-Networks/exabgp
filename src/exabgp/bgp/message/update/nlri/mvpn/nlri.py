@@ -49,7 +49,7 @@ class MVPN(NLRI):
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MVPN):
-            return NotImplemented
+            return False
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self) -> str:
