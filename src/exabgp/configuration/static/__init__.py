@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, List, cast
+from typing import Any, Callable, List
 
 from exabgp.configuration.static.route import ParseStaticRoute
 from exabgp.configuration.static.parser import prefix
@@ -65,14 +65,15 @@ def route(tokeniser: Any) -> List[Change]:
     ipmask = prefix(tokeniser)
     check: Callable[[Change, AFI], bool] = _check_true
 
+    nlri: INET
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
         nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
         check = AnnounceVPN.check
     elif 'label' in tokeniser.tokens:
-        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)  # type: ignore[assignment]
+        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)
         check = AnnounceLabel.check
     else:
-        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)  # type: ignore[assignment]
+        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
         check = AnnouncePath.check
 
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
@@ -122,12 +123,13 @@ def attributes(tokeniser: Any) -> List[Change]:
     ipmask = prefix(lambda: tokeniser.tokens[-1])  # type: ignore[arg-type]
     tokeniser.afi = ipmask.afi
 
+    nlri: INET
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
         nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
     elif 'label' in tokeniser.tokens:
-        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)  # type: ignore[assignment]
+        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)
     else:
-        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)  # type: ignore[assignment]
+        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
 
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
     attr = Attributes()
@@ -180,8 +182,8 @@ def attributes(tokeniser: Any) -> List[Change]:
             break
 
         ipmask = prefix(tokeniser)
-        # Create new NLRI of same type and cast to INET for attribute access
-        new_nlri = cast(INET, nlri.__class__(nlri.afi, nlri.safi, Action.UNSET))
+        # Create new NLRI of same type (nlri is typed as INET, all subclasses share same interface)
+        new_nlri: INET = nlri.__class__(nlri.afi, nlri.safi, Action.UNSET)
         new_nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
         if labels:
             new_nlri.labels = labels

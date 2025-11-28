@@ -1129,7 +1129,8 @@ class Peer:
             try:
                 # This generator only stops when it raises
                 # otherwise return one of the scheduling messages
-                return next(self.generator)  # type: ignore[return-value]
+                assert isinstance(self.generator, Generator)
+                return next(self.generator)
             except StopIteration:
                 # Trying to run a closed loop, no point continuing
                 self.generator = None

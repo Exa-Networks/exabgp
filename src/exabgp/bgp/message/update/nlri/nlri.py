@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
@@ -38,6 +39,8 @@ class NLRI(Family):
 
     # Singleton invalid NLRI (initialized after class definition)
     INVALID: ClassVar['NLRI']
+    # Singleton empty NLRI for cleared references (initialized after class definition)
+    EMPTY: ClassVar['NLRI']
 
     @classmethod
     def _create_invalid(cls) -> 'NLRI':
@@ -53,10 +56,44 @@ class NLRI(Family):
         instance.addpath = PathInfo.DISABLED
         return instance
 
+    @classmethod
+    def _create_empty(cls) -> 'NLRI':
+        """Create the empty NLRI singleton. Called once at module load.
+
+        Used when intentionally clearing an NLRI reference (e.g., after splitting routes).
+        """
+        # Bypass normal __init__
+        instance = object.__new__(cls)
+        instance.afi = AFI.undefined
+        instance.safi = SAFI.undefined
+        instance.action = Action.UNSET
+        instance.addpath = PathInfo.DISABLED
+        return instance
+
     def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET, addpath: PathInfo = PathInfo.DISABLED) -> None:
         Family.__init__(self, afi, safi)
         self.action = action
         self.addpath = addpath
+
+    def __copy__(self) -> 'NLRI':
+        """Preserve singleton identity for INVALID and EMPTY."""
+        if self is NLRI.INVALID or self is NLRI.EMPTY:
+            return self
+        # Regular NLRI: create a shallow copy
+        new = self.__class__.__new__(self.__class__)
+        new.__dict__.update(self.__dict__)
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'NLRI':
+        """Preserve singleton identity for INVALID and EMPTY."""
+        if self is NLRI.INVALID or self is NLRI.EMPTY:
+            return self
+        # Regular NLRI: create a deep copy
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        for k, v in self.__dict__.items():
+            setattr(new, k, deepcopy(v, memo))
+        return new
 
     def __hash__(self) -> int:
         return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri().hex()))  # type: ignore[call-arg]
@@ -137,5 +174,6 @@ class NLRI(Family):
         raise Notify(3, 0, 'trying to decode unknown family {}/{}'.format(a, s))
 
 
-# Initialize the invalid NLRI singleton
+# Initialize the NLRI singletons
 NLRI.INVALID = NLRI._create_invalid()
+NLRI.EMPTY = NLRI._create_empty()
