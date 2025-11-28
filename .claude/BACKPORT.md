@@ -22,6 +22,7 @@ Bug fixes that need backporting to stable branches.
 | 2025-11 | (pending) | attributes.py:340 - `attribute.ID` should be `aid` (bytes has no .ID, crashes on duplicate attr) | 5.0 | 🔴 Pending |
 | 2025-11 | (pending) | multitopology.py:90 - `__str__` calls non-existent `self.pack()`, should be `self.pack_tlv()` | 5.0 | 🟡 Review |
 | 2025-11 | (pending) | neighbor.py:144-145 - `str(None)` produces "None" instead of "not set" for peer/local-address | 5.0 | 🟡 Review |
+| 2025-11 | (pending) | aggregator.py:65 - JSON format used `%d` for IPv4 speaker address, should be `%s` | 5.0 | 🔴 Pending |
 
 ---
 
