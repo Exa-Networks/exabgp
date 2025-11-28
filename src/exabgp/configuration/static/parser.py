@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import List, Optional, Tuple, Union, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.configuration.core.parser import Tokeniser
@@ -538,7 +538,7 @@ def _extended_community_hex(value: str) -> ExtendedCommunity:
     if len(value) % 2:
         raise ValueError('invalid extended community {}'.format(value))
     raw = b''.join(bytes([int(value[_ : _ + 2], 16)]) for _ in range(2, len(value), 2))
-    return ExtendedCommunity.unpack_attribute(raw, None)  # type: ignore[return-value]
+    return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(raw, None))
 
 
 def _extended_community(value: str) -> ExtendedCommunity:
@@ -548,7 +548,7 @@ def _extended_community(value: str) -> ExtendedCommunity:
 
         if value == 'redirect-to-nexthop':
             header = _HEADER[value]
-            return ExtendedCommunity.unpack_attribute(header + pack('!HL', 0, 0), None)  # type: ignore[return-value]
+            return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(header + pack('!HL', 0, 0), None))
 
         raise ValueError('invalid extended community {} - lc+gc'.format(value))
 
@@ -557,7 +557,7 @@ def _extended_community(value: str) -> ExtendedCommunity:
     components = [_integer(_) if _digit(_) else _ip(_, value) for _ in parts]
     header, packed = _encode(command, components, parts)
 
-    return ExtendedCommunity.unpack_attribute(header + pack(packed, *components), None)  # type: ignore[return-value]
+    return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(header + pack(packed, *components), None))
 
 
 def extended_community(tokeniser: 'Tokeniser') -> ExtendedCommunities:

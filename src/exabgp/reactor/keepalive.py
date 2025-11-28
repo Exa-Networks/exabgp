@@ -9,9 +9,8 @@ from __future__ import annotations
 from typing import Any, Generator
 
 from exabgp.bgp.timer import SendTimer
+from exabgp.bgp.message import Message
 from exabgp.bgp.message import Notify
-from exabgp.bgp.message import KeepAlive
-from exabgp.bgp.message import NOP
 
 from exabgp.reactor.network.error import NetworkError
 
@@ -27,7 +26,7 @@ class KA:
 
     def _keepalive(self, proto: Any) -> Generator[bool, None, None]:
         need_ka: bool = False
-        generator: Generator[KeepAlive | NOP, None, None] | None = None
+        generator: Generator[Message, None, None] | None = None
 
         while True:
             # SEND KEEPALIVES
