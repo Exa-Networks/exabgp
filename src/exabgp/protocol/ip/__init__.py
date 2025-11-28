@@ -45,7 +45,7 @@ class IPSelf:
         return negotiated.nexthopself(self.afi).ton()
 
     def index(self) -> str:
-        return 'self-' + AFI.names[self.afi]
+        return 'self-' + self.afi.name()
 
 
 class IP:

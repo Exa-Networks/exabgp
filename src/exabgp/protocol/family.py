@@ -11,43 +11,53 @@ from struct import pack
 from struct import unpack
 from typing import Dict, ClassVar, List, Tuple
 
-from exabgp.protocol.resource import Resource
-
 
 # ======================================================================== AFI
 # https://www.iana.org/assignments/address-family-numbers/
 
 
-class _AFI(int):
+class AFI(int):
+    # Constants
     UNDEFINED: ClassVar[int] = 0x00  # internal
     IPv4: ClassVar[int] = 0x01
     IPv6: ClassVar[int] = 0x02
     L2VPN: ClassVar[int] = 0x19
     BGPLS: ClassVar[int] = 0x4004
 
+    # Singleton instances (initialized after class definition)
+    undefined: ClassVar[AFI]
+    ipv4: ClassVar[AFI]
+    ipv6: ClassVar[AFI]
+    l2vpn: ClassVar[AFI]
+    bgpls: ClassVar[AFI]
+
+    # Lookup tables
     _names: ClassVar[Dict[int, str]] = {
-        UNDEFINED: 'undefined',
-        IPv4: 'ipv4',
-        IPv6: 'ipv6',
-        L2VPN: 'l2vpn',
-        BGPLS: 'bgp-ls',
+        0x00: 'undefined',
+        0x01: 'ipv4',
+        0x02: 'ipv6',
+        0x19: 'l2vpn',
+        0x4004: 'bgp-ls',
     }
 
     _masks: ClassVar[Dict[int, int]] = {
-        IPv4: 32,
-        IPv6: 128,
+        0x01: 32,  # IPv4
+        0x02: 128,  # IPv6
     }
 
     _address_lengths: ClassVar[Dict[int, int]] = {
-        IPv4: 4,  # 4 bytes = 32 bits
-        IPv6: 16,  # 16 bytes = 128 bits
+        0x01: 4,  # IPv4: 4 bytes = 32 bits
+        0x02: 16,  # IPv6: 16 bytes = 128 bits
     }
 
-    def pack(self) -> bytes:
-        return pack('!H', self)
+    # Caches
+    common: ClassVar[Dict[bytes, AFI]] = {}
+    codes: ClassVar[Dict[str, AFI]] = {}
+    cache: ClassVar[Dict[int, AFI]] = {}
+    inet_names: ClassVar[Dict[int, str]] = {}
 
-    def name(self) -> str:
-        return self._names.get(self, f'unknown-afi-{hex(self)}')
+    def pack_afi(self) -> bytes:
+        return pack('!H', self)
 
     def mask(self) -> int | None:
         return self._masks.get(self, None)
@@ -62,50 +72,14 @@ class _AFI(int):
             raise ValueError(f'Address length not defined for AFI {self.name()}')
         return self._address_lengths[self]
 
-    def __repr__(self) -> str:
-        return self.name()
-
-    def __str__(self) -> str:
-        return self.name()
-
-
-class AFI(Resource):
-    undefined: ClassVar[AFI]
-    ipv4: ClassVar[AFI]
-    ipv6: ClassVar[AFI]
-    l2vpn: ClassVar[AFI]
-    bgpls: ClassVar[AFI]
-
-    common: ClassVar[Dict[bytes, AFI]] = {}
-    codes: ClassVar[Dict[str, AFI]] = {}  # type: ignore[assignment]
-    cache: ClassVar[Dict[int, AFI]] = {}  # type: ignore[assignment]
-    names: ClassVar[Dict[int, str]] = {}
-    inet_names: ClassVar[Dict[int, str]] = {}
-
-    def pack_afi(self) -> bytes:
-        return pack('!H', self)
-
-    def mask(self) -> int | None:
-        return _AFI._masks.get(self, None)
-
-    def address_length(self) -> int:
-        """Return address length in bytes.
-
-        Raises:
-            ValueError: If address length is not defined for this AFI
-        """
-        if self not in _AFI._address_lengths:
-            raise ValueError(f'Address length not defined for AFI {self.name()}')
-        return _AFI._address_lengths[self]
-
     def name(self) -> str:
-        return self.names.get(self, 'unknown afi')
+        return self._names.get(self, f'unknown-afi-{hex(self)}')
 
     def __repr__(self) -> str:
-        return _AFI._names.get(self, f'unknown-afi-{hex(self)}')
+        return self.name()
 
     def __str__(self) -> str:
-        return _AFI._names.get(self, f'unknown-afi-{hex(self)}')
+        return self.name()
 
     @staticmethod
     def unpack_afi(data: bytes) -> AFI:
@@ -137,11 +111,11 @@ class AFI(Resource):
 
 
 # Initialize AFI class attributes after class definition
-AFI.undefined = AFI(_AFI.UNDEFINED)
-AFI.ipv4 = AFI(_AFI.IPv4)
-AFI.ipv6 = AFI(_AFI.IPv6)
-AFI.l2vpn = AFI(_AFI.L2VPN)
-AFI.bgpls = AFI(_AFI.BGPLS)
+AFI.undefined = AFI(AFI.UNDEFINED)
+AFI.ipv4 = AFI(AFI.IPv4)
+AFI.ipv6 = AFI(AFI.IPv6)
+AFI.l2vpn = AFI(AFI.L2VPN)
+AFI.bgpls = AFI(AFI.BGPLS)
 
 AFI.common = {
     AFI.undefined.pack_afi(): AFI.undefined,
@@ -162,7 +136,6 @@ AFI.codes = dict(
 )
 
 AFI.cache = dict([(inst, inst) for (_, inst) in AFI.codes.items()])
-AFI.names = dict([(inst, name) for (name, inst) in AFI.codes.items()])
 AFI.inet_names = dict([(inst, name.replace('ipv', 'inet')) for (name, inst) in AFI.codes.items()])
 
 
@@ -170,23 +143,24 @@ AFI.inet_names = dict([(inst, name.replace('ipv', 'inet')) for (name, inst) in A
 # https://www.iana.org/assignments/safi-namespace
 
 
-class _SAFI(int):
+class SAFI(int):
+    # Constants
     UNDEFINED: ClassVar[int] = 0  # internal
     UNICAST: ClassVar[int] = 1  # [RFC4760]
     MULTICAST: ClassVar[int] = 2  # [RFC4760]
     NLRI_MPLS: ClassVar[int] = 4  # [RFC3107]
+    MCAST_VPN: ClassVar[int] = 5  # [RFC6514]
     VPLS: ClassVar[int] = 65  # [RFC4761]
     EVPN: ClassVar[int] = 70  # [draft-ietf-l2vpn-evpn]
     BGPLS: ClassVar[int] = 71  # [RFC7752]
     BGPLS_VPN: ClassVar[int] = 72  # [RFC7752]
     MUP: ClassVar[int] = 85  # [draft-mpmz-bess-mup-safi]
     MPLS_VPN: ClassVar[int] = 128  # [RFC4364]
-    MCAST_VPN: ClassVar[int] = 5  # [RFC6514]
     RTC: ClassVar[int] = 132  # [RFC4684]
     FLOW_IP: ClassVar[int] = 133  # [RFC5575]
     FLOW_VPN: ClassVar[int] = 134  # [RFC5575]
+    # Unused/deprecated SAFI values (kept for reference):
     # deprecated = 3            # [RFC4760]
-    # mcast_vpn = 5             # [draft-ietf-l3vpn-2547bis-mcast-bgp] (TEMPORARY - Expires 2008-06-19)
     # pseudowire = 6            # [draft-ietf-pwe3-dynamic-ms-pw] (TEMPORARY - Expires 2008-08-23)
     # encapsulation = 7         # [RFC5512]
     # tunel = 64                # [Nalawade]
@@ -199,49 +173,9 @@ class _SAFI(int):
     # vpn_ad = 140              # [draft-ietf-l3vpn-bgpvpn-auto]
     # private = [_ for _ in range(241,254)]   # [RFC4760]
     # unassigned = [_ for _ in range(8,64)] + [_ for _ in range(70,128)]
-    # reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,] # [RFC4760]
+    # reserved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,] # [RFC4760]
 
-    _names: ClassVar[Dict[int, str]] = {
-        UNICAST: 'unicast',
-        MULTICAST: 'multicast',
-        NLRI_MPLS: 'nlri-mpls',
-        VPLS: 'vpls',
-        EVPN: 'evpn',
-        BGPLS: 'bgp-ls',
-        BGPLS_VPN: 'bgp-ls-vpn',
-        MUP: 'mup',
-        MPLS_VPN: 'mpls-vpn',
-        MCAST_VPN: 'mcast-vpn',
-        RTC: 'rtc',
-        FLOW_IP: 'flow',
-        FLOW_VPN: 'flow-vpn',
-    }
-
-    def pack(self) -> bytes:
-        return bytes([self])
-
-    def name(self) -> str:
-        return self._names.get(self, f'unknown safi {int(self)}')
-
-    def has_label(self) -> bool:
-        return self in (SAFI.nlri_mpls, SAFI.mpls_vpn, SAFI.mcast_vpn)
-
-    def has_rd(self) -> bool:
-        return self in (SAFI.mup, SAFI.mpls_vpn, SAFI.mcast_vpn, SAFI.flow_vpn)
-        # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
-
-    def has_path(self) -> bool:
-        return self in (SAFI.unicast, SAFI.nlri_mpls)
-        # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
-
-    def __str__(self) -> str:
-        return self.name()
-
-    def __repr__(self) -> str:
-        return str(self)
-
-
-class SAFI(Resource):
+    # Singleton instances (initialized after class definition)
     undefined: ClassVar[SAFI]
     unicast: ClassVar[SAFI]
     multicast: ClassVar[SAFI]
@@ -257,33 +191,49 @@ class SAFI(Resource):
     flow_ip: ClassVar[SAFI]
     flow_vpn: ClassVar[SAFI]
 
+    # Lookup tables
+    _names: ClassVar[Dict[int, str]] = {
+        0: 'undefined',
+        1: 'unicast',
+        2: 'multicast',
+        4: 'nlri-mpls',
+        5: 'mcast-vpn',
+        65: 'vpls',
+        70: 'evpn',
+        71: 'bgp-ls',
+        72: 'bgp-ls-vpn',
+        85: 'mup',
+        128: 'mpls-vpn',
+        132: 'rtc',
+        133: 'flow',
+        134: 'flow-vpn',
+    }
+
+    # Caches
     common: ClassVar[Dict[bytes, SAFI]] = {}
-    codes: ClassVar[Dict[str, SAFI]] = {}  # type: ignore[assignment]
-    cache: ClassVar[Dict[int, SAFI]] = {}  # type: ignore[assignment]
-    names: ClassVar[Dict[int, str]] = {}
+    codes: ClassVar[Dict[str, SAFI]] = {}
+    cache: ClassVar[Dict[int, SAFI]] = {}
 
     def pack_safi(self) -> bytes:
         return bytes([self])
 
     def name(self) -> str:
-        return _SAFI._names.get(self, f'unknown safi {int(self)}')
+        return self._names.get(self, f'unknown safi {int(self)}')
 
     def has_label(self) -> bool:
         return self in (SAFI.nlri_mpls, SAFI.mpls_vpn, SAFI.mcast_vpn)
 
     def has_rd(self) -> bool:
         return self in (SAFI.mup, SAFI.mpls_vpn, SAFI.mcast_vpn, SAFI.flow_vpn)
-        # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
     def has_path(self) -> bool:
         return self in (SAFI.unicast, SAFI.nlri_mpls)
-        # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
     def __str__(self) -> str:
         return self.name()
 
     def __repr__(self) -> str:
-        return str(self)
+        return self.name()
 
     @staticmethod
     def unpack_safi(data: bytes) -> SAFI:
@@ -303,20 +253,20 @@ class SAFI(Resource):
 
 
 # Initialize SAFI class attributes after class definition
-SAFI.undefined = SAFI(_SAFI.UNDEFINED)
-SAFI.unicast = SAFI(_SAFI.UNICAST)
-SAFI.multicast = SAFI(_SAFI.MULTICAST)
-SAFI.nlri_mpls = SAFI(_SAFI.NLRI_MPLS)
-SAFI.vpls = SAFI(_SAFI.VPLS)
-SAFI.evpn = SAFI(_SAFI.EVPN)
-SAFI.bgp_ls = SAFI(_SAFI.BGPLS)
-SAFI.bgp_ls_vpn = SAFI(_SAFI.BGPLS_VPN)
-SAFI.mup = SAFI(_SAFI.MUP)
-SAFI.mpls_vpn = SAFI(_SAFI.MPLS_VPN)
-SAFI.mcast_vpn = SAFI(_SAFI.MCAST_VPN)
-SAFI.rtc = SAFI(_SAFI.RTC)
-SAFI.flow_ip = SAFI(_SAFI.FLOW_IP)
-SAFI.flow_vpn = SAFI(_SAFI.FLOW_VPN)
+SAFI.undefined = SAFI(SAFI.UNDEFINED)
+SAFI.unicast = SAFI(SAFI.UNICAST)
+SAFI.multicast = SAFI(SAFI.MULTICAST)
+SAFI.nlri_mpls = SAFI(SAFI.NLRI_MPLS)
+SAFI.vpls = SAFI(SAFI.VPLS)
+SAFI.evpn = SAFI(SAFI.EVPN)
+SAFI.bgp_ls = SAFI(SAFI.BGPLS)
+SAFI.bgp_ls_vpn = SAFI(SAFI.BGPLS_VPN)
+SAFI.mup = SAFI(SAFI.MUP)
+SAFI.mpls_vpn = SAFI(SAFI.MPLS_VPN)
+SAFI.mcast_vpn = SAFI(SAFI.MCAST_VPN)
+SAFI.rtc = SAFI(SAFI.RTC)
+SAFI.flow_ip = SAFI(SAFI.FLOW_IP)
+SAFI.flow_vpn = SAFI(SAFI.FLOW_VPN)
 
 SAFI.common = {
     SAFI.undefined.pack_safi(): SAFI.undefined,
@@ -354,7 +304,6 @@ SAFI.codes = dict(
     }.items()
 )
 
-SAFI.names = _SAFI._names
 SAFI.cache = dict([(inst, inst) for (_, inst) in SAFI.codes.items()])
 
 

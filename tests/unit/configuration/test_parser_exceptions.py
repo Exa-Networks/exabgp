@@ -102,13 +102,13 @@ class TestAFISAFIParsingExceptions:
         # Returns AFI.undefined instead of raising
         assert str(result) == 'undefined'
 
-    def test_safi_from_string_returns_unknown_for_invalid(self):
-        """Test that SAFI.fromString() returns unknown for invalid SAFI (no exception)."""
+    def test_safi_from_string_returns_undefined_for_invalid(self):
+        """Test that SAFI.fromString() returns undefined for invalid SAFI (no exception)."""
         from exabgp.protocol.family import SAFI
 
         result = SAFI.fromString('invalid-safi')
-        # Returns SAFI.unassigned instead of raising
-        assert 'unknown' in str(result).lower() or 'unassigned' in str(result).lower()
+        # Returns SAFI.undefined instead of raising
+        assert str(result) == 'undefined'
 
 
 class TestExceptionTranslationPatterns:
