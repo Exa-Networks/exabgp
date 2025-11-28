@@ -39,11 +39,7 @@ def test_api_commands():
 
     try:
         proc = subprocess.Popen(
-            [EXABGP_BIN, CONFIG_FILE],
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+            [EXABGP_BIN, CONFIG_FILE], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         )
 
         # Wait for test to complete (shutdown should happen automatically)
