@@ -30,11 +30,6 @@ class ESI:
             return False
         return self.esi == other.esi
 
-    def __neq__(self, other: object) -> bool:
-        if not isinstance(other, ESI):
-            return True
-        return self.esi != other.esi
-
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing ESI for ordering does not make sense')
 

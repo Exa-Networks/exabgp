@@ -27,11 +27,6 @@ class EthernetTag:
             return False
         return self.tag == other.tag
 
-    def __neq__(self, other: object) -> bool:
-        if not isinstance(other, EthernetTag):
-            return True
-        return self.tag != other.tag
-
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 

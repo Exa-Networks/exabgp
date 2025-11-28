@@ -86,8 +86,8 @@ class FSM:
     def __eq__(self, other: object) -> bool:
         return self.state == other
 
-    def __neq__(self, other: object) -> bool:
-        return not self.__eq__(other)
+    def __ne__(self, other: object) -> bool:
+        return self.state != other
 
     def __repr__(self) -> str:
         return f'FSM state {self.state}'

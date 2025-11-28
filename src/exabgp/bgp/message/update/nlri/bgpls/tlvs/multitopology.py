@@ -68,11 +68,10 @@ class MTID:
         # tids = ', '.join(_ for _ in self.topologies)
         # return f'[{tids}]'
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, MTID):
+            return False
         return self.topologies == other.topologies
-
-    def __neq__(self, other):
-        return self.topologies != other.topologies
 
     def __lt__(self, other):
         raise RuntimeError('Not implemented')

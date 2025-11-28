@@ -147,11 +147,10 @@ class NodeDescriptor:
         content = ', '.join(_ for _ in [node, designated, psn] if _)
         return f'{{ {content} }}'
 
-    def __eq__(self, other):
-        return isinstance(other, NodeDescriptor) and self.node_id == other.node_id
-
-    def __neq__(self, other):
-        return self.node_id != other.node_id
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, NodeDescriptor):
+            return False
+        return self.node_id == other.node_id
 
     def __lt__(self, other):
         raise RuntimeError('Not implemented')

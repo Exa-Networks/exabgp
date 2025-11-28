@@ -41,11 +41,10 @@ class Prefix:
         content = '"interface-address": "{}"'.format(self.iface_address)
         return content
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Prefix):
+            return False
         return self.iface_address == other.iface_address
-
-    def __neq__(self, other):
-        return self.iface_address != other.iface_address
 
     def __lt__(self, other):
         raise RuntimeError('Not implemented')

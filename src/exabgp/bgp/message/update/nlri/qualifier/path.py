@@ -34,11 +34,6 @@ class PathInfo:
             return False
         return self.path_info == other.path_info
 
-    def __neq__(self, other: object) -> bool:
-        if not isinstance(other, PathInfo):
-            return True
-        return self.path_info != other.path_info
-
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing PathInfo for ordering does not make sense')
 
