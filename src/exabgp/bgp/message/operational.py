@@ -84,7 +84,7 @@ class Operational(Message):
     # XXX: FIXME: should be upper case
     name: ClassVar[str] = ''
     category: ClassVar[str] = ''
-    code: ClassVar[int] = CODE.NOP  # type: ignore[assignment]  # shadows Message.code() method intentionally
+    code: ClassVar[int] = CODE.NOP
 
     def __init__(self, what: int) -> None:
         Message.__init__(self)
@@ -101,7 +101,6 @@ class Operational(Message):
 
     @staticmethod
     def register(klass: TypingType[_T]) -> TypingType[_T]:  # type: ignore[override]
-        # klass.code is an int, not Message.code() method - the attr shadows the parent method
         Operational.registered_operational[klass.code] = (klass.category, klass)
         return klass
 
@@ -257,7 +256,7 @@ class Advisory:
     @Operational.register
     class ADM(_Advisory):
         name: ClassVar[str] = 'ADM'
-        code: ClassVar[int] = Operational.CODE.ADM  # type: ignore[assignment]
+        code: ClassVar[int] = Operational.CODE.ADM
 
         def __init__(
             self,
@@ -278,7 +277,7 @@ class Advisory:
     @Operational.register
     class ASM(_Advisory):
         name: ClassVar[str] = 'ASM'
-        code: ClassVar[int] = Operational.CODE.ASM  # type: ignore[assignment]
+        code: ClassVar[int] = Operational.CODE.ASM
 
         def __init__(
             self,
@@ -304,7 +303,7 @@ class Advisory:
 class Query:
     class _Query(SequencedOperationalFamily):
         category: ClassVar[str] = 'query'
-        code: ClassVar[int]  # type: ignore[assignment]
+        code: ClassVar[int]
 
         def __init__(self, afi: int | AFI, safi: int | SAFI, routerid: RouterID | None, sequence: int | None) -> None:
             SequencedOperationalFamily.__init__(self, self.code, afi, safi, routerid, sequence)
@@ -337,7 +336,7 @@ class Query:
 class Response:
     class _Counter(SequencedOperationalFamily):
         category: ClassVar[str] = 'counter'
-        code: ClassVar[int]  # type: ignore[assignment]
+        code: ClassVar[int]
 
         def __init__(
             self,

@@ -207,7 +207,7 @@ class Message:
         return cls.klass_unknown(message, data, negotiated)
 
     @classmethod
-    def code(cls, name: str) -> _MessageCode:
+    def code_from_name(cls, name: str) -> _MessageCode:
         for message in cls.CODE.MESSAGES:
             if name == str(message) or name == message.short():
                 return message
