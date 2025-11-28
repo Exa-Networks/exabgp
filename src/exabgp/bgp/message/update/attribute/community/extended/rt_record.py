@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Type, TypeVar
+from typing import ClassVar, Type, TypeVar, cast
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import rt
@@ -24,7 +24,7 @@ class RTRecord(rt.RouteTarget):
     @classmethod
     def from_rt(cls: Type[T], route_target: rt.RouteTarget) -> T:
         packed = route_target.pack_attribute(None)  # type: ignore[arg-type]
-        return cls.unpack_attribute(packed[0:1] + bytes([cls.COMMUNITY_SUBTYPE]) + packed[2:])  # type: ignore[return-value]
+        return cast(T, cls.unpack_attribute(packed[0:1] + bytes([cls.COMMUNITY_SUBTYPE]) + packed[2:]))
 
 
 @ExtendedCommunity.register

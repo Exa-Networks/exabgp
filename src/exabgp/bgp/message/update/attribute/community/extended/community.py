@@ -30,7 +30,8 @@ class ExtendedCommunityBase(Attribute):
 
     @classmethod
     def register(cls, klass: Type[ExtendedCommunityBase]) -> Type[ExtendedCommunityBase]:  # type: ignore[override]
-        cls.registered_extended[(klass.COMMUNITY_TYPE & 0x0F, klass.COMMUNITY_SUBTYPE)] = klass  # type: ignore[index]
+        assert cls.registered_extended is not None
+        cls.registered_extended[(klass.COMMUNITY_TYPE & 0x0F, klass.COMMUNITY_SUBTYPE)] = klass
         return klass
 
     # size of value for data (boolean: is extended)
@@ -121,8 +122,9 @@ class ExtendedCommunityBase(Attribute):
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> ExtendedCommunityBase:
         # 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
         community = (data[0] & 0x0F, data[1])
-        if community in cls.registered_extended:  # type: ignore[operator]
-            klass = cls.registered_extended[community]  # type: ignore[index]
+        assert cls.registered_extended is not None
+        if community in cls.registered_extended:
+            klass = cls.registered_extended[community]
             instance = klass.unpack_attribute(data, negotiated)
             instance.klass = klass
             return instance

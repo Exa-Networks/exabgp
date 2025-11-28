@@ -46,22 +46,22 @@ class MPURNLRI(Attribute, Family):
 
         # we changed the API to nrli.pack from addpath to negotiated but not pack itself
 
-        mpurnlri = []
+        packed_nlris: List[bytes] = []
         for nlri in self.nlris:
             if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
                 continue
-            mpurnlri.append(nlri.pack_nlri(negotiated))
+            packed_nlris.append(nlri.pack_nlri(negotiated))
 
         payload = self.afi.pack_afi() + self.safi.pack_safi()
         header_length = len(payload)
-        for nlri in mpurnlri:  # type: ignore[assignment]
-            if self._len(payload + nlri) > maximum:  # type: ignore[operator]
+        for packed in packed_nlris:
+            if self._len(payload + packed) > maximum:
                 if len(payload) == header_length or len(payload) > maximum:
                     raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
                 yield self._attribute(payload)
-                payload = self.afi.pack_afi() + self.safi.pack_safi() + nlri  # type: ignore[operator]
+                payload = self.afi.pack_afi() + self.safi.pack_safi() + packed
                 continue
-            payload = payload + nlri  # type: ignore[operator]
+            payload = payload + packed
         if len(payload) == header_length or len(payload) > maximum:
             raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
         yield self._attribute(payload)

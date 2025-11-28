@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from struct import error, unpack
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Type, Union, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -257,7 +257,7 @@ class AS4Path(ASPath):
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Optional[AS4Path]:
         if not data:
             return None  # AS4Path.Empty
-        return cls._new_aspaths(data, True, AS4Path)  # type: ignore[return-value]
+        return cast(AS4Path, cls._new_aspaths(data, True, AS4Path))
 
 
 AS4Path.Empty = AS4Path([], [])  # type: ignore[arg-type]

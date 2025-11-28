@@ -2,7 +2,7 @@
 
 Bug fixes that need backporting to stable branches.
 
-**Last reviewed commit:** ba22a1d8
+**Last reviewed commit:** 1cd928bd
 
 ---
 
@@ -24,6 +24,7 @@ Bug fixes that need backporting to stable branches.
 | 2025-11 | (pending) | neighbor.py:144-145 - `str(None)` produces "None" instead of "not set" for peer/local-address | 5.0 | 🟡 Review |
 | 2025-11 | (pending) | aggregator.py:65 - JSON format used `%d` for IPv4 speaker address, should be `%s` | 5.0 | 🔴 Pending |
 | 2025-11 | (pending) | `__neq__` typo - 16 classes had `__neq__` instead of `__ne__`, method was dead code (never called) | 5.0 | 🔴 Pending |
+| 2025-11 | 1cd928bd | Preserve singleton identity through deepcopy for ADD-PATH | 5.0 | 🔴 Pending |
 
 ---
 

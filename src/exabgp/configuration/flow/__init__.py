@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, cast
 
 from exabgp.protocol.family import SAFI
 
@@ -72,14 +72,17 @@ def route(tokeniser: Any) -> List[Change]:
         action: str = ParseFlow.action[command]
 
         if action == 'nlri-add':
-            for adding in ParseFlow.known[command](tokeniser):  # type: ignore[operator]
+            handler = cast(Callable[[Any], Any], ParseFlow.known[command])
+            for adding in handler(tokeniser):
                 flow_nlri.add(adding)
         elif action == 'attribute-add':
-            change.attributes.add(ParseFlow.known[command](tokeniser))  # type: ignore[operator]
+            handler = cast(Callable[[Any], Any], ParseFlow.known[command])
+            change.attributes.add(handler(tokeniser))
         elif action == 'nexthop-and-attribute':
+            handler = cast(Callable[[Any], Any], ParseFlow.known[command])
             nexthop: Any
             attribute: Any
-            nexthop, attribute = ParseFlow.known[command](tokeniser)  # type: ignore[operator]
+            nexthop, attribute = handler(tokeniser)
             flow_nlri.nexthop = nexthop
             change.attributes.add(attribute)
         elif action == 'nop':

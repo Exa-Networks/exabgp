@@ -7,50 +7,32 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import os
 import asyncio  # noqa: F401 - Used by async methods (write_async, send_async, read_message_async)
-
+import os
 import traceback
-from typing import Any, Generator, Tuple, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generator, Tuple, cast
 
 if TYPE_CHECKING:
-    from exabgp.reactor.peer import Peer
-    from exabgp.reactor.network.incoming import Incoming
     from exabgp.bgp.neighbor import Neighbor
+    from exabgp.reactor.network.incoming import Incoming
+    from exabgp.reactor.peer import Peer
 
 # ================================================================ Registration
 #
 
-from exabgp.reactor.network.outgoing import Outgoing
-
-# from exabgp.reactor.network.error import NotifyError
-
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.bgp.message import Message
-from exabgp.bgp.message import NOP
-from exabgp.bgp.message import _NOP
-from exabgp.bgp.message import Open
-from exabgp.bgp.message.open import Version
-from exabgp.bgp.message.open.capability import Capabilities
-from exabgp.bgp.message.open.capability import Negotiated
-from exabgp.bgp.message import Update
-from exabgp.bgp.message import EOR
-from exabgp.bgp.message import KeepAlive
-from exabgp.bgp.message import Notification
-from exabgp.bgp.message import Notify
-from exabgp.bgp.message import Operational
-from exabgp.bgp.message.refresh import RouteRefresh
-
+from exabgp.bgp.message import _NOP, EOR, KeepAlive, Message, Notification, Notify, Open, Operational, Update
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open import Version
+from exabgp.bgp.message.open.capability import Capabilities, Negotiated
+from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.bgp.message.update.attribute import Attribute, Attributes
+from exabgp.logger import lazymsg, log
 
-from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute import Attributes
-
+# from exabgp.reactor.network.error import NotifyError
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
-
-from exabgp.logger import log, lazymsg
+from exabgp.reactor.network.outgoing import Outgoing
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
@@ -290,7 +272,7 @@ class Protocol:
                 raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
 
             if not length:
-                yield _NOP
+                yield cast(Message, _NOP)
                 continue
 
             current_msg_id = msg_id
@@ -309,7 +291,7 @@ class Protocol:
 
             if msg_id == Message.CODE.UPDATE:
                 if not self.neighbor['adj-rib-in'] and not (for_api or self.log_routes) and not (parsed or consolidate):
-                    yield _UPDATE
+                    yield cast(Message, _UPDATE)
                     return
 
             try:
@@ -346,7 +328,7 @@ class Protocol:
                 raise cast(Notification, message)
 
             if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in cast(Update, message).attributes:
-                yield _NOP
+                yield cast(Message, _NOP)
             else:
                 yield message
 
@@ -462,7 +444,7 @@ class Protocol:
     def read_open(self, ip: str) -> Generator[Message, None, None]:
         for received_open in self.read_message():
             if received_open.IS_NOP:
-                yield received_open
+                yield cast(Message, received_open)
             else:
                 break
 
@@ -474,7 +456,7 @@ class Protocol:
             )
 
         log.debug(lazymsg('open.received message={m}', m=received_open), self._session())
-        yield received_open
+        yield cast(Message, received_open)
 
     async def read_open_async(self, ip: str) -> Open:
         """Async version of read_open() - reads OPEN message using async I/O"""
@@ -491,19 +473,19 @@ class Protocol:
             )
 
         log.debug(lazymsg('open.received message={m}', m=received_open), self._session())
-        return received_open  # type: ignore[return-value]
+        return cast(Open, received_open)
 
     def read_keepalive(self) -> Generator[Message, None, None]:
         for message in self.read_message():
             if message.IS_NOP:
-                yield message
+                yield cast(Message, message)
             else:
                 break
 
         if message.TYPE != KeepAlive.TYPE:
             raise Notify(5, 2)
 
-        yield message
+        yield cast(Message, message)
 
     async def read_keepalive_async(self) -> KeepAlive:
         """Async version of read_keepalive() - reads KEEPALIVE message using async I/O"""
@@ -515,13 +497,13 @@ class Protocol:
         if message.TYPE != KeepAlive.TYPE:
             raise Notify(5, 2)
 
-        return message  # type: ignore[return-value]
+        return cast(KeepAlive, message)
 
     #
     # Sending message to peer
     #
 
-    def new_open(self) -> Generator[Open | NOP, None, None]:
+    def new_open(self) -> Generator[Message, None, None]:
         assert self.connection is not None
         if self.neighbor['local-as']:
             local_as = self.neighbor['local-as']
@@ -540,10 +522,10 @@ class Protocol:
 
         # we do not buffer open message in purpose
         for _ in self.write(sent_open, self.negotiated):
-            yield _NOP
+            yield cast(Message, _NOP)
 
         log.debug(lazymsg('open.sent message={m}', m=sent_open), self._session())
-        yield sent_open
+        yield cast(Message, sent_open)
 
     async def new_open_async(self) -> Open:
         """Async version of new_open() - creates and sends OPEN message using async I/O"""
@@ -569,19 +551,19 @@ class Protocol:
         log.debug(lazymsg('open.sent message={m}', m=sent_open), self._session())
         return sent_open
 
-    def new_keepalive(self, comment: str = '') -> Generator[KeepAlive | NOP, None, None]:
+    def new_keepalive(self, comment: str = '') -> Generator[Message, None, None]:
         assert self.connection is not None
         keepalive: KeepAlive = KeepAlive()
 
         for _ in self.write(keepalive, self.negotiated):
-            yield _NOP
+            yield cast(Message, _NOP)
 
         log.debug(
             lazymsg('keepalive.sent comment={c}', c=comment if comment else 'none'),
             self._session(),
         )
 
-        yield keepalive
+        yield cast(Message, keepalive)
 
     async def new_keepalive_async(self, comment: str = '') -> KeepAlive:
         """Async version of new_keepalive() - creates and sends KEEPALIVE message using async I/O"""
@@ -597,10 +579,10 @@ class Protocol:
 
         return keepalive
 
-    def new_notification(self, notification: Notify) -> Generator[Notify | NOP, None, None]:
+    def new_notification(self, notification: Notify) -> Generator[Message, None, None]:
         assert self.connection is not None
         for _ in self.write(notification, self.negotiated):
-            yield _NOP
+            yield cast(Message, _NOP)
         log.debug(
             lazymsg(
                 'notification.sent code={c} subcode={sc} data={d}',
@@ -610,7 +592,7 @@ class Protocol:
             ),
             self._session(),
         )
-        yield notification
+        yield cast(Message, notification)
 
     async def new_notification_async(self, notification: Notify) -> Notify:
         """Async version of new_notification - send BGP NOTIFICATION message"""
@@ -627,7 +609,7 @@ class Protocol:
         )
         return notification
 
-    def new_update(self, include_withdraw: bool) -> Generator[Update | NOP, None, None]:
+    def new_update(self, include_withdraw: bool) -> Generator[Message, None, None]:
         assert self.connection is not None
         assert self.neighbor.rib is not None
         updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
@@ -637,10 +619,10 @@ class Protocol:
                 number += 1
                 for boolean in self.send(message):
                     # boolean is a transient network error we already announced
-                    yield _NOP
+                    yield cast(Message, _NOP)
         if number:
             log.debug(lazymsg('update.sent count={n}', n=number), self._session())
-        yield _UPDATE
+        yield cast(Message, _UPDATE)
 
     async def new_update_async_generator(self, include_withdraw: bool):
         """Async generator version of new_update - yields control between sending messages
@@ -704,9 +686,9 @@ class Protocol:
         assert self.connection is not None
         eor: EOR = EOR(afi, safi)
         for _ in self.write(eor, self.negotiated):
-            yield _NOP
+            yield cast(Message, _NOP)
         log.debug(lazymsg('eor.sent afi={a} safi={s}', a=afi, s=safi), self._session())
-        yield eor
+        yield cast(Message, eor)
 
     async def new_eor_async(self, afi: AFI, safi: SAFI) -> EOR:
         """Async version of new_eor - send BGP End-of-RIB marker"""
@@ -739,23 +721,21 @@ class Protocol:
             )
             for eor_afi, eor_safi in families:
                 for _ in self.new_eor(eor_afi, eor_safi):
-                    yield _
+                    yield cast(Message, _)
         else:
             # If we are not sending an EOR, send a keepalive as soon as when finished
             # So the other routers knows that we have no (more) routes to send ...
             # (is that behaviour documented somewhere ??)
             for eor in self.new_keepalive('EOR'):
-                yield _NOP
-            yield _UPDATE
+                yield cast(Message, _NOP)
+            yield cast(Message, _UPDATE)
 
-    def new_operational(
-        self, operational: Operational, negotiated: Negotiated
-    ) -> Generator[Operational | NOP, None, None]:
+    def new_operational(self, operational: Operational, negotiated: Negotiated) -> Generator[Message, None, None]:
         assert self.connection is not None
         for _ in self.write(operational, negotiated):
-            yield _NOP
+            yield cast(Message, _NOP)
         log.debug(lazymsg('operational.sent message={m}', m=str(operational)), self._session())
-        yield operational
+        yield cast(Message, operational)
 
     async def new_operational_async(self, operational: Operational, negotiated: Negotiated) -> Operational:
         """Async version of new_operational - send BGP OPERATIONAL message"""
@@ -764,12 +744,12 @@ class Protocol:
         log.debug(lazymsg('operational.sent message={m}', m=str(operational)), self._session())
         return operational
 
-    def new_refresh(self, refresh: RouteRefresh) -> Generator[RouteRefresh | NOP, None, None]:
+    def new_refresh(self, refresh: RouteRefresh) -> Generator[Message, None, None]:
         assert self.connection is not None
         for _ in self.write(refresh, self.negotiated):
-            yield _NOP
+            yield cast(Message, _NOP)
         log.debug(lazymsg('refresh.sent message={m}', m=str(refresh)), self._session())
-        yield refresh
+        yield cast(Message, refresh)
 
     async def new_refresh_async(self, refresh: RouteRefresh) -> RouteRefresh:
         """Async version of new_refresh - send BGP ROUTE-REFRESH message"""

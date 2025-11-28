@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from struct import unpack
 from struct import pack
-from typing import Any, Iterator, Tuple, TYPE_CHECKING
+from typing import Any, Iterator, Tuple, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -52,7 +52,7 @@ class VPLS(NLRI):
         self.rd = rd
         self.base = base
         self.offset = offset
-        self.size = size  # type: ignore[assignment,misc]
+        self.size = size  # type: ignore[assignment,misc]  # shadows Family.size ClassVar
         self.endpoint = endpoint
         self.unique = next(unique)
 
@@ -69,7 +69,10 @@ class VPLS(NLRI):
             return 'vpls nlri size missing'
         if self.rd is None:
             return 'vpls nlri route-distinguisher missing'
-        if self.base > (0xFFFFF - self.size):  # type: ignore[operator]  # 20 bits, 3 bytes
+        # At this point base and size are known to be non-None (checked above)
+        # Cast needed because self.size shadows Family.size ClassVar (dict type)
+        size = cast(int, self.size)
+        if self.base > (0xFFFFF - size):  # 20 bits, 3 bytes
             return 'vpls nlri size inconsistency'
         return ''
 

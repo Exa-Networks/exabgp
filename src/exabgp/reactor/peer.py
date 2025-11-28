@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 # import traceback
 from exabgp.bgp.fsm import FSM
-from exabgp.bgp.message import NOP, Message, Notification, Notify, Open, Update
+from exabgp.bgp.message import _NOP, Message, Notification, Notify, Open, Update
 from exabgp.bgp.message.open.capability import REFRESH, Capability
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.timer import ReceiveTimer
@@ -402,20 +402,17 @@ class Peer:
                 self._close(f'connection to {self.neighbor["peer-address"]}:{self.neighbor["connect"]} failed')
             raise Interrupted('connection failed') from None
 
-    def _send_open(self) -> Generator[int | Open, NOP, None, None]:  # type: ignore[type-arg]
+    def _send_open(self) -> Generator[Message, None, None]:
         assert self.proto is not None
-        message = Message.CODE.NOP
-        for message in self.proto.new_open():  # type: ignore[assignment]
-            if message.ID == Message.CODE.NOP:  # type: ignore[attr-defined]
-                yield ACTION.NOW
-        yield message
+        for message in self.proto.new_open():
+            yield message
 
     async def _send_open_async(self) -> Open:
         """Async version of _send_open() - sends OPEN message using async I/O"""
         assert self.proto is not None
         return await self.proto.new_open_async()
 
-    def _read_open(self) -> Generator[int | Open, NOP, None, None]:  # type: ignore[type-arg]
+    def _read_open(self) -> Generator[Message, None, None]:
         assert self.proto is not None
         assert self.proto.connection is not None
         wait = getenv().bgp.openwait
@@ -430,14 +427,7 @@ class Peer:
         # which would be bad as we need to do the collission check without going to the other peer
         for message in self.proto.read_open(self.neighbor['peer-address'].top()):
             opentimer.check_ka(message)
-            # Only yield if we have not the open, otherwise the reactor can run the other connection
-            # which would be bad as we need to do the collision check
-            if message.ID == Message.CODE.NOP:
-                # If a peer does not reply to OPEN message, or not enough bytes
-                # yielding ACTION.NOW can cause ExaBGP to busy spin trying to
-                # read from peer. See GH #723 .
-                yield ACTION.LATER
-        yield message
+            yield message
 
     async def _read_open_async(self) -> Open:
         """Async version of _read_open() - reads OPEN message using async I/O"""
@@ -452,23 +442,23 @@ class Peer:
         except asyncio.TimeoutError:
             raise Notify(5, 1, 'waited for open too long, we do not like stuck in active') from None
 
-    def _send_ka(self) -> Generator[int, None, None]:
+    def _send_ka(self) -> Generator[Message, None, None]:
         assert self.proto is not None
         for message in self.proto.new_keepalive('OPENCONFIRM'):
-            yield ACTION.NOW
+            yield message
 
     async def _send_ka_async(self) -> None:
         """Async version of _send_ka() - sends KEEPALIVE message using async I/O"""
         assert self.proto is not None
         await self.proto.new_keepalive_async('OPENCONFIRM')
 
-    def _read_ka(self) -> Generator[int, None, None]:
+    def _read_ka(self) -> Generator[Message, None, None]:
         assert self.proto is not None
         assert self.recv_timer is not None
         # Start keeping keepalive timer
         for message in self.proto.read_keepalive():
             self.recv_timer.check_ka_timer(message)
-            yield ACTION.NOW
+            yield message
 
     async def _read_ka_async(self) -> None:
         """Async version of _read_ka() - reads KEEPALIVE message using async I/O"""
@@ -498,38 +488,43 @@ class Peer:
         # normal sending of OPEN first ...
         if self.neighbor['local-as']:
             for sent_open in self._send_open():
-                if sent_open in ACTION.ALL:
-                    yield sent_open
-            self.proto.negotiated.sent(sent_open)
-            self.proto.negotiated.sent(sent_open)
+                if sent_open.ID == Message.CODE.NOP:
+                    yield ACTION.NOW
+            self.proto.negotiated.sent(cast(Open, sent_open))
+            self.proto.negotiated.sent(cast(Open, sent_open))
             self.fsm.change(FSM.OPENSENT)
 
         # read the peer's open
         for received_open in self._read_open():
-            if received_open in ACTION.ALL:
-                yield received_open
-        self.proto.negotiated.received(received_open)
-        self.proto.negotiated.received(received_open)
+            if received_open.ID == Message.CODE.NOP:
+                # If a peer does not reply to OPEN message, or not enough bytes
+                # yielding ACTION.NOW can cause ExaBGP to busy spin trying to
+                # read from peer. See GH #723 .
+                yield ACTION.LATER
+        self.proto.negotiated.received(cast(Open, received_open))
+        self.proto.negotiated.received(cast(Open, received_open))
 
         self.proto.connection.msg_size = self.proto.negotiated.msg_size
 
         # if we mirror the ASN, we need to read first and send second
         if not self.neighbor['local-as']:
             for sent_open in self._send_open():
-                if sent_open in ACTION.ALL:
-                    yield sent_open
-            self.proto.negotiated.sent(sent_open)
-            self.proto.negotiated.sent(sent_open)
+                if sent_open.ID == Message.CODE.NOP:
+                    yield ACTION.NOW
+            self.proto.negotiated.sent(cast(Open, sent_open))
+            self.proto.negotiated.sent(cast(Open, sent_open))
             self.fsm.change(FSM.OPENSENT)
 
         self.proto.validate_open()
         self.fsm.change(FSM.OPENCONFIRM)
 
         self.recv_timer = ReceiveTimer(self.proto.connection.session, self.proto.negotiated.holdtime, 4, 0)
-        for action in self._send_ka():
-            yield action
-        for action in self._read_ka():
-            yield action
+        for message in self._send_ka():
+            if message.ID == Message.CODE.NOP:
+                yield ACTION.NOW
+        for message in self._read_ka():
+            if message.ID == Message.CODE.NOP:
+                yield ACTION.NOW
         self.fsm.change(FSM.ESTABLISHED)
         self.stats['complete'] = time.time()
 
@@ -729,8 +724,9 @@ class Peer:
 
                 elif send_eor:
                     send_eor = False
-                    for _ in self.proto.new_eors():
-                        yield ACTION.NOW
+                    for eor_msg in self.proto.new_eors():
+                        if eor_msg.ID == Message.CODE.NOP:
+                            yield ACTION.NOW
                     log.debug(lazymsg('eor.sent.all'), self.id())
 
                 # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
@@ -842,7 +838,7 @@ class Peer:
                 except asyncio.TimeoutError:
                     # No message within timeout - set to NOP and continue to outbound checks
                     # This matches generator mode where loop body executes even for NOP
-                    message = NOP  # type: ignore[assignment]
+                    message = _NOP
                     await asyncio.sleep(0)
 
                 # NOP means no data - continue to outbound checks (matches generator mode)
@@ -998,13 +994,9 @@ class Peer:
         except Notify as notify:
             if self.proto:
                 try:
-                    generator = self.proto.new_notification(notify)
-                    try:
-                        while True:
-                            next(generator)
+                    for notify_msg in self.proto.new_notification(notify):
+                        if notify_msg.ID == Message.CODE.NOP:
                             yield ACTION.NOW
-                    except StopIteration:
-                        pass
                 except (NetworkError, ProcessError):
                     log.error(lazymsg('notification.send.failed'), self.id())
                 self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
