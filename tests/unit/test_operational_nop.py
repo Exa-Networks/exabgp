@@ -14,7 +14,7 @@ License: 3-clause BSD
 import pytest
 import struct
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.nop import NOP
+from exabgp.bgp.message.scheduling import NOP
 from exabgp.bgp.message.operational import (
     Operational,
     Advisory,
@@ -44,14 +44,14 @@ def test_nop_creation() -> None:
 
 
 def test_nop_message_id() -> None:
-    """Test NOP message ID is correct (0x00)."""
-    assert NOP.ID == 0
+    """Test NOP message ID is correct (0xFC = 252)."""
+    assert NOP.ID == 0xFC
     assert NOP.ID == Message.CODE.NOP
 
 
 def test_nop_message_type_bytes() -> None:
     """Test NOP TYPE byte representation."""
-    assert NOP.TYPE == b'\x00'
+    assert NOP.TYPE == bytes([0xFC])
 
 
 def test_nop_cannot_be_encoded() -> None:
@@ -101,7 +101,7 @@ def test_nop_unpack_with_data() -> None:
 
 def test_nop_singleton_instance() -> None:
     """Test that NOP module provides a singleton instance."""
-    from exabgp.bgp.message.nop import _NOP
+    from exabgp.bgp.message.scheduling import _NOP
 
     assert isinstance(_NOP, NOP)
 
@@ -110,6 +110,123 @@ def test_nop_string_representation() -> None:
     """Test NOP string representation."""
     nop = NOP()
     assert str(nop) == 'NOP'
+
+
+def test_nop_scheduling_attribute() -> None:
+    """Test NOP has SCHEDULING = LATER for reactor scheduling."""
+    from exabgp.bgp.message.scheduling import Scheduling
+
+    nop = NOP()
+    assert nop.SCHEDULING == Scheduling.LATER
+
+
+# ==============================================================================
+# Part 1.5: AWAKE and DONE Message Tests
+# ==============================================================================
+
+
+def test_awake_creation() -> None:
+    """Test AWAKE message creation."""
+    from exabgp.bgp.message.scheduling import AWAKE
+
+    awake = AWAKE()
+    assert str(awake) == 'AWAKE'
+    assert awake.ID == Message.CODE.AWAKE
+
+
+def test_awake_message_id() -> None:
+    """Test AWAKE message ID is correct (0xFE = 254)."""
+    from exabgp.bgp.message.scheduling import AWAKE
+
+    assert AWAKE.ID == 0xFE
+    assert AWAKE.ID == Message.CODE.AWAKE
+
+
+def test_awake_scheduling_attribute() -> None:
+    """Test AWAKE has SCHEDULING = NOW for immediate reactor scheduling."""
+    from exabgp.bgp.message.scheduling import AWAKE, Scheduling
+
+    awake = AWAKE()
+    assert awake.SCHEDULING == Scheduling.NOW
+
+
+def test_awake_cannot_be_encoded() -> None:
+    """Test that AWAKE messages cannot be encoded for transmission."""
+    from exabgp.bgp.message.scheduling import AWAKE
+
+    awake = AWAKE()
+    with pytest.raises(RuntimeError) as exc_info:
+        awake.pack_message(None)
+    assert 'AWAKE messages can not be sent on the wire' in str(exc_info.value)
+
+
+def test_awake_singleton_instance() -> None:
+    """Test that AWAKE module provides a singleton instance."""
+    from exabgp.bgp.message.scheduling import AWAKE, _AWAKE
+
+    assert isinstance(_AWAKE, AWAKE)
+
+
+def test_done_creation() -> None:
+    """Test DONE message creation."""
+    from exabgp.bgp.message.scheduling import DONE
+
+    done = DONE()
+    assert str(done) == 'DONE'
+    assert done.ID == Message.CODE.DONE
+
+
+def test_done_message_id() -> None:
+    """Test DONE message ID is correct (0xFD = 253)."""
+    from exabgp.bgp.message.scheduling import DONE
+
+    assert DONE.ID == 0xFD
+    assert DONE.ID == Message.CODE.DONE
+
+
+def test_done_scheduling_attribute() -> None:
+    """Test DONE has SCHEDULING = CLOSE for peer removal."""
+    from exabgp.bgp.message.scheduling import DONE, Scheduling
+
+    done = DONE()
+    assert done.SCHEDULING == Scheduling.CLOSE
+
+
+def test_done_cannot_be_encoded() -> None:
+    """Test that DONE messages cannot be encoded for transmission."""
+    from exabgp.bgp.message.scheduling import DONE
+
+    done = DONE()
+    with pytest.raises(RuntimeError) as exc_info:
+        done.pack_message(None)
+    assert 'DONE messages can not be sent on the wire' in str(exc_info.value)
+
+
+def test_done_singleton_instance() -> None:
+    """Test that DONE module provides a singleton instance."""
+    from exabgp.bgp.message.scheduling import DONE, _DONE
+
+    assert isinstance(_DONE, DONE)
+
+
+def test_scheduling_enum_values() -> None:
+    """Test Scheduling enum has correct values."""
+    from exabgp.bgp.message.scheduling import Scheduling
+
+    # Values are: MESSAGE=0, NOW=1, LATER=2, CLOSE=3
+    assert Scheduling.MESSAGE == 0x00
+    assert Scheduling.NOW == 0x01
+    assert Scheduling.LATER == 0x02
+    assert Scheduling.CLOSE == 0x03
+
+
+def test_scheduling_enum_string_format() -> None:
+    """Test Scheduling enum string formatting."""
+    from exabgp.bgp.message.scheduling import Scheduling
+
+    assert str(Scheduling.LATER) == 'later'
+    assert str(Scheduling.NOW) == 'now'
+    assert str(Scheduling.CLOSE) == 'close'
 
 
 # ==============================================================================

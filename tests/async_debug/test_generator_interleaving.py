@@ -12,6 +12,8 @@ In async mode, we need to ensure generators don't block the event loop.
 import asyncio
 from typing import Iterator, List
 
+import pytest
+
 
 def data_generator_1() -> Iterator[str]:
     """Simulates RIB updates() generator - yields data objects"""
@@ -49,6 +51,7 @@ async def consume_generator_async_style(gen: Iterator[str], name: str, results: 
     print(f'[{name}] Finished consumption (async style)')
 
 
+@pytest.mark.asyncio
 async def test_sync_style_consumption():
     """Test if tight loop consumption blocks other tasks"""
     print('\n' + '=' * 60)
@@ -82,6 +85,7 @@ async def test_sync_style_consumption():
     print(f'Last 5 items from GEN2: {results[-5:]}')
 
 
+@pytest.mark.asyncio
 async def test_async_style_consumption():
     """Test if yielding allows interleaving"""
     print('\n' + '=' * 60)
@@ -112,6 +116,7 @@ async def test_async_style_consumption():
     print(f'\nInterleaving pattern: {results}')
 
 
+@pytest.mark.asyncio
 async def test_state_modification_during_consumption():
     """
     Critical test: Does state modification during generator consumption work?
@@ -169,6 +174,7 @@ async def test_state_modification_during_consumption():
     print('\n✅ State modification test PASSED')
 
 
+@pytest.mark.asyncio
 async def test_concurrent_state_modification():
     """
     Most critical test: Concurrent state modification and consumption

@@ -36,7 +36,7 @@ class ReceiveTimer:
         if self.holdtime == 0:
             return message.TYPE != KeepAlive.TYPE
         now = int(time.time())
-        if not message.IS_NOP:
+        if not message.SCHEDULING:  # Real message (not NOP)
             self.last_read = now
         elapsed = now - self.last_read
         if elapsed > self.holdtime:

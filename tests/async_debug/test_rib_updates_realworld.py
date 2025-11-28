@@ -16,6 +16,8 @@ import inspect
 from collections import deque
 from typing import Any, Deque, Iterator, Tuple
 
+import pytest
+
 
 class MockUpdate:
     """Simulates BGP Update message"""
@@ -168,6 +170,7 @@ class ASYNC:
         return True
 
 
+@pytest.mark.asyncio
 async def test_exabgp_pattern_single_flush():
     """
     Test Case 1: Single flush command
@@ -228,6 +231,7 @@ async def test_exabgp_pattern_single_flush():
         print('\n❌ TEST FAILED - pending() returned False after flush!')
 
 
+@pytest.mark.asyncio
 async def test_exabgp_pattern_multiple_flush():
     """
     Test Case 2: Multiple flush commands in sequence
@@ -310,6 +314,7 @@ async def test_exabgp_pattern_multiple_flush():
         print(f'\n❌ TEST FAILED - flush-1: {len(flush1_msgs)}, flush-2: {len(flush2_msgs)}, expected: {expected}')
 
 
+@pytest.mark.asyncio
 async def test_concurrent_flush_and_peer():
     """
     Test Case 3: Concurrent execution (most realistic)

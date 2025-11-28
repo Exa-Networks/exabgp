@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 # import traceback
 from exabgp.bgp.fsm import FSM
-from exabgp.bgp.message import _NOP, Message, Notification, Notify, Open, Update
+from exabgp.bgp.message import _NOP, _AWAKE, _DONE, Message, Notification, Notify, Open, Update
 from exabgp.bgp.message.open.capability import REFRESH, Capability
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.timer import ReceiveTimer
@@ -33,13 +33,6 @@ from exabgp.reactor.keepalive import KA
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.protocol import Protocol
 from exabgp.rib.change import Change
-
-
-class ACTION:
-    CLOSE = 0x01  # finished, no need to restart the peer
-    LATER = 0x02  # re-run at the next reactor round
-    NOW = 0x03  # re-run immediatlely
-    ALL = [CLOSE, LATER, NOW]
 
 
 # As we can not know if this is our first start or not, this flag is used to
@@ -123,7 +116,7 @@ class Peer:
         )
 
         # None = needs initialization, False = closed/don't restart, Generator = running
-        self.generator: Generator[int, None, None] | bool | None = None
+        self.generator: Generator[Message, None, None] | bool | None = None
         self._async_task: asyncio.Task | None = None  # For async mode
 
         # The peer should restart after a stop
@@ -347,7 +340,7 @@ class Peer:
 
         return ''
 
-    def _connect(self) -> Generator[int, None, None]:
+    def _connect(self) -> Generator[Message, None, None]:
         # Increment connection attempt counter
         self.connection_attempts += 1
 
@@ -360,7 +353,7 @@ class Peer:
                 if self._teardown:
                     raise Stop
                 # we want to come back as soon as possible
-                yield ACTION.LATER
+                yield _NOP
             self.proto = proto
         except Stop:
             # Connection failed
@@ -369,7 +362,7 @@ class Peer:
 
             # A connection arrived before we could establish !
             if not connected or self.proto:
-                yield ACTION.NOW
+                yield _AWAKE
                 raise Interrupted('connection failed') from None
 
     async def _connect_async(self) -> None:
@@ -467,20 +460,19 @@ class Peer:
         message = await self.proto.read_keepalive_async()
         self.recv_timer.check_ka_timer(message)
 
-    def _establish(self) -> Generator[int, None, None]:
+    def _establish(self) -> Generator[Message, None, None]:
         # try to establish the outgoing connection
         self.fsm.change(FSM.ACTIVE)
 
         if getenv().bgp.passive:
             while not self.proto:
-                yield ACTION.LATER
+                yield _NOP
 
         self.fsm.change(FSM.IDLE)
 
         if not self.proto:
             for action in self._connect():
-                if action in ACTION.ALL:
-                    yield action
+                yield action
         self.fsm.change(FSM.CONNECT)
         assert self.proto is not None  # Set by _connect() or handle_connection()
         assert self.proto.connection is not None
@@ -488,19 +480,16 @@ class Peer:
         # normal sending of OPEN first ...
         if self.neighbor['local-as']:
             for sent_open in self._send_open():
-                if sent_open.ID == Message.CODE.NOP:
-                    yield ACTION.NOW
+                if sent_open.SCHEDULING:
+                    yield sent_open
             self.proto.negotiated.sent(cast(Open, sent_open))
             self.proto.negotiated.sent(cast(Open, sent_open))
             self.fsm.change(FSM.OPENSENT)
 
         # read the peer's open
         for received_open in self._read_open():
-            if received_open.ID == Message.CODE.NOP:
-                # If a peer does not reply to OPEN message, or not enough bytes
-                # yielding ACTION.NOW can cause ExaBGP to busy spin trying to
-                # read from peer. See GH #723 .
-                yield ACTION.LATER
+            if received_open.SCHEDULING:
+                yield received_open
         self.proto.negotiated.received(cast(Open, received_open))
         self.proto.negotiated.received(cast(Open, received_open))
 
@@ -509,8 +498,8 @@ class Peer:
         # if we mirror the ASN, we need to read first and send second
         if not self.neighbor['local-as']:
             for sent_open in self._send_open():
-                if sent_open.ID == Message.CODE.NOP:
-                    yield ACTION.NOW
+                if sent_open.SCHEDULING:
+                    yield sent_open
             self.proto.negotiated.sent(cast(Open, sent_open))
             self.proto.negotiated.sent(cast(Open, sent_open))
             self.fsm.change(FSM.OPENSENT)
@@ -520,25 +509,25 @@ class Peer:
 
         self.recv_timer = ReceiveTimer(self.proto.connection.session, self.proto.negotiated.holdtime, 4, 0)
         for message in self._send_ka():
-            if message.ID == Message.CODE.NOP:
-                yield ACTION.NOW
+            if message.SCHEDULING:
+                yield message
         for message in self._read_ka():
-            if message.ID == Message.CODE.NOP:
-                yield ACTION.NOW
+            if message.SCHEDULING:
+                yield message
         self.fsm.change(FSM.ESTABLISHED)
         self.stats['complete'] = time.time()
 
         # let the caller know that we were sucesfull
-        yield ACTION.NOW
+        yield _AWAKE
 
-    async def _establish_async(self) -> int:
+    async def _establish_async(self) -> None:
         """Async version of _establish() - establishes BGP connection using async I/O"""
         # try to establish the outgoing connection
         self.fsm.change(FSM.ACTIVE)
 
         if getenv().bgp.passive:
             while not self.proto:
-                await asyncio.sleep(0)  # Yield control like ACTION.LATER
+                await asyncio.sleep(0)  # Yield control like _NOP
 
         self.fsm.change(FSM.IDLE)
 
@@ -579,10 +568,9 @@ class Peer:
         self.fsm.change(FSM.ESTABLISHED)
         self.stats['complete'] = time.time()
 
-        # let the caller know that we were sucesfull
-        return ACTION.NOW
+        # let the caller know that we were sucesfull (async version doesn't need return value)
 
-    def _main(self) -> Generator[int, None, None]:
+    def _main(self) -> Generator[Message, None, None]:
         """Yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
         assert self.proto is not None  # Set by _establish()
         assert self.proto.connection is not None
@@ -653,7 +641,7 @@ class Peer:
                 if send_ka() is not False:
                     # we need and will send a keepalive
                     while send_ka() is None:
-                        yield ACTION.NOW
+                        yield _AWAKE
                 for counter_line in self.stats.changed_statistics():
                     log.info(lazymsg('statistics.changed info={counter_line}', counter_line=counter_line), 'statistics')
 
@@ -725,8 +713,8 @@ class Peer:
                 elif send_eor:
                     send_eor = False
                     for eor_msg in self.proto.new_eors():
-                        if eor_msg.ID == Message.CODE.NOP:
-                            yield ACTION.NOW
+                        if eor_msg.SCHEDULING:
+                            yield eor_msg
                     log.debug(lazymsg('eor.sent.all'), self.id())
 
                 # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
@@ -742,15 +730,15 @@ class Peer:
 
                 if (
                     new_routes
-                    or not message.IS_NOP
+                    or not message.SCHEDULING  # Real message received (not NOP)
                     or self.neighbor.messages
                     or operational
                     or self.neighbor.eor
                     or command_eor
                 ):
-                    yield ACTION.NOW
+                    yield _AWAKE
                 else:
-                    yield ACTION.LATER
+                    yield _NOP
 
                 # read_message will loop until new message arrives with NOP
                 if self._teardown:
@@ -849,7 +837,7 @@ class Peer:
                 if send_ka() is not False:
                     # we need and will send a keepalive
                     while send_ka() is None:
-                        await asyncio.sleep(0)  # Yield control like ACTION.NOW
+                        await asyncio.sleep(0)  # Yield control like _AWAKE
                 for counter_line in self.stats.changed_statistics():
                     log.info(lazymsg('statistics.changed info={counter_line}', counter_line=counter_line), 'statistics')
 
@@ -929,15 +917,15 @@ class Peer:
 
                 if (
                     new_routes
-                    or not message.IS_NOP
+                    or not message.SCHEDULING  # Real message received (not NOP)
                     or self.neighbor.messages
                     or operational
                     or self.neighbor.eor
                     or command_eor
                 ):
-                    await asyncio.sleep(0)  # Yield control like ACTION.NOW
+                    await asyncio.sleep(0)  # Yield control like _AWAKE
                 else:
-                    await asyncio.sleep(0.001)  # Slightly longer sleep for ACTION.LATER
+                    await asyncio.sleep(0.001)  # Slightly longer sleep for _NOP
 
                     # read_message will loop until new message arrives with NOP
                     if self._teardown:
@@ -968,7 +956,7 @@ class Peer:
         # notify our peer of the shutdown
         raise Notify(6, self._teardown)
 
-    def _run(self) -> Generator[int, None, None]:
+    def _run(self) -> Generator[Message, None, None]:
         """Yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"""
         try:
             for action in self._establish():
@@ -995,8 +983,8 @@ class Peer:
             if self.proto:
                 try:
                     for notify_msg in self.proto.new_notification(notify):
-                        if notify_msg.ID == Message.CODE.NOP:
-                            yield ACTION.NOW
+                        if notify_msg.SCHEDULING:
+                            yield notify_msg
                 except (NetworkError, ProcessError):
                     log.error(lazymsg('notification.send.failed'), self.id())
                 self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
@@ -1126,7 +1114,7 @@ class Peer:
 
     # loop
 
-    def run(self) -> int:
+    def run(self) -> Message:
         if self.reactor.processes.broken(self.neighbor):
             # Process respawning handled by Processes._handle_problem().
             # This branch handles cases where respawning failed or was disabled.
@@ -1135,35 +1123,35 @@ class Peer:
                 self.reactor.shutdown()
             else:
                 self.stop()
-            return ACTION.CLOSE
+            return _DONE
 
         if self.generator and self.generator is not False:
             try:
                 # This generator only stops when it raises
-                # otherwise return one of the ACTION
-                return next(self.generator)  # type: ignore[arg-type]
+                # otherwise return one of the scheduling messages
+                return next(self.generator)  # type: ignore[return-value]
             except StopIteration:
                 # Trying to run a closed loop, no point continuing
                 self.generator = None
                 if self._restart:
-                    return ACTION.LATER
-                return ACTION.CLOSE
+                    return _NOP
+                return _DONE
 
         elif self.generator is None:
             if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
                 log.debug(lazymsg('peer.stopping reason=other_connection_established'), self.id())
                 self.generator = False
-                return ACTION.LATER
+                return _NOP
             if self._delay.backoff():
-                return ACTION.LATER
+                return _NOP
             if self._restart:
                 log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
                 self.generator = self._run()
-                return ACTION.LATER  # make sure we go through a clean loop
-            return ACTION.CLOSE
+                return _NOP  # make sure we go through a clean loop
+            return _DONE
 
         # generator is False - peer is closed and should not restart
-        return ACTION.CLOSE
+        return _DONE
 
     async def run_async(self) -> None:
         """Async entry point for peer - runs the peer FSM using async/await"""

@@ -1340,16 +1340,18 @@ def test_protocol_read_open_success(mock_peer: Any) -> None:
 def test_protocol_read_open_with_nop(mock_peer: Any) -> None:
     """Test read_open() skips NOP messages."""
     from exabgp.reactor.protocol import Protocol
-    from exabgp.bgp.message import Message, Open, NOP
+    from exabgp.bgp.message import Message, Open, NOP, Scheduling
 
     protocol = Protocol(mock_peer)
 
     mock_nop = Mock()
     mock_nop.TYPE = NOP.TYPE
+    mock_nop.SCHEDULING = Scheduling.LATER  # NOP has SCHEDULING = LATER
 
     mock_open = Mock()
     mock_open.TYPE = Open.TYPE
     mock_open.ID = Message.CODE.OPEN
+    mock_open.SCHEDULING = 0  # Real messages have SCHEDULING = 0 (INVALID/falsy)
     mock_open.__str__ = Mock(return_value='OPEN')
 
     mock_connection = Mock()
@@ -1393,16 +1395,18 @@ def test_protocol_read_keepalive_success(mock_peer: Any) -> None:
 def test_protocol_read_keepalive_with_nop(mock_peer: Any) -> None:
     """Test read_keepalive() skips NOP messages."""
     from exabgp.reactor.protocol import Protocol
-    from exabgp.bgp.message import NOP
+    from exabgp.bgp.message import NOP, Scheduling
     from exabgp.bgp.message.keepalive import KeepAlive
 
     protocol = Protocol(mock_peer)
 
     mock_nop = Mock()
     mock_nop.TYPE = NOP.TYPE
+    mock_nop.SCHEDULING = Scheduling.LATER  # NOP has SCHEDULING = LATER
 
     mock_keepalive = Mock()
     mock_keepalive.TYPE = KeepAlive.TYPE
+    mock_keepalive.SCHEDULING = 0  # Real messages have SCHEDULING = 0 (INVALID/falsy)
 
     mock_connection = Mock()
     mock_connection.session = Mock(return_value='test-session')
