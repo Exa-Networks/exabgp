@@ -200,8 +200,8 @@ class ParseNeighbor(Section):
                 neighbor.add_addpath(family)
             return
 
-        for family in ParseAddPath.convert:  # type: ignore[assignment]
-            for pair in add_path.get(family, []):
+        for afi_name in ParseAddPath.convert:
+            for pair in add_path.get(afi_name, []):
                 if pair not in families:
                     pair_log = pair
 

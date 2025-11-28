@@ -20,6 +20,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.attribute import Attribute
@@ -186,8 +187,7 @@ class ParseStaticRoute(Section):
 
     @staticmethod
     def check(change: Change) -> bool:
-        # The NLRI is actually an INET subclass with nexthop attribute
-        nlri: INET = change.nlri  # type: ignore[assignment]  # runtime: subclass of NLRI
+        nlri: NLRI = change.nlri
         if (
             nlri.nexthop is IP.NoNextHop
             and nlri.action == Action.ANNOUNCE
@@ -235,9 +235,8 @@ class ParseStaticRoute(Section):
         labels = nlri.labels if safi.has_label() else None
         rd = nlri.rd if safi.has_rd() else None
 
-        # XXX: Looks weird to set and then set to None, check
         nlri.cidr.mask = cut
-        last.nlri = None  # type: ignore[assignment]  # intentionally clearing reference
+        last.nlri = NLRI.EMPTY  # Clear reference after extracting data
 
         # generate the new routes
         for _ in range(number):

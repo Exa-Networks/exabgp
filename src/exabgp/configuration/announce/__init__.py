@@ -21,6 +21,7 @@ from exabgp.configuration.core import Error
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.attribute import Attribute
 
 
@@ -75,9 +76,8 @@ class ParseAnnounce(Section):
         path_info = inet_nlri.path_info
         nexthop = inet_nlri.nexthop
 
-        # XXX: Looks weird to set and then set to None, check
         inet_nlri.cidr.mask = cut
-        last.nlri = None  # type: ignore[assignment]
+        last.nlri = NLRI.EMPTY  # Clear reference after extracting data
 
         # generate the new routes
         for _ in range(number):
