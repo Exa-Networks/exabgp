@@ -38,11 +38,10 @@ class NeighAddr:
     def json(self):
         return '"{}"'.format(self.addr)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, NeighAddr):
+            return False
         return self.addr == other.addr
-
-    def __neq__(self, other):
-        return self.addr != other.addr
 
     def __lt__(self, other):
         raise RuntimeError('Not implemented')

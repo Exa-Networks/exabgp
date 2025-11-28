@@ -49,11 +49,10 @@ class OspfRoute:
         content = '"ospf-route-type": {}'.format(self.ospf_type)
         return content
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, OspfRoute):
+            return False
         return self.ospf_type == other.ospf_type
-
-    def __neq__(self, other):
-        return self.ospf_type != other.ospf_type
 
     def __lt__(self, other):
         raise RuntimeError('Not implemented')

@@ -87,11 +87,10 @@ class IpReach:
             ],
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, IpReach):
+            return False
         return self.prefix == other.prefix
-
-    def __neq__(self, other):
-        return self.prefix != other.prefix
 
     def __lt__(self, other):
         raise RuntimeError('Not implemented')

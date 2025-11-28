@@ -39,11 +39,10 @@ class Srv6SIDInformation:
     def json(self, compact: bool = False):
         return '"srv6-sid": "{}"'.format(str(self.sid))
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Srv6SIDInformation):
+            return False
         return self.sid == other.sid
-
-    def __neq__(self, other):
-        return self.sid != other.sid
 
     def __lt__(self, other):
         raise RuntimeError('Not implemented')

@@ -29,11 +29,6 @@ class MAC:
             return False
         return self._packed == other._packed
 
-    def __neq__(self, other: object) -> bool:
-        if not isinstance(other, MAC):
-            return True
-        return self.mac != other.mac
-
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing MAC for ordering does not make sense')
 

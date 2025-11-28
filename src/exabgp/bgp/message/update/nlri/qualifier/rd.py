@@ -36,11 +36,6 @@ class RouteDistinguisher:
             return False
         return self.rd == other.rd
 
-    def __neq__(self, other: object) -> bool:
-        if not isinstance(other, RouteDistinguisher):
-            return True
-        return self.rd != other.rd
-
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
 

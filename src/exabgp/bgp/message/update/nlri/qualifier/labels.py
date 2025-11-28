@@ -53,11 +53,6 @@ class Labels:
             return False
         return self.labels == other.labels
 
-    def __neq__(self, other: object) -> bool:
-        if not isinstance(other, Labels):
-            return True
-        return self.labels != other.labels
-
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
 
