@@ -5,11 +5,11 @@ import sys
 from datetime import datetime
 
 
-def get_zipapp():
+def get_zipapp() -> str:
     return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-2]))
 
 
-def get_root():
+def get_root() -> str:
     if os.path.isfile(get_zipapp()):
         return get_zipapp()
     return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-1]))

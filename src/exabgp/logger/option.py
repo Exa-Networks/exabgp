@@ -7,7 +7,7 @@ from typing import ClassVar, TYPE_CHECKING
 import logging
 
 if TYPE_CHECKING:
-    from exabgp.environment.environment import Env
+    from exabgp.environment.config import Environment
 
 from exabgp.logger.handler import get_logger
 from exabgp.logger.format import formater as get_formater, FormatterFunc
@@ -69,7 +69,7 @@ class option:
         return cls.enabled.get(source, True) and cls.logit.get(level, False)
 
     @classmethod
-    def load(cls, env: 'Env') -> None:
+    def load(cls, env: 'Environment') -> None:
         cls.pid = os.getpid()
         cls.cwd = os.getcwd()
 
@@ -107,7 +107,7 @@ class option:
             cls.destination = 'stdout'
 
     @classmethod
-    def setup(cls, env: 'Env') -> None:
+    def setup(cls, env: 'Environment') -> None:
         cls.load(env)
 
         # the time is used as we will need to re-init the logger once

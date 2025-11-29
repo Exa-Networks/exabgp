@@ -8,96 +8,116 @@ from unittest.mock import patch
 
 from typing import Any
 
-from exabgp.environment.hashtable import HashTable, GlobalHashTable
+from exabgp.environment import getenv, Environment
 from exabgp.environment.base import _find_root, APPLICATION, ROOT
+from exabgp.environment.config import ConfigSection, option
 
 
-class TestHashTable:
-    """Test HashTable class"""
+class TestConfigOption:
+    """Test ConfigOption descriptor"""
 
-    def test_hashtable_init(self) -> None:
-        """Test HashTable initialization"""
-        h = HashTable()
-        assert isinstance(h, dict)
+    def test_option_default(self) -> None:
+        """Test ConfigOption returns default value"""
 
-    def test_hashtable_setitem(self) -> None:
-        """Test HashTable __setitem__ with underscore replacement"""
-        h = HashTable()
-        h['test_key'] = 'value'
-        # Underscore should be replaced with dash
-        assert 'test-key' in h
-        assert h['test_key'] == 'value'
+        class TestSection(ConfigSection):
+            _section_name = 'test'
+            value: bool = option(True, 'test option')
 
-    def test_hashtable_getitem(self) -> None:
-        """Test HashTable __getitem__ with underscore replacement"""
-        h = HashTable()
-        h['test_key'] = 'value'
-        # Can access with underscores
-        assert h['test_key'] == 'value'
-        # Can also access with dashes
-        assert h['test-key'] == 'value'
+        section = TestSection()
+        assert section.value is True
 
-    def test_hashtable_setattr(self) -> None:
-        """Test HashTable __setattr__ attribute-style access"""
-        h = HashTable()
-        h.test_key = 'value'
-        # Should be stored with dashes
-        assert 'test-key' in h
-        assert h.test_key == 'value'
+    def test_option_set(self) -> None:
+        """Test ConfigOption can be set"""
 
-    def test_hashtable_getattr(self) -> None:
-        """Test HashTable __getattr__ attribute-style access"""
-        h = HashTable()
-        h['test_key'] = 'value'
-        # Can access via attribute
-        assert h.test_key == 'value'
+        class TestSection(ConfigSection):
+            _section_name = 'test'
+            value: str = option('default', 'test option')
 
-    def test_hashtable_no_underscore(self) -> None:
-        """Test HashTable with keys without underscores"""
-        h = HashTable()
-        h['testkey'] = 'value'
-        assert h['testkey'] == 'value'
-        assert h.testkey == 'value'
+        section = TestSection()
+        section.value = 'modified'
+        assert section.value == 'modified'
 
-    def test_hashtable_multiple_underscores(self) -> None:
-        """Test HashTable with multiple underscores"""
-        h = HashTable()
-        h['test_key_name'] = 'value'
-        # All underscores replaced
-        assert 'test-key-name' in h
-        assert h['test_key_name'] == 'value'
+    def test_option_dict_access(self) -> None:
+        """Test ConfigSection supports dict-style access"""
+
+        class TestSection(ConfigSection):
+            _section_name = 'test'
+            test_key: str = option('value', 'test option')
+
+        section = TestSection()
+        assert section['test_key'] == 'value'
+        # Also test with dash (underscore replacement)
+        assert section['test-key'] == 'value'
+
+    def test_option_dict_set(self) -> None:
+        """Test ConfigSection supports dict-style setting"""
+
+        class TestSection(ConfigSection):
+            _section_name = 'test'
+            test_key: str = option('default', 'test option')
+
+        section = TestSection()
+        section['test_key'] = 'modified'
+        assert section.test_key == 'modified'
+
+    def test_option_contains(self) -> None:
+        """Test ConfigSection supports 'in' operator"""
+
+        class TestSection(ConfigSection):
+            _section_name = 'test'
+            test_key: str = option('value', 'test option')
+
+        section = TestSection()
+        assert 'test_key' in section
+        assert 'test-key' in section
+        assert 'nonexistent' not in section
 
 
-class TestGlobalHashTable:
-    """Test GlobalHashTable (singleton) class"""
+class TestEnvironment:
+    """Test Environment singleton class"""
 
-    def test_globalhash_singleton(self) -> None:
-        """Test GlobalHashTable is a singleton"""
-        h1 = GlobalHashTable()
-        h2 = GlobalHashTable()
-        # Should be the same instance
-        assert h1 is h2
+    def test_environment_singleton(self) -> None:
+        """Test Environment is a singleton"""
+        e1 = Environment()
+        e2 = Environment()
+        assert e1 is e2
 
-    def test_globalhash_shared_state(self) -> None:
-        """Test GlobalHashTable shares state across instances"""
-        h1 = GlobalHashTable()
-        h2 = GlobalHashTable()
+    def test_environment_sections(self) -> None:
+        """Test Environment has all expected sections"""
+        env = getenv()
+        expected = ['profile', 'pdb', 'daemon', 'log', 'tcp', 'bgp', 'cache', 'api', 'reactor', 'debug']
+        for section in expected:
+            assert hasattr(env, section), f'Missing section: {section}'
 
-        h1['test_key'] = 'value1'
-        # h2 should see the same value
-        assert h2['test_key'] == 'value1'
+    def test_environment_api_section(self) -> None:
+        """Test Environment API section has expected options"""
+        env = getenv()
+        assert hasattr(env.api, 'ack')
+        assert hasattr(env.api, 'chunk')
+        assert hasattr(env.api, 'encoder')
+        assert hasattr(env.api, 'cli')
 
-        h2['test_key'] = 'value2'
-        # h1 should see the updated value
-        assert h1['test_key'] == 'value2'
+    def test_environment_dict_access(self) -> None:
+        """Test Environment supports dict-style access"""
+        env = getenv()
+        api = env['api']
+        assert api is env.api
+        assert api.ack == env.api.ack
 
-    def test_globalhash_inheritance(self) -> None:
-        """Test GlobalHashTable inherits HashTable behavior"""
-        h = GlobalHashTable()
-        h['test_key'] = 'value'
-        # Should use underscore replacement
-        assert 'test-key' in h
-        assert h.test_key == 'value'
+    def test_environment_contains(self) -> None:
+        """Test Environment supports 'in' operator"""
+        env = getenv()
+        assert 'api' in env
+        assert 'log' in env
+        assert 'nonexistent' not in env
+
+    def test_environment_iteration(self) -> None:
+        """Test Environment supports iteration"""
+        env = getenv()
+        sections = list(env.keys())
+        assert 'api' in sections
+        assert 'log' in sections
+        assert len(sections) == 10  # All 10 sections
 
 
 class TestBase:

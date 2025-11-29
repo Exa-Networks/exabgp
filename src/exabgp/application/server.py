@@ -179,7 +179,7 @@ def run(comment: str, configurations: list[str], pid: int = 0) -> None:
 
     # Only check for named pipes if socket is disabled
     if env.api.cli and socket_disabled:
-        pipename = 'exabgp' if env.api.pipename is None else env.api.pipename
+        pipename = env.api.pipename
         pipes = named_pipe(ROOT, pipename)
         if len(pipes) == 1:
             # Pipes found - enable pipe-based CLI process
@@ -218,7 +218,7 @@ def run(comment: str, configurations: list[str], pid: int = 0) -> None:
                 )
     elif env.api.cli:
         # Socket enabled - also enable pipes silently if they exist (for dual transport)
-        pipename = 'exabgp' if env.api.pipename is None else env.api.pipename
+        pipename = env.api.pipename
         pipes = named_pipe(ROOT, pipename)
         if len(pipes) == 1:
             pipe = pipes[0]
@@ -228,7 +228,7 @@ def run(comment: str, configurations: list[str], pid: int = 0) -> None:
 
     # Enable Unix socket for CLI (auto-enabled unless explicitly disabled)
     if env.api.cli and not socket_disabled:
-        socketname = 'exabgp' if env.api.socketname is None else env.api.socketname
+        socketname = env.api.socketname
         sockets = unix_socket(ROOT, socketname)
 
         # Socket is auto-enabled: use existing location if found, otherwise use default

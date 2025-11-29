@@ -325,7 +325,7 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
 
 
 def cmdline_batch(
-    batch_file: str, pipename: str | None, socketname: str | None, use_pipe_transport: bool, cmdarg: argparse.Namespace
+    batch_file: str, pipename: str, socketname: str, use_pipe_transport: bool, cmdarg: argparse.Namespace
 ) -> None:
     """Execute commands from file or stdin."""
     # Read commands from file or stdin
@@ -389,9 +389,9 @@ def cmdline_batch(
         sys.exit(1)
 
 
-def cmdline_socket(socketname: str | None, sending: str, exit_on_completion: bool = True) -> None:
+def cmdline_socket(socketname: str, sending: str, exit_on_completion: bool = True) -> None:
     """Execute command via Unix socket transport."""
-    sockets = unix_socket(ROOT, socketname or 'exabgp')
+    sockets = unix_socket(ROOT, socketname)
     if len(sockets) != 1:
         sys.stdout.write(f"could not find ExaBGP's Unix socket ({socketname}.sock) for the cli\n")
         sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
@@ -402,7 +402,7 @@ def cmdline_socket(socketname: str | None, sending: str, exit_on_completion: boo
         else:
             raise RuntimeError('Socket not found')
 
-    socket_path = sockets[0] + (socketname or 'exabgp') + '.sock'
+    socket_path = sockets[0] + socketname + '.sock'
 
     # Check if socket exists and is actually a socket
     if not os.path.exists(socket_path):
@@ -418,9 +418,9 @@ def cmdline_socket(socketname: str | None, sending: str, exit_on_completion: boo
         sys.exit(0)
 
 
-def cmdline_pipe(pipename: str | None, sending: str, exit_on_completion: bool = True) -> None:
+def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -> None:
     """Execute command via named pipe transport."""
-    pipes = named_pipe(ROOT, pipename or 'exabgp')
+    pipes = named_pipe(ROOT, pipename)
     if len(pipes) != 1:
         sys.stdout.write(f"could not find ExaBGP's named pipes ({pipename}.in and {pipename}.out) for the cli\n")
         sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
@@ -431,8 +431,8 @@ def cmdline_pipe(pipename: str | None, sending: str, exit_on_completion: bool = 
         else:
             raise RuntimeError('Pipe not found')
 
-    send = pipes[0] + (pipename or 'exabgp') + '.in'
-    recv = pipes[0] + (pipename or 'exabgp') + '.out'
+    send = pipes[0] + pipename + '.in'
+    recv = pipes[0] + pipename + '.out'
 
     if not check_fifo(send):
         sys.stdout.write('could not find write named pipe to connect to ExaBGP')
