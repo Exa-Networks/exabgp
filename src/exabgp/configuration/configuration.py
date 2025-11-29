@@ -487,7 +487,7 @@ class Configuration(_Configuration):
             if has_procs and has_match:
                 return self.error.set(
                     "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '{}' configuration.\n\n".format(
-                        neighbor['peer-address']
+                        neighbor.peer_address
                     ),
                 )
 
@@ -497,12 +497,12 @@ class Configuration(_Configuration):
                     if notification == 'processes':
                         if not self.processes[api].get('run', False):
                             return self.error.set(
-                                f"\n\nan api called '{api}' is used by neighbor '{neighbor['peer-address']}' but not defined\n\n",
+                                f"\n\nan api called '{api}' is used by neighbor '{neighbor.peer_address}' but not defined\n\n",
                             )
                     elif notification == 'processes-match':
                         if not any(v.get('run', False) for k, v in self.processes.items() if re.match(api, k)):
                             errors.append(
-                                f"\n\nAny process match regex '{api}' for neighbor '{neighbor['peer-address']}'.\n\n",
+                                f"\n\nAny process match regex '{api}' for neighbor '{neighbor.peer_address}'.\n\n",
                             )
 
                 # matching mode is an "or", we test all rules and check
@@ -531,11 +531,11 @@ class Configuration(_Configuration):
                     for name in ('parsed', 'packets', 'consolidate'):
                         key = f'{way}-{name}'
                         if api[key]:
-                            self.processes[process].setdefault(key, []).append(neighbor['router-id'])
+                            self.processes[process].setdefault(key, []).append(neighbor.router_id)
                     for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
                         key = f'{way}-{name}'
                         if api[key]:
-                            self.processes[process].setdefault(key, []).append(neighbor['router-id'])
+                            self.processes[process].setdefault(key, []).append(neighbor.router_id)
 
     def partial(self, section: str, text: str, action: str = 'announce') -> bool:
         self._cleanup()  # this perform a big cleanup (may be able to be smarter)

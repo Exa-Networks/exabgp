@@ -48,24 +48,53 @@ def mock_logger() -> Generator[None, None, None]:
 def mock_neighbor() -> Any:
     """Create a mock neighbor configuration."""
     neighbor = MagicMock()
+    # Set up attribute-based access (Neighbor no longer supports dict access)
+    neighbor.peer_address = Mock(top=Mock(return_value='192.0.2.1'), afi=1, __str__=Mock(return_value='192.0.2.1'))
+    neighbor.peer_as = 65001
+    neighbor.local_as = 65000
+    neighbor.local_address = None
+    neighbor.router_id = Mock(__str__=Mock(return_value='1.2.3.4'))
+    neighbor.hold_time = 180
+    neighbor.connect = 0  # 0 means use default port
+    neighbor.md5_ip = Mock(top=Mock(return_value=None))
+    neighbor.md5_password = None
+    neighbor.md5_base64 = False
+    neighbor.outgoing_ttl = None
+    neighbor.source_interface = None
+    neighbor.adj_rib_in = False
+    neighbor.group_updates = False
+    neighbor.host_name = 'test-host'
+    neighbor.domain_name = 'test-domain'
+    neighbor.capability = MagicMock()
+    neighbor.capability.aigp = MagicMock()
+    neighbor.capability.asn4 = MagicMock()
+    neighbor.capability.nexthop = MagicMock()
+    neighbor.capability.operational = MagicMock()
+    neighbor.capability.multi_session = MagicMock()
+    neighbor.capability.add_path = False
+    neighbor.capability.graceful_restart = MagicMock()
+    neighbor.capability.route_refresh = False
+    neighbor.capability.extended_message = MagicMock()
+    neighbor.capability.software_version = None
+    # Keep legacy __getitem__ for backward compatibility in tests that haven't been updated
     neighbor.__getitem__ = Mock(
         side_effect=lambda x: {
-            'peer-address': Mock(top=Mock(return_value='192.0.2.1'), afi=1, __str__=Mock(return_value='192.0.2.1')),
-            'peer-as': 65001,
-            'local-as': 65000,
-            'local-address': None,
-            'router-id': Mock(__str__=Mock(return_value='1.2.3.4')),
-            'hold-time': 180,
-            'connect': None,
-            'md5-ip': Mock(top=Mock(return_value=None)),
-            'md5-password': None,
-            'md5-base64': False,
-            'outgoing-ttl': None,
-            'source-interface': None,
-            'adj-rib-in': False,
-            'group-updates': False,
-            'host-name': 'test-host',
-            'domain-name': 'test-domain',
+            'peer-address': neighbor.peer_address,
+            'peer-as': neighbor.peer_as,
+            'local-as': neighbor.local_as,
+            'local-address': neighbor.local_address,
+            'router-id': neighbor.router_id,
+            'hold-time': neighbor.hold_time,
+            'connect': neighbor.connect,
+            'md5-ip': neighbor.md5_ip,
+            'md5-password': neighbor.md5_password,
+            'md5-base64': neighbor.md5_base64,
+            'outgoing-ttl': neighbor.outgoing_ttl,
+            'source-interface': neighbor.source_interface,
+            'adj-rib-in': neighbor.adj_rib_in,
+            'group-updates': neighbor.group_updates,
+            'host-name': neighbor.host_name,
+            'domain-name': neighbor.domain_name,
             'capability': {
                 'aigp': False,
                 'asn4': True,

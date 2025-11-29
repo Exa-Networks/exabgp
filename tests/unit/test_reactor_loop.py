@@ -104,7 +104,15 @@ class MockReactor:
         """Return list of peer names, optionally filtered by service."""
         if not service:
             return list(self._peers.keys())
-        return [key for key in self._peers.keys() if service in self._peers[key].neighbor['process']]
+        # NOTE: 'process' is not a real Neighbor attribute, it's part of neighbor.api
+        # This mock implementation is simplified
+        return [
+            key
+            for key in self._peers.keys()
+            if hasattr(self._peers[key].neighbor, 'api')
+            and self._peers[key].neighbor.api
+            and service in self._peers[key].neighbor.api.get('processes', [])
+        ]
 
     def neighbor(self, peer_name: str) -> Optional[Any]:
         """Get neighbor configuration for a peer."""
@@ -124,7 +132,7 @@ class MockReactor:
         peer = self._peers.get(peer_name, None)
         if peer is None:
             return ''
-        return str(peer.neighbor['peer-address'])
+        return str(peer.neighbor.peer_address)
 
     def _pending_adjribout(self) -> bool:
         """Check if any peer has pending adjribout."""
@@ -410,10 +418,12 @@ class TestPeers:
         reactor = MockReactor()
 
         peer1 = MagicMock()
-        peer1.neighbor = {'process': ['process-a', 'process-b']}
+        peer1.neighbor = MagicMock()
+        peer1.neighbor.api = {'processes': ['process-a', 'process-b']}
 
         peer2 = MagicMock()
-        peer2.neighbor = {'process': ['process-c']}
+        peer2.neighbor = MagicMock()
+        peer2.neighbor.api = {'processes': ['process-c']}
 
         reactor._peers = {'peer1': peer1, 'peer2': peer2}
 
@@ -463,7 +473,8 @@ class TestNeighborAccessors:
         """Test neighbor_ip returns peer IP."""
         reactor = MockReactor()
         peer = MagicMock()
-        peer.neighbor = {'peer-address': '192.0.2.1'}
+        peer.neighbor = MagicMock()
+        peer.neighbor.peer_address = '192.0.2.1'
         reactor._peers = {'peer1': peer}
 
         result = reactor.neighbor_ip('peer1')

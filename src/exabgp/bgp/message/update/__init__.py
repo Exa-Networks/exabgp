@@ -299,7 +299,7 @@ class Update(Message):
         # Log warning but don't kill session - peer may have misconfigured next-hop
         if nexthop is not IP.NoNextHop and hasattr(negotiated, 'neighbor'):
             try:
-                local_address = negotiated.neighbor['local-address']
+                local_address = negotiated.neighbor.local_address
                 if local_address is not None and hasattr(nexthop, '_packed') and hasattr(local_address, '_packed'):
                     if nexthop._packed == local_address._packed:
                         log.warning(

@@ -68,10 +68,10 @@ class JSON:
         return f'{{ "exabgp": "{self.version}", "time": {self.time(time.time())}, {peer}{pid}{ppid}{counter}{mtype}{header}{body}{content} }}'
 
     def _neighbor(self, neighbor, direction, content):
-        local_addr = neighbor['local-address']
-        peer_addr = neighbor['peer-address']
-        local_as = neighbor['local-as']
-        peer_as = neighbor['peer-as']
+        local_addr = neighbor.local_address
+        peer_addr = neighbor.peer_address
+        local_as = neighbor.local_as
+        peer_as = neighbor.peer_as
         sep1 = ', ' if direction else ''
         dir_field = f'"direction": "{direction}"' if direction else ''
         sep2 = ', ' if content else ' '
