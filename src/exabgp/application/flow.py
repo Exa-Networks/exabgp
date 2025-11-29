@@ -10,13 +10,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import os
-import sys
 import json
+import os
 import re
-import subprocess
 import signal
+import subprocess
+import sys
 from types import FrameType
+from typing import Any
 
 
 class ACL:
@@ -32,16 +33,16 @@ class ACL:
     _known: dict[str, tuple[int, str]] = dict()
 
     @classmethod
-    def _uid(cls):
+    def _uid(cls) -> int:
         cls.__uid += 1
         return cls.__uid
 
     @classmethod
-    def _file(cls, name):
+    def _file(cls, name: int) -> str:
         return cls.path + cls.priority + cls.prefix + str(name) + cls.suffix
 
     @classmethod
-    def _delete(cls, key):
+    def _delete(cls, key: str) -> None:
         if key not in cls._known:
             return
         # removing key first so the call to clear never loops forever
@@ -54,10 +55,10 @@ class ACL:
             pass
 
     @classmethod
-    def _commit(cls):
+    def _commit(cls) -> bytes:
         if cls.dry:
             cls.show()
-            return None
+            return b''
         try:
             return subprocess.Popen(
                 ['cl-acltool', '-i'],
@@ -65,10 +66,10 @@ class ACL:
                 stdout=subprocess.PIPE,
             ).communicate()[0]
         except (OSError, subprocess.SubprocessError):
-            pass
+            return b''
 
     @staticmethod
-    def _build(flow, action):
+    def _build(flow: dict[str, Any], action: str) -> str:
         acl = '[iptables]\n-A FORWARD --in-interface swp+'
         if 'protocol' in flow:
             acl += ' -p ' + re.sub('[!<>=]', '', flow['protocol'][0])
@@ -84,8 +85,8 @@ class ACL:
         return acl
 
     @classmethod
-    def insert(cls, flow, action):
-        key = flow['string']
+    def insert(cls, flow: dict[str, Any], action: str) -> None:
+        key: str = flow['string']
         if key in cls._known:
             return
         uid = cls._uid()
@@ -99,16 +100,16 @@ class ACL:
             cls.end()
 
     @classmethod
-    def remove(cls, flow):
-        key = flow['string']
+    def remove(cls, flow: dict[str, Any]) -> None:
+        key: str = flow['string']
         if key not in cls._known:
             return
         uid, _ = cls._known[key]
         cls._delete(key)
 
     @classmethod
-    def clear(cls):
-        for key in cls._known:
+    def clear(cls) -> None:
+        for key in list(cls._known.keys()):
             cls._delete(key)
         cls._commit()
 
@@ -118,7 +119,7 @@ class ACL:
         sys.exit(1)
 
     @classmethod
-    def show(cls):
+    def show(cls) -> None:
         for key, (uid, _) in cls._known.items():
             sys.stderr.write(f'{uid} {key}\n')
         for _, acl in cls._known.values():

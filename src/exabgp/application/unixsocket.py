@@ -17,6 +17,7 @@ import select
 import socket
 import traceback
 from collections import deque
+from typing import Callable
 
 from exabgp.reactor.network.error import error
 
@@ -24,7 +25,7 @@ kb = 1024
 mb = kb * 1024
 
 
-def unix_socket(root, socketname='exabgp'):
+def unix_socket(root: str, socketname: str = 'exabgp') -> list[str]:
     """Discover Unix socket path for CLI communication.
 
     Searches standard locations for socket file.
@@ -68,7 +69,7 @@ def unix_socket(root, socketname='exabgp'):
     return locations
 
 
-def env(app, section, name, default):
+def env(app: str, section: str, name: str, default: str) -> str:
     """Get environment variable with fallback."""
     r = os.environ.get(f'{app}.{section}.{name}', None)
     if r is None:
@@ -88,7 +89,7 @@ class Control:
 
     terminating = False
 
-    def __init__(self, location):
+    def __init__(self, location: str) -> None:
         # Check for explicit socket path override
         explicit_path = os.environ.get('exabgp_api_socketpath', '')
         if explicit_path:
@@ -97,11 +98,11 @@ class Control:
             socketname = env('exabgp', 'api', 'socketname', 'exabgp')
             self.socket_path = location + socketname + '.sock'
 
-        self.server_socket = None
-        self.client_socket = None
-        self.client_fd = None
+        self.server_socket: socket.socket | None = None
+        self.client_socket: socket.socket | None = None
+        self.client_fd: int | None = None
 
-    def init(self):
+    def init(self) -> bool:
         """Initialize socket server."""
         # Remove stale socket file if it exists
         try:
@@ -159,7 +160,7 @@ class Control:
         signal.signal(signal.SIGTERM, self.terminate)
         return True
 
-    def cleanup_client(self):
+    def cleanup_client(self) -> None:
         """Clean up client connection only (keep server listening).
 
         Note: Only closes the socket, not clearing client_fd.
@@ -173,7 +174,7 @@ class Control:
             self.client_socket = None
             # Do NOT clear client_fd here - main loop needs it to clean up dicts
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up all resources (server shutdown)."""
         self.cleanup_client()
         self.client_fd = None  # Full cleanup includes clearing fd
@@ -192,7 +193,7 @@ class Control:
         except OSError:
             pass
 
-    def terminate(self, ignore=None, me=None):
+    def terminate(self, signum: int | None = None, frame: object = None) -> None:
         """Signal handler for clean shutdown."""
         if self.terminating:
             sys.exit(1)
@@ -200,7 +201,7 @@ class Control:
         self.cleanup()
         sys.exit(0)
 
-    def read_on(self, reading):
+    def read_on(self, reading: list[int | None]) -> list[int]:
         """Poll file descriptors for readable data."""
         sleep_time = 1000  # 1 second timeout
 
@@ -224,7 +225,7 @@ class Control:
                     sys.exit(1)
         return ready
 
-    def loop(self):
+    def loop(self) -> None:
         """Main event loop."""
         standard_in = sys.stdin.fileno()
         standard_out = sys.stdout.fileno()
@@ -245,15 +246,7 @@ class Control:
         except OSError:
             pass
 
-        def monitor(function):
-            def wrapper(*args):
-                r = function(*args)
-                return r
-
-            return wrapper
-
-        @monitor
-        def std_reader(number):
+        def std_reader(number: int) -> bytes:
             try:
                 return os.read(standard_in, number)
             except OSError as exc:
@@ -261,8 +254,7 @@ class Control:
                     return b''
                 sys.exit(1)
 
-        @monitor
-        def std_writer(line):
+        def std_writer(line: bytes) -> int:
             try:
                 return os.write(standard_out, line)
             except OSError as exc:
@@ -270,8 +262,7 @@ class Control:
                     return 0
                 sys.exit(1)
 
-        @monitor
-        def socket_reader(number):
+        def socket_reader(number: int) -> bytes:
             if not self.client_socket:
                 return b''
             try:
@@ -287,8 +278,7 @@ class Control:
                 self.cleanup_client()
                 return b''
 
-        @monitor
-        def socket_writer(line):
+        def socket_writer(line: bytes) -> int:
             if not self.client_socket:
                 return 0
             try:
@@ -305,12 +295,14 @@ class Control:
         reading: list[int | None] = [standard_in, server_fd]
 
         # Data structures for buffering
-        read = {standard_in: std_reader}
-        write = {standard_in: None}  # Will be set to socket_writer when client connects
+        read: dict[int, Callable[[int], bytes]] = {standard_in: std_reader}
+        write: dict[int, Callable[[bytes], int] | None] = {
+            standard_in: None
+        }  # Will be set to socket_writer when client connects
         backlog: dict[int, deque[bytes]] = {standard_in: deque()}
-        store = {standard_in: b''}
+        store: dict[int, bytes] = {standard_in: b''}
 
-        def consume(source):
+        def consume(source: int) -> None:
             if not backlog[source] and b'\n' not in store[source]:
                 store[source] += read[source](1024)
             else:
@@ -426,7 +418,7 @@ class Control:
                 if backlog[source]:
                     store[source] += backlog[source].popleft()
 
-    def run(self):
+    def run(self) -> None:
         """Run the socket server."""
         if not self.init():
             sys.exit(1)
@@ -445,7 +437,7 @@ class Control:
             sys.exit(1)
 
 
-def main(location=''):
+def main(location: str = '') -> None:
     """Entry point for socket-based CLI control process."""
     if not location:
         location = os.environ.get('exabgp_cli_socket', '')

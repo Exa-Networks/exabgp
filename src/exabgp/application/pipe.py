@@ -63,7 +63,7 @@ def env(app: str, section: str, name: str, default: str) -> str:
     return r
 
 
-def check_fifo(name: str) -> bool | None:
+def check_fifo(name: str) -> bool:
     try:
         if not stat.S_ISFIFO(os.stat(name).st_mode):
             sys.stdout.write(f'error: a file exist which is not a named pipe ({os.path.abspath(name)})\n')
@@ -76,16 +76,9 @@ def check_fifo(name: str) -> bool | None:
             return False
         return True
     except OSError:
-        sys.stdout.write(f'error: could not create the named pipe {os.path.abspath(name)}\n')
+        sys.stdout.write(f'error: could not access the named pipe {os.path.abspath(name)}\n')
+        sys.stdout.flush()
         return False
-    except OSError:
-        sys.stdout.write(f'error: could not access/delete the named pipe {os.path.abspath(name)}\n')
-        sys.stdout.flush()
-        return None
-    except OSError:
-        sys.stdout.write(f'error: could not write on the named pipe {os.path.abspath(name)}\n')
-        sys.stdout.flush()
-        return None
 
 
 class Control:

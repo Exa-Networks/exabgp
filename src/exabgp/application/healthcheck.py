@@ -53,7 +53,8 @@ import signal
 import time
 import collections
 
-from ipaddress import ip_network
+from enum import Enum
+from ipaddress import ip_network, IPv4Network, IPv6Network
 from ipaddress import ip_address
 
 # Interface name validation constants
@@ -64,12 +65,20 @@ IP_IFNAME_PARTS = 2  # Expected format: ip%ifname
 logger = logging.getLogger('healthcheck')
 
 
-def enum(*sequential):
-    """Create a simple enumeration."""
-    return type(str('Enum'), (), dict(zip(sequential, sequential)))
+class States(str, Enum):
+    """States for the healthcheck FSM."""
+
+    INIT = 'INIT'  # Initial state
+    DISABLED = 'DISABLED'  # Disabled state
+    RISING = 'RISING'  # Checks are currently succeeding.
+    FALLING = 'FALLING'  # Checks are currently failing.
+    UP = 'UP'  # Service is considered as up.
+    DOWN = 'DOWN'  # Service is considered as down.
+    EXIT = 'EXIT'  # Exit state
+    END = 'END'  # End state, exiting but without removing setup ips and/or announced routes
 
 
-def setargs(parser):
+def setargs(parser: argparse.ArgumentParser) -> None:
     # fmt: off
     g = parser.add_mutually_exclusive_group()
     g.add_argument('--silent', '-s', action='store_true', default=False, help="don't log to console")
@@ -85,7 +94,7 @@ def setargs(parser):
     parser.add_argument('--user', metavar='USER', help='set user after setting ip addresses')
     parser.add_argument('--group', metavar='GROUP', help='set group after setting ip addresses')
 
-    g = parser.add_argument_group('checking healthiness')
+    g = parser.add_argument_group('checking healthiness')  # type: ignore[assignment]
     g.add_argument('--interval', '-i', metavar='N', default=5, type=float, help='wait N seconds between each healthcheck (zero to exit after first announcement)')
     g.add_argument('--fast-interval', '-f', metavar='N', default=1, type=float, dest='fast', help='when a state change is about to occur, wait N seconds between each healthcheck')
     g.add_argument('--timeout', '-t', metavar='N', default=5, type=int, help='wait N seconds for the check command to execute')
@@ -94,10 +103,10 @@ def setargs(parser):
     g.add_argument('--disable', metavar='FILE', type=str, help='if FILE exists, the service is considered disabled')
     g.add_argument('--command', '--cmd', '-c', metavar='CMD', type=str, help='command to use for healthcheck')
 
-    g = parser.add_argument_group('advertising options')
+    g = parser.add_argument_group('advertising options')  # type: ignore[assignment]
     g.add_argument('--next-hop', '-N', metavar='IP', type=ip_address, help='self IP address to use as next hop')
-    g.add_argument('--ip', metavar='IP', type=ip_network, dest='ips', action='append', help='advertise this IP address or network (CIDR notation)')
-    g.add_argument('--ip-ifname', metavar='IP%IFNAME', dest='ip_ifnames', action='append', help='bind this IP address or network (CIDR) to the given physical or logical interface (i.e. 192.165.14.1%%eth0)')
+    g.add_argument('--ip', metavar='IP', type=ip_network, dest='ips', action='append', default=[], help='advertise this IP address or network (CIDR notation)')
+    g.add_argument('--ip-ifname', metavar='IP%IFNAME', dest='ip_ifnames', action='append', default=[], help='bind this IP address or network (CIDR) to the given physical or logical interface (i.e. 192.165.14.1%%eth0)')
     g.add_argument('--local-preference', metavar='P', type=int, default=-1, help='advertise with local preference P')
     g.add_argument('--deaggregate-networks', dest='deaggregate_networks', action='store_true', help='Deaggregate Networks specified in --ip')
     g.add_argument('--no-ip-setup', action='store_false', dest='ip_setup', help="don't setup missing IP addresses")
@@ -122,7 +131,7 @@ def setargs(parser):
     g.add_argument('--neighbor', metavar='NEIGHBOR', type=ip_address, dest='neighbors', action='append', help='advertise the route to the selected neigbors')
     g.add_argument('--debounce', action='store_true', dest='debounce', help='announce only on state changes, instead of every iteration')
 
-    g = parser.add_argument_group('reporting')
+    g = parser.add_argument_group('reporting')  # type: ignore[assignment]
     g.add_argument('--execute', metavar='CMD', type=str, action='append', help='execute CMD on state change')
     g.add_argument('--up-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service becomes available')
     g.add_argument('--down-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service becomes unavailable')
@@ -130,13 +139,15 @@ def setargs(parser):
     # fmt: on
 
 
-def parse():
+def parse() -> argparse.Namespace:
     """Parse arguments"""
 
-    def parse_ip_ifnames(ip_ifnames, ips):
+    def parse_ip_ifnames(
+        ip_ifnames: list[str], ips: list[IPv4Network | IPv6Network]
+    ) -> dict[IPv4Network | IPv6Network, str]:
         """Parse ip interfaces and return a dict of ip:ifname"""
         keyval = {}
-        for val in ip_ifnames or []:
+        for val in ip_ifnames:
             ip_ifname = val.split(r'%')
             if len(ip_ifname) != IP_IFNAME_PARTS:
                 raise ValueError(f"Expected IP to IFNAME parameter: <ip_address>%<ifname>, got '{val}'")
@@ -177,10 +188,10 @@ def parse():
     return options
 
 
-def setup_logging(debug, silent, name, syslog_facility, syslog):
+def setup_logging(debug: bool, silent: bool, name: str | None, syslog_facility: str, syslog: bool) -> None:
     """Setup logger"""
 
-    def syslog_address():
+    def syslog_address() -> str:
         """Return a sensible syslog address"""
         if sys.platform == 'darwin':
             return '/var/run/syslog'
@@ -211,7 +222,12 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
         logger.addHandler(ch)
 
 
-def system_ips(ip_ifnames, label, label_only, label_exact_match):
+def system_ips(
+    ip_ifnames: dict[IPv4Network | IPv6Network, str] | None,
+    label: str | None,
+    label_only: bool,
+    label_exact_match: bool,
+) -> list[IPv4Network | IPv6Network]:
     """Retrieve IP addresses for loopback and ip-ifname given interfaces"""
     logger.debug('Retrieve IP addresses for loopback and ip-ifname interfaces')
     addresses = []
@@ -226,7 +242,8 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
             cmd = subprocess.Popen(
                 f'/sbin/ip -o address show dev {ifname}'.split(), shell=False, stdout=subprocess.PIPE
             )
-            output += [line for line in cmd.stdout]
+            if cmd.stdout is not None:
+                output += [line for line in cmd.stdout]
     else:
         # Try with ifconfig
         ipre = re.compile(
@@ -237,9 +254,10 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
         labelre = re.compile(r'')
         for ifname in ifnames:
             cmd = subprocess.Popen(f'/sbin/ifconfig {ifname}'.split(), shell=False, stdout=subprocess.PIPE)
-            output += [line for line in cmd.stdout]
-    for line in output or []:
-        line = line.decode('ascii', 'ignore').strip()
+            if cmd.stdout is not None:
+                output += [line for line in cmd.stdout]
+    for line_bytes in output or []:
+        line = line_bytes.decode('ascii', 'ignore').strip()
         mo = ipre.match(line)
         if not mo:
             continue
@@ -268,7 +286,7 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
     return addresses
 
 
-def ip_ifname(ip, ip_ifnames):
+def ip_ifname(ip: IPv4Network | IPv6Network, ip_ifnames: dict[IPv4Network | IPv6Network, str]) -> str:
     ifname = ip_ifnames.get(ip)
     if not ifname:
         ifname = 'lo0'
@@ -277,7 +295,13 @@ def ip_ifname(ip, ip_ifnames):
     return ifname
 
 
-def setup_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
+def setup_ips(
+    ips: list[IPv4Network | IPv6Network],
+    ip_ifnames: dict[IPv4Network | IPv6Network, str],
+    label: str | None,
+    label_exact_match: bool,
+    sudo: bool = False,
+) -> None:
     """Setup missing IP on loopback or physical interface"""
 
     existing = set(system_ips(ip_ifnames, label, False, label_exact_match))
@@ -300,7 +324,13 @@ def setup_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
                 raise e
 
 
-def remove_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
+def remove_ips(
+    ips: list[IPv4Network | IPv6Network],
+    ip_ifnames: dict[IPv4Network | IPv6Network, str],
+    label: str | None,
+    label_exact_match: bool,
+    sudo: bool = False,
+) -> None:
     """Remove added IP on loopback or physical interface"""
     existing = set(system_ips(ip_ifnames, label, True, label_exact_match))
 
@@ -326,7 +356,7 @@ def remove_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
                 )
 
 
-def drop_privileges(user, group):
+def drop_privileges(user: str | None, group: str | None) -> None:
     """Drop privileges to specified user and group"""
     if group is not None:
         import grp
@@ -334,7 +364,7 @@ def drop_privileges(user, group):
         gid = grp.getgrnam(group).gr_gid
         logger.debug(f'Dropping privileges to group {group}/{gid}')
         try:
-            os.setresgid(gid, gid, gid)
+            os.setresgid(gid, gid, gid)  # type: ignore[attr-defined]
         except AttributeError:
             os.setregid(gid, gid)
     if user is not None:
@@ -343,12 +373,12 @@ def drop_privileges(user, group):
         uid = pwd.getpwnam(user).pw_uid
         logger.debug(f'Dropping privileges to user {user}/{uid}')
         try:
-            os.setresuid(uid, uid, uid)
+            os.setresuid(uid, uid, uid)  # type: ignore[attr-defined]
         except AttributeError:
             os.setreuid(uid, uid)
 
 
-def check(cmd, timeout):
+def check(cmd: str | None, timeout: int) -> bool:
     """Check the return code of the given command.
 
     :param cmd: command to execute. If :keyword:`None`, no command is executed.
@@ -362,7 +392,7 @@ def check(cmd, timeout):
     class Alarm(Exception):
         """Exception to signal an alarm condition."""
 
-    def alarm_handler(number, frame):  # pylint: disable=W0613
+    def alarm_handler(number: int, frame: object) -> None:  # pylint: disable=W0613
         """Handle SIGALRM signal."""
         raise Alarm
 
@@ -389,27 +419,17 @@ def check(cmd, timeout):
         return False
 
 
-def loop(options):
+def loop(options: argparse.Namespace) -> None:
     """Main loop."""
-    states = enum(
-        'INIT',  # Initial state
-        'DISABLED',  # Disabled state
-        'RISING',  # Checks are currently succeeding.
-        'FALLING',  # Checks are currently failing.
-        'UP',  # Service is considered as up.
-        'DOWN',  # Service is considered as down.
-        'EXIT',  # Exit state
-        'END',  # End state, exiting but without removing setup ips and/or announced routes
-    )
 
-    def exabgp(target):
+    def exabgp(target: States) -> None:
         """Communicate new state to ExaBGP"""
-        if target not in (states.UP, states.DOWN, states.DISABLED, states.EXIT, states.END):
+        if target not in (States.UP, States.DOWN, States.DISABLED, States.EXIT, States.END):
             return
-        if target in (states.END,):
+        if target in (States.END,):
             return
         # if ips was deleted with dyn ip, re-setup them
-        if target == states.UP and options.ip_dynamic:
+        if target == States.UP and options.ip_dynamic:
             logger.info('service up, restoring loopback and ip-ifname ips')
             setup_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
 
@@ -419,8 +439,8 @@ def loop(options):
         if as_path is None:
             as_path = options.as_path
         for ip in options.ips:
-            if options.withdraw_on_down or target is states.EXIT:
-                command = 'neighbor * announce' if target is states.UP else 'neighbor * withdraw'
+            if options.withdraw_on_down or target is States.EXIT:
+                command = 'neighbor * announce' if target is States.UP else 'neighbor * withdraw'
             else:
                 command = 'neighbor * announce'
             announce = f'route {ip} next-hop {options.next_hop or "self"}'
@@ -431,7 +451,7 @@ def loop(options):
                     announce = f'{announce} local-preference {options.local_preference}'
                 if options.community or options.disabled_community:
                     community = options.community
-                    if target in (states.DOWN, states.DISABLED):
+                    if target in (States.DOWN, States.DISABLED):
                         if options.disabled_community:
                             community = options.disabled_community
                     if community:
@@ -471,25 +491,25 @@ def loop(options):
             sys.stdin.readline()
 
         # dynamic ip management. When the service fail, remove the setup ips
-        if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
+        if target in (States.EXIT,) and (options.ip_dynamic or options.ip_setup):
             logger.info('exiting, deleting setup ips')
             remove_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
         # dynamic ip management. When the service fail, remove the setup ips
-        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
+        if target in (States.DOWN, States.DISABLED) and options.ip_dynamic:
             logger.info('service down, deleting setup ips')
             remove_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
 
-    def trigger(target):
+    def trigger(target: States) -> States:
         """Trigger a state change and execute the appropriate commands"""
         # Shortcut for RISING->UP and FALLING->UP
-        if target == states.RISING and options.rise <= 1:
-            target = states.UP
-        elif target == states.FALLING and options.fall <= 1:
-            target = states.DOWN
+        if target == States.RISING and options.rise <= 1:
+            target = States.UP
+        elif target == States.FALLING and options.fall <= 1:
+            target = States.DOWN
 
         # Log and execute commands
         logger.debug(f'Transition to {target}')
-        cmds = []
+        cmds: list[str] = []
         cmds.extend(vars(options).get(f'{str(target).lower()}_execute', []) or [])
         cmds.extend(vars(options).get('execute', []) or [])
         for cmd in cmds:
@@ -501,49 +521,49 @@ def loop(options):
 
         return target
 
-    def one(checks, state):
+    def one(checks: int, state: States) -> tuple[int, States]:
         """Execute one loop iteration."""
         disabled = options.disable is not None and os.path.exists(options.disable)
         successful = disabled or check(options.command, options.timeout)
         state_before_iteration = state
         # FSM
-        if state != states.DISABLED and disabled:
-            state = trigger(states.DISABLED)
-        elif state == states.INIT:
+        if state != States.DISABLED and disabled:
+            state = trigger(States.DISABLED)
+        elif state == States.INIT:
             if successful and options.rise <= 1:
-                state = trigger(states.UP)
+                state = trigger(States.UP)
             elif successful:
-                state = trigger(states.RISING)
+                state = trigger(States.RISING)
                 checks = 1
             else:
-                state = trigger(states.FALLING)
+                state = trigger(States.FALLING)
                 checks = 1
-        elif state == states.DISABLED:
+        elif state == States.DISABLED:
             if not disabled:
-                state = trigger(states.INIT)
-        elif state == states.RISING:
+                state = trigger(States.INIT)
+        elif state == States.RISING:
             if successful:
                 checks += 1
                 if checks >= options.rise:
-                    state = trigger(states.UP)
+                    state = trigger(States.UP)
             else:
-                state = trigger(states.FALLING)
+                state = trigger(States.FALLING)
                 checks = 1
-        elif state == states.FALLING:
+        elif state == States.FALLING:
             if not successful:
                 checks += 1
                 if checks >= options.fall:
-                    state = trigger(states.DOWN)
+                    state = trigger(States.DOWN)
             else:
-                state = trigger(states.RISING)
+                state = trigger(States.RISING)
                 checks = 1
-        elif state == states.UP:
+        elif state == States.UP:
             if not successful:
-                state = trigger(states.FALLING)
+                state = trigger(States.FALLING)
                 checks = 1
-        elif state == states.DOWN:
+        elif state == States.DOWN:
             if successful:
-                state = trigger(states.RISING)
+                state = trigger(States.RISING)
                 checks = 1
         else:
             raise ValueError(f'Unhandled state: {state}')
@@ -556,11 +576,11 @@ def loop(options):
         return checks, state
 
     checks = 0
-    state = states.INIT
+    state = States.INIT
 
     # Do cleanups on SIGTERM
-    def sigterm_handler(signum, frame):  # pylint: disable=W0612,W0613
-        exabgp(states.EXIT)
+    def sigterm_handler(signum: int, frame: object) -> None:  # pylint: disable=W0612,W0613
+        exabgp(States.EXIT)
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, sigterm_handler)
@@ -570,25 +590,25 @@ def loop(options):
 
         try:
             # How much we should sleep?
-            if state in (states.FALLING, states.RISING):
+            if state in (States.FALLING, States.RISING):
                 time.sleep(options.fast)
             elif options.interval == 0:
                 logger.info('interval set to zero, exiting after the announcement')
-                exabgp(states.END)
+                exabgp(States.END)
                 break
             else:
                 time.sleep(options.interval)
         except KeyboardInterrupt:
-            exabgp(states.EXIT)
+            exabgp(States.EXIT)
             break
 
 
-def cmdline(cmdarg):
+def cmdline(cmdarg: argparse.Namespace) -> None:
     sys.argv = [f'{sys.argv[0]} {sys.argv[1]}'] + sys.argv[2:]
     main()
 
 
-def main():
+def main() -> None:
     """Entry point."""
     options = parse()
     setup_logging(options.debug, options.silent, options.name, options.syslog_facility, not options.no_syslog)

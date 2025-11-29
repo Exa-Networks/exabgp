@@ -31,21 +31,21 @@ from exabgp.version import version
 from exabgp.bgp.message.update.attribute import Attribute
 
 
-def __exit(memory, code):
+def __exit(memory: bool, code: int) -> None:
     if memory:
         from exabgp.vendoring import objgraph
 
         sys.stdout.write('memory utilisation\n\n')
-        sys.stdout.write(objgraph.show_most_common_types(limit=20))
+        sys.stdout.write(objgraph.show_most_common_types(limit=20))  # type: ignore[no-untyped-call]
         sys.stdout.write('\n\n\n')
         sys.stdout.write('generating memory utilisation graph\n\n')
         sys.stdout.write('')
-        obj = objgraph.by_type('Reactor')
-        objgraph.show_backrefs([obj], max_depth=10)
+        obj = objgraph.by_type('Reactor')  # type: ignore[no-untyped-call]
+        objgraph.show_backrefs([obj], max_depth=10)  # type: ignore[no-untyped-call]
     sys.exit(code)
 
 
-def _delayed_signal(delay, signalnum):
+def _delayed_signal(delay: int | None, signalnum: signal.Signals) -> None:
     if not delay:
         return
 
@@ -63,7 +63,7 @@ def _delayed_signal(delay, signalnum):
                 sys.exit(code)
 
 
-def setargs(sub):
+def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:off
     sub.add_argument('-v', '--verbose', help='toogle all logging', action='store_true')
     sub.add_argument('-d', '--debug', help='start the python debugger on issue and (implies -v, -p)', action='store_true')
@@ -77,7 +77,7 @@ def setargs(sub):
     # fmt:on
 
 
-def cmdline(cmdarg):
+def cmdline(cmdarg: argparse.Namespace) -> None:
     if not os.path.isfile(ENVFILE):
         comment = f'environment file missing\ngenerate it using "exabgp env > {ENVFILE}"'
     else:
@@ -156,7 +156,7 @@ def cmdline(cmdarg):
         sys.exit(1)
 
 
-def run(comment, configurations, pid=0):
+def run(comment: str, configurations: list[str], pid: int = 0) -> None:
     env = getenv()
 
     log.info(lazymsg('startup.banner message=thank_you_for_using_exabgp'), 'startup')
@@ -293,7 +293,7 @@ def run(comment, configurations, pid=0):
         __exit(env.debug.memory, exit_code)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     setargs(parser)
     cmdline(parser.parse_args())
