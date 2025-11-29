@@ -58,8 +58,14 @@ class Session:
 
         Called after configuration parsing to set derived defaults.
         """
+        from exabgp.bgp.message.open.routerid import RouterID
+
         if self.md5_ip is None and not self.auto_discovery:
             self.md5_ip = self.local_address
+
+        # Derive router_id from local_address if IPv4 and not auto-discovery
+        if not self.router_id and not self.auto_discovery and self.local_address.afi == AFI.ipv4:
+            self.router_id = RouterID(self.local_address.top())
 
     def missing(self) -> str:
         """Check for missing required session fields.

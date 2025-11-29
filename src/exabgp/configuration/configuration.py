@@ -9,60 +9,41 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.protocol.family import AFI, SAFI
 
 if TYPE_CHECKING:
-    from exabgp.rib.change import Change
     from exabgp.bgp.message.operational import OperationalFamily
+    from exabgp.rib.change import Change
 
-from exabgp.logger import log, lazymsg
-
-from exabgp.configuration.core import Error
-from exabgp.configuration.core import Scope
-from exabgp.configuration.core import Parser
-from exabgp.configuration.core import Tokeniser
-from exabgp.configuration.core import Section
-
-from exabgp.configuration.process import ParseProcess
-from exabgp.configuration.template import ParseTemplate
-from exabgp.configuration.template.neighbor import ParseTemplateNeighbor
-from exabgp.configuration.neighbor import ParseNeighbor
-from exabgp.configuration.neighbor.api import ParseAPI
-from exabgp.configuration.neighbor.api import ParseSend
-from exabgp.configuration.neighbor.api import ParseReceive
-from exabgp.configuration.neighbor.family import ParseFamily
-from exabgp.configuration.neighbor.family import ParseAddPath
-from exabgp.configuration.neighbor.nexthop import ParseNextHop
-from exabgp.configuration.capability import ParseCapability
-from exabgp.configuration.announce import SectionAnnounce
-from exabgp.configuration.announce import AnnounceIPv4
-from exabgp.configuration.announce import AnnounceIPv6
-from exabgp.configuration.announce import AnnounceL2VPN
-from exabgp.configuration.static import ParseStatic
-from exabgp.configuration.static import ParseStaticRoute
-from exabgp.configuration.flow import ParseFlow
-from exabgp.configuration.flow import ParseFlowRoute
-from exabgp.configuration.flow import ParseFlowThen
-from exabgp.configuration.flow import ParseFlowMatch
-from exabgp.configuration.flow import ParseFlowScope
-from exabgp.configuration.l2vpn import ParseL2VPN
-from exabgp.configuration.l2vpn import ParseVPLS
-from exabgp.configuration.operational import ParseOperational
-
-from exabgp.environment import getenv
+from exabgp.configuration.announce import AnnounceIPv4, AnnounceIPv6, AnnounceL2VPN, SectionAnnounce
+from exabgp.configuration.announce.flow import AnnounceFlow  # noqa: F401,E261,E501
 
 # for registration
 from exabgp.configuration.announce.ip import AnnounceIP  # noqa: F401,E261,E501
-from exabgp.configuration.announce.path import AnnouncePath  # noqa: F401,E261,E501
 from exabgp.configuration.announce.label import AnnounceLabel  # noqa: F401,E261,E501
-from exabgp.configuration.announce.vpn import AnnounceVPN  # noqa: F401,E261,E501
-from exabgp.configuration.announce.mvpn import AnnounceMVPN  # noqa: F401,E261,E501
-from exabgp.configuration.announce.flow import AnnounceFlow  # noqa: F401,E261,E501
-from exabgp.configuration.announce.vpls import AnnounceVPLS  # noqa: F401,E261,E501
 from exabgp.configuration.announce.mup import AnnounceMup  # noqa: F401,E261,E501
+from exabgp.configuration.announce.mvpn import AnnounceMVPN  # noqa: F401,E261,E501
+from exabgp.configuration.announce.path import AnnouncePath  # noqa: F401,E261,E501
+from exabgp.configuration.announce.vpls import AnnounceVPLS  # noqa: F401,E261,E501
+from exabgp.configuration.announce.vpn import AnnounceVPN  # noqa: F401,E261,E501
+from exabgp.configuration.capability import ParseCapability
+from exabgp.configuration.core import Error, Parser, Scope, Section, Tokeniser
+from exabgp.configuration.flow import ParseFlow, ParseFlowMatch, ParseFlowRoute, ParseFlowScope, ParseFlowThen
+from exabgp.configuration.l2vpn import ParseL2VPN, ParseVPLS
+from exabgp.configuration.neighbor import ParseNeighbor
+from exabgp.configuration.neighbor.api import ParseAPI, ParseReceive, ParseSend
+from exabgp.configuration.neighbor.family import ParseAddPath, ParseFamily
+from exabgp.configuration.neighbor.nexthop import ParseNextHop
+from exabgp.configuration.operational import ParseOperational
+from exabgp.configuration.process import ParseProcess
+from exabgp.configuration.static import ParseStatic, ParseStaticRoute
+from exabgp.configuration.template import ParseTemplate
+from exabgp.configuration.template.neighbor import ParseTemplateNeighbor
+from exabgp.environment import getenv
+from exabgp.logger import lazymsg, log
 
 
 class _Configuration:
@@ -424,7 +405,7 @@ class Configuration(_Configuration):
         self._previous_neighbors = {}
         self._cleanup()
 
-    def reload(self) -> bool | str:
+    def reload(self) -> bool:
         try:
             return self._reload()
         except KeyboardInterrupt:
@@ -442,7 +423,7 @@ class Configuration(_Configuration):
                 f'problem parsing configuration file line {self.parser.index_line}\nerror message: {exc}',
             )
 
-    def _reload(self) -> bool | str:
+    def _reload(self) -> bool:
         # taking the first configuration available (FIFO buffer)
         fname = self._configurations.pop(0)
         self._configurations.append(fname)
@@ -480,7 +461,7 @@ class Configuration(_Configuration):
 
         return True
 
-    def validate(self) -> bool | str:
+    def validate(self) -> bool:
         for neighbor in self.neighbors.values():
             has_procs = 'processes' in neighbor.api and neighbor.api['processes']
             has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']
@@ -511,7 +492,7 @@ class Configuration(_Configuration):
                     return self.error.set(
                         ' '.join(errors),
                     )
-        return ''
+        return True
 
     def _link(self) -> None:
         for neighbor in self.neighbors.values():
