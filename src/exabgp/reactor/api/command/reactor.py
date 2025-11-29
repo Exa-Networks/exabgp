@@ -9,11 +9,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import TYPE_CHECKING
 
 from exabgp.version import version as _version
 from exabgp.reactor.api.command.command import Command
 
 from exabgp.logger import log, lazymsg
+
+if TYPE_CHECKING:
+    from exabgp.reactor.loop import Reactor
 
 
 def register_reactor():
@@ -21,7 +25,7 @@ def register_reactor():
 
 
 @Command.register('help', False, json_support=True)
-def help_command(self, reactor, service, line, use_json):
+def help_command(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     if use_json:
         # Build JSON structure with command metadata
         commands_list = []
@@ -83,7 +87,7 @@ def help_command(self, reactor, service, line, use_json):
 
 
 @Command.register('shutdown', False, json_support=True)
-def shutdown(self, reactor, service, line, use_json):
+def shutdown(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     reactor.signal.received = reactor.signal.SHUTDOWN
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'shutdown in progress'}))
@@ -94,7 +98,7 @@ def shutdown(self, reactor, service, line, use_json):
 
 
 @Command.register('reload', False, json_support=True)
-def reload(self, reactor, service, line, use_json):
+def reload(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     reactor.signal.received = reactor.signal.RELOAD
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'reload in progress'}))
@@ -105,7 +109,7 @@ def reload(self, reactor, service, line, use_json):
 
 
 @Command.register('restart', False, json_support=True)
-def restart(self, reactor, service, line, use_json):
+def restart(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     reactor.signal.received = reactor.signal.RESTART
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'restart in progress'}))
@@ -116,7 +120,7 @@ def restart(self, reactor, service, line, use_json):
 
 
 @Command.register('version', False, json_support=True)
-def version(self, reactor, service, line, use_json):
+def version(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     if use_json:
         reactor.processes.write(service, json.dumps({'version': _version, 'application': 'exabgp'}))
     else:
@@ -126,14 +130,14 @@ def version(self, reactor, service, line, use_json):
 
 
 @Command.register('#', False, json_support=True)
-def comment(self, reactor, service, line, use_json):
+def comment(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     log.debug(lazymsg('api.comment text={text}', text=line.lstrip().lstrip('#').strip()), 'processes')
     reactor.processes.answer_done(service)
     return True
 
 
 @Command.register('reset', False, json_support=True)
-def reset(self, reactor, service, line, use_json):
+def reset(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     reactor.asynchronous.clear(service)
 
     if use_json:
@@ -146,7 +150,7 @@ def reset(self, reactor, service, line, use_json):
 
 
 @Command.register('crash', json_support=True)
-def crash(self, reactor, service, line, use_json):
+def crash(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         raise ValueError('crash test of the API')
         await asyncio.sleep(0)  # This line is unreachable but matches original structure
@@ -158,7 +162,7 @@ def crash(self, reactor, service, line, use_json):
 
 
 @Command.register('disable-ack', False, json_support=True)
-def disable_ack(self, reactor, service, line, use_json):
+def disable_ack(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Disable ACK responses for this connection (sends 'done' for this command, then disables)"""
     reactor.processes.set_ack(service, False)
     reactor.processes.answer_done(service, force=True)
@@ -166,7 +170,7 @@ def disable_ack(self, reactor, service, line, use_json):
 
 
 @Command.register('enable-ack', False, json_support=True)
-def enable_ack(self, reactor, service, line, use_json):
+def enable_ack(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Re-enable ACK responses for this connection"""
     reactor.processes.set_ack(service, True)
     reactor.processes.answer_done(service)
@@ -174,14 +178,14 @@ def enable_ack(self, reactor, service, line, use_json):
 
 
 @Command.register('silence-ack', False, json_support=True)
-def silence_ack(self, reactor, service, line, use_json):
+def silence_ack(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Disable ACK responses immediately (no 'done' sent for this command)"""
     reactor.processes.set_ack(service, False)
     return True
 
 
 @Command.register('enable-sync', False, json_support=True)
-def enable_sync(self, reactor, service, line, use_json):
+def enable_sync(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Enable sync mode - wait for routes to be flushed to wire before ACK.
 
     When sync mode is enabled, announce/withdraw commands will wait until
@@ -195,7 +199,7 @@ def enable_sync(self, reactor, service, line, use_json):
 
 
 @Command.register('disable-sync', False, json_support=True)
-def disable_sync(self, reactor, service, line, use_json):
+def disable_sync(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Disable sync mode - ACK immediately after RIB update (default).
 
     When sync mode is disabled (default), announce/withdraw commands return
@@ -208,7 +212,7 @@ def disable_sync(self, reactor, service, line, use_json):
 
 
 @Command.register('ping', False, json_support=True)
-def ping(self, reactor, service, line, use_json):
+def ping(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Lightweight health check - responds with 'pong <UUID>' and active status
 
     Defaults to JSON output unless 'text' keyword is explicitly used.
@@ -271,7 +275,7 @@ def ping(self, reactor, service, line, use_json):
 
 
 @Command.register('status', False, json_support=True)
-def status(self, reactor, service, line, use_json):
+def status(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Display daemon status information (UUID, uptime, version, peers)"""
     import os
     import time
@@ -319,7 +323,7 @@ def status(self, reactor, service, line, use_json):
 
 
 @Command.register('bye', False, json_support=True)
-def bye(self, reactor, service, line, use_json):
+def bye(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Handle client disconnect - clear active client tracking"""
     # Clear active client when CLI disconnects
     reactor.active_client_uuid = None

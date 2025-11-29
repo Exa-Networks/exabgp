@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 
 from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import match_neighbors
@@ -19,6 +20,9 @@ from exabgp.bgp.message.update.attribute import NextHop
 
 from exabgp.configuration.static import ParseStaticRoute
 from exabgp.logger import log, lazymsg
+
+if TYPE_CHECKING:
+    from exabgp.reactor.loop import Reactor
 
 
 def register_announce():
@@ -90,7 +94,7 @@ def register_flush_callbacks(peers, reactor, sync_mode: bool) -> list:
 
 
 @Command.register('announce route', json_support=True)
-def announce_route(self, reactor, service, line, use_json):
+def announce_route(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -148,7 +152,7 @@ def announce_route(self, reactor, service, line, use_json):
 
 
 @Command.register('withdraw route', json_support=True)
-def withdraw_route(self, reactor, service, line, use_json):
+def withdraw_route(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -214,7 +218,7 @@ def withdraw_route(self, reactor, service, line, use_json):
 
 
 @Command.register('announce vpls', json_support=True)
-def announce_vpls(self, reactor, service, line, use_json):
+def announce_vpls(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -260,7 +264,7 @@ def announce_vpls(self, reactor, service, line, use_json):
 
 
 @Command.register('withdraw vpls', json_support=True)
-def withdraw_vpls(self, reactor, service, line, use_json):
+def withdraw_vpls(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -311,7 +315,7 @@ def withdraw_vpls(self, reactor, service, line, use_json):
 
 @Command.register('announce attribute', json_support=True)
 @Command.register('announce attributes', json_support=True)
-def announce_attributes(self, reactor, service, line, use_json):
+def announce_attributes(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -364,7 +368,7 @@ def announce_attributes(self, reactor, service, line, use_json):
 
 @Command.register('withdraw attribute', json_support=True)
 @Command.register('withdraw attributes', json_support=True)
-def withdraw_attribute(self, reactor, service, line, use_json):
+def withdraw_attribute(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -420,7 +424,7 @@ def withdraw_attribute(self, reactor, service, line, use_json):
 
 
 @Command.register('announce flow', json_support=True)
-def announce_flow(self, reactor, service, line, use_json):
+def announce_flow(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -466,7 +470,7 @@ def announce_flow(self, reactor, service, line, use_json):
 
 
 @Command.register('withdraw flow', json_support=True)
-def withdraw_flow(self, reactor, service, line, use_json):
+def withdraw_flow(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -516,7 +520,7 @@ def withdraw_flow(self, reactor, service, line, use_json):
 
 
 @Command.register('announce eor', json_support=True)
-def announce_eor(self, reactor, service, line, use_json):
+def announce_eor(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback(self, command, peers):
         family = self.api_eor(command)
         if not family:
@@ -551,7 +555,7 @@ def announce_eor(self, reactor, service, line, use_json):
 
 
 @Command.register('announce route-refresh', json_support=True)
-def announce_refresh(self, reactor, service, line, use_json):
+def announce_refresh(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback(self, command, peers):
         refreshes = self.api_refresh(command)
         if not refreshes:
@@ -587,7 +591,7 @@ def announce_refresh(self, reactor, service, line, use_json):
 
 
 @Command.register('announce operational', json_support=True)
-def announce_operational(self, reactor, service, line, use_json):
+def announce_operational(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback(self, command, peers):
         operational = self.api_operational(command)
         if not operational:
@@ -634,7 +638,7 @@ def announce_operational(self, reactor, service, line, use_json):
 
 
 @Command.register('announce ipv4', json_support=True)
-def announce_ipv4(self, reactor, service, line, use_json):
+def announce_ipv4(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -680,7 +684,7 @@ def announce_ipv4(self, reactor, service, line, use_json):
 
 
 @Command.register('withdraw ipv4', json_support=True)
-def withdraw_ipv4(self, reactor, service, line, use_json):
+def withdraw_ipv4(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -730,7 +734,7 @@ def withdraw_ipv4(self, reactor, service, line, use_json):
 
 
 @Command.register('announce ipv6', json_support=True)
-def announce_ipv6(self, reactor, service, line, use_json):
+def announce_ipv6(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)
@@ -776,7 +780,7 @@ def announce_ipv6(self, reactor, service, line, use_json):
 
 
 @Command.register('withdraw ipv6', json_support=True)
-def withdraw_ipv6(self, reactor, service, line, use_json):
+def withdraw_ipv6(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback():
         try:
             descriptions, command = extract_neighbors(line)

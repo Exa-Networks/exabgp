@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Dict, Any, Tuple, List, Set
+from typing import TYPE_CHECKING, Dict, Any, Tuple, List, Set
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
@@ -20,6 +20,9 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import extract_neighbors, match_neighbors
 from exabgp.configuration.neighbor.api import ParseAPI
+
+if TYPE_CHECKING:
+    from exabgp.reactor.loop import Reactor
 
 
 def register_peer():
@@ -264,7 +267,7 @@ def _build_neighbor(params: Dict[str, Any], api_processes: List[str] | None = No
 
 
 @Command.register('create', neighbor=False, json_support=True)
-def neighbor_create(self, reactor, service, line, use_json):
+def neighbor_create(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Create a new BGP neighbor dynamically at runtime.
 
     API format: create neighbor <ip> local-address <ip> local-as <asn> peer-as <asn> [router-id <ip>] [family-allowed <families>] [graceful-restart <seconds>] [group-updates true|false] [api <process>]...
@@ -348,7 +351,7 @@ def neighbor_create(self, reactor, service, line, use_json):
 
 
 @Command.register('delete', neighbor=False, json_support=True)
-def neighbor_delete(self, reactor, service, line, use_json):
+def neighbor_delete(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     """Delete BGP neighbor(s) dynamically at runtime.
 
     API format: delete neighbor <selector>
