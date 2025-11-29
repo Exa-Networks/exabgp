@@ -8,8 +8,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 
 from exabgp.reactor.api.command.command import Command
+
+if TYPE_CHECKING:
+    from exabgp.reactor.loop import Reactor
 
 
 def register_watchdog():
@@ -17,7 +21,7 @@ def register_watchdog():
 
 
 @Command.register('announce watchdog', json_support=True)
-def announce_watchdog(self, reactor, service, line, use_json):
+def announce_watchdog(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback(name):
         # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():
@@ -38,7 +42,7 @@ def announce_watchdog(self, reactor, service, line, use_json):
 
 
 @Command.register('withdraw watchdog', json_support=True)
-def withdraw_watchdog(self, reactor, service, line, use_json):
+def withdraw_watchdog(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback(name):
         # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():

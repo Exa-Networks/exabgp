@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import TYPE_CHECKING
 
 from exabgp.bgp.neighbor import NeighborTemplate
 
@@ -17,13 +18,16 @@ from exabgp.reactor.api.command.limit import extract_neighbors
 
 from exabgp.reactor.api.command.command import Command
 
+if TYPE_CHECKING:
+    from exabgp.reactor.loop import Reactor
+
 
 def register_neighbor():
     pass
 
 
 @Command.register('teardown', neighbor=True, json_support=True)
-def teardown(self, reactor, service, line, use_json):
+def teardown(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     try:
         descriptions, line = extract_neighbors(line)
         if ' ' not in line:
@@ -50,7 +54,7 @@ def teardown(self, reactor, service, line, use_json):
 
 
 @Command.register('show neighbor', False, ['summary', 'extensive', 'configuration'], True)
-def show_neighbor(self, reactor, service, line, use_json):
+def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     words = line.split()
 
     extensive = 'extensive' in words
