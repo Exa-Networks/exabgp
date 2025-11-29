@@ -22,6 +22,15 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 
+__all__ = [
+    'Open',
+    'Version',
+    'ASN',
+    'HoldTime',
+    'RouterID',
+    'Capabilities',
+]
+
 # =================================================================== Open
 
 # 0                   1                   2                   3

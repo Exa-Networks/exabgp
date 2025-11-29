@@ -167,7 +167,8 @@ class TestPeerStateTransitions:
         peer._reset('test reset')
 
         assert peer.fsm == FSM.IDLE
-        assert peer.generator is None
+        assert not peer.generator.running
+        assert not peer.generator.terminated
         assert peer._teardown is None
         neighbor.reset_rib.assert_called_once()
 
@@ -313,7 +314,7 @@ class TestPeerCollisionDetection:
 
         # Should accept connection and replace proto
         assert result is None
-        assert peer.generator is None
+        assert not peer.generator.running
 
 
 class TestPeerTimers:
@@ -790,7 +791,7 @@ class TestPeerRun:
         reactor.processes.broken = Mock(return_value=False)
 
         peer = Peer(neighbor, reactor)
-        peer.generator = None
+        peer.generator.clear()  # Ensure not running, not terminated
         peer._restart = True
         peer.fsm.change(FSM.IDLE)
 

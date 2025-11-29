@@ -29,3 +29,20 @@ from exabgp.bgp.message.open.capability.refresh import REFRESH
 
 # Do not remove this include or unknown capability will not be handled
 from exabgp.bgp.message.open.capability.unknown import UnknownCapability
+
+__all__ = [
+    'Capability',
+    'Capabilities',
+    'Negotiated',
+    'NextHop',
+    'AddPath',
+    'ASN4',
+    'Graceful',
+    'MultiProtocol',
+    'MultiSession',
+    'Operational',
+    'RouteRefresh',
+    'EnhancedRouteRefresh',
+    'REFRESH',
+    'UnknownCapability',
+]
