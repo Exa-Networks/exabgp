@@ -161,7 +161,7 @@ warn_return_any = true
 
 **Why:** Locking prevents regression - once clean, stays clean.
 
-**Currently locked:** `util.*`, `data.*`, `environment.*`, `logger.*`
+**Currently locked:** `util.*`, `data.*`, `environment.*`, `logger.*`, `rib.*`
 
 ---
 
