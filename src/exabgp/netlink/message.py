@@ -10,6 +10,7 @@ from __future__ import annotations
 import socket
 from struct import unpack
 from collections import namedtuple
+from typing import Any, Iterator
 
 from exabgp.netlink.attributes import Attributes
 from exabgp.netlink.netlink import NetLink
@@ -27,13 +28,19 @@ class Message:
         LEN = 0
 
     @classmethod
-    def decode(cls, data):
+    def decode(cls, data: bytes) -> Any:
         extracted = list(unpack(cls.Header.PACK, data[: cls.Header.LEN]))
         attributes = Attributes.decode(data[cls.Header.LEN :])
         extracted.append(dict(attributes))
         return cls.format(*extracted)
 
     @classmethod
-    def extract(cls, format_type, control_flags=DEFAULT_FLAGS, family=socket.AF_UNSPEC, attributes=None):
+    def extract(
+        cls,
+        format_type: int,
+        control_flags: int = DEFAULT_FLAGS,
+        family: int = socket.AF_UNSPEC,
+        attributes: dict[int, bytes] | None = None,
+    ) -> Iterator[Any]:
         for data in NetLink.send(format_type, control_flags, family, attributes):
             yield cls.decode(data)

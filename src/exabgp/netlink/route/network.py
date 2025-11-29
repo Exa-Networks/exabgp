@@ -10,6 +10,7 @@ from __future__ import annotations
 import socket
 from struct import calcsize
 from collections import namedtuple
+from typing import Any, Iterator
 
 from exabgp.netlink.message import NetLink
 from exabgp.netlink.message import Message
@@ -116,11 +117,11 @@ class Network(Message):
             RTA_TABLE = 0x0F
 
     @classmethod
-    def get_routes(cls):
+    def get_routes(cls) -> Iterator[Any]:
         return cls.extract(Network.Command.RTM_GETROUTE)
 
     @classmethod
-    def new_route(cls):
+    def new_route(cls) -> Iterator[Any]:
         network_flags = NetLink.Flags.NLM_F_REQUEST
         network_flags |= NetLink.Flags.NLM_F_ACK
         network_flags |= NetLink.Flags.NLM_F_CREATE
@@ -153,8 +154,8 @@ class Network(Message):
             attributes,
         )
 
-        return cls.extract(Network.Command.RTM_NEWROUTE, network_flags, family, neighbor)
+        return cls.extract(Network.Command.RTM_NEWROUTE, network_flags, family, neighbor)  # type: ignore[arg-type]
 
     @classmethod
-    def del_route(cls):
+    def del_route(cls) -> Iterator[Any]:
         return cls.extract(Network.Command.RTM_DELROUTE)

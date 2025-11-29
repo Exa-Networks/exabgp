@@ -14,6 +14,7 @@ from struct import pack
 from struct import unpack
 from struct import calcsize
 from collections import namedtuple
+from typing import Any, Iterator
 
 
 try:
@@ -71,9 +72,9 @@ class NetLinkError(GlobalError):
 class Sequence(int):
     _instance: dict[str, int] = dict()
 
-    def __new__(cls):
+    def __new__(cls) -> Sequence:
         cls._instance['next'] = cls._instance.get('next', 0) + 1
-        return cls._instance['next']
+        return cls._instance['next']  # type: ignore[return-value]
 
 
 class NetLinkRoute:
@@ -120,13 +121,13 @@ class NetLinkRoute:
     }
 
     @classmethod
-    def encode(cls, dtype, seq, flags, body, attributes):
+    def encode(cls, dtype: int, seq: int, flags: int, body: bytes, attributes: dict[int, bytes]) -> bytes:
         attrs = Attributes.encode(attributes)
         length = cls.Header.LEN + len(attrs) + len(body)
         return pack(cls.Header.PACK, length, dtype, flags, seq, cls.pid) + body + attrs
 
     @classmethod
-    def decode(cls, data):
+    def decode(cls, data: bytes) -> Iterator[Any]:
         while data:
             length, ntype, flags, seq, pid = unpack(cls.Header.PACK, data[: cls.Header.LEN])
             if len(data) < length:
@@ -135,7 +136,7 @@ class NetLinkRoute:
             data = data[length:]
 
     @classmethod
-    def send(cls, dtype, hflags, family=socket.AF_UNSPEC):
+    def send(cls, dtype: int, hflags: int, family: int = socket.AF_UNSPEC) -> Iterator[bytes]:
         sequence = Sequence()
 
         message = cls.encode(dtype, sequence, hflags, pack('Bxxx', family), {})
@@ -181,7 +182,7 @@ class Attributes:
         IFA_MULTICAST = 0x07
 
     @classmethod
-    def decode(cls, data):
+    def decode(cls, data: bytes) -> Iterator[tuple[int, bytes]]:
         while data:
             (
                 length,
@@ -194,9 +195,9 @@ class Attributes:
             data = data[int((length + 3) / 4) * 4 :]
 
     @classmethod
-    def encode(cls, attributes):
-        def _encode(atype, payload):
-            def pad(length, to=4):
+    def encode(cls, attributes: dict[int, bytes]) -> bytes:
+        def _encode(atype: int, payload: bytes) -> bytes:
+            def pad(length: int, to: int = 4) -> int:
                 return (length + to - 1) & ~(to - 1)
 
             length = cls.Header.LEN + len(payload)
@@ -218,10 +219,10 @@ class _Message:
         PACK = ''
         LEN = 0
 
-    def __init__(self, route):
+    def __init__(self, route: NetLinkRoute) -> None:
         self.route = route
 
-    def decode(self, data):
+    def decode(self, data: bytes) -> Any:
         extracted = list(unpack(self.Header.PACK, data[: self.Header.LEN]))
         attributes = Attributes.decode(data[self.Header.LEN :])
         extracted.append(dict(attributes))
@@ -229,10 +230,10 @@ class _Message:
 
     def extract(
         self,
-        atype,
-        flags=NetLinkRoute.Flags.NLM_F_REQUEST | NetLinkRoute.Flags.NLM_F_DUMP,
-        family=socket.AF_UNSPEC,
-    ):
+        atype: int,
+        flags: int = NetLinkRoute.Flags.NLM_F_REQUEST | NetLinkRoute.Flags.NLM_F_DUMP,
+        family: int = socket.AF_UNSPEC,
+    ) -> Iterator[Any]:
         for data in self.route.send(atype, flags, family):
             yield self.decode(data)
 
@@ -303,7 +304,7 @@ class Link(_Message):
             IFLA_QDISC = 0x06
             IFLA_STATS = 0x07
 
-    def get_links(self):
+    def get_links(self) -> Iterator[Any]:
         return self.extract(Link.Command.RTM_GETLINK)
 
 
@@ -376,7 +377,7 @@ class Address(_Message):
             IFLA_VF_PORTS = 0x18
             IFLA_PORT_SELF = 0x19
 
-    def get_addresses(self):
+    def get_addresses(self) -> Iterator[Any]:
         return self.extract(Address.Command.RTM_GETADDR)
 
 
@@ -434,7 +435,7 @@ class Neighbor(_Message):
             NDA_CACHEINFO = 0x03  # Cache statistics
             NDA_PROBES = 0x04
 
-    def get_neighbors(self):
+    def get_neighbors(self) -> Iterator[Any]:
         return self.extract(Neighbor.Command.RTM_GETNEIGH)
 
 
@@ -536,7 +537,7 @@ class Network(_Message):
             # RTA_MP_ALGO     = 0x0E
             RTA_TABLE = 0x0F
 
-    def get_routes(self):
+    def get_routes(self) -> Iterator[Any]:
         return self.extract(Network.Command.RTM_GETROUTE)
 
     # def _create (self, family):
@@ -544,7 +545,7 @@ class Network(_Message):
     # 	for _ in self.extract(Network.Command.RTM_NEWROUTE,flags,family):
     # 		yield _
 
-    def new_route(self):
+    def new_route(self) -> Iterator[Any]:
         network_flags = NetLinkRoute.Flags.NLM_F_REQUEST
         network_flags |= NetLinkRoute.Flags.NLM_F_CREATE
         network_flags |= NetLinkRoute.Flags.NLM_F_EXCL
@@ -574,7 +575,7 @@ class Network(_Message):
         for _ in self.extract(Network.Command.RTM_NEWROUTE, network_flags, family):
             yield _
 
-    def del_route(self):
+    def del_route(self) -> Iterator[Any]:
         return self.extract(Network.Command.RTM_DELROUTE)
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 import socket
 from struct import calcsize
 from collections import namedtuple
+from typing import Any, Iterator
 
 from exabgp.netlink.message import Message
 
@@ -69,5 +70,5 @@ class Neighbor(Message):
             NDA_PROBES = 0x04
 
     @classmethod
-    def get_neighbors(cls):
+    def get_neighbors(cls) -> Iterator[Any]:
         return cls.extract(Neighbor.Command.RTM_GETNEIGH)
