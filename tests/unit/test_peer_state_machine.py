@@ -141,7 +141,7 @@ class TestPeerStateTransitions:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.generated = False
+        neighbor.ephemeral = False
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)
@@ -157,7 +157,7 @@ class TestPeerStateTransitions:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.generated = False
+        neighbor.ephemeral = False
         neighbor.reset_rib = Mock()
         reactor = Mock()
 
@@ -167,8 +167,8 @@ class TestPeerStateTransitions:
         peer._reset('test reset')
 
         assert peer.fsm == FSM.IDLE
-        assert not peer.generator.running
-        assert not peer.generator.terminated
+        assert not peer.fsm_runner.running
+        assert not peer.fsm_runner.terminated
         assert peer._teardown is None
         neighbor.reset_rib.assert_called_once()
 
@@ -314,7 +314,7 @@ class TestPeerCollisionDetection:
 
         # Should accept connection and replace proto
         assert result is None
-        assert not peer.generator.running
+        assert not peer.fsm_runner.running
 
 
 class TestPeerTimers:
@@ -336,7 +336,7 @@ class TestPeerTimers:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.generated = False
+        neighbor.ephemeral = False
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)
@@ -387,7 +387,7 @@ class TestPeerErrorRecovery:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.generated = False
+        neighbor.ephemeral = False
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)
@@ -403,7 +403,7 @@ class TestPeerErrorRecovery:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.generated = False
+        neighbor.ephemeral = False
         neighbor.reset_rib = Mock()
         reactor = Mock()
 
@@ -423,7 +423,7 @@ class TestPeerErrorRecovery:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.generated = False
+        neighbor.ephemeral = False
         neighbor.reset_rib = Mock()
         reactor = Mock()
 
@@ -440,7 +440,7 @@ class TestPeerErrorRecovery:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.generated = False
+        neighbor.ephemeral = False
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)
@@ -457,7 +457,7 @@ class TestPeerErrorRecovery:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.generated = False
+        neighbor.ephemeral = False
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)
@@ -791,7 +791,7 @@ class TestPeerRun:
         reactor.processes.broken = Mock(return_value=False)
 
         peer = Peer(neighbor, reactor)
-        peer.generator.clear()  # Ensure not running, not terminated
+        peer.fsm_runner.clear()  # Ensure not running, not terminated
         peer._restart = True
         peer.fsm.change(FSM.IDLE)
 
