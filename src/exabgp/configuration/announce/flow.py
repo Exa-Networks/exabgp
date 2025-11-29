@@ -176,7 +176,7 @@ class AnnounceFlow(ParseAnnounce):
 
     def post(self) -> bool:
         self.scope.to_context(self.name)
-        self.scope.set('routes', self.scope.pop('route', {}).get('routes', []))
+        self.scope.set_value('routes', self.scope.pop('route', {}).get('routes', []))
         self.scope.extend('routes', self.scope.pop('flow', []))
         return True
 

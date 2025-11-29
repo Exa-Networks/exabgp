@@ -51,7 +51,7 @@ class ParseFlow(Section):
         return True
 
     def post(self) -> bool:
-        self.scope.set('routes', self.scope.get_routes())
+        self.scope.set_value('routes', self.scope.get_routes())
         return True
 
     def check(self) -> bool:

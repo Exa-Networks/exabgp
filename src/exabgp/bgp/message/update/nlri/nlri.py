@@ -125,6 +125,10 @@ class NLRI(Family):
     def assign(self, name: str, value: Any) -> None:
         setattr(self, name, value)
 
+    def add(self, data: Any) -> bool:
+        """Add data to NLRI. Only implemented by Flow NLRI."""
+        raise NotImplementedError('add() only implemented by Flow NLRI')
+
     def index(self) -> bytes:
         return Family.index(self) + self.pack_nlri()  # type: ignore[call-arg]
 

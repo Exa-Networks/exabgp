@@ -99,7 +99,7 @@ class JSON:
     def _kv(self, extra: dict[str, Any]) -> str:
         return ', '.join(f'"{k}": {self._string(v)}' for (k, v) in extra.items())
 
-    def _json_kv(self, extra: dict[str, Any]) -> str:
+    def _json_kv(self, extra: dict[Any, Any]) -> str:
         return ', '.join(f'"{k}": {v.json()}' for (k, v) in extra.items())
 
     def _json_list(self, extra: dict[str, Any]) -> str:

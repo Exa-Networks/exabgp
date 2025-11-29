@@ -111,8 +111,8 @@ class SectionAnnounce(ParseAnnounce):
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, parser, scope, error)
 
-    def clear(self) -> bool:
-        return True
+    def clear(self) -> None:
+        pass
 
     def pre(self) -> bool:
         return True
@@ -130,21 +130,21 @@ class AnnounceIPv4(ParseAnnounce):
     name = 'ipv4'
     afi = AFI.ipv4
 
-    def clear(self) -> bool:
-        return True
+    def clear(self) -> None:
+        pass
 
 
 class AnnounceIPv6(ParseAnnounce):
     name = 'ipv6'
     afi = AFI.ipv6
 
-    def clear(self) -> bool:
-        return True
+    def clear(self) -> None:
+        pass
 
 
 class AnnounceL2VPN(ParseAnnounce):
     name = 'l2vpn'
     afi = AFI.l2vpn
 
-    def clear(self) -> bool:
-        return True
+    def clear(self) -> None:
+        pass

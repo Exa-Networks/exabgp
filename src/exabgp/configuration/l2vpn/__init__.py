@@ -24,8 +24,8 @@ class ParseL2VPN(ParseVPLS):
     def __init__(self, parser, scope, error):
         ParseVPLS.__init__(self, parser, scope, error)
 
-    def clear(self) -> bool:
-        return True
+    def clear(self) -> None:
+        pass
 
     def pre(self):
         return True

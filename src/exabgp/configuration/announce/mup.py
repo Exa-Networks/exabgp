@@ -105,7 +105,7 @@ def mup(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
         command_action = AnnounceMup.action[command]
         if command_action == 'nlri-add':
             for adding in AnnounceMup.known[command](tokeniser):
-                change.nlri.add(adding)  # type: ignore[attr-defined]
+                change.nlri.add(adding)
         elif command_action == 'attribute-add':
             change.attributes.add(AnnounceMup.known[command](tokeniser))
         elif command_action == 'nexthop-and-attribute':
