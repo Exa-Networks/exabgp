@@ -20,13 +20,14 @@ from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
+from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
 from exabgp.rib import RIB
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.open.routerid import RouterID
-    from exabgp.protocol.ip import IP
     from exabgp.rib.change import Change
 
 
@@ -37,17 +38,11 @@ class Neighbor:
     # Singleton empty neighbor (initialized after class definition)
     EMPTY: ClassVar['Neighbor']
 
-    # Configuration attributes (previously in defaults dict)
+    # Session (connection-related) configuration
+    session: Session
+
+    # BGP policy configuration (non-session)
     description: str
-    router_id: 'RouterID' | None
-    local_address: 'IP' | None
-    source_interface: str | None
-    peer_address: 'IP' | None
-    local_as: 'ASN' | None
-    peer_as: 'ASN' | None
-    passive: bool
-    listen: int
-    connect: int
     hold_time: HoldTime
     rate_limit: int
     host_name: str
@@ -57,16 +52,10 @@ class Neighbor:
     adj_rib_in: bool
     adj_rib_out: bool
     manual_eor: bool
-    md5_password: str | None
-    md5_base64: bool
-    md5_ip: 'IP' | None
-    outgoing_ttl: int | None
-    incoming_ttl: int | None
 
     # Other instance attributes
     api: dict[str, Any]
     capability: NeighborCapability
-    auto_discovery: bool
     range_size: int
     generated: bool
     _families: list[tuple[AFI, SAFI]]
@@ -82,18 +71,129 @@ class Neighbor:
     counter: Counter[str]
     uid: str
 
+    # Property aliases for backward compatibility during migration
+    @property
+    def router_id(self) -> 'RouterID | None':
+        return self.session.router_id
+
+    @router_id.setter
+    def router_id(self, value: 'RouterID | None') -> None:
+        self.session.router_id = value
+
+    @property
+    def local_address(self) -> IP:
+        return self.session.local_address
+
+    @local_address.setter
+    def local_address(self, value: IP | None) -> None:
+        self.session.local_address = value if value is not None else IP.NoNextHop
+
+    @property
+    def peer_address(self) -> IP:
+        return self.session.peer_address
+
+    @peer_address.setter
+    def peer_address(self, value: IP | None) -> None:
+        self.session.peer_address = value if value is not None else IP.NoNextHop
+
+    @property
+    def local_as(self) -> 'ASN':
+        return self.session.local_as
+
+    @local_as.setter
+    def local_as(self, value: 'ASN') -> None:
+        self.session.local_as = value
+
+    @property
+    def peer_as(self) -> 'ASN':
+        return self.session.peer_as
+
+    @peer_as.setter
+    def peer_as(self, value: 'ASN') -> None:
+        self.session.peer_as = value
+
+    @property
+    def passive(self) -> bool:
+        return self.session.passive
+
+    @passive.setter
+    def passive(self, value: bool) -> None:
+        self.session.passive = value
+
+    @property
+    def listen(self) -> int:
+        return self.session.listen
+
+    @listen.setter
+    def listen(self, value: int) -> None:
+        self.session.listen = value
+
+    @property
+    def connect(self) -> int:
+        return self.session.connect
+
+    @connect.setter
+    def connect(self, value: int) -> None:
+        self.session.connect = value
+
+    @property
+    def source_interface(self) -> str:
+        return self.session.source_interface
+
+    @source_interface.setter
+    def source_interface(self, value: str | None) -> None:
+        self.session.source_interface = value if value is not None else ''
+
+    @property
+    def md5_password(self) -> str:
+        return self.session.md5_password
+
+    @md5_password.setter
+    def md5_password(self, value: str) -> None:
+        self.session.md5_password = value
+
+    @property
+    def md5_base64(self) -> bool:
+        return self.session.md5_base64
+
+    @md5_base64.setter
+    def md5_base64(self, value: bool) -> None:
+        self.session.md5_base64 = value
+
+    @property
+    def md5_ip(self) -> IP | None:
+        return self.session.md5_ip
+
+    @md5_ip.setter
+    def md5_ip(self, value: IP | None) -> None:
+        self.session.md5_ip = value
+
+    @property
+    def outgoing_ttl(self) -> int | None:
+        return self.session.outgoing_ttl
+
+    @outgoing_ttl.setter
+    def outgoing_ttl(self, value: int | None) -> None:
+        self.session.outgoing_ttl = value
+
+    @property
+    def incoming_ttl(self) -> int | None:
+        return self.session.incoming_ttl
+
+    @incoming_ttl.setter
+    def incoming_ttl(self, value: int | None) -> None:
+        self.session.incoming_ttl = value
+
+    @property
+    def auto_discovery(self) -> bool:
+        return self.session.auto_discovery
+
     def __init__(self) -> None:
-        # Configuration attributes with defaults
+        # Session (connection-related) configuration
+        self.session = Session()
+
+        # BGP policy configuration
         self.description = ''
-        self.router_id = None
-        self.local_address = None
-        self.source_interface = None
-        self.peer_address = None
-        self.local_as = None
-        self.peer_as = None
-        self.passive = False
-        self.listen = 0
-        self.connect = 0
         self.hold_time = HoldTime(180)
         self.rate_limit = 0
         self.host_name = ''
@@ -103,20 +203,12 @@ class Neighbor:
         self.adj_rib_in = True
         self.adj_rib_out = True
         self.manual_eor = False
-        self.md5_password = None
-        self.md5_base64 = False
-        self.md5_ip = None
-        self.outgoing_ttl = None
-        self.incoming_ttl = None
 
         # API configuration
         self.api: dict[str, Any] = {}
 
         # Capability configuration (typed dataclass)
         self.capability = NeighborCapability()
-
-        # local_address uses auto discovery
-        self.auto_discovery = False
 
         self.range_size = 1
 
@@ -159,8 +251,8 @@ class Neighbor:
         return cls()
 
     def infer(self) -> None:
-        if self.md5_ip is None:
-            self.md5_ip = self.local_address
+        # Delegate session-related inference to Session
+        self.session.infer()
 
         # If graceful-restart is enabled but time is 0, use hold-time
         if self.capability.graceful_restart.is_enabled() and self.capability.graceful_restart.time == 0:
@@ -197,9 +289,9 @@ class Neighbor:
             session = '/'.join(f'{afi.name()}-{safi.name()}' for (afi, safi) in self.families())
         else:
             session = 'in-open'
-        local_addr = self.local_address if self.peer_address is not None else 'auto'
-        local_as = self.local_as if self.local_as is not None else 'auto'
-        peer_as = self.peer_as if self.peer_as is not None else 'auto'
+        local_addr = 'auto' if self.auto_discovery else self.local_address
+        local_as = self.local_as if self.local_as else 'auto'
+        peer_as = self.peer_as if self.peer_as else 'auto'
         return f'neighbor {self.peer_address} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self.router_id} family-allowed {session}'
 
     def families(self) -> list[tuple[AFI, SAFI]]:
@@ -257,11 +349,9 @@ class Neighbor:
             self._addpath.remove(family)
 
     def missing(self) -> str:
-        if self.local_address is None and not self.auto_discovery:
-            return 'local-address'
         if self.listen > 0 and self.auto_discovery:
             return 'local-address'
-        if self.peer_address is None:
+        if self.peer_address is IP.NoNextHop:
             return 'peer-address'
         if self.auto_discovery and not self.router_id:
             return 'router-id'
@@ -307,15 +397,15 @@ class Neighbor:
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def ip_self(self, afi: AFI) -> 'IP':
-        if self.local_address is not None and afi == self.local_address.afi:
+    def ip_self(self, afi: AFI) -> IP:
+        if not self.auto_discovery and afi == self.local_address.afi:
             return self.local_address
 
         # attempting to not barf for next-hop self when the peer is IPv6
         if afi == AFI.ipv4 and self.router_id is not None:
             return self.router_id
 
-        local_afi = self.local_address.afi if self.local_address else 'unknown'
+        local_afi = self.local_address.afi if not self.auto_discovery else 'unknown'
         raise TypeError(
             f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({local_afi})',
         )

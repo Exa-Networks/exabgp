@@ -100,14 +100,14 @@ class Protocol:
             return
 
         assert self.neighbor.peer_address is not None
-        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery and self.neighbor.md5_ip else None
+        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery and self.neighbor.md5_ip else ''
         peer = self.neighbor.peer_address.top()
         afi = self.neighbor.peer_address.afi
-        md5 = self.neighbor.md5_password or ''
+        md5 = self.neighbor.md5_password
         md5_base64 = self.neighbor.md5_base64
         ttl_out = self.neighbor.outgoing_ttl
         itf = self.neighbor.source_interface
-        self.connection = Outgoing(afi, peer, local or '', self.port, md5, md5_base64, ttl_out, itf)
+        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
 
         for connected in self.connection.establish():
             yield False
@@ -136,14 +136,14 @@ class Protocol:
             return True
 
         assert self.neighbor.peer_address is not None
-        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery and self.neighbor.md5_ip else None
+        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery and self.neighbor.md5_ip else ''
         peer = self.neighbor.peer_address.top()
         afi = self.neighbor.peer_address.afi
-        md5 = self.neighbor.md5_password or ''
+        md5 = self.neighbor.md5_password
         md5_base64 = self.neighbor.md5_base64
         ttl_out = self.neighbor.outgoing_ttl
         itf = self.neighbor.source_interface
-        self.connection = Outgoing(afi, peer, local or '', self.port, md5, md5_base64, ttl_out, itf)
+        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
 
         # Use async establish instead of generator
         connected = await self.connection.establish_async()
