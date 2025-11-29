@@ -119,8 +119,8 @@ class JSON:
                     },
                 ),
             ),
-            '',
-            '',
+            b'',
+            b'',
             neighbor,
             message_type='state',
         )
@@ -136,8 +136,8 @@ class JSON:
                     },
                 ),
             ),
-            '',
-            '',
+            b'',
+            b'',
             neighbor,
             message_type='state',
         )
@@ -159,8 +159,8 @@ class JSON:
                     },
                 ),
             ),
-            '',
-            '',
+            b'',
+            b'',
             neighbor,
             message_type='state',
         )
@@ -172,8 +172,8 @@ class JSON:
                     'notification': 'shutdown',
                 },
             ),
-            '',
-            '',
+            b'',
+            b'',
             None,
             message_type='notification',
         )
@@ -221,8 +221,8 @@ class JSON:
     def negotiated(self, neighbor: 'Neighbor', negotiated: 'Negotiated') -> str:
         return self._header(
             self._neighbor(neighbor, None, self._kv(self._negotiated(negotiated))),
-            '',
-            '',
+            b'',
+            b'',
             neighbor,
             message_type='negotiated',
         )
@@ -230,8 +230,8 @@ class JSON:
     def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> str:
         return self._header(
             self._neighbor(neighbor, None, self._kv({'state': fsm.name()})),
-            '',
-            '',
+            b'',
+            b'',
             neighbor,
             message_type='fsm',
         )
@@ -248,8 +248,8 @@ class JSON:
                     },
                 ),
             ),
-            '',
-            '',
+            b'',
+            b'',
             neighbor,
             message_type='signal',
         )
@@ -310,8 +310,8 @@ class JSON:
             message.update(self._negotiated(negotiated))
         return self._header(
             self._neighbor(neighbor, direction, self._kv(message)),
-            '',
-            '',
+            b'',
+            b'',
             neighbor,
             message_type=Message.string(category),
         )
