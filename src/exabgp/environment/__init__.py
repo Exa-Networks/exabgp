@@ -3,29 +3,25 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-# this is where the environment should be taken from
-# it makes sure the environment is setup before it is imported
-
-import exabgp.environment.setup  # noqa: F401,E261
-from exabgp.environment.environment import Env  # noqa: F401,E261
-
+# Import base constants
 from exabgp.environment.base import APPLICATION  # noqa: F401,E261
 from exabgp.environment.base import ENVFILE  # noqa: F401,E261
 from exabgp.environment.base import ROOT  # noqa: F401,E261
 from exabgp.environment.base import ETC  # noqa: F401,E261
 
-# As soon as we import anything, a COPY is made in the local
-# namespace, it mean that we can not import the GlobalHashTable
-# directly but must ask for a copy to be made each time
-# at the time of import, so using a function get around it
-from exabgp.environment.hashtable import GlobalHashTable as __
+# Import new typed configuration system
+from exabgp.environment.config import Environment  # noqa: F401,E261
+
+# Setup environment on import
+Environment.setup()
 
 if TYPE_CHECKING:
-    from exabgp.environment.hashtable import GlobalHashTable
+    pass
 
 
-def getenv() -> GlobalHashTable:
-    return __()
+def getenv() -> Environment:
+    """Return the global environment configuration."""
+    return Environment()
 
 
 def getconf(name: str) -> str:
@@ -43,3 +39,7 @@ def getconf(name: str) -> str:
         return absolute
 
     return ''
+
+
+# Backward compatibility - Env class alias
+Env = Environment

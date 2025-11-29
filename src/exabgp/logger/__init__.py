@@ -4,7 +4,7 @@ import time
 from typing import Callable, ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from exabgp.environment.environment import Env
+    from exabgp.environment.config import Environment
 
 from exabgp.logger.option import option
 from exabgp.logger.handler import get_logger  # noqa: F401,E261,E501
@@ -33,7 +33,7 @@ class _log:
     logger: ClassVar[Callable[..., None]] = _noop_logger
 
     @staticmethod
-    def init(env: 'Env') -> None:
+    def init(env: 'Environment') -> None:
         option.setup(env)
 
     @classmethod

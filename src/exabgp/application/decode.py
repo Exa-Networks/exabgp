@@ -78,7 +78,7 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
     env = getenv()
     env.bgp.passive = True
     env.log.parser = True
-    env.tcp.bind = ''
+    env.tcp.bind = []
 
     if cmdarg.debug:
         env.log.all = True
