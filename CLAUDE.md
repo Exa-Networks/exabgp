@@ -147,6 +147,16 @@ env EDITOR=cat ./qa/bin/functional encoding --edit <letter>
 # Stress test - run N times and report statistics
 ./qa/bin/functional encoding <letter> --stress 10
 # Shows pass/fail per run, timing stats (min/avg/max/stddev)
+
+# Verbose mode - show full daemon/client output for each test
+./qa/bin/functional encoding -v
+# Shows ALL output (no truncation) on failure, useful for debugging
+# Filters only keepalive timer spam, all other output preserved
+
+# Quiet mode - minimal output, verbose only on failure
+./qa/bin/functional encoding -q
+# Single line on success: "passed N/N (100.0%)"
+# Full verbose output on failure with debug hints
 ```
 
 **See:**

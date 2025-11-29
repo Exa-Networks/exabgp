@@ -819,6 +819,9 @@ class Tests:
         daemons_started: Optional[int] = None,
         clients_started: Optional[int] = None,
     ) -> None:
+        # In quiet mode, suppress all display output
+        if getattr(self, '_quiet', False):
+            return
         # Show timer in setup phase with [0/max] format
         if daemons_started is not None and clients_started is not None:
             if self._max_timeout:
@@ -901,7 +904,9 @@ class Tests:
         # Reset escape sequence at end forces terminal to process all characters
         flush(f'\r\033[K{status}\033[0m', end='')
 
-    def legend(self) -> None:
+    def legend(self, quiet: bool = False) -> None:
+        if quiet:
+            return
         flush(
             '\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N passed N failed N [failed test IDs] pending N [pending test IDs]\n'
         )
@@ -1207,8 +1212,18 @@ class Tests:
         failed: List[str],
         timed_out: List[str],
         skipped: List[str],
+        quiet: bool = False,
     ) -> None:
-        """Print test result summary"""
+        """Print test result summary. If quiet=True, only print on failure."""
+        all_failed = failed + timed_out
+        total_run = len(passed) + len(failed) + len(timed_out)
+
+        # Quiet mode: single line on success, verbose on failure
+        if quiet and not all_failed:
+            success_rate = (len(passed) / total_run) * 100 if total_run > 0 else 0
+            flush(f'{green()}passed{reset()} {len(passed)}/{total_run} ({success_rate:.1f}%)')
+            return
+
         flush()
         flush('=' * 60)
         flush('TEST SUMMARY')
@@ -1239,13 +1254,11 @@ class Tests:
 
         flush('=' * 60)
 
-        total_run = len(passed) + len(failed) + len(timed_out)
         if total_run > 0:
             success_rate = (len(passed) / total_run) * 100 if total_run > 0 else 0
             flush(f'Total: {total_run} test(s) run, {success_rate:.1f}% passed')
 
         # Add hint to debug failed tests individually
-        all_failed = failed + timed_out
         if all_failed and total_run > 1:
             flush()
             flush('To debug failed tests, run individually:')
@@ -1265,6 +1278,7 @@ class Tests:
         server: Optional['Exec'],
         client: Optional['Exec'],
         num_tests_selected: Optional[int],
+        quiet: bool = False,
     ) -> None:
         """Print summary of test results
 
@@ -1272,6 +1286,7 @@ class Tests:
             server: Optional server Exec object for single test debugging
             client: Optional client Exec object for single test debugging
             num_tests_selected: Number of tests that were selected to run (before completion)
+            quiet: If True, only print single line on success, verbose on failure
         """
         # Collect test results into categorized lists
         passed: List[str] = []
@@ -1289,11 +1304,12 @@ class Tests:
             elif test.state == State.SKIP:
                 skipped.append(test.nick)
 
-        # Print debug output if in single test mode
-        self._print_debug_output(server, client, num_tests_selected)
+        # Print debug output if in single test mode (only on failure in quiet mode)
+        if not quiet or failed or timed_out:
+            self._print_debug_output(server, client, num_tests_selected)
 
         # Print summary results
-        self._print_summary_results(passed, failed, timed_out, skipped)
+        self._print_summary_results(passed, failed, timed_out, skipped, quiet=quiet)
 
 
 def parse_msg_options(msg_file: str) -> int:
@@ -1548,13 +1564,15 @@ class EncodingTests(Tests):
         save_dir: Optional[str] = None,
         verbose: bool = False,
         debug_tests: Optional[List[str]] = None,
+        quiet: bool = False,
     ) -> bool:
         # Set max timeout before setup so it shows during initialization
         self._max_timeout: int = timeout
         self._save_dir = save_dir  # Store for use in server startup
         self._verbose = verbose  # Store for per-test output display
         self._debug_tests = set(debug_tests) if debug_tests else set()  # Tests to show verbose output for
-        self.legend()
+        self._quiet = quiet  # Quiet mode: single line on success, verbose on failure
+        self.legend(quiet=quiet)
 
         # Install signal handlers to detect when we're killed by another instance
         signal.signal(signal.SIGTERM, sigterm_handler)
@@ -1767,6 +1785,7 @@ class EncodingTests(Tests):
             server=server_exec,
             client=client_exec,
             num_tests_selected=num_tests_selected,
+            quiet=self._quiet,
         )
         return success
 
@@ -2206,6 +2225,13 @@ def add_test(
             nargs='+',
             default=None,
         )
+    if 'quiet' in extra:
+        sub.add_argument(
+            '--quiet',
+            '-q',
+            help='minimal output: single line on success, verbose on failure',
+            action='store_true',
+        )
     sub.add_argument('test', help='name of the test(s) to run', nargs='*', default=None)
 
     def func(parsed: Namespace) -> None:
@@ -2273,10 +2299,11 @@ def add_test(
             run_stress_test(tests, test_nick, stress_count, parsed.timeout, save_dir)
             return
 
-        # Pass save_dir, verbose, and debug_tests only if the test class supports it (encoding tests only)
+        # Pass save_dir, verbose, debug_tests, and quiet only if the test class supports it (encoding tests only)
         save_dir = getattr(parsed, 'save', None)
         verbose = getattr(parsed, 'verbose', False)
         debug_tests = getattr(parsed, 'debug', None)
+        quiet = getattr(parsed, 'quiet', False)
 
         # Handle --debug: run all tests but only show verbose output for specified tests
         if debug_tests and isinstance(tests, EncodingTests):
@@ -2288,11 +2315,12 @@ def add_test(
 
         if hasattr(tests, '_save_dir') or isinstance(tests, EncodingTests):
             success_exit = tests.run_selected(
-                parsed.timeout, save_dir=save_dir, verbose=verbose, debug_tests=debug_tests
+                parsed.timeout, save_dir=save_dir, verbose=verbose, debug_tests=debug_tests, quiet=quiet
             )
         else:
             success_exit = tests.run_selected(parsed.timeout)
-        flush()
+        if not quiet:
+            flush()
         sys.exit(0 if success_exit else 1)
 
     sub.set_defaults(func=func)
@@ -2331,6 +2359,7 @@ if __name__ == '__main__':
             'stress',
             'verbose',
             'debug',
+            'quiet',
         ],
     )
     add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit'])
