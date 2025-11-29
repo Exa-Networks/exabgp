@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.flow import Flow
@@ -21,13 +21,16 @@ from exabgp.environment import getenv
 from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import extract_neighbors, match_neighbors
 
+if TYPE_CHECKING:
+    from exabgp.reactor.loop import Reactor
+
 
 def register_rib():
     pass
 
 
 def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_name, extensive, use_json):
-    def to_text(key, changes):
+    def to_text(key: str, changes: list[Any]) -> None:
         for change in changes:
             if not isinstance(change.nlri, route_type):
                 # log something about this drop?
@@ -39,14 +42,14 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
             msg = f'{neighbor} {family} {details}'
             reactor.processes.write(service, msg)
 
-    def to_json(key, changes):
+    def to_json(key: str, changes: list[Any]) -> None:
         jason: dict[str, dict[str, Any]] = {}
         neighbor = reactor.neighbor(key)
         neighbor_ip = reactor.neighbor_ip(key)
         routes = jason.setdefault(neighbor_ip, {'routes': []})['routes']
 
         if extensive:
-            jason[neighbor_ip].update(NeighborTemplate.to_json(neighbor))
+            jason[neighbor_ip].update(NeighborTemplate.formated_dict(neighbor))
 
         for change in changes:
             if not isinstance(change.nlri, route_type):
@@ -99,7 +102,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
     ],
     True,
 )
-def show_adj_rib(self, reactor, service, line, use_json):
+def show_adj_rib(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     words = line.split()
     extensive = line.endswith(' extensive')
     try:
@@ -143,7 +146,7 @@ def show_adj_rib(self, reactor, service, line, use_json):
 
 
 @Command.register('flush adj-rib out', json_support=True)
-def flush_adj_rib_out(self, reactor, service, line, use_json):
+def flush_adj_rib_out(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback(self, peers):
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
         self.log_message(f'flushing adjb-rib out for {peer_list}')
@@ -173,7 +176,7 @@ def flush_adj_rib_out(self, reactor, service, line, use_json):
 
 
 @Command.register('clear adj-rib', json_support=True)
-def clear_adj_rib(self, reactor, service, line, use_json):
+def clear_adj_rib(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback(self, peers, direction):
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
         self.log_message(f'clearing adjb-rib-{direction} for {peer_list}')
