@@ -274,7 +274,7 @@ class Listener:
 
                 new_neighbor = copy.copy(ranged_neighbor[0])
                 new_neighbor.range_size = 1
-                new_neighbor.generated = True
+                new_neighbor.ephemeral = True
                 new_neighbor.session.local_address = IP.create(connection.peer)
                 new_neighbor.session.peer_address = IP.create(connection.local)
                 if not new_neighbor.session.router_id:

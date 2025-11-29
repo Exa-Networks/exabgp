@@ -93,8 +93,8 @@ class Neighbor:
 
         self.range_size = 1
 
-        # was this Neighbor generated from a range
-        self.generated = False
+        # True for neighbors dynamically created from a range (won't restart on disconnect)
+        self.ephemeral = False
 
         self._families = []
         self._nexthop = []

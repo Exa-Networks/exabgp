@@ -75,10 +75,10 @@ class Stats(dict[str, Any]):
         self.__changed = set()
 
 
-# ======================================================================== PeerGenerator
+# ======================================================================== FSMRunner
 
 
-class PeerGenerator:
+class FSMRunner:
     """Encapsulates peer generator state machine.
 
     Replaces the old tri-state: None (ready), False (terminated), Generator (running).
@@ -165,7 +165,7 @@ class Peer:
             },
         )
 
-        self.generator: PeerGenerator = PeerGenerator()
+        self.fsm_runner: FSMRunner = FSMRunner()
         self._async_task: asyncio.Task[None] | None = None  # For async mode
 
         # The peer should restart after a stop
@@ -225,11 +225,11 @@ class Peer:
     def _reset(self, message: str = '', error: str | Exception = '') -> None:
         self._close(message, error)
 
-        if not self._restart or self.neighbor.generated:
-            self.generator.terminate()
+        if not self._restart or self.neighbor.ephemeral:
+            self.fsm_runner.terminate()
             return
 
-        self.generator.clear()
+        self.fsm_runner.clear()
         self._teardown = None
         self.neighbor.reset_rib()
 
@@ -239,7 +239,7 @@ class Peer:
             self._neighbor = None
 
     def _stop(self, message: str) -> None:
-        self.generator.clear()
+        self.fsm_runner.clear()
         if self.proto:
             self._close(f'stop, message [{message}]')
 
@@ -368,7 +368,7 @@ class Peer:
             self._close('closing outgoing connection as we have another incoming on with higher router-id')
 
         self.proto = Protocol(self).accept(connection)
-        self.generator.clear()
+        self.fsm_runner.clear()
         # Let's make sure we do some work with this connection
         self._delay.reset()
         return None
@@ -1183,27 +1183,27 @@ class Peer:
                 self.stop()
             return _DONE
 
-        if self.generator.running:
+        if self.fsm_runner.running:
             try:
-                return self.generator.advance()
+                return self.fsm_runner.advance()
             except StopIteration:
-                self.generator.clear()
+                self.fsm_runner.clear()
                 if self._restart:
                     return _NOP
                 return _DONE
 
-        if self.generator.terminated:
+        if self.fsm_runner.terminated:
             return _DONE
 
         if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
             log.debug(lazymsg('peer.stopping reason=other_connection_established'), self.id())
-            self.generator.terminate()
+            self.fsm_runner.terminate()
             return _NOP
         if self._delay.backoff():
             return _NOP
         if self._restart:
             log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
-            self.generator.set(self._run())
+            self.fsm_runner.set(self._run())
             return _NOP
         return _DONE
 
