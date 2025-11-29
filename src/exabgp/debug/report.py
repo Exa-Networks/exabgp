@@ -11,6 +11,7 @@ import sys
 import platform
 import traceback
 from io import StringIO
+from types import TracebackType
 
 from exabgp.version import version
 from exabgp.environment import Env
@@ -19,7 +20,7 @@ from exabgp.environment import ROOT
 from exabgp.logger import history
 
 
-def string_exception(exception):
+def string_exception(exception: BaseException) -> str:
     buff = StringIO()
     traceback.print_exc(file=buff)
     trace = buff.getvalue()
@@ -27,13 +28,13 @@ def string_exception(exception):
     return trace
 
 
-def format_exception(exception):
+def format_exception(exception: BaseException) -> str:
     return '\n'.join(
         [_NO_PANIC + _INFO, '', '', str(type(exception)), str(exception), string_exception(exception), _FOOTER],
     )
 
 
-def format_panic(dtype, value, trace):
+def format_panic(dtype: type[BaseException], value: BaseException, trace: TracebackType | None) -> str:
     result = _PANIC + _INFO
 
     result += '-- Traceback\n\n'

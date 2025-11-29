@@ -52,5 +52,5 @@ class Protocol(Resource):
 
     names = dict([(value, name) for (name, value) in codes.items()])
 
-    def pack(self):
+    def pack(self) -> bytes:
         return bytes([self])
