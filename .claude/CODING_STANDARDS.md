@@ -137,6 +137,34 @@ After fixing ANY bug:
 
 ---
 
+## Mypy Strict Locking (MANDATORY)
+
+**Rule:** When a module passes mypy strict mode with 0 errors, lock it in `pyproject.toml` as part of the same commit.
+
+**Check before committing:**
+```bash
+# Test if module passes strict
+mypy --disallow-untyped-defs --disallow-untyped-calls --disallow-incomplete-defs --warn-return-any src/exabgp/<module>/
+```
+
+**If output shows "Success: no issues found":**
+1. Add strict override to `pyproject.toml`:
+```toml
+[[tool.mypy.overrides]]
+module = "exabgp.<module>.*"
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+warn_return_any = true
+```
+2. Include this change in the same commit
+
+**Why:** Locking prevents regression - once clean, stays clean.
+
+**Currently locked:** `util.*`, `data.*`, `environment.*`, `logger.*`
+
+---
+
 ## Quick Checklist
 
 - [ ] Python 3.10+ syntax (prefer `int | str` over `Union[int, str]`)
@@ -146,3 +174,4 @@ After fixing ANY bug:
 - [ ] No FIB manipulation
 - [ ] User explicitly requested commit/push
 - [ ] Bug fix? Added to `.claude/BACKPORT.md`
+- [ ] Module passes mypy strict? Lock it in `pyproject.toml`
