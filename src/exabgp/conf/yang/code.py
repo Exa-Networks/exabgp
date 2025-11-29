@@ -15,7 +15,8 @@ from __future__ import annotations
 from ast import Module, Import, FunctionDef, arguments, arg, alias
 from ast import Load, Call, Return, Name, Attribute, Constant  # , Param
 from ast import If, Compare, Gt, Lt, And  # , Add, GtE, LtE, Or
-from ast import BoolOp, UnaryOp, Not, USub
+from ast import BoolOp, UnaryOp, Not, USub, expr
+from typing import Any, Iterator
 
 # import astunparse
 
@@ -26,7 +27,7 @@ import sys
 
 if sys.version_info[:3] < (3, 7):
 
-    def breakpoint():
+    def breakpoint() -> None:
         import pdb  # noqa: T100
 
         pdb.set_trace()  # noqa: T100
@@ -34,12 +35,12 @@ if sys.version_info[:3] < (3, 7):
 
 
 class Code:
-    def __init__(self, tree):
+    def __init__(self, tree: dict[str, Any]) -> None:
         # the modules (import) required within the generated function
-        self.imported = set()
+        self.imported: set[str] = set()
         # type/function referenced in other types (union, ...)
         # which should therefore also be generated
-        self.referenced = set()
+        self.referenced: set[str] = set()
         # the parsed yang as a tree
         self.tree = tree
         # the main yang namespace/module
@@ -48,35 +49,35 @@ class Code:
         self.ns = self.module
 
     @staticmethod
-    def _missing(**kargs):
+    def _missing(**kargs: Any) -> None:
         sys.stdout.write(' '.join(f'{k}={v}' for k, v in kargs.items()))
         sys.stdout.write('\n')
         # this code path was not handled
         breakpoint()
 
     @staticmethod
-    def _unique(name, counter={}):  # noqa: B006 - intentional accumulator pattern
+    def _unique(name: str, counter: dict[str, int] = {}) -> str:  # noqa: B006 - intentional accumulator pattern
         unique = counter.get(name, 0)
         unique += 1
         counter[name] = unique
         return f'{name}_{unique}'
 
     @staticmethod
-    def _return_boolean(value):
+    def _return_boolean(value: bool) -> list[Return]:
         return [
             Return(
                 value=Constant(value=value, kind=None),
             ),
         ]
 
-    def _python_name(self, name):
+    def _python_name(self, name: str) -> str:
         if self.ns != self.tree[kw['loaded']][0] and ':' not in name:
             # XXX: could this lead to function shadowing?
             name = f'{self.ns}:{name}'
         # XXX: could this lead to function shadowing?
         return name.replace(':', '__').replace('-', '_')
 
-    def _if_pattern(self, pattern):
+    def _if_pattern(self, pattern: str) -> list[If]:
         self.imported.add('re')
         # fix known ietf regex use
         pattern = pattern.replace('\\p{N}\\p{L}', '\\w')
@@ -111,7 +112,7 @@ class Code:
             ),
         ]
 
-    def _if_length(self, minimum, maximum):
+    def _if_length(self, minimum: str | int, maximum: str | int) -> list[If]:
         return [
             If(
                 test=Compare(
@@ -138,7 +139,7 @@ class Code:
             ),
         ]
 
-    def _iter_if_string(self, node):
+    def _iter_if_string(self, node: dict[str, Any]) -> Iterator[list[If]]:
         for what, sub in node.items():
             if what == kw['pattern']:
                 yield self._if_pattern(sub)
@@ -155,7 +156,7 @@ class Code:
             self._missing(if_type=what, node=node)
 
     @staticmethod
-    def _if_digit():
+    def _if_digit() -> list[If]:
         return [
             If(
                 test=UnaryOp(
@@ -242,12 +243,12 @@ class Code:
             ),
         ]
 
-    def _if_range(self, minimum, maximum):
+    def _if_range(self, minimum: int, maximum: int) -> list[If]:
         return self._if_digit() + self._if_lt(minimum) + self._if_gt(maximum)
 
-    def _union(self, node):
-        values = []
-        generated = []
+    def _union(self, node: list[dict[str, Any]]) -> Iterator[Any]:
+        values: list[expr] = []
+        generated: list[str] = []
 
         for union in node:
             for what, sub in union.items():
@@ -290,11 +291,11 @@ class Code:
             ),
         ]
 
-    def _imported(self):
+    def _imported(self) -> Iterator[Import]:
         for imported in self.imported:
             yield Import(names=[alias(name=imported, asname=None)])
 
-    def _type(self, what, name, node):
+    def _type(self, what: str, name: str, node: Any) -> Any:
         if what == 'union':
             return list(self._union(node))
 
@@ -315,11 +316,11 @@ class Code:
 
         self._missing(what=what, name=name, node=node)
 
-    def _iter(self, node):
+    def _iter(self, node: dict[str, Any]) -> Iterator[Any]:
         for keyword, content in node.items():
             yield self._type(keyword, keyword, content)
 
-    def _function(self, name, body):
+    def _function(self, name: str, body: Any) -> list[FunctionDef]:
         # XXX: could this lead to function shadowing?
         return [
             FunctionDef(
@@ -340,7 +341,7 @@ class Code:
             ),
         ]
 
-    def _typedef(self, module, only):
+    def _typedef(self, module: str, only: str) -> Iterator[list[FunctionDef]]:
         td = self.tree[module][kw['typedef']]
 
         for name in td:
@@ -349,14 +350,14 @@ class Code:
             body = list(self._iter(td[name][kw['type']]))
             yield self._function(name, body)
 
-    def _module(self, module, only=''):
+    def _module(self, module: str, only: str = '') -> list[Any]:
         generated = list(self._typedef(module, only))
         # while self.referenced:
         #     module, check = self.referenced.pop(0)
         #     generated += list(self._typedef(module, check))
         return generated
 
-    def generate(self, module):
+    def generate(self, module: str) -> Module:
         # this must be run first so that the imported module can be generated
         body = list(self._module(module))
         ast = Module(

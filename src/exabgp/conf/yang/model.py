@@ -13,6 +13,7 @@ import glob
 import shutil
 import urllib
 import urllib.request
+from typing import Any
 
 
 class Model:
@@ -20,9 +21,9 @@ class Model:
         'ietf': 'https://raw.githubusercontent.com/YangModels/yang/master/standard/ietf/RFC',
     }
 
-    models: dict[str, str] = {}
+    models: dict[str, Any] = {}
 
-    def __init__(self, library, folder, module):
+    def __init__(self, library: str, folder: str, module: str) -> None:
         self.library = library
         self.folder = folder
 
@@ -34,7 +35,7 @@ class Model:
         if not os.path.exists('models'):
             os.mkdir('models')
 
-    def _write(self, string):
+    def _write(self, string: str) -> None:
         if not string.startswith('\n'):
             fill = ' ' * shutil.get_terminal_size().columns
             sys.stdout.write(f'\r{fill}\r')
@@ -48,7 +49,7 @@ class Model:
     #         self.fetch_model(folder, module)
 
     #     sys.stdout.write('done.\n\n')
-    def load(self, module, infolder=False):
+    def load(self, module: str, infolder: bool = False) -> str:
         fname = f'{module}.yang'
         if infolder:
             fname = os.path.join(self.folder, fname)
@@ -58,21 +59,21 @@ class Model:
 
         return open(fname).read()
 
-    def fetch(self, module):
+    def fetch(self, module: str) -> None:
         if module not in self.models:
             sys.exit(f'{module} imported but not defined in yang-library-data.json')
 
-        module = self.models[module]
+        model = self.models[module]
 
-        revision = module['revision']
-        yang = f'{module}@{revision}.yang'
-        save = f'{self.models}/{module}.yang'
+        revision = model['revision']
+        yang = f'{model}@{revision}.yang'
+        save = f'{self.models}/{model}.yang'
 
-        if 'schema' in module:
-            url = module['schema']
+        if 'schema' in model:
+            url = model['schema']
 
-        elif 'namespace' in module:
-            namespace = module['namespace'].split(':')
+        elif 'namespace' in model:
+            namespace = model['namespace'].split(':')
             site = self.namespaces.get(namespace[1], '')
             if not site:
                 raise RuntimeError('unimplemented namespace case')
@@ -82,12 +83,12 @@ class Model:
             raise RuntimeError('unimplemented yang-library case')
 
         if os.path.exists(save):
-            self._write(f'👌 skipping {module} (already downloaded)')
-            if self._verify(module, save):
+            self._write(f'👌 skipping {model} (already downloaded)')
+            if self._verify(str(model), save):
                 self._write('\n')
                 return
 
-        self._write(f'👁️  retrieve {module}@{revision} ({url})')
+        self._write(f'👁️  retrieve {model}@{revision} ({url})')
 
         try:
             urllib.request.urlretrieve(url, save)
@@ -96,12 +97,12 @@ class Model:
             self._write(f'\n🥺 failure attempting to retrieve {url}\n{exc}')
             return
 
-        if not self._verify(module, save):
-            sys.exit(f'\ninvalid yang content for {module}@{revision}')
+        if not self._verify(str(model), save):
+            sys.exit(f'\ninvalid yang content for {model}@{revision}')
 
-        self._write(f'👍 retrieve {module}@{revision}\n')
+        self._write(f'👍 retrieve {model}@{revision}\n')
 
-    def _verify(self, name, save):
+    def _verify(self, name: str, save: str) -> bool:
         # simple but should be enough
         self._write(f'🔍 checking {name} for correct yaml')
         if not open(save).readline().startswith('module'):
@@ -117,7 +118,7 @@ class Model:
             return False
         return True
 
-    def clean_models(self):
+    def clean_models(self) -> None:
         sys.stdout.write(f'cleaning {self.folder}\n')
         for file in glob.glob(f'{self.folder}/*.yang'):
             sys.stdout.write(f'cleanup: {file}\n')
