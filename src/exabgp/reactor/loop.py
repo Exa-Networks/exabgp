@@ -178,7 +178,7 @@ class Reactor:
             peer = self._peers[key]
 
             # Limit the number of message handling per second (matches sync mode)
-            if self._rate_limited(key, peer.neighbor['rate-limit']):
+            if self._rate_limited(key, peer.neighbor.rate_limit):
                 continue
 
             if not hasattr(peer, '_async_task') or peer._async_task is None:
@@ -317,7 +317,7 @@ class Reactor:
     def active_peers(self) -> Set[str]:
         peers: Set[str] = set()
         for key, peer in self._peers.items():
-            if peer.neighbor['passive'] and not peer.proto:
+            if peer.neighbor.passive and not peer.proto:
                 continue
             peers.add(key)
         return peers
@@ -369,7 +369,7 @@ class Reactor:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=ip_lookup', p=peer_name), 'reactor')
             return ''
-        return str(peer.neighbor['peer-address'])
+        return str(peer.neighbor.peer_address)
 
     def neighbor_cli_data(self, peer_name: str) -> Dict[str, Any] | None:
         if not (peer := self._peers.get(peer_name, None)):
@@ -478,14 +478,14 @@ class Reactor:
             return self.Exit.configuration
 
         for neighbor in self.configuration.neighbors.values():
-            if neighbor['listen']:
+            if neighbor.listen:
                 if not self.listener.listen_on(
-                    neighbor['md5-ip'],
-                    neighbor['peer-address'],
-                    neighbor['listen'],
-                    neighbor['md5-password'],
-                    neighbor['md5-base64'],
-                    neighbor['incoming-ttl'],
+                    neighbor.md5_ip,
+                    neighbor.peer_address,
+                    neighbor.listen,
+                    neighbor.md5_password,
+                    neighbor.md5_base64,
+                    neighbor.incoming_ttl,
                 ):
                     return self.Exit.listening
 
@@ -578,7 +578,7 @@ class Reactor:
                     peer = self._peers[key]
 
                     # limit the number of message handling per second
-                    if self._rate_limited(key, peer.neighbor['rate-limit']):
+                    if self._rate_limited(key, peer.neighbor.rate_limit):
                         peers.discard(key)
                         continue
 
@@ -679,14 +679,14 @@ class Reactor:
             return self.Exit.configuration
 
         for neighbor in self.configuration.neighbors.values():
-            if neighbor['listen']:
+            if neighbor.listen:
                 if not self.listener.listen_on(
-                    neighbor['md5-ip'],
-                    neighbor['peer-address'],
-                    neighbor['listen'],
-                    neighbor['md5-password'],
-                    neighbor['md5-base64'],
-                    neighbor['incoming-ttl'],
+                    neighbor.md5_ip,
+                    neighbor.peer_address,
+                    neighbor.listen,
+                    neighbor.md5_password,
+                    neighbor.md5_base64,
+                    neighbor.incoming_ttl,
                 ):
                     return self.Exit.listening
 
@@ -777,13 +777,13 @@ class Reactor:
                 log.debug(lazymsg('peer.unchanged key={key} action=reconfigure', key=key), 'reactor')
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
-                if ip.afi == neighbor['peer-address'].afi:
+                if ip.afi == neighbor.peer_address.afi:
                     self.listener.listen_on(
                         ip,
-                        neighbor['peer-address'],
+                        neighbor.peer_address,
                         self._port,
-                        neighbor['md5-password'],
-                        neighbor['md5-base64'],
+                        neighbor.md5_password,
+                        neighbor.md5_base64,
                         None,
                     )
         log.info(lazymsg('config.loaded'), 'reactor')

@@ -17,7 +17,6 @@ from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.reactor.peer import Peer
 from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import extract_neighbors, match_neighbors
 from exabgp.configuration.neighbor.api import ParseAPI
@@ -217,11 +216,11 @@ def _build_neighbor(params: Dict[str, Any], api_processes: List[str] | None = No
     neighbor = Neighbor()
 
     # Set required fields
-    neighbor['peer-address'] = params['peer-address']
-    neighbor['local-address'] = params['local-address']
-    neighbor['local-as'] = params['local-as']
-    neighbor['peer-as'] = params['peer-as']
-    neighbor['router-id'] = params['router-id']
+    neighbor.peer_address = params['peer-address']
+    neighbor.local_address = params['local-address']
+    neighbor.local_as = params['local-as']
+    neighbor.peer_as = params['peer-as']
+    neighbor.router_id = params['router-id']
 
     # Optional: families (defaults to IPv4 unicast only)
     if 'families' in params and params['families']:
@@ -241,7 +240,7 @@ def _build_neighbor(params: Dict[str, Any], api_processes: List[str] | None = No
 
     # Optional: group-updates (defaults to True per Neighbor.defaults)
     if 'group-updates' in params:
-        neighbor['group-updates'] = params['group-updates']
+        neighbor.group_updates = params['group-updates']
 
     # Initialize API configuration (required before setting processes)
     neighbor.api = ParseAPI.flatten({})
@@ -325,7 +324,9 @@ def neighbor_create(self, reactor, service, line, use_json):
         # Add to configuration (for reload persistence - though we'll mark as dynamic)
         reactor.configuration.neighbors[key] = neighbor
 
-        # Create and register Peer
+        # Create and register Peer (import here to avoid circular import)
+        from exabgp.reactor.peer import Peer
+
         peer = Peer(neighbor, reactor)
         reactor._peers[key] = peer
 

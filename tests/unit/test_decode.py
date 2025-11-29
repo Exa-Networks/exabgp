@@ -304,15 +304,15 @@ bodies.append((True, body))
 def make_test_neighbor() -> Neighbor:
     """Create a Neighbor configured for decode tests."""
     neighbor = Neighbor()
-    neighbor['description'] = 'a test neighbor'
-    neighbor['router-id'] = RouterID('127.0.0.1')
-    neighbor['local-address'] = IPv4('127.0.0.1')
-    neighbor['peer-address'] = IPv4('127.0.0.1')
-    neighbor['host-name'] = 'localhost'
-    neighbor['domain-name'] = 'localdomain'
-    neighbor['peer-as'] = ASN('65500')
-    neighbor['local-as'] = ASN('65500')
-    neighbor['hold-time'] = HoldTime(180)
+    neighbor.description = 'a test neighbor'
+    neighbor.router_id = RouterID('127.0.0.1')
+    neighbor.local_address = IPv4('127.0.0.1')
+    neighbor.peer_address = IPv4('127.0.0.1')
+    neighbor.host_name = 'localhost'
+    neighbor.domain_name = 'localdomain'
+    neighbor.peer_as = ASN('65500')
+    neighbor.local_as = ASN('65500')
+    neighbor.hold_time = HoldTime(180)
     # Add all known families
     for family in NLRI.known_families():
         neighbor.add_family(family)
@@ -349,19 +349,19 @@ class TestUpdateDecoding(unittest.TestCase):
             #         path[f] = neighbor.add_path
             # capa[Capability.CODE.ADD_PATH] = path
 
-            routerid_1 = str(neighbor['router-id'])
-            routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor['router-id']).split('.', -1))
+            routerid_1 = str(neighbor.router_id)
+            routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.router_id).split('.', -1))
 
             o1 = Open(
                 Version(4),
-                ASN(neighbor['local-as']),
+                ASN(neighbor.local_as),
                 HoldTime(180),
                 RouterID(routerid_1),
                 capa,
             )
             o2 = Open(
                 Version(4),
-                ASN(neighbor['peer-as']),
+                ASN(neighbor.peer_as),
                 HoldTime(180),
                 RouterID(routerid_2),
                 capa,

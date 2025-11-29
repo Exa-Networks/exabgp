@@ -50,8 +50,8 @@ class Protocol:
         self.negotiated: Negotiated = Negotiated(self.neighbor, Direction.IN)
         self.connection: 'Incoming' | Outgoing | None = None
 
-        if self.neighbor['connect']:
-            self.port: int = self.neighbor['connect']
+        if self.neighbor.connect:
+            self.port: int = self.neighbor.connect
         elif os.environ.get('exabgp.tcp.port', '').isdigit():
             self.port = int(os.environ['exabgp.tcp.port'])
         elif os.environ.get('exabgp_tcp_port', '').isdigit():
@@ -61,7 +61,7 @@ class Protocol:
 
         from exabgp.environment import getenv
 
-        self.log_routes: bool = peer.neighbor['adj-rib-in'] or getenv().log.routes
+        self.log_routes: bool = peer.neighbor.adj_rib_in or getenv().log.routes
 
     def fd(self) -> int:
         if self.connection is None:
@@ -83,7 +83,7 @@ class Protocol:
     # but self.peer.neighbor is used throughout to maintain clear ownership semantics.
 
     def me(self, message: str) -> str:
-        return f'{self.peer.neighbor["peer-address"]}/{self.peer.neighbor["peer-as"]} {message}'
+        return f'{self.peer.neighbor.peer_address}/{self.peer.neighbor.peer_as} {message}'
 
     def accept(self, incoming: 'Incoming') -> Protocol:
         self.connection = incoming
@@ -99,13 +99,13 @@ class Protocol:
         if self.connection:
             return
 
-        local = self.neighbor['md5-ip'].top() if not self.neighbor.auto_discovery else None
-        peer = self.neighbor['peer-address'].top()
-        afi = self.neighbor['peer-address'].afi
-        md5 = self.neighbor['md5-password']
-        md5_base64 = self.neighbor['md5-base64']
-        ttl_out = self.neighbor['outgoing-ttl']
-        itf = self.neighbor['source-interface']
+        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery else None
+        peer = self.neighbor.peer_address.top()
+        afi = self.neighbor.peer_address.afi
+        md5 = self.neighbor.md5_password
+        md5_base64 = self.neighbor.md5_base64
+        ttl_out = self.neighbor.outgoing_ttl
+        itf = self.neighbor.source_interface
         self.connection = Outgoing(afi, peer, cast(str, local), self.port, md5, md5_base64, ttl_out, itf)
 
         for connected in self.connection.establish():
@@ -115,9 +115,9 @@ class Protocol:
             self.peer.reactor.processes.connected(self.peer.neighbor)
 
         if not local:
-            self.neighbor['local-address'] = IP.create(self.connection.local)
-            if self.neighbor['router-id'] is None and self.neighbor['local-address'].afi == AFI.ipv4:
-                self.neighbor['router-id'] = self.neighbor['local-address']
+            self.neighbor.local_address = IP.create(self.connection.local)
+            if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
+                self.neighbor.router_id = self.neighbor.local_address
 
         yield True
 
@@ -134,13 +134,13 @@ class Protocol:
         if self.connection:
             return True
 
-        local = self.neighbor['md5-ip'].top() if not self.neighbor.auto_discovery else None
-        peer = self.neighbor['peer-address'].top()
-        afi = self.neighbor['peer-address'].afi
-        md5 = self.neighbor['md5-password']
-        md5_base64 = self.neighbor['md5-base64']
-        ttl_out = self.neighbor['outgoing-ttl']
-        itf = self.neighbor['source-interface']
+        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery else None
+        peer = self.neighbor.peer_address.top()
+        afi = self.neighbor.peer_address.afi
+        md5 = self.neighbor.md5_password
+        md5_base64 = self.neighbor.md5_base64
+        ttl_out = self.neighbor.outgoing_ttl
+        itf = self.neighbor.source_interface
         self.connection = Outgoing(afi, peer, cast(str, local), self.port, md5, md5_base64, ttl_out, itf)
 
         # Use async establish instead of generator
@@ -153,9 +153,9 @@ class Protocol:
             self.peer.reactor.processes.connected(self.peer.neighbor)
 
         if not local:
-            self.neighbor['local-address'] = IP.create(self.connection.local)
-            if self.neighbor['router-id'] is None and self.neighbor['local-address'].afi == AFI.ipv4:
-                self.neighbor['router-id'] = self.neighbor['local-address']
+            self.neighbor.local_address = IP.create(self.connection.local)
+            if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
+                self.neighbor.router_id = self.neighbor.local_address
 
         return True
 
@@ -290,7 +290,7 @@ class Protocol:
                 self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, header, body, neg)
 
             if msg_id == Message.CODE.UPDATE:
-                if not self.neighbor['adj-rib-in'] and not (for_api or self.log_routes) and not (parsed or consolidate):
+                if not self.neighbor.adj_rib_in and not (for_api or self.log_routes) and not (parsed or consolidate):
                     yield cast(Message, _UPDATE)
                     return
 
@@ -377,7 +377,7 @@ class Protocol:
             self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, header, body, neg)
 
         if msg_id == Message.CODE.UPDATE:
-            if not self.neighbor['adj-rib-in'] and not (for_api or self.log_routes) and not (parsed or consolidate):
+            if not self.neighbor.adj_rib_in and not (for_api or self.log_routes) and not (parsed or consolidate):
                 return _UPDATE
 
         try:
@@ -505,8 +505,8 @@ class Protocol:
 
     def new_open(self) -> Generator[Message, None, None]:
         assert self.connection is not None
-        if self.neighbor['local-as']:
-            local_as = self.neighbor['local-as']
+        if self.neighbor.local_as:
+            local_as = self.neighbor.local_as
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
         else:
@@ -515,8 +515,8 @@ class Protocol:
         sent_open = Open(
             Version(4),
             local_as,
-            self.neighbor['hold-time'],
-            self.neighbor['router-id'],
+            self.neighbor.hold_time,
+            self.neighbor.router_id,
             Capabilities().new(self.neighbor, self.peer._restarted),
         )
 
@@ -530,8 +530,8 @@ class Protocol:
     async def new_open_async(self) -> Open:
         """Async version of new_open() - creates and sends OPEN message using async I/O"""
         assert self.connection is not None
-        if self.neighbor['local-as']:
-            local_as = self.neighbor['local-as']
+        if self.neighbor.local_as:
+            local_as = self.neighbor.local_as
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
         else:
@@ -540,8 +540,8 @@ class Protocol:
         sent_open = Open(
             Version(4),
             local_as,
-            self.neighbor['hold-time'],
-            self.neighbor['router-id'],
+            self.neighbor.hold_time,
+            self.neighbor.router_id,
             Capabilities().new(self.neighbor, self.peer._restarted),
         )
 
@@ -612,7 +612,7 @@ class Protocol:
     def new_update(self, include_withdraw: bool) -> Generator[Message, None, None]:
         assert self.connection is not None
         assert self.neighbor.rib is not None
-        updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
+        updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
         number: int = 0
         for update in updates:
             for message in update.messages(self.negotiated, include_withdraw):
@@ -635,7 +635,7 @@ class Protocol:
         assert self.connection is not None
         assert self.neighbor.rib is not None
         log.debug(lazymsg('update.async.generator.started'), self._session())
-        updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
+        updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
         number: int = 0
         for update in updates:
             for message in update.messages(self.negotiated, include_withdraw):
@@ -660,7 +660,7 @@ class Protocol:
         assert self.connection is not None
         assert self.neighbor.rib is not None
         log.debug(lazymsg('update.async.started'), self._session())
-        updates = self.neighbor.rib.outgoing.updates(self.neighbor['group-updates'])
+        updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
         log.debug(lazymsg('update.async.iterating'), self._session())
         number: int = 0
         for update in updates:

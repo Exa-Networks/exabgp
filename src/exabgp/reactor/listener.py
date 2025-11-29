@@ -213,14 +213,14 @@ class Listener:
                     continue
 
                 connection_local = IP.create(connection.local).address()
-                neighbor_peer_start = neighbor['peer-address'].address()
+                neighbor_peer_start = neighbor.peer_address.address()
                 neighbor_peer_next = neighbor_peer_start + neighbor.range_size
 
                 if not neighbor_peer_start <= connection_local < neighbor_peer_next:
                     continue
 
                 connection_peer = IP.create(connection.peer).address()
-                neighbor_local = neighbor['local-address'].address()
+                neighbor_local = neighbor.local_address.address()
 
                 if connection_peer != neighbor_local:
                     if not neighbor.auto_discovery:
@@ -273,10 +273,10 @@ class Listener:
                 new_neighbor = copy.copy(ranged_neighbor[0])
                 new_neighbor.range_size = 1
                 new_neighbor.generated = True
-                new_neighbor['local-address'] = IP.create(connection.peer)
-                new_neighbor['peer-address'] = IP.create(connection.local)
-                if not new_neighbor['router-id']:
-                    new_neighbor['router-id'] = RouterID.create(connection.local)
+                new_neighbor.local_address = IP.create(connection.peer)
+                new_neighbor.peer_address = IP.create(connection.local)
+                if not new_neighbor.router_id:
+                    new_neighbor.router_id = RouterID.create(connection.local)
 
                 new_peer = Peer(new_neighbor, reactor)
                 denied = new_peer.handle_connection(connection)

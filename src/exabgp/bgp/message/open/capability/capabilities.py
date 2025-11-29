@@ -109,7 +109,7 @@ class Capabilities(dict):
         if not neighbor.capability.asn4.is_enabled():
             return
 
-        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor['local-as'])
+        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
 
     def _nexthop(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.nexthop.is_enabled():
@@ -157,7 +157,7 @@ class Capabilities(dict):
         self[Capability.CODE.EXTENDED_MESSAGE] = ExtendedMessage()
 
     def _hostname(self, neighbor: Neighbor) -> None:
-        self[Capability.CODE.HOSTNAME] = HostName(neighbor['host-name'], neighbor['domain-name'])
+        self[Capability.CODE.HOSTNAME] = HostName(neighbor.host_name, neighbor.domain_name)
 
     def _software_version(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.software_version:

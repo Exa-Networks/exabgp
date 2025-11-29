@@ -160,11 +160,11 @@ class TestBuildNeighbor:
 
         neighbor = _build_neighbor(params)
 
-        assert str(neighbor['peer-address']) == '127.0.0.1'
-        assert str(neighbor['local-address']) == '127.0.0.1'
-        assert neighbor['local-as'] == 65000
-        assert neighbor['peer-as'] == 65001
-        assert str(neighbor['router-id']) == '1.2.3.4'
+        assert str(neighbor.peer_address) == '127.0.0.1'
+        assert str(neighbor.local_address) == '127.0.0.1'
+        assert neighbor.local_as == 65000
+        assert neighbor.peer_as == 65001
+        assert str(neighbor.router_id) == '1.2.3.4'
         assert len(neighbor.families()) == 1  # Default IPv4 unicast
         assert (AFI.ipv4, SAFI.unicast) in neighbor.families()
 
@@ -179,7 +179,7 @@ class TestBuildNeighbor:
 
         neighbor = _build_neighbor(params)
 
-        assert str(neighbor['local-address']) == '10.0.0.1'
+        assert str(neighbor.local_address) == '10.0.0.1'
 
     def test_neighbor_with_api_processes(self):
         params = {
@@ -291,11 +291,11 @@ class TestEndToEnd:
         neighbor = _build_neighbor(params, api_processes)
 
         # Verify neighbor is properly configured
-        assert str(neighbor['peer-address']) == '10.0.0.2'
-        assert str(neighbor['local-address']) == '10.0.0.1'
-        assert neighbor['local-as'] == 65000
-        assert neighbor['peer-as'] == 65001
-        assert str(neighbor['router-id']) == '1.2.3.4'
+        assert str(neighbor.peer_address) == '10.0.0.2'
+        assert str(neighbor.local_address) == '10.0.0.1'
+        assert neighbor.local_as == 65000
+        assert neighbor.peer_as == 65001
+        assert str(neighbor.router_id) == '1.2.3.4'
         assert len(neighbor.families()) == 1
         assert neighbor.rib is not None  # RIB created
 
@@ -306,8 +306,8 @@ class TestEndToEnd:
         params, api_processes = _parse_neighbor_params(line)
         neighbor = _build_neighbor(params, api_processes)
 
-        assert neighbor['peer-address'].afi == AFI.ipv6
-        assert neighbor['local-address'].afi == AFI.ipv6
+        assert neighbor.peer_address.afi == AFI.ipv6
+        assert neighbor.local_address.afi == AFI.ipv6
         assert (AFI.ipv6, SAFI.unicast) in neighbor.families()
 
 
@@ -416,11 +416,11 @@ class TestNeighborCreateCommand:
 
         # Verify peer neighbor configuration
         neighbor = peer.neighbor
-        assert str(neighbor['peer-address']) == '10.0.0.2'
-        assert str(neighbor['local-address']) == '10.0.0.1'
-        assert neighbor['local-as'] == 65000
-        assert neighbor['peer-as'] == 65001
-        assert str(neighbor['router-id']) == '2.3.4.5'
+        assert str(neighbor.peer_address) == '10.0.0.2'
+        assert str(neighbor.local_address) == '10.0.0.1'
+        assert neighbor.local_as == 65000
+        assert neighbor.peer_as == 65001
+        assert str(neighbor.router_id) == '2.3.4.5'
 
         # Verify families
         families = neighbor.families()
@@ -466,7 +466,7 @@ class TestNeighborCreateCommand:
 
         # Verify they have different local addresses
         peers = list(mock_reactor._peers.values())
-        local_addrs = {str(p.neighbor['local-address']) for p in peers}
+        local_addrs = {str(p.neighbor.local_address) for p in peers}
         assert local_addrs == {'10.0.0.1', '10.0.0.2'}
 
 
@@ -617,8 +617,8 @@ class TestNeighborDeleteCommand:
         for key in other_peers:
             peer = mock_reactor_with_peers._peers[key]
             other_peer_data[key] = {
-                'peer-address': str(peer.neighbor['peer-address']),
-                'local-as': peer.neighbor['local-as'],
+                'peer-address': str(peer.neighbor.peer_address),
+                'local-as': peer.neighbor.local_as,
             }
 
         command = 'neighbor 127.0.0.1'
@@ -635,8 +635,8 @@ class TestNeighborDeleteCommand:
             peer = mock_reactor_with_peers._peers[key]
 
             # Verify configuration unchanged
-            assert str(peer.neighbor['peer-address']) == other_peer_data[key]['peer-address']
-            assert peer.neighbor['local-as'] == other_peer_data[key]['local-as']
+            assert str(peer.neighbor.peer_address) == other_peer_data[key]['peer-address']
+            assert peer.neighbor.local_as == other_peer_data[key]['local-as']
 
     def test_delete_calls_peer_remove(self, mock_reactor_with_peers):
         """Test that delete calls peer.remove() for graceful TCP teardown."""

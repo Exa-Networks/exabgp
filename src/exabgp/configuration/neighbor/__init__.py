@@ -155,22 +155,50 @@ class ParseNeighbor(Section):
             self.scope.inherit(data)
         return self.scope.get()  # type: ignore[no-any-return]
 
+    # Map config keys (with dashes) to Neighbor attributes (with underscores)
+    _CONFIG_TO_ATTR: Dict[str, str] = {
+        'description': 'description',
+        'router-id': 'router_id',
+        'local-address': 'local_address',
+        'source-interface': 'source_interface',
+        'peer-address': 'peer_address',
+        'local-as': 'local_as',
+        'peer-as': 'peer_as',
+        'passive': 'passive',
+        'listen': 'listen',
+        'connect': 'connect',
+        'hold-time': 'hold_time',
+        'rate-limit': 'rate_limit',
+        'host-name': 'host_name',
+        'domain-name': 'domain_name',
+        'group-updates': 'group_updates',
+        'auto-flush': 'auto_flush',
+        'adj-rib-in': 'adj_rib_in',
+        'adj-rib-out': 'adj_rib_out',
+        'manual-eor': 'manual_eor',
+        'md5-password': 'md5_password',
+        'md5-base64': 'md5_base64',
+        'md5-ip': 'md5_ip',
+        'outgoing-ttl': 'outgoing_ttl',
+        'incoming-ttl': 'incoming_ttl',
+    }
+
     def _post_neighbor(self, local: Dict[str, Any], families: List[Tuple[AFI, SAFI]]) -> Neighbor:
         neighbor = Neighbor()
 
-        for option in neighbor.defaults:
-            conf = local.get(option, None)
+        for config_key, attr_name in self._CONFIG_TO_ATTR.items():
+            conf = local.get(config_key, None)
             if conf is not None:
-                neighbor[option] = conf
+                setattr(neighbor, attr_name, conf)
 
-        if neighbor['local-address'] is None:
+        if neighbor.local_address is None:
             neighbor.auto_discovery = True
-            neighbor['local-address'] = None
-            neighbor['md5-ip'] = None
+            neighbor.local_address = None
+            neighbor.md5_ip = None
 
-        if not neighbor['router-id']:
-            if neighbor['peer-address'].afi == AFI.ipv4 and not neighbor.auto_discovery:
-                neighbor['router-id'] = neighbor['local-address']
+        if not neighbor.router_id:
+            if neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
+                neighbor.router_id = neighbor.local_address
 
         for family in families:
             neighbor.add_family(family)
@@ -272,7 +300,7 @@ class ParseNeighbor(Section):
 
     def _post_capa_rr(self, neighbor: Neighbor) -> None:
         if neighbor.capability.route_refresh:
-            if neighbor['adj-rib-out']:
+            if neighbor.adj_rib_out:
                 log.debug(lazymsg('neighbor.capability.route_refresh action=enable_adj_rib_out'), 'configuration')
 
     def _post_routes(self, neighbor: Neighbor, local: Dict[str, Any]) -> None:
@@ -331,20 +359,20 @@ class ParseNeighbor(Section):
             return self.error.set('incomplete neighbor, missing {}'.format(missing))
         neighbor.infer()
 
-        if not neighbor.auto_discovery and neighbor['local-address'].afi != neighbor['peer-address'].afi:
+        if not neighbor.auto_discovery and neighbor.local_address.afi != neighbor.peer_address.afi:
             return self.error.set('local-address and peer-address must be of the same family')
-        neighbor.range_size = neighbor['peer-address'].mask.size()
+        neighbor.range_size = neighbor.peer_address.mask.size()
 
-        if neighbor.range_size > 1 and not (neighbor['passive'] or getenv().bgp.passive):
+        if neighbor.range_size > 1 and not (neighbor.passive or getenv().bgp.passive):
             return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
         if neighbor.index() in self._neighbors:
-            return self.error.set('duplicate peer definition {}'.format(neighbor['peer-address'].top()))
+            return self.error.set('duplicate peer definition {}'.format(neighbor.peer_address.top()))
         self._neighbors.append(neighbor.index())
 
-        if neighbor['md5-password']:
+        if neighbor.md5_password:
             try:
-                md5 = base64.b64decode(neighbor['md5-password']) if neighbor['md5-base64'] else neighbor['md5-password']
+                md5 = base64.b64decode(neighbor.md5_password) if neighbor.md5_base64 else neighbor.md5_password
             except TypeError as e:
                 return self.error.set(f'Invalid base64 encoding of MD5 password ({e})')
             else:

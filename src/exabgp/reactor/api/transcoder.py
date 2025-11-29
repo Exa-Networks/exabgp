@@ -43,10 +43,10 @@ MAX_SHUTDOWN_COMM_LENGTH = 128  # Maximum length of shutdown communication messa
 def _make_transcoder_neighbor(local: str, remote: str, local_asn: int, peer_asn: int) -> Neighbor:
     """Create a minimal Neighbor for transcoding JSON responses."""
     neighbor = Neighbor()
-    neighbor['local-address'] = IPv4(local)
-    neighbor['peer-address'] = IPv4(remote)
-    neighbor['local-as'] = ASN(local_asn)
-    neighbor['peer-as'] = ASN(peer_asn)
+    neighbor.local_address = IPv4(local)
+    neighbor.peer_address = IPv4(remote)
+    neighbor.local_as = ASN(local_asn)
+    neighbor.peer_as = ASN(peer_asn)
     return neighbor
 
 

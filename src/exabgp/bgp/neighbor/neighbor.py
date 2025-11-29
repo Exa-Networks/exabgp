@@ -11,9 +11,8 @@ import json
 from collections import Counter, deque
 from copy import deepcopy
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Tuple, Union
 
-# from exabgp.util.dns import host, domain
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -23,68 +22,47 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib import RIB
 
 if TYPE_CHECKING:
+    from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.open.routerid import RouterID
     from exabgp.protocol.ip import IP
     from exabgp.rib.change import Change
 
 
-# class Section(dict):
-#     name = ''
-#     key = ''
-#     sub = ['capability']
-
-#     def string(self, level=0):
-#         prefix = ' ' * level
-#         key_name = self.get(key,'')
-#         returned = f'{prefix} {key_name} {\n'
-
-#         prefix = ' ' * (level+1)
-#         for k, v in self.items():
-#             if k == prefix:
-#                 continue
-#             if k in sub:
-#                 returned += self[k].string(level+1)
-#             returned += f'{k} {v};\n'
-#         return returned
-
-
 # The definition of a neighbor (from reading the configuration)
-class Neighbor(dict):
-    defaults: ClassVar[Dict[str, Any]] = {
-        # Those are the field from the configuration
-        'description': '',
-        'router-id': None,
-        'local-address': None,
-        'source-interface': None,
-        'peer-address': None,
-        'local-as': None,
-        'peer-as': None,
-        # passive indicate that we do not establish outgoing connections
-        'passive': False,
-        # the port to listen on ( zero mean that we do not listen )
-        'listen': 0,
-        # the port to connect to
-        'connect': 0,
-        'hold-time': HoldTime(180),
-        'rate-limit': 0,
-        'host-name': None,
-        'domain-name': None,
-        'group-updates': True,
-        'auto-flush': True,
-        'adj-rib-in': True,
-        'adj-rib-out': True,
-        'manual-eor': False,
-        # XXX: this should be under an MD5 sub-dict/object ?
-        'md5-password': None,
-        'md5-base64': False,
-        'md5-ip': None,
-        'outgoing-ttl': None,
-        'incoming-ttl': None,
-    }
-
+class Neighbor:
     _GLOBAL: ClassVar[Dict[str, int]] = {'uid': 1}
 
-    # Instance attributes
-    api: Dict[str, Any] | None  # XXX: not scriptable - is replaced outside the class
+    # Singleton empty neighbor (initialized after class definition)
+    EMPTY: ClassVar['Neighbor']
+
+    # Configuration attributes (previously in defaults dict)
+    description: str
+    router_id: Union['RouterID', None]
+    local_address: Union['IP', None]
+    source_interface: Union[str, None]
+    peer_address: Union['IP', None]
+    local_as: Union['ASN', None]
+    peer_as: Union['ASN', None]
+    passive: bool
+    listen: int
+    connect: int
+    hold_time: HoldTime
+    rate_limit: int
+    host_name: Union[str, None]
+    domain_name: Union[str, None]
+    group_updates: bool
+    auto_flush: bool
+    adj_rib_in: bool
+    adj_rib_out: bool
+    manual_eor: bool
+    md5_password: Union[str, None]
+    md5_base64: bool
+    md5_ip: Union['IP', None]
+    outgoing_ttl: Union[int, None]
+    incoming_ttl: Union[int, None]
+
+    # Other instance attributes
+    api: Union[Dict[str, Any], None]
     capability: NeighborCapability
     auto_discovery: bool
     range_size: int
@@ -92,9 +70,9 @@ class Neighbor(dict):
     _families: List[Tuple[AFI, SAFI]]
     _nexthop: List[Tuple[AFI, SAFI, AFI]]
     _addpath: List[Tuple[AFI, SAFI]]
-    rib: RIB | None
-    changes: List[Change]
-    previous: 'Neighbor' | None
+    rib: Union[RIB, None]
+    changes: List['Change']
+    previous: Union['Neighbor', None]
     eor: deque[Tuple[AFI, SAFI]]
     asm: Dict[Tuple[AFI, SAFI], Message]
     messages: deque[Message]
@@ -103,11 +81,34 @@ class Neighbor(dict):
     uid: str
 
     def __init__(self) -> None:
-        # super init
-        self.update(self.defaults)
+        # Configuration attributes with defaults
+        self.description = ''
+        self.router_id = None
+        self.local_address = None
+        self.source_interface = None
+        self.peer_address = None
+        self.local_as = None
+        self.peer_as = None
+        self.passive = False
+        self.listen = 0
+        self.connect = 0
+        self.hold_time = HoldTime(180)
+        self.rate_limit = 0
+        self.host_name = None
+        self.domain_name = None
+        self.group_updates = True
+        self.auto_flush = True
+        self.adj_rib_in = True
+        self.adj_rib_out = True
+        self.manual_eor = False
+        self.md5_password = None
+        self.md5_base64 = False
+        self.md5_ip = None
+        self.outgoing_ttl = None
+        self.incoming_ttl = None
 
-        # Those are subconf
-        self.api: Dict[str, Any] | None = None  # XXX: not scriptable - is replaced outside the class
+        # API configuration
+        self.api = None
 
         # Capability configuration (typed dataclass)
         self.capability = NeighborCapability()
@@ -143,9 +144,6 @@ class Neighbor(dict):
         self.uid = f'{self._GLOBAL["uid"]}'
         self._GLOBAL['uid'] += 1
 
-    # Singleton empty neighbor (initialized after class definition)
-    EMPTY: ClassVar['Neighbor']
-
     @classmethod
     def _create_empty(cls) -> 'Neighbor':
         """Create the empty neighbor singleton. Called once at module load.
@@ -159,24 +157,24 @@ class Neighbor(dict):
         return cls()
 
     def infer(self) -> None:
-        if self['md5-ip'] is None:
-            self['md5-ip'] = self['local-address']
+        if self.md5_ip is None:
+            self.md5_ip = self.local_address
 
         # If graceful-restart is enabled but time is 0, use hold-time
         if self.capability.graceful_restart.is_enabled() and self.capability.graceful_restart.time == 0:
-            self.capability.graceful_restart = GracefulRestartConfig.with_time(int(self['hold-time']))
+            self.capability.graceful_restart = GracefulRestartConfig.with_time(int(self.hold_time))
 
     def id(self) -> str:
         return f'neighbor-{self.uid}'
 
     # This set must be unique between peer, not full draft-ietf-idr-bgp-multisession-07
     def index(self) -> str:
-        if self['listen'] != 0:
-            return f'peer-ip {self["peer-address"]} listen {self["listen"]}'
+        if self.listen != 0:
+            return f'peer-ip {self.peer_address} listen {self.listen}'
         return self.name()
 
     def make_rib(self) -> None:
-        self.rib = RIB(self.name(), self['adj-rib-in'], self['adj-rib-out'], self._families)  # type: ignore[arg-type]
+        self.rib = RIB(self.name(), self.adj_rib_in, self.adj_rib_out, self._families)
 
     # will resend all the routes once we reconnect
     def reset_rib(self) -> None:
@@ -197,10 +195,10 @@ class Neighbor(dict):
             session = '/'.join(f'{afi.name()}-{safi.name()}' for (afi, safi) in self.families())
         else:
             session = 'in-open'
-        local_addr = self['local-address'] if self['peer-address'] is not None else 'auto'
-        local_as = self['local-as'] if self['local-as'] is not None else 'auto'
-        peer_as = self['peer-as'] if self['peer-as'] is not None else 'auto'
-        return f'neighbor {self["peer-address"]} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self["router-id"]} family-allowed {session}'
+        local_addr = self.local_address if self.peer_address is not None else 'auto'
+        local_as = self.local_as if self.local_as is not None else 'auto'
+        peer_as = self.peer_as if self.peer_as is not None else 'auto'
+        return f'neighbor {self.peer_address} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self.router_id} family-allowed {session}'
 
     def families(self) -> List[Tuple[AFI, SAFI]]:
         # this list() is important .. as we use the function to modify self._families
@@ -257,15 +255,15 @@ class Neighbor(dict):
             self._addpath.remove(family)
 
     def missing(self) -> str:
-        if self['local-address'] is None and not self.auto_discovery:
+        if self.local_address is None and not self.auto_discovery:
             return 'local-address'
-        if self['listen'] > 0 and self.auto_discovery:
+        if self.listen > 0 and self.auto_discovery:
             return 'local-address'
-        if self['peer-address'] is None:
+        if self.peer_address is None:
             return 'peer-address'
-        if self.auto_discovery and not self['router-id']:
+        if self.auto_discovery and not self.router_id:
             return 'router-id'
-        if self['peer-address'].afi == AFI.ipv6 and not self['router-id']:
+        if self.peer_address.afi == AFI.ipv6 and not self.router_id:
             return 'router-id'
         return ''
 
@@ -279,26 +277,26 @@ class Neighbor(dict):
         # the other one will be set to the auto disocvered IP address.
         auto_discovery = self.auto_discovery or other.auto_discovery
         return (
-            self['router-id'] == other['router-id']
-            and self['local-as'] == other['local-as']
-            and self['peer-address'] == other['peer-address']
-            and self['peer-as'] == other['peer-as']
-            and self['passive'] == other['passive']
-            and self['listen'] == other['listen']
-            and self['connect'] == other['connect']
-            and self['hold-time'] == other['hold-time']
-            and self['rate-limit'] == other['rate-limit']
-            and self['host-name'] == other['host-name']
-            and self['domain-name'] == other['domain-name']
-            and self['md5-password'] == other['md5-password']
-            and self['md5-ip'] == other['md5-ip']
-            and self['incoming-ttl'] == other['incoming-ttl']
-            and self['outgoing-ttl'] == other['outgoing-ttl']
-            and self['group-updates'] == other['group-updates']
-            and self['auto-flush'] == other['auto-flush']
-            and self['adj-rib-in'] == other['adj-rib-in']
-            and self['adj-rib-out'] == other['adj-rib-out']
-            and (auto_discovery or self['local-address'] == other['local-address'])
+            self.router_id == other.router_id
+            and self.local_as == other.local_as
+            and self.peer_address == other.peer_address
+            and self.peer_as == other.peer_as
+            and self.passive == other.passive
+            and self.listen == other.listen
+            and self.connect == other.connect
+            and self.hold_time == other.hold_time
+            and self.rate_limit == other.rate_limit
+            and self.host_name == other.host_name
+            and self.domain_name == other.domain_name
+            and self.md5_password == other.md5_password
+            and self.md5_ip == other.md5_ip
+            and self.incoming_ttl == other.incoming_ttl
+            and self.outgoing_ttl == other.outgoing_ttl
+            and self.group_updates == other.group_updates
+            and self.auto_flush == other.auto_flush
+            and self.adj_rib_in == other.adj_rib_in
+            and self.adj_rib_out == other.adj_rib_out
+            and (auto_discovery or self.local_address == other.local_address)
             and self.capability == other.capability
             and self.auto_discovery == other.auto_discovery
             and self.families() == other.families()
@@ -307,16 +305,17 @@ class Neighbor(dict):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def ip_self(self, afi: AFI) -> IP:
-        if afi == self['local-address'].afi:
-            return self['local-address']  # type: ignore[no-any-return]
+    def ip_self(self, afi: AFI) -> 'IP':
+        if self.local_address is not None and afi == self.local_address.afi:
+            return self.local_address
 
         # attempting to not barf for next-hop self when the peer is IPv6
-        if afi == AFI.ipv4:
-            return self['router-id']  # type: ignore[no-any-return]
+        if afi == AFI.ipv4 and self.router_id is not None:
+            return self.router_id
 
+        local_afi = self.local_address.afi if self.local_address else 'unknown'
         raise TypeError(
-            f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({self["local-address"].afi})',
+            f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({local_afi})',
         )
 
     def remove_self(self, changes: Change) -> Change:
@@ -487,38 +486,36 @@ Neighbor {peer-address}
 
             apis += _api
 
-        md5_base64_str = (
-            'true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'
-        )
+        md5_base64_str = 'true' if neighbor.md5_base64 is True else 'false' if neighbor.md5_base64 is False else 'auto'
         cap = neighbor.capability
         add_path_str = AddPath.string[cap.add_path] if cap.add_path else 'disable'
         graceful_str = str(cap.graceful_restart.time) if cap.graceful_restart.is_enabled() else 'disable'
 
         returned = (
-            f'neighbor {neighbor["peer-address"]} {{\n'
-            f'\tdescription "{neighbor["description"]}";\n'
-            f'\trouter-id {neighbor["router-id"]};\n'
-            f'\thost-name {neighbor["host-name"]};\n'
-            f'\tdomain-name {neighbor["domain-name"]};\n'
-            f'\tlocal-address {neighbor["local-address"] if not neighbor.auto_discovery else "auto"};\n'
-            f'\tsource-interface {neighbor["source-interface"]};\n'
-            f'\tlocal-as {neighbor["local-as"]};\n'
-            f'\tpeer-as {neighbor["peer-as"]};\n'
-            f'\thold-time {neighbor["hold-time"]};\n'
-            f'\trate-limit {"disable" if neighbor["rate-limit"] == 0 else neighbor["rate-limit"]};\n'
-            f'\tmanual-eor {"true" if neighbor["manual-eor"] else "false"};\n'
-            f'\n\tpassive {"true" if neighbor["passive"] else "false"};\n'
-            + (f'\n\tlisten {neighbor["listen"]};\n' if neighbor['listen'] else '')
-            + (f'\n\tconnect {neighbor["connect"]};\n' if neighbor['connect'] else '')
-            + f'\tgroup-updates {"true" if neighbor["group-updates"] else "false"};\n'
-            f'\tauto-flush {"true" if neighbor["auto-flush"] else "false"};\n'
-            f'\tadj-rib-in {"true" if neighbor["adj-rib-in"] else "false"};\n'
-            f'\tadj-rib-out {"true" if neighbor["adj-rib-out"] else "false"};\n'
-            + (f'\tmd5-password "{neighbor["md5-password"]}";\n' if neighbor['md5-password'] else '')
+            f'neighbor {neighbor.peer_address} {{\n'
+            f'\tdescription "{neighbor.description}";\n'
+            f'\trouter-id {neighbor.router_id};\n'
+            f'\thost-name {neighbor.host_name};\n'
+            f'\tdomain-name {neighbor.domain_name};\n'
+            f'\tlocal-address {neighbor.local_address if not neighbor.auto_discovery else "auto"};\n'
+            f'\tsource-interface {neighbor.source_interface};\n'
+            f'\tlocal-as {neighbor.local_as};\n'
+            f'\tpeer-as {neighbor.peer_as};\n'
+            f'\thold-time {neighbor.hold_time};\n'
+            f'\trate-limit {"disable" if neighbor.rate_limit == 0 else neighbor.rate_limit};\n'
+            f'\tmanual-eor {"true" if neighbor.manual_eor else "false"};\n'
+            f'\n\tpassive {"true" if neighbor.passive else "false"};\n'
+            + (f'\n\tlisten {neighbor.listen};\n' if neighbor.listen else '')
+            + (f'\n\tconnect {neighbor.connect};\n' if neighbor.connect else '')
+            + f'\tgroup-updates {"true" if neighbor.group_updates else "false"};\n'
+            f'\tauto-flush {"true" if neighbor.auto_flush else "false"};\n'
+            f'\tadj-rib-in {"true" if neighbor.adj_rib_in else "false"};\n'
+            f'\tadj-rib-out {"true" if neighbor.adj_rib_out else "false"};\n'
+            + (f'\tmd5-password "{neighbor.md5_password}";\n' if neighbor.md5_password else '')
             + f'\tmd5-base64 {md5_base64_str};\n'
-            + (f'\tmd5-ip "{neighbor["md5-ip"]}";\n' if not neighbor.auto_discovery else '')
-            + (f'\toutgoing-ttl {neighbor["outgoing-ttl"]};\n' if neighbor['outgoing-ttl'] else '')
-            + (f'\tincoming-ttl {neighbor["incoming-ttl"]};\n' if neighbor['incoming-ttl'] else '')
+            + (f'\tmd5-ip "{neighbor.md5_ip}";\n' if not neighbor.auto_discovery else '')
+            + (f'\toutgoing-ttl {neighbor.outgoing_ttl};\n' if neighbor.outgoing_ttl else '')
+            + (f'\tincoming-ttl {neighbor.incoming_ttl};\n' if neighbor.incoming_ttl else '')
             + f'\tcapability {{\n'
             f'\t\tasn4 {"enable" if cap.asn4.is_enabled() else "disable"};\n'
             f'\t\troute-refresh {"enable" if cap.route_refresh else "disable"};\n'
