@@ -34,7 +34,7 @@ class NodeName(BaseLS):
     REPR = 'Node Name'
     JSON = 'node-name'
 
-    def __init__(self, nodename):
+    def __init__(self, nodename: str) -> None:
         BaseLS.__init__(self, nodename)
 
     @classmethod
@@ -44,5 +44,5 @@ class NodeName(BaseLS):
 
         return cls(data.decode('ascii'))
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": {json.dumps(self.content)}'

@@ -32,12 +32,12 @@ class NodeOpaque(BaseLS):
     REPR = 'Node Opaque attribute'
     JSON = 'opaque'
 
-    def __init__(self, opaque):
+    def __init__(self, opaque: bytes) -> None:
         BaseLS.__init__(self, opaque)
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> NodeOpaque:
         return cls(unpack('!%ds' % len(data), data)[0])
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": {json.dumps(self.content)}'

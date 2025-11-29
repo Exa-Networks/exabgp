@@ -68,7 +68,7 @@ class Parameter(int):
 # +------------------------------+
 
 
-class Capabilities(dict):
+class Capabilities(dict[int, Capability]):
     # RFC 9072 - Extended Optional Parameters Length
     EXTENDED_LENGTH: ClassVar[int] = 0xFF  # IANA Extended Length type code - indicates extended format in use
 

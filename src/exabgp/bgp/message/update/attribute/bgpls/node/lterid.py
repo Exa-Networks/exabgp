@@ -28,7 +28,7 @@ class LocalTeRid(BaseLS):
     REPR = 'Local TE Router IDs'
     JSON = 'local-te-router-ids'
 
-    def __init__(self, terids):
+    def __init__(self, terids: list[str]) -> None:
         BaseLS.__init__(self, terids)
 
     @classmethod
@@ -40,6 +40,6 @@ class LocalTeRid(BaseLS):
 
         return cls([str(IP.unpack_ip(data))])
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         joined = '", "'.join(self.content)
         return f'"{self.JSON}": ["{joined}"]'

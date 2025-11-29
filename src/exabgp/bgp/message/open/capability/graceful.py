@@ -22,7 +22,7 @@ from exabgp.logger import log, lazymsg
 
 
 @Capability.register()
-class Graceful(Capability, dict):
+class Graceful(Capability, dict[tuple[AFI, SAFI], int]):
     MAX: ClassVar[int] = 0xFFFF
     ID: ClassVar[int] = Capability.CODE.GRACEFUL_RESTART
 

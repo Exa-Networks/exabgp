@@ -19,7 +19,7 @@ from exabgp.logger import log, lazymsg
 
 
 @Capability.register()
-class Operational(Capability, list):
+class Operational(Capability, list[bytes]):
     ID: ClassVar[int] = Capability.CODE.OPERATIONAL
     _seen: bool = False
 

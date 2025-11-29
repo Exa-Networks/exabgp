@@ -22,7 +22,7 @@ from exabgp.logger import log, lazymsg
 
 
 @Capability.register()
-class NextHop(Capability, list):
+class NextHop(Capability, list[tuple[AFI, SAFI, AFI]]):
     ID: ClassVar[int] = Capability.CODE.NEXTHOP
 
     def __init__(self, data: tuple[tuple[AFI, SAFI, AFI], ...] = ()) -> None:

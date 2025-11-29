@@ -21,7 +21,7 @@ from exabgp.logger import log, lazymsg
 
 
 @Capability.register()
-class AddPath(Capability, dict):
+class AddPath(Capability, dict[tuple[AFI, SAFI], int]):
     ID: ClassVar[int] = Capability.CODE.ADD_PATH
 
     string: ClassVar[dict[int, str]] = {

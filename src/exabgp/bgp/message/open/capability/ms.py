@@ -19,7 +19,7 @@ from exabgp.logger import log, lazymsg
 
 @Capability.register()
 @Capability.register(Capability.CODE.MULTISESSION_CISCO)
-class MultiSession(Capability, list):
+class MultiSession(Capability, list[CapabilityCode]):
     ID: ClassVar[int] = Capability.CODE.MULTISESSION
     _seen: bool = False
 
