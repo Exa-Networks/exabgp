@@ -10,6 +10,7 @@ from __future__ import annotations
 from struct import pack
 from struct import unpack
 from struct import calcsize
+from typing import Iterator
 
 from exabgp.netlink import NetLinkError
 
@@ -34,7 +35,7 @@ class Attributes:
         IFA_MULTICAST = 0x07
 
     @classmethod
-    def decode(cls, data):
+    def decode(cls, data: bytes) -> Iterator[tuple[int, bytes]]:
         while data:
             (
                 length,
@@ -47,9 +48,9 @@ class Attributes:
             data = data[int((length + 3) / 4) * 4 :]
 
     @classmethod
-    def encode(cls, attributes):
-        def _encode(atype, payload):
-            def pad(length, to=4):
+    def encode(cls, attributes: dict[int, bytes]) -> bytes:
+        def _encode(atype: int, payload: bytes) -> bytes:
+            def pad(length: int, to: int = 4) -> int:
                 return (length + to - 1) & ~(to - 1)
 
             length = cls.Header.LEN + len(payload)

@@ -10,6 +10,7 @@ from __future__ import annotations
 import socket
 from struct import calcsize
 from collections import namedtuple
+from typing import Any, Iterator
 
 from exabgp.netlink.message import Message
 
@@ -81,5 +82,5 @@ class Link(Message):
             IFLA_STATS = 0x07
 
     @classmethod
-    def get_links(cls):
+    def get_links(cls) -> Iterator[Any]:
         return cls.extract(Link.Command.RTM_GETLINK)

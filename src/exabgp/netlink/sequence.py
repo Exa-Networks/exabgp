@@ -13,6 +13,6 @@ from typing import ClassVar
 class Sequence(int):
     _instance: ClassVar[dict[str, int]] = dict()
 
-    def __new__(cls):
+    def __new__(cls) -> Sequence:
         cls._instance['next'] = cls._instance.get('next', 0) + 1
-        return cls._instance['next']
+        return cls._instance['next']  # type: ignore[return-value]

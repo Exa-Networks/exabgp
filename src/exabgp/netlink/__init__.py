@@ -8,16 +8,20 @@ from __future__ import annotations
 
 
 class NetLinkError(Exception):
-    def __init__(self, error, message='', response=''):
+    def __init__(self, error: str, message: bytes = b'', response: bytes = b'') -> None:
         reported = error.strip() + '\n'
         if message:
-            reported += '\nMessage: {}'.format(' '.join('{:02X}'.format(_) for _ in message))
+            reported += '\nMessage: {}'.format(' '.join('{:02X}'.format(b) for b in message))
         if message:
-            reported += '\n        : {}'.format(''.join(_ for _ in message if _.isalnum() or _.isspace()))
+            reported += '\n        : {}'.format(
+                ''.join(chr(b) for b in message if chr(b).isalnum() or chr(b).isspace())
+            )
         if response:
-            reported += '\nResponse: {}'.format(' '.join('{:02X}'.format(_) for _ in response))
+            reported += '\nResponse: {}'.format(' '.join('{:02X}'.format(b) for b in response))
         if response:
-            reported += '\n        : {}'.format(''.join(_ for _ in response if _.isalnum() or _.isspace()))
+            reported += '\n        : {}'.format(
+                ''.join(chr(b) for b in response if chr(b).isalnum() or chr(b).isspace())
+            )
         Exception.__init__(self, reported)
 
 

@@ -13,6 +13,7 @@ from struct import pack
 from struct import unpack
 from struct import calcsize
 from collections import namedtuple
+from typing import Any, Iterator
 
 from exabgp.netlink import NetLinkError
 from exabgp.netlink.sequence import Sequence
@@ -99,13 +100,15 @@ class NetLink:
     }
 
     @classmethod
-    def encode(cls, format_type, sequence, control_flags, pid, body, attributes):
+    def encode(
+        cls, format_type: int, sequence: int, control_flags: int, pid: int, body: bytes, attributes: dict[int, bytes]
+    ) -> bytes:
         attrs = Attributes.encode(attributes)
         length = cls.Header.LEN + len(attrs) + len(body)
         return pack(cls.Header.PACK, length, format_type, control_flags, sequence, pid) + body + attrs
 
     @classmethod
-    def decode(cls, data):
+    def decode(cls, data: bytes) -> Iterator[Any]:
         while data:
             length, format_type, control_flags, sequence, pid = unpack(cls.Header.PACK, data[: cls.Header.LEN])
             if len(data) < length:
@@ -117,7 +120,13 @@ class NetLink:
     # family=socket.AF_UNSPEC,
 
     @classmethod
-    def send(cls, format_type, control_flags, family=socket.AF_UNSPEC, attributes=None):
+    def send(
+        cls,
+        format_type: int,
+        control_flags: int,
+        family: int = socket.AF_UNSPEC,
+        attributes: dict[int, bytes] | None = None,
+    ) -> Iterator[bytes]:
         sequence = Sequence()
         pid = os.getpid()
 

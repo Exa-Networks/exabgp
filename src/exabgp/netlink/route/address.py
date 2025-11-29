@@ -10,6 +10,7 @@ from __future__ import annotations
 import socket
 from struct import calcsize
 from collections import namedtuple
+from typing import Any, Iterator
 
 from exabgp.netlink.message import Message
 
@@ -84,5 +85,5 @@ class Address(Message):
             IFLA_PORT_SELF = 0x19
 
     @classmethod
-    def get_addresses(cls):
+    def get_addresses(cls) -> Iterator[Any]:
         return cls.extract(Address.Command.RTM_GETADDR)
