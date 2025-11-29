@@ -45,7 +45,7 @@ class LinkState(Attribute):
                 return register_class(klass)
 
             kls = type('%s_%d' % (klass.__name__, lsid), klass.__bases__, dict(klass.__dict__))
-            kls.TLV = lsid
+            setattr(kls, 'TLV', lsid)
             return register_class(kls)
 
         return register_lsid
@@ -56,7 +56,7 @@ class LinkState(Attribute):
         if klass is not None:
             return klass
         unknown = type('GenericLSID_%d' % code, GenericLSID.__bases__, dict(GenericLSID.__dict__))
-        unknown.TLV = code
+        setattr(unknown, 'TLV', code)
         cls.registered_lsids[code] = unknown
         return unknown
 
@@ -159,7 +159,10 @@ class GenericLSID(BaseLS):
 
 
 class FlagLS(BaseLS):
-    def __init__(self, flags):
+    # Subclasses define FLAGS as a list of flag names, e.g. ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
+    FLAGS: list[str] = []
+
+    def __init__(self, flags: dict[str, int]) -> None:
         self.flags = flags
 
     def __repr__(self):

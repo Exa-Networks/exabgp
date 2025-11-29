@@ -19,3 +19,12 @@ from exabgp.bgp.message.update.nlri.evpn.mac import MAC
 from exabgp.bgp.message.update.nlri.evpn.multicast import Multicast
 from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
 from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix
+
+__all__ = [
+    'EVPN',
+    'EthernetAD',
+    'MAC',
+    'Multicast',
+    'EthernetSegment',
+    'Prefix',
+]

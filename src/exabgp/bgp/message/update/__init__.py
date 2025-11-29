@@ -23,6 +23,11 @@ from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 
+__all__ = [
+    'Update',
+    'EOR',
+]
+
 # Update message header offsets and constants
 UPDATE_WITHDRAWN_LENGTH_OFFSET = 2  # Offset to start of withdrawn routes
 UPDATE_ATTR_LENGTH_HEADER_SIZE = 4  # Size of withdrawn length (2) + attr length (2)

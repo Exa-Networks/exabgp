@@ -41,3 +41,34 @@ from exabgp.bgp.message.update.attribute.community.extended.rt_record import RTR
 from exabgp.bgp.message.update.attribute.community.extended.flowspec_scope import InterfaceSet
 from exabgp.bgp.message.update.attribute.community.extended.mac_mobility import MacMobility
 from exabgp.bgp.message.update.attribute.community.extended.mup import MUPExtendedCommunity
+
+__all__ = [
+    'ExtendedCommunity',
+    'ExtendedCommunityIPv6',
+    'ExtendedCommunities',
+    'ExtendedCommunitiesIPv6',
+    'L2Info',
+    'Origin',
+    'OriginASNIP',
+    'OriginIPASN',
+    'OriginASN4Number',
+    'RouteTarget',
+    'RouteTargetASN2Number',
+    'RouteTargetIPNumber',
+    'RouteTargetASN4Number',
+    'TrafficRate',
+    'TrafficAction',
+    'TrafficRedirect',
+    'TrafficRedirectASN4',
+    'TrafficMark',
+    'TrafficRedirectIPv6',
+    'TrafficNextHopIPv4IETF',
+    'TrafficNextHopIPv6IETF',
+    'TrafficNextHopSimpson',
+    'Encapsulation',
+    'ConsistentHashSortOrder',
+    'RTRecord',
+    'InterfaceSet',
+    'MacMobility',
+    'MUPExtendedCommunity',
+]

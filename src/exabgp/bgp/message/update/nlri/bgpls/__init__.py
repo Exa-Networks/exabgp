@@ -19,3 +19,12 @@ from exabgp.bgp.message.update.nlri.bgpls.link import LINK
 from exabgp.bgp.message.update.nlri.bgpls.prefixv4 import PREFIXv4
 from exabgp.bgp.message.update.nlri.bgpls.prefixv6 import PREFIXv6
 from exabgp.bgp.message.update.nlri.bgpls.srv6sid import SRv6SID
+
+__all__ = [
+    'BGPLS',
+    'NODE',
+    'LINK',
+    'PREFIXv4',
+    'PREFIXv6',
+    'SRv6SID',
+]

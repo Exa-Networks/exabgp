@@ -24,3 +24,18 @@ from exabgp.bgp.message.update.nlri.rtc import RTC
 from exabgp.bgp.message.update.nlri.bgpls import BGPLS
 from exabgp.bgp.message.update.nlri.mup import MUP
 from exabgp.bgp.message.update.nlri.mvpn import MVPN
+
+__all__ = [
+    'NLRI',
+    'CIDR',
+    'INET',
+    'Label',
+    'IPVPN',
+    'VPLS',
+    'Flow',
+    'EVPN',
+    'RTC',
+    'BGPLS',
+    'MUP',
+    'MVPN',
+]

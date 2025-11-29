@@ -17,3 +17,11 @@ from exabgp.bgp.message.update.nlri.mup.isd import InterworkSegmentDiscoveryRout
 from exabgp.bgp.message.update.nlri.mup.dsd import DirectSegmentDiscoveryRoute
 from exabgp.bgp.message.update.nlri.mup.t1st import Type1SessionTransformedRoute
 from exabgp.bgp.message.update.nlri.mup.t2st import Type2SessionTransformedRoute
+
+__all__ = [
+    'MUP',
+    'InterworkSegmentDiscoveryRoute',
+    'DirectSegmentDiscoveryRoute',
+    'Type1SessionTransformedRoute',
+    'Type2SessionTransformedRoute',
+]
