@@ -45,33 +45,35 @@ class OspfRoute:
             ospf_type = unpack('!B', data[0:1])[0]
         return cls(ospf_type=ospf_type, packed=data)
 
-    def json(self):
+    def json(self, compact: bool = False) -> str:
         content = '"ospf-route-type": {}'.format(self.ospf_type)
         return content
 
-    def __eq__(self, other: 'OspfRoute') -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, OspfRoute):
+            return NotImplemented
         return self.ospf_type == other.ospf_type
 
-    def __lt__(self, other):
+    def __lt__(self, other: OspfRoute) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __le__(self, other):
+    def __le__(self, other: OspfRoute) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __gt__(self, other):
+    def __gt__(self, other: OspfRoute) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __ge__(self, other):
+    def __ge__(self, other: OspfRoute) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def pack_tlv(self):
+    def pack_tlv(self) -> bytes:
         return self._packed
