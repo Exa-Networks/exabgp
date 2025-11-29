@@ -28,6 +28,7 @@ Bug fixes that need backporting to stable branches.
 | 2025-11 | (pending) | linkid.py JSON bug - `json()` returned invalid JSON (missing `{}` wrapper) | 5.0 | 🔴 Pending |
 | 2025-11 | (pending) | link.py `link_identifiers` bug - assigned single object to list, stayed empty | 5.0 | 🔴 Pending |
 | 2025-11 | (pending) | check.py ADD_PATH bug - used all known families instead of neighbor's configured addpath families | 5.0 | 🔴 Pending |
+| 2025-11 | (pending) | message.py register() - checked `klass.TYPE` (bytes) but dict uses `klass.ID` (int), duplicate registration check broken | 5.0 | 🔴 Pending |
 
 ---
 

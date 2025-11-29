@@ -187,7 +187,7 @@ class Message:
 
     @classmethod
     def register(cls, klass: Type[Message]) -> Type[Message]:
-        if klass.TYPE in cls.registered_message:
+        if klass.ID in cls.registered_message:
             raise RuntimeError('only one class can be registered per message')
         cls.registered_message[klass.ID] = klass
         return klass
