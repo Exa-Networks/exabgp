@@ -189,17 +189,17 @@ class ParseNeighbor(Section):
             if conf is not None:
                 setattr(neighbor, attr_name, conf)
 
-        if neighbor.local_address is None:
-            neighbor.auto_discovery = True
-            neighbor.local_address = None
+        # auto_discovery is now derived from local_address being IP.NoNextHop
+        # (which is the default if local-address is not set in config)
+        if neighbor.auto_discovery:
             neighbor.md5_ip = None
 
         if not neighbor.router_id:
-            if neighbor.peer_address is None:
+            from exabgp.protocol.ip import IP
+
+            if neighbor.peer_address is IP.NoNextHop:
                 return self.error.set('peer-address must be set')
             if neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
-                if neighbor.local_address is None:
-                    return self.error.set('local-address must be set when not using auto-discovery')
                 neighbor.router_id = RouterID(neighbor.local_address.top())
 
         for family in families:
@@ -361,16 +361,13 @@ class ParseNeighbor(Section):
             return self.error.set('incomplete neighbor, missing {}'.format(missing))
         neighbor.infer()
 
+        from exabgp.protocol.ip import IP, IPRange
+
         if not neighbor.auto_discovery:
-            if neighbor.local_address is None:
-                return self.error.set('local-address must be set when not using auto-discovery')
-            if neighbor.peer_address is None:
-                return self.error.set('peer-address must be set when not using auto-discovery')
             if neighbor.local_address.afi != neighbor.peer_address.afi:
                 return self.error.set('local-address and peer-address must be of the same family')
-        if neighbor.peer_address is None:
+        if neighbor.peer_address is IP.NoNextHop:
             return self.error.set('peer-address must be set')
-        from exabgp.protocol.ip import IPRange
 
         # peer_address is always IPRange when parsed from configuration (see parser.peer_ip)
         assert isinstance(neighbor.peer_address, IPRange)
