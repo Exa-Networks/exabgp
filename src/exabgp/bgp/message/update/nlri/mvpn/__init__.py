@@ -10,3 +10,10 @@ from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.mvpn.sourcead import SourceAD
 from exabgp.bgp.message.update.nlri.mvpn.sourcejoin import SourceJoin
 from exabgp.bgp.message.update.nlri.mvpn.sharedjoin import SharedJoin
+
+__all__ = [
+    'MVPN',
+    'SourceAD',
+    'SourceJoin',
+    'SharedJoin',
+]

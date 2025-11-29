@@ -17,3 +17,12 @@ from exabgp.bgp.message.update.attribute.community.large.communities import Larg
 
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
+
+__all__ = [
+    'Community',
+    'Communities',
+    'LargeCommunity',
+    'LargeCommunities',
+    'ExtendedCommunity',
+    'ExtendedCommunities',
+]

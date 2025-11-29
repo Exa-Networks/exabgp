@@ -17,3 +17,12 @@ from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.mac import MAC
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+
+__all__ = [
+    'ESI',
+    'EthernetTag',
+    'Labels',
+    'MAC',
+    'PathInfo',
+    'RouteDistinguisher',
+]
