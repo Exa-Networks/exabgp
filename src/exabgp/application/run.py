@@ -55,8 +55,8 @@ class AnswerStream:
     buffer_size = Answer.buffer_size + 2
 
 
-def open_reader(recv):
-    def open_timeout(signum, frame):
+def open_reader(recv: str) -> int:
+    def open_timeout(signum: int, frame: object) -> None:
         sys.stderr.write('could not connect to read response from ExaBGP\n')
         sys.stderr.flush()
         sys.exit(1)
@@ -81,8 +81,8 @@ def open_reader(recv):
     return reader
 
 
-def open_writer(send):
-    def write_timeout(signum, frame):
+def open_writer(send: str) -> int:
+    def write_timeout(signum: int, frame: object) -> None:
         sys.stderr.write('could not send command to ExaBGP (command timeout)')
         sys.stderr.flush()
         sys.exit(1)
@@ -109,7 +109,7 @@ def open_writer(send):
     return writer
 
 
-def setargs(sub):
+def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:off
     sub.add_argument('--pipename', dest='pipename', help='Name of the pipe', required=False)
     transport_group = sub.add_mutually_exclusive_group()
@@ -121,7 +121,7 @@ def setargs(sub):
     # fmt:on
 
 
-def send_command_socket(socket_path, command_str, return_output=False):
+def send_command_socket(socket_path: str, command_str: str, return_output: bool = False) -> str | None:  # noqa: C901
     """
     Send command via Unix socket and receive response.
 
@@ -233,15 +233,16 @@ def send_command_socket(socket_path, command_str, return_output=False):
 
     if return_output:
         return '\n'.join(output_lines)
+    return None
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     setargs(parser)
     cmdline(parser.parse_args())
 
 
-def cmdline(cmdarg):
+def cmdline(cmdarg: argparse.Namespace) -> None:
     # Determine transport: command-line flag > environment variable > default (socket)
     # Priority: 1. Command-line flags, 2. Environment variable, 3. Default
     if hasattr(cmdarg, 'use_pipe') and cmdarg.use_pipe:
@@ -323,7 +324,9 @@ def cmdline(cmdarg):
         cmdline_socket(socketname, sending)
 
 
-def cmdline_batch(batch_file, pipename, socketname, use_pipe_transport, cmdarg):
+def cmdline_batch(
+    batch_file: str, pipename: str | None, socketname: str | None, use_pipe_transport: bool, cmdarg: argparse.Namespace
+) -> None:
     """Execute commands from file or stdin."""
     # Read commands from file or stdin
     if batch_file == '-':
@@ -386,9 +389,9 @@ def cmdline_batch(batch_file, pipename, socketname, use_pipe_transport, cmdarg):
         sys.exit(1)
 
 
-def cmdline_socket(socketname, sending, exit_on_completion=True):
+def cmdline_socket(socketname: str | None, sending: str, exit_on_completion: bool = True) -> None:
     """Execute command via Unix socket transport."""
-    sockets = unix_socket(ROOT, socketname)
+    sockets = unix_socket(ROOT, socketname or 'exabgp')
     if len(sockets) != 1:
         sys.stdout.write(f"could not find ExaBGP's Unix socket ({socketname}.sock) for the cli\n")
         sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
@@ -399,7 +402,7 @@ def cmdline_socket(socketname, sending, exit_on_completion=True):
         else:
             raise RuntimeError('Socket not found')
 
-    socket_path = sockets[0] + socketname + '.sock'
+    socket_path = sockets[0] + (socketname or 'exabgp') + '.sock'
 
     # Check if socket exists and is actually a socket
     if not os.path.exists(socket_path):
@@ -415,9 +418,9 @@ def cmdline_socket(socketname, sending, exit_on_completion=True):
         sys.exit(0)
 
 
-def cmdline_pipe(pipename, sending, exit_on_completion=True):
+def cmdline_pipe(pipename: str | None, sending: str, exit_on_completion: bool = True) -> None:
     """Execute command via named pipe transport."""
-    pipes = named_pipe(ROOT, pipename)
+    pipes = named_pipe(ROOT, pipename or 'exabgp')
     if len(pipes) != 1:
         sys.stdout.write(f"could not find ExaBGP's named pipes ({pipename}.in and {pipename}.out) for the cli\n")
         sys.stdout.write('we scanned the following folders (the number is your PID):\n - ')
@@ -428,8 +431,8 @@ def cmdline_pipe(pipename, sending, exit_on_completion=True):
         else:
             raise RuntimeError('Pipe not found')
 
-    send = pipes[0] + pipename + '.in'
-    recv = pipes[0] + pipename + '.out'
+    send = pipes[0] + (pipename or 'exabgp') + '.in'
+    recv = pipes[0] + (pipename or 'exabgp') + '.out'
 
     if not check_fifo(send):
         sys.stdout.write('could not find write named pipe to connect to ExaBGP')

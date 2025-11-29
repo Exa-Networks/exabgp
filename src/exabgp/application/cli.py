@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import argparse
 import os
 import re
 import sys
@@ -504,7 +505,7 @@ Display Format (optional prefix):
                     sys.stdout.write(f'{i:4d}  {item}\n')
 
 
-def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool, cmdarg) -> int:
+def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool, cmdarg: argparse.Namespace) -> int:
     """
     Entry point for interactive CLI mode
 

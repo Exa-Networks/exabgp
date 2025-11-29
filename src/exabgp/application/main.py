@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import sys
 import argparse
+from typing import cast
 
 from exabgp.application import cli
 from exabgp.application import run
@@ -129,7 +130,7 @@ def main() -> int | None:
     options = vars(cmdarg)
 
     if 'func' in options:
-        return cmdarg.func(cmdarg)
+        return cast(int | None, cmdarg.func(cmdarg))
     parser.print_help()
     environ.default()
     return 1

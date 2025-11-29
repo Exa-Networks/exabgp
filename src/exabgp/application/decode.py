@@ -52,7 +52,7 @@ def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:on
 
 
-def main() -> int | None:
+def main() -> int:
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     setargs(parser)
     return cmdline(parser.parse_args())
