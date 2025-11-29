@@ -92,7 +92,7 @@ class Scope(Error):
         if name:
             self._current = self._current.setdefault(name, {})
 
-    def pop_context(self, name: str) -> dict[str, Any]:
+    def pop_context(self, name: str) -> Any:
         returned = self._all.pop(name)
 
         for inherit in returned.get('inherit', []):
@@ -104,7 +104,7 @@ class Scope(Error):
 
     # key / value
 
-    def set(self, name: str, value: Any) -> None:
+    def set_value(self, name: str, value: Any) -> None:
         self._current[name] = value
 
     def attribute_add(self, name: str, data: Any) -> None:
@@ -131,13 +131,13 @@ class Scope(Error):
         for key in data:
             value = data[key]
             if key not in self._current:
-                self.set(key, value)
+                self.set_value(key, value)
             elif isinstance(value, list):
                 self._current[key].extend(value)
             elif isinstance(value, dict):
                 self.transfer(value, self._current[key])
             else:
-                self.set(key, value)
+                self.set_value(key, value)
 
     def inherit(self, data: dict[str, Any]) -> None:
         self.transfer(data, self._current)
@@ -170,5 +170,5 @@ class Scope(Error):
             return dict((k, self._current.pop(k)) for k in list(self._current))
         return self._current.pop(name, default)
 
-    def template(self, template: str, name: str) -> dict[str, Any]:
+    def template(self, template: str, name: str) -> Any:
         return self._all['template'].get(template, {}).get(name, {})

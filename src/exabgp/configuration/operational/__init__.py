@@ -59,5 +59,5 @@ class ParseOperational(Section):
     def post(self):
         routes = self.scope.pop(self.name)
         if routes:
-            self.scope.set('routes', routes)
+            self.scope.set_value('routes', routes)
         return True

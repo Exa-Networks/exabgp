@@ -142,7 +142,7 @@ class Section(Error):
             action = self.action.get(identifier, '')
 
             if action == 'set-command':
-                self.scope.set(command, insert)
+                self.scope.set_value(command, insert)
             elif action == 'extend-name':
                 self.scope.extend(name, insert)
             elif action == 'append-name':

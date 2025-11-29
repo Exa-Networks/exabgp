@@ -139,8 +139,8 @@ class AnnounceVPLS(ParseAnnounce):
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, parser, scope, error)
 
-    def clear(self) -> bool:
-        return True
+    def clear(self) -> None:
+        pass
 
     def post(self) -> bool:
         return self._check()

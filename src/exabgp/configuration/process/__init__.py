@@ -63,7 +63,7 @@ class ParseProcess(Section):
         configured = self.scope.get().keys()
         for default in self.default:
             if default not in configured:
-                self.scope.set(default, self.default[default])
+                self.scope.set_value(default, self.default[default])
         difference = set(known).difference(configured)
         if difference:
             return self.error.set('unset process sections: {}'.format(', '.join(str(d) for d in difference)))
