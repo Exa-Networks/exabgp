@@ -34,11 +34,11 @@ neighbor 127.0.0.1 {
 """
 
 
-def is_bgp(message):
+def is_bgp(message: str) -> bool:
     return all(c in string.hexdigits or c == ':' for c in message)
 
 
-def setargs(sub):
+def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:off
     sub.add_argument('-n', '--nlri', help='the data is only the NLRI', action='store_true')
     sub.add_argument('-u', '--update', help='the data is an update message (does nothing)', action='store_true')
@@ -52,13 +52,13 @@ def setargs(sub):
     # fmt:on
 
 
-def main():
+def main() -> int | None:
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     setargs(parser)
-    cmdline(parser.parse_args())
+    return cmdline(parser.parse_args())
 
 
-def cmdline(cmdarg):
+def cmdline(cmdarg: argparse.Namespace) -> int:
     # Read from stdin if no payload provided
     if cmdarg.payload is None:
         if sys.stdin.isatty():

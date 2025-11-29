@@ -23,7 +23,7 @@ kb = 1024
 mb = kb * 1024
 
 
-def named_pipe(root, pipename='exabgp'):
+def named_pipe(root: str, pipename: str = 'exabgp') -> list[str]:
     locations = [
         '/run/exabgp/',
         f'/run/{os.getuid()}/',
@@ -54,7 +54,7 @@ def named_pipe(root, pipename='exabgp'):
     return locations
 
 
-def env(app, section, name, default):
+def env(app: str, section: str, name: str, default: str) -> str:
     r = os.environ.get(f'{app}.{section}.{name}', None)
     if r is None:
         r = os.environ.get(f'{app}_{section}_{name}', None)
@@ -63,7 +63,7 @@ def env(app, section, name, default):
     return r
 
 
-def check_fifo(name):
+def check_fifo(name: str) -> bool | None:
     try:
         if not stat.S_ISFIFO(os.stat(name).st_mode):
             sys.stdout.write(f'error: a file exist which is not a named pipe ({os.path.abspath(name)})\n')
@@ -81,20 +81,22 @@ def check_fifo(name):
     except OSError:
         sys.stdout.write(f'error: could not access/delete the named pipe {os.path.abspath(name)}\n')
         sys.stdout.flush()
+        return None
     except OSError:
         sys.stdout.write(f'error: could not write on the named pipe {os.path.abspath(name)}\n')
         sys.stdout.flush()
+        return None
 
 
 class Control:
     terminating = False
 
-    def __init__(self, location):
+    def __init__(self, location: str) -> None:
         self.send = location + env('exabgp', 'api', 'pipename', 'exabgp') + '.out'
         self.recv = location + env('exabgp', 'api', 'pipename', 'exabgp') + '.in'
-        self.r_pipe = None
+        self.r_pipe: int | None = None
 
-    def init(self):
+    def init(self) -> bool:
         # obviously this is vulnerable to race conditions ... if an attacker can create fifo in the folder
 
         if not check_fifo(self.recv):
@@ -109,8 +111,8 @@ class Control:
         signal.signal(signal.SIGTERM, self.terminate)
         return True
 
-    def cleanup(self):
-        def _close(pipe):
+    def cleanup(self) -> None:
+        def _close(pipe: int | None) -> None:
             if pipe:
                 try:
                     os.close(pipe)
@@ -119,7 +121,7 @@ class Control:
 
         _close(self.r_pipe)
 
-    def terminate(self, ignore=None, me=None):
+    def terminate(self, ignore: object = None, me: object = None) -> None:
         # if the named pipe is open, and remove_fifo called
         # do not ignore a second signal
         if self.terminating:
@@ -128,7 +130,7 @@ class Control:
 
         self.cleanup()
 
-    def read_on(self, reading):
+    def read_on(self, reading: list[int | None]) -> list[int]:
         sleep_time = 1000
 
         poller = select.poll()
@@ -136,7 +138,7 @@ class Control:
             if io is not None:
                 poller.register(io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
 
-        ready = []
+        ready: list[int] = []
         for io, event in poller.poll(sleep_time):
             if event & select.POLLIN or event & select.POLLPRI:
                 ready.append(io)
@@ -144,12 +146,12 @@ class Control:
                 sys.exit(1)
         return ready
 
-    def no_buffer(self, fd):
+    def no_buffer(self, fd: int) -> None:
         mfl = fcntl.fcntl(fd, fcntl.F_GETFL)
         mfl |= os.O_SYNC
         fcntl.fcntl(fd, fcntl.F_SETFL, mfl)
 
-    def loop(self):
+    def loop(self) -> None:
         try:
             self.r_pipe = os.open(self.recv, os.O_RDWR | os.O_NONBLOCK | os.O_EXCL)
         except OSError:
@@ -177,15 +179,15 @@ class Control:
             # If we can't send the command or read the response, continue anyway
             pass
 
-        def monitor(function):
-            def wrapper(*args):
+        def monitor(function):  # type: ignore[no-untyped-def]
+            def wrapper(*args):  # type: ignore[no-untyped-def]
                 r = function(*args)
                 return r
 
             return wrapper
 
         @monitor
-        def std_reader(number):
+        def std_reader(number):  # type: ignore[no-untyped-def]
             try:
                 return os.read(standard_in, number)
             except OSError as exc:
@@ -194,7 +196,7 @@ class Control:
                 sys.exit(1)
 
         @monitor
-        def std_writer(line):
+        def std_writer(line):  # type: ignore[no-untyped-def]
             try:
                 return os.write(standard_out, line)
             except OSError as exc:
@@ -203,7 +205,7 @@ class Control:
                 sys.exit(1)
 
         @monitor
-        def fifo_reader(number):
+        def fifo_reader(number):  # type: ignore[no-untyped-def]
             if self.r_pipe is None:
                 return b''
             try:
@@ -214,7 +216,7 @@ class Control:
                 sys.exit(1)
 
         @monitor
-        def fifo_writer(line):
+        def fifo_writer(line):  # type: ignore[no-untyped-def]
             pipe, nb = None, 0
             try:
                 pipe = os.open(self.send, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)
@@ -253,7 +255,7 @@ class Control:
             self.r_pipe: b'',
         }
 
-        def consume(source):
+        def consume(source: int) -> None:
             if not backlog[source] and b'\n' not in store[source]:
                 store[source] += read[source](1024)
             else:
@@ -290,7 +292,7 @@ class Control:
                 if backlog[source]:
                     store[source] += backlog[source].popleft()
 
-    def run(self):
+    def run(self) -> None:
         if not self.init():
             sys.exit(1)
         try:
@@ -308,7 +310,7 @@ class Control:
             sys.exit(1)
 
 
-def main(location=''):
+def main(location: str = '') -> None:
     if not location:
         location = os.environ.get('exabgp_cli_pipe', '')
     if not location:

@@ -8,20 +8,20 @@ import argparse
 from exabgp.environment import Env
 
 
-def setargs(sub):
+def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt: off
     sub.add_argument('-d', '--diff', help='show only the different from the defaults', action='store_true')
     sub.add_argument('-e', '--env', help='display using environment (not ini)', action='store_true')
     # fmt: on
 
 
-def default():
+def default() -> None:
     sys.stdout.write('\nEnvironment values are:\n')
     sys.stdout.write('\n'.join('    {}'.format(_) for _ in Env.default()))
     sys.stdout.flush()
 
 
-def cmdline(cmdarg):
+def cmdline(cmdarg: argparse.Namespace) -> None:
     dispatch = {
         True: Env.iter_env,
         False: Env.iter_ini,
@@ -32,7 +32,7 @@ def cmdline(cmdarg):
         sys.stdout.flush()
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     setargs(parser)
     cmdline(parser.parse_args())

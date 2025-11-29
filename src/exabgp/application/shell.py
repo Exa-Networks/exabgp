@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -735,7 +736,7 @@ def uninstall_completion(shell: str) -> int:
     return 0
 
 
-def cmdline(args):
+def cmdline(args: argparse.Namespace) -> int:
     """Handle 'exabgp shell' subcommands."""
     if not hasattr(args, 'shell_command') or args.shell_command is None:
         sys.stderr.write('Error: Please specify a subcommand (install, uninstall, or completion)\n')
@@ -766,7 +767,7 @@ def cmdline(args):
         return 1
 
 
-def setargs(parser):
+def setargs(parser: argparse.ArgumentParser) -> None:
     """Configure argparse subcommand for 'shell' commands."""
     subparsers = parser.add_subparsers(dest='shell_command', help='Shell completion commands')
 

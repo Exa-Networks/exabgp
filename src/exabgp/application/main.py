@@ -23,7 +23,7 @@ from exabgp.application import healthcheck
 from exabgp.application import shell
 
 
-def main():
+def main() -> int | None:
     # Check if this is a CLI subprocess (pipe or socket)
     cli_mode = os.environ.get('exabgp_api_cli_mode', '')
 
