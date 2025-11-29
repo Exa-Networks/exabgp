@@ -109,7 +109,7 @@ class Capabilities(dict):
         if not neighbor.capability.asn4.is_enabled():
             return
 
-        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
+        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.session.local_as)
 
     def _nexthop(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.nexthop.is_enabled():

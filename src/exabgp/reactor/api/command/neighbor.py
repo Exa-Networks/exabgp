@@ -102,10 +102,12 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
                 # Build minimal neighbor info from configuration
                 try:
                     neighbor_data = {
-                        'peer-address': str(neighbor.peer_address),
-                        'local-address': str(neighbor.local_address) if neighbor.local_address else None,
-                        'peer-as': neighbor.peer_as,
-                        'local-as': neighbor.local_as,
+                        'peer-address': str(neighbor.session.peer_address),
+                        'local-address': str(neighbor.session.local_address)
+                        if neighbor.session.local_address
+                        else None,
+                        'peer-as': neighbor.session.peer_as,
+                        'local-as': neighbor.session.local_as,
                     }
 
                     # If neighbor is also an active peer, get full runtime data
@@ -146,10 +148,10 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
                         await asyncio.sleep(0)
                 else:
                     # Neighbor is configured but not connected - show minimal info
-                    peer_addr = str(neighbor.peer_address) if neighbor.peer_address else 'not set'
-                    local_addr = str(neighbor.local_address) if neighbor.local_address else 'not set'
-                    peer_as = neighbor.peer_as if neighbor.peer_as else 'not set'
-                    local_as = neighbor.local_as if neighbor.local_as else 'not set'
+                    peer_addr = str(neighbor.session.peer_address) if neighbor.session.peer_address else 'not set'
+                    local_addr = str(neighbor.session.local_address) if neighbor.session.local_address else 'not set'
+                    peer_as = neighbor.session.peer_as if neighbor.session.peer_as else 'not set'
+                    local_as = neighbor.session.local_as if neighbor.session.local_as else 'not set'
 
                     reactor.processes.write(service, f'Neighbor {peer_addr}')
                     reactor.processes.write(service, '')

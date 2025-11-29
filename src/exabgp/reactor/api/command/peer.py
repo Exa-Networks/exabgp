@@ -223,11 +223,11 @@ def _build_neighbor(params: dict[str, Any], api_processes: list[str] | None = No
     neighbor = Neighbor()
 
     # Set required fields
-    neighbor.peer_address = params['peer-address']
-    neighbor.local_address = params['local-address']
-    neighbor.local_as = params['local-as']
-    neighbor.peer_as = params['peer-as']
-    neighbor.router_id = params['router-id']
+    neighbor.session.peer_address = params['peer-address']
+    neighbor.session.local_address = params['local-address']
+    neighbor.session.local_as = params['local-as']
+    neighbor.session.peer_as = params['peer-as']
+    neighbor.session.router_id = params['router-id']
 
     # Optional: families (defaults to IPv4 unicast only)
     if 'families' in params and params['families']:

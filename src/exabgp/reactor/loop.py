@@ -317,7 +317,7 @@ class Reactor:
     def active_peers(self) -> set[str]:
         peers: set[str] = set()
         for key, peer in self._peers.items():
-            if peer.neighbor.passive and not peer.proto:
+            if peer.neighbor.session.passive and not peer.proto:
                 continue
             peers.add(key)
         return peers
@@ -369,7 +369,7 @@ class Reactor:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=ip_lookup', p=peer_name), 'reactor')
             return ''
-        return str(peer.neighbor.peer_address)
+        return str(peer.neighbor.session.peer_address)
 
     def neighbor_cli_data(self, peer_name: str) -> dict[str, Any]:
         if not (peer := self._peers.get(peer_name, None)):
@@ -478,14 +478,14 @@ class Reactor:
             return self.Exit.configuration
 
         for neighbor in self.configuration.neighbors.values():
-            if neighbor.listen:
+            if neighbor.session.listen:
                 if not self.listener.listen_on(
-                    neighbor.md5_ip,
-                    neighbor.peer_address,
-                    neighbor.listen,
-                    neighbor.md5_password,
-                    neighbor.md5_base64,
-                    neighbor.incoming_ttl,
+                    neighbor.session.md5_ip,
+                    neighbor.session.peer_address,
+                    neighbor.session.listen,
+                    neighbor.session.md5_password,
+                    neighbor.session.md5_base64,
+                    neighbor.session.incoming_ttl,
                 ):
                     return self.Exit.listening
 
@@ -679,14 +679,14 @@ class Reactor:
             return self.Exit.configuration
 
         for neighbor in self.configuration.neighbors.values():
-            if neighbor.listen:
+            if neighbor.session.listen:
                 if not self.listener.listen_on(
-                    neighbor.md5_ip,
-                    neighbor.peer_address,
-                    neighbor.listen,
-                    neighbor.md5_password,
-                    neighbor.md5_base64,
-                    neighbor.incoming_ttl,
+                    neighbor.session.md5_ip,
+                    neighbor.session.peer_address,
+                    neighbor.session.listen,
+                    neighbor.session.md5_password,
+                    neighbor.session.md5_base64,
+                    neighbor.session.incoming_ttl,
                 ):
                     return self.Exit.listening
 
@@ -777,13 +777,13 @@ class Reactor:
                 log.debug(lazymsg('peer.unchanged key={key} action=reconfigure', key=key), 'reactor')
                 self._peers[key].reconfigure(neighbor)
             for ip in self._ips:
-                if ip.afi == neighbor.peer_address.afi:
+                if ip.afi == neighbor.session.peer_address.afi:
                     self.listener.listen_on(
                         ip,
-                        neighbor.peer_address,
+                        neighbor.session.peer_address,
                         self._port,
-                        neighbor.md5_password,
-                        neighbor.md5_base64,
+                        neighbor.session.md5_password,
+                        neighbor.session.md5_base64,
                         None,
                     )
         log.info(lazymsg('config.loaded'), 'reactor')

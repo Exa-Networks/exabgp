@@ -42,13 +42,13 @@ class Text:
         return None
 
     def up(self, neighbor: 'Neighbor') -> str:
-        return f'neighbor {neighbor.peer_address} up\n'
+        return f'neighbor {neighbor.session.peer_address} up\n'
 
     def connected(self, neighbor: 'Neighbor') -> str:
-        return f'neighbor {neighbor.peer_address} connected\n'
+        return f'neighbor {neighbor.session.peer_address} connected\n'
 
     def down(self, neighbor: 'Neighbor', reason: str = '') -> str:
-        return f'neighbor {neighbor.peer_address} down - {reason}\n'
+        return f'neighbor {neighbor.session.peer_address} down - {reason}\n'
 
     def shutdown(self) -> str:
         return f'shutdown {os.getpid()} {os.getppid()}\n'
@@ -73,7 +73,7 @@ class Text:
     ) -> str:
         data_hex = hexstring(message.data)
         header_body = self._header_body(header, body)
-        return f'neighbor {neighbor.peer_address} {direction} notification code {message.code} subcode {message.subcode} data {data_hex}{header_body}\n'
+        return f'neighbor {neighbor.session.peer_address} {direction} notification code {message.code} subcode {message.subcode} data {data_hex}{header_body}\n'
 
     def packets(
         self,
@@ -84,12 +84,12 @@ class Text:
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
-        return f'neighbor {neighbor.peer_address} {direction} {category}{self._header_body(header, body)}\n'
+        return f'neighbor {neighbor.session.peer_address} {direction} {category}{self._header_body(header, body)}\n'
 
     def keepalive(
         self, neighbor: 'Neighbor', direction: str, header: bytes, body: bytes, negotiated: 'Negotiated'
     ) -> str:
-        return f'neighbor {neighbor.peer_address} {direction} keepalive{self._header_body(header, body)}\n'
+        return f'neighbor {neighbor.session.peer_address} {direction} keepalive{self._header_body(header, body)}\n'
 
     def open(
         self,
@@ -102,7 +102,7 @@ class Text:
     ) -> str:
         capabilities_str = str(sent_open.capabilities).lower()
         header_body = self._header_body(header, body)
-        return f'neighbor {neighbor.peer_address} {direction} open version {sent_open.version} asn {sent_open.asn} hold_time {sent_open.hold_time} router_id {sent_open.router_id} capabilities [{capabilities_str}]{header_body}\n'
+        return f'neighbor {neighbor.session.peer_address} {direction} open version {sent_open.version} asn {sent_open.asn} hold_time {sent_open.hold_time} router_id {sent_open.router_id} capabilities [{capabilities_str}]{header_body}\n'
 
     def update(
         self,
@@ -113,7 +113,7 @@ class Text:
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
-        prefix = f'neighbor {neighbor.peer_address} {direction} update'
+        prefix = f'neighbor {neighbor.session.peer_address} {direction} update'
 
         r = f'{prefix} start\n'
 
@@ -145,23 +145,23 @@ class Text:
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
-        return f'neighbor {neighbor.peer_address} {direction} route-refresh afi {refresh.afi} safi {refresh.safi} {refresh.reserved}{self._header_body(header, body)}\n'
+        return f'neighbor {neighbor.session.peer_address} {direction} route-refresh afi {refresh.afi} safi {refresh.safi} {refresh.reserved}{self._header_body(header, body)}\n'
 
     def _operational_advisory(
         self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
     ) -> str:
         data = operational.data.decode('utf-8') if isinstance(operational.data, bytes) else operational.data
-        return f'neighbor {neighbor.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi} advisory "{data}"{self._header_body(header, body)}'
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi} advisory "{data}"{self._header_body(header, body)}'
 
     def _operational_query(
         self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
     ) -> str:
-        return f'neighbor {neighbor.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi}{self._header_body(header, body)}'
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi}{self._header_body(header, body)}'
 
     def _operational_counter(
         self, neighbor: 'Neighbor', direction: str, operational: 'Any', header: bytes, body: bytes
     ) -> str:
-        return f'neighbor {neighbor.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi} router-id {operational.routerid} sequence {operational.sequence} counter {operational.counter}{self._header_body(header, body)}'
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi} router-id {operational.routerid} sequence {operational.sequence} counter {operational.counter}{self._header_body(header, body)}'
 
     def operational(
         self,

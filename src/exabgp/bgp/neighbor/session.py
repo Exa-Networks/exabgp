@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,9 @@ from exabgp.protocol.ip import IP
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.routerid import RouterID
+
+# MD5 password length constraint (RFC 2385)
+MAX_MD5_PASSWORD_LENGTH = 80
 
 
 @dataclass
@@ -56,6 +60,65 @@ class Session:
         """
         if self.md5_ip is None and not self.auto_discovery:
             self.md5_ip = self.local_address
+
+    def missing(self) -> str:
+        """Check for missing required session fields.
+
+        Returns:
+            Name of missing field, or empty string if complete.
+        """
+        if self.listen > 0 and self.auto_discovery:
+            return 'local-address'
+        if self.peer_address is IP.NoNextHop:
+            return 'peer-address'
+        if self.auto_discovery and not self.router_id:
+            return 'router-id'
+        if self.peer_address.afi == AFI.ipv6 and not self.router_id:
+            return 'router-id'
+        return ''
+
+    def validate_md5(self) -> str:
+        """Validate MD5 password configuration.
+
+        Returns:
+            Error message if invalid, empty string if valid.
+        """
+        if not self.md5_password:
+            return ''
+
+        try:
+            password = base64.b64decode(self.md5_password) if self.md5_base64 else self.md5_password
+        except (TypeError, ValueError) as e:
+            return f'Invalid base64 encoding of MD5 password ({e})'
+
+        if len(password) > MAX_MD5_PASSWORD_LENGTH:
+            return f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters'
+
+        return ''
+
+    def ip_self(self, afi: AFI) -> IP:
+        """Get the local IP address for next-hop self.
+
+        Args:
+            afi: The address family of the route.
+
+        Returns:
+            The IP to use as next-hop self.
+
+        Raises:
+            TypeError: If address family mismatch prevents next-hop self.
+        """
+        if not self.auto_discovery and afi == self.local_address.afi:
+            return self.local_address
+
+        # attempting to not barf for next-hop self when the peer is IPv6
+        if afi == AFI.ipv4 and self.router_id is not None:
+            return self.router_id
+
+        local_afi = self.local_address.afi if not self.auto_discovery else 'unknown'
+        raise TypeError(
+            f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({local_afi})',
+        )
 
     def connection_established(self, local: str) -> None:
         """Called after TCP connection to set auto-discovered values.

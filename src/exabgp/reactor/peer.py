@@ -199,7 +199,7 @@ class Peer:
     # logging
 
     def me(self, message: str) -> str:
-        return f'peer {self.neighbor.peer_address} ASN {self.neighbor.peer_as:<7} {message}'
+        return f'peer {self.neighbor.session.peer_address} ASN {self.neighbor.session.peer_as:<7} {message}'
 
     # control
 
@@ -295,8 +295,8 @@ class Peer:
             # it does not matter as the open message will be the same anyway
             assert self.proto is not None  # Must exist in OPENCONFIRM state
             assert self.proto.negotiated.received_open is not None  # Must exist in OPENCONFIRM
-            assert self.neighbor.router_id is not None  # Must exist at this point
-            local_id = self.neighbor.router_id.pack_ip()
+            assert self.neighbor.session.router_id is not None  # Must exist at this point
+            local_id = self.neighbor.session.router_id.pack_ip()
             remote_id = self.proto.negotiated.received_open.router_id.pack_ip()
 
             if remote_id < local_id:
@@ -361,7 +361,9 @@ class Peer:
         except Stop:
             # Connection failed
             if not connected and self.proto:
-                self._close(f'connection to {self.neighbor.peer_address}:{self.neighbor.connect} failed')
+                self._close(
+                    f'connection to {self.neighbor.session.peer_address}:{self.neighbor.session.connect} failed'
+                )
 
             # A connection arrived before we could establish !
             if not connected or self.proto:
@@ -387,7 +389,9 @@ class Peer:
 
             if not connected:
                 if self.proto:
-                    self._close(f'connection to {self.neighbor.peer_address}:{self.neighbor.connect} failed')
+                    self._close(
+                        f'connection to {self.neighbor.session.peer_address}:{self.neighbor.session.connect} failed'
+                    )
                 raise Interrupted('connection failed')
 
             self.proto = proto
@@ -395,7 +399,9 @@ class Peer:
         except Stop:
             # Connection failed
             if self.proto:
-                self._close(f'connection to {self.neighbor.peer_address}:{self.neighbor.connect} failed')
+                self._close(
+                    f'connection to {self.neighbor.session.peer_address}:{self.neighbor.session.connect} failed'
+                )
             raise Interrupted('connection failed') from None
 
     def _send_open(self) -> Generator[Message, None, None]:
@@ -421,19 +427,21 @@ class Peer:
         )
         # Only yield if we have not the open, otherwise the reactor can run the other connection
         # which would be bad as we need to do the collission check without going to the other peer
-        assert self.neighbor.peer_address is not None
-        for message in self.proto.read_open(self.neighbor.peer_address.top()):
+        assert self.neighbor.session.peer_address is not None
+        for message in self.proto.read_open(self.neighbor.session.peer_address.top()):
             opentimer.check_ka(message)
             yield message
 
     async def _read_open_async(self) -> Open:
         """Async version of _read_open() - reads OPEN message using async I/O"""
         assert self.proto is not None
-        assert self.neighbor.peer_address is not None
+        assert self.neighbor.session.peer_address is not None
         wait = getenv().bgp.openwait
         try:
             # Use asyncio timeout instead of ReceiveTimer
-            message = await asyncio.wait_for(self.proto.read_open_async(self.neighbor.peer_address.top()), timeout=wait)
+            message = await asyncio.wait_for(
+                self.proto.read_open_async(self.neighbor.session.peer_address.top()), timeout=wait
+            )
             return message
         except asyncio.TimeoutError:
             raise Notify(5, 1, 'waited for open too long, we do not like stuck in active') from None
@@ -481,7 +489,7 @@ class Peer:
         assert self.proto.connection is not None
 
         # normal sending of OPEN first ...
-        if self.neighbor.local_as:
+        if self.neighbor.session.local_as:
             for sent_open in self._send_open():
                 if sent_open.SCHEDULING:
                     yield sent_open
@@ -499,7 +507,7 @@ class Peer:
         self.proto.connection.msg_size = self.proto.negotiated.msg_size
 
         # if we mirror the ASN, we need to read first and send second
-        if not self.neighbor.local_as:
+        if not self.neighbor.session.local_as:
             for sent_open in self._send_open():
                 if sent_open.SCHEDULING:
                     yield sent_open
@@ -542,7 +550,7 @@ class Peer:
         assert self.proto.connection is not None
 
         # normal sending of OPEN first ...
-        if self.neighbor.local_as:
+        if self.neighbor.session.local_as:
             sent_open = await self._send_open_async()
             self.proto.negotiated.sent(sent_open)
             self.proto.negotiated.sent(sent_open)
@@ -556,7 +564,7 @@ class Peer:
         self.proto.connection.msg_size = self.proto.negotiated.msg_size
 
         # if we mirror the ASN, we need to read first and send second
-        if not self.neighbor.local_as:
+        if not self.neighbor.session.local_as:
             sent_open = await self._send_open_async()
             self.proto.negotiated.sent(sent_open)
             self.proto.negotiated.sent(sent_open)
@@ -1294,11 +1302,11 @@ class Peer:
         return {
             'down': int(self.stats['reset'] - self.stats['creation']),
             'duration': (int(time.time() - self.stats['complete']) if self.stats['complete'] else 0),
-            'local-address': str(self.neighbor.local_address),
-            'peer-address': str(self.neighbor.peer_address),
-            'local-as': int(self.neighbor.local_as),
-            'peer-as': int(self.neighbor.peer_as),
-            'local-id': str(self.neighbor.router_id),
+            'local-address': str(self.neighbor.session.local_address),
+            'peer-address': str(self.neighbor.session.peer_address),
+            'local-as': int(self.neighbor.session.local_as),
+            'peer-as': int(self.neighbor.session.peer_as),
+            'local-id': str(self.neighbor.session.router_id),
             'peer-id': None if peer['peer-id'] is None else str(peer['router-id']),
             'local-hold': int(self.neighbor.hold_time),
             'peer-hold': None if peer['hold-time'] is None else int(peer['hold-time']),

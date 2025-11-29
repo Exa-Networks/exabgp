@@ -177,11 +177,11 @@ class Negotiated:
         assert self.sent_open is not None
         assert self.received_open is not None
 
-        if neighbor.peer_as is not None and self.peer_as != neighbor.peer_as:
+        if neighbor.session.peer_as and self.peer_as != neighbor.session.peer_as:
             return (
                 2,
                 2,
-                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn, neighbor.peer_as),
+                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn, neighbor.session.peer_as),
             )
 
         # RFC 6286 : https://tools.ietf.org/html/rfc6286
@@ -189,9 +189,9 @@ class Negotiated:
         if self.received_open.router_id == RouterID('0.0.0.0'):
             return (2, 3, '0.0.0.0 is an invalid router_id')
 
-        if self.received_open.asn == neighbor.local_as:
+        if self.received_open.asn == neighbor.session.local_as:
             # router-id must be unique within an ASN
-            if self.received_open.router_id == neighbor.router_id:
+            if self.received_open.router_id == neighbor.session.router_id:
                 return (
                     2,
                     3,
