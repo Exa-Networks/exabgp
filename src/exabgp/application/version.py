@@ -9,19 +9,19 @@ import platform
 from exabgp.version import version, get_root
 
 
-def setargs(sub):
+def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:off
     pass
     # fmt:on
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     setargs(parser)
     cmdline(parser.parse_args())
 
 
-def cmdline(cmdarg):
+def cmdline(cmdarg: argparse.Namespace) -> None:
     python_version = sys.version.replace('\n', ' ')
     sys.stdout.write(f'ExaBGP : {version}\n')
     sys.stdout.write(f'Python : {python_version}\n')

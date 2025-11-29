@@ -17,7 +17,7 @@ from exabgp.logger import log, lazymsg
 from exabgp.configuration.check import check_generation
 
 
-def setargs(sub):
+def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:off
     sub.add_argument('-n', '--neighbor', help='check the parsing of the neighbors', action='store_true')
     sub.add_argument('-r', '--route', help='check the parsing of the routes', action='store_true')
@@ -27,7 +27,7 @@ def setargs(sub):
     # fmt:on
 
 
-def cmdline(cmdarg):
+def cmdline(cmdarg: argparse.Namespace) -> None:
     env = getenv()
 
     # Must be done before setting the logger as it modify its behaviour
@@ -79,7 +79,7 @@ def cmdline(cmdarg):
             log.info(lazymsg('validate.routes status=success'), 'configuration')
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     setargs(parser)
     cmdline(parser.parse_args())

@@ -49,7 +49,7 @@ neighbor 127.0.0.1 {{
 """
 
 
-def setargs(sub):
+def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:off
     sub.add_argument('route', help='route in config format (e.g., "route 10.0.0.0/24 next-hop 1.2.3.4")', type=str, nargs='?')
     sub.add_argument('-f', '--family', help='address family (e.g., "ipv4 unicast")', type=str, default='ipv4 unicast')
@@ -64,13 +64,13 @@ def setargs(sub):
     # fmt:on
 
 
-def main():
+def main() -> int | None:
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
     setargs(parser)
-    cmdline(parser.parse_args())
+    return cmdline(parser.parse_args())
 
 
-def cmdline(cmdarg):
+def cmdline(cmdarg: argparse.Namespace) -> int:
     if not cmdarg.route and not cmdarg.configuration:
         sys.stdout.write('Environment values are:\n{}\n\n'.format('\n'.join(' - {}'.format(_) for _ in Env.default())))
         sys.stdout.write('Usage: exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4"\n')
