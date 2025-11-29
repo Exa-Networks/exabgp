@@ -7,13 +7,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable, TypeVar
 from string import ascii_letters
 from string import digits
 
 from exabgp.configuration.core.error import Error
 from exabgp.configuration.core.scope import Scope
 from exabgp.configuration.core.parser import Parser
+
+F = TypeVar('F', bound=Callable[..., Any])
 
 
 def _levenshtein(s1: str, s2: str) -> int:
@@ -85,13 +87,13 @@ class Section(Error):
         self.error = error
         self._names: list[str] = []
 
-    def clear(self):
+    def clear(self) -> None:
         self._names = []
 
     @classmethod
-    def register(cls, name, action, afi=''):
-        def inner(function):
-            identifier = (afi, name) if afi else name
+    def register(cls, name: str, action: str, afi: str = '') -> Callable[[F], F]:
+        def inner(function: F) -> F:
+            identifier: str | tuple[str, str] = (afi, name) if afi else name
             if identifier in cls.known:
                 raise RuntimeError('more than one registration per command attempted')
             cls.known[identifier] = function
@@ -100,17 +102,17 @@ class Section(Error):
 
         return inner
 
-    def check_name(self, name):
+    def check_name(self, name: str) -> None:
         if any(False if c in ascii_letters + digits + '.-_' else True for c in name):
             self.throw(f'invalid character in name for {self.name} ')
         if name in self._names:
             self.throw(f'the name "{name}" already exists in {self.name}')
         self._names.append(name)
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return True
 
     def parse(self, name: str, command: str) -> bool:  # noqa: C901

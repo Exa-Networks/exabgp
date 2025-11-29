@@ -7,6 +7,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.error import Error
+    from exabgp.configuration.core.parser import Parser
+    from exabgp.configuration.core.scope import Scope
+
 from exabgp.configuration.core import Section
 
 
@@ -15,14 +22,14 @@ class ParseTemplate(Section):
 
     name = 'template'
 
-    def __init__(self, parser, scope, error):
+    def __init__(self, parser: 'Parser', scope: 'Scope', error: 'Error') -> None:
         Section.__init__(self, parser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         self._names = []
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         return True

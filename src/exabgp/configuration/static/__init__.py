@@ -42,15 +42,15 @@ def _check_true(change: Change, afi: AFI) -> bool:
 class ParseStatic(ParseStaticRoute):
     syntax: str = 'route <ip>/<netmask> {};'.format(' '.join(ParseStaticRoute.definition))
 
-    action: dict = dict(ParseStaticRoute.action)
+    action: dict[str | tuple[Any, ...], str] = dict(ParseStaticRoute.action)
 
     name: str = 'static'
 
     def __init__(self, parser: Any, scope: Any, error: Any) -> None:
         ParseStaticRoute.__init__(self, parser, scope, error)
 
-    def clear(self) -> bool:
-        return True
+    def clear(self) -> None:
+        pass
 
     def pre(self) -> bool:
         return True
@@ -61,19 +61,19 @@ class ParseStatic(ParseStaticRoute):
 
 @ParseStatic.register('route', 'append-route')
 def route(tokeniser: Any) -> list[Change]:
-    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
+    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
     check: Callable[[Change, AFI], bool] = _check_true
 
     nlri: INET
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-        nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
+        nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, nlri_action)
         check = AnnounceVPN.check
     elif 'label' in tokeniser.tokens:
-        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)
+        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, nlri_action)
         check = AnnounceLabel.check
     else:
-        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
+        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
         check = AnnouncePath.check
 
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
@@ -98,13 +98,13 @@ def route(tokeniser: Any) -> list[Change]:
             nlri.path_info = path_information(tokeniser)
             continue
 
-        action = ParseStatic.action.get(command, '')
+        cmd_action = ParseStatic.action.get(command, '')
 
-        if action == 'attribute-add':
+        if cmd_action == 'attribute-add':
             change.attributes.add(ParseStatic.known[command](tokeniser))
-        elif action == 'nlri-set':
+        elif cmd_action == 'nlri-set':
             change.nlri.assign(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
-        elif action == 'nexthop-and-attribute':
+        elif cmd_action == 'nexthop-and-attribute':
             nexthop, attribute = ParseStatic.known[command](tokeniser)
             change.nlri.nexthop = nexthop
             change.attributes.add(attribute)
@@ -119,17 +119,17 @@ def route(tokeniser: Any) -> list[Change]:
 
 @ParseStatic.register('attributes', 'append-route')
 def attributes(tokeniser: Any) -> list[Change]:
-    action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
+    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(lambda: tokeniser.tokens[-1])  # type: ignore[arg-type]
     tokeniser.afi = ipmask.afi
 
     nlri: INET
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-        nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, action)
+        nlri = IPVPN(IP.toafi(ipmask.top()), SAFI.mpls_vpn, nlri_action)
     elif 'label' in tokeniser.tokens:
-        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, action)
+        nlri = Label(IP.toafi(ipmask.top()), SAFI.nlri_mpls, nlri_action)
     else:
-        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), action)
+        nlri = INET(IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
 
     nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
     attr = Attributes()
@@ -159,15 +159,15 @@ def attributes(tokeniser: Any) -> list[Change]:
             rd = route_distinguisher(tokeniser)
             continue
 
-        action = ParseStatic.action.get(command, '')
-        if action == '':
+        cmd_action = ParseStatic.action.get(command, '')
+        if cmd_action == '':
             raise ValueError(f"The command '{command}' is not known or valid where used")
 
-        if action == 'attribute-add':
+        if cmd_action == 'attribute-add':
             attr.add(ParseStatic.known[command](tokeniser))
-        elif action == 'nlri-set':
+        elif cmd_action == 'nlri-set':
             nlri.assign(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
-        elif action == 'nexthop-and-attribute':
+        elif cmd_action == 'nexthop-and-attribute':
             nexthop, attribute = ParseStatic.known[command](tokeniser)
             nlri.nexthop = nexthop
             attr.add(attribute)

@@ -14,3 +14,5 @@ from exabgp.configuration.core.scope import Scope
 from exabgp.configuration.core.section import Section
 from exabgp.configuration.core.parser import Parser
 from exabgp.configuration.core.parser import Tokeniser
+
+__all__ = ['Error', 'Scope', 'Section', 'Parser', 'Tokeniser']

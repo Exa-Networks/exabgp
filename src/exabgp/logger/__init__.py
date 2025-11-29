@@ -26,6 +26,7 @@ __all__ = [
     'lazynlri',
     'lazymsg',
     'history',
+    'option',
     'record',
     'LogMessage',
     'log',
