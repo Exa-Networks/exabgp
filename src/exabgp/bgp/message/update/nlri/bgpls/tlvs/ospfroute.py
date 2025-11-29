@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 
 
 #     https://tools.ietf.org/html/rfc7752#section-3.2.3
@@ -35,23 +35,21 @@ OSPF_ROUTE = {1: 'intra-area', 2: 'inter-area', 3: 'external-1', 4: 'external-2'
 
 
 class OspfRoute:
-    def __init__(self, ospf_type, packed=None):
+    def __init__(self, ospf_type: int, packed: bytes | None = None) -> None:
         self.ospf_type = ospf_type
-        self._packed = packed
+        self._packed = packed if packed is not None else pack('!B', ospf_type)
 
     @classmethod
-    def unpack_ospfroute(cls, data):
+    def unpack_ospfroute(cls, data: bytes) -> 'OspfRoute':
         if len(data) == 1:
             ospf_type = unpack('!B', data[0:1])[0]
-        return cls(ospf_type=ospf_type)
+        return cls(ospf_type=ospf_type, packed=data)
 
     def json(self):
         content = '"ospf-route-type": {}'.format(self.ospf_type)
         return content
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, OspfRoute):
-            return False
+    def __eq__(self, other: 'OspfRoute') -> bool:  # type: ignore[override]
         return self.ospf_type == other.ospf_type
 
     def __lt__(self, other):

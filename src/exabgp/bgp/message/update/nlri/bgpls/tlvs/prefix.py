@@ -23,27 +23,25 @@ from exabgp.protocol.ip import IP, IPv4, IPv6
 
 
 class Prefix:
-    def __init__(self, iface_addr, packed=None):
+    def __init__(self, iface_addr: IP, packed: bytes) -> None:
         self.iface_address = iface_addr
         self._packed = packed
 
     @classmethod
-    def unpack_prefix(cls, data):
+    def unpack_prefix(cls, data: bytes) -> 'Prefix':
         if len(data) == IPv4.BYTES:
             # IPv4 address
             addr = IP.unpack_ip(data[: IPv4.BYTES])
         elif len(data) == IPv6.BYTES:
             # IPv6
             addr = IP.unpack_ip(data[: IPv6.BYTES])
-        return cls(iface_addr=addr)
+        return cls(iface_addr=addr, packed=data)
 
     def json(self):
         content = '"interface-address": "{}"'.format(self.iface_address)
         return content
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Prefix):
-            return False
+    def __eq__(self, other: 'Prefix') -> bool:  # type: ignore[override]
         return self.iface_address == other.iface_address
 
     def __lt__(self, other):
@@ -70,7 +68,5 @@ class Prefix:
     def __hash__(self):
         return hash(str(self))
 
-    def pack_tlv(self):
-        if self._packed:
-            return self._packed
-        raise RuntimeError('Not implemented')
+    def pack_tlv(self) -> bytes:
+        return self._packed

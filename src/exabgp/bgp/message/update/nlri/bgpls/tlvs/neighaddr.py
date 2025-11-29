@@ -21,26 +21,24 @@ from exabgp.protocol.ip import IP, IPv4, IPv6
 
 
 class NeighAddr:
-    def __init__(self, addr, packed=None):
+    def __init__(self, addr: IP, packed: bytes) -> None:
         self.addr = addr
         self._packed = packed
 
     @classmethod
-    def unpack_neighaddr(cls, data):
+    def unpack_neighaddr(cls, data: bytes) -> 'NeighAddr':
         if len(data) == IPv4.BYTES:
             # IPv4 address
             addr = IP.unpack_ip(data[: IPv4.BYTES])
         elif len(data) == IPv6.BYTES:
             # IPv6
             addr = IP.unpack_ip(data[: IPv6.BYTES])
-        return cls(addr=addr)
+        return cls(addr=addr, packed=data)
 
     def json(self):
         return '"{}"'.format(self.addr)
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, NeighAddr):
-            return False
+    def __eq__(self, other: 'NeighAddr') -> bool:  # type: ignore[override]
         return self.addr == other.addr
 
     def __lt__(self, other):

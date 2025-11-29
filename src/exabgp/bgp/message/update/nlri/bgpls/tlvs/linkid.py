@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 
 
 #       0                   1                   2                   3
@@ -22,24 +22,21 @@ from struct import unpack
 
 
 class LinkIdentifier:
-    def __init__(self, local_id, remote_id, packed=None):
+    def __init__(self, local_id: int, remote_id: int, packed: bytes | None = None) -> None:
         self.local_id = local_id
         self.remote_id = remote_id
-        self._packed = packed
+        self._packed = packed if packed is not None else pack('!LL', local_id, remote_id)
 
     @classmethod
-    def unpack_linkid(cls, data):
+    def unpack_linkid(cls, data: bytes) -> 'LinkIdentifier':
         local_id = unpack('!L', data[:4])[0]
         remote_id = unpack('!L', data[4:8])[0]
-        return cls(local_id=local_id, remote_id=remote_id)
+        return cls(local_id=local_id, remote_id=remote_id, packed=data[:8])
 
-    def json(self):
-        content = '"link-local-id": {}, '.format(self.local_id) + '"link-remote-id": {}'.format(self.remote_id)
-        return content
+    def json(self) -> str:
+        return f'{{ "link-local-id": {self.local_id}, "link-remote-id": {self.remote_id} }}'
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, LinkIdentifier):
-            return False
+    def __eq__(self, other: 'LinkIdentifier') -> bool:  # type: ignore[override]
         return self.local_id == other.local_id and self.remote_id == other.remote_id
 
     def __lt__(self, other):

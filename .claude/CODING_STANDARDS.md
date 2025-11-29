@@ -185,6 +185,35 @@ class Foo:
 
 ---
 
+## `__eq__` Method Signatures
+
+**Use the class type, not `object`, for `__eq__` parameter:**
+
+❌ **AVOID:**
+```python
+def __eq__(self, other: object) -> bool:
+    if not isinstance(other, MyClass):
+        return False
+    return self.value == other.value
+```
+
+✅ **PREFER:**
+```python
+def __eq__(self, other: 'MyClass') -> bool:  # type: ignore[override]
+    return self.value == other.value
+```
+
+**Why:** Using the specific type:
+1. Documents the intended usage - only compare same types
+2. Makes attribute access type-safe (no isinstance check needed)
+3. Prevents silent `False` returns for logic errors
+
+**Note on `# type: ignore[override]`:** Required because we intentionally violate Liskov substitution principle. Python's `object.__eq__` accepts `object`, but we restrict to our type. This is a deliberate design choice.
+
+**Limitation:** Mypy doesn't catch `x == "string"` at call sites because `==` is specially handled. The type annotation documents intent and enables type-safe implementation, but won't catch all misuse.
+
+---
+
 ## Refactoring: Fix Root Causes
 
 **When refactoring reveals mypy or type errors:**

@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
+from typing import Any
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPv6
@@ -65,7 +66,14 @@ class NodeDescriptor:
         NODE_DESC_TLV_IGP_ROUTER: 'Invalid router-id sub-tlv',
     }
 
-    def __init__(self, node_id, node_type, psn=None, dr_id=None, packed=None):
+    def __init__(
+        self,
+        node_id: Any,  # int | IP | tuple - varies by node_type
+        node_type: int,
+        psn: int | None,
+        dr_id: IP | None,
+        packed: bytes,
+    ) -> None:
         self.node_id = node_id
         self.node_type = node_type
         self.psn = psn
@@ -73,7 +81,7 @@ class NodeDescriptor:
         self._packed = packed
 
     @classmethod
-    def unpack_node(cls, data, igp):
+    def unpack_node(cls, data: bytes, igp: int) -> tuple['NodeDescriptor', bytes]:
         node_type, length = unpack('!HH', data[0:4])
         packed = data[: 4 + length]
         payload = packed[4:]
@@ -147,10 +155,8 @@ class NodeDescriptor:
         content = ', '.join(_ for _ in [node, designated, psn] if _)
         return f'{{ {content} }}'
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, NodeDescriptor):
-            return False
-        return self.node_id == other.node_id
+    def __eq__(self, other: 'NodeDescriptor') -> bool:  # type: ignore[override]
+        return bool(self.node_id == other.node_id)
 
     def __lt__(self, other):
         raise RuntimeError('Not implemented')
@@ -176,7 +182,5 @@ class NodeDescriptor:
     def __hash__(self):
         return hash(str(self))
 
-    def pack_tlv(self):
-        if self._packed:
-            return self._packed
-        raise RuntimeError('pack when not fully implemented for {self.__name__}')
+    def pack_tlv(self) -> bytes:
+        return self._packed
