@@ -180,9 +180,9 @@ class Code:
         ]
 
     @staticmethod
-    def _if_lt(value):
+    def _if_lt(value: int) -> list[If]:
         if value >= 0:
-            comparators: list = [Constant(value=value, kind=None)]
+            comparators: list[Constant | UnaryOp] = [Constant(value=value, kind=None)]
         else:
             comparators = [
                 UnaryOp(
@@ -200,7 +200,7 @@ class Code:
                         keywords=[],
                     ),
                     ops=[Lt()],
-                    comparators=comparators,
+                    comparators=comparators,  # type: ignore[arg-type]
                 ),
                 body=[
                     Return(
@@ -212,9 +212,9 @@ class Code:
         ]
 
     @staticmethod
-    def _if_gt(value):
+    def _if_gt(value: int) -> list[If]:
         if value >= 0:
-            comparators: list = [Constant(value=value, kind=None)]
+            comparators: list[Constant | UnaryOp] = [Constant(value=value, kind=None)]
         else:
             comparators = [
                 UnaryOp(
@@ -231,7 +231,7 @@ class Code:
                         keywords=[],
                     ),
                     ops=[Gt()],
-                    comparators=comparators,
+                    comparators=comparators,  # type: ignore[arg-type]
                 ),
                 body=[
                     Return(
