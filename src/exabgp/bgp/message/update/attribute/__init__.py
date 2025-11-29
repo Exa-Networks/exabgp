@@ -43,3 +43,37 @@ from exabgp.bgp.message.update.attribute.pmsi import PMSI
 from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
+
+__all__ = [
+    'Attribute',
+    'Attributes',
+    'GenericAttribute',
+    'Origin',
+    'ASPath',
+    'AS4Path',
+    'SET',
+    'SEQUENCE',
+    'CONFED_SET',
+    'CONFED_SEQUENCE',
+    'NextHop',
+    'NextHopSelf',
+    'MED',
+    'LocalPreference',
+    'AtomicAggregate',
+    'Aggregator',
+    'Aggregator4',
+    'Communities',
+    'LargeCommunities',
+    'ExtendedCommunities',
+    'OriginatorID',
+    'ClusterList',
+    'ClusterID',
+    'MPRNLRI',
+    'EMPTY_MPRNLRI',
+    'MPURNLRI',
+    'EMPTY_MPURNLRI',
+    'PMSI',
+    'AIGP',
+    'LinkState',
+    'PrefixSid',
+]

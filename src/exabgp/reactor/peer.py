@@ -55,7 +55,7 @@ class Stop(Exception):
 # ======================================================================== Counter
 
 
-class Stats(dict):
+class Stats(dict[str, Any]):
     __format: dict[str, Any] = {
         'complete': lambda t: 'time {}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t)))
     }
@@ -73,6 +73,54 @@ class Stats(dict):
             formater = self.__format.get(name, lambda v: f'counter {v}')
             yield f'statistics for {name} {formater(self[name])}'
         self.__changed = set()
+
+
+# ======================================================================== PeerGenerator
+
+
+class PeerGenerator:
+    """Encapsulates peer generator state machine.
+
+    Replaces the old tri-state: None (ready), False (terminated), Generator (running).
+    """
+
+    def __init__(self) -> None:
+        self._generator: Generator[Message, None, None] | None = None
+        self._terminated: bool = False
+
+    @property
+    def running(self) -> bool:
+        """True if generator is active."""
+        return self._generator is not None
+
+    @property
+    def terminated(self) -> bool:
+        """True if peer should not restart."""
+        return self._terminated
+
+    def set(self, gen: Generator[Message, None, None]) -> None:
+        """Start running a generator."""
+        self._generator = gen
+        self._terminated = False
+
+    def clear(self) -> None:
+        """Stop generator, allow restart."""
+        self._generator = None
+
+    def terminate(self) -> None:
+        """Stop generator, prevent restart."""
+        self._generator = None
+        self._terminated = True
+
+    def reset(self) -> None:
+        """Clear terminated flag (for reestablish)."""
+        self._terminated = False
+
+    def advance(self) -> Message:
+        """Call next() on generator. Raises StopIteration when done."""
+        if self._generator is None:
+            raise StopIteration
+        return next(self._generator)
 
 
 # ======================================================================== Peer
@@ -117,9 +165,8 @@ class Peer:
             },
         )
 
-        # None = needs initialization, False = closed/don't restart, Generator = running
-        self.generator: Generator[Message, None, None] | bool | None = None
-        self._async_task: asyncio.Task | None = None  # For async mode
+        self.generator: PeerGenerator = PeerGenerator()
+        self._async_task: asyncio.Task[None] | None = None  # For async mode
 
         # The peer should restart after a stop
         self._restart: bool = True
@@ -179,10 +226,10 @@ class Peer:
         self._close(message, error)
 
         if not self._restart or self.neighbor.generated:
-            self.generator = False
+            self.generator.terminate()
             return
 
-        self.generator = None
+        self.generator.clear()
         self._teardown = None
         self.neighbor.reset_rib()
 
@@ -192,7 +239,7 @@ class Peer:
             self._neighbor = None
 
     def _stop(self, message: str) -> None:
-        self.generator = None
+        self.generator.clear()
         if self.proto:
             self._close(f'stop, message [{message}]')
 
@@ -321,7 +368,7 @@ class Peer:
             self._close('closing outgoing connection as we have another incoming on with higher router-id')
 
         self.proto = Protocol(self).accept(connection)
-        self.generator = None
+        self.generator.clear()
         # Let's make sure we do some work with this connection
         self._delay.reset()
         return None
@@ -1136,33 +1183,28 @@ class Peer:
                 self.stop()
             return _DONE
 
-        if self.generator and self.generator is not False:
+        if self.generator.running:
             try:
-                # This generator only stops when it raises
-                # otherwise return one of the scheduling messages
-                assert isinstance(self.generator, Generator)
-                return next(self.generator)
+                return self.generator.advance()
             except StopIteration:
-                # Trying to run a closed loop, no point continuing
-                self.generator = None
+                self.generator.clear()
                 if self._restart:
                     return _NOP
                 return _DONE
 
-        elif self.generator is None:
-            if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
-                log.debug(lazymsg('peer.stopping reason=other_connection_established'), self.id())
-                self.generator = False
-                return _NOP
-            if self._delay.backoff():
-                return _NOP
-            if self._restart:
-                log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
-                self.generator = self._run()
-                return _NOP  # make sure we go through a clean loop
+        if self.generator.terminated:
             return _DONE
 
-        # generator is False - peer is closed and should not restart
+        if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
+            log.debug(lazymsg('peer.stopping reason=other_connection_established'), self.id())
+            self.generator.terminate()
+            return _NOP
+        if self._delay.backoff():
+            return _NOP
+        if self._restart:
+            log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
+            self.generator.set(self._run())
+            return _NOP
         return _DONE
 
     async def run_async(self) -> None:
@@ -1209,7 +1251,7 @@ class Peer:
             self._async_task.cancel()
 
     def cli_data(self) -> dict[str, Any]:
-        peer: defaultdict = defaultdict(lambda: None)
+        peer: defaultdict[str, Any] = defaultdict(lambda: None)
 
         have_peer = self.proto is not None
         have_open = self.proto and self.proto.negotiated.received_open
