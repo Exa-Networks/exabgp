@@ -7,8 +7,25 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import errno
+import errno as errno  # Re-export for type checkers
 from typing import ClassVar
+
+__all__ = [
+    'errno',
+    'error',
+    'NetworkError',
+    'BindingError',
+    'AcceptError',
+    'NotConnected',
+    'LostConnection',
+    'MD5Error',
+    'NagleError',
+    'TTLError',
+    'AsyncError',
+    'TooSlowError',
+    'SizeError',
+    'NotifyError',
+]
 
 
 class error:

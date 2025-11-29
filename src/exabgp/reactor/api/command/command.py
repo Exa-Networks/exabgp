@@ -7,11 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Callable, ClassVar, Dict, List, TypeVar
+from typing import Any, Callable, ClassVar, TypeVar
 
 
 # TypeVar for the decorator pattern - preserves the function signature
-F = TypeVar('F', bound=Callable)
+F = TypeVar('F', bound=Callable[..., Any])
 
 
 class Command:
@@ -19,7 +19,7 @@ class Command:
     # - 'text' and 'json': store command handler functions
     # - 'neighbor': stores bool flags
     # - 'options': stores optional configuration (could be None, dict, list, etc.)
-    callback: ClassVar[dict[str, dict[str, Callable | bool | None | dict | list]]] = {
+    callback: ClassVar[dict[str, dict[str, Callable[..., Any] | bool | None | dict[str, Any] | list[Any]]]] = {
         'text': {},
         'json': {},
         'neighbor': {},
@@ -30,7 +30,11 @@ class Command:
 
     @classmethod
     def register(
-        cls, name: str, neighbor: bool = True, options: Dict | List | None = None, json_support: bool = False
+        cls,
+        name: str,
+        neighbor: bool = True,
+        options: dict[str, Any] | list[Any] | None = None,
+        json_support: bool = False,
     ) -> Callable[[F], F]:
         if name not in cls.functions:
             cls.functions.append(name)

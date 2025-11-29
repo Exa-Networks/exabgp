@@ -71,8 +71,8 @@ class API(Command):
         api = 'json' if use_json else 'text'
         for registered in self.functions:
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
-                handler = cast(Callable, self.callback[api][registered])
-                return handler(self, reactor, service, command, use_json)  # type: ignore[no-any-return]
+                handler = cast(Callable[..., bool], self.callback[api][registered])
+                return handler(self, reactor, service, command, use_json)
         reactor.processes.answer_error(service)
         log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
         return False
@@ -87,7 +87,7 @@ class API(Command):
         api = 'json' if use_json else 'text'
         for registered in self.functions:
             if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
-                handler = cast(Callable, self.callback[api][registered])
+                handler = cast(Callable[..., bool], self.callback[api][registered])
                 # Call sync handler - with non-blocking stdin, write() won't block
                 result = handler(self, reactor, service, command, use_json)
                 # Flush any queued writes immediately (for commands like enable-ack/disable-ack

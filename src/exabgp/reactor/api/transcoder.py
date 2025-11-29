@@ -22,7 +22,7 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.version import json as json_version
-from exabgp.reactor.api.response import Response
+from exabgp.reactor.api.response import Response, ResponseEncoder
 
 from exabgp.protocol.ip import IPv4
 
@@ -60,7 +60,7 @@ class Transcoder:
     }
     negotiated: Negotiated | None = None
 
-    json: Response.JSON = Response.JSON(json_version)
+    json: ResponseEncoder = Response.JSON(json_version)
 
     def __init__(self, src: str = 'json', dst: str = 'json') -> None:
         if src != 'json':
@@ -70,7 +70,7 @@ class Transcoder:
             raise RuntimeError('left as an exercise to the reader')
 
         self.convert: Callable[[str], str | None] = self._from_json
-        self.encoder: Response.JSON = self.json
+        self.encoder: ResponseEncoder = self.json
 
     def _state(self) -> None:
         self.seen_open['send'] = None

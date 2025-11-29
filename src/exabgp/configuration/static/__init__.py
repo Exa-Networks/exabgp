@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from exabgp.configuration.static.route import ParseStaticRoute
+from exabgp.configuration.static.route import ParseStaticRoute as ParseStaticRoute  # Re-export
 from exabgp.configuration.static.parser import prefix
 
 from exabgp.configuration.announce.path import AnnouncePath
