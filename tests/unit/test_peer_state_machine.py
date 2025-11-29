@@ -232,8 +232,9 @@ class TestPeerCollisionDetection:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        # Neighbor now uses attribute access instead of dict access
-        neighbor.router_id = Mock(pack_ip=Mock(return_value=b'\x02\x02\x02\x02'))
+        # Neighbor now uses session for connection-related config
+        neighbor.session = Mock()
+        neighbor.session.router_id = Mock(pack_ip=Mock(return_value=b'\x02\x02\x02\x02'))
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)
@@ -260,8 +261,9 @@ class TestPeerCollisionDetection:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        # Neighbor now uses attribute access instead of dict access
-        neighbor.router_id = Mock(pack_ip=Mock(return_value=b'\x01\x01\x01\x01'))
+        # Neighbor now uses session for connection-related config
+        neighbor.session = Mock()
+        neighbor.session.router_id = Mock(pack_ip=Mock(return_value=b'\x01\x01\x01\x01'))
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)

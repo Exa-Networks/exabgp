@@ -26,8 +26,6 @@ from exabgp.protocol.ip import IP
 from exabgp.rib import RIB
 
 if TYPE_CHECKING:
-    from exabgp.bgp.message.open.asn import ASN
-    from exabgp.bgp.message.open.routerid import RouterID
     from exabgp.rib.change import Change
 
 
@@ -70,123 +68,6 @@ class Neighbor:
     refresh: deque[RouteRefresh]
     counter: Counter[str]
     uid: str
-
-    # Property aliases for backward compatibility during migration
-    @property
-    def router_id(self) -> 'RouterID | None':
-        return self.session.router_id
-
-    @router_id.setter
-    def router_id(self, value: 'RouterID | None') -> None:
-        self.session.router_id = value
-
-    @property
-    def local_address(self) -> IP:
-        return self.session.local_address
-
-    @local_address.setter
-    def local_address(self, value: IP | None) -> None:
-        self.session.local_address = value if value is not None else IP.NoNextHop
-
-    @property
-    def peer_address(self) -> IP:
-        return self.session.peer_address
-
-    @peer_address.setter
-    def peer_address(self, value: IP | None) -> None:
-        self.session.peer_address = value if value is not None else IP.NoNextHop
-
-    @property
-    def local_as(self) -> 'ASN':
-        return self.session.local_as
-
-    @local_as.setter
-    def local_as(self, value: 'ASN') -> None:
-        self.session.local_as = value
-
-    @property
-    def peer_as(self) -> 'ASN':
-        return self.session.peer_as
-
-    @peer_as.setter
-    def peer_as(self, value: 'ASN') -> None:
-        self.session.peer_as = value
-
-    @property
-    def passive(self) -> bool:
-        return self.session.passive
-
-    @passive.setter
-    def passive(self, value: bool) -> None:
-        self.session.passive = value
-
-    @property
-    def listen(self) -> int:
-        return self.session.listen
-
-    @listen.setter
-    def listen(self, value: int) -> None:
-        self.session.listen = value
-
-    @property
-    def connect(self) -> int:
-        return self.session.connect
-
-    @connect.setter
-    def connect(self, value: int) -> None:
-        self.session.connect = value
-
-    @property
-    def source_interface(self) -> str:
-        return self.session.source_interface
-
-    @source_interface.setter
-    def source_interface(self, value: str | None) -> None:
-        self.session.source_interface = value if value is not None else ''
-
-    @property
-    def md5_password(self) -> str:
-        return self.session.md5_password
-
-    @md5_password.setter
-    def md5_password(self, value: str) -> None:
-        self.session.md5_password = value
-
-    @property
-    def md5_base64(self) -> bool:
-        return self.session.md5_base64
-
-    @md5_base64.setter
-    def md5_base64(self, value: bool) -> None:
-        self.session.md5_base64 = value
-
-    @property
-    def md5_ip(self) -> IP | None:
-        return self.session.md5_ip
-
-    @md5_ip.setter
-    def md5_ip(self, value: IP | None) -> None:
-        self.session.md5_ip = value
-
-    @property
-    def outgoing_ttl(self) -> int | None:
-        return self.session.outgoing_ttl
-
-    @outgoing_ttl.setter
-    def outgoing_ttl(self, value: int | None) -> None:
-        self.session.outgoing_ttl = value
-
-    @property
-    def incoming_ttl(self) -> int | None:
-        return self.session.incoming_ttl
-
-    @incoming_ttl.setter
-    def incoming_ttl(self, value: int | None) -> None:
-        self.session.incoming_ttl = value
-
-    @property
-    def auto_discovery(self) -> bool:
-        return self.session.auto_discovery
 
     def __init__(self) -> None:
         # Session (connection-related) configuration
@@ -263,8 +144,8 @@ class Neighbor:
 
     # This set must be unique between peer, not full draft-ietf-idr-bgp-multisession-07
     def index(self) -> str:
-        if self.listen != 0:
-            return f'peer-ip {self.peer_address} listen {self.listen}'
+        if self.session.listen != 0:
+            return f'peer-ip {self.session.peer_address} listen {self.session.listen}'
         return self.name()
 
     def make_rib(self) -> None:
@@ -289,10 +170,10 @@ class Neighbor:
             session = '/'.join(f'{afi.name()}-{safi.name()}' for (afi, safi) in self.families())
         else:
             session = 'in-open'
-        local_addr = 'auto' if self.auto_discovery else self.local_address
-        local_as = self.local_as if self.local_as else 'auto'
-        peer_as = self.peer_as if self.peer_as else 'auto'
-        return f'neighbor {self.peer_address} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self.router_id} family-allowed {session}'
+        local_addr = 'auto' if self.session.auto_discovery else self.session.local_address
+        local_as = self.session.local_as if self.session.local_as else 'auto'
+        peer_as = self.session.peer_as if self.session.peer_as else 'auto'
+        return f'neighbor {self.session.peer_address} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self.session.router_id} family-allowed {session}'
 
     def families(self) -> list[tuple[AFI, SAFI]]:
         # this list() is important .. as we use the function to modify self._families
@@ -349,15 +230,7 @@ class Neighbor:
             self._addpath.remove(family)
 
     def missing(self) -> str:
-        if self.listen > 0 and self.auto_discovery:
-            return 'local-address'
-        if self.peer_address is IP.NoNextHop:
-            return 'peer-address'
-        if self.auto_discovery and not self.router_id:
-            return 'router-id'
-        if self.peer_address.afi == AFI.ipv6 and not self.router_id:
-            return 'router-id'
-        return ''
+        return self.session.missing()
 
     # This function only compares the neighbor BUT NOT ITS ROUTES
     def __eq__(self, other: object) -> bool:
@@ -367,30 +240,30 @@ class Neighbor:
         # peer is configured to auto discover its local address. In
         # this case it can happen that one local_address is None and
         # the other one will be set to the auto disocvered IP address.
-        auto_discovery = self.auto_discovery or other.auto_discovery
+        auto_discovery = self.session.auto_discovery or other.session.auto_discovery
         return (
-            self.router_id == other.router_id
-            and self.local_as == other.local_as
-            and self.peer_address == other.peer_address
-            and self.peer_as == other.peer_as
-            and self.passive == other.passive
-            and self.listen == other.listen
-            and self.connect == other.connect
+            self.session.router_id == other.session.router_id
+            and self.session.local_as == other.session.local_as
+            and self.session.peer_address == other.session.peer_address
+            and self.session.peer_as == other.session.peer_as
+            and self.session.passive == other.session.passive
+            and self.session.listen == other.session.listen
+            and self.session.connect == other.session.connect
             and self.hold_time == other.hold_time
             and self.rate_limit == other.rate_limit
             and self.host_name == other.host_name
             and self.domain_name == other.domain_name
-            and self.md5_password == other.md5_password
-            and self.md5_ip == other.md5_ip
-            and self.incoming_ttl == other.incoming_ttl
-            and self.outgoing_ttl == other.outgoing_ttl
+            and self.session.md5_password == other.session.md5_password
+            and self.session.md5_ip == other.session.md5_ip
+            and self.session.incoming_ttl == other.session.incoming_ttl
+            and self.session.outgoing_ttl == other.session.outgoing_ttl
             and self.group_updates == other.group_updates
             and self.auto_flush == other.auto_flush
             and self.adj_rib_in == other.adj_rib_in
             and self.adj_rib_out == other.adj_rib_out
-            and (auto_discovery or self.local_address == other.local_address)
+            and (auto_discovery or self.session.local_address == other.session.local_address)
             and self.capability == other.capability
-            and self.auto_discovery == other.auto_discovery
+            and self.session.auto_discovery == other.session.auto_discovery
             and self.families() == other.families()
         )
 
@@ -398,17 +271,7 @@ class Neighbor:
         return not self.__eq__(other)
 
     def ip_self(self, afi: AFI) -> IP:
-        if not self.auto_discovery and afi == self.local_address.afi:
-            return self.local_address
-
-        # attempting to not barf for next-hop self when the peer is IPv6
-        if afi == AFI.ipv4 and self.router_id is not None:
-            return self.router_id
-
-        local_afi = self.local_address.afi if not self.auto_discovery else 'unknown'
-        raise TypeError(
-            f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({local_afi})',
-        )
+        return self.session.ip_self(afi)
 
     def remove_self(self, changes: Change) -> Change:
         change = deepcopy(changes)
@@ -578,36 +441,42 @@ Neighbor {peer-address}
 
             apis += _api
 
-        md5_base64_str = 'true' if neighbor.md5_base64 is True else 'false' if neighbor.md5_base64 is False else 'auto'
+        md5_base64_str = (
+            'true'
+            if neighbor.session.md5_base64 is True
+            else 'false'
+            if neighbor.session.md5_base64 is False
+            else 'auto'
+        )
         cap = neighbor.capability
         add_path_str = AddPath.string[cap.add_path] if cap.add_path else 'disable'
         graceful_str = str(cap.graceful_restart.time) if cap.graceful_restart.is_enabled() else 'disable'
 
         returned = (
-            f'neighbor {neighbor.peer_address} {{\n'
+            f'neighbor {neighbor.session.peer_address} {{\n'
             f'\tdescription "{neighbor.description}";\n'
-            f'\trouter-id {neighbor.router_id};\n'
+            f'\trouter-id {neighbor.session.router_id};\n'
             f'\thost-name {neighbor.host_name};\n'
             f'\tdomain-name {neighbor.domain_name};\n'
-            f'\tlocal-address {neighbor.local_address if not neighbor.auto_discovery else "auto"};\n'
-            f'\tsource-interface {neighbor.source_interface};\n'
-            f'\tlocal-as {neighbor.local_as};\n'
-            f'\tpeer-as {neighbor.peer_as};\n'
+            f'\tlocal-address {neighbor.session.local_address if not neighbor.session.auto_discovery else "auto"};\n'
+            f'\tsource-interface {neighbor.session.source_interface};\n'
+            f'\tlocal-as {neighbor.session.local_as};\n'
+            f'\tpeer-as {neighbor.session.peer_as};\n'
             f'\thold-time {neighbor.hold_time};\n'
             f'\trate-limit {"disable" if neighbor.rate_limit == 0 else neighbor.rate_limit};\n'
             f'\tmanual-eor {"true" if neighbor.manual_eor else "false"};\n'
-            f'\n\tpassive {"true" if neighbor.passive else "false"};\n'
-            + (f'\n\tlisten {neighbor.listen};\n' if neighbor.listen else '')
-            + (f'\n\tconnect {neighbor.connect};\n' if neighbor.connect else '')
+            f'\n\tpassive {"true" if neighbor.session.passive else "false"};\n'
+            + (f'\n\tlisten {neighbor.session.listen};\n' if neighbor.session.listen else '')
+            + (f'\n\tconnect {neighbor.session.connect};\n' if neighbor.session.connect else '')
             + f'\tgroup-updates {"true" if neighbor.group_updates else "false"};\n'
             f'\tauto-flush {"true" if neighbor.auto_flush else "false"};\n'
             f'\tadj-rib-in {"true" if neighbor.adj_rib_in else "false"};\n'
             f'\tadj-rib-out {"true" if neighbor.adj_rib_out else "false"};\n'
-            + (f'\tmd5-password "{neighbor.md5_password}";\n' if neighbor.md5_password else '')
+            + (f'\tmd5-password "{neighbor.session.md5_password}";\n' if neighbor.session.md5_password else '')
             + f'\tmd5-base64 {md5_base64_str};\n'
-            + (f'\tmd5-ip "{neighbor.md5_ip}";\n' if not neighbor.auto_discovery else '')
-            + (f'\toutgoing-ttl {neighbor.outgoing_ttl};\n' if neighbor.outgoing_ttl else '')
-            + (f'\tincoming-ttl {neighbor.incoming_ttl};\n' if neighbor.incoming_ttl else '')
+            + (f'\tmd5-ip "{neighbor.session.md5_ip}";\n' if not neighbor.session.auto_discovery else '')
+            + (f'\toutgoing-ttl {neighbor.session.outgoing_ttl};\n' if neighbor.session.outgoing_ttl else '')
+            + (f'\tincoming-ttl {neighbor.session.incoming_ttl};\n' if neighbor.session.incoming_ttl else '')
             + f'\tcapability {{\n'
             f'\t\tasn4 {"enable" if cap.asn4.is_enabled() else "disable"};\n'
             f'\t\troute-refresh {"enable" if cap.route_refresh else "disable"};\n'

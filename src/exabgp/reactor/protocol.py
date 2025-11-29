@@ -51,8 +51,8 @@ class Protocol:
         self.negotiated: Negotiated = Negotiated(self.neighbor, Direction.IN)
         self.connection: 'Incoming' | Outgoing | None = None
 
-        if self.neighbor.connect:
-            self.port: int = self.neighbor.connect
+        if self.neighbor.session.connect:
+            self.port: int = self.neighbor.session.connect
         elif os.environ.get('exabgp.tcp.port', '').isdigit():
             self.port = int(os.environ['exabgp.tcp.port'])
         elif os.environ.get('exabgp_tcp_port', '').isdigit():
@@ -83,7 +83,7 @@ class Protocol:
     # but self.peer.neighbor is used throughout to maintain clear ownership semantics.
 
     def me(self, message: str) -> str:
-        return f'{self.peer.neighbor.peer_address}/{self.peer.neighbor.peer_as} {message}'
+        return f'{self.peer.neighbor.session.peer_address}/{self.peer.neighbor.session.peer_as} {message}'
 
     def accept(self, incoming: 'Incoming') -> Protocol:
         self.connection = incoming
@@ -99,14 +99,18 @@ class Protocol:
         if self.connection:
             return
 
-        assert self.neighbor.peer_address is not None
-        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery and self.neighbor.md5_ip else ''
-        peer = self.neighbor.peer_address.top()
-        afi = self.neighbor.peer_address.afi
-        md5 = self.neighbor.md5_password
-        md5_base64 = self.neighbor.md5_base64
-        ttl_out = self.neighbor.outgoing_ttl
-        itf = self.neighbor.source_interface
+        assert self.neighbor.session.peer_address is not None
+        local = (
+            self.neighbor.session.md5_ip.top()
+            if not self.neighbor.session.auto_discovery and self.neighbor.session.md5_ip
+            else ''
+        )
+        peer = self.neighbor.session.peer_address.top()
+        afi = self.neighbor.session.peer_address.afi
+        md5 = self.neighbor.session.md5_password
+        md5_base64 = self.neighbor.session.md5_base64
+        ttl_out = self.neighbor.session.outgoing_ttl
+        itf = self.neighbor.session.source_interface
         self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
 
         for connected in self.connection.establish():
@@ -116,9 +120,9 @@ class Protocol:
             self.peer.reactor.processes.connected(self.peer.neighbor)
 
         if not local:
-            self.neighbor.local_address = IP.create(self.connection.local)
-            if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
-                self.neighbor.router_id = RouterID(self.neighbor.local_address.top())
+            self.neighbor.session.local_address = IP.create(self.connection.local)
+            if self.neighbor.session.router_id is None and self.neighbor.session.local_address.afi == AFI.ipv4:
+                self.neighbor.session.router_id = RouterID(self.neighbor.session.local_address.top())
 
         yield True
 
@@ -135,14 +139,18 @@ class Protocol:
         if self.connection:
             return True
 
-        assert self.neighbor.peer_address is not None
-        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery and self.neighbor.md5_ip else ''
-        peer = self.neighbor.peer_address.top()
-        afi = self.neighbor.peer_address.afi
-        md5 = self.neighbor.md5_password
-        md5_base64 = self.neighbor.md5_base64
-        ttl_out = self.neighbor.outgoing_ttl
-        itf = self.neighbor.source_interface
+        assert self.neighbor.session.peer_address is not None
+        local = (
+            self.neighbor.session.md5_ip.top()
+            if not self.neighbor.session.auto_discovery and self.neighbor.session.md5_ip
+            else ''
+        )
+        peer = self.neighbor.session.peer_address.top()
+        afi = self.neighbor.session.peer_address.afi
+        md5 = self.neighbor.session.md5_password
+        md5_base64 = self.neighbor.session.md5_base64
+        ttl_out = self.neighbor.session.outgoing_ttl
+        itf = self.neighbor.session.source_interface
         self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
 
         # Use async establish instead of generator
@@ -155,9 +163,9 @@ class Protocol:
             self.peer.reactor.processes.connected(self.peer.neighbor)
 
         if not local:
-            self.neighbor.local_address = IP.create(self.connection.local)
-            if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
-                self.neighbor.router_id = RouterID(self.neighbor.local_address.top())
+            self.neighbor.session.local_address = IP.create(self.connection.local)
+            if self.neighbor.session.router_id is None and self.neighbor.session.local_address.afi == AFI.ipv4:
+                self.neighbor.session.router_id = RouterID(self.neighbor.session.local_address.top())
 
         return True
 
@@ -511,9 +519,9 @@ class Protocol:
 
     def new_open(self) -> Generator[Message, None, None]:
         assert self.connection is not None
-        assert self.neighbor.router_id is not None
-        if self.neighbor.local_as:
-            local_as = self.neighbor.local_as
+        assert self.neighbor.session.router_id is not None
+        if self.neighbor.session.local_as:
+            local_as = self.neighbor.session.local_as
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
         else:
@@ -523,7 +531,7 @@ class Protocol:
             Version(4),
             local_as,
             self.neighbor.hold_time,
-            self.neighbor.router_id,
+            self.neighbor.session.router_id,
             Capabilities().new(self.neighbor, self.peer._restarted),
         )
 
@@ -537,9 +545,9 @@ class Protocol:
     async def new_open_async(self) -> Open:
         """Async version of new_open() - creates and sends OPEN message using async I/O"""
         assert self.connection is not None
-        assert self.neighbor.router_id is not None
-        if self.neighbor.local_as:
-            local_as = self.neighbor.local_as
+        assert self.neighbor.session.router_id is not None
+        if self.neighbor.session.local_as:
+            local_as = self.neighbor.session.local_as
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
         else:
@@ -549,7 +557,7 @@ class Protocol:
             Version(4),
             local_as,
             self.neighbor.hold_time,
-            self.neighbor.router_id,
+            self.neighbor.session.router_id,
             Capabilities().new(self.neighbor, self.peer._restarted),
         )
 

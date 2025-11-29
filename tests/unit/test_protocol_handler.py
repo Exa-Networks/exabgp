@@ -48,19 +48,23 @@ def mock_logger() -> Generator[None, None, None]:
 def mock_neighbor() -> Any:
     """Create a mock neighbor configuration."""
     neighbor = MagicMock()
-    # Set up attribute-based access (Neighbor no longer supports dict access)
-    neighbor.peer_address = Mock(top=Mock(return_value='192.0.2.1'), afi=1, __str__=Mock(return_value='192.0.2.1'))
-    neighbor.peer_as = 65001
-    neighbor.local_as = 65000
-    neighbor.local_address = None
-    neighbor.router_id = Mock(__str__=Mock(return_value='1.2.3.4'))
+    # Set up session for connection-related config
+    neighbor.session = MagicMock()
+    neighbor.session.peer_address = Mock(
+        top=Mock(return_value='192.0.2.1'), afi=1, __str__=Mock(return_value='192.0.2.1')
+    )
+    neighbor.session.peer_as = 65001
+    neighbor.session.local_as = 65000
+    neighbor.session.local_address = None
+    neighbor.session.router_id = Mock(__str__=Mock(return_value='1.2.3.4'))
+    neighbor.session.connect = 0  # 0 means use default port
+    neighbor.session.md5_ip = Mock(top=Mock(return_value=None))
+    neighbor.session.md5_password = None
+    neighbor.session.md5_base64 = False
+    neighbor.session.outgoing_ttl = None
+    neighbor.session.source_interface = None
+    # Non-session neighbor attributes
     neighbor.hold_time = 180
-    neighbor.connect = 0  # 0 means use default port
-    neighbor.md5_ip = Mock(top=Mock(return_value=None))
-    neighbor.md5_password = None
-    neighbor.md5_base64 = False
-    neighbor.outgoing_ttl = None
-    neighbor.source_interface = None
     neighbor.adj_rib_in = False
     neighbor.group_updates = False
     neighbor.host_name = 'test-host'

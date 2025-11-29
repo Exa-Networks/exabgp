@@ -81,11 +81,11 @@ def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
     capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
     # capa[Capability.CODE.FOUR_BYTES_ASN] = True
 
-    routerid_1 = str(neighbor.router_id)
-    routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.router_id).split('.', -1))
+    routerid_1 = str(neighbor.session.router_id)
+    routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.session.router_id).split('.', -1))
 
-    o1 = Open(Version(4), ASN(neighbor.local_as), HoldTime(180), RouterID(routerid_1), capa)
-    o2 = Open(Version(4), ASN(neighbor.peer_as), HoldTime(180), RouterID(routerid_2), capa)
+    o1 = Open(Version(4), ASN(neighbor.session.local_as), HoldTime(180), RouterID(routerid_1), capa)
+    o2 = Open(Version(4), ASN(neighbor.session.peer_as), HoldTime(180), RouterID(routerid_2), capa)
     negotiated_in = Negotiated(neighbor, Direction.IN)
     negotiated_out = Negotiated(neighbor, Direction.OUT)
     negotiated_in.sent(o1)
@@ -105,7 +105,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 
     for name in neighbors.keys():
         neighbor = copy.deepcopy(neighbors[name])
-        neighbor.local_as = neighbor.peer_as
+        neighbor.session.local_as = neighbor.session.peer_as
         negotiated_in, negotiated_out = _negotiated(neighbor)
 
         if neighbor.rib is None:
@@ -159,7 +159,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                     if ':' in str1r:
                         str1r = str1r.replace('next-hop self', 'next-hop ::1')
                     else:
-                        str1r = str1r.replace('next-hop self', 'next-hop {}'.format(neighbor.local_address))
+                        str1r = str1r.replace('next-hop self', 'next-hop {}'.format(neighbor.session.local_address))
 
                 if ' name ' in str1r:
                     parts = str1r.split(' ')

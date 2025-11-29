@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # import sys
 from __future__ import annotations
 
-import base64
 from copy import deepcopy
 from typing import Any
 
@@ -56,9 +55,6 @@ from exabgp.configuration.neighbor.parser import rate_limit
 from exabgp.environment import getenv
 
 from exabgp.logger import log, lazymsg
-
-# MD5 password length constraint (RFC 2385)
-MAX_MD5_PASSWORD_LENGTH = 80  # Maximum length for TCP MD5 signature password
 
 
 class ParseNeighbor(Section):
@@ -153,18 +149,9 @@ class ParseNeighbor(Section):
             self.scope.inherit(data)
         return self.scope.get()  # type: ignore[no-any-return]
 
-    # Map config keys (with dashes) to Neighbor attributes (with underscores)
-    _CONFIG_TO_ATTR: dict[str, str] = {
+    # Map config keys to Neighbor attributes (BGP policy)
+    _CONFIG_TO_NEIGHBOR: dict[str, str] = {
         'description': 'description',
-        'router-id': 'router_id',
-        'local-address': 'local_address',
-        'source-interface': 'source_interface',
-        'peer-address': 'peer_address',
-        'local-as': 'local_as',
-        'peer-as': 'peer_as',
-        'passive': 'passive',
-        'listen': 'listen',
-        'connect': 'connect',
         'hold-time': 'hold_time',
         'rate-limit': 'rate_limit',
         'host-name': 'host_name',
@@ -174,6 +161,19 @@ class ParseNeighbor(Section):
         'adj-rib-in': 'adj_rib_in',
         'adj-rib-out': 'adj_rib_out',
         'manual-eor': 'manual_eor',
+    }
+
+    # Map config keys to Session attributes (connection config)
+    _CONFIG_TO_SESSION: dict[str, str] = {
+        'router-id': 'router_id',
+        'local-address': 'local_address',
+        'source-interface': 'source_interface',
+        'peer-address': 'peer_address',
+        'local-as': 'local_as',
+        'peer-as': 'peer_as',
+        'passive': 'passive',
+        'listen': 'listen',
+        'connect': 'connect',
         'md5-password': 'md5_password',
         'md5-base64': 'md5_base64',
         'md5-ip': 'md5_ip',
@@ -184,23 +184,30 @@ class ParseNeighbor(Section):
     def _post_neighbor(self, local: dict[str, Any], families: list[tuple[AFI, SAFI]]) -> Neighbor:
         neighbor = Neighbor()
 
-        for config_key, attr_name in self._CONFIG_TO_ATTR.items():
+        # Set neighbor (BGP policy) attributes
+        for config_key, attr_name in self._CONFIG_TO_NEIGHBOR.items():
             conf = local.get(config_key, None)
             if conf is not None:
                 setattr(neighbor, attr_name, conf)
 
+        # Set session (connection) attributes
+        for config_key, attr_name in self._CONFIG_TO_SESSION.items():
+            conf = local.get(config_key, None)
+            if conf is not None:
+                setattr(neighbor.session, attr_name, conf)
+
         # auto_discovery is now derived from local_address being IP.NoNextHop
         # (which is the default if local-address is not set in config)
-        if neighbor.auto_discovery:
-            neighbor.md5_ip = None
+        if neighbor.session.auto_discovery:
+            neighbor.session.md5_ip = None
 
-        if not neighbor.router_id:
+        if not neighbor.session.router_id:
             from exabgp.protocol.ip import IP
 
-            if neighbor.peer_address is IP.NoNextHop:
+            if neighbor.session.peer_address is IP.NoNextHop:
                 return self.error.set('peer-address must be set')
-            if neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
-                neighbor.router_id = RouterID(neighbor.local_address.top())
+            if neighbor.session.peer_address.afi == AFI.ipv4 and not neighbor.session.auto_discovery:
+                neighbor.session.router_id = RouterID(neighbor.session.local_address.top())
 
         for family in families:
             neighbor.add_family(family)
@@ -363,32 +370,27 @@ class ParseNeighbor(Section):
 
         from exabgp.protocol.ip import IP, IPRange
 
-        if not neighbor.auto_discovery:
-            if neighbor.local_address.afi != neighbor.peer_address.afi:
+        if not neighbor.session.auto_discovery:
+            if neighbor.session.local_address.afi != neighbor.session.peer_address.afi:
                 return self.error.set('local-address and peer-address must be of the same family')
-        if neighbor.peer_address is IP.NoNextHop:
+        if neighbor.session.peer_address is IP.NoNextHop:
             return self.error.set('peer-address must be set')
 
         # peer_address is always IPRange when parsed from configuration (see parser.peer_ip)
-        assert isinstance(neighbor.peer_address, IPRange)
-        peer_range = neighbor.peer_address
+        assert isinstance(neighbor.session.peer_address, IPRange)
+        peer_range = neighbor.session.peer_address
         neighbor.range_size = peer_range.mask.size()
 
-        if neighbor.range_size > 1 and not (neighbor.passive or getenv().bgp.passive):
+        if neighbor.range_size > 1 and not (neighbor.session.passive or getenv().bgp.passive):
             return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
         if neighbor.index() in self._neighbors:
-            return self.error.set('duplicate peer definition {}'.format(neighbor.peer_address.top()))
+            return self.error.set('duplicate peer definition {}'.format(neighbor.session.peer_address.top()))
         self._neighbors.append(neighbor.index())
 
-        if neighbor.md5_password:
-            try:
-                md5 = base64.b64decode(neighbor.md5_password) if neighbor.md5_base64 else neighbor.md5_password
-            except TypeError as e:
-                return self.error.set(f'Invalid base64 encoding of MD5 password ({e})')
-            else:
-                if len(md5) > MAX_MD5_PASSWORD_LENGTH:
-                    return self.error.set(f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters')
+        md5_error = neighbor.session.validate_md5()
+        if md5_error:
+            return self.error.set(md5_error)
 
         # check we are not trying to announce routes without the right MP announcement
         for change in neighbor.changes:
