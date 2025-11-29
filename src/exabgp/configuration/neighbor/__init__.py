@@ -11,50 +11,34 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.nlri.flow import NLRI
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig
-from exabgp.util.enumeration import TriState
-
-from exabgp.bgp.message import Action
-from exabgp.bgp.message.open import RouterID
-
-from exabgp.bgp.message.update.nlri.flow import NLRI
-
-from exabgp.configuration.core import Section
-from exabgp.configuration.core import Parser
-from exabgp.configuration.core import Scope
-from exabgp.configuration.core import Error
-
+from exabgp.configuration.core import Error, Parser, Scope, Section
 from exabgp.configuration.neighbor.api import ParseAPI
-from exabgp.configuration.neighbor.family import ParseFamily
-from exabgp.configuration.neighbor.family import ParseAddPath
-
-from exabgp.configuration.parser import boolean
-from exabgp.configuration.parser import auto_boolean
-from exabgp.configuration.parser import ip
-from exabgp.configuration.parser import peer_ip
+from exabgp.configuration.neighbor.family import ParseAddPath, ParseFamily
+from exabgp.configuration.neighbor.parser import (
+    description,
+    domainname,
+    hold_time,
+    hostname,
+    inherit,
+    local_address,
+    md5,
+    rate_limit,
+    router_id,
+    source_interface,
+    ttl,
+)
 
 # from exabgp.configuration.parser import asn
-from exabgp.configuration.parser import auto_asn
-from exabgp.configuration.parser import port
-from exabgp.configuration.neighbor.parser import ttl
-from exabgp.configuration.neighbor.parser import md5
-from exabgp.configuration.neighbor.parser import hold_time
-from exabgp.configuration.neighbor.parser import router_id
-from exabgp.configuration.neighbor.parser import local_address
-from exabgp.configuration.neighbor.parser import source_interface
-from exabgp.configuration.neighbor.parser import hostname
-from exabgp.configuration.neighbor.parser import domainname
-from exabgp.configuration.neighbor.parser import description
-from exabgp.configuration.neighbor.parser import inherit
-from exabgp.configuration.neighbor.parser import rate_limit
-
+from exabgp.configuration.parser import auto_asn, auto_boolean, boolean, ip, peer_ip, port
 from exabgp.environment import getenv
-
-from exabgp.logger import log, lazymsg
+from exabgp.logger import lazymsg, log
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP, IPRange
+from exabgp.util.enumeration import TriState
 
 
 class ParseNeighbor(Section):
@@ -201,13 +185,13 @@ class ParseNeighbor(Section):
         if neighbor.session.auto_discovery:
             neighbor.session.md5_ip = None
 
-        if not neighbor.session.router_id:
-            from exabgp.protocol.ip import IP
+        # Derive optional fields (router_id, md5_ip) from required ones
+        neighbor.session.infer()
 
-            if neighbor.session.peer_address is IP.NoNextHop:
-                return self.error.set('peer-address must be set')
-            if neighbor.session.peer_address.afi == AFI.ipv4 and not neighbor.session.auto_discovery:
-                neighbor.session.router_id = RouterID(neighbor.session.local_address.top())
+        # Check for missing required session fields
+        missing = neighbor.session.missing()
+        if missing:
+            self.error.set(f'{missing} must be set')
 
         for family in families:
             neighbor.add_family(family)
@@ -363,12 +347,10 @@ class ParseNeighbor(Section):
 
         neighbor.api = ParseAPI.flatten(local.pop('api', {}))
 
+        neighbor.infer()
         missing = neighbor.missing()
         if missing:
             return self.error.set('incomplete neighbor, missing {}'.format(missing))
-        neighbor.infer()
-
-        from exabgp.protocol.ip import IP, IPRange
 
         if not neighbor.session.auto_discovery:
             if neighbor.session.local_address.afi != neighbor.session.peer_address.afi:

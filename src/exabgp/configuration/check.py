@@ -354,7 +354,7 @@ def display_open(neighbor: Neighbor, raw: bytes) -> bool:
     try:
         negotiated_in, _ = _negotiated(neighbor)
         o = Open.unpack_message(raw, negotiated_in)
-        sys.stdout.write(Response.JSON(json_version).open(neighbor, 'in', o, None, '', ''))
+        sys.stdout.write(Response.JSON(json_version).open(neighbor, 'in', o, b'', b'', Negotiated.UNSET))
         sys.stdout.write('\n')
         return True
     except (Notify, ValueError, IndexError, KeyError, struct.error):
@@ -490,7 +490,7 @@ def display_notification(neighbor: Neighbor, raw: bytes) -> bool:
     if not notification:
         return False
 
-    sys.stdout.write(Response.JSON(json_version).notification(neighbor, 'in', notification, None, '', ''))
+    sys.stdout.write(Response.JSON(json_version).notification(neighbor, 'in', notification, b'', b'', Negotiated.UNSET))
     sys.stdout.write('\n')
     return True
 

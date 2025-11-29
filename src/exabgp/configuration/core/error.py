@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import sys
 import pdb  # noqa: T100
+import sys
 
 from exabgp.environment import getenv
 
