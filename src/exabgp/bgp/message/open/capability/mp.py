@@ -38,10 +38,9 @@ class MultiProtocol(Capability, list):
             rs.append(pack('!H', v[0]) + pack('!H', v[1]))
         return rs
 
-    @staticmethod
-    def unpack_capability(
-        instance: MultiProtocol, data: bytes, capability: CapabilityCode | None = None
-    ) -> MultiProtocol:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, MultiProtocol)
         afi: AFI = AFI.unpack_afi(data[:2])
         safi: SAFI = SAFI.unpack_safi(data[3:4])
         if (afi, safi) in instance:

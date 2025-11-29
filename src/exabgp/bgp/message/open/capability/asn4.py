@@ -26,11 +26,12 @@ class ASN4(Capability, ASN):
     def __str__(self) -> str:
         return 'ASN4(%d)' % int(self)
 
-    @staticmethod
-    def unpack_capability(instance: ASN, data: bytes, capability: CapabilityCode | None = None) -> ASN:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         # XXX: FIXME: if instance is not ASN(0) we have two ASN - raise
-        instance = ASN.unpack_asn(data, ASN4)
-        return instance
+        # ASN4 extends both Capability and ASN, so the result is a Capability
+        result: ASN4 = ASN.unpack_asn(data, cls)  # type: ignore[assignment]
+        return result
 
     def json(self) -> str:
         return '{ "name": "asn4", "asn4": %d }' % int(self)

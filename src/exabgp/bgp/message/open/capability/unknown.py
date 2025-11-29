@@ -45,6 +45,7 @@ class UnknownCapability(Capability):
     def extract(self) -> list[bytes]:
         return []
 
-    @staticmethod
-    def unpack_capability(instance: UnknownCapability, data: bytes, capability: CapabilityCode) -> UnknownCapability:
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:
+        assert isinstance(instance, UnknownCapability)
         return instance.set(capability, data)

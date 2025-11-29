@@ -66,8 +66,9 @@ class AddPath(Capability, dict):
             rs,
         ]
 
-    @staticmethod
-    def unpack_capability(instance: AddPath, data: bytes, capability: CapabilityCode | None = None) -> AddPath:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, AddPath)
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
             log.debug(lazymsg('capability.addpath.duplicate action=merge'), 'parser')

@@ -52,8 +52,9 @@ class NextHop(Capability, list):
             rs,
         ]
 
-    @staticmethod
-    def unpack_capability(instance: NextHop, data: bytes, capability: CapabilityCode | None = None) -> NextHop:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, NextHop)
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
             log.debug(lazymsg('capability.nexthop.duplicate action=merge'), 'parser')

@@ -33,8 +33,9 @@ class Operational(Capability, list):
     def extract(self) -> list[bytes]:
         return [b'']
 
-    @staticmethod
-    def unpack_capability(instance: Operational, data: bytes, capability: CapabilityCode | None = None) -> Operational:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, Operational)
         if instance._seen:
             log.debug(lazymsg('capability.operational.duplicate'), 'parser')
         instance._seen = True

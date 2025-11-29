@@ -157,10 +157,11 @@ class Capability:
         return '0x' + ''.join('{:02x}'.format(_) for _ in data)
 
     @classmethod
-    def unknown(cls, klass: Type[Capability]) -> None:
+    def unknown(cls, klass: Type[Capability]) -> Type[Capability]:
         if cls.unknown_capability is not None:
             raise RuntimeError('only one fallback function can be registered')
         cls.unknown_capability = klass
+        return klass
 
     @classmethod
     def register(cls, capability: int | None = None) -> Callable[[Type[Capability]], Type[Capability]]:
@@ -187,4 +188,4 @@ class Capability:
     @classmethod
     def unpack(cls, capability: CapabilityCode, capabilities: Any, data: bytes) -> Capability:
         instance: Capability = capabilities.get(capability, Capability.klass(capability)())
-        return cls.klass(capability).unpack_capability(instance, data, capability)  # type: ignore[attr-defined,no-any-return]
+        return cls.klass(capability).unpack_capability(instance, data, capability)
