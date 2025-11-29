@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -85,18 +85,18 @@ class Attribute:
     NO_GENERATION: ClassVar[bool] = False
 
     # Registered subclasses we know how to decode
-    registered_attributes: ClassVar[Dict[Tuple[int, int], Type[Attribute]]] = dict()
+    registered_attributes: ClassVar[dict[tuple[int, int], Type[Attribute]]] = dict()
 
     # what this implementation knows as attributes
-    attributes_known: ClassVar[List[int]] = []
-    attributes_well_know: ClassVar[List[int]] = []
-    attributes_optional: ClassVar[List[int]] = []
+    attributes_known: ClassVar[list[int]] = []
+    attributes_well_know: ClassVar[list[int]] = []
+    attributes_optional: ClassVar[list[int]] = []
 
     # Are we caching Attributes (configuration)
     caching: ClassVar[bool] = False
 
     # The attribute cache per attribute ID
-    cache: ClassVar[Dict[int, Cache]] = {}
+    cache: ClassVar[dict[int, Cache]] = {}
 
     # ---------------------------------------------------------------------------
 
@@ -147,7 +147,7 @@ class Attribute:
         INTERNAL_TREAT_AS_WITHDRAW: ClassVar[int] = 0xFFFF  # Treat as Withdraw
 
         # Currently formatting is done with %-18s
-        names: ClassVar[Dict[int, str]] = {
+        names: ClassVar[dict[int, str]] = {
             ORIGIN: 'origin',
             AS_PATH: 'as-path',
             NEXT_HOP: 'next-hop',
@@ -202,7 +202,7 @@ class Attribute:
         MASK_OPTIONAL: ClassVar[int] = 0x7F  # . 127 - 0111 1111
 
         def __str__(self) -> str:
-            r: List[str] = []
+            r: list[str] = []
             v: int = int(self)
             if v & 0x10:
                 r.append('EXTENDED_LENGTH')
@@ -289,7 +289,7 @@ class Attribute:
 
     @classmethod
     def klass(cls, attribute_id: int, flag: int) -> Type[Attribute]:
-        key: Tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
+        key: tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in cls.registered_attributes:
             kls: Type[Attribute] = cls.registered_attributes[key]
             kls.ID = attribute_id
@@ -312,7 +312,7 @@ class Attribute:
         if cache and data in cls.cache.get(cls.ID, {}):
             return cls.cache[cls.ID].retrieve(data)  # type: ignore[no-any-return]
 
-        key: Tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
+        key: tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in Attribute.registered_attributes.keys():
             instance: Attribute = cls.klass(attribute_id, flag).unpack_attribute(data, negotiated)  # type: ignore[attr-defined]
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from struct import pack
-from typing import ClassVar, Dict
+from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
 
@@ -35,7 +35,7 @@ from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidIn
 class Srv6SidStructure:  # type: ignore[type-var]
     TLV: ClassVar[int] = 1
 
-    registered_subsubtlvs: ClassVar[Dict[int, type]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type]] = dict()
 
     def __init__(
         self,
@@ -96,7 +96,7 @@ class Srv6SidStructure:  # type: ignore[type-var]
         )
 
     def json(self, compact: bool | None = None) -> str:
-        pairs: Dict[str, int] = {
+        pairs: dict[str, int] = {
             'locator-block-length': self.loc_block_len,
             'locator-node-length': self.loc_node_len,
             'function-length': self.func_len,

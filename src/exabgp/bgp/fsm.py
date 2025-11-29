@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict, List
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.reactor.peer import Peer
@@ -27,7 +27,7 @@ class FSM:
         OPENCONFIRM: ClassVar[int] = 0x10
         ESTABLISHED: ClassVar[int] = 0x20
 
-        names: ClassVar[Dict[int, str]] = {
+        names: ClassVar[dict[int, str]] = {
             IDLE: 'IDLE',
             ACTIVE: 'ACTIVE',
             CONNECT: 'CONNECT',
@@ -36,9 +36,9 @@ class FSM:
             ESTABLISHED: 'ESTABLISHED',
         }
 
-        codes: ClassVar[Dict[str, int]] = dict((name, code) for (code, name) in names.items())
+        codes: ClassVar[dict[str, int]] = dict((name, code) for (code, name) in names.items())
 
-        valid: ClassVar[List[int]] = list(names)
+        valid: ClassVar[list[int]] = list(names)
 
         def __init__(self, code: int) -> None:
             if code not in self.valid:
@@ -59,7 +59,7 @@ class FSM:
     ESTABLISHED: STATE = STATE(0x20)
 
     # to: from - transition table mapping destination state to valid source states
-    transition: ClassVar[Dict[STATE, List[STATE]]] = {
+    transition: ClassVar[dict[STATE, list[STATE]]] = {
         IDLE: [IDLE, ACTIVE, CONNECT, OPENSENT, OPENCONFIRM, ESTABLISHED],
         ACTIVE: [IDLE, ACTIVE, OPENSENT],
         CONNECT: [IDLE, CONNECT, ACTIVE],

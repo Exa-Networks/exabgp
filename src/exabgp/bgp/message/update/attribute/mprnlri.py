@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Generator, List
+from typing import TYPE_CHECKING, Generator
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -33,10 +33,10 @@ class MPRNLRI(Attribute, Family):
     ID = Attribute.CODE.MP_REACH_NLRI
     NO_DUPLICATE = True
 
-    def __init__(self, afi: int | AFI, safi: int | SAFI, nlris: List[NLRI]) -> None:
+    def __init__(self, afi: int | AFI, safi: int | SAFI, nlris: list[NLRI]) -> None:
         Family.__init__(self, afi, safi)
         # all the routes must have the same next-hop
-        self.nlris: List[NLRI] = nlris
+        self.nlris: list[NLRI] = nlris
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MPRNLRI):

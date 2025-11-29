@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
 
 from exabgp.rib.change import Change
 
@@ -82,7 +81,7 @@ class AnnounceMup(ParseAnnounce):
         return True
 
 
-def mup(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
+def mup(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
     muptype = tokeniser()
     mup_nlri: MUP
     if muptype == 'mup-isd':
@@ -122,10 +121,10 @@ def mup(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
 
 @ParseAnnounce.register('mup', 'extend-name', 'ipv4')
-def mup_ip_v4(tokeniser: Tokeniser) -> List[Change]:
+def mup_ip_v4(tokeniser: Tokeniser) -> list[Change]:
     return mup(tokeniser, AFI.ipv4, SAFI.mup)
 
 
 @ParseAnnounce.register('mup', 'extend-name', 'ipv6')
-def mup_ip_v6(tokeniser: Tokeniser) -> List[Change]:
+def mup_ip_v6(tokeniser: Tokeniser) -> list[Change]:
     return mup(tokeniser, AFI.ipv6, SAFI.mup)

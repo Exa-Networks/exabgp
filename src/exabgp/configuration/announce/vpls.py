@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
 
 from exabgp.rib.change import Change
 
@@ -152,7 +151,7 @@ class AnnounceVPLS(ParseAnnounce):
         return True
 
 
-def l2vpn_vpls(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
+def l2vpn_vpls(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
     change = Change(VPLS(None, None, None, None, None), Attributes())  # type: ignore[arg-type]
 
     while True:
@@ -180,5 +179,5 @@ def l2vpn_vpls(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
 
 @ParseAnnounce.register('vpls', 'extend-name', 'l2vpn')
-def vpls_v4(tokeniser: Tokeniser) -> List[Change]:
+def vpls_v4(tokeniser: Tokeniser) -> list[Change]:
     return l2vpn_vpls(tokeniser, AFI.l2vpn, SAFI.vpls)

@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Union, cast, TYPE_CHECKING
+from typing import cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.configuration.core.parser import Tokeniser
@@ -93,9 +93,7 @@ def path_information(tokeniser: 'Tokeniser') -> PathInfo:
     return PathInfo(ip=pi)
 
 
-def next_hop(
-    tokeniser: 'Tokeniser', afi: Optional[AFI] = None
-) -> Tuple[Union[IP, IPSelf], Union[NextHop, NextHopSelf]]:
+def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSelf, NextHop | NextHopSelf]:
     value = tokeniser()
     if value.lower() == 'self':
         return IPSelf(tokeniser.afi), NextHopSelf(tokeniser.afi)
@@ -207,8 +205,8 @@ def med(tokeniser: 'Tokeniser') -> MED:
 
 
 def as_path(tokeniser: 'Tokeniser') -> ASPath:
-    as_path: List[Union[SEQUENCE, CONFED_SEQUENCE, SET, CONFED_SET, ASN]] = []
-    insert: Optional[Union[SEQUENCE, CONFED_SEQUENCE, SET, CONFED_SET]] = None
+    as_path: list[SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET | ASN] = []
+    insert: (SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET) | None = None
 
     while True:
         value = tokeniser()
@@ -316,7 +314,7 @@ def originator_id(tokeniser: 'Tokeniser') -> OriginatorID:
 
 
 def cluster_list(tokeniser: 'Tokeniser') -> ClusterList:
-    clusterids: List[ClusterID] = []
+    clusterids: list[ClusterID] = []
     value = tokeniser()
     try:
         if value == '[':
@@ -509,7 +507,7 @@ def _ip(string: str, error: str) -> int:
     return (v[0] << 24) + (v[1] << 16) + (v[2] << 8) + v[3]
 
 
-def _encode(command: str, components: List[int], parts: List[str]) -> Tuple[bytes, str]:
+def _encode(command: str, components: list[int], parts: list[str]) -> tuple[bytes, str]:
     if command not in _HEADER:
         raise ValueError('invalid extended community type {}'.format(command))
 
@@ -618,7 +616,7 @@ def watchdog(tokeniser: 'Tokeniser') -> str:
     return Watchdog(command)
 
 
-def withdraw(tokeniser: Optional['Tokeniser'] = None) -> object:
+def withdraw(tokeniser: 'Tokeniser' | None = None) -> object:
     class Withdrawn:
         ID = Attribute.CODE.INTERNAL_WITHDRAW
 

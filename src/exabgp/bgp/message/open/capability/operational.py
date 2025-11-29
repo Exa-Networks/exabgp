@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, List
+from typing import ClassVar
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -30,7 +30,7 @@ class Operational(Capability, list):
     def json(self) -> str:
         return '{ "name": "operational" }'
 
-    def extract(self) -> List[bytes]:
+    def extract(self) -> list[bytes]:
         return [b'']
 
     @staticmethod

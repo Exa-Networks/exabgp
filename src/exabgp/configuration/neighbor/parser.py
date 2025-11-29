@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 from string import ascii_letters
 from string import digits
-from typing import List
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -26,7 +25,7 @@ HOSTNAME_MAX_LENGTH = 255  # Maximum hostname length (RFC 1123)
 MIN_NONZERO_HOLDTIME = 3  # Minimum hold time in seconds (must be 0 or >= 3)
 
 
-def inherit(tokeniser) -> List[str]:
+def inherit(tokeniser) -> list[str]:
     if len(tokeniser.tokens) == INHERIT_SINGLE_TOKEN_COUNT:
         return [tokeniser()]
     if (
@@ -151,8 +150,8 @@ def hold_time(tokeniser) -> HoldTime:
     return holdtime
 
 
-def processes(tokeniser) -> List[str]:
-    result: List[str] = []
+def processes(tokeniser) -> list[str]:
+    result: list[str] = []
     token = tokeniser()
     if token != '[':
         raise ValueError('invalid processes list\n  Format: [ process1, process2, ... ]')
@@ -170,8 +169,8 @@ def processes(tokeniser) -> List[str]:
     return result
 
 
-def processes_match(tokeniser) -> List[str]:
-    result: List[str] = []
+def processes_match(tokeniser) -> list[str]:
+    result: list[str] = []
     token = tokeniser()
     if token != '[':
         raise ValueError('invalid processes-match list\n  Format: [ regex1, regex2, ... ]')

@@ -11,9 +11,6 @@ from __future__ import annotations
 import base64
 from copy import deepcopy
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -139,8 +136,8 @@ class ParseNeighbor(Section):
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         Section.__init__(self, parser, scope, error)
-        self._neighbors: List[str] = []
-        self.neighbors: Dict[str, Neighbor] = {}
+        self._neighbors: list[str] = []
+        self.neighbors: dict[str, Neighbor] = {}
 
     def clear(self) -> None:
         self._neighbors = []
@@ -149,14 +146,14 @@ class ParseNeighbor(Section):
     def pre(self) -> bool:
         return self.parse(self.name, 'peer-address')
 
-    def _post_get_scope(self) -> Dict[str, Any]:
+    def _post_get_scope(self) -> dict[str, Any]:
         for inherited in self.scope.pop('inherit', []):
             data = self.scope.template('neighbor', inherited)
             self.scope.inherit(data)
         return self.scope.get()  # type: ignore[no-any-return]
 
     # Map config keys (with dashes) to Neighbor attributes (with underscores)
-    _CONFIG_TO_ATTR: Dict[str, str] = {
+    _CONFIG_TO_ATTR: dict[str, str] = {
         'description': 'description',
         'router-id': 'router_id',
         'local-address': 'local_address',
@@ -183,7 +180,7 @@ class ParseNeighbor(Section):
         'incoming-ttl': 'incoming_ttl',
     }
 
-    def _post_neighbor(self, local: Dict[str, Any], families: List[Tuple[AFI, SAFI]]) -> Neighbor:
+    def _post_neighbor(self, local: dict[str, Any], families: list[tuple[AFI, SAFI]]) -> Neighbor:
         neighbor = Neighbor()
 
         for config_key, attr_name in self._CONFIG_TO_ATTR.items():
@@ -205,15 +202,15 @@ class ParseNeighbor(Section):
 
         return neighbor
 
-    def _post_families(self, local: Dict[str, Any]) -> List[Tuple[AFI, SAFI]]:
-        families: List[Tuple[AFI, SAFI]] = []
+    def _post_families(self, local: dict[str, Any]) -> list[tuple[AFI, SAFI]]:
+        families: list[tuple[AFI, SAFI]] = []
         for family in ParseFamily.convert:
             for pair in local.get('family', {}).get(family, []):
                 families.append(pair)
 
         return families or NLRI.known_families()
 
-    def _post_capa_default(self, neighbor: Neighbor, local: Dict[str, Any]) -> None:
+    def _post_capa_default(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         capability = local.get('capability', {})
         cap = neighbor.capability
 
@@ -244,7 +241,7 @@ class ParseNeighbor(Section):
                 # gr == 0 means enabled but use hold-time (inferred later)
                 cap.graceful_restart = GracefulRestartConfig.with_time(gr)
 
-    def _post_capa_addpath(self, neighbor: Neighbor, local: Dict[str, Any], families: List[Tuple[AFI, SAFI]]) -> None:
+    def _post_capa_addpath(self, neighbor: Neighbor, local: dict[str, Any], families: list[tuple[AFI, SAFI]]) -> None:
         if not neighbor.capability.add_path:
             return
 
@@ -266,7 +263,7 @@ class ParseNeighbor(Section):
                     continue
                 neighbor.add_addpath(pair)
 
-    def _post_capa_nexthop(self, neighbor: Neighbor, local: Dict[str, Any]) -> None:
+    def _post_capa_nexthop(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         # The default is to auto-detect by the presence of the nexthop block
         # if this is manually set, then we honor it
         nexthop = local.get('nexthop', {})
@@ -276,7 +273,7 @@ class ParseNeighbor(Section):
         if not neighbor.capability.nexthop.is_enabled():
             return
 
-        nexthops: List[Tuple[AFI, SAFI, AFI]] = []
+        nexthops: list[tuple[AFI, SAFI, AFI]] = []
         for family in nexthop:
             nexthops.extend(nexthop[family])
 
@@ -303,7 +300,7 @@ class ParseNeighbor(Section):
             if neighbor.adj_rib_out:
                 log.debug(lazymsg('neighbor.capability.route_refresh action=enable_adj_rib_out'), 'configuration')
 
-    def _post_routes(self, neighbor: Neighbor, local: Dict[str, Any]) -> None:
+    def _post_routes(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         # NOTE: this may modify change but does not matter as want to modified
 
         neighbor.changes = []
@@ -325,7 +322,7 @@ class ParseNeighbor(Section):
             # remove_self may well have side effects on change
             neighbor.changes.append(neighbor.remove_self(route))
 
-    def _init_neighbor(self, neighbor: Neighbor, local: Dict[str, Any]) -> None:
+    def _init_neighbor(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         families = neighbor.families()
         for change in neighbor.changes:
             # remove_self may well have side effects on change

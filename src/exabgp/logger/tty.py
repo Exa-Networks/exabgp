@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict
+from typing import Any
 
 
 def _istty(std: Any) -> bool:
@@ -11,7 +11,7 @@ def _istty(std: Any) -> bool:
         return False
 
 
-_std: Dict[str, Any] = {
+_std: dict[str, Any] = {
     'stderr': sys.stderr,
     'stdout': sys.stdout,
     'out': sys.stdout,

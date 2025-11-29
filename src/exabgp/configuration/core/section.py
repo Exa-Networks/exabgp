@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 from string import ascii_letters
 from string import digits
 
@@ -42,7 +42,7 @@ def _levenshtein(s1: str, s2: str) -> int:
     return previous_row[-1]
 
 
-def _find_similar(target: str, candidates: List[str], max_distance: int = 2, max_results: int = 3) -> List[str]:
+def _find_similar(target: str, candidates: list[str], max_distance: int = 2, max_results: int = 3) -> list[str]:
     """Find similar strings using Levenshtein distance.
 
     Args:

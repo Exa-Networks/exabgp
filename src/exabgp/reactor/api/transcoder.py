@@ -5,7 +5,7 @@ import sys
 import json
 import string
 
-from typing import Callable, Dict, cast
+from typing import Callable, cast
 
 from exabgp.util import hexbytes
 from exabgp.util import hexstring
@@ -51,7 +51,7 @@ def _make_transcoder_neighbor(local: str, remote: str, local_asn: int, peer_asn:
 
 
 class Transcoder:
-    seen_open: Dict[str, Open | None] = {
+    seen_open: dict[str, Open | None] = {
         'send': None,
         'receive': None,
     }

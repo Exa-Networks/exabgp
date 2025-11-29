@@ -6,7 +6,7 @@ Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar, Dict
+from typing import ClassVar
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.resource import Resource
@@ -33,7 +33,7 @@ class NetMask(Resource):
         # return self.names.get(self,'%d' % int(self))
         return '%d' % int(self)
 
-    names: ClassVar[Dict[int, str]] = {
+    names: ClassVar[dict[int, str]] = {
         32: '255.255.255.255',
         31: '255.255.255.254',
         30: '255.255.255.252',
@@ -69,7 +69,7 @@ class NetMask(Resource):
         0: '0.0.0.0',
     }
 
-    codes: ClassVar[Dict[str, int]] = dict([(inst, name) for (name, inst) in names.items()])
+    codes: ClassVar[dict[str, int]] = dict([(inst, name) for (name, inst) in names.items()])
 
     @classmethod
     def create(cls, string: str | int, afi: AFI) -> NetMask:

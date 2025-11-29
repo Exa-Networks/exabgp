@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, cast
+from typing import cast
 
 from exabgp.rib.change import Change
 
@@ -66,7 +66,7 @@ class AnnounceLabel(AnnouncePath):
         return True
 
 
-def ip_label(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
+def ip_label(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
@@ -101,10 +101,10 @@ def ip_label(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
 
 @ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv4')
-def nlri_mpls_v4(tokeniser: Tokeniser) -> List[Change]:
+def nlri_mpls_v4(tokeniser: Tokeniser) -> list[Change]:
     return ip_label(tokeniser, AFI.ipv4, SAFI.nlri_mpls)
 
 
 @ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv6')
-def nlri_mpls_v6(tokeniser: Tokeniser) -> List[Change]:
+def nlri_mpls_v6(tokeniser: Tokeniser) -> list[Change]:
     return ip_label(tokeniser, AFI.ipv6, SAFI.nlri_mpls)

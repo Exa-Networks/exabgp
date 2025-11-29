@@ -7,7 +7,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -34,7 +34,7 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 @NLRI.register(AFI.ipv4, SAFI.mup)
 @NLRI.register(AFI.ipv6, SAFI.mup)
 class MUP(NLRI):
-    registered: ClassVar[Dict[str, Type[MUP]]] = dict()
+    registered: ClassVar[dict[str, Type[MUP]]] = dict()
 
     # NEED to be defined in the subclasses
     ARCHTYPE: ClassVar[int] = 0

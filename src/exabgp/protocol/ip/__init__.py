@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import Any, Dict, Set, Type, ClassVar, Iterator, TYPE_CHECKING
+from typing import Any, Type, ClassVar, Iterator, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
@@ -55,12 +55,12 @@ class IP:
     # BITS and BYTES are defined as ClassVar in subclasses (IPv4/IPv6)
     # Not annotated here to allow proper ClassVar override
 
-    _known: ClassVar[Dict[AFI, Type[IP]]] = dict()
+    _known: ClassVar[dict[AFI, Type[IP]]] = dict()
 
     _UNICAST: ClassVar[SAFI] = SAFI.unicast
     _MULTICAST: ClassVar[SAFI] = SAFI.multicast
 
-    _multicast_range: ClassVar[Set[int]] = set(range(224, 240))  # 239
+    _multicast_range: ClassVar[set[int]] = set(range(224, 240))  # 239
 
     _string: str
     _packed: bytes

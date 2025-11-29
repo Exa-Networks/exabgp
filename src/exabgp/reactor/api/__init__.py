@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Callable, List, cast, TYPE_CHECKING
+from typing import Callable, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -101,7 +101,7 @@ class API(Command):
         await reactor.processes.flush_write_queue_async()
         return False
 
-    def api_route(self, command: str) -> List[Change]:
+    def api_route(self, command: str) -> list[Change]:
         action, line = command.split(' ', 1)
 
         self.configuration.static.clear()
@@ -115,7 +115,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_announce_v4(self, command: str) -> List[Change]:
+    def api_announce_v4(self, command: str) -> list[Change]:
         action, line = command.split(' ', 1)
         _, line = line.split(' ', 1)
 
@@ -130,7 +130,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_announce_v6(self, command: str) -> List[Change]:
+    def api_announce_v6(self, command: str) -> list[Change]:
         action, line = command.split(' ', 1)
         _, line = line.split(' ', 1)
 
@@ -145,7 +145,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_flow(self, command: str) -> List[Change]:
+    def api_flow(self, command: str) -> list[Change]:
         action, flow, line = command.split(' ', 2)
 
         self.configuration.flow.clear()
@@ -159,7 +159,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_vpls(self, command: str) -> List[Change]:
+    def api_vpls(self, command: str) -> list[Change]:
         action, line = command.split(' ', 1)
 
         self.configuration.l2vpn.clear()
@@ -170,7 +170,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_attributes(self, command: str, peers: List[str]) -> List[Change]:
+    def api_attributes(self, command: str, peers: list[str]) -> list[Change]:
         action, line = command.split(' ', 1)
 
         self.configuration.static.clear()
@@ -184,7 +184,7 @@ class API(Command):
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_refresh(self, command: str) -> List[RouteRefresh] | None:
+    def api_refresh(self, command: str) -> list[RouteRefresh] | None:
         tokens = formated(command).split(' ')[2:]
         if len(tokens) != API_REFRESH_TOKEN_COUNT:
             return None

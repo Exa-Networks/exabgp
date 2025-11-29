@@ -11,7 +11,7 @@ import os
 import uuid
 import copy
 import socket
-from typing import ClassVar, Dict, Generator, List, Tuple, TYPE_CHECKING
+from typing import ClassVar, Generator, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -40,7 +40,7 @@ MAX_PRIVILEGED_PORT: int = 1024  # Highest privileged port number (requires root
 
 
 class Listener:
-    _family_AFI_map: ClassVar[Dict[socket.AddressFamily, AFI]] = {
+    _family_AFI_map: ClassVar[dict[socket.AddressFamily, AFI]] = {
         socket.AF_INET: AFI.ipv4,
         socket.AF_INET6: AFI.ipv6,
     }
@@ -62,8 +62,8 @@ class Listener:
 
         self._reactor: 'Reactor' = reactor
         self._backlog: int = backlog
-        self._sockets: Dict[socket.socket, Tuple[str, int, str, str | None]] = {}
-        self._accepted: Dict[socket.socket, socket.socket] = {}
+        self._sockets: dict[socket.socket, tuple[str, int, str, str | None]] = {}
+        self._accepted: dict[socket.socket, socket.socket] = {}
 
     def _new_socket(self, ip: IP) -> socket.socket:
         if ip.afi == AFI.ipv6:
@@ -203,7 +203,7 @@ class Listener:
         yield None
 
         reactor: Reactor = self._reactor
-        ranged_neighbor: List[Neighbor] = []
+        ranged_neighbor: list[Neighbor] = []
 
         for connection in self._connected():
             log.debug(lazymsg('new connection received {name}', name=connection.name()), 'network')

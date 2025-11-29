@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from struct import unpack
 from struct import pack
-from typing import Any, Iterator, Tuple, cast, TYPE_CHECKING
+from typing import Any, Iterator, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -126,7 +126,7 @@ class VPLS(NLRI):
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> Tuple[VPLS, bytes]:
+    ) -> tuple[VPLS, bytes]:
         # label is 20bits, stored using 3 bytes, 24 bits
         (length,) = unpack('!H', bgp[0:2])
         if len(bgp) != length + 2:

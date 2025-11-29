@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -116,7 +116,7 @@ class IPVPN(Label):
         mask = bytes([len(self.rd) * 8 + self.cidr.mask])
         return Family.index(self) + addpath + mask + self.rd.pack_rd() + self.cidr.pack_ip()
 
-    def _internal(self, announced: bool = True) -> List[str]:
+    def _internal(self, announced: bool = True) -> list[str]:
         r = Label._internal(self, announced)
         if announced and self.rd:
             r.append(self.rd.json())

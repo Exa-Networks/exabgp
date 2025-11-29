@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from exabgp.environment import parsing
 from exabgp.environment.environment import Env
@@ -24,7 +24,7 @@ where logging should log
 {_SPACE} <filename> send the data to a file"""
 
 # Each config entry has: read (parser), write (formatter), value (default), help (description)
-CONFIGURATION: Dict[str, Dict[str, Dict[str, Any]]] = {
+CONFIGURATION: dict[str, dict[str, dict[str, Any]]] = {
     'profile': {
         'enable': {
             'read': parsing.boolean,

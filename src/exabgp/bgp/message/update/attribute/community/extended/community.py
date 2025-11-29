@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict, Tuple, Type
+from typing import TYPE_CHECKING, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -26,7 +26,7 @@ class ExtendedCommunityBase(Attribute):
     NON_TRANSITIVE: ClassVar[int] = 0x40
 
     # Need to be overwritten by sub-classes
-    registered_extended: ClassVar[Dict[Tuple[int, int], Type[ExtendedCommunityBase]] | None] = None
+    registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]] | None] = None
 
     @classmethod
     def register(cls, klass: Type[ExtendedCommunityBase]) -> Type[ExtendedCommunityBase]:  # type: ignore[override]
@@ -35,8 +35,8 @@ class ExtendedCommunityBase(Attribute):
         return klass
 
     # size of value for data (boolean: is extended)
-    length_value: ClassVar[Dict[bool, int]] = {False: 7, True: 6}
-    name: ClassVar[Dict[bool, str]] = {False: 'regular', True: 'extended'}
+    length_value: ClassVar[dict[bool, int]] = {False: 7, True: 6}
+    name: ClassVar[dict[bool, str]] = {False: 'regular', True: 'extended'}
 
     def __init__(self, community: bytes) -> None:
         # Two top bits are iana and transitive bits
@@ -135,7 +135,7 @@ class ExtendedCommunity(ExtendedCommunityBase):
     ID = Attribute.CODE.EXTENDED_COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    registered_extended: ClassVar[Dict[Tuple[int, int], Type[ExtendedCommunityBase]]] = {}
+    registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]] = {}
 
     def __len__(self) -> int:
         return 8
@@ -145,7 +145,7 @@ class ExtendedCommunityIPv6(ExtendedCommunityBase):
     ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    registered_extended: ClassVar[Dict[Tuple[int, int], Type[ExtendedCommunityBase]]] = {}
+    registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]] = {}
 
     def __len__(self) -> int:
         return 20

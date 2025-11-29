@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, Dict, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -71,7 +71,7 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 #            +-------------+----------------------------------+
 # ===================================================================== PROTO_ID
 
-PROTO_CODES: Dict[int, str] = {
+PROTO_CODES: dict[int, str] = {
     1: 'isis_l1',
     2: 'isis_l2',
     3: 'ospf_v2',
@@ -88,7 +88,7 @@ T = TypeVar('T', bound='BGPLS')
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls)
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls_vpn)
 class BGPLS(NLRI):
-    registered_bgpls: ClassVar[Dict[int, Type[BGPLS]]] = dict()
+    registered_bgpls: ClassVar[dict[int, Type[BGPLS]]] = dict()
 
     CODE: ClassVar[int] = -1
     NAME: ClassVar[str] = 'Unknown'
@@ -135,7 +135,7 @@ class BGPLS(NLRI):
     @classmethod
     def unpack_nlri(
         cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: PathInfo | None, negotiated
-    ) -> Tuple[T, bytes]:
+    ) -> tuple[T, bytes]:
         code, length = unpack('!HH', bgp[:4])
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:

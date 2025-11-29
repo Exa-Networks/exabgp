@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Any, Tuple, List, Set
+from typing import TYPE_CHECKING, Any
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
@@ -53,7 +53,7 @@ def _parse_asn(value: str) -> ASN:
         raise ValueError(f'invalid ASN {value}: {e}')
 
 
-def _parse_families(value: str) -> List[Tuple[AFI, SAFI]]:
+def _parse_families(value: str) -> list[tuple[AFI, SAFI]]:
     """Parse family-allowed value into list of (AFI, SAFI) tuples.
 
     Accepts formats like:
@@ -96,7 +96,7 @@ def _parse_families(value: str) -> List[Tuple[AFI, SAFI]]:
     return families
 
 
-def _parse_neighbor_params(line: str) -> Tuple[Dict[str, Any], List[str]]:
+def _parse_neighbor_params(line: str) -> tuple[dict[str, Any], list[str]]:
     """Parse neighbor parameters from command line.
 
     API format: neighbor <ip> local-address <ip> local-as <asn> peer-as <asn> [router-id <ip>] [family-allowed <families>] [graceful-restart <seconds>] [group-updates true|false] [api <process>]...
@@ -109,7 +109,7 @@ def _parse_neighbor_params(line: str) -> Tuple[Dict[str, Any], List[str]]:
     """
 
     # Helper to parse key-value parameter
-    def parse_param(key: str, tokens: List[str], i: int, seen: Set[str], parser) -> Tuple[Any, int]:
+    def parse_param(key: str, tokens: list[str], i: int, seen: set[str], parser) -> tuple[Any, int]:
         if key in seen:
             raise ValueError(f'duplicate parameter: {key}')
         if i + 1 >= len(tokens):
@@ -123,9 +123,9 @@ def _parse_neighbor_params(line: str) -> Tuple[Dict[str, Any], List[str]]:
     if tokens[0] != 'neighbor':
         raise ValueError('command must start with "neighbor <ip>"')
 
-    params: Dict[str, Any] = {}
-    api_processes: List[str] = []
-    seen_params: Set[str] = set()
+    params: dict[str, Any] = {}
+    api_processes: list[str] = []
+    seen_params: set[str] = set()
 
     # Parse peer IP (second token)
     params['peer-address'] = _parse_ip(tokens[1])
@@ -191,7 +191,7 @@ def _parse_neighbor_params(line: str) -> Tuple[Dict[str, Any], List[str]]:
     return params, api_processes
 
 
-def _build_neighbor(params: Dict[str, Any], api_processes: List[str] | None = None) -> Neighbor:
+def _build_neighbor(params: dict[str, Any], api_processes: list[str] | None = None) -> Neighbor:
     """Build Neighbor object from parsed parameters.
 
     Args:

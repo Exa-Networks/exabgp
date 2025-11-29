@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import sys
 import pwd
-from typing import Any, List
+from typing import Any
 
 from exabgp.logger.handler import levels
 
@@ -40,7 +40,7 @@ def quote(_: Any) -> str:
     return f"'{_!s}'"
 
 
-def quote_list(_: List[Any]) -> str:
+def quote_list(_: list[Any]) -> str:
     joined = ' '.join([str(x) for x in _])
     return f"'{joined}'"
 
@@ -60,11 +60,11 @@ def api(_: str) -> str:
     return encoder
 
 
-def methods(_: str) -> List[str]:
+def methods(_: str) -> list[str]:
     return _.upper().split()
 
 
-def list(_: List[str]) -> str:
+def list(_: list[str]) -> str:
     joined = ' '.join(_)
     return f"'{joined}'"
 
@@ -79,8 +79,8 @@ def ip(_: str) -> str:
     raise TypeError(f'ip {_} is invalid')
 
 
-def ip_list(_: str) -> List[IP]:
-    ips: List[IP] = []
+def ip_list(_: str) -> list[IP]:
+    ips: list[IP] = []
     for ip in _.split(' '):
         if not ip:
             continue
@@ -102,8 +102,8 @@ def user(_: str) -> str:
 
 
 def folder(path: str) -> str:
-    paths: List[str] = root(path)
-    options: List[str] = [p for p in paths if os.path.exists(path)]
+    paths: list[str] = root(path)
+    options: list[str] = [p for p in paths if os.path.exists(path)]
     if not options:
         raise TypeError(f'{path} does not exists')
     first: str = options[0]
@@ -113,7 +113,7 @@ def folder(path: str) -> str:
 
 
 def path(path: str) -> str:
-    split: List[str] = sys.argv[0].split('src/exabgp')
+    split: list[str] = sys.argv[0].split('src/exabgp')
     if len(split) > 1:
         prefix: str = os.sep.join(split[:1])
         if prefix and path.startswith(prefix):
@@ -169,16 +169,16 @@ def syslog_name(log: str) -> str:
     return log
 
 
-def root(path: str) -> List[str]:
-    roots: List[str] = base.ROOT.split(os.sep)
-    location: List[str] = []
+def root(path: str) -> list[str]:
+    roots: list[str] = base.ROOT.split(os.sep)
+    location: list[str] = []
     for index in range(len(roots) - 1, -1, -1):
         if roots[index] == 'src':
             if index:
                 location = roots[:index]
             break
     root_path: str = os.path.join(*location)
-    paths: List[str] = [
+    paths: list[str] = [
         os.path.normpath(os.path.join(os.path.join(os.sep, root_path, path))),
         os.path.normpath(os.path.expanduser(unquote(path))),
         os.path.normpath(os.path.join('/', path)),

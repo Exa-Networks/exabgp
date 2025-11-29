@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import socket
 
-from typing import TYPE_CHECKING, ClassVar, Dict
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -60,12 +60,12 @@ class TrafficAction(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x07
 
-    _sample: ClassVar[Dict[bool, int]] = {
+    _sample: ClassVar[dict[bool, int]] = {
         False: 0x0,
         True: 0x2,
     }
 
-    _terminal: ClassVar[Dict[bool, int]] = {
+    _terminal: ClassVar[dict[bool, int]] = {
         False: 0x0,
         True: 0x1,
     }

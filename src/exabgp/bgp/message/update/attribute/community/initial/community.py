@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, Dict
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -28,7 +28,7 @@ class Community:
     NO_PEER: ClassVar[bytes] = pack('!L', 0xFFFFFF04)
     BLACKHOLE: ClassVar[bytes] = pack('!L', 0xFFFF029A)
 
-    cache: ClassVar[Dict[bytes, Community]] = {}
+    cache: ClassVar[dict[bytes, Community]] = {}
     caching: ClassVar[bool] = True
 
     def __init__(self, community: bytes) -> None:

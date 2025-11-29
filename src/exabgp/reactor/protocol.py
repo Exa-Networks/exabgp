@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio  # noqa: F401 - Used by async methods (write_async, send_async, read_message_async)
 import os
 import traceback
-from typing import TYPE_CHECKING, Any, Generator, Tuple, cast
+from typing import TYPE_CHECKING, Any, Generator, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -417,7 +417,7 @@ class Protocol:
             return message
 
     def validate_open(self) -> None:
-        error: Tuple[int, int, str] | None = self.negotiated.validate(self.neighbor)
+        error: tuple[int, int, str] | None = self.negotiated.validate(self.neighbor)
         if error is not None:
             raise Notify(*error)
 

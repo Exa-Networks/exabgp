@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -44,19 +44,19 @@ class ParseFlowRoute(Section):
         )
     )
 
-    known: Dict[str | tuple[Any, ...], Callable[[Any], Any]] = {
+    known: dict[str | tuple[Any, ...], Callable[[Any], Any]] = {
         'rd': route_distinguisher,
         'route-distinguisher': route_distinguisher,
         'next-hop': next_hop,
     }
 
-    action: Dict[str | tuple[Any, ...], str] = {
+    action: dict[str | tuple[Any, ...], str] = {
         'rd': 'nlri-set',
         'route-distinguisher': 'nlri-set',
         'next-hop': 'nlri-nexthop',
     }
 
-    assign: Dict[str, str] = {
+    assign: dict[str, str] = {
         'rd': 'rd',
         'route-distinguisher': 'rd',
     }

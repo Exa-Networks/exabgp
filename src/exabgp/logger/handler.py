@@ -5,13 +5,13 @@ from __future__ import annotations
 import sys
 import logging
 import logging.handlers as handlers
-from typing import Any, Dict
+from typing import Any
 
 TIMED: str = '%(asctime)s: %(message)s'
 SHORT: str = '%(filename)s: %(message)s'
 CLEAR: str = '%(levelname) %(asctime)s %(filename)s: %(message)s'
 
-levels: Dict[str, int] = {
+levels: dict[str, int] = {
     'FATAL': logging.FATAL,
     'CRITICAL': logging.CRITICAL,
     'ERROR': logging.ERROR,
@@ -22,7 +22,7 @@ levels: Dict[str, int] = {
 }
 
 # prevent recreation of already created logger
-_created: Dict[str | None, logging.Logger] = {}
+_created: dict[str | None, logging.Logger] = {}
 
 
 def get_logger(name: str | None = None, **kwargs: Any) -> logging.Logger:

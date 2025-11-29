@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, List
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -32,8 +32,8 @@ class ClusterList(Attribute):
     FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 
-    def __init__(self, clusters: List[IPv4], packed: bytes | None = None) -> None:
-        self.clusters: List[IPv4] = clusters
+    def __init__(self, clusters: list[IPv4], packed: bytes | None = None) -> None:
+        self.clusters: list[IPv4] = clusters
         self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack_ip() for _ in clusters))
         self._length: int = len(clusters) * 4
 
@@ -61,7 +61,7 @@ class ClusterList(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> ClusterList:
-        clusters: List[IPv4] = []
+        clusters: list[IPv4] = []
         while data:
             clusters.append(IPv4.unpack_ipv4(data[:4]))
             data = data[4:]

@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generator, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Generator
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -49,7 +49,7 @@ NOTHING: _NOTHING = _NOTHING()
 
 class Attributes(dict):
     # Internal pseudo-attributes (no dedicated classes exist for these)
-    INTERNAL: ClassVar[Tuple[int, ...]] = (
+    INTERNAL: ClassVar[tuple[int, ...]] = (
         Attribute.CODE.INTERNAL_SPLIT,
         Attribute.CODE.INTERNAL_WATCHDOG,
         Attribute.CODE.INTERNAL_NAME,
@@ -57,14 +57,14 @@ class Attributes(dict):
     )
 
     # A cache of parsed attributes
-    cache: ClassVar[Dict[str, Attributes]] = {}
+    cache: ClassVar[dict[str, Attributes]] = {}
 
     # The previously parsed Attributes
     cached: ClassVar[Attributes | None] = None
     # previously parsed attribute, from which cached was made of
     previous: ClassVar[bytes] = b''
 
-    representation: ClassVar[Dict[int, Tuple[str, str, str | Tuple[str, ...], str, str]]] = {
+    representation: ClassVar[dict[int, tuple[str, str, str | tuple[str, ...], str, str]]] = {
         # key:  (how, default, name, text_presentation, json_presentation),
         Attribute.CODE.ORIGIN: ('string', '', 'origin', '%s', '%s'),
         Attribute.CODE.AS_PATH: ('list', '', 'as-path', '%s', '%s'),
@@ -297,7 +297,7 @@ class Attributes(dict):
         return attributes
 
     @staticmethod
-    def flag_attribute_content(data: bytes) -> Tuple[int, int, bytes]:
+    def flag_attribute_content(data: bytes) -> tuple[int, int, bytes]:
         flag = Attribute.Flag(data[0])
         attr = Attribute.CODE(data[1])
 

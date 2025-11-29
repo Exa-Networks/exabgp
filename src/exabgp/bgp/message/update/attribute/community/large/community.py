@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -20,7 +20,7 @@ from struct import unpack
 class LargeCommunity(Attribute):
     MAX: ClassVar[int] = 0xFFFFFFFFFFFFFFFFFFFFFFFF
 
-    _instance_cache: ClassVar[Dict[bytes, LargeCommunity]] = {}
+    _instance_cache: ClassVar[dict[bytes, LargeCommunity]] = {}
     caching: ClassVar[bool] = True
 
     def __init__(self, large_community: bytes) -> None:

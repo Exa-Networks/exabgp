@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Generator, List
+from typing import Generator
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
@@ -26,9 +26,9 @@ class MPURNLRI(Attribute, Family):
     ID = Attribute.CODE.MP_UNREACH_NLRI
     NO_DUPLICATE = True
 
-    def __init__(self, afi: int | AFI, safi: int | SAFI, nlris: List[NLRI]) -> None:
+    def __init__(self, afi: int | AFI, safi: int | SAFI, nlris: list[NLRI]) -> None:
         Family.__init__(self, afi, safi)
-        self.nlris: List[NLRI] = nlris
+        self.nlris: list[NLRI] = nlris
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MPURNLRI):
@@ -46,7 +46,7 @@ class MPURNLRI(Attribute, Family):
 
         # we changed the API to nrli.pack from addpath to negotiated but not pack itself
 
-        packed_nlris: List[bytes] = []
+        packed_nlris: list[bytes] = []
         for nlri in self.nlris:
             if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
                 continue

@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Dict, Any, Callable
+from typing import Any, Callable
 
 
 # ===================================================================== dictdict
@@ -16,7 +16,7 @@ from typing import Dict, Any, Callable
 
 
 class Dictionary(defaultdict):
-    default_factory: Callable[[], Dict[Any, Any]] | None
+    default_factory: Callable[[], dict[Any, Any]] | None
 
     def __init__(self) -> None:
         self.default_factory = dict

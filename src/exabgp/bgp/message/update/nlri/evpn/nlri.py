@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, ClassVar, Dict, Tuple, Type
+from typing import TYPE_CHECKING, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -38,7 +38,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 
 @NLRI.register(AFI.l2vpn, SAFI.evpn)
 class EVPN(NLRI):
-    registered_evpn: ClassVar[Dict[int, Type[EVPN]]] = dict()
+    registered_evpn: ClassVar[dict[int, Type[EVPN]]] = dict()
 
     # NEED to be defined in the subclasses
     CODE: ClassVar[int] = -1
@@ -99,7 +99,7 @@ class EVPN(NLRI):
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: PathInfo | None, negotiated: Negotiated
-    ) -> Tuple[EVPN, bytes]:
+    ) -> tuple[EVPN, bytes]:
         code = bgp[0]
         length = bgp[1]
 

@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Dict, Any, Type, Iterator, ClassVar
+from typing import Any, Type, Iterator, ClassVar
 from exabgp.util import string_is_hex
 
 # Resource value range constants
@@ -16,10 +16,10 @@ RESOURCE_VALUE_MAX: int = 0xFFFF  # Maximum 16-bit unsigned integer value
 
 class Resource(int):
     NAME: ClassVar[str] = ''
-    codes: ClassVar[Dict[str, int]] = {}
-    names: ClassVar[Dict[int, str]] = {}
+    codes: ClassVar[dict[str, int]] = {}
+    names: ClassVar[dict[int, str]] = {}
 
-    cache: ClassVar[Dict[Type[Resource], Dict[str, Resource]]] = {}
+    cache: ClassVar[dict[Type[Resource], dict[str, Resource]]] = {}
 
     def __new__(cls, *args: Any) -> Resource:
         key = '//'.join(str(_) for _ in args)

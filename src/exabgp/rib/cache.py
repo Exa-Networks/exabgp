@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Iterator, List, Set, Tuple
+from typing import TYPE_CHECKING, Iterator
 
 from exabgp.bgp.message import Action
 
@@ -18,10 +18,10 @@ if TYPE_CHECKING:
 
 class Cache:
     cache: bool
-    families: Set[Tuple[AFI, SAFI]]
-    _seen: Dict[Tuple[AFI, SAFI], Dict[bytes, Change]]
+    families: set[tuple[AFI, SAFI]]
+    _seen: dict[tuple[AFI, SAFI], dict[bytes, Change]]
 
-    def __init__(self, cache: bool, families: Set[Tuple[AFI, SAFI]]) -> None:
+    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]]) -> None:
         self.cache = cache
         self._seen = {}
         # self._seen[family][change-index] = change
@@ -33,15 +33,15 @@ class Cache:
     def clear_cache(self) -> None:
         self._seen = {}
 
-    def delete_cached_family(self, families: Set[Tuple[AFI, SAFI]]) -> None:
+    def delete_cached_family(self, families: set[tuple[AFI, SAFI]]) -> None:
         for family in list(self._seen.keys()):
             if family not in families:
                 del self._seen[family]
 
     def cached_changes(
         self,
-        families: List[Tuple[AFI, SAFI]] | None = None,
-        actions: Tuple[int, ...] = (Action.ANNOUNCE,),
+        families: list[tuple[AFI, SAFI]] | None = None,
+        actions: tuple[int, ...] = (Action.ANNOUNCE,),
     ) -> Iterator[Change]:
         # families can be None or []
         requested_families = self.families if families is None else set(families).intersection(self.families)

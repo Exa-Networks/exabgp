@@ -11,7 +11,7 @@ import json
 from collections import Counter, deque
 from copy import deepcopy
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
@@ -30,53 +30,53 @@ if TYPE_CHECKING:
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor:
-    _GLOBAL: ClassVar[Dict[str, int]] = {'uid': 1}
+    _GLOBAL: ClassVar[dict[str, int]] = {'uid': 1}
 
     # Singleton empty neighbor (initialized after class definition)
     EMPTY: ClassVar['Neighbor']
 
     # Configuration attributes (previously in defaults dict)
     description: str
-    router_id: Union['RouterID', None]
-    local_address: Union['IP', None]
-    source_interface: Union[str, None]
-    peer_address: Union['IP', None]
-    local_as: Union['ASN', None]
-    peer_as: Union['ASN', None]
+    router_id: 'RouterID' | None
+    local_address: 'IP' | None
+    source_interface: str | None
+    peer_address: 'IP' | None
+    local_as: 'ASN' | None
+    peer_as: 'ASN' | None
     passive: bool
     listen: int
     connect: int
     hold_time: HoldTime
     rate_limit: int
-    host_name: Union[str, None]
-    domain_name: Union[str, None]
+    host_name: str | None
+    domain_name: str | None
     group_updates: bool
     auto_flush: bool
     adj_rib_in: bool
     adj_rib_out: bool
     manual_eor: bool
-    md5_password: Union[str, None]
+    md5_password: str | None
     md5_base64: bool
-    md5_ip: Union['IP', None]
-    outgoing_ttl: Union[int, None]
-    incoming_ttl: Union[int, None]
+    md5_ip: 'IP' | None
+    outgoing_ttl: int | None
+    incoming_ttl: int | None
 
     # Other instance attributes
-    api: Union[Dict[str, Any], None]
+    api: dict[str, Any, None]
     capability: NeighborCapability
     auto_discovery: bool
     range_size: int
     generated: bool
-    _families: List[Tuple[AFI, SAFI]]
-    _nexthop: List[Tuple[AFI, SAFI, AFI]]
-    _addpath: List[Tuple[AFI, SAFI]]
-    rib: Union[RIB, None]
-    changes: List['Change']
-    previous: Union['Neighbor', None]
-    eor: deque[Tuple[AFI, SAFI]]
-    asm: Dict[Tuple[AFI, SAFI], Message]
+    _families: list[tuple[AFI, SAFI]]
+    _nexthop: list[tuple[AFI, SAFI, AFI]]
+    _addpath: list[tuple[AFI, SAFI]]
+    rib: RIB | None
+    changes: list['Change']
+    previous: 'Neighbor' | None
+    eor: deque[tuple[AFI, SAFI]]
+    asm: dict[tuple[AFI, SAFI], Message]
     messages: deque[Message]
-    refresh: deque[Tuple[AFI, SAFI]]
+    refresh: deque[tuple[AFI, SAFI]]
     counter: Counter[str]
     uid: str
 
@@ -200,24 +200,24 @@ class Neighbor:
         peer_as = self.peer_as if self.peer_as is not None else 'auto'
         return f'neighbor {self.peer_address} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self.router_id} family-allowed {session}'
 
-    def families(self) -> List[Tuple[AFI, SAFI]]:
+    def families(self) -> list[tuple[AFI, SAFI]]:
         # this list() is important .. as we use the function to modify self._families
         return list(self._families)
 
-    def nexthops(self) -> List[Tuple[AFI, SAFI, AFI]]:
+    def nexthops(self) -> list[tuple[AFI, SAFI, AFI]]:
         # this list() is important .. as we use the function to modify self._nexthop
         return list(self._nexthop)
 
-    def addpaths(self) -> List[Tuple[AFI, SAFI]]:
+    def addpaths(self) -> list[tuple[AFI, SAFI]]:
         # this list() is important .. as we use the function to modify self._add_path
         return list(self._addpath)
 
-    def add_family(self, family: Tuple[AFI, SAFI]) -> None:
+    def add_family(self, family: tuple[AFI, SAFI]) -> None:
         # the families MUST be sorted for neighbor indexing name to be predictable for API users
         # this list() is important .. as we use the function to modify self._families
         if family not in self.families():
             afi, safi = family
-            d: Dict[AFI, List[SAFI]] = dict()
+            d: dict[AFI, list[SAFI]] = dict()
             d[afi] = [
                 safi,
             ]
@@ -229,12 +229,12 @@ class Neighbor:
         if (afi, safi, nhafi) not in self._nexthop:
             self._nexthop.append((afi, safi, nhafi))
 
-    def add_addpath(self, family: Tuple[AFI, SAFI]) -> None:
+    def add_addpath(self, family: tuple[AFI, SAFI]) -> None:
         # the families MUST be sorted for neighbor indexing name to be predictable for API users
         # this list() is important .. as we use the function to modify self._add_path
         if family not in self.addpaths():
             afi, safi = family
-            d: Dict[AFI, List[SAFI]] = dict()
+            d: dict[AFI, list[SAFI]] = dict()
             d[afi] = [
                 safi,
             ]
@@ -242,7 +242,7 @@ class Neighbor:
                 d.setdefault(afi, []).append(safi)
             self._addpath = [(afi, safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
-    def remove_family(self, family: Tuple[AFI, SAFI]) -> None:
+    def remove_family(self, family: tuple[AFI, SAFI]) -> None:
         if family in self.families():
             self._families.remove(family)
 
@@ -250,7 +250,7 @@ class Neighbor:
         if (afi, safi, nhafi) in self.nexthops():
             self._nexthop.remove((afi, safi, nhafi))
 
-    def remove_addpath(self, family: Tuple[AFI, SAFI]) -> None:
+    def remove_addpath(self, family: tuple[AFI, SAFI]) -> None:
         if family in self.addpaths():
             self._addpath.remove(family)
 
@@ -542,10 +542,10 @@ Neighbor {peer-address}
         return returned.replace('\t', '  ')
 
     @classmethod
-    def as_dict(cls, answer: Dict[str, Any]) -> Dict[str, Any]:
+    def as_dict(cls, answer: dict[str, Any]) -> dict[str, Any]:
         up = answer['duration']
 
-        formated: Dict[str, Any] = {
+        formated: dict[str, Any] = {
             'state': 'up' if up else 'down',
             'duration': answer['duration'] if up else answer['down'],
             'fsm': answer['state'],
@@ -598,7 +598,7 @@ Neighbor {peer-address}
         return formated
 
     @classmethod
-    def formated_dict(cls, answer: Dict[str, Any]) -> Dict[str, Any]:
+    def formated_dict(cls, answer: dict[str, Any]) -> dict[str, Any]:
         if answer['duration']:
             duration_value = timedelta(seconds=answer['duration'])
             duration = f'    {"up for":<20} {str(duration_value):>15} {"":<15} {"":<15}'
@@ -606,7 +606,7 @@ Neighbor {peer-address}
             down_value = timedelta(seconds=answer['down'])
             duration = f'    {"down for":<20} {str(down_value):>15} {"":<15} {"":<15}'
 
-        formated: Dict[str, Any] = {
+        formated: dict[str, Any] = {
             'peer-address': answer['peer-address'],
             'local-address': f'    {"local":<20} {answer["local-address"]:>15} {"":<15} {"":<15}',
             'state': f'    {"state":<20} {answer["state"]:>15} {"":<15} {"":<15}',
@@ -630,15 +630,15 @@ Neighbor {peer-address}
         return formated
 
     @classmethod
-    def to_json(cls, answer: Dict[str, Any]) -> str:
+    def to_json(cls, answer: dict[str, Any]) -> str:
         return json.dumps(cls.formated_dict(answer))
 
     @classmethod
-    def extensive(cls, answer: Dict[str, Any]) -> str:
+    def extensive(cls, answer: dict[str, Any]) -> str:
         return cls.extensive_template.format(**cls.formated_dict(answer))
 
     @classmethod
-    def summary(cls, answer: Dict[str, Any]) -> str:
+    def summary(cls, answer: dict[str, Any]) -> str:
         peer_addr = str(answer['peer-address'])
         peer_as_str = _pr(answer['peer-as'])
         # Convert timedelta to string before formatting to support Python 3.12+

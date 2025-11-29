@@ -9,13 +9,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Dict, Type
+from typing import Any, Callable, ClassVar, Type
 
 from exabgp.bgp.message.notification import Notify
 
 
 class CapabilityCode(int):
-    _cache: ClassVar[Dict[int, CapabilityCode]] = dict()
+    _cache: ClassVar[dict[int, CapabilityCode]] = dict()
 
     RESERVED: ClassVar[int] = 0x00  # [RFC5492]
     MULTIPROTOCOL: ClassVar[int] = 0x01  # [RFC2858]
@@ -49,7 +49,7 @@ class CapabilityCode(int):
     # Internal
     AIGP: ClassVar[int] = 0xFF00
 
-    names: ClassVar[Dict[int, str]] = {
+    names: ClassVar[dict[int, str]] = {
         RESERVED: 'reserved',
         MULTIPROTOCOL: 'multiprotocol',
         ROUTE_REFRESH: 'route-refresh',
@@ -146,7 +146,7 @@ class Capability:
                     return 'reserved-{}'.format(hex(self))
             return name
 
-    registered_capability: ClassVar[Dict[int, Type[Capability]]] = dict()
+    registered_capability: ClassVar[dict[int, Type[Capability]]] = dict()
     unknown_capability: ClassVar[Type[Capability] | None] = None
 
     # ID attribute set by subclasses

@@ -5,7 +5,7 @@ Created by Stephane Litkowski on 2017-02-24.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict
+from typing import TYPE_CHECKING, ClassVar
 
 from struct import pack
 from struct import unpack
@@ -26,7 +26,7 @@ class InterfaceSet(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x07
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x02
 
-    names: ClassVar[Dict[int, str]] = {
+    names: ClassVar[dict[int, str]] = {
         1: 'input',
         2: 'output',
         3: 'input-output',

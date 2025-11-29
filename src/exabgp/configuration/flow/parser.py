@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generator, Tuple, Type, TypeVar, Union, TYPE_CHECKING, cast
+from typing import Generator, Type, TypeVar, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from exabgp.configuration.core.parser import Tokeniser
@@ -101,7 +101,7 @@ def flow(tokeniser: 'Tokeniser') -> Change:
     return Change(Flow(), Attributes())
 
 
-def source(tokeniser: 'Tokeniser') -> Generator[Union[Flow4Source, Flow6Source], None, None]:
+def source(tokeniser: 'Tokeniser') -> Generator[Flow4Source | Flow6Source, None, None]:
     """Update source to handle both IPv4 and IPv6 flows."""
     data: str = tokeniser()
     # Check if it's IPv4
@@ -122,7 +122,7 @@ def source(tokeniser: 'Tokeniser') -> Generator[Union[Flow4Source, Flow6Source],
         yield Flow6Source(IP.pton(ip), int(netmask), int(offset))
 
 
-def destination(tokeniser: 'Tokeniser') -> Generator[Union[Flow4Destination, Flow6Destination], None, None]:
+def destination(tokeniser: 'Tokeniser') -> Generator[Flow4Destination | Flow6Destination, None, None]:
     """Update destination to handle both IPv4 and IPv6 flows."""
     data: str = tokeniser()
     # Check if it's IPv4
@@ -146,7 +146,7 @@ def destination(tokeniser: 'Tokeniser') -> Generator[Union[Flow4Destination, Flo
 # Expressions
 
 
-def _operator_numeric(string: str) -> Tuple[int, str]:
+def _operator_numeric(string: str) -> tuple[int, str]:
     try:
         char: str = string[0].lower()
         if char == '=':
@@ -174,7 +174,7 @@ def _operator_numeric(string: str) -> Tuple[int, str]:
         raise ValueError('Invalid expression (too short) {}'.format(string)) from None
 
 
-def _operator_binary(string: str) -> Tuple[int, str]:
+def _operator_binary(string: str) -> tuple[int, str]:
     try:
         if string[0] == '=':
             return BinaryOperator.MATCH, string[1:]
@@ -187,7 +187,7 @@ def _operator_binary(string: str) -> Tuple[int, str]:
         raise ValueError('Invalid expression (too short) {}'.format(string)) from None
 
 
-def _value(string: str) -> Tuple[str, str]:
+def _value(string: str) -> tuple[str, str]:
     ls: int = 0
     for c in string:
         if c not in [
@@ -291,7 +291,7 @@ def flow_label(tokeniser: 'Tokeniser') -> Generator[FlowFlowLabel, None, None]:
     yield from _generic_condition(tokeniser, FlowFlowLabel)
 
 
-def next_hop(tokeniser: 'Tokeniser') -> Union[NextHopSelf, NextHop]:
+def next_hop(tokeniser: 'Tokeniser') -> NextHopSelf | NextHop:
     value: str = tokeniser()
 
     if value.lower() == 'self':
@@ -330,7 +330,7 @@ def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
 
 
-def redirect(tokeniser: 'Tokeniser') -> Tuple[IP, ExtendedCommunities]:
+def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
     data: str = tokeniser()
     count: int = data.count(':')
 
@@ -396,14 +396,14 @@ def redirect_next_hop(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     return ExtendedCommunities().add(TrafficNextHopSimpson(False))
 
 
-def redirect_next_hop_ietf(tokeniser: 'Tokeniser') -> Union[ExtendedCommunities, ExtendedCommunitiesIPv6]:
+def redirect_next_hop_ietf(tokeniser: 'Tokeniser') -> ExtendedCommunities | ExtendedCommunitiesIPv6:
     ip: IP = IP.create(tokeniser())
     if ip.ipv4():
         return ExtendedCommunities().add(TrafficNextHopIPv4IETF(cast(IPv4, ip), False))
     return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(cast(IPv6, ip), False))
 
 
-def copy(tokeniser: 'Tokeniser') -> Tuple[IP, ExtendedCommunities]:
+def copy(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
     return IP.create(tokeniser()), ExtendedCommunities().add(TrafficNextHopSimpson(True))
 
 

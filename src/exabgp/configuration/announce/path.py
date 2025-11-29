@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
 
 from exabgp.rib.change import Change
 
@@ -77,7 +76,7 @@ class AnnouncePath(AnnounceIP):
         return True
 
 
-def ip_unicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
+def ip_unicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
@@ -112,10 +111,10 @@ def ip_unicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
 
 @ParseAnnounce.register('unicast', 'extend-name', 'ipv4')
-def unicast_v4(tokeniser: Tokeniser) -> List[Change]:
+def unicast_v4(tokeniser: Tokeniser) -> list[Change]:
     return ip_unicast(tokeniser, AFI.ipv4, SAFI.unicast)
 
 
 @ParseAnnounce.register('unicast', 'extend-name', 'ipv6')
-def unicast_v6(tokeniser: Tokeniser) -> List[Change]:
+def unicast_v6(tokeniser: Tokeniser) -> list[Change]:
     return ip_unicast(tokeniser, AFI.ipv6, SAFI.unicast)

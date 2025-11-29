@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -30,8 +30,8 @@ T = TypeVar('T', bound='NLRI')
 class NLRI(Family):
     EOR: ClassVar[bool] = False
 
-    registered_nlri: ClassVar[Dict[str, Type[NLRI]]] = dict()
-    registered_families: ClassVar[List[Tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
+    registered_nlri: ClassVar[dict[str, Type[NLRI]]] = dict()
+    registered_families: ClassVar[list[tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
 
     action: int
     nexthop: 'IP'
@@ -138,7 +138,7 @@ class NLRI(Family):
     @classmethod
     def register(cls, afi: int, safi: int, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
         def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:
-            new: Tuple[AFI, SAFI] = (AFI.create(afi), SAFI.create(safi))
+            new: tuple[AFI, SAFI] = (AFI.create(afi), SAFI.create(safi))
             if new in cls.registered_nlri:
                 if force:
                     # python has a bug and does not allow %ld/%ld (pypy does)
@@ -154,7 +154,7 @@ class NLRI(Family):
         return register_nlri
 
     @staticmethod
-    def known_families() -> List[Tuple[AFI, SAFI]]:
+    def known_families() -> list[tuple[AFI, SAFI]]:
         # we do not want to take the risk of the caller modifying the list by accident
         # it can not be a generator
         return list(NLRI.registered_families)
@@ -162,7 +162,7 @@ class NLRI(Family):
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> Tuple[NLRI, bytes]:
+    ) -> tuple[NLRI, bytes]:
         a: AFI
         s: SAFI
         a, s = AFI.create(afi), SAFI.create(safi)

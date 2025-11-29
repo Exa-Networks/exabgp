@@ -5,7 +5,7 @@ from __future__ import annotations
 import socket
 import sys
 
-from typing import Any, Dict, List
+from typing import Any
 
 from exabgp.netlink import NetMask
 from exabgp.netlink.attributes import Attributes
@@ -28,15 +28,15 @@ def usage() -> None:
 
 
 def addresses() -> None:
-    links: Dict[int, Any] = {}
+    links: dict[int, Any] = {}
     for ifi in Link.get_links():
         links[ifi.index] = ifi
 
-    addrs: Dict[int, List[Any]] = {}
+    addrs: dict[int, list[Any]] = {}
     for ifa in Address.get_addresses():
         addrs.setdefault(ifa.index, []).append(ifa)
 
-    neighbors: Dict[int, List[Any]] = {}
+    neighbors: dict[int, list[Any]] = {}
     for neighbor in Neighbor.get_neighbors():
         neighbors.setdefault(neighbor.index, []).append(neighbor)
 
@@ -73,7 +73,7 @@ def addresses() -> None:
 
 
 def routes() -> None:
-    links: Dict[int, str] = {}
+    links: dict[int, str] = {}
     for ifi in Link.get_links():
         links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 
@@ -106,7 +106,7 @@ def routes() -> None:
 
 
 def new() -> None:
-    links: Dict[int, str] = {}
+    links: dict[int, str] = {}
     for ifi in Link.get_links():
         links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 

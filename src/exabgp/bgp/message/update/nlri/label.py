@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -89,7 +89,7 @@ class Label(INET):
         mask = bytes([self.cidr.mask])
         return Family.index(self) + addpath + mask + self.cidr.pack_ip()
 
-    def _internal(self, announced: bool = True) -> List[str]:
+    def _internal(self, announced: bool = True) -> list[str]:
         r = INET._internal(self, announced)
         if announced and self.labels:
             r.append(self.labels.json())

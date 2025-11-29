@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Set, Tuple
+from typing import TYPE_CHECKING
 
 from exabgp.rib.cache import Cache
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class IncomingRIB(Cache):
-    def __init__(self, cache: bool, families: Set[Tuple[AFI, SAFI]]) -> None:
+    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]]) -> None:
         Cache.__init__(self, cache, families)
 
     # back to square one, all the routes are removed

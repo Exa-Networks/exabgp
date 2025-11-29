@@ -7,8 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
-from typing import Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -93,7 +91,7 @@ class ParseFamily(Section):
             'all': self.all,
         }
         self._all: bool = False
-        self._seen: List[Tuple[AFI, SAFI]] = []
+        self._seen: list[tuple[AFI, SAFI]] = []
 
     def clear(self) -> None:
         self._all = False
@@ -106,7 +104,7 @@ class ParseFamily(Section):
     def post(self) -> bool:
         return True
 
-    def _family(self, tokeniser, afi: str) -> Tuple[AFI, SAFI]:
+    def _family(self, tokeniser, afi: str) -> tuple[AFI, SAFI]:
         if self._all:
             raise ValueError('can not add any family once family all is set')
 
@@ -120,16 +118,16 @@ class ParseFamily(Section):
         self._seen.append(pair)
         return pair
 
-    def ipv4(self, tokeniser) -> Tuple[AFI, SAFI]:
+    def ipv4(self, tokeniser) -> tuple[AFI, SAFI]:
         return self._family(tokeniser, 'ipv4')
 
-    def ipv6(self, tokeniser) -> Tuple[AFI, SAFI]:
+    def ipv6(self, tokeniser) -> tuple[AFI, SAFI]:
         return self._family(tokeniser, 'ipv6')
 
-    def l2vpn(self, tokeniser) -> Tuple[AFI, SAFI]:
+    def l2vpn(self, tokeniser) -> tuple[AFI, SAFI]:
         return self._family(tokeniser, 'l2vpn')
 
-    def bgpls(self, tokeniser) -> Tuple[AFI, SAFI]:
+    def bgpls(self, tokeniser) -> tuple[AFI, SAFI]:
         return self._family(tokeniser, 'bgp-ls')
 
     def minimal(self, tokeniser) -> None:

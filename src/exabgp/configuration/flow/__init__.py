@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, cast
+from typing import Any, Callable, cast
 
 from exabgp.protocol.family import SAFI
 
@@ -33,11 +33,11 @@ class ParseFlow(Section):
 
     name: str = 'flow'
 
-    known: Dict[str | tuple[Any, ...], object] = dict(ParseFlowMatch.known)
+    known: dict[str | tuple[Any, ...], object] = dict(ParseFlowMatch.known)
     known.update(ParseFlowThen.known)
     known.update(ParseFlowScope.known)
 
-    action: Dict[str | tuple[Any, ...], str] = dict(ParseFlowMatch.action)
+    action: dict[str | tuple[Any, ...], str] = dict(ParseFlowMatch.action)
     action.update(ParseFlowThen.action)
     action.update(ParseFlowScope.action)
 
@@ -59,7 +59,7 @@ class ParseFlow(Section):
 
 
 @ParseFlow.register('route', 'append-route')
-def route(tokeniser: Any) -> List[Change]:
+def route(tokeniser: Any) -> list[Change]:
     flow_nlri = Flow()
     change: Change = Change(flow_nlri, Attributes())
 

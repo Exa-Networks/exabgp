@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import signal
-from typing import ClassVar, Dict
+from typing import ClassVar
 from types import FrameType
 
 from exabgp.logger import log, lazymsg
@@ -21,7 +21,7 @@ class Signal:
     RELOAD: int = -4
     FULL_RELOAD: int = -8
 
-    _names: ClassVar[Dict[int, str]] = {
+    _names: ClassVar[dict[int, str]] = {
         **dict(
             (k, v)
             for v, k in reversed(sorted(signal.__dict__.items()))

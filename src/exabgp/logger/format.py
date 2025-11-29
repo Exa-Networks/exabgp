@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Callable, Tuple, Dict, TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.protocol.family import AFI, SAFI
@@ -40,7 +40,7 @@ def _long_color_formater(message: str, source: str, level: str, timestamp: time.
 def formater(short: bool, destination: str) -> FormatterFunc | None:
     # service, short, tty
     # fmt: off
-    _formater: Dict[Tuple[str, bool, bool], FormatterFunc] = {
+    _formater: dict[tuple[str, bool, bool], FormatterFunc] = {
         ('stdout', True, True): _short_color_formater,
         ('stdout', True, False): _short_formater,
         ('stdout', False, True): _long_color_formater,

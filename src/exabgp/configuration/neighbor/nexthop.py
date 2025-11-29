@@ -7,8 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
-from typing import Tuple
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -50,7 +48,7 @@ class ParseNextHop(Section):
             'ipv6': self.ipv6,
         }
         self._all: bool = False
-        self._seen: List[Tuple[AFI, SAFI, AFI]] = []
+        self._seen: list[tuple[AFI, SAFI, AFI]] = []
 
     def clear(self) -> None:
         self._all = False
@@ -63,7 +61,7 @@ class ParseNextHop(Section):
     def post(self) -> bool:
         return True
 
-    def _family(self, tokeniser, afi: str, safis: List[str], nhafis: List[str]) -> Tuple[AFI, SAFI, AFI]:
+    def _family(self, tokeniser, afi: str, safis: list[str], nhafis: list[str]) -> tuple[AFI, SAFI, AFI]:
         safi = tokeniser().lower()
         if safi not in safis:
             raise ValueError(f'invalid afi/safi pair {afi}/{safi}')
@@ -76,7 +74,7 @@ class ParseNextHop(Section):
         self._seen.append(seen)
         return seen
 
-    def ipv4(self, tokeniser) -> Tuple[AFI, SAFI, AFI]:
+    def ipv4(self, tokeniser) -> tuple[AFI, SAFI, AFI]:
         return self._family(
             tokeniser,
             'ipv4',
@@ -86,7 +84,7 @@ class ParseNextHop(Section):
             ],
         )
 
-    def ipv6(self, tokeniser) -> Tuple[AFI, SAFI, AFI]:
+    def ipv6(self, tokeniser) -> tuple[AFI, SAFI, AFI]:
         return self._family(
             tokeniser,
             'ipv6',

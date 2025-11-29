@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, List
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -82,12 +82,12 @@ class LINK(BGPLS):
         self,
         domain: int,
         proto_id: int,
-        local_node: List[NodeDescriptor] | None,
-        remote_node: List[NodeDescriptor] | None,
-        neigh_addrs: List[NeighAddr] | None = None,
-        iface_addrs: List[IfaceAddr] | None = None,
-        topology_ids: List[MTID] | None = None,
-        link_ids: List[LinkIdentifier] | None = None,
+        local_node: list[NodeDescriptor] | None,
+        remote_node: list[NodeDescriptor] | None,
+        neigh_addrs: list[NeighAddr] | None = None,
+        iface_addrs: list[IfaceAddr] | None = None,
+        topology_ids: list[MTID] | None = None,
+        link_ids: list[LinkIdentifier] | None = None,
         nexthop: IP = IP.NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
@@ -97,12 +97,12 @@ class LINK(BGPLS):
         BGPLS.__init__(self, action, addpath)
         self.domain: int = domain
         self.proto_id: int = proto_id
-        self.local_node: List[NodeDescriptor] = local_node if local_node else []
-        self.remote_node: List[NodeDescriptor] = remote_node if remote_node else []
-        self.neigh_addrs: List[NeighAddr] = neigh_addrs if neigh_addrs else []
-        self.iface_addrs: List[IfaceAddr] = iface_addrs if iface_addrs else []
-        self.link_ids: List[LinkIdentifier] = link_ids if link_ids else []
-        self.topology_ids: List[MTID] = topology_ids if topology_ids else []
+        self.local_node: list[NodeDescriptor] = local_node if local_node else []
+        self.remote_node: list[NodeDescriptor] = remote_node if remote_node else []
+        self.neigh_addrs: list[NeighAddr] = neigh_addrs if neigh_addrs else []
+        self.iface_addrs: list[IfaceAddr] = iface_addrs if iface_addrs else []
+        self.link_ids: list[LinkIdentifier] = link_ids if link_ids else []
+        self.topology_ids: list[MTID] = topology_ids if topology_ids else []
         self.nexthop = nexthop
         self.route_d: RouteDistinguisher | None = route_d
         if packed is not None:
@@ -112,12 +112,12 @@ class LINK(BGPLS):
     def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> LINK:
         proto_id = unpack('!B', data[0:1])[0]
         # FIXME: all these list should probably be defined in the objects
-        iface_addrs: List[IfaceAddr] = []
-        neigh_addrs: List[NeighAddr] = []
-        link_identifiers: List[LinkIdentifier] = []
-        topology_ids: List[MTID] = []
-        remote_node: List[NodeDescriptor] = []
-        local_node: List[NodeDescriptor] = []
+        iface_addrs: list[IfaceAddr] = []
+        neigh_addrs: list[NeighAddr] = []
+        link_identifiers: list[LinkIdentifier] = []
+        topology_ids: list[MTID] = []
+        remote_node: list[NodeDescriptor] = []
+        local_node: list[NodeDescriptor] = []
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]

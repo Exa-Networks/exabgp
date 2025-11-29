@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar, Generator, List, Tuple
+from typing import TYPE_CHECKING, ClassVar, Generator
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -60,8 +60,8 @@ class Update(Message):
     TYPE = bytes([Message.CODE.UPDATE])
     EOR: ClassVar[bool] = False
 
-    def __init__(self, nlris: List[NLRI], attributes: Attributes) -> None:
-        self.nlris: List[NLRI] = nlris
+    def __init__(self, nlris: list[NLRI], attributes: Attributes) -> None:
+        self.nlris: list[NLRI] = nlris
         self.attributes: Attributes = attributes
 
     # message not implemented we should use messages below.
@@ -75,7 +75,7 @@ class Update(Message):
         return pack('!H', len(data)) + data
 
     @staticmethod
-    def split(data: bytes) -> Tuple[bytes, bytes, bytes]:
+    def split(data: bytes) -> tuple[bytes, bytes, bytes]:
         length = len(data)
 
         len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
@@ -312,7 +312,7 @@ class Update(Message):
                 # negotiated.neighbor may be a mock or not support subscripting
                 pass
 
-        nlris: List[NLRI] = []
+        nlris: list[NLRI] = []
         while withdrawn:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath, negotiated)
             log.debug(lazymsg('withdrawn NLRI {nlri}', nlri=nlri), 'routes')

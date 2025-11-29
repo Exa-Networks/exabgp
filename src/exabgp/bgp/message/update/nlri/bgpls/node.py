@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar, List
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -54,7 +54,7 @@ class NODE(BGPLS):
         self,
         domain: int,
         proto_id: int,
-        node_ids: List[NodeDescriptor],
+        node_ids: list[NodeDescriptor],
         packed: bytes | None = None,
         nexthop: IP = IP.NoNextHop,
         action: Action = Action.UNSET,
@@ -64,7 +64,7 @@ class NODE(BGPLS):
         BGPLS.__init__(self, action, addpath)
         self.domain: int = domain
         self.proto_id: int = proto_id
-        self.node_ids: List[NodeDescriptor] = node_ids
+        self.node_ids: list[NodeDescriptor] = node_ids
         self.nexthop = nexthop
         self._pack: bytes | None = packed
         self.route_d: RouteDistinguisher | None = route_d
@@ -99,7 +99,7 @@ class NODE(BGPLS):
             )
         values = data[13 : 13 + node_length]
 
-        node_ids: List[NodeDescriptor] = []
+        node_ids: list[NodeDescriptor] = []
         while values:
             # Unpack Node Descriptor Sub-TLVs
             node_id, left = NodeDescriptor.unpack_node(values, proto_id)

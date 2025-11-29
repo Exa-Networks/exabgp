@@ -6,7 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import ClassVar, List, Type
+from typing import ClassVar, Type
 
 from struct import pack
 from struct import unpack
@@ -25,9 +25,9 @@ class Labels:
 
     NOLABEL: ClassVar['Labels']
 
-    def __init__(self, labels: List[int], bos: bool = True, raw_labels: List[int] | None = None) -> None:
-        self.labels: List[int] = labels
-        self.raw_labels: List[int] = raw_labels if raw_labels else []
+    def __init__(self, labels: list[int], bos: bool = True, raw_labels: list[int] | None = None) -> None:
+        self.labels: list[int] = labels
+        self.raw_labels: list[int] = raw_labels if raw_labels else []
         packed = []
         if raw_labels:
             for label in raw_labels:
