@@ -116,15 +116,17 @@ class Srv6LanEndXISIS(Srv6):
         )
 
     @classmethod
-    def register(cls) -> Callable[[type], type]:
-        def register_subsubtlv(klass: type) -> type:
+    def register_subsubtlv(cls) -> Callable[[type], type]:
+        """Register a sub-sub-TLV class for SRv6 LAN End.X ISIS."""
+
+        def decorator(klass: type) -> type:
             code = klass.TLV  # type: ignore[attr-defined]
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 LAN End.X Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
             return klass
 
-        return register_subsubtlv
+        return decorator
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
@@ -160,15 +162,17 @@ class Srv6LanEndXOSPF(Srv6):
         )
 
     @classmethod
-    def register(cls) -> Callable[[type], type]:
-        def register_subsubtlv(klass: type) -> type:
+    def register_subsubtlv(cls) -> Callable[[type], type]:
+        """Register a sub-sub-TLV class for SRv6 LAN End.X OSPF."""
+
+        def decorator(klass: type) -> type:
             code = klass.TLV  # type: ignore[attr-defined]
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 LAN End.X Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
             return klass
 
-        return register_subsubtlv
+        return decorator
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXOSPF:

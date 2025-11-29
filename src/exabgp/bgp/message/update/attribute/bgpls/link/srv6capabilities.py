@@ -7,6 +7,7 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
+from typing import Callable
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
@@ -28,22 +29,24 @@ class Srv6Capabilities(BaseLS):
     TLV = 1038
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, flags):
+    def __init__(self, flags: dict[str, int]) -> None:
         self.flags = flags
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'flags: {}'.format(self.flags)
 
     @classmethod
-    def register(cls):
-        def register_subsubtlv(klass):
-            code = klass.TLV
+    def register_subsubtlv(cls) -> Callable[[type], type]:
+        """Register a sub-sub-TLV class for SRv6 Capabilities."""
+
+        def decorator(klass: type) -> type:
+            code = klass.TLV  # type: ignore[attr-defined]
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Capabilities Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
             return klass
 
-        return register_subsubtlv
+        return decorator
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6Capabilities:
@@ -51,7 +54,7 @@ class Srv6Capabilities(BaseLS):
         flags = {'O': flags_value & (1 << 6)}
         return cls(flags=flags)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"srv6-capabilities": ' + json.dumps(
             {
                 'flags': self.flags,

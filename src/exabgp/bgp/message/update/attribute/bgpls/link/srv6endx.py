@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from struct import unpack
+from typing import Callable
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
 from exabgp.protocol.ip import IPv6
@@ -40,29 +41,31 @@ class Srv6EndX(FlagLS):
     MERGE = True
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, content):
-        self.content = [content]
+    def __init__(self, content: dict[str, object]) -> None:
+        self.content: list[dict[str, object]] = [content]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '\n'.join(
             [
                 'behavior: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.behavior, d.flags, d.algorithm, d.weight, d.sid
+                    d.get('behavior'), d.get('flags'), d.get('algorithm'), d.get('weight'), d.get('sid')
                 )
                 for d in self.content
             ],
         )
 
     @classmethod
-    def register(cls):
-        def register_subsubtlv(klass):
-            code = klass.TLV
+    def register_subsubtlv(cls) -> Callable[[type], type]:
+        """Register a sub-sub-TLV class for SRv6 End.X."""
+
+        def decorator(klass: type) -> type:
+            code = klass.TLV  # type: ignore[attr-defined]
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 End.X Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
             return klass
 
-        return register_subsubtlv
+        return decorator
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6EndX:
@@ -102,5 +105,5 @@ class Srv6EndX(FlagLS):
 
         return cls(content=content)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"srv6-endx": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
