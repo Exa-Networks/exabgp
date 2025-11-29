@@ -165,9 +165,51 @@ warn_return_any = true
 
 ---
 
+## Class Attribute Type Annotations
+
+**Avoid `| None` in class attributes when possible:**
+
+❌ **AVOID:**
+```python
+class Foo:
+    value: int | None = None
+```
+
+✅ **PREFER:** Use sentinels, default values, or restructure to avoid None:
+```python
+class Foo:
+    value: int = 0  # Or appropriate default
+```
+
+**Why:** Optional class attributes spread None-checking throughout the codebase.
+
+---
+
+## Refactoring: Fix Root Causes
+
+**When refactoring reveals mypy or type errors:**
+
+❌ **NEVER hide problems:**
+```python
+x = cast(SomeType, problematic_value)  # Hides real issue
+x = value  # type: ignore  # Silences warning without fixing
+```
+
+✅ **ALWAYS fix the root cause:**
+- Trace back to where the bad type originates
+- Fix the source, not the symptom
+- If a function returns wrong type, fix the function
+- If data structure is wrong, restructure it
+
+**Why:** Casts and ignores hide bugs. Root cause fixes prevent bugs.
+
+---
+
 ## Quick Checklist
 
 - [ ] Python 3.10+ syntax (prefer `int | str` over `Union[int, str]`)
+- [ ] Avoid `| None` class attributes when possible
+- [ ] Fix type errors at root cause, never cast/ignore
 - [ ] `ruff format src && ruff check src` passes
 - [ ] `./qa/bin/test_everything` passes
 - [ ] No asyncio introduced
