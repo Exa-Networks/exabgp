@@ -154,7 +154,7 @@ class LINK(BGPLS):
 
             if tlv_type == TLV_LINK_ID:
                 # Link Local/Remote identifiers
-                link_identifiers = LinkIdentifier.unpack_linkid(value)
+                link_identifiers = [LinkIdentifier.unpack_linkid(value)]
                 continue
 
             if tlv_type in [TLV_IPV4_IFACE_ADDR, TLV_IPV6_IFACE_ADDR]:

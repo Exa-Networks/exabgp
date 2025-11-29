@@ -33,13 +33,13 @@ PROTOCOL_ID_IPV6 = 4  # IPv6 protocol identifier
 
 
 class IpReach:
-    def __init__(self, prefix, plength=None, packed=None):
+    def __init__(self, prefix: str, plength: int, packed: bytes) -> None:
         self.prefix = prefix
-        self._packed = packed
         self.plength = plength
+        self._packed = packed
 
     @classmethod
-    def unpack_ipreachability(cls, data, code):
+    def unpack_ipreachability(cls, data: bytes, code: int) -> 'IpReach':
         # FIXME
         # There seems to be a bug in the Cisco Xr implementation
         # that causes the Prefix IP field to be one octet less than
@@ -50,6 +50,9 @@ class IpReach:
         # octets of the prefix, i.e., 1 octet for prefix length 1 up to 8, 2
         # octets for prefix length 9 to 16, 3 octets for prefix length 17 up to
         # 24, 4 octets for prefix length 25 up to 32, etc.
+
+        # Store original data for _packed before any modification
+        original_data = bytes(data)
 
         plength = unpack('!B', data[0:1])[0]
         # octet = int(math.ceil(plength / 8))
@@ -77,7 +80,7 @@ class IpReach:
             prefix_parts = prefix_parts + ['0'] * (4 - len(prefix_parts))
             prefix = '.'.join(prefix_parts)
 
-        return cls(prefix=prefix, plength=plength)
+        return cls(prefix=prefix, plength=plength, packed=original_data)
 
     def json(self, compact: bool = False):
         return ', '.join(
@@ -87,9 +90,7 @@ class IpReach:
             ],
         )
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, IpReach):
-            return False
+    def __eq__(self, other: 'IpReach') -> bool:  # type: ignore[override]
         return self.prefix == other.prefix
 
     def __lt__(self, other):

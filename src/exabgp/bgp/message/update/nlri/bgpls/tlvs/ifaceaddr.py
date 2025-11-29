@@ -23,26 +23,24 @@ from exabgp.protocol.ip import IP, IPv4, IPv6
 
 
 class IfaceAddr:
-    def __init__(self, iface_addr, packed=None):
+    def __init__(self, iface_addr: IP, packed: bytes) -> None:
         self.iface_address = iface_addr
         self._packed = packed
 
     @classmethod
-    def unpack_ifaceaddr(cls, data):
+    def unpack_ifaceaddr(cls, data: bytes) -> 'IfaceAddr':
         if len(data) == IPv4.BYTES:
             # IPv4 address
             addr = IP.unpack_ip(data[: IPv4.BYTES])
         elif len(data) == IPv6.BYTES:
             # IPv6
             addr = IP.unpack_ip(data[: IPv6.BYTES])
-        return cls(iface_addr=addr)
+        return cls(iface_addr=addr, packed=data)
 
     def json(self, compact: bool = False):
         return '"{}"'.format(self.iface_address)
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, IfaceAddr):
-            return False
+    def __eq__(self, other: 'IfaceAddr') -> bool:  # type: ignore[override]
         return self.iface_address == other.iface_address
 
     def __lt__(self, other):

@@ -50,12 +50,12 @@ import struct
 
 
 class MTID:
-    def __init__(self, topologies, packed=None):
+    def __init__(self, topologies: int, packed: bytes) -> None:
         self.topologies = topologies
         self._packed = packed
 
     @classmethod
-    def unpack_mtid(cls, data):
+    def unpack_mtid(cls, data: bytes) -> 'MTID':
         # tids = []
         # for i in range(0, len(data), 2):
         #     payload = struct.unpack('!H', data[i:i+2])[0]
@@ -68,9 +68,7 @@ class MTID:
         # tids = ', '.join(_ for _ in self.topologies)
         # return f'[{tids}]'
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, MTID):
-            return False
+    def __eq__(self, other: 'MTID') -> bool:  # type: ignore[override]
         return self.topologies == other.topologies
 
     def __lt__(self, other):
@@ -97,7 +95,5 @@ class MTID:
     def __hash__(self):
         return hash(str(self))
 
-    def pack_tlv(self):
-        if self._packed:
-            return self._packed
-        raise RuntimeError('Not implemented')
+    def pack_tlv(self) -> bytes:
+        return self._packed

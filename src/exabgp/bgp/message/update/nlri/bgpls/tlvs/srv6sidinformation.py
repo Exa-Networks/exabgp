@@ -28,20 +28,19 @@ from exabgp.protocol.ip import IPv6
 
 
 class Srv6SIDInformation:
-    def __init__(self, sid, packed=None):
+    def __init__(self, sid: str, packed: bytes) -> None:
         self.sid = sid
+        self._packed = packed
 
     @classmethod
-    def unpack_srv6sid(cls, data):
+    def unpack_srv6sid(cls, data: bytes) -> 'Srv6SIDInformation':
         sid = IPv6.ntop(data)
-        return cls(sid)
+        return cls(sid, data)
 
     def json(self, compact: bool = False):
         return '"srv6-sid": "{}"'.format(str(self.sid))
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Srv6SIDInformation):
-            return False
+    def __eq__(self, other: 'Srv6SIDInformation') -> bool:  # type: ignore[override]
         return self.sid == other.sid
 
     def __lt__(self, other):
@@ -62,11 +61,11 @@ class Srv6SIDInformation:
     def __repr__(self):
         return self.__str__()
 
-    def __len__(self):
-        return len(self.sid)
+    def __len__(self) -> int:
+        return len(self._packed)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def pack_tlv(self):
-        raise RuntimeError('Not implemented')
+    def pack_tlv(self) -> bytes:
+        return self._packed
