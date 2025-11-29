@@ -213,6 +213,7 @@ class Listener:
                     continue
 
                 connection_local = IP.create(connection.local).address()
+                assert neighbor.peer_address is not None  # Configured neighbors must have peer_address
                 neighbor_peer_start = neighbor.peer_address.address()
                 neighbor_peer_next = neighbor_peer_start + neighbor.range_size
 
@@ -220,6 +221,7 @@ class Listener:
                     continue
 
                 connection_peer = IP.create(connection.peer).address()
+                assert neighbor.local_address is not None  # Configured neighbors must have local_address
                 neighbor_local = neighbor.local_address.address()
 
                 if connection_peer != neighbor_local:
@@ -276,7 +278,7 @@ class Listener:
                 new_neighbor.local_address = IP.create(connection.peer)
                 new_neighbor.peer_address = IP.create(connection.local)
                 if not new_neighbor.router_id:
-                    new_neighbor.router_id = RouterID.create(connection.local)
+                    new_neighbor.router_id = RouterID(connection.local)
 
                 new_peer = Peer(new_neighbor, reactor)
                 denied = new_peer.handle_connection(connection)

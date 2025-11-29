@@ -25,3 +25,22 @@ from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.operational import Operational
+
+__all__ = [
+    'Action',
+    'Scheduling',
+    'NOP',
+    'AWAKE',
+    'DONE',
+    '_NOP',
+    '_AWAKE',
+    '_DONE',
+    'Message',
+    'Open',
+    'Update',
+    'EOR',
+    'KeepAlive',
+    'Notification',
+    'Notify',
+    'Operational',
+]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Callable, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.protocol.family import AFI, SAFI
@@ -69,7 +69,7 @@ def formater(short: bool, destination: str) -> FormatterFunc | None:
 # These lazy formatting functions are called during logging and using f-strings
 # causes infinite recursion when the logger tries to format the log message.
 # The % formatting is intentionally used here to avoid this issue.
-def lazyformat(prefix: str, message: bytes, formater: Callable[[bytes], str] = od) -> Callable[[], str]:
+def lazyformat(prefix: str, message: Any, formater: Callable[[Any], str] = od) -> Callable[[], str]:
     def _lazy() -> str:
         formated = formater(message)
         return '%s (%4d) %s' % (prefix, len(message), formated)

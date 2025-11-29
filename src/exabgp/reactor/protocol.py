@@ -11,6 +11,7 @@ import asyncio  # noqa: F401 - Used by async methods (write_async, send_async, r
 import os
 import traceback
 from typing import TYPE_CHECKING, Any, Generator, cast
+from collections.abc import AsyncGenerator
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.message import _NOP, EOR, KeepAlive, Message, Notification, Notify, Open, Operational, Update
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open import Version
+from exabgp.bgp.message.open import RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities, Negotiated
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute import Attribute, Attributes
@@ -74,9 +75,8 @@ class Protocol:
         return self.connection.session()
 
     @property
-    def _api(self) -> dict:
-        """Return neighbor API config. Requires API to be configured."""
-        assert self.neighbor.api is not None
+    def _api(self) -> dict[str, Any]:
+        """Return neighbor API config."""
         return self.neighbor.api
 
     # Note: We use self.peer.neighbor for consistency - both reference the same object
@@ -99,14 +99,15 @@ class Protocol:
         if self.connection:
             return
 
-        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery else None
+        assert self.neighbor.peer_address is not None
+        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery and self.neighbor.md5_ip else None
         peer = self.neighbor.peer_address.top()
         afi = self.neighbor.peer_address.afi
-        md5 = self.neighbor.md5_password
+        md5 = self.neighbor.md5_password or ''
         md5_base64 = self.neighbor.md5_base64
         ttl_out = self.neighbor.outgoing_ttl
         itf = self.neighbor.source_interface
-        self.connection = Outgoing(afi, peer, cast(str, local), self.port, md5, md5_base64, ttl_out, itf)
+        self.connection = Outgoing(afi, peer, local or '', self.port, md5, md5_base64, ttl_out, itf)
 
         for connected in self.connection.establish():
             yield False
@@ -117,7 +118,7 @@ class Protocol:
         if not local:
             self.neighbor.local_address = IP.create(self.connection.local)
             if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
-                self.neighbor.router_id = self.neighbor.local_address
+                self.neighbor.router_id = RouterID(self.neighbor.local_address.top())
 
         yield True
 
@@ -134,14 +135,15 @@ class Protocol:
         if self.connection:
             return True
 
-        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery else None
+        assert self.neighbor.peer_address is not None
+        local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery and self.neighbor.md5_ip else None
         peer = self.neighbor.peer_address.top()
         afi = self.neighbor.peer_address.afi
-        md5 = self.neighbor.md5_password
+        md5 = self.neighbor.md5_password or ''
         md5_base64 = self.neighbor.md5_base64
         ttl_out = self.neighbor.outgoing_ttl
         itf = self.neighbor.source_interface
-        self.connection = Outgoing(afi, peer, cast(str, local), self.port, md5, md5_base64, ttl_out, itf)
+        self.connection = Outgoing(afi, peer, local or '', self.port, md5, md5_base64, ttl_out, itf)
 
         # Use async establish instead of generator
         connected = await self.connection.establish_async()
@@ -155,7 +157,7 @@ class Protocol:
         if not local:
             self.neighbor.local_address = IP.create(self.connection.local)
             if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
-                self.neighbor.router_id = self.neighbor.local_address
+                self.neighbor.router_id = RouterID(self.neighbor.local_address.top())
 
         return True
 
@@ -176,21 +178,17 @@ class Protocol:
         if consolidate:
             if packets:
                 self.peer.reactor.processes.message(
-                    message.ID, self.peer.neighbor, direction, message, raw[:19], raw[19:], negotiated=neg
+                    message.ID, self.peer, direction, message, raw[:19], raw[19:], negotiated=neg
                 )
             else:
-                self.peer.reactor.processes.message(
-                    message.ID, self.peer.neighbor, direction, message, b'', b'', negotiated=neg
-                )
+                self.peer.reactor.processes.message(message.ID, self.peer, direction, message, b'', b'', negotiated=neg)
         else:
             if packets:
                 self.peer.reactor.processes.packets(
                     self.peer.neighbor, direction, int(message.ID), raw[:19], raw[19:], neg
                 )
             if parsed:
-                self.peer.reactor.processes.message(
-                    message.ID, self.peer.neighbor, direction, message, b'', b'', negotiated=neg
-                )
+                self.peer.reactor.processes.message(message.ID, self.peer, direction, message, b'', b'', negotiated=neg)
 
     def write(self, message: Any, negotiated: Negotiated) -> Generator[bool, None, None]:
         assert self.connection is not None
@@ -260,12 +258,16 @@ class Protocol:
                 if self._api.get(code, False):
                     if consolidate:
                         self.peer.reactor.processes.notification(
-                            self.peer.neighbor, 'receive', notify_msg, header, body
+                            self.peer.neighbor, 'receive', notify_msg, header, body, self.negotiated
                         )
                     elif parsed:
-                        self.peer.reactor.processes.notification(self.peer.neighbor, 'receive', notify_msg, b'', b'')
+                        self.peer.reactor.processes.notification(
+                            self.peer.neighbor, 'receive', notify_msg, b'', b'', self.negotiated
+                        )
                     elif packets:
-                        self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, header, body)
+                        self.peer.reactor.processes.packets(
+                            self.peer.neighbor, 'receive', msg_id, header, body, self.negotiated
+                        )
                 raise notify_msg
 
             if not length:
@@ -286,8 +288,9 @@ class Protocol:
             for_api = self._api.get(code, False)
 
             if for_api and packets and not consolidate:
-                neg = self.negotiated if self._api.get('negotiated', False) else None
-                self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, header, body, neg)
+                self.peer.reactor.processes.packets(
+                    self.peer.neighbor, 'receive', msg_id, header, body, self.negotiated
+                )
 
             if msg_id == Message.CODE.UPDATE:
                 if not self.neighbor.adj_rib_in and not (for_api or self.log_routes) and not (parsed or consolidate):
@@ -314,14 +317,13 @@ class Protocol:
                         nlri.action = Action.WITHDRAW
 
             if for_api:
-                neg = self.negotiated if self._api.get('negotiated', False) else None
                 if consolidate:
                     self.peer.reactor.processes.message(
-                        msg_id, self.neighbor, 'receive', message, header, body, negotiated=neg
+                        msg_id, self.peer, 'receive', message, header, body, self.negotiated
                     )
                 elif parsed:
                     self.peer.reactor.processes.message(
-                        msg_id, self.neighbor, 'receive', message, b'', b'', negotiated=neg
+                        msg_id, self.peer, 'receive', message, b'', b'', self.negotiated
                     )
 
             if message.TYPE == Notification.TYPE:
@@ -349,11 +351,17 @@ class Protocol:
             notify_msg = Notify(notify.code, notify.subcode, str(notify))
             if self._api.get(code, False):
                 if consolidate:
-                    self.peer.reactor.processes.notification(self.peer.neighbor, 'receive', notify_msg, header, body)
+                    self.peer.reactor.processes.notification(
+                        self.peer.neighbor, 'receive', notify_msg, header, body, self.negotiated
+                    )
                 elif parsed:
-                    self.peer.reactor.processes.notification(self.peer.neighbor, 'receive', notify_msg, b'', b'')
+                    self.peer.reactor.processes.notification(
+                        self.peer.neighbor, 'receive', notify_msg, b'', b'', self.negotiated
+                    )
                 elif packets:
-                    self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, header, body)
+                    self.peer.reactor.processes.packets(
+                        self.peer.neighbor, 'receive', msg_id, header, body, self.negotiated
+                    )
             raise notify_msg
 
         if msg_id not in Message.CODE.MESSAGES:
@@ -373,8 +381,7 @@ class Protocol:
         for_api = self._api.get(code, False)
 
         if for_api and packets and not consolidate:
-            neg = self.negotiated if self._api.get('negotiated', False) else None
-            self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, header, body, neg)
+            self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, header, body, self.negotiated)
 
         if msg_id == Message.CODE.UPDATE:
             if not self.neighbor.adj_rib_in and not (for_api or self.log_routes) and not (parsed or consolidate):
@@ -400,13 +407,12 @@ class Protocol:
                     nlri.action = Action.WITHDRAW
 
         if for_api:
-            neg = self.negotiated if self._api.get('negotiated', False) else None
             if consolidate:
                 self.peer.reactor.processes.message(
-                    msg_id, self.neighbor, 'receive', message, header, body, negotiated=neg
+                    msg_id, self.peer, 'receive', message, header, body, self.negotiated
                 )
             elif parsed:
-                self.peer.reactor.processes.message(msg_id, self.neighbor, 'receive', message, b'', b'', negotiated=neg)
+                self.peer.reactor.processes.message(msg_id, self.peer, 'receive', message, b'', b'', self.negotiated)
 
         if message.TYPE == Notification.TYPE:
             raise cast(Notification, message)
@@ -444,7 +450,7 @@ class Protocol:
     def read_open(self, ip: str) -> Generator[Message, None, None]:
         for received_open in self.read_message():
             if received_open.SCHEDULING:  # NOP - keep waiting
-                yield cast(Message, received_open)
+                yield received_open
             else:
                 break
 
@@ -456,7 +462,7 @@ class Protocol:
             )
 
         log.debug(lazymsg('open.received message={m}', m=received_open), self._session())
-        yield cast(Message, received_open)
+        yield received_open
 
     async def read_open_async(self, ip: str) -> Open:
         """Async version of read_open() - reads OPEN message using async I/O"""
@@ -478,14 +484,14 @@ class Protocol:
     def read_keepalive(self) -> Generator[Message, None, None]:
         for message in self.read_message():
             if message.SCHEDULING:  # NOP - keep waiting
-                yield cast(Message, message)
+                yield message
             else:
                 break
 
         if message.TYPE != KeepAlive.TYPE:
             raise Notify(5, 2)
 
-        yield cast(Message, message)
+        yield message
 
     async def read_keepalive_async(self) -> KeepAlive:
         """Async version of read_keepalive() - reads KEEPALIVE message using async I/O"""
@@ -505,6 +511,7 @@ class Protocol:
 
     def new_open(self) -> Generator[Message, None, None]:
         assert self.connection is not None
+        assert self.neighbor.router_id is not None
         if self.neighbor.local_as:
             local_as = self.neighbor.local_as
         elif self.negotiated.received_open:
@@ -530,6 +537,7 @@ class Protocol:
     async def new_open_async(self) -> Open:
         """Async version of new_open() - creates and sends OPEN message using async I/O"""
         assert self.connection is not None
+        assert self.neighbor.router_id is not None
         if self.neighbor.local_as:
             local_as = self.neighbor.local_as
         elif self.negotiated.received_open:
@@ -624,7 +632,7 @@ class Protocol:
             log.debug(lazymsg('update.sent count={n}', n=number), self._session())
         yield cast(Message, _UPDATE)
 
-    async def new_update_async_generator(self, include_withdraw: bool):
+    async def new_update_async_generator(self, include_withdraw: bool) -> AsyncGenerator[None, None]:
         """Async generator version of new_update - yields control between sending messages
 
         This matches the sync version's behavior where the generator is created once and
@@ -721,7 +729,7 @@ class Protocol:
             )
             for eor_afi, eor_safi in families:
                 for _ in self.new_eor(eor_afi, eor_safi):
-                    yield cast(Message, _)
+                    yield _
         else:
             # If we are not sending an EOR, send a keepalive as soon as when finished
             # So the other routers knows that we have no (more) routes to send ...

@@ -18,6 +18,19 @@ from exabgp.logger.format import lazymsg  # noqa: F401,E261,E501
 from exabgp.logger.history import history  # noqa: F401,E261,E501
 from exabgp.logger.history import record  # noqa: F401,E261,E501
 
+__all__ = [
+    'get_logger',
+    'formater',
+    'lazyformat',
+    'lazyattribute',
+    'lazynlri',
+    'lazymsg',
+    'history',
+    'record',
+    'LogMessage',
+    'log',
+]
+
 # Type for log messages - must be callable returning string (use lazymsg or lambda)
 LogMessage = Callable[..., str]
 

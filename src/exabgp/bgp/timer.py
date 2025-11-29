@@ -9,6 +9,11 @@ from __future__ import annotations
 
 import time
 
+from typing import Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.holdtime import HoldTime
+
 from exabgp.logger import log, lazymsg
 from exabgp.bgp.message import _NOP
 from exabgp.bgp.message import Message
@@ -20,7 +25,9 @@ from exabgp.bgp.message import Notify
 
 
 class ReceiveTimer:
-    def __init__(self, session, holdtime, code, subcode, message=''):
+    def __init__(
+        self, session: Callable[[], str], holdtime: 'HoldTime', code: int, subcode: int, message: str = ''
+    ) -> None:
         self.session = session
 
         self.holdtime = holdtime
@@ -56,14 +63,14 @@ class ReceiveTimer:
 
 
 class SendTimer:
-    def __init__(self, session, holdtime):
+    def __init__(self, session: Callable[[], str], holdtime: 'HoldTime') -> None:
         self.session = session
 
         self.keepalive = holdtime.keepalive()
         self.last_print = int(time.time())
         self.last_sent = int(time.time())
 
-    def need_ka(self):
+    def need_ka(self) -> bool:
         if not self.keepalive:
             return False
 

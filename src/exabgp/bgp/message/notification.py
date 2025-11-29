@@ -101,7 +101,7 @@ class Notification(Message, Exception):
 
     def __init__(self, code: int, subcode: int, data: bytes = b'', parse_data: bool = True) -> None:
         Exception.__init__(self)
-        self.code = code  # type: ignore[assignment,method-assign]
+        self.code = code
         self.subcode = subcode
 
         if not parse_data:
@@ -149,8 +149,8 @@ class Notification(Message, Exception):
             self.data += (', trailing data: ' + hexstring(trailer)).encode('utf-8')
 
     def __str__(self) -> str:
-        code_str = self._str_code.get(self.code, 'unknown error')  # type: ignore[call-overload]
-        subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')  # type: ignore[arg-type]
+        code_str = self._str_code.get(self.code, 'unknown error')
+        subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')
         data_str = f' / {self.data.decode("ascii")}' if self.data else ''
         return f'{code_str} / {subcode_str}{data_str}'
 
@@ -172,4 +172,4 @@ class Notify(Notification):
         Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(bytes([self.code, self.subcode]) + self.data)  # type: ignore[list-item]
+        return self._message(bytes([self.code, self.subcode]) + self.data)

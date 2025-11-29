@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
 
 
-def register_peer():
+def register_peer() -> None:
     """Register peer management commands.
 
     This function is called during module initialization to ensure
@@ -109,7 +109,11 @@ def _parse_neighbor_params(line: str) -> tuple[dict[str, Any], list[str]]:
     """
 
     # Helper to parse key-value parameter
-    def parse_param(key: str, tokens: list[str], i: int, seen: set[str], parser) -> tuple[Any, int]:
+    from typing import Callable
+
+    def parse_param(
+        key: str, tokens: list[str], i: int, seen: set[str], parser: Callable[[str], Any]
+    ) -> tuple[Any, int]:
         if key in seen:
             raise ValueError(f'duplicate parameter: {key}')
         if i + 1 >= len(tokens):
@@ -335,8 +339,8 @@ def neighbor_create(self: Command, reactor: Reactor, service: str, line: str, us
 
         # Mark as dynamic peer (ephemeral - removed on reload)
         if not hasattr(reactor, '_dynamic_peers'):
-            reactor._dynamic_peers = set()
-        reactor._dynamic_peers.add(key)
+            reactor._dynamic_peers = set()  # type: ignore[attr-defined]
+        reactor._dynamic_peers.add(key)  # type: ignore[attr-defined]
 
         # Success response - use _answer() which works in both sync and async modes
         reactor.processes._answer(service, 'done')

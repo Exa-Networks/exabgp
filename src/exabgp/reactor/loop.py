@@ -225,7 +225,7 @@ class Reactor:
                     for key in self._peers:
                         peer = self._peers[key]
                         if peer.neighbor.api and peer.neighbor.api['signal']:
-                            peer.reactor.processes.signal(peer.neighbor, Signal.name(self.signal.number))
+                            peer.reactor.processes.signal(peer.neighbor, self.signal.number)
 
                     self.signal.rearm()
 
@@ -371,10 +371,10 @@ class Reactor:
             return ''
         return str(peer.neighbor.peer_address)
 
-    def neighbor_cli_data(self, peer_name: str) -> dict[str, Any] | None:
+    def neighbor_cli_data(self, peer_name: str) -> dict[str, Any]:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=cli_data', p=peer_name), 'reactor')
-            return None
+            return {}
         return peer.cli_data()
 
     def neighor_rib(self, peer_name: str, rib_name: str, advertised: bool = False) -> list[Any]:
@@ -501,7 +501,7 @@ class Reactor:
             self.processes.start(self.configuration.processes)
 
         # This is required to make sure we can write in the log location as we now have dropped root privileges
-        log.init(getenv())  # type: ignore[arg-type]
+        log.init(getenv())
 
         if not self.daemon.savepid():
             return self.Exit.pid
@@ -512,9 +512,9 @@ class Reactor:
             log.debug(lazymsg('reactor.waiting seconds={s}', s=sleeptime), 'reactor')
             time.sleep(float(sleeptime))
 
-        workers: dict = {}
+        workers: dict[int, str] = {}
         peers = set()
-        api_fds: list = []
+        api_fds: list[int] = []
         ms_sleep = int(self._sleep_time * 1000)
 
         while True:
@@ -526,7 +526,7 @@ class Reactor:
                     for key in self._peers:
                         peer = self._peers[key]
                         if peer.neighbor.api and peer.neighbor.api['signal']:
-                            peer.reactor.processes.signal(peer.neighbor, Signal.name(self.signal.number))
+                            peer.reactor.processes.signal(peer.neighbor, self.signal.number)
 
                     self.signal.rearm()
 
@@ -704,7 +704,7 @@ class Reactor:
             self.processes.start(self.configuration.processes)
 
         # Initialize logging with dropped privileges
-        log.init(getenv())  # type: ignore[arg-type]
+        log.init(getenv())
 
         if not self.daemon.savepid():
             return self.Exit.pid

@@ -20,6 +20,7 @@ from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.util.enumeration import TriState
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.open import RouterID
 
 from exabgp.bgp.message.update.nlri.flow import NLRI
 
@@ -194,8 +195,12 @@ class ParseNeighbor(Section):
             neighbor.md5_ip = None
 
         if not neighbor.router_id:
+            if neighbor.peer_address is None:
+                return self.error.set('peer-address must be set')
             if neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
-                neighbor.router_id = neighbor.local_address
+                if neighbor.local_address is None:
+                    return self.error.set('local-address must be set when not using auto-discovery')
+                neighbor.router_id = RouterID(neighbor.local_address.top())
 
         for family in families:
             neighbor.add_family(family)
@@ -356,9 +361,21 @@ class ParseNeighbor(Section):
             return self.error.set('incomplete neighbor, missing {}'.format(missing))
         neighbor.infer()
 
-        if not neighbor.auto_discovery and neighbor.local_address.afi != neighbor.peer_address.afi:
-            return self.error.set('local-address and peer-address must be of the same family')
-        neighbor.range_size = neighbor.peer_address.mask.size()
+        if not neighbor.auto_discovery:
+            if neighbor.local_address is None:
+                return self.error.set('local-address must be set when not using auto-discovery')
+            if neighbor.peer_address is None:
+                return self.error.set('peer-address must be set when not using auto-discovery')
+            if neighbor.local_address.afi != neighbor.peer_address.afi:
+                return self.error.set('local-address and peer-address must be of the same family')
+        if neighbor.peer_address is None:
+            return self.error.set('peer-address must be set')
+        from exabgp.protocol.ip import IPRange
+
+        # peer_address is always IPRange when parsed from configuration (see parser.peer_ip)
+        assert isinstance(neighbor.peer_address, IPRange)
+        peer_range = neighbor.peer_address
+        neighbor.range_size = peer_range.mask.size()
 
         if neighbor.range_size > 1 and not (neighbor.passive or getenv().bgp.passive):
             return self.error.set('can only use ip ranges for the peer address with passive neighbors')

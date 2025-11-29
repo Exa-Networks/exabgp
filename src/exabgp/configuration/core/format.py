@@ -10,7 +10,7 @@ from __future__ import annotations
 from exabgp.util import coroutine
 
 
-def formated(line):
+def formated(line: str) -> str:
     changed_line = '#'
     new_line = (
         line.strip()

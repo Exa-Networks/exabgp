@@ -65,7 +65,7 @@ class EOR(Message):
                 return 4
             return self.MP_LENGTH
 
-    def __init__(self, afi, safi, action=None):
+    def __init__(self, afi: AFI, safi: SAFI, action: _NLRI.Action = None) -> None:  # type: ignore[assignment]
         Message.__init__(self)
         self.nlris = [
             EOR.NLRI(afi, safi, action),
