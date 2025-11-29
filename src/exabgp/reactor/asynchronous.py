@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import deque
-from typing import Any, Deque
+from typing import Any
 
 from exabgp.logger import log, lazymsg
 
@@ -19,7 +19,7 @@ class ASYNC:
     LIMIT: int = 50
 
     def __init__(self) -> None:
-        self._async: Deque[tuple[str, Any]] = deque()
+        self._async: deque[tuple[str, Any]] = deque()
 
     def ready(self) -> bool:
         return not self._async
@@ -46,7 +46,7 @@ class ASYNC:
             # We could delete all the generators just to be safe
             self._async = deque()
             return
-        running: deque = deque()
+        running: deque[tuple[str, Any]] = deque()
         for uid, generator in self._async:
             if uid != deluid:
                 running.append((uid, generator))

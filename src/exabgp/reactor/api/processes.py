@@ -32,7 +32,7 @@ from exabgp.util.errstr import errstr
 from exabgp.reactor.network.error import error
 
 from exabgp.configuration.core.format import formated
-from exabgp.reactor.api.response import Response
+from exabgp.reactor.api.response import Response, ResponseEncoder
 from exabgp.reactor.api.response.answer import Answer
 
 from exabgp.bgp.message import Message
@@ -117,7 +117,7 @@ class Processes:
         self._async_mode: bool = False
         self._loop: asyncio.AbstractEventLoop | None = None
         # Write queue for async mode (process_name -> deque of strings to write)
-        self._write_queue: dict[str, collections.deque] = {}
+        self._write_queue: dict[str, collections.deque[bytes]] = {}
         self._command_queue: collections.deque[tuple[str, str]] = collections.deque()
 
     def number(self) -> int:
@@ -126,7 +126,7 @@ class Processes:
     def clean(self) -> None:
         self.fds: list[int] = []
         self._process: dict[str, subprocess.Popen[bytes]] = {}
-        self._encoder: dict[str, Response.JSON | Response.Text] = {}
+        self._encoder: dict[str, ResponseEncoder] = {}
         self._ackjson: dict[str, bool] = {}
         self._ack: dict[str, bool] = {}
         self._sync: dict[str, bool] = {}  # Per-service sync mode (default: False)
