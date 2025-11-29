@@ -9,12 +9,16 @@ from __future__ import annotations
 
 import os
 import stat
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.parser import Tokeniser
 
 # OS error codes
 ENOENT = 2  # Error code for "No such file or directory" (errno.ENOENT)
 
 
-def encoder(tokeniser):
+def encoder(tokeniser: 'Tokeniser') -> str:
     value = tokeniser()
 
     if value not in ('text', 'json'):
@@ -22,7 +26,7 @@ def encoder(tokeniser):
     return value
 
 
-def _make_path(prg):
+def _make_path(prg: str) -> list[str]:
     parts = prg.split('/')
 
     env = os.environ.get('EXABGP_ETC', '')
@@ -41,7 +45,7 @@ def _make_path(prg):
     return options
 
 
-def run(tokeniser):
+def run(tokeniser: 'Tokeniser') -> list[str]:
     """Parse and validate the 'run' command for a process.
 
     Args:

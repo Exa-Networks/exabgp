@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Iterable, Iterator
+
 from exabgp.util import coroutine
 
 
@@ -31,7 +33,7 @@ def formated(line: str) -> str:
 
 
 @coroutine.join
-def unescape(string):
+def unescape(string: str) -> Iterator[str]:
     start = 0
     while start < len(string):
         pos = string.find('\\', start)
@@ -52,7 +54,7 @@ def unescape(string):
         elif esc == 't':
             yield '\t'
         elif esc == 'u':
-            yield bytes([int(string[pos + 1 : pos + 5], 16)])
+            yield chr(int(string[pos + 1 : pos + 5], 16))
             pos += 4
         else:
             yield esc
@@ -62,7 +64,7 @@ def unescape(string):
 # A coroutine which return the producer token, or string if quoted from the stream
 
 
-def tokens(stream):  # noqa: C901
+def tokens(stream: Iterable[str]) -> Iterator[list[tuple[int, int, str]]]:  # noqa: C901
     spaces = [' ', '\t', '\r', '\n']
     strings = ['"', "'"]
     syntax = [',', '[', ']']

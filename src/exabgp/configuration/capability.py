@@ -10,7 +10,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from exabgp.configuration.core.error import Error
+    from exabgp.configuration.core.parser import Parser
     from exabgp.configuration.core.parser import Tokeniser
+    from exabgp.configuration.core.scope import Scope
 
 from exabgp.bgp.message.open.capability.graceful import Graceful
 
@@ -122,7 +125,7 @@ class ParseCapability(Section):
 
     name = 'capability'
 
-    def __init__(self, parser, scope, error) -> None:
+    def __init__(self, parser: 'Parser', scope: 'Scope', error: 'Error') -> None:
         Section.__init__(self, parser, scope, error)
 
     def pre(self) -> bool:

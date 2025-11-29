@@ -25,6 +25,8 @@ from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
+from exabgp.bgp.message.open.capability.addpath import AddPath
+from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.neighbor import Neighbor
@@ -71,14 +73,14 @@ def _hexa(data: str) -> bytes:
 
 
 def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
-    path = {}
-    for f in NLRI.known_families():
-        if neighbor.capability.add_path:
-            path[f] = neighbor.capability.add_path
-
     capa = Capabilities().new(neighbor, False)
-    capa[Capability.CODE.ADD_PATH] = path
-    capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
+    # Override ADD_PATH with neighbor's configured addpath families
+    if neighbor.capability.add_path:
+        capa[Capability.CODE.ADD_PATH] = AddPath(neighbor.addpaths(), neighbor.capability.add_path)
+    # Override MULTIPROTOCOL with neighbor's families
+    mp = MultiProtocol()
+    mp.extend(neighbor.families())
+    capa[Capability.CODE.MULTIPROTOCOL] = mp
     # capa[Capability.CODE.FOUR_BYTES_ASN] = True
 
     routerid_1 = str(neighbor.session.router_id)

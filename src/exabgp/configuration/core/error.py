@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import pdb  # noqa: T100
 import sys
+from typing import NoReturn
 
 from exabgp.environment import getenv
 
 
 class Error(Exception):
-    def __init__(self):
+    def __init__(self) -> None:
         self.message = ''
         self.debug = getenv().debug.configuration
 
@@ -18,21 +19,20 @@ class Error(Exception):
             pdb.set_trace()  # noqa: T100
         return False
 
-    def throw(self, message):
+    def throw(self, message: str) -> NoReturn:
         self.message = message
         if self.debug:
             sys.stdout.write('\n{}\n'.format(message))
             pdb.set_trace()  # noqa: T100
-        else:
-            raise self
+        raise self
 
-    def clear(self):
+    def clear(self) -> None:
         self.message = ''
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.message
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
 

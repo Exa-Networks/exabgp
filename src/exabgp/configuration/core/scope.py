@@ -32,7 +32,7 @@ class Scope(Error):
         self._routes = []
         self._current: dict[str, Any] = self._all
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return pprint.pformat(self.__dict__, indent=3)
 
     def clear(self) -> None:
@@ -70,10 +70,10 @@ class Scope(Error):
 
     # context
 
-    def enter(self, location):
+    def enter(self, location: str) -> None:
         self._location.append(location)
 
-    def leave(self):
+    def leave(self) -> str:
         if not len(self._location):
             return ''  # This is signaling an issue to the caller without raising
         return self._location.pop()
@@ -92,7 +92,7 @@ class Scope(Error):
         if name:
             self._current = self._current.setdefault(name, {})
 
-    def pop_context(self, name):
+    def pop_context(self, name: str) -> dict[str, Any]:
         returned = self._all.pop(name)
 
         for inherit in returned.get('inherit', []):
@@ -104,30 +104,30 @@ class Scope(Error):
 
     # key / value
 
-    def set(self, name, value):
+    def set(self, name: str, value: Any) -> None:
         self._current[name] = value
 
-    def attribute_add(self, name, data):
+    def attribute_add(self, name: str, data: Any) -> None:
         self.get_route().attributes.add(data)
         if name not in self._added:
             self._added.add(name)
 
-    def nlri_assign(self, name, command, data):
+    def nlri_assign(self, name: str, command: str, data: Any) -> None:
         self.get_route().nlri.assign(command, data)
 
-    def nlri_add(self, name, command, data):
+    def nlri_add(self, name: str, command: str, data: Any) -> None:
         self.get_route().nlri.add(data)
 
-    def nlri_nexthop(self, name, data):
+    def nlri_nexthop(self, name: str, data: Any) -> None:
         self.get_route().nlri.nexthop = data
 
-    def append(self, name, data):
+    def append(self, name: str, data: Any) -> None:
         self._current.setdefault(name, []).append(data)
 
-    def extend(self, name, data):
+    def extend(self, name: str, data: Any) -> None:
         self._current.setdefault(name, []).extend(data)
 
-    def merge(self, name, data):
+    def merge(self, name: str, data: dict[str, Any]) -> None:
         for key in data:
             value = data[key]
             if key not in self._current:
@@ -139,10 +139,10 @@ class Scope(Error):
             else:
                 self.set(key, value)
 
-    def inherit(self, data):
-        return self.transfer(data, self._current)
+    def inherit(self, data: dict[str, Any]) -> None:
+        self.transfer(data, self._current)
 
-    def transfer(self, source, destination):
+    def transfer(self, source: dict[str, Any], destination: dict[str, Any]) -> None:
         for key, value in source.items():
             if key not in destination:
                 destination[key] = value
@@ -165,10 +165,10 @@ class Scope(Error):
             return self._current.get(name, default)
         return self._current
 
-    def pop(self, name='', default=None):
+    def pop(self, name: str = '', default: Any = None) -> Any:
         if name == '':
             return dict((k, self._current.pop(k)) for k in list(self._current))
         return self._current.pop(name, default)
 
-    def template(self, template, name):
+    def template(self, template: str, name: str) -> dict[str, Any]:
         return self._all['template'].get(template, {}).get(name, {})

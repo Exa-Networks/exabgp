@@ -89,7 +89,7 @@ class ParseStaticRoute(Section):
 
     syntax: str = 'route <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known: dict = {
+    known: dict[str | tuple[Any, ...], Any] = {
         'path-information': path_information,
         'rd': route_distinguisher,
         'route-distinguisher': route_distinguisher,
@@ -116,7 +116,7 @@ class ParseStaticRoute(Section):
         'withdraw': withdraw,
     }
 
-    action: dict = {
+    action: dict[str | tuple[Any, ...], str] = {
         'path-information': 'nlri-set',
         'rd': 'nlri-set',
         'route-distinguisher': 'nlri-set',
@@ -145,7 +145,7 @@ class ParseStaticRoute(Section):
         'aigp': 'attribute-add',
     }
 
-    assign: dict = {
+    assign: dict[str, str] = {
         'path-information': 'path_info',
         'rd': 'rd',
         'route-distinguisher': 'rd',
@@ -157,8 +157,8 @@ class ParseStaticRoute(Section):
     def __init__(self, parser: Any, scope: Any, error: Any) -> None:
         Section.__init__(self, parser, scope, error)
 
-    def clear(self) -> bool:
-        return True
+    def clear(self) -> None:
+        pass
 
     def pre(self) -> bool:
         self.scope.append_route(mpls(self.parser.tokeniser))

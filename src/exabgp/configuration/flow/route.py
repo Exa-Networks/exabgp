@@ -23,6 +23,8 @@ from exabgp.configuration.flow.scope import ParseFlowScope
 
 from exabgp.configuration.static.mpls import route_distinguisher
 
+__all__ = ['ParseFlowRoute', 'ParseFlowMatch', 'ParseFlowThen', 'ParseFlowScope']
+
 from exabgp.configuration.flow.parser import flow
 from exabgp.configuration.flow.parser import next_hop
 
