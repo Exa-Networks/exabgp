@@ -30,7 +30,7 @@ class SrAlgorithm(BaseLS):
     REPR = 'SrAlgorithms'
     JSON = 'sr-algorithms'
 
-    def __init__(self, sr_algos):
+    def __init__(self, sr_algos: list[int]) -> None:
         BaseLS.__init__(self, sr_algos)
 
     @classmethod
@@ -44,5 +44,5 @@ class SrAlgorithm(BaseLS):
             ],
         )
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": {json.dumps(self.content)}'

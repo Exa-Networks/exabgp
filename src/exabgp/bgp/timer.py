@@ -39,7 +39,7 @@ class ReceiveTimer:
         self.message = message
         self.single = False
 
-    def check_ka_timer(self, message: Message = _NOP):
+    def check_ka_timer(self, message: Message = _NOP) -> bool:
         if self.holdtime == 0:
             return message.TYPE != KeepAlive.TYPE
         now = int(time.time())
@@ -54,7 +54,7 @@ class ReceiveTimer:
             self.last_print = now
         return True
 
-    def check_ka(self, message: Message = _NOP):
+    def check_ka(self, message: Message = _NOP) -> None:
         if self.check_ka_timer(message):
             return
         if self.single:

@@ -21,7 +21,7 @@ from exabgp.logger import log
 
 
 @Capability.register()
-class MultiProtocol(Capability, list):
+class MultiProtocol(Capability, list[tuple[AFI, SAFI]]):
     ID: ClassVar[int] = Capability.CODE.MULTIPROTOCOL
 
     def __str__(self) -> str:

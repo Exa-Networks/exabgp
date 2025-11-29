@@ -36,13 +36,19 @@ class SrPrefix(FlagLS):
     TLV = 1158
     FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
 
-    def __init__(self, flags, sids, sr_algo, undecoded=()):
+    def __init__(
+        self,
+        flags: dict[str, int],
+        sids: list[int],
+        sr_algo: int,
+        undecoded: tuple[str, ...] = (),
+    ) -> None:
         self.flags = flags
         self.sids = sids
         self.sr_algo = sr_algo
         self.undecoded = undecoded
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'prefix_flags: {}, sids: {}, undecoded_sid: {}'.format(self.flags, self.sids, self.undecoded)
 
     @classmethod
@@ -82,7 +88,7 @@ class SrPrefix(FlagLS):
                 raw.append(hexstring(data))
                 break
 
-        return cls(flags=flags, sids=sids, sr_algo=sr_algo, undecoded=raw)
+        return cls(flags=flags, sids=sids, sr_algo=sr_algo, undecoded=tuple(raw))
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return f'"sr-prefix-flags": {json.dumps(self.flags)}, "sids": {json.dumps(self.sids)}, "undecoded-sids": {json.dumps(self.undecoded)}, "sr-algorithm": {json.dumps(self.sr_algo)}'

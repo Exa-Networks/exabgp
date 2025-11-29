@@ -59,5 +59,19 @@ class ASN(Resource):
     def from_string(cls: Type[ASN], value: str) -> ASN:
         return cls(int(value))
 
+    def to_int(self) -> int:
+        """Return the ASN as a plain int."""
+        return int(self)
+
+    @classmethod
+    def from_int(cls: Type[ASN], value: int) -> ASN:
+        """Create an ASN from any int-like value. Returns ASN4 if value > 16-bit max."""
+        # Avoid circular import
+        from exabgp.bgp.message.open.capability.asn4 import ASN4
+
+        if value > cls.MAX:
+            return ASN4(value)
+        return ASN(value)
+
 
 AS_TRANS = ASN(23456)

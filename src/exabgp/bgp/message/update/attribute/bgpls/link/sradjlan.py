@@ -8,11 +8,16 @@ from __future__ import annotations
 
 import json
 from struct import unpack
-from exabgp.util import hexstring
+from typing import Any, TYPE_CHECKING
 
+from exabgp.util import hexstring
 from exabgp.protocol.iso import ISO
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+
+if TYPE_CHECKING:
+    pass
 
 
 #   0                   1                   2                   3
@@ -43,10 +48,10 @@ class SrAdjacencyLan(FlagLS):
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
     MERGE = True
 
-    def __init__(self, sradjlans):
-        self.sr_adj_lan_sids = []
+    def __init__(self, sradjlans: list[dict[str, Any]]) -> None:
+        self.sr_adj_lan_sids: list[dict[str, Any]] = sradjlans
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'sr-adj-lan-sids: {self.sr_adj_lan_sids}'
 
     @classmethod
@@ -86,8 +91,9 @@ class SrAdjacencyLan(FlagLS):
 
         return cls([{'flags': flags, 'weight': weight, 'system-id': system_id, 'sid': sid, 'undecoded': raw}])
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return f'"sr-adj-lan-sids": {json.dumps(self.sr_adj_lan_sids)}'
 
-    def merge(self, klass):
-        self.sr_adj_lan_sids.extend(klass.sr_adj_lan_sids)
+    def merge(self, other: BaseLS) -> None:
+        if isinstance(other, SrAdjacencyLan):
+            self.sr_adj_lan_sids.extend(other.sr_adj_lan_sids)

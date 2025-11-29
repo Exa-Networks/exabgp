@@ -31,13 +31,19 @@ class SrAdjacency(FlagLS):
     TLV = 1099
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
 
-    def __init__(self, flags, sids, weight, undecoded=()):
+    def __init__(
+        self,
+        flags: dict[str, int],
+        sids: list[int],
+        weight: int,
+        undecoded: tuple[str, ...] = (),
+    ) -> None:
         self.flags = flags
         self.sids = sids
         self.weight = weight
         self.undecoded = undecoded
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'adj_flags: {}, sids: {}, undecoded_sid {}'.format(self.flags, self.sids, self.undecoded)
 
     @classmethod
@@ -74,9 +80,9 @@ class SrAdjacency(FlagLS):
                 raw.append(hexstring(data))
                 break
 
-        return cls(flags=flags, sids=sids, weight=weight, undecoded=raw)
+        return cls(flags=flags, sids=sids, weight=weight, undecoded=tuple(raw))
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"sr-adj": ' + json.dumps(
             {
                 'flags': self.flags,

@@ -55,11 +55,11 @@ class SrCapabilities(FlagLS):
     TLV = 1034
     FLAGS = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
 
-    def __init__(self, flags, sids):
+    def __init__(self, flags: dict[str, int], sids: list[list[int]]) -> None:
         FlagLS.__init__(self, flags)
         self.sids = sids
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '{}: {}, sids: {}'.format(self.REPR, self.flags, self.sids)
 
     @classmethod
@@ -96,5 +96,5 @@ class SrCapabilities(FlagLS):
 
         return cls(flags, sids)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return f'{FlagLS.json(self)}, "sids": {self.sids}'
