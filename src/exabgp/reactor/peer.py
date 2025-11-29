@@ -29,6 +29,7 @@ from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.delay import Delay
+from exabgp.util.enumeration import TriState
 from exabgp.reactor.keepalive import KA
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.protocol import Protocol
@@ -665,7 +666,7 @@ class Peer:
                     self.resend(enhanced, (rr.afi, rr.safi))
 
                 # SEND OPERATIONAL
-                if self.neighbor['capability']['operational']:
+                if self.neighbor.capability.operational.is_enabled():
                     if not operational:
                         new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                         if new_operational:
@@ -682,7 +683,7 @@ class Peer:
                     self.neighbor.messages.popleft()
 
                 # SEND REFRESH
-                if self.neighbor['capability']['route-refresh']:
+                if self.neighbor.capability.route_refresh:
                     if not refresh:
                         new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                         if new_refresh:
@@ -745,7 +746,7 @@ class Peer:
                     break
 
         # If graceful restart, silent shutdown
-        if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
+        if self.neighbor.capability.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(
             Capability.CODE.GRACEFUL_RESTART,
         ):
             log.error(lazymsg('session.closing reason=graceful_restart'), self.id())
@@ -861,7 +862,7 @@ class Peer:
                     self.resend(enhanced, (rr.afi, rr.safi))
 
                 # SEND OPERATIONAL
-                if self.neighbor['capability']['operational']:
+                if self.neighbor.capability.operational.is_enabled():
                     if not operational:
                         new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                         if new_operational:
@@ -874,7 +875,7 @@ class Peer:
                     self.neighbor.messages.popleft()
 
                 # SEND REFRESH
-                if self.neighbor['capability']['route-refresh']:
+                if self.neighbor.capability.route_refresh:
                     if not refresh:
                         new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                         if new_refresh:
@@ -943,10 +944,10 @@ class Peer:
 
         # If graceful restart, silent shutdown
         log.debug(
-            lazymsg('async.mainloop.ended graceful_restart={gr}', gr=self.neighbor['capability']['graceful-restart']),
+            lazymsg('async.mainloop.ended graceful_restart={gr}', gr=bool(self.neighbor.capability.graceful_restart)),
             self.id(),
         )
-        if self.neighbor['capability']['graceful-restart'] and self.proto.negotiated.sent_open.capabilities.announced(
+        if self.neighbor.capability.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(
             Capability.CODE.GRACEFUL_RESTART,
         ):
             log.error(lazymsg('session.closing reason=graceful_restart'), self.id())
@@ -1198,11 +1199,6 @@ class Peer:
             self._async_task.cancel()
 
     def cli_data(self) -> Dict[str, Any]:
-        def tri(value):
-            if value is None:
-                return None
-            return True if value else False
-
         peer: defaultdict = defaultdict(lambda: None)
 
         have_peer = self.proto is not None
@@ -1237,45 +1233,49 @@ class Peer:
                 },
             )
 
-        capabilities = {
-            'asn4': (tri(self.neighbor['capability']['asn4']), tri(peer['asn4'])),
+        cap = self.neighbor.capability
+        capabilities: Dict[str, Tuple[TriState, TriState]] = {
+            'asn4': (cap.asn4, TriState.from_bool(peer['asn4'])),
             'route-refresh': (
-                tri(self.neighbor['capability']['route-refresh']),
-                tri(peer['route-refresh']),
+                TriState.from_bool(bool(cap.route_refresh)),
+                TriState.from_bool(peer['route-refresh']),
             ),
             'multi-session': (
-                tri(self.neighbor['capability']['multi-session']),
-                tri(peer['multi-session']),
+                cap.multi_session,
+                TriState.from_bool(peer['multi-session']),
             ),
             'operational': (
-                tri(self.neighbor['capability']['operational']),
-                tri(peer['operational']),
+                cap.operational,
+                TriState.from_bool(peer['operational']),
             ),
             'add-path': (
-                tri(self.neighbor['capability']['add-path']),
-                tri(peer['add-path']),
+                TriState.from_bool(bool(cap.add_path)),
+                TriState.from_bool(peer['add-path']),
             ),
             'extended-message': (
-                tri(self.neighbor['capability']['extended-message']),
-                tri(peer['extended-message']),
+                cap.extended_message,
+                TriState.from_bool(peer['extended-message']),
             ),
             'graceful-restart': (
-                tri(self.neighbor['capability']['graceful-restart']),
-                tri(peer['graceful-restart']),
+                TriState.from_bool(bool(cap.graceful_restart)),
+                TriState.from_bool(peer['graceful-restart']),
             ),
         }
 
-        families = {}
+        families: Dict[Tuple[AFI, SAFI], Tuple[bool, TriState, TriState, TriState]] = {}
         for family in self.neighbor.families():
+            common: TriState
+            send_addpath: TriState
+            recv_addpath: TriState
             if have_open:
                 assert self.proto is not None  # Guarded by have_open
-                common = family in self.proto.negotiated.families
-                send_addpath = self.proto.negotiated.addpath.send(*family)
-                recv_addpath = self.proto.negotiated.addpath.receive(*family)
+                common = TriState.from_bool(family in self.proto.negotiated.families)
+                send_addpath = TriState.from_bool(self.proto.negotiated.addpath.send(*family))
+                recv_addpath = TriState.from_bool(self.proto.negotiated.addpath.receive(*family))
             else:
-                common = None
-                send_addpath = None if family in self.neighbor.addpaths() else False  # type: ignore[assignment]
-                recv_addpath = None if family in self.neighbor.addpaths() else False  # type: ignore[assignment]
+                common = TriState.UNSET
+                send_addpath = TriState.UNSET if family in self.neighbor.addpaths() else TriState.FALSE
+                recv_addpath = TriState.UNSET if family in self.neighbor.addpaths() else TriState.FALSE
             families[family] = (True, common, send_addpath, recv_addpath)
 
         messages = {}

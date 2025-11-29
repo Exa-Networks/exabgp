@@ -392,7 +392,7 @@ class Reactor:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=rib_resend', p=peer_name), 'reactor')
             return
-        peer.resend(peer.neighbor['capability']['route-refresh'])
+        peer.resend(bool(peer.neighbor.capability.route_refresh))
 
     def neighbor_rib_out_withdraw(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):
@@ -735,9 +735,9 @@ class Reactor:
     def shutdown(self) -> None:
         """Terminate all the current BGP connections"""
         log.critical(lazymsg('reactor.shutdown'), 'reactor')
-        if self.listener:
+        if self.listener is not Listener.STOPPED:
             self.listener.stop()
-            self.listener = None  # type: ignore[assignment]
+            self.listener = Listener.STOPPED
         for key in self._peers.keys():
             self._peers[key].shutdown()
         self.asynchronous.clear()

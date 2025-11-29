@@ -73,8 +73,8 @@ def _hexa(data: str) -> bytes:
 def _negotiated(neighbor: Neighbor) -> Tuple[Negotiated, Negotiated]:
     path = {}
     for f in NLRI.known_families():
-        if neighbor['capability']['add-path']:
-            path[f] = neighbor['capability']['add-path']
+        if neighbor.capability.add_path:
+            path[f] = neighbor.capability.add_path
 
     capa = Capabilities().new(neighbor, False)
     capa[Capability.CODE.ADD_PATH] = path

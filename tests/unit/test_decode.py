@@ -28,6 +28,8 @@ from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.util.enumeration import TriState
 
 from exabgp.logger import log
 from exabgp.environment import getenv
@@ -299,38 +301,22 @@ body = [0x00, 0x00, # withdrawn routes length 0
 bodies.append((True, body))
 
 
-class FakeNeighbor(dict):
-    def __init__(self):
-        self.update(
-            {
-                'description': 'a test neighbor',
-                'router-id': RouterID('127.0.0.1'),
-                'local-address': IPv4('127.0.0.1'),
-                'peer-address': IPv4('127.0.0.1'),
-                'host-name': 'localhost',
-                'domain-name': 'localdomain',
-                'peer-as': ASN('65500'),
-                'local-as': ASN('65500'),
-                'hold-time': HoldTime(180),
-                'capability': {
-                    'asn4': False,
-                    'add-path': 0,
-                    'extended_message': False,
-                    'nexthop': None,
-                    'route-refresh': False,
-                    'graceful-restart': False,
-                    'multi-session': None,
-                    'aigp': None,
-                    'operational': None,
-                    'extended-message': True,
-                    'software-version': False,
-                },
-            },
-        )
-
-    @staticmethod
-    def families():
-        return NLRI.known_families()
+def make_test_neighbor() -> Neighbor:
+    """Create a Neighbor configured for decode tests."""
+    neighbor = Neighbor()
+    neighbor['description'] = 'a test neighbor'
+    neighbor['router-id'] = RouterID('127.0.0.1')
+    neighbor['local-address'] = IPv4('127.0.0.1')
+    neighbor['peer-address'] = IPv4('127.0.0.1')
+    neighbor['host-name'] = 'localhost'
+    neighbor['domain-name'] = 'localdomain'
+    neighbor['peer-as'] = ASN('65500')
+    neighbor['local-as'] = ASN('65500')
+    neighbor['hold-time'] = HoldTime(180)
+    # Add all known families
+    for family in NLRI.known_families():
+        neighbor.add_family(family)
+    return neighbor
 
 
 # from contextlib import contextmanager
@@ -351,8 +337,8 @@ class TestUpdateDecoding(unittest.TestCase):
         self.negotiated = {}
 
         for asn4 in (True, False):
-            neighbor = FakeNeighbor()
-            neighbor.asn4 = asn4
+            neighbor = make_test_neighbor()
+            neighbor.capability.asn4 = TriState.TRUE if asn4 else TriState.FALSE
 
             capa = Capabilities().new(neighbor, False)
             capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()

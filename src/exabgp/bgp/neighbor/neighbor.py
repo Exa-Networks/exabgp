@@ -18,6 +18,7 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
+from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib import RIB
 
@@ -48,20 +49,6 @@ if TYPE_CHECKING:
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor(dict):
-    class Capability(dict):
-        defaults: ClassVar[Dict[str, bool | int | None | str]] = {
-            'asn4': True,
-            'extended-message': True,
-            'graceful-restart': False,
-            'multi-session': False,
-            'operational': False,
-            'add-path': 0,
-            'route-refresh': 0,
-            'nexthop': None,
-            'aigp': None,
-            'software-version': None,
-        }
-
     defaults: ClassVar[Dict[str, Any]] = {
         # Those are the field from the configuration
         'description': '',
@@ -98,6 +85,7 @@ class Neighbor(dict):
 
     # Instance attributes
     api: Dict[str, Any] | None  # XXX: not scriptable - is replaced outside the class
+    capability: NeighborCapability
     auto_discovery: bool
     range_size: int
     generated: bool
@@ -121,8 +109,8 @@ class Neighbor(dict):
         # Those are subconf
         self.api: Dict[str, Any] | None = None  # XXX: not scriptable - is replaced outside the class
 
-        # internal or calculated field
-        self['capability'] = self.Capability.defaults.copy()
+        # Capability configuration (typed dataclass)
+        self.capability = NeighborCapability()
 
         # local_address uses auto discovery
         self.auto_discovery = False
@@ -174,13 +162,9 @@ class Neighbor(dict):
         if self['md5-ip'] is None:
             self['md5-ip'] = self['local-address']
 
-        # Because (0 == False) == True when it should not!
-        if self['capability']['graceful-restart'] is False:
-            return
-        if self['capability']['graceful-restart'] != 0:
-            return
-
-        self['capability']['graceful-restart'] = int(self['hold-time'])
+        # If graceful-restart is enabled but time is 0, use hold-time
+        if self.capability.graceful_restart.is_enabled() and self.capability.graceful_restart.time == 0:
+            self.capability.graceful_restart = GracefulRestartConfig.with_time(int(self['hold-time']))
 
     def id(self) -> str:
         return f'neighbor-{self.uid}'
@@ -209,7 +193,7 @@ class Neighbor(dict):
         self.refresh = deque()
 
     def name(self) -> str:
-        if self['capability']['multi-session']:
+        if self.capability.multi_session.is_enabled():
             session = '/'.join(f'{afi.name()}-{safi.name()}' for (afi, safi) in self.families())
         else:
             session = 'in-open'
@@ -315,7 +299,7 @@ class Neighbor(dict):
             and self['adj-rib-in'] == other['adj-rib-in']
             and self['adj-rib-out'] == other['adj-rib-out']
             and (auto_discovery or self['local-address'] == other['local-address'])
-            and self['capability'] == other['capability']
+            and self.capability == other.capability
             and self.auto_discovery == other.auto_discovery
             and self.families() == other.families()
         )
@@ -506,9 +490,9 @@ Neighbor {peer-address}
         md5_base64_str = (
             'true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'
         )
-        add_path_str = (
-            AddPath.string[neighbor['capability']['add-path']] if neighbor['capability']['add-path'] else 'disable'
-        )
+        cap = neighbor.capability
+        add_path_str = AddPath.string[cap.add_path] if cap.add_path else 'disable'
+        graceful_str = str(cap.graceful_restart.time) if cap.graceful_restart.is_enabled() else 'disable'
 
         returned = (
             f'neighbor {neighbor["peer-address"]} {{\n'
@@ -536,15 +520,15 @@ Neighbor {peer-address}
             + (f'\toutgoing-ttl {neighbor["outgoing-ttl"]};\n' if neighbor['outgoing-ttl'] else '')
             + (f'\tincoming-ttl {neighbor["incoming-ttl"]};\n' if neighbor['incoming-ttl'] else '')
             + f'\tcapability {{\n'
-            f'\t\tasn4 {"enable" if neighbor["capability"]["asn4"] else "disable"};\n'
-            f'\t\troute-refresh {"enable" if neighbor["capability"]["route-refresh"] else "disable"};\n'
-            f'\t\tgraceful-restart {neighbor["capability"]["graceful-restart"] if neighbor["capability"]["graceful-restart"] else "disable"};\n'
-            f'\t\tsoftware-version {"enable" if neighbor["capability"]["software-version"] else "disable"};\n'
-            f'\t\tnexthop {"enable" if neighbor["capability"]["nexthop"] else "disable"};\n'
+            f'\t\tasn4 {"enable" if cap.asn4.is_enabled() else "disable"};\n'
+            f'\t\troute-refresh {"enable" if cap.route_refresh else "disable"};\n'
+            f'\t\tgraceful-restart {graceful_str};\n'
+            f'\t\tsoftware-version {"enable" if cap.software_version else "disable"};\n'
+            f'\t\tnexthop {"enable" if cap.nexthop.is_enabled() else "disable"};\n'
             f'\t\tadd-path {add_path_str};\n'
-            f'\t\tmulti-session {"enable" if neighbor["capability"]["multi-session"] else "disable"};\n'
-            f'\t\toperational {"enable" if neighbor["capability"]["operational"] else "disable"};\n'
-            f'\t\taigp {"enable" if neighbor["capability"]["aigp"] else "disable"};\n'
+            f'\t\tmulti-session {"enable" if cap.multi_session.is_enabled() else "disable"};\n'
+            f'\t\toperational {"enable" if cap.operational.is_enabled() else "disable"};\n'
+            f'\t\taigp {"enable" if cap.aigp.is_enabled() else "disable"};\n'
             f'\t}}\n'
             f'\tfamily {{{families}\n'
             f'\t}}\n'

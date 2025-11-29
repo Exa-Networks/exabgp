@@ -14,6 +14,7 @@ from typing import Dict, Any, Tuple, List, Set
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.reactor.peer import Peer
@@ -232,7 +233,11 @@ def _build_neighbor(params: Dict[str, Any], api_processes: List[str] | None = No
 
     # Optional: graceful-restart (defaults to False)
     if 'graceful-restart' in params:
-        neighbor['capability']['graceful-restart'] = params['graceful-restart']
+        gr_time = params['graceful-restart']
+        if gr_time:
+            neighbor.capability.graceful_restart = GracefulRestartConfig.with_time(gr_time)
+        else:
+            neighbor.capability.graceful_restart = GracefulRestartConfig.disabled()
 
     # Optional: group-updates (defaults to True per Neighbor.defaults)
     if 'group-updates' in params:
