@@ -9,10 +9,24 @@ import binascii
 import itertools
 import json
 from struct import unpack
+from typing import Any, Callable, Protocol, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.util import hexstring
+
+
+class LSClass(Protocol):
+    """Protocol for BGP-LS classes that can unpack from bytes."""
+
+    TLV: int
+    MERGE: bool
+
+    @classmethod
+    def unpack_bgpls(cls, data: bytes) -> BaseLS: ...
 
 
 @Attribute.register()
@@ -29,18 +43,20 @@ class LinkState(Attribute):
     link_lsids: list[int] = []
     prefix_lsids: list[int] = []
 
-    def __init__(self, ls_attrs):
+    def __init__(self, ls_attrs: list[BaseLS]) -> None:
         self.ls_attrs = ls_attrs
 
     @classmethod
-    def register(cls, lsid=None, flag=None):
-        def register_class(klass):
-            if klass.TLV in cls.registered_lsids:
+    def register_lsid(cls, lsid: int | None = None) -> Callable[[type], type]:
+        """Register BGP-LS subclass by TLV code (different from Attribute.register)."""
+
+        def register_class(klass: type) -> type:
+            if klass.TLV in cls.registered_lsids:  # type: ignore[attr-defined]
                 raise RuntimeError('only one class can be registered per BGP link state attribute type')
-            cls.registered_lsids[klass.TLV] = klass
+            cls.registered_lsids[klass.TLV] = klass  # type: ignore[attr-defined]
             return klass
 
-        def register_lsid(klass):
+        def register_lsid_inner(klass: type) -> type:
             if not lsid:
                 return register_class(klass)
 
@@ -48,10 +64,11 @@ class LinkState(Attribute):
             setattr(kls, 'TLV', lsid)
             return register_class(kls)
 
-        return register_lsid
+        return register_lsid_inner
 
     @classmethod
-    def klass(cls, code):
+    def get_ls_class(cls, code: int) -> type[LSClass]:
+        """Get BGP-LS subclass by TLV code (different from Attribute.klass)."""
         klass = cls.registered_lsids.get(code, None)
         if klass is not None:
             return klass
@@ -61,19 +78,20 @@ class LinkState(Attribute):
         return unknown
 
     @classmethod
-    def registered(cls, lsid, flag=None):
+    def is_lsid_registered(cls, lsid: int) -> bool:
+        """Check if BGP-LS TLV code is registered (different from Attribute.registered)."""
         return lsid in cls.registered_lsids
 
     @classmethod
-    def unpack_attribute(cls, data, negotiated):
-        ls_attrs = []
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> LinkState:
+        ls_attrs: list[BaseLS] = []
         while data:
             scode, length = unpack('!HH', data[:4])
             payload = data[4 : length + 4]
             BaseLS.check_length(payload, length)
 
             data = data[length + 4 :]
-            klass = cls.klass(scode)
+            klass = cls.get_ls_class(scode)
             instance = klass.unpack_bgpls(payload)
 
             if not instance.MERGE:
@@ -89,56 +107,56 @@ class LinkState(Attribute):
 
         return cls(ls_attrs=ls_attrs)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         content = ', '.join(d.json() for d in self.ls_attrs)
         return f'{{ {content} }}'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ', '.join(str(d) for d in self.ls_attrs)
 
 
 class BaseLS:
-    TLV = -1
-    JSON = 'json-name-unset'
-    REPR = 'repr name unset'
-    LEN = 0
-    MERGE = False
+    TLV: int = -1
+    JSON: str = 'json-name-unset'
+    REPR: str = 'repr name unset'
+    LEN: int = 0
+    MERGE: bool = False
 
-    BGPLS_SUBTLV_HEADER_SIZE = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
+    BGPLS_SUBTLV_HEADER_SIZE: int = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
 
-    def __init__(self, content):
+    def __init__(self, content: Any) -> None:
         self.content = content
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         try:
             return f'"{self.JSON}": {json.dumps(self.content)}'
         except TypeError:
             # not a basic type
             return f'"{self.JSON}": "{self.content.decode("utf-8")}"'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '{}: {}'.format(self.REPR, self.content)
 
     @classmethod
-    def check_length(cls, data, length):
+    def check_length(cls, data: bytes, length: int) -> None:
         if length and len(data) != length:
             raise Notify(3, 5, f'Unable to decode attribute, wrong size for {cls.REPR}')
 
     @classmethod
-    def check(cls, data):
+    def check(cls, data: bytes) -> None:
         return cls.check_length(data, cls.LEN)
 
-    def merge(self, other):
+    def merge(self, other: BaseLS) -> None:
         if not self.MERGE:
             raise Notify(3, 5, f'Invalid merge, issue decoding {self.REPR}')
         self.content.extend(other.content)
 
 
 class GenericLSID(BaseLS):
-    TLV = 0
-    MERGE = True
+    TLV: int = 0
+    MERGE: bool = True
 
-    def __init__(self, content):
+    def __init__(self, content: bytes) -> None:
         BaseLS.__init__(
             self,
             [
@@ -146,15 +164,15 @@ class GenericLSID(BaseLS):
             ],
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Attribute with code [ {} ] not implemented'.format(self.TLV)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         merged = ', '.join([f'"{hexstring(_)}"' for _ in self.content])
         return f'"generic-lsid-{self.TLV}": [{merged}]'
 
     @classmethod
-    def unpack_bgpls(cls, data):
+    def unpack_bgpls(cls, data: bytes) -> GenericLSID:
         return cls(data)
 
 
@@ -165,14 +183,14 @@ class FlagLS(BaseLS):
     def __init__(self, flags: dict[str, int]) -> None:
         self.flags = flags
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '{}: {}'.format(self.REPR, self.flags)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": {json.dumps(self.flags)}'
 
     @classmethod
-    def unpack_flags(cls, data):
+    def unpack_flags(cls, data: bytes) -> dict[str, int]:
         pad = cls.FLAGS.count('RSV')
         repeat = len(cls.FLAGS) - pad
         hex_rep = int(binascii.b2a_hex(data), 16)
@@ -195,7 +213,7 @@ class FlagLS(BaseLS):
         return flags
 
     @classmethod
-    def unpack_bgpls(cls, data):
+    def unpack_bgpls(cls, data: bytes) -> FlagLS:
         cls.check(data)
         # We only support IS-IS for now.
         return cls(cls.unpack_flags(data[0:1]))

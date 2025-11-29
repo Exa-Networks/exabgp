@@ -48,7 +48,7 @@ SRCAP_SUB_TLV_HEADER_SIZE = 4  # Type (2) + Length (2)
 SRCAP_LABEL_MASK_20BIT = 0xFFFFF  # Mask for 20-bit label
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class SrCapabilities(FlagLS):
     REPR = 'SR Capability Flags'
     JSON = 'sr-capability-flags'

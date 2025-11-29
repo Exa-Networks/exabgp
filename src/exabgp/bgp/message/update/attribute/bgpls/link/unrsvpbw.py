@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #  ----------------------------
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class UnRsvpBw(BaseLS):
     TLV = 1091
     REPR = 'Maximum link bandwidth'

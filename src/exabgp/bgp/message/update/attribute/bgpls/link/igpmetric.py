@@ -34,7 +34,7 @@ IGP_METRIC_SIZE_ISIS_SMALL: int = 1  # IS-IS small metrics are 1 octet
 IGP_METRIC_SIZE_ISIS_WIDE: int = 3  # IS-IS wide metrics are 3 octets
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class IgpMetric(BaseLS):
     TLV = 1095
     REPR = 'IGP Metric'

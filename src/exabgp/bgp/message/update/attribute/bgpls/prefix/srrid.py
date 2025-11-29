@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #     Source Router Identifier (Source Router-ID) TLV
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class SrSourceRouterID(BaseLS):
     TLV = 1171
     REPR = 'Source router identifier'

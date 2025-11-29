@@ -88,7 +88,7 @@ class Srv6(FlagLS):
         }
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class Srv6LanEndXISIS(Srv6):
     TLV = 1107
     MERGE = True
@@ -127,7 +127,7 @@ class Srv6LanEndXISIS(Srv6):
         return '"srv6-lan-endx-isis": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class Srv6LanEndXOSPF(Srv6):
     TLV = 1108
     MERGE = True

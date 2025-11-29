@@ -26,7 +26,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #   Use of draft-tantsura-bgp-ls-segment-routing-msd-02 in this TLV is not clear
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class NodeOpaque(BaseLS):
     TLV = 1025
     REPR = 'Node Opaque attribute'

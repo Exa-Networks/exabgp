@@ -31,7 +31,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both false
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class SrPrefix(FlagLS):
     TLV = 1158
     FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']

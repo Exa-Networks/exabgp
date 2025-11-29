@@ -19,8 +19,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #   |           | Remote Node         |              |                  |
 
 
-@LinkState.register(lsid=1030)
-@LinkState.register(lsid=1031)
+@LinkState.register_lsid(lsid=1030)
+@LinkState.register_lsid(lsid=1031)
 class RemoteTeRid(BaseLS):
     REPR = 'Remote TE Router ID'
     JSON = 'remote-te-router-id'

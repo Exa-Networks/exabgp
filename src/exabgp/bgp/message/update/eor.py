@@ -29,13 +29,13 @@ class EOR(Message):
     TYPE = bytes([Message.CODE.UPDATE])
 
     class NLRI(_NLRI):
-        PREFIX = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
-        MP_LENGTH = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
-        EOR = True
+        PREFIX: bytes = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
+        MP_LENGTH: int = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
+        EOR: bool = True  # type: ignore[misc]  # Override class variable
 
         nexthop = IP.NoNextHop
 
-        def __init__(self, afi, safi, action):
+        def __init__(self, afi: AFI, safi: SAFI, action: Action) -> None:
             _NLRI.__init__(self, afi, safi, action)
             self.action = action
             self.afi = afi
@@ -51,16 +51,16 @@ class EOR(Message):
             # EOR (End-of-RIB) marker - addpath not applicable
             return self._pack_nlri_simple()
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return self.extensive()
 
-        def extensive(self):
+        def extensive(self) -> str:
             return 'eor %ld/%ld (%s %s)' % (int(self.afi), int(self.safi), self.afi, self.safi)
 
-        def json(self, announced=True, compact=None):
+        def json(self, compact: bool = False) -> str:
             return '"eor": {{ "afi" : "{}", "safi" : "{}" }}'.format(self.afi, self.safi)
 
-        def __len__(self):
+        def __len__(self) -> int:
             if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
                 # May not have been the size read on the wire if MP was used for IPv4 unicast
                 return 4
@@ -73,10 +73,10 @@ class EOR(Message):
         ]
         self.attributes = Attributes()
 
-    def pack_message(self, negotiated=None):
+    def pack_message(self, negotiated: 'Negotiated') -> bytes:
         return self._message(self.nlris[0].pack_nlri(negotiated))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'EOR'
 
     @classmethod

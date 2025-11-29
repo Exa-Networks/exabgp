@@ -33,7 +33,7 @@ from exabgp.util import hexstring
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class Srv6EndX(FlagLS):
     TLV = 1106
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']

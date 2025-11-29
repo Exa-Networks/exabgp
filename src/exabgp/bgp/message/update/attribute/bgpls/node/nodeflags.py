@@ -33,7 +33,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # 	RFC 7752 3.3.1.1. Node Flag Bits TLV
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class NodeFlags(FlagLS):
     REPR = 'Node Flags'
     JSON = 'node-flags'
